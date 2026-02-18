@@ -245,7 +245,7 @@ export function AddToolCommandSection({
             <FormDescription className="space-y-1">
               <span className="block"><strong>{t("installCommandHint")}</strong></span>
               <span className="block">• {t("installCommandGit")} <code className="bg-muted px-1 py-0.5 rounded">git clone https://github.com/user/tool</code></span>
-              <span className="block">• {t("installCommandGo")} <code className="bg-muted px-1 py-0.5 rounded">go install -v github.com/tool@latest</code></span>
+              <span className="block">• {t("installCommandGo")} <code className="bg-muted px-1 py-0.5 rounded">go install -v github.com/tool@v1.2.3</code></span>
               <span className="flex items-center gap-1 text-amber-600">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 {t("installCommandNote")}

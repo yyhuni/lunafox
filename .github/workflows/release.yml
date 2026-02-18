@@ -14,6 +14,7 @@ env:
   DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE != '' && vars.DOCKERHUB_NAMESPACE || 'yyhuni' }}
   TCR_REGISTRY: ${{ vars.TCR_REGISTRY != '' && vars.TCR_REGISTRY || 'ccr.ccs.tencentyun.com' }}
   TCR_NAMESPACE: ${{ vars.TCR_NAMESPACE != '' && vars.TCR_NAMESPACE || 'yyhuni' }}
+  RELEASE_STAGING_TAG: ci-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
   validate-tag:
@@ -95,7 +96,7 @@ jobs:
           path: dist/release/*
           if-no-files-found: error
 
-  publish-github-release:
+  prepare-github-release:
     runs-on: ubuntu-22.04
     needs: [validate-tag, build-installers]
     steps:
@@ -105,11 +106,12 @@ jobs:
           name: release-installers
           path: dist/release
 
-      - name: Publish GitHub release
+      - name: Prepare GitHub draft release (phase 1)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.validate-tag.outputs.tag }}
           name: ${{ needs.validate-tag.outputs.tag }}
+          draft: true
           prerelease: ${{ needs.validate-tag.outputs.prerelease == 'true' }}
           generate_release_notes: true
           files: |
@@ -121,9 +123,9 @@ jobs:
           fail_on_unmatched_files: true
           overwrite_files: true
 
-  publish-gitee-release:
+  prepare-gitee-release:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, build-installers]
+    needs: validate-tag
     env:
       GITEE_OWNER: ${{ secrets.GITEE_OWNER }}
       GITEE_REPO: ${{ secrets.GITEE_REPO }}
@@ -132,12 +134,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Download installer artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: release-installers
-          path: dist/release
 
       - name: Validate gitee secrets
         run: |
@@ -152,118 +148,6 @@ jobs:
           TAG="${{ needs.validate-tag.outputs.tag }}"
           git remote add gitee "https://oauth2:${GITEE_TOKEN}@gitee.com/${GITEE_OWNER}/${GITEE_REPO}.git"
           git push gitee "refs/tags/${TAG}:refs/tags/${TAG}"
-
-      - name: Publish gitee release
-        run: |
-          set -euo pipefail
-          TAG="${{ needs.validate-tag.outputs.tag }}"
-          PRERELEASE="${{ needs.validate-tag.outputs.prerelease }}"
-          API="https://gitee.com/api/v5/repos/${GITEE_OWNER}/${GITEE_REPO}"
-          TMP_DIR="$(mktemp -d)"
-          trap 'rm -rf "$TMP_DIR"' EXIT
-
-          PAYLOAD=$(cat <<JSON
-          {"tag_name":"${TAG}","name":"${TAG}","body":"Automated release for ${TAG}","prerelease":${PRERELEASE}}
-          JSON
-          )
-
-          extract_release_id() {
-            python3 - "$1" <<'PY'
-          import json
-          import sys
-
-          path = sys.argv[1]
-          try:
-              with open(path, "r", encoding="utf-8") as f:
-                  payload = json.load(f)
-          except Exception:
-              print("")
-              sys.exit(0)
-
-          if isinstance(payload, dict):
-              release_id = payload.get("id")
-              if release_id is not None:
-                  print(release_id)
-                  sys.exit(0)
-
-          print("")
-          PY
-          }
-
-          STATUS=$(curl -sS -o "$TMP_DIR/create.json" -w "%{http_code}" \
-            -X POST "${API}/releases?access_token=${GITEE_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "$PAYLOAD")
-
-          RELEASE_ID=""
-          LOOKUP_STATUS=""
-          COMPAT_STATUS=""
-
-          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 300 ]; then
-            RELEASE_ID="$(extract_release_id "$TMP_DIR/create.json")"
-          fi
-
-          # Compatibility fallback: some gitee instances may reject or ignore
-          # prerelease fields. Retry create with a minimal payload.
-          if [ -z "$RELEASE_ID" ] && [ "$PRERELEASE" = "true" ]; then
-            COMPAT_PAYLOAD=$(cat <<JSON
-          {"tag_name":"${TAG}","name":"${TAG}","body":"Automated release for ${TAG}"}
-          JSON
-            )
-            COMPAT_STATUS=$(curl -sS -o "$TMP_DIR/create-compat.json" -w "%{http_code}" \
-              -X POST "${API}/releases?access_token=${GITEE_TOKEN}" \
-              -H "Content-Type: application/json" \
-              -d "$COMPAT_PAYLOAD")
-            if [ "$COMPAT_STATUS" -ge 200 ] && [ "$COMPAT_STATUS" -lt 300 ]; then
-              RELEASE_ID="$(extract_release_id "$TMP_DIR/create-compat.json")"
-            fi
-          fi
-
-          if [ -z "$RELEASE_ID" ]; then
-            for delay in 0 2 4 6; do
-              if [ "$delay" -gt 0 ]; then
-                sleep "$delay"
-              fi
-              LOOKUP_STATUS=$(curl -sS -o "$TMP_DIR/release.json" -w "%{http_code}" \
-                "${API}/releases/tags/${TAG}?access_token=${GITEE_TOKEN}")
-              if [ "$LOOKUP_STATUS" -ge 200 ] && [ "$LOOKUP_STATUS" -lt 300 ]; then
-                RELEASE_ID="$(extract_release_id "$TMP_DIR/release.json")"
-                if [ -n "$RELEASE_ID" ]; then
-                  break
-                fi
-              fi
-            done
-          fi
-
-          if [ -z "$RELEASE_ID" ]; then
-            echo "failed to resolve gitee release id for tag ${TAG}" >&2
-            echo "create status: ${STATUS}" >&2
-            if [ -n "${COMPAT_STATUS}" ]; then
-              echo "compat create status: ${COMPAT_STATUS}" >&2
-            fi
-            if [ -n "${LOOKUP_STATUS}" ]; then
-              echo "lookup status: ${LOOKUP_STATUS}" >&2
-            fi
-            echo "create response:" >&2
-            cat "$TMP_DIR/create.json" >&2 || true
-            if [ -f "$TMP_DIR/create-compat.json" ]; then
-              echo "compat create response:" >&2
-              cat "$TMP_DIR/create-compat.json" >&2 || true
-            fi
-            if [ -f "$TMP_DIR/release.json" ]; then
-              echo "lookup response:" >&2
-              cat "$TMP_DIR/release.json" >&2 || true
-            fi
-            exit 1
-          fi
-
-          for file in dist/release/lunafox-installer-* dist/release/checksums.txt; do
-            name="$(basename "$file")"
-            curl -fsSL \
-              -X POST "${API}/releases/${RELEASE_ID}/attach_files?access_token=${GITEE_TOKEN}" \
-              -F "name=${name}" \
-              -F "file=@${file}" >/dev/null
-          done
 
   publish-images:
     runs-on: ubuntu-22.04
@@ -323,7 +207,7 @@ jobs:
           username: ${{ secrets.TCR_USERNAME }}
           password: ${{ secrets.TCR_PASSWORD }}
 
-      - name: Build and push image
+      - name: Build and push staging image (phase 1)
         id: build_push
         uses: docker/build-push-action@v6
         with:
@@ -332,9 +216,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:${{ needs.validate-tag.outputs.tag }}
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ needs.validate-tag.outputs.tag }}
-            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/${{ matrix.image }}:${{ needs.validate-tag.outputs.tag }}
+            docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}
+            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}
 
       - name: Persist image digest
         run: |
@@ -345,6 +229,7 @@ jobs:
           cat > "dist/image-digests/${{ matrix.image }}.env" <<EOF
           IMAGE=${{ matrix.image }}
           DIGEST=${DIGEST}
+          STAGING_TAG=${RELEASE_STAGING_TAG}
           DOCKERHUB_REF=docker.io/${DOCKERHUB_NAMESPACE}/${{ matrix.image }}@${DIGEST}
           GHCR_REF=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}@${DIGEST}
           TCR_REF=${TCR_REGISTRY}/${TCR_NAMESPACE}/${{ matrix.image }}@${DIGEST}
@@ -359,7 +244,7 @@ jobs:
 
   update-release-channel:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, build-installers, publish-github-release, publish-gitee-release, publish-images]
+    needs: [validate-tag, build-installers, promote-images, finalize-github-release, finalize-gitee-release]
     env:
       GITEE_OWNER: ${{ secrets.GITEE_OWNER }}
       GITEE_REPO: ${{ secrets.GITEE_REPO }}
@@ -488,3 +373,298 @@ jobs:
             git remote add gitee "https://oauth2:${GITEE_TOKEN}@gitee.com/${GITEE_OWNER}/${GITEE_REPO}.git"
             git push gitee "${RELEASE_CHANNEL_BRANCH}:${RELEASE_CHANNEL_BRANCH}"
           )
+
+  promote-images:
+    runs-on: ubuntu-22.04
+    needs: [validate-tag, publish-images]
+    steps:
+      - name: Download image digest artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: image-digest-*
+          merge-multiple: true
+          path: dist/image-digests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate Tencent TCR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Promote staging digest to release tag (phase 2)
+        run: |
+          set -euo pipefail
+          FINAL_TAG="${{ needs.validate-tag.outputs.tag }}"
+          [ -n "$FINAL_TAG" ] || { echo "missing final tag"; exit 1; }
+          PLAN_FILE="$(mktemp)"
+          trap 'rm -f "$PLAN_FILE"' EXIT
+
+          shopt -s nullglob
+          files=(dist/image-digests/*.env)
+          [ "${#files[@]}" -gt 0 ] || { echo "missing image digest artifacts"; exit 1; }
+
+          # Preflight all source references first; only promote when all checks pass.
+          for file in "${files[@]}"; do
+            IMAGE=""
+            DIGEST=""
+            DOCKERHUB_REF=""
+            GHCR_REF=""
+            TCR_REF=""
+            # shellcheck disable=SC1090
+            source "$file"
+
+            [ -n "$IMAGE" ] || { echo "missing IMAGE in $file"; exit 1; }
+            [[ "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid DIGEST in $file: $DIGEST"; exit 1; }
+            [ -n "$DOCKERHUB_REF" ] || { echo "missing DOCKERHUB_REF in $file"; exit 1; }
+            [ -n "$GHCR_REF" ] || { echo "missing GHCR_REF in $file"; exit 1; }
+            [ -n "$TCR_REF" ] || { echo "missing TCR_REF in $file"; exit 1; }
+
+            docker buildx imagetools inspect "$DOCKERHUB_REF" >/dev/null
+            docker buildx imagetools inspect "$GHCR_REF" >/dev/null
+            docker buildx imagetools inspect "$TCR_REF" >/dev/null
+
+            printf '%s|%s|%s|%s|%s\n' "$IMAGE" "$DIGEST" "$DOCKERHUB_REF" "$GHCR_REF" "$TCR_REF" >> "$PLAN_FILE"
+          done
+
+          while IFS='|' read -r IMAGE DIGEST DOCKERHUB_REF GHCR_REF TCR_REF; do
+            docker_target="docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
+            ghcr_target="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${IMAGE}:${FINAL_TAG}"
+            tcr_target="${TCR_REGISTRY}/${TCR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
+
+            echo "promote ${IMAGE}: ${DIGEST}"
+            docker buildx imagetools create --tag "$docker_target" "$DOCKERHUB_REF"
+            docker buildx imagetools create --tag "$ghcr_target" "$GHCR_REF"
+            docker buildx imagetools create --tag "$tcr_target" "$TCR_REF"
+          done < "$PLAN_FILE"
+
+  finalize-github-release:
+    runs-on: ubuntu-22.04
+    needs: [validate-tag, prepare-github-release, promote-images]
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Publish GitHub draft release (phase 2)
+        run: |
+          set -euo pipefail
+          TAG="${{ needs.validate-tag.outputs.tag }}"
+          PRERELEASE="${{ needs.validate-tag.outputs.prerelease }}"
+          API="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          TMP_DIR="$(mktemp -d)"
+          trap 'rm -rf "$TMP_DIR"' EXIT
+
+          STATUS=$(curl -sS -o "$TMP_DIR/release.json" -w "%{http_code}" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${API}/releases/tags/${TAG}")
+
+          if [ "$STATUS" -lt 200 ] || [ "$STATUS" -ge 300 ]; then
+            echo "failed to load github release for tag ${TAG}, status=${STATUS}" >&2
+            cat "$TMP_DIR/release.json" >&2 || true
+            exit 1
+          fi
+
+          read -r RELEASE_ID IS_DRAFT < <(python3 - "$TMP_DIR/release.json" <<'PY'
+          import json
+          import sys
+
+          path = sys.argv[1]
+          try:
+              with open(path, "r", encoding="utf-8") as f:
+                  payload = json.load(f)
+          except Exception:
+              print("")
+              sys.exit(0)
+
+          release_id = payload.get("id") if isinstance(payload, dict) else None
+          draft = payload.get("draft") if isinstance(payload, dict) else None
+          if release_id is None:
+              print("")
+          else:
+              print(f"{release_id} {'true' if draft else 'false'}")
+          PY
+          )
+
+          [ -n "${RELEASE_ID:-}" ] || { echo "missing github release id for tag ${TAG}" >&2; exit 1; }
+          [ -n "${IS_DRAFT:-}" ] || IS_DRAFT="false"
+
+          if [ "$IS_DRAFT" != "true" ]; then
+            echo "github release for ${TAG} is already published"
+            exit 0
+          fi
+
+          PAYLOAD=$(cat <<JSON
+          {"draft":false,"prerelease":${PRERELEASE},"name":"${TAG}"}
+          JSON
+          )
+
+          PATCH_STATUS=$(curl -sS -o "$TMP_DIR/patch.json" -w "%{http_code}" \
+            -X PATCH "${API}/releases/${RELEASE_ID}" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+
+          if [ "$PATCH_STATUS" -lt 200 ] || [ "$PATCH_STATUS" -ge 300 ]; then
+            echo "failed to publish github release ${RELEASE_ID}, status=${PATCH_STATUS}" >&2
+            cat "$TMP_DIR/patch.json" >&2 || true
+            exit 1
+          fi
+
+  finalize-gitee-release:
+    runs-on: ubuntu-22.04
+    needs: [validate-tag, build-installers, prepare-gitee-release, promote-images]
+    env:
+      GITEE_OWNER: ${{ secrets.GITEE_OWNER }}
+      GITEE_REPO: ${{ secrets.GITEE_REPO }}
+      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+    steps:
+      - name: Download installer artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-installers
+          path: dist/release
+
+      - name: Validate gitee secrets
+        run: |
+          set -euo pipefail
+          [ -n "${GITEE_OWNER:-}" ] || { echo "missing GITEE_OWNER"; exit 1; }
+          [ -n "${GITEE_REPO:-}" ] || { echo "missing GITEE_REPO"; exit 1; }
+          [ -n "${GITEE_TOKEN:-}" ] || { echo "missing GITEE_TOKEN"; exit 1; }
+
+      - name: Publish Gitee release (phase 2)
+        run: |
+          set -euo pipefail
+          # Gitee Releases API does not expose a draft field, so create
+          # release only after image promotion completes.
+          TAG="${{ needs.validate-tag.outputs.tag }}"
+          PRERELEASE="${{ needs.validate-tag.outputs.prerelease }}"
+          API="https://gitee.com/api/v5/repos/${GITEE_OWNER}/${GITEE_REPO}"
+          TMP_DIR="$(mktemp -d)"
+          trap 'rm -rf "$TMP_DIR"' EXIT
+
+          PAYLOAD=$(cat <<JSON
+          {"tag_name":"${TAG}","name":"${TAG}","body":"Automated release for ${TAG}","prerelease":${PRERELEASE}}
+          JSON
+          )
+
+          extract_release_id() {
+            python3 - "$1" <<'PY'
+          import json
+          import sys
+
+          path = sys.argv[1]
+          try:
+              with open(path, "r", encoding="utf-8") as f:
+                  payload = json.load(f)
+          except Exception:
+              print("")
+              sys.exit(0)
+
+          if isinstance(payload, dict):
+              release_id = payload.get("id")
+              if release_id is not None:
+                  print(release_id)
+                  sys.exit(0)
+
+          print("")
+          PY
+          }
+
+          STATUS=$(curl -sS -o "$TMP_DIR/create.json" -w "%{http_code}" \
+            -X POST "${API}/releases?access_token=${GITEE_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+
+          RELEASE_ID=""
+          LOOKUP_STATUS=""
+          COMPAT_STATUS=""
+
+          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 300 ]; then
+            RELEASE_ID="$(extract_release_id "$TMP_DIR/create.json")"
+          fi
+
+          # Compatibility fallback: some gitee instances may reject or ignore
+          # prerelease fields. Retry create with a minimal payload.
+          if [ -z "$RELEASE_ID" ] && [ "$PRERELEASE" = "true" ]; then
+            COMPAT_PAYLOAD=$(cat <<JSON
+          {"tag_name":"${TAG}","name":"${TAG}","body":"Automated release for ${TAG}"}
+          JSON
+            )
+            COMPAT_STATUS=$(curl -sS -o "$TMP_DIR/create-compat.json" -w "%{http_code}" \
+              -X POST "${API}/releases?access_token=${GITEE_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$COMPAT_PAYLOAD")
+            if [ "$COMPAT_STATUS" -ge 200 ] && [ "$COMPAT_STATUS" -lt 300 ]; then
+              RELEASE_ID="$(extract_release_id "$TMP_DIR/create-compat.json")"
+            fi
+          fi
+
+          if [ -z "$RELEASE_ID" ]; then
+            for delay in 0 2 4 6; do
+              if [ "$delay" -gt 0 ]; then
+                sleep "$delay"
+              fi
+              LOOKUP_STATUS=$(curl -sS -o "$TMP_DIR/release.json" -w "%{http_code}" \
+                "${API}/releases/tags/${TAG}?access_token=${GITEE_TOKEN}")
+              if [ "$LOOKUP_STATUS" -ge 200 ] && [ "$LOOKUP_STATUS" -lt 300 ]; then
+                RELEASE_ID="$(extract_release_id "$TMP_DIR/release.json")"
+                if [ -n "$RELEASE_ID" ]; then
+                  break
+                fi
+              fi
+            done
+          fi
+
+          if [ -z "$RELEASE_ID" ]; then
+            echo "failed to resolve gitee release id for tag ${TAG}" >&2
+            echo "create status: ${STATUS}" >&2
+            if [ -n "${COMPAT_STATUS}" ]; then
+              echo "compat create status: ${COMPAT_STATUS}" >&2
+            fi
+            if [ -n "${LOOKUP_STATUS}" ]; then
+              echo "lookup status: ${LOOKUP_STATUS}" >&2
+            fi
+            echo "create response:" >&2
+            cat "$TMP_DIR/create.json" >&2 || true
+            if [ -f "$TMP_DIR/create-compat.json" ]; then
+              echo "compat create response:" >&2
+              cat "$TMP_DIR/create-compat.json" >&2 || true
+            fi
+            if [ -f "$TMP_DIR/release.json" ]; then
+              echo "lookup response:" >&2
+              cat "$TMP_DIR/release.json" >&2 || true
+            fi
+            exit 1
+          fi
+
+          for file in dist/release/lunafox-installer-* dist/release/checksums.txt; do
+            name="$(basename "$file")"
+            curl -fsSL \
+              -X POST "${API}/releases/${RELEASE_ID}/attach_files?access_token=${GITEE_TOKEN}" \
+              -F "name=${name}" \
+              -F "file=@${file}" >/dev/null
+          done

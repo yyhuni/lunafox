@@ -5,8 +5,8 @@
 FROM node:20.20.0-alpine AS deps
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install pnpm (pinned for reproducible builds)
+RUN corepack enable && corepack prepare pnpm@10.30.0 --activate
 
 # Copy dependency manifests
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
@@ -19,7 +19,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 FROM node:20.20.0-alpine AS builder
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.30.0 --activate
 
 # Copy deps
 COPY --from=deps /app/node_modules ./node_modules

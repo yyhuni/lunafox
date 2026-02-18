@@ -31,7 +31,7 @@ RUN git clone https://github.com/blechschmidt/massdns.git /tmp/massdns && \
     cp bin/massdns /usr/local/bin/massdns
 
 # Install ProjectDiscovery and other Go tools with retries.
-# `@latest` can occasionally fail due upstream/network fluctuation.
+# Pin exact versions to keep release builds reproducible.
 RUN set -eux; \
     install_tool() { \
       pkg="$1"; \
@@ -47,16 +47,16 @@ RUN set -eux; \
       echo "install failed for $pkg after 3 attempts" >&2; \
       exit 1; \
     }; \
-    install_tool github.com/projectdiscovery/httpx/cmd/httpx@latest; \
-    install_tool github.com/projectdiscovery/naabu/v2/cmd/naabu@latest; \
-    install_tool github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest; \
-    install_tool github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest; \
-    install_tool github.com/projectdiscovery/katana/cmd/katana@latest; \
-    install_tool github.com/tomnomnom/assetfinder@latest; \
-    install_tool github.com/ffuf/ffuf/v2@latest; \
-    install_tool github.com/d3mondev/puredns/v2@latest; \
-    install_tool github.com/yyhuni/xingfinger@latest; \
-    install_tool github.com/hahwul/dalfox/v2@latest
+    install_tool github.com/projectdiscovery/httpx/cmd/httpx@v1.8.1; \
+    install_tool github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.4.0; \
+    install_tool github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.12.0; \
+    install_tool github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.7.0; \
+    install_tool github.com/projectdiscovery/katana/cmd/katana@v1.4.0; \
+    install_tool github.com/tomnomnom/assetfinder@v0.1.1; \
+    install_tool github.com/ffuf/ffuf/v2@v2.1.0; \
+    install_tool github.com/d3mondev/puredns/v2@v2.1.1; \
+    install_tool github.com/yyhuni/xingfinger@v0.0.0-20251228093343-bd42c7be5a70; \
+    install_tool github.com/hahwul/dalfox/v2@v2.12.0
 
 # ============================================
 # Stage 2: Build Go Worker
