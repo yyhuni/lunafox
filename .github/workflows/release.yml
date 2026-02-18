@@ -233,10 +233,9 @@ jobs:
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-amd64
             ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-amd64
           cache-from: |
-            type=registry,ref=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:buildcache-amd64
-            type=gha,scope=lunafox-worker-tools-amd64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-amd64
           cache-to: |
-            type=registry,ref=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:buildcache-amd64,mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-amd64,mode=max
 
   publish-worker-tools-arm64:
     runs-on: ubuntu-22.04-arm
@@ -280,10 +279,9 @@ jobs:
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-arm64
             ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-arm64
           cache-from: |
-            type=registry,ref=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:buildcache-arm64
-            type=gha,scope=lunafox-worker-tools-arm64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-arm64
           cache-to: |
-            type=registry,ref=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:buildcache-arm64,mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-arm64,mode=max
 
   publish-worker-tools:
     runs-on: ubuntu-22.04
@@ -393,10 +391,9 @@ jobs:
           build-args: |
             GOPROXY=${{ vars.GOPROXY != '' && vars.GOPROXY || 'https://proxy.golang.org,direct' }}
           cache-from: |
-            type=registry,ref=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:buildcache-amd64
-            type=gha,scope=${{ matrix.image }}-amd64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:buildcache-amd64
           cache-to: |
-            type=registry,ref=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:buildcache-amd64,mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:buildcache-amd64,mode=max
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-amd64
             ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-amd64
@@ -452,10 +449,9 @@ jobs:
           build-args: |
             GOPROXY=${{ vars.GOPROXY != '' && vars.GOPROXY || 'https://proxy.golang.org,direct' }}
           cache-from: |
-            type=registry,ref=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:buildcache-arm64
-            type=gha,scope=${{ matrix.image }}-arm64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:buildcache-arm64
           cache-to: |
-            type=registry,ref=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:buildcache-arm64,mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:buildcache-arm64,mode=max
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-arm64
             ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-arm64
@@ -497,10 +493,9 @@ jobs:
           provenance: false
           sbom: false
           cache-from: |
-            type=registry,ref=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker:buildcache-amd64
-            type=gha,scope=lunafox-worker-amd64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker:buildcache-amd64
           cache-to: |
-            type=registry,ref=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker:buildcache-amd64,mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker:buildcache-amd64,mode=max
           build-args: |
             GOPROXY=${{ vars.GOPROXY != '' && vars.GOPROXY || 'https://proxy.golang.org,direct' }}
             WORKER_TOOLS_IMAGE=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools.outputs.tools_tag }}
@@ -545,10 +540,9 @@ jobs:
           provenance: false
           sbom: false
           cache-from: |
-            type=registry,ref=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker:buildcache-arm64
-            type=gha,scope=lunafox-worker-arm64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker:buildcache-arm64
           cache-to: |
-            type=registry,ref=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker:buildcache-arm64,mode=max
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker:buildcache-arm64,mode=max
           build-args: |
             GOPROXY=${{ vars.GOPROXY != '' && vars.GOPROXY || 'https://proxy.golang.org,direct' }}
             WORKER_TOOLS_IMAGE=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools.outputs.tools_tag }}
