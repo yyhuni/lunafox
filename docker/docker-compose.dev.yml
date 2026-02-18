@@ -93,8 +93,8 @@ services:
 
   nginx:
     build:
-      context: ..
-      dockerfile: docker/nginx/Dockerfile
+      context: ../docker/nginx
+      dockerfile: Dockerfile
     image: ${IMAGE_REGISTRY:-docker.io}/${IMAGE_NAMESPACE:-yyhuni}/lunafox-nginx:${IMAGE_TAG:-dev}
     restart: "on-failure:3"
     depends_on:

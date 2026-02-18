@@ -9,7 +9,7 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.30.0 --activate
 
 # Copy dependency manifests
-COPY frontend/package.json frontend/pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install dependencies (BuildKit cache)
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
@@ -23,7 +23,7 @@ RUN corepack enable && corepack prepare pnpm@10.30.0 --activate
 
 # Copy deps
 COPY --from=deps /app/node_modules ./node_modules
-COPY frontend/ ./
+COPY . ./
 
 # Build-time env
 ARG IMAGE_TAG=unknown

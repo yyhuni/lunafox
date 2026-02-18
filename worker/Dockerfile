@@ -13,7 +13,7 @@ FROM ${WORKER_TOOLS_IMAGE} AS tools-source
 FROM golang:1.26 AS worker-builder
 
 ARG GO111MODULE=on
-ARG GOPROXY=https://goproxy.cn,direct
+ARG GOPROXY=https://proxy.golang.org,direct
 
 ENV GO111MODULE=$GO111MODULE
 ENV GOPROXY=$GOPROXY

@@ -1,5 +1,5 @@
 FROM nginx:1.28.1-alpine
 
 # 复制 nginx 配置和证书
-COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf
-COPY docker/nginx/ssl /etc/nginx/ssl
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY ssl /etc/nginx/ssl

@@ -6,7 +6,7 @@
 FROM golang:1.26 AS builder
 
 ARG GO111MODULE=on
-ARG GOPROXY=https://goproxy.cn,direct
+ARG GOPROXY=https://proxy.golang.org,direct
 
 ENV GO111MODULE=$GO111MODULE
 ENV GOPROXY=$GOPROXY
@@ -14,15 +14,13 @@ ENV GOPROXY=$GOPROXY
 WORKDIR /src
 
 # Cache dependencies
-COPY agent/go.mod agent/go.sum ./
+COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
     go mod download
 
 # Copy source
-COPY agent ./agent
-
-WORKDIR /src/agent
+COPY . .
 
 # Build (static where possible)
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \

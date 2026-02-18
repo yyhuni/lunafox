@@ -6,14 +6,15 @@
 FROM golang:1.25 AS tools-builder
 
 ARG GO111MODULE=on
-ARG GOPROXY=https://goproxy.cn,direct
-ARG GOFLAGS=-p=1
+ARG GOPROXY=https://proxy.golang.org,direct
+ARG GOFLAGS=-p=4
+ARG GOMAXPROCS=4
 
 ENV GO111MODULE=$GO111MODULE
 ENV GOPROXY=$GOPROXY
 ENV GOFLAGS=$GOFLAGS
 ENV CGO_ENABLED=1
-ENV GOMAXPROCS=2
+ENV GOMAXPROCS=$GOMAXPROCS
 
 # Install build dependencies for CGO tools
 # hadolint ignore=DL3008

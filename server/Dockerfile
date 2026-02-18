@@ -5,6 +5,12 @@
 # ============================================
 FROM golang:1.26 AS builder
 
+ARG GO111MODULE=on
+ARG GOPROXY=https://proxy.golang.org,direct
+
+ENV GO111MODULE=$GO111MODULE
+ENV GOPROXY=$GOPROXY
+
 WORKDIR /src
 
 # Cache dependencies
