@@ -71,7 +71,7 @@ go run ./cmd/lunafox-installer --root-dir /path/to/lunafox --dev
 ## 发布通道约定
 
 - `stable`: 正式版 tag（`vX.Y.Z`）自动更新。
-- `canary`: 预发布 tag（`vX.Y.Z-rc.N`、`-beta.N`、`-alpha.N`、`-test.N`）自动更新。
+- `canary`: 预发布 tag（`vX.Y.Z-rc.N`、`-beta.N`、`-alpha.N`）自动更新。
 
 页面模板位于：`tools/installer/internal/web/static/index.html`（通过 `go:embed` 内嵌）。
 
@@ -105,11 +105,11 @@ go run ./cmd/lunafox-installer --root-dir /path/to/lunafox --dev
 1. 本地先验证：
    - `./scripts/dev/install.sh`
 2. 发布测试版（canary）：
-   - `git tag v1.6.0-test.1`
-   - `git push origin v1.6.0-test.1`
+   - `git tag v1.6.0-alpha.1`
+   - `git push origin v1.6.0-alpha.1`
 3. 在测试机器验证分发：
    - `./install.sh --channel canary`
-   - 或 `./install.sh --version v1.6.0-test.1`
+   - 或 `./install.sh --version v1.6.0-alpha.1`
 4. 发布正式版（stable）：
    - `git tag v1.6.0`
    - `git push origin v1.6.0`

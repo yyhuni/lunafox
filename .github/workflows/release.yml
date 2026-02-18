@@ -32,11 +32,11 @@ jobs:
 
           if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             CHANNEL="stable"
-          elif [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-(rc|beta|alpha|test)\.[0-9]+$ ]]; then
+          elif [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-(rc|beta|alpha)\.[0-9]+$ ]]; then
             CHANNEL="canary"
             PRERELEASE="true"
           else
-            echo "Tag must be vX.Y.Z or vX.Y.Z-(rc|beta|alpha|test).N, got: $TAG" >&2
+            echo "Tag must be vX.Y.Z or vX.Y.Z-(rc|beta|alpha).N, got: $TAG" >&2
             exit 1
           fi
 
