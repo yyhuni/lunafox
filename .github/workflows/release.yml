@@ -151,6 +151,19 @@ jobs:
           set -euo pipefail
           TAG="${{ needs.validate-tag.outputs.tag }}"
           git remote add gitee "https://oauth2:${GITEE_TOKEN}@gitee.com/${GITEE_OWNER}/${GITEE_REPO}.git"
+          local_oid="$(git rev-parse "refs/tags/${TAG}^{commit}")"
+          remote_line="$(git ls-remote --tags gitee "refs/tags/${TAG}" || true)"
+          remote_oid="$(printf '%s' "$remote_line" | awk 'NR==1{print $1}')"
+
+          if [ -n "${remote_oid}" ]; then
+            if [ "$remote_oid" = "$local_oid" ]; then
+              echo "gitee tag ${TAG} already exists with same commit, skip push"
+              exit 0
+            fi
+            echo "gitee tag ${TAG} already exists but points to different commit: remote=${remote_oid}, local=${local_oid}" >&2
+            exit 1
+          fi
+
           git push gitee "refs/tags/${TAG}:refs/tags/${TAG}"
 
   publish-worker-tools-meta:
@@ -587,6 +600,58 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist/image-digests
+
+          retry_imagetools_inspect() {
+            local ref="$1"
+            local delays=(0 2 4 8 12)
+            local delay
+            for delay in "${delays[@]}"; do
+              if [ "$delay" -gt 0 ]; then
+                sleep "$delay"
+              fi
+              if docker buildx imagetools inspect "$ref" >/dev/null 2>&1; then
+                return 0
+              fi
+            done
+            echo "failed to inspect image ref after retries: $ref" >&2
+            return 1
+          }
+
+          retry_imagetools_create() {
+            local target="$1"
+            shift
+            local delays=(0 2 4)
+            local delay
+            for delay in "${delays[@]}"; do
+              if [ "$delay" -gt 0 ]; then
+                sleep "$delay"
+              fi
+              if docker buildx imagetools create --tag "$target" "$@" >/dev/null 2>&1; then
+                return 0
+              fi
+            done
+            echo "failed to create manifest after retries: $target" >&2
+            return 1
+          }
+
+          resolve_digest() {
+            local ref="$1"
+            local delays=(0 2 4 8)
+            local delay
+            local digest
+            for delay in "${delays[@]}"; do
+              if [ "$delay" -gt 0 ]; then
+                sleep "$delay"
+              fi
+              digest="$(docker buildx imagetools inspect "$ref" | awk '/Digest:/ {print $2; exit}')"
+              if [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+                printf '%s\n' "$digest"
+                return 0
+              fi
+            done
+            return 1
+          }
+
           images=(
             lunafox-server
             lunafox-frontend
@@ -601,18 +666,20 @@ jobs:
             ghcr_amd64_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}:${RELEASE_STAGING_TAG}-amd64"
             ghcr_arm64_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}:${RELEASE_STAGING_TAG}-arm64"
 
-            docker buildx imagetools inspect "$docker_amd64_ref" >/dev/null
-            docker buildx imagetools inspect "$docker_arm64_ref" >/dev/null
-            docker buildx imagetools inspect "$ghcr_amd64_ref" >/dev/null
-            docker buildx imagetools inspect "$ghcr_arm64_ref" >/dev/null
+            retry_imagetools_inspect "$docker_amd64_ref"
+            retry_imagetools_inspect "$docker_arm64_ref"
+            retry_imagetools_inspect "$ghcr_amd64_ref"
+            retry_imagetools_inspect "$ghcr_arm64_ref"
 
             docker_staging_ref="docker.io/${DOCKERHUB_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}"
             ghcr_staging_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}:${RELEASE_STAGING_TAG}"
 
-            docker buildx imagetools create --tag "$docker_staging_ref" "$docker_amd64_ref" "$docker_arm64_ref"
-            docker buildx imagetools create --tag "$ghcr_staging_ref" "$ghcr_amd64_ref" "$ghcr_arm64_ref"
+            retry_imagetools_create "$docker_staging_ref" "$docker_amd64_ref" "$docker_arm64_ref"
+            retry_imagetools_create "$ghcr_staging_ref" "$ghcr_amd64_ref" "$ghcr_arm64_ref"
+            retry_imagetools_inspect "$docker_staging_ref"
+            retry_imagetools_inspect "$ghcr_staging_ref"
 
-            digest="$(docker buildx imagetools inspect "$docker_staging_ref" | awk '/Digest:/ {print $2; exit}')"
+            digest="$(resolve_digest "$docker_staging_ref" || true)"
             [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid digest for ${image}: $digest"; exit 1; }
 
             {
