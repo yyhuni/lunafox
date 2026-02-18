@@ -197,7 +197,7 @@ jobs:
             context: ./server
             dockerfile: ./server/Dockerfile
           - image: lunafox-frontend
-            context: ./frontend
+            context: .
             dockerfile: ./frontend/Dockerfile
           - image: lunafox-nginx
             context: .
@@ -206,7 +206,7 @@ jobs:
             context: ./worker
             dockerfile: ./worker/Dockerfile
           - image: lunafox-agent
-            context: ./agent
+            context: .
             dockerfile: ./agent/Dockerfile
     steps:
       - uses: actions/checkout@v4
