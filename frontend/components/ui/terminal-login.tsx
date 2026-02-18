@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import type { ShuffleRef } from "@/components/shuffle"
+import type { ShuffleRef } from "@/components/Shuffle"
 import type { LoginStep, TerminalLine, TerminalLoginTranslations } from "@/components/ui/terminal-login-types"
 import {
   TerminalDesktopPanel,

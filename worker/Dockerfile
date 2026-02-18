@@ -4,14 +4,17 @@
 # ============================================
 # Stage 1: Build Go scanning tools
 # ============================================
-FROM golang:1.26 AS tools-builder
+FROM golang:1.25 AS tools-builder
 
 ARG GO111MODULE=on
 ARG GOPROXY=https://goproxy.cn,direct
+ARG GOFLAGS=-p=1
 
 ENV GO111MODULE=$GO111MODULE
 ENV GOPROXY=$GOPROXY
+ENV GOFLAGS=$GOFLAGS
 ENV CGO_ENABLED=1
+ENV GOMAXPROCS=2
 
 # Install build dependencies (build stage, unpinned to get latest security updates)
 # hadolint ignore=DL3008
@@ -27,17 +30,33 @@ RUN git clone https://github.com/blechschmidt/massdns.git /tmp/massdns && \
     make && \
     cp bin/massdns /usr/local/bin/massdns
 
-# Install ProjectDiscovery and other Go tools
-RUN go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest && \
-    go install -v github.com/projectdiscovery/naabu/v2/cmd/naabu@latest && \
-    go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest && \
-    go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && \
-    go install -v github.com/projectdiscovery/katana/cmd/katana@latest && \
-    go install -v github.com/tomnomnom/assetfinder@latest && \
-    go install -v github.com/ffuf/ffuf/v2@latest && \
-    go install -v github.com/d3mondev/puredns/v2@latest && \
-    go install -v github.com/yyhuni/xingfinger@latest && \
-    go install -v github.com/hahwul/dalfox/v2@latest
+# Install ProjectDiscovery and other Go tools with retries.
+# `@latest` can occasionally fail due upstream/network fluctuation.
+RUN set -eux; \
+    install_tool() { \
+      pkg="$1"; \
+      tries=0; \
+      while [ "$tries" -lt 3 ]; do \
+        tries=$((tries + 1)); \
+        if go install -v "$pkg"; then \
+          return 0; \
+        fi; \
+        echo "install failed for $pkg (attempt $tries), retrying..." >&2; \
+        sleep $((tries * 2)); \
+      done; \
+      echo "install failed for $pkg after 3 attempts" >&2; \
+      exit 1; \
+    }; \
+    install_tool github.com/projectdiscovery/httpx/cmd/httpx@latest; \
+    install_tool github.com/projectdiscovery/naabu/v2/cmd/naabu@latest; \
+    install_tool github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest; \
+    install_tool github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest; \
+    install_tool github.com/projectdiscovery/katana/cmd/katana@latest; \
+    install_tool github.com/tomnomnom/assetfinder@latest; \
+    install_tool github.com/ffuf/ffuf/v2@latest; \
+    install_tool github.com/d3mondev/puredns/v2@latest; \
+    install_tool github.com/yyhuni/xingfinger@latest; \
+    install_tool github.com/hahwul/dalfox/v2@latest
 
 # ============================================
 # Stage 2: Build Go Worker

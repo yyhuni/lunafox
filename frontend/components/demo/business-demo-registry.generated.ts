@@ -753,8 +753,8 @@ export const businessDemoItems: BusinessDemoItem[] = [
     slug: "Shuffle",
     title: "Shuffle",
     group: "root",
-    modulePath: "@/components/shuffle",
-    loader: () => import("@/components/shuffle"),
+    modulePath: "@/components/Shuffle",
+    loader: () => import("@/components/Shuffle"),
   },
   {
     slug: "subdomains-bulk-add-subdomains-dialog",

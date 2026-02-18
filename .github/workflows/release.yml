@@ -54,6 +54,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.26"
+          cache: false
 
       - name: Build installer binaries
         working-directory: tools/installer
@@ -166,16 +167,94 @@ jobs:
           JSON
           )
 
+          extract_release_id() {
+            python3 - "$1" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+try:
+    with open(path, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+except Exception:
+    print("")
+    sys.exit(0)
+
+if isinstance(payload, dict):
+    release_id = payload.get("id")
+    if release_id is not None:
+        print(release_id)
+        sys.exit(0)
+
+print("")
+PY
+          }
+
           STATUS=$(curl -sS -o "$TMP_DIR/create.json" -w "%{http_code}" \
             -X POST "${API}/releases?access_token=${GITEE_TOKEN}" \
             -H "Content-Type: application/json" \
             -d "$PAYLOAD")
 
+          RELEASE_ID=""
+          LOOKUP_STATUS=""
+          COMPAT_STATUS=""
+
           if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 300 ]; then
-            RELEASE_ID="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["id"])' "$TMP_DIR/create.json")"
-          else
-            curl -fsSL "${API}/releases/tags/${TAG}?access_token=${GITEE_TOKEN}" -o "$TMP_DIR/release.json"
-            RELEASE_ID="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["id"])' "$TMP_DIR/release.json")"
+            RELEASE_ID="$(extract_release_id "$TMP_DIR/create.json")"
+          fi
+
+          # Compatibility fallback: some gitee instances may reject or ignore
+          # prerelease fields. Retry create with a minimal payload.
+          if [ -z "$RELEASE_ID" ] && [ "$PRERELEASE" = "true" ]; then
+            COMPAT_PAYLOAD=$(cat <<JSON
+          {"tag_name":"${TAG}","name":"${TAG}","body":"Automated release for ${TAG}"}
+          JSON
+            )
+            COMPAT_STATUS=$(curl -sS -o "$TMP_DIR/create-compat.json" -w "%{http_code}" \
+              -X POST "${API}/releases?access_token=${GITEE_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$COMPAT_PAYLOAD")
+            if [ "$COMPAT_STATUS" -ge 200 ] && [ "$COMPAT_STATUS" -lt 300 ]; then
+              RELEASE_ID="$(extract_release_id "$TMP_DIR/create-compat.json")"
+            fi
+          fi
+
+          if [ -z "$RELEASE_ID" ]; then
+            for delay in 0 2 4 6; do
+              if [ "$delay" -gt 0 ]; then
+                sleep "$delay"
+              fi
+              LOOKUP_STATUS=$(curl -sS -o "$TMP_DIR/release.json" -w "%{http_code}" \
+                "${API}/releases/tags/${TAG}?access_token=${GITEE_TOKEN}")
+              if [ "$LOOKUP_STATUS" -ge 200 ] && [ "$LOOKUP_STATUS" -lt 300 ]; then
+                RELEASE_ID="$(extract_release_id "$TMP_DIR/release.json")"
+                if [ -n "$RELEASE_ID" ]; then
+                  break
+                fi
+              fi
+            done
+          fi
+
+          if [ -z "$RELEASE_ID" ]; then
+            echo "failed to resolve gitee release id for tag ${TAG}" >&2
+            echo "create status: ${STATUS}" >&2
+            if [ -n "${COMPAT_STATUS}" ]; then
+              echo "compat create status: ${COMPAT_STATUS}" >&2
+            fi
+            if [ -n "${LOOKUP_STATUS}" ]; then
+              echo "lookup status: ${LOOKUP_STATUS}" >&2
+            fi
+            echo "create response:" >&2
+            cat "$TMP_DIR/create.json" >&2 || true
+            if [ -f "$TMP_DIR/create-compat.json" ]; then
+              echo "compat create response:" >&2
+              cat "$TMP_DIR/create-compat.json" >&2 || true
+            fi
+            if [ -f "$TMP_DIR/release.json" ]; then
+              echo "lookup response:" >&2
+              cat "$TMP_DIR/release.json" >&2 || true
+            fi
+            exit 1
           fi
 
           for file in dist/release/lunafox-installer-* dist/release/checksums.txt; do
