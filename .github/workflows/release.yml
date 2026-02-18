@@ -169,25 +169,25 @@ jobs:
 
           extract_release_id() {
             python3 - "$1" <<'PY'
-import json
-import sys
+            import json
+            import sys
 
-path = sys.argv[1]
-try:
-    with open(path, "r", encoding="utf-8") as f:
-        payload = json.load(f)
-except Exception:
-    print("")
-    sys.exit(0)
+            path = sys.argv[1]
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    payload = json.load(f)
+            except Exception:
+                print("")
+                sys.exit(0)
 
-if isinstance(payload, dict):
-    release_id = payload.get("id")
-    if release_id is not None:
-        print(release_id)
-        sys.exit(0)
+            if isinstance(payload, dict):
+                release_id = payload.get("id")
+                if release_id is not None:
+                    print(release_id)
+                    sys.exit(0)
 
-print("")
-PY
+            print("")
+            PY
           }
 
           STATUS=$(curl -sS -o "$TMP_DIR/create.json" -w "%{http_code}" \
