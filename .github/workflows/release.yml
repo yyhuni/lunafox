@@ -931,14 +931,34 @@ jobs:
   finalize-github-release:
     runs-on: ubuntu-22.04
     needs: [validate-tag, prepare-github-release, sync-tcr]
-    if: >
-      always() &&
-      needs.validate-tag.result == 'success' &&
-      needs.prepare-github-release.result == 'success' &&
-      needs.sync-tcr.result == 'success'
+    if: always()
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - name: Verify release prerequisites
+        run: |
+          set -euo pipefail
+          FAILED=()
+          check_gate() {
+            local name="$1"
+            local result="$2"
+            if [ "$result" != "success" ]; then
+              FAILED+=("${name}=${result}")
+            fi
+          }
+
+          check_gate "validate-tag" "${{ needs.validate-tag.result }}"
+          check_gate "prepare-github-release" "${{ needs.prepare-github-release.result }}"
+          check_gate "sync-tcr" "${{ needs.sync-tcr.result }}"
+
+          if [ "${#FAILED[@]}" -gt 0 ]; then
+            echo "github release blocked by prerequisite jobs:" >&2
+            for item in "${FAILED[@]}"; do
+              echo "  - ${item}" >&2
+            done
+            exit 1
+          fi
+
       - name: Publish GitHub draft release (phase 2)
         run: |
           set -euo pipefail
@@ -1009,17 +1029,37 @@ jobs:
   finalize-gitee-release:
     runs-on: ubuntu-22.04
     needs: [validate-tag, build-installers, prepare-gitee-release, sync-tcr]
-    if: >
-      always() &&
-      needs.validate-tag.result == 'success' &&
-      needs.build-installers.result == 'success' &&
-      needs.prepare-gitee-release.result == 'success' &&
-      needs.sync-tcr.result == 'success'
+    if: always()
     env:
       GITEE_OWNER: ${{ secrets.GITEE_OWNER }}
       GITEE_REPO: ${{ secrets.GITEE_REPO }}
       GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
     steps:
+      - name: Verify release prerequisites
+        run: |
+          set -euo pipefail
+          FAILED=()
+          check_gate() {
+            local name="$1"
+            local result="$2"
+            if [ "$result" != "success" ]; then
+              FAILED+=("${name}=${result}")
+            fi
+          }
+
+          check_gate "validate-tag" "${{ needs.validate-tag.result }}"
+          check_gate "build-installers" "${{ needs.build-installers.result }}"
+          check_gate "prepare-gitee-release" "${{ needs.prepare-gitee-release.result }}"
+          check_gate "sync-tcr" "${{ needs.sync-tcr.result }}"
+
+          if [ "${#FAILED[@]}" -gt 0 ]; then
+            echo "gitee release blocked by prerequisite jobs:" >&2
+            for item in "${FAILED[@]}"; do
+              echo "  - ${item}" >&2
+            done
+            exit 1
+          fi
+
       - name: Download installer artifact
         uses: actions/download-artifact@v4
         with:
