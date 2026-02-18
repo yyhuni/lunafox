@@ -463,6 +463,10 @@ jobs:
   publish-worker-image-amd64:
     runs-on: ubuntu-22.04
     needs: [validate-tag, publish-worker-tools]
+    if: >
+      always() &&
+      needs.validate-tag.result == 'success' &&
+      needs.publish-worker-tools.result == 'success'
     steps:
       - uses: actions/checkout@v4
 
@@ -507,6 +511,10 @@ jobs:
   publish-worker-image-arm64:
     runs-on: ubuntu-22.04-arm
     needs: [validate-tag, publish-worker-tools]
+    if: >
+      always() &&
+      needs.validate-tag.result == 'success' &&
+      needs.publish-worker-tools.result == 'success'
     steps:
       - uses: actions/checkout@v4
 
@@ -556,6 +564,13 @@ jobs:
       - publish-images-arm64
       - publish-worker-image-amd64
       - publish-worker-image-arm64
+    if: >
+      always() &&
+      needs.validate-tag.result == 'success' &&
+      needs.publish-images-amd64.result == 'success' &&
+      needs.publish-images-arm64.result == 'success' &&
+      needs.publish-worker-image-amd64.result == 'success' &&
+      needs.publish-worker-image-arm64.result == 'success'
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -625,6 +640,13 @@ jobs:
   update-release-channel:
     runs-on: ubuntu-22.04
     needs: [validate-tag, build-installers, promote-images, finalize-github-release, finalize-gitee-release]
+    if: >
+      always() &&
+      needs.validate-tag.result == 'success' &&
+      needs.build-installers.result == 'success' &&
+      needs.promote-images.result == 'success' &&
+      needs.finalize-github-release.result == 'success' &&
+      needs.finalize-gitee-release.result == 'success'
     env:
       GITEE_OWNER: ${{ secrets.GITEE_OWNER }}
       GITEE_REPO: ${{ secrets.GITEE_REPO }}
@@ -756,6 +778,10 @@ jobs:
   promote-images:
     runs-on: ubuntu-22.04
     needs: [validate-tag, merge-staging-images]
+    if: >
+      always() &&
+      needs.validate-tag.result == 'success' &&
+      needs.merge-staging-images.result == 'success'
     steps:
       - name: Download image digest artifacts
         uses: actions/download-artifact@v4
@@ -824,6 +850,11 @@ jobs:
   sync-tcr:
     runs-on: ubuntu-22.04
     needs: [validate-tag, publish-worker-tools, promote-images]
+    if: >
+      always() &&
+      needs.validate-tag.result == 'success' &&
+      needs.publish-worker-tools.result == 'success' &&
+      needs.promote-images.result == 'success'
     steps:
       - name: Download image digest artifacts
         uses: actions/download-artifact@v4
@@ -900,6 +931,11 @@ jobs:
   finalize-github-release:
     runs-on: ubuntu-22.04
     needs: [validate-tag, prepare-github-release, sync-tcr]
+    if: >
+      always() &&
+      needs.validate-tag.result == 'success' &&
+      needs.prepare-github-release.result == 'success' &&
+      needs.sync-tcr.result == 'success'
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -973,6 +1009,12 @@ jobs:
   finalize-gitee-release:
     runs-on: ubuntu-22.04
     needs: [validate-tag, build-installers, prepare-gitee-release, sync-tcr]
+    if: >
+      always() &&
+      needs.validate-tag.result == 'success' &&
+      needs.build-installers.result == 'success' &&
+      needs.prepare-gitee-release.result == 'success' &&
+      needs.sync-tcr.result == 'success'
     env:
       GITEE_OWNER: ${{ secrets.GITEE_OWNER }}
       GITEE_REPO: ${{ secrets.GITEE_REPO }}
