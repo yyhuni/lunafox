@@ -1,0 +1,41 @@
+name: Check Generated Files
+
+on:
+  workflow_call:  # Run only when called by another workflow
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-22.04  # Pin runner version for stability
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'  # Keep in sync with go.mod
+
+      - name: Generate files for all workflows
+        working-directory: worker
+        run: make generate
+
+      - name: Check for differences
+        run: |
+          if ! git diff --exit-code; then
+            echo "❌ Generated files are out of date!"
+            echo "Please run: cd worker && make generate"
+            echo ""
+            echo "Changed files:"
+            git status --porcelain
+            echo ""
+            echo "Diff:"
+            git diff
+            exit 1
+          fi
+          echo "✅ Generated files are up to date"
+
+      - name: Run metadata consistency tests
+        working-directory: worker
+        run: make test-metadata

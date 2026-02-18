@@ -1,0 +1,406 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "lunafox://schemas/engines/subdomain_discovery/1.0.0",
+  "title": "Subdomain Discovery",
+  "description": "Discover all subdomains of target domains through reconnaissance, dictionary bruteforce, and permutation",
+  "x-engine": "subdomain_discovery",
+  "x-engine-version": "1.0.0",
+  "type": "object",
+  "properties": {
+    "bruteforce": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether to enable this stage"
+        },
+        "tools": {
+          "type": "object",
+          "properties": {
+            "subdomain-bruteforce": {
+              "type": "object",
+              "description": "DNS bruteforce domains using dictionaries",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether to enable this tool"
+                },
+                "rate-limit-cli": {
+                  "type": "integer",
+                  "description": "Rate limit per second"
+                },
+                "subdomain-wordlist-name-runtime": {
+                  "type": "string",
+                  "description": "Subdomain wordlist name (stored on server)"
+                },
+                "threads-cli": {
+                  "type": "integer",
+                  "description": "Number of concurrent threads"
+                },
+                "timeout-runtime": {
+                  "type": "integer",
+                  "description": "Scan timeout in seconds"
+                },
+                "wildcard-batch-cli": {
+                  "type": "integer",
+                  "description": "Wildcard batch processing size"
+                },
+                "wildcard-tests-cli": {
+                  "type": "integer",
+                  "description": "Number of wildcard detection tests"
+                }
+              },
+              "required": [
+                "enabled"
+              ],
+              "additionalProperties": false,
+              "if": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              },
+              "then": {
+                "type": "object",
+                "required": [
+                  "timeout-runtime",
+                  "subdomain-wordlist-name-runtime",
+                  "threads-cli",
+                  "rate-limit-cli",
+                  "wildcard-tests-cli",
+                  "wildcard-batch-cli"
+                ]
+              },
+              "x-stage": "bruteforce"
+            }
+          },
+          "required": [
+            "subdomain-bruteforce"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "enabled",
+        "tools"
+      ],
+      "additionalProperties": false
+    },
+    "permutation": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether to enable this stage"
+        },
+        "tools": {
+          "type": "object",
+          "properties": {
+            "subdomain-permutation-resolve": {
+              "type": "object",
+              "description": "Generate new possible subdomains by permuting discovered subdomains and resolve them",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether to enable this tool"
+                },
+                "rate-limit-cli": {
+                  "type": "integer",
+                  "description": "Rate limit per second"
+                },
+                "threads-cli": {
+                  "type": "integer",
+                  "description": "Number of concurrent threads"
+                },
+                "timeout-runtime": {
+                  "type": "integer",
+                  "description": "Scan timeout in seconds"
+                },
+                "wildcard-batch-cli": {
+                  "type": "integer",
+                  "description": "Wildcard batch processing size"
+                },
+                "wildcard-expansion-threshold-runtime": {
+                  "type": "integer",
+                  "description": "Wildcard expansion ratio threshold"
+                },
+                "wildcard-sample-multiplier-runtime": {
+                  "type": "integer",
+                  "description": "Wildcard sample size multiplier"
+                },
+                "wildcard-sample-timeout-runtime": {
+                  "type": "integer",
+                  "description": "Wildcard sample timeout in seconds"
+                },
+                "wildcard-tests-cli": {
+                  "type": "integer",
+                  "description": "Number of wildcard detection tests"
+                }
+              },
+              "required": [
+                "enabled"
+              ],
+              "additionalProperties": false,
+              "if": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              },
+              "then": {
+                "type": "object",
+                "required": [
+                  "timeout-runtime",
+                  "wildcard-sample-timeout-runtime",
+                  "wildcard-sample-multiplier-runtime",
+                  "wildcard-expansion-threshold-runtime",
+                  "threads-cli",
+                  "rate-limit-cli",
+                  "wildcard-tests-cli",
+                  "wildcard-batch-cli"
+                ]
+              },
+              "x-stage": "permutation"
+            }
+          },
+          "required": [
+            "subdomain-permutation-resolve"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "enabled",
+        "tools"
+      ],
+      "additionalProperties": false
+    },
+    "recon": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether to enable this stage"
+        },
+        "tools": {
+          "type": "object",
+          "properties": {
+            "assetfinder": {
+              "type": "object",
+              "description": "Find domain-related assets from multiple data sources",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether to enable this tool"
+                },
+                "timeout-runtime": {
+                  "type": "integer",
+                  "description": "Scan timeout in seconds"
+                }
+              },
+              "required": [
+                "enabled"
+              ],
+              "additionalProperties": false,
+              "if": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              },
+              "then": {
+                "type": "object",
+                "required": [
+                  "timeout-runtime"
+                ]
+              },
+              "x-stage": "recon"
+            },
+            "subfinder": {
+              "type": "object",
+              "description": "Collect subdomains using multiple data sources (Shodan, Censys, VirusTotal, etc.)",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether to enable this tool"
+                },
+                "threads-cli": {
+                  "type": "integer",
+                  "description": "Number of concurrent threads"
+                },
+                "timeout-runtime": {
+                  "type": "integer",
+                  "description": "Scan timeout in seconds"
+                }
+              },
+              "required": [
+                "enabled"
+              ],
+              "additionalProperties": false,
+              "if": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              },
+              "then": {
+                "type": "object",
+                "required": [
+                  "timeout-runtime",
+                  "threads-cli"
+                ]
+              },
+              "x-stage": "recon"
+            }
+          },
+          "required": [
+            "assetfinder",
+            "subfinder"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "enabled",
+        "tools"
+      ],
+      "additionalProperties": false
+    },
+    "resolve": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether to enable this stage"
+        },
+        "tools": {
+          "type": "object",
+          "properties": {
+            "subdomain-resolve": {
+              "type": "object",
+              "description": "Resolve subdomain list to verify their validity",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether to enable this tool"
+                },
+                "rate-limit-cli": {
+                  "type": "integer",
+                  "description": "Rate limit per second"
+                },
+                "threads-cli": {
+                  "type": "integer",
+                  "description": "Number of concurrent threads"
+                },
+                "timeout-runtime": {
+                  "type": "integer",
+                  "description": "Scan timeout in seconds"
+                }
+              },
+              "required": [
+                "enabled"
+              ],
+              "additionalProperties": false,
+              "if": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "enabled"
+                ]
+              },
+              "then": {
+                "type": "object",
+                "required": [
+                  "timeout-runtime",
+                  "threads-cli",
+                  "rate-limit-cli"
+                ]
+              },
+              "x-stage": "resolve"
+            }
+          },
+          "required": [
+            "subdomain-resolve"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "enabled",
+        "tools"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "recon",
+    "bruteforce",
+    "permutation",
+    "resolve"
+  ],
+  "additionalProperties": false,
+  "x-metadata": {
+    "name": "subdomain_discovery",
+    "stages": [
+      {
+        "id": "recon",
+        "name": "Reconnaissance",
+        "description": "Collect subdomains from multiple data sources without directly probing the target",
+        "required": true,
+        "parallel": true
+      },
+      {
+        "id": "bruteforce",
+        "name": "Dictionary Bruteforce",
+        "description": "Bruteforce domains using dictionaries to discover unpublished subdomains",
+        "required": false,
+        "parallel": false
+      },
+      {
+        "id": "permutation",
+        "name": "Permutation",
+        "description": "Generate new possible subdomains by permuting discovered subdomains",
+        "required": false,
+        "parallel": false,
+        "notes": [
+          "Permutation performs a wildcard sampling check before execution and may skip if wildcard is detected."
+        ]
+      },
+      {
+        "id": "resolve",
+        "name": "Resolution",
+        "description": "Resolve all discovered subdomains to IP addresses and verify they are alive",
+        "required": false,
+        "parallel": false
+      }
+    ],
+    "target_types": [
+      "domain"
+    ],
+    "version": "1.0.0"
+  }
+}

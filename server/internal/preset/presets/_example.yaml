@@ -1,0 +1,48 @@
+# _example.yaml - example preset engine template (this file is not loaded)
+# Copy this file and rename it to <id>.yaml to create a new preset
+#
+# Field descriptions:
+#   id:            Unique identifier; recommended to match the filename
+#   name:          Display name (Unicode supported)
+#   description:   Optional description of preset purpose
+#   configuration: YAML configuration content, use | for multi-line string
+#
+# Frontend automatically parses enabled features (enabledFeatures) from configuration
+# Supported features: subdomain_discovery, port_scan, site_scan, fingerprint_detect,
+#            directory_scan, url_fetch, vuln_scan, waf_detection, screenshot, osint
+#
+# Note: configuration content is validated by JSON Schema at startup; ensure valid format
+
+id: example_preset
+name: 示例预设
+description: 这是一个示例预设，包含子域名发现功能
+
+configuration: |
+  subdomain_discovery:
+    recon:
+      enabled: true
+      tools:
+        subfinder:
+          enabled: true
+          timeout-runtime: 3600
+          threads-cli: 10
+        assetfinder:
+          enabled: false
+    bruteforce:
+      enabled: false
+      tools:
+        subdomain-bruteforce:
+          enabled: false
+    permutation:
+      enabled: false
+      tools:
+        subdomain-permutation-resolve:
+          enabled: false
+    resolve:
+      enabled: true
+      tools:
+        subdomain-resolve:
+          enabled: true
+          timeout-runtime: 3600
+          threads-cli: 50
+          rate-limit-cli: 1000

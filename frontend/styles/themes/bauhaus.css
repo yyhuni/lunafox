@@ -1,0 +1,807 @@
+/* Modern industrial theme */
+/* Inspired by 2025 technology product design trends */
+/* Core concept: restrained elegance, cool blue-gray tones, and soft contrast */
+[data-theme="bauhaus"] {
+  /* Base color - soft black and white (with cool blues) */
+  --background: oklch(0.985 0.008 260);  /* Milky white with a cool blue tint */
+  --foreground: oklch(0.145 0.02 260);   /* Ink gray with a cool blue tint */
+  
+  --card: oklch(1 0 0);                  /* #FFFFFF - pure white card */
+  --card-foreground: oklch(0.145 0.02 260);
+  
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0.02 260);
+  
+  --primary: oklch(0.205 0.02 260);      /* Dark gray with a cool blue tint */
+  --primary-foreground: oklch(0.985 0.008 260);
+  
+  --secondary: oklch(0.965 0.01 260);    /* Light cool blue-gray */
+  --secondary-foreground: oklch(0.205 0.02 260);
+  
+  --muted: oklch(0.925 0.012 260);       /* Medium cool blue-gray */
+  --muted-foreground: oklch(0.52 0.02 260); /* Secondary text in cool blue */
+  
+  --accent: oklch(0.965 0.01 260);
+  --accent-foreground: oklch(0.205 0.02 260);
+  
+  --destructive: oklch(0.60 0.20 25);    /* #EF4444 - coral red */
+  --destructive-foreground: oklch(0.985 0.008 260);
+
+  --border: oklch(0.90 0.012 260);       /* Cool blue border */
+  --input: oklch(0.925 0.012 260);
+  --ring: oklch(0.78 0.16 75);           /* Amber highlight, aligned with accent color */
+
+  /* Chart Colors - Modern Harmonics */
+  --chart-1: oklch(0.205 0.02 260);      /* Ink gray with a cool blue tint */
+  --chart-2: oklch(0.60 0.02 260);       /* Medium gray with a cool blue tint */
+  --chart-3: oklch(0.60 0.18 260);       /* Cool blue */
+  --chart-4: oklch(0.65 0.18 25);        /* Coral orange */
+  --chart-5: oklch(0.70 0.17 160);       /* Mint green */
+
+  /* Sidebar - cool blue */
+  --sidebar: oklch(0.99 0.005 260);
+  --sidebar-foreground: oklch(0.205 0.02 260);
+  --sidebar-primary: oklch(0.205 0.02 260);
+  --sidebar-primary-foreground: oklch(0.985 0.008 260);
+  --sidebar-accent: oklch(0.96 0.01 260);
+  --sidebar-accent-foreground: oklch(0.205 0.02 260);
+  --sidebar-border: oklch(0.92 0.012 260);
+  --sidebar-ring: oklch(0.205 0.02 260);
+
+  /* Core feature: square corners */
+  --radius: 0rem;
+  --radius-sm: 0rem;
+  --radius-md: 0rem;
+  --radius-lg: 0rem;
+  --radius-xl: 0rem;
+  
+  /* Font - Monospace Numbers */
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", monospace;
+
+  /* Basic typesetting and shadow variables (to ensure global layout/component size stability) */
+  --font-sans: 'HarmonyOS Sans SC', 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif;
+  --font-serif: Georgia, 'Noto Serif SC', serif;
+  --shadow-color: hsl(0 0% 0% / 0.12);
+  --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.06);
+  --shadow-xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.08);
+  --shadow-sm: 0px 1px 2px 0px hsl(0 0% 0% / 0.12), 0px 1px 2px -1px hsl(0 0% 0% / 0.12);
+  --shadow: 0px 1px 2px 0px hsl(0 0% 0% / 0.12), 0px 1px 2px -1px hsl(0 0% 0% / 0.12);
+  --shadow-md: 0px 1px 2px 0px hsl(0 0% 0% / 0.12), 0px 2px 4px -1px hsl(0 0% 0% / 0.12);
+  --shadow-lg: 0px 1px 2px 0px hsl(0 0% 0% / 0.12), 0px 4px 6px -1px hsl(0 0% 0% / 0.12);
+  --shadow-xl: 0px 1px 2px 0px hsl(0 0% 0% / 0.12), 0px 8px 10px -1px hsl(0 0% 0% / 0.12);
+  --shadow-2xl: 0px 1px 2px 0px hsl(0 0% 0% / 0.30);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+
+  /* Semantic variables */
+  --ark-bg: var(--background);
+  --ark-bg-2: var(--secondary);
+  --ark-panel: var(--card);
+  --ark-panel-2: var(--secondary);
+  --ark-border: var(--border);
+  --ark-border-strong: oklch(0.82 0.015 260);
+  --ark-text: var(--foreground);
+  --ark-text-2: var(--muted-foreground);
+  --ark-muted: var(--muted-foreground);
+  --ark-accent: var(--primary);
+  --ark-active: oklch(0.60 0.18 260); /* Cool blue highlight */
+  --bauhaus-grid: oklch(0.205 0.02 260 / 0.04); /* Cool blue grid */
+  
+  /* Accent Color - Modern Amber Yellow */
+  --highlight: oklch(0.78 0.16 75);   /* #F59E0B - amber yellow */
+  
+  /* Semantic Status Colors - Modern Harmonious Colors */
+  --success: oklch(0.65 0.18 160);    /* #10B981 - emerald green */
+  --warning: oklch(0.78 0.16 75);     /* #F59E0B - amber yellow */
+  --error: oklch(0.60 0.20 25);       /* #EF4444 - coral red */
+  --info: oklch(0.60 0.16 250);       /* #3B82F6 - sky blue */
+}
+
+/* 
+ * Bauhaus theme-specific global style overrides 
+ * These styles only take effect when data-theme="bauhaus"
+ */
+
+/* 1. Global background grid */
+[data-theme="bauhaus"] body {
+  background-color: var(--background);
+  background-image:
+    linear-gradient(var(--bauhaus-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bauhaus-grid) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-attachment: fixed; /* Keep the grid fixed while scrolling */
+}
+
+/* In order for the grid to show up, make sure the main content container has a transparent background */
+[data-theme="bauhaus"] [data-slot="sidebar-inset"] {
+  background-color: transparent;
+}
+
+/* 2. Reshape the card style - thicker black border at the top */
+[data-theme="bauhaus"] .bg-card,
+[data-theme="bauhaus"] [data-slot="card"] {
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--primary); /* Core feature: bold top border */
+  box-shadow: var(--shadow-2xs);
+  border-radius: 0 !important; /* Force square corners */
+  background: var(--card);
+}
+
+/* 3. Text and component style - closer to demo */
+[data-theme="bauhaus"] [data-slot="card-description"] {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
+[data-theme="bauhaus"] [data-slot="card-title"] {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* ============================================
+ * Badge unified style - transparent background + border
+ * All Badges use a transparent background and distinguish types by border color.
+ * ============================================ */
+[data-theme="bauhaus"] [data-slot="badge"],
+[data-theme="bauhaus"] span[data-slot="badge"],
+[data-theme="bauhaus"] .rounded-full[data-slot="badge"] {
+  border-radius: 0 !important;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  line-height: 1.2;
+  /* Unified transparent background + border */
+  background: transparent !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
+}
+
+/* Asset type Badge - transparent background + light border (unified with engine/worker) */
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="subdomain"],
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="website"],
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="ip"],
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="endpoint"],
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="vulnerability"] {
+  background: transparent !important;
+  color: var(--muted-foreground) !important;
+  border: 1px solid var(--border) !important;
+}
+
+/* Status Badge - Transparent background + left colored border */
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="cancelled"],
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="completed"],
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="failed"],
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="pending"],
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="running"] {
+  background: transparent !important;
+  border: 1px solid var(--border) !important;
+  border-left: 3px solid transparent !important;
+  padding-left: 8px !important;
+}
+
+/* Status indication - distinguished by left border color and text color */
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="completed"] {
+  border-left-color: var(--success) !important;
+  color: var(--success) !important;
+}
+
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="running"] {
+  border-left-color: var(--warning) !important;
+  color: var(--warning) !important;
+}
+
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="pending"] {
+  border-left-color: var(--info) !important;
+  color: var(--info) !important;
+}
+
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="failed"] {
+  border-left-color: var(--error) !important;
+  color: var(--error) !important;
+}
+
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="cancelled"] {
+  border-left-color: var(--muted-foreground) !important;
+  color: var(--muted-foreground) !important;
+}
+
+/* Auxiliary Badge - transparent background + light border */
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="engine"],
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="worker"] {
+  background: transparent !important;
+  color: var(--muted-foreground) !important;
+  border: 1px solid var(--border) !important;
+}
+
+[data-theme="bauhaus"] [data-slot="button"],
+[data-theme="bauhaus"] [data-slot="input"] {
+  border-radius: 0;
+}
+
+[data-theme="bauhaus"] [data-slot="tabs-list"] {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 2px;
+}
+
+[data-theme="bauhaus"] [data-slot="tabs-trigger"] {
+  border-radius: 0;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+[data-theme="bauhaus"] [data-slot="tabs-trigger"][data-state="active"] {
+  background: var(--secondary);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+/* Minimal Tab (Style H) overrides */
+[data-theme="bauhaus"] [data-slot="tabs-list"][data-variant="minimal-tab"] {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+[data-theme="bauhaus"] [data-slot="tabs-trigger"][data-variant="minimal-tab"] {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+[data-theme="bauhaus"] [data-slot="tabs-trigger"][data-variant="minimal-tab"][data-state="active"] {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid var(--primary);
+  box-shadow: none;
+}
+
+[data-theme="bauhaus"] [data-slot="table-header"] {
+  background: var(--secondary);
+}
+
+[data-theme="bauhaus"] [data-slot="table-head"] {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+[data-theme="bauhaus"] [data-slot="table-row"] {
+  border-color: var(--border);
+}
+
+[data-theme="bauhaus"] [data-slot="table-row"]:hover {
+  background: var(--secondary);
+}
+
+[data-theme="bauhaus"] [data-slot="data-table"] {
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--primary);
+  border-radius: 0;
+  background: var(--card);
+}
+
+/* 4. Sidebar adjustment - aligned with prototype page */
+[data-theme="bauhaus"] [data-sidebar="sidebar"] {
+  border-right: 1px solid var(--border);
+  background-color: var(--sidebar);
+}
+
+[data-theme="bauhaus"] [data-slot="sidebar-header"] {
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+
+/* With the unified top bar layout, offset the fixed sidebar area to avoid overlap. */
+[data-theme="bauhaus"] [data-slot="sidebar-container"] {
+  top: var(--header-height);
+  height: calc(100svh - var(--header-height));
+}
+
+[data-theme="bauhaus"] [data-slot="sidebar-gap"] {
+  height: calc(100svh - var(--header-height));
+}
+
+[data-theme="bauhaus"] [data-slot="sidebar-group-label"] {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  font-weight: 500;
+  padding-left: 12px;
+}
+
+/* Sidebar menu button - key style (overrides rounded-md) */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"],
+[data-theme="bauhaus"] [data-sidebar="menu-button"] {
+  border-radius: 0 !important;
+  border-left: 2px solid transparent;
+  padding: 10px 12px !important;
+  height: auto;
+  min-height: 36px;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  margin: 0 !important;
+  position: relative;
+  overflow: hidden; /* Constrain pseudo-elements to avoid covering submenus */
+}
+
+
+/* Ensure all border radii are removed */
+[data-theme="bauhaus"] .rounded-md,
+[data-theme="bauhaus"] .rounded-lg,
+[data-theme="bauhaus"] .rounded-xl {
+  border-radius: 0 !important;
+}
+
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"]:hover,
+[data-theme="bauhaus"] [data-sidebar="menu-button"]:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+  border-left-color: var(--border);
+}
+
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"][data-active="true"],
+[data-theme="bauhaus"] [data-sidebar="menu-button"][data-active="true"] {
+  background: transparent; /* Remove default background and use pseudo-element instead */
+  color: var(--foreground);
+  border-left: none; /* Remove legacy left border */
+  font-weight: 600;
+  border-top-left-radius: 0 !important; /* Keep the left edge square */
+  border-bottom-left-radius: 0 !important;
+}
+
+/* Top-level menu: sliding background (implemented with pseudo-elements) */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"]::before,
+[data-theme="bauhaus"] [data-sidebar="menu-button"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--secondary);
+  transform: translateX(-101%);
+  opacity: 0; /* Default to fully transparent to prevent edge shadows */
+  transition: transform 0.3s cubic-bezier(0.2, 0.0, 0.2, 1), opacity 0.2s ease;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Top-level menu: raise text/icon stacking context */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"] > span,
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"] > svg:not(.ml-auto),
+[data-theme="bauhaus"] [data-sidebar="menu-button"] > span,
+[data-theme="bauhaus"] [data-sidebar="menu-button"] > svg:not(.ml-auto) {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.2s ease;
+}
+
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"] > svg.ml-auto,
+[data-theme="bauhaus"] [data-sidebar="menu-button"] > svg.ml-auto {
+  position: relative;
+  z-index: 1; /* Keep the arrow above the slider */
+}
+
+/* Top-level menu: hover state */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"]:hover,
+[data-theme="bauhaus"] [data-sidebar="menu-button"]:hover {
+  background: transparent;
+  color: var(--foreground);
+}
+
+/* First-level menu: background slides in when hovering */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"]:hover::before,
+[data-theme="bauhaus"] [data-sidebar="menu-button"]:hover::before {
+  transform: translateX(0);
+  opacity: 1; /* Show slider */
+}
+
+/* Top-level menu: shift content right on hover */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"]:hover > span,
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"]:hover > svg:not(.ml-auto),
+[data-theme="bauhaus"] [data-sidebar="menu-button"]:hover > span,
+[data-theme="bauhaus"] [data-sidebar="menu-button"]:hover > svg:not(.ml-auto) {
+  transform: translateX(4px);
+}
+
+/* Top-level menu: keep selected-state background persistent */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"][data-active="true"]::before,
+[data-theme="bauhaus"] [data-sidebar="menu-button"][data-active="true"]::before {
+  transform: translateX(0);
+  opacity: 1; /* Show slider */
+  background: var(--secondary); /* Keep background color consistent */
+  /* Remove box-shadow and use ::after instead */
+}
+
+/* First-level menu: orange rectangular indicator bar on the left (use ::after) */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"][data-active="true"]::after,
+[data-theme="bauhaus"] [data-sidebar="menu-button"][data-active="true"]::after {
+  content: "";
+  display: block !important; /* Force display */
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--highlight);
+  z-index: 2; /* Above background and content */
+  border-radius: 0; /* Keep the indicator rectangular */
+}
+
+/* Top-level menu: keep selected content offset */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"][data-active="true"] > span,
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"][data-active="true"] > svg:not(.ml-auto),
+[data-theme="bauhaus"] [data-sidebar="menu-button"][data-active="true"] > span,
+[data-theme="bauhaus"] [data-sidebar="menu-button"][data-active="true"] > svg:not(.ml-auto) {
+  transform: translateX(4px);
+}
+
+/* Collapsed mode: disable slide-in and offset animations */
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-slot="sidebar-menu-button"]::before,
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-sidebar="menu-button"]::before {
+  display: none;
+}
+
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-slot="sidebar-menu-button"]:hover > span,
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-slot="sidebar-menu-button"]:hover > svg:not(.ml-auto),
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-sidebar="menu-button"]:hover > span,
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-sidebar="menu-button"]:hover > svg:not(.ml-auto),
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-slot="sidebar-menu-button"][data-active="true"] > span,
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-slot="sidebar-menu-button"][data-active="true"] > svg:not(.ml-auto),
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-sidebar="menu-button"][data-active="true"] > span,
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-sidebar="menu-button"][data-active="true"] > svg:not(.ml-auto) {
+  transform: none;
+}
+
+/* Sidebar menu item container - remove default spacing */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-item"] {
+  padding: 0;
+  margin: 0;
+}
+
+/* Sidebar menu list - tight spacing */
+[data-theme="bauhaus"] [data-slot="sidebar-menu"] {
+  gap: 2px;
+}
+
+/* Submenu button */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"] {
+  border-radius: 4px !important;
+  border-top-left-radius: 0 !important; /* Square left edge to keep the orange line rectangular */
+  border-bottom-left-radius: 0 !important; /* Square left edge */
+  color: var(--muted-foreground);
+  padding-left: 36px !important;
+  font-size: 13px; /* Slightly larger font for readability */
+  border-left: none; /* Remove original left border */
+  margin-left: 0 !important;
+  position: relative;
+  overflow: hidden; /* Prevent slider overflow */
+  transition: color 0.2s ease;
+  background: transparent; /* No background by default */
+}
+
+/* Background slider (simulated using pseudo-elements) */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--secondary); /* Slider color */
+  transform: translateX(-101%); /* Start just outside the left edge */
+  opacity: 0; /* Fully transparent by default */
+  transition: transform 0.3s cubic-bezier(0.2, 0.0, 0.2, 1), opacity 0.2s ease; /* Smooth easing */
+  z-index: 0; /* Render below text */
+  pointer-events: none;
+}
+
+/* The text container needs to be positioned relatively to float above the background */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"] > span,
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"] > svg {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.2s ease;
+}
+
+/* Hover state */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"]:hover {
+  color: var(--foreground);
+  background: transparent; /* Disable default background */
+}
+
+/* Background slides in when hovering */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"]:hover::before {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* Shift text slightly right on hover */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"]:hover > span {
+  transform: translateX(4px);
+}
+
+/* Active (selected) state */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"][data-active="true"] {
+  color: var(--foreground);
+  background: transparent;
+  font-weight: 500;
+}
+
+/* Keep selected-state background persistent */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"][data-active="true"]::before {
+  transform: translateX(0);
+  opacity: 1;
+  background: var(--secondary);
+  /* Remove box-shadow */
+}
+
+/* Submenu: Orange rectangular indicator bar on the left (use ::after) */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"][data-active="true"]::after {
+  content: "";
+  display: block !important;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--highlight);
+  z-index: 2;
+  border-radius: 0; /* Keep the indicator rectangular */
+}
+
+/* Keep selected text offset (optional); the offset strengthens selection feedback. */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"][data-active="true"] > span {
+  transform: translateX(4px);
+}
+
+/* Remove legacy dot styles */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"][data-active="true"]::after {
+  display: none;
+}
+
+/* Submenu container */
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub"] {
+  border-left: none;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+[data-theme="bauhaus"] [data-slot="sidebar-rail"]::after {
+  background: var(--border);
+}
+
+/* Sidebar groups - tight spacing */
+[data-theme="bauhaus"] [data-slot="sidebar-group"] {
+  padding: 8px 0;
+}
+
+[data-theme="bauhaus"] [data-slot="sidebar-group-content"] {
+  padding: 0 8px;
+}
+
+/* 5. Unify top bar styles */
+[data-theme="bauhaus"] [data-slot="unified-header"] {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Legacy top bar styles (kept for compatibility) */
+[data-theme="bauhaus"] [data-slot="site-header"] {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+/* ============================================
+ * Exclusive decorative styles for Bauhaus Dashboard
+ * These styles are used to achieve consistent visual effects with the dashboard-demo prototype
+ * ============================================ */
+
+/* 6. Statistics Card Decoration – Numbered Labels */
+[data-theme="bauhaus"] [data-slot="card"].bauhaus-stat-card {
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="bauhaus"] [data-slot="card"].bauhaus-stat-card::before {
+  content: attr(data-card-index) " //";
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--muted-foreground);
+  opacity: 0.5;
+  letter-spacing: 0.05em;
+}
+
+/* Bevel-cut decoration in the lower right corner of the statistics card */
+[data-theme="bauhaus"] [data-slot="card"].bauhaus-stat-card::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, transparent 50%, var(--border) 50%);
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+/* 7. Dashboard Header decoration style */
+[data-theme="bauhaus"] .bauhaus-dashboard-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+[data-theme="bauhaus"] .bauhaus-header-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+[data-theme="bauhaus"] .bauhaus-header-tag .tag-id {
+  padding: 2px 6px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+[data-theme="bauhaus"] .bauhaus-header-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+/* 8. Status indicator style */
+[data-theme="bauhaus"] .bauhaus-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-theme="bauhaus"] .bauhaus-status-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.05em;
+}
+
+[data-theme="bauhaus"] .bauhaus-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--success);
+}
+
+[data-theme="bauhaus"] .bauhaus-status-dot.offline {
+  background: var(--error);
+}
+
+/* 9. Chart card bottom column decoration */
+[data-theme="bauhaus"] .bauhaus-chart-footer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--muted-foreground);
+  background: var(--secondary);
+}
+
+[data-theme="bauhaus"] .bauhaus-signal-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: var(--success);
+}
+
+[data-theme="bauhaus"] .bauhaus-signal-status .pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: bauhaus-pulse 2s ease-in-out infinite;
+}
+
+@keyframes bauhaus-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* 10. Card Kicker title style */
+[data-theme="bauhaus"] .bauhaus-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  padding: 12px 16px;
+  background: var(--secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+[data-theme="bauhaus"] .bauhaus-kicker svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 11. Table Decoration - LIVE FEED Tag */
+[data-theme="bauhaus"] .bauhaus-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--muted-foreground);
+  letter-spacing: 0.1em;
+}
+
+[data-theme="bauhaus"] .bauhaus-live-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--muted-foreground);
+  opacity: 0.5;
+}
+
+/* 12. Global system status bottom bar */
+[data-theme="bauhaus"] .bauhaus-system-footer {
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.15em;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+}
+
+/* 13. Statistics card 1x4 horizontal layout (large screen) */
+[data-theme="bauhaus"] .bauhaus-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1024px) {
+  [data-theme="bauhaus"] .bauhaus-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 14. Button interaction enhancement */
+[data-theme="bauhaus"] [data-slot="button"][variant="default"]:hover {
+  background: var(--primary);
+  opacity: 0.9;
+  border-bottom: 2px solid var(--highlight);
+  transform: translateY(-1px);
+}

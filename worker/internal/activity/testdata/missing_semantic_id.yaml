@@ -1,0 +1,33 @@
+metadata:
+  name: "test_workflow"
+  display_name: "Test Workflow"
+  description: "A test workflow"
+  version: "1.0.0"
+  target_types: ["domain"]
+  stages:
+    - id: "recon"
+      name: "Reconnaissance"
+      description: "Reconnaissance subdomain collection"
+      order: 1
+      required: true
+      parallel: true
+
+tools:
+  subfinder:
+    metadata:
+      display_name: "Subfinder"
+      description: "Reconnaissance subdomain enumeration tool"
+      stage: "recon"
+    base_command: "subfinder -d {{.Domain}}"
+    cli_params:
+      - semantic_id: ""
+        var: Timeout
+        arg: "-timeout {{.Timeout}}"
+        config_schema:
+          key: timeout-cli
+          type: integer
+          required: false
+        config_example:
+          show_as: value
+        documentation:
+          description: "Timeout in seconds"

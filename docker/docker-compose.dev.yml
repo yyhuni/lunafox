@@ -1,0 +1,123 @@
+name: lunafox
+
+services:
+  # Agents should be registered and started via install script (/api/agent/install-script)
+  postgres:
+    image: postgres:16.3-alpine
+    restart: "on-failure:3"
+    environment:
+      POSTGRES_DB: ${DB_NAME:-lunafox}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.4.7-alpine
+    restart: "on-failure:3"
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    image: golang:1.26
+    restart: "on-failure:3"
+    env_file:
+      - .env
+    environment:
+      - IMAGE_TAG=${IMAGE_TAG:-dev}
+      - PUBLIC_URL=${PUBLIC_URL:-}
+      - GOMODCACHE=/go/pkg/mod
+      - GOCACHE=/root/.cache/go-build
+      - GO111MODULE=${GO111MODULE:-on}
+      - GOPROXY=${GOPROXY:-https://goproxy.cn,direct}
+    ports:
+      - "8080:8080"
+    working_dir: /workspace/server
+    command: sh -c "go install github.com/air-verse/air@latest && air -c .air.toml"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - lunafox_data:/opt/lunafox
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../server:/workspace/server
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  frontend:
+    image: node:20.20.0-alpine
+    restart: "on-failure:3"
+    environment:
+      - NODE_ENV=development
+      - API_HOST=server
+      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-}
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+    ports:
+      - "3000:3000"
+    working_dir: /app
+    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && LOCK_HASH_FILE=node_modules/.pnpm-lock.hash; if [ -f pnpm-lock.yaml ]; then NEW_HASH=$$(sha256sum pnpm-lock.yaml | awk '{print $$1}'); else NEW_HASH=''; fi; if [ ! -d node_modules/.pnpm ] || [ ! -f \"$$LOCK_HASH_FILE\" ] || [ \"$$(cat $$LOCK_HASH_FILE 2>/dev/null)\" != \"$$NEW_HASH\" ]; then pnpm install && echo \"$$NEW_HASH\" > \"$$LOCK_HASH_FILE\"; fi && pnpm dev"
+    depends_on:
+      server:
+        condition: service_healthy
+    volumes:
+      - ../frontend:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_pnpm_store:/root/.local/share/pnpm/store
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000',res=>process.exit(res.statusCode<500?0:1)).on('error',()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  nginx:
+    build:
+      context: ..
+      dockerfile: docker/nginx/Dockerfile
+    image: ${IMAGE_REGISTRY:-docker.io}/${IMAGE_NAMESPACE:-yyhuni}/lunafox-nginx:${IMAGE_TAG:-dev}
+    restart: "on-failure:3"
+    depends_on:
+      server:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    ports:
+      - "${PUBLIC_PORT:-8083}:8083"
+    volumes:
+      - lunafox_ssl:/etc/nginx/ssl:ro
+
+volumes:
+  postgres_data:
+  lunafox_data:
+    name: lunafox_data
+  lunafox_ssl:
+    name: lunafox_ssl
+  go-mod-cache:
+  go-build-cache:
+  frontend_node_modules:
+  frontend_pnpm_store:
+
+networks:
+  default:
+    name: lunafox_network  # Fixed network name, independent of directory name

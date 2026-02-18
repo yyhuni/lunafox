@@ -1,0 +1,767 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-02-13T04:49:00.358Z",
+  "source": "scripts/build-route-todo.mjs",
+  "include": "app/[locale]/**/page.tsx",
+  "exclusions": [
+    "route starts with /[locale]/tools",
+    "route starts with /[locale]/prototypes",
+    "route path includes /demo/"
+  ],
+  "summary": {
+    "discovered": 89,
+    "skipped": 52,
+    "planned": 37,
+    "lastRunAt": "2026-02-13T04:49:21.826Z",
+    "executedRoutes": 37,
+    "statusCounts": {
+      "pending": 0,
+      "running": 0,
+      "passed": 37,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "routes": [
+    {
+      "id": "route_root",
+      "routePattern": "/[locale]/",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P0",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_dashboard",
+      "routePattern": "/[locale]/dashboard",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P0",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_login",
+      "routePattern": "/[locale]/login",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P0",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_organization",
+      "routePattern": "/[locale]/organization",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P0",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_organization_id",
+      "routePattern": "/[locale]/organization/[id]",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_scan_engine",
+      "routePattern": "/[locale]/scan/engine",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P0",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_scan_history",
+      "routePattern": "/[locale]/scan/history",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P0",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_scan_history_id",
+      "routePattern": "/[locale]/scan/history/[id]",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_scan_history_id_directories",
+      "routePattern": "/[locale]/scan/history/[id]/directories",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_scan_history_id_endpoints",
+      "routePattern": "/[locale]/scan/history/[id]/endpoints",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_scan_history_id_ip_addresses",
+      "routePattern": "/[locale]/scan/history/[id]/ip-addresses",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_scan_history_id_overview",
+      "routePattern": "/[locale]/scan/history/[id]/overview",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_scan_history_id_screenshots",
+      "routePattern": "/[locale]/scan/history/[id]/screenshots",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_scan_history_id_subdomain",
+      "routePattern": "/[locale]/scan/history/[id]/subdomain",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_scan_history_id_vulnerabilities",
+      "routePattern": "/[locale]/scan/history/[id]/vulnerabilities",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_scan_history_id_websites",
+      "routePattern": "/[locale]/scan/history/[id]/websites",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_scan_scheduled",
+      "routePattern": "/[locale]/scan/scheduled",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_search",
+      "routePattern": "/[locale]/search",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P0",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_settings_api_keys",
+      "routePattern": "/[locale]/settings/api-keys",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_settings_blacklist",
+      "routePattern": "/[locale]/settings/blacklist",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_settings_database_health",
+      "routePattern": "/[locale]/settings/database-health",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_settings_notifications",
+      "routePattern": "/[locale]/settings/notifications",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_settings_system_logs",
+      "routePattern": "/[locale]/settings/system-logs",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_settings_workers",
+      "routePattern": "/[locale]/settings/workers",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_target",
+      "routePattern": "/[locale]/target",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P0",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_target_id",
+      "routePattern": "/[locale]/target/[id]",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_target_id_details",
+      "routePattern": "/[locale]/target/[id]/details",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_target_id_directories",
+      "routePattern": "/[locale]/target/[id]/directories",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_target_id_endpoints",
+      "routePattern": "/[locale]/target/[id]/endpoints",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_target_id_ip_addresses",
+      "routePattern": "/[locale]/target/[id]/ip-addresses",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_target_id_overview",
+      "routePattern": "/[locale]/target/[id]/overview",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_target_id_screenshots",
+      "routePattern": "/[locale]/target/[id]/screenshots",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_target_id_settings",
+      "routePattern": "/[locale]/target/[id]/settings",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_target_id_subdomain",
+      "routePattern": "/[locale]/target/[id]/subdomain",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_target_id_vulnerabilities",
+      "routePattern": "/[locale]/target/[id]/vulnerabilities",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_target_id_websites",
+      "routePattern": "/[locale]/target/[id]/websites",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P1",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    },
+    {
+      "id": "route_vulnerabilities",
+      "routePattern": "/[locale]/vulnerabilities",
+      "locales": [
+        "zh",
+        "en"
+      ],
+      "priority": "P0",
+      "status": "passed",
+      "attempts": 1,
+      "lastRunAt": "2026-02-13T04:49:21.826Z",
+      "lastResult": {
+        "testedLocales": [
+          "zh"
+        ],
+        "passCount": 1,
+        "failCount": 0
+      },
+      "notes": ""
+    }
+  ]
+}

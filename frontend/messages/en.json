@@ -1,0 +1,2559 @@
+{
+  "columns": {
+    "common": {
+      "name": "Name",
+      "description": "Description",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "status": "Status",
+      "actions": "Actions",
+      "type": "Type",
+      "url": "URL"
+    },
+    "scanHistory": {
+      "target": "Target",
+      "summary": "Summary",
+      "engineName": "Engine Name",
+      "workerName": "Worker Node",
+      "progress": "Progress",
+      "subdomains": "Subdomains",
+      "websites": "Websites",
+      "ipAddresses": "IP Addresses",
+      "endpoints": "Endpoints",
+      "vulnerabilities": "Vulnerabilities"
+    },
+    "vulnerability": {
+      "severity": "Severity",
+      "source": "Source",
+      "vulnType": "Vuln Type"
+    },
+    "organization": {
+      "organization": "Organization",
+      "totalTargets": "Total Targets",
+      "added": "Added"
+    },
+    "target": {
+      "target": "Target",
+      "addedOn": "Added On",
+      "lastScanned": "Last Scanned"
+    },
+    "subdomain": {
+      "subdomain": "Subdomain"
+    },
+    "ipAddress": {
+      "ipAddress": "IP Address",
+      "hosts": "Hosts",
+      "openPorts": "Open Ports",
+      "allHosts": "All Hosts",
+      "allOpenPorts": "All Open Ports"
+    },
+    "endpoint": {
+      "title": "Title",
+      "host": "Host",
+      "contentLength": "Content Length",
+      "location": "Location",
+      "webServer": "Web Server",
+      "contentType": "Content Type",
+      "technologies": "Technologies",
+      "responseBody": "Response Body",
+		"vhost": "VHost",
+		"responseHeaders": "Response Headers",
+		"responseTime": "Response Time"
+    },
+    "website": {
+      "host": "Host",
+      "responseHeaders": "Response Headers"
+    },
+    "directory": {
+      "length": "Length",
+      "words": "Words",
+      "lines": "Lines",
+      "duration": "Duration"
+    },
+    "engine": {
+      "engineName": "Engine Name",
+      "subdomainDiscovery": "Subdomain Discovery",
+      "portScan": "Port Scan",
+      "siteScan": "Site Scan",
+      "directoryScan": "Directory Scan",
+      "urlFetch": "URL Fetch",
+      "osint": "OSINT",
+      "vulnerabilityScan": "Vulnerability Scan",
+      "wafDetection": "WAF Detection",
+      "screenshot": "Screenshot"
+    },
+    "scheduledScan": {
+      "taskName": "Task Name",
+      "scanEngine": "Scan Engine",
+      "cronExpression": "Cron Expression",
+      "scope": "Scope",
+      "nextRun": "Next Run",
+      "runCount": "Run Count",
+      "lastRun": "Last Run"
+    },
+    "fingerprint": {
+      "name": "Name",
+      "cats": "Categories",
+      "rules": "Rules",
+      "implies": "Implies",
+      "website": "Website",
+      "cpe": "CPE",
+      "created": "Created",
+      "logic": "Logic",
+      "ruleDetails": "Rule Details",
+      "cms": "CMS",
+      "method": "Method",
+      "keyword": "Keyword",
+      "type": "Type",
+      "important": "Important"
+    },
+    "command": {
+      "tool": "Tool",
+      "commandTemplate": "Command Template"
+    }
+  },
+  "tooltips": {
+    "targetDetails": "Target Details",
+    "viewProgress": "Click to view progress details",
+    "targetSummary": "Target Summary",
+    "organizationDetails": "Organization Details",
+    "initiateScan": "Initiate Scan",
+    "scheduleScan": "Schedule Scan",
+    "editEngine": "Edit Engine",
+    "viewDetails": "View Details",
+    "unlinkTarget": "Unlink Target",
+    "clickToCopy": "Click to copy",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "vulnDetails": "Vulnerability Details",
+    "copied": "Copied",
+    "allHosts": "All Hosts",
+    "allOpenPorts": "All Open Ports",
+    "reviewed": "Reviewed",
+    "pending": "Pending review"
+  },
+  "severity": {
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "info": "Info"
+  },
+  "common": {
+    "actions": {
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "add": "Add",
+      "create": "Create",
+      "update": "Update",
+      "search": "Search",
+      "refresh": "Refresh",
+      "export": "Export",
+      "import": "Import",
+      "confirm": "Confirm",
+      "close": "Close",
+      "submit": "Submit",
+      "reset": "Reset",
+      "copy": "Copy",
+      "download": "Download",
+      "upload": "Upload",
+      "view": "View",
+      "details": "Details",
+      "back": "Back",
+      "next": "Next",
+      "previous": "Previous",
+      "start": "Start",
+      "stop": "Stop",
+      "pause": "Pause",
+      "resume": "Resume",
+      "retry": "Retry",
+      "snapshot": "Details",
+      "openMenu": "Open menu",
+      "selectAll": "Select all",
+      "deselectAll": "Deselect all",
+      "selectRow": "Select row",
+      "website": "Website",
+      "description": "Description",
+      "processing": "Processing...",
+      "confirmDelete": "Confirm Delete",
+      "deleteConfirmMessage": "Are you sure you want to delete {count} selected items? This action cannot be undone.",
+      "all": "All",
+      "filter": "Filter"
+    },
+    "yamlEditor": {
+      "syntaxError": "Syntax Error",
+      "syntaxValid": "Syntax Valid",
+      "errorLocation": "Line {line}, Column {column}",
+      "loading": "Loading editor...",
+      "duplicateKey": "Duplicate key '{key}' found. Later values will override earlier ones. Please remove duplicates."
+    },
+    "language": {
+      "switchLanguage": "Switch language"
+    },
+    "download": {
+      "all": "Download All",
+      "selected": "Download Selected",
+      "important": "Download Important"
+    },
+    "ui": {
+      "toggleSidebar": "Toggle Sidebar",
+      "loading": "Loading",
+      "commandDialog": "Command Dialog",
+      "skipToMainContent": "Skip to main content",
+      "statusLabel": "STATUS",
+      "cycleLabel": "CYCLE",
+      "activeStatus": "ACTIVE"
+    },
+    "dropzone": {
+      "uploadFile": "Upload file",
+      "uploadFiles": "Upload files",
+      "dragOrClick": "Drag files here or click to select",
+      "dragOrClickReplace": "Drag or click to replace files",
+      "moreFiles": "{files} and {count} more files",
+      "supports": "Supports",
+      "minimum": "minimum",
+      "maximum": "maximum",
+      "sizeBetween": "size between {min} and {max}"
+    },
+    "status": {
+      "loading": "Loading...",
+      "pageLoading": "Loading page...",
+      "success": "Operation successful",
+      "error": "Operation failed",
+      "noData": "No data",
+      "pending": "Pending",
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "active": "Active",
+      "inactive": "Inactive",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "creating": "Creating...",
+      "updating": "Updating...",
+      "deleting": "Deleting...",
+      "removing": "Removing...",
+      "unlinking": "Unlinking...",
+      "batchCreating": "Batch creating...",
+      "batchDeleting": "Batch deleting...",
+      "batchRemoving": "Batch removing...",
+      "updateSuccess": "Update successful",
+      "updateFailed": "Update failed",
+      "uploading": "Uploading..."
+    },
+    "pagination": {
+      "page": "Page {current} of {total}",
+      "rowsPerPage": "Rows per page",
+      "total": "{count} total",
+      "first": "First",
+      "last": "Last",
+      "previous": "Previous",
+      "next": "Next",
+      "goTo": "Go to"
+    },
+    "time": {
+      "justNow": "Just now",
+      "minutesAgo": "{count} minutes ago",
+      "hoursAgo": "{count} hours ago",
+      "daysAgo": "{count} days ago",
+      "weeksAgo": "{count} weeks ago",
+      "monthsAgo": "{count} months ago",
+      "yearsAgo": "{count} years ago"
+    },
+    "confirm": {
+      "title": "Confirm Action",
+      "deleteTitle": "Confirm Delete",
+      "deleteMessage": "Are you sure you want to delete? This action cannot be undone.",
+      "bulkDeleteTitle": "Confirm Bulk Delete",
+      "bulkDeleteMessage": "Are you sure you want to delete {count} selected items? This action cannot be undone.",
+      "unlinkTitle": "Confirm Unlink",
+      "unlinkMessage": "Are you sure you want to unlink? This will only remove the association, the data itself will not be deleted.",
+      "bulkUnlinkTitle": "Confirm Bulk Unlink",
+      "bulkUnlinkMessage": "Are you sure you want to unlink {count} selected items? The data itself will not be deleted.",
+      "stopTitle": "Confirm Stop",
+      "stopMessage": "Are you sure you want to stop this task?",
+      "yes": "Yes",
+      "no": "No",
+      "deleteVulnMessage": "This action cannot be undone. This will permanently delete vulnerability \"{name}\" and its related data.",
+      "bulkDeleteVulnMessage": "This action cannot be undone. This will permanently delete the following {count} vulnerabilities and their related data.",
+      "deleteVulnCount": "Delete {count} vulnerabilities",
+      "deleteScanMessage": "This action cannot be undone. This will permanently delete scan record \"{name}\" and its related data.",
+      "bulkDeleteScanMessage": "This action cannot be undone. This will permanently delete the following {count} scan records and their related data.",
+      "deleteScanCount": "Delete {count} records",
+      "stopScanTitle": "Confirm Stop Scan",
+      "stopScanMessage": "Are you sure you want to stop scan task \"{name}\"? The scan will be aborted, but collected data will be preserved.",
+      "stopScanAction": "Stop Scan",
+      "deleteOrgMessage": "This will permanently delete organization \"{name}\" and unlink its domains. The domains themselves will not be deleted.",
+      "bulkDeleteOrgMessage": "This will permanently delete the following {count} organizations and unlink their domains. The domains themselves will not be deleted.",
+      "deleteOrgCount": "Delete {count} organizations",
+      "deleting": "Deleting...",
+      "deleteToolMessage": "This action cannot be undone. This will permanently delete opensource tool \"{name}\" and its configuration.",
+      "deleteCustomToolMessage": "This action cannot be undone. This will permanently delete custom tool \"{name}\" and its configuration.",
+      "deleteTargetTitle": "Confirm Delete Target",
+      "deleteTargetMessage": "This action cannot be undone. This will permanently delete target \"{name}\" and all its associated data.",
+      "bulkDeleteTargetTitle": "Confirm Bulk Delete Targets",
+      "bulkDeleteTargetMessage": "This action cannot be undone. This will permanently delete the following {count} targets and all their associated data.",
+      "deleteTargetCount": "Confirm delete {count} targets",
+      "confirmDelete": "Confirm Delete",
+      "confirmUnlink": "Confirm Unlink",
+      "confirmUnlinkCount": "Confirm unlink {count} items",
+      "unlinkTargetMessage": "Are you sure you want to unlink target \"{name}\" from this organization? This will only remove the association, the target itself will not be deleted.",
+      "bulkUnlinkTargetMessage": "This will unlink the following {count} targets from this organization. The targets themselves will not be deleted.",
+      "deleteScheduledScanMessage": "Are you sure you want to delete scheduled scan task \"{name}\"? This action cannot be undone.",
+      "deleteEngineMessage": "Are you sure you want to delete engine \"{name}\"? This action cannot be undone.",
+      "deleteNucleiRepoMessage": "Are you sure you want to delete repository \"{name}\"? This action cannot be undone.",
+      "deleteWordlistMessage": "Are you sure you want to delete wordlist \"{name}\"? This action cannot be undone."
+    }
+  },
+  "navigation": {
+    "appName": "LunaFox",
+    "mainFeatures": "Main Features",
+    "dashboard": "Dashboard",
+    "search": "Search",
+    "organization": "Organization",
+    "target": "Targets",
+    "vulnerabilities": "Vulnerabilities",
+    "scan": "Scan",
+    "scanHistory": "Scan History",
+    "scheduledScan": "Scheduled Scan",
+    "scanEngine": "Scan Engine",
+    "tools": "Tools",
+    "wordlists": "Wordlists",
+    "fingerprints": "Fingerprints",
+    "nucleiTemplates": "Nuclei Templates",
+    "settings": "Settings",
+    "workers": "Agents",
+    "systemLogs": "System Logs",
+    "databaseHealth": "Database Health",
+    "notifications": "Notifications",
+    "apiKeys": "API Keys",
+    "globalBlacklist": "Global Blacklist",
+    "devTools": "Dev Tools",
+    "uiPrototypes": "UI Prototypes",
+    "about": "About"
+  },
+  "search": {
+    "title": "Asset Search",
+    "hint": "Click search box to view available fields and syntax. Plain text defaults to hostname search",
+    "searching": "Searching...",
+    "loading": "Loading...",
+    "resultsCount": "Found {count} results",
+    "error": "Search failed, please try again later",
+    "noResults": "No matching assets found",
+    "noResultsHint": "Try adjusting your search criteria",
+    "vulnLoadError": "Failed to load vulnerability details",
+    "recentSearches": "Recent Searches",
+    "export": "Export",
+    "exporting": "Exporting...",
+    "exportSuccess": "Export successful",
+    "exportFailed": "Export failed",
+    "stats": {
+      "vulnerabilities": "Vulnerabilities"
+    },
+    "assetTypes": {
+      "website": "Website",
+      "endpoint": "Endpoint"
+    },
+    "fields": {
+      "host": "Hostname",
+      "url": "URL address",
+      "title": "Page title",
+      "tech": "Technology stack",
+      "status": "HTTP status code",
+      "body": "Response body content",
+      "header": "Response header content"
+    },
+    "table": {
+      "url": "URL",
+      "host": "Host",
+      "title": "Title",
+      "status": "Status",
+      "technologies": "Technologies",
+      "contentLength": "Content Length",
+      "location": "Location",
+      "webserver": "Web Server",
+      "contentType": "Content Type",
+      "responseBody": "Response Body",
+		"responseHeaders": "Response Headers",
+		"vhost": "VHost",
+		"createdAt": "Created At"
+	},
+    "card": {
+      "title": "Title",
+      "expand": "Expand",
+      "collapse": "Collapse",
+      "vulnerabilities": "Vulnerabilities ({count})",
+      "vulnName": "Vulnerability Name",
+      "severity": "Severity",
+      "source": "Source",
+      "vulnType": "Vuln Type"
+    },
+    "vulnDetail": {
+      "title": "Vulnerability Details",
+      "name": "Vulnerability Name",
+      "source": "Source",
+      "type": "Vulnerability Type",
+      "url": "Vulnerability URL"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "stats": {
+      "totalTargets": "Total Targets",
+      "totalVulnerabilities": "Total Vulnerabilities",
+      "activeScans": "Active Scans",
+      "completedScans": "Completed Scans",
+      "totalOrganizations": "Total Organizations",
+      "totalSubdomains": "Total Subdomains",
+      "totalEndpoints": "Total Endpoints",
+      "totalWebsites": "Total Websites"
+    },
+    "statCards": {
+      "assetsFound": "Assets Found",
+      "vulnsFound": "Vulnerabilities Found",
+      "monitoredTargets": "Monitored Targets",
+      "runningScans": "Running Scans",
+      "assetsFooter": "Subdomains + IPs + Endpoints + Websites",
+      "vulnsFooter": "All vulnerabilities from scans",
+      "targetsFooter": "Total targets added",
+      "scansFooter": "Currently running tasks",
+      "updatedAt": "Updated at {time}",
+      "noData": "No data"
+    },
+    "assetTrend": {
+      "title": "Asset Trend",
+      "description": "Updated hourly",
+      "noData": "No historical data",
+      "current": "Current",
+      "subdomains": "Subdomains",
+      "ips": "IPs",
+      "endpoints": "Endpoints",
+      "websites": "Websites"
+    },
+    "assetDistribution": {
+      "title": "Asset Distribution",
+      "description": "Asset count by type",
+      "totalAssets": "Total Assets",
+      "subdomains": "Subdomains",
+      "ipAddresses": "IP Addresses",
+      "endpoints": "Endpoints",
+      "websites": "Websites",
+      "count": "Count"
+    },
+    "vulnDistribution": {
+      "title": "Vulnerability Distribution",
+      "description": "By severity level",
+      "noData": "No vulnerability data",
+      "vulns": "Vulns"
+    },
+    "recentVulns": {
+      "title": "Recent Vulnerabilities",
+      "description": "Recently discovered security vulnerabilities",
+      "viewAll": "View All",
+      "noData": "No vulnerability data"
+    },
+    "bauhausHeader": {
+      "operationsCommand": "Operations Command",
+      "systemOverview": "System Overview",
+      "networkOnline": "NETWORK: ONLINE",
+      "cycleLabel": "CYCLE:"
+    }
+  },
+  "dataTable": {
+    "columns": "Columns",
+    "filter": "Filter",
+    "selected": "{count} selected",
+    "noResults": "No results found",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
+    "showColumns": "Show columns",
+    "hideColumns": "Hide columns",
+    "sortAsc": "Sort ascending",
+    "sortDesc": "Sort descending",
+    "clearSort": "Clear sort",
+    "clearFilter": "Clear filter"
+  },
+  "filter": {
+    "fields": {
+      "ip": "IP address",
+      "port": "Port number",
+      "host": "Hostname",
+      "domain": "Domain name",
+      "url": "Full URL",
+      "status": "HTTP status code",
+      "title": "Page title",
+      "source": "Data source",
+      "path": "URL path",
+      "severity": "Vulnerability severity",
+      "name": "Name",
+      "type": "Type"
+    },
+    "syntax": {
+      "operators": "Operators",
+      "containsFuzzy": "contains (fuzzy)",
+      "exactMatch": "exact match",
+      "notEquals": "not equals",
+      "logic": "Logic",
+      "matchAny": "match any",
+      "matchAll": "match all"
+    },
+    "groups": {
+      "activeFilters": "Active filters",
+      "availableFields": "Available fields",
+      "syntax": "Syntax",
+      "examples": "Examples"
+    },
+    "empty": "Type to filter...",
+    "descriptions": {
+      "directoryUrl": "Directory URL",
+      "subdomainName": "Subdomain name",
+      "endpointUrl": "Endpoint URL",
+      "vulnType": "Vulnerability type",
+      "scannerSource": "Scanner source"
+    }
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidEmail": "Please enter a valid email",
+    "invalidUrl": "Please enter a valid URL",
+    "invalidDomain": "Please enter a valid domain",
+    "invalidIp": "Please enter a valid IP address",
+    "minLength": "Minimum {min} characters required",
+    "maxLength": "Maximum {max} characters allowed",
+    "minValue": "Minimum value is {min}",
+    "maxValue": "Maximum value is {max}",
+    "pattern": "Invalid format"
+  },
+  "auth": {
+    "title": "LunaFox",
+    "subtitle": "Automated Asset Discovery & Vulnerability Scanning Platform",
+    "login": "Login",
+    "pageTitle": "Login - LunaFox | Attack Surface Management",
+    "pageDescription": "LunaFox - Attack Surface Management (ASM) Platform, providing automated asset discovery and vulnerability scanning",
+    "loggingIn": "Logging in...",
+    "logout": "Logout",
+    "username": "Username",
+    "usernamePlaceholder": "Enter username",
+    "password": "Password",
+    "passwordPlaceholder": "Enter password",
+    "rememberMe": "Remember me",
+    "forgotPassword": "Forgot password",
+    "loginSuccess": "Login successful",
+    "loginFailed": "Login failed",
+    "logoutSuccess": "Logged out successfully",
+    "sessionExpired": "Session expired, please login again",
+    "terminal": {
+      "title": "LunaFox ASM Platform",
+      "subtitle": "Secure Authentication Terminal",
+      "usernamePrompt": "Username",
+      "passwordPrompt": "Password",
+      "authenticating": "Authenticating...",
+      "processing": "Processing...",
+      "accessGranted": "Access granted.",
+      "welcomeMessage": "Welcome back, commander.",
+      "authFailed": "ERROR: Authentication failed.",
+      "invalidCredentials": "Invalid credentials. Please try again.",
+      "shortcuts": "Shortcuts",
+      "submit": "submit",
+      "cancel": "cancel",
+      "clear": "clear",
+      "startEnd": "start/end"
+    },
+    "changePassword": {
+      "title": "Change Password",
+      "desc": "Enter your current password and new password",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "passwordMismatch": "New password and confirmation do not match",
+      "passwordTooShort": "New password must be at least {min} characters",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving..."
+    }
+  },
+  "organization": {
+    "title": "Organization Management",
+    "name": "Organization Name",
+    "description": "Description",
+    "addOrganization": "Add Organization",
+    "createOrganization": "Create Organization",
+    "editOrganization": "Edit Organization",
+    "deleteOrganization": "Delete Organization",
+    "searchPlaceholder": "Search organization name...",
+    "noResults": "No organizations",
+    "targetCount": "Target Count",
+    "notFound": "Organization Not Found",
+    "notFoundDesc": "Organization with ID {id} not found",
+    "noDescription": "No description",
+    "createdAt": "Created at {date}",
+    "targetCountLabel": "{count} targets",
+    "dialog": {
+      "addTitle": "Add New Organization",
+      "addDesc": "Fill in organization information to add to the system. You can also add targets. Fields marked with * are required.",
+      "editTitle": "Edit Organization",
+      "editDesc": "Modify organization basic information. Fields marked with * are required.",
+      "addButton": "Add Organization",
+      "orgName": "Organization Name",
+      "orgNamePlaceholder": "Enter organization name",
+      "orgDesc": "Organization Description",
+      "orgDescPlaceholder": "Enter organization description (optional)",
+      "addTargets": "Add Targets (optional)",
+      "targetsPlaceholder": "Enter targets, one per line\nSupports domain, IP, CIDR\nExample:\nexample.com\n192.168.1.1\n10.0.0.0/8",
+      "targetCount": "{count} targets",
+      "invalidCount": "{count} invalid",
+      "invalidExample": "e.g., Line {line}: \"{target}\" - {error}",
+      "cancel": "Cancel",
+      "create": "Create Organization",
+      "creating": "Creating organization...",
+      "creatingTargets": "Creating targets...",
+      "update": "Update Organization",
+      "updating": "Updating...",
+      "reset": "Reset",
+      "changesDetected": "Changes detected, click update to save",
+      "characters": "{count}/{max} characters"
+    },
+    "validation": {
+      "nameMin": "Organization name must be at least {min} characters",
+      "nameMax": "Organization name cannot exceed {max} characters",
+      "descMax": "Description cannot exceed {max} characters",
+      "targetInvalid": "Invalid target format"
+    },
+    "linkTarget": {
+      "title": "Add Targets to Organization",
+      "description": "Enter targets to link to \"{name}\". Supports batch adding, one target per line. Fields marked with * are required.",
+      "targetLabel": "Targets",
+      "organizationLabel": "Organization",
+      "placeholder": "Enter targets, one per line\nSupports domain, IP, CIDR\nExample:\nexample.com\n192.168.1.1\n10.0.0.0/8",
+      "targetCount": "{count} targets",
+      "invalidCount": "{count} invalid",
+      "invalidExample": "e.g., Line {line}: \"{target}\" - {error}",
+      "creating": "Creating...",
+      "createTarget": "Create Targets",
+      "validation": {
+        "required": "Please enter at least one target",
+        "invalidFormat": "Invalid target format"
+      }
+    }
+  },
+  "target": {
+    "title": "Target Management",
+    "name": "Target Name",
+    "domain": "Domain",
+    "description": "Description",
+    "addTarget": "Add Target",
+    "createTarget": "Create Target",
+    "editTarget": "Edit Target",
+    "deleteTarget": "Delete Target",
+    "organization": "Organization",
+    "types": {
+      "domain": "Domain",
+      "ip": "IP",
+      "cidr": "CIDR"
+    },
+    "dialog": {
+      "addTitle": "Add Target",
+      "addDesc": "Enter targets and link to organization. Supports batch adding, one target per line. Fields marked with * are required.",
+      "targetList": "Target List",
+      "targetPlaceholder": "Enter targets, one per line\nSupports domain, IP, CIDR\nExample:\nexample.com\n192.168.1.1\n10.0.0.0/8",
+      "targetCount": "{count} targets",
+      "invalidCount": "{count} invalid targets, e.g., Line {line}: \"{target}\" - {error}",
+      "invalidFormat": "Invalid target format",
+      "linkOrganization": "Link Organization (optional)",
+      "selectOrganization": "Select organization",
+      "searchOrganization": "Search organization...",
+      "noOrganization": "No organization found",
+      "loading": "Loading...",
+      "orgPagination": "{total} organizations · Page {page} / {totalPages}",
+      "perPage": "Per page:",
+      "creating": "Creating...",
+      "addTarget": "Add Target"
+    }
+  },
+  "scan": {
+    "title": "Scan",
+    "startScan": "Start Scan",
+    "stopScan": "Stop Scan",
+    "stopScanPending": "Stopping...",
+    "scanType": "Scan Type",
+    "scanStatus": "Scan Status",
+    "scanProgress": "Scan Progress",
+    "scanResult": "Scan Result",
+    "editTask": "Edit Task",
+    "initiate": {
+      "title": "Initiate Scan",
+      "targetDesc": "For target",
+      "orgDesc": "For organization",
+      "selectEngine": "select scan engine",
+      "selectEngineTitle": "Select Engine",
+      "selectEngineHint": "Select one scan engine",
+      "loading": "Loading...",
+      "loadFailed": "Failed to load",
+      "noEngines": "No engines available",
+      "capabilities": "{count} capabilities",
+      "noConfig": "No config",
+      "initiating": "Initiating...",
+      "startScan": "Start Scan",
+      "selectedCount": "{count} engines selected",
+      "configTitle": "Scan Configuration",
+      "configEdited": "Edited",
+      "advancedConfig": "Advanced Configuration",
+      "quickStart": "Quick Start",
+      "cancel": "Cancel",
+      "stepIndicator": "Step {current}/{total}",
+      "back": "Back",
+      "next": "Next",
+      "steps": {
+        "selectEngine": "Select Engine",
+        "editConfig": "Edit Config"
+      },
+      "presets": {
+        "title": "Quick Select",
+        "fullScan": "Full Scan",
+        "fullScanDesc": "Complete security assessment covering asset discovery to vulnerability detection",
+        "recon": "Reconnaissance",
+        "reconDesc": "Discover and identify target assets including subdomains, ports, sites and fingerprints",
+        "vulnScan": "Vulnerability Scan",
+        "vulnScanDesc": "Detect security vulnerabilities on known assets",
+        "custom": "Custom",
+        "customDesc": "Manually select engine combination",
+        "customHint": "Click to manually select engines",
+        "selectHint": "Please select a scan preset",
+        "selectEngines": "Select Engines",
+        "enginesCount": "engines",
+        "capabilities": "Capabilities",
+        "usedEngines": "Used Engines",
+        "noCapabilities": "Please select engines",
+        "loading": "Loading scan presets...",
+        "noMatchingEngines": "No matching engines",
+        "empty": "No preset engines"
+      },
+      "mode": {
+        "preset": "Preset Engines",
+        "custom": "Custom Engine"
+      },
+      "overwriteConfirm": {
+        "title": "Overwrite Configuration",
+        "description": "You have manually edited the configuration. Changing engines will overwrite your changes. Continue?",
+        "cancel": "Cancel",
+        "confirm": "Overwrite"
+      },
+      "validation": {
+        "title": "Validation",
+        "yamlOk": "YAML syntax looks good",
+        "yamlError": "YAML has errors, please review",
+        "enginesOk": "{count} engines selected",
+        "enginesMissing": "No scan engine selected",
+        "presetOk": "Preset selected: {name}",
+        "presetMissing": "No preset selected",
+        "configEdited": "Configuration edited manually",
+        "configFromPreset": "Configuration is from preset",
+        "configFromEngine": "Configuration is from selected engine",
+        "configMissing": "Configuration is required"
+      }
+    },
+    "cron": {
+      "everyMinute": "Every minute",
+      "everyNMinutes": "Every {n} minutes",
+      "everyHour": "Every hour at {minute}",
+      "everyNHours": "Every {n} hours at {minute}",
+      "everyDay": "Every day at {time}",
+      "everyWeek": "Every {day} at {time}",
+      "everyMonth": "Every month on day {day} at {time}",
+      "weekdays": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    },
+    "history": {
+      "title": "Scan History",
+      "description": "View and manage all scan task records",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "duration": "Duration",
+      "status": "Status",
+      "searchPlaceholder": "Search target name...",
+      "allStatus": "All Status",
+      "loadFailed": "Failed to load scan history",
+      "retry": "Retry",
+      "taskId": "Scan Task ID: {id}",
+      "breadcrumb": {
+        "scanHistory": "Scan History"
+      },
+      "tabs": {
+        "overview": "Overview",
+        "assets": "Assets",
+        "screenshots": "Screenshots",
+        "vulnerabilities": "Vulnerabilities",
+        "websites": "Websites",
+        "subdomains": "Subdomains",
+        "ips": "IPs",
+        "urls": "URLs",
+        "directories": "Directories"
+      },
+      "directoriesHelp": "Results from directory scanning (e.g. ffuf/dirsearch)",
+      "status": {
+        "completed": "Completed",
+        "running": "Running",
+        "failed": "Failed",
+        "pending": "Pending",
+        "cancelled": "Cancelled"
+      },
+      "overview": {
+        "loadError": "Failed to load scan data",
+        "startedAt": "Started",
+        "duration": "Duration",
+        "assetsTitle": "Discovered Assets",
+        "vulnerabilitiesTitle": "Vulnerabilities",
+        "stagesTitle": "Scan Progress",
+        "stagesCompleted": "completed",
+        "logsTitle": "Scan Logs",
+        "configTitle": "Configuration",
+        "autoRefresh": "Auto Refresh",
+        "noConfig": "No configuration available",
+        "noStages": "No stage progress available",
+        "totalFound": "total found",
+        "totalVulns": "{count} total",
+        "viewAll": "View All",
+        "cards": {
+          "websites": "Websites",
+          "subdomains": "Subdomains",
+          "ips": "IP Addresses",
+          "urls": "URLs",
+          "directories": "Directories",
+          "screenshots": "Screenshots",
+          "vulnerabilities": "Vulnerabilities"
+        },
+        "severity": {
+          "critical": "Critical",
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low"
+        }
+      },
+      "stats": {
+        "totalScans": "Total Scans",
+        "running": "Running",
+        "vulnsFound": "Vulns Found",
+        "assetsFound": "Assets Found",
+        "allScanTasks": "All scan tasks",
+        "runningScans": "Running scans",
+        "completedScansFound": "Found in completed scans",
+        "assetTypes": "Subdomains + IPs + Endpoints + Websites",
+        "all": "All"
+      }
+    },
+    "progress": {
+      "title": "Scan Progress",
+      "target": "Target",
+      "engine": "Engine",
+      "startTime": "Start Time",
+      "status": "Status",
+      "errorReason": "Error Reason",
+      "totalProgress": "Total Progress",
+      "tab_stages": "Stages",
+      "tab_logs": "Logs",
+      "status_running": "Scanning",
+      "status_cancelled": "Cancelled",
+      "status_completed": "Completed",
+      "status_failed": "Failed",
+      "status_pending": "Pending",
+      "stage_running": "Running",
+      "stage_pending": "Pending",
+      "stage_failed": "Failed",
+      "stage_cancelled": "Cancelled",
+      "stages": {
+        "subdomainDiscovery": "Subdomain Discovery",
+        "portScan": "Port Scan",
+        "siteScan": "Site Scan",
+        "fingerprintDetect": "Fingerprint Detection",
+        "directoryScan": "Directory Scan",
+        "urlFetch": "URL Fetch",
+        "vulnScan": "Vulnerability Scan",
+        "subdomain_discovery": "Subdomain Discovery",
+        "port_scan": "Port Scan",
+        "site_scan": "Site Scan",
+        "fingerprint_detect": "Fingerprint Detection",
+        "directory_scan": "Directory Scan",
+        "url_fetch": "URL Fetch",
+        "vuln_scan": "Vulnerability Scan",
+        "screenshot": "Screenshot"
+      }
+    },
+    "scheduled": {
+      "title": "Scheduled Scan",
+      "description": "Configure and manage scheduled scan tasks",
+      "searchPlaceholder": "Search task name...",
+      "cronExpression": "Cron Expression",
+      "nextRun": "Next Run",
+      "lastRun": "Last Run",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "createTitle": "Create Scheduled Scan",
+      "createDesc": "Configure scheduled scan task and set execution plan",
+      "editTitle": "Edit Scheduled Scan",
+      "editDesc": "Modify scheduled scan task configuration",
+      "stepIndicator": "Step {current}/{total}",
+      "steps": {
+        "basicInfo": "Basic Info",
+        "scanMode": "Scan Mode",
+        "selectTarget": "Select Target",
+        "selectEngine": "Select Engine",
+        "editConfig": "Edit Config",
+        "scheduleSettings": "Schedule Settings"
+      },
+      "form": {
+        "taskName": "Task Name",
+        "taskNamePlaceholder": "e.g., Daily Security Scan",
+        "taskNameDesc": "Set an easily identifiable name for the scheduled task",
+        "taskNameRequired": "Please enter task name",
+        "scanEngine": "Scan Engine",
+        "scanEnginePlaceholder": "Select scan engine",
+        "scanEngineDesc": "Select engine to auto-fill configuration, or edit directly",
+        "scanEngineRequired": "Please select a scan engine",
+        "configuration": "Scan Configuration",
+        "configurationPlaceholder": "Enter YAML scan configuration...",
+        "configurationDesc": "YAML format scan configuration, select engine to auto-fill or edit manually",
+        "configurationRequired": "Please enter scan configuration",
+        "yamlInvalid": "Invalid YAML configuration, please check syntax",
+        "configEdited": "Edited",
+        "selectScanMode": "Select Scan Mode",
+        "organizationScan": "Organization Scan",
+        "organizationScanDesc": "Select organization, dynamically fetch all targets at execution",
+        "targetScan": "Target Scan",
+        "targetScanDesc": "Select fixed target list for scanning",
+        "organizationScanHint": "Organization Scan: Dynamically fetches all targets under the organization at each execution, newly added targets will also be scanned",
+        "targetScanHint": "Target Scan: Scans a fixed target list, newly added targets will not be scanned",
+        "selectOrganization": "Select Organization",
+        "selectTarget": "Select Scan Target",
+        "searchOrganization": "Search organization name...",
+        "searchTarget": "Search target name...",
+        "clearSelectedOrganization": "Clear selected organization",
+        "clearSelectedTarget": "Clear selected target",
+        "noOrganization": "No organization found",
+        "noTarget": "No target found",
+        "targetCount": "{count} targets",
+        "selectedOrganization": "Organization selected, will dynamically scan all targets under this organization at execution",
+        "selectedTarget": "Target selected",
+        "cronExpression": "Cron Expression",
+        "cronPlaceholder": "min hour day month week (e.g., 0 2 * * *)",
+        "cronFormat": "Format: min(0-59) hour(0-23) day(1-31) month(1-12) week(0-6, 0=Sunday)",
+        "cronRequired": "Invalid Cron expression format, requires 5 parts: min hour day month week",
+        "quickSelect": "Quick Select",
+        "executionPreview": "Execution Preview",
+        "valid": "Valid",
+        "nextExecutionTime": "Next execution time:",
+        "upcoming": "(upcoming)",
+        "invalidExpression": "Invalid expression",
+        "scanScope": "Scan Scope",
+        "organizationMode": "Organization Scan",
+        "organizationModeHint": "In organization scan mode, all targets under this organization will be dynamically fetched at execution",
+        "noAvailableTarget": "No available targets",
+        "noEngine": "No engines available",
+        "noConfig": "No config",
+        "capabilitiesCount": "{count} capabilities",
+        "selected": "Selected",
+        "selectedEngines": "{count} engines selected",
+        "scanTarget": "Scan Target",
+        "presetTargetHint": "Target is preset and cannot be changed. To scan other targets, create from the global scheduled scans page."
+      },
+      "presets": {
+        "everyHour": "Every Hour",
+        "daily2am": "Daily at 2 AM",
+        "daily4am": "Daily at 4 AM",
+        "weekly": "Weekly Monday at 2 AM",
+        "monthly": "Monthly 1st at 2 AM",
+        "everyMinute": "Every Minute",
+        "every5Minutes": "Every 5 Minutes"
+      },
+      "buttons": {
+        "previous": "Previous",
+        "next": "Next",
+        "createTask": "Create Task",
+        "saveChanges": "Save Changes",
+        "cancel": "Cancel"
+      },
+      "toast": {
+        "selectOrganization": "Please select an organization",
+        "selectTarget": "Please select a scan target",
+        "configConflict": "Configuration conflict"
+      },
+      "overwriteConfirm": {
+        "title": "Overwrite Configuration",
+        "description": "You have manually edited the configuration. Changing engines will overwrite your changes. Do you want to continue?",
+        "cancel": "Cancel",
+        "confirm": "Overwrite"
+      }
+    },
+    "engine": {
+      "title": "Scan Engine",
+      "name": "Engine Name",
+      "type": "Engine Type",
+      "config": "Configuration",
+      "searchPlaceholder": "Search my engines...",
+      "createEngine": "Create Engine",
+      "engineList": "Engine List",
+      "presetEngines": "Preset Engines",
+      "myEngines": "My Engines",
+      "preset": "Preset",
+      "noMatchingEngine": "No matching engine found",
+      "noEngines": "No custom engines yet",
+      "featuresEnabled": "{count} features enabled",
+      "featuresCount": "{count} features",
+      "updatedAt": "Updated at",
+      "enabledFeatures": "Enabled Features",
+      "configPreview": "Configuration Preview",
+      "editConfig": "Edit Config",
+      "cloneAsMyEngine": "Clone as My Engine",
+      "configNeedsUpdate": "Configuration needs update",
+      "needsUpdate": "Needs Update",
+      "selectEngineHint": "Select an engine from the left to view details",
+      "features": {
+        "subdomain_discovery": "Subdomain Discovery",
+        "port_scan": "Port Scan",
+        "site_scan": "Site Scan",
+        "fingerprint_detect": "Fingerprint Detection",
+        "directory_scan": "Directory Scan",
+        "screenshot": "Screenshot",
+        "url_fetch": "URL Fetch",
+        "vuln_scan": "Vulnerability Scan"
+      },
+      "create": {
+        "title": "Create Scan Engine",
+        "desc": "Create a new scan engine configuration using Monaco Editor to edit YAML config files with syntax highlighting, auto-completion and error hints.",
+        "selectPresetDesc": "Select a preset engine as template",
+        "editConfigDesc": "Customize engine name and configuration",
+        "nextStep": "Next",
+        "prevStep": "Back",
+        "engineName": "Engine Name",
+        "engineNamePlaceholder": "Enter engine name, e.g., Full Scan Engine",
+        "yamlConfig": "YAML Configuration",
+        "syntaxError": "Syntax Error",
+        "syntaxValid": "Syntax Valid",
+        "loadingEditor": "Loading editor...",
+        "errorLocation": "Line {line}, Column {column}",
+        "confirmClose": "You have unsaved changes, are you sure you want to close?",
+        "creating": "Creating...",
+        "createEngine": "Create Engine"
+      },
+      "edit": {
+        "title": "Edit Engine Config - {name}",
+        "desc": "Edit engine YAML configuration using Monaco Editor with syntax highlighting, auto-completion and error hints.",
+        "yamlConfig": "YAML Configuration",
+        "syntaxError": "Syntax Error",
+        "syntaxValid": "Syntax Valid",
+        "loadingEditor": "Loading editor...",
+        "errorLocation": "Line {line}, Column {column}",
+        "unsavedChanges": "You have unsaved changes",
+        "confirmClose": "You have unsaved changes, are you sure you want to close?",
+        "saving": "Saving...",
+        "saveConfig": "Save Configuration"
+      }
+    }
+  },
+  "vulnerability": {
+    "title": "Vulnerabilities",
+    "name": "Vulnerability Name",
+    "severity": "Severity",
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+    "info": "Info",
+    "status": "Status",
+    "open": "Open",
+    "confirmed": "Confirmed",
+    "fixed": "Fixed",
+    "falsePositive": "False Positive",
+    "description": "Description",
+    "solution": "Solution",
+    "reference": "Reference"
+  },
+  "tools": {
+    "title": "Tools",
+    "wordlists": {
+      "title": "Wordlists",
+      "name": "Wordlist Name",
+      "type": "Type",
+      "count": "Entry Count",
+      "upload": "Upload Wordlist",
+      "download": "Download Wordlist",
+      "uploadDialog": {
+        "title": "Upload Wordlist",
+        "desc": "Upload wordlist file, workers will download as needed after backend saves it",
+        "dragHint": "Drag file here",
+        "selectFile": "Select file",
+        "fileHint": "Supports .txt files, max 50MB",
+        "namePlaceholder": "e.g., Common directories",
+        "descPlaceholder": "e.g., Based on dirsearch",
+        "descLabel": "Description (optional)",
+        "cancel": "Cancel",
+        "uploading": "Uploading...",
+        "uploadButton": "Upload Wordlist"
+      },
+      "editDialog": {
+        "title": "Edit Wordlist - {name}",
+        "desc": "Edit wordlist content, one entry per line. Line count, file size and hash will be updated after saving.",
+        "content": "Wordlist Content",
+        "lines": "{count} lines",
+        "hash": "Hash",
+        "loading": "Loading wordlist content...",
+        "loadingEditor": "Loading editor...",
+        "unsavedChanges": "You have unsaved changes",
+        "confirmClose": "You have unsaved changes, are you sure you want to close?",
+        "cancel": "Cancel",
+        "saving": "Saving...",
+        "save": "Save Wordlist"
+      }
+    },
+    "fingerprints": {
+      "title": "Fingerprints",
+      "name": "Fingerprint Name",
+      "category": "Category",
+      "import": "Import Fingerprints",
+      "export": "Export Fingerprints",
+      "pageDescription": "Web fingerprint rule management",
+      "helpText": "• EHole: Red team asset identification tool, supports keyword, favicon hash and other identification methods\n• Goby: Attack surface mapping tool, contains a large number of web applications and device fingerprints\n• Wappalyzer: Browser extension that can identify the technology stack used by websites\n• Fingers: HTTP fingerprint library with detailed rule matching\n• FingerPrintHub: Nuclei-style fingerprint templates with HTTP matchers\n• ARL: Asset Reconnaissance Lighthouse fingerprint rules in YAML format",
+      "actions": {
+        "operations": "Actions",
+        "exportAll": "Export All Fingerprints",
+        "deleteSelected": "Delete Selected",
+        "deleteAll": "Delete All",
+        "addFingerprint": "Add Fingerprint",
+        "addSingle": "Add Single",
+        "importFile": "Import File"
+      },
+      "dialogs": {
+        "exportTitle": "Export All Fingerprints",
+        "exportDesc": "Export all {count} fingerprints as JSON file.",
+        "deleteSelectedTitle": "Delete Selected Fingerprints",
+        "deleteSelectedDesc": "Are you sure you want to delete {count} selected fingerprints? This action cannot be undone.",
+        "deleteAllTitle": "Delete All Fingerprints",
+        "deleteAllDesc": "Are you sure you want to delete all {count} fingerprints? This action cannot be undone.",
+        "confirmExport": "Confirm Export",
+        "confirmDelete": "Confirm Delete"
+      },
+      "ehole": {
+        "addTitle": "Add EHole Fingerprint",
+        "editTitle": "Edit EHole Fingerprint",
+        "addDesc": "Add a new fingerprint rule",
+        "editDesc": "Modify fingerprint rule configuration"
+      },
+      "goby": {
+        "addTitle": "Add Goby Fingerprint",
+        "editTitle": "Edit Goby Fingerprint",
+        "addDesc": "Add a new fingerprint rule",
+        "editDesc": "Modify fingerprint rule configuration"
+      },
+      "wappalyzer": {
+        "addTitle": "Add Wappalyzer Fingerprint",
+        "editTitle": "Edit Wappalyzer Fingerprint",
+        "addDesc": "Add a new fingerprint rule",
+        "editDesc": "Modify fingerprint rule configuration"
+      },
+      "fingers": {
+        "addTitle": "Add Fingers Fingerprint",
+        "editTitle": "Edit Fingers Fingerprint",
+        "addDesc": "Add a new HTTP fingerprint rule",
+        "editDesc": "Modify fingerprint rule configuration"
+      },
+      "fingerprinthub": {
+        "addTitle": "Add FingerPrintHub Fingerprint",
+        "editTitle": "Edit FingerPrintHub Fingerprint",
+        "addDesc": "Add a new Nuclei-style fingerprint template",
+        "editDesc": "Modify fingerprint template configuration"
+      },
+      "arl": {
+        "addTitle": "Add ARL Fingerprint",
+        "editTitle": "Edit ARL Fingerprint",
+        "addDesc": "Add a new ARL fingerprint rule",
+        "editDesc": "Modify fingerprint rule configuration"
+      },
+      "toast": {
+        "createSuccess": "Create successful",
+        "updateSuccess": "Update successful",
+        "createFailed": "Create failed",
+        "updateFailed": "Update failed",
+        "exportSuccess": "Export successful",
+        "exportFailed": "Export failed",
+        "deleteSuccess": "Delete successful",
+        "deleteFailed": "Delete failed"
+      },
+      "form": {
+        "cmsPlaceholder": "e.g., WordPress, Nginx",
+        "cmsRequired": "CMS name is required",
+        "keywordPlaceholder": "Multiple keywords separated by commas",
+        "keywordRequired": "Keyword is required",
+        "typePlaceholder": "e.g., CMS, Server",
+        "namePlaceholder": "e.g., Apache, Nginx",
+        "nameRequired": "Product name is required",
+        "logicPlaceholder": "e.g., a||b, (a&&b)||c",
+        "logicRequired": "Logic expression is required",
+        "featurePlaceholder": "Match feature",
+        "appNamePlaceholder": "e.g., WordPress, React",
+        "appNameRequired": "Application name is required",
+        "catsPlaceholder": "e.g., 1, 6, 12",
+        "descPlaceholder": "Application description",
+        "detectionRules": "Detection Rules",
+        "detectionRulesHint": "Use objects for JSON format, comma-separated for arrays",
+        "jsVariables": "JS Variables",
+        "metaTags": "Meta Tags",
+        "htmlContent": "HTML Content",
+        "implies": "Implies",
+        "cookies": "Cookies (JSON)",
+        "headers": "Headers (JSON)",
+        "scriptUrl": "Script URL",
+        "location": "Location",
+        "mark": "Mark",
+        "name": "Name",
+        "fpId": "Fingerprint ID",
+        "fpIdPlaceholder": "e.g., wordpress-detect",
+        "fpIdRequired": "Fingerprint ID is required",
+        "author": "Author",
+        "authorPlaceholder": "e.g., security-team",
+        "severity": "Severity",
+        "tags": "Tags",
+        "tagsPlaceholder": "e.g., cms, wordpress, php",
+        "http": "HTTP Matchers",
+        "httpPlaceholder": "JSON array of HTTP matching rules",
+        "httpRequired": "HTTP matchers are required",
+        "httpArrayRequired": "HTTP must be an array",
+        "httpJsonInvalid": "Invalid HTTP JSON format",
+        "metadata": "Metadata",
+        "metadataPlaceholder": "JSON object for metadata",
+        "metadataObjectRequired": "Metadata must be an object",
+        "metadataJsonInvalid": "Invalid metadata JSON format",
+        "sourceFile": "Source File",
+        "sourceFilePlaceholder": "e.g., wordpress.yaml",
+        "link": "Reference Link",
+        "linkPlaceholder": "e.g., https://example.com/docs",
+        "rule": "Match Rules",
+        "rulePlaceholder": "JSON array of matching rules",
+        "ruleRequired": "Match rules are required",
+        "ruleArrayRequired": "Rules must be an array",
+        "ruleJsonInvalid": "Invalid rule JSON format",
+        "tag": "Tags",
+        "tagPlaceholder": "e.g., cms, framework (comma-separated)",
+        "focusLabel": "Mark as focus",
+        "defaultPort": "Default Ports",
+        "defaultPortPlaceholder": "e.g., 80, 443, 8080 (comma-separated)",
+        "arlNamePlaceholder": "e.g., Nginx, Apache",
+        "arlRule": "ARL Rule",
+        "arlRulePlaceholder": "body=\"nginx\" || header=\"nginx\"",
+        "arlRuleRequired": "ARL rule is required",
+        "arlRuleHint": "Supports body, header, title matchers. Use || and && to combine conditions"
+      },
+      "loadFailed": "Failed to load",
+      "loadError": "Error loading fingerprint data",
+      "reload": "Reload",
+      "filter": {
+        "ehole": {
+          "cms": "Product/CMS name",
+          "method": "Match method (keyword, faviconhash...)",
+          "location": "Match location (body, header, title)",
+          "type": "Category",
+          "isImportant": "Is important asset (true/false)"
+        },
+        "goby": {
+          "product": "Product name",
+          "logic": "Logic expression"
+        },
+        "wappalyzer": {
+          "name": "Application name",
+          "description": "Application description",
+          "website": "Website URL",
+          "cpe": "CPE identifier",
+          "implies": "Dependencies (e.g., PHP, MySQL)"
+        },
+        "fingers": {
+          "name": "Fingerprint name",
+          "link": "Reference link",
+          "tag": "Tags",
+          "focus": "Focus flag (true/false)",
+          "defaultPort": "Default ports"
+        },
+        "fingerprinthub": {
+          "fpId": "Fingerprint ID",
+          "name": "Fingerprint name",
+          "author": "Author",
+          "tags": "Tags",
+          "severity": "Severity"
+        },
+        "arl": {
+          "name": "Fingerprint name",
+          "rule": "Rule content"
+        }
+      },
+      "import": {
+        "eholeTitle": "Import EHole Fingerprints",
+        "eholeDesc": "Upload EHole format fingerprint file",
+        "eholeFormatHint": "{\"fingerprint\": [...]}",
+        "eholeInvalidMissing": "Invalid EHole format: missing fingerprint field",
+        "eholeInvalidArray": "Invalid EHole format: fingerprint must be an array",
+        "eholeInvalidFields": "Invalid EHole format: fingerprint missing required fields (cms, keyword)",
+        "gobyTitle": "Import Goby Fingerprints",
+        "gobyDesc": "Upload Goby format fingerprint file",
+        "gobyFormatHint": "[{...}] or {...}",
+        "gobyInvalidFields": "Invalid Goby format: fingerprint missing required fields (product, rule)",
+        "gobyInvalidFormat": "Invalid Goby format: must be array or object",
+        "wappalyzerTitle": "Import Wappalyzer Fingerprints",
+        "wappalyzerDesc": "Upload Wappalyzer format fingerprint file",
+        "wappalyzerFormatHint": "{\"apps\": {...}} or [{...}]",
+        "wappalyzerInvalidApps": "Invalid Wappalyzer format: apps/technologies must be an object",
+        "wappalyzerInvalidFormat": "Invalid Wappalyzer format",
+        "fingersTitle": "Import Fingers Fingerprints",
+        "fingersDesc": "Upload Fingers format fingerprint file",
+        "fingersFormatHint": "[{\"name\": ..., \"rule\": [...]}]",
+        "fingersInvalidFormat": "Invalid Fingers format: must be an array",
+        "fingersInvalidArray": "Invalid Fingers format: must be an array",
+        "fingersInvalidFields": "Invalid Fingers format: fingerprint missing required fields (name, rule)",
+        "fingerprinthubTitle": "Import FingerPrintHub Fingerprints",
+        "fingerprinthubDesc": "Upload FingerPrintHub format fingerprint file",
+        "fingerprinthubFormatHint": "[{\"id\": ..., \"info\": {...}, \"http\": [...]}]",
+        "fingerprinthubInvalidFormat": "Invalid FingerPrintHub format: must be an array",
+        "fingerprinthubInvalidArray": "Invalid FingerPrintHub format: must be an array",
+        "fingerprinthubInvalidFields": "Invalid FingerPrintHub format: fingerprint missing required fields",
+        "arlTitle": "Import ARL Fingerprints",
+        "arlDesc": "Upload ARL format fingerprint file",
+        "arlFormatHint": "YAML format with name and rule fields",
+        "arlInvalidFormat": "Invalid ARL format",
+        "arlInvalidArray": "Invalid ARL format: must be an array",
+        "arlInvalidFields": "Invalid ARL format: fingerprint missing required fields (name, rule)",
+        "emptyData": "Fingerprint data is empty",
+        "supportedFormat": "Supported format:",
+        "importing": "Importing...",
+        "importSuccessDetail": "Import successful: {created} created, {failed} failed"
+      }
+    },
+    "nuclei": {
+      "title": "Nuclei Templates",
+      "templateName": "Template Name",
+      "author": "Author",
+      "severity": "Severity",
+      "tags": "Tags",
+      "selectTemplate": "Select a template on the left to view content",
+      "useSearch": "Or use search to locate quickly",
+      "back": "Back",
+      "searchPlaceholder": "Search templates...",
+      "syncing": "Syncing...",
+      "sync": "Sync",
+      "templateDirectory": "Template Directory",
+      "templateCount": "{count} templates",
+      "noMatchingTemplate": "No matching templates found",
+      "noTemplateOrLoadFailed": "No templates or failed to load",
+      "repoName": "Repository #{id}"
+    },
+    "config": {
+      "addTool": "Add Tool",
+      "editTool": "Edit Tool",
+      "addNewTool": "Add New Tool",
+      "addCustomTool": "Add Custom Tool",
+      "editCustomTool": "Edit Custom Tool",
+      "dialogDesc": "Configure scan tool basic info and commands. Fields marked with * are required.",
+      "customDialogDesc": "Configure custom scan tool basic info. Fields marked with * are required.",
+      "basicInfo": "Basic Info",
+      "commandConfig": "Command Config",
+      "toolName": "Tool Name",
+      "toolNamePlaceholder": "e.g., Nuclei, Subfinder, HTTPX",
+      "toolNameMin": "Tool name must be at least 2 characters",
+      "toolNameMax": "Tool name cannot exceed 255 characters",
+      "repoUrl": "Repository URL",
+      "repoUrlPlaceholder": "https://github.com/projectdiscovery/nuclei",
+      "currentVersion": "Current Installed Version",
+      "versionPlaceholder": "v3.0.0",
+      "toolDesc": "Tool Description",
+      "toolDescPlaceholder": "Describe the tool's features and use cases...",
+      "categoryTags": "Category Tags",
+      "noCategories": "No categories available",
+      "installCommand": "Install Command",
+      "installCommandPlaceholder": "git clone https://github.com/user/tool\nor\ngo install -v github.com/tool@latest",
+      "installCommandRequired": "Install command is required",
+      "installCommandHint": "Examples:",
+      "installCommandGit": "Using git:",
+      "installCommandGo": "Using go:",
+      "installCommandNote": "Note: go get is no longer supported, please use go install",
+      "updateCommand": "Update Command",
+      "updateCommandPlaceholder": "git pull\nor\ngo install -v github.com/tool@latest",
+      "updateCommandRequired": "Update command is required",
+      "updateCommandGitHint": "For tools installed via git clone, recommend using",
+      "updateCommandGoHint": "For tools installed via go install, recommend using the same install command",
+      "versionCommand": "Version Command",
+      "versionCommandPlaceholder": "toolname --version",
+      "versionCommandRequired": "Version command is required",
+      "versionCommandAutoGenerated": "Auto-generated",
+      "versionCommandHint": "System will use this command to check tool version. Common formats:",
+      "characters": "{count}/{max} characters",
+      "cancel": "Cancel",
+      "creating": "Creating...",
+      "saving": "Saving...",
+      "createTool": "Create Tool",
+      "saveChanges": "Save Changes",
+      "customToolNamePlaceholder": "e.g., Custom Port Scanner",
+      "customToolDescPlaceholder": "Describe the tool's features and use cases...",
+      "toolPath": "Tool Path",
+      "toolPathPlaceholder": "e.g., /opt/security-tools/port-scanner",
+      "toolPathHint": "Directory path where the script or tool is located",
+      "repository": "Repository",
+      "uncategorized": "Uncategorized",
+      "noDescription": "No description",
+      "checking": "Checking...",
+      "checkUpdate": "Check Update",
+      "noTools": "No tools",
+      "noCustomTools": "No custom tools",
+      "directory": "Directory"
+    },
+    "commands": {
+      "searchPlaceholder": "Search command name..."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "workers": {
+      "title": "Agents",
+      "install": {
+        "title": "Install Agent",
+        "desc": "Run the install command on the target machine. The target machine does not need public Internet access; it only needs to reach the server URL. If it cannot reach the image registry, pre-pull images or configure a registry mirror/private registry.",
+        "step1Desc": "Generate the token and copy the command to the target machine",
+        "step2Desc": "Run it on the target machine, then confirm agent status in the agent list",
+        "tokenUsage": "Reusable within its validity window",
+        "generateToken": "Generate Command",
+        "regenerateToken": "Regenerate Command",
+        "commandTitle": "Install Command",
+        "commandDesc": "Run on the target machine (Docker access required). The target machine does not need public Internet access; it only needs to reach the server URL. If it cannot reach the image registry, pre-pull images or configure a registry mirror/private registry.",
+        "commandPlaceholder": "Generate a token to show the install command",
+        "commandStatusReady": "Token ready",
+        "commandStatusGenerating": "Generating token",
+        "commandStatusIdle": "Token not generated",
+        "commandStatusExpired": "Expired",
+        "commandExpires": "Expires in {time}",
+        "localOnlyWarning": "localhost or server:8080 only works on the same Docker host/network.",
+        "stepsTitle": "Steps",
+        "requirementsTitle": "Prerequisites",
+        "requirementsDocker": "Docker installed and running on the target machine",
+        "requirementsAccess": "Target machine does not need public Internet access but must reach the server URL",
+        "openDialog": "Open installer"
+      },
+      "stats": {
+        "total": "Total",
+        "online": "Online",
+        "offline": "Offline",
+        "unhealthy": "Unhealthy"
+      },
+      "status": {
+        "online": "Online",
+        "offline": "Offline",
+        "maintenance": "Maintenance",
+        "unknown": "Unknown"
+      },
+      "health": {
+        "ok": "Healthy",
+        "warning": "Warning",
+        "error": "Error",
+        "unknown": "Unknown"
+      },
+      "agents": {
+        "title": "Agent Fleet",
+        "desc": "Monitor agent health, version, and scheduling thresholds"
+      },
+      "metrics": {
+        "lastHeartbeat": "Last heartbeat",
+        "connectedAt": "Connected",
+        "maxTasks": "Max tasks {value}",
+        "cpuThreshold": "CPU {value}%",
+        "memThreshold": "Mem {value}%",
+        "diskThreshold": "Disk {value}%",
+        "cpu": "CPU",
+        "mem": "Memory",
+        "disk": "Disk",
+        "tasks": "Tasks",
+        "uptime": "Uptime {value}",
+        "updatedAt": "Updated {value}"
+      },
+      "actions": {
+        "title": "Actions",
+        "config": "Edit Config",
+        "delete": "Delete Agent",
+        "deleteTitle": "Delete Agent",
+        "deleteDesc": "Delete agent \"{name}\"? This action cannot be undone."
+      },
+      "config": {
+        "title": "Scheduling Config",
+        "desc": "Adjust task concurrency and resource thresholds",
+        "maxTasks": "Max Tasks",
+        "maxTasksDesc": "Maximum concurrent tasks for this agent",
+        "cpuThreshold": "CPU %",
+        "memThreshold": "Mem %",
+        "diskThreshold": "Disk %",
+        "save": "Save Config",
+        "saving": "Saving..."
+      },
+      "empty": {
+        "title": "No agents yet",
+        "desc": "Generate a registration token and install agents on your remote servers to start distributing scan tasks.",
+        "cta": "Generate Token"
+      },
+      "card": {
+        "warning": "Warning",
+        "showDetails": "Show Details",
+        "hideDetails": "Hide Details",
+        "systemMetrics": "System Metrics",
+        "configuration": "Configuration",
+        "waitingForHeartbeat": "Waiting for first heartbeat..."
+      },
+      "list": {
+        "uptime": "Uptime"
+      },
+      "version": "v{version}",
+      "unknownHost": "Unknown host",
+      "unknownIp": "Unknown IP"
+    },
+    "systemLogs": {
+      "title": "System Logs",
+      "description": "Auto-refresh every 2 seconds (polling mode)",
+      "level": "Level",
+      "message": "Message",
+      "timestamp": "Timestamp",
+      "source": "Source",
+      "noContent": "(No log content)",
+      "toolbar": {
+        "logFile": "Log",
+        "selectFile": "Select log file",
+        "lines": "Lines",
+        "linesUnit": "lines",
+        "searchPlaceholder": "Search logs...",
+        "download": "Download",
+        "levelAll": "All Levels",
+        "autoRefresh": "Auto Refresh",
+        "systemLogsGroup": "System Logs",
+        "containerLogsGroup": "Container Logs"
+      }
+    },
+    "notifications": {
+      "title": "Notification Settings",
+      "email": "Email Notifications",
+      "webhook": "Webhook",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "pageTitle": "Notification Settings",
+      "pageDesc": "Configure notification channels and preferences",
+      "tabs": {
+        "channels": "Channels",
+        "preferences": "Preferences"
+      },
+      "discord": {
+        "title": "Discord",
+        "description": "Push notifications to your Discord channel",
+        "webhookLabel": "Webhook URL",
+        "webhookPlaceholder": "https://discord.com/api/webhooks/...",
+        "webhookHelp": "Create a Webhook in Discord channel settings and paste the URL",
+        "requiredError": "Webhook URL is required when Discord is enabled",
+        "urlInvalid": "Please enter a valid Discord Webhook URL"
+      },
+      "wecom": {
+        "title": "WeCom",
+        "description": "Push notifications to WeCom group bot",
+        "webhookLabel": "Webhook URL",
+        "webhookPlaceholder": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...",
+        "webhookHelp": "Add a bot in WeCom group and copy the Webhook URL",
+        "requiredError": "Webhook URL is required when WeCom is enabled",
+        "urlInvalid": "Please enter a valid WeCom Webhook URL"
+      },
+      "emailChannel": {
+        "title": "Email",
+        "description": "Receive notifications via email",
+        "comingSoon": "Coming Soon"
+      },
+      "enterprise": {
+        "title": "Lark / DingTalk / WeCom",
+        "description": "Push to enterprise collaboration platforms"
+      },
+      "categories": {
+        "title": "Notification Categories",
+        "description": "Select notification types you want to receive",
+        "scan": "Scan Tasks",
+        "scanDesc": "Scan start, progress, completion, failure notifications",
+        "vulnerability": "Vulnerability Discovery",
+        "vulnerabilityDesc": "Notify when security vulnerabilities are found",
+        "asset": "Asset Discovery",
+        "assetDesc": "Notify when new subdomains, IPs, ports are found",
+        "system": "System Messages",
+        "systemDesc": "System-level notifications and announcements"
+      },
+      "saveSettings": "Save Settings"
+    }
+  },
+  "toast": {
+    "copied": "Copied",
+    "copyFailed": "Copy failed",
+    "downloadFailed": "Download failed",
+    "deleteSuccess": "Delete successful",
+    "deleteFailed": "Delete failed",
+    "deletedScanRecord": "Delete successful",
+    "stoppedScan": "Stop successful",
+    "stopFailed": "Stop failed",
+    "bulkDeleteSuccess": "Delete successful",
+    "bulkDeleteFailed": "Delete failed",
+    "paramError": "Parameter error",
+    "paramErrorDesc": "Organization ID or Target ID is required",
+    "scanInitiated": "Scan initiated",
+    "scanInitiatedDesc": "Scan initiated",
+    "initiateScanFailed": "Failed to initiate scan",
+    "noScansCreated": "No scan tasks were created",
+    "unknownError": "Unknown error",
+    "noEngineSelected": "Please select at least one scan engine",
+    "noPresetSelected": "Please select a scan preset first",
+    "emptyConfig": "Scan configuration cannot be empty",
+    "invalidConfig": "Invalid configuration format, please check YAML syntax",
+    "engineNameRequired": "Please enter engine name",
+    "configRequired": "Configuration content is required",
+    "yamlSyntaxError": "YAML syntax error",
+    "engineCreateSuccess": "Create successful",
+    "engineCreateSuccessDesc": "Create successful",
+    "engineCreateFailed": "Create failed",
+    "configSaveSuccess": "Save successful",
+    "configSaveSuccessDesc": "Save successful",
+    "configSaveFailed": "Save failed",
+    "selectFileFirst": "Please select a file first",
+    "invalidJsonFile": "Invalid JSON file",
+    "importSuccess": "Import successful",
+    "importFailed": "Import failed",
+    "loadScanHistoryFailed": "Load failed",
+    "scan": {
+      "quick": {
+        "success": "Start successful",
+        "error": "Start failed"
+      },
+      "stop": {
+        "success": "Stop successful"
+      },
+      "delete": {
+        "success": "Delete successful",
+        "bulkSuccess": "Delete successful"
+      },
+      "initiate": {
+        "success": "Initiate successful",
+        "error": "Initiate failed"
+      }
+    },
+    "scheduledScan": {
+      "create": {
+        "success": "Create successful",
+        "error": "Create failed"
+      },
+      "update": {
+        "success": "Update successful",
+        "error": "Update failed"
+      },
+      "delete": {
+        "success": "Delete successful",
+        "error": "Delete failed"
+      },
+      "toggle": {
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "error": "Toggle failed"
+      }
+    },
+    "target": {
+      "create": {
+        "success": "Create successful",
+        "bulkSuccess": "Create successful",
+        "error": "Create failed"
+      },
+      "update": {
+        "success": "Update successful",
+        "error": "Update failed"
+      },
+      "delete": {
+        "success": "Delete successful",
+        "bulkSuccess": "Delete successful",
+        "error": "Delete failed"
+      },
+      "link": {
+        "success": "Link successful",
+        "error": "Link failed"
+      },
+      "unlink": {
+        "success": "Unlink successful",
+        "bulkSuccess": "Unlink successful",
+        "error": "Unlink failed"
+      }
+    },
+    "organization": {
+      "create": {
+        "success": "Create successful",
+        "error": "Create failed"
+      },
+      "update": {
+        "success": "Update successful",
+        "error": "Update failed"
+      },
+      "delete": {
+        "success": "Delete successful",
+        "bulkSuccess": "Delete successful",
+        "error": "Delete failed"
+      }
+    },
+    "asset": {
+      "subdomain": {
+        "create": {
+          "success": "Create successful",
+          "partialSuccess": "Create successful",
+          "error": "Create failed"
+        },
+        "delete": {
+          "success": "Delete successful",
+          "bulkSuccess": "Delete successful",
+          "error": "Delete failed"
+        }
+      },
+      "website": {
+        "create": {
+          "success": "Create successful",
+          "partialSuccess": "Create successful",
+          "error": "Create failed"
+        },
+        "delete": {
+          "success": "Delete successful",
+          "bulkSuccess": "Delete successful",
+          "error": "Delete failed"
+        }
+      },
+      "endpoint": {
+        "create": {
+          "success": "Create successful",
+          "partialSuccess": "Create successful",
+          "error": "Create failed"
+        },
+        "delete": {
+          "success": "Delete successful",
+          "bulkSuccess": "Delete successful",
+          "error": "Delete failed"
+        }
+      },
+      "directory": {
+        "create": {
+          "success": "Create successful",
+          "partialSuccess": "Create successful",
+          "error": "Create failed"
+        },
+        "delete": {
+          "success": "Delete successful",
+          "bulkSuccess": "Delete successful",
+          "error": "Delete failed"
+        }
+      }
+    },
+    "auth": {
+      "login": {
+        "success": "Login successful"
+      },
+      "logout": {
+        "success": "Logged out"
+      },
+      "changePassword": {
+        "success": "Change successful",
+        "error": "Change failed"
+      }
+    },
+    "agent": {
+      "token": {
+        "success": "Token generated",
+        "error": "Failed to generate token"
+      },
+      "config": {
+        "success": "Config updated",
+        "error": "Update failed"
+      },
+      "key": {
+        "success": "API key regenerated",
+        "error": "Regenerate failed"
+      },
+      "delete": {
+        "success": "Agent deleted",
+        "error": "Delete failed"
+      }
+    },
+    "worker": {
+      "create": {
+        "success": "Create successful",
+        "error": "Create failed"
+      },
+      "update": {
+        "success": "Update successful",
+        "error": "Update failed"
+      },
+      "delete": {
+        "success": "Delete successful",
+        "error": "Delete failed"
+      },
+      "deploy": {
+        "success": "Deployment started",
+        "error": "Deploy failed"
+      },
+      "restart": {
+        "success": "Restarting...",
+        "error": "Restart failed"
+      },
+      "stop": {
+        "success": "Stopped",
+        "error": "Stop failed"
+      }
+    },
+    "nucleiRepo": {
+      "create": {
+        "success": "Create successful",
+        "error": "Create failed"
+      },
+      "update": {
+        "success": "Update successful",
+        "error": "Update failed"
+      },
+      "delete": {
+        "success": "Delete successful",
+        "error": "Delete failed"
+      },
+      "sync": {
+        "success": "Sync successful",
+        "error": "Sync failed"
+      }
+    },
+    "wordlist": {
+      "upload": {
+        "success": "Upload successful",
+        "error": "Upload failed"
+      },
+      "update": {
+        "success": "Update successful",
+        "error": "Update failed"
+      },
+      "delete": {
+        "success": "Delete successful",
+        "error": "Delete failed"
+      }
+    },
+    "notification": {
+      "settings": {
+        "success": "Save successful",
+        "error": "Save failed"
+      },
+      "markRead": {
+        "success": "Success",
+        "error": "Failed"
+      },
+      "connection": {
+        "error": "Connection error"
+      }
+    },
+    "apiKeys": {
+      "settings": {
+        "success": "Save successful",
+        "error": "Save failed"
+      }
+    },
+    "tool": {
+      "create": {
+        "success": "Create successful",
+        "error": "Create failed"
+      },
+      "update": {
+        "success": "Update successful",
+        "error": "Update failed"
+      },
+      "delete": {
+        "success": "Delete successful",
+        "error": "Delete failed"
+      }
+    },
+    "engine": {
+      "create": {
+        "success": "Create successful",
+        "error": "Create failed"
+      },
+      "update": {
+        "success": "Update successful",
+        "error": "Update failed"
+      },
+      "delete": {
+        "success": "Delete successful",
+        "error": "Delete failed"
+      }
+    },
+    "command": {
+      "create": {
+        "success": "Create successful",
+        "error": "Create failed"
+      },
+      "update": {
+        "success": "Update successful",
+        "error": "Update failed"
+      },
+      "delete": {
+        "success": "Delete successful",
+        "bulkSuccess": "Delete successful",
+        "error": "Delete failed"
+      }
+    },
+    "nucleiTemplate": {
+      "refresh": {
+        "loading": "Syncing...",
+        "success": "Sync successful",
+        "error": "Sync failed"
+      },
+      "upload": {
+        "success": "Upload successful",
+        "error": "Upload failed"
+      },
+      "save": {
+        "success": "Save successful",
+        "error": "Save failed"
+      }
+    },
+    "nucleiGit": {
+      "settings": {
+        "success": "Save successful",
+        "error": "Save failed"
+      }
+    },
+    "systemLog": {
+      "fetch": {
+        "error": "Fetch failed",
+        "recovered": "Recovered"
+      }
+    },
+    "blacklist": {
+      "save": {
+        "success": "Save successful",
+        "error": "Save failed"
+      }
+    }
+  },
+  "quickScan": {
+    "title": "Quick Scan",
+    "description": "Quickly create scan tasks for multiple targets",
+    "steps": {
+      "enterTargets": "Enter Targets",
+      "selectEngine": "Select Engine",
+      "confirmScan": "Confirm Scan"
+    },
+    "step1Title": "Enter Targets",
+    "step2Title": "Select Engines",
+    "step3Title": "Edit Config",
+    "stepIndicator": "Step {current}/{total}",
+    "step1Hint": "Enter scan targets in the left input box, one per line",
+    "step": "Step {current}/{total} · {title}",
+    "targetPlaceholder": "Enter one target per line, supported formats:\n\nDomain: example.com, sub.example.com\nIP Address: 192.168.1.1, 10.0.0.1\nCIDR: 192.168.1.0/24, 10.0.0.0/8\nURL: https://example.com/api/v1",
+    "supportedFormats": "Supported: Domain, IP, CIDR, URL",
+    "validTargets": "{count} valid targets",
+    "invalidTargets": "{count} invalid",
+    "selectEngine": "Select Engine",
+    "noEngines": "No engines available",
+    "capabilities": "{count} capabilities",
+    "noConfig": "No config",
+    "scanTargets": "Scan Targets",
+    "totalTargets": "{count} targets total",
+    "previous": "Previous",
+    "back": "Back",
+    "next": "Next",
+    "startScan": "Start Scan",
+    "creating": "Creating...",
+    "selectEngineHint": "Select an engine on the left to view configuration",
+    "moreErrors": "{count} more errors...",
+    "lineError": "Line {lineNumber}: {error}",
+    "loading": "Loading...",
+    "loadFailed": "Failed to load",
+    "selectedCount": "{count} selected",
+    "confirmTargets": "{count} scan targets",
+    "andMore": "{count} more...",
+    "selectedEngines": "Selected Engines",
+    "confirmSummary": "Will scan {targetCount} targets with {engineCount} engines",
+    "configTitle": "Scan Configuration",
+    "configEdited": "Edited",
+    "overwriteConfirm": {
+      "title": "Overwrite Configuration",
+      "description": "You have manually edited the configuration. Changing engines will overwrite your changes. Continue?",
+      "cancel": "Cancel",
+      "confirm": "Overwrite"
+    },
+    "toast": {
+      "noValidTarget": "Please enter at least one valid target",
+      "hasInvalidInputs": "{count} invalid inputs, please fix before continuing",
+      "selectEngine": "Please select a scan engine",
+      "emptyConfig": "Scan configuration cannot be empty",
+      "getEnginesFailed": "Failed to get engine list",
+      "createFailed": "Create failed",
+      "createSuccess": "Create successful",
+      "createSuccessDesc": "",
+      "targetsFailed": "Failed",
+      "configConflict": "Engine configuration conflict"
+    }
+  },
+  "notificationDrawer": {
+    "title": "Notifications",
+    "markAllRead": "Mark All Read",
+    "markAllAsRead": "Mark all as read",
+    "empty": "No notifications",
+    "noNotifications": "No notifications",
+    "filters": {
+      "all": "All",
+      "scan": "Scan",
+      "vulnerability": "Vulnerability",
+      "asset": "Asset",
+      "system": "System"
+    },
+    "categories": {
+      "scan": "Scan Tasks",
+      "vulnerability": "Vulnerability Discovery",
+      "asset": "Asset Discovery",
+      "system": "System Messages"
+    },
+    "timeGroups": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "earlier": "Earlier"
+    },
+    "status": {
+      "realtime": "Live",
+      "offline": "Offline"
+    },
+    "connection": {
+      "live": "Live",
+      "offline": "Offline"
+    }
+  },
+  "disk": {
+    "totalCapacity": "Total Capacity",
+    "used": "Used",
+    "available": "Available"
+  },
+  "databaseHealth": {
+    "overview": {
+      "title": "Overview",
+      "description": "Real-time snapshot of the primary database",
+      "role": "Role",
+      "region": "Region",
+      "version": "Version",
+      "readOnly": "Read-only",
+      "uptime": "Uptime",
+      "lastCheck": "Last check",
+      "roleValue": {
+        "primary": "Primary",
+        "replica": "Replica"
+      },
+      "readOnlyYes": "Yes",
+      "readOnlyNo": "No"
+    },
+    "status": {
+      "online": "Online",
+      "degraded": "Degraded",
+      "maintenance": "Maintenance",
+      "offline": "Offline"
+    },
+    "metrics": {
+      "latencyP95": "Latency p95",
+      "connections": "Connections",
+      "replicationLag": "Replication lag",
+      "cacheHitRate": "Cache hit rate",
+      "qps": "QPS",
+      "diskUsage": "Disk usage",
+      "walGenerated": "WAL generated (24h)",
+      "deadlocks": "Deadlocks (1h)",
+      "longTransactions": "Long transactions",
+      "backupFreshness": "Backup freshness"
+    },
+    "sections": {
+      "core": "Core indicators",
+      "signals": "Signals",
+      "signalsDesc": "Operational signals derived from PostgreSQL stats"
+    },
+    "hints": {
+      "latencyP95": "Target < 50 ms",
+      "connections": "{value}% of limit",
+      "replicationLag": "Target < 1000 ms",
+      "cacheHitRate": "Target > 99%"
+    },
+    "alerts": {
+      "title": "Active alerts",
+      "description": "Recent health events and ongoing warnings",
+      "empty": "No active alerts",
+      "severity": {
+        "info": "Info",
+        "warning": "Warning",
+        "critical": "Critical"
+      }
+    }
+  },
+  "subdomains": {
+    "loadFailed": "Load Failed",
+    "loadError": "Error loading subdomain data, please retry",
+    "reload": "Reload"
+  },
+  "vulnerabilities": {
+    "title": "Vulnerability Management",
+    "description": "View and manage all vulnerabilities found by scans",
+    "severity": "Severity",
+    "source": "Source",
+    "reviewStatus": {
+      "all": "All",
+      "pending": "Pending",
+      "reviewed": "Reviewed"
+    },
+    "reviewSuccess": "Marked as reviewed",
+    "unreviewSuccess": "Marked as pending",
+    "reviewError": "Failed to mark as reviewed",
+    "unreviewError": "Failed to mark as pending",
+    "bulkReviewSuccess": "{count} vulnerabilities marked as reviewed",
+    "bulkUnreviewSuccess": "{count} vulnerabilities marked as pending",
+    "bulkReviewError": "Failed to bulk mark as reviewed",
+    "bulkUnreviewError": "Failed to bulk mark as pending",
+    "markAsReviewed": "Mark Reviewed",
+    "markAsPending": "Mark Pending",
+    "selected": "{count} selected",
+    "tooltips": {
+      "reviewed": "Reviewed",
+      "pending": "Pending review"
+    },
+    "detail": {
+      "vulnUrl": "Vulnerability URL",
+      "tabs": {
+        "overview": "Overview",
+        "requestResponse": "Request/Response",
+        "evidence": "Evidence",
+        "reproduce": "Reproduce",
+        "rawData": "Raw Data"
+      },
+      "basicInfo": "Basic Info",
+      "createdAt": "Created At",
+      "severity": "Severity",
+      "source": "Source",
+      "httpMethod": "HTTP Method",
+      "param": "Parameter",
+      "classification": "Classification",
+      "noClassification": "No classification info",
+      "detailedDesc": "Detailed Description",
+      "references": "References",
+      "noEvidence": "No evidence data",
+      "curlCommand": "CURL Command",
+      "curlHint": "Copy the following command to terminal to reproduce this vulnerability",
+      "rawOutput": "Raw Output (JSON)",
+      "rawOutputHint": "Complete output data from scan tool",
+      "evidence": {
+        "payload": "Payload",
+        "evidence": "Evidence",
+        "httpRequest": "HTTP Request",
+        "httpResponse": "HTTP Response"
+      }
+    },
+    "severity": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "info": "Info"
+    }
+  },
+  "pages": {
+    "organization": {
+      "title": "Organizations",
+      "description": "Manage and view all organizations in the system"
+    },
+    "target": {
+      "title": "Targets",
+      "description": "Manage all targets in the system"
+    },
+    "workers": {
+      "title": "Agents",
+      "description": "Manage agent installation, health, and scheduling thresholds",
+      "viewArchitecture": "View Architecture",
+      "flowTitle": "Architecture overview",
+      "flowDesc": "The server schedules and aggregates; agents run on target machines and launch workers to execute tasks.",
+      "flowServerTitle": "Server",
+      "flowServerDesc": "Schedule & aggregate",
+      "flowAgentTitle": "Agent",
+      "flowAgentDesc": "Execute tasks",
+      "flowWorkerTitle": "Worker",
+      "flowWorkerDesc": "Local scans",
+      "flowVpsTitle": "VPS",
+      "flowLink": "Tasks / Heartbeat",
+      "flowWorkerLink": "Launched by Agent",
+      "flowWorkerResultLink": "Results direct",
+      "flowDiagramTitle": "Flow diagram",
+      "flowDiagramDesc": "Topology: 1 Server → many Agents → multiple Workers per Agent",
+      "flowRolesTitle": "Roles & responsibilities",
+      "flowRolesDesc": "Boundaries and primary responsibilities of each component",
+      "flowTableRole": "Role",
+      "flowTableLocation": "Runs on",
+      "flowTableResponsibilities": "Primary responsibilities",
+      "flowTableComms": "Communication",
+      "flowServerLocation": "Central service (control plane)",
+      "flowAgentLocation": "Target machine (edge node)",
+      "flowWorkerLocation": "Co-located with Agent",
+      "flowServerComms": "Bidirectional with Agent (tasks/heartbeat), receives Worker results",
+      "flowAgentComms": "Bidirectional with Server; triggers local Workers",
+      "flowWorkerComms": "Direct to Server for results",
+      "flowServerItem1": "Manage registration tokens and agent inventory",
+      "flowServerItem2": "Dispatch tasks and aggregate results",
+      "flowServerItem3": "Monitor heartbeats and health status",
+      "flowAgentItem1": "Runs on target machines and maintains heartbeats",
+      "flowAgentItem2": "Pulls tasks and starts workers",
+      "flowAgentItem3": "Reports runtime metrics",
+      "flowWorkerItem1": "Executes concrete scans/tasks",
+      "flowWorkerItem2": "Started locally by the Agent",
+      "flowWorkerItem3": "Results go directly to Server",
+      "flowStepsTitle": "Runtime flow (simplified)",
+      "flowStepsDesc": "A quick timeline from registration to execution",
+      "flowStep1": "Agent starts on the target machine and registers with the Server",
+      "flowStep2": "Server dispatches tasks; Agent triggers Worker execution",
+      "flowStep3": "Worker completes and returns results directly to the Server"
+    },
+    "databaseHealth": {
+      "title": "Database Health",
+      "description": "Monitor PostgreSQL availability, performance, and replication signals"
+    },
+    "wordlists": {
+      "title": "Wordlist Management",
+      "searchPlaceholder": "Search wordlists...",
+      "listTitle": "Wordlist List",
+      "loading": "Loading...",
+      "noMatch": "No matching wordlists found",
+      "noData": "No wordlists yet, please upload first",
+      "lines": "lines",
+      "rows": "Rows",
+      "size": "Size",
+      "id": "ID",
+      "updatedAt": "Updated At",
+      "hash": "Hash",
+      "editContent": "Edit Content",
+      "delete": "Delete",
+      "selectHint": "Select a wordlist on the left to view details",
+      "idCopied": "ID copied to clipboard"
+    },
+    "nuclei": {
+      "title": "Nuclei Template Repositories",
+      "searchPlaceholder": "Search repositories...",
+      "addRepo": "Add Repository",
+      "listTitle": "Repository List",
+      "loading": "Loading...",
+      "loadFailed": "Load failed",
+      "noMatch": "No matching repositories found",
+      "noData": "No repositories yet, please add first",
+      "synced": "Synced",
+      "notSynced": "Not Synced",
+      "syncedAt": "Synced at",
+      "notSyncedYet": "Not synced yet",
+      "status": "Status",
+      "lastSync": "Last Sync",
+      "gitUrl": "Git URL",
+      "localPath": "Local Path",
+      "commit": "Commit",
+      "syncRepo": "Sync Repository",
+      "syncing": "Syncing...",
+      "editConfig": "Edit Config",
+      "manageTemplates": "Manage Templates",
+      "delete": "Delete",
+      "selectHint": "Select a repository on the left to view details",
+      "addDialog": {
+        "title": "Add Nuclei Template Repository",
+        "repoName": "Repository Name",
+        "repoNamePlaceholder": "e.g., Default Nuclei Official Templates",
+        "gitUrl": "Git Repository URL",
+        "gitUrlPlaceholder": "e.g., https://github.com/projectdiscovery/nuclei-templates.git",
+        "cancel": "Cancel",
+        "creating": "Creating...",
+        "confirm": "Confirm Add"
+      },
+      "editDialog": {
+        "title": "Edit Nuclei Repository Config",
+        "repoName": "Repository Name:",
+        "gitUrl": "Git Repository URL",
+        "gitUrlPlaceholder": "e.g., https://github.com/projectdiscovery/nuclei-templates.git",
+        "cancel": "Cancel",
+        "saving": "Saving...",
+        "save": "Save Config"
+      }
+    },
+    "tools": {
+      "title": "Tools",
+      "description": "Manage auxiliary resources related to scanning, such as wordlists",
+      "wordlists": {
+        "title": "Wordlist Management",
+        "description": "Manage wordlist files used for directory scanning, etc."
+      },
+      "nuclei": {
+        "title": "Nuclei Templates",
+        "description": "Browse local Nuclei template structure and content"
+      },
+      "comingSoon": "Coming Soon",
+      "stats": {
+        "total": "Total:",
+        "active": "Active:"
+      },
+      "enterManagement": "Enter Management",
+      "quickActions": {
+        "title": "Quick Actions",
+        "description": "Common tool operations"
+      }
+    },
+    "screenshots": {
+      "filterPlaceholder": "Filter by URL...",
+      "loadError": "Failed to load screenshots",
+      "noResults": "No screenshots match your filter",
+      "lightboxTitle": "Screenshot Preview",
+      "openInNewTab": "Open screenshot URL in new tab",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "closeLightbox": "Close lightbox",
+      "previousScreenshot": "Previous screenshot",
+      "nextScreenshot": "Next screenshot",
+      "empty": {
+        "title": "No Screenshots",
+        "description": "Screenshots will appear here after running a site scan with screenshot enabled."
+      }
+    },
+    "targetDetail": {
+      "noDescription": "No description",
+      "breadcrumb": {
+        "targetDetail": "Target Detail"
+      },
+      "error": {
+        "title": "Load Failed",
+        "message": "An error occurred while fetching target data"
+      },
+      "notFound": {
+        "title": "Target Not Found",
+        "message": "Target with ID {id} not found"
+      },
+      "tabs": {
+        "overview": "Overview",
+        "assets": "Assets",
+        "screenshots": "Screenshots",
+        "vulnerabilities": "Vulnerabilities",
+        "settings": "Settings",
+        "websites": "Websites",
+        "subdomains": "Subdomains",
+        "ips": "IPs",
+        "urls": "URLs",
+        "directories": "Directories"
+      },
+      "directoriesHelp": "Results discovered during the directory scanning phase",
+      "settings": {
+        "loadError": "Failed to load settings",
+        "blacklist": {
+          "title": "Blacklist Rules",
+          "description": "Assets matching the following rules will be automatically excluded during scanning.",
+          "rulesTitle": "Supported Rule Types",
+          "rules": {
+            "domain": "Domain wildcard, matches specified suffix",
+            "domainShort": "Domain",
+            "keyword": "Keyword match, contains specified string",
+            "keywordShort": "Keyword",
+            "ip": "Exact IP address match",
+            "ipShort": "IP",
+            "cidr": "Matches IP range",
+            "cidrShort": "CIDR"
+          },
+          "placeholder": "Enter rules, one per line\n\nExamples:\n*.gov\n*.edu\n*cdn*\n192.168.0.0/16\n10.0.0.1",
+          "save": "Save Rules"
+        },
+        "scheduledScans": {
+          "title": "Scheduled Scans",
+          "description": "Configure automated scan tasks for this target",
+          "create": "New Scheduled Scan",
+          "empty": "No scheduled scans",
+          "emptyHint": "Click the button above to create a scheduled scan",
+          "enabled": "Enabled",
+          "disabled": "Disabled",
+          "nextRun": "Next run",
+          "runCount": "Run count",
+          "edit": "Edit",
+          "delete": "Delete",
+          "cronDaily": "Daily at {time}",
+          "cronWeekly": "Every {day} at {time}",
+          "cronMonthly": "Monthly on day {day} at {time}",
+          "weekdays": {
+            "sun": "Sunday",
+            "mon": "Monday",
+            "tue": "Tuesday",
+            "wed": "Wednesday",
+            "thu": "Thursday",
+            "fri": "Friday",
+            "sat": "Saturday"
+          },
+          "deleteConfirm": {
+            "title": "Confirm Delete",
+            "description": "Are you sure you want to delete the scheduled scan \"{name}\"? This action cannot be undone.",
+            "cancel": "Cancel",
+            "confirm": "Delete"
+          }
+        }
+      },
+      "overview": {
+        "loadError": "Failed to load target data",
+        "createdAt": "Created",
+        "lastScanned": "Last Scanned",
+        "assetsTitle": "Assets",
+        "vulnerabilitiesTitle": "Vulnerabilities",
+        "scanHistoryTitle": "Scan History",
+        "recentScans": "Recent Scans",
+        "noScans": "No scan records",
+        "viewAll": "View all",
+        "cards": {
+          "websites": "Websites",
+          "subdomains": "Subdomains",
+          "ips": "IP Addresses",
+          "urls": "URLs",
+          "directories": "Directories",
+          "screenshots": "Screenshots",
+          "vulnerabilities": "Total Vulnerabilities"
+        },
+        "severity": {
+          "critical": "Critical",
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low"
+        },
+        "scanStatus": {
+          "completed": "Completed",
+          "running": "Running",
+          "failed": "Failed",
+          "cancelled": "Cancelled",
+          "pending": "Pending"
+        },
+        "scheduledScans": {
+          "title": "Scheduled Scans",
+          "manage": "Manage",
+          "empty": "No scheduled scans",
+          "createFirst": "Create your first scheduled scan",
+          "configured": "Configured",
+          "enabled": "Enabled",
+          "nextRun": "Next run",
+          "today": "Today",
+          "tomorrow": "Tomorrow",
+          "more": "+{count} more"
+        },
+        "initiateScan": "Initiate Scan"
+      }
+    },
+    "nav": {
+      "scanEngine": "Scan Engine",
+      "wordlists": "Wordlist Management"
+    },
+    "settings": {
+      "blacklist": {
+        "title": "Global Blacklist",
+        "description": "Configure global blacklist rules. Matching assets will be automatically excluded during scans.",
+        "loadError": "Failed to load blacklist rules",
+        "card": {
+          "title": "Blacklist Rules",
+          "description": "These rules apply to all target scans. To configure blacklist for a specific target, go to the target settings page."
+        },
+        "rules": {
+          "title": "Supported rule types",
+          "domain": "Domain",
+          "keyword": "Keyword",
+          "ip": "IP",
+          "cidr": "CIDR"
+        },
+        "scopeHint": "Global rules apply to all targets. Target-level rules can be configured in Target → Settings.",
+        "placeholder": "Enter rules, one per line\n\nExamples:\n*.gov\n*.edu\n*cdn*\n192.168.0.0/16\n10.0.0.1",
+        "save": "Save Rules",
+        "toast": {
+          "saveSuccess": "Save successful",
+          "saveError": "Save failed"
+        }
+      }
+    }
+  },
+  "metadata": {
+    "title": "LunaFox - Attack Surface Management Platform | ASM",
+    "description": "LunaFox - Attack Surface Management (ASM) platform, providing automated asset discovery, vulnerability scanning, subdomain enumeration, port scanning, and more. Supports distributed scanning, Nuclei integration, and scheduled tasks.",
+    "keywords": "ASM, Attack Surface Management, Vulnerability Scanning, Asset Discovery, Bug Bounty, Penetration Testing, Nuclei, Subdomain Enumeration, Security Tools, EASM, Security, LunaFox",
+    "ogTitle": "LunaFox - Attack Surface Management Platform",
+    "ogDescription": "Attack Surface Management (ASM) platform providing automated asset discovery and vulnerability scanning"
+  },
+  "bulkAdd": {
+    "subdomain": {
+      "title": "Bulk Add Subdomains",
+      "description": "Enter subdomain list, one per line.",
+      "belongsTo": "Subdomains must belong to",
+      "label": "Subdomain List",
+      "placeholder": "Enter subdomains, one per line\nExample:\napi.example.com\nwww.example.com\nmail.example.com",
+      "valid": "Valid: {count}",
+      "duplicate": "Duplicate: {count}",
+      "invalid": "Invalid: {count}",
+      "lineError": "Line {line}: \"{value}\" - {error}",
+      "formatInvalid": "Invalid format",
+      "creating": "Creating...",
+      "bulkAdd": "Bulk Add"
+    },
+    "url": {
+      "endpoint": {
+        "title": "Bulk Add Endpoints",
+        "description": "Enter endpoint URL list, one per line.",
+        "placeholder": "Enter endpoint URLs, one per line\nExample:\nhttps://example.com/api/v1\nhttps://example.com/api/v2\nhttps://example.com/login"
+      },
+      "website": {
+        "title": "Bulk Add Websites",
+        "description": "Enter website URL list, one per line.",
+        "placeholder": "Enter website URLs, one per line\nExample:\nhttps://example.com\nhttps://www.example.com\nhttps://api.example.com"
+      },
+      "directory": {
+        "title": "Bulk Add Directories",
+        "description": "Enter directory URL list, one per line.",
+        "placeholder": "Enter directory URLs, one per line\nExample:\nhttps://example.com/admin\nhttps://example.com/api\nhttps://example.com/uploads"
+      },
+      "label": "URL List",
+      "valid": "Valid: {count}",
+      "duplicate": "Duplicate: {count}",
+      "invalid": "Invalid: {count}",
+      "mismatched": "Mismatched: {count}",
+      "lineError": "Line {line}: \"{value}\" - {error}",
+      "mismatchError": "Line {line}: \"{value}\" - URL does not belong to target {target}, please remove before submitting",
+      "creating": "Creating..."
+    },
+    "common": {
+      "cancel": "Cancel",
+      "bulkAdd": "Bulk Add",
+      "formatInvalid": "Invalid format"
+    }
+  },
+  "globalSearch": {
+    "search": "Search",
+    "placeholder": "Search assets... (host=\"api\" && tech=\"nginx\")",
+    "noResults": "No results found",
+    "searchFor": "Search for",
+    "recent": "Recent Searches",
+    "quickSearch": "Quick Search",
+    "hint": "Supports FOFA-style syntax",
+    "toSearch": "to search"
+  },
+  "errors": {
+    "unknown": "Operation failed, please try again later",
+    "validation": "Invalid input data",
+    "notFound": "Resource not found",
+    "permissionDenied": "Permission denied",
+    "serverError": "Server error, please try again later",
+    "badRequest": "Invalid request format",
+    "conflict": "Resource conflict, please check and try again",
+    "unauthorized": "Please login first",
+    "rateLimited": "Too many requests, please try again later"
+  },
+  "about": {
+    "title": "About LunaFox",
+    "productName": "LunaFox",
+    "description": "Attack Surface Management Platform",
+    "currentVersion": "Current Version",
+    "latestVersion": "Latest Version",
+    "checkUpdate": "Check Update",
+    "checking": "Checking...",
+    "checkFailed": "Failed to check update, please try again later",
+    "updateAvailable": "Update Available",
+    "upToDate": "Up to Date",
+    "viewRelease": "View Release",
+    "updateHint": "Run the following command in project root to update:",
+    "changelog": "Changelog",
+    "feedback": "Feedback",
+    "docs": "Documentation"
+  }
+}

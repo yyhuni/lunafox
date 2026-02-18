@@ -1,0 +1,4782 @@
+{
+  "metadata": {
+    "generated_at": "2026-02-11T17:18:44+08:00",
+    "last_updated_at": "2026-02-13T01:04:42+08:00",
+    "last_updated_by": "codex",
+    "analysis_method": "swarm_mode_5_agents",
+    "repository_path": "/Users/yangyang/Desktop/lunafox",
+    "analysis_scope": "frontend/",
+    "total_files_analyzed": 517,
+    "total_lines_analyzed": 96951,
+    "analysis_duration_minutes": 15
+  },
+  "overall_health": {
+    "health_score": 6.8,
+    "health_grade": "C+",
+    "refactoring_priority": "P1",
+    "urgency": "moderate"
+  },
+  "codebase_metrics": {
+    "total_typescript_files": 517,
+    "total_lines_of_code": 96951,
+    "components": 236,
+    "custom_hooks": 45,
+    "services": 32,
+    "type_definitions": 33,
+    "page_routes": 86,
+    "data_tables": 23,
+    "average_file_size_lines": 250
+  },
+  "quality_scores": {
+    "type_safety": 9.5,
+    "architecture": 8,
+    "maintainability": 7,
+    "test_coverage": 0,
+    "code_quality": 7.5
+  },
+  "type_safety_metrics": {
+    "any_usages": 20,
+    "files_with_any": 11,
+    "type_assertions": 10,
+    "typescript_suppressions": 0,
+    "eslint_disables": 8,
+    "typescript_errors": 1,
+    "type_safety_issues_by_file": [
+      {
+        "file": "components/organization/targets/targets-detail-view.tsx",
+        "issues": 5,
+        "lines": [
+          243,
+          253,
+          254,
+          255,
+          256
+        ]
+      },
+      {
+        "file": "components/scan/scheduled/create-scheduled-scan-dialog.tsx",
+        "issues": 2,
+        "lines": [
+          168,
+          170
+        ]
+      },
+      {
+        "file": "components/target/all-targets-detail-view.tsx",
+        "issues": 2,
+        "lines": [
+          111,
+          112
+        ]
+      },
+      {
+        "file": "hooks/use-nudge-toast.tsx",
+        "issues": 1,
+        "lines": [
+          133
+        ],
+        "critical": true
+      }
+    ]
+  },
+  "code_duplication_metrics": {
+    "total_duplicated_lines": 8100,
+    "duplication_percentage": 8.3,
+    "duplicated_mutation_hooks": 50,
+    "duplicated_mutation_lines": 3000,
+    "duplicated_data_tables": 21,
+    "duplicated_table_lines": 4200,
+    "duplicated_query_key_factories": 45,
+    "duplicated_query_key_lines": 900
+  },
+  "component_size_distribution": {
+    "files_over_1000_lines": 6,
+    "files_400_to_1000_lines": 44,
+    "files_under_400_lines": 467,
+    "largest_files": [
+      {
+        "file": "app/[locale]/prototypes/advanced-asset-pulse/page.tsx",
+        "lines": 4684,
+        "category": "prototype"
+      },
+      {
+        "file": "components/prototypes/agent-node-designs.tsx",
+        "lines": 2124,
+        "category": "prototype"
+      },
+      {
+        "file": "components/demo/ui-demo-registry.tsx",
+        "lines": 1624,
+        "category": "demo"
+      },
+      {
+        "file": "components/settings/workers/agent-install-dialog.tsx",
+        "lines": 642,
+        "category": "production"
+      },
+      {
+        "file": "components/scan/initiate-scan-dialog.tsx",
+        "lines": 626,
+        "category": "production"
+      }
+    ]
+  },
+  "quality_markers": {
+    "todo_comments": 4,
+    "fixme_comments": 0,
+    "hack_comments": 0,
+    "deprecated_markers": 1,
+    "console_statements": 5,
+    "eslint_warnings": 5,
+    "eslint_errors": 16
+  },
+  "test_coverage_metrics": {
+    "test_files_found": 0,
+    "test_framework_configured": false,
+    "services_with_tests": 0,
+    "hooks_with_tests": 0,
+    "components_with_tests": 0,
+    "overall_coverage_percentage": 0,
+    "critical_gap": true
+  },
+  "architecture_metrics": {
+    "circular_dependencies": 0,
+    "hooks_with_toast_coupling": 23,
+    "toast_coupling_percentage": 51,
+    "query_invalidation_calls": 195,
+    "toast_message_calls": 275,
+    "average_imports_per_file": 4.56
+  },
+  "unified_data_table_migration": {
+    "total_tables": 23,
+    "migrated_to_grouped_props": 23,
+    "using_legacy_props": 0,
+    "migration_completion_percentage": 100,
+    "legacy_api_lines_to_remove": 190
+  },
+  "high_risk_files": [
+    {
+      "rank": 1,
+      "file": "hooks/use-fingerprints.ts",
+      "risk_score": 92,
+      "lines": 596,
+      "issues": "84 exported functions, 6× duplication",
+      "priority": "P1"
+    },
+    {
+      "rank": 2,
+      "file": "components/scan/initiate-scan-dialog.tsx",
+      "risk_score": 88,
+      "lines": 626,
+      "issues": "17 useState, complex state machine",
+      "priority": "P1"
+    },
+    {
+      "rank": 3,
+      "file": "hooks/use-nudge-toast.tsx",
+      "risk_score": 85,
+      "lines": 133,
+      "issues": "TypeScript error (line 133)",
+      "priority": "P0"
+    },
+    {
+      "rank": 4,
+      "file": "components/common/smart-filter-input.tsx",
+      "risk_score": 78,
+      "lines": 530,
+      "issues": "100+ line useMemo, mixed concerns",
+      "priority": "P1"
+    },
+    {
+      "rank": 5,
+      "file": "components/settings/workers/agent-install-dialog.tsx",
+      "risk_score": 75,
+      "lines": 642,
+      "issues": "Complex multi-step form",
+      "priority": "P2"
+    },
+    {
+      "rank": 6,
+      "file": "components/scan/scheduled/create-scheduled-scan-dialog.tsx",
+      "risk_score": 72,
+      "lines": 606,
+      "issues": "26 imports, complex validation",
+      "priority": "P2"
+    },
+    {
+      "rank": 7,
+      "file": "hooks/use-targets.ts",
+      "risk_score": 70,
+      "lines": 383,
+      "issues": "Mutation duplication, 10 type assertions",
+      "priority": "P1"
+    },
+    {
+      "rank": 8,
+      "file": "hooks/use-scans.ts",
+      "risk_score": 68,
+      "lines": 350,
+      "issues": "Mutation duplication, toast coupling",
+      "priority": "P1"
+    },
+    {
+      "rank": 9,
+      "file": "components/ui/data-table/unified-data-table.tsx",
+      "risk_score": 65,
+      "lines": 398,
+      "issues": "40+ props, dual API support",
+      "priority": "P2"
+    },
+    {
+      "rank": 10,
+      "file": "components/organization/targets/targets-detail-view.tsx",
+      "risk_score": 63,
+      "lines": 329,
+      "issues": "5 type assertions (lines 243-256)",
+      "priority": "P2"
+    },
+    {
+      "rank": 11,
+      "file": "hooks/use-subdomains.ts",
+      "risk_score": 62,
+      "lines": 280,
+      "issues": "Mutation duplication",
+      "priority": "P1"
+    },
+    {
+      "rank": 12,
+      "file": "hooks/use-endpoints.ts",
+      "risk_score": 60,
+      "lines": 280,
+      "issues": "Mutation duplication",
+      "priority": "P1"
+    },
+    {
+      "rank": 13,
+      "file": "hooks/use-vulnerabilities.ts",
+      "risk_score": 58,
+      "lines": 300,
+      "issues": "Mutation duplication",
+      "priority": "P1"
+    },
+    {
+      "rank": 14,
+      "file": "components/scan/history/scan-overview.tsx",
+      "risk_score": 56,
+      "lines": 589,
+      "issues": "Mixed concerns, 19 imports",
+      "priority": "P2"
+    },
+    {
+      "rank": 15,
+      "file": "components/target/add-target-dialog.tsx",
+      "risk_score": 55,
+      "lines": 527,
+      "issues": "Complex form validation",
+      "priority": "P2"
+    },
+    {
+      "rank": 16,
+      "file": "components/tools/config/add-tool-dialog.tsx",
+      "risk_score": 54,
+      "lines": 500,
+      "issues": "Multi-step dialog",
+      "priority": "P2"
+    },
+    {
+      "rank": 17,
+      "file": "components/scan/history/scan-history-columns.tsx",
+      "risk_score": 52,
+      "lines": 422,
+      "issues": "Complex column definitions",
+      "priority": "P3"
+    },
+    {
+      "rank": 18,
+      "file": "components/target/all-targets-detail-view.tsx",
+      "risk_score": 50,
+      "lines": 356,
+      "issues": "2 type assertions (lines 111-112)",
+      "priority": "P2"
+    },
+    {
+      "rank": 19,
+      "file": "components/scan/scheduled/edit-scheduled-scan-dialog.tsx",
+      "risk_score": 48,
+      "lines": 283,
+      "issues": "1 type assertion (line 136)",
+      "priority": "P2"
+    },
+    {
+      "rank": 20,
+      "file": "components/dashboard/dashboard-data-table.tsx",
+      "risk_score": 45,
+      "lines": 410,
+      "issues": "22 imports, aggregation logic",
+      "priority": "P2"
+    }
+  ],
+  "technical_debt_inventory": {
+    "p0_critical": [
+      {
+        "id": "P0-1",
+        "title": "Zero Test Coverage",
+        "risk_score": 95,
+        "files_affected": 517,
+        "estimated_effort_weeks": 4
+      },
+      {
+        "id": "P0-2",
+        "title": "TypeScript Compilation Error",
+        "risk_score": 85,
+        "files_affected": 1,
+        "estimated_effort_weeks": 0.1
+      }
+    ],
+    "p1_high": [
+      {
+        "id": "P1-1",
+        "title": "Massive Hook Duplication",
+        "risk_score": 78,
+        "files_affected": 23,
+        "lines_to_eliminate": 3000,
+        "estimated_effort_weeks": 2
+      },
+      {
+        "id": "P1-2",
+        "title": "Data Table Component Duplication",
+        "risk_score": 72,
+        "files_affected": 21,
+        "lines_to_eliminate": 4200,
+        "estimated_effort_weeks": 2
+      },
+      {
+        "id": "P1-3",
+        "title": "Tight Coupling to Toast System",
+        "risk_score": 68,
+        "files_affected": 23,
+        "estimated_effort_weeks": 1
+      }
+    ],
+    "p2_medium": [
+      {
+        "id": "P2-1",
+        "title": "Large Dialog Components",
+        "risk_score": 58,
+        "files_affected": 4,
+        "estimated_effort_weeks": 2
+      },
+      {
+        "id": "P2-2",
+        "title": "Query Key Factory Duplication",
+        "risk_score": 52,
+        "files_affected": 45,
+        "lines_to_eliminate": 900,
+        "estimated_effort_weeks": 1
+      },
+      {
+        "id": "P2-3",
+        "title": "Missing CI/CD Pipeline",
+        "risk_score": 65,
+        "files_affected": 0,
+        "estimated_effort_weeks": 1
+      }
+    ],
+    "p3_low": [
+      {
+        "id": "P3-1",
+        "title": "Prototype Code in Production Bundle",
+        "risk_score": 35,
+        "files_affected": 15,
+        "estimated_effort_weeks": 1
+      },
+      {
+        "id": "P3-2",
+        "title": "Deprecated Code Cleanup",
+        "risk_score": 25,
+        "files_affected": 1,
+        "estimated_effort_weeks": 0.1
+      },
+      {
+        "id": "P3-3",
+        "title": "TODO Resolution",
+        "risk_score": 30,
+        "files_affected": 4,
+        "estimated_effort_weeks": 1
+      }
+    ]
+  },
+  "refactoring_roadmap": {
+    "total_duration_weeks": 12,
+    "phase_1": {
+      "name": "Foundation & Quality Gates",
+      "weeks": "1-4",
+      "lines_eliminated": 200,
+      "tests_added": 100
+    },
+    "phase_2": {
+      "name": "Duplication Elimination",
+      "weeks": "5-8",
+      "lines_eliminated": 8100,
+      "tests_added": 50
+    },
+    "phase_3": {
+      "name": "Architecture Optimization",
+      "weeks": "9-12",
+      "lines_eliminated": 1400,
+      "tests_added": 30
+    }
+  },
+  "success_metrics": {
+    "target_test_coverage": 80,
+    "target_duplication_percentage": 2,
+    "target_typescript_errors": 0,
+    "target_eslint_issues": 0,
+    "target_max_file_size": 500,
+    "target_health_score": 9
+  },
+  "execution_snapshots": [
+    {
+      "timestamp": "2026-02-11T18:22:07+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase4_hooks_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 7,
+        "tests_total": 19,
+        "tests_passed": 19,
+        "hooks_test_files": 4,
+        "lib_test_files": 2,
+        "components_test_files": 1
+      },
+      "hook_migration_snapshot": {
+        "shared_helper_file": "frontend/hooks/_shared/create-resource-mutation.ts",
+        "migrated_hooks": [
+          "frontend/hooks/use-targets.ts",
+          "frontend/hooks/use-scans.ts",
+          "frontend/hooks/use-subdomains.ts",
+          "frontend/hooks/use-endpoints.ts",
+          "frontend/hooks/use-websites.ts",
+          "frontend/hooks/use-directories.ts"
+        ],
+        "use_resource_mutation_calls_in_migrated_hooks": 30,
+        "use_mutation_calls_in_migrated_hooks": 0
+      },
+      "new_test_files": [
+        "frontend/hooks/_shared/__tests__/create-resource-mutation.test.ts",
+        "frontend/hooks/__tests__/use-targets.mutation.test.ts",
+        "frontend/hooks/__tests__/use-scans.mutation.test.ts"
+      ]
+    },
+    {
+      "timestamp": "2026-02-11T18:30:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_remaining_tasks_t020_t021_t030_t031",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 10,
+        "tests_total": 26,
+        "tests_passed": 26,
+        "hooks_test_files": 6,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "new_test_files": [
+        "frontend/hooks/__tests__/use-nudge-toast.test.tsx",
+        "frontend/hooks/__tests__/use-targets.types.test.ts",
+        "frontend/components/ui/data-table/__tests__/use-table-state.test.ts"
+      ],
+      "expanded_test_files": [
+        "frontend/components/ui/data-table/__tests__/unified-data-table.smoke.test.tsx"
+      ]
+    },
+    {
+      "timestamp": "2026-02-11T19:08:57+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_hooks_mutation_dedup_full_rollout",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 11,
+        "tests_total": 29,
+        "tests_passed": 29,
+        "hooks_test_files": 7,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "hook_migration_snapshot": {
+        "shared_helper_file": "frontend/hooks/_shared/create-resource-mutation.ts",
+        "shared_helper_updates": [
+          "add skipDefaultErrorHandler",
+          "add onSettled lifecycle",
+          "onMutate context includes queryClient and toast"
+        ],
+        "migrated_hooks": [
+          "frontend/hooks/use-fingerprints.ts",
+          "frontend/hooks/use-workers.ts",
+          "frontend/hooks/use-vulnerabilities.ts",
+          "frontend/hooks/use-scheduled-scans.ts",
+          "frontend/hooks/use-organizations.ts",
+          "frontend/hooks/use-nuclei-repos.ts",
+          "frontend/hooks/use-commands.ts",
+          "frontend/hooks/use-tools.ts",
+          "frontend/hooks/use-engines.ts",
+          "frontend/hooks/use-auth.ts",
+          "frontend/hooks/use-agents.ts",
+          "frontend/hooks/use-nuclei-templates.ts",
+          "frontend/hooks/use-nuclei-git-settings.ts",
+          "frontend/hooks/use-notifications.ts",
+          "frontend/hooks/use-notification-settings.ts",
+          "frontend/hooks/use-global-blacklist.ts",
+          "frontend/hooks/use-api-key-settings.ts"
+        ],
+        "use_mutation_calls_in_hooks": 0,
+        "use_resource_mutation_calls_in_hooks": 80
+      },
+      "new_test_files": [
+        "frontend/hooks/__tests__/use-fingerprints.mutation.test.ts"
+      ]
+    },
+    {
+      "timestamp": "2026-02-11T19:13:56+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_gate_revalidation_post_component_fix",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 11,
+        "tests_total": 29,
+        "tests_passed": 29,
+        "hooks_test_files": 7,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "component_fix_snapshot": {
+        "files_updated": [
+          "frontend/components/scan/history/scan-history-list.tsx"
+        ],
+        "fixes": [
+          "replace undefined queryClient retry handler with useScans refetch"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T17:46:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase52_pagination_helper_rollout_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.94,
+        "functions": 51.02,
+        "lines": 50.78
+      },
+      "refactor_snapshot": {
+        "pagination_helper": "frontend/hooks/_shared/pagination.ts",
+        "pagination_tests": [
+          "frontend/hooks/_shared/__tests__/pagination.test.ts"
+        ],
+        "updated_components": [
+          "frontend/components/endpoints/endpoints-data-table.tsx",
+          "frontend/components/target/targets-data-table.tsx",
+          "frontend/components/scan/scheduled/scheduled-scan-data-table.tsx",
+          "frontend/components/subdomains/subdomains-detail-view.tsx",
+          "frontend/components/scan/history/scan-history-list.tsx"
+        ],
+        "notes": [
+          "centralize pagination info construction",
+          "add coverage for new pagination helper"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T17:39:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase51_dashboard_pagination_refine_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 263,
+        "tests_passed": 263,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.66,
+        "branches": 33.79,
+        "functions": 50.96,
+        "lines": 50.71
+      },
+      "refactor_snapshot": {
+        "dashboard_file": "frontend/components/dashboard/dashboard-data-table.tsx",
+        "normalized_pagination_helper": "frontend/hooks/_shared/pagination.ts",
+        "updated_views": [
+          "frontend/components/subdomains/subdomains-detail-view.tsx",
+          "frontend/components/scan/history/scan-history-list.tsx",
+          "frontend/components/websites/websites-view.tsx",
+          "frontend/components/directories/directories-view.tsx",
+          "frontend/components/ip-addresses/ip-addresses-view.tsx",
+          "frontend/components/organization/organization-detail-view.tsx",
+          "frontend/components/organization/organization-list.tsx"
+        ],
+        "notes": [
+          "dedupe dashboard tabs toolbar",
+          "reuse pagination normalization across views"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T17:34:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase50_error_pagination_unify_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 263,
+        "tests_passed": 263,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.66,
+        "branches": 33.79,
+        "functions": 50.96,
+        "lines": 50.71
+      },
+      "refactor_snapshot": {
+        "error_utils_file": "frontend/lib/error-utils.ts",
+        "normalized_pagination_helper": "frontend/hooks/_shared/pagination.ts",
+        "updated_views": [
+          "frontend/components/websites/websites-view.tsx",
+          "frontend/components/directories/directories-view.tsx",
+          "frontend/components/subdomains/subdomains-detail-view.tsx",
+          "frontend/components/ip-addresses/ip-addresses-view.tsx",
+          "frontend/components/scan/history/scan-history-list.tsx",
+          "frontend/components/organization/organization-detail-view.tsx",
+          "frontend/components/organization/organization-list.tsx"
+        ],
+        "updated_fingerprint_components": [
+          "frontend/components/fingerprints/ehole-fingerprint-view.tsx",
+          "frontend/components/fingerprints/goby-fingerprint-view.tsx",
+          "frontend/components/fingerprints/wappalyzer-fingerprint-view.tsx",
+          "frontend/components/fingerprints/arl-fingerprint-view.tsx",
+          "frontend/components/fingerprints/fingerprinthub-fingerprint-view.tsx",
+          "frontend/components/fingerprints/fingers-fingerprint-view.tsx",
+          "frontend/components/fingerprints/ehole-fingerprint-dialog.tsx",
+          "frontend/components/fingerprints/wappalyzer-fingerprint-dialog.tsx",
+          "frontend/components/fingerprints/fingers-fingerprint-dialog.tsx",
+          "frontend/components/fingerprints/arl-fingerprint-dialog.tsx",
+          "frontend/components/fingerprints/fingerprinthub-fingerprint-dialog.tsx",
+          "frontend/components/fingerprints/import-fingerprint-dialog.tsx"
+        ],
+        "notes": [
+          "centralize error message extraction",
+          "reuse pagination normalization to reduce duplication"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T19:30:06+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_hooks_refactor_workers_vulnerabilities_and_tests",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 13,
+        "tests_total": 33,
+        "tests_passed": 33,
+        "hooks_test_files": 9,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 30.5,
+        "branches": 21.92,
+        "functions": 23.56,
+        "lines": 31.61
+      },
+      "hook_refactor_snapshot": {
+        "updated_hooks": [
+          "frontend/hooks/use-workers.ts",
+          "frontend/hooks/use-vulnerabilities.ts"
+        ],
+        "notes": [
+          "extract worker mutation template to reduce repeated success/error/invalidate wiring",
+          "deduplicate vulnerability default params and enabled resolution logic"
+        ]
+      },
+      "new_test_files": [
+        "frontend/hooks/__tests__/use-workers.mutation.test.ts",
+        "frontend/hooks/__tests__/use-vulnerabilities.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T19:32:37+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_hooks_mutation_tests_scheduled_scans_organizations",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 15,
+        "tests_total": 37,
+        "tests_passed": 37,
+        "hooks_test_files": 11,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 30.46,
+        "branches": 21.29,
+        "functions": 23.51,
+        "lines": 31.51
+      },
+      "new_test_files": [
+        "frontend/hooks/__tests__/use-scheduled-scans.mutation.test.ts",
+        "frontend/hooks/__tests__/use-organizations.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T19:41:12+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase2_speckit_and_hooks_coverage_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 18,
+        "tests_total": 43,
+        "tests_passed": 43,
+        "hooks_test_files": 14,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 30.79,
+        "branches": 21.08,
+        "functions": 24.74,
+        "lines": 31.84
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/004-frontend-techdebt-phase2/spec.md",
+          "specs/004-frontend-techdebt-phase2/plan.md",
+          "specs/004-frontend-techdebt-phase2/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T014",
+          "T015",
+          "T016",
+          "T021",
+          "T032",
+          "T043",
+          "T050",
+          "T051"
+        ]
+      },
+      "hook_refactor_snapshot": {
+        "updated_hooks": [
+          "frontend/hooks/use-tools.ts"
+        ],
+        "notes": [
+          "extract useToolMutation to unify loading/success/invalidate/error wiring without API changes"
+        ]
+      },
+      "new_test_files": [
+        "frontend/hooks/__tests__/use-tools.mutation.test.ts",
+        "frontend/hooks/__tests__/use-engines.mutation.test.ts",
+        "frontend/hooks/__tests__/use-settings.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T19:49:39+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase3_auth_agents_settings_coverage_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 22,
+        "tests_total": 51,
+        "tests_passed": 51,
+        "hooks_test_files": 18,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 31.52,
+        "branches": 21.01,
+        "functions": 26.33,
+        "lines": 32.57
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/005-frontend-techdebt-phase3/spec.md",
+          "specs/005-frontend-techdebt-phase3/plan.md",
+          "specs/005-frontend-techdebt-phase3/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T030",
+          "T031",
+          "T032",
+          "T033",
+          "T034",
+          "T040"
+        ]
+      },
+      "hook_refactor_snapshot": {
+        "updated_hooks": [
+          "frontend/hooks/use-auth.ts",
+          "frontend/hooks/use-nuclei-git-settings.ts"
+        ],
+        "notes": [
+          "extract authKeys for shared query/invalidation key",
+          "extract nucleiGitKeys to avoid duplicated query key literal"
+        ]
+      },
+      "new_test_files": [
+        "frontend/hooks/__tests__/use-auth.mutation.test.ts",
+        "frontend/hooks/__tests__/use-agents.mutation.test.ts",
+        "frontend/hooks/__tests__/use-nuclei-git-settings.mutation.test.ts",
+        "frontend/hooks/__tests__/use-global-blacklist.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T20:02:51+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase4_nuclei_notifications_coverage_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 25,
+        "tests_total": 59,
+        "tests_passed": 59,
+        "hooks_test_files": 21,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 31.86,
+        "branches": 20.94,
+        "functions": 27.5,
+        "lines": 32.9
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/006-frontend-techdebt-phase4/spec.md",
+          "specs/006-frontend-techdebt-phase4/plan.md",
+          "specs/006-frontend-techdebt-phase4/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T030",
+          "T031",
+          "T032",
+          "T033",
+          "T034",
+          "T040"
+        ]
+      },
+      "hook_refactor_snapshot": {
+        "updated_hooks": [
+          "frontend/hooks/use-nuclei-repos.ts"
+        ],
+        "notes": [
+          "extract nucleiRepoKeys to replace duplicated query key literals and stabilize invalidation assertions"
+        ]
+      },
+      "new_test_files": [
+        "frontend/hooks/__tests__/use-nuclei-repos.mutation.test.ts",
+        "frontend/hooks/__tests__/use-nuclei-templates.mutation.test.ts",
+        "frontend/hooks/__tests__/use-notifications.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T20:12:16+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase5_commands_assets_coverage_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 28,
+        "tests_total": 66,
+        "tests_passed": 66,
+        "hooks_test_files": 24,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 31.94,
+        "branches": 20.8,
+        "functions": 27.85,
+        "lines": 33.05
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/007-frontend-techdebt-phase5/spec.md",
+          "specs/007-frontend-techdebt-phase5/plan.md",
+          "specs/007-frontend-techdebt-phase5/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T020",
+          "T021",
+          "T030",
+          "T031",
+          "T032",
+          "T033",
+          "T034",
+          "T040"
+        ]
+      },
+      "hook_refactor_snapshot": {
+        "updated_hooks": [
+          "frontend/hooks/use-commands.ts"
+        ],
+        "notes": [
+          "extract commandKeys and replace duplicated query/mutation key literals without API changes"
+        ]
+      },
+      "new_test_files": [
+        "frontend/hooks/__tests__/use-commands.mutation.test.ts",
+        "frontend/hooks/__tests__/use-websites.mutation.test.ts",
+        "frontend/hooks/__tests__/use-directories.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T21:35:32+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase6_endpoints_subdomains_coverage_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 73,
+        "tests_passed": 73,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 32.19,
+        "branches": 20.2,
+        "functions": 28.42,
+        "lines": 33.25
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/008-frontend-techdebt-phase6/spec.md",
+          "specs/008-frontend-techdebt-phase6/plan.md",
+          "specs/008-frontend-techdebt-phase6/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T020",
+          "T021",
+          "T022",
+          "T030",
+          "T031",
+          "T032",
+          "T033",
+          "T034",
+          "T040"
+        ]
+      },
+      "hook_refactor_snapshot": {
+        "updated_hooks": [
+          "frontend/hooks/use-endpoints.ts",
+          "frontend/hooks/use-subdomains.ts"
+        ],
+        "notes": [
+          "replace mutation invalidate key literals with endpointKeys/subdomainKeys constants without API changes"
+        ]
+      },
+      "new_test_files": [
+        "frontend/hooks/__tests__/use-endpoints.mutation.test.ts",
+        "frontend/hooks/__tests__/use-subdomains.mutation.test.ts",
+        "frontend/hooks/__tests__/use-subdomains.organization.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T21:40:35+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase7_settings_symmetry_coverage_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 75,
+        "tests_passed": 75,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 32.29,
+        "branches": 20.2,
+        "functions": 28.53,
+        "lines": 33.36
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/009-frontend-techdebt-phase7/spec.md",
+          "specs/009-frontend-techdebt-phase7/plan.md",
+          "specs/009-frontend-techdebt-phase7/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T020",
+          "T021",
+          "T030",
+          "T031",
+          "T032",
+          "T033",
+          "T034",
+          "T040"
+        ]
+      },
+      "hook_refactor_snapshot": {
+        "updated_hooks": [
+          "frontend/hooks/use-api-key-settings.ts",
+          "frontend/hooks/use-notification-settings.ts"
+        ],
+        "notes": [
+          "extract settings query key constants and reuse for query/invalidate wiring without API changes"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-settings.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T21:46:12+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase8_assets_commands_branch_coverage_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 79,
+        "tests_passed": 79,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 32.95,
+        "branches": 20.36,
+        "functions": 29.82,
+        "lines": 33.95
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/010-frontend-techdebt-phase8/spec.md",
+          "specs/010-frontend-techdebt-phase8/plan.md",
+          "specs/010-frontend-techdebt-phase8/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T030",
+          "T031",
+          "T032",
+          "T033",
+          "T034",
+          "T035",
+          "T036",
+          "T040"
+        ]
+      },
+      "hook_refactor_snapshot": {
+        "updated_hooks": [
+          "frontend/hooks/use-websites.ts",
+          "frontend/hooks/use-directories.ts"
+        ],
+        "notes": [
+          "extract shared cascade invalidates for delete/bulk-delete paths to reduce duplication"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-websites.mutation.test.ts",
+        "frontend/hooks/__tests__/use-directories.mutation.test.ts",
+        "frontend/hooks/__tests__/use-commands.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T22:36:37+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase9_endpoints_delete_coverage_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 81,
+        "tests_passed": 81,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 33.16,
+        "branches": 20.36,
+        "functions": 30.34,
+        "lines": 34.17
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/011-frontend-techdebt-phase9/spec.md",
+          "specs/011-frontend-techdebt-phase9/plan.md",
+          "specs/011-frontend-techdebt-phase9/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T020",
+          "T030",
+          "T031",
+          "T032",
+          "T033",
+          "T034",
+          "T040"
+        ]
+      },
+      "hook_refactor_snapshot": {
+        "updated_hooks": [
+          "frontend/hooks/use-endpoints.ts"
+        ],
+        "notes": [
+          "extract endpointAllInvalidates to reuse delete/batch-delete invalidation wiring"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-endpoints.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T22:41:28+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase10_subdomains_delete_coverage_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 83,
+        "tests_passed": 83,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 33.37,
+        "branches": 20.36,
+        "functions": 30.87,
+        "lines": 34.39
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/012-frontend-techdebt-phase10/spec.md",
+          "specs/012-frontend-techdebt-phase10/plan.md",
+          "specs/012-frontend-techdebt-phase10/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T020",
+          "T030",
+          "T031",
+          "T032",
+          "T033",
+          "T034",
+          "T040"
+        ]
+      },
+      "hook_refactor_snapshot": {
+        "updated_hooks": [
+          "frontend/hooks/use-subdomains.ts"
+        ],
+        "notes": [
+          "extract subdomainCascadeInvalidates to reuse delete/batch-delete invalidation wiring"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-subdomains.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T22:47:37+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase11_wordlists_migration_coverage_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 85,
+        "tests_passed": 85,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 33.82,
+        "branches": 20.36,
+        "functions": 31.79,
+        "lines": 34.86
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/013-frontend-techdebt-phase11/spec.md",
+          "specs/013-frontend-techdebt-phase11/plan.md",
+          "specs/013-frontend-techdebt-phase11/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "hook_refactor_snapshot": {
+        "updated_hooks": [
+          "frontend/hooks/use-wordlists.ts"
+        ],
+        "notes": [
+          "migrate wordlist mutations to useResourceMutation while preserving toast/invalidate behavior"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-wordlists.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T22:56:23+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase12_endpoints_bulk_create_warning_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 86,
+        "tests_passed": 86,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 33.86,
+        "branches": 20.44,
+        "functions": 31.79,
+        "lines": 34.91
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/014-frontend-techdebt-phase12/spec.md",
+          "specs/014-frontend-techdebt-phase12/plan.md",
+          "specs/014-frontend-techdebt-phase12/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-endpoints.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T22:59:51+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase13_wordlists_error_paths_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 88,
+        "tests_passed": 88,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 33.86,
+        "branches": 20.44,
+        "functions": 31.79,
+        "lines": 34.91
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/015-frontend-techdebt-phase13/spec.md",
+          "specs/015-frontend-techdebt-phase13/plan.md",
+          "specs/015-frontend-techdebt-phase13/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-wordlists.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T23:03:37+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase14_endpoints_create_success_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 89,
+        "tests_passed": 89,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 33.91,
+        "branches": 20.52,
+        "functions": 31.79,
+        "lines": 34.96
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/016-frontend-techdebt-phase14/spec.md",
+          "specs/016-frontend-techdebt-phase14/plan.md",
+          "specs/016-frontend-techdebt-phase14/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-endpoints.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T23:06:49+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase15_directories_delete_error_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 90,
+        "tests_passed": 90,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 34,
+        "branches": 20.52,
+        "functions": 32.02,
+        "lines": 35.05
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/017-frontend-techdebt-phase15/spec.md",
+          "specs/017-frontend-techdebt-phase15/plan.md",
+          "specs/017-frontend-techdebt-phase15/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-directories.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T23:10:26+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase16_websites_delete_success_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 91,
+        "tests_passed": 91,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 34.05,
+        "branches": 20.52,
+        "functions": 32.13,
+        "lines": 35.1
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/018-frontend-techdebt-phase16/spec.md",
+          "specs/018-frontend-techdebt-phase16/plan.md",
+          "specs/018-frontend-techdebt-phase16/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-websites.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T23:15:44+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase17_directories_delete_success_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 92,
+        "tests_passed": 92,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 34.09,
+        "branches": 20.52,
+        "functions": 32.24,
+        "lines": 35.15
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/019-frontend-techdebt-phase17/spec.md",
+          "specs/019-frontend-techdebt-phase17/plan.md",
+          "specs/019-frontend-techdebt-phase17/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-directories.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T23:25:16+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase18_websites_bulk_delete_error_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 93,
+        "tests_passed": 93,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 34.09,
+        "branches": 20.52,
+        "functions": 32.24,
+        "lines": 35.15
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/020-frontend-techdebt-phase18/spec.md",
+          "specs/020-frontend-techdebt-phase18/plan.md",
+          "specs/020-frontend-techdebt-phase18/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-websites.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T23:32:27+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase19_assets_error_branches_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 98,
+        "tests_passed": 98,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 34.09,
+        "branches": 20.52,
+        "functions": 32.24,
+        "lines": 35.15
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/021-frontend-techdebt-phase19/spec.md",
+          "specs/021-frontend-techdebt-phase19/plan.md",
+          "specs/021-frontend-techdebt-phase19/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-endpoints.mutation.test.ts",
+        "frontend/hooks/__tests__/use-directories.mutation.test.ts",
+        "frontend/hooks/__tests__/use-subdomains.organization.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T23:47:18+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase20_workers_mutation_branches_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 107,
+        "tests_passed": 107,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 34.74,
+        "branches": 20.52,
+        "functions": 33.82,
+        "lines": 35.82
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/022-frontend-techdebt-phase20/spec.md",
+          "specs/022-frontend-techdebt-phase20/plan.md",
+          "specs/022-frontend-techdebt-phase20/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-workers.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T23:52:30+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase21_commands_mutation_branches_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 110,
+        "tests_passed": 110,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 34.78,
+        "branches": 20.52,
+        "functions": 33.93,
+        "lines": 35.87
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/023-frontend-techdebt-phase21/spec.md",
+          "specs/023-frontend-techdebt-phase21/plan.md",
+          "specs/023-frontend-techdebt-phase21/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-commands.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-11T23:58:30+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase22_targets_mutation_branches_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 124,
+        "tests_passed": 124,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 36.12,
+        "branches": 20.6,
+        "functions": 37.19,
+        "lines": 37.26
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/024-frontend-techdebt-phase22/spec.md",
+          "specs/024-frontend-techdebt-phase22/plan.md",
+          "specs/024-frontend-techdebt-phase22/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-targets.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T00:03:30+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase23_scans_scheduled_scans_mutation_branches_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 139,
+        "tests_passed": 139,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 38.18,
+        "branches": 21.47,
+        "functions": 39.43,
+        "lines": 39.42
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/025-frontend-techdebt-phase23/spec.md",
+          "specs/025-frontend-techdebt-phase23/plan.md",
+          "specs/025-frontend-techdebt-phase23/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-scans.mutation.test.ts",
+        "frontend/hooks/__tests__/use-scheduled-scans.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T00:07:30+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase24_organizations_mutation_branches_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 145,
+        "tests_passed": 145,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 39.33,
+        "branches": 21.71,
+        "functions": 40.67,
+        "lines": 40.62
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/026-frontend-techdebt-phase24/spec.md",
+          "specs/026-frontend-techdebt-phase24/plan.md",
+          "specs/026-frontend-techdebt-phase24/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-organizations.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T08:52:30+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase25_auth_agents_tools_engines_mutation_branches_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 161,
+        "tests_passed": 161,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 39.88,
+        "branches": 21.71,
+        "functions": 42.02,
+        "lines": 41.19
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/027-frontend-techdebt-phase25/spec.md",
+          "specs/027-frontend-techdebt-phase25/plan.md",
+          "specs/027-frontend-techdebt-phase25/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T013",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-auth.mutation.test.ts",
+        "frontend/hooks/__tests__/use-agents.mutation.test.ts",
+        "frontend/hooks/__tests__/use-tools.mutation.test.ts",
+        "frontend/hooks/__tests__/use-engines.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T08:56:30+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase26_nuclei_templates_repos_mutation_branches_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 169,
+        "tests_passed": 169,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 40.16,
+        "branches": 21.71,
+        "functions": 42.69,
+        "lines": 41.48
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/028-frontend-techdebt-phase26/spec.md",
+          "specs/028-frontend-techdebt-phase26/plan.md",
+          "specs/028-frontend-techdebt-phase26/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-nuclei-templates.mutation.test.ts",
+        "frontend/hooks/__tests__/use-nuclei-repos.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T08:59:30+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase27_vulnerabilities_mutation_branches_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 176,
+        "tests_passed": 176,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 40.57,
+        "branches": 21.71,
+        "functions": 43.7,
+        "lines": 41.91
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/029-frontend-techdebt-phase27/spec.md",
+          "specs/029-frontend-techdebt-phase27/plan.md",
+          "specs/029-frontend-techdebt-phase27/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-vulnerabilities.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T09:05:30+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase28_fingerprints_mutation_branches_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 31,
+        "tests_total": 212,
+        "tests_passed": 212,
+        "hooks_test_files": 27,
+        "lib_test_files": 2,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 41.4,
+        "branches": 21.71,
+        "functions": 45.73,
+        "lines": 42.78
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/030-frontend-techdebt-phase28/spec.md",
+          "specs/030-frontend-techdebt-phase28/plan.md",
+          "specs/030-frontend-techdebt-phase28/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/__tests__/use-fingerprints.mutation.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T09:16:36+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase29_smart_filter_extraction_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 32,
+        "tests_total": 216,
+        "tests_passed": 216,
+        "hooks_test_files": 27,
+        "lib_test_files": 3,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 43.5,
+        "branches": 24.26,
+        "functions": 46.52,
+        "lines": 44.9
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/031-frontend-techdebt-phase29/spec.md",
+          "specs/031-frontend-techdebt-phase29/plan.md",
+          "specs/031-frontend-techdebt-phase29/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/lib/__tests__/smart-filter.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T09:24:28+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase30_scheduled_scan_helpers_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 33,
+        "tests_total": 220,
+        "tests_passed": 220,
+        "hooks_test_files": 27,
+        "lib_test_files": 4,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 44.22,
+        "branches": 25.95,
+        "functions": 46.76,
+        "lines": 45.53
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/032-frontend-techdebt-phase30/spec.md",
+          "specs/032-frontend-techdebt-phase30/plan.md",
+          "specs/032-frontend-techdebt-phase30/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T013",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/lib/__tests__/scheduled-scan-helpers.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T09:28:51+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase31_initiate_scan_helpers_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 34,
+        "tests_total": 226,
+        "tests_passed": 226,
+        "hooks_test_files": 27,
+        "lib_test_files": 5,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 44.92,
+        "branches": 27.19,
+        "functions": 46.94,
+        "lines": 46.14
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/033-frontend-techdebt-phase31/spec.md",
+          "specs/033-frontend-techdebt-phase31/plan.md",
+          "specs/033-frontend-techdebt-phase31/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/lib/__tests__/initiate-scan-helpers.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T09:34:04+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase32_nudge_toast_helpers_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 35,
+        "tests_total": 230,
+        "tests_passed": 230,
+        "hooks_test_files": 27,
+        "lib_test_files": 6,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 45.96,
+        "branches": 28.04,
+        "functions": 47.39,
+        "lines": 47.13
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/034-frontend-techdebt-phase32/spec.md",
+          "specs/034-frontend-techdebt-phase32/plan.md",
+          "specs/034-frontend-techdebt-phase32/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/lib/__tests__/nudge-toast-helpers.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T09:39:19+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase33_agent_install_helpers_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 36,
+        "tests_total": 233,
+        "tests_passed": 233,
+        "hooks_test_files": 27,
+        "lib_test_files": 7,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 46.76,
+        "branches": 29.27,
+        "functions": 47.85,
+        "lines": 47.85
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/035-frontend-techdebt-phase33/spec.md",
+          "specs/035-frontend-techdebt-phase33/plan.md",
+          "specs/035-frontend-techdebt-phase33/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/lib/__tests__/agent-install-helpers.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T09:46:57+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase34_fingerprint_hook_factory_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 36,
+        "tests_total": 233,
+        "tests_passed": 233,
+        "hooks_test_files": 27,
+        "lib_test_files": 7,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 46.76,
+        "branches": 29.27,
+        "functions": 47.85,
+        "lines": 47.87
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/036-frontend-techdebt-phase34/spec.md",
+          "specs/036-frontend-techdebt-phase34/plan.md",
+          "specs/036-frontend-techdebt-phase34/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T09:56:05+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase35_pagination_helper_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 37,
+        "tests_total": 236,
+        "tests_passed": 236,
+        "hooks_test_files": 28,
+        "lib_test_files": 7,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 46.95,
+        "branches": 30.41,
+        "functions": 47.91,
+        "lines": 48.06
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/037-frontend-techdebt-phase35/spec.md",
+          "specs/037-frontend-techdebt-phase35/plan.md",
+          "specs/037-frontend-techdebt-phase35/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/_shared/__tests__/pagination.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T10:01:33+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase36_targets_helpers_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 38,
+        "tests_total": 240,
+        "tests_passed": 240,
+        "hooks_test_files": 29,
+        "lib_test_files": 7,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 47.62,
+        "branches": 31.84,
+        "functions": 48.24,
+        "lines": 48.73
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/038-frontend-techdebt-phase36/spec.md",
+          "specs/038-frontend-techdebt-phase36/plan.md",
+          "specs/038-frontend-techdebt-phase36/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/_shared/__tests__/targets-helpers.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T10:16:07+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase37_scan_mutation_helpers_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 39,
+        "tests_total": 246,
+        "tests_passed": 246,
+        "hooks_test_files": 30,
+        "lib_test_files": 7,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 47.8,
+        "branches": 32.2,
+        "functions": 49.08,
+        "lines": 48.89
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/039-frontend-techdebt-phase37/spec.md",
+          "specs/039-frontend-techdebt-phase37/plan.md",
+          "specs/039-frontend-techdebt-phase37/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/_shared/__tests__/scan-mutation-helpers.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T10:55:48+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase38_scheduled_scan_success_helpers_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 40,
+        "tests_total": 248,
+        "tests_passed": 248,
+        "hooks_test_files": 31,
+        "lib_test_files": 7,
+        "components_test_files": 2
+      },
+      "coverage_snapshot": {
+        "statements": 47.89,
+        "branches": 32.3,
+        "functions": 49.35,
+        "lines": 48.98
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/040-frontend-techdebt-phase38/spec.md",
+          "specs/040-frontend-techdebt-phase38/plan.md",
+          "specs/040-frontend-techdebt-phase38/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/_shared/__tests__/scheduled-scan-mutation-helpers.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T11:46:28+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase39_commands_mock_extraction_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 41,
+        "tests_total": 252,
+        "tests_passed": 252,
+        "hooks_test_files": 31,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 48.52,
+        "branches": 32.79,
+        "functions": 49.73,
+        "lines": 49.52
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/041-frontend-techdebt-phase39/spec.md",
+          "specs/041-frontend-techdebt-phase39/plan.md",
+          "specs/041-frontend-techdebt-phase39/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/mock/data/__tests__/commands.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T11:53:18+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase40_subdomain_mutation_helpers_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 42,
+        "tests_total": 255,
+        "tests_passed": 255,
+        "hooks_test_files": 32,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 48.72,
+        "branches": 33.28,
+        "functions": 49.89,
+        "lines": 49.73
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/042-frontend-techdebt-phase40/spec.md",
+          "specs/042-frontend-techdebt-phase40/plan.md",
+          "specs/042-frontend-techdebt-phase40/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/_shared/__tests__/subdomain-mutation-helpers.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T11:58:54+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase41_asset_bulk_create_toast_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 43,
+        "tests_total": 258,
+        "tests_passed": 258,
+        "hooks_test_files": 33,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 48.87,
+        "branches": 33.5,
+        "functions": 50,
+        "lines": 49.88
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/043-frontend-techdebt-phase41/spec.md",
+          "specs/043-frontend-techdebt-phase41/plan.md",
+          "specs/043-frontend-techdebt-phase41/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/_shared/__tests__/asset-mutation-helpers.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T12:20:14+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase42_organization_optimistic_helpers_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 44,
+        "tests_total": 261,
+        "tests_passed": 261,
+        "hooks_test_files": 34,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.34,
+        "branches": 33.6,
+        "functions": 50.69,
+        "lines": 50.4
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/044-frontend-techdebt-phase42/spec.md",
+          "specs/044-frontend-techdebt-phase42/plan.md",
+          "specs/044-frontend-techdebt-phase42/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/_shared/__tests__/organization-mutation-helpers.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T12:28:42+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase43_delete_count_helpers_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 44,
+        "tests_total": 261,
+        "tests_passed": 261,
+        "hooks_test_files": 34,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.32,
+        "branches": 33.57,
+        "functions": 50.69,
+        "lines": 50.37
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/045-frontend-techdebt-phase43/spec.md",
+          "specs/045-frontend-techdebt-phase43/plan.md",
+          "specs/045-frontend-techdebt-phase43/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T012",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T12:58:09+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase44_query_key_factory_and_dialog_state_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 263,
+        "tests_passed": 263,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.66,
+        "branches": 33.79,
+        "functions": 50.96,
+        "lines": 50.71
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/046-frontend-techdebt-phase44/spec.md",
+          "specs/046-frontend-techdebt-phase44/plan.md",
+          "specs/046-frontend-techdebt-phase44/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T030",
+          "T031",
+          "T032",
+          "T033",
+          "T034",
+          "T040"
+        ]
+      },
+      "expanded_test_files": [
+        "frontend/hooks/_shared/__tests__/query-keys.test.ts"
+      ],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T13:28:22+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase45_smartfilter_state_extraction_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 263,
+        "tests_passed": 263,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.66,
+        "branches": 33.79,
+        "functions": 50.96,
+        "lines": 50.71
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/047-frontend-techdebt-phase45/spec.md",
+          "specs/047-frontend-techdebt-phase45/plan.md",
+          "specs/047-frontend-techdebt-phase45/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T030",
+          "T040",
+          "T041",
+          "T042",
+          "T043",
+          "T044",
+          "T050"
+        ]
+      },
+      "expanded_test_files": [],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T15:41:30+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase46_fingerprint_table_actions_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 263,
+        "tests_passed": 263,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.66,
+        "branches": 33.79,
+        "functions": 50.96,
+        "lines": 50.71
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/048-frontend-techdebt-phase46/spec.md",
+          "specs/048-frontend-techdebt-phase46/plan.md",
+          "specs/048-frontend-techdebt-phase46/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T16:31:06+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase47_simple_search_toolbar_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 263,
+        "tests_passed": 263,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.66,
+        "branches": 33.79,
+        "functions": 50.96,
+        "lines": 50.71
+      },
+      "speckit_snapshot": {
+        "spec_files": [
+          "specs/049-frontend-techdebt-phase47/spec.md",
+          "specs/049-frontend-techdebt-phase47/plan.md",
+          "specs/049-frontend-techdebt-phase47/tasks.md"
+        ],
+        "tasks_completed_in_batch": [
+          "T010",
+          "T011",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T030"
+        ]
+      },
+      "expanded_test_files": [],
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T17:06:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase48_csv_utils_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 263,
+        "tests_passed": 263,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.66,
+        "branches": 33.79,
+        "functions": 50.96,
+        "lines": 50.71
+      },
+      "refactor_snapshot": {
+        "csv_utils_file": "frontend/lib/csv-utils.ts",
+        "updated_views": [
+          "frontend/components/websites/websites-view.tsx",
+          "frontend/components/directories/directories-view.tsx",
+          "frontend/components/subdomains/subdomains-detail-view.tsx",
+          "frontend/components/endpoints/endpoints-detail-view.tsx",
+          "frontend/components/ip-addresses/ip-addresses-view.tsx"
+        ],
+        "notes": [
+          "extract shared CSV formatting and escaping helpers"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T17:23:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase49_download_search_state_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 263,
+        "tests_passed": 263,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.66,
+        "branches": 33.79,
+        "functions": 50.96,
+        "lines": 50.71
+      },
+      "refactor_snapshot": {
+        "download_utils_file": "frontend/lib/download-utils.ts",
+        "search_state_hook": "frontend/hooks/_shared/use-search-state.ts",
+        "updated_views": [
+          "frontend/components/websites/websites-view.tsx",
+          "frontend/components/directories/directories-view.tsx",
+          "frontend/components/endpoints/endpoints-detail-view.tsx",
+          "frontend/components/subdomains/subdomains-detail-view.tsx",
+          "frontend/components/ip-addresses/ip-addresses-view.tsx",
+          "frontend/components/settings/system-logs/system-logs-view.tsx",
+          "frontend/components/dashboard/dashboard-scheduled-scans.tsx",
+          "frontend/components/organization/organization-list.tsx",
+          "frontend/components/organization/organization-detail-view.tsx",
+          "frontend/components/scan/history/scan-history-list.tsx",
+          "frontend/components/target/target-settings.tsx",
+          "frontend/components/target/all-targets-detail-view.tsx",
+          "frontend/components/fingerprints/ehole-fingerprint-view.tsx",
+          "frontend/components/fingerprints/goby-fingerprint-view.tsx",
+          "frontend/components/fingerprints/wappalyzer-fingerprint-view.tsx",
+          "frontend/components/fingerprints/arl-fingerprint-view.tsx",
+          "frontend/components/fingerprints/fingerprinthub-fingerprint-view.tsx",
+          "frontend/components/fingerprints/fingers-fingerprint-view.tsx"
+        ],
+        "notes": [
+          "centralize blob download flow",
+          "extract shared searching state reset"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T17:52:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase53_fingerprint_pagination_hook_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.94,
+        "functions": 51.02,
+        "lines": 50.78
+      },
+      "refactor_snapshot": {
+        "pagination_hook": "frontend/hooks/_shared/use-stable-pagination-info.ts",
+        "updated_views": [
+          "frontend/components/fingerprints/arl-fingerprint-view.tsx",
+          "frontend/components/fingerprints/ehole-fingerprint-view.tsx",
+          "frontend/components/fingerprints/fingerprinthub-fingerprint-view.tsx",
+          "frontend/components/fingerprints/fingers-fingerprint-view.tsx",
+          "frontend/components/fingerprints/goby-fingerprint-view.tsx",
+          "frontend/components/fingerprints/wappalyzer-fingerprint-view.tsx"
+        ],
+        "notes": [
+          "centralize stable paginationInfo memoization in fingerprint views"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T17:57:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase54_pagination_detail_refine_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.94,
+        "functions": 51.02,
+        "lines": 50.78
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/vulnerabilities/vulnerabilities-detail-view.tsx",
+          "frontend/components/dashboard/dashboard-scan-history.tsx"
+        ],
+        "notes": [
+          "normalize pagination info construction in remaining views"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T18:12:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase55_pagination_scheduled_endpoints_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.94,
+        "functions": 51.02,
+        "lines": 50.78
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/endpoints/endpoints-detail-view.tsx",
+          "frontend/components/target/target-settings.tsx",
+          "frontend/components/dashboard/dashboard-scheduled-scans.tsx"
+        ],
+        "notes": [
+          "standardize pagination info construction for scheduled scans and endpoints views"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T18:16:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase56_search_screenshot_pagination_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.94,
+        "functions": 51.02,
+        "lines": 50.78
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/screenshots/screenshots-gallery.tsx",
+          "frontend/components/search/search-page.tsx"
+        ],
+        "notes": [
+          "use shared pagination builder to avoid invalid page ranges"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T18:20:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase57_pagination_min_page_align_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.94,
+        "functions": 51.02,
+        "lines": 50.78
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/websites/websites-view.tsx",
+          "frontend/components/directories/directories-view.tsx",
+          "frontend/components/ip-addresses/ip-addresses-view.tsx",
+          "frontend/components/organization/organization-detail-view.tsx"
+        ],
+        "notes": [
+          "ensure pagination helper enforces minTotalPages=1 in list views"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T18:26:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase58_pagination_org_dashboard_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.94,
+        "functions": 51.02,
+        "lines": 50.78
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/organization/organization-list.tsx",
+          "frontend/components/organization/targets/targets-detail-view.tsx",
+          "frontend/components/dashboard/dashboard-scan-history.tsx"
+        ],
+        "notes": [
+          "align list pagination to minTotalPages=1 across org and dashboard views"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T18:29:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase59_dashboard_pagination_build_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.94,
+        "functions": 51.02,
+        "lines": 50.78
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/dashboard/dashboard-data-table.tsx"
+        ],
+        "notes": [
+          "replace manual totalPages fallback with shared pagination builder"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T18:33:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase60_add_target_org_pagination_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.94,
+        "functions": 51.02,
+        "lines": 50.78
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/target/add-target-dialog.tsx"
+        ],
+        "notes": [
+          "derive organization picker pagination via shared helper"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T18:36:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase61_pagination_display_safety_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.76,
+        "branches": 33.91,
+        "functions": 51.02,
+        "lines": 50.82
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/search/search-pagination.tsx",
+          "frontend/components/ui/data-table/pagination.tsx",
+          "frontend/components/screenshots/screenshots-gallery.tsx"
+        ],
+        "notes": [
+          "centralize safe totalPages handling and avoid negative page indices"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T18:39:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase62_server_pagination_zero_total_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.76,
+        "branches": 33.91,
+        "functions": 51.02,
+        "lines": 50.82
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/endpoints/endpoints-data-table.tsx",
+          "frontend/components/target/targets-data-table.tsx"
+        ],
+        "notes": [
+          "keep manual pagination active when totalCount is zero"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T18:48:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase63_vulnerability_pagination_unify_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.76,
+        "branches": 33.91,
+        "functions": 51.02,
+        "lines": 50.82
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/vulnerabilities/vulnerabilities-detail-view.tsx"
+        ],
+        "notes": [
+          "always build pagination info with minTotalPages=1"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T19:04:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase64_dialog_hook_split_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/scan/initiate-scan-dialog.tsx",
+          "frontend/components/scan/initiate-scan-dialog-sections.tsx",
+          "frontend/components/common/smart-filter-input.tsx",
+          "frontend/components/common/smart-filter-input-field.tsx",
+          "frontend/components/common/smart-filter-input-menu.tsx"
+        ],
+        "updated_hooks": [
+          "frontend/hooks/use-fingerprints/index.ts",
+          "frontend/hooks/use-fingerprints/keys.ts",
+          "frontend/hooks/use-fingerprints/ehole.ts",
+          "frontend/hooks/use-fingerprints/goby.ts",
+          "frontend/hooks/use-fingerprints/wappalyzer.ts",
+          "frontend/hooks/use-fingerprints/fingers.ts",
+          "frontend/hooks/use-fingerprints/fingerprinthub.ts",
+          "frontend/hooks/use-fingerprints/arl.ts",
+          "frontend/hooks/use-fingerprints/stats.ts"
+        ],
+        "notes": [
+          "split initiate scan dialog into focused sections",
+          "extract smart filter input field/menu subcomponents",
+          "modularize fingerprint hooks by fingerprint type"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T19:22:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase65_dialog_hook_split_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/settings/workers/agent-install-dialog.tsx",
+          "frontend/components/settings/workers/agent-install-dialog-sections.tsx",
+          "frontend/components/scan/scheduled/create-scheduled-scan-dialog.tsx",
+          "frontend/components/scan/scheduled/scheduled-scan-dialog-sections.tsx",
+          "frontend/components/tools/config/add-tool-dialog.tsx",
+          "frontend/components/tools/config/add-tool-dialog-sections.tsx"
+        ],
+        "updated_hooks": [
+          "frontend/hooks/use-targets/index.ts",
+          "frontend/hooks/use-targets/keys.ts",
+          "frontend/hooks/use-targets/queries.ts",
+          "frontend/hooks/use-targets/mutations.ts",
+          "frontend/hooks/use-scans/index.ts",
+          "frontend/hooks/use-scans/keys.ts",
+          "frontend/hooks/use-scans/queries.ts",
+          "frontend/hooks/use-scans/mutations.ts",
+          "frontend/hooks/use-vulnerabilities/index.ts",
+          "frontend/hooks/use-vulnerabilities/keys.ts",
+          "frontend/hooks/use-vulnerabilities/queries.ts",
+          "frontend/hooks/use-vulnerabilities/mutations.ts"
+        ],
+        "notes": [
+          "split agent install/scheduled scan/tool dialogs into focused sections",
+          "modularize targets/scans/vulnerabilities hooks into keys/queries/mutations"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T19:38:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase66_state_dialog_split_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/target/add-target-dialog.tsx",
+          "frontend/components/target/add-target-dialog-sections.tsx",
+          "frontend/components/scan/history/scan-history-list.tsx",
+          "frontend/components/scan/history/scan-history-list-dialogs.tsx",
+          "frontend/components/scan/history/scan-overview.tsx",
+          "frontend/components/scan/history/scan-overview-sections.tsx"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/settings/workers/agent-install-dialog-state.ts",
+          "frontend/components/settings/workers/agent-install-dialog-state-hooks.ts",
+          "frontend/components/scan/scheduled/scheduled-scan-dialog-state.ts",
+          "frontend/components/scan/scheduled/scheduled-scan-dialog-state-hooks.ts",
+          "frontend/components/scan/history/scan-history-list-state.ts",
+          "frontend/components/scan/history/scan-overview-utils.ts",
+          "frontend/components/scan/history/scan-overview-state.ts"
+        ],
+        "notes": [
+          "extract dialog state into focused hooks",
+          "split add-target and scan history UI into sections and dialogs",
+          "centralize scan overview formatting helpers"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T20:19:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase67_dialog_input_split_batch",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/settings/workers/deploy-terminal-dialog.tsx",
+          "frontend/components/settings/workers/deploy-terminal-dialog-sections.tsx",
+          "frontend/components/scan/scan-progress-dialog.tsx",
+          "frontend/components/scan/scan-progress-dialog-sections.tsx",
+          "frontend/components/scan/engine/engine-create-dialog.tsx",
+          "frontend/components/scan/engine/engine-create-dialog-sections.tsx",
+          "frontend/components/fingerprints/import-fingerprint-dialog.tsx",
+          "frontend/components/scan/quick-scan-dialog.tsx",
+          "frontend/components/scan/quick-scan-dialog-sections.tsx",
+          "frontend/components/organization/targets/link-target-dialog.tsx",
+          "frontend/components/organization/targets/link-target-dialog-sections.tsx",
+          "frontend/components/ui/terminal-login.tsx",
+          "frontend/components/ui/terminal-login-sections.tsx"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/settings/workers/deploy-terminal-dialog-state.ts",
+          "frontend/components/scan/scan-progress-dialog-state.ts",
+          "frontend/components/scan/engine/engine-create-dialog-state.ts",
+          "frontend/components/fingerprints/import-fingerprint-dialog-state.ts",
+          "frontend/components/scan/quick-scan-dialog-state.ts",
+          "frontend/components/organization/targets/link-target-dialog-state.ts"
+        ],
+        "updated_utilities": [
+          "frontend/components/scan/scan-progress-dialog-types.ts",
+          "frontend/components/scan/scan-progress-dialog-utils.ts",
+          "frontend/components/fingerprints/import-fingerprint-dialog-utils.ts",
+          "frontend/components/ui/terminal-login-types.ts"
+        ],
+        "notes": [
+          "split large dialogs into state hooks and UI sections",
+          "extract scan progress formatting/types helpers",
+          "modularize terminal login input flow for mobile/desktop"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T20:45:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase68_bulk_add_urls_split",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/common/bulk-add-urls-dialog.tsx",
+          "frontend/components/common/bulk-add-urls-dialog-sections.tsx"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/common/bulk-add-urls-dialog-state.ts"
+        ],
+        "notes": [
+          "extract bulk add URL dialog state and input sections"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T21:01:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase69_bulk_add_subdomains_split",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/subdomains/bulk-add-subdomains-dialog.tsx",
+          "frontend/components/subdomains/bulk-add-subdomains-dialog-sections.tsx"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/subdomains/bulk-add-subdomains-dialog-state.ts"
+        ],
+        "notes": [
+          "extract subdomain bulk add dialog state and sections"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T21:05:00+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase70_engine_edit_split",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/scan/engine/engine-edit-dialog.tsx",
+          "frontend/components/scan/engine/engine-edit-dialog-sections.tsx"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/scan/engine/engine-edit-dialog-state.ts"
+        ],
+        "notes": [
+          "extract engine edit dialog state and editor sections"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T21:21:53+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase71_org_custom_tool_dialog_split",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/organization/add-organization-dialog.tsx",
+          "frontend/components/organization/add-organization-dialog-sections.tsx",
+          "frontend/components/tools/config/add-custom-tool-dialog.tsx",
+          "frontend/components/tools/config/add-custom-tool-dialog-sections.tsx"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/organization/add-organization-dialog-state.ts",
+          "frontend/components/tools/config/add-custom-tool-dialog-state.ts"
+        ],
+        "notes": [
+          "extract add organization dialog state and form sections",
+          "extract custom tool dialog state and category sections"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T21:34:58+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase72_wappalyzer_edit_org_split",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/fingerprints/wappalyzer-fingerprint-dialog.tsx",
+          "frontend/components/fingerprints/wappalyzer-fingerprint-dialog-sections.tsx",
+          "frontend/components/organization/edit-organization-dialog.tsx",
+          "frontend/components/organization/edit-organization-dialog-sections.tsx"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/fingerprints/wappalyzer-fingerprint-dialog-state.ts",
+          "frontend/components/organization/edit-organization-dialog-state.ts"
+        ],
+        "notes": [
+          "extract wappalyzer fingerprint dialog state and sections",
+          "extract edit organization dialog state and form sections"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T21:39:20+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase73_ehole_dialog_split",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/fingerprints/ehole-fingerprint-dialog.tsx",
+          "frontend/components/fingerprints/ehole-fingerprint-dialog-sections.tsx"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/fingerprints/ehole-fingerprint-dialog-state.ts"
+        ],
+        "notes": [
+          "extract ehole fingerprint dialog state and sections"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T21:53:59+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase74_goby_fingers_dialog_split",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/fingerprints/goby-fingerprint-dialog.tsx",
+          "frontend/components/fingerprints/goby-fingerprint-dialog-sections.tsx",
+          "frontend/components/fingerprints/fingers-fingerprint-dialog.tsx",
+          "frontend/components/fingerprints/fingers-fingerprint-dialog-sections.tsx"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/fingerprints/goby-fingerprint-dialog-state.ts",
+          "frontend/components/fingerprints/fingers-fingerprint-dialog-state.ts"
+        ],
+        "notes": [
+          "extract goby fingerprint dialog state and rules section",
+          "extract fingers fingerprint dialog state and form sections"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T22:01:42+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase75_fingerprinthub_arl_edit_scheduled_split",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/fingerprints/fingerprinthub-fingerprint-dialog.tsx",
+          "frontend/components/fingerprints/fingerprinthub-fingerprint-dialog-sections.tsx",
+          "frontend/components/fingerprints/arl-fingerprint-dialog.tsx",
+          "frontend/components/fingerprints/arl-fingerprint-dialog-sections.tsx",
+          "frontend/components/scan/scheduled/edit-scheduled-scan-dialog.tsx",
+          "frontend/components/scan/scheduled/edit-scheduled-scan-dialog-sections.tsx"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/fingerprints/fingerprinthub-fingerprint-dialog-state.ts",
+          "frontend/components/fingerprints/arl-fingerprint-dialog-state.ts"
+        ],
+        "notes": [
+          "extract fingerprinthub fingerprint dialog state and form sections",
+          "extract arl fingerprint dialog state and rule form sections",
+          "modularize edit scheduled scan dialog sections"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-12T22:14:42+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase76_multi_dialog_split",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/about-dialog.tsx",
+          "frontend/components/about-dialog-sections.tsx",
+          "frontend/components/auth/change-password-dialog.tsx",
+          "frontend/components/auth/change-password-dialog-sections.tsx",
+          "frontend/components/settings/workers/worker-dialog.tsx",
+          "frontend/components/settings/workers/worker-dialog-sections.tsx",
+          "frontend/components/settings/workers/architecture-dialog.tsx",
+          "frontend/components/settings/workers/architecture-dialog-sections.tsx",
+          "frontend/components/tools/wordlist-edit-dialog.tsx",
+          "frontend/components/tools/wordlist-edit-dialog-sections.tsx",
+          "frontend/components/tools/wordlist-upload-dialog.tsx",
+          "frontend/components/tools/wordlist-upload-dialog-sections.tsx"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/about-dialog-state.ts",
+          "frontend/components/auth/change-password-dialog-state.ts",
+          "frontend/components/settings/workers/worker-dialog-state.ts",
+          "frontend/components/settings/workers/architecture-dialog-state.ts",
+          "frontend/components/tools/wordlist-edit-dialog-state.ts",
+          "frontend/components/tools/wordlist-upload-dialog-state.ts"
+        ],
+        "notes": [
+          "extract about dialog update check state and sections",
+          "split change password dialog into state and form sections",
+          "split worker config dialog into state and form sections",
+          "modularize architecture dialog content and roles",
+          "split wordlist edit dialog state and editor sections",
+          "split wordlist upload dialog state and dropzone sections"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-13T00:11:35+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase77_multi_component_split",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/target/target-overview.tsx",
+          "frontend/components/target/target-settings.tsx",
+          "frontend/components/dashboard/dashboard-data-table.tsx",
+          "frontend/components/screenshots/screenshots-gallery.tsx",
+          "frontend/components/notifications/notification-drawer.tsx",
+          "frontend/components/scan/history/scan-history-list.tsx",
+          "frontend/components/scan/history/scan-history-data-table.tsx",
+          "frontend/components/scan/scan-config-editor.tsx",
+          "frontend/components/scan/scan-log-list.tsx",
+          "frontend/components/ui/confirm-dialog.tsx"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/target/target-settings-state.ts",
+          "frontend/components/dashboard/dashboard-data-table-state.ts",
+          "frontend/components/screenshots/screenshots-gallery-state.ts",
+          "frontend/components/notifications/notification-drawer-state.ts",
+          "frontend/components/scan/history/scan-history-list-view-state.ts",
+          "frontend/components/scan/history/scan-history-data-table-state.ts",
+          "frontend/components/scan/scan-config-editor-state.ts",
+          "frontend/components/scan/scan-log-list-state.ts",
+          "frontend/components/ui/confirm-dialog-state.ts"
+        ],
+        "notes": [
+          "split 10 large/medium components into orchestration + state/sections",
+          "keep UnifiedDataTable grouped-props API and remove legacy-style inline leakage",
+          "preserve behavior while isolating notification/gallery/dialog/table state transitions"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-13T00:32:38+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase78_table_state_and_asset_view_split",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/organization/organization-data-table.tsx",
+          "frontend/components/organization/targets/targets-data-table.tsx",
+          "frontend/components/target/targets-data-table.tsx",
+          "frontend/components/websites/websites-view.tsx",
+          "frontend/components/directories/directories-view.tsx",
+          "frontend/components/ip-addresses/ip-addresses-view.tsx",
+          "frontend/components/endpoints/endpoints-detail-view.tsx",
+          "frontend/components/subdomains/subdomains-detail-view.tsx"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/organization/organization-data-table-state.ts",
+          "frontend/components/organization/targets/targets-data-table-state.ts",
+          "frontend/components/target/targets-data-table-state.ts",
+          "frontend/components/websites/websites-view-state.ts",
+          "frontend/components/directories/directories-view-state.ts",
+          "frontend/components/ip-addresses/ip-addresses-view-state.ts",
+          "frontend/components/endpoints/endpoints-detail-view-state.ts",
+          "frontend/components/subdomains/subdomains-detail-view-state.ts"
+        ],
+        "updated_sections": [
+          "frontend/components/websites/websites-view-sections.tsx",
+          "frontend/components/directories/directories-view-sections.tsx",
+          "frontend/components/ip-addresses/ip-addresses-view-sections.tsx",
+          "frontend/components/endpoints/endpoints-detail-view-sections.tsx",
+          "frontend/components/subdomains/subdomains-detail-view-sections.tsx"
+        ],
+        "notes": [
+          "complete table-level state extraction for organization and target tables",
+          "split five asset views into orchestration + state + sections",
+          "keep existing query/search/pagination/delete/download behavior unchanged"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-13T00:48:55+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase79_vulnerability_and_architecture_split",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/vulnerabilities/vulnerabilities-detail-view.tsx",
+          "frontend/components/vulnerabilities/vulnerability-detail-content.tsx",
+          "frontend/components/settings/workers/architecture-flow.tsx",
+          "frontend/components/vulnerabilities/vulnerability-detail-dialog.tsx",
+          "frontend/components/settings/workers/agent-install-dialog.tsx",
+          "frontend/components/settings/workers/architecture-dialog-state.ts"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/vulnerabilities/vulnerabilities-detail-view-state.ts",
+          "frontend/components/vulnerabilities/vulnerability-detail-content-state.ts",
+          "frontend/components/settings/workers/architecture-flow-state.ts"
+        ],
+        "updated_sections": [
+          "frontend/components/vulnerabilities/vulnerabilities-detail-view-sections.tsx",
+          "frontend/components/vulnerabilities/vulnerability-detail-content-sections.tsx",
+          "frontend/components/settings/workers/architecture-flow-sections.tsx"
+        ],
+        "notes": [
+          "split vulnerabilities detail view into orchestration + state + sections",
+          "split vulnerability detail content into copy/state logic + tabbed sections",
+          "split architecture flow into orchestration + layout state + node sections",
+          "clean up warning-level unused vars/imports in touched worker/vulnerability files"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-13T00:53:24+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase80_search_page_split",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/search/search-page.tsx"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/search/search-page-state.ts"
+        ],
+        "updated_sections": [
+          "frontend/components/search/search-page-sections.tsx"
+        ],
+        "notes": [
+          "split search page into orchestration + state + sections",
+          "keep URL-init search, local recent history, export, pagination, and vulnerability detail dialog behavior unchanged",
+          "validate changed search module with dedicated eslint run"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" frontend -n",
+        "use_mutation_calls_in_frontend": 0
+      }
+    },
+    {
+      "timestamp": "2026-02-13T01:04:42+08:00",
+      "source": "codex_execution",
+      "scope": "frontend_phase81_review_fixes_reactflow_search_sidebar",
+      "gate_results": {
+        "typecheck": "pass",
+        "lint_core": "pass",
+        "check_datatable_legacy": "pass",
+        "test": "pass",
+        "test_coverage": "pass"
+      },
+      "test_snapshot": {
+        "test_files": 45,
+        "tests_total": 265,
+        "tests_passed": 265,
+        "hooks_test_files": 35,
+        "lib_test_files": 7,
+        "components_test_files": 2,
+        "mock_test_files": 1
+      },
+      "coverage_snapshot": {
+        "statements": 49.72,
+        "branches": 33.91,
+        "functions": 50.91,
+        "lines": 50.77
+      },
+      "refactor_snapshot": {
+        "updated_components": [
+          "frontend/components/settings/workers/architecture-flow-sections.tsx",
+          "frontend/components/app-sidebar.tsx"
+        ],
+        "updated_state_hooks": [
+          "frontend/components/settings/workers/architecture-flow-state.ts",
+          "frontend/components/search/search-page-state.ts"
+        ],
+        "notes": [
+          "memoize React Flow role/group nodes to avoid unnecessary re-renders",
+          "make resolveLayout width-aware for responsive horizontal spacing and startX centering",
+          "replace one-shot URL sync with deduplicated key-based resync logic in search page state",
+          "memoize sidebar static structures to avoid rebuilding navigation objects on every render"
+        ]
+      },
+      "frontend_scan_snapshot": {
+        "command": "rg \"useMutation\\(\" . -n --glob '!node_modules'",
+        "use_mutation_calls_in_frontend": 0
+      }
+    }
+  ],
+  "agent_contributions": {
+    "agent_1": {
+      "name": "Type Safety Analysis",
+      "agent_id": "a1ba07d",
+      "focus": "Type safety, any usage, TypeScript errors"
+    },
+    "agent_2": {
+      "name": "Component Maintainability Analysis",
+      "agent_id": "ae73d40",
+      "focus": "Component size, complexity, state management"
+    },
+    "agent_3": {
+      "name": "Architecture Analysis",
+      "agent_id": "a1c5a71",
+      "focus": "Module boundaries, coupling, duplication"
+    },
+    "agent_4": {
+      "name": "Quality Assurance Analysis",
+      "agent_id": "aeb83e9",
+      "focus": "Test coverage, CI/CD, quality markers"
+    },
+    "agent_5": {
+      "name": "UnifiedDataTable Migration Analysis",
+      "agent_id": "ad1899a",
+      "focus": "Table migration status, legacy API retirement"
+    }
+  }
+}

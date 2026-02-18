@@ -1,0 +1,10 @@
+{
+  "startedAt": "2026-02-13T04:49:00.927Z",
+  "finishedAt": "2026-02-13T04:49:21.826Z",
+  "baseUrl": "http://192.168.5.7:3000",
+  "total": 37,
+  "passed": 37,
+  "failed": 0,
+  "routeCount": 37,
+  "failures": []
+}

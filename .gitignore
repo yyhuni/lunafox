@@ -1,0 +1,68 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+go.work
+
+# Build artifacts
+dist/
+build/
+bin/
+
+# Node dependencies
+node_modules/
+**/node_modules/
+
+# IDE
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+*.log
+.venv/
+
+# Testing
+coverage.txt
+*.coverprofile
+.hypothesis/
+
+# Temporary files
+*.tmp
+tmp/
+temp/
+
+.kiro/
+.claude/
+.specify/
+
+# AI Assistant directories
+codex/
+openspec/
+specs/
+AGENTS.md
+WARP.md
+.opencode/
+
+# Playwright MCP screenshots
+.playwright-mcp/
+
+# SSL certificates
+docker/nginx/ssl/*.pem
+docker/nginx/ssl/*.key
+docker/nginx/ssl/*.crt

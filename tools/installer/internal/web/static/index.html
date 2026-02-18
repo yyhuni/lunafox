@@ -1,0 +1,1301 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LunaFox 快速安装</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-page: #f5f7fb;
+      --bg-card: #ffffff;
+      --bg-soft: #f8fafc;
+      --ink-strong: #111827;
+      --ink-main: #1f2937;
+      --ink-muted: #6b7280;
+      --line: #e5e7eb;
+      --line-strong: #d1d5db;
+      --brand: #2563eb;
+      --brand-soft: #eff6ff;
+      --success: #15803d;
+      --warning: #b45309;
+      --danger: #b91c1c;
+      --radius-lg: 14px;
+      --radius-md: 10px;
+      --radius-sm: 8px;
+      --shadow: 0 16px 32px rgba(17, 24, 39, 0.08);
+    }
+
+    body {
+      font-family: "Avenir Next", "SF Pro Text", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg-page);
+      color: var(--ink-main);
+      min-height: 100vh;
+      padding: 18px;
+      line-height: 1.5;
+    }
+
+    .wizard {
+      width: min(860px, 100%);
+      margin: 0 auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .wizard-header {
+      padding: 22px 24px 16px;
+      border-bottom: 1px solid var(--line);
+      background: #fafbff;
+    }
+
+    .wizard-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--ink-strong);
+      letter-spacing: 0.2px;
+    }
+
+    .wizard-subtitle {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--ink-muted);
+    }
+
+    .entry-screen {
+      padding: 30px 24px;
+    }
+
+    .entry-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ink-strong);
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .entry-desc {
+      font-size: 13px;
+      color: var(--ink-muted);
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .entry-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .entry-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: #fff;
+      padding: 16px;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+      font-family: inherit;
+    }
+
+    .entry-card:hover {
+      border-color: #93c5fd;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      background: var(--brand-soft);
+    }
+
+    .entry-card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--ink-strong);
+      margin-bottom: 6px;
+    }
+
+    .entry-card-desc {
+      font-size: 12px;
+      color: var(--ink-muted);
+      line-height: 1.55;
+    }
+
+    .flow-shell {
+      border-top: 1px solid var(--line);
+    }
+
+    .flow-status {
+      padding: 10px 24px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+      font-size: 12px;
+      color: #4b5563;
+      font-weight: 600;
+      letter-spacing: 0.1px;
+    }
+
+    .wizard-content {
+      padding: 20px 24px 24px;
+    }
+
+    .wizard-step {
+      display: none;
+      animation: fade-in 0.2s ease;
+    }
+
+    .wizard-step.active {
+      display: block;
+    }
+
+    @keyframes fade-in {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .step-title {
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--ink-strong);
+      margin-bottom: 5px;
+    }
+
+    .step-desc {
+      font-size: 13px;
+      color: var(--ink-muted);
+      margin-bottom: 16px;
+    }
+
+    .hint-box,
+    .info-box,
+    .warning-box,
+    .success-box {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: var(--bg-soft);
+      padding: 10px 12px;
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+
+    .hint-box {
+      color: #334155;
+    }
+
+    .info-box {
+      border-color: #cfe0ff;
+      background: #f5f9ff;
+      color: #1e3a8a;
+    }
+
+    .warning-box {
+      border-color: #fed7aa;
+      background: #fff7ed;
+      color: #9a3412;
+    }
+
+    .success-box {
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+      color: #166534;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .advanced-toggle {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: #fff;
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+
+    .advanced-toggle > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #4b5563;
+      background: var(--bg-soft);
+    }
+
+    .advanced-toggle > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .advanced-content {
+      padding: 12px;
+      border-top: 1px solid var(--line);
+      background: #fff;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink-main);
+      margin-bottom: 6px;
+    }
+
+    label .required {
+      color: var(--danger);
+      margin-left: 4px;
+    }
+
+    label .optional {
+      color: var(--ink-muted);
+      font-size: 12px;
+      font-weight: 500;
+      margin-left: 4px;
+    }
+
+    input,
+    select {
+      width: 100%;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-md);
+      background: #fff;
+      color: var(--ink-strong);
+      font-size: 14px;
+      font-family: inherit;
+      padding: 10px 12px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input::placeholder {
+      color: #9ca3af;
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+    }
+
+    input[aria-invalid="true"],
+    select[aria-invalid="true"] {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+      background: #fff5f5;
+    }
+
+    input[readonly] {
+      background: #f3f4f6;
+      color: #4b5563;
+      border-color: #d1d5db;
+    }
+
+    .error-message {
+      margin-top: 6px;
+      color: var(--danger);
+      font-size: 12px;
+      min-height: 18px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+      margin-bottom: 14px;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 13px;
+      color: var(--ink-main);
+    }
+
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--brand);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .summary-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: #fafbfd;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .summary-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.28px;
+      color: #4b5563;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: minmax(92px, auto) 1fr;
+      column-gap: 10px;
+      row-gap: 6px;
+      font-size: 12px;
+      margin: 0;
+    }
+
+    .summary-grid dt {
+      color: #6b7280;
+    }
+
+    .summary-grid dd {
+      margin: 0;
+      color: #111827;
+      font-weight: 600;
+      word-break: break-all;
+    }
+
+    .summary-foot {
+      margin-top: 9px;
+      padding-top: 9px;
+      border-top: 1px dashed var(--line);
+      font-size: 12px;
+      color: #4b5563;
+    }
+
+    .status-wrap {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-md);
+      background: #fafbfd;
+      padding: 12px;
+    }
+
+    .status-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .status-caption {
+      font-size: 12px;
+      color: var(--ink-muted);
+    }
+
+    .status-badge {
+      border: 1px solid #d1d5db;
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: #f3f4f6;
+      color: #4b5563;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: lowercase;
+      min-width: 82px;
+      text-align: center;
+    }
+
+    .status-badge.running {
+      border-color: #bfdbfe;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .status-badge.success {
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+      color: #166534;
+    }
+
+    .status-badge.failed {
+      border-color: #fecaca;
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .logs-container {
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      background: #0f172a;
+      color: #dbe7ff;
+      font-family: "SFMono-Regular", "Menlo", "Consolas", monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+      height: clamp(240px, 40vh, 420px);
+      overflow: auto;
+      padding: 10px;
+    }
+
+    .logs-container::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    .logs-container::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.45);
+      border-radius: 999px;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .actions.right {
+      justify-content: flex-end;
+    }
+
+    .btn {
+      min-height: 42px;
+      min-width: 110px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: inherit;
+      padding: 10px 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      color: #fff;
+      background: var(--brand);
+      border-color: var(--brand);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+    }
+
+    .btn-secondary {
+      color: var(--ink-main);
+      background: #fff;
+      border-color: var(--line-strong);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #f9fafb;
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid rgba(37, 99, 235, 0.45);
+      outline-offset: 2px;
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .empty-log {
+      margin-top: 12px;
+      color: var(--ink-muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+
+      .wizard {
+        width: 100%;
+      }
+
+      .wizard-header {
+        padding: 16px;
+      }
+
+      .entry-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-status {
+        padding: 10px 16px;
+      }
+
+      .wizard-content {
+        padding: 16px;
+      }
+
+      .actions {
+        flex-direction: column-reverse;
+      }
+
+      .actions.right {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+
+      .logs-container {
+        height: 300px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wizard">
+    <header class="wizard-header">
+      <h1 class="wizard-title">LunaFox 快速安装</h1>
+      <p class="wizard-subtitle" id="wizardSubtitle">先选部署方式，再开始安装</p>
+    </header>
+
+    <section class="entry-screen" id="entryScreen">
+      <h2 class="entry-title">选择部署方式</h2>
+      <div class="entry-grid">
+        <button type="button" class="entry-card" id="choosePublicBtn">
+          <div class="entry-card-title">公网部署</div>
+          <div class="entry-card-desc">用于 VPS 或云服务器，手动填写公网ip和端口。</div>
+        </button>
+        <button type="button" class="entry-card" id="chooseLocalBtn">
+          <div class="entry-card-title">本地部署</div>
+          <div class="entry-card-desc">通信地址默认为localhost</div>
+        </button>
+      </div>
+    </section>
+
+    <div class="flow-shell hidden" id="wizardFlow">
+      <div class="flow-status" id="flowStatus">当前：填写地址</div>
+
+      <div class="wizard-content" id="quickInstall">
+        <section class="wizard-step active" id="stepConfig" aria-labelledby="stepConfigTitle">
+          <h2 class="step-title" id="stepConfigTitle">步骤 1：填写地址并开始安装</h2>
+          <p class="step-desc" id="stepConfigDesc">填写主机和端口，系统自动检查后安装。</p>
+
+          <div class="hint-box" id="modeWarning">只填主机和端口，不要带协议和路径。</div>
+
+          <div class="form-group" id="publicHostGroup">
+            <label for="publicHost">主机（IP / 域名）<span class="required" id="publicHostRequired">*</span></label>
+            <input
+              id="publicHost"
+              type="text"
+              inputmode="url"
+              value="{{ .DefaultPublicHost }}"
+              placeholder="example.com 或 1.2.3.4"
+              aria-label="主机"
+              aria-required="true"
+            />
+            <div class="error-message" id="publicHostError" role="alert" aria-live="polite"></div>
+          </div>
+
+          <div class="form-group" id="publicPortGroup">
+            <label for="publicPort">端口<span class="required">*</span></label>
+            <input
+              id="publicPort"
+              type="text"
+              inputmode="numeric"
+              value="{{ .DefaultPublicPort }}"
+              placeholder="8083"
+              aria-label="端口"
+            />
+            <div class="error-message" id="publicPortError" role="alert" aria-live="polite"></div>
+          </div>
+
+          <div class="info-box hidden" id="hostReachability"></div>
+
+          <details class="advanced-toggle">
+            <summary>高级选项（可选）</summary>
+            <div class="advanced-content">
+              {{ if .ShowGoProxy }}
+              <div class="info-box" id="goProxyHint">开发模式可选开启 goproxy.cn。</div>
+              <div class="checkbox-group" id="goProxyGroup">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="useGoProxyCN" />
+                  <span>使用国内 Go 代理 (goproxy.cn)</span>
+                </label>
+              </div>
+              {{ end }}
+
+              <div class="summary-card" id="configSummary"></div>
+            </div>
+          </details>
+
+          <div class="actions">
+            <button type="button" class="btn btn-secondary" id="backToEntryBtn">返回选择部署方式</button>
+            <button type="button" class="btn btn-primary" id="startBtn">
+              <span id="btnText">开始安装</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="wizard-step" id="stepInstall" aria-labelledby="stepInstallTitle">
+          <h2 class="step-title" id="stepInstallTitle">步骤 2：安装结果</h2>
+          <p class="step-desc">日志实时显示，可随时返回修改。</p>
+
+          <div class="status-wrap" id="installStatus">
+            <div class="status-head">
+              <span class="status-caption">安装状态</span>
+              <div class="status-badge idle" id="status" role="status" aria-live="polite">idle</div>
+            </div>
+            <div class="logs-container" id="logs" role="log" aria-live="polite" aria-atomic="false"></div>
+          </div>
+
+          <p class="empty-log" id="logPlaceholder">等待安装启动...</p>
+
+          <div class="actions">
+            <button type="button" class="btn btn-secondary" id="backToConfigBtn">返回修改地址</button>
+            <button type="button" class="btn btn-primary" id="retryInstallBtn">重新开始</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let pollTimer = null;
+    let eventSource = null;
+    let currentJobId = "";
+    let lastEventId = 0;
+    let probeTimer = null;
+    let lastProbeResult = null;
+    let currentStep = 1;
+    let deploymentType = "";
+    let currentInstallStatus = "idle";
+
+    const INSTALL_MODE = "{{ .InstallMode }}";
+    const IS_PROD = INSTALL_MODE === "prod";
+
+    function $(id) {
+      return document.getElementById(id);
+    }
+
+    function showEntry() {
+      const entryScreen = $("entryScreen");
+      const wizardFlow = $("wizardFlow");
+      if (entryScreen) entryScreen.classList.remove("hidden");
+      if (wizardFlow) wizardFlow.classList.add("hidden");
+      currentInstallStatus = "idle";
+    }
+
+    function showFlow() {
+      const entryScreen = $("entryScreen");
+      const wizardFlow = $("wizardFlow");
+      if (entryScreen) entryScreen.classList.add("hidden");
+      if (wizardFlow) wizardFlow.classList.remove("hidden");
+    }
+
+    function showStep(step) {
+      currentStep = step;
+      const config = $("stepConfig");
+      const install = $("stepInstall");
+      if (config) config.classList.toggle("active", step === 1);
+      if (install) install.classList.toggle("active", step === 2);
+      updateFlowStatus();
+    }
+
+    function updateFlowStatus() {
+      const statusNode = $("flowStatus");
+      if (!statusNode) return;
+      let phase = "填写地址";
+      if (currentStep === 2) {
+        phase = "安装中";
+        if (currentInstallStatus === "success") phase = "安装完成";
+        if (currentInstallStatus === "failed") phase = "安装失败";
+      }
+      const prefix = deploymentType ? `部署方式：${deploymentLabel()} · ` : "";
+      statusNode.textContent = `${prefix}当前：${phase}`;
+    }
+
+    function clearErrors() {
+      ["publicHost", "publicPort"].forEach((id) => {
+        const input = $(id);
+        const error = $(`${id}Error`);
+        if (input) input.removeAttribute("aria-invalid");
+        if (error) error.textContent = "";
+      });
+    }
+
+    function setError(id, message) {
+      const input = $(id);
+      const error = $(`${id}Error`);
+      if (input) input.setAttribute("aria-invalid", "true");
+      if (error) error.textContent = message;
+    }
+
+    function isLoopbackLike(value) {
+      const normalized = (value || "").trim().toLowerCase();
+      return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1";
+    }
+
+    function browserHostCandidate() {
+      const host = (window.location && window.location.hostname ? window.location.hostname : "").trim();
+      if (!host || isLoopbackLike(host)) return "";
+      return host;
+    }
+
+    function setReachability(level, message) {
+      const box = $("hostReachability");
+      if (!box) return;
+      const quietInfo = level === "info" && message && message.includes("自动检查");
+      if (quietInfo) {
+        box.classList.add("hidden");
+        box.textContent = "";
+        return;
+      }
+      box.classList.remove("hidden");
+      box.className = "info-box";
+      if (level === "warning") box.className = "warning-box";
+      if (level === "success") box.className = "success-box";
+      if (level === "error") box.className = "warning-box";
+      box.textContent = message;
+    }
+
+    function appendLog(line) {
+      if (!line) return;
+      const logs = $("logs");
+      logs.textContent += line;
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    function replaceLogs(content) {
+      const logs = $("logs");
+      logs.textContent = content || "";
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    function setStatus(kind, text) {
+      const status = $("status");
+      status.className = `status-badge ${kind}`;
+      status.textContent = text;
+      currentInstallStatus = kind;
+      updateFlowStatus();
+    }
+
+    function closeEventStream() {
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+    }
+
+    function applyModeDefaults() {
+      const goProxyGroup = $("goProxyGroup");
+      const goProxyHint = $("goProxyHint");
+      const goProxyCheckbox = $("useGoProxyCN");
+      const wizardSubtitle = $("wizardSubtitle");
+
+      if (IS_PROD) {
+        if (wizardSubtitle) wizardSubtitle.textContent = "生产模式：选方式后直接安装";
+        $("stepConfigTitle").textContent = "步骤 1：填写生产访问地址";
+        $("stepConfigDesc").textContent = "填写可访问的主机和端口。";
+        if (goProxyHint) goProxyHint.style.display = "none";
+        if (goProxyGroup) goProxyGroup.style.display = "none";
+        if (goProxyCheckbox) goProxyCheckbox.checked = false;
+        return;
+      }
+
+      if (wizardSubtitle) wizardSubtitle.textContent = "开发模式：选方式后直接安装";
+      $("stepConfigTitle").textContent = "步骤 1：填写开发访问地址";
+      $("stepConfigDesc").textContent = "填写开发机可访问的主机和端口。";
+      if (goProxyHint) goProxyHint.style.display = "block";
+      if (goProxyGroup) goProxyGroup.style.display = "flex";
+    }
+
+    function applyDeploymentChoice(type) {
+      deploymentType = type;
+      const hostInput = $("publicHost");
+      const modeWarning = $("modeWarning");
+
+      if (!hostInput || !modeWarning) return;
+
+      if (type === "local") {
+        hostInput.value = "localhost";
+        hostInput.readOnly = true;
+        modeWarning.textContent = "本机部署：主机固定为 localhost，只需确认端口。";
+        setReachability("success", "已切换为本机部署（localhost）");
+      } else {
+        hostInput.readOnly = false;
+        const currentHost = hostInput.value.trim();
+        const hasManualHost = currentHost !== "" && !isLoopbackLike(currentHost);
+        const candidate = browserHostCandidate();
+        if (!hasManualHost && candidate) {
+          hostInput.value = candidate;
+          modeWarning.textContent = `公网部署：已按当前访问地址预填主机（${candidate}），可按需修改。`;
+        } else {
+          if (isLoopbackLike(currentHost)) {
+            hostInput.value = "";
+          }
+          modeWarning.textContent = "公网部署：填写可访问的 IP/域名和端口。";
+        }
+        setReachability("info", "将自动检查地址连通性。");
+      }
+
+      showFlow();
+      showStep(1);
+      refreshSummary();
+      if (type === "public") {
+        scheduleProbe();
+      }
+    }
+
+    function isLikelyIPv4(value) {
+      const parts = value.split(".");
+      if (parts.length !== 4) return false;
+      return parts.every((part) => /^\d+$/.test(part) && part.length > 0);
+    }
+
+    function isValidIPv4(value) {
+      const parts = value.split(".");
+      if (parts.length !== 4) return false;
+      return parts.every((part) => {
+        if (!/^\d+$/.test(part)) return false;
+        const n = Number(part);
+        return n >= 0 && n <= 255;
+      });
+    }
+
+    function isValidIPv6(value) {
+      if (!/^[0-9a-fA-F:]+$/.test(value)) return false;
+      if ((value.match(/:/g) || []).length < 2) return false;
+      if (value.includes(":::")) return false;
+      if ((value.match(/::/g) || []).length > 1) return false;
+      const parts = value.split(":");
+      return parts.every((part) => part.length <= 4);
+    }
+
+    function isValidDomain(value) {
+      if (!value || value.length > 253) return false;
+      if (value.startsWith(".") || value.endsWith(".")) return false;
+      const labels = value.split(".");
+      return labels.every((label) => {
+        if (!label || label.length > 63) return false;
+        if (label.startsWith("-") || label.endsWith("-")) return false;
+        return /^[A-Za-z0-9-]+$/.test(label);
+      });
+    }
+
+    function isValidHost(value) {
+      const raw = value.trim();
+      if (!raw) return false;
+      if (/\s/.test(raw)) return false;
+      if (raw.includes("://")) return false;
+      if (/[/?#]/.test(raw)) return false;
+
+      if (raw.startsWith("[") !== raw.endsWith("]")) return false;
+      const host = raw.startsWith("[") && raw.endsWith("]") ? raw.slice(1, -1) : raw;
+      if (!host) return false;
+      if (raw.startsWith("[") && raw.endsWith("]") && !host.includes(":")) return false;
+
+      if (host.includes(":")) {
+        const singleColonWithoutBrackets = !raw.startsWith("[") && !raw.endsWith("]") && host.split(":").length === 2;
+        if (singleColonWithoutBrackets) return false;
+        return isValidIPv6(host);
+      }
+      if (isValidIPv4(host)) return true;
+      if (isLikelyIPv4(host)) return false;
+      return isValidDomain(host);
+    }
+
+    function isValidPort(value) {
+      if (!/^\d+$/.test(value)) return false;
+      const n = Number(value);
+      return n >= 1 && n <= 65535;
+    }
+
+    function validateForm() {
+      clearErrors();
+      const publicHost = $("publicHost").value.trim();
+      const publicPort = $("publicPort").value.trim();
+      if (!publicHost) {
+        setError("publicHost", "请填写主机（IP 或域名）");
+        return false;
+      }
+      if (publicHost && !isValidHost(publicHost)) {
+        setError("publicHost", "主机格式不合法（不要带协议或端口）");
+        return false;
+      }
+      if (deploymentType === "public" && IS_PROD && publicHost && isLoopbackLike(publicHost)) {
+        setError("publicHost", "公网部署不能使用 localhost");
+        return false;
+      }
+      if (!isValidPort(publicPort)) {
+        setError("publicPort", "端口必须是 1-65535");
+        return false;
+      }
+      return true;
+    }
+
+    function collectPayload() {
+      const goProxyCheckbox = $("useGoProxyCN");
+      const hostInput = $("publicHost");
+      let host = hostInput ? hostInput.value.trim() : "";
+      if (deploymentType === "local") {
+        host = "localhost";
+        if (hostInput) hostInput.value = host;
+      }
+      return {
+        publicHost: host,
+        publicPort: $("publicPort").value.trim(),
+        useGoProxyCN: !IS_PROD && !!goProxyCheckbox && goProxyCheckbox.checked
+      };
+    }
+
+    async function probeReachability() {
+      const host = $("publicHost").value.trim();
+      const port = $("publicPort").value.trim();
+
+      if (!host) {
+        const result = { ok: false, level: "error", message: "请填写主机" };
+        lastProbeResult = result;
+        setReachability(result.level, result.message);
+        return result;
+      }
+
+      if (!isValidHost(host)) {
+        const result = { ok: false, level: "error", message: "主机格式不合法" };
+        lastProbeResult = result;
+        setReachability(result.level, result.message);
+        return result;
+      }
+      if (!isValidPort(port)) {
+        const result = { ok: false, level: "error", message: "端口必须是 1-65535" };
+        lastProbeResult = result;
+        setReachability(result.level, result.message);
+        return result;
+      }
+
+      if (deploymentType === "local") {
+        const result = { ok: true, level: "success", message: "本机部署将使用 localhost" };
+        lastProbeResult = result;
+        setReachability(result.level, result.message);
+        return result;
+      }
+
+      try {
+        const response = await fetch(`/api/network/reachability?host=${encodeURIComponent(host)}&port=${encodeURIComponent(port)}`, {
+          cache: "no-store"
+        });
+        if (!response.ok) {
+          const result = { ok: false, level: "error", message: "地址检查失败，请重试" };
+          lastProbeResult = result;
+          setReachability(result.level, result.message);
+          return result;
+        }
+        const data = await response.json();
+        const result = {
+          ok: !!data.ok,
+          level: data.level || "info",
+          message: data.message || "地址检查完成"
+        };
+        lastProbeResult = result;
+        setReachability(result.level, result.message);
+        return result;
+      } catch (_) {
+        const result = { ok: false, level: "warning", message: "检查请求失败，安装时会再次确认" };
+        lastProbeResult = result;
+        setReachability(result.level, result.message);
+        return result;
+      }
+    }
+
+    function scheduleProbe() {
+      if (probeTimer) {
+        clearTimeout(probeTimer);
+      }
+      probeTimer = setTimeout(() => {
+        probeReachability();
+      }, 300);
+    }
+
+    function escapeHTML(value) {
+      return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function deploymentLabel() {
+      if (deploymentType === "local") return "本机部署";
+      if (deploymentType === "public") return "公网部署";
+      return "未选择";
+    }
+
+    function refreshSummary() {
+      const payload = collectPayload();
+      const inferredPublicUrl = `https://${payload.publicHost}:${payload.publicPort}`;
+      const goProxyLine = IS_PROD
+        ? ""
+        : `<div class="summary-foot"><strong>goproxy.cn：</strong>${payload.useGoProxyCN ? "开启" : "关闭"}</div>`;
+
+      const summary = $("configSummary");
+      if (!summary) return;
+
+      summary.innerHTML = `
+        <div class="summary-title">安装配置摘要</div>
+        <dl class="summary-grid">
+          <dt>部署方式</dt>
+          <dd>${escapeHTML(deploymentLabel())}</dd>
+          <dt>运行模式</dt>
+          <dd>${escapeHTML(INSTALL_MODE)}</dd>
+          <dt>主机</dt>
+          <dd>${escapeHTML(payload.publicHost)}</dd>
+          <dt>端口</dt>
+          <dd>${escapeHTML(payload.publicPort)}</dd>
+          <dt>安装地址</dt>
+          <dd>${escapeHTML(inferredPublicUrl)}</dd>
+        </dl>
+        ${goProxyLine}
+      `;
+    }
+
+    function applySnapshot(snapshot) {
+      if (!snapshot) return;
+      showStep(2);
+      const placeholder = $("logPlaceholder");
+      if (placeholder) placeholder.style.display = "none";
+      replaceLogs(snapshot.logs || "");
+      const state = snapshot.state || "idle";
+      if (state === "running") {
+        setStatus("running", "running");
+        return;
+      }
+      if (state === "succeeded") {
+        setStatus("success", "success");
+      } else if (state === "failed") {
+        setStatus("failed", "failed");
+      } else {
+        setStatus("idle", state);
+      }
+      if (state !== "running") {
+        $("btnText").textContent = "开始安装";
+      }
+    }
+
+    async function pollStateFallback() {
+      if (!currentJobId) return;
+      try {
+        const resp = await fetch(`/api/state?jobId=${encodeURIComponent(currentJobId)}`, { cache: "no-store" });
+        if (!resp.ok) return;
+        const snapshot = await resp.json();
+        applySnapshot(snapshot);
+      } catch (_) {
+      }
+    }
+
+    function startPolling() {
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(pollStateFallback, 1500);
+    }
+
+    function stopPolling() {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }
+
+    function handleEventPayload(rawData) {
+      try {
+        const wrapped = JSON.parse(rawData);
+        if (!wrapped || typeof wrapped !== "object") return;
+        if (typeof wrapped.id === "number") {
+          lastEventId = wrapped.id;
+        }
+        switch (wrapped.type) {
+          case "log":
+            if (wrapped.data && typeof wrapped.data.message === "string") {
+              appendLog(wrapped.data.message);
+            }
+            break;
+          case "state":
+            if (wrapped.data && typeof wrapped.data.state === "string") {
+              const state = wrapped.data.state;
+              if (state === "running") setStatus("running", "running");
+              if (state === "succeeded") setStatus("success", "success");
+              if (state === "failed") setStatus("failed", "failed");
+            }
+            break;
+          case "snapshot":
+          case "done":
+            if (wrapped.data) applySnapshot(wrapped.data);
+            if (wrapped.type === "done") {
+              closeEventStream();
+              stopPolling();
+            }
+            break;
+          default:
+            break;
+        }
+      } catch (_) {
+      }
+    }
+
+    function connectEvents() {
+      closeEventStream();
+      if (!currentJobId) return;
+      const url = `/api/events?jobId=${encodeURIComponent(currentJobId)}${lastEventId > 0 ? `&lastEventId=${lastEventId}` : ""}`;
+      eventSource = new EventSource(url);
+
+      ["snapshot", "log", "state", "done"].forEach((eventType) => {
+        eventSource.addEventListener(eventType, (event) => handleEventPayload(event.data));
+      });
+      eventSource.onerror = () => {
+        startPolling();
+      };
+    }
+
+    function renderAPIError(data) {
+      if (!data || typeof data !== "object") return "请求失败";
+      if (data.message) return data.message;
+      return "请求失败";
+    }
+
+    async function startInstall() {
+      if (!deploymentType) {
+        showEntry();
+        return;
+      }
+      if (!validateForm()) {
+        showStep(1);
+        return;
+      }
+
+      const probeResult = await probeReachability();
+      if (!probeResult || !probeResult.ok) {
+        if (probeResult && probeResult.level === "error") {
+          showStep(1);
+          setError("publicHost", probeResult.message || "地址检查失败");
+        }
+        return;
+      }
+
+      const payload = collectPayload();
+
+      showStep(2);
+      const placeholder = $("logPlaceholder");
+      if (placeholder) placeholder.style.display = "none";
+      $("btnText").textContent = "安装中...";
+      setStatus("running", "running");
+      replaceLogs("");
+      stopPolling();
+      closeEventStream();
+      currentJobId = "";
+      lastEventId = 0;
+
+      try {
+        const resp = await fetch("/api/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!resp.ok) {
+          let message = "启动安装失败";
+          try {
+            const body = await resp.json();
+            message = renderAPIError(body);
+          } catch (_) {
+          }
+          setStatus("failed", "failed");
+          replaceLogs(`${message}\n`);
+          $("btnText").textContent = "开始安装";
+          return;
+        }
+        const body = await resp.json();
+        currentJobId = body.jobId || "";
+        if (!currentJobId) {
+          throw new Error("服务端未返回 jobId");
+        }
+        connectEvents();
+        await pollStateFallback();
+      } catch (err) {
+        setStatus("failed", "failed");
+        replaceLogs(String(err));
+        $("btnText").textContent = "开始安装";
+      }
+    }
+
+    window.startInstall = startInstall;
+    applyModeDefaults();
+    showEntry();
+    refreshSummary();
+
+    ["publicHost", "publicPort", "useGoProxyCN"].forEach((id) => {
+      const element = $(id);
+      if (!element) return;
+      const eventName = element.type === "checkbox" ? "change" : "input";
+      element.addEventListener(eventName, () => {
+        refreshSummary();
+        if (deploymentType === "public" && (id === "publicHost" || id === "publicPort")) {
+          scheduleProbe();
+        }
+      });
+    });
+
+    const choosePublicBtn = $("choosePublicBtn");
+    if (choosePublicBtn) {
+      choosePublicBtn.addEventListener("click", () => applyDeploymentChoice("public"));
+    }
+
+    const chooseLocalBtn = $("chooseLocalBtn");
+    if (chooseLocalBtn) {
+      chooseLocalBtn.addEventListener("click", () => applyDeploymentChoice("local"));
+    }
+
+    const backToEntryBtn = $("backToEntryBtn");
+    if (backToEntryBtn) {
+      backToEntryBtn.addEventListener("click", () => {
+        showEntry();
+      });
+    }
+
+    const backToConfigBtn = $("backToConfigBtn");
+    if (backToConfigBtn) {
+      backToConfigBtn.addEventListener("click", () => showStep(1));
+    }
+
+    const startBtn = $("startBtn");
+    if (startBtn) {
+      startBtn.addEventListener("click", startInstall);
+    }
+
+    const retryInstallBtn = $("retryInstallBtn");
+    if (retryInstallBtn) {
+      retryInstallBtn.addEventListener("click", startInstall);
+    }
+
+  </script>
+</body>
+</html>

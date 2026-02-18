@@ -1,0 +1,250 @@
+name: Run Tests
+
+on:
+  workflow_call:  # Run only when called by another workflow
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Frontend typecheck
+        working-directory: frontend
+        run: pnpm run typecheck
+
+      - name: Frontend lint core
+        working-directory: frontend
+        run: pnpm run lint:core
+
+      - name: Frontend legacy props guard
+        working-directory: frontend
+        run: pnpm run check:datatable-legacy
+
+      - name: Frontend test
+        working-directory: frontend
+        run: pnpm run test
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Install shell tooling
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          go install mvdan.cc/sh/v3/cmd/shfmt@v3.10.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Shell static checks
+        run: |
+          set -euo pipefail
+          while IFS= read -r file; do
+            shellcheck "$file"
+          done < <(rg --files -g '*.sh' -g '!old/**')
+
+          shfmt -d $(rg --files -g '*.sh' -g '!old/**')
+
+          while IFS= read -r file; do
+            bash -n "$file"
+          done < <(rg --files -g '*.sh' -g '!old/**')
+
+      - name: Verify script executable bits
+        run: |
+          set -euo pipefail
+          for file in \
+            install.sh start.sh restart.sh stop.sh uninstall.sh \
+            scripts/cli/*.sh scripts/lib/*.sh scripts/dev/*.sh; do
+            [ -x "$file" ] || { echo "script is not executable: $file"; exit 1; }
+          done
+
+      - name: Script contract smoke
+        run: |
+          set -euo pipefail
+
+          ./install.sh --help >/tmp/install-help.log
+          ./scripts/dev/install.sh --help >/tmp/dev-install-help.log
+
+          set +e
+          ./install.sh --dev >/tmp/install-dev.log 2>&1
+          rc_install=$?
+          ./start.sh --dev >/tmp/start-dev.log 2>&1
+          rc_start=$?
+          ./restart.sh --dev >/tmp/restart-dev.log 2>&1
+          rc_restart=$?
+          set -e
+
+          [ "$rc_install" -eq 2 ] || { cat /tmp/install-dev.log; exit 1; }
+          [ "$rc_start" -eq 2 ] || { cat /tmp/start-dev.log; exit 1; }
+          [ "$rc_restart" -eq 2 ] || { cat /tmp/restart-dev.log; exit 1; }
+
+          grep -q -- "--dev 已移除，请使用 ./scripts/dev/install.sh" /tmp/install-dev.log
+          grep -q -- "请使用 ./scripts/dev/start.sh" /tmp/start-dev.log
+          grep -q -- "请使用 ./scripts/dev/restart.sh" /tmp/restart-dev.log
+
+      - name: Verify root does not expose dev entrypoints
+        run: |
+          set -euo pipefail
+          [ ! -e dev-install.sh ] || { echo "dev-install.sh must not exist in repo root"; exit 1; }
+          [ ! -e start-dev.sh ] || { echo "start-dev.sh must not exist in repo root"; exit 1; }
+          [ ! -e restart-dev.sh ] || { echo "restart-dev.sh must not exist in repo root"; exit 1; }
+
+      - name: Installer download smoke (mock channel + checksum)
+        run: |
+          set -euo pipefail
+          TMP_DIR="$(mktemp -d)"
+          PORT=18983
+          trap 'kill "${HTTP_PID:-}" >/dev/null 2>&1 || true; rm -rf "$TMP_DIR"' EXIT
+
+          mkdir -p "$TMP_DIR/repo/raw/branch/channels" "$TMP_DIR/assets"
+          cat > "$TMP_DIR/assets/lunafox-installer-linux-amd64" <<'SCRIPT'
+          #!/usr/bin/env bash
+          exit 0
+          SCRIPT
+          chmod +x "$TMP_DIR/assets/lunafox-installer-linux-amd64"
+          asset_sha="$(sha256sum "$TMP_DIR/assets/lunafox-installer-linux-amd64" | awk '{print $1}')"
+
+          cat > "$TMP_DIR/repo/raw/branch/channels/stable.env" <<'EOF_STABLE'
+          SCHEMA_VERSION=2
+          VERSION=v0.0.1
+          EOF_STABLE
+
+          cat > "$TMP_DIR/repo/raw/branch/channels/v0.0.1.env" <<EOF_VER
+          SCHEMA_VERSION=2
+          VERSION=v0.0.1
+          GITHUB_BASE_URL=http://127.0.0.1:9/assets
+          GITEE_BASE_URL=http://127.0.0.1:${PORT}/assets
+          LINUX_AMD64_ASSET=lunafox-installer-linux-amd64
+          LINUX_AMD64_SHA256=${asset_sha}
+          LINUX_ARM64_ASSET=lunafox-installer-linux-amd64
+          LINUX_ARM64_SHA256=${asset_sha}
+          DARWIN_AMD64_ASSET=lunafox-installer-linux-amd64
+          DARWIN_AMD64_SHA256=${asset_sha}
+          DARWIN_ARM64_ASSET=lunafox-installer-linux-amd64
+          DARWIN_ARM64_SHA256=${asset_sha}
+          IMAGE_REGISTRY=docker.io
+          IMAGE_NAMESPACE=yyhuni
+          AGENT_IMAGE_REFS=docker.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,ghcr.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          WORKER_IMAGE_REFS=docker.io/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,ghcr.io/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,ccr.ccs.tencentyun.com/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          EOF_VER
+
+          cat > "$TMP_DIR/repo/raw/branch/channels/bad.env" <<'EOF_BAD'
+          SCHEMA_VERSION=2
+          VERSION=v0.0.2
+          EOF_BAD
+
+          cat > "$TMP_DIR/repo/raw/branch/channels/v0.0.2.env" <<EOF_BAD_VER
+          SCHEMA_VERSION=2
+          VERSION=v0.0.2
+          GITHUB_BASE_URL=http://127.0.0.1:9/assets
+          GITEE_BASE_URL=http://127.0.0.1:${PORT}/assets
+          LINUX_AMD64_ASSET=lunafox-installer-linux-amd64
+          LINUX_AMD64_SHA256=deadbeef
+          LINUX_ARM64_ASSET=lunafox-installer-linux-amd64
+          LINUX_ARM64_SHA256=deadbeef
+          DARWIN_AMD64_ASSET=lunafox-installer-linux-amd64
+          DARWIN_AMD64_SHA256=deadbeef
+          DARWIN_ARM64_ASSET=lunafox-installer-linux-amd64
+          DARWIN_ARM64_SHA256=deadbeef
+          IMAGE_REGISTRY=docker.io
+          IMAGE_NAMESPACE=yyhuni
+          AGENT_IMAGE_REFS=docker.io/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,ghcr.io/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+          WORKER_IMAGE_REFS=docker.io/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,ghcr.io/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,ccr.ccs.tencentyun.com/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+          EOF_BAD_VER
+
+          python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$TMP_DIR" >/tmp/mock-http.log 2>&1 &
+          HTTP_PID=$!
+          sleep 1
+
+          LUNAFOX_RELEASE_CHANNEL_BRANCH=branch \
+          LUNAFOX_RELEASE_GITHUB_REPO=repo \
+          LUNAFOX_RELEASE_GITEE_REPO=repo \
+          LUNAFOX_RELEASE_GITHUB_RAW_BASE=http://127.0.0.1:9 \
+          LUNAFOX_RELEASE_GITEE_RAW_BASE=http://127.0.0.1:${PORT} \
+          ./install.sh --source auto --listen 127.0.0.1:19083 >/tmp/install-fallback.log 2>&1
+
+          set +e
+          LUNAFOX_RELEASE_CHANNEL_BRANCH=branch \
+          LUNAFOX_RELEASE_GITHUB_REPO=repo \
+          LUNAFOX_RELEASE_GITEE_REPO=repo \
+          LUNAFOX_RELEASE_GITHUB_RAW_BASE=http://127.0.0.1:${PORT} \
+          LUNAFOX_RELEASE_GITEE_RAW_BASE=http://127.0.0.1:${PORT} \
+          ./install.sh --source gitee --channel bad --listen 127.0.0.1:19083 >/tmp/install-checksum.log 2>&1
+          rc=$?
+          set -e
+
+          [ "$rc" -ne 0 ] || { cat /tmp/install-checksum.log; exit 1; }
+          grep -q "安装器 sha256 校验失败" /tmp/install-checksum.log
+
+      - name: Docs command consistency
+        run: |
+          set -euo pipefail
+          if rg -n "install\\.sh --dev|start\\.sh --dev|restart\\.sh --dev|scripts/installer/build\\.sh|\\./dev-install\\.sh|\\./start-dev\\.sh|\\./restart-dev\\.sh" \
+            --glob "*.md" --glob "!old/**" .; then
+            echo "found outdated command references in markdown docs"
+            exit 1
+          fi
+
+      - name: Run worker tests
+        working-directory: worker
+        run: make test
+
+      - name: Check repo naming conventions
+        run: bash ./scripts/check-repo-naming.sh
+
+      - name: Check server DDD boundaries
+        working-directory: server
+        run: make check-ddd
+
+      - name: Self-test server guards
+        working-directory: server
+        run: make check-guards-selftest
+
+      - name: Run server tests
+        working-directory: server
+        run: make test
+
+      - name: Run agent tests
+        working-directory: agent
+        run: make test
+
+      - name: Run installer tests
+        working-directory: tools/installer
+        run: go test ./...
+
+      - name: Verify release channel schema contract
+        run: bash ./scripts/installer/verify-channel-schema.sh ./tools/installer/testdata/channel-schema/v2.env
+
+      - name: Installer cross-compile smoke
+        working-directory: tools/installer
+        run: |
+          set -euo pipefail
+          OUT_DIR="$(mktemp -d)"
+          for GOOS in linux darwin; do
+            for GOARCH in amd64 arm64; do
+              CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" \
+                go build -trimpath -o "$OUT_DIR/lunafox-installer-${GOOS}-${GOARCH}" ./cmd/lunafox-installer
+            done
+          done
+          ls -l "$OUT_DIR"

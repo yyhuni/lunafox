@@ -1,0 +1,135 @@
+services:
+  # PostgreSQL（可选，使用远程数据库时不启动）
+  # 本地模式: docker compose --profile local-db up -d
+  # 远程模式: docker compose up -d（需配置 DB_HOST 为远程地址）
+  # 使用自定义镜像，预装 pg_ivm 扩展
+  postgres:
+    profiles: ["local-db"]
+    build:
+      context: ./postgres
+      dockerfile: Dockerfile
+    image: ${DOCKER_USER:-yyhuni}/xingrin-postgres:${IMAGE_TAG:-dev}
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init-user-db.sh:/docker-entrypoint-initdb.d/init-user-db.sh
+    ports:
+      - "${DB_PORT}:5432"
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_ivm
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build:
+      context: ..
+      dockerfile: docker/server/Dockerfile
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - IMAGE_TAG=${IMAGE_TAG:-dev}
+    ports:
+      - "8888:8888"
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      # 统一挂载数据目录
+      - /opt/xingrin:/opt/xingrin
+      - /var/run/docker.sock:/var/run/docker.sock
+    # OOM 优先级：-500 保护核心服务
+    oom_score_adj: -500
+    healthcheck:
+      # 使用专门的健康检查端点（无需认证）
+      test: ["CMD", "curl", "-f", "http://localhost:8888/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Agent：心跳上报 + 负载监控 + 版本检查
+  agent:
+    build:
+      context: ..
+      dockerfile: docker/agent/Dockerfile
+      args:
+        IMAGE_TAG: ${IMAGE_TAG:-dev}
+    restart: always
+    environment:
+      - SERVER_URL=http://server:8888
+      - WORKER_NAME=Local-Worker
+      - IS_LOCAL=true
+      - IMAGE_TAG=${IMAGE_TAG:-dev}
+      - WORKER_API_KEY=${WORKER_API_KEY}
+    depends_on:
+      server:
+        condition: service_healthy
+    volumes:
+      - /proc:/host/proc:ro
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend/Dockerfile
+      args:
+        IMAGE_TAG: ${IMAGE_TAG:-dev}
+    restart: always
+    # OOM 优先级：-500 保护 Web 界面
+    oom_score_adj: -500
+    depends_on:
+      server:
+        condition: service_healthy
+
+  nginx:
+    build:
+      context: ..
+      dockerfile: docker/nginx/Dockerfile
+    restart: always
+    # OOM 优先级：-500 保护入口网关
+    oom_score_adj: -500
+    depends_on:
+      server:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    ports:
+      - "8083:8083"
+    volumes:
+      # SSL 证书挂载（方便更新）
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+
+  # Worker：扫描任务执行容器（开发模式下构建）
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/worker/Dockerfile
+    image: docker-worker:${IMAGE_TAG:-latest}-dev
+    restart: "no"
+    volumes:
+      - /opt/xingrin:/opt/xingrin
+    command: echo "Worker image built for development"
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: xingrin_network  # 固定网络名，不随目录名变化
