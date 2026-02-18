@@ -1,0 +1,65 @@
+name: Sync To Gitee
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+concurrency:
+  group: sync-gitee-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-22.04
+    env:
+      GITEE_OWNER: ${{ secrets.GITEE_OWNER }}
+      GITEE_REPO: ${{ secrets.GITEE_REPO }}
+      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate gitee secrets
+        run: |
+          set -euo pipefail
+          [ -n "${GITEE_OWNER:-}" ] || { echo "missing GITEE_OWNER"; exit 1; }
+          [ -n "${GITEE_REPO:-}" ] || { echo "missing GITEE_REPO"; exit 1; }
+          [ -n "${GITEE_TOKEN:-}" ] || { echo "missing GITEE_TOKEN"; exit 1; }
+
+      - name: Push current ref to gitee
+        run: |
+          set -euo pipefail
+          REF_TYPE="${GITHUB_REF_TYPE}"
+          REF_NAME="${GITHUB_REF_NAME}"
+          git remote add gitee "https://oauth2:${GITEE_TOKEN}@gitee.com/${GITEE_OWNER}/${GITEE_REPO}.git"
+
+          if [ "$REF_TYPE" = "branch" ]; then
+            SRC="refs/heads/${REF_NAME}"
+            DST="refs/heads/${REF_NAME}"
+          elif [ "$REF_TYPE" = "tag" ]; then
+            SRC="refs/tags/${REF_NAME}"
+            DST="refs/tags/${REF_NAME}"
+          else
+            echo "unsupported ref type: $REF_TYPE" >&2
+            exit 1
+          fi
+
+          for delay in 0 2 4; do
+            if [ "$delay" -gt 0 ]; then
+              sleep "$delay"
+            fi
+            if git push gitee "${SRC}:${DST}"; then
+              exit 0
+            fi
+          done
+
+          echo "failed to push ${SRC} to gitee" >&2
+          exit 1
