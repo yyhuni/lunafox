@@ -1,0 +1,9 @@
+*
+!.dockerignore
+!frontend/
+!frontend/**
+!agent/
+!agent/**
+!docker/
+!docker/nginx/
+!docker/nginx/**

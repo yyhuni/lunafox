@@ -1,0 +1,3 @@
+# Exclude local build outputs from Docker context.
+worker
+bin/

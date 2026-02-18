@@ -5,6 +5,10 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: release-global
+  cancel-in-progress: true
+
 permissions:
   contents: write
   packages: write
@@ -149,33 +153,50 @@ jobs:
           git remote add gitee "https://oauth2:${GITEE_TOKEN}@gitee.com/${GITEE_OWNER}/${GITEE_REPO}.git"
           git push gitee "refs/tags/${TAG}:refs/tags/${TAG}"
 
-  publish-images:
+  publish-worker-tools-meta:
     runs-on: ubuntu-22.04
     needs: validate-tag
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - image: lunafox-server
-            context: ./server
-            dockerfile: ./server/Dockerfile
-          - image: lunafox-frontend
-            context: .
-            dockerfile: ./frontend/Dockerfile
-          - image: lunafox-nginx
-            context: .
-            dockerfile: ./docker/nginx/Dockerfile
-          - image: lunafox-worker
-            context: ./worker
-            dockerfile: ./worker/Dockerfile
-          - image: lunafox-agent
-            context: .
-            dockerfile: ./agent/Dockerfile
+    outputs:
+      tools_tag: ${{ steps.meta.outputs.tools_tag }}
+      exists: ${{ steps.probe.outputs.exists }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Compute worker tools tag
+        id: meta
+        run: |
+          set -euo pipefail
+          TOOLS_HASH="$(sha256sum worker/Dockerfile.tools | awk '{print substr($1,1,16)}')"
+          TOOLS_TAG="tools-${TOOLS_HASH}"
+          echo "tools_tag=${TOOLS_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Check worker-tools image in Docker Hub
+        id: probe
+        run: |
+          set -euo pipefail
+          REF="docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${{ steps.meta.outputs.tools_tag }}"
+          if docker buildx imagetools inspect "$REF" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish-worker-tools-amd64:
+    runs-on: ubuntu-22.04
+    needs: [validate-tag, publish-worker-tools-meta]
+    if: needs.publish-worker-tools-meta.outputs.exists != 'true'
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -207,39 +228,514 @@ jobs:
           username: ${{ secrets.TCR_USERNAME }}
           password: ${{ secrets.TCR_PASSWORD }}
 
-      - name: Build and push staging image (phase 1)
-        id: build_push
+      - name: Build and push worker tools image (amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./worker
+          file: ./worker/Dockerfile.tools
+          target: tools-export
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-amd64
+            ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-amd64
+            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-amd64
+          cache-from: |
+            type=gha,scope=lunafox-worker-tools-amd64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-amd64
+          cache-to: |
+            type=gha,mode=max,scope=lunafox-worker-tools-amd64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-amd64,mode=max
+
+  publish-worker-tools-arm64:
+    runs-on: ubuntu-22.04-arm
+    needs: [validate-tag, publish-worker-tools-meta]
+    if: needs.publish-worker-tools-meta.outputs.exists != 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate Tencent TCR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Build and push worker tools image (arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./worker
+          file: ./worker/Dockerfile.tools
+          target: tools-export
+          platforms: linux/arm64
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-arm64
+            ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-arm64
+            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-arm64
+          cache-from: |
+            type=gha,scope=lunafox-worker-tools-arm64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-arm64
+          cache-to: |
+            type=gha,mode=max,scope=lunafox-worker-tools-arm64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-arm64,mode=max
+
+  publish-worker-tools:
+    runs-on: ubuntu-22.04
+    needs: [publish-worker-tools-meta, publish-worker-tools-amd64, publish-worker-tools-arm64]
+    if: >
+      always() &&
+      needs.publish-worker-tools-meta.result == 'success' &&
+      (
+        needs.publish-worker-tools-meta.outputs.exists == 'true' ||
+        (needs.publish-worker-tools-amd64.result == 'success' && needs.publish-worker-tools-arm64.result == 'success')
+      )
+    outputs:
+      tools_tag: ${{ needs.publish-worker-tools-meta.outputs.tools_tag }}
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate Tencent TCR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Publish worker-tools multi-arch tag
+        run: |
+          set -euo pipefail
+          TOOLS_TAG="${{ needs.publish-worker-tools-meta.outputs.tools_tag }}"
+          EXISTS="${{ needs.publish-worker-tools-meta.outputs.exists }}"
+          [ -n "$TOOLS_TAG" ] || { echo "missing tools tag"; exit 1; }
+
+          if [ "$EXISTS" = "true" ]; then
+            SRC="docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
+            GHCR_TARGET="ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}"
+            TCR_TARGET="${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
+            docker buildx imagetools create --tag "$GHCR_TARGET" "$SRC"
+            docker buildx imagetools create --tag "$TCR_TARGET" "$SRC"
+            exit 0
+          fi
+
+          [ "${{ needs.publish-worker-tools-amd64.result }}" = "success" ] || { echo "amd64 worker tools build failed"; exit 1; }
+          [ "${{ needs.publish-worker-tools-arm64.result }}" = "success" ] || { echo "arm64 worker tools build failed"; exit 1; }
+
+          docker buildx imagetools create \
+            --tag "docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}" \
+            "docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}-amd64" \
+            "docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}-arm64"
+
+          docker buildx imagetools create \
+            --tag "ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}" \
+            "ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}-amd64" \
+            "ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}-arm64"
+
+          docker buildx imagetools create \
+            --tag "${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}" \
+            "${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}-amd64" \
+            "${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}-arm64"
+
+  publish-images-amd64:
+    runs-on: ubuntu-22.04
+    needs: validate-tag
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: lunafox-server
+            context: ./server
+            dockerfile: ./server/Dockerfile
+          - image: lunafox-frontend
+            context: .
+            dockerfile: ./frontend/Dockerfile
+          - image: lunafox-nginx
+            context: .
+            dockerfile: ./docker/nginx/Dockerfile
+          - image: lunafox-agent
+            context: .
+            dockerfile: ./agent/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate Tencent TCR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Build and push staging image (amd64)
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
+          provenance: false
+          sbom: false
+          cache-from: |
+            type=gha,scope=${{ matrix.image }}-amd64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:buildcache-amd64
+          cache-to: |
+            type=gha,mode=max,scope=${{ matrix.image }}-amd64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:buildcache-amd64,mode=max
           tags: |
-            docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}
-            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}
+            docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-amd64
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-amd64
+            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-amd64
 
-      - name: Persist image digest
+  publish-images-arm64:
+    runs-on: ubuntu-22.04-arm
+    needs: validate-tag
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: lunafox-server
+            context: ./server
+            dockerfile: ./server/Dockerfile
+          - image: lunafox-frontend
+            context: .
+            dockerfile: ./frontend/Dockerfile
+          - image: lunafox-nginx
+            context: .
+            dockerfile: ./docker/nginx/Dockerfile
+          - image: lunafox-agent
+            context: .
+            dockerfile: ./agent/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate Tencent TCR credentials
         run: |
           set -euo pipefail
-          DIGEST="${{ steps.build_push.outputs.digest }}"
-          [ -n "$DIGEST" ] || { echo "missing digest for ${{ matrix.image }}"; exit 1; }
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Build and push staging image (arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/arm64
+          push: true
+          provenance: false
+          sbom: false
+          cache-from: |
+            type=gha,scope=${{ matrix.image }}-arm64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:buildcache-arm64
+          cache-to: |
+            type=gha,mode=max,scope=${{ matrix.image }}-arm64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:buildcache-arm64,mode=max
+          tags: |
+            docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-arm64
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-arm64
+            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-arm64
+
+  publish-worker-image-amd64:
+    runs-on: ubuntu-22.04
+    needs: [validate-tag, publish-worker-tools]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate Tencent TCR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Build and push worker image (amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./worker
+          file: ./worker/Dockerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          sbom: false
+          cache-from: |
+            type=gha,scope=lunafox-worker-amd64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker:buildcache-amd64
+          cache-to: |
+            type=gha,mode=max,scope=lunafox-worker-amd64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker:buildcache-amd64,mode=max
+          build-args: |
+            WORKER_TOOLS_IMAGE=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools.outputs.tools_tag }}
+          tags: |
+            docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-amd64
+            ghcr.io/${{ github.repository_owner }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-amd64
+            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-amd64
+
+  publish-worker-image-arm64:
+    runs-on: ubuntu-22.04-arm
+    needs: [validate-tag, publish-worker-tools]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate Tencent TCR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Build and push worker image (arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./worker
+          file: ./worker/Dockerfile
+          platforms: linux/arm64
+          push: true
+          provenance: false
+          sbom: false
+          cache-from: |
+            type=gha,scope=lunafox-worker-arm64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker:buildcache-arm64
+          cache-to: |
+            type=gha,mode=max,scope=lunafox-worker-arm64
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker:buildcache-arm64,mode=max
+          build-args: |
+            WORKER_TOOLS_IMAGE=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools.outputs.tools_tag }}
+          tags: |
+            docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-arm64
+            ghcr.io/${{ github.repository_owner }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-arm64
+            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-arm64
+
+  merge-staging-images:
+    runs-on: ubuntu-22.04
+    needs:
+      - validate-tag
+      - publish-images-amd64
+      - publish-images-arm64
+      - publish-worker-image-amd64
+      - publish-worker-image-arm64
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate Tencent TCR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Merge staging manifests and persist digests
+        run: |
+          set -euo pipefail
           mkdir -p dist/image-digests
-          cat > "dist/image-digests/${{ matrix.image }}.env" <<EOF
-          IMAGE=${{ matrix.image }}
-          DIGEST=${DIGEST}
-          STAGING_TAG=${RELEASE_STAGING_TAG}
-          DOCKERHUB_REF=docker.io/${DOCKERHUB_NAMESPACE}/${{ matrix.image }}@${DIGEST}
-          GHCR_REF=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}@${DIGEST}
-          TCR_REF=${TCR_REGISTRY}/${TCR_NAMESPACE}/${{ matrix.image }}@${DIGEST}
-          EOF
+          images=(
+            lunafox-server
+            lunafox-frontend
+            lunafox-nginx
+            lunafox-agent
+            lunafox-worker
+          )
+
+          for image in "${images[@]}"; do
+            docker_amd64_ref="docker.io/${DOCKERHUB_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}-amd64"
+            docker_arm64_ref="docker.io/${DOCKERHUB_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}-arm64"
+            ghcr_amd64_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}:${RELEASE_STAGING_TAG}-amd64"
+            ghcr_arm64_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}:${RELEASE_STAGING_TAG}-arm64"
+            tcr_amd64_ref="${TCR_REGISTRY}/${TCR_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}-amd64"
+            tcr_arm64_ref="${TCR_REGISTRY}/${TCR_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}-arm64"
+
+            docker buildx imagetools inspect "$docker_amd64_ref" >/dev/null
+            docker buildx imagetools inspect "$docker_arm64_ref" >/dev/null
+            docker buildx imagetools inspect "$ghcr_amd64_ref" >/dev/null
+            docker buildx imagetools inspect "$ghcr_arm64_ref" >/dev/null
+            docker buildx imagetools inspect "$tcr_amd64_ref" >/dev/null
+            docker buildx imagetools inspect "$tcr_arm64_ref" >/dev/null
+
+            docker_staging_ref="docker.io/${DOCKERHUB_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}"
+            ghcr_staging_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}:${RELEASE_STAGING_TAG}"
+            tcr_staging_ref="${TCR_REGISTRY}/${TCR_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}"
+
+            docker buildx imagetools create --tag "$docker_staging_ref" "$docker_amd64_ref" "$docker_arm64_ref"
+            docker buildx imagetools create --tag "$ghcr_staging_ref" "$ghcr_amd64_ref" "$ghcr_arm64_ref"
+            docker buildx imagetools create --tag "$tcr_staging_ref" "$tcr_amd64_ref" "$tcr_arm64_ref"
+
+            digest="$(docker buildx imagetools inspect "$docker_staging_ref" | awk '/Digest:/ {print $2; exit}')"
+            [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid digest for ${image}: $digest"; exit 1; }
+
+            {
+              echo "IMAGE=${image}"
+              echo "DIGEST=${digest}"
+              echo "STAGING_TAG=${RELEASE_STAGING_TAG}"
+              echo "DOCKERHUB_REF=docker.io/${DOCKERHUB_NAMESPACE}/${image}@${digest}"
+              echo "GHCR_REF=ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}@${digest}"
+              echo "TCR_REF=${TCR_REGISTRY}/${TCR_NAMESPACE}/${image}@${digest}"
+            } > "dist/image-digests/${image}.env"
+          done
 
       - name: Upload image digest artifact
         uses: actions/upload-artifact@v4
         with:
-          name: image-digest-${{ matrix.image }}
-          path: dist/image-digests/${{ matrix.image }}.env
+          name: release-image-digests
+          path: dist/image-digests/*.env
           if-no-files-found: error
 
   update-release-channel:
@@ -261,8 +757,7 @@ jobs:
       - name: Download image digest artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: image-digest-*
-          merge-multiple: true
+          name: release-image-digests
           path: dist/image-digests
 
       - name: Generate channel files
@@ -376,13 +871,12 @@ jobs:
 
   promote-images:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, publish-images]
+    needs: [validate-tag, merge-staging-images]
     steps:
       - name: Download image digest artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: image-digest-*
-          merge-multiple: true
+          name: release-image-digests
           path: dist/image-digests
 
       - name: Set up Docker Buildx

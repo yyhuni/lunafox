@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.7
 
 # ============================================
 # Go Server - build
@@ -9,13 +9,17 @@ WORKDIR /src
 
 # Cache dependencies
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
+    --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
+    go mod download
 
 # Copy source
 COPY . .
 
 # Build (static where possible)
-RUN CGO_ENABLED=0 go build -o /out/server ./cmd/server
+RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
+    --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
+    CGO_ENABLED=0 go build -o /out/server ./cmd/server
 
 # ============================================
 # Go Server - runtime

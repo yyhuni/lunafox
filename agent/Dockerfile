@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.7
 
 # ============================================
 # Go Agent - build
@@ -15,7 +15,9 @@ WORKDIR /src
 
 # Cache dependencies
 COPY agent/go.mod agent/go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
+    --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
+    go mod download
 
 # Copy source
 COPY agent ./agent
@@ -23,7 +25,9 @@ COPY agent ./agent
 WORKDIR /src/agent
 
 # Build (static where possible)
-RUN CGO_ENABLED=0 go build -o /out/agent ./cmd/agent
+RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
+    --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
+    CGO_ENABLED=0 go build -o /out/agent ./cmd/agent
 
 # ============================================
 # Go Agent - runtime
