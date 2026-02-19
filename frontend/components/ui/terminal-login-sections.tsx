@@ -3,10 +3,10 @@
 import * as React from "react"
 import dynamic from "next/dynamic"
 import { cn } from "@/lib/utils"
-import type { ShuffleRef } from "@/components/Shuffle"
+import type { ShuffleRef } from "@/components/shuffle"
 import type { LoginStep, TerminalLine, TerminalLoginTranslations } from "@/components/ui/terminal-login-types"
 
-const Shuffle = dynamic(() => import("@/components/Shuffle"), { ssr: false })
+const Shuffle = dynamic(() => import("@/components/shuffle"), { ssr: false })
 
 type BootLine = {
   text: string
