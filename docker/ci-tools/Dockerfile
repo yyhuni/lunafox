@@ -42,8 +42,8 @@ RUN set -eux; \
     ln -sf "/usr/local/lib/nodejs/node-v${NODE_VERSION}-linux-${node_arch}/bin/corepack" /usr/local/bin/corepack; \
     node -v; \
     npm -v; \
-    corepack enable; \
-    corepack prepare "pnpm@${PNPM_VERSION}" --activate; \
+    npm install -g "pnpm@${PNPM_VERSION}"; \
+    which pnpm; \
     pnpm -v
 
 CMD ["bash"]

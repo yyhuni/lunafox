@@ -27,6 +27,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Ensure pnpm available
+        run: |
+          set -euo pipefail
+          if command -v pnpm >/dev/null 2>&1; then
+            pnpm -v
+            exit 0
+          fi
+
+          if command -v corepack >/dev/null 2>&1; then
+            corepack enable
+            corepack prepare "pnpm@10.30.0" --activate
+          elif command -v npm >/dev/null 2>&1; then
+            npm install -g pnpm@10.30.0
+          else
+            echo "pnpm/corepack/npm all unavailable. Check CI_TOOLS_IMAGE contents." >&2
+            exit 1
+          fi
+
+          pnpm -v
+
       - name: Cache pnpm store
         uses: actions/cache@v4
         with:
