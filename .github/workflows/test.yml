@@ -145,8 +145,8 @@ jobs:
           DARWIN_ARM64_SHA256=${asset_sha}
           IMAGE_REGISTRY=docker.io
           IMAGE_NAMESPACE=yyhuni
-          AGENT_IMAGE_REFS=docker.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,ghcr.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-          WORKER_IMAGE_REFS=docker.io/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,ghcr.io/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,ccr.ccs.tencentyun.com/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          AGENT_IMAGE_REFS=docker.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,ghcr.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          WORKER_IMAGE_REFS=docker.io/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,ghcr.io/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,ccr.ccs.tencentyun.com/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
           EOF_VER
 
           cat > "$TMP_DIR/repo/raw/branch/channels/bad.env" <<'EOF_BAD'
@@ -169,8 +169,8 @@ jobs:
           DARWIN_ARM64_SHA256=deadbeef
           IMAGE_REGISTRY=docker.io
           IMAGE_NAMESPACE=yyhuni
-          AGENT_IMAGE_REFS=docker.io/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,ghcr.io/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-          WORKER_IMAGE_REFS=docker.io/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,ghcr.io/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,ccr.ccs.tencentyun.com/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+          AGENT_IMAGE_REFS=docker.io/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,ghcr.io/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+          WORKER_IMAGE_REFS=docker.io/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,ghcr.io/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,ccr.ccs.tencentyun.com/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
           EOF_BAD_VER
 
           python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$TMP_DIR" >/tmp/mock-http.log 2>&1 &

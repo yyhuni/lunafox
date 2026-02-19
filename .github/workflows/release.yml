@@ -18,6 +18,8 @@ env:
   DOCKERHUB_NAMESPACE: ${{ vars.DOCKERHUB_NAMESPACE != '' && vars.DOCKERHUB_NAMESPACE || 'yyhuni' }}
   TCR_REGISTRY: ${{ vars.TCR_REGISTRY != '' && vars.TCR_REGISTRY || 'ccr.ccs.tencentyun.com' }}
   TCR_NAMESPACE: ${{ vars.TCR_NAMESPACE != '' && vars.TCR_NAMESPACE || 'yyhuni' }}
+  ACR_REGISTRY: ${{ vars.ACR_REGISTRY }}
+  ACR_NAMESPACE: ${{ vars.ACR_NAMESPACE != '' && vars.ACR_NAMESPACE || 'yyhuni' }}
   RELEASE_STAGING_TAG: ci-${{ github.run_id }}-${{ github.run_attempt }}
 
 jobs:
@@ -228,6 +230,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Validate TCR and ACR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
+          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Log in to Alibaba ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
       - name: Build and push worker tools image (amd64)
         uses: docker/build-push-action@v6
         with:
@@ -245,6 +271,8 @@ jobs:
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-amd64
             ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-amd64
+            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-amd64
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-amd64
           cache-from: |
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-amd64
           cache-to: |
@@ -274,6 +302,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Validate TCR and ACR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
+          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Log in to Alibaba ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
       - name: Build and push worker tools image (arm64)
         uses: docker/build-push-action@v6
         with:
@@ -291,6 +343,8 @@ jobs:
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-arm64
             ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-arm64
+            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-arm64
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-arm64
           cache-from: |
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-arm64
           cache-to: |
@@ -326,6 +380,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Validate TCR and ACR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
+          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Log in to Alibaba ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
       - name: Publish worker-tools multi-arch tag
         run: |
           set -euo pipefail
@@ -336,7 +414,11 @@ jobs:
           if [ "$EXISTS" = "true" ]; then
             SRC="docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
             GHCR_TARGET="ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}"
+            TCR_TARGET="${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
+            ACR_TARGET="${ACR_REGISTRY}/${ACR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
             docker buildx imagetools create --tag "$GHCR_TARGET" "$SRC"
+            docker buildx imagetools create --tag "$TCR_TARGET" "$SRC"
+            docker buildx imagetools create --tag "$ACR_TARGET" "$SRC"
             exit 0
           fi
 
@@ -353,11 +435,22 @@ jobs:
             "ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}-amd64" \
             "ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}-arm64"
 
+          docker buildx imagetools create \
+            --tag "${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}" \
+            "${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}-amd64" \
+            "${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}-arm64"
+
+          docker buildx imagetools create \
+            --tag "${ACR_REGISTRY}/${ACR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}" \
+            "${ACR_REGISTRY}/${ACR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}-amd64" \
+            "${ACR_REGISTRY}/${ACR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}-arm64"
+
   publish-images-amd64:
     runs-on: ubuntu-22.04
     needs: validate-tag
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         include:
           - image: lunafox-server
@@ -391,6 +484,30 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate TCR and ACR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
+          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Log in to Alibaba ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
       - name: Build and push staging image (amd64)
         uses: docker/build-push-action@v6
@@ -410,12 +527,15 @@ jobs:
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-amd64
             ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-amd64
+            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-amd64
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-amd64
 
   publish-images-arm64:
     runs-on: ubuntu-22.04-arm
     needs: validate-tag
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         include:
           - image: lunafox-server
@@ -450,6 +570,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Validate TCR and ACR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
+          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Log in to Alibaba ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
       - name: Build and push staging image (arm64)
         uses: docker/build-push-action@v6
         with:
@@ -468,6 +612,8 @@ jobs:
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-arm64
             ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-arm64
+            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-arm64
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-arm64
 
   publish-worker-image-amd64:
     runs-on: ubuntu-22.04
@@ -496,6 +642,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Validate TCR and ACR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
+          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Log in to Alibaba ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
       - name: Build and push worker image (amd64)
         uses: docker/build-push-action@v6
         with:
@@ -515,6 +685,8 @@ jobs:
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-amd64
             ghcr.io/${{ github.repository_owner }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-amd64
+            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-amd64
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-amd64
 
   publish-worker-image-arm64:
     runs-on: ubuntu-22.04-arm
@@ -543,6 +715,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Validate TCR and ACR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
+          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Log in to Alibaba ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
       - name: Build and push worker image (arm64)
         uses: docker/build-push-action@v6
         with:
@@ -562,6 +758,8 @@ jobs:
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-arm64
             ghcr.io/${{ github.repository_owner }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-arm64
+            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-arm64
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-arm64
 
   merge-staging-images:
     runs-on: ubuntu-22.04
@@ -596,9 +794,34 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Validate TCR and ACR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
+          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Log in to Alibaba ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
       - name: Merge staging manifests and persist digests
         run: |
           set -euo pipefail
+          start_epoch="$(date +%s)"
           mkdir -p dist/image-digests
 
           retry_imagetools_inspect() {
@@ -665,31 +888,56 @@ jobs:
             docker_arm64_ref="docker.io/${DOCKERHUB_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}-arm64"
             ghcr_amd64_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}:${RELEASE_STAGING_TAG}-amd64"
             ghcr_arm64_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}:${RELEASE_STAGING_TAG}-arm64"
+            tcr_amd64_ref="${TCR_REGISTRY}/${TCR_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}-amd64"
+            tcr_arm64_ref="${TCR_REGISTRY}/${TCR_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}-arm64"
+            acr_amd64_ref="${ACR_REGISTRY}/${ACR_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}-amd64"
+            acr_arm64_ref="${ACR_REGISTRY}/${ACR_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}-arm64"
 
             retry_imagetools_inspect "$docker_amd64_ref"
             retry_imagetools_inspect "$docker_arm64_ref"
             retry_imagetools_inspect "$ghcr_amd64_ref"
             retry_imagetools_inspect "$ghcr_arm64_ref"
+            retry_imagetools_inspect "$tcr_amd64_ref"
+            retry_imagetools_inspect "$tcr_arm64_ref"
+            retry_imagetools_inspect "$acr_amd64_ref"
+            retry_imagetools_inspect "$acr_arm64_ref"
 
             docker_staging_ref="docker.io/${DOCKERHUB_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}"
             ghcr_staging_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}:${RELEASE_STAGING_TAG}"
+            tcr_staging_ref="${TCR_REGISTRY}/${TCR_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}"
+            acr_staging_ref="${ACR_REGISTRY}/${ACR_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}"
 
             retry_imagetools_create "$docker_staging_ref" "$docker_amd64_ref" "$docker_arm64_ref"
             retry_imagetools_create "$ghcr_staging_ref" "$ghcr_amd64_ref" "$ghcr_arm64_ref"
+            retry_imagetools_create "$tcr_staging_ref" "$tcr_amd64_ref" "$tcr_arm64_ref"
+            retry_imagetools_create "$acr_staging_ref" "$acr_amd64_ref" "$acr_arm64_ref"
             retry_imagetools_inspect "$docker_staging_ref"
             retry_imagetools_inspect "$ghcr_staging_ref"
+            retry_imagetools_inspect "$tcr_staging_ref"
+            retry_imagetools_inspect "$acr_staging_ref"
 
-            digest="$(resolve_digest "$docker_staging_ref" || true)"
-            [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid digest for ${image}: $digest"; exit 1; }
+            docker_digest="$(resolve_digest "$docker_staging_ref" || true)"
+            ghcr_digest="$(resolve_digest "$ghcr_staging_ref" || true)"
+            tcr_digest="$(resolve_digest "$tcr_staging_ref" || true)"
+            acr_digest="$(resolve_digest "$acr_staging_ref" || true)"
+            [[ "$docker_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid docker digest for ${image}: $docker_digest"; exit 1; }
+            [[ "$ghcr_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid ghcr digest for ${image}: $ghcr_digest"; exit 1; }
+            [[ "$tcr_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid tcr digest for ${image}: $tcr_digest"; exit 1; }
+            [[ "$acr_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid acr digest for ${image}: $acr_digest"; exit 1; }
 
             {
               echo "IMAGE=${image}"
-              echo "DIGEST=${digest}"
+              echo "DIGEST=${docker_digest}"
               echo "STAGING_TAG=${RELEASE_STAGING_TAG}"
-              echo "DOCKERHUB_REF=docker.io/${DOCKERHUB_NAMESPACE}/${image}@${digest}"
-              echo "GHCR_REF=ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}@${digest}"
+              echo "DOCKERHUB_REF=docker.io/${DOCKERHUB_NAMESPACE}/${image}@${docker_digest}"
+              echo "GHCR_REF=ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}@${ghcr_digest}"
+              echo "TCR_REF=${TCR_REGISTRY}/${TCR_NAMESPACE}/${image}@${tcr_digest}"
+              echo "ACR_REF=${ACR_REGISTRY}/${ACR_NAMESPACE}/${image}@${acr_digest}"
             } > "dist/image-digests/${image}.env"
           done
+
+          end_epoch="$(date +%s)"
+          echo "merge_staging_images_duration_seconds=$((end_epoch - start_epoch))"
 
       - name: Upload image digest artifact
         uses: actions/upload-artifact@v4
@@ -747,16 +995,20 @@ jobs:
           [ -n "$darwin_amd64_sha" ] || { echo "missing darwin amd64 checksum"; exit 1; }
           [ -n "$darwin_arm64_sha" ] || { echo "missing darwin arm64 checksum"; exit 1; }
 
-          agent_digest="$(awk -F= '$1=="DIGEST"{print $2}' dist/image-digests/lunafox-agent.env | tr -d '\r')"
-          worker_digest="$(awk -F= '$1=="DIGEST"{print $2}' dist/image-digests/lunafox-worker.env | tr -d '\r')"
-          [[ "$agent_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid agent digest: $agent_digest"; exit 1; }
-          [[ "$worker_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid worker digest: $worker_digest"; exit 1; }
-          agent_tcr_ref="${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-agent@${agent_digest}"
-          agent_dockerhub_ref="docker.io/${DOCKERHUB_NAMESPACE}/lunafox-agent@${agent_digest}"
-          agent_ghcr_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-agent@${agent_digest}"
-          worker_tcr_ref="${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker@${worker_digest}"
-          worker_dockerhub_ref="docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker@${worker_digest}"
-          worker_ghcr_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker@${worker_digest}"
+          agent_dockerhub_ref="$(awk -F= '$1=="DOCKERHUB_REF"{print $2}' dist/image-digests/lunafox-agent.env | tr -d '\r')"
+          agent_ghcr_ref="$(awk -F= '$1=="GHCR_REF"{print $2}' dist/image-digests/lunafox-agent.env | tr -d '\r')"
+          agent_tcr_ref="$(awk -F= '$1=="TCR_REF"{print $2}' dist/image-digests/lunafox-agent.env | tr -d '\r')"
+          agent_acr_ref="$(awk -F= '$1=="ACR_REF"{print $2}' dist/image-digests/lunafox-agent.env | tr -d '\r')"
+          worker_dockerhub_ref="$(awk -F= '$1=="DOCKERHUB_REF"{print $2}' dist/image-digests/lunafox-worker.env | tr -d '\r')"
+          worker_ghcr_ref="$(awk -F= '$1=="GHCR_REF"{print $2}' dist/image-digests/lunafox-worker.env | tr -d '\r')"
+          worker_tcr_ref="$(awk -F= '$1=="TCR_REF"{print $2}' dist/image-digests/lunafox-worker.env | tr -d '\r')"
+          worker_acr_ref="$(awk -F= '$1=="ACR_REF"{print $2}' dist/image-digests/lunafox-worker.env | tr -d '\r')"
+
+          for ref in \
+            "$agent_dockerhub_ref" "$agent_ghcr_ref" "$agent_tcr_ref" "$agent_acr_ref" \
+            "$worker_dockerhub_ref" "$worker_ghcr_ref" "$worker_tcr_ref" "$worker_acr_ref"; do
+            [[ "$ref" =~ ^.+@sha256:[a-f0-9]{64}$ ]] || { echo "invalid digest ref: $ref"; exit 1; }
+          done
 
           cat > "$CHANNEL_DIR/channels/${TAG}.env" <<EOF
           SCHEMA_VERSION=2
@@ -773,8 +1025,8 @@ jobs:
           DARWIN_ARM64_SHA256=${darwin_arm64_sha}
           IMAGE_REGISTRY=docker.io
           IMAGE_NAMESPACE=${DOCKERHUB_NAMESPACE}
-          AGENT_IMAGE_REFS=${agent_dockerhub_ref},${agent_ghcr_ref},${agent_tcr_ref}
-          WORKER_IMAGE_REFS=${worker_dockerhub_ref},${worker_ghcr_ref},${worker_tcr_ref}
+          AGENT_IMAGE_REFS=${agent_dockerhub_ref},${agent_ghcr_ref},${agent_tcr_ref},${agent_acr_ref}
+          WORKER_IMAGE_REFS=${worker_dockerhub_ref},${worker_ghcr_ref},${worker_tcr_ref},${worker_acr_ref}
           EOF
 
           if [ "$CHANNEL" = "stable" ]; then
@@ -867,13 +1119,71 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Validate TCR and ACR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
+          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Log in to Alibaba ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
       - name: Promote staging digest to release tag (phase 2)
         run: |
           set -euo pipefail
+          start_epoch="$(date +%s)"
           FINAL_TAG="${{ needs.validate-tag.outputs.tag }}"
           [ -n "$FINAL_TAG" ] || { echo "missing final tag"; exit 1; }
           PLAN_FILE="$(mktemp)"
           trap 'rm -f "$PLAN_FILE"' EXIT
+
+          retry_imagetools_inspect() {
+            local ref="$1"
+            local delays=(0 2 4 8)
+            local delay
+            for delay in "${delays[@]}"; do
+              if [ "$delay" -gt 0 ]; then
+                sleep "$delay"
+              fi
+              if docker buildx imagetools inspect "$ref" >/dev/null 2>&1; then
+                return 0
+              fi
+            done
+            echo "failed to inspect image ref after retries: $ref" >&2
+            return 1
+          }
+
+          retry_imagetools_create() {
+            local target="$1"
+            local src="$2"
+            local delays=(0 2 4)
+            local delay
+            for delay in "${delays[@]}"; do
+              if [ "$delay" -gt 0 ]; then
+                sleep "$delay"
+              fi
+              if docker buildx imagetools create --tag "$target" "$src" >/dev/null 2>&1; then
+                return 0
+              fi
+            done
+            echo "failed to create manifest after retries: $target <- $src" >&2
+            return 1
+          }
 
           shopt -s nullglob
           files=(dist/image-digests/*.env)
@@ -885,6 +1195,8 @@ jobs:
             DIGEST=""
             DOCKERHUB_REF=""
             GHCR_REF=""
+            TCR_REF=""
+            ACR_REF=""
             # shellcheck disable=SC1090
             source "$file"
 
@@ -892,31 +1204,48 @@ jobs:
             [[ "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid DIGEST in $file: $DIGEST"; exit 1; }
             [ -n "$DOCKERHUB_REF" ] || { echo "missing DOCKERHUB_REF in $file"; exit 1; }
             [ -n "$GHCR_REF" ] || { echo "missing GHCR_REF in $file"; exit 1; }
+            [ -n "$TCR_REF" ] || { echo "missing TCR_REF in $file"; exit 1; }
+            [ -n "$ACR_REF" ] || { echo "missing ACR_REF in $file"; exit 1; }
 
-            docker buildx imagetools inspect "$DOCKERHUB_REF" >/dev/null
-            docker buildx imagetools inspect "$GHCR_REF" >/dev/null
+            retry_imagetools_inspect "$DOCKERHUB_REF"
+            retry_imagetools_inspect "$GHCR_REF"
+            retry_imagetools_inspect "$TCR_REF"
+            retry_imagetools_inspect "$ACR_REF"
 
-            printf '%s|%s|%s|%s\n' "$IMAGE" "$DIGEST" "$DOCKERHUB_REF" "$GHCR_REF" >> "$PLAN_FILE"
+            printf '%s|%s|%s|%s|%s|%s\n' "$IMAGE" "$DIGEST" "$DOCKERHUB_REF" "$GHCR_REF" "$TCR_REF" "$ACR_REF" >> "$PLAN_FILE"
           done
 
-          while IFS='|' read -r IMAGE DIGEST DOCKERHUB_REF GHCR_REF; do
+          while IFS='|' read -r IMAGE DIGEST DOCKERHUB_REF GHCR_REF TCR_REF ACR_REF; do
             docker_target="docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
             ghcr_target="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${IMAGE}:${FINAL_TAG}"
+            tcr_target="${TCR_REGISTRY}/${TCR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
+            acr_target="${ACR_REGISTRY}/${ACR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
 
             echo "promote ${IMAGE}: ${DIGEST}"
-            docker buildx imagetools create --tag "$docker_target" "$DOCKERHUB_REF"
-            docker buildx imagetools create --tag "$ghcr_target" "$GHCR_REF"
+            retry_imagetools_create "$docker_target" "$DOCKERHUB_REF"
+            retry_imagetools_create "$ghcr_target" "$GHCR_REF"
+            retry_imagetools_create "$tcr_target" "$TCR_REF"
+            retry_imagetools_create "$acr_target" "$ACR_REF"
+            retry_imagetools_inspect "$docker_target"
+            retry_imagetools_inspect "$ghcr_target"
+            retry_imagetools_inspect "$tcr_target"
+            retry_imagetools_inspect "$acr_target"
           done < "$PLAN_FILE"
 
-  sync-tcr-images:
+          end_epoch="$(date +%s)"
+          echo "promote_images_duration_seconds=$((end_epoch - start_epoch))"
+
+  verify-tcr-images:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, merge-staging-images]
+    needs: [validate-tag, merge-staging-images, promote-images]
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
-      needs.merge-staging-images.result == 'success'
+      needs.merge-staging-images.result == 'success' &&
+      needs.promote-images.result == 'success'
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         image:
           - lunafox-server
@@ -934,16 +1263,10 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Validate Tencent TCR credentials
         run: |
           set -euo pipefail
+          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
           [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
           [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
 
@@ -954,9 +1277,27 @@ jobs:
           username: ${{ secrets.TCR_USERNAME }}
           password: ${{ secrets.TCR_PASSWORD }}
 
-      - name: Sync final image tag to Tencent TCR
+      - name: Verify final image tag in Tencent TCR
         run: |
           set -euo pipefail
+          start_epoch="$(date +%s)"
+
+          retry_imagetools_inspect() {
+            local ref="$1"
+            local delays=(0 2 4 8)
+            local delay
+            for delay in "${delays[@]}"; do
+              if [ "$delay" -gt 0 ]; then
+                sleep "$delay"
+              fi
+              if docker buildx imagetools inspect "$ref" >/dev/null 2>&1; then
+                return 0
+              fi
+            done
+            echo "failed to inspect image ref after retries: $ref" >&2
+            return 1
+          }
+
           FINAL_TAG="${{ needs.validate-tag.outputs.tag }}"
           [ -n "$FINAL_TAG" ] || { echo "missing final tag"; exit 1; }
 
@@ -965,44 +1306,36 @@ jobs:
           [ -f "$FILE" ] || { echo "missing digest file: $FILE"; exit 1; }
 
           IMAGE=""
-          DIGEST=""
-          DOCKERHUB_REF=""
+          TCR_REF=""
           # shellcheck disable=SC1090
           source "$FILE"
 
           [ "$IMAGE" = "$IMAGE_EXPECTED" ] || { echo "image mismatch in $FILE: $IMAGE"; exit 1; }
-          [[ "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid DIGEST in $FILE: $DIGEST"; exit 1; }
-          [ -n "$DOCKERHUB_REF" ] || { echo "missing DOCKERHUB_REF in $FILE"; exit 1; }
-
-          docker buildx imagetools inspect "$DOCKERHUB_REF" >/dev/null
+          [ -n "$TCR_REF" ] || { echo "missing TCR_REF in $FILE"; exit 1; }
 
           tcr_target="${TCR_REGISTRY}/${TCR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
-          echo "sync ${IMAGE}: ${DIGEST}"
-          docker buildx imagetools create --tag "$tcr_target" "$DOCKERHUB_REF"
-          docker buildx imagetools inspect "$tcr_target" >/dev/null
+          retry_imagetools_inspect "$TCR_REF"
+          retry_imagetools_inspect "$tcr_target"
 
-  sync-tcr-worker-tools:
+          end_epoch="$(date +%s)"
+          echo "verify_tcr_images_duration_seconds=$((end_epoch - start_epoch))"
+
+  verify-tcr-worker-tools:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, publish-worker-tools, merge-staging-images]
+    needs: [validate-tag, publish-worker-tools, promote-images]
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
       needs.publish-worker-tools.result == 'success' &&
-      needs.merge-staging-images.result == 'success'
+      needs.promote-images.result == 'success'
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Validate Tencent TCR credentials
         run: |
           set -euo pipefail
+          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
           [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
           [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
 
@@ -1013,22 +1346,178 @@ jobs:
           username: ${{ secrets.TCR_USERNAME }}
           password: ${{ secrets.TCR_PASSWORD }}
 
-      - name: Sync worker-tools tag to Tencent TCR
+      - name: Verify worker-tools tag in Tencent TCR
         run: |
           set -euo pipefail
+          start_epoch="$(date +%s)"
+
+          retry_imagetools_inspect() {
+            local ref="$1"
+            local delays=(0 2 4 8)
+            local delay
+            for delay in "${delays[@]}"; do
+              if [ "$delay" -gt 0 ]; then
+                sleep "$delay"
+              fi
+              if docker buildx imagetools inspect "$ref" >/dev/null 2>&1; then
+                return 0
+              fi
+            done
+            echo "failed to inspect image ref after retries: $ref" >&2
+            return 1
+          }
+
           TOOLS_TAG="${{ needs.publish-worker-tools.outputs.tools_tag }}"
           [ -n "$TOOLS_TAG" ] || { echo "missing worker-tools tag"; exit 1; }
-
-          tools_src="docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
           tools_target="${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
+          retry_imagetools_inspect "$tools_target"
 
-          docker buildx imagetools inspect "$tools_src" >/dev/null
-          docker buildx imagetools create --tag "$tools_target" "$tools_src"
-          docker buildx imagetools inspect "$tools_target" >/dev/null
+          end_epoch="$(date +%s)"
+          echo "verify_tcr_worker_tools_duration_seconds=$((end_epoch - start_epoch))"
+
+  verify-acr-images:
+    runs-on: ubuntu-22.04
+    needs: [validate-tag, merge-staging-images, promote-images]
+    if: >
+      always() &&
+      needs.validate-tag.result == 'success' &&
+      needs.merge-staging-images.result == 'success' &&
+      needs.promote-images.result == 'success'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        image:
+          - lunafox-server
+          - lunafox-frontend
+          - lunafox-nginx
+          - lunafox-agent
+          - lunafox-worker
+    steps:
+      - name: Download image digest artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-image-digests
+          path: dist/image-digests
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate Alibaba ACR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
+          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
+
+      - name: Log in to Alibaba ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Verify final image tag in Alibaba ACR
+        run: |
+          set -euo pipefail
+          start_epoch="$(date +%s)"
+
+          retry_imagetools_inspect() {
+            local ref="$1"
+            local delays=(0 2 4 8)
+            local delay
+            for delay in "${delays[@]}"; do
+              if [ "$delay" -gt 0 ]; then
+                sleep "$delay"
+              fi
+              if docker buildx imagetools inspect "$ref" >/dev/null 2>&1; then
+                return 0
+              fi
+            done
+            echo "failed to inspect image ref after retries: $ref" >&2
+            return 1
+          }
+
+          FINAL_TAG="${{ needs.validate-tag.outputs.tag }}"
+          [ -n "$FINAL_TAG" ] || { echo "missing final tag"; exit 1; }
+
+          IMAGE_EXPECTED="${{ matrix.image }}"
+          FILE="dist/image-digests/${IMAGE_EXPECTED}.env"
+          [ -f "$FILE" ] || { echo "missing digest file: $FILE"; exit 1; }
+
+          IMAGE=""
+          ACR_REF=""
+          # shellcheck disable=SC1090
+          source "$FILE"
+
+          [ "$IMAGE" = "$IMAGE_EXPECTED" ] || { echo "image mismatch in $FILE: $IMAGE"; exit 1; }
+          [ -n "$ACR_REF" ] || { echo "missing ACR_REF in $FILE"; exit 1; }
+
+          acr_target="${ACR_REGISTRY}/${ACR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
+          retry_imagetools_inspect "$ACR_REF"
+          retry_imagetools_inspect "$acr_target"
+
+          end_epoch="$(date +%s)"
+          echo "verify_acr_images_duration_seconds=$((end_epoch - start_epoch))"
+
+  verify-acr-worker-tools:
+    runs-on: ubuntu-22.04
+    needs: [validate-tag, publish-worker-tools, promote-images]
+    if: >
+      always() &&
+      needs.validate-tag.result == 'success' &&
+      needs.publish-worker-tools.result == 'success' &&
+      needs.promote-images.result == 'success'
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate Alibaba ACR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
+          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
+
+      - name: Log in to Alibaba ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Verify worker-tools tag in Alibaba ACR
+        run: |
+          set -euo pipefail
+          start_epoch="$(date +%s)"
+
+          retry_imagetools_inspect() {
+            local ref="$1"
+            local delays=(0 2 4 8)
+            local delay
+            for delay in "${delays[@]}"; do
+              if [ "$delay" -gt 0 ]; then
+                sleep "$delay"
+              fi
+              if docker buildx imagetools inspect "$ref" >/dev/null 2>&1; then
+                return 0
+              fi
+            done
+            echo "failed to inspect image ref after retries: $ref" >&2
+            return 1
+          }
+
+          TOOLS_TAG="${{ needs.publish-worker-tools.outputs.tools_tag }}"
+          [ -n "$TOOLS_TAG" ] || { echo "missing worker-tools tag"; exit 1; }
+          tools_target="${ACR_REGISTRY}/${ACR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
+          retry_imagetools_inspect "$tools_target"
+
+          end_epoch="$(date +%s)"
+          echo "verify_acr_worker_tools_duration_seconds=$((end_epoch - start_epoch))"
 
   finalize-github-release:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, prepare-github-release, promote-images, sync-tcr-images, sync-tcr-worker-tools]
+    needs: [validate-tag, prepare-github-release, promote-images, verify-tcr-images, verify-tcr-worker-tools, verify-acr-images, verify-acr-worker-tools]
     if: always()
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1048,8 +1537,10 @@ jobs:
           check_gate "validate-tag" "${{ needs.validate-tag.result }}"
           check_gate "prepare-github-release" "${{ needs.prepare-github-release.result }}"
           check_gate "promote-images" "${{ needs.promote-images.result }}"
-          check_gate "sync-tcr-images" "${{ needs.sync-tcr-images.result }}"
-          check_gate "sync-tcr-worker-tools" "${{ needs.sync-tcr-worker-tools.result }}"
+          check_gate "verify-tcr-images" "${{ needs.verify-tcr-images.result }}"
+          check_gate "verify-tcr-worker-tools" "${{ needs.verify-tcr-worker-tools.result }}"
+          check_gate "verify-acr-images" "${{ needs.verify-acr-images.result }}"
+          check_gate "verify-acr-worker-tools" "${{ needs.verify-acr-worker-tools.result }}"
 
           if [ "${#FAILED[@]}" -gt 0 ]; then
             echo "github release blocked by prerequisite jobs:" >&2
@@ -1151,9 +1642,70 @@ jobs:
             exit 0
           fi
 
-          PAYLOAD=$(cat <<JSON
-          {"draft":false,"prerelease":${PRERELEASE},"name":"${TAG}"}
-          JSON
+          DETAIL_STATUS=$(curl -sS -o "$TMP_DIR/release-detail.json" -w "%{http_code}" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${API}/releases/${RELEASE_ID}")
+          if [ "$DETAIL_STATUS" -lt 200 ] || [ "$DETAIL_STATUS" -ge 300 ]; then
+            echo "failed to load github release detail ${RELEASE_ID}, status=${DETAIL_STATUS}" >&2
+            cat "$TMP_DIR/release-detail.json" >&2 || true
+            exit 1
+          fi
+
+          PAYLOAD=$(python3 - "$TMP_DIR/release-detail.json" "$TAG" "$PRERELEASE" <<'PY'
+          import json
+          import re
+          import sys
+
+          path = sys.argv[1]
+          tag = sys.argv[2]
+          prerelease = sys.argv[3] == "true"
+
+          with open(path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+
+          body = payload.get("body", "") if isinstance(payload, dict) else ""
+          if body is None:
+            body = ""
+          body = str(body)
+
+          marker_start = "<!-- codex-release-notice:start -->"
+          marker_end = "<!-- codex-release-notice:end -->"
+          pattern = re.compile(re.escape(marker_start) + r".*?" + re.escape(marker_end) + r"\n*", re.DOTALL)
+          body = re.sub(pattern, "", body).lstrip()
+
+          if prerelease:
+            notice_lines = [
+              marker_start,
+              "## Release Notice",
+              "- [CN] 预发布测试版本，仅用于验证和试用。",
+              "- [EN] Pre-release build for validation and testing.",
+              "- [CN] 不建议在生产环境使用。",
+              "- [EN] Not recommended for production environments.",
+              marker_end,
+            ]
+          else:
+            notice_lines = [
+              marker_start,
+              "## Release Notice",
+              "- [CN] 稳定版本，可用于生产环境。",
+              "- [EN] Stable release intended for production use.",
+              "- [CN] 升级前请先备份数据并阅读升级说明。",
+              "- [EN] Review upgrade notes and back up data before upgrading.",
+              marker_end,
+            ]
+
+          notice = "\n".join(notice_lines)
+          merged_body = notice if not body else f"{notice}\n\n{body}"
+
+          out = {
+            "draft": False,
+            "prerelease": prerelease,
+            "name": tag,
+            "body": merged_body,
+          }
+          print(json.dumps(out, ensure_ascii=False))
+          PY
           )
 
           PATCH_STATUS=$(curl -sS -o "$TMP_DIR/patch.json" -w "%{http_code}" \
@@ -1171,7 +1723,7 @@ jobs:
 
   finalize-gitee-release:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, build-installers, prepare-gitee-release, promote-images, sync-tcr-images, sync-tcr-worker-tools]
+    needs: [validate-tag, build-installers, prepare-gitee-release, promote-images, verify-tcr-images, verify-tcr-worker-tools, verify-acr-images, verify-acr-worker-tools]
     if: always()
     env:
       GITEE_OWNER: ${{ secrets.GITEE_OWNER }}
@@ -1194,8 +1746,10 @@ jobs:
           check_gate "build-installers" "${{ needs.build-installers.result }}"
           check_gate "prepare-gitee-release" "${{ needs.prepare-gitee-release.result }}"
           check_gate "promote-images" "${{ needs.promote-images.result }}"
-          check_gate "sync-tcr-images" "${{ needs.sync-tcr-images.result }}"
-          check_gate "sync-tcr-worker-tools" "${{ needs.sync-tcr-worker-tools.result }}"
+          check_gate "verify-tcr-images" "${{ needs.verify-tcr-images.result }}"
+          check_gate "verify-tcr-worker-tools" "${{ needs.verify-tcr-worker-tools.result }}"
+          check_gate "verify-acr-images" "${{ needs.verify-acr-images.result }}"
+          check_gate "verify-acr-worker-tools" "${{ needs.verify-acr-worker-tools.result }}"
 
           if [ "${#FAILED[@]}" -gt 0 ]; then
             echo "gitee release blocked by prerequisite jobs:" >&2
@@ -1231,9 +1785,31 @@ jobs:
           TMP_DIR="$(mktemp -d)"
           trap 'rm -rf "$TMP_DIR"' EXIT
 
-          PAYLOAD=$(cat <<JSON
-          {"tag_name":"${TAG}","target_commitish":"${TARGET_COMMITISH}","name":"${TAG}","body":"Automated release for ${TAG}","prerelease":${PRERELEASE}}
-          JSON
+          if [ "$PRERELEASE" = "true" ]; then
+            RELEASE_NOTICE="[CN] 预发布测试版本，仅用于验证和试用；不建议在生产环境使用。 [EN] Pre-release build for validation and testing; not recommended for production environments."
+          else
+            RELEASE_NOTICE="[CN] 稳定版本，可用于生产环境；升级前请先备份数据并阅读升级说明。 [EN] Stable release intended for production use; review upgrade notes and back up data before upgrading."
+          fi
+          RELEASE_BODY="${RELEASE_NOTICE} [EN] Automated release for ${TAG}."
+
+          PAYLOAD=$(python3 - "$TAG" "$TARGET_COMMITISH" "$PRERELEASE" "$RELEASE_BODY" <<'PY'
+          import json
+          import sys
+
+          tag = sys.argv[1]
+          target_commitish = sys.argv[2]
+          prerelease = sys.argv[3] == "true"
+          body = sys.argv[4]
+
+          payload = {
+            "tag_name": tag,
+            "target_commitish": target_commitish,
+            "name": tag,
+            "body": body,
+            "prerelease": prerelease,
+          }
+          print(json.dumps(payload, ensure_ascii=False))
+          PY
           )
 
           extract_release_id() {
@@ -1275,9 +1851,22 @@ jobs:
           # Compatibility fallback: some gitee instances may reject or ignore
           # prerelease fields. Retry create with a minimal payload.
           if [ -z "$RELEASE_ID" ] && [ "$PRERELEASE" = "true" ]; then
-            COMPAT_PAYLOAD=$(cat <<JSON
-          {"tag_name":"${TAG}","target_commitish":"${TARGET_COMMITISH}","name":"${TAG}","body":"Automated release for ${TAG}"}
-          JSON
+            COMPAT_PAYLOAD=$(python3 - "$TAG" "$TARGET_COMMITISH" "$RELEASE_BODY" <<'PY'
+          import json
+          import sys
+
+          tag = sys.argv[1]
+          target_commitish = sys.argv[2]
+          body = sys.argv[3]
+
+          payload = {
+            "tag_name": tag,
+            "target_commitish": target_commitish,
+            "name": tag,
+            "body": body,
+          }
+          print(json.dumps(payload, ensure_ascii=False))
+          PY
             )
             COMPAT_STATUS=$(curl -sS -o "$TMP_DIR/create-compat.json" -w "%{http_code}" \
               -X POST "${API}/releases?access_token=${GITEE_TOKEN}" \
