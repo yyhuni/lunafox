@@ -908,14 +908,22 @@ jobs:
             docker buildx imagetools create --tag "$ghcr_target" "$GHCR_REF"
           done < "$PLAN_FILE"
 
-  sync-tcr:
+  sync-tcr-images:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, publish-worker-tools, promote-images]
+    needs: [validate-tag, merge-staging-images]
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
-      needs.publish-worker-tools.result == 'success' &&
-      needs.promote-images.result == 'success'
+      needs.merge-staging-images.result == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - lunafox-server
+          - lunafox-frontend
+          - lunafox-nginx
+          - lunafox-agent
+          - lunafox-worker
     steps:
       - name: Download image digest artifacts
         uses: actions/download-artifact@v4
@@ -946,52 +954,81 @@ jobs:
           username: ${{ secrets.TCR_USERNAME }}
           password: ${{ secrets.TCR_PASSWORD }}
 
-      - name: Sync final tags to Tencent TCR (strict gate)
+      - name: Sync final image tag to Tencent TCR
         run: |
           set -euo pipefail
           FINAL_TAG="${{ needs.validate-tag.outputs.tag }}"
-          TOOLS_TAG="${{ needs.publish-worker-tools.outputs.tools_tag }}"
           [ -n "$FINAL_TAG" ] || { echo "missing final tag"; exit 1; }
+
+          IMAGE_EXPECTED="${{ matrix.image }}"
+          FILE="dist/image-digests/${IMAGE_EXPECTED}.env"
+          [ -f "$FILE" ] || { echo "missing digest file: $FILE"; exit 1; }
+
+          IMAGE=""
+          DIGEST=""
+          DOCKERHUB_REF=""
+          # shellcheck disable=SC1090
+          source "$FILE"
+
+          [ "$IMAGE" = "$IMAGE_EXPECTED" ] || { echo "image mismatch in $FILE: $IMAGE"; exit 1; }
+          [[ "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid DIGEST in $FILE: $DIGEST"; exit 1; }
+          [ -n "$DOCKERHUB_REF" ] || { echo "missing DOCKERHUB_REF in $FILE"; exit 1; }
+
+          docker buildx imagetools inspect "$DOCKERHUB_REF" >/dev/null
+
+          tcr_target="${TCR_REGISTRY}/${TCR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
+          echo "sync ${IMAGE}: ${DIGEST}"
+          docker buildx imagetools create --tag "$tcr_target" "$DOCKERHUB_REF"
+          docker buildx imagetools inspect "$tcr_target" >/dev/null
+
+  sync-tcr-worker-tools:
+    runs-on: ubuntu-22.04
+    needs: [validate-tag, publish-worker-tools, merge-staging-images]
+    if: >
+      always() &&
+      needs.validate-tag.result == 'success' &&
+      needs.publish-worker-tools.result == 'success' &&
+      needs.merge-staging-images.result == 'success'
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Validate Tencent TCR credentials
+        run: |
+          set -euo pipefail
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+
+      - name: Log in to Tencent TCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.TCR_REGISTRY }}
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Sync worker-tools tag to Tencent TCR
+        run: |
+          set -euo pipefail
+          TOOLS_TAG="${{ needs.publish-worker-tools.outputs.tools_tag }}"
           [ -n "$TOOLS_TAG" ] || { echo "missing worker-tools tag"; exit 1; }
-
-          PLAN_FILE="$(mktemp)"
-          trap 'rm -f "$PLAN_FILE"' EXIT
-
-          shopt -s nullglob
-          files=(dist/image-digests/*.env)
-          [ "${#files[@]}" -gt 0 ] || { echo "missing image digest artifacts"; exit 1; }
-
-          for file in "${files[@]}"; do
-            IMAGE=""
-            DIGEST=""
-            DOCKERHUB_REF=""
-            # shellcheck disable=SC1090
-            source "$file"
-
-            [ -n "$IMAGE" ] || { echo "missing IMAGE in $file"; exit 1; }
-            [[ "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid DIGEST in $file: $DIGEST"; exit 1; }
-            [ -n "$DOCKERHUB_REF" ] || { echo "missing DOCKERHUB_REF in $file"; exit 1; }
-
-            docker buildx imagetools inspect "$DOCKERHUB_REF" >/dev/null
-            printf '%s|%s|%s\n' "$IMAGE" "$DIGEST" "$DOCKERHUB_REF" >> "$PLAN_FILE"
-          done
 
           tools_src="docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
           tools_target="${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
+
           docker buildx imagetools inspect "$tools_src" >/dev/null
           docker buildx imagetools create --tag "$tools_target" "$tools_src"
           docker buildx imagetools inspect "$tools_target" >/dev/null
 
-          while IFS='|' read -r IMAGE DIGEST DOCKERHUB_REF; do
-            tcr_target="${TCR_REGISTRY}/${TCR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
-            echo "sync ${IMAGE}: ${DIGEST}"
-            docker buildx imagetools create --tag "$tcr_target" "$DOCKERHUB_REF"
-            docker buildx imagetools inspect "$tcr_target" >/dev/null
-          done < "$PLAN_FILE"
-
   finalize-github-release:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, prepare-github-release, sync-tcr]
+    needs: [validate-tag, prepare-github-release, promote-images, sync-tcr-images, sync-tcr-worker-tools]
     if: always()
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1010,7 +1047,9 @@ jobs:
 
           check_gate "validate-tag" "${{ needs.validate-tag.result }}"
           check_gate "prepare-github-release" "${{ needs.prepare-github-release.result }}"
-          check_gate "sync-tcr" "${{ needs.sync-tcr.result }}"
+          check_gate "promote-images" "${{ needs.promote-images.result }}"
+          check_gate "sync-tcr-images" "${{ needs.sync-tcr-images.result }}"
+          check_gate "sync-tcr-worker-tools" "${{ needs.sync-tcr-worker-tools.result }}"
 
           if [ "${#FAILED[@]}" -gt 0 ]; then
             echo "github release blocked by prerequisite jobs:" >&2
@@ -1089,7 +1128,7 @@ jobs:
 
   finalize-gitee-release:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, build-installers, prepare-gitee-release, sync-tcr]
+    needs: [validate-tag, build-installers, prepare-gitee-release, promote-images, sync-tcr-images, sync-tcr-worker-tools]
     if: always()
     env:
       GITEE_OWNER: ${{ secrets.GITEE_OWNER }}
@@ -1111,7 +1150,9 @@ jobs:
           check_gate "validate-tag" "${{ needs.validate-tag.result }}"
           check_gate "build-installers" "${{ needs.build-installers.result }}"
           check_gate "prepare-gitee-release" "${{ needs.prepare-gitee-release.result }}"
-          check_gate "sync-tcr" "${{ needs.sync-tcr.result }}"
+          check_gate "promote-images" "${{ needs.promote-images.result }}"
+          check_gate "sync-tcr-images" "${{ needs.sync-tcr-images.result }}"
+          check_gate "sync-tcr-worker-tools" "${{ needs.sync-tcr-worker-tools.result }}"
 
           if [ "${#FAILED[@]}" -gt 0 ]; then
             echo "gitee release blocked by prerequisite jobs:" >&2
