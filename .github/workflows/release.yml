@@ -58,6 +58,9 @@ jobs:
   build-installers:
     runs-on: ubuntu-22.04
     needs: [validate-tag, tests-gate]
+    defaults:
+      run:
+        shell: bash
     container:
       image: ${{ vars.CI_TOOLS_IMAGE != '' && vars.CI_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-ci-tools:stable', github.repository_owner) }}
       credentials:

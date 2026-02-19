@@ -105,6 +105,9 @@ jobs:
   verify-build-installers:
     needs: [build-ci-tools]
     runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
     container:
       image: ${{ needs.build-ci-tools.outputs.image_ref }}
       credentials:

@@ -16,6 +16,9 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-22.04  # Pin runner version for stability
+    defaults:
+      run:
+        shell: bash
     container:
       image: ${{ inputs.ci_tools_image != '' && inputs.ci_tools_image || (vars.CI_TOOLS_IMAGE != '' && vars.CI_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-ci-tools:stable', github.repository_owner)) }}
       credentials:
