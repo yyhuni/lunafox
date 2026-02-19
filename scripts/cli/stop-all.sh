@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 if [ -z "${BASH_VERSION:-}" ]; then
-  SCRIPT_PATH="$0"
-  case "$SCRIPT_PATH" in
-    /*|*/*) ;;
-    *) SCRIPT_PATH="./$SCRIPT_PATH" ;;
-  esac
-  exec /usr/bin/env bash "$SCRIPT_PATH" "$@"
+	SCRIPT_PATH="$0"
+	case "$SCRIPT_PATH" in
+	/* | */*) ;;
+	*) SCRIPT_PATH="./$SCRIPT_PATH" ;;
+	esac
+	exec /usr/bin/env bash "$SCRIPT_PATH" "$@"
 fi
 set -euo pipefail
 
@@ -25,16 +25,16 @@ RUNTIME_ENV_FILE="$ENV_FILE"
 TEMP_ENV_FILE=""
 
 cleanup_temp_env() {
-  if [ -n "$TEMP_ENV_FILE" ] && [ -f "$TEMP_ENV_FILE" ]; then
-    rm -f "$TEMP_ENV_FILE"
-    info "已清理临时停止配置: $TEMP_ENV_FILE"
-  fi
+	if [ -n "$TEMP_ENV_FILE" ] && [ -f "$TEMP_ENV_FILE" ]; then
+		rm -f "$TEMP_ENV_FILE"
+		info "已清理临时停止配置: $TEMP_ENV_FILE"
+	fi
 }
 
 trap cleanup_temp_env EXIT
 
 usage() {
-  cat <<'USAGE'
+	cat <<'USAGE'
 用法:
   ./stop.sh
 
@@ -44,54 +44,54 @@ USAGE
 }
 
 parse_args() {
-  while [ "$#" -gt 0 ]; do
-    case "$1" in
-      -h|--help)
-        usage
-        exit 0
-        ;;
-      *)
-        usage_error "不支持的参数: $1"
-        ;;
-    esac
-    shift
-  done
+	while [ "$#" -gt 0 ]; do
+		case "$1" in
+		-h | --help)
+			usage
+			exit 0
+			;;
+		*)
+			usage_error "不支持的参数: $1"
+			;;
+		esac
+		shift
+	done
 }
 
 check_system() {
-  info "系统环境校验..."
-  ensure_docker
-  detect_compose
+	info "系统环境校验..."
+	ensure_docker
+	detect_compose
 
-  if [ ! -f "$COMPOSE_PROD" ] && [ ! -f "$COMPOSE_DEV" ]; then
-    error "未找到可用 compose 文件（docker-compose.yml / docker-compose.dev.yml）"
-    exit 1
-  fi
+	if [ ! -f "$COMPOSE_PROD" ] && [ ! -f "$COMPOSE_DEV" ]; then
+		error "未找到可用 compose 文件（docker-compose.yml / docker-compose.dev.yml）"
+		exit 1
+	fi
 
-  info "使用 compose 命令: ${COMPOSE_CMD[*]}"
-  success "环境校验通过"
+	info "使用 compose 命令: ${COMPOSE_CMD[*]}"
+	success "环境校验通过"
 }
 
 stop_local_agent() {
-  local running_agents=()
-  while IFS= read -r container_name; do
-    [ -n "$container_name" ] || continue
-    running_agents+=("$container_name")
-  done < <(run_docker ps --format "{{.Names}}" | grep -E '^lunafox-agent($|-)' || true)
+	local running_agents=()
+	while IFS= read -r container_name; do
+		[ -n "$container_name" ] || continue
+		running_agents+=("$container_name")
+	done < <(run_docker ps --format "{{.Names}}" | grep -E '^lunafox-agent($|-)' || true)
 
-  if [ "${#running_agents[@]}" -eq 0 ]; then
-    return
-  fi
+	if [ "${#running_agents[@]}" -eq 0 ]; then
+		return
+	fi
 
-  info "检测到本地 Agent 容器，正在停止: ${running_agents[*]}"
-  run_docker stop "${running_agents[@]}" >/dev/null
-  success "本地 Agent 已停止"
+	info "检测到本地 Agent 容器，正在停止: ${running_agents[*]}"
+	run_docker stop "${running_agents[@]}" >/dev/null
+	success "本地 Agent 已停止"
 }
 
 stop_services() {
-  if [ ! -f "$ENV_FILE" ]; then
-    TEMP_ENV_FILE="$(mktemp "${TMPDIR:-/tmp}/lunafox-stop-env.XXXXXX")"
-    cat >"$TEMP_ENV_FILE" <<'EOF'
+	if [ ! -f "$ENV_FILE" ]; then
+		TEMP_ENV_FILE="$(mktemp "${TMPDIR:-/tmp}/lunafox-stop-env.XXXXXX")"
+		cat >"$TEMP_ENV_FILE" <<'EOF'
 IMAGE_TAG=cleanup
 JWT_SECRET=cleanup
 WORKER_TOKEN=cleanup
@@ -103,28 +103,28 @@ DB_USER=postgres
 DB_PORT=5432
 PUBLIC_PORT=8083
 EOF
-    RUNTIME_ENV_FILE="$TEMP_ENV_FILE"
-    warn "未找到 docker/.env，已生成临时停止配置"
-  else
-    RUNTIME_ENV_FILE="$ENV_FILE"
-  fi
+		RUNTIME_ENV_FILE="$TEMP_ENV_FILE"
+		warn "未找到 docker/.env，已生成临时停止配置"
+	else
+		RUNTIME_ENV_FILE="$ENV_FILE"
+	fi
 
-  if [ -f "$COMPOSE_PROD" ]; then
-    run_compose --env-file "$RUNTIME_ENV_FILE" -f "$COMPOSE_PROD" --profile local-db down --remove-orphans
-  fi
-  if [ -f "$COMPOSE_DEV" ]; then
-    run_compose --env-file "$RUNTIME_ENV_FILE" -f "$COMPOSE_DEV" down --remove-orphans
-  fi
+	if [ -f "$COMPOSE_PROD" ]; then
+		run_compose --env-file "$RUNTIME_ENV_FILE" -f "$COMPOSE_PROD" --profile local-db down --remove-orphans
+	fi
+	if [ -f "$COMPOSE_DEV" ]; then
+		run_compose --env-file "$RUNTIME_ENV_FILE" -f "$COMPOSE_DEV" down --remove-orphans
+	fi
 
-  stop_local_agent
+	stop_local_agent
 
-  success "服务已停止"
+	success "服务已停止"
 }
 
 main() {
-  parse_args "$@"
-  check_system
-  stop_services
+	parse_args "$@"
+	check_system
+	stop_services
 }
 
 main "$@"

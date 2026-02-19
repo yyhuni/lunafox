@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 if [ -z "${BASH_VERSION:-}" ]; then
-  SCRIPT_PATH="$0"
-  case "$SCRIPT_PATH" in
-    /*|*/*) ;;
-    *) SCRIPT_PATH="./$SCRIPT_PATH" ;;
-  esac
-  exec /usr/bin/env bash "$SCRIPT_PATH" "$@"
+	SCRIPT_PATH="$0"
+	case "$SCRIPT_PATH" in
+	/* | */*) ;;
+	*) SCRIPT_PATH="./$SCRIPT_PATH" ;;
+	esac
+	exec /usr/bin/env bash "$SCRIPT_PATH" "$@"
 fi
 set -euo pipefail
 
