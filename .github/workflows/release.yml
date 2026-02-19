@@ -174,6 +174,8 @@ jobs:
     outputs:
       tools_tag: ${{ steps.meta.outputs.tools_tag }}
       exists: ${{ steps.probe.outputs.exists }}
+      source_ref: ${{ steps.probe.outputs.source_ref }}
+      source_registry: ${{ steps.probe.outputs.source_registry }}
     steps:
       - uses: actions/checkout@v4
 
@@ -195,15 +197,32 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Check worker-tools image in Docker Hub
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Probe reusable worker-tools image
         id: probe
         run: |
           set -euo pipefail
-          REF="docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${{ steps.meta.outputs.tools_tag }}"
-          if docker buildx imagetools inspect "$REF" >/dev/null 2>&1; then
+          GHCR_REF="ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${{ steps.meta.outputs.tools_tag }}"
+          DOCKER_REF="docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${{ steps.meta.outputs.tools_tag }}"
+
+          if docker buildx imagetools inspect "$GHCR_REF" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "source_registry=ghcr" >> "$GITHUB_OUTPUT"
+            echo "source_ref=$GHCR_REF" >> "$GITHUB_OUTPUT"
+          elif docker buildx imagetools inspect "$DOCKER_REF" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "source_registry=dockerhub" >> "$GITHUB_OUTPUT"
+            echo "source_ref=$DOCKER_REF" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "source_registry=none" >> "$GITHUB_OUTPUT"
+            echo "source_ref=" >> "$GITHUB_OUTPUT"
           fi
 
   publish-worker-tools-amd64:
@@ -409,16 +428,35 @@ jobs:
           set -euo pipefail
           TOOLS_TAG="${{ needs.publish-worker-tools-meta.outputs.tools_tag }}"
           EXISTS="${{ needs.publish-worker-tools-meta.outputs.exists }}"
+          SOURCE_REGISTRY="${{ needs.publish-worker-tools-meta.outputs.source_registry }}"
+          SOURCE_REF="${{ needs.publish-worker-tools-meta.outputs.source_ref }}"
           [ -n "$TOOLS_TAG" ] || { echo "missing tools tag"; exit 1; }
 
           if [ "$EXISTS" = "true" ]; then
-            SRC="docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
             GHCR_TARGET="ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}"
             TCR_TARGET="${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
             ACR_TARGET="${ACR_REGISTRY}/${ACR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
-            docker buildx imagetools create --tag "$GHCR_TARGET" "$SRC"
-            docker buildx imagetools create --tag "$TCR_TARGET" "$SRC"
-            docker buildx imagetools create --tag "$ACR_TARGET" "$SRC"
+
+            [ -n "$SOURCE_REF" ] || { echo "missing source_ref when worker-tools exists"; exit 1; }
+            echo "reuse source: ${SOURCE_REGISTRY} -> ${SOURCE_REF}"
+
+            ensure_target_tag() {
+              local target="$1"
+              local src="$2"
+              if [ "$target" = "$src" ]; then
+                echo "skip copy, target equals source: $target"
+                return 0
+              fi
+              if docker buildx imagetools inspect "$target" >/dev/null 2>&1; then
+                echo "skip copy, target already exists: $target"
+                return 0
+              fi
+              docker buildx imagetools create --tag "$target" "$src"
+            }
+
+            ensure_target_tag "$GHCR_TARGET" "$SOURCE_REF"
+            ensure_target_tag "$TCR_TARGET" "$SOURCE_REF"
+            ensure_target_tag "$ACR_TARGET" "$SOURCE_REF"
             exit 0
           fi
 
@@ -681,7 +719,7 @@ jobs:
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker:buildcache-amd64,mode=max
           build-args: |
             GOPROXY=${{ vars.GOPROXY != '' && vars.GOPROXY || 'https://proxy.golang.org,direct' }}
-            WORKER_TOOLS_IMAGE=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools.outputs.tools_tag }}
+            WORKER_TOOLS_IMAGE=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:${{ needs.publish-worker-tools.outputs.tools_tag }}
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-amd64
             ghcr.io/${{ github.repository_owner }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-amd64
@@ -754,7 +792,7 @@ jobs:
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker:buildcache-arm64,mode=max
           build-args: |
             GOPROXY=${{ vars.GOPROXY != '' && vars.GOPROXY || 'https://proxy.golang.org,direct' }}
-            WORKER_TOOLS_IMAGE=docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools.outputs.tools_tag }}
+            WORKER_TOOLS_IMAGE=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:${{ needs.publish-worker-tools.outputs.tools_tag }}
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-arm64
             ghcr.io/${{ github.repository_owner }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-arm64
