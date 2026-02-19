@@ -43,6 +43,9 @@ RUN set -eux; \
     node -v; \
     npm -v; \
     npm install -g "pnpm@${PNPM_VERSION}"; \
+    pnpm_bin="/usr/local/lib/nodejs/node-v${NODE_VERSION}-linux-${node_arch}/bin/pnpm"; \
+    [ -x "${pnpm_bin}" ]; \
+    ln -sf "${pnpm_bin}" /usr/local/bin/pnpm; \
     which pnpm; \
     pnpm -v
 
