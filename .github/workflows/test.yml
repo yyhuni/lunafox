@@ -48,6 +48,10 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.26'
+          cache-dependency-path: |
+            server/go.sum
+            agent/go.sum
+            worker/go.sum
 
       - name: Install shell tooling
         run: |
