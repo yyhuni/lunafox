@@ -1,7 +1,7 @@
 name: Run Tests
 
 on:
-  workflow_call:  # Run only when called by another workflow
+  workflow_call:
     inputs:
       ci_tools_image:
         description: "Optional CI tools image override (digest recommended)"
@@ -14,7 +14,7 @@ permissions:
   packages: read
 
 jobs:
-  test:
+  frontend-and-scripts:
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -26,15 +26,13 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
     env:
       PNPM_STORE_PATH: ${{ github.workspace }}/.cache/pnpm-store
-      GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
-      GOCACHE: ${{ github.workspace }}/.cache/go-build
     steps:
       - uses: actions/checkout@v4
 
       - name: Prepare writable cache directories
         run: |
           set -euo pipefail
-          mkdir -p "${PNPM_STORE_PATH}" "${GOMODCACHE}" "${GOCACHE}"
+          mkdir -p "${PNPM_STORE_PATH}"
 
       - name: Ensure pnpm available
         run: |
@@ -49,7 +47,7 @@ jobs:
             corepack prepare "pnpm@10.30.0" --activate
           elif command -v npm >/dev/null 2>&1; then
             npm install -g --prefix "${GITHUB_WORKSPACE}/.npm-global" pnpm@10.30.0
-            export PATH="${GITHUB_WORKSPACE}/.npm-global/bin:${PATH}"
+            echo "${GITHUB_WORKSPACE}/.npm-global/bin" >> "$GITHUB_PATH"
           else
             echo "pnpm/corepack/npm all unavailable. Check CI_TOOLS_IMAGE contents." >&2
             exit 1
@@ -67,16 +65,6 @@ jobs:
 
       - name: Configure pnpm store
         run: pnpm config set store-dir "${PNPM_STORE_PATH}"
-
-      - name: Cache Go modules and build cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ env.GOMODCACHE }}
-            ${{ env.GOCACHE }}
-          key: ${{ runner.os }}-go-cache-${{ hashFiles('server/go.sum', 'agent/go.sum', 'worker/go.sum', 'tools/installer/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-cache-
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -252,12 +240,74 @@ jobs:
             exit 1
           fi
 
+      - name: Check repo naming conventions
+        run: bash ./scripts/check-repo-naming.sh
+
+  worker-tests:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: ${{ inputs.ci_tools_image != '' && inputs.ci_tools_image || (vars.CI_TOOLS_IMAGE != '' && vars.CI_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-ci-tools:stable', github.repository_owner)) }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
+      GOCACHE: ${{ github.workspace }}/.cache/go-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare writable cache directories
+        run: |
+          set -euo pipefail
+          mkdir -p "${GOMODCACHE}" "${GOCACHE}"
+
+      - name: Cache Go modules and build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.GOMODCACHE }}
+            ${{ env.GOCACHE }}
+          key: ${{ runner.os }}-go-cache-worker-${{ hashFiles('worker/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-cache-worker-
+
       - name: Run worker tests
         working-directory: worker
         run: make test
 
-      - name: Check repo naming conventions
-        run: bash ./scripts/check-repo-naming.sh
+  server-tests:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: ${{ inputs.ci_tools_image != '' && inputs.ci_tools_image || (vars.CI_TOOLS_IMAGE != '' && vars.CI_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-ci-tools:stable', github.repository_owner)) }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
+      GOCACHE: ${{ github.workspace }}/.cache/go-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare writable cache directories
+        run: |
+          set -euo pipefail
+          mkdir -p "${GOMODCACHE}" "${GOCACHE}"
+
+      - name: Cache Go modules and build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.GOMODCACHE }}
+            ${{ env.GOCACHE }}
+          key: ${{ runner.os }}-go-cache-server-${{ hashFiles('server/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-cache-server-
 
       - name: Check server DDD boundaries
         working-directory: server
@@ -271,9 +321,71 @@ jobs:
         working-directory: server
         run: make test
 
+  agent-tests:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: ${{ inputs.ci_tools_image != '' && inputs.ci_tools_image || (vars.CI_TOOLS_IMAGE != '' && vars.CI_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-ci-tools:stable', github.repository_owner)) }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
+      GOCACHE: ${{ github.workspace }}/.cache/go-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare writable cache directories
+        run: |
+          set -euo pipefail
+          mkdir -p "${GOMODCACHE}" "${GOCACHE}"
+
+      - name: Cache Go modules and build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.GOMODCACHE }}
+            ${{ env.GOCACHE }}
+          key: ${{ runner.os }}-go-cache-agent-${{ hashFiles('agent/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-cache-agent-
+
       - name: Run agent tests
         working-directory: agent
         run: make test
+
+  installer-tests:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: ${{ inputs.ci_tools_image != '' && inputs.ci_tools_image || (vars.CI_TOOLS_IMAGE != '' && vars.CI_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-ci-tools:stable', github.repository_owner)) }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
+      GOCACHE: ${{ github.workspace }}/.cache/go-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare writable cache directories
+        run: |
+          set -euo pipefail
+          mkdir -p "${GOMODCACHE}" "${GOCACHE}"
+
+      - name: Cache Go modules and build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.GOMODCACHE }}
+            ${{ env.GOCACHE }}
+          key: ${{ runner.os }}-go-cache-installer-${{ hashFiles('tools/installer/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-cache-installer-
 
       - name: Run installer tests
         working-directory: tools/installer
@@ -294,3 +406,15 @@ jobs:
             done
           done
           ls -l "$OUT_DIR"
+
+  test:
+    runs-on: ubuntu-22.04
+    needs:
+      - frontend-and-scripts
+      - worker-tests
+      - server-tests
+      - agent-tests
+      - installer-tests
+    steps:
+      - name: Aggregate parallel test results
+        run: echo "All parallel test jobs passed."
