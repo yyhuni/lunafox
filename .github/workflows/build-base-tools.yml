@@ -1,0 +1,89 @@
+name: Build Base Tools Image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, develop]
+    paths:
+      - docker/base-tools/Dockerfile
+      - .github/workflows/build-base-tools.yml
+
+permissions:
+  contents: read
+  packages: write
+  actions: write
+
+jobs:
+  build-base-tools:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare image metadata
+        id: meta
+        run: |
+          set -euo pipefail
+          echo "date_tag=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push base-tools image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./docker/base-tools/Dockerfile
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/lunafox-base-tools:stable
+            ghcr.io/${{ github.repository_owner }}/lunafox-base-tools:${{ steps.meta.outputs.date_tag }}
+            ghcr.io/${{ github.repository_owner }}/lunafox-base-tools:run-${{ github.run_id }}
+
+      - name: Publish digest summary
+        id: summary
+        run: |
+          set -euo pipefail
+          image_ref="ghcr.io/${{ github.repository_owner }}/lunafox-base-tools@${{ steps.build.outputs.digest }}"
+          echo "## Base Tools Image" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- BASE_TOOLS_IMAGE=${image_ref}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- tags: stable, ${{ steps.meta.outputs.date_tag }}, run-${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "image_ref=${image_ref}" >> "$GITHUB_OUTPUT"
+
+      - name: Upsert BASE_TOOLS_IMAGE repository variable
+        if: |
+          (github.event_name == 'push' && github.ref_name == 'main') ||
+          github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v7
+        env:
+          BASE_TOOLS_IMAGE_VALUE: ${{ steps.summary.outputs.image_ref }}
+        with:
+          script: |
+            const name = "BASE_TOOLS_IMAGE"
+            const value = process.env.BASE_TOOLS_IMAGE_VALUE
+            const { owner, repo } = context.repo
+
+            if (!value) {
+              core.setFailed("BASE_TOOLS_IMAGE_VALUE is empty")
+              return
+            }
+
+            try {
+              await github.rest.actions.getRepoVariable({ owner, repo, name })
+              await github.rest.actions.updateRepoVariable({ owner, repo, name, value })
+              core.info(`Updated repository variable ${name}`)
+            } catch (error) {
+              if (error.status !== 404) throw error
+              await github.rest.actions.createRepoVariable({ owner, repo, name, value })
+              core.info(`Created repository variable ${name}`)
+            }

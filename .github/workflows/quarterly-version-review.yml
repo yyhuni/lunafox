@@ -1,0 +1,78 @@
+name: Quarterly Version Review
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 1 1,4,7,10 *"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  quarterly-review:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare artifacts directory
+        run: mkdir -p artifacts
+
+      - name: Generate version inventory
+        run: bash ./scripts/ci/version_inventory.sh artifacts/version-inventory.json
+
+      - name: Render quarterly issue body
+        run: bash ./scripts/ci/render_quarterly_issue.sh artifacts/version-inventory.json artifacts/quarterly-version-review.md
+
+      - name: Compute issue title
+        id: quarter
+        run: |
+          set -euo pipefail
+          year="$(date -u +%Y)"
+          month="$(date -u +%-m)"
+          quarter="$(( (month - 1) / 3 + 1 ))"
+          echo "title=[Quarterly] Version Review ${year}-Q${quarter}" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update quarterly issue
+        uses: actions/github-script@v7
+        env:
+          ISSUE_TITLE: ${{ steps.quarter.outputs.title }}
+        with:
+          script: |
+            const fs = require('fs')
+            const title = process.env.ISSUE_TITLE
+            const body = fs.readFileSync('artifacts/quarterly-version-review.md', 'utf8')
+            const labels = ['dependencies', 'security', 'maintenance']
+            const { owner, repo } = context.repo
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            })
+
+            const existing = issues.find((issue) => !issue.pull_request && issue.title === title)
+
+            if (existing) {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existing.number,
+                title,
+                body,
+                labels,
+              })
+              core.info(`Updated quarterly issue #${existing.number}`)
+              return
+            }
+
+            const created = await github.rest.issues.create({
+              owner,
+              repo,
+              title,
+              body,
+              labels,
+            })
+
+            core.info(`Created quarterly issue #${created.data.number}`)

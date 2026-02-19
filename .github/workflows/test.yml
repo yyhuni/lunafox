@@ -2,28 +2,51 @@ name: Run Tests
 
 on:
   workflow_call:  # Run only when called by another workflow
+    inputs:
+      ci_tools_image:
+        description: "Optional CI tools image override (digest recommended)"
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   test:
     runs-on: ubuntu-22.04
+    container:
+      image: ${{ inputs.ci_tools_image != '' && inputs.ci_tools_image || vars.CI_TOOLS_IMAGE }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      GOMODCACHE: /root/go/pkg/mod
+      GOCACHE: /root/.cache/go-build
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+      - name: Cache pnpm store
+        uses: actions/cache@v4
         with:
-          version: 10.30.0
-          run_install: false
+          path: /root/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Configure pnpm store
+        run: pnpm config set store-dir /root/.pnpm-store
+
+      - name: Cache Go modules and build cache
+        uses: actions/cache@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: frontend/pnpm-lock.yaml
+          path: |
+            /root/go/pkg/mod
+            /root/.cache/go-build
+          key: ${{ runner.os }}-go-cache-${{ hashFiles('server/go.sum', 'agent/go.sum', 'worker/go.sum', 'tools/installer/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-cache-
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -44,27 +67,6 @@ jobs:
       - name: Frontend test
         working-directory: frontend
         run: pnpm run test
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: server/go.mod
-          cache: true
-          cache-dependency-path: |
-            server/go.sum
-            agent/go.sum
-            worker/go.sum
-            tools/installer/go.sum
-
-      - name: Install shell tooling
-        run: |
-          set -euo pipefail
-          if ! command -v shellcheck >/dev/null 2>&1 || ! command -v rg >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y shellcheck ripgrep
-          fi
-          go install mvdan.cc/sh/v3/cmd/shfmt@v3.10.0
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
       - name: Shell static checks
         run: |

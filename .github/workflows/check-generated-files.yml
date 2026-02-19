@@ -2,22 +2,40 @@ name: Check Generated Files
 
 on:
   workflow_call:  # Run only when called by another workflow
+    inputs:
+      ci_tools_image:
+        description: "Optional CI tools image override (digest recommended)"
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   check:
     runs-on: ubuntu-22.04  # Pin runner version for stability
+    container:
+      image: ${{ inputs.ci_tools_image != '' && inputs.ci_tools_image || vars.CI_TOOLS_IMAGE }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      GOMODCACHE: /root/go/pkg/mod
+      GOCACHE: /root/.cache/go-build
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Cache Go modules and build cache
+        uses: actions/cache@v4
         with:
-          go-version-file: worker/go.mod
-          cache: true
-          cache-dependency-path: worker/go.sum
+          path: |
+            /root/go/pkg/mod
+            /root/.cache/go-build
+          key: ${{ runner.os }}-go-cache-worker-${{ hashFiles('worker/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-cache-worker-
 
       - name: Generate files for all workflows
         working-directory: worker

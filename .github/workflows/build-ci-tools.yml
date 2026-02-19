@@ -1,0 +1,200 @@
+name: Build CI Tools Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_tools_image:
+        description: "Optional BASE_TOOLS_IMAGE override (digest recommended)"
+        required: false
+        type: string
+  push:
+    branches: [main, develop]
+    paths:
+      - docker/ci-tools/Dockerfile
+      - .github/workflows/build-ci-tools.yml
+  workflow_run:
+    workflows: ["Build Base Tools Image"]
+    types: [completed]
+
+permissions:
+  contents: read
+  packages: write
+  actions: write
+
+jobs:
+  build-ci-tools:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-22.04
+    env:
+      BASE_TOOLS_IMAGE: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.base_tools_image != '' && github.event.inputs.base_tools_image) || vars.BASE_TOOLS_IMAGE }}
+    outputs:
+      image_ref: ${{ steps.summary.outputs.image_ref }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate base tools image
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE_TOOLS_IMAGE:-}" ]; then
+            echo "BASE_TOOLS_IMAGE is empty. Set repository variable BASE_TOOLS_IMAGE or pass workflow input base_tools_image." >&2
+            exit 1
+          fi
+          echo "Using BASE_TOOLS_IMAGE=${BASE_TOOLS_IMAGE}"
+
+      - name: Prepare image metadata
+        id: meta
+        run: |
+          set -euo pipefail
+          echo "date_tag=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ci-tools image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./docker/ci-tools/Dockerfile
+          push: true
+          provenance: false
+          sbom: false
+          build-args: |
+            BASE_TOOLS_IMAGE=${{ env.BASE_TOOLS_IMAGE }}
+            GO_VERSION=1.26.0
+            NODE_VERSION=20.20.0
+            PNPM_VERSION=10.30.0
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/lunafox-ci-tools:stable
+            ghcr.io/${{ github.repository_owner }}/lunafox-ci-tools:${{ steps.meta.outputs.date_tag }}
+            ghcr.io/${{ github.repository_owner }}/lunafox-ci-tools:run-${{ github.run_id }}
+
+      - name: Publish digest summary
+        id: summary
+        run: |
+          set -euo pipefail
+          image_ref="ghcr.io/${{ github.repository_owner }}/lunafox-ci-tools@${{ steps.build.outputs.digest }}"
+          echo "## CI Tools Image" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- BASE_TOOLS_IMAGE=${BASE_TOOLS_IMAGE}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- CI_TOOLS_IMAGE=${image_ref}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- tags: stable, ${{ steps.meta.outputs.date_tag }}, run-${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "image_ref=${image_ref}" >> "$GITHUB_OUTPUT"
+
+  verify-test:
+    needs: [build-ci-tools]
+    uses: ./.github/workflows/test.yml
+    with:
+      ci_tools_image: ${{ needs.build-ci-tools.outputs.image_ref }}
+    secrets: inherit
+
+  verify-check-generated:
+    needs: [build-ci-tools]
+    uses: ./.github/workflows/check-generated-files.yml
+    with:
+      ci_tools_image: ${{ needs.build-ci-tools.outputs.image_ref }}
+    secrets: inherit
+
+  verify-build-installers:
+    needs: [build-ci-tools]
+    runs-on: ubuntu-22.04
+    container:
+      image: ${{ needs.build-ci-tools.outputs.image_ref }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      GOMODCACHE: /root/go/pkg/mod
+      GOCACHE: /root/.cache/go-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Go modules and build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            /root/go/pkg/mod
+            /root/.cache/go-build
+          key: ${{ runner.os }}-go-cache-installer-${{ hashFiles('tools/installer/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-cache-installer-
+
+      - name: Build installer binaries (verification)
+        working-directory: tools/installer
+        run: |
+          set -euo pipefail
+          BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          TAG="ci-tools-verify-${GITHUB_RUN_ID}"
+          OUT_DIR="$GITHUB_WORKSPACE/dist/release"
+          mkdir -p "$OUT_DIR"
+
+          build_one() {
+            local goos="$1"
+            local goarch="$2"
+            local out="$3"
+            CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
+              go build -trimpath \
+                -ldflags "-s -w \
+                -X 'github.com/yyhuni/lunafox/tools/installer/internal/buildinfo.Version=${TAG}' \
+                -X 'github.com/yyhuni/lunafox/tools/installer/internal/buildinfo.Commit=${GITHUB_SHA}' \
+                -X 'github.com/yyhuni/lunafox/tools/installer/internal/buildinfo.BuildTime=${BUILD_TIME}'" \
+                -o "$out" \
+                ./cmd/lunafox-installer
+          }
+
+          build_one "linux" "amd64" "$OUT_DIR/lunafox-installer-linux-amd64"
+          build_one "linux" "arm64" "$OUT_DIR/lunafox-installer-linux-arm64"
+          build_one "darwin" "amd64" "$OUT_DIR/lunafox-installer-darwin-amd64"
+          build_one "darwin" "arm64" "$OUT_DIR/lunafox-installer-darwin-arm64"
+          ls -lah "$OUT_DIR"
+
+  promote-ci-tools-variable:
+    if: |
+      always() &&
+      needs.build-ci-tools.result == 'success' &&
+      needs.verify-test.result == 'success' &&
+      needs.verify-check-generated.result == 'success' &&
+      needs.verify-build-installers.result == 'success' &&
+      (
+        (github.event_name == 'push' && github.ref_name == 'main') ||
+        (github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main') ||
+        github.event_name == 'workflow_dispatch'
+      )
+    needs:
+      - build-ci-tools
+      - verify-test
+      - verify-check-generated
+      - verify-build-installers
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Upsert CI_TOOLS_IMAGE repository variable
+        uses: actions/github-script@v7
+        env:
+          CI_TOOLS_IMAGE_VALUE: ${{ needs.build-ci-tools.outputs.image_ref }}
+        with:
+          script: |
+            const name = "CI_TOOLS_IMAGE"
+            const value = process.env.CI_TOOLS_IMAGE_VALUE
+            const { owner, repo } = context.repo
+
+            if (!value) {
+              core.setFailed("CI_TOOLS_IMAGE_VALUE is empty")
+              return
+            }
+
+            try {
+              await github.rest.actions.getRepoVariable({ owner, repo, name })
+              await github.rest.actions.updateRepoVariable({ owner, repo, name, value })
+              core.info(`Updated repository variable ${name}`)
+            } catch (error) {
+              if (error.status !== 404) throw error
+              await github.rest.actions.createRepoVariable({ owner, repo, name, value })
+              core.info(`Created repository variable ${name}`)
+            }
