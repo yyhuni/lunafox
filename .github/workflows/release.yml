@@ -782,7 +782,7 @@ jobs:
 
           retry_imagetools_inspect() {
             local ref="$1"
-            local delays=(0 2 4 8 12)
+            local delays=(0 3 6 12 20 30)
             local delay
             for delay in "${delays[@]}"; do
               if [ "$delay" -gt 0 ]; then
@@ -859,6 +859,10 @@ jobs:
             retry_imagetools_create "$ghcr_staging_ref" "$ghcr_amd64_ref" "$ghcr_arm64_ref"
             retry_imagetools_create "$tcr_staging_ref" "$ghcr_staging_ref"
             retry_imagetools_create "$acr_staging_ref" "$ghcr_staging_ref"
+
+            # Wait for registry propagation (TCR/ACR need extra time)
+            sleep 5
+
             retry_imagetools_inspect "$docker_staging_ref"
             retry_imagetools_inspect "$ghcr_staging_ref"
             retry_imagetools_inspect "$tcr_staging_ref"
