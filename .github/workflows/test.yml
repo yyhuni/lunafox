@@ -17,15 +17,21 @@ jobs:
   test:
     runs-on: ubuntu-22.04
     container:
-      image: ${{ inputs.ci_tools_image != '' && inputs.ci_tools_image || vars.CI_TOOLS_IMAGE }}
+      image: ${{ inputs.ci_tools_image != '' && inputs.ci_tools_image || (vars.CI_TOOLS_IMAGE != '' && vars.CI_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-ci-tools:stable', github.repository_owner)) }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     env:
-      GOMODCACHE: /root/go/pkg/mod
-      GOCACHE: /root/.cache/go-build
+      PNPM_STORE_PATH: ${{ github.workspace }}/.cache/pnpm-store
+      GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
+      GOCACHE: ${{ github.workspace }}/.cache/go-build
     steps:
       - uses: actions/checkout@v4
+
+      - name: Prepare writable cache directories
+        run: |
+          set -euo pipefail
+          mkdir -p "${PNPM_STORE_PATH}" "${GOMODCACHE}" "${GOCACHE}"
 
       - name: Ensure pnpm available
         run: |
@@ -39,7 +45,8 @@ jobs:
             corepack enable
             corepack prepare "pnpm@10.30.0" --activate
           elif command -v npm >/dev/null 2>&1; then
-            npm install -g pnpm@10.30.0
+            npm install -g --prefix "${GITHUB_WORKSPACE}/.npm-global" pnpm@10.30.0
+            export PATH="${GITHUB_WORKSPACE}/.npm-global/bin:${PATH}"
           else
             echo "pnpm/corepack/npm all unavailable. Check CI_TOOLS_IMAGE contents." >&2
             exit 1
@@ -50,20 +57,20 @@ jobs:
       - name: Cache pnpm store
         uses: actions/cache@v4
         with:
-          path: /root/.pnpm-store
+          path: ${{ env.PNPM_STORE_PATH }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
       - name: Configure pnpm store
-        run: pnpm config set store-dir /root/.pnpm-store
+        run: pnpm config set store-dir "${PNPM_STORE_PATH}"
 
       - name: Cache Go modules and build cache
         uses: actions/cache@v4
         with:
           path: |
-            /root/go/pkg/mod
-            /root/.cache/go-build
+            ${{ env.GOMODCACHE }}
+            ${{ env.GOCACHE }}
           key: ${{ runner.os }}-go-cache-${{ hashFiles('server/go.sum', 'agent/go.sum', 'worker/go.sum', 'tools/installer/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-cache-

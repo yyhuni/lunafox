@@ -83,7 +83,19 @@ jobs:
               await github.rest.actions.updateRepoVariable({ owner, repo, name, value })
               core.info(`Updated repository variable ${name}`)
             } catch (error) {
+              if (error.status === 403) {
+                core.warning(`No permission to update repository variable ${name}; skipping auto-promotion.`)
+                return
+              }
               if (error.status !== 404) throw error
-              await github.rest.actions.createRepoVariable({ owner, repo, name, value })
-              core.info(`Created repository variable ${name}`)
+              try {
+                await github.rest.actions.createRepoVariable({ owner, repo, name, value })
+                core.info(`Created repository variable ${name}`)
+              } catch (createError) {
+                if (createError.status === 403) {
+                  core.warning(`No permission to create repository variable ${name}; skipping auto-promotion.`)
+                  return
+                }
+                throw createError
+              }
             }

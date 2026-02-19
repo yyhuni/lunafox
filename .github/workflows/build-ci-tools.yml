@@ -26,7 +26,7 @@ jobs:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-22.04
     env:
-      BASE_TOOLS_IMAGE: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.base_tools_image != '' && github.event.inputs.base_tools_image) || vars.BASE_TOOLS_IMAGE }}
+      BASE_TOOLS_IMAGE: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.base_tools_image != '' && github.event.inputs.base_tools_image) || (vars.BASE_TOOLS_IMAGE != '' && vars.BASE_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-base-tools:stable', github.repository_owner)) }}
     outputs:
       image_ref: ${{ steps.summary.outputs.image_ref }}
     steps:
@@ -111,17 +111,22 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     env:
-      GOMODCACHE: /root/go/pkg/mod
-      GOCACHE: /root/.cache/go-build
+      GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
+      GOCACHE: ${{ github.workspace }}/.cache/go-build
     steps:
       - uses: actions/checkout@v4
+
+      - name: Prepare writable cache directories
+        run: |
+          set -euo pipefail
+          mkdir -p "${GOMODCACHE}" "${GOCACHE}"
 
       - name: Cache Go modules and build cache
         uses: actions/cache@v4
         with:
           path: |
-            /root/go/pkg/mod
-            /root/.cache/go-build
+            ${{ env.GOMODCACHE }}
+            ${{ env.GOCACHE }}
           key: ${{ runner.os }}-go-cache-installer-${{ hashFiles('tools/installer/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-cache-installer-
@@ -194,7 +199,19 @@ jobs:
               await github.rest.actions.updateRepoVariable({ owner, repo, name, value })
               core.info(`Updated repository variable ${name}`)
             } catch (error) {
+              if (error.status === 403) {
+                core.warning(`No permission to update repository variable ${name}; skipping auto-promotion.`)
+                return
+              }
               if (error.status !== 404) throw error
-              await github.rest.actions.createRepoVariable({ owner, repo, name, value })
-              core.info(`Created repository variable ${name}`)
+              try {
+                await github.rest.actions.createRepoVariable({ owner, repo, name, value })
+                core.info(`Created repository variable ${name}`)
+              } catch (createError) {
+                if (createError.status === 403) {
+                  core.warning(`No permission to create repository variable ${name}; skipping auto-promotion.`)
+                  return
+                }
+                throw createError
+              }
             }

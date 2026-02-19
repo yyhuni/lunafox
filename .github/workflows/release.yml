@@ -59,22 +59,27 @@ jobs:
     runs-on: ubuntu-22.04
     needs: [validate-tag, tests-gate]
     container:
-      image: ${{ vars.CI_TOOLS_IMAGE }}
+      image: ${{ vars.CI_TOOLS_IMAGE != '' && vars.CI_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-ci-tools:stable', github.repository_owner) }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     env:
-      GOMODCACHE: /root/go/pkg/mod
-      GOCACHE: /root/.cache/go-build
+      GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
+      GOCACHE: ${{ github.workspace }}/.cache/go-build
     steps:
       - uses: actions/checkout@v4
+
+      - name: Prepare writable cache directories
+        run: |
+          set -euo pipefail
+          mkdir -p "${GOMODCACHE}" "${GOCACHE}"
 
       - name: Cache Go modules and build cache
         uses: actions/cache@v4
         with:
           path: |
-            /root/go/pkg/mod
-            /root/.cache/go-build
+            ${{ env.GOMODCACHE }}
+            ${{ env.GOCACHE }}
           key: ${{ runner.os }}-go-cache-installer-${{ hashFiles('tools/installer/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-cache-installer-
