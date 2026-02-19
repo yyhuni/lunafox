@@ -290,7 +290,7 @@ jobs:
           for GOOS in linux darwin; do
             for GOARCH in amd64 arm64; do
               CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" \
-                go build -trimpath -o "$OUT_DIR/lunafox-installer-${GOOS}-${GOARCH}" ./cmd/lunafox-installer
+                go build -trimpath -buildvcs=false -o "$OUT_DIR/lunafox-installer-${GOOS}-${GOARCH}" ./cmd/lunafox-installer
             done
           done
           ls -l "$OUT_DIR"

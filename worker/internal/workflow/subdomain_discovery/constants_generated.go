@@ -13,9 +13,9 @@ const (
 
 // Tool name constants (auto-generated from templates.yaml)
 const (
+	toolSubdomainResolve = "subdomain-resolve"
+	toolSubdomainPermutationResolve = "subdomain-permutation-resolve"
 	toolSubfinder = "subfinder"
 	toolAssetfinder = "assetfinder"
 	toolSubdomainBruteforce = "subdomain-bruteforce"
-	toolSubdomainResolve = "subdomain-resolve"
-	toolSubdomainPermutationResolve = "subdomain-permutation-resolve"
 )

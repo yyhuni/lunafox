@@ -149,6 +149,7 @@ jobs:
             local out="$3"
             CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
               go build -trimpath \
+                -buildvcs=false \
                 -ldflags "-s -w \
                 -X 'github.com/yyhuni/lunafox/tools/installer/internal/buildinfo.Version=${TAG}' \
                 -X 'github.com/yyhuni/lunafox/tools/installer/internal/buildinfo.Commit=${GITHUB_SHA}' \

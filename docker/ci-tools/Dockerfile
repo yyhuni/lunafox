@@ -7,9 +7,9 @@ ARG GO_VERSION=1.26.0
 ARG NODE_VERSION=20.20.0
 ARG PNPM_VERSION=10.30.0
 
-ENV GOPATH=/root/go
-ENV GOCACHE=/root/.cache/go-build
-ENV GOMODCACHE=/root/go/pkg/mod
+ENV GOPATH=/home/runner/go
+ENV GOCACHE=/home/runner/.cache/go-build
+ENV GOMODCACHE=/home/runner/go/pkg/mod
 ENV PATH=/usr/local/go/bin:/usr/local/bin:${PATH}
 
 RUN set -eux; \
@@ -48,5 +48,12 @@ RUN set -eux; \
     ln -sf "${pnpm_bin}" /usr/local/bin/pnpm; \
     which pnpm; \
     pnpm -v
+
+RUN set -eux; \
+    useradd --create-home --uid 1001 --shell /bin/bash runner; \
+    mkdir -p /home/runner/.cache/go-build /home/runner/go/pkg/mod; \
+    chown -R runner:runner /home/runner
+
+USER runner
 
 CMD ["bash"]
