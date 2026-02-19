@@ -1068,22 +1068,13 @@ jobs:
           TMP_DIR="$(mktemp -d)"
           trap 'rm -rf "$TMP_DIR"' EXIT
 
-          STATUS=$(curl -sS -o "$TMP_DIR/release.json" -w "%{http_code}" \
-            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-            -H "Accept: application/vnd.github+json" \
-            "${API}/releases/tags/${TAG}")
-
-          if [ "$STATUS" -lt 200 ] || [ "$STATUS" -ge 300 ]; then
-            echo "failed to load github release for tag ${TAG}, status=${STATUS}" >&2
-            cat "$TMP_DIR/release.json" >&2 || true
-            exit 1
-          fi
-
-          read -r RELEASE_ID IS_DRAFT < <(python3 - "$TMP_DIR/release.json" <<'PY'
+          extract_release_meta() {
+            python3 - "$1" "$2" <<'PY'
           import json
           import sys
 
           path = sys.argv[1]
+          tag = sys.argv[2]
           try:
               with open(path, "r", encoding="utf-8") as f:
                   payload = json.load(f)
@@ -1091,16 +1082,68 @@ jobs:
               print("")
               sys.exit(0)
 
-          release_id = payload.get("id") if isinstance(payload, dict) else None
-          draft = payload.get("draft") if isinstance(payload, dict) else None
-          if release_id is None:
-              print("")
-          else:
+          def emit(item):
+              if not isinstance(item, dict):
+                  return False
+              release_id = item.get("id")
+              if release_id is None:
+                  return False
+              draft = item.get("draft")
               print(f"{release_id} {'true' if draft else 'false'}")
-          PY
-          )
+              return True
 
-          [ -n "${RELEASE_ID:-}" ] || { echo "missing github release id for tag ${TAG}" >&2; exit 1; }
+          if isinstance(payload, dict):
+              emit(payload)
+              sys.exit(0)
+
+          if isinstance(payload, list):
+              for item in payload:
+                  if isinstance(item, dict) and item.get("tag_name") == tag:
+                      emit(item)
+                      sys.exit(0)
+
+          print("")
+          PY
+          }
+
+          RELEASE_ID=""
+          IS_DRAFT="false"
+          LIST_STATUS=""
+
+          STATUS=$(curl -sS -o "$TMP_DIR/release.json" -w "%{http_code}" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${API}/releases/tags/${TAG}")
+
+          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 300 ]; then
+            read -r RELEASE_ID IS_DRAFT < <(extract_release_meta "$TMP_DIR/release.json" "$TAG")
+          elif [ "$STATUS" -eq 404 ]; then
+            LIST_STATUS=$(curl -sS -o "$TMP_DIR/releases.json" -w "%{http_code}" \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "${API}/releases?per_page=100")
+
+            if [ "$LIST_STATUS" -ge 200 ] && [ "$LIST_STATUS" -lt 300 ]; then
+              read -r RELEASE_ID IS_DRAFT < <(extract_release_meta "$TMP_DIR/releases.json" "$TAG")
+            else
+              echo "failed to list github releases for fallback lookup, status=${LIST_STATUS}" >&2
+              cat "$TMP_DIR/releases.json" >&2 || true
+              exit 1
+            fi
+          else
+            echo "failed to load github release for tag ${TAG}, status=${STATUS}" >&2
+            cat "$TMP_DIR/release.json" >&2 || true
+            exit 1
+          fi
+
+          if [ -z "${RELEASE_ID:-}" ]; then
+            echo "missing github release id for tag ${TAG}" >&2
+            echo "lookup by tag status: ${STATUS}" >&2
+            if [ -n "$LIST_STATUS" ]; then
+              echo "lookup by list status: ${LIST_STATUS}" >&2
+            fi
+            exit 1
+          fi
           [ -n "${IS_DRAFT:-}" ] || IS_DRAFT="false"
 
           if [ "$IS_DRAFT" != "true" ]; then
@@ -1182,12 +1225,14 @@ jobs:
           # release only after image promotion completes.
           TAG="${{ needs.validate-tag.outputs.tag }}"
           PRERELEASE="${{ needs.validate-tag.outputs.prerelease }}"
+          TARGET_COMMITISH="${GITHUB_SHA}"
+          [ -n "$TARGET_COMMITISH" ] || { echo "missing target commitish"; exit 1; }
           API="https://gitee.com/api/v5/repos/${GITEE_OWNER}/${GITEE_REPO}"
           TMP_DIR="$(mktemp -d)"
           trap 'rm -rf "$TMP_DIR"' EXIT
 
           PAYLOAD=$(cat <<JSON
-          {"tag_name":"${TAG}","name":"${TAG}","body":"Automated release for ${TAG}","prerelease":${PRERELEASE}}
+          {"tag_name":"${TAG}","target_commitish":"${TARGET_COMMITISH}","name":"${TAG}","body":"Automated release for ${TAG}","prerelease":${PRERELEASE}}
           JSON
           )
 
@@ -1231,7 +1276,7 @@ jobs:
           # prerelease fields. Retry create with a minimal payload.
           if [ -z "$RELEASE_ID" ] && [ "$PRERELEASE" = "true" ]; then
             COMPAT_PAYLOAD=$(cat <<JSON
-          {"tag_name":"${TAG}","name":"${TAG}","body":"Automated release for ${TAG}"}
+          {"tag_name":"${TAG}","target_commitish":"${TARGET_COMMITISH}","name":"${TAG}","body":"Automated release for ${TAG}"}
           JSON
             )
             COMPAT_STATUS=$(curl -sS -o "$TMP_DIR/create-compat.json" -w "%{http_code}" \
