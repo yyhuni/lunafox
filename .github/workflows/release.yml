@@ -385,7 +385,7 @@ jobs:
             if [ "$delay" -gt 0 ]; then
               sleep "$delay"
             fi
-            if printf '%s' "${{ secrets.TCR_PASSWORD }}" | docker login "${TCR_REGISTRY}" --username "${{ secrets.TCR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
+            if printf '%s' "${{ secrets.TCR_PASSWORD }}" | docker login "${TCR_REGISTRY}" --username "${{ secrets.TCR_USERNAME }}" --password-stdin; then
               exit 0
             fi
           done
@@ -753,7 +753,7 @@ jobs:
             if [ "$delay" -gt 0 ]; then
               sleep "$delay"
             fi
-            if printf '%s' "${{ secrets.TCR_PASSWORD }}" | docker login "${TCR_REGISTRY}" --username "${{ secrets.TCR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
+            if printf '%s' "${{ secrets.TCR_PASSWORD }}" | docker login "${TCR_REGISTRY}" --username "${{ secrets.TCR_USERNAME }}" --password-stdin; then
               exit 0
             fi
           done
