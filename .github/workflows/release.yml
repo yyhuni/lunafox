@@ -249,44 +249,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validate TCR and ACR credentials
-        run: |
-          set -euo pipefail
-          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
-          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
-          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
-          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
-
-      - name: Log in to Tencent TCR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.TCR_PASSWORD }}" | docker login "${TCR_REGISTRY}" --username "${{ secrets.TCR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${TCR_REGISTRY} after retries" >&2
-          exit 1
-
-      - name: Log in to Alibaba ACR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.ACR_PASSWORD }}" | docker login "${ACR_REGISTRY}" --username "${{ secrets.ACR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${ACR_REGISTRY} after retries" >&2
-          exit 1
-
       - name: Build and push worker tools image (amd64)
         uses: docker/build-push-action@v6
         with:
@@ -304,8 +266,6 @@ jobs:
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-amd64
             ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-amd64
-            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-amd64
-            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-amd64
           cache-from: |
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-amd64
           cache-to: |
@@ -335,44 +295,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validate TCR and ACR credentials
-        run: |
-          set -euo pipefail
-          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
-          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
-          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
-          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
-
-      - name: Log in to Tencent TCR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.TCR_PASSWORD }}" | docker login "${TCR_REGISTRY}" --username "${{ secrets.TCR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${TCR_REGISTRY} after retries" >&2
-          exit 1
-
-      - name: Log in to Alibaba ACR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.ACR_PASSWORD }}" | docker login "${ACR_REGISTRY}" --username "${{ secrets.ACR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${ACR_REGISTRY} after retries" >&2
-          exit 1
-
       - name: Build and push worker tools image (arm64)
         uses: docker/build-push-action@v6
         with:
@@ -390,8 +312,6 @@ jobs:
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-arm64
             ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-arm64
-            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-arm64
-            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-arm64
           cache-from: |
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-arm64
           cache-to: |
@@ -473,6 +393,31 @@ jobs:
           SOURCE_REGISTRY="${{ needs.publish-worker-tools-meta.outputs.source_registry }}"
           [ -n "$TOOLS_TAG" ] || { echo "missing tools tag"; exit 1; }
 
+          ensure_target_tag() {
+            local target="$1"
+            local src="$2"
+            local delays=(0 2 4 8)
+            local delay
+            if [ "$target" = "$src" ]; then
+              echo "skip copy, target equals source: $target"
+              return 0
+            fi
+            if docker buildx imagetools inspect "$target" >/dev/null 2>&1; then
+              echo "skip copy, target already exists: $target"
+              return 0
+            fi
+            for delay in "${delays[@]}"; do
+              if [ "$delay" -gt 0 ]; then
+                sleep "$delay"
+              fi
+              if docker buildx imagetools create --tag "$target" "$src" >/dev/null 2>&1; then
+                return 0
+              fi
+            done
+            echo "failed to copy manifest: ${src} -> ${target}" >&2
+            return 1
+          }
+
           if [ "$EXISTS" = "true" ]; then
             GHCR_TARGET="ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}"
             TCR_TARGET="${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
@@ -491,20 +436,6 @@ jobs:
                 ;;
             esac
             echo "reuse source: ${SOURCE_REGISTRY} -> ${SOURCE_REF}"
-
-            ensure_target_tag() {
-              local target="$1"
-              local src="$2"
-              if [ "$target" = "$src" ]; then
-                echo "skip copy, target equals source: $target"
-                return 0
-              fi
-              if docker buildx imagetools inspect "$target" >/dev/null 2>&1; then
-                echo "skip copy, target already exists: $target"
-                return 0
-              fi
-              docker buildx imagetools create --tag "$target" "$src"
-            }
 
             ensure_target_tag "$GHCR_TARGET" "$SOURCE_REF"
             ensure_target_tag "$TCR_TARGET" "$SOURCE_REF"
@@ -525,15 +456,12 @@ jobs:
             "ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}-amd64" \
             "ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}-arm64"
 
-          docker buildx imagetools create \
-            --tag "${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}" \
-            "${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}-amd64" \
-            "${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}-arm64"
-
-          docker buildx imagetools create \
-            --tag "${ACR_REGISTRY}/${ACR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}" \
-            "${ACR_REGISTRY}/${ACR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}-amd64" \
-            "${ACR_REGISTRY}/${ACR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}-arm64"
+          ensure_target_tag \
+            "${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}" \
+            "ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}"
+          ensure_target_tag \
+            "${ACR_REGISTRY}/${ACR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}" \
+            "ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}"
 
   publish-images-amd64:
     runs-on: ubuntu-22.04
@@ -575,44 +503,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validate TCR and ACR credentials
-        run: |
-          set -euo pipefail
-          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
-          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
-          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
-          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
-
-      - name: Log in to Tencent TCR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.TCR_PASSWORD }}" | docker login "${TCR_REGISTRY}" --username "${{ secrets.TCR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${TCR_REGISTRY} after retries" >&2
-          exit 1
-
-      - name: Log in to Alibaba ACR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.ACR_PASSWORD }}" | docker login "${ACR_REGISTRY}" --username "${{ secrets.ACR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${ACR_REGISTRY} after retries" >&2
-          exit 1
-
       - name: Build and push staging image (amd64)
         uses: docker/build-push-action@v6
         with:
@@ -631,8 +521,6 @@ jobs:
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-amd64
             ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-amd64
-            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-amd64
-            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-amd64
 
   publish-images-arm64:
     runs-on: ubuntu-22.04-arm
@@ -674,44 +562,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validate TCR and ACR credentials
-        run: |
-          set -euo pipefail
-          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
-          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
-          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
-          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
-
-      - name: Log in to Tencent TCR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.TCR_PASSWORD }}" | docker login "${TCR_REGISTRY}" --username "${{ secrets.TCR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${TCR_REGISTRY} after retries" >&2
-          exit 1
-
-      - name: Log in to Alibaba ACR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.ACR_PASSWORD }}" | docker login "${ACR_REGISTRY}" --username "${{ secrets.ACR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${ACR_REGISTRY} after retries" >&2
-          exit 1
-
       - name: Build and push staging image (arm64)
         uses: docker/build-push-action@v6
         with:
@@ -730,8 +580,6 @@ jobs:
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-arm64
             ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-arm64
-            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-arm64
-            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-arm64
 
   publish-worker-image-amd64:
     runs-on: ubuntu-22.04
@@ -762,44 +610,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validate TCR and ACR credentials
-        run: |
-          set -euo pipefail
-          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
-          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
-          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
-          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
-
-      - name: Log in to Tencent TCR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.TCR_PASSWORD }}" | docker login "${TCR_REGISTRY}" --username "${{ secrets.TCR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${TCR_REGISTRY} after retries" >&2
-          exit 1
-
-      - name: Log in to Alibaba ACR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.ACR_PASSWORD }}" | docker login "${ACR_REGISTRY}" --username "${{ secrets.ACR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${ACR_REGISTRY} after retries" >&2
-          exit 1
-
       - name: Build and push worker image (amd64)
         uses: docker/build-push-action@v6
         with:
@@ -819,8 +629,6 @@ jobs:
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-amd64
             ghcr.io/${{ github.repository_owner }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-amd64
-            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-amd64
-            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-amd64
 
   publish-worker-image-arm64:
     runs-on: ubuntu-22.04-arm
@@ -851,44 +659,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validate TCR and ACR credentials
-        run: |
-          set -euo pipefail
-          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
-          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
-          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
-          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
-
-      - name: Log in to Tencent TCR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.TCR_PASSWORD }}" | docker login "${TCR_REGISTRY}" --username "${{ secrets.TCR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${TCR_REGISTRY} after retries" >&2
-          exit 1
-
-      - name: Log in to Alibaba ACR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.ACR_PASSWORD }}" | docker login "${ACR_REGISTRY}" --username "${{ secrets.ACR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${ACR_REGISTRY} after retries" >&2
-          exit 1
-
       - name: Build and push worker image (arm64)
         uses: docker/build-push-action@v6
         with:
@@ -908,8 +678,6 @@ jobs:
           tags: |
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-arm64
             ghcr.io/${{ github.repository_owner }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-arm64
-            ${{ env.TCR_REGISTRY }}/${{ env.TCR_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-arm64
-            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-arm64
 
   merge-staging-images:
     runs-on: ubuntu-22.04
@@ -1055,19 +823,11 @@ jobs:
             docker_arm64_ref="docker.io/${DOCKERHUB_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}-arm64"
             ghcr_amd64_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}:${RELEASE_STAGING_TAG}-amd64"
             ghcr_arm64_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}:${RELEASE_STAGING_TAG}-arm64"
-            tcr_amd64_ref="${TCR_REGISTRY}/${TCR_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}-amd64"
-            tcr_arm64_ref="${TCR_REGISTRY}/${TCR_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}-arm64"
-            acr_amd64_ref="${ACR_REGISTRY}/${ACR_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}-amd64"
-            acr_arm64_ref="${ACR_REGISTRY}/${ACR_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}-arm64"
 
             retry_imagetools_inspect "$docker_amd64_ref"
             retry_imagetools_inspect "$docker_arm64_ref"
             retry_imagetools_inspect "$ghcr_amd64_ref"
             retry_imagetools_inspect "$ghcr_arm64_ref"
-            retry_imagetools_inspect "$tcr_amd64_ref"
-            retry_imagetools_inspect "$tcr_arm64_ref"
-            retry_imagetools_inspect "$acr_amd64_ref"
-            retry_imagetools_inspect "$acr_arm64_ref"
 
             docker_staging_ref="docker.io/${DOCKERHUB_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}"
             ghcr_staging_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}:${RELEASE_STAGING_TAG}"
@@ -1076,8 +836,8 @@ jobs:
 
             retry_imagetools_create "$docker_staging_ref" "$docker_amd64_ref" "$docker_arm64_ref"
             retry_imagetools_create "$ghcr_staging_ref" "$ghcr_amd64_ref" "$ghcr_arm64_ref"
-            retry_imagetools_create "$tcr_staging_ref" "$tcr_amd64_ref" "$tcr_arm64_ref"
-            retry_imagetools_create "$acr_staging_ref" "$acr_amd64_ref" "$acr_arm64_ref"
+            retry_imagetools_create "$tcr_staging_ref" "$ghcr_staging_ref"
+            retry_imagetools_create "$acr_staging_ref" "$ghcr_staging_ref"
             retry_imagetools_inspect "$docker_staging_ref"
             retry_imagetools_inspect "$ghcr_staging_ref"
             retry_imagetools_inspect "$tcr_staging_ref"
