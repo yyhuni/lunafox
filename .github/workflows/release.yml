@@ -174,7 +174,6 @@ jobs:
     outputs:
       tools_tag: ${{ steps.meta.outputs.tools_tag }}
       exists: ${{ steps.probe.outputs.exists }}
-      source_ref: ${{ steps.probe.outputs.source_ref }}
       source_registry: ${{ steps.probe.outputs.source_registry }}
     steps:
       - uses: actions/checkout@v4
@@ -214,15 +213,12 @@ jobs:
           if docker buildx imagetools inspect "$GHCR_REF" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "source_registry=ghcr" >> "$GITHUB_OUTPUT"
-            echo "source_ref=$GHCR_REF" >> "$GITHUB_OUTPUT"
           elif docker buildx imagetools inspect "$DOCKER_REF" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "source_registry=dockerhub" >> "$GITHUB_OUTPUT"
-            echo "source_ref=$DOCKER_REF" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
             echo "source_registry=none" >> "$GITHUB_OUTPUT"
-            echo "source_ref=" >> "$GITHUB_OUTPUT"
           fi
 
   publish-worker-tools-amd64:
@@ -471,7 +467,6 @@ jobs:
           TOOLS_TAG="${{ needs.publish-worker-tools-meta.outputs.tools_tag }}"
           EXISTS="${{ needs.publish-worker-tools-meta.outputs.exists }}"
           SOURCE_REGISTRY="${{ needs.publish-worker-tools-meta.outputs.source_registry }}"
-          SOURCE_REF="${{ needs.publish-worker-tools-meta.outputs.source_ref }}"
           [ -n "$TOOLS_TAG" ] || { echo "missing tools tag"; exit 1; }
 
           if [ "$EXISTS" = "true" ]; then
@@ -479,7 +474,18 @@ jobs:
             TCR_TARGET="${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
             ACR_TARGET="${ACR_REGISTRY}/${ACR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
 
-            [ -n "$SOURCE_REF" ] || { echo "missing source_ref when worker-tools exists"; exit 1; }
+            case "$SOURCE_REGISTRY" in
+              ghcr)
+                SOURCE_REF="ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}"
+                ;;
+              dockerhub)
+                SOURCE_REF="docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
+                ;;
+              *)
+                echo "invalid source_registry when worker-tools exists: ${SOURCE_REGISTRY}" >&2
+                exit 1
+                ;;
+            esac
             echo "reuse source: ${SOURCE_REGISTRY} -> ${SOURCE_REF}"
 
             ensure_target_tag() {
