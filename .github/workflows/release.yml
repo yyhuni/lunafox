@@ -51,9 +51,13 @@ jobs:
           echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
           echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
 
+  tests-gate:
+    needs: validate-tag
+    uses: ./.github/workflows/test.yml
+
   build-installers:
     runs-on: ubuntu-22.04
-    needs: validate-tag
+    needs: [validate-tag, tests-gate]
     steps:
       - uses: actions/checkout@v4
 
@@ -104,7 +108,7 @@ jobs:
 
   prepare-github-release:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, build-installers]
+    needs: [validate-tag, tests-gate, build-installers]
     steps:
       - name: Download installer artifact
         uses: actions/download-artifact@v4
@@ -131,7 +135,7 @@ jobs:
 
   prepare-gitee-release:
     runs-on: ubuntu-22.04
-    needs: validate-tag
+    needs: [validate-tag, tests-gate]
     env:
       GITEE_OWNER: ${{ secrets.GITEE_OWNER }}
       GITEE_REPO: ${{ secrets.GITEE_REPO }}
@@ -170,7 +174,7 @@ jobs:
 
   publish-worker-tools-meta:
     runs-on: ubuntu-22.04
-    needs: validate-tag
+    needs: [validate-tag, tests-gate]
     outputs:
       tools_tag: ${{ steps.meta.outputs.tools_tag }}
       exists: ${{ steps.probe.outputs.exists }}
@@ -223,7 +227,7 @@ jobs:
 
   publish-worker-tools-amd64:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, publish-worker-tools-meta]
+    needs: [validate-tag, tests-gate, publish-worker-tools-meta]
     if: needs.publish-worker-tools-meta.outputs.exists != 'true'
     steps:
       - uses: actions/checkout@v4
@@ -309,7 +313,7 @@ jobs:
 
   publish-worker-tools-arm64:
     runs-on: ubuntu-22.04-arm
-    needs: [validate-tag, publish-worker-tools-meta]
+    needs: [validate-tag, tests-gate, publish-worker-tools-meta]
     if: needs.publish-worker-tools-meta.outputs.exists != 'true'
     steps:
       - uses: actions/checkout@v4
@@ -533,7 +537,7 @@ jobs:
 
   publish-images-amd64:
     runs-on: ubuntu-22.04
-    needs: validate-tag
+    needs: [validate-tag, tests-gate]
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -632,7 +636,7 @@ jobs:
 
   publish-images-arm64:
     runs-on: ubuntu-22.04-arm
-    needs: validate-tag
+    needs: [validate-tag, tests-gate]
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -731,10 +735,12 @@ jobs:
 
   publish-worker-image-amd64:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, publish-worker-tools]
+    needs: [validate-tag, tests-gate, publish-worker-tools]
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
+
+      needs.tests-gate.result == 'success' &&
       needs.publish-worker-tools.result == 'success'
     steps:
       - uses: actions/checkout@v4
@@ -818,10 +824,12 @@ jobs:
 
   publish-worker-image-arm64:
     runs-on: ubuntu-22.04-arm
-    needs: [validate-tag, publish-worker-tools]
+    needs: [validate-tag, tests-gate, publish-worker-tools]
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
+
+      needs.tests-gate.result == 'success' &&
       needs.publish-worker-tools.result == 'success'
     steps:
       - uses: actions/checkout@v4
@@ -907,6 +915,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs:
       - validate-tag
+      - tests-gate
       - publish-images-amd64
       - publish-images-arm64
       - publish-worker-image-amd64
@@ -914,6 +923,8 @@ jobs:
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
+
+      needs.tests-gate.result == 'success' &&
       needs.publish-images-amd64.result == 'success' &&
       needs.publish-images-arm64.result == 'success' &&
       needs.publish-worker-image-amd64.result == 'success' &&
@@ -1104,10 +1115,12 @@ jobs:
 
   update-release-channel:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, build-installers, promote-images, finalize-github-release, finalize-gitee-release]
+    needs: [validate-tag, tests-gate, build-installers, promote-images, finalize-github-release, finalize-gitee-release]
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
+
+      needs.tests-gate.result == 'success' &&
       needs.build-installers.result == 'success' &&
       needs.promote-images.result == 'success' &&
       needs.finalize-github-release.result == 'success' &&
@@ -1246,10 +1259,12 @@ jobs:
 
   promote-images:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, merge-staging-images]
+    needs: [validate-tag, tests-gate, merge-staging-images]
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
+
+      needs.tests-gate.result == 'success' &&
       needs.merge-staging-images.result == 'success'
     steps:
       - name: Download image digest artifacts
@@ -1407,10 +1422,12 @@ jobs:
 
   verify-tcr-images:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, merge-staging-images, promote-images]
+    needs: [validate-tag, tests-gate, merge-staging-images, promote-images]
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
+
+      needs.tests-gate.result == 'success' &&
       needs.merge-staging-images.result == 'success' &&
       needs.promote-images.result == 'success'
     strategy:
@@ -1499,10 +1516,12 @@ jobs:
 
   verify-tcr-worker-tools:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, publish-worker-tools, promote-images]
+    needs: [validate-tag, tests-gate, publish-worker-tools, promote-images]
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
+
+      needs.tests-gate.result == 'success' &&
       needs.publish-worker-tools.result == 'success' &&
       needs.promote-images.result == 'success'
     steps:
@@ -1561,10 +1580,12 @@ jobs:
 
   verify-acr-images:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, merge-staging-images, promote-images]
+    needs: [validate-tag, tests-gate, merge-staging-images, promote-images]
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
+
+      needs.tests-gate.result == 'success' &&
       needs.merge-staging-images.result == 'success' &&
       needs.promote-images.result == 'success'
     strategy:
@@ -1653,10 +1674,12 @@ jobs:
 
   verify-acr-worker-tools:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, publish-worker-tools, promote-images]
+    needs: [validate-tag, tests-gate, publish-worker-tools, promote-images]
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
+
+      needs.tests-gate.result == 'success' &&
       needs.publish-worker-tools.result == 'success' &&
       needs.promote-images.result == 'success'
     steps:
@@ -1715,7 +1738,7 @@ jobs:
 
   finalize-github-release:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, prepare-github-release, promote-images, verify-tcr-images, verify-tcr-worker-tools, verify-acr-images, verify-acr-worker-tools]
+    needs: [validate-tag, tests-gate, prepare-github-release, promote-images, verify-tcr-images, verify-tcr-worker-tools, verify-acr-images, verify-acr-worker-tools]
     if: always()
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1733,6 +1756,7 @@ jobs:
           }
 
           check_gate "validate-tag" "${{ needs.validate-tag.result }}"
+          check_gate "tests-gate" "${{ needs.tests-gate.result }}"
           check_gate "prepare-github-release" "${{ needs.prepare-github-release.result }}"
           check_gate "promote-images" "${{ needs.promote-images.result }}"
           check_gate "verify-tcr-images" "${{ needs.verify-tcr-images.result }}"
@@ -1921,7 +1945,7 @@ jobs:
 
   finalize-gitee-release:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, build-installers, prepare-gitee-release, promote-images, verify-tcr-images, verify-tcr-worker-tools, verify-acr-images, verify-acr-worker-tools]
+    needs: [validate-tag, tests-gate, build-installers, prepare-gitee-release, promote-images, verify-tcr-images, verify-tcr-worker-tools, verify-acr-images, verify-acr-worker-tools]
     if: always()
     env:
       GITEE_OWNER: ${{ secrets.GITEE_OWNER }}
@@ -1941,6 +1965,7 @@ jobs:
           }
 
           check_gate "validate-tag" "${{ needs.validate-tag.result }}"
+          check_gate "tests-gate" "${{ needs.tests-gate.result }}"
           check_gate "build-installers" "${{ needs.build-installers.result }}"
           check_gate "prepare-gitee-release" "${{ needs.prepare-gitee-release.result }}"
           check_gate "promote-images" "${{ needs.promote-images.result }}"
