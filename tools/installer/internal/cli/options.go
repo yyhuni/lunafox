@@ -13,21 +13,31 @@ const (
 	ModeDev  = "dev"
 )
 
+type PublicAddressSource string
+
+const (
+	PublicAddressSourceDefault  PublicAddressSource = "default"
+	PublicAddressSourceURL      PublicAddressSource = "public-url"
+	PublicAddressSourceHostPort PublicAddressSource = "public-host-port"
+)
+
 type Options struct {
-	Mode            string
-	Version         string
-	UseGoProxyCN    bool
-	PublicURL       string
-	PublicPort      string
-	ImageRegistry   string
-	ImageNamespace  string
-	AgentImageRef   string
-	AgentImageRefs  []string
-	WorkerImageRef  string
-	WorkerImageRefs []string
-	AgentServerURL  string
-	AgentNetwork    string
-	SharedDataBind  string
+	Mode                string
+	Version             string
+	UseGoProxyCN        bool
+	PublicURL           string
+	PublicPort          string
+	PublicAddressSource PublicAddressSource
+	NonInteractive      bool
+	ImageRegistry       string
+	ImageNamespace      string
+	AgentImageRef       string
+	AgentImageRefs      []string
+	WorkerImageRef      string
+	WorkerImageRefs     []string
+	AgentServerURL      string
+	AgentNetwork        string
+	SharedDataBind      string
 
 	RootDir     string
 	DockerDir   string
@@ -37,44 +47,105 @@ type Options struct {
 	ComposeProd string
 	Go111Module string
 	GoProxy     string
-	ListenAddr  string
+}
+
+func (options Options) HasExplicitPublicAddress() bool {
+	return options.PublicAddressSource != PublicAddressSourceDefault
 }
 
 func Parse(args []string) (Options, error) {
+	if err := checkLegacyFlags(args); err != nil {
+		return Options{}, err
+	}
+
 	dev := false
+	nonInteractive := false
 	version := ""
 	useGoProxyCN := false
+	publicURLRaw := ""
+	publicHostRaw := ""
+	publicPortRaw := ""
 	imageRegistry := firstNonEmpty(os.Getenv("LUNAFOX_IMAGE_REGISTRY"), DefaultImageRegistry)
 	imageNamespace := firstNonEmpty(os.Getenv("LUNAFOX_IMAGE_NAMESPACE"), DefaultImageNamespace)
 	agentImageRefsRaw := strings.TrimSpace(os.Getenv("AGENT_IMAGE_REFS"))
 	workerImageRefsRaw := strings.TrimSpace(os.Getenv("WORKER_IMAGE_REFS"))
-	publicURL := DefaultPublicURL
-	publicPort := DefaultPublicPort
 	agentServerURL := firstNonEmpty(os.Getenv("LUNAFOX_AGENT_SERVER_URL"), DefaultAgentServerURL)
 	agentNetwork := firstNonEmpty(os.Getenv("LUNAFOX_AGENT_DOCKER_NETWORK"), DefaultAgentNetwork)
 	sharedDataBind := firstNonEmpty(os.Getenv("LUNAFOX_SHARED_DATA_VOLUME_BIND"), DefaultSharedDataBind)
 	rootDirInput := ""
-	listenAddr := DefaultListenAddr
 
 	fs := flag.NewFlagSet("lunafox-installer", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	fs.BoolVar(&dev, "dev", false, "开发模式")
 	fs.StringVar(&version, "version", strings.TrimSpace(os.Getenv("LUNAFOX_INSTALLER_VERSION")), "安装版本，例如 v1.5.13")
 	fs.BoolVar(&useGoProxyCN, "goproxy", false, "使用 goproxy.cn")
+	fs.BoolVar(&nonInteractive, "non-interactive", false, "禁用交互向导，缺少必填参数时直接失败")
+	fs.StringVar(&publicURLRaw, "public-url", "", "公网访问地址，例如 https://example.com:8083")
+	fs.StringVar(&publicHostRaw, "public-host", "", "公网主机（IP 或域名），例如 10.0.0.8 或 example.com")
+	fs.StringVar(&publicPortRaw, "public-port", "", "公网端口（1-65535），默认 8083")
 	fs.StringVar(&imageRegistry, "image-registry", imageRegistry, "镜像仓库域名，例如 docker.io 或 ghcr.io")
 	fs.StringVar(&imageNamespace, "image-namespace", imageNamespace, "镜像命名空间，例如 yyhuni")
 	fs.StringVar(&agentImageRefsRaw, "agent-image-refs", agentImageRefsRaw, "Agent 镜像候选列表（逗号分隔，按优先级）")
 	fs.StringVar(&workerImageRefsRaw, "worker-image-refs", workerImageRefsRaw, "Worker 镜像候选列表（逗号分隔，按优先级）")
 	fs.StringVar(&rootDirInput, "root-dir", "", "项目根目录（必填）")
-	fs.StringVar(&listenAddr, "listen", listenAddr, "Web 页面监听地址，例如 127.0.0.1:18083")
 
 	if err := fs.Parse(args); err != nil {
 		return Options{}, err
 	}
 
+	if fs.NArg() > 0 {
+		return Options{}, fmt.Errorf("不支持的位置参数: %s", strings.Join(fs.Args(), " "))
+	}
+
+	publicURLProvided := hasFlag(args, "--public-url")
+	publicHostProvided := hasFlag(args, "--public-host")
+	publicPortProvided := hasFlag(args, "--public-port")
+
+	if publicURLProvided && publicHostProvided {
+		return Options{}, fmt.Errorf("--public-url 与 --public-host 不能同时使用")
+	}
+	if publicURLProvided && publicPortProvided {
+		return Options{}, fmt.Errorf("--public-url 与 --public-port 不能同时使用")
+	}
+	if publicPortProvided && !publicHostProvided {
+		return Options{}, fmt.Errorf("--public-port 需要配合 --public-host 使用")
+	}
+
 	mode := ModeProd
 	if dev {
 		mode = ModeDev
+	}
+
+	publicURL := DefaultPublicURL
+	publicPort := DefaultPublicPort
+	addressSource := PublicAddressSourceDefault
+	var err error
+
+	switch {
+	case publicURLProvided:
+		publicURL, publicPort, err = NormalizePublicURL(publicURLRaw, DefaultPublicPort)
+		if err != nil {
+			return Options{}, err
+		}
+		addressSource = PublicAddressSourceURL
+	case publicHostProvided:
+		if strings.TrimSpace(publicPortRaw) == "" {
+			publicPortRaw = DefaultPublicPort
+		}
+		publicURL, publicPort, err = NormalizePublicHostPort(publicHostRaw, publicPortRaw)
+		if err != nil {
+			return Options{}, err
+		}
+		addressSource = PublicAddressSourceHostPort
+	default:
+		publicURL, publicPort, err = NormalizePublicURL(DefaultPublicURL, DefaultPublicPort)
+		if err != nil {
+			return Options{}, err
+		}
+	}
+
+	if nonInteractive && addressSource == PublicAddressSourceDefault {
+		return Options{}, fmt.Errorf("--non-interactive 需要配合 --public-url 或 --public-host/--public-port")
 	}
 
 	version = strings.TrimSpace(version)
@@ -90,7 +161,7 @@ func Parse(args []string) (Options, error) {
 	if sharedDataBind == "" {
 		return Options{}, fmt.Errorf("LUNAFOX_SHARED_DATA_VOLUME_BIND 不能为空")
 	}
-	// Single-value refs were intentionally removed; parse candidates only.
+
 	agentImageRefs := parseImageRefs(agentImageRefsRaw)
 	workerImageRefs := parseImageRefs(workerImageRefsRaw)
 	agentImageRef := ""
@@ -103,7 +174,6 @@ func Parse(args []string) (Options, error) {
 	}
 
 	if mode == ModeProd {
-		// Production is digest-only to guarantee immutable pull targets.
 		if len(agentImageRefs) == 0 {
 			return Options{}, fmt.Errorf("生产模式必须提供 --agent-image-refs")
 		}
@@ -152,40 +222,54 @@ func Parse(args []string) (Options, error) {
 	}
 
 	return Options{
-		Mode:            mode,
-		Version:         version,
-		UseGoProxyCN:    useGoProxyCN,
-		PublicURL:       publicURL,
-		PublicPort:      publicPort,
-		ImageRegistry:   imageRegistry,
-		ImageNamespace:  imageNamespace,
-		AgentImageRef:   agentImageRef,
-		AgentImageRefs:  agentImageRefs,
-		WorkerImageRef:  workerImageRef,
-		WorkerImageRefs: workerImageRefs,
-		AgentServerURL:  agentServerURL,
-		AgentNetwork:    agentNetwork,
-		SharedDataBind:  sharedDataBind,
-		RootDir:         rootDir,
-		DockerDir:       dockerDir,
-		EnvFile:         filepath.Join(dockerDir, ".env"),
-		ComposeFile:     composeFile,
-		ComposeDev:      composeDev,
-		ComposeProd:     composeProd,
-		Go111Module:     "on",
-		GoProxy:         goProxy,
-		ListenAddr:      strings.TrimSpace(listenAddr),
+		Mode:                mode,
+		Version:             version,
+		UseGoProxyCN:        useGoProxyCN,
+		PublicURL:           publicURL,
+		PublicPort:          publicPort,
+		PublicAddressSource: addressSource,
+		NonInteractive:      nonInteractive,
+		ImageRegistry:       imageRegistry,
+		ImageNamespace:      imageNamespace,
+		AgentImageRef:       agentImageRef,
+		AgentImageRefs:      agentImageRefs,
+		WorkerImageRef:      workerImageRef,
+		WorkerImageRefs:     workerImageRefs,
+		AgentServerURL:      agentServerURL,
+		AgentNetwork:        agentNetwork,
+		SharedDataBind:      sharedDataBind,
+		RootDir:             rootDir,
+		DockerDir:           dockerDir,
+		EnvFile:             filepath.Join(dockerDir, ".env"),
+		ComposeFile:         composeFile,
+		ComposeDev:          composeDev,
+		ComposeProd:         composeProd,
+		Go111Module:         "on",
+		GoProxy:             goProxy,
 	}, nil
 }
 
-func firstNonEmpty(values ...string) string {
-	for _, v := range values {
-		v = strings.TrimSpace(v)
-		if v != "" {
-			return v
+func checkLegacyFlags(args []string) error {
+	for _, arg := range args {
+		switch {
+		case arg == "--listen" || strings.HasPrefix(arg, "--listen="):
+			return fmt.Errorf("--listen 已移除，请改用 --public-url 或 --public-host/--public-port")
+		case arg == "--web" || strings.HasPrefix(arg, "--web="):
+			return fmt.Errorf("--web 已移除：安装器现在仅支持终端交互")
+		case arg == "--headless-install" || strings.HasPrefix(arg, "--headless-install="):
+			return fmt.Errorf("--headless-install 已移除，请使用 --non-interactive + 显式公网地址")
 		}
 	}
-	return ""
+	return nil
+}
+
+func hasFlag(args []string, name string) bool {
+	for _, arg := range args {
+		if arg == name || strings.HasPrefix(arg, name+"=") {
+			return true
+		}
+	}
+	return false
 }
 
 func resolveRootDir(preferred string) (string, error) {
@@ -259,4 +343,14 @@ func parseImageRefs(raw string) []string {
 		result = append(result, ref)
 	}
 	return result
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		v = strings.TrimSpace(v)
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }

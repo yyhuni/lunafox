@@ -1,15 +1,15 @@
 # LunaFox Installer
 
-LunaFox 安装器以 Go 实现，默认通过 Web 页面引导安装。
+LunaFox 安装器以 Go 实现，默认使用终端交互向导完成安装，不再提供 Web 安装页面。
 
-## 命令矩阵（标准化）
+## 命令矩阵
 
 - `./install.sh`
   - 用户安装入口（远程发布产物）
-  - 支持：`--version`、`--channel`、`--source`、`--listen`
+  - 支持：`--version`、`--channel`、`--source`、`--public-url`、`--public-host`、`--public-port`、`--non-interactive`
 - `./scripts/dev/install.sh`
   - 开发者调试入口（本地源码）
-  - 支持：`--listen`
+  - 支持：`--public-url`、`--public-host`、`--public-port`、`--non-interactive`
 - `./start.sh` / `./restart.sh`
   - 仅生产模式
 - `./scripts/dev/start.sh` / `./scripts/dev/restart.sh`
@@ -30,7 +30,7 @@ LunaFox 安装器以 Go 实现，默认通过 Web 页面引导安装。
 1. 读取 `stable` 通道（或你传入的 `--version`/`--channel`）。
 2. 从远程 release 拉取对应平台安装器二进制。
 3. 校验安装器 SHA256，并读取 `AGENT_IMAGE_REFS`/`WORKER_IMAGE_REFS`（digest 候选列表）。
-4. installer 按连通性探测优先级 + `docker pull` 成功结果选择可用源，启动本地 Web 安装页。
+4. 启动终端向导（或非交互模式），执行安装步骤。
 
 常用示例：
 
@@ -39,14 +39,14 @@ LunaFox 安装器以 Go 实现，默认通过 Web 页面引导安装。
 ./install.sh --version v1.5.13
 ./install.sh --channel stable --source github
 ./install.sh --channel canary --source github
-./install.sh --listen 0.0.0.0:18083
+./install.sh --public-url https://example.com:8083 --non-interactive
+./install.sh --public-host 10.0.0.8 --public-port 8083 --non-interactive
 ```
 
 说明：
 - `install.sh` 不支持 `--dev`，开发调试请使用 `./scripts/dev/install.sh`。
-- `install.sh` 不支持 `--web`，默认即 Web 安装入口。
 - `install.sh` 不支持 `--` 参数透传。
-- `goproxy` 通过 Web 页面勾选项配置，不通过 `install.sh` 参数透传。
+- `install.sh` 不再支持 `--web`、`--listen`。
 - 下载源策略：`--source auto` 时按 `GitHub -> Gitee` 顺序重试。
 - 发布通道清单当前 schema 为 `SCHEMA_VERSION=2`，并强制 `AGENT_IMAGE_REFS`/`WORKER_IMAGE_REFS` 使用 digest 列表。
 - `SCHEMA_VERSION=2` 下不再接受旧单值键 `AGENT_IMAGE_REF`/`WORKER_IMAGE_REF`。
@@ -58,7 +58,7 @@ LunaFox 安装器以 Go 实现，默认通过 Web 页面引导安装。
 
 ```bash
 ./scripts/dev/install.sh
-./scripts/dev/install.sh --listen 0.0.0.0:18083
+./scripts/dev/install.sh --public-url https://example.com:8083 --non-interactive
 ```
 
 等价底层命令：
@@ -68,30 +68,22 @@ cd tools/installer
 go run ./cmd/lunafox-installer --root-dir /path/to/lunafox --dev
 ```
 
+## 交互与非交互规则
+
+- 默认行为：
+  - 在交互终端（TTY）下，如果未显式传入公网地址，会进入终端向导。
+- 非交互行为：
+  - `--non-interactive` 模式下必须显式传入地址。
+  - 在非 TTY 环境（CI/管道）下，若未传地址会直接失败。
+- 地址参数：
+  - 二选一：
+    - `--public-url https://example.com:8083`
+    - `--public-host example.com --public-port 8083`
+
 ## 发布通道约定
 
 - `stable`: 正式版 tag（`vX.Y.Z`）自动更新。
 - `canary`: 预发布 tag（`vX.Y.Z-rc.N`、`-beta.N`、`-alpha.N`）自动更新。
-
-页面模板位于：`tools/installer/internal/web/static/index.html`（通过 `go:embed` 内嵌）。
-
-## Web API 契约（硬切后）
-
-- `POST /api/start`
-  - 请求体：`{"publicHost":"<ip-or-domain>","publicPort":"<port>","useGoProxyCN":<bool>}`
-  - 响应：`202 {"jobId":"job-1","state":"running"}`
-  - 冲突：`409 {"code":"JOB_ALREADY_RUNNING","message":"...","details":{"jobId":"..."}}`
-- `GET /api/events?jobId=<id>`
-  - SSE 主通道，事件类型固定：`snapshot`、`log`、`state`、`done`
-  - 支持 `Last-Event-ID` 或 `lastEventId` 续传
-- `GET /api/state?jobId=<id>`
-  - 快照兜底接口，返回当前任务状态 + 日志尾部 + 步骤进度
-- 错误统一结构：
-  - `{"code":"<ERROR_CODE>","message":"<human-readable>","details":{...}}`
-
-说明：
-- 前端默认走 SSE 实时更新，`/api/state` 仅用于断线兜底。
-- 接口不再返回旧 `{ok:true}` 风格响应。
 
 ## TLS 行为（严格模式）
 

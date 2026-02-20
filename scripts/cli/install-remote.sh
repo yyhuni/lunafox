@@ -27,7 +27,10 @@ GITEE_RAW_BASE="${LUNAFOX_RELEASE_GITEE_RAW_BASE:-https://gitee.com}"
 CHANNEL="stable"
 SOURCE="auto"
 VERSION_OVERRIDE=""
-LISTEN_ADDR=""
+PUBLIC_URL=""
+PUBLIC_HOST=""
+PUBLIC_PORT=""
+NON_INTERACTIVE=0
 
 usage() {
 	cat <<'USAGE'
@@ -38,14 +41,18 @@ usage() {
   ./install.sh
   ./install.sh --version v1.5.13
   ./install.sh --channel canary
-  ./install.sh --source gitee --channel stable --listen 0.0.0.0:18083
+  ./install.sh --source gitee --channel stable --public-url https://example.com:8083
+  ./install.sh --public-host 10.0.0.8 --public-port 8083 --non-interactive
 
 常用参数:
   --version <ver>            指定安装版本（例如 v1.5.13）
   --channel <name>           版本通道（默认 stable）
   --source <auto|github|gitee>
                             下载源策略（默认 auto=github 后 gitee）
-  --listen <addr>            Web 页面监听地址，如 0.0.0.0:18083
+  --public-url <url>         公网访问地址，如 https://example.com:8083
+  --public-host <host>       公网主机（IP/域名），如 10.0.0.8
+  --public-port <port>       公网端口（默认 8083）
+  --non-interactive          禁用交互向导，需显式提供公网地址
 USAGE
 }
 
@@ -80,15 +87,35 @@ while [ "$#" -gt 0 ]; do
 		fi
 		SOURCE="$1"
 		;;
-	--listen)
+	--public-url)
 		shift
 		if [ "$#" -eq 0 ]; then
-			usage_error "--listen 缺少参数"
+			usage_error "--public-url 缺少参数"
 		fi
-		LISTEN_ADDR="$1"
+		PUBLIC_URL="$1"
+		;;
+	--public-host)
+		shift
+		if [ "$#" -eq 0 ]; then
+			usage_error "--public-host 缺少参数"
+		fi
+		PUBLIC_HOST="$1"
+		;;
+	--public-port)
+		shift
+		if [ "$#" -eq 0 ]; then
+			usage_error "--public-port 缺少参数"
+		fi
+		PUBLIC_PORT="$1"
+		;;
+	--non-interactive)
+		NON_INTERACTIVE=1
+		;;
+	--listen)
+		usage_error "--listen 已移除，请改用 --public-url 或 --public-host/--public-port"
 		;;
 	--web)
-		usage_error "--web 参数已移除，install.sh 默认即 Web 安装入口"
+		usage_error "--web 已移除：安装器现在仅支持终端交互"
 		;;
 	--)
 		usage_error "不再支持参数透传，请直接使用 install.sh 提供的参数"
@@ -107,6 +134,13 @@ auto | github | gitee) ;;
 	usage_error "不支持的 --source: $SOURCE（仅支持 auto/github/gitee）"
 	;;
 esac
+
+if [ -n "$PUBLIC_URL" ] && { [ -n "$PUBLIC_HOST" ] || [ -n "$PUBLIC_PORT" ]; }; then
+	usage_error "--public-url 与 --public-host/--public-port 不能同时使用"
+fi
+if [ -n "$PUBLIC_PORT" ] && [ -z "$PUBLIC_HOST" ]; then
+	usage_error "--public-port 需要配合 --public-host 使用"
+fi
 
 if ! command -v curl >/dev/null 2>&1; then
 	error "未检测到 curl，请先安装 curl"
@@ -374,8 +408,17 @@ INSTALLER_ARGS=(
 	--agent-image-refs "$AGENT_IMAGE_REFS"
 	--worker-image-refs "$WORKER_IMAGE_REFS"
 )
-if [ -n "$LISTEN_ADDR" ]; then
-	INSTALLER_ARGS+=(--listen "$LISTEN_ADDR")
+if [ -n "$PUBLIC_URL" ]; then
+	INSTALLER_ARGS+=(--public-url "$PUBLIC_URL")
+fi
+if [ -n "$PUBLIC_HOST" ]; then
+	INSTALLER_ARGS+=(--public-host "$PUBLIC_HOST")
+fi
+if [ -n "$PUBLIC_PORT" ]; then
+	INSTALLER_ARGS+=(--public-port "$PUBLIC_PORT")
+fi
+if [ "$NON_INTERACTIVE" -eq 1 ]; then
+	INSTALLER_ARGS+=(--non-interactive)
 fi
 
 cd "$ROOT_DIR"

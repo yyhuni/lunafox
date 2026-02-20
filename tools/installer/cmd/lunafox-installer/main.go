@@ -7,9 +7,13 @@ import (
 	"fmt"
 	"os"
 
+	"golang.org/x/term"
+
 	"github.com/yyhuni/lunafox/tools/installer/internal/cli"
 	"github.com/yyhuni/lunafox/tools/installer/internal/execx"
-	"github.com/yyhuni/lunafox/tools/installer/internal/web"
+	"github.com/yyhuni/lunafox/tools/installer/internal/steps"
+	"github.com/yyhuni/lunafox/tools/installer/internal/tui"
+	"github.com/yyhuni/lunafox/tools/installer/internal/ui"
 )
 
 func main() {
@@ -22,10 +26,38 @@ func main() {
 		os.Exit(1)
 	}
 
+	stdinTTY := term.IsTerminal(int(os.Stdin.Fd()))
+	stdoutTTY := term.IsTerminal(int(os.Stdout.Fd()))
+	interactiveTTY := stdinTTY && stdoutTTY
+
+	if !options.HasExplicitPublicAddress() {
+		if options.NonInteractive {
+			fmt.Fprintln(os.Stderr, "✗ --non-interactive 模式下必须传入 --public-url 或 --public-host/--public-port")
+			os.Exit(1)
+		}
+		if !interactiveTTY {
+			fmt.Fprintln(os.Stderr, "✗ 检测到非交互终端，缺少公网地址参数")
+			fmt.Fprintln(os.Stderr, "  请使用：--public-url https://example.com:8083 --non-interactive")
+			fmt.Fprintln(os.Stderr, "  或使用：--public-host 10.0.0.8 --public-port 8083 --non-interactive")
+			os.Exit(1)
+		}
+
+		options, err = tui.RunWizard(options, os.Stdin, os.Stdout)
+		if err != nil {
+			if errors.Is(err, tui.ErrCancelled) {
+				fmt.Fprintln(os.Stderr, "✗ 安装已取消")
+				os.Exit(130)
+			}
+			fmt.Fprintf(os.Stderr, "✗ 终端向导执行失败: %v\n", err)
+			os.Exit(1)
+		}
+	}
+
 	runner := execx.NewOSRunner()
-	server := web.NewServer(options, runner, os.Stdout, os.Stderr)
-	if err := server.Run(context.Background()); err != nil {
-		fmt.Fprintf(os.Stderr, "✗ Web 安装页面启动失败: %v\n", err)
+	printer := ui.NewPrinter(os.Stdout, os.Stderr)
+	installer := steps.NewInstaller(options, runner, printer)
+	if err := installer.Run(context.Background()); err != nil {
+		fmt.Fprintf(os.Stderr, "✗ 安装失败: %v\n", err)
 		os.Exit(1)
 	}
 }

@@ -9,5 +9,4 @@ const (
 	DefaultAgentServerURL = "http://server:8080"
 	DefaultAgentNetwork   = "lunafox_network"
 	DefaultSharedDataBind = "lunafox_data:/opt/lunafox"
-	DefaultListenAddr     = "127.0.0.1:18083"
 )

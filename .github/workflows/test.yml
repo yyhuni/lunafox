@@ -216,7 +216,7 @@ jobs:
           LUNAFOX_RELEASE_GITEE_REPO=repo \
           LUNAFOX_RELEASE_GITHUB_RAW_BASE=http://127.0.0.1:9 \
           LUNAFOX_RELEASE_GITEE_RAW_BASE=http://127.0.0.1:${PORT} \
-          ./install.sh --source auto --listen 127.0.0.1:19083 >/tmp/install-fallback.log 2>&1
+          ./install.sh --source auto --public-url https://127.0.0.1:19083 --non-interactive >/tmp/install-fallback.log 2>&1
 
           set +e
           LUNAFOX_RELEASE_CHANNEL_BRANCH=branch \
@@ -224,7 +224,7 @@ jobs:
           LUNAFOX_RELEASE_GITEE_REPO=repo \
           LUNAFOX_RELEASE_GITHUB_RAW_BASE=http://127.0.0.1:${PORT} \
           LUNAFOX_RELEASE_GITEE_RAW_BASE=http://127.0.0.1:${PORT} \
-          ./install.sh --source gitee --channel bad --listen 127.0.0.1:19083 >/tmp/install-checksum.log 2>&1
+          ./install.sh --source gitee --channel bad --public-url https://127.0.0.1:19083 --non-interactive >/tmp/install-checksum.log 2>&1
           rc=$?
           set -e
 

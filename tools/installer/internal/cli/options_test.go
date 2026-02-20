@@ -42,19 +42,15 @@ func createTestProjectRoot(t *testing.T) string {
 	return dir
 }
 
-func TestParseProdDefaultsPublicURL(t *testing.T) {
-	dir := createTestProjectRoot(t)
-
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	defer func() { _ = os.Chdir(oldWD) }()
-	if err := os.Chdir(dir); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
+func withProdImageRefs(t *testing.T) {
+	t.Helper()
 	t.Setenv("AGENT_IMAGE_REFS", testAgentDigestRef)
 	t.Setenv("WORKER_IMAGE_REFS", testWorkerDigestRef)
+}
+
+func TestParseProdDefaultsPublicURL(t *testing.T) {
+	dir := createTestProjectRoot(t)
+	withProdImageRefs(t)
 
 	opts, err := parseWithRoot(dir)
 	if err != nil {
@@ -69,37 +65,16 @@ func TestParseProdDefaultsPublicURL(t *testing.T) {
 	if opts.PublicPort != "8083" {
 		t.Fatalf("unexpected public port: %s", opts.PublicPort)
 	}
-	if opts.ImageRegistry != "docker.io" {
-		t.Fatalf("unexpected image registry: %s", opts.ImageRegistry)
+	if opts.PublicAddressSource != PublicAddressSourceDefault {
+		t.Fatalf("unexpected public address source: %s", opts.PublicAddressSource)
 	}
-	if opts.ImageNamespace != "yyhuni" {
-		t.Fatalf("unexpected image namespace: %s", opts.ImageNamespace)
-	}
-	if opts.AgentImageRef != testAgentDigestRef {
-		t.Fatalf("unexpected agent image ref: %s", opts.AgentImageRef)
-	}
-	if opts.WorkerImageRef != testWorkerDigestRef {
-		t.Fatalf("unexpected worker image ref: %s", opts.WorkerImageRef)
-	}
-	if len(opts.AgentImageRefs) != 1 || opts.AgentImageRefs[0] != testAgentDigestRef {
-		t.Fatalf("unexpected agent image refs: %#v", opts.AgentImageRefs)
-	}
-	if len(opts.WorkerImageRefs) != 1 || opts.WorkerImageRefs[0] != testWorkerDigestRef {
-		t.Fatalf("unexpected worker image refs: %#v", opts.WorkerImageRefs)
+	if opts.HasExplicitPublicAddress() {
+		t.Fatalf("expected default public address source")
 	}
 }
 
 func TestParseDevDefaultsPublicURL(t *testing.T) {
 	dir := createTestProjectRoot(t)
-
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	defer func() { _ = os.Chdir(oldWD) }()
-	if err := os.Chdir(dir); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
 
 	opts, err := parseWithRoot(dir, "--dev")
 	if err != nil {
@@ -119,17 +94,7 @@ func TestParseDevDefaultsPublicURL(t *testing.T) {
 
 func TestParseGoProxyFlag(t *testing.T) {
 	dir := createTestProjectRoot(t)
-
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	defer func() { _ = os.Chdir(oldWD) }()
-	if err := os.Chdir(dir); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-	t.Setenv("AGENT_IMAGE_REFS", testAgentDigestRef)
-	t.Setenv("WORKER_IMAGE_REFS", testWorkerDigestRef)
+	withProdImageRefs(t)
 
 	opts, err := parseWithRoot(dir, "--goproxy")
 	if err != nil {
@@ -138,26 +103,119 @@ func TestParseGoProxyFlag(t *testing.T) {
 	if opts.GoProxy != "https://goproxy.cn,direct" {
 		t.Fatalf("unexpected go proxy: %s", opts.GoProxy)
 	}
+}
+
+func TestParseAcceptsPublicURLFlagAndDerivesPort(t *testing.T) {
+	dir := createTestProjectRoot(t)
+	withProdImageRefs(t)
+
+	opts, err := parseWithRoot(dir, "--public-url", "https://example.com:18443")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if opts.PublicURL != "https://example.com:18443" {
+		t.Fatalf("unexpected public url: %s", opts.PublicURL)
+	}
+	if opts.PublicPort != "18443" {
+		t.Fatalf("unexpected public port: %s", opts.PublicPort)
+	}
+	if opts.PublicAddressSource != PublicAddressSourceURL {
+		t.Fatalf("unexpected source: %s", opts.PublicAddressSource)
+	}
+	if !opts.HasExplicitPublicAddress() {
+		t.Fatalf("expected explicit public address")
+	}
+}
+
+func TestParsePublicHostPortWithDefaultPort(t *testing.T) {
+	dir := createTestProjectRoot(t)
+	withProdImageRefs(t)
+
+	opts, err := parseWithRoot(dir, "--public-host", "example.com")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if opts.PublicURL != "https://example.com:8083" {
+		t.Fatalf("unexpected public url: %s", opts.PublicURL)
+	}
 	if opts.PublicPort != "8083" {
 		t.Fatalf("unexpected public port: %s", opts.PublicPort)
+	}
+	if opts.PublicAddressSource != PublicAddressSourceHostPort {
+		t.Fatalf("unexpected source: %s", opts.PublicAddressSource)
+	}
+}
+
+func TestParseRejectsConflictingPublicAddressFlags(t *testing.T) {
+	dir := createTestProjectRoot(t)
+	withProdImageRefs(t)
+
+	_, err := parseWithRoot(dir, "--public-url", "https://example.com:8083", "--public-host", "example.com")
+	if err == nil {
+		t.Fatalf("expected conflict error")
+	}
+	if !strings.Contains(err.Error(), "不能同时使用") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestParseRejectsPublicPortWithoutHost(t *testing.T) {
+	dir := createTestProjectRoot(t)
+	withProdImageRefs(t)
+
+	_, err := parseWithRoot(dir, "--public-port", "18443")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(err.Error(), "需要配合 --public-host") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestParseRejectsNonInteractiveWithoutAddress(t *testing.T) {
+	dir := createTestProjectRoot(t)
+	withProdImageRefs(t)
+
+	_, err := parseWithRoot(dir, "--non-interactive")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(err.Error(), "--non-interactive 需要配合") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestParseLegacyFlagsMigrationMessage(t *testing.T) {
+	dir := createTestProjectRoot(t)
+	withProdImageRefs(t)
+
+	cases := []struct {
+		arg  string
+		want string
+	}{
+		{arg: "--listen", want: "--listen 已移除"},
+		{arg: "--web", want: "--web 已移除"},
+		{arg: "--headless-install", want: "--headless-install 已移除"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.arg, func(t *testing.T) {
+			_, err := parseWithRoot(dir, tc.arg)
+			if err == nil {
+				t.Fatalf("expected error")
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
 	}
 }
 
 func TestParseRejectsRemovedFlags(t *testing.T) {
 	dir := createTestProjectRoot(t)
 
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	defer func() { _ = os.Chdir(oldWD) }()
-	if err := os.Chdir(dir); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-
 	cases := [][]string{
 		{"--mode", "prod"},
-		{"--public-url", "https://example.com:8443"},
 		{"--agent-server-url", "http://server:8080"},
 		{"--agent-register-url", "https://example.com:8083"},
 		{"--agent-network", "lunafox_network"},
@@ -175,17 +233,9 @@ func TestParseRejectsRemovedFlags(t *testing.T) {
 func TestParseVersionAndImageOptions(t *testing.T) {
 	dir := createTestProjectRoot(t)
 
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	defer func() { _ = os.Chdir(oldWD) }()
-	if err := os.Chdir(dir); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-
 	opts, err := parseWithRoot(dir,
 		"--version", "v1.5.13",
+		"--public-url", "https://example.com:8083",
 		"--image-registry", "ghcr.io",
 		"--image-namespace", "yyhuni",
 		"--agent-image-refs", "ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:1111111111111111111111111111111111111111111111111111111111111111,ghcr.io/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
@@ -230,16 +280,8 @@ func TestParseRequiresExplicitRootDir(t *testing.T) {
 func TestParseProdRequiresDigestImageRef(t *testing.T) {
 	dir := createTestProjectRoot(t)
 
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	defer func() { _ = os.Chdir(oldWD) }()
-	if err := os.Chdir(dir); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-
-	_, err = parseWithRoot(dir,
+	_, err := parseWithRoot(dir,
+		"--public-url", "https://example.com:8083",
 		"--agent-image-refs", "docker.io/yyhuni/lunafox-agent:v1.0.0",
 		"--worker-image-refs", "docker.io/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
 	)
@@ -251,23 +293,15 @@ func TestParseProdRequiresDigestImageRef(t *testing.T) {
 func TestParseImageRefsDeduplicateAndKeepOrder(t *testing.T) {
 	dir := createTestProjectRoot(t)
 
-	oldWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	defer func() { _ = os.Chdir(oldWD) }()
-	if err := os.Chdir(dir); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-
 	agentPrimary := "docker.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	agentFallback := "ghcr.io/yyhuni/lunafox-agent@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 	workerPrimary := "docker.io/yyhuni/lunafox-worker@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 	workerFallback := "ghcr.io/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
 
 	opts, err := parseWithRoot(dir,
-		"--agent-image-refs", agentPrimary + "," + agentFallback + "," + agentPrimary,
-		"--worker-image-refs", workerPrimary + "," + workerFallback + "," + workerPrimary,
+		"--public-url", "https://example.com:8083",
+		"--agent-image-refs", agentPrimary+","+agentFallback+","+agentPrimary,
+		"--worker-image-refs", workerPrimary+","+workerFallback+","+workerPrimary,
 	)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
