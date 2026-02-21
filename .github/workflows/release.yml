@@ -61,16 +61,16 @@ jobs:
     defaults:
       run:
         shell: bash
-    container:
-      image: ${{ vars.CI_TOOLS_IMAGE != '' && vars.CI_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-ci-tools:stable', github.repository_owner) }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     env:
       GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
       GOCACHE: ${{ github.workspace }}/.cache/go-build
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/installer/go.mod
 
       - name: Prepare writable cache directories
         run: |
@@ -193,303 +193,12 @@ jobs:
 
           git push gitee "refs/tags/${TAG}:refs/tags/${TAG}"
 
-  publish-worker-tools-meta:
-    runs-on: ubuntu-22.04
-    needs: [validate-tag, tests-gate]
-    outputs:
-      tools_tag: ${{ steps.meta.outputs.tools_tag }}
-      exists: ${{ steps.probe.outputs.exists }}
-      source_registry: ${{ steps.probe.outputs.source_registry }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Compute worker tools tag
-        id: meta
-        run: |
-          set -euo pipefail
-          TOOLS_HASH="$(sha256sum worker/Dockerfile.tools | awk '{print substr($1,1,16)}')"
-          TOOLS_TAG="tools-${TOOLS_HASH}"
-          echo "tools_tag=${TOOLS_TAG}" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Probe reusable worker-tools image
-        id: probe
-        run: |
-          set -euo pipefail
-          GHCR_REF="ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${{ steps.meta.outputs.tools_tag }}"
-          DOCKER_REF="docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${{ steps.meta.outputs.tools_tag }}"
-
-          if docker buildx imagetools inspect "$GHCR_REF" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "source_registry=ghcr" >> "$GITHUB_OUTPUT"
-          elif docker buildx imagetools inspect "$DOCKER_REF" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "source_registry=dockerhub" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "source_registry=none" >> "$GITHUB_OUTPUT"
-          fi
-
-  publish-worker-tools-amd64:
-    runs-on: ubuntu-22.04
-    needs: [validate-tag, tests-gate, publish-worker-tools-meta]
-    if: needs.publish-worker-tools-meta.outputs.exists != 'true'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push worker tools image (amd64)
-        uses: docker/build-push-action@v6
-        with:
-          context: ./worker
-          file: ./worker/Dockerfile.tools
-          target: tools-export
-          platforms: linux/amd64
-          push: true
-          provenance: false
-          sbom: false
-          build-args: |
-            GOPROXY=${{ vars.GOPROXY != '' && vars.GOPROXY || 'https://proxy.golang.org,direct' }}
-            GOFLAGS=${{ vars.WORKER_TOOLS_GOFLAGS != '' && vars.WORKER_TOOLS_GOFLAGS || '-p=4' }}
-            GOMAXPROCS=${{ vars.WORKER_TOOLS_GOMAXPROCS != '' && vars.WORKER_TOOLS_GOMAXPROCS || '4' }}
-          tags: |
-            docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-amd64
-            ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-amd64
-          cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-amd64
-          cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-amd64,mode=max
-
-  publish-worker-tools-arm64:
-    runs-on: ubuntu-22.04-arm
-    needs: [validate-tag, tests-gate, publish-worker-tools-meta]
-    if: needs.publish-worker-tools-meta.outputs.exists != 'true'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push worker tools image (arm64)
-        uses: docker/build-push-action@v6
-        with:
-          context: ./worker
-          file: ./worker/Dockerfile.tools
-          target: tools-export
-          platforms: linux/arm64
-          push: true
-          provenance: false
-          sbom: false
-          build-args: |
-            GOPROXY=${{ vars.GOPROXY != '' && vars.GOPROXY || 'https://proxy.golang.org,direct' }}
-            GOFLAGS=${{ vars.WORKER_TOOLS_GOFLAGS != '' && vars.WORKER_TOOLS_GOFLAGS || '-p=4' }}
-            GOMAXPROCS=${{ vars.WORKER_TOOLS_GOMAXPROCS != '' && vars.WORKER_TOOLS_GOMAXPROCS || '4' }}
-          tags: |
-            docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-arm64
-            ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:${{ needs.publish-worker-tools-meta.outputs.tools_tag }}-arm64
-          cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-arm64
-          cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:buildcache-arm64,mode=max
-
-  publish-worker-tools:
-    runs-on: ubuntu-22.04
-    needs: [publish-worker-tools-meta, publish-worker-tools-amd64, publish-worker-tools-arm64]
-    if: >
-      always() &&
-      needs.publish-worker-tools-meta.result == 'success' &&
-      (
-        needs.publish-worker-tools-meta.outputs.exists == 'true' ||
-        (needs.publish-worker-tools-amd64.result == 'success' && needs.publish-worker-tools-arm64.result == 'success')
-      )
-    outputs:
-      tools_tag: ${{ needs.publish-worker-tools-meta.outputs.tools_tag }}
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Validate TCR and ACR credentials
-        run: |
-          set -euo pipefail
-          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
-          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
-          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
-          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
-
-      - name: Log in to Tencent TCR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.TCR_PASSWORD }}" | docker login "${TCR_REGISTRY}" --username "${{ secrets.TCR_USERNAME }}" --password-stdin; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${TCR_REGISTRY} after retries" >&2
-          exit 1
-
-      - name: Log in to Alibaba ACR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.ACR_PASSWORD }}" | docker login "${ACR_REGISTRY}" --username "${{ secrets.ACR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${ACR_REGISTRY} after retries" >&2
-          exit 1
-
-      - name: Publish worker-tools multi-arch tag
-        run: |
-          set -euo pipefail
-          TOOLS_TAG="${{ needs.publish-worker-tools-meta.outputs.tools_tag }}"
-          EXISTS="${{ needs.publish-worker-tools-meta.outputs.exists }}"
-          SOURCE_REGISTRY="${{ needs.publish-worker-tools-meta.outputs.source_registry }}"
-          [ -n "$TOOLS_TAG" ] || { echo "missing tools tag"; exit 1; }
-
-          ensure_target_tag() {
-            local target="$1"
-            local src="$2"
-            local delays=(0 2 4 8)
-            local delay
-            if [ "$target" = "$src" ]; then
-              echo "skip copy, target equals source: $target"
-              return 0
-            fi
-            if docker buildx imagetools inspect "$target" >/dev/null 2>&1; then
-              echo "skip copy, target already exists: $target"
-              return 0
-            fi
-            for delay in "${delays[@]}"; do
-              if [ "$delay" -gt 0 ]; then
-                sleep "$delay"
-              fi
-              if docker buildx imagetools create --tag "$target" "$src" >/dev/null 2>&1; then
-                return 0
-              fi
-            done
-            echo "failed to copy manifest: ${src} -> ${target}" >&2
-            return 1
-          }
-
-          if [ "$EXISTS" = "true" ]; then
-            GHCR_TARGET="ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}"
-            TCR_TARGET="${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
-            ACR_TARGET="${ACR_REGISTRY}/${ACR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
-
-            case "$SOURCE_REGISTRY" in
-              ghcr)
-                SOURCE_REF="ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}"
-                ;;
-              dockerhub)
-                SOURCE_REF="docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
-                ;;
-              *)
-                echo "invalid source_registry when worker-tools exists: ${SOURCE_REGISTRY}" >&2
-                exit 1
-                ;;
-            esac
-            echo "reuse source: ${SOURCE_REGISTRY} -> ${SOURCE_REF}"
-
-            ensure_target_tag "$GHCR_TARGET" "$SOURCE_REF"
-            ensure_target_tag "$TCR_TARGET" "$SOURCE_REF"
-            ensure_target_tag "$ACR_TARGET" "$SOURCE_REF"
-            exit 0
-          fi
-
-          [ "${{ needs.publish-worker-tools-amd64.result }}" = "success" ] || { echo "amd64 worker tools build failed"; exit 1; }
-          [ "${{ needs.publish-worker-tools-arm64.result }}" = "success" ] || { echo "arm64 worker tools build failed"; exit 1; }
-
-          docker buildx imagetools create \
-            --tag "docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}" \
-            "docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}-amd64" \
-            "docker.io/${DOCKERHUB_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}-arm64"
-
-          docker buildx imagetools create \
-            --tag "ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}" \
-            "ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}-amd64" \
-            "ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}-arm64"
-
-          ensure_target_tag \
-            "${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}" \
-            "ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}"
-          ensure_target_tag \
-            "${ACR_REGISTRY}/${ACR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}" \
-            "ghcr.io/${GITHUB_REPOSITORY_OWNER}/lunafox-worker-tools:${TOOLS_TAG}"
-
   publish-images-amd64:
     runs-on: ubuntu-22.04
     needs: [validate-tag, tests-gate]
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 3
       matrix:
         include:
           - image: lunafox-server
@@ -504,6 +213,9 @@ jobs:
           - image: lunafox-agent
             context: ./agent
             dockerfile: ./agent/Dockerfile
+          - image: lunafox-worker
+            context: ./worker
+            dockerfile: ./worker/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
@@ -548,7 +260,7 @@ jobs:
     needs: [validate-tag, tests-gate]
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 3
       matrix:
         include:
           - image: lunafox-server
@@ -563,6 +275,9 @@ jobs:
           - image: lunafox-agent
             context: ./agent
             dockerfile: ./agent/Dockerfile
+          - image: lunafox-worker
+            context: ./worker
+            dockerfile: ./worker/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
@@ -602,104 +317,6 @@ jobs:
             docker.io/${{ env.DOCKERHUB_NAMESPACE }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-arm64
             ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ env.RELEASE_STAGING_TAG }}-arm64
 
-  publish-worker-image-amd64:
-    runs-on: ubuntu-22.04
-    needs: [validate-tag, tests-gate, publish-worker-tools]
-    if: >
-      always() &&
-      needs.validate-tag.result == 'success' &&
-
-      needs.tests-gate.result == 'success' &&
-      needs.publish-worker-tools.result == 'success'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push worker image (amd64)
-        uses: docker/build-push-action@v6
-        with:
-          context: ./worker
-          file: ./worker/Dockerfile
-          platforms: linux/amd64
-          push: true
-          provenance: false
-          sbom: false
-          cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker:buildcache-amd64
-          cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker:buildcache-amd64,mode=max
-          build-args: |
-            GOPROXY=${{ vars.GOPROXY != '' && vars.GOPROXY || 'https://proxy.golang.org,direct' }}
-            WORKER_TOOLS_IMAGE=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:${{ needs.publish-worker-tools.outputs.tools_tag }}
-          tags: |
-            docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-amd64
-            ghcr.io/${{ github.repository_owner }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-amd64
-
-  publish-worker-image-arm64:
-    runs-on: ubuntu-22.04-arm
-    needs: [validate-tag, tests-gate, publish-worker-tools]
-    if: >
-      always() &&
-      needs.validate-tag.result == 'success' &&
-
-      needs.tests-gate.result == 'success' &&
-      needs.publish-worker-tools.result == 'success'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push worker image (arm64)
-        uses: docker/build-push-action@v6
-        with:
-          context: ./worker
-          file: ./worker/Dockerfile
-          platforms: linux/arm64
-          push: true
-          provenance: false
-          sbom: false
-          cache-from: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker:buildcache-arm64
-          cache-to: |
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/lunafox-worker:buildcache-arm64,mode=max
-          build-args: |
-            GOPROXY=${{ vars.GOPROXY != '' && vars.GOPROXY || 'https://proxy.golang.org,direct' }}
-            WORKER_TOOLS_IMAGE=ghcr.io/${{ github.repository_owner }}/lunafox-worker-tools:${{ needs.publish-worker-tools.outputs.tools_tag }}
-          tags: |
-            docker.io/${{ env.DOCKERHUB_NAMESPACE }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-arm64
-            ghcr.io/${{ github.repository_owner }}/lunafox-worker:${{ env.RELEASE_STAGING_TAG }}-arm64
-
   merge-staging-images:
     runs-on: ubuntu-22.04
     needs:
@@ -707,17 +324,13 @@ jobs:
       - tests-gate
       - publish-images-amd64
       - publish-images-arm64
-      - publish-worker-image-amd64
-      - publish-worker-image-arm64
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
 
       needs.tests-gate.result == 'success' &&
       needs.publish-images-amd64.result == 'success' &&
-      needs.publish-images-arm64.result == 'success' &&
-      needs.publish-worker-image-amd64.result == 'success' &&
-      needs.publish-worker-image-arm64.result == 'success'
+      needs.publish-images-arm64.result == 'success'
     steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -1215,16 +828,6 @@ jobs:
       needs.tests-gate.result == 'success' &&
       needs.merge-staging-images.result == 'success' &&
       needs.promote-images.result == 'success'
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        image:
-          - lunafox-server
-          - lunafox-frontend
-          - lunafox-nginx
-          - lunafox-agent
-          - lunafox-worker
     steps:
       - name: Download image digest artifacts
         uses: actions/download-artifact@v4
@@ -1256,7 +859,7 @@ jobs:
           echo "failed to log in to ${TCR_REGISTRY} after retries" >&2
           exit 1
 
-      - name: Verify final image tag in Tencent TCR
+      - name: Verify final image tags in Tencent TCR
         run: |
           set -euo pipefail
           start_epoch="$(date +%s)"
@@ -1280,88 +883,25 @@ jobs:
           FINAL_TAG="${{ needs.validate-tag.outputs.tag }}"
           [ -n "$FINAL_TAG" ] || { echo "missing final tag"; exit 1; }
 
-          IMAGE_EXPECTED="${{ matrix.image }}"
-          FILE="dist/image-digests/${IMAGE_EXPECTED}.env"
-          [ -f "$FILE" ] || { echo "missing digest file: $FILE"; exit 1; }
+          for IMAGE_EXPECTED in lunafox-server lunafox-frontend lunafox-nginx lunafox-agent lunafox-worker; do
+            FILE="dist/image-digests/${IMAGE_EXPECTED}.env"
+            [ -f "$FILE" ] || { echo "missing digest file: $FILE"; exit 1; }
 
-          IMAGE=""
-          TCR_REF=""
-          # shellcheck disable=SC1090
-          source "$FILE"
+            IMAGE=""
+            TCR_REF=""
+            # shellcheck disable=SC1090
+            source "$FILE"
 
-          [ "$IMAGE" = "$IMAGE_EXPECTED" ] || { echo "image mismatch in $FILE: $IMAGE"; exit 1; }
-          [ -n "$TCR_REF" ] || { echo "missing TCR_REF in $FILE"; exit 1; }
+            [ "$IMAGE" = "$IMAGE_EXPECTED" ] || { echo "image mismatch in $FILE: $IMAGE"; exit 1; }
+            [ -n "$TCR_REF" ] || { echo "missing TCR_REF in $FILE"; exit 1; }
 
-          tcr_target="${TCR_REGISTRY}/${TCR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
-          retry_imagetools_inspect "$TCR_REF"
-          retry_imagetools_inspect "$tcr_target"
+            tcr_target="${TCR_REGISTRY}/${TCR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
+            retry_imagetools_inspect "$TCR_REF"
+            retry_imagetools_inspect "$tcr_target"
+          done
 
           end_epoch="$(date +%s)"
           echo "verify_tcr_images_duration_seconds=$((end_epoch - start_epoch))"
-
-  verify-tcr-worker-tools:
-    runs-on: ubuntu-22.04
-    needs: [validate-tag, tests-gate, publish-worker-tools, promote-images]
-    if: >
-      always() &&
-      needs.validate-tag.result == 'success' &&
-
-      needs.tests-gate.result == 'success' &&
-      needs.publish-worker-tools.result == 'success' &&
-      needs.promote-images.result == 'success'
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Validate Tencent TCR credentials
-        run: |
-          set -euo pipefail
-          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
-          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
-
-      - name: Log in to Tencent TCR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.TCR_PASSWORD }}" | docker login "${TCR_REGISTRY}" --username "${{ secrets.TCR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${TCR_REGISTRY} after retries" >&2
-          exit 1
-
-      - name: Verify worker-tools tag in Tencent TCR
-        run: |
-          set -euo pipefail
-          start_epoch="$(date +%s)"
-
-          retry_imagetools_inspect() {
-            local ref="$1"
-            local delays=(0 2 4 8)
-            local delay
-            for delay in "${delays[@]}"; do
-              if [ "$delay" -gt 0 ]; then
-                sleep "$delay"
-              fi
-              if docker buildx imagetools inspect "$ref" >/dev/null 2>&1; then
-                return 0
-              fi
-            done
-            echo "failed to inspect image ref after retries: $ref" >&2
-            return 1
-          }
-
-          TOOLS_TAG="${{ needs.publish-worker-tools.outputs.tools_tag }}"
-          [ -n "$TOOLS_TAG" ] || { echo "missing worker-tools tag"; exit 1; }
-          tools_target="${TCR_REGISTRY}/${TCR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
-          retry_imagetools_inspect "$tools_target"
-
-          end_epoch="$(date +%s)"
-          echo "verify_tcr_worker_tools_duration_seconds=$((end_epoch - start_epoch))"
 
   verify-acr-images:
     runs-on: ubuntu-22.04
@@ -1373,16 +913,6 @@ jobs:
       needs.tests-gate.result == 'success' &&
       needs.merge-staging-images.result == 'success' &&
       needs.promote-images.result == 'success'
-    strategy:
-      fail-fast: false
-      max-parallel: 2
-      matrix:
-        image:
-          - lunafox-server
-          - lunafox-frontend
-          - lunafox-nginx
-          - lunafox-agent
-          - lunafox-worker
     steps:
       - name: Download image digest artifacts
         uses: actions/download-artifact@v4
@@ -1414,7 +944,7 @@ jobs:
           echo "failed to log in to ${ACR_REGISTRY} after retries" >&2
           exit 1
 
-      - name: Verify final image tag in Alibaba ACR
+      - name: Verify final image tags in Alibaba ACR
         run: |
           set -euo pipefail
           start_epoch="$(date +%s)"
@@ -1438,92 +968,29 @@ jobs:
           FINAL_TAG="${{ needs.validate-tag.outputs.tag }}"
           [ -n "$FINAL_TAG" ] || { echo "missing final tag"; exit 1; }
 
-          IMAGE_EXPECTED="${{ matrix.image }}"
-          FILE="dist/image-digests/${IMAGE_EXPECTED}.env"
-          [ -f "$FILE" ] || { echo "missing digest file: $FILE"; exit 1; }
+          for IMAGE_EXPECTED in lunafox-server lunafox-frontend lunafox-nginx lunafox-agent lunafox-worker; do
+            FILE="dist/image-digests/${IMAGE_EXPECTED}.env"
+            [ -f "$FILE" ] || { echo "missing digest file: $FILE"; exit 1; }
 
-          IMAGE=""
-          ACR_REF=""
-          # shellcheck disable=SC1090
-          source "$FILE"
+            IMAGE=""
+            ACR_REF=""
+            # shellcheck disable=SC1090
+            source "$FILE"
 
-          [ "$IMAGE" = "$IMAGE_EXPECTED" ] || { echo "image mismatch in $FILE: $IMAGE"; exit 1; }
-          [ -n "$ACR_REF" ] || { echo "missing ACR_REF in $FILE"; exit 1; }
+            [ "$IMAGE" = "$IMAGE_EXPECTED" ] || { echo "image mismatch in $FILE: $IMAGE"; exit 1; }
+            [ -n "$ACR_REF" ] || { echo "missing ACR_REF in $FILE"; exit 1; }
 
-          acr_target="${ACR_REGISTRY}/${ACR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
-          retry_imagetools_inspect "$ACR_REF"
-          retry_imagetools_inspect "$acr_target"
+            acr_target="${ACR_REGISTRY}/${ACR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
+            retry_imagetools_inspect "$ACR_REF"
+            retry_imagetools_inspect "$acr_target"
+          done
 
           end_epoch="$(date +%s)"
           echo "verify_acr_images_duration_seconds=$((end_epoch - start_epoch))"
 
-  verify-acr-worker-tools:
-    runs-on: ubuntu-22.04
-    needs: [validate-tag, tests-gate, publish-worker-tools, promote-images]
-    if: >
-      always() &&
-      needs.validate-tag.result == 'success' &&
-
-      needs.tests-gate.result == 'success' &&
-      needs.publish-worker-tools.result == 'success' &&
-      needs.promote-images.result == 'success'
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Validate Alibaba ACR credentials
-        run: |
-          set -euo pipefail
-          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
-          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
-
-      - name: Log in to Alibaba ACR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.ACR_PASSWORD }}" | docker login "${ACR_REGISTRY}" --username "${{ secrets.ACR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${ACR_REGISTRY} after retries" >&2
-          exit 1
-
-      - name: Verify worker-tools tag in Alibaba ACR
-        run: |
-          set -euo pipefail
-          start_epoch="$(date +%s)"
-
-          retry_imagetools_inspect() {
-            local ref="$1"
-            local delays=(0 2 4 8)
-            local delay
-            for delay in "${delays[@]}"; do
-              if [ "$delay" -gt 0 ]; then
-                sleep "$delay"
-              fi
-              if docker buildx imagetools inspect "$ref" >/dev/null 2>&1; then
-                return 0
-              fi
-            done
-            echo "failed to inspect image ref after retries: $ref" >&2
-            return 1
-          }
-
-          TOOLS_TAG="${{ needs.publish-worker-tools.outputs.tools_tag }}"
-          [ -n "$TOOLS_TAG" ] || { echo "missing worker-tools tag"; exit 1; }
-          tools_target="${ACR_REGISTRY}/${ACR_NAMESPACE}/lunafox-worker-tools:${TOOLS_TAG}"
-          retry_imagetools_inspect "$tools_target"
-
-          end_epoch="$(date +%s)"
-          echo "verify_acr_worker_tools_duration_seconds=$((end_epoch - start_epoch))"
-
   finalize-github-release:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, tests-gate, prepare-github-release, promote-images, verify-tcr-images, verify-tcr-worker-tools, verify-acr-images, verify-acr-worker-tools]
+    needs: [validate-tag, tests-gate, prepare-github-release, promote-images, verify-tcr-images, verify-acr-images]
     if: always()
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1545,9 +1012,7 @@ jobs:
           check_gate "prepare-github-release" "${{ needs.prepare-github-release.result }}"
           check_gate "promote-images" "${{ needs.promote-images.result }}"
           check_gate "verify-tcr-images" "${{ needs.verify-tcr-images.result }}"
-          check_gate "verify-tcr-worker-tools" "${{ needs.verify-tcr-worker-tools.result }}"
           check_gate "verify-acr-images" "${{ needs.verify-acr-images.result }}"
-          check_gate "verify-acr-worker-tools" "${{ needs.verify-acr-worker-tools.result }}"
 
           if [ "${#FAILED[@]}" -gt 0 ]; then
             echo "github release blocked by prerequisite jobs:" >&2
@@ -1730,7 +1195,7 @@ jobs:
 
   finalize-gitee-release:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, tests-gate, build-installers, prepare-gitee-release, promote-images, verify-tcr-images, verify-tcr-worker-tools, verify-acr-images, verify-acr-worker-tools]
+    needs: [validate-tag, tests-gate, build-installers, prepare-gitee-release, promote-images, verify-tcr-images, verify-acr-images]
     if: always()
     env:
       GITEE_OWNER: ${{ secrets.GITEE_OWNER }}
@@ -1755,9 +1220,7 @@ jobs:
           check_gate "prepare-gitee-release" "${{ needs.prepare-gitee-release.result }}"
           check_gate "promote-images" "${{ needs.promote-images.result }}"
           check_gate "verify-tcr-images" "${{ needs.verify-tcr-images.result }}"
-          check_gate "verify-tcr-worker-tools" "${{ needs.verify-tcr-worker-tools.result }}"
           check_gate "verify-acr-images" "${{ needs.verify-acr-images.result }}"
-          check_gate "verify-acr-worker-tools" "${{ needs.verify-acr-worker-tools.result }}"
 
           if [ "${#FAILED[@]}" -gt 0 ]; then
             echo "gitee release blocked by prerequisite jobs:" >&2
