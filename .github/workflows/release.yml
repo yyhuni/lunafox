@@ -349,44 +349,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validate TCR and ACR credentials
-        run: |
-          set -euo pipefail
-          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
-          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
-          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
-          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
-
-      - name: Log in to Tencent TCR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.TCR_PASSWORD }}" | docker login "${TCR_REGISTRY}" --username "${{ secrets.TCR_USERNAME }}" --password-stdin; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${TCR_REGISTRY} after retries" >&2
-          exit 1
-
-      - name: Log in to Alibaba ACR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.ACR_PASSWORD }}" | docker login "${ACR_REGISTRY}" --username "${{ secrets.ACR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${ACR_REGISTRY} after retries" >&2
-          exit 1
-
       - name: Merge staging manifests and persist digests
         run: |
           set -euo pipefail
@@ -465,30 +427,17 @@ jobs:
 
             docker_staging_ref="docker.io/${DOCKERHUB_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}"
             ghcr_staging_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}:${RELEASE_STAGING_TAG}"
-            tcr_staging_ref="${TCR_REGISTRY}/${TCR_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}"
-            acr_staging_ref="${ACR_REGISTRY}/${ACR_NAMESPACE}/${image}:${RELEASE_STAGING_TAG}"
 
             retry_imagetools_create "$docker_staging_ref" "$docker_amd64_ref" "$docker_arm64_ref"
             retry_imagetools_create "$ghcr_staging_ref" "$ghcr_amd64_ref" "$ghcr_arm64_ref"
-            retry_imagetools_create "$tcr_staging_ref" "$ghcr_staging_ref"
-            retry_imagetools_create "$acr_staging_ref" "$ghcr_staging_ref"
-
-            # Wait for registry propagation (TCR/ACR need extra time)
-            sleep 5
 
             retry_imagetools_inspect "$docker_staging_ref"
             retry_imagetools_inspect "$ghcr_staging_ref"
-            retry_imagetools_inspect "$tcr_staging_ref"
-            retry_imagetools_inspect "$acr_staging_ref"
 
             docker_digest="$(resolve_digest "$docker_staging_ref" || true)"
             ghcr_digest="$(resolve_digest "$ghcr_staging_ref" || true)"
-            tcr_digest="$(resolve_digest "$tcr_staging_ref" || true)"
-            acr_digest="$(resolve_digest "$acr_staging_ref" || true)"
             [[ "$docker_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid docker digest for ${image}: $docker_digest"; exit 1; }
             [[ "$ghcr_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid ghcr digest for ${image}: $ghcr_digest"; exit 1; }
-            [[ "$tcr_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid tcr digest for ${image}: $tcr_digest"; exit 1; }
-            [[ "$acr_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid acr digest for ${image}: $acr_digest"; exit 1; }
 
             {
               echo "IMAGE=${image}"
@@ -496,8 +445,6 @@ jobs:
               echo "STAGING_TAG=${RELEASE_STAGING_TAG}"
               echo "DOCKERHUB_REF=docker.io/${DOCKERHUB_NAMESPACE}/${image}@${docker_digest}"
               echo "GHCR_REF=ghcr.io/${GITHUB_REPOSITORY_OWNER}/${image}@${ghcr_digest}"
-              echo "TCR_REF=${TCR_REGISTRY}/${TCR_NAMESPACE}/${image}@${tcr_digest}"
-              echo "ACR_REF=${ACR_REGISTRY}/${ACR_NAMESPACE}/${image}@${acr_digest}"
             } > "dist/image-digests/${image}.env"
           done
 
@@ -507,13 +454,13 @@ jobs:
       - name: Upload image digest artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-image-digests
+          name: release-image-digests-base
           path: dist/image-digests/*.env
           if-no-files-found: error
 
   update-release-channel:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, tests-gate, build-installers, promote-images, finalize-github-release, finalize-gitee-release]
+    needs: [validate-tag, tests-gate, build-installers, promote-images, collect-cn-image-digests, finalize-github-release, finalize-gitee-release]
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
@@ -521,6 +468,7 @@ jobs:
       needs.tests-gate.result == 'success' &&
       needs.build-installers.result == 'success' &&
       needs.promote-images.result == 'success' &&
+      needs.collect-cn-image-digests.result == 'success' &&
       needs.finalize-github-release.result == 'success' &&
       needs.finalize-gitee-release.result == 'success'
     env:
@@ -668,7 +616,7 @@ jobs:
       - name: Download image digest artifacts
         uses: actions/download-artifact@v4
         with:
-          name: release-image-digests
+          name: release-image-digests-base
           path: dist/image-digests
 
       - name: Set up Docker Buildx
@@ -687,44 +635,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Validate TCR and ACR credentials
-        run: |
-          set -euo pipefail
-          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
-          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
-          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
-          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
-          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
-
-      - name: Log in to Tencent TCR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.TCR_PASSWORD }}" | docker login "${TCR_REGISTRY}" --username "${{ secrets.TCR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${TCR_REGISTRY} after retries" >&2
-          exit 1
-
-      - name: Log in to Alibaba ACR (retry)
-        run: |
-          set -euo pipefail
-          for delay in 0 2 4 8 12; do
-            if [ "$delay" -gt 0 ]; then
-              sleep "$delay"
-            fi
-            if printf '%s' "${{ secrets.ACR_PASSWORD }}" | docker login "${ACR_REGISTRY}" --username "${{ secrets.ACR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
-              exit 0
-            fi
-          done
-          echo "failed to log in to ${ACR_REGISTRY} after retries" >&2
-          exit 1
 
       - name: Promote staging digest to release tag (phase 2)
         run: |
@@ -778,8 +688,6 @@ jobs:
             DIGEST=""
             DOCKERHUB_REF=""
             GHCR_REF=""
-            TCR_REF=""
-            ACR_REF=""
             # shellcheck disable=SC1090
             source "$file"
 
@@ -787,54 +695,138 @@ jobs:
             [[ "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid DIGEST in $file: $DIGEST"; exit 1; }
             [ -n "$DOCKERHUB_REF" ] || { echo "missing DOCKERHUB_REF in $file"; exit 1; }
             [ -n "$GHCR_REF" ] || { echo "missing GHCR_REF in $file"; exit 1; }
-            [ -n "$TCR_REF" ] || { echo "missing TCR_REF in $file"; exit 1; }
-            [ -n "$ACR_REF" ] || { echo "missing ACR_REF in $file"; exit 1; }
 
             retry_imagetools_inspect "$DOCKERHUB_REF"
             retry_imagetools_inspect "$GHCR_REF"
-            retry_imagetools_inspect "$TCR_REF"
-            retry_imagetools_inspect "$ACR_REF"
 
-            printf '%s|%s|%s|%s|%s|%s\n' "$IMAGE" "$DIGEST" "$DOCKERHUB_REF" "$GHCR_REF" "$TCR_REF" "$ACR_REF" >> "$PLAN_FILE"
+            printf '%s|%s|%s|%s\n' "$IMAGE" "$DIGEST" "$DOCKERHUB_REF" "$GHCR_REF" >> "$PLAN_FILE"
           done
 
-          while IFS='|' read -r IMAGE DIGEST DOCKERHUB_REF GHCR_REF TCR_REF ACR_REF; do
+          while IFS='|' read -r IMAGE DIGEST DOCKERHUB_REF GHCR_REF; do
             docker_target="docker.io/${DOCKERHUB_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
             ghcr_target="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${IMAGE}:${FINAL_TAG}"
-            tcr_target="${TCR_REGISTRY}/${TCR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
-            acr_target="${ACR_REGISTRY}/${ACR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
 
             echo "promote ${IMAGE}: ${DIGEST}"
             retry_imagetools_create "$docker_target" "$DOCKERHUB_REF"
             retry_imagetools_create "$ghcr_target" "$GHCR_REF"
-            retry_imagetools_create "$tcr_target" "$TCR_REF"
-            retry_imagetools_create "$acr_target" "$ACR_REF"
             retry_imagetools_inspect "$docker_target"
             retry_imagetools_inspect "$ghcr_target"
-            retry_imagetools_inspect "$tcr_target"
-            retry_imagetools_inspect "$acr_target"
           done < "$PLAN_FILE"
 
           end_epoch="$(date +%s)"
           echo "promote_images_duration_seconds=$((end_epoch - start_epoch))"
 
-  verify-tcr-images:
+  trigger-cn-registry-sync:
     runs-on: ubuntu-22.04
     needs: [validate-tag, tests-gate, merge-staging-images, promote-images]
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
-
       needs.tests-gate.result == 'success' &&
       needs.merge-staging-images.result == 'success' &&
       needs.promote-images.result == 'success'
     steps:
-      - name: Download image digest artifacts
+      - name: Download base image digest artifacts
         uses: actions/download-artifact@v4
         with:
-          name: release-image-digests
+          name: release-image-digests-base
           path: dist/image-digests
 
+      - name: Validate sync webhooks
+        env:
+          TCR_SYNC_WEBHOOK_URL: ${{ secrets.TCR_SYNC_WEBHOOK_URL }}
+          ACR_SYNC_WEBHOOK_URL: ${{ secrets.ACR_SYNC_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+          [ -n "${TCR_SYNC_WEBHOOK_URL:-}" ] || { echo "missing secret TCR_SYNC_WEBHOOK_URL"; exit 1; }
+          [ -n "${ACR_SYNC_WEBHOOK_URL:-}" ] || { echo "missing secret ACR_SYNC_WEBHOOK_URL"; exit 1; }
+
+      - name: Trigger TCR and ACR sync tasks
+        env:
+          TCR_SYNC_WEBHOOK_URL: ${{ secrets.TCR_SYNC_WEBHOOK_URL }}
+          ACR_SYNC_WEBHOOK_URL: ${{ secrets.ACR_SYNC_WEBHOOK_URL }}
+          TCR_SYNC_WEBHOOK_TOKEN: ${{ secrets.TCR_SYNC_WEBHOOK_TOKEN }}
+          ACR_SYNC_WEBHOOK_TOKEN: ${{ secrets.ACR_SYNC_WEBHOOK_TOKEN }}
+        run: |
+          set -euo pipefail
+          FINAL_TAG="${{ needs.validate-tag.outputs.tag }}"
+          [ -n "$FINAL_TAG" ] || { echo "missing final tag"; exit 1; }
+
+          trigger_sync() {
+            local provider="$1"
+            local url="$2"
+            local token="$3"
+            local image="$4"
+            local source_ref="$5"
+            local target_registry="$6"
+            local target_namespace="$7"
+            local target_tag="$8"
+            local payload
+            local tmp
+            local http_code
+            local delay
+            local auth_args=()
+            local delays=(0 2 4 8)
+
+            payload="{\"provider\":\"${provider}\",\"image\":\"${image}\",\"source_ref\":\"${source_ref}\",\"target_registry\":\"${target_registry}\",\"target_namespace\":\"${target_namespace}\",\"target_tag\":\"${target_tag}\"}"
+
+            if [ -n "$token" ]; then
+              auth_args=(-H "Authorization: Bearer ${token}")
+            fi
+
+            for delay in "${delays[@]}"; do
+              if [ "$delay" -gt 0 ]; then
+                sleep "$delay"
+              fi
+              tmp="$(mktemp)"
+              http_code="$(curl -sS -o "$tmp" -w "%{http_code}" \
+                -X POST "$url" \
+                -H "Content-Type: application/json" \
+                "${auth_args[@]}" \
+                --data "$payload" || true)"
+
+              if [[ "$http_code" =~ ^2[0-9][0-9]$ ]]; then
+                rm -f "$tmp"
+                return 0
+              fi
+
+              echo "sync trigger failed: provider=${provider} image=${image} http=${http_code}" >&2
+              cat "$tmp" >&2 || true
+              rm -f "$tmp"
+            done
+
+            return 1
+          }
+
+          shopt -s nullglob
+          files=(dist/image-digests/*.env)
+          [ "${#files[@]}" -gt 0 ] || { echo "missing base image digest artifacts"; exit 1; }
+
+          for file in "${files[@]}"; do
+            IMAGE=""
+            GHCR_REF=""
+            # shellcheck disable=SC1090
+            source "$file"
+
+            [ -n "$IMAGE" ] || { echo "missing IMAGE in $file"; exit 1; }
+            [ -n "$GHCR_REF" ] || { echo "missing GHCR_REF in $file"; exit 1; }
+
+            ghcr_release_ref="ghcr.io/${GITHUB_REPOSITORY_OWNER}/${IMAGE}:${FINAL_TAG}"
+            trigger_sync "tcr" "$TCR_SYNC_WEBHOOK_URL" "${TCR_SYNC_WEBHOOK_TOKEN:-}" "$IMAGE" "$ghcr_release_ref" "$TCR_REGISTRY" "$TCR_NAMESPACE" "$FINAL_TAG"
+            trigger_sync "acr" "$ACR_SYNC_WEBHOOK_URL" "${ACR_SYNC_WEBHOOK_TOKEN:-}" "$IMAGE" "$ghcr_release_ref" "$ACR_REGISTRY" "$ACR_NAMESPACE" "$FINAL_TAG"
+          done
+
+  verify-tcr-images:
+    runs-on: ubuntu-22.04
+    needs: [validate-tag, tests-gate, promote-images, trigger-cn-registry-sync]
+    if: >
+      always() &&
+      needs.validate-tag.result == 'success' &&
+
+      needs.tests-gate.result == 'success' &&
+      needs.promote-images.result == 'success' &&
+      needs.trigger-cn-registry-sync.result == 'success'
+    steps:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -866,7 +858,7 @@ jobs:
 
           retry_imagetools_inspect() {
             local ref="$1"
-            local delays=(0 2 4 8)
+            local delays=(0 5 10 20 30 45 60)
             local delay
             for delay in "${delays[@]}"; do
               if [ "$delay" -gt 0 ]; then
@@ -883,20 +875,8 @@ jobs:
           FINAL_TAG="${{ needs.validate-tag.outputs.tag }}"
           [ -n "$FINAL_TAG" ] || { echo "missing final tag"; exit 1; }
 
-          for IMAGE_EXPECTED in lunafox-server lunafox-frontend lunafox-nginx lunafox-agent lunafox-worker; do
-            FILE="dist/image-digests/${IMAGE_EXPECTED}.env"
-            [ -f "$FILE" ] || { echo "missing digest file: $FILE"; exit 1; }
-
-            IMAGE=""
-            TCR_REF=""
-            # shellcheck disable=SC1090
-            source "$FILE"
-
-            [ "$IMAGE" = "$IMAGE_EXPECTED" ] || { echo "image mismatch in $FILE: $IMAGE"; exit 1; }
-            [ -n "$TCR_REF" ] || { echo "missing TCR_REF in $FILE"; exit 1; }
-
+          for IMAGE in lunafox-server lunafox-frontend lunafox-nginx lunafox-agent lunafox-worker; do
             tcr_target="${TCR_REGISTRY}/${TCR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
-            retry_imagetools_inspect "$TCR_REF"
             retry_imagetools_inspect "$tcr_target"
           done
 
@@ -905,21 +885,15 @@ jobs:
 
   verify-acr-images:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, tests-gate, merge-staging-images, promote-images]
+    needs: [validate-tag, tests-gate, promote-images, trigger-cn-registry-sync]
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
 
       needs.tests-gate.result == 'success' &&
-      needs.merge-staging-images.result == 'success' &&
-      needs.promote-images.result == 'success'
+      needs.promote-images.result == 'success' &&
+      needs.trigger-cn-registry-sync.result == 'success'
     steps:
-      - name: Download image digest artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: release-image-digests
-          path: dist/image-digests
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -951,7 +925,7 @@ jobs:
 
           retry_imagetools_inspect() {
             local ref="$1"
-            local delays=(0 2 4 8)
+            local delays=(0 5 10 20 30 45 60)
             local delay
             for delay in "${delays[@]}"; do
               if [ "$delay" -gt 0 ]; then
@@ -968,29 +942,138 @@ jobs:
           FINAL_TAG="${{ needs.validate-tag.outputs.tag }}"
           [ -n "$FINAL_TAG" ] || { echo "missing final tag"; exit 1; }
 
-          for IMAGE_EXPECTED in lunafox-server lunafox-frontend lunafox-nginx lunafox-agent lunafox-worker; do
-            FILE="dist/image-digests/${IMAGE_EXPECTED}.env"
-            [ -f "$FILE" ] || { echo "missing digest file: $FILE"; exit 1; }
-
-            IMAGE=""
-            ACR_REF=""
-            # shellcheck disable=SC1090
-            source "$FILE"
-
-            [ "$IMAGE" = "$IMAGE_EXPECTED" ] || { echo "image mismatch in $FILE: $IMAGE"; exit 1; }
-            [ -n "$ACR_REF" ] || { echo "missing ACR_REF in $FILE"; exit 1; }
-
+          for IMAGE in lunafox-server lunafox-frontend lunafox-nginx lunafox-agent lunafox-worker; do
             acr_target="${ACR_REGISTRY}/${ACR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
-            retry_imagetools_inspect "$ACR_REF"
             retry_imagetools_inspect "$acr_target"
           done
 
           end_epoch="$(date +%s)"
           echo "verify_acr_images_duration_seconds=$((end_epoch - start_epoch))"
 
+  collect-cn-image-digests:
+    runs-on: ubuntu-22.04
+    needs: [validate-tag, tests-gate, merge-staging-images, promote-images, verify-tcr-images, verify-acr-images]
+    if: >
+      always() &&
+      needs.validate-tag.result == 'success' &&
+      needs.tests-gate.result == 'success' &&
+      needs.merge-staging-images.result == 'success' &&
+      needs.promote-images.result == 'success' &&
+      needs.verify-tcr-images.result == 'success' &&
+      needs.verify-acr-images.result == 'success'
+    steps:
+      - name: Download base image digest artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-image-digests-base
+          path: dist/image-digests-base
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Tencent TCR (retry)
+        run: |
+          set -euo pipefail
+          [ -n "${TCR_REGISTRY:-}" ] || { echo "missing TCR_REGISTRY"; exit 1; }
+          [ -n "${{ secrets.TCR_USERNAME }}" ] || { echo "missing TCR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.TCR_PASSWORD }}" ] || { echo "missing TCR_PASSWORD"; exit 1; }
+          for delay in 0 2 4 8 12; do
+            if [ "$delay" -gt 0 ]; then
+              sleep "$delay"
+            fi
+            if printf '%s' "${{ secrets.TCR_PASSWORD }}" | docker login "${TCR_REGISTRY}" --username "${{ secrets.TCR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
+              exit 0
+            fi
+          done
+          echo "failed to log in to ${TCR_REGISTRY} after retries" >&2
+          exit 1
+
+      - name: Log in to Alibaba ACR (retry)
+        run: |
+          set -euo pipefail
+          [ -n "${ACR_REGISTRY:-}" ] || { echo "missing ACR_REGISTRY"; exit 1; }
+          [ -n "${{ secrets.ACR_USERNAME }}" ] || { echo "missing ACR_USERNAME"; exit 1; }
+          [ -n "${{ secrets.ACR_PASSWORD }}" ] || { echo "missing ACR_PASSWORD"; exit 1; }
+          for delay in 0 2 4 8 12; do
+            if [ "$delay" -gt 0 ]; then
+              sleep "$delay"
+            fi
+            if printf '%s' "${{ secrets.ACR_PASSWORD }}" | docker login "${ACR_REGISTRY}" --username "${{ secrets.ACR_USERNAME }}" --password-stdin >/dev/null 2>&1; then
+              exit 0
+            fi
+          done
+          echo "failed to log in to ${ACR_REGISTRY} after retries" >&2
+          exit 1
+
+      - name: Resolve TCR/ACR digests and build final artifact
+        run: |
+          set -euo pipefail
+          FINAL_TAG="${{ needs.validate-tag.outputs.tag }}"
+          [ -n "$FINAL_TAG" ] || { echo "missing final tag"; exit 1; }
+          mkdir -p dist/image-digests
+
+          retry_resolve_digest() {
+            local ref="$1"
+            local delays=(0 3 6 12 20 30)
+            local delay
+            local digest
+            for delay in "${delays[@]}"; do
+              if [ "$delay" -gt 0 ]; then
+                sleep "$delay"
+              fi
+              digest="$(docker buildx imagetools inspect "$ref" | awk '/Digest:/ {print $2; exit}')"
+              if [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+                printf '%s\n' "$digest"
+                return 0
+              fi
+            done
+            echo "failed to resolve digest after retries: $ref" >&2
+            return 1
+          }
+
+          shopt -s nullglob
+          files=(dist/image-digests-base/*.env)
+          [ "${#files[@]}" -gt 0 ] || { echo "missing base digest artifacts"; exit 1; }
+
+          for file in "${files[@]}"; do
+            IMAGE=""
+            DIGEST=""
+            DOCKERHUB_REF=""
+            GHCR_REF=""
+            # shellcheck disable=SC1090
+            source "$file"
+
+            [ -n "$IMAGE" ] || { echo "missing IMAGE in $file"; exit 1; }
+            [[ "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid DIGEST in $file: $DIGEST"; exit 1; }
+            [ -n "$DOCKERHUB_REF" ] || { echo "missing DOCKERHUB_REF in $file"; exit 1; }
+            [ -n "$GHCR_REF" ] || { echo "missing GHCR_REF in $file"; exit 1; }
+
+            tcr_target="${TCR_REGISTRY}/${TCR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
+            acr_target="${ACR_REGISTRY}/${ACR_NAMESPACE}/${IMAGE}:${FINAL_TAG}"
+            tcr_digest="$(retry_resolve_digest "$tcr_target")"
+            acr_digest="$(retry_resolve_digest "$acr_target")"
+
+            {
+              echo "IMAGE=${IMAGE}"
+              echo "DIGEST=${DIGEST}"
+              echo "STAGING_TAG=${RELEASE_STAGING_TAG}"
+              echo "DOCKERHUB_REF=${DOCKERHUB_REF}"
+              echo "GHCR_REF=${GHCR_REF}"
+              echo "TCR_REF=${TCR_REGISTRY}/${TCR_NAMESPACE}/${IMAGE}@${tcr_digest}"
+              echo "ACR_REF=${ACR_REGISTRY}/${ACR_NAMESPACE}/${IMAGE}@${acr_digest}"
+            } > "dist/image-digests/${IMAGE}.env"
+          done
+
+      - name: Upload final image digest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-image-digests
+          path: dist/image-digests/*.env
+          if-no-files-found: error
+
   finalize-github-release:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, tests-gate, prepare-github-release, promote-images, verify-tcr-images, verify-acr-images]
+    needs: [validate-tag, tests-gate, prepare-github-release, promote-images, verify-tcr-images, verify-acr-images, collect-cn-image-digests]
     if: always()
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1013,6 +1096,7 @@ jobs:
           check_gate "promote-images" "${{ needs.promote-images.result }}"
           check_gate "verify-tcr-images" "${{ needs.verify-tcr-images.result }}"
           check_gate "verify-acr-images" "${{ needs.verify-acr-images.result }}"
+          check_gate "collect-cn-image-digests" "${{ needs.collect-cn-image-digests.result }}"
 
           if [ "${#FAILED[@]}" -gt 0 ]; then
             echo "github release blocked by prerequisite jobs:" >&2
@@ -1195,7 +1279,7 @@ jobs:
 
   finalize-gitee-release:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, tests-gate, build-installers, prepare-gitee-release, promote-images, verify-tcr-images, verify-acr-images]
+    needs: [validate-tag, tests-gate, build-installers, prepare-gitee-release, promote-images, verify-tcr-images, verify-acr-images, collect-cn-image-digests]
     if: always()
     env:
       GITEE_OWNER: ${{ secrets.GITEE_OWNER }}
@@ -1221,6 +1305,7 @@ jobs:
           check_gate "promote-images" "${{ needs.promote-images.result }}"
           check_gate "verify-tcr-images" "${{ needs.verify-tcr-images.result }}"
           check_gate "verify-acr-images" "${{ needs.verify-acr-images.result }}"
+          check_gate "collect-cn-image-digests" "${{ needs.collect-cn-image-digests.result }}"
 
           if [ "${#FAILED[@]}" -gt 0 ]; then
             echo "gitee release blocked by prerequisite jobs:" >&2
