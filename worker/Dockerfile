@@ -13,12 +13,14 @@ ARG GO111MODULE=on
 ARG GOPROXY=https://proxy.golang.org,direct
 ARG GOFLAGS=-p=4
 ARG GOMAXPROCS=4
+ARG GONOSUMDB=github.com/yyhuni/xingfinger
 
 ENV GO111MODULE=$GO111MODULE
 ENV GOPROXY=$GOPROXY
 ENV GOFLAGS=$GOFLAGS
 ENV CGO_ENABLED=1
 ENV GOMAXPROCS=$GOMAXPROCS
+ENV GONOSUMDB=$GONOSUMDB
 
 # Install build dependencies for CGO tools
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
