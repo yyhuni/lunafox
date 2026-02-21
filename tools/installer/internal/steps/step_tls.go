@@ -4,12 +4,15 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/yyhuni/lunafox/tools/installer/internal/execx"
 )
 
 type stepTLS struct{}
@@ -68,7 +71,7 @@ func (installer *Installer) generateSSLCert(ctx context.Context, sslDirPath stri
 		"-addext", subjectAltName,
 	)
 	if _, err := installer.runner.Run(ctx, command); err != nil {
-		return fmt.Errorf("证书生成失败，请检查 Docker 与 openssl 镜像是否可用")
+		return wrapCommandFailure(err, "证书生成失败，请检查 Docker 与 openssl 镜像是否可用", 260)
 	}
 	return nil
 }
@@ -82,9 +85,20 @@ func (installer *Installer) syncSSLCertToVolume(ctx context.Context, sslDirPath 
 		"sh", "-c", "cp /src/fullchain.pem /dst/fullchain.pem && cp /src/privkey.pem /dst/privkey.pem && chmod 644 /dst/fullchain.pem && chmod 600 /dst/privkey.pem",
 	)
 	if _, err := installer.runner.Run(ctx, command); err != nil {
-		return fmt.Errorf("同步 HTTPS 证书到 Docker 卷失败")
+		return wrapCommandFailure(err, "同步 HTTPS 证书到 Docker 卷失败", 260)
 	}
 	return nil
+}
+
+func wrapCommandFailure(err error, message string, maxDetail int) error {
+	var execErr *execx.ExecError
+	if errors.As(err, &execErr) {
+		detail := trimCommandErrorDetail(execErr.Result.Stderr, execErr.Result.Stdout, maxDetail)
+		if detail != "" {
+			return fmt.Errorf("%s（%s）", message, detail)
+		}
+	}
+	return fmt.Errorf("%s: %w", message, err)
 }
 
 func loadTLSConfigFromCA(caPath string) (*tls.Config, error) {
