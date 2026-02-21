@@ -10,7 +10,7 @@
 FROM golang:1.26 AS tools-builder
 
 ARG GO111MODULE=on
-ARG GOPROXY=https://proxy.golang.org,direct
+ARG GOPROXY=https://proxy.golang.org,https://goproxy.cn,direct
 ARG GOFLAGS=-p=4
 ARG GOMAXPROCS=4
 ARG GONOSUMDB=github.com/yyhuni/xingfinger
@@ -108,7 +108,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
 FROM golang:1.26 AS worker-builder
 
 ARG GO111MODULE=on
-ARG GOPROXY=https://proxy.golang.org,direct
+ARG GOPROXY=https://proxy.golang.org,https://goproxy.cn,direct
 
 ENV GO111MODULE=$GO111MODULE
 ENV GOPROXY=$GOPROXY
