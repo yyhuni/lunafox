@@ -1,13 +1,7 @@
 name: Check Generated Files
 
 on:
-  workflow_call:  # Run only when called by another workflow
-    inputs:
-      ci_tools_image:
-        description: "Optional CI tools image override (digest recommended)"
-        required: false
-        type: string
-        default: ''
+  workflow_call:
 
 permissions:
   contents: read
@@ -15,20 +9,20 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-22.04  # Pin runner version for stability
+    runs-on: ubuntu-22.04
     defaults:
       run:
         shell: bash
-    container:
-      image: ${{ inputs.ci_tools_image != '' && inputs.ci_tools_image || (vars.CI_TOOLS_IMAGE != '' && vars.CI_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-ci-tools:stable', github.repository_owner)) }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     env:
       GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
       GOCACHE: ${{ github.workspace }}/.cache/go-build
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: worker/go.mod
 
       - name: Prepare writable cache directories
         run: |

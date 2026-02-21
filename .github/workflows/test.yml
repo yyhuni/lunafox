@@ -3,11 +3,26 @@ name: Run Tests
 on:
   workflow_call:
     inputs:
-      ci_tools_image:
-        description: "Optional CI tools image override (digest recommended)"
+      run_frontend_scripts:
         required: false
-        type: string
-        default: ''
+        type: boolean
+        default: true
+      run_worker:
+        required: false
+        type: boolean
+        default: true
+      run_server:
+        required: false
+        type: boolean
+        default: true
+      run_agent:
+        required: false
+        type: boolean
+        default: true
+      run_installer:
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -15,53 +30,36 @@ permissions:
 
 jobs:
   frontend-and-scripts:
+    if: inputs.run_frontend_scripts
     runs-on: ubuntu-22.04
     defaults:
       run:
         shell: bash
-    container:
-      image: ${{ inputs.ci_tools_image != '' && inputs.ci_tools_image || (vars.CI_TOOLS_IMAGE != '' && vars.CI_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-ci-tools:stable', github.repository_owner)) }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     env:
       PNPM_STORE_PATH: ${{ github.workspace }}/.cache/pnpm-store
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare writable cache directories
-        run: |
-          set -euo pipefail
-          mkdir -p "${PNPM_STORE_PATH}"
-
-      - name: Ensure pnpm available
-        run: |
-          set -euo pipefail
-          if command -v pnpm >/dev/null 2>&1; then
-            pnpm -v
-            exit 0
-          fi
-
-          if command -v corepack >/dev/null 2>&1; then
-            corepack enable
-            corepack prepare "pnpm@10.30.0" --activate
-          elif command -v npm >/dev/null 2>&1; then
-            npm install -g --prefix "${GITHUB_WORKSPACE}/.npm-global" pnpm@10.30.0
-            echo "${GITHUB_WORKSPACE}/.npm-global/bin" >> "$GITHUB_PATH"
-          else
-            echo "pnpm/corepack/npm all unavailable. Check CI_TOOLS_IMAGE contents." >&2
-            exit 1
-          fi
-
-          pnpm -v
-
-      - name: Cache pnpm store
-        uses: actions/cache@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
-          path: ${{ env.PNPM_STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('frontend/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.0
+
+      - name: Install shell tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends shellcheck shfmt
+
+      - name: Prepare pnpm cache dir
+        run: mkdir -p "${PNPM_STORE_PATH}"
 
       - name: Configure pnpm store
         run: pnpm config set store-dir "${PNPM_STORE_PATH}"
@@ -248,6 +246,7 @@ jobs:
           LUNAFOX_RELEASE_GITEE_RAW_BASE=http://127.0.0.1:${PORT} \
           ./install.sh --source auto --public-url https://127.0.0.1:19083 --non-interactive >/tmp/install-fallback.log 2>&1
           grep -q "安装器源测速" /tmp/install-fallback.log
+          grep -q "安装器源排序" /tmp/install-fallback.log
           grep -q "安装器下载成功: source=gitee" /tmp/install-fallback.log
 
           LUNAFOX_RELEASE_CHANNEL_BRANCH=branch \
@@ -257,6 +256,7 @@ jobs:
           LUNAFOX_RELEASE_GITEE_RAW_BASE=http://127.0.0.1:9 \
           ./install.sh --source auto --channel githubok --public-url https://127.0.0.1:19083 --non-interactive >/tmp/install-github.log 2>&1
           grep -q "安装器源测速" /tmp/install-github.log
+          grep -q "安装器源排序" /tmp/install-github.log
           grep -q "安装器下载成功: source=github" /tmp/install-github.log
 
           set +e
@@ -282,24 +282,44 @@ jobs:
             exit 1
           fi
 
+      - name: CI contract guard
+        run: |
+          set -euo pipefail
+          if rg -n "build-base-tools\\.yml|build-ci-tools\\.yml|CI_TOOLS_IMAGE|BASE_TOOLS_IMAGE|Dockerfile\\.tools|WORKER_TOOLS_IMAGE" .github/workflows --glob '!test.yml'; then
+            echo "detected forbidden CI contract keyword regression"
+            exit 1
+          fi
+
+          if rg -n "CI_TOOLS_IMAGE|BASE_TOOLS_IMAGE|WORKER_TOOLS_IMAGE|Dockerfile\\.tools" \
+            docs/ci-version-governance.md tools/installer/README.md scripts/ci/version_inventory.sh; then
+            echo "detected forbidden docs/script keyword regression"
+            exit 1
+          fi
+
+          [ ! -f worker/Dockerfile.tools ] || {
+            echo "worker/Dockerfile.tools should not exist"
+            exit 1
+          }
+
       - name: Check repo naming conventions
         run: bash ./scripts/check-repo-naming.sh
 
   worker-tests:
+    if: inputs.run_worker
     runs-on: ubuntu-22.04
     defaults:
       run:
         shell: bash
-    container:
-      image: ${{ inputs.ci_tools_image != '' && inputs.ci_tools_image || (vars.CI_TOOLS_IMAGE != '' && vars.CI_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-ci-tools:stable', github.repository_owner)) }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     env:
       GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
       GOCACHE: ${{ github.workspace }}/.cache/go-build
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: worker/go.mod
 
       - name: Prepare writable cache directories
         run: |
@@ -321,20 +341,21 @@ jobs:
         run: make test
 
   server-tests:
+    if: inputs.run_server
     runs-on: ubuntu-22.04
     defaults:
       run:
         shell: bash
-    container:
-      image: ${{ inputs.ci_tools_image != '' && inputs.ci_tools_image || (vars.CI_TOOLS_IMAGE != '' && vars.CI_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-ci-tools:stable', github.repository_owner)) }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     env:
       GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
       GOCACHE: ${{ github.workspace }}/.cache/go-build
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
 
       - name: Prepare writable cache directories
         run: |
@@ -364,20 +385,21 @@ jobs:
         run: make test
 
   agent-tests:
+    if: inputs.run_agent
     runs-on: ubuntu-22.04
     defaults:
       run:
         shell: bash
-    container:
-      image: ${{ inputs.ci_tools_image != '' && inputs.ci_tools_image || (vars.CI_TOOLS_IMAGE != '' && vars.CI_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-ci-tools:stable', github.repository_owner)) }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     env:
       GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
       GOCACHE: ${{ github.workspace }}/.cache/go-build
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: agent/go.mod
 
       - name: Prepare writable cache directories
         run: |
@@ -399,20 +421,21 @@ jobs:
         run: make test
 
   installer-tests:
+    if: inputs.run_installer
     runs-on: ubuntu-22.04
     defaults:
       run:
         shell: bash
-    container:
-      image: ${{ inputs.ci_tools_image != '' && inputs.ci_tools_image || (vars.CI_TOOLS_IMAGE != '' && vars.CI_TOOLS_IMAGE || format('ghcr.io/{0}/lunafox-ci-tools:stable', github.repository_owner)) }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
     env:
       GOMODCACHE: ${{ github.workspace }}/.cache/go/pkg/mod
       GOCACHE: ${{ github.workspace }}/.cache/go-build
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/installer/go.mod
 
       - name: Prepare writable cache directories
         run: |
@@ -451,6 +474,7 @@ jobs:
 
   test:
     runs-on: ubuntu-22.04
+    if: always()
     needs:
       - frontend-and-scripts
       - worker-tests
@@ -459,4 +483,29 @@ jobs:
       - installer-tests
     steps:
       - name: Aggregate parallel test results
-        run: echo "All parallel test jobs passed."
+        run: |
+          set -euo pipefail
+          results=(
+            "frontend-and-scripts:${{ needs.frontend-and-scripts.result }}"
+            "worker-tests:${{ needs.worker-tests.result }}"
+            "server-tests:${{ needs.server-tests.result }}"
+            "agent-tests:${{ needs.agent-tests.result }}"
+            "installer-tests:${{ needs.installer-tests.result }}"
+          )
+
+          failed=0
+          for item in "${results[@]}"; do
+            name="${item%%:*}"
+            result="${item#*:}"
+            echo "${name} => ${result}"
+            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+              failed=1
+            fi
+          done
+
+          if [ "$failed" -ne 0 ]; then
+            echo "parallel test jobs contain failure/cancelled status"
+            exit 1
+          fi
+
+          echo "All selected test jobs passed."

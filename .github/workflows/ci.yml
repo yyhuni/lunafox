@@ -14,8 +14,96 @@ permissions:
   packages: read
 
 jobs:
+  detect-changes:
+    runs-on: ubuntu-22.04
+    outputs:
+      run_check_generated: ${{ steps.compute.outputs.run_check_generated }}
+      run_frontend_scripts: ${{ steps.compute.outputs.run_frontend_scripts }}
+      run_worker: ${{ steps.compute.outputs.run_worker }}
+      run_server: ${{ steps.compute.outputs.run_server }}
+      run_agent: ${{ steps.compute.outputs.run_agent }}
+      run_installer: ${{ steps.compute.outputs.run_installer }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            workflows:
+              - '.github/workflows/**'
+            check_generated:
+              - 'worker/**'
+              - '.github/workflows/check-generated-files.yml'
+              - '.github/workflows/ci.yml'
+            frontend_scripts:
+              - 'frontend/**'
+              - 'scripts/**'
+              - 'install.sh'
+              - 'start.sh'
+              - 'restart.sh'
+              - 'stop.sh'
+              - 'uninstall.sh'
+              - '.github/workflows/test.yml'
+              - '.github/workflows/ci.yml'
+            worker:
+              - 'worker/**'
+              - '.github/workflows/test.yml'
+              - '.github/workflows/ci.yml'
+            server:
+              - 'server/**'
+              - '.github/workflows/test.yml'
+              - '.github/workflows/ci.yml'
+            agent:
+              - 'agent/**'
+              - '.github/workflows/test.yml'
+              - '.github/workflows/ci.yml'
+            installer:
+              - 'tools/installer/**'
+              - '.github/workflows/test.yml'
+              - '.github/workflows/ci.yml'
+
+      - id: compute
+        run: |
+          set -euo pipefail
+
+          workflows='${{ steps.filter.outputs.workflows }}'
+          run_check_generated='${{ steps.filter.outputs.check_generated }}'
+          run_frontend_scripts='${{ steps.filter.outputs.frontend_scripts }}'
+          run_worker='${{ steps.filter.outputs.worker }}'
+          run_server='${{ steps.filter.outputs.server }}'
+          run_agent='${{ steps.filter.outputs.agent }}'
+          run_installer='${{ steps.filter.outputs.installer }}'
+
+          if [ "$workflows" = "true" ]; then
+            run_check_generated=true
+            run_frontend_scripts=true
+            run_worker=true
+            run_server=true
+            run_agent=true
+            run_installer=true
+          fi
+
+          {
+            echo "run_check_generated=${run_check_generated}"
+            echo "run_frontend_scripts=${run_frontend_scripts}"
+            echo "run_worker=${run_worker}"
+            echo "run_server=${run_server}"
+            echo "run_agent=${run_agent}"
+            echo "run_installer=${run_installer}"
+          } >> "$GITHUB_OUTPUT"
+
   check-generated:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.run_check_generated == 'true'
     uses: ./.github/workflows/check-generated-files.yml
-  
+
   test:
+    needs: detect-changes
     uses: ./.github/workflows/test.yml
+    with:
+      run_frontend_scripts: ${{ needs.detect-changes.outputs.run_frontend_scripts == 'true' }}
+      run_worker: ${{ needs.detect-changes.outputs.run_worker == 'true' }}
+      run_server: ${{ needs.detect-changes.outputs.run_server == 'true' }}
+      run_agent: ${{ needs.detect-changes.outputs.run_agent == 'true' }}
+      run_installer: ${{ needs.detect-changes.outputs.run_installer == 'true' }}

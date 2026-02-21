@@ -2,59 +2,60 @@
 
 ## Scope
 
-This repository uses layered tool images for CI and quarterly reminder-based version governance.
+The repository now uses a simplified CI baseline:
 
-- `base-tools`: lightweight common utilities.
-- `ci-tools`: Go/Node/pnpm on top of `base-tools` for CI jobs.
-- `scanner-tools`: heavy scanner toolchain in `worker/Dockerfile.tools`.
+- CI jobs run directly on GitHub-hosted runners.
+- Language toolchains are installed by official setup actions.
+- Worker build toolchain is maintained in `worker/Dockerfile`.
+- Quarterly reminder-based version governance is retained.
 
-## Repository Variables
+## CI Baseline Contracts
 
-Set these repository variables to immutable image digests:
+Mandatory contracts:
 
-- `BASE_TOOLS_IMAGE=ghcr.io/<owner>/lunafox-base-tools@sha256:<digest>`
-- `CI_TOOLS_IMAGE=ghcr.io/<owner>/lunafox-ci-tools@sha256:<digest>`
+- `.github/workflows/test.yml` must run without job-level container images.
+- `.github/workflows/check-generated-files.yml` must run without job-level container images.
+- `.github/workflows/ci.yml` must support change-detection and conditional module testing.
+- The legacy tool-image workflows must not be reintroduced.
 
-Use digest references to avoid tag drift.
+Guard policy:
 
-## Build Flows
+- `test.yml` contains a contract-guard step that fails CI if forbidden legacy keywords or removed workflow names reappear.
+- This guard is part of drift prevention and should remain enabled.
 
-Image build workflows support automatic and manual trigger:
+## Workflow Topology
 
-- `.github/workflows/build-base-tools.yml`
-- `.github/workflows/build-ci-tools.yml`
+Core CI workflows:
 
-Trigger policy:
+- `.github/workflows/ci.yml`: entry pipeline with change detection and conditional fan-out.
+- `.github/workflows/test.yml`: module tests (frontend/scripts, worker, server, agent, installer).
+- `.github/workflows/check-generated-files.yml`: generated-file consistency for worker metadata.
 
-- `push` on `main/develop` when relevant Dockerfiles/workflow files change
-- `workflow_dispatch` manual fallback
-- `build-ci-tools` also runs after `Build Base Tools Image` completes
+Release workflow:
 
-Promotion policy:
+- `.github/workflows/release.yml`: installer build, multi-registry image publish/merge/promote, release finalization, channel update.
 
-- `BASE_TOOLS_IMAGE` variable auto-updates on `main` push or manual dispatch.
-- `CI_TOOLS_IMAGE` auto-updates only after all verification jobs pass.
-- Verification failure fails workflow and blocks promotion (no auto issue creation).
+## Release Contracts
 
-## CI Job Usage
+Release contracts that must not drift:
 
-`CI_TOOLS_IMAGE` is used by these jobs:
+- Keep dual channels (`stable`, `canary`) and `SCHEMA_VERSION=2`.
+- Keep digest lists for `AGENT_IMAGE_REFS` and `WORKER_IMAGE_REFS` in channel files.
+- Keep four registry digests emitted and verified: DockerHub, GHCR, Tencent TCR, Alibaba ACR.
+- Keep both architectures for published images: `linux/amd64` and `linux/arm64`.
 
-- `.github/workflows/test.yml`
-- `.github/workflows/check-generated-files.yml`
-- `.github/workflows/release.yml` (`build-installers` job)
+## Version Inventory and Upgrades
 
-## Upgrade Policy
+Governance is intentionally conservative:
 
-- Runtime/tool version upgrades are manual via pull request.
-- No automatic major-version bump bot is used.
-- Quarterly workflow provides reminder/report only and does not block CI/release.
-- CI image promotion requires successful validation jobs.
+- Version upgrades are manual via pull request.
+- Quarterly review remains advisory, not a merge/release blocker.
+- `scripts/ci/version_inventory.sh` is the canonical source used for version snapshots and reports.
 
 ## Quarterly Reminder Workflow
 
 - Workflow: `.github/workflows/quarterly-version-review.yml`
-- Outputs/updates issue title: `[Quarterly] Version Review YYYY-QN`
+- Issue title pattern: `[Quarterly] Version Review YYYY-QN`
 
 Report sections:
 
@@ -66,11 +67,11 @@ Report sections:
 
 ## UNPINNED Rule
 
-`UNPINNED` items are highlighted as high priority in quarterly issue with concrete pinning suggestions.
+`UNPINNED` entries are highlighted in quarterly output with explicit pinning suggestions.
 
 Current expected candidates:
 
 - `nmap` / `masscan` apt installs in `worker/Dockerfile`
-- `pipx install` packages in `worker/Dockerfile` without `==<version>`
+- `pipx install` packages in `worker/Dockerfile` without strict `==<version>`
 
 These findings are reminders only and do not fail workflows.
