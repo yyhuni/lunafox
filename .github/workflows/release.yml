@@ -246,7 +246,7 @@ jobs:
           provenance: false
           sbom: false
           build-args: |
-            GOPROXY=${{ vars.GOPROXY != '' && vars.GOPROXY || 'https://proxy.golang.org,https://goproxy.cn,direct' }}
+            GOPROXY=https://proxy.golang.org,direct
           cache-from: |
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:buildcache-amd64
           cache-to: |
@@ -308,7 +308,7 @@ jobs:
           provenance: false
           sbom: false
           build-args: |
-            GOPROXY=${{ vars.GOPROXY != '' && vars.GOPROXY || 'https://proxy.golang.org,https://goproxy.cn,direct' }}
+            GOPROXY=https://proxy.golang.org,direct
           cache-from: |
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:buildcache-arm64
           cache-to: |

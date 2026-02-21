@@ -7,20 +7,18 @@
 # ============================================
 # Stage 1: Build scanner tools
 # ============================================
-FROM golang:1.26 AS tools-builder
+FROM golang:1.24 AS tools-builder
 
 ARG GO111MODULE=on
-ARG GOPROXY=https://proxy.golang.org,https://goproxy.cn,direct
-ARG GOFLAGS=-p=4
-ARG GOMAXPROCS=4
-ARG GONOSUMDB=github.com/yyhuni/xingfinger
+ARG GOPROXY=https://proxy.golang.org,direct
+ARG GOFLAGS=-p=1
+ARG GOMAXPROCS=2
 
 ENV GO111MODULE=$GO111MODULE
 ENV GOPROXY=$GOPROXY
 ENV GOFLAGS=$GOFLAGS
 ENV CGO_ENABLED=1
 ENV GOMAXPROCS=$GOMAXPROCS
-ENV GONOSUMDB=$GONOSUMDB
 
 # Install build dependencies for CGO tools
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -66,31 +64,6 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
       echo "install failed for $pkg after 3 attempts" >&2; \
       exit 1; \
     }; \
-    install_tool_no_sumdb() { \
-      pkg="$1"; \
-      proxy_candidates="https://proxy.golang.org,direct https://goproxy.cn,direct direct"; \
-      for proxy in $proxy_candidates; do \
-        tries=0; \
-        while [ "$tries" -lt 4 ]; do \
-          tries=$((tries + 1)); \
-          tmp_modcache="$(mktemp -d)"; \
-          tmp_gocache="$(mktemp -d)"; \
-          errlog="$(mktemp)"; \
-          if GOSUMDB=off GOPROXY="$proxy" GOFLAGS=-p=2 GOMAXPROCS=2 GOMODCACHE="$tmp_modcache" GOCACHE="$tmp_gocache" GIT_TERMINAL_PROMPT=0 GIT_HTTP_VERSION=HTTP/1.1 go install -v "$pkg" 2>"$errlog"; then \
-            rm -rf "$tmp_modcache" "$tmp_gocache"; \
-            rm -f "$errlog"; \
-            return 0; \
-          fi; \
-          echo "install (GOSUMDB=off GOPROXY=$proxy) failed for $pkg (attempt $tries), retrying..." >&2; \
-          tail -n 40 "$errlog" >&2 || true; \
-          rm -rf "$tmp_modcache" "$tmp_gocache"; \
-          rm -f "$errlog"; \
-          sleep $((tries * 2)); \
-        done; \
-      done; \
-      echo "install (GOSUMDB=off) failed for $pkg after retries across proxy candidates" >&2; \
-      exit 1; \
-    }; \
     install_tool github.com/projectdiscovery/httpx/cmd/httpx@v1.8.1; \
     install_tool github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.4.0; \
     install_tool github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.12.0; \
@@ -99,7 +72,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     install_tool github.com/tomnomnom/assetfinder@v0.1.1; \
     install_tool github.com/ffuf/ffuf/v2@v2.1.0; \
     install_tool github.com/d3mondev/puredns/v2@v2.1.1; \
-    install_tool_no_sumdb github.com/yyhuni/xingfinger@v0.0.0-20251228093343-bd42c7be5a70; \
+    install_tool github.com/yyhuni/xingfinger@v0.0.0-20251228093343-bd42c7be5a70; \
     install_tool github.com/hahwul/dalfox/v2@v2.12.0
 
 # ============================================
@@ -108,7 +81,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
 FROM golang:1.26 AS worker-builder
 
 ARG GO111MODULE=on
-ARG GOPROXY=https://proxy.golang.org,https://goproxy.cn,direct
+ARG GOPROXY=https://proxy.golang.org,direct
 
 ENV GO111MODULE=$GO111MODULE
 ENV GOPROXY=$GOPROXY
