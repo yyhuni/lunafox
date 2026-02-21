@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/yyhuni/lunafox/tools/installer/internal/cli"
@@ -16,21 +16,22 @@ import (
 )
 
 const (
-	registryProbeTimeout = 3 * time.Second
+	imageProbeTimeout     = 6 * time.Second
+	imageProbeParallelism = 4
 )
 
 type stepImages struct{}
 
-type registryProbe struct {
-	host      string
-	reachable bool
-	latency   time.Duration
+type imageProbeResult struct {
+	ref     string
+	success bool
+	latency time.Duration
+	errMsg  string
 }
 
 type imageCandidate struct {
-	ref      string
-	registry string
-	index    int
+	ref   string
+	index int
 }
 
 func (stepImages) Title() string {
@@ -54,8 +55,8 @@ func runProdImageSelection(ctx context.Context, installer *Installer) error {
 		return fmt.Errorf("生产模式缺少 WORKER_IMAGE_REF 候选")
 	}
 
-	allCandidates := append(append([]string{}, agentCandidates...), workerCandidates...)
-	probes := probeRegistries(ctx, allCandidates)
+	allCandidates := normalizeImageCandidates(append(append([]string{}, agentCandidates...), workerCandidates...))
+	probes := probeImageCandidates(ctx, installer, allCandidates)
 
 	agentRef, err := pullFirstAvailable(ctx, installer, "Agent", agentCandidates, probes)
 	if err != nil {
@@ -128,51 +129,97 @@ func runDevImageBuild(ctx context.Context, installer *Installer) error {
 	return nil
 }
 
-func probeRegistries(ctx context.Context, imageRefs []string) map[string]registryProbe {
-	orderedHosts := make([]string, 0, len(imageRefs))
-	seen := make(map[string]struct{}, len(imageRefs))
-	for _, ref := range imageRefs {
-		host := imageRegistryHost(ref)
-		if host == "" {
-			continue
-		}
-		if _, ok := seen[host]; ok {
-			continue
-		}
-		seen[host] = struct{}{}
-		orderedHosts = append(orderedHosts, host)
+func probeImageCandidates(ctx context.Context, installer *Installer, refs []string) map[string]imageProbeResult {
+	results := make(map[string]imageProbeResult, len(refs))
+	if len(refs) == 0 {
+		return results
 	}
 
-	results := make(map[string]registryProbe, len(orderedHosts))
-	for _, host := range orderedHosts {
-		latency, reachable := probeRegistryReachability(ctx, host)
-		results[host] = registryProbe{
-			host:      host,
-			reachable: reachable,
-			latency:   latency,
-		}
+	concurrency := imageProbeParallelism
+	if concurrency < 1 {
+		concurrency = 1
 	}
+	sem := make(chan struct{}, concurrency)
+	var wg sync.WaitGroup
+	var mutex sync.Mutex
+
+	for _, ref := range refs {
+		candidate := strings.TrimSpace(ref)
+		if candidate == "" {
+			continue
+		}
+		wg.Add(1)
+		go func(imageRef string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			started := time.Now()
+			probeCtx, cancel := context.WithTimeout(ctx, imageProbeTimeout)
+			defer cancel()
+
+			command := installer.toolchain.DockerCommand("buildx", "imagetools", "inspect", imageRef)
+			_, err := installer.runner.Run(probeCtx, command)
+
+			result := imageProbeResult{
+				ref:     imageRef,
+				success: err == nil,
+				latency: time.Since(started),
+			}
+			if err != nil {
+				result.errMsg = commandErrorMessage(err)
+			}
+
+			mutex.Lock()
+			results[imageRef] = result
+			mutex.Unlock()
+		}(candidate)
+	}
+	wg.Wait()
+
+	for _, ref := range refs {
+		probe, ok := results[ref]
+		if !ok {
+			continue
+		}
+		if probe.success {
+			installer.printer.Info("镜像候选测速成功: %s（inspect %dms）", ref, probe.latency.Milliseconds())
+			continue
+		}
+		errMsg := strings.TrimSpace(probe.errMsg)
+		if errMsg == "" {
+			errMsg = "未知错误"
+		}
+		installer.printer.Warn("镜像候选测速失败: %s（%s）", ref, errMsg)
+	}
+
 	return results
 }
 
-func pullFirstAvailable(ctx context.Context, installer *Installer, component string, refs []string, probes map[string]registryProbe) (string, error) {
+func pullFirstAvailable(ctx context.Context, installer *Installer, component string, refs []string, probes map[string]imageProbeResult) (string, error) {
 	candidates := buildSortedCandidates(refs, probes)
 	failures := make([]string, 0, len(candidates))
 
 	for _, candidate := range candidates {
-		if probe, ok := probes[candidate.registry]; ok && probe.reachable {
-			installer.printer.Info("%s 镜像候选: %s（探测延迟 %dms）", component, candidate.ref, probe.latency.Milliseconds())
+		if probe, ok := probes[candidate.ref]; ok && probe.success {
+			installer.printer.Info("%s 镜像候选: %s（测速 %dms）", component, candidate.ref, probe.latency.Milliseconds())
+		} else if ok {
+			errMsg := strings.TrimSpace(probe.errMsg)
+			if errMsg == "" {
+				errMsg = "未知错误"
+			}
+			installer.printer.Warn("%s 镜像候选: %s（测速失败: %s，作为回退继续尝试）", component, candidate.ref, errMsg)
 		} else {
-			installer.printer.Warn("%s 镜像候选: %s（连通性探测失败，作为回退继续尝试）", component, candidate.ref)
+			installer.printer.Warn("%s 镜像候选: %s（未采集到测速结果，作为回退继续尝试）", component, candidate.ref)
 		}
 
 		command := installer.toolchain.DockerCommand("pull", candidate.ref)
-		if _, err := installer.runner.Run(ctx, command); err == nil {
+		_, pullErr := installer.runner.Run(ctx, command)
+		if pullErr == nil {
 			installer.printer.Success("%s 镜像已拉取: %s", component, candidate.ref)
 			return candidate.ref, nil
-		} else {
-			failures = append(failures, pullErrorMessage(err))
 		}
+		failures = append(failures, commandErrorMessage(pullErr))
 	}
 
 	lastFailure := ""
@@ -185,7 +232,7 @@ func pullFirstAvailable(ctx context.Context, installer *Installer, component str
 	return "", fmt.Errorf("%s 镜像拉取失败：没有可用候选", component)
 }
 
-func buildSortedCandidates(refs []string, probes map[string]registryProbe) []imageCandidate {
+func buildSortedCandidates(refs []string, probes map[string]imageProbeResult) []imageCandidate {
 	candidates := make([]imageCandidate, 0, len(refs))
 	for idx, ref := range refs {
 		trimmed := strings.TrimSpace(ref)
@@ -193,22 +240,21 @@ func buildSortedCandidates(refs []string, probes map[string]registryProbe) []ima
 			continue
 		}
 		candidates = append(candidates, imageCandidate{
-			ref:      trimmed,
-			registry: imageRegistryHost(trimmed),
-			index:    idx,
+			ref:   trimmed,
+			index: idx,
 		})
 	}
 
 	sort.SliceStable(candidates, func(i, j int) bool {
-		leftProbe, leftOK := probes[candidates[i].registry]
-		rightProbe, rightOK := probes[candidates[j].registry]
+		leftProbe, leftOK := probes[candidates[i].ref]
+		rightProbe, rightOK := probes[candidates[j].ref]
 
-		leftReachable := leftOK && leftProbe.reachable
-		rightReachable := rightOK && rightProbe.reachable
-		if leftReachable != rightReachable {
-			return leftReachable
+		leftSuccess := leftOK && leftProbe.success
+		rightSuccess := rightOK && rightProbe.success
+		if leftSuccess != rightSuccess {
+			return leftSuccess
 		}
-		if leftReachable && rightReachable && leftProbe.latency != rightProbe.latency {
+		if leftSuccess && rightSuccess && leftProbe.latency != rightProbe.latency {
 			return leftProbe.latency < rightProbe.latency
 		}
 		return candidates[i].index < candidates[j].index
@@ -233,53 +279,7 @@ func normalizeImageCandidates(refs []string) []string {
 	return result
 }
 
-func imageRegistryHost(imageRef string) string {
-	trimmed := strings.TrimSpace(imageRef)
-	if trimmed == "" {
-		return ""
-	}
-	slash := strings.Index(trimmed, "/")
-	if slash <= 0 {
-		return "docker.io"
-	}
-	host := strings.TrimSpace(trimmed[:slash])
-	if host == "" {
-		return "docker.io"
-	}
-	if !strings.Contains(host, ".") && !strings.Contains(host, ":") && !strings.EqualFold(host, "localhost") {
-		return "docker.io"
-	}
-	return strings.ToLower(host)
-}
-
-func probeRegistryReachability(ctx context.Context, registryHost string) (time.Duration, bool) {
-	probeHost := registryHost
-	if strings.EqualFold(probeHost, "docker.io") {
-		probeHost = "registry-1.docker.io"
-	}
-	target := "https://" + probeHost + "/v2/"
-
-	requestCtx, cancel := context.WithTimeout(ctx, registryProbeTimeout)
-	defer cancel()
-
-	request, err := http.NewRequestWithContext(requestCtx, http.MethodGet, target, nil)
-	if err != nil {
-		return 0, false
-	}
-
-	client := &http.Client{Timeout: registryProbeTimeout}
-	started := time.Now()
-	response, err := client.Do(request)
-	if err != nil {
-		return 0, false
-	}
-	defer response.Body.Close()
-
-	latency := time.Since(started)
-	return latency, response.StatusCode >= 200 && response.StatusCode < 500
-}
-
-func pullErrorMessage(err error) string {
+func commandErrorMessage(err error) string {
 	detail := ""
 	var execErr *execx.ExecError
 	if errors.As(err, &execErr) {

@@ -31,27 +31,24 @@ func TestNormalizeImageCandidates(t *testing.T) {
 	}
 }
 
-func TestBuildSortedCandidatesPrefersReachableLowerLatency(t *testing.T) {
+func TestBuildSortedCandidatesPrefersSuccessfulLowerLatency(t *testing.T) {
 	refs := []string{
 		"docker.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		"ghcr.io/yyhuni/lunafox-agent@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 		"ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
 	}
-	probes := map[string]registryProbe{
-		"docker.io": {
-			host:      "docker.io",
-			reachable: true,
-			latency:   80 * time.Millisecond,
+	probes := map[string]imageProbeResult{
+		refs[0]: {
+			success: true,
+			latency: 80 * time.Millisecond,
 		},
-		"ghcr.io": {
-			host:      "ghcr.io",
-			reachable: false,
-			latency:   0,
+		refs[1]: {
+			success: false,
+			latency: 10 * time.Millisecond,
 		},
-		"ccr.ccs.tencentyun.com": {
-			host:      "ccr.ccs.tencentyun.com",
-			reachable: true,
-			latency:   30 * time.Millisecond,
+		refs[2]: {
+			success: true,
+			latency: 30 * time.Millisecond,
 		},
 	}
 
@@ -64,6 +61,34 @@ func TestBuildSortedCandidatesPrefersReachableLowerLatency(t *testing.T) {
 	want := []string{refs[2], refs[0], refs[1]}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("unexpected ordering: got=%v want=%v", got, want)
+	}
+}
+
+func TestBuildSortedCandidatesStableOrderForSameLatency(t *testing.T) {
+	refs := []string{
+		"docker.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		"ghcr.io/yyhuni/lunafox-agent@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		"ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+	}
+	probes := map[string]imageProbeResult{
+		refs[0]: {
+			success: true,
+			latency: 50 * time.Millisecond,
+		},
+		refs[1]: {
+			success: true,
+			latency: 50 * time.Millisecond,
+		},
+		refs[2]: {
+			success: false,
+		},
+	}
+
+	candidates := buildSortedCandidates(refs, probes)
+	got := []string{candidates[0].ref, candidates[1].ref, candidates[2].ref}
+	want := []string{refs[0], refs[1], refs[2]}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected stable ordering: got=%v want=%v", got, want)
 	}
 }
 
@@ -82,16 +107,14 @@ func TestPullFirstAvailableFallsBackWhenPrimaryFails(t *testing.T) {
 		toolchain: docker.Toolchain{DockerBin: "docker"},
 	}
 
-	probes := map[string]registryProbe{
-		"ccr.ccs.tencentyun.com": {
-			host:      "ccr.ccs.tencentyun.com",
-			reachable: true,
-			latency:   20 * time.Millisecond,
+	probes := map[string]imageProbeResult{
+		primary: {
+			success: false,
+			errMsg:  "probe failed",
 		},
-		"docker.io": {
-			host:      "docker.io",
-			reachable: true,
-			latency:   40 * time.Millisecond,
+		secondary: {
+			success: true,
+			latency: 40 * time.Millisecond,
 		},
 	}
 
@@ -103,7 +126,7 @@ func TestPullFirstAvailableFallsBackWhenPrimaryFails(t *testing.T) {
 		t.Fatalf("expected fallback ref, got %s", got)
 	}
 
-	wantPulled := []string{primary, secondary}
+	wantPulled := []string{secondary}
 	if !reflect.DeepEqual(runner.pulled, wantPulled) {
 		t.Fatalf("unexpected pull order: got=%v want=%v", runner.pulled, wantPulled)
 	}

@@ -39,6 +39,12 @@ require_digest_ref_list() {
 		exit 1
 	fi
 
+	# Release contract (SCHEMA_VERSION=2):
+	# AGENT_IMAGE_REFS / WORKER_IMAGE_REFS must stay as digest ref lists across
+	# DockerHub + GHCR + Tencent TCR + Alibaba ACR so installer probe/fallback
+	# keeps working. Regressing to a single value or legacy single-key form is
+	# not allowed.
+
 	IFS=',' read -r -a parts <<<"$value"
 	for part in "${parts[@]}"; do
 		trimmed="$(printf '%s' "$part" | xargs)"
