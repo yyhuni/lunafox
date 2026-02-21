@@ -55,6 +55,20 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
       echo "install failed for $pkg after 3 attempts" >&2; \
       exit 1; \
     }; \
+    install_tool_no_sumdb() { \
+      pkg="$1"; \
+      tries=0; \
+      while [ "$tries" -lt 3 ]; do \
+        tries=$((tries + 1)); \
+        if GOSUMDB=off go install -v "$pkg"; then \
+          return 0; \
+        fi; \
+        echo "install (GOSUMDB=off) failed for $pkg (attempt $tries), retrying..." >&2; \
+        sleep $((tries * 2)); \
+      done; \
+      echo "install (GOSUMDB=off) failed for $pkg after 3 attempts" >&2; \
+      exit 1; \
+    }; \
     install_tool github.com/projectdiscovery/httpx/cmd/httpx@v1.8.1; \
     install_tool github.com/projectdiscovery/naabu/v2/cmd/naabu@v2.4.0; \
     install_tool github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.12.0; \
@@ -63,7 +77,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     install_tool github.com/tomnomnom/assetfinder@v0.1.1; \
     install_tool github.com/ffuf/ffuf/v2@v2.1.0; \
     install_tool github.com/d3mondev/puredns/v2@v2.1.1; \
-    install_tool github.com/yyhuni/xingfinger@v0.0.0-20251228093343-bd42c7be5a70; \
+    install_tool_no_sumdb github.com/yyhuni/xingfinger@v0.0.0-20251228093343-bd42c7be5a70; \
     install_tool github.com/hahwul/dalfox/v2@v2.12.0
 
 # ============================================
