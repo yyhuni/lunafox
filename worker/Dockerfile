@@ -32,7 +32,18 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && rm -rf /var/lib/apt/lists/*
 
 # Build massdns (required by puredns)
-RUN git clone https://github.com/blechschmidt/massdns.git /tmp/massdns && \
+RUN set -eux; \
+    tries=0; \
+    while [ "$tries" -lt 5 ]; do \
+      tries=$((tries + 1)); \
+      rm -rf /tmp/massdns; \
+      if git clone --depth=1 https://github.com/blechschmidt/massdns.git /tmp/massdns; then \
+        break; \
+      fi; \
+      echo "massdns clone failed (attempt $tries), retrying..." >&2; \
+      sleep $((tries * 2)); \
+    done; \
+    [ -d /tmp/massdns/.git ] || { echo "failed to clone massdns after 5 attempts" >&2; exit 1; }; \
     cd /tmp/massdns && \
     make && \
     cp bin/massdns /usr/local/bin/massdns
@@ -57,16 +68,27 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     }; \
     install_tool_no_sumdb() { \
       pkg="$1"; \
-      tries=0; \
-      while [ "$tries" -lt 3 ]; do \
-        tries=$((tries + 1)); \
-        if GOSUMDB=off go install -v "$pkg"; then \
-          return 0; \
-        fi; \
-        echo "install (GOSUMDB=off) failed for $pkg (attempt $tries), retrying..." >&2; \
-        sleep $((tries * 2)); \
+      proxy_candidates="https://proxy.golang.org,direct https://goproxy.cn,direct direct"; \
+      for proxy in $proxy_candidates; do \
+        tries=0; \
+        while [ "$tries" -lt 4 ]; do \
+          tries=$((tries + 1)); \
+          tmp_modcache="$(mktemp -d)"; \
+          tmp_gocache="$(mktemp -d)"; \
+          errlog="$(mktemp)"; \
+          if GOSUMDB=off GOPROXY="$proxy" GOFLAGS=-p=2 GOMAXPROCS=2 GOMODCACHE="$tmp_modcache" GOCACHE="$tmp_gocache" GIT_TERMINAL_PROMPT=0 GIT_HTTP_VERSION=HTTP/1.1 go install -v "$pkg" 2>"$errlog"; then \
+            rm -rf "$tmp_modcache" "$tmp_gocache"; \
+            rm -f "$errlog"; \
+            return 0; \
+          fi; \
+          echo "install (GOSUMDB=off GOPROXY=$proxy) failed for $pkg (attempt $tries), retrying..." >&2; \
+          tail -n 40 "$errlog" >&2 || true; \
+          rm -rf "$tmp_modcache" "$tmp_gocache"; \
+          rm -f "$errlog"; \
+          sleep $((tries * 2)); \
+        done; \
       done; \
-      echo "install (GOSUMDB=off) failed for $pkg after 3 attempts" >&2; \
+      echo "install (GOSUMDB=off) failed for $pkg after retries across proxy candidates" >&2; \
       exit 1; \
     }; \
     install_tool github.com/projectdiscovery/httpx/cmd/httpx@v1.8.1; \
