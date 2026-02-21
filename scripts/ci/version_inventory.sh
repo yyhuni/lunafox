@@ -119,7 +119,7 @@ def extract_pnpm_version():
 
 
 def extract_scanner_go_tools():
-    text = read_text("worker/Dockerfile.tools")
+    text = read_text("worker/Dockerfile")
     tools = []
     pattern = re.compile(r"install_tool\s+([^\s@]+)@([^;\s]+)")
 
@@ -147,7 +147,7 @@ def extract_scanner_go_tools():
                 "module": module_path,
                 "module_root": module_root,
                 "current": version,
-                "source": "worker/Dockerfile.tools",
+                "source": "worker/Dockerfile",
             }
         )
     return tools
