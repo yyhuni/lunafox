@@ -40,6 +40,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.0
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -47,16 +52,11 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.30.0
-
       - name: Install shell tools
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends shellcheck shfmt
+          sudo apt-get install -y --no-install-recommends shellcheck shfmt ripgrep
 
       - name: Prepare pnpm cache dir
         run: mkdir -p "${PNPM_STORE_PATH}"
@@ -371,6 +371,12 @@ jobs:
           key: ${{ runner.os }}-go-cache-server-${{ hashFiles('server/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-cache-server-
+
+      - name: Install server guard dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ripgrep
 
       - name: Check server DDD boundaries
         working-directory: server
