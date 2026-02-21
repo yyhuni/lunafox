@@ -1,10 +1,11 @@
 package tui
 
 import (
-	"fmt"
+	"net"
 	"net/url"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/yyhuni/lunafox/tools/installer/internal/cli"
 )
@@ -12,91 +13,152 @@ import (
 type step int
 
 const (
-	stepSelectDeployment step = iota
-	stepProdLocalConfirm
-	stepAddress
+	stepHost step = iota
+	stepProdLoopbackConfirm
+	stepPort
 	stepGoProxy
 	stepConfirm
-)
-
-type deploymentType int
-
-const (
-	deploymentLocal deploymentType = iota
-	deploymentPublic
 )
 
 type model struct {
 	options cli.Options
 
-	step       step
-	deployment deploymentType
-	cursor     int
-	focus      int
+	step   step
+	cursor int
 
-	host string
-	port string
+	hostInput textinput.Model
+	portInput textinput.Model
 
-	hints      []cli.NetworkCandidate
-	activeHint string
 	useGoProxy bool
 	errMsg     string
 	done       bool
 	cancelled  bool
+	width      int
+	height     int
 }
 
 func newModel(options cli.Options) model {
 	host, port := splitHostPortFromURL(options.PublicURL)
-	if port == "" {
-		port = options.PublicPort
+	if !options.HasExplicitPublicAddress() {
+		host = ""
+	} else {
+		host = strings.TrimSpace(host)
+	}
+	if strings.TrimSpace(port) == "" {
+		port = strings.TrimSpace(options.PublicPort)
 	}
 	if strings.TrimSpace(port) == "" {
 		port = cli.DefaultPublicPort
 	}
-	if strings.TrimSpace(host) == "" {
-		host = "localhost"
-	}
 
-	deployment := deploymentLocal
-	cursor := 0
-	if options.Mode == cli.ModeProd {
-		deployment = deploymentPublic
-		cursor = 1
-	}
+	hostInput := textinput.New()
+	hostInput.Placeholder = "例如 localhost / 192.168.1.10"
+	hostInput.SetValue(host)
+	hostInput.CharLimit = 100
+	hostInput.Width = 36
+	hostInput.Prompt = ""
 
-	hints, _ := cli.ListNetworkCandidates()
-	activeHint := ""
-	if len(hints) > 0 {
-		activeHint = hints[0].IP
-	}
+	portInput := textinput.New()
+	portInput.Placeholder = "例如: 8083"
+	portInput.SetValue(port)
+	portInput.CharLimit = 5
+	portInput.Width = 10
+	portInput.Prompt = ""
 
-	if deployment == deploymentPublic && cli.IsLoopbackHost(host) && activeHint != "" {
-		host = activeHint
-	}
-	if deployment == deploymentLocal {
-		host = "localhost"
-	}
-
-	return model{
+	m := model{
 		options:    options,
-		step:       stepSelectDeployment,
-		deployment: deployment,
-		cursor:     cursor,
-		focus:      0,
-		host:       host,
-		port:       port,
-		hints:      hints,
-		activeHint: activeHint,
+		step:       stepHost,
+		cursor:     0,
+		hostInput:  hostInput,
+		portInput:  portInput,
 		useGoProxy: options.UseGoProxyCN,
 	}
+	m.syncInputFocus()
+	return m
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+	switch m.step {
+	case stepHost:
+		return m.hostInput.Focus()
+	case stepPort:
+		return m.portInput.Focus()
+	default:
+		return nil
+	}
+}
+
+func (m *model) syncInputFocus() tea.Cmd {
+	switch m.step {
+	case stepHost:
+		m.portInput.Blur()
+		return m.hostInput.Focus()
+	case stepPort:
+		m.hostInput.Blur()
+		return m.portInput.Focus()
+	default:
+		m.hostInput.Blur()
+		m.portInput.Blur()
+		return nil
+	}
+}
+
+func (m *model) adjustInputWidths() {
+	hostWidth := 36
+	portWidth := 10
+
+	if m.width > 0 {
+		hostWidth = m.width - 30
+		if hostWidth < 18 {
+			hostWidth = 18
+		}
+		if hostWidth > 72 {
+			hostWidth = 72
+		}
+
+		switch {
+		case m.width < 42:
+			portWidth = 6
+		case m.width < 56:
+			portWidth = 8
+		}
+	}
+
+	m.hostInput.Width = hostWidth
+	m.portInput.Width = portWidth
+}
+
+func batchWith(cmds []tea.Cmd, cmd tea.Cmd) tea.Cmd {
+	if cmd != nil {
+		cmds = append(cmds, cmd)
+	}
+	if len(cmds) == 0 {
+		return nil
+	}
+	return tea.Batch(cmds...)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+
+	switch m.step {
+	case stepHost:
+		nextInput, cmd := m.hostInput.Update(msg)
+		m.hostInput = nextInput
+		cmds = append(cmds, cmd)
+	case stepPort:
+		nextInput, cmd := m.portInput.Update(msg)
+		m.portInput = nextInput
+		cmds = append(cmds, cmd)
+	}
+
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		m.adjustInputWidths()
+		return m, batchWith(cmds, nil)
+
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
@@ -104,124 +166,104 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
+		var stepCmd tea.Cmd
 		switch m.step {
-		case stepSelectDeployment:
-			return m.updateDeploymentStep(msg)
-		case stepProdLocalConfirm:
-			return m.updateProdLocalConfirmStep(msg)
-		case stepAddress:
-			return m.updateAddressStep(msg)
+		case stepHost:
+			m, stepCmd = m.updateHostStep(msg)
+		case stepProdLoopbackConfirm:
+			m, stepCmd = m.updateProdLoopbackConfirmStep(msg)
+		case stepPort:
+			m, stepCmd = m.updatePortStep(msg)
 		case stepGoProxy:
-			return m.updateGoProxyStep(msg)
+			m, stepCmd = m.updateGoProxyStep(msg)
 		case stepConfirm:
-			return m.updateConfirmStep(msg)
+			m, stepCmd = m.updateConfirmStep(msg)
 		}
+		return m, batchWith(cmds, stepCmd)
 	}
-	return m, nil
+
+	return m, batchWith(cmds, nil)
 }
 
-func (m model) updateDeploymentStep(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m model) updateHostStep(msg tea.KeyMsg) (model, tea.Cmd) {
 	switch msg.Type {
-	case tea.KeyUp, tea.KeyShiftTab:
-		if m.cursor > 0 {
-			m.cursor--
-		}
-	case tea.KeyDown, tea.KeyTab:
-		if m.cursor < 1 {
-			m.cursor++
-		}
-	case tea.KeyEnter:
-		if m.cursor == 0 {
-			m.deployment = deploymentLocal
-			m.host = "localhost"
-			m.focus = 1
-			if m.options.Mode == cli.ModeProd {
-				m.step = stepProdLocalConfirm
-				m.cursor = 0
-				return m, nil
-			}
-		} else {
-			m.deployment = deploymentPublic
-			m.focus = 0
-			if cli.IsLoopbackHost(m.host) {
-				if m.activeHint != "" {
-					m.host = m.activeHint
-				} else {
-					m.host = ""
-				}
-			}
-		}
-		m.step = stepAddress
-		m.errMsg = ""
-	}
-	return m, nil
-}
-
-func (m model) updateProdLocalConfirmStep(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyUp, tea.KeyShiftTab:
-		if m.cursor > 0 {
-			m.cursor--
-		}
-	case tea.KeyDown, tea.KeyTab:
-		if m.cursor < 1 {
-			m.cursor++
-		}
-	case tea.KeyEnter:
-		if m.cursor == 0 {
-			m.step = stepSelectDeployment
-			m.cursor = 1
-			return m, nil
-		}
-		m.step = stepAddress
-		m.focus = 1
-		m.errMsg = ""
-	}
-	return m, nil
-}
-
-func (m model) updateAddressStep(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	hostEditable := m.deployment == deploymentPublic
-
-	switch msg.Type {
-	case tea.KeyUp:
-		if hostEditable {
-			m.focus = 0
-		}
-	case tea.KeyDown:
-		m.focus = 1
-	case tea.KeyTab, tea.KeyShiftTab:
-		if hostEditable {
-			if m.focus == 0 {
-				m.focus = 1
-			} else {
-				m.focus = 0
-			}
-		}
-	case tea.KeyBackspace, tea.KeyDelete:
-		if m.focus == 0 && hostEditable {
-			if len(m.host) > 0 {
-				m.host = m.host[:len(m.host)-1]
-			}
-		} else if m.focus == 1 {
-			if len(m.port) > 0 {
-				m.port = m.port[:len(m.port)-1]
-			}
-		}
-		m.errMsg = ""
-	case tea.KeyEnter:
-		host := m.host
-		if m.deployment == deploymentLocal {
-			host = "localhost"
-		}
-		publicURL, publicPort, err := cli.NormalizePublicHostPort(host, m.port)
+	case tea.KeyEnter, tea.KeyTab:
+		host, err := cli.ParsePublicHostInput(m.hostInput.Value())
 		if err != nil {
-			m.errMsg = err.Error()
+			m.errMsg = "主机不合法: " + err.Error()
 			return m, nil
 		}
-		m.options.PublicURL = publicURL
-		m.options.PublicPort = publicPort
+		if host == "" {
+			m.errMsg = "主机不合法: 不能为空"
+			return m, nil
+		}
+
+		m.hostInput.SetValue(host)
+		m.errMsg = ""
+
+		if m.options.Mode == cli.ModeProd && cli.IsLoopbackHost(host) {
+			m.step = stepProdLoopbackConfirm
+			m.cursor = 0
+			return m, m.syncInputFocus()
+		}
+
+		m.step = stepPort
+		return m, m.syncInputFocus()
+	}
+	return m, nil
+}
+
+func (m model) updateProdLoopbackConfirmStep(msg tea.KeyMsg) (model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyUp, tea.KeyShiftTab:
+		if m.cursor > 0 {
+			m.cursor--
+		}
+	case tea.KeyDown, tea.KeyTab:
+		if m.cursor < 1 {
+			m.cursor++
+		}
+	case tea.KeyEnter:
+		if m.cursor == 0 {
+			m.step = stepHost
+			m.errMsg = ""
+			return m, m.syncInputFocus()
+		}
+		m.step = stepPort
+		m.errMsg = ""
+		return m, m.syncInputFocus()
+	}
+	return m, nil
+}
+
+func (m model) updatePortStep(msg tea.KeyMsg) (model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEnter, tea.KeyTab:
+		host, err := cli.ParsePublicHostInput(m.hostInput.Value())
+		if err != nil {
+			m.errMsg = "主机不合法: " + err.Error()
+			return m, nil
+		}
+		if host == "" {
+			m.errMsg = "主机不合法: 不能为空"
+			return m, nil
+		}
+
+		port := strings.TrimSpace(m.portInput.Value())
+		if port == "" {
+			port = cli.DefaultPublicPort
+		}
+		if err := cli.ValidatePublicPort(port); err != nil {
+			m.errMsg = "端口不合法: " + err.Error()
+			return m, nil
+		}
+
+		m.portInput.SetValue(port)
+		m.options.PublicPort = port
+		m.options.PublicURL = cli.BuildPublicURL(host, port)
 		m.options.PublicAddressSource = cli.PublicAddressSourceHostPort
+		m.errMsg = ""
+
 		if m.options.Mode == cli.ModeDev {
 			m.step = stepGoProxy
 			m.cursor = 0
@@ -229,32 +271,25 @@ func (m model) updateAddressStep(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.step = stepConfirm
 			m.cursor = 0
 		}
-		m.errMsg = ""
-	case tea.KeyRunes:
-		text := string(msg.Runes)
-		if m.focus == 0 && hostEditable {
-			m.host += text
-		} else if m.focus == 1 {
-			m.port += text
-		}
-		m.errMsg = ""
+		return m, m.syncInputFocus()
 	}
-
 	return m, nil
 }
 
-func (m model) updateGoProxyStep(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m model) updateGoProxyStep(msg tea.KeyMsg) (model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyLeft, tea.KeyRight, tea.KeyTab, tea.KeyShiftTab, tea.KeySpace:
 		m.useGoProxy = !m.useGoProxy
 	case tea.KeyEnter:
 		m.step = stepConfirm
 		m.cursor = 0
+		m.errMsg = ""
+		return m, m.syncInputFocus()
 	}
 	return m, nil
 }
 
-func (m model) updateConfirmStep(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m model) updateConfirmStep(msg tea.KeyMsg) (model, tea.Cmd) {
 	maxCursor := 2
 	switch msg.Type {
 	case tea.KeyUp, tea.KeyShiftTab:
@@ -277,12 +312,9 @@ func (m model) updateConfirmStep(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.done = true
 			return m, tea.Quit
 		case 1:
-			m.step = stepAddress
-			if m.deployment == deploymentPublic {
-				m.focus = 0
-			} else {
-				m.focus = 1
-			}
+			m.step = stepHost
+			m.errMsg = ""
+			return m, m.syncInputFocus()
 		case 2:
 			m.cancelled = true
 			return m, tea.Quit
@@ -291,86 +323,280 @@ func (m model) updateConfirmStep(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m model) totalSteps() int {
+	total := 3 // 主机 + 端口 + 确认
+	if m.options.Mode == cli.ModeDev {
+		total++
+	}
+	return total
+}
+
+func (m model) currentStepNumber() int {
+	switch m.step {
+	case stepHost, stepProdLoopbackConfirm:
+		return 1
+	case stepPort:
+		return 2
+	case stepGoProxy:
+		return 3
+	case stepConfirm:
+		return m.totalSteps()
+	default:
+		return 1
+	}
+}
+
+func (m model) stepLabels() []string {
+	if m.options.Mode == cli.ModeDev {
+		return []string{"主机", "端口", "代理", "确认"}
+	}
+	return []string{"主机", "端口", "确认"}
+}
+
+func (m model) renderCompletedSummary() string {
+	var b strings.Builder
+	current := m.currentStepNumber()
+
+	if current > 1 {
+		host, _, _ := m.resolvedHost()
+		if host == "" {
+			host = "-"
+		}
+		b.WriteString(renderCompletedItem("主机", host) + "\n")
+	}
+	if current > 2 {
+		port, _, _ := m.resolvedPort()
+		b.WriteString(renderCompletedItem("端口", port) + "\n")
+	}
+	if m.options.Mode == cli.ModeDev && current > 3 {
+		proxyStatus := "关闭"
+		if m.useGoProxy {
+			proxyStatus = "开启"
+		}
+		b.WriteString(renderCompletedItem("Go代理", proxyStatus) + "\n")
+	}
+
+	if b.Len() > 0 {
+		b.WriteString("\n")
+	}
+	return b.String()
+}
+
+func (m model) resolvedHost() (string, bool, string) {
+	host, err := cli.ParsePublicHostInput(m.hostInput.Value())
+	if err != nil {
+		return "", false, "主机错误: " + err.Error()
+	}
+	if host == "" {
+		return "", false, "主机待输入"
+	}
+	return host, true, "主机合法"
+}
+
+func (m model) resolvedPort() (string, bool, string) {
+	port := strings.TrimSpace(m.portInput.Value())
+	if port == "" {
+		port = cli.DefaultPublicPort
+	}
+	if err := cli.ValidatePublicPort(port); err != nil {
+		return port, false, "端口错误: " + err.Error()
+	}
+	return port, true, "端口合法"
+}
+
+func (m model) hostType() string {
+	host, ok, _ := m.resolvedHost()
+	if !ok {
+		return "-"
+	}
+	if cli.IsLoopbackHost(host) {
+		return "localhost"
+	}
+	if net.ParseIP(host) != nil {
+		return "IP"
+	}
+	return "未知"
+}
+
+func (m model) previewURL() string {
+	host, hostOK, _ := m.resolvedHost()
+	port, portOK, _ := m.resolvedPort()
+	if !hostOK || !portOK {
+		return "-"
+	}
+	return cli.BuildPublicURL(host, port)
+}
+
 func (m model) View() string {
+	initStyles()
+
 	if m.done {
-		return "配置已确认，开始安装...\n"
+		return m.renderDoneView()
 	}
 	if m.cancelled {
-		return "安装已取消。\n"
+		return m.renderCancelledView()
 	}
 
-	var builder strings.Builder
-	builder.WriteString("LunaFox 终端安装向导\n")
-	builder.WriteString("按 Ctrl+C 或 Esc 取消。\n\n")
+	current := m.currentStepNumber()
 
+	var content strings.Builder
+	content.WriteString(m.renderHeader(current))
+
+	var body strings.Builder
 	switch m.step {
-	case stepSelectDeployment:
-		builder.WriteString("步骤 1/4: 选择部署方式\n")
-		builder.WriteString(menuItem(m.cursor == 0, "本机部署（localhost）") + "\n")
-		builder.WriteString(menuItem(m.cursor == 1, "公网部署（IP/域名）") + "\n")
-		if m.activeHint != "" {
-			builder.WriteString(fmt.Sprintf("\n检测到网卡地址: %s\n", m.activeHint))
-		}
-		builder.WriteString("\n方向键选择，Enter 确认。\n")
-	case stepProdLocalConfirm:
-		builder.WriteString("步骤 1.5/4: 生产模式确认\n")
-		builder.WriteString("你选择了本机部署（localhost）。这通常会导致远端访问失败。\n")
-		builder.WriteString(menuItem(m.cursor == 0, "返回并改为公网部署") + "\n")
-		builder.WriteString(menuItem(m.cursor == 1, "我确认继续本机部署") + "\n")
-	case stepAddress:
-		builder.WriteString("步骤 2/4: 填写访问地址\n")
-		if m.deployment == deploymentLocal {
-			builder.WriteString("主机: localhost（固定）\n")
-		} else {
-			builder.WriteString(inputLine("主机", m.host, m.focus == 0) + "\n")
-		}
-		builder.WriteString(inputLine("端口", m.port, m.focus == 1) + "\n")
-		builder.WriteString("\nTab 切换输入项，Enter 下一步。\n")
+	case stepHost:
+		body.WriteString(m.renderHostStep())
+	case stepProdLoopbackConfirm:
+		body.WriteString(m.renderProdLoopbackConfirmStep())
+	case stepPort:
+		body.WriteString(m.renderPortStep())
 	case stepGoProxy:
-		builder.WriteString("步骤 3/4: 开发模式选项\n")
-		status := "关闭"
-		if m.useGoProxy {
-			status = "开启"
-		}
-		builder.WriteString(fmt.Sprintf("goproxy.cn: %s\n", status))
-		builder.WriteString("空格切换，Enter 下一步。\n")
+		body.WriteString(m.renderGoProxyStep())
 	case stepConfirm:
-		builder.WriteString("步骤 4/4: 确认安装\n")
-		deployText := "本机部署"
-		if m.deployment == deploymentPublic {
-			deployText = "公网部署"
-		}
-		builder.WriteString(fmt.Sprintf("模式: %s\n", m.options.Mode))
-		builder.WriteString(fmt.Sprintf("部署: %s\n", deployText))
-		builder.WriteString(fmt.Sprintf("访问地址: %s\n", m.options.PublicURL))
-		if m.options.Mode == cli.ModeDev {
-			builder.WriteString(fmt.Sprintf("goproxy.cn: %t\n", m.useGoProxy))
-		}
-		builder.WriteString("\n")
-		builder.WriteString(menuItem(m.cursor == 0, "确认并开始安装") + "\n")
-		builder.WriteString(menuItem(m.cursor == 1, "返回修改地址") + "\n")
-		builder.WriteString(menuItem(m.cursor == 2, "取消安装") + "\n")
+		body.WriteString(m.renderConfirmStep())
 	}
 
 	if strings.TrimSpace(m.errMsg) != "" {
-		builder.WriteString("\n错误: " + m.errMsg + "\n")
+		body.WriteString("\n" + renderStatusErr(m.errMsg) + "\n")
 	}
 
-	return builder.String()
+	content.WriteString(renderCard(body.String(), m.width) + "\n")
+	content.WriteString(renderSeparator(m.width) + "\n")
+	content.WriteString(helpStyle.Render(m.stepHelpText()))
+	return content.String()
 }
 
-func menuItem(active bool, label string) string {
-	if active {
-		return "> " + label
-	}
-	return "  " + label
+func (m model) renderHeader(currentStep int) string {
+	var b strings.Builder
+	b.WriteString("\n")
+	titleStr := "  L U N A F O X   I N S T A L L E R      "
+	modeStr := "[" + string(m.options.Mode) + "]"
+	b.WriteString(titleStyle.Render(titleStr) + subtitleStyle.Render(modeStr) + "\n")
+	b.WriteString(renderDoubleSeparator(m.width) + "\n")
+	b.WriteString(renderProgressBar(m.stepLabels(), currentStep) + "\n")
+	b.WriteString(renderSeparator(m.width) + "\n\n")
+	return b.String()
 }
 
-func inputLine(label string, value string, focused bool) string {
-	if focused {
-		return fmt.Sprintf("%s: [%s]", label, value)
+func (m model) stepHelpText() string {
+	switch m.step {
+	case stepHost:
+		return "Enter 下一步  │  Ctrl+C 取消"
+	case stepProdLoopbackConfirm, stepConfirm:
+		return "↑↓ 选择  │  Enter 继续  │  Ctrl+C 取消"
+	case stepPort:
+		return "Enter 下一步  │  Ctrl+C 取消"
+	case stepGoProxy:
+		return "Space 切换  │  Enter 下一步  │  Ctrl+C 取消"
+	default:
+		return "Enter 继续  │  Ctrl+C 取消"
 	}
-	return fmt.Sprintf("%s: %s", label, value)
+}
+
+func (m model) renderHostStep() string {
+	var b strings.Builder
+	_, hostOK, hostStatus := m.resolvedHost()
+
+	b.WriteString(renderInputPrefix("主机项") + m.hostInput.View() + "\n\n")
+	if strings.TrimSpace(m.hostInput.Value()) != "" {
+		if hostOK {
+			b.WriteString(renderStatusOk(hostStatus) + "\n")
+		} else {
+			b.WriteString(renderStatusErr(hostStatus) + "\n")
+		}
+	}
+	if m.options.Mode == cli.ModeProd {
+		b.WriteString(renderHint("分布式功能必须填写公网IP（不要填 localhost）") + "\n")
+	} else {
+		b.WriteString(renderHint("输入主机(localhost/IPv4)") + "\n")
+	}
+	return b.String()
+}
+
+func (m model) renderProdLoopbackConfirmStep() string {
+	var b string
+	b += renderHint("你输入了 localhost/loopback，远程通常无法访问") + "\n\n"
+	b += renderConfigItem("当前主机", strings.TrimSpace(m.hostInput.Value())) + "\n\n"
+	b += renderMenuItem(m.cursor == 0, "返回修改主机") + "\n"
+	b += renderMenuItem(m.cursor == 1, "确认继续使用 localhost") + "\n"
+	return b
+}
+
+func (m model) renderPortStep() string {
+	var b strings.Builder
+	_, portOK, portStatus := m.resolvedPort()
+
+	b.WriteString(m.renderCompletedSummary())
+	b.WriteString(renderInputPrefix("公网端口") + m.portInput.View() + "\n\n")
+	if portOK {
+		b.WriteString(renderStatusOk(portStatus) + "\n")
+	} else {
+		b.WriteString(renderStatusErr(portStatus) + "\n")
+	}
+	b.WriteString(renderHint("输入范围 1-65535，默认 " + cli.DefaultPublicPort) + "\n")
+	return b.String()
+}
+
+func (m model) renderGoProxyStep() string {
+	var b strings.Builder
+	status := "关闭"
+	if m.useGoProxy {
+		status = "开启"
+	}
+	b.WriteString(m.renderCompletedSummary())
+	b.WriteString(renderConfigItem("Go 代理", status) + "\n")
+	b.WriteString(renderConfigItem("源地址", "https://goproxy.cn,direct") + "\n\n")
+	b.WriteString(renderHint("按 Space 键切换代理开关") + "\n")
+	return b.String()
+}
+
+func (m model) renderConfirmStep() string {
+	var b strings.Builder
+	b.WriteString(renderConfigItem("运行模式", string(m.options.Mode)) + "\n")
+	b.WriteString(renderConfigItem("主机类型", m.hostType()) + "\n")
+	b.WriteString(renderConfigItem("访问地址", m.options.PublicURL) + "\n")
+
+	if m.options.Mode == cli.ModeDev {
+		proxyStatus := "关闭"
+		if m.useGoProxy {
+			proxyStatus = "开启"
+		}
+		b.WriteString(renderConfigItem("Go代理", proxyStatus) + "\n")
+	}
+
+	b.WriteString("\n")
+	b.WriteString(renderMenuItem(m.cursor == 0, "开始安装") + "\n")
+	b.WriteString(renderMenuItem(m.cursor == 1, "返回修改") + "\n")
+	b.WriteString(renderMenuItem(m.cursor == 2, "取消退出") + "\n")
+	return b.String()
+}
+
+func (m model) renderDoneView() string {
+	var b strings.Builder
+
+	b.WriteString(m.renderHeader(m.totalSteps() + 1))
+
+	b.WriteString(renderStatusOk(successMsgStyle.Render("配置完成")) + "\n\n")
+	b.WriteString(renderConfigItem("模式", string(m.options.Mode)) + "\n")
+	b.WriteString(renderConfigItem("主机类型", m.hostType()) + "\n")
+	b.WriteString(renderConfigItem("访问地址", m.options.PublicURL) + "\n")
+
+	if m.options.Mode == cli.ModeDev {
+		proxyStatus := "关闭"
+		if m.useGoProxy {
+			proxyStatus = "开启"
+		}
+		b.WriteString(renderConfigItem("Go代理", proxyStatus) + "\n")
+	}
+
+	b.WriteString("\n")
+	b.WriteString(renderSeparator(m.width) + "\n")
+	b.WriteString(renderHint("准备就绪，接下来将开始拉取镜像并启动服务...") + "\n")
+	return b.String()
+}
+
+func (m model) renderCancelledView() string {
+	return errorMsgStyle.Render("安装已取消。\n")
 }
 
 func splitHostPortFromURL(raw string) (string, string) {

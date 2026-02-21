@@ -151,7 +151,7 @@ jobs:
           PORT=18983
           trap 'kill "${HTTP_PID:-}" >/dev/null 2>&1 || true; rm -rf "$TMP_DIR"' EXIT
 
-          mkdir -p "$TMP_DIR/repo/raw/branch/channels" "$TMP_DIR/assets"
+          mkdir -p "$TMP_DIR/repo/raw/branch/channels" "$TMP_DIR/repo/branch/channels" "$TMP_DIR/assets"
           cat > "$TMP_DIR/assets/lunafox-installer-linux-amd64" <<'SCRIPT'
           #!/usr/bin/env bash
           exit 0
@@ -163,6 +163,13 @@ jobs:
           SCHEMA_VERSION=2
           VERSION=v0.0.1
           EOF_STABLE
+          cp "$TMP_DIR/repo/raw/branch/channels/stable.env" "$TMP_DIR/repo/branch/channels/stable.env"
+
+          cat > "$TMP_DIR/repo/raw/branch/channels/githubok.env" <<'EOF_STABLE_GITHUB'
+          SCHEMA_VERSION=2
+          VERSION=v0.0.3
+          EOF_STABLE_GITHUB
+          cp "$TMP_DIR/repo/raw/branch/channels/githubok.env" "$TMP_DIR/repo/branch/channels/githubok.env"
 
           cat > "$TMP_DIR/repo/raw/branch/channels/v0.0.1.env" <<EOF_VER
           SCHEMA_VERSION=2
@@ -182,11 +189,13 @@ jobs:
           AGENT_IMAGE_REFS=docker.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,ghcr.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
           WORKER_IMAGE_REFS=docker.io/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,ghcr.io/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,ccr.ccs.tencentyun.com/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
           EOF_VER
+          cp "$TMP_DIR/repo/raw/branch/channels/v0.0.1.env" "$TMP_DIR/repo/branch/channels/v0.0.1.env"
 
           cat > "$TMP_DIR/repo/raw/branch/channels/bad.env" <<'EOF_BAD'
           SCHEMA_VERSION=2
           VERSION=v0.0.2
           EOF_BAD
+          cp "$TMP_DIR/repo/raw/branch/channels/bad.env" "$TMP_DIR/repo/branch/channels/bad.env"
 
           cat > "$TMP_DIR/repo/raw/branch/channels/v0.0.2.env" <<EOF_BAD_VER
           SCHEMA_VERSION=2
@@ -194,18 +203,39 @@ jobs:
           GITHUB_BASE_URL=http://127.0.0.1:9/assets
           GITEE_BASE_URL=http://127.0.0.1:${PORT}/assets
           LINUX_AMD64_ASSET=lunafox-installer-linux-amd64
-          LINUX_AMD64_SHA256=deadbeef
+          LINUX_AMD64_SHA256=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           LINUX_ARM64_ASSET=lunafox-installer-linux-amd64
-          LINUX_ARM64_SHA256=deadbeef
+          LINUX_ARM64_SHA256=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           DARWIN_AMD64_ASSET=lunafox-installer-linux-amd64
-          DARWIN_AMD64_SHA256=deadbeef
+          DARWIN_AMD64_SHA256=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           DARWIN_ARM64_ASSET=lunafox-installer-linux-amd64
-          DARWIN_ARM64_SHA256=deadbeef
+          DARWIN_ARM64_SHA256=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           IMAGE_REGISTRY=docker.io
           IMAGE_NAMESPACE=yyhuni
           AGENT_IMAGE_REFS=docker.io/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,ghcr.io/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           WORKER_IMAGE_REFS=docker.io/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,ghcr.io/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,ccr.ccs.tencentyun.com/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
           EOF_BAD_VER
+          cp "$TMP_DIR/repo/raw/branch/channels/v0.0.2.env" "$TMP_DIR/repo/branch/channels/v0.0.2.env"
+
+          cat > "$TMP_DIR/repo/raw/branch/channels/v0.0.3.env" <<EOF_GITHUB_OK
+          SCHEMA_VERSION=2
+          VERSION=v0.0.3
+          GITHUB_BASE_URL=http://127.0.0.1:${PORT}/assets
+          GITEE_BASE_URL=http://127.0.0.1:9/assets
+          LINUX_AMD64_ASSET=lunafox-installer-linux-amd64
+          LINUX_AMD64_SHA256=${asset_sha}
+          LINUX_ARM64_ASSET=lunafox-installer-linux-amd64
+          LINUX_ARM64_SHA256=${asset_sha}
+          DARWIN_AMD64_ASSET=lunafox-installer-linux-amd64
+          DARWIN_AMD64_SHA256=${asset_sha}
+          DARWIN_ARM64_ASSET=lunafox-installer-linux-amd64
+          DARWIN_ARM64_SHA256=${asset_sha}
+          IMAGE_REGISTRY=docker.io
+          IMAGE_NAMESPACE=yyhuni
+          AGENT_IMAGE_REFS=docker.io/yyhuni/lunafox-agent@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,ghcr.io/yyhuni/lunafox-agent@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-agent@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+          WORKER_IMAGE_REFS=docker.io/yyhuni/lunafox-worker@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff,ghcr.io/yyhuni/lunafox-worker@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff,ccr.ccs.tencentyun.com/yyhuni/lunafox-worker@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-worker@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+          EOF_GITHUB_OK
+          cp "$TMP_DIR/repo/raw/branch/channels/v0.0.3.env" "$TMP_DIR/repo/branch/channels/v0.0.3.env"
 
           python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$TMP_DIR" >/tmp/mock-http.log 2>&1 &
           HTTP_PID=$!
@@ -217,6 +247,17 @@ jobs:
           LUNAFOX_RELEASE_GITHUB_RAW_BASE=http://127.0.0.1:9 \
           LUNAFOX_RELEASE_GITEE_RAW_BASE=http://127.0.0.1:${PORT} \
           ./install.sh --source auto --public-url https://127.0.0.1:19083 --non-interactive >/tmp/install-fallback.log 2>&1
+          grep -q "安装器源测速" /tmp/install-fallback.log
+          grep -q "安装器下载成功: source=gitee" /tmp/install-fallback.log
+
+          LUNAFOX_RELEASE_CHANNEL_BRANCH=branch \
+          LUNAFOX_RELEASE_GITHUB_REPO=repo \
+          LUNAFOX_RELEASE_GITEE_REPO=repo \
+          LUNAFOX_RELEASE_GITHUB_RAW_BASE=http://127.0.0.1:${PORT} \
+          LUNAFOX_RELEASE_GITEE_RAW_BASE=http://127.0.0.1:9 \
+          ./install.sh --source auto --channel githubok --public-url https://127.0.0.1:19083 --non-interactive >/tmp/install-github.log 2>&1
+          grep -q "安装器源测速" /tmp/install-github.log
+          grep -q "安装器下载成功: source=github" /tmp/install-github.log
 
           set +e
           LUNAFOX_RELEASE_CHANNEL_BRANCH=branch \
@@ -230,6 +271,7 @@ jobs:
 
           [ "$rc" -ne 0 ] || { cat /tmp/install-checksum.log; exit 1; }
           grep -q "安装器 sha256 校验失败" /tmp/install-checksum.log
+          grep -q -- "--version v0.0.2 --source github" /tmp/install-checksum.log
 
       - name: Docs command consistency
         run: |

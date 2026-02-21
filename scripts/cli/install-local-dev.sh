@@ -29,8 +29,8 @@ usage() {
   本地源码模式启动安装器（固定 dev 模式）
 
 参数:
-  --public-url <url>  公网访问地址，如 https://example.com:8083
-  --public-host <host> 公网主机（IP/域名）
+  --public-url <url>  公网访问地址（仅支持 localhost/IPv4），如 https://10.0.0.8:8083
+  --public-host <host> 公网主机（仅支持 localhost/IPv4）
   --public-port <port> 公网端口（默认 8083）
   --non-interactive   禁用交互向导，需显式提供公网地址
   --help             显示帮助
@@ -89,7 +89,7 @@ if ! command -v go >/dev/null 2>&1; then
 	exit 1
 fi
 
-INSTALLER_ARGS=(run ./tools/installer/cmd/lunafox-installer --root-dir "$ROOT_DIR" --dev)
+INSTALLER_ARGS=(./cmd/lunafox-installer --root-dir "$ROOT_DIR" --dev)
 if [ -n "$PUBLIC_URL" ]; then
 	INSTALLER_ARGS+=(--public-url "$PUBLIC_URL")
 fi
@@ -103,5 +103,5 @@ if [ "$NON_INTERACTIVE" -eq 1 ]; then
 	INSTALLER_ARGS+=(--non-interactive)
 fi
 
-cd "$ROOT_DIR"
-exec go "${INSTALLER_ARGS[@]}"
+cd "$ROOT_DIR/tools/installer"
+exec go run "${INSTALLER_ARGS[@]}"

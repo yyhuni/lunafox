@@ -109,11 +109,11 @@ func TestParseAcceptsPublicURLFlagAndDerivesPort(t *testing.T) {
 	dir := createTestProjectRoot(t)
 	withProdImageRefs(t)
 
-	opts, err := parseWithRoot(dir, "--public-url", "https://example.com:18443")
+	opts, err := parseWithRoot(dir, "--public-url", "https://10.8.0.25:18443")
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	if opts.PublicURL != "https://example.com:18443" {
+	if opts.PublicURL != "https://10.8.0.25:18443" {
 		t.Fatalf("unexpected public url: %s", opts.PublicURL)
 	}
 	if opts.PublicPort != "18443" {
@@ -131,11 +131,11 @@ func TestParsePublicHostPortWithDefaultPort(t *testing.T) {
 	dir := createTestProjectRoot(t)
 	withProdImageRefs(t)
 
-	opts, err := parseWithRoot(dir, "--public-host", "example.com")
+	opts, err := parseWithRoot(dir, "--public-host", "10.8.0.25")
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	if opts.PublicURL != "https://example.com:8083" {
+	if opts.PublicURL != "https://10.8.0.25:8083" {
 		t.Fatalf("unexpected public url: %s", opts.PublicURL)
 	}
 	if opts.PublicPort != "8083" {
@@ -146,11 +146,37 @@ func TestParsePublicHostPortWithDefaultPort(t *testing.T) {
 	}
 }
 
+func TestParseRejectsDomainInPublicHost(t *testing.T) {
+	dir := createTestProjectRoot(t)
+	withProdImageRefs(t)
+
+	_, err := parseWithRoot(dir, "--public-host", "example.com")
+	if err == nil {
+		t.Fatalf("expected domain host to be rejected")
+	}
+	if !strings.Contains(err.Error(), "仅支持 localhost 或 IPv4 地址") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestParseRejectsIPv6InPublicHost(t *testing.T) {
+	dir := createTestProjectRoot(t)
+	withProdImageRefs(t)
+
+	_, err := parseWithRoot(dir, "--public-host", "2001:db8::1")
+	if err == nil {
+		t.Fatalf("expected ipv6 host to be rejected")
+	}
+	if !strings.Contains(err.Error(), "暂不支持 IPv6") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestParseRejectsConflictingPublicAddressFlags(t *testing.T) {
 	dir := createTestProjectRoot(t)
 	withProdImageRefs(t)
 
-	_, err := parseWithRoot(dir, "--public-url", "https://example.com:8083", "--public-host", "example.com")
+	_, err := parseWithRoot(dir, "--public-url", "https://10.8.0.25:8083", "--public-host", "10.8.0.26")
 	if err == nil {
 		t.Fatalf("expected conflict error")
 	}
@@ -235,7 +261,7 @@ func TestParseVersionAndImageOptions(t *testing.T) {
 
 	opts, err := parseWithRoot(dir,
 		"--version", "v1.5.13",
-		"--public-url", "https://example.com:8083",
+		"--public-url", "https://10.8.0.25:8083",
 		"--image-registry", "ghcr.io",
 		"--image-namespace", "yyhuni",
 		"--agent-image-refs", "ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:1111111111111111111111111111111111111111111111111111111111111111,ghcr.io/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
@@ -281,7 +307,7 @@ func TestParseProdRequiresDigestImageRef(t *testing.T) {
 	dir := createTestProjectRoot(t)
 
 	_, err := parseWithRoot(dir,
-		"--public-url", "https://example.com:8083",
+		"--public-url", "https://10.8.0.25:8083",
 		"--agent-image-refs", "docker.io/yyhuni/lunafox-agent:v1.0.0",
 		"--worker-image-refs", "docker.io/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
 	)
@@ -299,7 +325,7 @@ func TestParseImageRefsDeduplicateAndKeepOrder(t *testing.T) {
 	workerFallback := "ghcr.io/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
 
 	opts, err := parseWithRoot(dir,
-		"--public-url", "https://example.com:8083",
+		"--public-url", "https://10.8.0.25:8083",
 		"--agent-image-refs", agentPrimary+","+agentFallback+","+agentPrimary,
 		"--worker-image-refs", workerPrimary+","+workerFallback+","+workerPrimary,
 	)

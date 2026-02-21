@@ -11,7 +11,14 @@ import (
 
 var ErrCancelled = errors.New("安装已取消")
 
+// 打印成功消息（配置摘要已在 TUI 完成视图中展示）
+func printSuccessMessage(output io.Writer, _ cli.Options) {
+	fmt.Fprintln(output)
+}
+
 func RunWizard(base cli.Options, input io.Reader, output io.Writer) (cli.Options, error) {
+	initStyles()
+
 	m := newModel(base)
 	program := tea.NewProgram(m, tea.WithInput(input), tea.WithOutput(output))
 	finalModel, err := program.Run()
@@ -29,5 +36,7 @@ func RunWizard(base cli.Options, input io.Reader, output io.Writer) (cli.Options
 	if !result.done {
 		return base, fmt.Errorf("终端向导未完成")
 	}
+
+	printSuccessMessage(output, result.options)
 	return result.options, nil
 }

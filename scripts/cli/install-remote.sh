@@ -31,6 +31,14 @@ PUBLIC_URL=""
 PUBLIC_HOST=""
 PUBLIC_PORT=""
 NON_INTERACTIVE=0
+TARGET_VERSION=""
+CHANNEL_SOURCE=""
+CHANNEL_SOURCE_URL=""
+VERSION_SOURCE=""
+VERSION_SOURCE_URL=""
+ASSET_SOURCE=""
+ASSET_SOURCE_URL=""
+FAILED_DOWNLOADS=()
 
 usage() {
 	cat <<'USAGE'
@@ -41,16 +49,16 @@ usage() {
   ./install.sh
   ./install.sh --version v1.5.13
   ./install.sh --channel canary
-  ./install.sh --source gitee --channel stable --public-url https://example.com:8083
+  ./install.sh --source gitee --channel stable --public-url https://10.0.0.8:8083
   ./install.sh --public-host 10.0.0.8 --public-port 8083 --non-interactive
 
 常用参数:
   --version <ver>            指定安装版本（例如 v1.5.13）
   --channel <name>           版本通道（默认 stable）
   --source <auto|github|gitee>
-                            下载源策略（默认 auto=github 后 gitee）
-  --public-url <url>         公网访问地址，如 https://example.com:8083
-  --public-host <host>       公网主机（IP/域名），如 10.0.0.8
+                            下载源策略（默认 auto=清单 gitee 后 github；安装器测速后在 gitee/github 间自动选择）
+  --public-url <url>         公网访问地址（仅支持 localhost/IPv4），如 https://10.0.0.8:8083
+  --public-host <host>       公网主机（仅支持 localhost/IPv4），如 10.0.0.8
   --public-port <port>       公网端口（默认 8083）
   --non-interactive          禁用交互向导，需显式提供公网地址
 USAGE
@@ -135,6 +143,11 @@ auto | github | gitee) ;;
 	;;
 esac
 
+CHANNEL="$(printf '%s' "$CHANNEL" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+if ! printf '%s' "$CHANNEL" | grep -Eq '^[a-z0-9._-]+$'; then
+	usage_error "--channel 格式不合法：仅支持字母/数字/点/下划线/中划线"
+fi
+
 if [ -n "$PUBLIC_URL" ] && { [ -n "$PUBLIC_HOST" ] || [ -n "$PUBLIC_PORT" ]; }; then
 	usage_error "--public-url 与 --public-host/--public-port 不能同时使用"
 fi
@@ -187,12 +200,56 @@ if [ -z "$SHA_CMD" ]; then
 	exit 1
 fi
 
-source_candidates() {
+manifest_source_candidates() {
 	case "$SOURCE" in
-	auto) echo "github gitee" ;;
+	auto) echo "gitee github" ;;
 	github) echo "github" ;;
 	gitee) echo "gitee" ;;
 	esac
+}
+
+asset_source_candidates() {
+	case "$SOURCE" in
+	auto) echo "gitee github" ;;
+	github) echo "github" ;;
+	gitee) echo "gitee" ;;
+	esac
+}
+
+append_failed_download() {
+	local kind="$1"
+	local source="$2"
+	local url="$3"
+	FAILED_DOWNLOADS+=("${kind}|${source}|${url}")
+}
+
+print_failed_download_summary() {
+	if [ "${#FAILED_DOWNLOADS[@]}" -eq 0 ]; then
+		return
+	fi
+	error "下载失败明细："
+	local item=""
+	for item in "${FAILED_DOWNLOADS[@]}"; do
+		local kind="${item%%|*}"
+		local rest="${item#*|}"
+		local source="${rest%%|*}"
+		local url="${rest#*|}"
+		error "  - ${kind} source=${source} url=${url}"
+	done
+}
+
+print_retry_hints() {
+	warn "你可以尝试以下命令快速重试："
+	if [ -n "$TARGET_VERSION" ]; then
+		warn "  1) ./install.sh --version ${TARGET_VERSION} --source gitee"
+		warn "  2) ./install.sh --version ${TARGET_VERSION} --source github"
+	else
+		warn "  1) ./install.sh --channel stable --source gitee"
+		warn "  2) ./install.sh --channel stable --source github"
+	fi
+	if [ "$CHANNEL" != "stable" ]; then
+		warn "  3) 若你只想先装稳定版：./install.sh --channel stable"
+	fi
 }
 
 manifest_url() {
@@ -212,19 +269,145 @@ download_with_retry() {
 	local url="$1"
 	local output="$2"
 	local desc="$3"
+	local source="$4"
 	local delays=(1 2 4)
 	local attempt=1
+	local attempts_total="${#delays[@]}"
+	local rc=0
+	local err_file=""
+	local err_msg=""
 	for delay in "${delays[@]}"; do
-		if curl -fsSL --connect-timeout 10 --max-time 60 -o "$output" "$url"; then
+		err_file="$(mktemp "${TMP_DIR}/curl-err.XXXXXX")"
+		if curl -fsSL --connect-timeout 10 --max-time 60 -o "$output" "$url" 2>"$err_file"; then
+			rm -f "$err_file"
 			return 0
+		else
+			rc=$?
 		fi
-		if [ "$attempt" -lt "${#delays[@]}" ]; then
-			info "$desc 下载失败（第 ${attempt} 次），${delay}s 后重试"
+		err_msg="$(tr '\n' ' ' <"$err_file" | sed 's/[[:space:]]\+/ /g' | cut -c1-220)"
+		rm -f "$err_file"
+		if [ "$attempt" -lt "$attempts_total" ]; then
+			info "$desc 下载失败（source=${source}，第 ${attempt}/${attempts_total} 次，url=${url}，rc=${rc}）${err_msg:+，错误: ${err_msg}}，${delay}s 后重试"
 			sleep "$delay"
+		else
+			error "$desc 下载失败（source=${source}，第 ${attempt}/${attempts_total} 次，url=${url}，rc=${rc}）${err_msg:+，错误: ${err_msg}}"
 		fi
 		attempt=$((attempt + 1))
 	done
 	return 1
+}
+
+validate_version_value() {
+	local version="$1"
+	if ! printf '%s' "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$'; then
+		error "版本号格式不合法: $version"
+		error "期望格式示例: v1.5.13 或 v1.6.0-rc.1"
+		exit 1
+	fi
+}
+
+validate_sha256_value() {
+	local value="$1"
+	local key_name="$2"
+	if ! printf '%s' "$value" | grep -Eq '^[a-f0-9]{64}$'; then
+		error "版本清单字段 ${key_name} 不合法（必须为 64 位小写 sha256）"
+		exit 1
+	fi
+}
+
+validate_asset_name() {
+	local value="$1"
+	local key_name="$2"
+	if ! printf '%s' "$value" | grep -Eq '^[A-Za-z0-9._-]+$'; then
+		error "版本清单字段 ${key_name} 不合法（仅支持字母/数字/点/下划线/中划线）"
+		exit 1
+	fi
+}
+
+validate_manifest_base_url() {
+	local value="$1"
+	local key_name="$2"
+	if ! printf '%s' "$value" | grep -Eq '^https?://'; then
+		error "版本清单字段 ${key_name} 不合法（必须以 http:// 或 https:// 开头）"
+		exit 1
+	fi
+}
+
+probe_asset_source() {
+	local source="$1"
+	local url="$2"
+	local err_file=""
+	local err_msg=""
+	local out=""
+	local http_code=""
+	local time_total=""
+	local speed_download=""
+	local rc=0
+
+	err_file="$(mktemp "${TMP_DIR}/probe-curl-err.${source}.XXXXXX")"
+	if out="$(curl -fsS -L --range 0-131071 --connect-timeout 2 --max-time 6 -o /dev/null -w '%{http_code} %{time_total} %{speed_download}' "$url" 2>"$err_file")"; then
+		:
+	else
+		rc=$?
+		err_msg="$(tr '\n' ' ' <"$err_file" | sed 's/[[:space:]]\+/ /g' | cut -c1-220)"
+		rm -f "$err_file"
+		info "安装器源测速失败（source=${source}，url=${url}，rc=${rc}）${err_msg:+，错误: ${err_msg}}" >&2
+		return 1
+	fi
+	rm -f "$err_file"
+
+	read -r http_code time_total speed_download <<<"$out"
+	if [ "$http_code" != "200" ] && [ "$http_code" != "206" ]; then
+		info "安装器源测速失败（source=${source}，url=${url}，http=${http_code}）" >&2
+		return 1
+	fi
+	if [ -z "$time_total" ]; then
+		return 1
+	fi
+	info "安装器源测速结果（source=${source}，time=${time_total}s，speed=${speed_download}B/s）" >&2
+	printf '%s\n' "$time_total"
+	return 0
+}
+
+resolve_auto_asset_order() {
+	local gitee_url="${GITEE_BASE_URL%/}/$ASSET_NAME"
+	local github_url="${GITHUB_BASE_URL%/}/$ASSET_NAME"
+	local gitee_time=""
+	local github_time=""
+	local have_gitee=0
+	local have_github=0
+
+	if gitee_time="$(probe_asset_source "gitee" "$gitee_url")"; then
+		have_gitee=1
+	fi
+	if github_time="$(probe_asset_source "github" "$github_url")"; then
+		have_github=1
+	fi
+
+	if [ "$have_gitee" -eq 1 ] && [ "$have_github" -eq 1 ]; then
+		if awk "BEGIN {exit !(${gitee_time} <= ${github_time})}"; then
+			info "安装器源排序：gitee 优先（${gitee_time}s <= ${github_time}s）" >&2
+			printf '%s\n' "gitee github"
+		else
+			info "安装器源排序：github 优先（${github_time}s < ${gitee_time}s）" >&2
+			printf '%s\n' "github gitee"
+		fi
+		return 0
+	fi
+	if [ "$have_gitee" -eq 1 ]; then
+		info "安装器源排序：仅 gitee 探测速通过，优先 gitee" >&2
+		printf '%s\n' "gitee github"
+		return 0
+	fi
+	if [ "$have_github" -eq 1 ]; then
+		info "安装器源排序：仅 github 探测速通过，优先 github" >&2
+		printf '%s\n' "github gitee"
+		return 0
+	fi
+
+	warn "安装器源测速全部失败，回退默认顺序 gitee -> github" >&2
+	printf '%s\n' "gitee github"
+	return 0
 }
 
 read_env_value() {
@@ -308,20 +491,27 @@ CHANNEL_MANIFEST=""
 TARGET_VERSION="$VERSION_OVERRIDE"
 
 if [ -z "$TARGET_VERSION" ]; then
-	for source in $(source_candidates); do
+	for source in $(manifest_source_candidates); do
 		candidate="$TMP_DIR/channel-${source}.env"
 		url="$(manifest_url "$source" "${CHANNEL}.env")"
-		if download_with_retry "$url" "$candidate" "通道清单(${source})"; then
+		if download_with_retry "$url" "$candidate" "通道清单(${source})" "$source"; then
 			CHANNEL_MANIFEST="$candidate"
+			CHANNEL_SOURCE="$source"
+			CHANNEL_SOURCE_URL="$url"
 			break
+		else
+			append_failed_download "channel-manifest" "$source" "$url"
 		fi
 	done
 	if [ -z "$CHANNEL_MANIFEST" ] || [ ! -s "$CHANNEL_MANIFEST" ]; then
 		error "无法下载通道清单: ${CHANNEL}.env"
+		print_failed_download_summary
+		print_retry_hints
 		exit 1
 	fi
 	validate_manifest_schema "$CHANNEL_MANIFEST" "通道清单(${CHANNEL})"
 	TARGET_VERSION="$(require_env_value "$CHANNEL_MANIFEST" "VERSION")"
+	info "通道清单下载成功: source=${CHANNEL_SOURCE} url=${CHANNEL_SOURCE_URL}"
 fi
 
 TARGET_VERSION="$(printf '%s' "$TARGET_VERSION" | tr -d '[:space:]')"
@@ -329,20 +519,29 @@ if [ -z "$TARGET_VERSION" ]; then
 	error "无法解析目标版本，请检查 --version 或通道清单中的 VERSION"
 	exit 1
 fi
+validate_version_value "$TARGET_VERSION"
+info "目标安装版本: ${TARGET_VERSION}"
 
 VERSION_MANIFEST=""
-for source in $(source_candidates); do
+for source in $(manifest_source_candidates); do
 	candidate="$TMP_DIR/version-${source}.env"
 	url="$(manifest_url "$source" "${TARGET_VERSION}.env")"
-	if download_with_retry "$url" "$candidate" "版本清单(${source})"; then
+	if download_with_retry "$url" "$candidate" "版本清单(${source})" "$source"; then
 		VERSION_MANIFEST="$candidate"
+		VERSION_SOURCE="$source"
+		VERSION_SOURCE_URL="$url"
 		break
+	else
+		append_failed_download "version-manifest" "$source" "$url"
 	fi
 done
 if [ -z "$VERSION_MANIFEST" ] || [ ! -s "$VERSION_MANIFEST" ]; then
 	error "无法下载版本清单: ${TARGET_VERSION}.env"
+	print_failed_download_summary
+	print_retry_hints
 	exit 1
 fi
+info "版本清单下载成功: source=${VERSION_SOURCE} url=${VERSION_SOURCE_URL}"
 
 validate_manifest_schema "$VERSION_MANIFEST" "版本清单(${TARGET_VERSION})"
 MANIFEST_VERSION="$(require_env_value "$VERSION_MANIFEST" "VERSION")"
@@ -359,6 +558,10 @@ ASSET_NAME="$(require_env_value "$VERSION_MANIFEST" "$ASSET_KEY")"
 EXPECTED_SHA="$(require_env_value "$VERSION_MANIFEST" "$SHA_KEY")"
 GITHUB_BASE_URL="$(require_env_value "$VERSION_MANIFEST" "GITHUB_BASE_URL")"
 GITEE_BASE_URL="$(require_env_value "$VERSION_MANIFEST" "GITEE_BASE_URL")"
+validate_asset_name "$ASSET_NAME" "$ASSET_KEY"
+validate_sha256_value "$EXPECTED_SHA" "$SHA_KEY"
+validate_manifest_base_url "$GITHUB_BASE_URL" "GITHUB_BASE_URL"
+validate_manifest_base_url "$GITEE_BASE_URL" "GITEE_BASE_URL"
 # Schema v2 contract: only digest candidate lists are accepted.
 AGENT_IMAGE_REFS_RAW="$(require_env_value "$VERSION_MANIFEST" "AGENT_IMAGE_REFS")"
 WORKER_IMAGE_REFS_RAW="$(require_env_value "$VERSION_MANIFEST" "WORKER_IMAGE_REFS")"
@@ -371,7 +574,11 @@ if [ -z "$ASSET_NAME" ] || [ -z "$EXPECTED_SHA" ]; then
 fi
 INSTALLER_BIN="$TMP_DIR/lunafox-installer"
 DOWNLOADED=0
-for source in $(source_candidates); do
+ASSET_SOURCE_ORDER="$(asset_source_candidates)"
+if [ "$SOURCE" = "auto" ]; then
+	ASSET_SOURCE_ORDER="$(resolve_auto_asset_order)"
+fi
+for source in $ASSET_SOURCE_ORDER; do
 	case "$source" in
 	github) base_url="$GITHUB_BASE_URL" ;;
 	gitee) base_url="$GITEE_BASE_URL" ;;
@@ -380,24 +587,33 @@ for source in $(source_candidates); do
 		continue
 	fi
 	asset_url="${base_url%/}/$ASSET_NAME"
-	if download_with_retry "$asset_url" "$INSTALLER_BIN" "安装器(${source})"; then
+	if download_with_retry "$asset_url" "$INSTALLER_BIN" "安装器(${source})" "$source"; then
 		DOWNLOADED=1
+		ASSET_SOURCE="$source"
+		ASSET_SOURCE_URL="$asset_url"
 		break
+	else
+		append_failed_download "installer-asset" "$source" "$asset_url"
 	fi
 done
 
 if [ "$DOWNLOADED" -ne 1 ]; then
 	error "安装器下载失败：已尝试 source=$SOURCE 的所有可用源"
+	print_failed_download_summary
+	print_retry_hints
 	exit 1
 fi
+info "安装器下载成功: source=${ASSET_SOURCE} url=${ASSET_SOURCE_URL}"
 
 ACTUAL_SHA="$($SHA_CMD "$INSTALLER_BIN" | awk '{print $1}')"
 if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
 	error "安装器 sha256 校验失败"
 	error "期望: $EXPECTED_SHA"
 	error "实际: $ACTUAL_SHA"
+	print_retry_hints
 	exit 1
 fi
+success "安装器校验通过: sha256=${ACTUAL_SHA}"
 
 chmod +x "$INSTALLER_BIN"
 

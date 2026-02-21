@@ -13,6 +13,7 @@ go.work
 dist/
 build/
 bin/
+tools/installer/lunafox-installer
 
 # Node dependencies
 node_modules/
