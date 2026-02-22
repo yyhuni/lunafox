@@ -57,7 +57,7 @@ func TestIssueRegistrationTokenSuccess(t *testing.T) {
 		case "/api/auth/login":
 			writer.WriteHeader(http.StatusOK)
 			_ = json.NewEncoder(writer).Encode(map[string]string{"accessToken": "abc"})
-		case "/api/agents/registration-tokens":
+		case "/api/admin/agents/registration-tokens":
 			if !strings.HasPrefix(request.Header.Get("Authorization"), "Bearer ") {
 				writer.WriteHeader(http.StatusUnauthorized)
 				return

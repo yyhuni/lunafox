@@ -101,7 +101,7 @@ func (client *Client) IssueRegistrationToken(ctx context.Context, serverURL, use
 		return "", &StageError{Stage: "login", Endpoint: loginURL, Message: readJSONField(body, "message"), Code: status}
 	}
 
-	tokenURL := strings.TrimRight(serverURL, "/") + "/api/agents/registration-tokens"
+	tokenURL := strings.TrimRight(serverURL, "/") + "/api/admin/agents/registration-tokens"
 	status, body, err = client.postJSON(ctx, tokenURL, map[string]string{}, "Bearer "+accessToken, 10*time.Second)
 	if err != nil {
 		return "", &StageError{Stage: "registration-token", Endpoint: tokenURL, Message: err.Error()}
