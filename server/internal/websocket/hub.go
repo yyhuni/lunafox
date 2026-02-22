@@ -122,30 +122,36 @@ func (h *Hub) SendTo(agentID int, message []byte) {
 
 // SendTaskCancel sends a task_cancel message to a specific agent.
 func (h *Hub) SendTaskCancel(agentID, taskID int) {
-	payload, err := json.Marshal(agentproto.TaskCancelPayload{TaskID: taskID})
-	if err != nil {
-		return
-	}
-	msg := agentproto.Message{
-		Type:      agentproto.MessageTypeTaskCancel,
-		Payload:   payload,
-		Timestamp: time.Now().UTC(),
-	}
-	data, err := json.Marshal(msg)
-	if err != nil {
-		return
-	}
-	h.SendTo(agentID, data)
+	_ = h.sendTypedMessage(agentID, agentproto.MessageTypeTaskCancel, agentproto.TaskCancelPayload{TaskID: taskID})
 }
 
 // SendUpdateRequired sends an update_required message and returns whether sending succeeded.
 func (h *Hub) SendUpdateRequired(agentID int, payload agentproto.UpdateRequiredPayload) bool {
+	return h.sendTypedMessage(agentID, agentproto.MessageTypeUpdateRequired, payload)
+}
+
+// SendConfigUpdate sends a config_update message to a specific agent.
+func (h *Hub) SendConfigUpdate(agentID int, payload agentproto.ConfigUpdatePayload) {
+	_ = h.sendTypedMessage(agentID, agentproto.MessageTypeConfigUpdate, payload)
+}
+
+// SendLogOpen sends a log_open message and returns whether sending succeeded.
+func (h *Hub) SendLogOpen(agentID int, payload agentproto.LogOpenPayload) bool {
+	return h.sendTypedMessage(agentID, agentproto.MessageTypeLogOpen, payload)
+}
+
+// SendLogCancel sends a log_cancel message and returns whether sending succeeded.
+func (h *Hub) SendLogCancel(agentID int, payload agentproto.LogCancelPayload) bool {
+	return h.sendTypedMessage(agentID, agentproto.MessageTypeLogCancel, payload)
+}
+
+func (h *Hub) sendTypedMessage(agentID int, messageType string, payload any) bool {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return false
 	}
 	msg := agentproto.Message{
-		Type:      agentproto.MessageTypeUpdateRequired,
+		Type:      messageType,
 		Payload:   data,
 		Timestamp: time.Now().UTC(),
 	}
@@ -154,24 +160,6 @@ func (h *Hub) SendUpdateRequired(agentID int, payload agentproto.UpdateRequiredP
 		return false
 	}
 	return h.SendToWithResult(agentID, encoded)
-}
-
-// SendConfigUpdate sends a config_update message to a specific agent.
-func (h *Hub) SendConfigUpdate(agentID int, payload agentproto.ConfigUpdatePayload) {
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return
-	}
-	msg := agentproto.Message{
-		Type:      agentproto.MessageTypeConfigUpdate,
-		Payload:   data,
-		Timestamp: time.Now().UTC(),
-	}
-	encoded, err := json.Marshal(msg)
-	if err != nil {
-		return
-	}
-	h.SendTo(agentID, encoded)
 }
 
 // NewAgentMessagePublisher exposes a typed publisher adapter for agent runtime services.
@@ -202,6 +190,20 @@ func (publisher *agentMessagePublisher) SendTaskCancel(agentID, taskID int) {
 		return
 	}
 	publisher.hub.SendTaskCancel(agentID, taskID)
+}
+
+func (publisher *agentMessagePublisher) SendLogOpen(agentID int, payload agentproto.LogOpenPayload) bool {
+	if publisher == nil || publisher.hub == nil {
+		return false
+	}
+	return publisher.hub.SendLogOpen(agentID, payload)
+}
+
+func (publisher *agentMessagePublisher) SendLogCancel(agentID int, payload agentproto.LogCancelPayload) bool {
+	if publisher == nil || publisher.hub == nil {
+		return false
+	}
+	return publisher.hub.SendLogCancel(agentID, payload)
 }
 
 // SendToWithResult sends a message to a specific agent and returns success.

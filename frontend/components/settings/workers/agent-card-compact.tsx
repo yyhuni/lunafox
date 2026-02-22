@@ -10,6 +10,7 @@ import {
   IconClock,
   IconCpu,
   IconDatabase,
+  IconTerminal,
   HardDrive,
 } from "@/components/icons"
 import { Button } from "@/components/ui/button"
@@ -132,12 +133,14 @@ interface AgentCardCompactProps {
   agent: Agent
   onConfig: (agent: Agent) => void
   onDelete: (agent: Agent) => void
+  onLogs: (agent: Agent) => void
 }
 
 export function AgentCardCompact({
   agent,
   onConfig,
   onDelete,
+  onLogs,
 }: AgentCardCompactProps) {
   const t = useTranslations("settings.workers")
   const formatRelativeTime = useFormatRelativeTime()
@@ -194,6 +197,10 @@ export function AgentCardCompact({
             <DropdownMenuItem onClick={() => onConfig(agent)}>
               <IconSettings className="w-4 h-4" />
               {t("actions.config")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onLogs(agent)}>
+              <IconTerminal className="w-4 h-4" />
+              {t("actions.logs")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onClick={() => onDelete(agent)}>

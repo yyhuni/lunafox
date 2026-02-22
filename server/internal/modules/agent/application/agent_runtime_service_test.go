@@ -59,7 +59,9 @@ func (publisher *publisherStub) SendUpdateRequired(_ int, payload agentproto.Upd
 	publisher.lastUpdatePayload = payload
 	return publisher.updateSendSuccess
 }
-func (publisher *publisherStub) SendTaskCancel(int, int) {}
+func (publisher *publisherStub) SendTaskCancel(int, int)                             {}
+func (publisher *publisherStub) SendLogOpen(int, agentproto.LogOpenPayload) bool     { return true }
+func (publisher *publisherStub) SendLogCancel(int, agentproto.LogCancelPayload) bool { return true }
 
 func TestAgentRuntimeServiceHeartbeatAndUpdateRequired(t *testing.T) {
 	repo := &runtimeRepoStub{}

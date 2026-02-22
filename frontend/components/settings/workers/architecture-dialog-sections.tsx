@@ -1,10 +1,7 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { IconInfoCircle } from "@/components/icons"
 import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { ArchitectureLabels, ArchitectureRoleDetail } from "@/components/settings/workers/architecture-dialog-state"
@@ -18,19 +15,6 @@ const ArchitectureFlow = dynamic(
     loading: () => <Skeleton className="h-[360px] w-full" />,
   }
 )
-
-interface ArchitectureDialogTriggerProps {
-  t: TranslationFn
-}
-
-export function ArchitectureDialogTrigger({ t }: ArchitectureDialogTriggerProps) {
-  return (
-    <Button variant="outline" size="sm">
-      <IconInfoCircle className="h-4 w-4 mr-2" />
-      {t("viewArchitecture")}
-    </Button>
-  )
-}
 
 interface ArchitectureDialogHeaderProps {
   t: TranslationFn
@@ -53,11 +37,36 @@ interface ArchitectureFlowSectionProps {
 export function ArchitectureFlowSection({ t, isOpen }: ArchitectureFlowSectionProps) {
   return (
     <div className="space-y-2">
-      <div>
+      <div className="space-y-1">
         <p className="text-sm font-medium">{t("flowDiagramTitle")}</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground leading-5">
           {t("flowDiagramDesc")}
         </p>
+      </div>
+      <div className="rounded-md border bg-muted/15 px-3 py-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-muted-foreground">
+          <div className="inline-flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+            <span>{t("flowServerTitle")}</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--color-chart-2)]" />
+            <span>{t("flowAgentTitle")}</span>
+          </div>
+          <div className="inline-flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--color-chart-1)]" />
+            <span>{t("flowWorkerTitle")}</span>
+          </div>
+          <span className="text-muted-foreground/60">|</span>
+          <div className="inline-flex items-center gap-2">
+            <span className="w-8 border-t-2 border-primary/70" />
+            <span>{t("flowLegendBidirectionalShort")}</span>
+          </div>
+          <div className="inline-flex items-center gap-2">
+            <span className="w-8 border-t-2 border-dashed border-primary/70" />
+            <span>{t("flowLegendLocalShort")}</span>
+          </div>
+        </div>
       </div>
       {isOpen ? <ArchitectureFlow /> : <Skeleton className="h-[360px] w-full" />}
     </div>
@@ -147,4 +156,4 @@ export function ArchitectureStepsSection({ t, steps }: ArchitectureStepsSectionP
   )
 }
 
-export { ScrollArea, Separator }
+export { ScrollArea }

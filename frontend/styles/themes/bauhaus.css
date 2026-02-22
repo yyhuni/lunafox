@@ -85,7 +85,7 @@
   --ark-muted: var(--muted-foreground);
   --ark-accent: var(--primary);
   --ark-active: oklch(0.60 0.18 260); /* Cool blue highlight */
-  --bauhaus-grid: oklch(0.205 0.02 260 / 0.04); /* Cool blue grid */
+  --bauhaus-grid: oklch(0.205 0.02 260 / 0.03); /* Cool blue grid */
   
   /* Accent Color - Modern Amber Yellow */
   --highlight: oklch(0.78 0.16 75);   /* #F59E0B - amber yellow */

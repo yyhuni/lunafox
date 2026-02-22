@@ -1484,13 +1484,14 @@
         "uptime": "运行 {value}",
         "updatedAt": "更新 {value}"
       },
-      "actions": {
-        "title": "操作",
-        "config": "配置",
-        "delete": "删除 Agent",
-        "deleteTitle": "删除 Agent",
-        "deleteDesc": "确定删除 Agent \"{name}\" 吗？此操作不可恢复。"
-      },
+    "actions": {
+      "title": "操作",
+      "config": "配置",
+      "logs": "日志",
+      "delete": "删除 Agent",
+      "deleteTitle": "删除 Agent",
+      "deleteDesc": "确定删除 Agent \"{name}\" 吗？此操作不可恢复。"
+    },
       "config": {
         "title": "调度配置",
         "desc": "调整并发任务与资源阈值",
@@ -1515,13 +1516,40 @@
         "configuration": "配置信息",
         "waitingForHeartbeat": "等待首次心跳数据..."
       },
-      "list": {
-        "uptime": "运行"
-      },
-      "version": "v{version}",
-      "unknownHost": "未知主机",
-      "unknownIp": "未知 IP"
+    "list": {
+      "uptime": "运行"
     },
+    "logs": {
+      "title": "Agent 日志",
+      "noAgent": "未选择 Agent",
+      "empty": "暂无日志输出",
+      "lineLimitHint": "日志过多，仅保留最近 {max} 行",
+      "truncated": "已截断",
+      "ready": "就绪",
+      "openFailed": "打开日志流失败",
+      "errors": {
+        "containerNotFound": "容器不存在或名称错误",
+        "dockerUnavailable": "Docker 不可用，请检查 Agent 运行环境",
+        "dockerApiError": "Docker 日志读取失败",
+        "agentTimeout": "Agent 响应超时，请稍后重试",
+        "wsSendFailed": "日志请求发送到 Agent 失败",
+        "agentOffline": "Agent 离线，无法读取日志",
+        "badRequest": "请求参数无效，请检查容器名",
+        "streamUnavailable": "浏览器不支持流式读取",
+        "unknown": "未知错误"
+      },
+      "status": {
+        "idle": "等待开始",
+        "connecting": "连接中",
+        "streaming": "流式中",
+        "done": "已结束",
+        "error": "错误"
+      }
+    },
+    "version": "v{version}",
+    "unknownHost": "未知主机",
+    "unknownIp": "未知 IP"
+  },
     "systemLogs": {
       "title": "系统日志",
       "description": "每 2 秒自动刷新一次（轮询模式）",
@@ -2179,9 +2207,12 @@
     "workers": {
       "title": "Agent 节点",
       "description": "管理 Agent 安装、健康状态与调度阈值",
-      "viewArchitecture": "查看架构说明",
-      "flowTitle": "结构示意",
-      "flowDesc": "Server 负责调度与汇总；Agent 运行在目标机器并启动 Worker 执行任务",
+      "viewArchitecture": "系统架构",
+      "flowTitle": "系统架构",
+      "flowDesc": "用于说明 Server、Agent、Worker 的协作关系与执行路径",
+      "flowTabDiagram": "架构图",
+      "flowTabRoles": "角色职责",
+      "flowTabSteps": "执行流程",
       "flowServerTitle": "Server",
       "flowServerDesc": "任务调度与结果汇总",
       "flowAgentTitle": "Agent",
@@ -2194,6 +2225,8 @@
       "flowWorkerResultLink": "结果直连回传",
       "flowDiagramTitle": "结构流程图",
       "flowDiagramDesc": "拓扑关系：1 个 Server → 多个 Agent → 每个 Agent 多个 Worker",
+      "flowLegendBidirectionalShort": "双向控制链路",
+      "flowLegendLocalShort": "本机调度链路",
       "flowRolesTitle": "角色与职责",
       "flowRolesDesc": "了解各个组件的运行位置、通信方式和核心职责",
       "flowTableRole": "角色",

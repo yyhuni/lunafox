@@ -64,6 +64,7 @@ type deps struct {
 	agentHandler     *agenthandler.AgentHandler
 	agentWSHandler   *agenthandler.AgentWebSocketHandler
 	agentTaskHandler *agenthandler.AgentTaskHandler
+	agentLogHandler  *agenthandler.AgentLogStreamHandler
 
 	websiteSnapshotHandler       *snapshothandler.WebsiteSnapshotHandler
 	subdomainSnapshotHandler     *snapshothandler.SubdomainSnapshotHandler
@@ -154,6 +155,7 @@ type agentModuleHandlers struct {
 	agentHandler     *agenthandler.AgentHandler
 	agentWSHandler   *agenthandler.AgentWebSocketHandler
 	agentTaskHandler *agenthandler.AgentTaskHandler
+	agentLogHandler  *agenthandler.AgentLogStreamHandler
 }
 
 type snapshotModuleHandlers struct {
@@ -202,6 +204,7 @@ func buildDependencies(infra *infra, cfg *config.Config) *deps {
 		agentHandler:     agent.agentHandler,
 		agentWSHandler:   agent.agentWSHandler,
 		agentTaskHandler: agent.agentTaskHandler,
+		agentLogHandler:  agent.agentLogHandler,
 
 		websiteSnapshotHandler:       snapshot.websiteSnapshotHandler,
 		subdomainSnapshotHandler:     snapshot.subdomainSnapshotHandler,
@@ -386,6 +389,8 @@ func wireAgentModule(
 		infra.serverVersion,
 		infra.agentImageRef,
 	)
+	logStreamSvc := agentservice.NewLogStreamService(ws.NewAgentMessagePublisher(infra.wsHub), agentClock)
+	agentRuntimeSvc.BindLogStreamService(logStreamSvc)
 	agentTaskSvc := agentservice.NewAgentTaskService(scanTaskRuntime)
 
 	return agentModuleHandlers{
@@ -402,6 +407,7 @@ func wireAgentModule(
 		),
 		agentWSHandler:   agenthandler.NewAgentWebSocketHandler(infra.wsHub, agentRuntimeSvc),
 		agentTaskHandler: agenthandler.NewAgentTaskHandler(agentTaskSvc),
+		agentLogHandler:  agenthandler.NewAgentLogStreamHandler(repos.agentRepo, logStreamSvc),
 	}
 }
 

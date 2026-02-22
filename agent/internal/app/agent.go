@@ -71,6 +71,8 @@ func Run(ctx context.Context, cfg config.Config, wsURL string) error {
 	} else {
 		logger.Log.Info("docker client ready")
 	}
+	logStreamMgr := newLogStreamManager(dockerClient, client)
+	defer logStreamMgr.Close()
 
 	workerToken := os.Getenv("WORKER_TOKEN")
 	if workerToken == "" {
@@ -113,6 +115,8 @@ func Run(ctx context.Context, cfg config.Config, wsURL string) error {
 		puller.UpdateConfig(cfgUpdate.MaxTasks, cfgUpdate.CPUThreshold, cfgUpdate.MemThreshold, cfgUpdate.DiskThreshold)
 	})
 	handler.OnUpdateRequired(updater.HandleUpdateRequired)
+	handler.OnLogOpen(logStreamMgr.HandleOpen)
+	handler.OnLogCancel(logStreamMgr.HandleCancel)
 	client.SetOnMessage(handler.Handle)
 
 	logger.Log.Info("starting heartbeat sender")

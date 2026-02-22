@@ -130,21 +130,22 @@ const EDGE_PRESETS: Record<
   }
 > = {
   bidirectional: {
-    animated: true,
+    animated: false,
     style: {
       stroke: "var(--primary)",
-      strokeWidth: 2.5,
-      strokeOpacity: 0.6,
+      strokeWidth: 2.4,
+      strokeOpacity: 0.85,
     },
+    markerStart: ARROW_MARKER,
     markerEnd: ARROW_MARKER,
   },
   local: {
-    animated: true,
+    animated: false,
     style: {
       stroke: "var(--primary)",
-      strokeWidth: 2,
-      strokeOpacity: 0.45,
-      strokeDasharray: "6 6",
+      strokeWidth: 2.1,
+      strokeOpacity: 0.7,
+      strokeDasharray: "7 5",
     },
     markerEnd: ARROW_MARKER,
   },
@@ -473,18 +474,13 @@ export function useArchitectureFlowState(t: (key: string) => string) {
         labelBgPadding: [4, 8] as [number, number],
         labelBgBorderRadius: 4,
         style: preset.style,
+        markerStart: preset.markerStart,
         markerEnd: preset.markerEnd,
       }
     }
 
     const result: Edge[] = []
     links.forEach((link) => {
-      if (link.kind === "bidirectional") {
-        result.push(buildEdge(link, link.source, link.target, link.id, link.label))
-        result.push(buildEdge(link, link.target, link.source, `${link.id}-reverse`))
-        return
-      }
-
       result.push(buildEdge(link, link.source, link.target, link.id, link.label))
     })
     return result

@@ -28,6 +28,7 @@ import { AgentConfigDialog } from "./worker-dialog"
 import { AgentCardCompact } from "./agent-card-compact"
 import { AgentInstallDialog } from "./agent-install-dialog"
 import { ArchitectureDialog } from "./architecture-dialog"
+import { AgentLogDrawer } from "./agent-log-drawer"
 
 function EmptyState({ onOpenInstall }: { onOpenInstall: () => void }) {
   const t = useTranslations("settings.workers")
@@ -54,6 +55,8 @@ export function AgentList() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null)
   const [token, setToken] = useState<RegistrationTokenResponse | null>(null)
+  const [logDrawerOpen, setLogDrawerOpen] = useState(false)
+  const [logAgent, setLogAgent] = useState<Agent | null>(null)
 
   const { data, isLoading } = useAgents(page, pageSize)
   const createToken = useCreateRegistrationToken()
@@ -97,6 +100,11 @@ export function AgentList() {
   const handleDelete = (agent: Agent) => {
     setAgentToDelete(agent)
     setDeleteDialogOpen(true)
+  }
+
+  const handleOpenLogs = (agent: Agent) => {
+    setLogAgent(agent)
+    setLogDrawerOpen(true)
   }
 
   const confirmDelete = async () => {
@@ -169,6 +177,7 @@ export function AgentList() {
                 agent={agent}
                 onConfig={handleConfigure}
                 onDelete={handleDelete}
+                onLogs={handleOpenLogs}
               />
             ))}
           </div>
@@ -189,6 +198,12 @@ export function AgentList() {
         onConfirm={confirmDelete}
         variant="destructive"
         loading={deleteAgent.isPending}
+      />
+
+      <AgentLogDrawer
+        open={logDrawerOpen}
+        onOpenChange={setLogDrawerOpen}
+        agent={logAgent}
       />
 
     </div>

@@ -1470,13 +1470,14 @@
         "uptime": "Uptime {value}",
         "updatedAt": "Updated {value}"
       },
-      "actions": {
-        "title": "Actions",
-        "config": "Edit Config",
-        "delete": "Delete Agent",
-        "deleteTitle": "Delete Agent",
-        "deleteDesc": "Delete agent \"{name}\"? This action cannot be undone."
-      },
+    "actions": {
+      "title": "Actions",
+      "config": "Edit Config",
+      "logs": "Logs",
+      "delete": "Delete Agent",
+      "deleteTitle": "Delete Agent",
+      "deleteDesc": "Delete agent \"{name}\"? This action cannot be undone."
+    },
       "config": {
         "title": "Scheduling Config",
         "desc": "Adjust task concurrency and resource thresholds",
@@ -1501,13 +1502,40 @@
         "configuration": "Configuration",
         "waitingForHeartbeat": "Waiting for first heartbeat..."
       },
-      "list": {
-        "uptime": "Uptime"
-      },
-      "version": "v{version}",
-      "unknownHost": "Unknown host",
-      "unknownIp": "Unknown IP"
+    "list": {
+      "uptime": "Uptime"
     },
+    "logs": {
+      "title": "Agent Logs",
+      "noAgent": "No agent selected",
+      "empty": "No logs yet",
+      "lineLimitHint": "Log volume is high, keeping only the latest {max} lines",
+      "truncated": "Truncated",
+      "ready": "Ready",
+      "openFailed": "Failed to open log stream",
+      "errors": {
+        "containerNotFound": "Container not found or invalid name",
+        "dockerUnavailable": "Docker is unavailable on this agent",
+        "dockerApiError": "Failed to read Docker logs",
+        "agentTimeout": "Agent response timeout, please retry",
+        "wsSendFailed": "Failed to forward log request to agent",
+        "agentOffline": "Agent is offline",
+        "badRequest": "Invalid request parameters",
+        "streamUnavailable": "Streaming is not supported by this browser",
+        "unknown": "Unknown error"
+      },
+      "status": {
+        "idle": "Idle",
+        "connecting": "Connecting",
+        "streaming": "Streaming",
+        "done": "Done",
+        "error": "Error"
+      }
+    },
+    "version": "v{version}",
+    "unknownHost": "Unknown host",
+    "unknownIp": "Unknown IP"
+  },
     "systemLogs": {
       "title": "System Logs",
       "description": "Auto-refresh every 2 seconds (polling mode)",
@@ -2165,9 +2193,12 @@
     "workers": {
       "title": "Agents",
       "description": "Manage agent installation, health, and scheduling thresholds",
-      "viewArchitecture": "View Architecture",
-      "flowTitle": "Architecture overview",
-      "flowDesc": "The server schedules and aggregates; agents run on target machines and launch workers to execute tasks.",
+      "viewArchitecture": "System Architecture",
+      "flowTitle": "System Architecture",
+      "flowDesc": "Shows how Server, Agent, and Worker collaborate across scheduling and execution.",
+      "flowTabDiagram": "Diagram",
+      "flowTabRoles": "Roles",
+      "flowTabSteps": "Flow",
       "flowServerTitle": "Server",
       "flowServerDesc": "Schedule & aggregate",
       "flowAgentTitle": "Agent",
@@ -2180,6 +2211,8 @@
       "flowWorkerResultLink": "Results direct",
       "flowDiagramTitle": "Flow diagram",
       "flowDiagramDesc": "Topology: 1 Server → many Agents → multiple Workers per Agent",
+      "flowLegendBidirectionalShort": "Bidirectional control link",
+      "flowLegendLocalShort": "Local orchestration link",
       "flowRolesTitle": "Roles & responsibilities",
       "flowRolesDesc": "Boundaries and primary responsibilities of each component",
       "flowTableRole": "Role",

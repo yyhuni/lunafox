@@ -8,6 +8,10 @@ type runtimeMessageHandler func(service *AgentRuntimeService, ctx context.Contex
 
 func newRuntimeMessageDispatcher() map[string]runtimeMessageHandler {
 	return map[string]runtimeMessageHandler{
-		RuntimeMessageTypeHeartbeat: dispatchHeartbeatMessage,
+		RuntimeMessageTypeHeartbeat:  dispatchHeartbeatMessage,
+		RuntimeMessageTypeLogStarted: dispatchLogStartedMessage,
+		RuntimeMessageTypeLogChunk:   dispatchLogChunkMessage,
+		RuntimeMessageTypeLogEnd:     dispatchLogEndMessage,
+		RuntimeMessageTypeLogError:   dispatchLogErrorMessage,
 	}
 }

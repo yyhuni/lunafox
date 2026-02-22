@@ -15,15 +15,51 @@ func toRuntimeMessageInput(raw []byte) (agentapp.RuntimeMessageInput, error) {
 	}
 
 	input := agentapp.RuntimeMessageInput{Type: message.Type}
-	if message.Type != agentproto.MessageTypeHeartbeat {
-		return input, nil
+	switch message.Type {
+	case agentproto.MessageTypeHeartbeat:
+		var payload agentproto.HeartbeatPayload
+		if err := json.Unmarshal(message.Payload, &payload); err != nil {
+			return agentapp.RuntimeMessageInput{}, err
+		}
+		input.Heartbeat = toHeartbeatItem(payload)
+	case agentproto.MessageTypeLogStarted:
+		var payload agentproto.LogStartedPayload
+		if err := json.Unmarshal(message.Payload, &payload); err != nil {
+			return agentapp.RuntimeMessageInput{}, err
+		}
+		input.LogStarted = &agentapp.LogStartedItem{RequestID: payload.RequestID}
+	case agentproto.MessageTypeLogChunk:
+		var payload agentproto.LogChunkPayload
+		if err := json.Unmarshal(message.Payload, &payload); err != nil {
+			return agentapp.RuntimeMessageInput{}, err
+		}
+		input.LogChunk = &agentapp.LogChunkItem{
+			RequestID: payload.RequestID,
+			TS:        payload.TS.UTC(),
+			Stream:    payload.Stream,
+			Line:      payload.Line,
+			Truncated: payload.Truncated,
+		}
+	case agentproto.MessageTypeLogEnd:
+		var payload agentproto.LogEndPayload
+		if err := json.Unmarshal(message.Payload, &payload); err != nil {
+			return agentapp.RuntimeMessageInput{}, err
+		}
+		input.LogEnd = &agentapp.LogEndItem{
+			RequestID: payload.RequestID,
+			Reason:    payload.Reason,
+		}
+	case agentproto.MessageTypeLogError:
+		var payload agentproto.LogErrorPayload
+		if err := json.Unmarshal(message.Payload, &payload); err != nil {
+			return agentapp.RuntimeMessageInput{}, err
+		}
+		input.LogError = &agentapp.LogErrorItem{
+			RequestID: payload.RequestID,
+			Code:      payload.Code,
+			Message:   payload.Message,
+		}
 	}
-
-	var payload agentproto.HeartbeatPayload
-	if err := json.Unmarshal(message.Payload, &payload); err != nil {
-		return agentapp.RuntimeMessageInput{}, err
-	}
-	input.Heartbeat = toHeartbeatItem(payload)
 	return input, nil
 }
 
