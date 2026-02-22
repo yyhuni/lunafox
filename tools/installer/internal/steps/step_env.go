@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -19,13 +20,19 @@ func (stepEnv) Title() string {
 }
 
 func (stepEnv) Run(ctx context.Context, installer *Installer) error {
-	jwtSecret, err := installer.generateSecret(ctx)
+	jwtSecret, jwtReused, err := installer.resolveSecret(ctx, installer.options.EnvFile, "JWT 密钥", envfile.ReadJWTSecret)
 	if err != nil {
-		return fmt.Errorf("JWT 密钥生成失败: %w", err)
+		return err
 	}
-	workerToken, err := installer.generateSecret(ctx)
+	workerToken, workerReused, err := installer.resolveSecret(ctx, installer.options.EnvFile, "Worker 令牌", envfile.ReadWorkerToken)
 	if err != nil {
-		return fmt.Errorf("Worker 令牌生成失败: %w", err)
+		return err
+	}
+	if jwtReused {
+		installer.printer.Info("检测到已有 JWT_SECRET，已复用")
+	}
+	if workerReused {
+		installer.printer.Info("检测到已有 WORKER_TOKEN，已复用")
 	}
 
 	agentImageRef := strings.TrimSpace(installer.options.AgentImageRef)
@@ -76,6 +83,30 @@ func (stepEnv) Run(ctx context.Context, installer *Installer) error {
 
 	installer.printer.Success("配置文件已生成")
 	return nil
+}
+
+func (installer *Installer) resolveSecret(
+	ctx context.Context,
+	envPath string,
+	label string,
+	readFunc func(path string) (string, error),
+) (string, bool, error) {
+	existing, err := readFunc(envPath)
+	if err == nil {
+		value := strings.TrimSpace(existing)
+		if value != "" {
+			return value, true, nil
+		}
+	}
+	if err != nil && !errors.Is(err, envfile.ErrEnvFileNotFound) && !errors.Is(err, envfile.ErrEnvKeyNotFound) {
+		return "", false, fmt.Errorf("读取已有%s失败: %w", label, err)
+	}
+
+	generated, genErr := installer.generateSecret(ctx)
+	if genErr != nil {
+		return "", false, fmt.Errorf("%s生成失败: %w", label, genErr)
+	}
+	return generated, false, nil
 }
 
 func (installer *Installer) generateSecret(ctx context.Context) (string, error) {

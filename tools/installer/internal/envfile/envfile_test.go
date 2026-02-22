@@ -1,6 +1,7 @@
 package envfile
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,6 +64,43 @@ func TestReadWorkerToken(t *testing.T) {
 	}
 	if token != "abc123" {
 		t.Fatalf("unexpected token: %s", token)
+	}
+}
+
+func TestReadJWTSecret(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".env")
+	if err := os.WriteFile(path, []byte("JWT_SECRET=jwt-secret-value\n"), 0o644); err != nil {
+		t.Fatalf("write env: %v", err)
+	}
+
+	secret, err := ReadJWTSecret(path)
+	if err != nil {
+		t.Fatalf("read jwt secret: %v", err)
+	}
+	if secret != "jwt-secret-value" {
+		t.Fatalf("unexpected secret: %s", secret)
+	}
+}
+
+func TestReadJWTSecretMissingFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".env-not-found")
+	_, err := ReadJWTSecret(path)
+	if !errors.Is(err, ErrEnvFileNotFound) {
+		t.Fatalf("expected ErrEnvFileNotFound, got: %v", err)
+	}
+}
+
+func TestReadJWTSecretMissingKey(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".env")
+	if err := os.WriteFile(path, []byte("WORKER_TOKEN=worker\n"), 0o644); err != nil {
+		t.Fatalf("write env: %v", err)
+	}
+
+	_, err := ReadJWTSecret(path)
+	if !errors.Is(err, ErrEnvKeyNotFound) {
+		t.Fatalf("expected ErrEnvKeyNotFound, got: %v", err)
 	}
 }
 

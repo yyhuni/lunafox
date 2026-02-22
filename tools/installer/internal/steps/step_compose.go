@@ -14,14 +14,7 @@ func (stepCompose) Title() string {
 }
 
 func (stepCompose) Run(ctx context.Context, installer *Installer) error {
-	args := []string{}
-	if fileExists(installer.options.EnvFile) {
-		args = append(args, "--env-file", installer.options.EnvFile)
-	}
-	args = append(args, "-f", installer.options.ComposeFile)
-	if installer.options.Mode == cli.ModeProd {
-		args = append(args, "--profile", "local-db")
-	}
+	args := composeBaseArgs(installer.options)
 	args = append(args, "up", "-d", "--build", "--force-recreate")
 
 	command := installer.toolchain.ComposeCommand(args...)
@@ -31,4 +24,16 @@ func (stepCompose) Run(ctx context.Context, installer *Installer) error {
 
 	installer.printer.Success("Docker 服务启动成功")
 	return nil
+}
+
+func composeBaseArgs(options cli.Options) []string {
+	args := make([]string, 0, 6)
+	if fileExists(options.EnvFile) {
+		args = append(args, "--env-file", options.EnvFile)
+	}
+	args = append(args, "-f", options.ComposeFile)
+	if options.Mode == cli.ModeProd {
+		args = append(args, "--profile", "local-db")
+	}
+	return args
 }

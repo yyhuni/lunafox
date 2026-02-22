@@ -1,9 +1,15 @@
 package envfile
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
+)
+
+var (
+	ErrEnvFileNotFound = errors.New("env file not found")
+	ErrEnvKeyNotFound  = errors.New("env key not found")
 )
 
 type Data struct {
@@ -76,6 +82,10 @@ func Write(path string, data Data) error {
 	return os.WriteFile(path, []byte(content), 0o644)
 }
 
+func ReadJWTSecret(path string) (string, error) {
+	return readRequiredValue(path, "JWT_SECRET")
+}
+
 func ReadWorkerToken(path string) (string, error) {
 	return readRequiredValue(path, "WORKER_TOKEN")
 }
@@ -87,7 +97,10 @@ func ReadSharedDataVolumeBind(path string) (string, error) {
 func readRequiredValue(path string, key string) (string, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return "", fmt.Errorf("未找到环境文件: %s", path)
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("%w: %s", ErrEnvFileNotFound, path)
+		}
+		return "", fmt.Errorf("读取环境文件失败: %w", err)
 	}
 
 	lines := strings.Split(string(content), "\n")
@@ -104,5 +117,5 @@ func readRequiredValue(path string, key string) (string, error) {
 		return value, nil
 	}
 
-	return "", fmt.Errorf("docker/.env 缺少 %s", key)
+	return "", fmt.Errorf("%w: %s", ErrEnvKeyNotFound, key)
 }

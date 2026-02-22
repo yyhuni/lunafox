@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	TotalSteps    = 7
+	TotalSteps    = 8
 	sslVolumeName = "lunafox_ssl"
 )
 
@@ -54,6 +54,7 @@ func (installer *Installer) Run(ctx context.Context) error {
 		stepImages{},
 		stepTLS{},
 		stepEnv{},
+		stepPreclean{},
 		stepCompose{},
 		stepHealth{},
 		stepAgent{},

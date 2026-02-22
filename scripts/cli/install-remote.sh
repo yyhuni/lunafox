@@ -61,6 +61,10 @@ usage() {
   --public-host <host>       公网主机（仅支持 localhost/IPv4），如 10.0.0.8
   --public-port <port>       公网端口（默认 8083）
   --non-interactive          禁用交互向导，需显式提供公网地址
+
+行为说明:
+  install 默认会在安装前执行轻清理（compose down --remove-orphans + 清理残留 lunafox-agent 容器），不会删除卷/证书/.env。
+  如需完全重置，请在项目根目录运行 ./uninstall.sh（或 ./uninstall.sh --keep-data 仅卸载服务）。
 USAGE
 }
 

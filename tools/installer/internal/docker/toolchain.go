@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -81,6 +82,8 @@ func (toolchain Toolchain) EnsureNetwork(ctx context.Context, runner execx.Runne
 	}
 
 	inspectCommand := toolchain.DockerCommand("network", "inspect", networkName)
+	inspectCommand.StdoutWriter = io.Discard
+	inspectCommand.StderrWriter = io.Discard
 	if _, err := runner.Run(ctx, inspectCommand); err == nil {
 		return nil
 	}
