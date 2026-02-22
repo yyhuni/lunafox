@@ -51,8 +51,8 @@ func (installer *Installer) Run(ctx context.Context) error {
 
 	steps := []Step{
 		stepSystem{},
-		stepTLS{},
 		stepImages{},
+		stepTLS{},
 		stepEnv{},
 		stepCompose{},
 		stepHealth{},

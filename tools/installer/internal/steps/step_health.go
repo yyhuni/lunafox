@@ -2,7 +2,6 @@ package steps
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -11,7 +10,6 @@ import (
 	"time"
 
 	"github.com/yyhuni/lunafox/tools/installer/internal/cli"
-	"github.com/yyhuni/lunafox/tools/installer/internal/execx"
 )
 
 type stepHealth struct{}
@@ -59,6 +57,10 @@ func (installer *Installer) checkContainerNetworkReachability(ctx context.Contex
 	if err != nil {
 		return err
 	}
+	if cli.IsLoopbackHost(targetHost) {
+		installer.printer.Warn("PUBLIC_URL 为 loopback 地址（%s），跳过容器网络可达性检查；分布式功能需使用公网 IPv4", targetHost)
+		return nil
+	}
 
 	target := net.JoinHostPort(targetHost, targetPort)
 	healthURL := strings.TrimRight(installer.options.PublicURL, "/") + "/health"
@@ -68,32 +70,48 @@ func (installer *Installer) checkContainerNetworkReachability(ctx context.Contex
 	}
 
 	installer.printer.Info("容器网络可达性检查: %s", healthURL)
-	command := installer.toolchain.DockerCommand(
-		"run", "--rm",
-		"--network", networkName,
-		"-e", "LUNAFOX_TLS_TARGET="+target,
-		"-e", "LUNAFOX_TLS_SERVER_NAME="+targetHost,
-		"-v", fmt.Sprintf("%s:/ca/fullchain.pem:ro", caPath),
-		"alpine/openssl",
-		"sh", "-ec",
-		`printf "GET /health HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n" "$LUNAFOX_TLS_SERVER_NAME" | openssl s_client -verify_return_error -CAfile /ca/fullchain.pem -connect "$LUNAFOX_TLS_TARGET" -servername "$LUNAFOX_TLS_SERVER_NAME" 2>/dev/null | grep -Eq "HTTP/1\.[01] [23][0-9]{2}"`,
-	)
-
-	if _, err := installer.runner.Run(ctx, command); err != nil {
-		detail := ""
-		var execErr *execx.ExecError
-		if errors.As(err, &execErr) {
-			detail = trimCommandErrorDetail(execErr.Result.Stderr, execErr.Result.Stdout, 260)
-		}
-		if detail != "" {
-			return fmt.Errorf("容器网络可达性检查失败：Agent/Worker 可能无法访问 %s（%s）", healthURL, detail)
-		}
-		return fmt.Errorf("容器网络可达性检查失败：Agent/Worker 可能无法访问 %s，请确认公网主机、端口和 DNS", healthURL)
+	helperImages := syncHelperImageCandidates(installer.options.WorkerImageRef, installer.options.AgentImageRef)
+	if len(helperImages) == 0 {
+		return fmt.Errorf("容器网络可达性检查失败：缺少可用业务镜像，请先完成镜像准备步骤")
 	}
-
-	installer.printer.Success("容器网络可达性检查通过")
-	return nil
+	failures := make([]string, 0, len(helperImages))
+	for _, helperImage := range helperImages {
+		command := installer.toolchain.DockerCommand(
+			"run", "--rm", "--pull=never",
+			"--network", networkName,
+			"-e", "LUNAFOX_HEALTH_URL="+healthURL,
+			"-e", "LUNAFOX_TLS_TARGET="+target,
+			"-e", "LUNAFOX_TLS_SERVER_NAME="+targetHost,
+			"-v", fmt.Sprintf("%s:/ca/fullchain.pem:ro", caPath),
+			helperImage,
+			"sh", "-ec",
+			probeHTTPSWithCACommand,
+		)
+		if _, err := installer.runner.Run(ctx, command); err == nil {
+			installer.printer.Info("容器网络可达性探测镜像: %s", helperImage)
+			installer.printer.Success("容器网络可达性检查通过")
+			return nil
+		} else {
+			failures = append(failures, fmt.Sprintf("%s => %s", helperImage, commandErrorMessage(err)))
+		}
+	}
+	return fmt.Errorf("容器网络可达性检查失败：Agent/Worker 可能无法访问 %s（%s）", healthURL, strings.Join(failures, " ; "))
 }
+
+const probeHTTPSWithCACommand = `
+if command -v curl >/dev/null 2>&1; then
+  curl -fsS --connect-timeout 5 --max-time 15 --cacert /ca/fullchain.pem "$LUNAFOX_HEALTH_URL" >/dev/null
+elif command -v wget >/dev/null 2>&1; then
+  wget -q -O - --timeout=15 --ca-certificate=/ca/fullchain.pem "$LUNAFOX_HEALTH_URL" >/dev/null
+elif command -v openssl >/dev/null 2>&1; then
+  printf "GET /health HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n" "$LUNAFOX_TLS_SERVER_NAME" | \
+    openssl s_client -verify_return_error -CAfile /ca/fullchain.pem -connect "$LUNAFOX_TLS_TARGET" -servername "$LUNAFOX_TLS_SERVER_NAME" 2>/dev/null | \
+    grep -Eq "HTTP/1\.[01] [23][0-9]{2}"
+else
+  echo "helper image missing curl/wget/openssl" >&2
+  exit 127
+fi
+`
 
 func parseHostPortForProbe(publicURL string) (string, string, error) {
 	parsed, err := url.Parse(strings.TrimSpace(publicURL))
@@ -116,20 +134,6 @@ func parseHostPortForProbe(publicURL string) (string, string, error) {
 		}
 	}
 	return host, port, nil
-}
-
-func trimCommandErrorDetail(stderr string, stdout string, maxLen int) string {
-	detail := strings.TrimSpace(stderr)
-	if detail == "" {
-		detail = strings.TrimSpace(stdout)
-	}
-	if detail == "" {
-		return ""
-	}
-	if len(detail) <= maxLen {
-		return detail
-	}
-	return detail[:maxLen] + "..."
 }
 
 func (installer *Installer) prewarmFrontend(ctx context.Context) error {

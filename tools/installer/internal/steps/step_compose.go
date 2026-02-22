@@ -26,7 +26,7 @@ func (stepCompose) Run(ctx context.Context, installer *Installer) error {
 
 	command := installer.toolchain.ComposeCommand(args...)
 	if _, err := installer.runner.Run(ctx, command); err != nil {
-		return fmt.Errorf("服务启动失败")
+		return fmt.Errorf("服务启动失败：%s", commandErrorMessage(err))
 	}
 
 	installer.printer.Success("Docker 服务启动成功")

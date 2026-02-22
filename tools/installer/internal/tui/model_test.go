@@ -39,16 +39,6 @@ func TestModelDevLocalFlow(t *testing.T) {
 	}
 
 	m = nextModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	if m.step != stepGoProxy {
-		t.Fatalf("expected goproxy step, got %v", m.step)
-	}
-
-	m = nextModel(t, m, tea.KeyMsg{Type: tea.KeySpace})
-	if !m.useGoProxy {
-		t.Fatalf("expected goproxy enabled")
-	}
-
-	m = nextModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	if m.step != stepConfirm {
 		t.Fatalf("expected confirm step, got %v", m.step)
 	}
@@ -56,9 +46,6 @@ func TestModelDevLocalFlow(t *testing.T) {
 	m = nextModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	if !m.done {
 		t.Fatalf("expected done")
-	}
-	if !m.options.UseGoProxyCN {
-		t.Fatalf("expected options goproxy enabled")
 	}
 	if m.options.PublicURL != "https://localhost:8083" {
 		t.Fatalf("unexpected public url: %s", m.options.PublicURL)
@@ -79,11 +66,6 @@ func TestModelDevPublicFlow(t *testing.T) {
 	}
 	if !m.portInput.Focused() {
 		t.Fatalf("expected port input focused on port step")
-	}
-
-	m = nextModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
-	if m.step != stepGoProxy {
-		t.Fatalf("expected goproxy step, got %v", m.step)
 	}
 
 	m = nextModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})

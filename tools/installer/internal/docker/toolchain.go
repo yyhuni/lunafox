@@ -28,11 +28,11 @@ func Detect(ctx context.Context, runner execx.Runner) (Toolchain, error) {
 	if _, err := runner.Run(ctx, execx.Command{Name: dockerBin, Args: []string{"info"}}); err != nil {
 		sudoPath, sudoErr := runner.LookPath("sudo")
 		if sudoErr != nil {
-			return Toolchain{}, fmt.Errorf("未检测到 sudo，无法提升权限访问 Docker")
+			return Toolchain{}, fmt.Errorf("未检测到 sudo，无法提升权限访问 Docker（docker info 失败: %s）", commandErrorMessage(err))
 		}
 
 		if _, err := runner.Run(ctx, execx.Command{Name: sudoPath, Args: []string{dockerBin, "info"}}); err != nil {
-			return Toolchain{}, fmt.Errorf("Docker 守护进程未运行或无权限访问")
+			return Toolchain{}, fmt.Errorf("Docker 守护进程未运行或无权限访问（docker info 失败: %s）", commandErrorMessage(err))
 		}
 		toolchain.Prefix = []string{sudoPath}
 	}
@@ -54,7 +54,7 @@ func Detect(ctx context.Context, runner execx.Runner) (Toolchain, error) {
 
 	versionCommand := toolchain.ComposeCommand("version")
 	if _, err := runner.Run(ctx, versionCommand); err != nil {
-		return Toolchain{}, fmt.Errorf("未检测到 docker compose，请先安装")
+		return Toolchain{}, fmt.Errorf("未检测到 docker compose，请先安装（compose version 失败: %s）", commandErrorMessage(err))
 	}
 	return toolchain, nil
 }
@@ -62,7 +62,7 @@ func Detect(ctx context.Context, runner execx.Runner) (Toolchain, error) {
 func (toolchain Toolchain) DockerCommand(args ...string) execx.Command {
 	cmd := joinPrefix(toolchain.Prefix, toolchain.DockerBin)
 	cmd = append(cmd, args...)
-	return execx.Command{Name: cmd[0], Args: cmd[1:], Env: os.Environ()}
+	return execx.Command{Name: cmd[0], Args: cmd[1:], Env: os.Environ(), PreferTTY: true}
 }
 
 func (toolchain Toolchain) ComposeCommand(args ...string) execx.Command {
@@ -71,7 +71,7 @@ func (toolchain Toolchain) ComposeCommand(args ...string) execx.Command {
 	if len(toolchain.ComposeEnv) > 0 {
 		env = append(env, toolchain.ComposeEnv...)
 	}
-	return execx.Command{Name: cmd[0], Args: cmd[1:], Env: env}
+	return execx.Command{Name: cmd[0], Args: cmd[1:], Env: env, PreferTTY: true}
 }
 
 func (toolchain Toolchain) EnsureNetwork(ctx context.Context, runner execx.Runner, networkName string) error {
@@ -87,7 +87,7 @@ func (toolchain Toolchain) EnsureNetwork(ctx context.Context, runner execx.Runne
 
 	createCommand := toolchain.DockerCommand("network", "create", networkName)
 	if _, err := runner.Run(ctx, createCommand); err != nil {
-		return fmt.Errorf("无法创建 Docker 网络: %s", networkName)
+		return fmt.Errorf("无法创建 Docker 网络 %s：%s", networkName, commandErrorMessage(err))
 	}
 	return nil
 }

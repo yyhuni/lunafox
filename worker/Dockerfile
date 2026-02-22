@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-
 # Worker application image:
 # - build scanner tools in this Dockerfile (no external tools image dependency)
 # - compile worker binary and assemble runtime image
@@ -50,18 +48,62 @@ RUN set -eux; \
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
     set -eux; \
+    now_ms() { \
+      date +%s%3N 2>/dev/null || echo "$(( $(date +%s) * 1000 ))"; \
+    }; \
+    probe_module="golang.org/x/text@v0.14.0"; \
+    rank_file="$(mktemp)"; \
+    probe_proxy() { \
+      proxy="$1"; \
+      sumdb="$2"; \
+      label="$3"; \
+      start_ms="$(now_ms)"; \
+      if command -v timeout >/dev/null 2>&1; then \
+        if timeout 20s env GO111MODULE=on GOPROXY="$proxy" GOSUMDB="$sumdb" GIT_TERMINAL_PROMPT=0 GOFLAGS=-p=1 GOMAXPROCS=1 go list -m -mod=mod "$probe_module" >/dev/null 2>&1; then \
+          status=0; \
+        else \
+          status=1; \
+        fi; \
+      else \
+        if env GO111MODULE=on GOPROXY="$proxy" GOSUMDB="$sumdb" GIT_TERMINAL_PROMPT=0 GOFLAGS=-p=1 GOMAXPROCS=1 go list -m -mod=mod "$probe_module" >/dev/null 2>&1; then \
+          status=0; \
+        else \
+          status=1; \
+        fi; \
+      fi; \
+      end_ms="$(now_ms)"; \
+      latency="$((end_ms - start_ms))"; \
+      if [ "$status" -eq 0 ]; then \
+        echo "go proxy probe ok: $label (${latency}ms) proxy=$proxy sumdb=$sumdb" >&2; \
+      else \
+        echo "go proxy probe failed: $label (${latency}ms) proxy=$proxy sumdb=$sumdb" >&2; \
+      fi; \
+      printf '%s|%s|%s|%s|%s\n' "$status" "$latency" "$label" "$proxy" "$sumdb" >>"$rank_file"; \
+    }; \
+    probe_proxy "https://proxy.golang.org,direct" "sum.golang.org" "official"; \
+    probe_proxy "https://goproxy.cn,direct" "sum.golang.google.cn" "goproxy-cn"; \
+    probe_proxy "direct" "sum.golang.org" "direct"; \
+    probe_proxy "https://goproxy.cn,direct" "off" "goproxy-cn-nosumdb"; \
+    sort -t '|' -k1,1n -k2,2n "$rank_file" >"${rank_file}.sorted"; \
+    echo "go proxy ranked order:" >&2; \
+    while IFS='|' read -r status latency label proxy sumdb; do \
+      echo "  status=$status latency=${latency}ms label=$label proxy=$proxy sumdb=$sumdb" >&2; \
+    done <"${rank_file}.sorted"; \
     install_tool() { \
       pkg="$1"; \
-      tries=0; \
-      while [ "$tries" -lt 3 ]; do \
-        tries=$((tries + 1)); \
-        if go install -v "$pkg"; then \
-          return 0; \
-        fi; \
-        echo "install failed for $pkg (attempt $tries), retrying..." >&2; \
-        sleep $((tries * 2)); \
-      done; \
-      echo "install failed for $pkg after 3 attempts" >&2; \
+      while IFS='|' read -r _status _latency label proxy sumdb; do \
+        tries=0; \
+        while [ "$tries" -lt 2 ]; do \
+          tries=$((tries + 1)); \
+          if GOSUMDB="$sumdb" GOPROXY="$proxy" GIT_TERMINAL_PROMPT=0 go install -v "$pkg"; then \
+            echo "install success for $pkg via $label (proxy=$proxy sumdb=$sumdb)" >&2; \
+            return 0; \
+          fi; \
+          echo "install failed for $pkg via $label (attempt $tries), retrying..." >&2; \
+          sleep $((tries * 2)); \
+        done; \
+      done <"${rank_file}.sorted"; \
+      echo "install failed for $pkg after trying all proxy candidates" >&2; \
       exit 1; \
     }; \
     install_tool github.com/projectdiscovery/httpx/cmd/httpx@v1.8.1; \
@@ -73,7 +115,8 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     install_tool github.com/ffuf/ffuf/v2@v2.1.0; \
     install_tool github.com/d3mondev/puredns/v2@v2.1.1; \
     install_tool github.com/yyhuni/xingfinger@v0.0.0-20251228093343-bd42c7be5a70; \
-    install_tool github.com/hahwul/dalfox/v2@v2.12.0
+    install_tool github.com/hahwul/dalfox/v2@v2.12.0; \
+    rm -f "$rank_file" "${rank_file}.sorted"
 
 # ============================================
 # Stage 2: Build Go Worker
@@ -92,13 +135,41 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
-    go mod download
+    set -eux; \
+    try_mod_download() { \
+      proxy="$1"; \
+      sumdb="$2"; \
+      label="$3"; \
+      echo "go mod download via $label (proxy=$proxy sumdb=$sumdb)" >&2; \
+      if GOSUMDB="$sumdb" GOPROXY="$proxy" GIT_TERMINAL_PROMPT=0 go mod download; then \
+        return 0; \
+      fi; \
+      return 1; \
+    }; \
+    try_mod_download "https://proxy.golang.org,direct" "sum.golang.org" "official" || \
+      try_mod_download "https://goproxy.cn,direct" "sum.golang.google.cn" "goproxy-cn" || \
+      try_mod_download "direct" "sum.golang.org" "direct" || \
+      try_mod_download "https://goproxy.cn,direct" "off" "goproxy-cn-nosumdb"
 
 # Copy source and build
 COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
-    CGO_ENABLED=0 go build -o /worker ./cmd/worker
+    set -eux; \
+    try_go_build() { \
+      proxy="$1"; \
+      sumdb="$2"; \
+      label="$3"; \
+      echo "go build via $label (proxy=$proxy sumdb=$sumdb)" >&2; \
+      if GOSUMDB="$sumdb" GOPROXY="$proxy" GIT_TERMINAL_PROMPT=0 CGO_ENABLED=0 go build -o /worker ./cmd/worker; then \
+        return 0; \
+      fi; \
+      return 1; \
+    }; \
+    try_go_build "https://proxy.golang.org,direct" "sum.golang.org" "official" || \
+      try_go_build "https://goproxy.cn,direct" "sum.golang.google.cn" "goproxy-cn" || \
+      try_go_build "direct" "sum.golang.org" "direct" || \
+      try_go_build "https://goproxy.cn,direct" "off" "goproxy-cn-nosumdb"
 
 # ============================================
 # Stage 3: Runtime image

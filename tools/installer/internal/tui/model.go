@@ -16,7 +16,6 @@ const (
 	stepHost step = iota
 	stepProdLoopbackConfirm
 	stepPort
-	stepGoProxy
 	stepConfirm
 )
 
@@ -29,12 +28,11 @@ type model struct {
 	hostInput textinput.Model
 	portInput textinput.Model
 
-	useGoProxy bool
-	errMsg     string
-	done       bool
-	cancelled  bool
-	width      int
-	height     int
+	errMsg    string
+	done      bool
+	cancelled bool
+	width     int
+	height    int
 }
 
 func newModel(options cli.Options) model {
@@ -66,12 +64,11 @@ func newModel(options cli.Options) model {
 	portInput.Prompt = ""
 
 	m := model{
-		options:    options,
-		step:       stepHost,
-		cursor:     0,
-		hostInput:  hostInput,
-		portInput:  portInput,
-		useGoProxy: options.UseGoProxyCN,
+		options:   options,
+		step:      stepHost,
+		cursor:    0,
+		hostInput: hostInput,
+		portInput: portInput,
 	}
 	m.syncInputFocus()
 	return m
@@ -174,8 +171,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m, stepCmd = m.updateProdLoopbackConfirmStep(msg)
 		case stepPort:
 			m, stepCmd = m.updatePortStep(msg)
-		case stepGoProxy:
-			m, stepCmd = m.updateGoProxyStep(msg)
 		case stepConfirm:
 			m, stepCmd = m.updateConfirmStep(msg)
 		}
@@ -264,26 +259,8 @@ func (m model) updatePortStep(msg tea.KeyMsg) (model, tea.Cmd) {
 		m.options.PublicAddressSource = cli.PublicAddressSourceHostPort
 		m.errMsg = ""
 
-		if m.options.Mode == cli.ModeDev {
-			m.step = stepGoProxy
-			m.cursor = 0
-		} else {
-			m.step = stepConfirm
-			m.cursor = 0
-		}
-		return m, m.syncInputFocus()
-	}
-	return m, nil
-}
-
-func (m model) updateGoProxyStep(msg tea.KeyMsg) (model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyLeft, tea.KeyRight, tea.KeyTab, tea.KeyShiftTab, tea.KeySpace:
-		m.useGoProxy = !m.useGoProxy
-	case tea.KeyEnter:
 		m.step = stepConfirm
 		m.cursor = 0
-		m.errMsg = ""
 		return m, m.syncInputFocus()
 	}
 	return m, nil
@@ -303,12 +280,6 @@ func (m model) updateConfirmStep(msg tea.KeyMsg) (model, tea.Cmd) {
 	case tea.KeyEnter:
 		switch m.cursor {
 		case 0:
-			m.options.UseGoProxyCN = m.useGoProxy
-			if m.useGoProxy {
-				m.options.GoProxy = "https://goproxy.cn,direct"
-			} else {
-				m.options.GoProxy = "https://proxy.golang.org,direct"
-			}
 			m.done = true
 			return m, tea.Quit
 		case 1:
@@ -324,11 +295,7 @@ func (m model) updateConfirmStep(msg tea.KeyMsg) (model, tea.Cmd) {
 }
 
 func (m model) totalSteps() int {
-	total := 3 // 主机 + 端口 + 确认
-	if m.options.Mode == cli.ModeDev {
-		total++
-	}
-	return total
+	return 3 // 主机 + 端口 + 确认
 }
 
 func (m model) currentStepNumber() int {
@@ -337,8 +304,6 @@ func (m model) currentStepNumber() int {
 		return 1
 	case stepPort:
 		return 2
-	case stepGoProxy:
-		return 3
 	case stepConfirm:
 		return m.totalSteps()
 	default:
@@ -347,9 +312,6 @@ func (m model) currentStepNumber() int {
 }
 
 func (m model) stepLabels() []string {
-	if m.options.Mode == cli.ModeDev {
-		return []string{"主机", "端口", "代理", "确认"}
-	}
 	return []string{"主机", "端口", "确认"}
 }
 
@@ -368,14 +330,6 @@ func (m model) renderCompletedSummary() string {
 		port, _, _ := m.resolvedPort()
 		b.WriteString(renderCompletedItem("端口", port) + "\n")
 	}
-	if m.options.Mode == cli.ModeDev && current > 3 {
-		proxyStatus := "关闭"
-		if m.useGoProxy {
-			proxyStatus = "开启"
-		}
-		b.WriteString(renderCompletedItem("Go代理", proxyStatus) + "\n")
-	}
-
 	if b.Len() > 0 {
 		b.WriteString("\n")
 	}
@@ -450,8 +404,6 @@ func (m model) View() string {
 		body.WriteString(m.renderProdLoopbackConfirmStep())
 	case stepPort:
 		body.WriteString(m.renderPortStep())
-	case stepGoProxy:
-		body.WriteString(m.renderGoProxyStep())
 	case stepConfirm:
 		body.WriteString(m.renderConfirmStep())
 	}
@@ -486,8 +438,6 @@ func (m model) stepHelpText() string {
 		return "↑↓ 选择  │  Enter 继续  │  Ctrl+C 取消"
 	case stepPort:
 		return "Enter 下一步  │  Ctrl+C 取消"
-	case stepGoProxy:
-		return "Space 切换  │  Enter 下一步  │  Ctrl+C 取消"
 	default:
 		return "Enter 继续  │  Ctrl+C 取消"
 	}
@@ -533,20 +483,7 @@ func (m model) renderPortStep() string {
 	} else {
 		b.WriteString(renderStatusErr(portStatus) + "\n")
 	}
-	b.WriteString(renderHint("输入范围 1-65535，默认 " + cli.DefaultPublicPort) + "\n")
-	return b.String()
-}
-
-func (m model) renderGoProxyStep() string {
-	var b strings.Builder
-	status := "关闭"
-	if m.useGoProxy {
-		status = "开启"
-	}
-	b.WriteString(m.renderCompletedSummary())
-	b.WriteString(renderConfigItem("Go 代理", status) + "\n")
-	b.WriteString(renderConfigItem("源地址", "https://goproxy.cn,direct") + "\n\n")
-	b.WriteString(renderHint("按 Space 键切换代理开关") + "\n")
+	b.WriteString(renderHint("输入范围 1-65535，默认 "+cli.DefaultPublicPort) + "\n")
 	return b.String()
 }
 
@@ -555,14 +492,6 @@ func (m model) renderConfirmStep() string {
 	b.WriteString(renderConfigItem("运行模式", string(m.options.Mode)) + "\n")
 	b.WriteString(renderConfigItem("主机类型", m.hostType()) + "\n")
 	b.WriteString(renderConfigItem("访问地址", m.options.PublicURL) + "\n")
-
-	if m.options.Mode == cli.ModeDev {
-		proxyStatus := "关闭"
-		if m.useGoProxy {
-			proxyStatus = "开启"
-		}
-		b.WriteString(renderConfigItem("Go代理", proxyStatus) + "\n")
-	}
 
 	b.WriteString("\n")
 	b.WriteString(renderMenuItem(m.cursor == 0, "开始安装") + "\n")
@@ -580,14 +509,6 @@ func (m model) renderDoneView() string {
 	b.WriteString(renderConfigItem("模式", string(m.options.Mode)) + "\n")
 	b.WriteString(renderConfigItem("主机类型", m.hostType()) + "\n")
 	b.WriteString(renderConfigItem("访问地址", m.options.PublicURL) + "\n")
-
-	if m.options.Mode == cli.ModeDev {
-		proxyStatus := "关闭"
-		if m.useGoProxy {
-			proxyStatus = "开启"
-		}
-		b.WriteString(renderConfigItem("Go代理", proxyStatus) + "\n")
-	}
 
 	b.WriteString("\n")
 	b.WriteString(renderSeparator(m.width) + "\n")

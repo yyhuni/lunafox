@@ -2,6 +2,8 @@ package steps
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
@@ -77,16 +79,12 @@ func (stepEnv) Run(ctx context.Context, installer *Installer) error {
 }
 
 func (installer *Installer) generateSecret(ctx context.Context) (string, error) {
-	command := installer.toolchain.DockerCommand("run", "--rm", "alpine/openssl", "rand", "-hex", "32")
-	result, err := installer.runner.Run(ctx, command)
-	if err != nil {
-		return "", err
+	_ = ctx
+	buffer := make([]byte, 32)
+	if _, err := rand.Read(buffer); err != nil {
+		return "", fmt.Errorf("生成密钥随机数失败: %w", err)
 	}
-	secret := strings.TrimSpace(result.Stdout)
-	if secret == "" {
-		return "", fmt.Errorf("生成的密钥为空")
-	}
-	return secret, nil
+	return hex.EncodeToString(buffer), nil
 }
 
 func resolvePublicPort(preferred string) (string, error) {

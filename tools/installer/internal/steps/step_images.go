@@ -2,7 +2,6 @@ package steps
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	"github.com/yyhuni/lunafox/tools/installer/internal/cli"
-	"github.com/yyhuni/lunafox/tools/installer/internal/execx"
 )
 
 const (
@@ -77,25 +75,35 @@ func runProdImageSelection(ctx context.Context, installer *Installer) error {
 }
 
 func runDevImageBuild(ctx context.Context, installer *Installer) error {
+	progressMode := buildkitProgressMode()
 	env := append(os.Environ(),
 		"DOCKER_BUILDKIT=1",
 		"COMPOSE_DOCKER_CLI_BUILD=1",
-		"BUILDKIT_PROGRESS=plain",
+		"BUILDKIT_PROGRESS="+progressMode,
 	)
 
 	inspectCommand := installer.toolchain.DockerCommand("buildx", "inspect")
 	inspectCommand.Env = env
 	inspectResult, err := installer.runner.Run(ctx, inspectCommand)
 	if err != nil {
-		return fmt.Errorf("检测 buildx 失败")
+		return fmt.Errorf("检测 buildx 失败：%s", commandErrorMessage(err))
 	}
 	driver := parseBuildxDriver(inspectResult.Stdout)
 
 	cacheBase := filepath.Join(os.Getenv("HOME"), ".cache", "lunafox-buildx")
 	agentCache := filepath.Join(cacheBase, "agent")
 	workerCache := filepath.Join(cacheBase, "worker")
-	_ = os.MkdirAll(agentCache, 0o755)
-	_ = os.MkdirAll(workerCache, 0o755)
+	enableCache := driver != "docker" && driver != ""
+	if enableCache {
+		if err := ensureWritableDir(agentCache); err != nil {
+			installer.printer.Warn("buildx 缓存目录不可写，已禁用本地缓存: %s（%v）", agentCache, err)
+			enableCache = false
+		}
+		if err := ensureWritableDir(workerCache); err != nil {
+			installer.printer.Warn("buildx 缓存目录不可写，已禁用本地缓存: %s（%v）", workerCache, err)
+			enableCache = false
+		}
+	}
 
 	bakeFile, err := os.CreateTemp("", "lunafox-bake-*.hcl")
 	if err != nil {
@@ -107,7 +115,7 @@ func runDevImageBuild(ctx context.Context, installer *Installer) error {
 		installer.options.RootDir,
 		installer.options.Go111Module,
 		installer.options.GoProxy,
-		driver != "docker" && driver != "",
+		enableCache,
 		agentCache,
 		workerCache,
 		installer.options.ImageRegistry,
@@ -119,11 +127,23 @@ func runDevImageBuild(ctx context.Context, installer *Installer) error {
 	}
 	_ = bakeFile.Close()
 
-	buildCommand := installer.toolchain.DockerCommand("buildx", "bake", "-f", bakeFile.Name(), "--progress=plain", "--load")
-	buildCommand.Env = env
-	if _, err := installer.runner.Run(ctx, buildCommand); err != nil {
-		return fmt.Errorf("Agent/Worker 镜像构建失败")
+	buildCommand := installer.toolchain.DockerCommand("buildx", "bake", "-f", bakeFile.Name(), "--progress="+progressMode, "--load")
+	for _, allowArg := range buildxBakeAllowArgs(installer.options.RootDir, agentCache, workerCache, enableCache) {
+		buildCommand.Args = append(buildCommand.Args, allowArg)
 	}
+	buildCommand.Env = env
+	buildCommand.StdoutWriter = installer.printer.Out
+	buildCommand.StderrWriter = installer.printer.Err
+	if _, err := installer.runner.Run(ctx, buildCommand); err != nil {
+		return fmt.Errorf("Agent/Worker 镜像构建失败：%s", commandErrorMessage(err))
+	}
+
+	agentRef := fmt.Sprintf("%s:dev", buildAgentImage(installer.options.ImageRegistry, installer.options.ImageNamespace))
+	workerRef := fmt.Sprintf("%s:dev", buildWorkerImage(installer.options.ImageRegistry, installer.options.ImageNamespace))
+	installer.options.AgentImageRef = agentRef
+	installer.options.WorkerImageRef = workerRef
+	installer.options.AgentImageRefs = []string{agentRef}
+	installer.options.WorkerImageRefs = []string{workerRef}
 
 	installer.printer.Success("Agent/Worker 镜像已构建")
 	return nil
@@ -279,18 +299,6 @@ func normalizeImageCandidates(refs []string) []string {
 	return result
 }
 
-func commandErrorMessage(err error) string {
-	detail := ""
-	var execErr *execx.ExecError
-	if errors.As(err, &execErr) {
-		detail = trimCommandErrorDetail(execErr.Result.Stderr, execErr.Result.Stdout, 220)
-	}
-	if detail == "" {
-		return err.Error()
-	}
-	return detail
-}
-
 func parseBuildxDriver(raw string) string {
 	for _, line := range strings.Split(raw, "\n") {
 		line = strings.TrimSpace(line)
@@ -310,12 +318,14 @@ func buildBakeContent(rootDir, go111module, goproxy string, enableCache bool, ag
 	builder := strings.Builder{}
 	agentImage := buildAgentImage(imageRegistry, imageNamespace)
 	workerImage := buildWorkerImage(imageRegistry, imageNamespace)
+	agentDir := filepath.Join(rootDir, "agent")
+	workerDir := filepath.Join(rootDir, "worker")
 
 	builder.WriteString("group \"default\" {\n  targets = [\"agent\", \"worker\"]\n}\n\n")
 
 	builder.WriteString("target \"agent\" {\n")
-	builder.WriteString(fmt.Sprintf("  context = \"%s\"\n", rootDir))
-	builder.WriteString(fmt.Sprintf("  dockerfile = \"%s\"\n", filepath.Join(rootDir, "agent", "Dockerfile")))
+	builder.WriteString(fmt.Sprintf("  context = \"%s\"\n", agentDir))
+	builder.WriteString(fmt.Sprintf("  dockerfile = \"%s\"\n", filepath.Join(agentDir, "Dockerfile")))
 	builder.WriteString(fmt.Sprintf("  tags = [\"%s:dev\"]\n", agentImage))
 	builder.WriteString("  build-args = {\n")
 	builder.WriteString("    BUILDKIT_INLINE_CACHE = \"1\"\n")
@@ -329,8 +339,8 @@ func buildBakeContent(rootDir, go111module, goproxy string, enableCache bool, ag
 	builder.WriteString("}\n\n")
 
 	builder.WriteString("target \"worker\" {\n")
-	builder.WriteString(fmt.Sprintf("  context = \"%s\"\n", filepath.Join(rootDir, "worker")))
-	builder.WriteString(fmt.Sprintf("  dockerfile = \"%s\"\n", filepath.Join(rootDir, "worker", "Dockerfile")))
+	builder.WriteString(fmt.Sprintf("  context = \"%s\"\n", workerDir))
+	builder.WriteString(fmt.Sprintf("  dockerfile = \"%s\"\n", filepath.Join(workerDir, "Dockerfile")))
 	builder.WriteString(fmt.Sprintf("  tags = [\"%s:dev\"]\n", workerImage))
 	builder.WriteString("  build-args = {\n")
 	builder.WriteString("    BUILDKIT_INLINE_CACHE = \"1\"\n")
@@ -352,4 +362,67 @@ func buildAgentImage(registry, namespace string) string {
 
 func buildWorkerImage(registry, namespace string) string {
 	return fmt.Sprintf("%s/%s/lunafox-worker", strings.Trim(registry, "/"), strings.Trim(namespace, "/"))
+}
+
+func buildkitProgressMode() string {
+	override := strings.TrimSpace(os.Getenv("LUNAFOX_BUILDKIT_PROGRESS"))
+	if override != "" {
+		return override
+	}
+	if isTerminalFile(os.Stdout) && strings.TrimSpace(os.Getenv("CI")) == "" {
+		return "auto"
+	}
+	return "plain"
+}
+
+func isTerminalFile(file *os.File) bool {
+	if file == nil {
+		return false
+	}
+	info, err := file.Stat()
+	if err != nil {
+		return false
+	}
+	return (info.Mode() & os.ModeCharDevice) != 0
+}
+
+func ensureWritableDir(path string) error {
+	if err := os.MkdirAll(path, 0o755); err != nil {
+		return err
+	}
+	probe := filepath.Join(path, ".lunafox-write-probe")
+	file, err := os.OpenFile(probe, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return err
+	}
+	_ = file.Close()
+	_ = os.Remove(probe)
+	return nil
+}
+
+func buildxBakeAllowArgs(rootDir, agentCache, workerCache string, includeCache bool) []string {
+	values := []string{
+		"fs.read=" + strings.TrimSpace(rootDir),
+		"fs.read=" + strings.TrimSpace(filepath.Join(rootDir, "worker")),
+	}
+	if includeCache {
+		values = append(values,
+			"fs="+strings.TrimSpace(agentCache),
+			"fs="+strings.TrimSpace(workerCache),
+		)
+	}
+
+	args := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		if strings.TrimSpace(value) == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		args = append(args, "--allow="+value)
+	}
+	return args
 }

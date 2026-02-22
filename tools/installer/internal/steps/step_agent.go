@@ -86,7 +86,7 @@ func (stepAgent) Run(ctx context.Context, installer *Installer) error {
 
 	command := execx.Command{Name: bashPath, Env: env, Stdin: script}
 	if _, err := installer.runner.Run(ctx, command); err != nil {
-		return fmt.Errorf("Agent 安装脚本执行失败，请检查: %s", scriptURL)
+		return fmt.Errorf("Agent 安装脚本执行失败: %s（脚本来源: %s）", commandErrorMessage(err), scriptURL)
 	}
 
 	installer.printer.Success("Agent/Worker 安装完成")

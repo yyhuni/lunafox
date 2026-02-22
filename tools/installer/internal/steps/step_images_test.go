@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +13,26 @@ import (
 	"github.com/yyhuni/lunafox/tools/installer/internal/execx"
 	"github.com/yyhuni/lunafox/tools/installer/internal/ui"
 )
+
+func TestBuildBakeContentUsesModuleSubdirAsContext(t *testing.T) {
+	content := buildBakeContent(
+		"/repo/lunafox",
+		"on",
+		"https://proxy.golang.org,direct",
+		true,
+		"/cache/agent",
+		"/cache/worker",
+		"docker.io",
+		"yyhuni",
+	)
+
+	if !strings.Contains(content, "target \"agent\" {\n  context = \"/repo/lunafox/agent\"") {
+		t.Fatalf("agent context mismatch, content=%s", content)
+	}
+	if !strings.Contains(content, "target \"worker\" {\n  context = \"/repo/lunafox/worker\"") {
+		t.Fatalf("worker context mismatch, content=%s", content)
+	}
+}
 
 func TestNormalizeImageCandidates(t *testing.T) {
 	list := normalizeImageCandidates(
