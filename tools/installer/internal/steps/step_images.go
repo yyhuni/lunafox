@@ -84,6 +84,8 @@ func runDevImageBuild(ctx context.Context, installer *Installer) error {
 
 	inspectCommand := installer.toolchain.DockerCommand("buildx", "inspect")
 	inspectCommand.Env = env
+	// Keep buildx diagnostics visible for troubleshooting.
+	// Do not silence this output.
 	inspectResult, err := installer.runner.Run(ctx, inspectCommand)
 	if err != nil {
 		return fmt.Errorf("检测 buildx 失败：%s", commandErrorMessage(err))

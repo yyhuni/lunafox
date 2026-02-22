@@ -28,6 +28,8 @@ func (stepPreclean) Run(ctx context.Context, installer *Installer) error {
 }
 
 func (installer *Installer) removeResidualAgentContainers(ctx context.Context) error {
+	// Keep cleanup command output visible for troubleshooting.
+	// Do not silence these command logs.
 	listCommand := installer.toolchain.DockerCommand("ps", "-a", "--format", "{{.Names}}")
 	result, err := installer.runner.Run(ctx, listCommand)
 	if err != nil {

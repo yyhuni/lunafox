@@ -3,7 +3,6 @@ package docker
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,13 +25,23 @@ func Detect(ctx context.Context, runner execx.Runner) (Toolchain, error) {
 
 	toolchain := Toolchain{DockerBin: dockerBin}
 
-	if _, err := runner.Run(ctx, execx.Command{Name: dockerBin, Args: []string{"info"}}); err != nil {
+	// Keep installer diagnostics fully visible.
+	// Do not silence this command output, support relies on raw logs.
+	dockerInfoCommand := execx.Command{
+		Name: dockerBin,
+		Args: []string{"info"},
+	}
+	if _, err := runner.Run(ctx, dockerInfoCommand); err != nil {
 		sudoPath, sudoErr := runner.LookPath("sudo")
 		if sudoErr != nil {
 			return Toolchain{}, fmt.Errorf("未检测到 sudo，无法提升权限访问 Docker（docker info 失败: %s）", commandErrorMessage(err))
 		}
 
-		if _, err := runner.Run(ctx, execx.Command{Name: sudoPath, Args: []string{dockerBin, "info"}}); err != nil {
+		sudoDockerInfoCommand := execx.Command{
+			Name: sudoPath,
+			Args: []string{dockerBin, "info"},
+		}
+		if _, err := runner.Run(ctx, sudoDockerInfoCommand); err != nil {
 			return Toolchain{}, fmt.Errorf("Docker 守护进程未运行或无权限访问（docker info 失败: %s）", commandErrorMessage(err))
 		}
 		toolchain.Prefix = []string{sudoPath}
@@ -82,8 +91,6 @@ func (toolchain Toolchain) EnsureNetwork(ctx context.Context, runner execx.Runne
 	}
 
 	inspectCommand := toolchain.DockerCommand("network", "inspect", networkName)
-	inspectCommand.StdoutWriter = io.Discard
-	inspectCommand.StderrWriter = io.Discard
 	if _, err := runner.Run(ctx, inspectCommand); err == nil {
 		return nil
 	}
