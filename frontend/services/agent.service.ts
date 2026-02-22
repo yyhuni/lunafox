@@ -11,7 +11,7 @@ import type {
 } from '@/types/agent.types'
 import { USE_MOCK, mockDelay, getMockAgents, getMockAgentById, getMockRegistrationToken } from '@/mock'
 
-const BASE_URL = '/agents'
+const BASE_URL = '/admin/agents'
 
 export const agentService = {
   async getAgents(page = 1, pageSize = 10, status?: string): Promise<AgentsResponse> {
@@ -51,7 +51,7 @@ export const agentService = {
       await mockDelay()
       return getMockRegistrationToken()
     }
-    const response = await api.post<RegistrationTokenResponse>('/agents/registration-tokens')
+    const response = await api.post<RegistrationTokenResponse>(`${BASE_URL}/registration-tokens`)
     return response.data
   },
 }
