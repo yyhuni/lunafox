@@ -2078,28 +2078,47 @@
       "maintenance": "Maintenance",
       "offline": "Offline"
     },
+    "riskSummary": {
+      "title": "Core Risk Summary",
+      "description": "Prioritize signals that directly affect write paths and task scheduling",
+      "lastCheck": "Last check: {time}",
+      "riskCount": "{count} risk items",
+      "noCoreRisk": "No active core risks"
+    },
     "metrics": {
       "latencyP95": "Latency p95",
       "connections": "Connections",
-      "replicationLag": "Replication lag",
+      "lockWaitCount": "Lock wait sessions",
       "cacheHitRate": "Cache hit rate",
+      "notAvailable": "N/A",
       "qps": "QPS",
       "diskUsage": "Disk usage",
       "walGenerated": "WAL generated (24h)",
       "deadlocks": "Deadlocks (1h)",
       "longTransactions": "Long transactions",
-      "backupFreshness": "Backup freshness"
+      "oldestPendingTaskAge": "Oldest pending task age"
     },
     "sections": {
       "core": "Core indicators",
+      "coreDetailed": "View detailed core indicators",
+      "coreDetailedDesc": "Probe latency and long transactions for deeper diagnosis",
       "signals": "Signals",
       "signalsDesc": "Operational signals derived from PostgreSQL stats"
     },
     "hints": {
       "latencyP95": "Target < 50 ms",
       "connections": "{value}% of limit",
-      "replicationLag": "Target < 1000 ms",
+      "lockWaitCount": "Target < 2",
+      "deadlocks": "Target < 0.5 / h",
+      "longTransactions": "Target < 2",
+      "oldestPendingTaskAge": "Target < 2 minutes",
       "cacheHitRate": "Target > 99%"
+    },
+    "impacts": {
+      "connections": "Sustained high connection usage can queue heartbeat and task status writes.",
+      "lockWaitCount": "More lock waits increase pull/update latency on scan tasks.",
+      "deadlocks1h": "Deadlocks cause transaction rollbacks and task update retries.",
+      "oldestPendingTaskAgeSec": "Aging pending tasks usually indicates scheduling pipeline slowdown."
     },
     "alerts": {
       "title": "Active alerts",
@@ -2109,6 +2128,30 @@
         "info": "Info",
         "warning": "Warning",
         "critical": "Critical"
+      }
+    },
+    "errors": {
+      "loadFailedTitle": "Failed to load database health",
+      "loadFailedDescription": "Unable to fetch the latest snapshot. Please try again.",
+      "retry": "Retry"
+    },
+    "stale": {
+      "title": "Snapshot may be stale",
+      "description": "Last successful snapshot at: {time}"
+    },
+    "unavailable": {
+      "title": "Unavailable signals",
+      "description": "The following signals are currently unavailable and do not directly mean offline.",
+      "scope": {
+        "core": "Core",
+        "optional": "Optional"
+      },
+      "reason": {
+        "permissionDenied": "Permission denied",
+        "timeout": "Query timeout",
+        "unsupported": "Unsupported in current environment",
+        "queryFailed": "Query failed",
+        "unknown": "Unknown reason"
       }
     }
   },
@@ -2242,7 +2285,7 @@
     },
     "databaseHealth": {
       "title": "Database Health",
-      "description": "Monitor PostgreSQL availability, performance, and replication signals"
+      "description": "Monitor PostgreSQL availability and performance signals"
     },
     "wordlists": {
       "title": "Wordlist Management",

@@ -7,6 +7,6 @@ export async function getDatabaseHealth(): Promise<DatabaseHealthSnapshot> {
     await mockDelay()
     return mockDatabaseHealth
   }
-  const res = await api.get<DatabaseHealthSnapshot>('/system/database-health/')
+  const res = await api.get<DatabaseHealthSnapshot>('/system/database-health')
   return res.data
 }

@@ -55,7 +55,11 @@ temp/
 # AI Assistant directories
 codex/
 openspec/
-specs/
+specs/*
+!specs/features/
+specs/features/*
+!specs/features/002-database-health-standardization/
+!specs/features/002-database-health-standardization/**
 AGENTS.md
 WARP.md
 .opencode/

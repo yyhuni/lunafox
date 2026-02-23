@@ -18,7 +18,7 @@ export function useNudgeGuardian() {
     variants: [],
     probability: 1,
     delay: 0,
-    duration: Infinity,
+    duration: 8000,
     position: "bottom-right",
   })
 
@@ -32,9 +32,9 @@ export function useNudgeGuardian() {
       },
       secondaryAction: content.secondary
         ? {
-            label: content.secondary,
-            buttonVariant: "outline",
-          }
+          label: content.secondary,
+          buttonVariant: "outline",
+        }
         : undefined,
     }
   }, [])

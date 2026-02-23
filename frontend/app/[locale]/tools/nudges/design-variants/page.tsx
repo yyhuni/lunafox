@@ -21,49 +21,47 @@ const DEMO_DATA = {
   secondaryAction: { label: "忽略", onClick: () => console.log("secondary") },
 }
 
+const NUDGE_TOAST_ID = "nudge-singleton"
+
 export default function NudgeDesignVariantsPage() {
   const triggerStandard = () => {
-    toast.dismiss()
-    toast.custom((t) => (
+    toast.custom(() => (
       <NudgeToastCard
         {...DEMO_DATA}
         icon={<span className="text-2xl">{DEMO_DATA.icon}</span>}
-        onDismiss={() => toast.dismiss(t)}
+        onDismiss={() => toast.dismiss(NUDGE_TOAST_ID)}
       />
-    ), { duration: Infinity, position: "bottom-right" })
+    ), { id: NUDGE_TOAST_ID, duration: 8000, position: "bottom-right" })
   }
 
   const triggerTerminal = () => {
-    toast.dismiss()
-    toast.custom((t) => (
+    toast.custom(() => (
       <NudgeTerminal
         {...DEMO_DATA}
         icon={<span className="text-xl">{DEMO_DATA.icon}</span>}
-        onDismiss={() => toast.dismiss(t)}
+        onDismiss={() => toast.dismiss(NUDGE_TOAST_ID)}
       />
-    ), { duration: Infinity, position: "bottom-right" })
+    ), { id: NUDGE_TOAST_ID, duration: 8000, position: "bottom-right" })
   }
 
   const triggerGlass = () => {
-    toast.dismiss()
-    toast.custom((t) => (
+    toast.custom(() => (
       <NudgeGlass
         {...DEMO_DATA}
         icon={<span className="text-xl">{DEMO_DATA.icon}</span>}
-        onDismiss={() => toast.dismiss(t)}
+        onDismiss={() => toast.dismiss(NUDGE_TOAST_ID)}
       />
-    ), { duration: Infinity, position: "bottom-right" })
+    ), { id: NUDGE_TOAST_ID, duration: 8000, position: "bottom-right" })
   }
 
   const triggerReport = () => {
-    toast.dismiss()
-    toast.custom((t) => (
+    toast.custom(() => (
       <NudgeReport
         {...DEMO_DATA}
         icon={<span className="text-2xl">{DEMO_DATA.icon}</span>}
-        onDismiss={() => toast.dismiss(t)}
+        onDismiss={() => toast.dismiss(NUDGE_TOAST_ID)}
       />
-    ), { duration: Infinity, position: "bottom-right" })
+    ), { id: NUDGE_TOAST_ID, duration: 8000, position: "bottom-right" })
   }
 
   return (
@@ -80,7 +78,7 @@ export default function NudgeDesignVariantsPage() {
 
       <div className="flex-1 overflow-auto p-6 md:p-8">
         <div className="mx-auto max-w-5xl grid gap-6 md:grid-cols-2">
-          
+
           {/* Standard */}
           <Card className="flex flex-col">
             <CardHeader>

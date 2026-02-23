@@ -2092,28 +2092,47 @@
       "maintenance": "维护中",
       "offline": "离线"
     },
+    "riskSummary": {
+      "title": "核心风险摘要",
+      "description": "优先关注会影响写入链路和任务调度的信号",
+      "lastCheck": "最近检查：{time}",
+      "riskCount": "风险项 {count}",
+      "noCoreRisk": "当前无核心风险"
+    },
     "metrics": {
       "latencyP95": "延迟 p95",
       "connections": "连接数",
-      "replicationLag": "复制延迟",
+      "lockWaitCount": "锁等待会话",
       "cacheHitRate": "缓存命中率",
+      "notAvailable": "不可用",
       "qps": "QPS",
       "diskUsage": "磁盘使用率",
       "walGenerated": "WAL 产生量 (24h)",
       "deadlocks": "死锁 (1h)",
       "longTransactions": "长事务",
-      "backupFreshness": "备份新鲜度"
+      "oldestPendingTaskAge": "最老待处理任务年龄"
     },
     "sections": {
       "core": "核心指标",
+      "coreDetailed": "查看详细核心指标",
+      "coreDetailedDesc": "探活延迟与长事务作为补充诊断信息",
       "signals": "运行信号",
       "signalsDesc": "基于 PostgreSQL 统计的运行信号"
     },
     "hints": {
       "latencyP95": "目标 < 50 ms",
       "connections": "占用 {value}% 上限",
-      "replicationLag": "目标 < 1000 ms",
+      "lockWaitCount": "目标 < 2",
+      "deadlocks": "目标 < 0.5 / h",
+      "longTransactions": "目标 < 2",
+      "oldestPendingTaskAge": "目标 < 2 分钟",
       "cacheHitRate": "目标 > 99%"
+    },
+    "impacts": {
+      "connections": "连接占用持续偏高会导致任务更新和心跳写入排队。",
+      "lockWaitCount": "锁等待增加会放大 task pull 与状态更新延迟。",
+      "deadlocks1h": "死锁会触发事务回滚，导致任务状态写入重试。",
+      "oldestPendingTaskAgeSec": "待处理任务年龄过高通常意味着调度链路卡顿。"
     },
     "alerts": {
       "title": "告警",
@@ -2123,6 +2142,30 @@
         "info": "提示",
         "warning": "警告",
         "critical": "严重"
+      }
+    },
+    "errors": {
+      "loadFailedTitle": "加载数据库健康失败",
+      "loadFailedDescription": "当前无法获取数据库健康快照，请稍后重试。",
+      "retry": "重试"
+    },
+    "stale": {
+      "title": "数据可能已过期",
+      "description": "最近一次成功快照时间：{time}"
+    },
+    "unavailable": {
+      "title": "不可用信号",
+      "description": "以下信号当前无法采集，不会直接判定为离线。",
+      "scope": {
+        "core": "核心",
+        "optional": "可选"
+      },
+      "reason": {
+        "permissionDenied": "权限不足",
+        "timeout": "查询超时",
+        "unsupported": "当前环境不支持",
+        "queryFailed": "查询失败",
+        "unknown": "未知原因"
       }
     }
   },
@@ -2256,7 +2299,7 @@
     },
     "databaseHealth": {
       "title": "数据库健康",
-      "description": "监控 PostgreSQL 可用性、性能与复制信号"
+      "description": "监控 PostgreSQL 可用性与性能信号"
     },
     "wordlists": {
       "title": "字典管理",

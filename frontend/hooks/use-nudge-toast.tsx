@@ -41,8 +41,8 @@ export interface UseNudgeToastOptions {
   delay?: number
 
   /**
-   * Toast duration (Infinity means no automatic shutdown)
-   * @default Infinity
+   * Toast duration (ms)
+   * @default 8000
    */
   duration?: number
 
@@ -59,6 +59,12 @@ export interface UseNudgeToastOptions {
 }
 
 const withDismiss = withNudgeDismiss
+
+/**
+ * 全局唯一 nudge toast id，确保右下角只显示一个 nudge，不叠加。
+ * 所有 nudge 来源（guardian / star / care / milestone）共享此 id。
+ */
+const NUDGE_TOAST_ID = "nudge-singleton"
 
 let nudgeToastCardLoader: Promise<
   (typeof import("@/components/nudges/nudge-toast-card"))["NudgeToastCard"]
@@ -78,7 +84,7 @@ export function useNudgeToast({
   cooldownMs,
   probability = 1,
   delay = 1500,
-  duration = Infinity,
+  duration = 8000,
   position = "bottom-right",
   variants,
 }: UseNudgeToastOptions) {
@@ -95,10 +101,11 @@ export function useNudgeToast({
 
   const showVariant = React.useCallback((variant: NudgeToastVariant) => {
     void loadNudgeToastCard().then((NudgeToastCard) => {
+      // 使用固定 id，sonner 会自动替换已有的同 id toast，不会叠加
       toast.custom(
-        (t) => {
+        () => {
           const onDismiss = () => {
-            toast.dismiss(t)
+            toast.dismiss(NUDGE_TOAST_ID)
             if (storageKey) suppressNudge(storageKey, cooldownMs)
           }
 
@@ -117,6 +124,7 @@ export function useNudgeToast({
           )
         },
         {
+          id: NUDGE_TOAST_ID,
           duration,
           position,
         }

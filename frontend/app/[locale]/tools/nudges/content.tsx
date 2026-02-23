@@ -286,25 +286,27 @@ const LOCAL_TRIGGER_VARIANTS = [
   },
 ]
 
+const NUDGE_TOAST_ID = "nudge-singleton"
+
 export default function NudgeDemoPage() {
   const triggerToast = (variant: DemoVariant) => {
-    toast.custom((t) => (
+    toast.custom(() => (
       <NudgeToastCard
         title={variant.title}
         description={variant.desc}
         icon={variant.icon}
         primaryAction={{
           ...variant.primaryAction,
-          onClick: () => toast.dismiss(t),
+          onClick: () => toast.dismiss(NUDGE_TOAST_ID),
         }}
         secondaryAction={
           variant.secondaryAction
-            ? { ...variant.secondaryAction, onClick: () => toast.dismiss(t), buttonVariant: "outline" }
+            ? { ...variant.secondaryAction, onClick: () => toast.dismiss(NUDGE_TOAST_ID), buttonVariant: "outline" }
             : undefined
         }
-        onDismiss={() => toast.dismiss(t)}
+        onDismiss={() => toast.dismiss(NUDGE_TOAST_ID)}
       />
-    ), { duration: Infinity, position: "bottom-right" })
+    ), { id: NUDGE_TOAST_ID, duration: 8000, position: "bottom-right" })
   }
 
   return (
@@ -432,25 +434,25 @@ function AiNudgeTestPanel() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setResults((prev) => ({ ...prev, [label]: data }))
-      
+
       // Pop up Toast at the same time
-      toast.custom((t) => (
+      toast.custom(() => (
         <NudgeToastCard
           title={data.title}
           description={data.description}
           icon={<span className="text-2xl">{data.icon || "🤖"}</span>}
           primaryAction={{
             label: data.primaryAction?.label || "OK",
-            onClick: () => toast.dismiss(t),
+            onClick: () => toast.dismiss(NUDGE_TOAST_ID),
           }}
           secondaryAction={
             data.secondaryAction
-              ? { label: data.secondaryAction.label, onClick: () => toast.dismiss(t), buttonVariant: "outline" }
+              ? { label: data.secondaryAction.label, onClick: () => toast.dismiss(NUDGE_TOAST_ID), buttonVariant: "outline" }
               : undefined
           }
-          onDismiss={() => toast.dismiss(t)}
+          onDismiss={() => toast.dismiss(NUDGE_TOAST_ID)}
         />
-      ), { duration: Infinity, position: "bottom-right" })
+      ), { id: NUDGE_TOAST_ID, duration: 8000, position: "bottom-right" })
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {

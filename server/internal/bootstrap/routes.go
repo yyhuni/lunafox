@@ -48,6 +48,7 @@ func registerRoutes(engine *gin.Engine, d *deps, workerToken string, jwtMiddlewa
 		d.directorySnapshotHandler,
 		d.vulnerabilitySnapshotHandler,
 	)
+	assetrouter.RegisterSystemRoutes(protected, d.healthHandler)
 	scanrouter.RegisterScanRoutes(protected, d.scanHandler, d.scanLogHandler)
 	scanrouter.RegisterWorkerScanRoutes(api, workerToken, d.workerScanHandler)
 	securityrouter.RegisterSecurityRoutes(protected, d.vulnerabilityHandler)

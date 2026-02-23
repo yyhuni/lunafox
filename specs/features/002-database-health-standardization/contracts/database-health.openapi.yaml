@@ -1,0 +1,202 @@
+openapi: 3.0.3
+info:
+  title: 数据库健康快照接口
+  version: 1.0.0
+  description: 为设置页提供数据库健康状态、信号和告警信息。
+
+paths:
+  /api/system/database-health:
+    get:
+      summary: 获取数据库健康快照
+      operationId: getDatabaseHealthSnapshot
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: 成功返回健康快照
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DatabaseHealthSnapshot"
+        "401":
+          description: 未认证
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: 数据库未配置（code=database_unavailable）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    DatabaseHealthSnapshot:
+      type: object
+      required:
+        - status
+        - observedAt
+        - role
+        - version
+        - readOnly
+        - uptimeSeconds
+        - coreSignals
+        - optionalSignals
+        - unavailableSignals
+        - alerts
+      properties:
+        status:
+          type: string
+          enum: [online, degraded, offline, maintenance]
+        observedAt:
+          type: string
+          format: date-time
+        role:
+          type: string
+          enum: [primary, replica]
+        region:
+          type: string
+          nullable: true
+        version:
+          type: string
+        readOnly:
+          type: boolean
+        uptimeSeconds:
+          type: integer
+          minimum: 0
+        coreSignals:
+          $ref: "#/components/schemas/CoreSignals"
+        optionalSignals:
+          $ref: "#/components/schemas/OptionalSignals"
+        unavailableSignals:
+          type: array
+          items:
+            $ref: "#/components/schemas/UnavailableSignal"
+        alerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/HealthAlert"
+
+    CoreSignals:
+      type: object
+      required:
+        - probeLatencyMs
+        - connectionsUsed
+        - connectionsMax
+        - connectionUsagePercent
+        - lockWaitCount
+        - deadlocks1h
+        - longTransactionCount
+        - oldestPendingTaskAgeSec
+      properties:
+        probeLatencyMs:
+          type: number
+          minimum: 0
+        connectionsUsed:
+          type: integer
+          minimum: 0
+        connectionsMax:
+          type: integer
+          minimum: 1
+        connectionUsagePercent:
+          type: number
+          minimum: 0
+          maximum: 100
+        lockWaitCount:
+          type: integer
+          minimum: 0
+        deadlocks1h:
+          type: number
+          minimum: 0
+        longTransactionCount:
+          type: integer
+          minimum: 0
+        oldestPendingTaskAgeSec:
+          type: integer
+          minimum: 0
+
+    OptionalSignals:
+      type: object
+      required:
+        - qps
+        - walGeneratedMb24h
+        - cacheHitRate
+      properties:
+        qps:
+          type: number
+          minimum: 0
+          nullable: true
+        walGeneratedMb24h:
+          type: number
+          minimum: 0
+          nullable: true
+        cacheHitRate:
+          type: number
+          minimum: 0
+          maximum: 100
+          nullable: true
+
+    UnavailableSignal:
+      type: object
+      required:
+        - name
+        - scope
+        - reasonCode
+      properties:
+        name:
+          type: string
+        scope:
+          type: string
+          enum: [core, optional]
+        reasonCode:
+          type: string
+          enum: [permission_denied, timeout, unsupported, query_failed, unknown]
+        message:
+          type: string
+          nullable: true
+
+    HealthAlert:
+      type: object
+      required:
+        - id
+        - severity
+        - title
+        - description
+        - occurredAt
+      properties:
+        id:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, critical]
+        title:
+          type: string
+        description:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - unauthorized
+            - database_unavailable
+            - internal_error
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true

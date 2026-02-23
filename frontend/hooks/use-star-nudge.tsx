@@ -156,7 +156,7 @@ export function useStarNudge(options: UseStarNudgeOptions = {}) {
     storageKey: STORAGE_KEY,
     probability,
     delay,
-    duration: Infinity,
+    duration: 8000,
     position: "bottom-right",
     variants,
   })
