@@ -56,9 +56,9 @@
       "contentType": "Content Type",
       "technologies": "Technologies",
       "responseBody": "Response Body",
-		"vhost": "VHost",
-		"responseHeaders": "Response Headers",
-		"responseTime": "Response Time"
+      "vhost": "VHost",
+      "responseHeaders": "Response Headers",
+      "responseTime": "Response Time"
     },
     "website": {
       "host": "Host",
@@ -378,10 +378,10 @@
       "webserver": "Web Server",
       "contentType": "Content Type",
       "responseBody": "Response Body",
-		"responseHeaders": "Response Headers",
-		"vhost": "VHost",
-		"createdAt": "Created At"
-	},
+      "responseHeaders": "Response Headers",
+      "vhost": "VHost",
+      "createdAt": "Created At"
+    },
     "card": {
       "title": "Title",
       "expand": "Expand",
@@ -764,7 +764,15 @@
       "everyDay": "Every day at {time}",
       "everyWeek": "Every {day} at {time}",
       "everyMonth": "Every month on day {day} at {time}",
-      "weekdays": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+      "weekdays": [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday"
+      ]
     },
     "history": {
       "title": "Scan History",
@@ -1440,6 +1448,7 @@
         "offline": "Offline",
         "unhealthy": "Unhealthy"
       },
+      "viewArchitecture": "Architecture",
       "status": {
         "online": "Online",
         "offline": "Offline",
@@ -1470,14 +1479,14 @@
         "uptime": "Uptime {value}",
         "updatedAt": "Updated {value}"
       },
-    "actions": {
-      "title": "Actions",
-      "config": "Edit Config",
-      "logs": "Logs",
-      "delete": "Delete Agent",
-      "deleteTitle": "Delete Agent",
-      "deleteDesc": "Delete agent \"{name}\"? This action cannot be undone."
-    },
+      "actions": {
+        "title": "Actions",
+        "config": "Edit Config",
+        "logs": "Logs",
+        "delete": "Delete Agent",
+        "deleteTitle": "Delete Agent",
+        "deleteDesc": "Delete agent \"{name}\"? This action cannot be undone."
+      },
       "config": {
         "title": "Scheduling Config",
         "desc": "Adjust task concurrency and resource thresholds",
@@ -1502,43 +1511,43 @@
         "configuration": "Configuration",
         "waitingForHeartbeat": "Waiting for first heartbeat..."
       },
-    "list": {
-      "uptime": "Uptime"
-    },
-    "logs": {
-      "title": "Agent Logs",
-      "noAgent": "No agent selected",
-      "empty": "No logs yet",
-      "lineLimitHint": "Log volume is high, keeping only the latest {max} lines",
-      "truncated": "Truncated",
-      "ready": "Ready",
-      "openFailed": "Failed to open log stream",
-      "errors": {
-        "containerNotFound": "Container not found or invalid name",
-        "dockerUnavailable": "Docker is unavailable on this agent",
-        "dockerApiError": "Failed to read Docker logs",
-        "agentTimeout": "Agent response timeout, please retry",
-        "wsSendFailed": "Failed to forward log request to agent",
-        "lokiUnavailable": "Loki is unavailable, please check infrastructure",
-        "queryTimeout": "Log query timed out, please retry",
-        "agentNotFound": "Agent not found",
-        "agentOffline": "Agent is offline",
-        "badRequest": "Invalid request parameters",
-        "streamUnavailable": "Streaming is not supported by this browser",
-        "unknown": "Unknown error"
+      "list": {
+        "uptime": "Uptime"
       },
-      "status": {
-        "idle": "Idle",
-        "connecting": "Connecting",
-        "streaming": "Streaming",
-        "done": "Done",
-        "error": "Error"
-      }
+      "logs": {
+        "title": "Agent Logs",
+        "noAgent": "No agent selected",
+        "empty": "No logs yet",
+        "lineLimitHint": "Log volume is high, keeping only the latest {max} lines",
+        "truncated": "Truncated",
+        "ready": "Ready",
+        "openFailed": "Failed to open log stream",
+        "errors": {
+          "containerNotFound": "Container not found or invalid name",
+          "dockerUnavailable": "Docker is unavailable on this agent",
+          "dockerApiError": "Failed to read Docker logs",
+          "agentTimeout": "Agent response timeout, please retry",
+          "wsSendFailed": "Failed to forward log request to agent",
+          "lokiUnavailable": "Loki is unavailable, please check infrastructure",
+          "queryTimeout": "Log query timed out, please retry",
+          "agentNotFound": "Agent not found",
+          "agentOffline": "Agent is offline",
+          "badRequest": "Invalid request parameters",
+          "streamUnavailable": "Streaming is not supported by this browser",
+          "unknown": "Unknown error"
+        },
+        "status": {
+          "idle": "Idle",
+          "connecting": "Connecting",
+          "streaming": "Streaming",
+          "done": "Done",
+          "error": "Error"
+        }
+      },
+      "version": "v{version}",
+      "unknownHost": "Unknown host",
+      "unknownIp": "Unknown IP"
     },
-    "version": "v{version}",
-    "unknownHost": "Unknown host",
-    "unknownIp": "Unknown IP"
-  },
     "systemLogs": {
       "title": "System Logs",
       "description": "Auto-refresh every 2 seconds (polling mode)",

@@ -121,34 +121,46 @@ export function AgentList() {
 
   return (
     <div className="space-y-6">
-      {hasAgents && (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {stats.map((stat) => (
-            <Card key={stat.label} className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg border bg-muted/40 p-2">
-                  <stat.icon className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-2xl font-semibold tracking-tight tabular-nums">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+      {/* YoRHa Wrapper - Native Theme Adapter */}
+      <div className="bg-card border border-border/50 rounded-xl p-6 relative overflow-hidden uppercase font-mono tracking-widest text-foreground shadow-sm mb-6">
+        {/* Thin outline border referencing NieR, but using theme border */}
+        <div className="absolute inset-2 border border-border/60 pointer-events-none rounded-lg z-0" />
+        {/* Decorative pattern using muted color */}
+        <div className="absolute top-0 right-0 w-32 h-full bg-[radial-gradient(var(--border)_1px,transparent_1px)] bg-[size:10px_10px] opacity-20 pointer-events-none z-0" />
 
-      <div className="space-y-4">
-        <div className="flex justify-end">
-          <div className="flex items-center gap-2">
-            <ArchitectureDialog />
+        <div className="relative z-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-8">
+
+          <div className="flex flex-col gap-0 border-l-4 border-primary pl-4 shrink-0">
+            <span className="text-[10px] font-bold text-muted-foreground">{t("title")}</span>
+            <h3 className="text-foreground text-2xl tracking-[0.3em] font-light">CLUSTER_MAP</h3>
+          </div>
+
+          <div className="flex flex-1 gap-6 xl:gap-8 xl:px-8 xl:border-l border-border/60 w-full overflow-hidden flex-wrap">
+            <div className="flex flex-col">
+              <span className="text-[9px] mb-1 font-bold text-muted-foreground">{stats[0]?.label}</span>
+              <span className="text-3xl font-light">{stats[0]?.value || 0}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[9px] mb-1 font-bold text-muted-foreground">{stats[1]?.label}</span>
+              <span className="text-3xl font-light text-emerald-600 dark:text-emerald-400">{stats[1]?.value || 0}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[9px] mb-1 font-bold text-muted-foreground">{stats[2]?.label}</span>
+              <span className={`text-3xl font-light ${Number(stats[2]?.value) > 0 ? "text-destructive" : "text-foreground"}`}>{stats[2]?.value || 0}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[9px] mb-1 font-bold text-muted-foreground">{stats[3]?.label}</span>
+              <span className={`text-3xl font-light ${Number(stats[3]?.value) > 0 ? "text-amber-500" : "text-foreground"}`}>{stats[3]?.value || 0}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row xl:flex-col gap-2 shrink-0">
             <Dialog open={installOpen} onOpenChange={setInstallOpen}>
               <DialogTrigger asChild>
-                <Button size="sm">
-                  <IconHeartbeat className="h-4 w-4 mr-2" />
-                  {t("install.openDialog")}
-                </Button>
+                <button className="bg-primary text-primary-foreground px-4 py-2 text-xs hover:bg-primary/90 transition-colors font-mono flex items-center justify-between gap-6">
+                  <span>{t("install.openDialog")}</span>
+                  <span className="opacity-50 text-[10px]">01</span>
+                </button>
               </DialogTrigger>
               <AgentInstallDialog
                 open={installOpen}
@@ -156,10 +168,39 @@ export function AgentList() {
                 isGenerating={createToken.isPending}
                 onGenerate={handleGenerateToken}
               />
-
             </Dialog>
+
+            <ArchitectureDialog trigger={
+              <button className="border border-border text-foreground px-4 py-2 text-xs hover:bg-muted transition-colors font-mono flex items-center justify-between gap-6">
+                <span>{t("viewArchitecture")}</span>
+                <span className="opacity-50 text-[10px]">02</span>
+              </button>
+            } />
           </div>
         </div>
+
+        {/* Node Bar */}
+        <div className="mt-8 relative z-10 flex items-center gap-2 border-t border-border/60 pt-4 max-w-full overflow-hidden">
+          <span className="text-[10px] font-bold text-muted-foreground shrink-0">STATUS</span>
+          <div className="flex-1 h-2 flex gap-[2px]">
+            {hasAgents ? agents.map((agent) => {
+              const isHealthy = agent.health?.state?.toLowerCase() === "ok" || !agent.health?.state
+              const isOnline = agent.status === "online"
+              return (
+                <div
+                  key={agent.id}
+                  className={`h-full flex-1 border-r border-background ${!isOnline ? "bg-destructive/80" : isHealthy ? "bg-emerald-500/80" : "bg-amber-500/80"}`}
+                  title={`${agent.name} - ${agent.status}`}
+                />
+              )
+            }) : (
+              <span className="text-[10px] text-muted-foreground/50 font-mono flex-1">—</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

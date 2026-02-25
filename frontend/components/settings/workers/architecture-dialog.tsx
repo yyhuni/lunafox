@@ -17,7 +17,7 @@ import {
   ScrollArea,
 } from "@/components/settings/workers/architecture-dialog-sections"
 
-export function ArchitectureDialog() {
+export function ArchitectureDialog({ trigger }: { trigger?: React.ReactNode }) {
   const {
     t,
     open,
@@ -30,10 +30,12 @@ export function ArchitectureDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <IconInfoCircle className="h-4 w-4 mr-2" />
-          {t("viewArchitecture")}
-        </Button>
+        {trigger || (
+          <Button variant="outline" size="sm">
+            <IconInfoCircle className="h-4 w-4 mr-2" />
+            {t("viewArchitecture")}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] h-[calc(100vh-1rem)] sm:w-[calc(100vw-2rem)] sm:max-w-[1280px] sm:h-[calc(100vh-2rem)] p-0 gap-0 flex flex-col overflow-hidden">
         <div className="border-b px-4 py-4 sm:px-6">

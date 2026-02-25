@@ -59,9 +59,9 @@
       "contentType": "内容类型",
       "technologies": "技术栈",
       "responseBody": "响应体",
-		"vhost": "虚拟主机",
-		"responseHeaders": "响应头",
-		"responseTime": "响应时间"
+      "vhost": "虚拟主机",
+      "responseHeaders": "响应头",
+      "responseTime": "响应时间"
     },
     "website": {
       "url": "URL",
@@ -392,10 +392,10 @@
       "webserver": "Web 服务器",
       "contentType": "内容类型",
       "responseBody": "响应体",
-		"responseHeaders": "响应头",
-		"vhost": "VHost",
-		"createdAt": "创建时间"
-	},
+      "responseHeaders": "响应头",
+      "vhost": "VHost",
+      "createdAt": "创建时间"
+    },
     "card": {
       "title": "标题",
       "expand": "展开",
@@ -778,7 +778,15 @@
       "everyDay": "每天 {time}",
       "everyWeek": "每{day} {time}",
       "everyMonth": "每月{day}号 {time}",
-      "weekdays": ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
+      "weekdays": [
+        "周日",
+        "周一",
+        "周二",
+        "周三",
+        "周四",
+        "周五",
+        "周六"
+      ]
     },
     "history": {
       "title": "扫描历史",
@@ -1454,6 +1462,7 @@
         "offline": "离线",
         "unhealthy": "异常"
       },
+      "viewArchitecture": "系统架构",
       "status": {
         "online": "在线",
         "offline": "离线",
@@ -1484,14 +1493,14 @@
         "uptime": "运行 {value}",
         "updatedAt": "更新 {value}"
       },
-    "actions": {
-      "title": "操作",
-      "config": "配置",
-      "logs": "日志",
-      "delete": "删除 Agent",
-      "deleteTitle": "删除 Agent",
-      "deleteDesc": "确定删除 Agent \"{name}\" 吗？此操作不可恢复。"
-    },
+      "actions": {
+        "title": "操作",
+        "config": "配置",
+        "logs": "日志",
+        "delete": "删除 Agent",
+        "deleteTitle": "删除 Agent",
+        "deleteDesc": "确定删除 Agent \"{name}\" 吗？此操作不可恢复。"
+      },
       "config": {
         "title": "调度配置",
         "desc": "调整并发任务与资源阈值",
@@ -1516,43 +1525,43 @@
         "configuration": "配置信息",
         "waitingForHeartbeat": "等待首次心跳数据..."
       },
-    "list": {
-      "uptime": "运行"
-    },
-    "logs": {
-      "title": "Agent 日志",
-      "noAgent": "未选择 Agent",
-      "empty": "暂无日志输出",
-      "lineLimitHint": "日志过多，仅保留最近 {max} 行",
-      "truncated": "已截断",
-      "ready": "就绪",
-      "openFailed": "打开日志流失败",
-      "errors": {
-        "containerNotFound": "容器不存在或名称错误",
-        "dockerUnavailable": "Docker 不可用，请检查 Agent 运行环境",
-        "dockerApiError": "Docker 日志读取失败",
-        "agentTimeout": "Agent 响应超时，请稍后重试",
-        "wsSendFailed": "日志请求发送到 Agent 失败",
-        "lokiUnavailable": "Loki 不可用，请检查日志基础设施",
-        "queryTimeout": "日志查询超时，请稍后重试",
-        "agentNotFound": "Agent 不存在",
-        "agentOffline": "Agent 离线，无法读取日志",
-        "badRequest": "请求参数无效，请检查容器名",
-        "streamUnavailable": "浏览器不支持流式读取",
-        "unknown": "未知错误"
+      "list": {
+        "uptime": "运行"
       },
-      "status": {
-        "idle": "等待开始",
-        "connecting": "连接中",
-        "streaming": "流式中",
-        "done": "已结束",
-        "error": "错误"
-      }
+      "logs": {
+        "title": "Agent 日志",
+        "noAgent": "未选择 Agent",
+        "empty": "暂无日志输出",
+        "lineLimitHint": "日志过多，仅保留最近 {max} 行",
+        "truncated": "已截断",
+        "ready": "就绪",
+        "openFailed": "打开日志流失败",
+        "errors": {
+          "containerNotFound": "容器不存在或名称错误",
+          "dockerUnavailable": "Docker 不可用，请检查 Agent 运行环境",
+          "dockerApiError": "Docker 日志读取失败",
+          "agentTimeout": "Agent 响应超时，请稍后重试",
+          "wsSendFailed": "日志请求发送到 Agent 失败",
+          "lokiUnavailable": "Loki 不可用，请检查日志基础设施",
+          "queryTimeout": "日志查询超时，请稍后重试",
+          "agentNotFound": "Agent 不存在",
+          "agentOffline": "Agent 离线，无法读取日志",
+          "badRequest": "请求参数无效，请检查容器名",
+          "streamUnavailable": "浏览器不支持流式读取",
+          "unknown": "未知错误"
+        },
+        "status": {
+          "idle": "等待开始",
+          "connecting": "连接中",
+          "streaming": "流式中",
+          "done": "已结束",
+          "error": "错误"
+        }
+      },
+      "version": "v{version}",
+      "unknownHost": "未知主机",
+      "unknownIp": "未知 IP"
     },
-    "version": "v{version}",
-    "unknownHost": "未知主机",
-    "unknownIp": "未知 IP"
-  },
     "systemLogs": {
       "title": "系统日志",
       "description": "每 2 秒自动刷新一次（轮询模式）",
