@@ -61,7 +61,7 @@ export function useFormatDate() {
  */
 export function useFormatRelativeTime() {
   const format = useFormatter()
-  const now = useNow({ updateInterval: 60000 }) // Update every minute
+  const now = useNow({ updateInterval: 5000 }) // Update every 5 seconds
 
   return (date: Date | string | number | null | undefined) => {
     if (!date) return '-'

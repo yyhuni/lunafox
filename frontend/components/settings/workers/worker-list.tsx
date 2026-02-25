@@ -48,7 +48,7 @@ function EmptyState({ onOpenInstall }: { onOpenInstall: () => void }) {
 export function AgentList() {
   const t = useTranslations("settings.workers")
   const [page] = useState(1)
-  const [pageSize] = useState(10)
+  const [pageSize] = useState(100)
   const [installOpen, setInstallOpen] = useState(false)
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
   const [configDialogOpen, setConfigDialogOpen] = useState(false)
@@ -66,7 +66,7 @@ export function AgentList() {
   const hasAgents = agents.length > 0
 
   const stats = useMemo(() => {
-    const total = agents.length
+    const total = data?.total ?? agents.length
     const online = agents.filter((agent) => agent.status === "online").length
     const offline = agents.filter((agent) => agent.status === "offline").length
     const unhealthy = agents.filter((agent) => {
@@ -80,7 +80,7 @@ export function AgentList() {
       { label: t("stats.offline"), value: offline, icon: IconCloudOff },
       { label: t("stats.unhealthy"), value: unhealthy, icon: IconHeartbeat },
     ]
-  }, [agents, t])
+  }, [agents, data?.total, t])
 
   const handleGenerateToken = async () => {
     try {

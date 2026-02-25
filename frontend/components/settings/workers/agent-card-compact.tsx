@@ -1,7 +1,7 @@
 "use client"
 
 import { type ReactNode, useMemo } from "react"
-import { useTranslations } from "next-intl"
+import { useNow, useTranslations } from "next-intl"
 import {
   IconDotsVertical,
   IconSettings,
@@ -136,6 +136,14 @@ interface AgentCardCompactProps {
   onLogs: (agent: Agent) => void
 }
 
+function normalizePastDate(value: string | Date | null | undefined, nowMs: number): Date | null {
+  if (!value) return null
+  const parsed = value instanceof Date ? value : new Date(value)
+  const parsedMs = parsed.getTime()
+  if (Number.isNaN(parsedMs)) return null
+  return new Date(Math.min(parsedMs, nowMs))
+}
+
 export function AgentCardCompact({
   agent,
   onConfig,
@@ -144,19 +152,20 @@ export function AgentCardCompact({
 }: AgentCardCompactProps) {
   const t = useTranslations("settings.workers")
   const formatRelativeTime = useFormatRelativeTime()
+  const now = useNow({ updateInterval: 5000 })
   const formatNumber = useFormatNumber()
 
   const heartbeat = agent.heartbeat
+  const nowMs = now.getTime()
+  const lastSeenDate = useMemo(() => normalizePastDate(agent.lastHeartbeat, nowMs), [agent.lastHeartbeat, nowMs])
 
   const lastHeartbeatSeconds = useMemo(() => {
-    if (!agent.lastHeartbeat) return null
-    const now = Date.now()
-    const lastHeartbeat = new Date(agent.lastHeartbeat).getTime()
-    return Math.floor((now - lastHeartbeat) / 1000)
-  }, [agent.lastHeartbeat])
+    if (!lastSeenDate) return null
+    return Math.floor((nowMs - lastSeenDate.getTime()) / 1000)
+  }, [lastSeenDate, nowMs])
 
   const isHeartbeatStale = lastHeartbeatSeconds !== null && lastHeartbeatSeconds > 30
-  const lastSeenText = formatRelativeTime(agent.lastHeartbeat)
+  const lastSeenText = formatRelativeTime(lastSeenDate)
   const statusVariant = getStatusVariant(agent.status)
   const statusLabel = statusVariant === "online"
     ? t("status.online")
