@@ -264,6 +264,41 @@ def collect_docker_bases():
     return rows
 
 
+def parse_compose_service_images(compose_relative_path: str, target_services):
+    text = read_text(compose_relative_path)
+    images = {}
+    current_service = None
+
+    service_header = re.compile(r"^\s{2}([A-Za-z0-9_-]+):\s*$")
+    image_line = re.compile(r"^\s{4}image:\s*(.+?)\s*$")
+
+    for line in text.splitlines():
+        header_match = service_header.match(line)
+        if header_match:
+            current_service = header_match.group(1)
+            continue
+
+        image_match = image_line.match(line)
+        if image_match and current_service in target_services:
+            image_ref = image_match.group(1).strip().strip("'\"")
+            images[current_service] = image_ref
+
+    rows = []
+    for service in target_services:
+        rows.append(
+            {
+                "name": service,
+                "current": images.get(service),
+                "latest": None,
+                "status": "manual_review",
+                "risk": "info",
+                "source": compose_relative_path,
+                "note": "Version extracted from docker-compose service image.",
+            }
+        )
+    return rows
+
+
 latest_go = latest_go_version()
 latest_node = latest_node_lts_version()
 latest_pnpm = latest_pnpm_version()
@@ -341,6 +376,7 @@ summary = {
     "outdated_components": sum(1 for c in components if c["status"] == "outdated"),
     "outdated_scanner_tools": sum(1 for t in scanner_tools if t["status"] == "outdated"),
     "unpinned_items": len(unpinned),
+    "compose_service_images": 3,
 }
 
 payload = {
@@ -348,6 +384,10 @@ payload = {
     "components": components,
     "scanner_tools": scanner_tools,
     "docker_bases": collect_docker_bases(),
+    "compose_service_images": parse_compose_service_images(
+        "docker/docker-compose.yml",
+        ["loki", "redis", "postgres"],
+    ),
     "unpinned": unpinned,
     "summary": summary,
 }

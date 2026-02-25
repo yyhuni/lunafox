@@ -11,15 +11,15 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
-import { AgentLogStreamError, agentService } from "@/services/agent.service"
+import { AgentLogQueryError, agentService } from "@/services/agent.service"
+import type { AgentLogItem } from "@/types/agent-log.types"
 import type { Agent } from "@/types/agent.types"
-import type { AgentLogStreamEvent } from "@/types/agent-log.types"
 
 const MAX_RENDER_LINES = 5000
-const LOG_FLUSH_INTERVAL_MS = 80
+const LOG_POLL_INTERVAL_MS = 2000
 
 interface LogLineItem {
-  id: number
+  id: string
   ts: string
   stream: string
   line: string
@@ -37,20 +37,17 @@ export function AgentLogDrawer({ open, onOpenChange, agent }: AgentLogDrawerProp
 
   const container = "lunafox-agent"
   const [lines, setLines] = useState<LogLineItem[]>([])
-  const [requestId, setRequestId] = useState("")
   const [status, setStatus] = useState<"idle" | "connecting" | "streaming" | "done" | "error">("idle")
-  const [statusReason, setStatusReason] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
   const [autoScroll, setAutoScroll] = useState(true)
-  const [isStreaming, setIsStreaming] = useState(false)
+  const [isPolling, setIsPolling] = useState(false)
   const [lineLimitReached, setLineLimitReached] = useState(false)
 
   const abortRef = useRef<AbortController | null>(null)
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const isFetchingRef = useRef(false)
+  const cursorRef = useRef("")
   const viewportRef = useRef<HTMLDivElement | null>(null)
-  const lineIdRef = useRef(0)
-  const lineCountRef = useRef(0)
-  const bufferedLinesRef = useRef<LogLineItem[]>([])
-  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const statusText = useMemo(() => {
     if (status === "connecting") return t("logs.status.connecting")
@@ -76,73 +73,31 @@ export function AgentLogDrawer({ open, onOpenChange, agent }: AgentLogDrawerProp
     return "text-muted-foreground"
   }, [status])
 
-  const resetBufferedLines = useCallback(() => {
-    bufferedLinesRef.current = []
-    if (flushTimerRef.current !== null) {
-      clearTimeout(flushTimerRef.current)
-      flushTimerRef.current = null
-    }
-  }, [])
-
-  const flushBufferedLines = useCallback(() => {
-    if (flushTimerRef.current !== null) {
-      clearTimeout(flushTimerRef.current)
-      flushTimerRef.current = null
-    }
-
-    if (bufferedLinesRef.current.length === 0) {
-      return
-    }
-
-    const chunk = bufferedLinesRef.current
-    bufferedLinesRef.current = []
-
-    if (lineCountRef.current + chunk.length > MAX_RENDER_LINES) {
-      setLineLimitReached(true)
-    }
-
-    setLines((prev) => {
-      const merged = [...prev, ...chunk]
-      if (merged.length <= MAX_RENDER_LINES) {
-        lineCountRef.current = merged.length
-        return merged
-      }
-      const sliced = merged.slice(merged.length - MAX_RENDER_LINES)
-      lineCountRef.current = sliced.length
-      return sliced
-    })
-  }, [])
-
-  const scheduleFlushBufferedLines = useCallback(() => {
-    if (flushTimerRef.current !== null) {
-      return
-    }
-    flushTimerRef.current = setTimeout(() => {
-      flushBufferedLines()
-    }, LOG_FLUSH_INTERVAL_MS)
-  }, [flushBufferedLines])
-
-  const stopStream = useCallback(() => {
+  const stopPolling = useCallback(() => {
     abortRef.current?.abort()
     abortRef.current = null
-    resetBufferedLines()
-    setIsStreaming(false)
-  }, [resetBufferedLines])
+    if (pollTimerRef.current !== null) {
+      clearInterval(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+    isFetchingRef.current = false
+    setIsPolling(false)
+  }, [])
 
   useEffect(() => {
     if (!open) {
-      stopStream()
+      stopPolling()
       setStatus("idle")
-      setStatusReason("")
-      setRequestId("")
+      setErrorMessage("")
+      cursorRef.current = ""
     }
-  }, [open, stopStream])
+  }, [open, stopPolling])
 
   useEffect(() => {
     return () => {
-      stopStream()
+      stopPolling()
     }
-  }, [stopStream])
+  }, [stopPolling])
 
   useEffect(() => {
     if (!autoScroll) {
@@ -155,107 +110,93 @@ export function AgentLogDrawer({ open, onOpenChange, agent }: AgentLogDrawerProp
     viewport.scrollTop = viewport.scrollHeight
   }, [lines, autoScroll])
 
-  const appendLogLine = useCallback((event: Extract<AgentLogStreamEvent, { type: "log" }>) => {
-    const nextItem: LogLineItem = {
-      id: ++lineIdRef.current,
-      ts: event.ts,
-      stream: event.stream,
-      line: event.line,
-      truncated: event.truncated,
+  const appendLogLines = useCallback((items: AgentLogItem[]) => {
+    if (items.length === 0) {
+      return
     }
-    bufferedLinesRef.current.push(nextItem)
-    scheduleFlushBufferedLines()
-  }, [scheduleFlushBufferedLines])
+    const mapped = items.map((item) => ({
+      id: item.id,
+      ts: item.ts,
+      stream: item.stream,
+      line: item.line,
+      truncated: item.truncated,
+    }))
+
+    setLines((prev) => {
+      if (mapped.length === 0) {
+        return prev
+      }
+      const seen = new Set(prev.map((item) => item.id))
+      const unique = mapped.filter((item) => {
+        if (seen.has(item.id)) {
+          return false
+        }
+        seen.add(item.id)
+        return true
+      })
+      if (unique.length === 0) {
+        return prev
+      }
+      const merged = [...prev, ...unique]
+      if (merged.length <= MAX_RENDER_LINES) {
+        return merged
+      }
+      setLineLimitReached(true)
+      return merged.slice(merged.length - MAX_RENDER_LINES)
+    })
+  }, [])
 
   const mapErrorMessage = useCallback((code: string, fallback: string) => {
     const normalized = code.trim().toLowerCase()
     if (normalized === "container_not_found") return t("logs.errors.containerNotFound")
-    if (normalized === "docker_unavailable") return t("logs.errors.dockerUnavailable")
-    if (normalized === "docker_api_error") return t("logs.errors.dockerApiError")
-    if (normalized === "agent_timeout") return t("logs.errors.agentTimeout")
-    if (normalized === "ws_send_failed") return t("logs.errors.wsSendFailed")
-    if (normalized === "agent_offline") return t("logs.errors.agentOffline")
+    if (normalized === "loki_unavailable") return t("logs.errors.lokiUnavailable")
+    if (normalized === "query_timeout") return t("logs.errors.queryTimeout")
+    if (normalized === "agent_not_found") return t("logs.errors.agentNotFound")
     if (normalized === "bad_request") return t("logs.errors.badRequest")
-    if (normalized === "stream_unavailable") return t("logs.errors.streamUnavailable")
+    if (normalized === "internal_error") return t("logs.errors.unknown")
+    if (normalized === "agent_offline") return t("logs.errors.agentOffline")
     return fallback || t("logs.errors.unknown")
   }, [t])
 
-  const handleStreamEvent = useCallback((event: AgentLogStreamEvent) => {
-    if (event.type === "ping") {
-      return
-    }
-
-    setRequestId(event.requestId)
-
-    if (event.type === "status") {
-      if (event.status === "started") {
-        setStatus("streaming")
-      }
-      return
-    }
-
-    if (event.type === "log") {
-      appendLogLine(event)
-      return
-    }
-
-    if (event.type === "error") {
-      flushBufferedLines()
-      setStatus("error")
-      const reason = mapErrorMessage(event.code, event.message)
-      setErrorMessage(`[${event.code}] ${reason}`)
-      return
-    }
-
-    if (event.type === "done") {
-      flushBufferedLines()
-      setStatus("done")
-      setStatusReason(event.reason)
-      setIsStreaming(false)
-    }
-  }, [appendLogLine, flushBufferedLines, mapErrorMessage])
-
-  const startStream = useCallback(async () => {
+  const pollOnce = useCallback(async (controller: AbortController) => {
     if (!agent || !container.trim()) {
       return
     }
+    if (controller.signal.aborted || isFetchingRef.current) {
+      return
+    }
 
-    stopStream()
-    lineIdRef.current = 0
-    lineCountRef.current = 0
-    resetBufferedLines()
-    setLines([])
-    setRequestId("")
-    setStatus("connecting")
-    setStatusReason("")
-    setErrorMessage("")
-    setIsStreaming(true)
-    setLineLimitReached(false)
-
-    const controller = new AbortController()
-    abortRef.current = controller
-
+    isFetchingRef.current = true
     try {
-      await agentService.streamAgentLogs({
+      const result = await agentService.fetchAgentLogs({
         agentId: agent.id,
         container: container.trim(),
-        tail: 200,
-        follow: true,
-        timestamps: true,
+        limit: 200,
+        cursor: cursorRef.current || undefined,
         signal: controller.signal,
-        onEvent: handleStreamEvent,
       })
-      if (!controller.signal.aborted) {
-        setStatus((prev) => (prev === "error" ? prev : "done"))
+      if (controller.signal.aborted) {
+        return
       }
+
+      if (result.logs.length > 0) {
+        appendLogLines(result.logs)
+      }
+
+      const nextCursor = result.nextCursor.trim()
+      if (nextCursor) {
+        cursorRef.current = nextCursor
+      }
+
+      setStatus("streaming")
+      setErrorMessage("")
     } catch (error) {
       if (isAbortError(error)) {
         return
       }
 
-      flushBufferedLines()
       setStatus("error")
-      if (error instanceof AgentLogStreamError) {
+      if (error instanceof AgentLogQueryError) {
         const reason = mapErrorMessage(error.code, error.message)
         setErrorMessage(`[${error.code}] ${reason}`)
       } else if (error instanceof Error) {
@@ -264,26 +205,51 @@ export function AgentLogDrawer({ open, onOpenChange, agent }: AgentLogDrawerProp
         setErrorMessage(t("logs.openFailed"))
       }
     } finally {
-      if (abortRef.current === controller) {
-        abortRef.current = null
-      }
-      setIsStreaming(false)
+      isFetchingRef.current = false
     }
-  }, [agent, flushBufferedLines, handleStreamEvent, mapErrorMessage, resetBufferedLines, stopStream, t])
+  }, [agent, appendLogLines, mapErrorMessage, t])
+
+  const startPolling = useCallback(async () => {
+    if (!agent || !container.trim()) {
+      return
+    }
+
+    stopPolling()
+    cursorRef.current = ""
+    setLines([])
+    setStatus("connecting")
+    setErrorMessage("")
+    setIsPolling(true)
+    setLineLimitReached(false)
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    await pollOnce(controller)
+    if (controller.signal.aborted) {
+      return
+    }
+
+    setStatus((prev) => (prev === "error" ? prev : "streaming"))
+    pollTimerRef.current = setInterval(() => {
+      void pollOnce(controller)
+    }, LOG_POLL_INTERVAL_MS)
+  }, [agent, pollOnce, stopPolling])
 
   useEffect(() => {
     if (!open || !agent) {
       return
     }
-    void startStream()
-  }, [open, agent, startStream])
+    void startPolling()
+  }, [open, agent, startPolling])
 
   const onToggleOpen = useCallback((nextOpen: boolean) => {
     if (!nextOpen) {
-      stopStream()
+      stopPolling()
+      setStatus("done")
     }
     onOpenChange(nextOpen)
-  }, [onOpenChange, stopStream])
+  }, [onOpenChange, stopPolling])
 
   const handleViewportScroll = useCallback(() => {
     const viewport = viewportRef.current
@@ -373,12 +339,9 @@ export function AgentLogDrawer({ open, onOpenChange, agent }: AgentLogDrawerProp
               {statusText}
             </span>
             <span className="truncate text-muted-foreground">
-              {errorMessage || statusReason || t("logs.ready")}
+              {errorMessage || (isPolling ? t("logs.status.streaming") : t("logs.ready"))}
             </span>
           </div>
-          {requestId && (
-            <span className="font-mono text-muted-foreground/80">requestId: {requestId}</span>
-          )}
         </div>
       </SheetContent>
     </Sheet>
@@ -399,6 +362,9 @@ function isErrorStream(stream: string): boolean {
 
 function isAbortError(error: unknown): boolean {
   if (error instanceof DOMException) {
+    return error.name === "AbortError"
+  }
+  if (error instanceof Error) {
     return error.name === "AbortError"
   }
   return false

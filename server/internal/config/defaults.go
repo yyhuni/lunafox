@@ -26,6 +26,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("REDIS_PORT", 6379)
 	v.SetDefault("REDIS_PASSWORD", "")
 	v.SetDefault("REDIS_DB", 0)
+	v.SetDefault("LOKI_URL", "http://loki:3100")
 
 	v.SetDefault("LOG_LEVEL", "info")
 	v.SetDefault("LOG_FORMAT", "json")
@@ -64,6 +65,7 @@ func GetDefaults() *Config {
 			Password: "",
 			DB:       0,
 		},
+		LokiURL: "http://loki:3100",
 		Log: LogConfig{
 			Level:  "info",
 			Format: "json",

@@ -19,7 +19,6 @@ type AgentRuntimeService struct {
 	serverVersion   string
 	agentImageRef   string
 	updateNotifier  *updateNotifier
-	logStreamSvc    *LogStreamService
 	messageHandlers map[string]runtimeMessageHandler
 }
 
@@ -78,14 +77,6 @@ func (service *AgentRuntimeService) SendConfigUpdate(agent *agentdomain.Agent) {
 		return
 	}
 	service.messageBus.SendConfigUpdate(agent.ID, BuildConfigUpdatePayload(agent))
-}
-
-// BindLogStreamService attaches the transient log stream session service.
-func (service *AgentRuntimeService) BindLogStreamService(logStreamSvc *LogStreamService) {
-	if service == nil {
-		return
-	}
-	service.logStreamSvc = logStreamSvc
 }
 
 func (service *AgentRuntimeService) HandleMessage(ctx context.Context, agentID int, message RuntimeMessageInput) error {
@@ -182,36 +173,4 @@ func toHeartbeatCacheData(payload HeartbeatItem) *cache.HeartbeatData {
 		Since:   since,
 	}
 	return cachePayload
-}
-
-func (service *AgentRuntimeService) handleLogStarted(payload LogStartedItem) error {
-	if service == nil || service.logStreamSvc == nil {
-		return nil
-	}
-	service.logStreamSvc.HandleLogStarted(payload)
-	return nil
-}
-
-func (service *AgentRuntimeService) handleLogChunk(payload LogChunkItem) error {
-	if service == nil || service.logStreamSvc == nil {
-		return nil
-	}
-	service.logStreamSvc.HandleLogChunk(payload)
-	return nil
-}
-
-func (service *AgentRuntimeService) handleLogEnd(payload LogEndItem) error {
-	if service == nil || service.logStreamSvc == nil {
-		return nil
-	}
-	service.logStreamSvc.HandleLogEnd(payload)
-	return nil
-}
-
-func (service *AgentRuntimeService) handleLogError(payload LogErrorItem) error {
-	if service == nil || service.logStreamSvc == nil {
-		return nil
-	}
-	service.logStreamSvc.HandleLogError(payload)
-	return nil
 }

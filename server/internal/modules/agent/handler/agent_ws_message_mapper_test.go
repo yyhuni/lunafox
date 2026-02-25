@@ -77,49 +77,6 @@ func TestToRuntimeMessageInputUnknown(t *testing.T) {
 	}
 }
 
-func TestToRuntimeMessageInputLogChunk(t *testing.T) {
-	raw, err := json.Marshal(agentproto.Message{
-		Type: agentproto.MessageTypeLogChunk,
-		Payload: func() json.RawMessage {
-			payload, _ := json.Marshal(agentproto.LogChunkPayload{
-				RequestID: "req-1",
-				TS:        time.Date(2026, 2, 22, 12, 0, 0, 0, time.FixedZone("UTC+8", 8*60*60)),
-				Stream:    "stderr",
-				Line:      "boom",
-				Truncated: true,
-			})
-			return payload
-		}(),
-		Timestamp: time.Now().UTC(),
-	})
-	if err != nil {
-		t.Fatalf("marshal message: %v", err)
-	}
-
-	input, err := toRuntimeMessageInput(raw)
-	if err != nil {
-		t.Fatalf("toRuntimeMessageInput error: %v", err)
-	}
-	if input.Type != agentapp.RuntimeMessageTypeLogChunk {
-		t.Fatalf("expected log_chunk type, got %q", input.Type)
-	}
-	if input.LogChunk == nil {
-		t.Fatalf("expected log_chunk payload")
-	}
-	if input.LogChunk.RequestID != "req-1" {
-		t.Fatalf("expected requestId req-1")
-	}
-	if input.LogChunk.Stream != "stderr" {
-		t.Fatalf("expected stderr stream")
-	}
-	if !input.LogChunk.Truncated {
-		t.Fatalf("expected truncated true")
-	}
-	if input.LogChunk.TS.Location() != time.UTC {
-		t.Fatalf("expected ts normalized to UTC")
-	}
-}
-
 func TestToRuntimeMessageInputInvalidPayload(t *testing.T) {
 	raw := []byte(`{"type":"heartbeat","payload":{"version":}`)
 

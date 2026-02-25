@@ -135,16 +135,6 @@ func (h *Hub) SendConfigUpdate(agentID int, payload agentproto.ConfigUpdatePaylo
 	_ = h.sendTypedMessage(agentID, agentproto.MessageTypeConfigUpdate, payload)
 }
 
-// SendLogOpen sends a log_open message and returns whether sending succeeded.
-func (h *Hub) SendLogOpen(agentID int, payload agentproto.LogOpenPayload) bool {
-	return h.sendTypedMessage(agentID, agentproto.MessageTypeLogOpen, payload)
-}
-
-// SendLogCancel sends a log_cancel message and returns whether sending succeeded.
-func (h *Hub) SendLogCancel(agentID int, payload agentproto.LogCancelPayload) bool {
-	return h.sendTypedMessage(agentID, agentproto.MessageTypeLogCancel, payload)
-}
-
 func (h *Hub) sendTypedMessage(agentID int, messageType string, payload any) bool {
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -190,20 +180,6 @@ func (publisher *agentMessagePublisher) SendTaskCancel(agentID, taskID int) {
 		return
 	}
 	publisher.hub.SendTaskCancel(agentID, taskID)
-}
-
-func (publisher *agentMessagePublisher) SendLogOpen(agentID int, payload agentproto.LogOpenPayload) bool {
-	if publisher == nil || publisher.hub == nil {
-		return false
-	}
-	return publisher.hub.SendLogOpen(agentID, payload)
-}
-
-func (publisher *agentMessagePublisher) SendLogCancel(agentID int, payload agentproto.LogCancelPayload) bool {
-	if publisher == nil || publisher.hub == nil {
-		return false
-	}
-	return publisher.hub.SendLogCancel(agentID, payload)
 }
 
 // SendToWithResult sends a message to a specific agent and returns success.

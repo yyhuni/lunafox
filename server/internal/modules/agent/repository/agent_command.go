@@ -10,7 +10,14 @@ import (
 
 // Create creates a new agent.
 func (r *agentRepository) Create(ctx context.Context, agent *agentdomain.Agent) error {
-	return r.db.WithContext(ctx).Create(domainAgentToModel(agent)).Error
+	record := domainAgentToModel(agent)
+	if err := r.db.WithContext(ctx).Create(record).Error; err != nil {
+		return err
+	}
+	if agent != nil {
+		agent.ID = record.ID
+	}
+	return nil
 }
 
 // Update updates an agent.

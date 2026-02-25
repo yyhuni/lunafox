@@ -32,6 +32,19 @@ services:
       timeout: 5s
       retries: 5
 
+  loki:
+    image: grafana/loki:3.6.6
+    restart: always
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki_data:/loki
+    healthcheck:
+      test: ["CMD", "/usr/bin/loki", "-verify-config=true", "-config.file=/etc/loki/loki-config.yaml"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   server:
     image: ${IMAGE_REGISTRY:-docker.io}/${IMAGE_NAMESPACE:-yyhuni}/lunafox-server:${IMAGE_TAG:?IMAGE_TAG is required}
     restart: always
@@ -40,8 +53,11 @@ services:
     environment:
       - IMAGE_TAG=${IMAGE_TAG}
       - PUBLIC_URL=${PUBLIC_URL:-}
+      - LOKI_URL=${LOKI_URL:-http://loki:3100}
     depends_on:
       redis:
+        condition: service_healthy
+      loki:
         condition: service_healthy
     volumes:
       - lunafox_data:/opt/lunafox
@@ -85,6 +101,8 @@ volumes:
     name: lunafox_data
   lunafox_ssl:
     name: lunafox_ssl
+  loki_data:
+    name: lunafox_loki_data
 
 networks:
   default:

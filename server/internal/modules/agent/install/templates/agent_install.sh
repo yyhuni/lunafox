@@ -12,11 +12,13 @@ set -e
 TOKEN="{{.Token}}"
 REGISTER_URL="{{.RegisterURL}}"
 AGENT_SERVER_URL="{{.AgentServerURL}}"
+LOKI_PUSH_URL="{{.LokiPushURL}}"
 NETWORK_NAME="${LUNAFOX_AGENT_DOCKER_NETWORK:-off}"
 AGENT_IMAGE_REF="{{.AgentImageRef}}"
 AGENT_VERSION="{{.AgentVersion}}"
 DEFAULT_WORKER_TOKEN="{{.WorkerToken}}"
 WORKER_IMAGE_REF="{{.WorkerImageRef}}"
+LOKI_PLUGIN_REFS=()
 LOCAL_AGENT_CONFIG="${LUNAFOX_AGENT_USE_LOCAL_LIMITS:-}"
 SHARED_DATA_VOLUME_BIND="{{.SharedDataVolumeBind}}"
 
@@ -46,6 +48,7 @@ require_cmd curl
 echo "Configuration:"
 echo "Register URL: $REGISTER_URL"
 echo "Agent server URL: $AGENT_SERVER_URL"
+echo "Loki push URL: $LOKI_PUSH_URL"
 echo "Network: $NETWORK_NAME"
 echo "Data bind: $SHARED_DATA_VOLUME_BIND"
 
@@ -71,6 +74,88 @@ if ! docker info >/dev/null 2>&1; then
 		exit 1
 	fi
 fi
+
+validate_loki_push_url() {
+	case "$LOKI_PUSH_URL" in
+	https://*) ;;
+	*)
+		echo "LOKI_PUSH_URL must be a complete https URL, got: $LOKI_PUSH_URL" >&2
+		return 1
+		;;
+	esac
+	return 0
+}
+
+ensure_loki_plugin() {
+	local existing_line existing_name existing_enabled arch ref
+
+	existing_line="$($DOCKER_CMD plugin ls --format '{{"{{.Name}}"}} {{"{{.Enabled}}"}}' | awk '$1 ~ /^loki(:|$)/ {print $0; exit}')"
+	if [ -n "$existing_line" ]; then
+		existing_name="${existing_line%% *}"
+		existing_enabled="${existing_line##* }"
+		if [ "$existing_enabled" = "true" ]; then
+			return 0
+		fi
+		echo "Enabling Loki Docker plugin ($existing_name)..."
+		if $DOCKER_CMD plugin enable "$existing_name" >/dev/null 2>&1; then
+			return 0
+		fi
+	fi
+
+	arch="$(detect_docker_arch)"
+	build_loki_plugin_refs "$arch"
+
+	echo "Installing Loki Docker plugin..."
+	for ref in "${LOKI_PLUGIN_REFS[@]}"; do
+		if [ -z "$ref" ]; then
+			continue
+		fi
+		echo "Trying Loki Docker plugin ref: $ref"
+		if $DOCKER_CMD plugin install "$ref" --alias loki --grant-all-permissions; then
+			return 0
+		fi
+	done
+
+	if $DOCKER_CMD plugin ls --format '{{"{{.Name}}"}}' | grep -Eq '^loki(:|$)'; then
+		return 0
+	fi
+
+	echo "Warning: failed to install Loki Docker plugin (${LOKI_PLUGIN_REFS[*]})." >&2
+	echo "Warning: agent container will start without Loki log driver." >&2
+	return 1
+}
+
+detect_docker_arch() {
+	local raw_arch
+	raw_arch="$($DOCKER_CMD info --format '{{"{{.Architecture}}"}}' 2>/dev/null || true)"
+	case "$raw_arch" in
+	aarch64 | arm64)
+		echo "arm64"
+		;;
+	x86_64 | amd64)
+		echo "amd64"
+		;;
+	*)
+		echo ""
+		;;
+	esac
+}
+
+build_loki_plugin_refs() {
+	local arch="$1"
+	LOKI_PLUGIN_REFS=()
+	if [ -n "$arch" ]; then
+		LOKI_PLUGIN_REFS+=("grafana/loki-docker-driver:3.6.7-${arch}")
+	fi
+}
+
+probe_loki_push_url() {
+	# /loki/api/v1/push is a write endpoint; GET may return 404/405 even when reachable.
+	# Treat this as a connectivity probe only and avoid failing on HTTP status codes.
+	if ! curl -ksSL --connect-timeout 10 --max-time 30 -o /dev/null "$LOKI_PUSH_URL"; then
+		echo "Warning: LOKI_PUSH_URL connectivity probe failed (network/TLS): $LOKI_PUSH_URL" >&2
+	fi
+}
 
 NETWORK_ARGS=()
 if [ -n "$NETWORK_NAME" ] && [ "$NETWORK_NAME" != "off" ] && [ "$NETWORK_NAME" != "none" ]; then
@@ -124,6 +209,7 @@ RESPONSE=$(curl "${curl_opts[@]}" \
 	echo "Registration failed: $RESPONSE" >&2
 	exit 1
 }
+AGENT_ID="$(printf '%s' "$RESPONSE" | sed -n 's/.*"agentId"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -n1)"
 API_KEY="$(printf '%s' "$RESPONSE" | sed -n 's/.*"apiKey"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
 
 if [ -z "$API_KEY" ]; then
@@ -135,6 +221,21 @@ if [ -z "$API_KEY" ]; then
 	echo "Failed to obtain API key" >&2
 	exit 1
 fi
+
+if [ -z "${AGENT_ID:-}" ]; then
+	echo "Failed to obtain agent ID from registration response" >&2
+	exit 1
+fi
+
+if ! validate_loki_push_url; then
+	exit 1
+fi
+
+USE_LOKI_DRIVER=1
+if ! ensure_loki_plugin; then
+	USE_LOKI_DRIVER=0
+fi
+probe_loki_push_url
 
 echo "Pulling agent image..."
 if [ "$force_local_images" -eq 1 ]; then
@@ -169,8 +270,25 @@ else
 fi
 
 $DOCKER_CMD rm -f lunafox-agent >/dev/null 2>&1 || true
+
+LOGGING_ARGS=()
+if [ "$USE_LOKI_DRIVER" -eq 1 ]; then
+	LOGGING_ARGS=(
+		--log-driver=loki
+		--log-opt "loki-url=$LOKI_PUSH_URL"
+		--log-opt "loki-tls-insecure-skip-verify=true"
+		--log-opt "no-file=true"
+		--log-opt "mode=non-blocking"
+		--log-opt "loki-batch-size=1048576"
+		--log-opt "max-buffer-size=5m"
+		--log-opt "loki-retries=3"
+		--log-opt "loki-external-labels=agent_id=$AGENT_ID,container_name=lunafox-agent"
+	)
+fi
+
 $DOCKER_CMD run -d --restart unless-stopped --name lunafox-agent \
 	"${NETWORK_ARGS[@]}" \
+	"${LOGGING_ARGS[@]}" \
 	--hostname "$HOSTNAME" \
 	-e SERVER_URL="$AGENT_SERVER_URL" \
 	-e API_KEY="$API_KEY" \

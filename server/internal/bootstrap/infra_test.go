@@ -1,6 +1,12 @@
 package bootstrap
 
-import "testing"
+import (
+	"context"
+	"errors"
+	"strings"
+	"testing"
+	"time"
+)
 
 func TestResolveAgentImageRef(t *testing.T) {
 	t.Setenv("AGENT_IMAGE_REF", "")
@@ -60,5 +66,43 @@ func TestResolveSharedDataVolumeBind(t *testing.T) {
 	t.Setenv("LUNAFOX_SHARED_DATA_VOLUME_BIND", "lunafox_data:/opt/lunafox")
 	if got, err := resolveSharedDataVolumeBind(); err != nil || got != "lunafox_data:/opt/lunafox" {
 		t.Fatalf("expected valid bind, got %q, err=%v", got, err)
+	}
+}
+
+func TestWaitForLokiReadyRetriesUntilSuccess(t *testing.T) {
+	t.Parallel()
+
+	var attempts int
+	err := waitForLokiReady(func(ctx context.Context) error {
+		attempts++
+		if attempts < 3 {
+			return errors.New("loki unavailable: /ready status=503")
+		}
+		return nil
+	}, 200*time.Millisecond, 40*time.Millisecond, 10*time.Millisecond)
+	if err != nil {
+		t.Fatalf("expected readiness success after retries, got %v", err)
+	}
+	if attempts != 3 {
+		t.Fatalf("expected 3 attempts, got %d", attempts)
+	}
+}
+
+func TestWaitForLokiReadyTimeout(t *testing.T) {
+	t.Parallel()
+
+	var attempts int
+	err := waitForLokiReady(func(ctx context.Context) error {
+		attempts++
+		return errors.New("loki unavailable: /ready status=503")
+	}, 120*time.Millisecond, 40*time.Millisecond, 10*time.Millisecond)
+	if err == nil {
+		t.Fatal("expected readiness timeout error")
+	}
+	if !strings.Contains(err.Error(), "timed out") {
+		t.Fatalf("expected timeout error message, got %v", err)
+	}
+	if attempts < 2 {
+		t.Fatalf("expected at least 2 attempts before timeout, got %d", attempts)
 	}
 }

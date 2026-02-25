@@ -7,6 +7,7 @@ type Config struct {
 	Server    ServerConfig
 	Database  DatabaseConfig
 	Redis     RedisConfig
+	LokiURL   string
 	Log       LogConfig
 	JWT       JWTConfig
 	Storage   StorageConfig

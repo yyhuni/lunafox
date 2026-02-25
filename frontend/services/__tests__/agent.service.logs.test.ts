@@ -1,23 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AgentLogStreamEvent } from '@/types/agent-log.types'
 
-const tokenManagerMocks = vi.hoisted(() => ({
-  getAccessToken: vi.fn(),
+const apiMocks = vi.hoisted(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  patch: vi.fn(),
+  delete: vi.fn(),
 }))
 
 vi.mock('@/lib/api-client', () => ({
-  api: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    patch: vi.fn(),
-    delete: vi.fn(),
-  },
-  tokenManager: tokenManagerMocks,
-}))
-
-vi.mock('@/lib/env', () => ({
-  getBackendBaseUrl: () => 'https://example.test',
+  api: apiMocks,
 }))
 
 vi.mock('@/mock', () => ({
@@ -28,119 +20,128 @@ vi.mock('@/mock', () => ({
   getMockRegistrationToken: vi.fn(),
 }))
 
-import { AgentLogStreamError, agentService } from '@/services/agent.service'
+import { api } from '@/lib/api-client'
+import { AgentLogQueryError, agentService } from '@/services/agent.service'
 
-describe('agentService.streamAgentLogs', () => {
+describe('agentService.fetchAgentLogs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    tokenManagerMocks.getAccessToken.mockReturnValue('test-token')
   })
 
-  it('解析 SSE 事件并按顺序回调', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(
-        createSSEStream([
-          'event: status\ndata: {"requestId":"req-1","status":"started"}\n\n',
-          'event: log\ndata: {"requestId":"req-1","ts":"2026-02-22T12:00:00Z","stream":"stdout","line":"hello","truncated":false}\n\n',
-          'event: ping\ndata: {"requestId":"req-1","ts":"2026-02-22T12:00:01Z"}\n\n',
-          'event: done\ndata: {"requestId":"req-1","reason":"eof"}\n\n',
-        ]),
-        { status: 200, headers: { 'Content-Type': 'text/event-stream' } }
-      )
-    )
-    vi.stubGlobal('fetch', fetchMock)
+  it('请求普通 JSON 接口并解析 logs/nextCursor/hasMore', async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: {
+        logs: [
+          {
+            id: 'agt_1:lunafox-agent:1740381601000000000:abc:000001',
+            ts: '2026-02-24T10:00:01Z',
+            tsNs: '1740381601000000000',
+            stream: 'stdout',
+            line: 'hello',
+            truncated: false,
+          },
+        ],
+        nextCursor: 'cursor-1',
+        hasMore: true,
+      },
+    } as never)
 
-    const events: AgentLogStreamEvent[] = []
-    await agentService.streamAgentLogs({
+    const result = await agentService.fetchAgentLogs({
       agentId: 1,
       container: 'lunafox-agent',
-      onEvent: (event) => events.push(event),
+      limit: 50,
+      cursor: 'cursor-0',
     })
 
-    expect(events.map((event) => event.type)).toEqual(['status', 'log', 'ping', 'done'])
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toContain('/api/admin/agents/1/logs/stream')
-    expect(url).toContain('container=lunafox-agent')
-    expect(url).toContain('tail=200')
-    expect(url).toContain('follow=true')
-    expect(url).toContain('timestamps=true')
-    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer test-token')
-  })
+    expect(result.logs).toHaveLength(1)
+    expect(result.nextCursor).toBe('cursor-1')
+    expect(result.hasMore).toBe(true)
 
-  it('遇到 done 事件后立刻结束读取', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(
-        createSSEStream([
-          'event: status\ndata: {"requestId":"req-2","status":"started"}\n\n',
-          'event: done\ndata: {"requestId":"req-2","reason":"eof"}\n\n',
-          'event: log\ndata: {"requestId":"req-2","ts":"2026-02-22T12:00:02Z","stream":"stdout","line":"should-not-appear","truncated":false}\n\n',
-        ]),
-        { status: 200, headers: { 'Content-Type': 'text/event-stream' } }
-      )
-    )
-    vi.stubGlobal('fetch', fetchMock)
-
-    const events: AgentLogStreamEvent[] = []
-    await agentService.streamAgentLogs({
-      agentId: 2,
-      container: 'lunafox-agent',
-      onEvent: (event) => events.push(event),
+    expect(api.get).toHaveBeenCalledTimes(1)
+    expect(api.get).toHaveBeenCalledWith('/admin/agents/1/logs', {
+      params: {
+        container: 'lunafox-agent',
+        limit: '50',
+        cursor: 'cursor-0',
+      },
+      signal: undefined,
     })
-
-    expect(events.map((event) => event.type)).toEqual(['status', 'done'])
   })
 
-  it('HTTP 错误响应会抛出带 code/status 的 AgentLogStreamError', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
+  it('HTTP 错误会抛出带 code/status 的 AgentLogQueryError（503）', async () => {
+    vi.mocked(api.get).mockRejectedValue({
+      response: {
+        status: 503,
+        data: {
           error: {
-            code: 'AGENT_OFFLINE',
-            message: 'Agent is offline',
+            code: 'loki_unavailable',
+            message: 'Loki is unavailable',
           },
-        }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      )
-    )
-    vi.stubGlobal('fetch', fetchMock)
+        },
+      },
+      message: 'Request failed with status code 503',
+    } as never)
 
     await expect(
-      agentService.streamAgentLogs({
-        agentId: 3,
+      agentService.fetchAgentLogs({
+        agentId: 1,
         container: 'lunafox-agent',
-        onEvent: () => {},
       })
     ).rejects.toMatchObject({
-      code: 'AGENT_OFFLINE',
-      status: 404,
-    } satisfies Partial<AgentLogStreamError>)
+      code: 'loki_unavailable',
+      status: 503,
+    } satisfies Partial<AgentLogQueryError>)
   })
 
-  it('当响应无 body 时抛出 STREAM_UNAVAILABLE', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }))
-    vi.stubGlobal('fetch', fetchMock)
+  it('HTTP 错误会抛出带 code/status 的 AgentLogQueryError（400）', async () => {
+    vi.mocked(api.get).mockRejectedValue({
+      response: {
+        status: 400,
+        data: {
+          error: {
+            code: 'bad_request',
+            message: 'direction is deprecated, please remove it',
+          },
+        },
+      },
+      message: 'Request failed with status code 400',
+    } as never)
 
     await expect(
-      agentService.streamAgentLogs({
-        agentId: 4,
+      agentService.fetchAgentLogs({
+        agentId: 1,
         container: 'lunafox-agent',
-        onEvent: () => {},
       })
     ).rejects.toMatchObject({
-      code: 'STREAM_UNAVAILABLE',
-    } satisfies Partial<AgentLogStreamError>)
+      code: 'bad_request',
+      status: 400,
+    } satisfies Partial<AgentLogQueryError>)
+  })
+
+  it('会过滤掉缺失 id 的非法日志项', async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: {
+        logs: [
+          {
+            ts: '2026-02-24T10:00:01Z',
+            tsNs: '1740381601000000000',
+            stream: 'stdout',
+            line: 'invalid-without-id',
+            truncated: false,
+          },
+        ],
+        nextCursor: '',
+        hasMore: false,
+      },
+    } as never)
+
+    const result = await agentService.fetchAgentLogs({
+      agentId: 1,
+      container: 'lunafox-agent',
+    })
+
+    expect(result.logs).toHaveLength(0)
+    expect(result.nextCursor).toBe('')
+    expect(result.hasMore).toBe(false)
   })
 })
-
-function createSSEStream(frames: string[]): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder()
-  return new ReadableStream<Uint8Array>({
-    start(controller) {
-      for (const frame of frames) {
-        controller.enqueue(encoder.encode(frame))
-      }
-      controller.close()
-    },
-  })
-}

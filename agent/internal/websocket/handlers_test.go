@@ -92,38 +92,3 @@ func TestHandlersUpdateRequiredMissingFields(t *testing.T) {
 		t.Fatalf("expected no callbacks for invalid payload")
 	}
 }
-
-func TestHandlersLogOpen(t *testing.T) {
-	h := NewHandler()
-	var (
-		requestID string
-		container string
-	)
-	h.OnLogOpen(func(payload protocol.LogOpenPayload) {
-		requestID = payload.RequestID
-		container = payload.Container
-	})
-
-	message := fmt.Sprintf(`{"type":"%s","payload":{"requestId":"req-1","container":"lunafox-agent","tail":200,"follow":true,"timestamps":true}}`, protocol.MessageTypeLogOpen)
-	h.Handle([]byte(message))
-	if requestID != "req-1" {
-		t.Fatalf("expected requestId req-1")
-	}
-	if container != "lunafox-agent" {
-		t.Fatalf("expected container lunafox-agent")
-	}
-}
-
-func TestHandlersLogCancel(t *testing.T) {
-	h := NewHandler()
-	var requestID string
-	h.OnLogCancel(func(payload protocol.LogCancelPayload) {
-		requestID = payload.RequestID
-	})
-
-	message := fmt.Sprintf(`{"type":"%s","payload":{"requestId":"req-2"}}`, protocol.MessageTypeLogCancel)
-	h.Handle([]byte(message))
-	if requestID != "req-2" {
-		t.Fatalf("expected requestId req-2")
-	}
-}

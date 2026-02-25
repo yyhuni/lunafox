@@ -16,6 +16,7 @@ func TestConfigDefaults(t *testing.T) {
 		"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSLMODE", "DB_TIMEZONE",
 		"DB_MAX_OPEN_CONNS", "DB_MAX_IDLE_CONNS", "DB_CONN_MAX_LIFETIME",
 		"REDIS_HOST", "REDIS_PORT", "REDIS_PASSWORD", "REDIS_DB",
+		"LOKI_URL",
 		"LOG_LEVEL", "LOG_FORMAT",
 		"PUBLIC_URL",
 	}
@@ -79,6 +80,9 @@ func TestConfigDefaults(t *testing.T) {
 	if cfg.Redis.DB != defaults.Redis.DB {
 		t.Errorf("Redis.DB: expected %d, got %d", defaults.Redis.DB, cfg.Redis.DB)
 	}
+	if cfg.LokiURL != defaults.LokiURL {
+		t.Errorf("LokiURL: expected %s, got %s", defaults.LokiURL, cfg.LokiURL)
+	}
 
 	// Test Log defaults
 	if cfg.Log.Level != defaults.Log.Level {
@@ -110,6 +114,9 @@ func TestConfigFromEnv(t *testing.T) {
 	if err := os.Setenv("LOG_LEVEL", "debug"); err != nil {
 		t.Fatalf("Failed to set LOG_LEVEL: %v", err)
 	}
+	if err := os.Setenv("LOKI_URL", "http://custom-loki:3100"); err != nil {
+		t.Fatalf("Failed to set LOKI_URL: %v", err)
+	}
 	if err := os.Setenv("PUBLIC_URL", "https://public.example"); err != nil {
 		t.Fatalf("Failed to set PUBLIC_URL: %v", err)
 	}
@@ -119,6 +126,7 @@ func TestConfigFromEnv(t *testing.T) {
 		_ = os.Unsetenv("DB_PORT")
 		_ = os.Unsetenv("DB_TIMEZONE")
 		_ = os.Unsetenv("LOG_LEVEL")
+		_ = os.Unsetenv("LOKI_URL")
 		_ = os.Unsetenv("PUBLIC_URL")
 	}()
 
@@ -141,6 +149,9 @@ func TestConfigFromEnv(t *testing.T) {
 	}
 	if cfg.Log.Level != "debug" {
 		t.Errorf("Log.Level: expected debug, got %s", cfg.Log.Level)
+	}
+	if cfg.LokiURL != "http://custom-loki:3100" {
+		t.Errorf("LokiURL: expected http://custom-loki:3100, got %s", cfg.LokiURL)
 	}
 	if cfg.PublicURL != "https://public.example" {
 		t.Errorf("PublicURL: expected https://public.example, got %s", cfg.PublicURL)

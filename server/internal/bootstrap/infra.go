@@ -15,6 +15,7 @@ import (
 	"github.com/yyhuni/lunafox/server/internal/cache"
 	"github.com/yyhuni/lunafox/server/internal/config"
 	"github.com/yyhuni/lunafox/server/internal/database"
+	"github.com/yyhuni/lunafox/server/internal/loki"
 	"github.com/yyhuni/lunafox/server/internal/pkg"
 	pkgvalidator "github.com/yyhuni/lunafox/server/internal/pkg/validator"
 	"github.com/yyhuni/lunafox/server/internal/preset"
@@ -26,6 +27,7 @@ import (
 type infra struct {
 	db                   *gorm.DB
 	redisClient          *redis.Client
+	lokiClient           *loki.Client
 	heartbeatCache       cache.HeartbeatCache
 	wsHub                *ws.Hub
 	jwtManager           *auth.JWTManager
@@ -35,6 +37,12 @@ type infra struct {
 	workerImageRef       string
 	sharedDataVolumeBind string
 }
+
+const (
+	lokiBootstrapReadyTimeout   = 60 * time.Second
+	lokiBootstrapAttemptTimeout = 3 * time.Second
+	lokiBootstrapRetryInterval  = 2 * time.Second
+)
 
 func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 	// Runtime update contract:
@@ -109,6 +117,11 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 		heartbeatCache = cache.NewHeartbeatCache(redisClient)
 	}
 
+	lokiClient := loki.NewClient(cfg.LokiURL)
+	if err := waitForLokiReady(lokiClient.CheckReady, lokiBootstrapReadyTimeout, lokiBootstrapAttemptTimeout, lokiBootstrapRetryInterval); err != nil {
+		pkg.Fatal("Loki is unavailable during bootstrap", zap.String("loki_url", cfg.LokiURL), zap.Error(err))
+	}
+
 	wsHub := ws.NewHub()
 	go wsHub.Run()
 
@@ -124,6 +137,7 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 	return &infra{
 		db:                   db,
 		redisClient:          redisClient,
+		lokiClient:           lokiClient,
 		heartbeatCache:       heartbeatCache,
 		wsHub:                wsHub,
 		jwtManager:           jwtManager,
@@ -144,6 +158,68 @@ func resolveAgentImageRef() (string, error) {
 		return "", fmt.Errorf("AGENT_IMAGE_REF must include tag or digest")
 	}
 	return imageRef, nil
+}
+
+type lokiReadyCheckFunc func(ctx context.Context) error
+
+func waitForLokiReady(check lokiReadyCheckFunc, totalTimeout, attemptTimeout, retryInterval time.Duration) error {
+	if check == nil {
+		return fmt.Errorf("loki readiness check is nil")
+	}
+	if totalTimeout <= 0 {
+		totalTimeout = lokiBootstrapReadyTimeout
+	}
+	if attemptTimeout <= 0 || attemptTimeout > totalTimeout {
+		attemptTimeout = totalTimeout
+	}
+	if retryInterval <= 0 {
+		retryInterval = lokiBootstrapRetryInterval
+	}
+
+	deadlineCtx, cancel := context.WithTimeout(context.Background(), totalTimeout)
+	defer cancel()
+
+	var (
+		lastErr error
+		attempt int
+	)
+
+	for {
+		attempt++
+		attemptCtx, attemptCancel := context.WithTimeout(deadlineCtx, attemptTimeout)
+		err := check(attemptCtx)
+		attemptCancel()
+		if err == nil {
+			if attempt > 1 {
+				pkg.Info("Loki readiness confirmed after retries", zap.Int("attempts", attempt))
+			}
+			return nil
+		}
+		lastErr = err
+		if deadlineCtx.Err() != nil {
+			break
+		}
+
+		pkg.Warn(
+			"Loki not ready yet, retrying bootstrap probe",
+			zap.Int("attempt", attempt),
+			zap.Duration("retry_in", retryInterval),
+			zap.Error(err),
+		)
+
+		select {
+		case <-deadlineCtx.Done():
+		case <-time.After(retryInterval):
+		}
+		if deadlineCtx.Err() != nil {
+			break
+		}
+	}
+
+	if lastErr == nil {
+		lastErr = deadlineCtx.Err()
+	}
+	return fmt.Errorf("loki readiness probe timed out after %s: %w", totalTimeout, lastErr)
 }
 
 func resolveWorkerImageRef() (string, error) {

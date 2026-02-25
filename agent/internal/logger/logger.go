@@ -13,6 +13,16 @@ var Log = zap.NewNop()
 
 // Init configures the logger using the provided level and ENV.
 func Init(level string) error {
+	logger, err := buildLogger(level, os.Getenv("ENV"), zapcore.Lock(os.Stdout), zapcore.Lock(os.Stderr))
+	if err != nil {
+		Log = zap.NewNop()
+		return err
+	}
+	Log = logger
+	return nil
+}
+
+func buildLogger(level, env string, stdout, stderr zapcore.WriteSyncer) (*zap.Logger, error) {
 	level = strings.TrimSpace(level)
 	if level == "" {
 		level = "info"
@@ -23,23 +33,37 @@ func Init(level string) error {
 		zapLevel = zapcore.InfoLevel
 	}
 
-	isDev := strings.EqualFold(os.Getenv("ENV"), "development")
-	var config zap.Config
-	if isDev {
-		config = zap.NewDevelopmentConfig()
-		config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
-	} else {
-		config = zap.NewProductionConfig()
-	}
-	config.Level = zap.NewAtomicLevelAt(zapLevel)
+	isDev := strings.EqualFold(env, "development")
+	stdoutLevel := zap.LevelEnablerFunc(func(entryLevel zapcore.Level) bool {
+		return entryLevel >= zapLevel && entryLevel < zapcore.WarnLevel
+	})
+	stderrLevel := zap.LevelEnablerFunc(func(entryLevel zapcore.Level) bool {
+		return entryLevel >= zapLevel && entryLevel >= zapcore.WarnLevel
+	})
 
-	logger, err := config.Build()
-	if err != nil {
-		Log = zap.NewNop()
-		return err
+	core := zapcore.NewTee(
+		zapcore.NewCore(newEncoder(isDev), stdout, stdoutLevel),
+		zapcore.NewCore(newEncoder(isDev), stderr, stderrLevel),
+	)
+
+	options := []zap.Option{
+		zap.AddCaller(),
+		zap.AddStacktrace(zapcore.ErrorLevel),
 	}
-	Log = logger
-	return nil
+	if isDev {
+		options = append(options, zap.Development())
+	}
+
+	return zap.New(core, options...), nil
+}
+
+func newEncoder(isDev bool) zapcore.Encoder {
+	if isDev {
+		config := zap.NewDevelopmentEncoderConfig()
+		config.EncodeLevel = zapcore.CapitalColorLevelEncoder
+		return zapcore.NewConsoleEncoder(config)
+	}
+	return zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
 }
 
 // Sync flushes any buffered log entries.

@@ -12,8 +12,6 @@ type Handler struct {
 	onTaskCancel    func(int)
 	onConfigUpdate  func(protocol.ConfigUpdatePayload)
 	onUpdateReq     func(protocol.UpdateRequiredPayload)
-	onLogOpen       func(protocol.LogOpenPayload)
-	onLogCancel     func(protocol.LogCancelPayload)
 }
 
 // NewHandler creates a message handler.
@@ -39,16 +37,6 @@ func (h *Handler) OnConfigUpdate(fn func(protocol.ConfigUpdatePayload)) {
 // OnUpdateRequired registers a callback for update_required messages.
 func (h *Handler) OnUpdateRequired(fn func(protocol.UpdateRequiredPayload)) {
 	h.onUpdateReq = fn
-}
-
-// OnLogOpen registers a callback for log_open messages.
-func (h *Handler) OnLogOpen(fn func(protocol.LogOpenPayload)) {
-	h.onLogOpen = fn
-}
-
-// OnLogCancel registers a callback for log_cancel messages.
-func (h *Handler) OnLogCancel(fn func(protocol.LogCancelPayload)) {
-	h.onLogCancel = fn
 }
 
 // Handle processes a raw message.
@@ -98,29 +86,5 @@ func (h *Handler) Handle(raw []byte) {
 			return
 		}
 		h.onUpdateReq(payload)
-	case protocol.MessageTypeLogOpen:
-		if h.onLogOpen == nil {
-			return
-		}
-		var payload protocol.LogOpenPayload
-		if err := json.Unmarshal(msg.Data, &payload); err != nil {
-			return
-		}
-		if payload.RequestID == "" || payload.Container == "" {
-			return
-		}
-		h.onLogOpen(payload)
-	case protocol.MessageTypeLogCancel:
-		if h.onLogCancel == nil {
-			return
-		}
-		var payload protocol.LogCancelPayload
-		if err := json.Unmarshal(msg.Data, &payload); err != nil {
-			return
-		}
-		if payload.RequestID == "" {
-			return
-		}
-		h.onLogCancel(payload)
 	}
 }

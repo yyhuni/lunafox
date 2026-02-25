@@ -30,6 +30,19 @@ services:
       timeout: 5s
       retries: 5
 
+  loki:
+    image: grafana/loki:3.6.6
+    restart: "on-failure:3"
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki_data:/loki
+    healthcheck:
+      test: ["CMD", "/usr/bin/loki", "-verify-config=true", "-config.file=/etc/loki/loki-config.yaml"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   server:
     image: golang:1.26
     restart: "on-failure:3"
@@ -38,6 +51,7 @@ services:
     environment:
       - IMAGE_TAG=${IMAGE_TAG:-dev}
       - PUBLIC_URL=${PUBLIC_URL:-}
+      - LOKI_URL=${LOKI_URL:-http://loki:3100}
       - GOMODCACHE=/go/pkg/mod
       - GOCACHE=/root/.cache/go-build
       - GO111MODULE=${GO111MODULE:-on}
@@ -50,6 +64,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      loki:
         condition: service_healthy
     volumes:
       - lunafox_data:/opt/lunafox
@@ -118,6 +134,7 @@ volumes:
   go-build-cache:
   frontend_node_modules:
   frontend_pnpm_store:
+  loki_data:
 
 networks:
   default:

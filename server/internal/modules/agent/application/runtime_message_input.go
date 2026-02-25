@@ -3,21 +3,13 @@ package application
 import "time"
 
 const (
-	RuntimeMessageTypeHeartbeat  = "heartbeat"
-	RuntimeMessageTypeLogStarted = "log_started"
-	RuntimeMessageTypeLogChunk   = "log_chunk"
-	RuntimeMessageTypeLogEnd     = "log_end"
-	RuntimeMessageTypeLogError   = "log_error"
+	RuntimeMessageTypeHeartbeat = "heartbeat"
 )
 
 // RuntimeMessageInput is the application-level input for agent runtime messages.
 type RuntimeMessageInput struct {
-	Type       string
-	Heartbeat  *HeartbeatItem
-	LogStarted *LogStartedItem
-	LogChunk   *LogChunkItem
-	LogEnd     *LogEndItem
-	LogError   *LogErrorItem
+	Type      string
+	Heartbeat *HeartbeatItem
 }
 
 // HeartbeatItem carries heartbeat metrics used by runtime processing.
@@ -37,27 +29,4 @@ type HeartbeatHealthItem struct {
 	Reason  string
 	Message string
 	Since   *time.Time
-}
-
-type LogStartedItem struct {
-	RequestID string
-}
-
-type LogChunkItem struct {
-	RequestID string
-	TS        time.Time
-	Stream    string
-	Line      string
-	Truncated bool
-}
-
-type LogEndItem struct {
-	RequestID string
-	Reason    string
-}
-
-type LogErrorItem struct {
-	RequestID string
-	Code      string
-	Message   string
 }

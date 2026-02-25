@@ -64,7 +64,7 @@ type deps struct {
 	agentHandler     *agenthandler.AgentHandler
 	agentWSHandler   *agenthandler.AgentWebSocketHandler
 	agentTaskHandler *agenthandler.AgentTaskHandler
-	agentLogHandler  *agenthandler.AgentLogStreamHandler
+	agentLogHandler  *agenthandler.AgentLogHandler
 
 	websiteSnapshotHandler       *snapshothandler.WebsiteSnapshotHandler
 	subdomainSnapshotHandler     *snapshothandler.SubdomainSnapshotHandler
@@ -155,7 +155,7 @@ type agentModuleHandlers struct {
 	agentHandler     *agenthandler.AgentHandler
 	agentWSHandler   *agenthandler.AgentWebSocketHandler
 	agentTaskHandler *agenthandler.AgentTaskHandler
-	agentLogHandler  *agenthandler.AgentLogStreamHandler
+	agentLogHandler  *agenthandler.AgentLogHandler
 }
 
 type snapshotModuleHandlers struct {
@@ -389,9 +389,8 @@ func wireAgentModule(
 		infra.serverVersion,
 		infra.agentImageRef,
 	)
-	logStreamSvc := agentservice.NewLogStreamService(ws.NewAgentMessagePublisher(infra.wsHub), agentClock)
-	agentRuntimeSvc.BindLogStreamService(logStreamSvc)
 	agentTaskSvc := agentservice.NewAgentTaskService(scanTaskRuntime)
+	lokiLogQuerySvc := agentservice.NewLokiLogQueryService(infra.lokiClient, cfg.JWT.Secret)
 
 	return agentModuleHandlers{
 		agentHandler: agenthandler.NewAgentHandler(
@@ -407,7 +406,7 @@ func wireAgentModule(
 		),
 		agentWSHandler:   agenthandler.NewAgentWebSocketHandler(infra.wsHub, agentRuntimeSvc),
 		agentTaskHandler: agenthandler.NewAgentTaskHandler(agentTaskSvc),
-		agentLogHandler:  agenthandler.NewAgentLogStreamHandler(repos.agentRepo, logStreamSvc),
+		agentLogHandler:  agenthandler.NewAgentLogHandler(repos.agentRepo, lokiLogQuerySvc),
 	}
 }
 

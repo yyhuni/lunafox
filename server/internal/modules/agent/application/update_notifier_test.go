@@ -21,12 +21,6 @@ func (publisher *notifierPublisherStub) SendUpdateRequired(_ int, payload agentp
 }
 
 func (publisher *notifierPublisherStub) SendTaskCancel(int, int) {}
-func (publisher *notifierPublisherStub) SendLogOpen(int, agentproto.LogOpenPayload) bool {
-	return true
-}
-func (publisher *notifierPublisherStub) SendLogCancel(int, agentproto.LogCancelPayload) bool {
-	return true
-}
 
 func TestUpdateNotifierDedupAndReset(t *testing.T) {
 	publisher := &notifierPublisherStub{sendSuccess: true}

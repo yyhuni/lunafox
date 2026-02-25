@@ -27,6 +27,7 @@ type installTemplateData struct {
 	Token                string
 	RegisterURL          string
 	AgentServerURL       string
+	LokiPushURL          string
 	AgentImageRef        string
 	WorkerImageRef       string
 	SharedDataVolumeBind string

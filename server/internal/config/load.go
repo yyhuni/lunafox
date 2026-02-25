@@ -63,6 +63,7 @@ func configFromViper(v *viper.Viper) *Config {
 			Password: v.GetString("REDIS_PASSWORD"),
 			DB:       v.GetInt("REDIS_DB"),
 		},
+		LokiURL: v.GetString("LOKI_URL"),
 		Log: LogConfig{
 			Level:  v.GetString("LOG_LEVEL"),
 			Format: v.GetString("LOG_FORMAT"),

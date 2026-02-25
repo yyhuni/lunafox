@@ -14,7 +14,7 @@ func RegisterAgentRoutes(
 	agentHandler *agenthandler.AgentHandler,
 	agentWSHandler *agenthandler.AgentWebSocketHandler,
 	agentTaskHandler *agenthandler.AgentTaskHandler,
-	agentLogHandler *agenthandler.AgentLogStreamHandler,
+	agentLogHandler *agenthandler.AgentLogHandler,
 	agentRepo agentdomain.AgentRepository,
 ) {
 	runtime := api.Group("/agent")
@@ -36,6 +36,6 @@ func RegisterAgentRoutes(
 		admin.GET("/:id", agentHandler.GetAgent)
 		admin.DELETE("/:id", agentHandler.DeleteAgent)
 		admin.PATCH("/:id/config", agentHandler.UpdateAgentConfig)
-		admin.GET("/:id/logs/stream", agentLogHandler.Stream)
+		admin.GET("/:id/logs", agentLogHandler.List)
 	}
 }

@@ -94,6 +94,11 @@ func (h *AgentHandler) InstallScript(c *gin.Context) {
 		dto.InternalError(c, err.Error())
 		return
 	}
+	lokiPushURL, err := buildLokiPushURL(publicURL)
+	if err != nil {
+		dto.InternalError(c, err.Error())
+		return
+	}
 	agentServerURL := publicURL
 	if mode == installScriptModeLocal {
 		agentServerURL = h.agentInternalURL
@@ -127,6 +132,7 @@ func (h *AgentHandler) InstallScript(c *gin.Context) {
 		Token:                token,
 		RegisterURL:          publicURL,
 		AgentServerURL:       agentServerURL,
+		LokiPushURL:          lokiPushURL,
 		AgentImageRef:        agentImageRef,
 		WorkerImageRef:       workerImageRef,
 		SharedDataVolumeBind: sharedDataVolumeBind,
@@ -177,4 +183,22 @@ func validateInstallScriptPublicURL(raw string) (string, error) {
 		return "", fmt.Errorf("PUBLIC_URL host is required")
 	}
 	return strings.TrimRight(trimmed, "/"), nil
+}
+
+func buildLokiPushURL(publicURL string) (string, error) {
+	trimmed := strings.TrimSpace(publicURL)
+	if trimmed == "" {
+		return "", fmt.Errorf("PUBLIC_URL is required for loki push url generation")
+	}
+	parsed, err := url.Parse(trimmed)
+	if err != nil {
+		return "", fmt.Errorf("PUBLIC_URL is invalid: %w", err)
+	}
+	if parsed.Scheme != "https" {
+		return "", fmt.Errorf("PUBLIC_URL must use https scheme")
+	}
+	if parsed.Host == "" {
+		return "", fmt.Errorf("PUBLIC_URL host is required")
+	}
+	return strings.TrimRight(trimmed, "/") + "/loki/api/v1/push", nil
 }
