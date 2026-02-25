@@ -183,7 +183,15 @@ export function AgentList() {
         <div className="mt-8 relative z-10 flex items-center gap-2 border-t border-border/60 pt-4 max-w-full overflow-hidden">
           <span className="text-[10px] font-bold text-muted-foreground shrink-0">STATUS</span>
           <div className="flex-1 h-2 flex gap-[2px]">
-            {hasAgents ? agents.map((agent) => {
+            {hasAgents ? [...agents].sort((a, b) => {
+              const priority = (agent: typeof a) => {
+                const isOnline = agent.status === "online"
+                if (!isOnline) return 2 // red
+                const isHealthy = agent.health?.state?.toLowerCase() === "ok" || !agent.health?.state
+                return isHealthy ? 0 : 1 // green : amber
+              }
+              return priority(a) - priority(b)
+            }).map((agent) => {
               const isHealthy = agent.health?.state?.toLowerCase() === "ok" || !agent.health?.state
               const isOnline = agent.status === "online"
               return (
