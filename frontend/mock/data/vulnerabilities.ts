@@ -234,27 +234,42 @@ export const mockVulnerabilities: Vulnerability[] = [
   },
 ]
 
-export function getMockVulnerabilities(params?: {
+export interface GetMockVulnerabilitiesParams {
   page?: number
   pageSize?: number
   targetId?: number
   severity?: VulnerabilitySeverity
   search?: string
-}): GetVulnerabilitiesResponse {
+  filter?: string
+  isReviewed?: boolean
+}
+
+export interface VulnerabilityMockStats {
+  total: number
+  pendingCount: number
+  reviewedCount: number
+}
+
+export function getMockVulnerabilities(params?: GetMockVulnerabilitiesParams): GetVulnerabilitiesResponse {
   const page = params?.page || 1
   const pageSize = params?.pageSize || 10
   const targetId = params?.targetId
   const severity = params?.severity
-  const search = params?.search?.toLowerCase() || ''
+  const search = (params?.filter ?? params?.search ?? '').toLowerCase()
+  const isReviewed = params?.isReviewed
 
   let filtered = mockVulnerabilities
 
-  if (targetId) {
+  if (typeof targetId === 'number') {
     filtered = filtered.filter(v => v.target === targetId)
   }
 
   if (severity) {
     filtered = filtered.filter(v => v.severity === severity)
+  }
+
+  if (typeof isReviewed === 'boolean') {
+    filtered = filtered.filter(v => v.isReviewed === isReviewed)
   }
 
   if (search) {
@@ -277,6 +292,21 @@ export function getMockVulnerabilities(params?: {
     page,
     pageSize,
     totalPages,
+  }
+}
+
+export function getMockVulnerabilityStats(targetId?: number): VulnerabilityMockStats {
+  const scoped = typeof targetId === 'number'
+    ? mockVulnerabilities.filter((item) => item.target === targetId)
+    : mockVulnerabilities
+  const total = scoped.length
+  const reviewedCount = scoped.filter((item) => item.isReviewed).length
+  const pendingCount = total - reviewedCount
+
+  return {
+    total,
+    pendingCount,
+    reviewedCount,
   }
 }
 

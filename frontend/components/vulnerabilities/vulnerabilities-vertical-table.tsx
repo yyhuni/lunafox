@@ -97,7 +97,7 @@ export function VulnerabilitiesVerticalTable({
   return (
     <div className="flex-1 overflow-auto bg-background relative" role="grid" aria-label="Vulnerability List">
       <Table>
-        <TableHeader className="sticky top-0 bg-muted/40/80 backdrop-blur-sm z-10 box-border shadow-sm">
+        <TableHeader className="sticky top-0 bg-muted/40/80 backdrop-blur-sm z-10 box-border shadow-none">
           <TableRow className="hover:bg-transparent border-b-border/60">
             <TableHead className="w-12 text-center h-9">
               <Checkbox

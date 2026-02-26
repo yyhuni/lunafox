@@ -51,6 +51,7 @@ export {
 export {
   mockVulnerabilities,
   getMockVulnerabilities,
+  getMockVulnerabilityStats,
   getMockVulnerabilityById,
 } from './data/vulnerabilities'
 

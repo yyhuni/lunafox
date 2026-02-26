@@ -2,7 +2,6 @@
 
 ## Structure
 - Public entry: `routes.go` (`RegisterScanRoutes`)
-- Worker entry: `worker_routes.go` (`RegisterWorkerScanRoutes`)
 - Other files contain package-private sub-route registrars
 
 ## Files
@@ -20,8 +19,6 @@
 - `POST /api/scans/deletions`
 - `GET /api/scans/:id/logs`
 - `POST /api/scans/:id/logs`
-- `GET /api/worker/scans/:id/target`
 
 ## Constraints
 - Register business routes through `RegisterScanRoutes`
-- Keep worker routes in a dedicated entry to avoid mixing with business auth groups

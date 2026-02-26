@@ -30,9 +30,5 @@ Target-scoped upsert routes in `asset/router` are delegated to snapshot handlers
 - `/api/targets/:id/host-ports/bulk-upsert` -> `HostPortSnapshotHandler.BulkUpsert`
 - `/api/targets/:id/screenshots/bulk-upsert` -> `ScreenshotSnapshotHandler.BulkUpsert`
 
-## Worker write entry points (same snapshot handlers)
-- `POST /api/worker/scans/:id/subdomains/bulk-upsert`
-- `POST /api/worker/scans/:id/websites/bulk-upsert`
-- `POST /api/worker/scans/:id/endpoints/bulk-upsert`
-
-These worker routes reuse the same snapshot handlers as scan snapshot routes to keep write semantics consistent.
+## Runtime notes
+Worker runtime writes no longer enter via HTTP `/api/worker/*` routes. Runtime batch upserts are handled by the gRPC runtime data proxy and reuse the same snapshot application services.
