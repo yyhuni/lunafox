@@ -112,7 +112,7 @@
 - 是否需要每个 scan 的并发上限（超出 agent 能力以外）？
 
 ## 旧项目参考
-旧项目定义了带“阶段模式”（串行/并行）的执行阶段，并列出每阶段的 flow。见：
+旧项目定义了带“阶段模式”（串行/并行）的执行阶段，并列出每阶段的 flow。历史参考可在 tag `archive-old-before-removal-20260226` 中查看：
 
 - `old/docs/scan-flow-architecture.md`
 
