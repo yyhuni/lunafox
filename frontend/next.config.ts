@@ -44,14 +44,6 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  webpack: (config, { dev }) => {
-    // Dev cache occasionally gets corrupted under heavy concurrent route smoke tests,
-    // which causes random JSON.parse failures and transient HTTP 500 pages.
-    if (dev) {
-      config.cache = false;
-    }
-    return config;
-  },
 
   async rewrites() {
     // Skip rewrites on Vercel when using mock data

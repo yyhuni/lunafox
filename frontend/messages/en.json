@@ -2199,6 +2199,12 @@
     },
     "detail": {
       "vulnUrl": "Vulnerability URL",
+      "target": "Target",
+      "details": "Details",
+      "discovered": "Discovered",
+      "cvssScore": "CVSS Base Score",
+      "noRawEvidence": "No raw evidence available for this finding.",
+      "reproduceHint": "Run this command in your terminal to reproduce the finding. Ensure you have the proper authorization context if required.",
       "tabs": {
         "overview": "Overview",
         "requestResponse": "Request/Response",
@@ -2228,6 +2234,7 @@
         "httpResponse": "HTTP Response"
       }
     },
+    "emptyDetail": "Select a vulnerability to view details.",
     "severity": {
       "critical": "Critical",
       "high": "High",

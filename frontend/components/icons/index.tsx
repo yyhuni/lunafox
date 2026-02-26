@@ -197,5 +197,6 @@ export { Upload as IconUpload } from "@carbon/icons-react"
 export { User as IconUser } from "@carbon/icons-react"
 
 // Additional icons used in specific components
+export { Globe as IconGlobe } from "@carbon/icons-react"
 export { Menu as IconMenu } from "@carbon/icons-react"
 export { ApplicationWeb as IconBrowser } from "@carbon/icons-react"

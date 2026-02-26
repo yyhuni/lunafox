@@ -2213,6 +2213,12 @@
     },
     "detail": {
       "vulnUrl": "漏洞 URL",
+      "target": "目标",
+      "details": "详情",
+      "discovered": "发现时间",
+      "cvssScore": "CVSS 基础分",
+      "noRawEvidence": "暂无原始证据数据",
+      "reproduceHint": "在终端运行以下命令以复现此漏洞，请确保拥有正确的授权上下文。",
       "tabs": {
         "overview": "概览",
         "requestResponse": "请求/响应",
@@ -2242,6 +2248,7 @@
         "httpResponse": "HTTP 响应"
       }
     },
+    "emptyDetail": "选择一个漏洞以查看详情",
     "severity": {
       "critical": "严重",
       "high": "高危",
