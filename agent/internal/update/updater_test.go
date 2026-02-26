@@ -82,3 +82,20 @@ func TestResolveSharedDataBind(t *testing.T) {
 		t.Fatalf("expected host path bind mount error")
 	}
 }
+
+func TestResolveRuntimeVolumeName(t *testing.T) {
+	t.Setenv(runtimeVolumeNameEnvKey, "")
+	if got, err := resolveRuntimeVolumeName(); err != nil || got != "lunafox_runtime" {
+		t.Fatalf("expected default runtime volume name, got=%q err=%v", got, err)
+	}
+
+	t.Setenv(runtimeVolumeNameEnvKey, "custom_runtime")
+	if got, err := resolveRuntimeVolumeName(); err != nil || got != "custom_runtime" {
+		t.Fatalf("expected custom runtime volume name, got=%q err=%v", got, err)
+	}
+
+	t.Setenv(runtimeVolumeNameEnvKey, "/host/path")
+	if _, err := resolveRuntimeVolumeName(); err == nil {
+		t.Fatalf("expected invalid runtime volume name error")
+	}
+}

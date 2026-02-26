@@ -14,18 +14,18 @@ type fakeReporter struct {
 }
 
 type fakeDockerRunner struct {
-	startWorkerFn func(ctx context.Context, t *domain.Task, serverURL, serverToken string) (string, error)
+	startWorkerFn func(ctx context.Context, t *domain.Task, agentSocket, taskToken string) (string, error)
 	waitFn        func(ctx context.Context, containerID string) (int64, error)
 	stopFn        func(ctx context.Context, containerID string) error
 	removeFn      func(ctx context.Context, containerID string) error
 	tailLogsFn    func(ctx context.Context, containerID string, lines int) (string, error)
 }
 
-func (fake *fakeDockerRunner) StartWorker(ctx context.Context, t *domain.Task, serverURL, serverToken string) (string, error) {
+func (fake *fakeDockerRunner) StartWorker(ctx context.Context, t *domain.Task, agentSocket, taskToken string) (string, error) {
 	if fake.startWorkerFn == nil {
 		return "container-1", nil
 	}
-	return fake.startWorkerFn(ctx, t, serverURL, serverToken)
+	return fake.startWorkerFn(ctx, t, agentSocket, taskToken)
 }
 
 func (fake *fakeDockerRunner) Wait(ctx context.Context, containerID string) (int64, error) {
@@ -62,12 +62,10 @@ func (f *fakeReporter) UpdateStatus(ctx context.Context, taskID int, status, err
 	return nil
 }
 
-func TestExecutorMissingWorkerToken(t *testing.T) {
+func TestExecutorMissingWorkerRuntimeSocket(t *testing.T) {
 	reporter := &fakeReporter{}
 	exec := &Executor{
-		client:      reporter,
-		serverURL:   "https://server",
-		workerToken: "",
+		client: reporter,
 	}
 
 	exec.execute(context.Background(), &domain.Task{ID: 1})
@@ -83,8 +81,7 @@ func TestExecutorDockerUnavailable(t *testing.T) {
 	reporter := &fakeReporter{}
 	exec := &Executor{
 		client:      reporter,
-		serverURL:   "https://server",
-		workerToken: "token",
+		agentSocket: "/run/lunafox/worker-runtime.sock",
 	}
 
 	exec.execute(context.Background(), &domain.Task{ID: 2})
@@ -153,7 +150,7 @@ func TestExecutorShutdownPreventsLateStartAfterDrainRace(t *testing.T) {
 	started := make(chan int, 1)
 
 	fakeDocker := &fakeDockerRunner{
-		startWorkerFn: func(ctx context.Context, t *domain.Task, serverURL, serverToken string) (string, error) {
+		startWorkerFn: func(ctx context.Context, t *domain.Task, agentSocket, taskToken string) (string, error) {
 			started <- t.ID
 			return "container-1", nil
 		},
@@ -162,7 +159,7 @@ func TestExecutorShutdownPreventsLateStartAfterDrainRace(t *testing.T) {
 		},
 	}
 
-	exec := NewExecutor(fakeDocker, nil, nil, "https://server", "token")
+	exec := NewExecutor(fakeDocker, nil, nil, "/run/lunafox/worker-runtime.sock")
 	runCtx, runCancel := context.WithCancel(context.Background())
 	defer runCancel()
 
@@ -223,7 +220,7 @@ func TestExecutorFailurePathUsesTimeoutContexts(t *testing.T) {
 	removeHasDeadline := false
 
 	fakeDocker := &fakeDockerRunner{
-		startWorkerFn: func(ctx context.Context, t *domain.Task, serverURL, serverToken string) (string, error) {
+		startWorkerFn: func(ctx context.Context, t *domain.Task, agentSocket, taskToken string) (string, error) {
 			return "container-1", nil
 		},
 		waitFn: func(ctx context.Context, containerID string) (int64, error) {
@@ -239,7 +236,7 @@ func TestExecutorFailurePathUsesTimeoutContexts(t *testing.T) {
 		},
 	}
 
-	exec := NewExecutor(fakeDocker, reporter, nil, "https://server", "token")
+	exec := NewExecutor(fakeDocker, reporter, nil, "/run/lunafox/worker-runtime.sock")
 	exec.execute(context.Background(), &domain.Task{ID: 10, ScanID: 20})
 
 	if reporter.status != "failed" {
@@ -264,7 +261,7 @@ func TestExecutorHandleTimeoutUsesDeadlineOnStop(t *testing.T) {
 		},
 	}
 
-	exec := NewExecutor(fakeDocker, reporter, nil, "https://server", "token")
+	exec := NewExecutor(fakeDocker, reporter, nil, "/run/lunafox/worker-runtime.sock")
 	exec.handleTimeout(context.Background(), &domain.Task{ID: 1, ScanID: 2}, "container-1")
 
 	if !stopHasDeadline {
@@ -272,5 +269,35 @@ func TestExecutorHandleTimeoutUsesDeadlineOnStop(t *testing.T) {
 	}
 	if reporter.status != "failed" {
 		t.Fatalf("expected failed status, got %s", reporter.status)
+	}
+}
+
+func TestExecutorInjectsWorkerRuntimeSocketAndTaskToken(t *testing.T) {
+	reporter := &fakeReporter{}
+	var (
+		gotAgentSocket string
+		gotTaskToken   string
+	)
+
+	fakeDocker := &fakeDockerRunner{
+		startWorkerFn: func(ctx context.Context, t *domain.Task, agentSocket, taskToken string) (string, error) {
+			gotAgentSocket = agentSocket
+			gotTaskToken = taskToken
+			return "container-1", nil
+		},
+		waitFn: func(ctx context.Context, containerID string) (int64, error) {
+			return 0, nil
+		},
+	}
+
+	socketPath := "/run/lunafox/worker-runtime.sock"
+	exec := NewExecutor(fakeDocker, reporter, nil, socketPath)
+	exec.execute(context.Background(), &domain.Task{ID: 9, ScanID: 10})
+
+	if gotAgentSocket != socketPath {
+		t.Fatalf("expected injected agent socket %q, got %q", socketPath, gotAgentSocket)
+	}
+	if gotTaskToken == "" {
+		t.Fatalf("expected non-empty task token")
 	}
 }

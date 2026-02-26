@@ -39,10 +39,9 @@ func TestBuildWorkerEnv(t *testing.T) {
 		Config:       "config-yaml",
 	}
 
-	env := buildWorkerEnv(spec, "https://server", "token")
+	env := buildWorkerEnv(spec, "/run/lunafox/worker-runtime.sock", "task-token")
 	expected := []string{
-		"SERVER_URL=https://server",
-		"SERVER_TOKEN=token",
+		"TASK_ID=0",
 		"SCAN_ID=1",
 		"TARGET_ID=2",
 		"TARGET_NAME=example.com",
@@ -50,6 +49,8 @@ func TestBuildWorkerEnv(t *testing.T) {
 		"WORKFLOW_NAME=subdomain_discovery",
 		"WORKSPACE_DIR=/opt/lunafox/results",
 		"CONFIG=config-yaml",
+		"AGENT_SOCKET=/run/lunafox/worker-runtime.sock",
+		"TASK_TOKEN=task-token",
 	}
 
 	if len(env) != len(expected) {
@@ -99,6 +100,37 @@ func TestResolveSharedDataBind(t *testing.T) {
 		t.Setenv(sharedDataVolumeBindEnvKey, "/data/lunafox:/opt/lunafox")
 		if _, err := resolveSharedDataVolumeBind(); err == nil {
 			t.Fatalf("expected host path bind mount to fail")
+		}
+	})
+}
+
+func TestResolveRuntimeVolumeBind(t *testing.T) {
+	t.Run("default volume", func(t *testing.T) {
+		t.Setenv(runtimeVolumeNameEnvKey, "")
+		got, err := resolveRuntimeVolumeBind()
+		if err != nil {
+			t.Fatalf("resolve runtime volume bind: %v", err)
+		}
+		if got != "lunafox_runtime:/run/lunafox:ro" {
+			t.Fatalf("unexpected default runtime bind: %s", got)
+		}
+	})
+
+	t.Run("custom volume", func(t *testing.T) {
+		t.Setenv(runtimeVolumeNameEnvKey, "custom_runtime")
+		got, err := resolveRuntimeVolumeBind()
+		if err != nil {
+			t.Fatalf("resolve runtime volume bind: %v", err)
+		}
+		if got != "custom_runtime:/run/lunafox:ro" {
+			t.Fatalf("unexpected custom runtime bind: %s", got)
+		}
+	})
+
+	t.Run("invalid runtime volume", func(t *testing.T) {
+		t.Setenv(runtimeVolumeNameEnvKey, "/host/path")
+		if _, err := resolveRuntimeVolumeBind(); err == nil {
+			t.Fatalf("expected invalid runtime volume to fail")
 		}
 	})
 }

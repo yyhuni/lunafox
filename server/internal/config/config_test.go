@@ -12,7 +12,7 @@ import (
 func TestConfigDefaults(t *testing.T) {
 	// Clear all relevant environment variables
 	envVars := []string{
-		"SERVER_PORT", "GIN_MODE",
+		"SERVER_PORT", "SERVER_GRPC_PORT", "GIN_MODE",
 		"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSLMODE", "DB_TIMEZONE",
 		"DB_MAX_OPEN_CONNS", "DB_MAX_IDLE_CONNS", "DB_CONN_MAX_LIFETIME",
 		"REDIS_HOST", "REDIS_PORT", "REDIS_PASSWORD", "REDIS_DB",
@@ -36,6 +36,9 @@ func TestConfigDefaults(t *testing.T) {
 	// Test Server defaults
 	if cfg.Server.Port != defaults.Server.Port {
 		t.Errorf("Server.Port: expected %d, got %d", defaults.Server.Port, cfg.Server.Port)
+	}
+	if cfg.Server.GRPCPort != defaults.Server.GRPCPort {
+		t.Errorf("Server.GRPCPort: expected %d, got %d", defaults.Server.GRPCPort, cfg.Server.GRPCPort)
 	}
 	if cfg.Server.Mode != defaults.Server.Mode {
 		t.Errorf("Server.Mode: expected %s, got %s", defaults.Server.Mode, cfg.Server.Mode)
@@ -102,6 +105,9 @@ func TestConfigFromEnv(t *testing.T) {
 	if err := os.Setenv("SERVER_PORT", "9999"); err != nil {
 		t.Fatalf("Failed to set SERVER_PORT: %v", err)
 	}
+	if err := os.Setenv("SERVER_GRPC_PORT", "19090"); err != nil {
+		t.Fatalf("Failed to set SERVER_GRPC_PORT: %v", err)
+	}
 	if err := os.Setenv("DB_HOST", "custom-host"); err != nil {
 		t.Fatalf("Failed to set DB_HOST: %v", err)
 	}
@@ -122,6 +128,7 @@ func TestConfigFromEnv(t *testing.T) {
 	}
 	defer func() {
 		_ = os.Unsetenv("SERVER_PORT")
+		_ = os.Unsetenv("SERVER_GRPC_PORT")
 		_ = os.Unsetenv("DB_HOST")
 		_ = os.Unsetenv("DB_PORT")
 		_ = os.Unsetenv("DB_TIMEZONE")
@@ -137,6 +144,9 @@ func TestConfigFromEnv(t *testing.T) {
 
 	if cfg.Server.Port != 9999 {
 		t.Errorf("Server.Port: expected 9999, got %d", cfg.Server.Port)
+	}
+	if cfg.Server.GRPCPort != 19090 {
+		t.Errorf("Server.GRPCPort: expected 19090, got %d", cfg.Server.GRPCPort)
 	}
 	if cfg.Database.Host != "custom-host" {
 		t.Errorf("Database.Host: expected custom-host, got %s", cfg.Database.Host)
