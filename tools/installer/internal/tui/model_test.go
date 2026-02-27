@@ -20,9 +20,7 @@ func nextModel(t *testing.T, current model, msg tea.KeyMsg) model {
 
 func TestModelDevLocalFlow(t *testing.T) {
 	m := newModel(cli.Options{
-		Mode:       cli.ModeDev,
-		PublicURL:  cli.DefaultPublicURL,
-		PublicPort: cli.DefaultPublicPort,
+		Mode: cli.ModeDev,
 	})
 
 	if m.step != stepHost {
@@ -38,6 +36,7 @@ func TestModelDevLocalFlow(t *testing.T) {
 		t.Fatalf("expected port step, got %v", m.step)
 	}
 
+	m.portInput.SetValue("18443")
 	m = nextModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	if m.step != stepConfirm {
 		t.Fatalf("expected confirm step, got %v", m.step)
@@ -47,16 +46,14 @@ func TestModelDevLocalFlow(t *testing.T) {
 	if !m.done {
 		t.Fatalf("expected done")
 	}
-	if m.options.PublicURL != "https://localhost:8083" {
+	if m.options.PublicURL != "https://localhost:18443" {
 		t.Fatalf("unexpected public url: %s", m.options.PublicURL)
 	}
 }
 
 func TestModelDevPublicFlow(t *testing.T) {
 	m := newModel(cli.Options{
-		Mode:       cli.ModeDev,
-		PublicURL:  cli.DefaultPublicURL,
-		PublicPort: cli.DefaultPublicPort,
+		Mode: cli.ModeDev,
 	})
 
 	m.hostInput.SetValue("10.10.10.10")
@@ -68,6 +65,7 @@ func TestModelDevPublicFlow(t *testing.T) {
 		t.Fatalf("expected port input focused on port step")
 	}
 
+	m.portInput.SetValue("18443")
 	m = nextModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	if m.step != stepConfirm {
 		t.Fatalf("expected confirm step, got %v", m.step)
@@ -77,16 +75,14 @@ func TestModelDevPublicFlow(t *testing.T) {
 	if !m.done {
 		t.Fatalf("expected done")
 	}
-	if m.options.PublicURL != "https://10.10.10.10:8083" {
+	if m.options.PublicURL != "https://10.10.10.10:18443" {
 		t.Fatalf("unexpected public url: %s", m.options.PublicURL)
 	}
 }
 
 func TestModelProdLoopbackNeedsDoubleConfirm(t *testing.T) {
 	m := newModel(cli.Options{
-		Mode:       cli.ModeProd,
-		PublicURL:  cli.DefaultPublicURL,
-		PublicPort: cli.DefaultPublicPort,
+		Mode: cli.ModeProd,
 	})
 
 	m.hostInput.SetValue("localhost")
@@ -112,6 +108,7 @@ func TestModelProdLoopbackNeedsDoubleConfirm(t *testing.T) {
 		t.Fatalf("expected port step, got %v", m.step)
 	}
 
+	m.portInput.SetValue("18443")
 	m = nextModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
 	if m.step != stepConfirm {
 		t.Fatalf("expected confirm step, got %v", m.step)
@@ -121,13 +118,13 @@ func TestModelProdLoopbackNeedsDoubleConfirm(t *testing.T) {
 	if !m.done {
 		t.Fatalf("expected done")
 	}
-	if m.options.PublicURL != "https://localhost:8083" {
+	if m.options.PublicURL != "https://localhost:18443" {
 		t.Fatalf("unexpected public url: %s", m.options.PublicURL)
 	}
 }
 
 func TestModelCancelByCtrlC(t *testing.T) {
-	m := newModel(cli.Options{Mode: cli.ModeDev, PublicURL: cli.DefaultPublicURL, PublicPort: cli.DefaultPublicPort})
+	m := newModel(cli.Options{Mode: cli.ModeDev})
 	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
 	out := updated.(model)
 	if !out.cancelled {
@@ -140,9 +137,7 @@ func TestModelCancelByCtrlC(t *testing.T) {
 
 func TestModelFocusFlowHostToPort(t *testing.T) {
 	m := newModel(cli.Options{
-		Mode:       cli.ModeDev,
-		PublicURL:  cli.DefaultPublicURL,
-		PublicPort: cli.DefaultPublicPort,
+		Mode: cli.ModeDev,
 	})
 
 	if !m.hostInput.Focused() {
@@ -167,13 +162,29 @@ func TestModelFocusFlowHostToPort(t *testing.T) {
 
 func TestModelProdHostStepShowsPublicIPHint(t *testing.T) {
 	m := newModel(cli.Options{
-		Mode:       cli.ModeProd,
-		PublicURL:  cli.DefaultPublicURL,
-		PublicPort: cli.DefaultPublicPort,
+		Mode: cli.ModeProd,
 	})
 
 	view := m.View()
 	if !strings.Contains(view, "分布式功能必须填写公网IP") {
 		t.Fatalf("expected prod host step to show distributed public IP hint")
+	}
+}
+
+func TestModelRejectsEmptyPort(t *testing.T) {
+	m := newModel(cli.Options{Mode: cli.ModeDev})
+	m.hostInput.SetValue("10.10.10.10")
+	m = nextModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	if m.step != stepPort {
+		t.Fatalf("expected port step, got %v", m.step)
+	}
+
+	m.portInput.SetValue("")
+	m = nextModel(t, m, tea.KeyMsg{Type: tea.KeyEnter})
+	if m.step != stepPort {
+		t.Fatalf("expected to stay on port step, got %v", m.step)
+	}
+	if !strings.Contains(m.errMsg, "端口不合法") {
+		t.Fatalf("unexpected error message: %s", m.errMsg)
 	}
 }

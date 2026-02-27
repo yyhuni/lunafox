@@ -29,11 +29,16 @@ usage() {
   本地源码模式启动安装器（固定 dev 模式）
 
 参数:
-  --public-url <url>  公网访问地址（仅支持 localhost/IPv4），如 https://10.0.0.8:8083
+  --public-url <url>  公网访问地址（仅支持 localhost/IPv4），如 https://10.0.0.8:18443
   --public-host <host> 公网主机（仅支持 localhost/IPv4）
-  --public-port <port> 公网端口（默认 8083）
+  --public-port <port> 公网端口（1-65535，必填）
   --non-interactive   禁用交互向导，需显式提供公网地址
   --help             显示帮助
+
+地址输入规则:
+  1) --public-url 与 --public-host/--public-port 二选一
+  2) --public-host 必须配合 --public-port
+  3) 主机仅支持 localhost 或 IPv4
 
 行为说明:
   install 默认会在安装前执行轻清理（compose down --remove-orphans + 清理残留 lunafox-agent 容器），不会删除卷/证书/.env。
@@ -86,6 +91,9 @@ if [ -n "$PUBLIC_URL" ] && { [ -n "$PUBLIC_HOST" ] || [ -n "$PUBLIC_PORT" ]; }; 
 fi
 if [ -n "$PUBLIC_PORT" ] && [ -z "$PUBLIC_HOST" ]; then
 	usage_error "--public-port 需要配合 --public-host 使用"
+fi
+if [ -n "$PUBLIC_HOST" ] && [ -z "$PUBLIC_PORT" ]; then
+	usage_error "--public-host 需要配合 --public-port 使用"
 fi
 
 if ! command -v go >/dev/null 2>&1; then

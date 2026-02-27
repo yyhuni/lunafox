@@ -97,24 +97,10 @@ uninstall_services() {
 	info "正在卸载服务（容器与网络）..."
 
 	if [ ! -f "$ENV_FILE" ]; then
-		TEMP_ENV_FILE="$(mktemp "${TMPDIR:-/tmp}/lunafox-uninstall-env.XXXXXX")"
-		cat >"$TEMP_ENV_FILE" <<'EOF'
-IMAGE_TAG=cleanup
-JWT_SECRET=cleanup
-WORKER_TOKEN=cleanup
-DB_HOST=127.0.0.1
-DB_PASSWORD=cleanup
-REDIS_HOST=127.0.0.1
-DB_NAME=lunafox
-DB_USER=postgres
-DB_PORT=5432
-PUBLIC_PORT=8083
-EOF
-		RUNTIME_ENV_FILE="$TEMP_ENV_FILE"
-		warn "未找到 docker/.env，已生成临时卸载配置"
-	else
-		RUNTIME_ENV_FILE="$ENV_FILE"
+		error "未找到 docker/.env，无法解析 PUBLIC_PORT。请先恢复配置文件后再执行卸载。"
+		exit 1
 	fi
+	RUNTIME_ENV_FILE="$ENV_FILE"
 
 	if [ -f "$COMPOSE_PROD" ]; then
 		run_compose --env-file "$RUNTIME_ENV_FILE" -f "$COMPOSE_PROD" --profile local-db down --remove-orphans

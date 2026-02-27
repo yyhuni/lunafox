@@ -12,8 +12,7 @@ import (
 
 func TestStepAgentRunRequiresPublicURL(t *testing.T) {
 	installer := NewInstaller(cli.Options{
-		PublicURL:      "",
-		AgentServerURL: "http://server:8080",
+		PublicURL: "",
 	}, nil, ui.NewPrinter(io.Discard, io.Discard))
 
 	err := stepAgent{}.Run(context.Background(), installer)
@@ -25,17 +24,16 @@ func TestStepAgentRunRequiresPublicURL(t *testing.T) {
 	}
 }
 
-func TestStepAgentRunRequiresAgentServerURL(t *testing.T) {
+func TestStepAgentRunDoesNotRequireAgentServerURL(t *testing.T) {
 	installer := NewInstaller(cli.Options{
-		PublicURL:      "https://example.com:8083",
-		AgentServerURL: "",
+		PublicURL: "https://example.com:8083",
 	}, nil, ui.NewPrinter(io.Discard, io.Discard))
 
 	err := stepAgent{}.Run(context.Background(), installer)
 	if err == nil {
-		t.Fatalf("expected missing agent server url error")
+		t.Fatalf("expected TLS init error")
 	}
-	if !strings.Contains(err.Error(), "LUNAFOX_AGENT_SERVER_URL") {
+	if !strings.Contains(err.Error(), "HTTPS 信任链未初始化") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

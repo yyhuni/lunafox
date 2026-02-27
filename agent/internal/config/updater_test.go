@@ -4,12 +4,12 @@ import "testing"
 
 func TestUpdaterApplyAndSnapshot(t *testing.T) {
 	cfg := Config{
-		ServerURL:     "https://example.com",
-		APIKey:        "key",
-		MaxTasks:      2,
-		CPUThreshold:  70,
-		MemThreshold:  80,
-		DiskThreshold: 90,
+		RuntimeGRPCURL: "https://runtime.example.com",
+		APIKey:         "key",
+		MaxTasks:       2,
+		CPUThreshold:   70,
+		MemThreshold:   80,
+		DiskThreshold:  90,
 	}
 
 	updater := NewUpdater(cfg)

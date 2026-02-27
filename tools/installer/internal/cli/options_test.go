@@ -48,7 +48,7 @@ func withProdImageRefs(t *testing.T) {
 	t.Setenv("WORKER_IMAGE_REFS", testWorkerDigestRef)
 }
 
-func TestParseProdDefaultsPublicURL(t *testing.T) {
+func TestParseProdWithoutAddressKeepsPublicFieldsEmpty(t *testing.T) {
 	dir := createTestProjectRoot(t)
 	withProdImageRefs(t)
 
@@ -59,10 +59,10 @@ func TestParseProdDefaultsPublicURL(t *testing.T) {
 	if opts.Mode != ModeProd {
 		t.Fatalf("expected prod mode, got %s", opts.Mode)
 	}
-	if opts.PublicURL != "https://localhost:8083" {
+	if opts.PublicURL != "" {
 		t.Fatalf("unexpected public url: %s", opts.PublicURL)
 	}
-	if opts.PublicPort != "8083" {
+	if opts.PublicPort != "" {
 		t.Fatalf("unexpected public port: %s", opts.PublicPort)
 	}
 	if opts.PublicAddressSource != PublicAddressSourceDefault {
@@ -73,7 +73,7 @@ func TestParseProdDefaultsPublicURL(t *testing.T) {
 	}
 }
 
-func TestParseDevDefaultsPublicURL(t *testing.T) {
+func TestParseDevWithoutAddressKeepsPublicFieldsEmpty(t *testing.T) {
 	dir := createTestProjectRoot(t)
 
 	opts, err := parseWithRoot(dir, "--dev")
@@ -84,10 +84,10 @@ func TestParseDevDefaultsPublicURL(t *testing.T) {
 	if opts.Mode != ModeDev {
 		t.Fatalf("expected dev mode, got %s", opts.Mode)
 	}
-	if opts.PublicURL != "https://localhost:8083" {
+	if opts.PublicURL != "" {
 		t.Fatalf("unexpected public url: %s", opts.PublicURL)
 	}
-	if opts.PublicPort != "8083" {
+	if opts.PublicPort != "" {
 		t.Fatalf("unexpected public port: %s", opts.PublicPort)
 	}
 }
@@ -127,18 +127,18 @@ func TestParseAcceptsPublicURLFlagAndDerivesPort(t *testing.T) {
 	}
 }
 
-func TestParsePublicHostPortWithDefaultPort(t *testing.T) {
+func TestParsePublicHostPortExplicitlyBuildsURL(t *testing.T) {
 	dir := createTestProjectRoot(t)
 	withProdImageRefs(t)
 
-	opts, err := parseWithRoot(dir, "--public-host", "10.8.0.25")
+	opts, err := parseWithRoot(dir, "--public-host", "10.8.0.25", "--public-port", "18443")
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	if opts.PublicURL != "https://10.8.0.25:8083" {
+	if opts.PublicURL != "https://10.8.0.25:18443" {
 		t.Fatalf("unexpected public url: %s", opts.PublicURL)
 	}
-	if opts.PublicPort != "8083" {
+	if opts.PublicPort != "18443" {
 		t.Fatalf("unexpected public port: %s", opts.PublicPort)
 	}
 	if opts.PublicAddressSource != PublicAddressSourceHostPort {
@@ -146,11 +146,24 @@ func TestParsePublicHostPortWithDefaultPort(t *testing.T) {
 	}
 }
 
+func TestParseRejectsPublicHostWithoutPort(t *testing.T) {
+	dir := createTestProjectRoot(t)
+	withProdImageRefs(t)
+
+	_, err := parseWithRoot(dir, "--public-host", "10.8.0.25")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(err.Error(), "需要配合 --public-port") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestParseRejectsDomainInPublicHost(t *testing.T) {
 	dir := createTestProjectRoot(t)
 	withProdImageRefs(t)
 
-	_, err := parseWithRoot(dir, "--public-host", "example.com")
+	_, err := parseWithRoot(dir, "--public-host", "example.com", "--public-port", "18443")
 	if err == nil {
 		t.Fatalf("expected domain host to be rejected")
 	}
@@ -163,7 +176,7 @@ func TestParseRejectsIPv6InPublicHost(t *testing.T) {
 	dir := createTestProjectRoot(t)
 	withProdImageRefs(t)
 
-	_, err := parseWithRoot(dir, "--public-host", "2001:db8::1")
+	_, err := parseWithRoot(dir, "--public-host", "2001:db8::1", "--public-port", "18443")
 	if err == nil {
 		t.Fatalf("expected ipv6 host to be rejected")
 	}

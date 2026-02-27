@@ -1,11 +1,12 @@
 package config
 
 import (
+	"strings"
 	"testing"
 )
 
 func TestLoadConfigFromEnvAndFlags(t *testing.T) {
-	t.Setenv("SERVER_URL", "https://example.com")
+	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com:8443")
 	t.Setenv("API_KEY", "abc12345")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
 	t.Setenv("LUNAFOX_AGENT_MAX_TASKS", "5")
@@ -17,15 +18,15 @@ func TestLoadConfigFromEnvAndFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load failed: %v", err)
 	}
-	if cfg.ServerURL != "https://example.com" {
-		t.Fatalf("expected server url from env")
+	if cfg.RuntimeGRPCURL != "https://runtime.example.com:8443" {
+		t.Fatalf("expected runtime grpc url from env")
 	}
 	if cfg.MaxTasks != 5 {
 		t.Fatalf("expected max tasks from env")
 	}
 
 	args := []string{
-		"--server-url=https://override.example.com",
+		"--runtime-grpc-url=https://runtime-override.example.com:9443",
 		"--api-key=deadbeef",
 		"--max-tasks=9",
 		"--cpu-threshold=70",
@@ -36,8 +37,8 @@ func TestLoadConfigFromEnvAndFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load failed: %v", err)
 	}
-	if cfg.ServerURL != "https://override.example.com" {
-		t.Fatalf("expected server url from args")
+	if cfg.RuntimeGRPCURL != "https://runtime-override.example.com:9443" {
+		t.Fatalf("expected runtime grpc url from args")
 	}
 	if cfg.APIKey != "deadbeef" {
 		t.Fatalf("expected api key from args")
@@ -51,7 +52,7 @@ func TestLoadConfigFromEnvAndFlags(t *testing.T) {
 }
 
 func TestLoadConfigMissingRequired(t *testing.T) {
-	t.Setenv("SERVER_URL", "")
+	t.Setenv("RUNTIME_GRPC_URL", "")
 	t.Setenv("API_KEY", "")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
 
@@ -62,7 +63,7 @@ func TestLoadConfigMissingRequired(t *testing.T) {
 }
 
 func TestLoadConfigInvalidEnvValue(t *testing.T) {
-	t.Setenv("SERVER_URL", "https://example.com")
+	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com")
 	t.Setenv("API_KEY", "abc")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
 	t.Setenv("LUNAFOX_AGENT_MAX_TASKS", "nope")
@@ -73,3 +74,31 @@ func TestLoadConfigInvalidEnvValue(t *testing.T) {
 	}
 }
 
+func TestLoadConfigRequiresExplicitRuntimeGRPCURL(t *testing.T) {
+	t.Setenv("RUNTIME_GRPC_URL", "")
+	t.Setenv("API_KEY", "abc12345")
+	t.Setenv("AGENT_VERSION", "v1.2.3")
+
+	_, err := Load([]string{})
+	if err == nil {
+		t.Fatalf("expected error when runtime url is missing")
+	}
+	if !strings.Contains(err.Error(), "runtime gRPC URL is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestLoadConfigDoesNotRequireServerURL(t *testing.T) {
+	t.Setenv("SERVER_URL", "")
+	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com:8443")
+	t.Setenv("API_KEY", "abc12345")
+	t.Setenv("AGENT_VERSION", "v1.2.3")
+
+	cfg, err := Load([]string{})
+	if err != nil {
+		t.Fatalf("expected load success without SERVER_URL: %v", err)
+	}
+	if cfg.RuntimeGRPCURL != "https://runtime.example.com:8443" {
+		t.Fatalf("expected runtime grpc url from env")
+	}
+}

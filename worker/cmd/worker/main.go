@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 
@@ -15,28 +16,57 @@ import (
 	_ "github.com/yyhuni/lunafox/worker/internal/workflow/subdomain_discovery"
 )
 
+type runtimeClient interface {
+	server.ServerClient
+	Close() error
+}
+
+var (
+	loadConfig = config.Load
+	initLogger = pkg.InitLogger
+	syncLogger = pkg.Sync
+	newClient  = func(socketPath, taskToken string, taskID int) (runtimeClient, error) {
+		return server.NewRuntimeClient(socketPath, taskToken, taskID)
+	}
+	getWorkflow = workflow.Get
+)
+
 func main() {
+	if err := run(context.Background()); err != nil {
+		log.Printf("Worker failed: %v", err)
+		os.Exit(1)
+	}
+}
+
+func run(ctx context.Context) error {
 	// Load configuration from environment variables
-	cfg, err := config.Load()
+	cfg, err := loadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load config: %v", err)
+		return fmt.Errorf("load config: %w", err)
 	}
 
 	// Initialize logger
-	if err := pkg.InitLogger(cfg.LogLevel); err != nil {
-		log.Fatalf("Failed to initialize logger: %v", err)
+	if err := initLogger(cfg.LogLevel); err != nil {
+		return fmt.Errorf("init logger: %w", err)
 	}
-	defer pkg.Sync()
+	defer syncLogger()
 
 	pkg.Logger.Info("Worker starting",
+		zap.Int("taskId", cfg.TaskID),
 		zap.Int("scanId", cfg.ScanID),
 		zap.Int("targetId", cfg.TargetID),
 		zap.String("targetName", cfg.TargetName),
 		zap.String("targetType", cfg.TargetType),
 		zap.String("workflow", cfg.WorkflowName))
 
-	// Create server client (implements ServerClient, ResultSaver)
-	serverClient := server.NewClient(cfg.ServerURL, cfg.ServerToken)
+	// Create runtime client (worker -> local agent UDS gRPC).
+	agentRuntimeClient, err := newClient(cfg.AgentSocket, cfg.TaskToken, cfg.TaskID)
+	if err != nil {
+		return fmt.Errorf("create runtime client: %w", err)
+	}
+	defer func() {
+		_ = agentRuntimeClient.Close()
+	}()
 
 	// Create workflow params
 	params := &workflow.Params{
@@ -46,14 +76,13 @@ func main() {
 		TargetType:   cfg.TargetType,
 		WorkDir:      cfg.WorkspaceDir,
 		ScanConfig:   cfg.Config,
-		ServerClient: serverClient,
+		ServerClient: agentRuntimeClient,
 	}
 
 	// Get and execute the workflow
-	w := workflow.Get(cfg.WorkflowName, cfg.WorkspaceDir)
+	w := getWorkflow(cfg.WorkflowName, cfg.WorkspaceDir)
 	if w == nil {
-		pkg.Logger.Error("Unknown workflow name", zap.String("workflow", cfg.WorkflowName))
-		os.Exit(1)
+		return fmt.Errorf("unknown workflow name: %s", cfg.WorkflowName)
 	}
 
 	// Execute workflow
@@ -62,33 +91,16 @@ func main() {
 	// - exit 1 = failed
 	output, execErr := w.Execute(params)
 	if execErr != nil {
-		pkg.Logger.Error("Workflow execution failed",
-			zap.Int("scanId", cfg.ScanID),
-			zap.String("workflow", cfg.WorkflowName),
-			zap.String("targetName", cfg.TargetName),
-			zap.String("targetType", cfg.TargetType),
-			zap.Error(execErr))
-		os.Exit(1) // Agent will detect exit code and set status to "failed"
+		return fmt.Errorf("execute workflow %s: %w", cfg.WorkflowName, execErr)
 	}
 
 	// Save results
-	ctx := context.Background()
-	if err := w.SaveResults(ctx, serverClient, params, output); err != nil {
-		fileCount := 0
-		if output != nil {
-			if files, ok := output.Data.([]string); ok {
-				fileCount = len(files)
-			}
-		}
-		pkg.Logger.Error("Failed to save results",
-			zap.Int("scanId", cfg.ScanID),
-			zap.String("workflow", cfg.WorkflowName),
-			zap.Int("files", fileCount),
-			zap.Error(err))
-		os.Exit(1)
+	if err := w.SaveResults(ctx, agentRuntimeClient, params, output); err != nil {
+		return fmt.Errorf("save workflow results %s: %w", cfg.WorkflowName, err)
 	}
 
 	pkg.Logger.Info("Worker completed successfully",
 		zap.Int("scanId", cfg.ScanID))
 	// exit 0 - Agent will detect and set status to "completed"
+	return nil
 }

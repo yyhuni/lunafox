@@ -23,15 +23,11 @@ func main() {
 	if err != nil {
 		logger.Log.Fatal("failed to load config", zap.Error(err))
 	}
-	wsURL, err := config.BuildWebSocketURL(cfg.ServerURL)
-	if err != nil {
-		logger.Log.Fatal("invalid server URL", zap.Error(err))
-	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := app.Run(ctx, *cfg, wsURL); err != nil {
+	if err := app.Run(ctx, *cfg); err != nil {
 		logger.Log.Fatal("agent stopped", zap.Error(err))
 	}
 }

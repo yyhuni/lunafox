@@ -45,9 +45,6 @@ func newModel(options cli.Options) model {
 	if strings.TrimSpace(port) == "" {
 		port = strings.TrimSpace(options.PublicPort)
 	}
-	if strings.TrimSpace(port) == "" {
-		port = cli.DefaultPublicPort
-	}
 
 	hostInput := textinput.New()
 	hostInput.Placeholder = "例如 localhost / 192.168.1.10"
@@ -57,7 +54,7 @@ func newModel(options cli.Options) model {
 	hostInput.Prompt = ""
 
 	portInput := textinput.New()
-	portInput.Placeholder = "例如: 8083"
+	portInput.Placeholder = "例如: 18443"
 	portInput.SetValue(port)
 	portInput.CharLimit = 5
 	portInput.Width = 10
@@ -246,7 +243,8 @@ func (m model) updatePortStep(msg tea.KeyMsg) (model, tea.Cmd) {
 
 		port := strings.TrimSpace(m.portInput.Value())
 		if port == "" {
-			port = cli.DefaultPublicPort
+			m.errMsg = "端口不合法: 不能为空"
+			return m, nil
 		}
 		if err := cli.ValidatePublicPort(port); err != nil {
 			m.errMsg = "端口不合法: " + err.Error()
@@ -350,7 +348,7 @@ func (m model) resolvedHost() (string, bool, string) {
 func (m model) resolvedPort() (string, bool, string) {
 	port := strings.TrimSpace(m.portInput.Value())
 	if port == "" {
-		port = cli.DefaultPublicPort
+		return "", false, "端口待输入"
 	}
 	if err := cli.ValidatePublicPort(port); err != nil {
 		return port, false, "端口错误: " + err.Error()
@@ -483,7 +481,7 @@ func (m model) renderPortStep() string {
 	} else {
 		b.WriteString(renderStatusErr(portStatus) + "\n")
 	}
-	b.WriteString(renderHint("输入范围 1-65535，默认 "+cli.DefaultPublicPort) + "\n")
+	b.WriteString(renderHint("输入范围 1-65535（必填）") + "\n")
 	return b.String()
 }
 

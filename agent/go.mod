@@ -4,7 +4,6 @@ go 1.26.0
 
 require (
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/gorilla/websocket v1.5.3
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/shirou/gopsutil/v3 v3.24.5
 	go.uber.org/zap v1.27.0
@@ -37,6 +36,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
+	github.com/yyhuni/lunafox/contracts v0.0.0
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.64.0 // indirect
 	go.opentelemetry.io/otel v1.39.0 // indirect
@@ -51,3 +51,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
 )
+
+replace github.com/yyhuni/lunafox/contracts => ../contracts

@@ -23,10 +23,6 @@ func (stepAgent) Run(ctx context.Context, installer *Installer) error {
 	if registerURL == "" {
 		return fmt.Errorf("缺少必填配置: PUBLIC_URL")
 	}
-	agentServerURL := strings.TrimSpace(installer.options.AgentServerURL)
-	if agentServerURL == "" {
-		return fmt.Errorf("缺少必填配置: LUNAFOX_AGENT_SERVER_URL")
-	}
 
 	if installer.tlsConfig == nil {
 		return fmt.Errorf("HTTPS 信任链未初始化，请检查证书配置")
@@ -49,7 +45,7 @@ func (stepAgent) Run(ctx context.Context, installer *Installer) error {
 		return fmt.Errorf("无法获取 Agent 注册令牌: %w", err)
 	}
 
-	script, scriptURL, err := agentClient.DownloadInstallScript(ctx, registerURL, registrationToken, "local")
+	script, scriptURL, err := agentClient.DownloadInstallScript(ctx, registerURL, registrationToken)
 	if err != nil {
 		return fmt.Errorf("获取安装脚本失败: %w", err)
 	}
@@ -60,15 +56,14 @@ func (stepAgent) Run(ctx context.Context, installer *Installer) error {
 	}
 
 	installEnv, err := agent.BuildInstallEnv(agent.Config{
-		Mode:           installer.options.Mode,
-		AgentServerURL: agentServerURL,
-		RegisterURL:    registerURL,
-		NetworkName:    installer.options.AgentNetwork,
-		WorkerToken:    workerToken,
-		MaxTasks:       os.Getenv("LUNAFOX_AGENT_MAX_TASKS"),
-		CPUThreshold:   os.Getenv("LUNAFOX_AGENT_CPU_THRESHOLD"),
-		MemThreshold:   os.Getenv("LUNAFOX_AGENT_MEM_THRESHOLD"),
-		DiskThreshold:  os.Getenv("LUNAFOX_AGENT_DISK_THRESHOLD"),
+		Mode:          installer.options.Mode,
+		RegisterURL:   registerURL,
+		NetworkName:   installer.options.AgentNetwork,
+		WorkerToken:   workerToken,
+		MaxTasks:      os.Getenv("LUNAFOX_AGENT_MAX_TASKS"),
+		CPUThreshold:  os.Getenv("LUNAFOX_AGENT_CPU_THRESHOLD"),
+		MemThreshold:  os.Getenv("LUNAFOX_AGENT_MEM_THRESHOLD"),
+		DiskThreshold: os.Getenv("LUNAFOX_AGENT_DISK_THRESHOLD"),
 	})
 	if err != nil {
 		return err

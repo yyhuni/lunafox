@@ -52,6 +52,7 @@ services:
       - IMAGE_TAG=${IMAGE_TAG:-dev}
       - PUBLIC_URL=${PUBLIC_URL:-}
       - LOKI_URL=${LOKI_URL:-http://loki:3100}
+      - SERVER_GRPC_PORT=${SERVER_GRPC_PORT:-9090}
       - GOMODCACHE=/go/pkg/mod
       - GOCACHE=/root/.cache/go-build
       - GO111MODULE=${GO111MODULE:-on}

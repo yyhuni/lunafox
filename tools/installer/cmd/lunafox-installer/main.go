@@ -33,12 +33,20 @@ func main() {
 	if !options.HasExplicitPublicAddress() {
 		if options.NonInteractive {
 			fmt.Fprintln(os.Stderr, "✗ --non-interactive 模式下必须传入 --public-url 或 --public-host/--public-port")
+			fmt.Fprintln(os.Stderr, "  地址规则：")
+			fmt.Fprintln(os.Stderr, "  1) --public-url 与 --public-host/--public-port 二选一")
+			fmt.Fprintln(os.Stderr, "  2) --public-host 必须配合 --public-port")
+			fmt.Fprintln(os.Stderr, "  3) 主机仅支持 localhost 或 IPv4")
 			os.Exit(1)
 		}
 		if !interactiveTTY {
 			fmt.Fprintln(os.Stderr, "✗ 检测到非交互终端，缺少公网地址参数")
-			fmt.Fprintln(os.Stderr, "  请使用：--public-url https://example.com:8083 --non-interactive")
-			fmt.Fprintln(os.Stderr, "  或使用：--public-host 10.0.0.8 --public-port 8083 --non-interactive")
+			fmt.Fprintln(os.Stderr, "  地址规则：")
+			fmt.Fprintln(os.Stderr, "  1) --public-url 与 --public-host/--public-port 二选一")
+			fmt.Fprintln(os.Stderr, "  2) --public-host 必须配合 --public-port")
+			fmt.Fprintln(os.Stderr, "  3) 主机仅支持 localhost 或 IPv4")
+			fmt.Fprintln(os.Stderr, "  请使用：--public-url https://example.com:18443 --non-interactive")
+			fmt.Fprintln(os.Stderr, "  或使用：--public-host 10.0.0.8 --public-port 18443 --non-interactive")
 			os.Exit(1)
 		}
 

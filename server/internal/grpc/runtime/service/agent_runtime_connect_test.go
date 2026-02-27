@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
 	"github.com/yyhuni/lunafox/server/internal/agentproto"
 	grpcauth "github.com/yyhuni/lunafox/server/internal/grpc/runtime/auth"
-	runtimev1 "github.com/yyhuni/lunafox/server/internal/grpc/runtime/v1/gen"
 	agentapp "github.com/yyhuni/lunafox/server/internal/modules/agent/application"
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 	scanapp "github.com/yyhuni/lunafox/server/internal/modules/scan/application"

@@ -23,15 +23,14 @@ type ClientOptions struct {
 }
 
 type Config struct {
-	Mode           string
-	AgentServerURL string
-	RegisterURL    string
-	NetworkName    string
-	WorkerToken    string
-	MaxTasks       string
-	CPUThreshold   string
-	MemThreshold   string
-	DiskThreshold  string
+	Mode          string
+	RegisterURL   string
+	NetworkName   string
+	WorkerToken   string
+	MaxTasks      string
+	CPUThreshold  string
+	MemThreshold  string
+	DiskThreshold string
 }
 
 type EnvVar struct {
@@ -115,12 +114,11 @@ func (client *Client) IssueRegistrationToken(ctx context.Context, serverURL, use
 	return registrationToken, nil
 }
 
-func (client *Client) DownloadInstallScript(ctx context.Context, serverURL, registrationToken, mode string) (string, string, error) {
-	installMode := normalizeInstallMode(mode)
+func (client *Client) DownloadInstallScript(ctx context.Context, serverURL, registrationToken string) (string, string, error) {
 	values := url.Values{}
 	values.Set("token", strings.TrimSpace(registrationToken))
-	values.Set("mode", installMode)
-	installURL := strings.TrimRight(serverURL, "/") + "/api/agent/install-script?" + values.Encode()
+	// Installer owns local bootstrap flow and must always request local profile.
+	installURL := strings.TrimRight(serverURL, "/") + "/api/agent/install-script/local?" + values.Encode()
 	status, body, err := client.get(ctx, installURL, 30*time.Second)
 	if err != nil {
 		return "", installURL, &StageError{Stage: "install-script", Endpoint: installURL, Message: err.Error()}
@@ -156,7 +154,6 @@ func BuildInstallEnv(config Config) ([]EnvVar, error) {
 func validateInstallConfig(config Config) (Config, error) {
 	validated := config
 	validated.RegisterURL = strings.TrimSpace(validated.RegisterURL)
-	validated.AgentServerURL = strings.TrimSpace(validated.AgentServerURL)
 	validated.NetworkName = strings.TrimSpace(validated.NetworkName)
 	validated.WorkerToken = strings.TrimSpace(validated.WorkerToken)
 	validated.MaxTasks = strings.TrimSpace(validated.MaxTasks)
@@ -166,9 +163,6 @@ func validateInstallConfig(config Config) (Config, error) {
 
 	if validated.RegisterURL == "" {
 		return Config{}, fmt.Errorf("LUNAFOX_AGENT_REGISTER_URL 不能为空")
-	}
-	if validated.AgentServerURL == "" {
-		return Config{}, fmt.Errorf("LUNAFOX_AGENT_SERVER_URL 不能为空")
 	}
 
 	return validated, nil
@@ -180,15 +174,6 @@ func defaultValue(value, fallback string) string {
 		return fallback
 	}
 	return trimmed
-}
-
-func normalizeInstallMode(raw string) string {
-	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case "local":
-		return "local"
-	default:
-		return "remote"
-	}
 }
 
 func readJSONField(raw []byte, field string) string {

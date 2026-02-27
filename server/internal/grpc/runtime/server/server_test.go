@@ -8,7 +8,7 @@ import (
 
 	grpcauth "github.com/yyhuni/lunafox/server/internal/grpc/runtime/auth"
 	"github.com/yyhuni/lunafox/server/internal/grpc/runtime/service"
-	runtimev1 "github.com/yyhuni/lunafox/server/internal/grpc/runtime/v1/gen"
+	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
 	agentapp "github.com/yyhuni/lunafox/server/internal/modules/agent/application"
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 	scanapp "github.com/yyhuni/lunafox/server/internal/modules/scan/application"

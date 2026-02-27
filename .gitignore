@@ -60,6 +60,13 @@ specs/*
 specs/features/*
 !specs/features/002-database-health-standardization/
 !specs/features/002-database-health-standardization/**
+# Track selected OpenSpec change artifacts
+!openspec/
+openspec/*
+!openspec/changes/
+openspec/changes/*
+!openspec/changes/update-agent-install-local-only-endpoint-profile/
+!openspec/changes/update-agent-install-local-only-endpoint-profile/**
 AGENTS.md
 WARP.md
 .opencode/

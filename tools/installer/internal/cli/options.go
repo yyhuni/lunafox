@@ -35,7 +35,6 @@ type Options struct {
 	AgentImageRefs      []string
 	WorkerImageRef      string
 	WorkerImageRefs     []string
-	AgentServerURL      string
 	AgentNetwork        string
 	SharedDataBind      string
 
@@ -69,7 +68,6 @@ func Parse(args []string) (Options, error) {
 	imageNamespace := firstNonEmpty(os.Getenv("LUNAFOX_IMAGE_NAMESPACE"), DefaultImageNamespace)
 	agentImageRefsRaw := strings.TrimSpace(os.Getenv("AGENT_IMAGE_REFS"))
 	workerImageRefsRaw := strings.TrimSpace(os.Getenv("WORKER_IMAGE_REFS"))
-	agentServerURL := firstNonEmpty(os.Getenv("LUNAFOX_AGENT_SERVER_URL"), DefaultAgentServerURL)
 	agentNetwork := firstNonEmpty(os.Getenv("LUNAFOX_AGENT_DOCKER_NETWORK"), DefaultAgentNetwork)
 	sharedDataBind := firstNonEmpty(os.Getenv("LUNAFOX_SHARED_DATA_VOLUME_BIND"), DefaultSharedDataBind)
 	rootDirInput := ""
@@ -80,9 +78,9 @@ func Parse(args []string) (Options, error) {
 	fs.StringVar(&version, "version", strings.TrimSpace(os.Getenv("LUNAFOX_INSTALLER_VERSION")), "安装版本，例如 v1.5.13")
 	fs.BoolVar(&useGoProxyCN, "goproxy", false, "使用 goproxy.cn")
 	fs.BoolVar(&nonInteractive, "non-interactive", false, "禁用交互向导，缺少必填参数时直接失败")
-	fs.StringVar(&publicURLRaw, "public-url", "", "公网访问地址，例如 https://10.0.0.8:8083")
-	fs.StringVar(&publicHostRaw, "public-host", "", "公网主机（仅支持 localhost 或 IPv4），例如 10.0.0.8")
-	fs.StringVar(&publicPortRaw, "public-port", "", "公网端口（1-65535），默认 8083")
+	fs.StringVar(&publicURLRaw, "public-url", "", "公网访问地址（与 --public-host/--public-port 二选一），例如 https://10.0.0.8:18443")
+	fs.StringVar(&publicHostRaw, "public-host", "", "公网主机（仅支持 localhost 或 IPv4，需配合 --public-port），例如 10.0.0.8")
+	fs.StringVar(&publicPortRaw, "public-port", "", "公网端口（1-65535，需配合 --public-host）")
 	fs.StringVar(&imageRegistry, "image-registry", imageRegistry, "镜像仓库域名，例如 docker.io 或 ghcr.io")
 	fs.StringVar(&imageNamespace, "image-namespace", imageNamespace, "镜像命名空间，例如 yyhuni")
 	fs.StringVar(&agentImageRefsRaw, "agent-image-refs", agentImageRefsRaw, "Agent 镜像候选列表（逗号分隔，按优先级）")
@@ -107,6 +105,9 @@ func Parse(args []string) (Options, error) {
 	if publicURLProvided && publicPortProvided {
 		return Options{}, fmt.Errorf("--public-url 与 --public-port 不能同时使用")
 	}
+	if publicHostProvided && !publicPortProvided {
+		return Options{}, fmt.Errorf("--public-host 需要配合 --public-port 使用")
+	}
 	if publicPortProvided && !publicHostProvided {
 		return Options{}, fmt.Errorf("--public-port 需要配合 --public-host 使用")
 	}
@@ -116,32 +117,24 @@ func Parse(args []string) (Options, error) {
 		mode = ModeDev
 	}
 
-	publicURL := DefaultPublicURL
-	publicPort := DefaultPublicPort
+	publicURL := ""
+	publicPort := ""
 	addressSource := PublicAddressSourceDefault
 	var err error
 
 	switch {
 	case publicURLProvided:
-		publicURL, publicPort, err = NormalizePublicURL(publicURLRaw, DefaultPublicPort)
+		publicURL, publicPort, err = NormalizePublicURL(publicURLRaw, "")
 		if err != nil {
 			return Options{}, err
 		}
 		addressSource = PublicAddressSourceURL
 	case publicHostProvided:
-		if strings.TrimSpace(publicPortRaw) == "" {
-			publicPortRaw = DefaultPublicPort
-		}
 		publicURL, publicPort, err = NormalizePublicHostPort(publicHostRaw, publicPortRaw)
 		if err != nil {
 			return Options{}, err
 		}
 		addressSource = PublicAddressSourceHostPort
-	default:
-		publicURL, publicPort, err = NormalizePublicURL(DefaultPublicURL, DefaultPublicPort)
-		if err != nil {
-			return Options{}, err
-		}
 	}
 
 	if nonInteractive && addressSource == PublicAddressSourceDefault {
@@ -235,7 +228,6 @@ func Parse(args []string) (Options, error) {
 		AgentImageRefs:      agentImageRefs,
 		WorkerImageRef:      workerImageRef,
 		WorkerImageRefs:     workerImageRefs,
-		AgentServerURL:      agentServerURL,
 		AgentNetwork:        agentNetwork,
 		SharedDataBind:      sharedDataBind,
 		RootDir:             rootDir,

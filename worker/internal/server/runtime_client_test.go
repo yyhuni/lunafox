@@ -10,7 +10,7 @@ import (
 	"time"
 
 	grpcauth "github.com/yyhuni/lunafox/worker/internal/grpc/runtime/auth"
-	runtimev1 "github.com/yyhuni/lunafox/worker/internal/grpc/runtime/v1/gen"
+	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"

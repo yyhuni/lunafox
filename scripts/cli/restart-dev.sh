@@ -93,7 +93,10 @@ prewarm_frontend() {
 	fi
 
 	local public_port
-	public_port="$(resolve_public_port_from_env "$ENV_FILE")"
+	if ! public_port="$(resolve_public_port_from_env "$ENV_FILE")"; then
+		warn "PUBLIC_PORT 配置缺失或非法，跳过前端预热"
+		return
+	fi
 	local base_url="https://localhost:${public_port}"
 	local paths=("/zh/login" "/zh/dashboard/")
 	local max_attempts=30

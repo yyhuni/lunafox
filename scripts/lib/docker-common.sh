@@ -167,7 +167,8 @@ resolve_public_port_from_env() {
 	fi
 
 	if ! is_valid_port "$port"; then
-		port="8083"
+		error "无法解析 PUBLIC_PORT，请检查配置文件: $env_file"
+		return 1
 	fi
 	echo "$port"
 }

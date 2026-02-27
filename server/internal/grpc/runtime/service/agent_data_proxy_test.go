@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	runtimev1 "github.com/yyhuni/lunafox/server/internal/grpc/runtime/v1/gen"
+	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
 	catalogapp "github.com/yyhuni/lunafox/server/internal/modules/catalog/application"
 	snapshotapp "github.com/yyhuni/lunafox/server/internal/modules/snapshot/application"
 	"google.golang.org/grpc/codes"

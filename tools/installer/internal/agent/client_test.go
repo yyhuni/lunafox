@@ -80,17 +80,17 @@ func TestIssueRegistrationTokenSuccess(t *testing.T) {
 	}
 }
 
-func TestDownloadInstallScriptUsesModeQuery(t *testing.T) {
+func TestDownloadInstallScriptUsesLocalEndpointWithoutModeQuery(t *testing.T) {
 	server := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		if request.URL.Path != "/api/agent/install-script" {
+		if request.URL.Path != "/api/agent/install-script/local" {
 			writer.WriteHeader(http.StatusNotFound)
 			return
 		}
 		if got := request.URL.Query().Get("token"); got != "reg-token" {
 			t.Fatalf("unexpected token query: %s", got)
 		}
-		if got := request.URL.Query().Get("mode"); got != "local" {
-			t.Fatalf("unexpected mode query: %s", got)
+		if got := request.URL.Query().Get("mode"); got != "" {
+			t.Fatalf("mode query must be removed, got: %s", got)
 		}
 		writer.WriteHeader(http.StatusOK)
 		_, _ = writer.Write([]byte("#!/usr/bin/env bash\necho ok\n"))
@@ -98,41 +98,23 @@ func TestDownloadInstallScriptUsesModeQuery(t *testing.T) {
 	defer server.Close()
 
 	client := newTLSClientForServer(t, server)
-	script, installURL, err := client.DownloadInstallScript(context.Background(), server.URL, "reg-token", "local")
+	script, installURL, err := client.DownloadInstallScript(context.Background(), server.URL, "reg-token")
 	if err != nil {
 		t.Fatalf("DownloadInstallScript error: %v", err)
 	}
 	if !strings.Contains(script, "echo ok") {
 		t.Fatalf("unexpected script body: %s", script)
 	}
-	if !strings.Contains(installURL, "mode=local") {
-		t.Fatalf("install url should include mode=local: %s", installURL)
+	if strings.Contains(installURL, "mode=") {
+		t.Fatalf("install url should not include mode query: %s", installURL)
 	}
-}
-
-func TestDownloadInstallScriptInvalidModeFallsBackToRemote(t *testing.T) {
-	server := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		if request.URL.Path != "/api/agent/install-script" {
-			writer.WriteHeader(http.StatusNotFound)
-			return
-		}
-		if got := request.URL.Query().Get("mode"); got != "remote" {
-			t.Fatalf("unexpected mode query: %s", got)
-		}
-		writer.WriteHeader(http.StatusOK)
-		_, _ = writer.Write([]byte("#!/usr/bin/env bash\necho ok\n"))
-	}))
-	defer server.Close()
-
-	client := newTLSClientForServer(t, server)
-	_, _, err := client.DownloadInstallScript(context.Background(), server.URL, "reg-token", "bad-mode")
-	if err != nil {
-		t.Fatalf("DownloadInstallScript error: %v", err)
+	if !strings.Contains(installURL, "/api/agent/install-script/local?") {
+		t.Fatalf("install url should hit local endpoint: %s", installURL)
 	}
 }
 
 func TestBuildInstallEnv(t *testing.T) {
-	env, err := BuildInstallEnv(Config{Mode: "dev", RegisterURL: "https://a", AgentServerURL: "http://b", NetworkName: "luna", WorkerToken: "w"})
+	env, err := BuildInstallEnv(Config{Mode: "dev", RegisterURL: "https://a", NetworkName: "luna", WorkerToken: "w"})
 	if err != nil {
 		t.Fatalf("BuildInstallEnv error: %v", err)
 	}
@@ -149,7 +131,7 @@ func TestBuildInstallEnv(t *testing.T) {
 }
 
 func TestBuildInstallEnvProd(t *testing.T) {
-	env, err := BuildInstallEnv(Config{Mode: "prod", RegisterURL: "https://a", AgentServerURL: "http://b", NetworkName: "luna"})
+	env, err := BuildInstallEnv(Config{Mode: "prod", RegisterURL: "https://a", NetworkName: "luna"})
 	if err != nil {
 		t.Fatalf("BuildInstallEnv error: %v", err)
 	}
@@ -163,10 +145,10 @@ func TestBuildInstallEnvProd(t *testing.T) {
 }
 
 func TestBuildInstallEnvRequiresURLs(t *testing.T) {
-	if _, err := BuildInstallEnv(Config{RegisterURL: "", AgentServerURL: "http://b"}); err == nil {
+	if _, err := BuildInstallEnv(Config{RegisterURL: ""}); err == nil {
 		t.Fatalf("expected missing register url error")
 	}
-	if _, err := BuildInstallEnv(Config{RegisterURL: "https://a", AgentServerURL: ""}); err == nil {
-		t.Fatalf("expected missing agent server url error")
+	if _, err := BuildInstallEnv(Config{RegisterURL: "https://a"}); err != nil {
+		t.Fatalf("unexpected error without agent server url: %v", err)
 	}
 }

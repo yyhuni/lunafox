@@ -34,6 +34,10 @@ jobs:
               - '.github/workflows/**'
             check_generated:
               - 'worker/**'
+              - 'proto/**'
+              - 'contracts/**'
+              - 'Makefile'
+              - 'scripts/ci/check-runtime-proto-generated.sh'
               - '.github/workflows/check-generated-files.yml'
               - '.github/workflows/ci.yml'
             frontend_scripts:

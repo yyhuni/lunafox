@@ -1,30 +1,31 @@
 package runtime
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/yyhuni/lunafox/agent/internal/domain"
-	runtimev1 "github.com/yyhuni/lunafox/agent/internal/grpc/runtime/v1/gen"
+	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
 )
 
 func TestBuildRuntimeTarget(t *testing.T) {
 	tests := []struct {
 		name       string
-		serverURL  string
+		runtimeURL string
 		target     string
 		secure     bool
 		shouldFail bool
 	}{
-		{name: "https default port", serverURL: "https://example.com", target: "example.com:443", secure: true},
-		{name: "http default port", serverURL: "http://example.com", target: "example.com:80", secure: false},
-		{name: "explicit port", serverURL: "https://example.com:9443/api", target: "example.com:9443", secure: true},
-		{name: "unsupported scheme", serverURL: "ftp://example.com", shouldFail: true},
-		{name: "missing scheme", serverURL: "example.com", shouldFail: true},
+		{name: "https default port", runtimeURL: "https://example.com", target: "example.com:443", secure: true},
+		{name: "http default port", runtimeURL: "http://example.com", target: "example.com:80", secure: false},
+		{name: "explicit port", runtimeURL: "https://example.com:9443/api", target: "example.com:9443", secure: true},
+		{name: "unsupported scheme", runtimeURL: "ftp://example.com", shouldFail: true},
+		{name: "missing scheme", runtimeURL: "example.com", shouldFail: true},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			target, secure, err := buildRuntimeTarget(tc.serverURL)
+			target, secure, err := buildRuntimeTarget(tc.runtimeURL)
 			if tc.shouldFail {
 				if err == nil {
 					t.Fatalf("expected error, got nil")
@@ -38,6 +39,16 @@ func TestBuildRuntimeTarget(t *testing.T) {
 				t.Fatalf("unexpected target result target=%s secure=%v", target, secure)
 			}
 		})
+	}
+}
+
+func TestBuildRuntimeTargetErrorMessageUsesRuntimeURLTerm(t *testing.T) {
+	_, _, err := buildRuntimeTarget("")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "runtime url") {
+		t.Fatalf("error should use runtime URL term, got: %v", err)
 	}
 }
 

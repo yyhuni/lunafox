@@ -4,7 +4,7 @@
 
 **Goal:** Build the protocol and generation foundation for runtime communication migration from WebSocket/HTTP to gRPC.
 
-**Architecture:** Define shared protobuf contracts in a new top-level `proto/` tree, generate Go stubs into each runtime component (`server/agent/worker`), and centralize auth metadata + gRPC error mapping as shared runtime conventions. Do not replace existing runtime endpoints in this step.
+**Architecture:** Define shared protobuf contracts in a new top-level `proto/` tree, generate Go stubs once into shared module `contracts/gen`, and let `server/agent/worker` import that shared package. Centralize auth metadata + gRPC error mapping as shared runtime conventions. Do not replace existing runtime endpoints in this step.
 
 **Tech Stack:** Go 1.26, Protocol Buffers, gRPC-Go, protoc plugins (`protoc-gen-go`, `protoc-gen-go-grpc`)
 
@@ -48,7 +48,7 @@ Create `runtime.proto` with:
 - `service AgentDataProxyService` with provider-config, wordlist meta/download, batch upsert
 - `service WorkerRuntimeService` with provider-config, ensure-wordlist, post-batch
 - oneof envelopes for agent up/down stream messages
-- `go_package = "github.com/yyhuni/lunafox/proto/gen/lunafox/runtime/v1;runtimev1"`
+- `go_package = "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1;runtimev1"`
 
 **Step 4: Run test to verify it still fails for missing generated code**
 
@@ -63,14 +63,13 @@ Expected: compile failure now points to missing generated Go files.
 **Files:**
 - Create: `proto/scripts/gen-go.sh`
 - Create: `proto/scripts/check-generated.sh`
-- Create: `proto/gen/.gitkeep`
+- Create: `contracts/go.mod`
 - Modify: `Makefile` (workspace root)
 - Modify: `server/go.mod`
 - Modify: `agent/go.mod`
 - Modify: `worker/go.mod`
-- Create: `server/internal/grpc/runtime/v1/gen.go`
-- Create: `agent/internal/grpc/runtime/v1/gen.go`
-- Create: `worker/internal/grpc/runtime/v1/gen.go`
+- Create: `contracts/gen/lunafox/runtime/v1/runtime.pb.go` (generated)
+- Create: `contracts/gen/lunafox/runtime/v1/runtime_grpc.pb.go` (generated)
 
 **Step 1: Write the failing test**
 
@@ -92,14 +91,10 @@ Expected: failure because generator and paths are not implemented.
 
 - Implement `proto/scripts/gen-go.sh`:
   - installs/uses `protoc-gen-go` and `protoc-gen-go-grpc` from local Go toolchain
-  - generates to `proto/gen/`
-  - syncs generated files into:
-    - `server/internal/grpc/runtime/v1/gen/`
-    - `agent/internal/grpc/runtime/v1/gen/`
-    - `worker/internal/grpc/runtime/v1/gen/`
+  - generates to `contracts/gen/`
 - add root `make proto` and `make proto-check`
-- add required grpc/protobuf deps to all three go.mod files
-- add `gen.go` packages exposing stable import paths in each component.
+- add required grpc/protobuf deps to all three go.mod files and add local module mapping to `../contracts`
+- update runtime imports in each component to use shared package `github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1`.
 
 **Step 4: Run test to verify it passes**
 
@@ -193,4 +188,3 @@ Mark completed items:
 - `1.4` (if metadata + auth mapping are fully wired)
 
 Leave unchecked anything partially implemented.
-

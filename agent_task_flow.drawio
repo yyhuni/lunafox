@@ -1,0 +1,139 @@
+<mxfile host="Electron" modified="2024-05-24T00:00:00Z" agent="Mozilla/5.0" version="24.0.0" type="device">
+  <diagram id="detailed_diagram" name="Resource Limited Task Flow">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0" defaultFontFamily="Noto Sans JP" defaultFontSize="18">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- TITLE -->
+        <mxCell id="title" value="Agent 任务限制与并发模型" style="text;html=1;fontSize=24;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="220" y="20" width="400" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== ARROWS (BACK LAYER) ==================== -->
+        
+        <!-- Start -> Cond 1 -->
+        <mxCell id="e_loop_cond1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="140" as="sourcePoint" />
+            <mxPoint x="420" y="180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Cond 1 (No) -> Back to Loop -->
+        <mxCell id="e_cond1_no" value="达到上限" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=18;fontColor=#FF0000;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="300" y="220" as="sourcePoint" />
+            <mxPoint x="420" y="110" as="targetPoint" />
+            <mxPoint x="-20" y="-15" as="offset"/>
+            <Array as="points">
+              <mxPoint x="180" y="220" />
+              <mxPoint x="180" y="110" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Cond 1 (Yes) -> Cond 2 -->
+        <mxCell id="e_cond1_yes" value="未满" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=18;fontColor=#008000;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="260" as="sourcePoint" />
+            <mxPoint x="420" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Cond 2 (No) -> Back to Loop -->
+        <mxCell id="e_cond2_no" value="超标 (报警)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=18;fontColor=#FF0000;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="280" y="370" as="sourcePoint" />
+            <mxPoint x="180" y="180" as="targetPoint" />
+            <mxPoint x="-20" y="-15" as="offset"/>
+            <Array as="points">
+              <mxPoint x="180" y="370" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Cond 2 (Yes) -> Pull Task -->
+        <mxCell id="e_cond2_yes" value="正常" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=18;fontColor=#008000;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="420" as="sourcePoint" />
+            <mxPoint x="420" y="480" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        
+        <!-- Pull Task -> Queue -->
+        <mxCell id="e_pull_queue" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=18;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="560" as="sourcePoint" />
+            <mxPoint x="420" y="620" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Queue Loop -> Back to Start -->
+        <mxCell id="e_queue_loop" value="拉取完成，继续寻呼" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=18;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="540" y="650" as="sourcePoint" />
+            <mxPoint x="420" y="110" as="targetPoint" />
+            <mxPoint x="20" y="-20" as="offset"/>
+            <Array as="points">
+              <mxPoint x="640" y="650" />
+              <mxPoint x="640" y="110" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ==================== NODES (FRONT LAYER) ==================== -->
+        
+        <!-- Loop Start -->
+        <mxCell id="n_loop" value="启动任务拉取循环" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="320" y="80" width="200" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Capacity Check (Concurrency) -->
+        <mxCell id="n_cond1" value="① 并发数限制拦截&lt;br&gt;运行任务数 &amp;lt; MaxTasks ?" style="rhombus;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="300" y="180" width="240" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Resource Check -->
+        <mxCell id="n_cond2" value="② 节点资源限制拦截&lt;br&gt;CPU &amp;lt; CpuThreshold ?&lt;br&gt;内存 &amp;lt; MemThreshold ?&lt;br&gt;磁盘 &amp;lt; DiskThreshold ?" style="rhombus;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="280" y="320" width="280" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Pull Task -->
+        <mxCell id="n_pull" value="发起 gRPC 提取 1 个任务" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="320" y="480" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Queue -->
+        <mxCell id="n_queue" value="放入 Task Queue (通道)" style="shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="320" y="620" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Executors Group -->
+        <mxCell id="n_exec_bg" value="异步执行器模块：最大同时存活 Goroutine = MaxTasks" style="rounded=1;html=1;strokeWidth=2;dashed=1;fillColor=none;strokeColor=#666666;verticalAlign=top;align=left;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="150" y="740" width="580" height="150" as="geometry" />
+        </mxCell>
+
+        <mxCell id="n_exec1" value="任务 1&lt;br&gt;(消耗CPU/内存)" style="rounded=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="180" y="790" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n_exec2" value="任务 2&lt;br&gt;(消耗CPU/内存)" style="rounded=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="320" y="790" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n_exec3" value="..." style="text;html=1;fontSize=24;align=center;" vertex="1" parent="1">
+          <mxGeometry x="450" y="805" width="40" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="n_exec4" value="任务 MaxTasks" style="rounded=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="510" y="790" width="180" height="60" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="e_queue_exec_link" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=18;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="680" as="sourcePoint" />
+            <mxPoint x="430" y="730" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

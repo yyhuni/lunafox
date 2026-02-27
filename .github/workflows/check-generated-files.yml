@@ -35,9 +35,24 @@ jobs:
           path: |
             ${{ env.GOMODCACHE }}
             ${{ env.GOCACHE }}
-          key: ${{ runner.os }}-go-cache-worker-${{ hashFiles('worker/go.sum') }}
+          key: ${{ runner.os }}-go-cache-generated-${{ hashFiles('worker/go.sum', 'agent/go.sum', 'server/go.sum', 'contracts/go.sum') }}
           restore-keys: |
-            ${{ runner.os }}-go-cache-worker-
+            ${{ runner.os }}-go-cache-generated-
+
+      - name: Install protoc
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends protobuf-compiler
+
+      - name: Install protoc Go plugins
+        run: |
+          set -euo pipefail
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.10
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
+
+      - name: Generate runtime gRPC contracts
+        run: make proto
 
       - name: Generate files for all workflows
         working-directory: worker
@@ -47,7 +62,9 @@ jobs:
         run: |
           if ! git diff --exit-code; then
             echo "❌ Generated files are out of date!"
-            echo "Please run: cd worker && make generate"
+            echo "Please run:"
+            echo "  make proto"
+            echo "  cd worker && make generate"
             echo ""
             echo "Changed files:"
             git status --porcelain

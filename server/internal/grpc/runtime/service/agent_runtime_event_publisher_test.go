@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
+	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
 	"github.com/yyhuni/lunafox/server/internal/agentproto"
-	runtimev1 "github.com/yyhuni/lunafox/server/internal/grpc/runtime/v1/gen"
 )
 
 func TestAgentRuntimeEventPublisherPublishesTypedEvents(t *testing.T) {

@@ -3,7 +3,7 @@ package cli
 import "testing"
 
 func TestNormalizePublicURL(t *testing.T) {
-	url, port, err := NormalizePublicURL("https://10.8.0.25:18443", DefaultPublicPort)
+	url, port, err := NormalizePublicURL("https://10.8.0.25:18443", "")
 	if err != nil {
 		t.Fatalf("normalize: %v", err)
 	}
@@ -16,7 +16,7 @@ func TestNormalizePublicURL(t *testing.T) {
 }
 
 func TestNormalizePublicURLAddsDefaultPortByScheme(t *testing.T) {
-	url, port, err := NormalizePublicURL("http://10.8.0.25", DefaultPublicPort)
+	url, port, err := NormalizePublicURL("http://10.8.0.25", "")
 	if err != nil {
 		t.Fatalf("normalize: %v", err)
 	}
@@ -38,6 +38,13 @@ func TestNormalizePublicHostPort(t *testing.T) {
 	}
 	if port != "8443" {
 		t.Fatalf("unexpected port: %s", port)
+	}
+}
+
+func TestNormalizePublicHostPortRejectsEmptyPort(t *testing.T) {
+	_, _, err := NormalizePublicHostPort("10.8.0.25", "")
+	if err == nil {
+		t.Fatalf("expected empty port to be rejected")
 	}
 }
 
@@ -72,7 +79,7 @@ func TestParsePublicHostInputRejectsDomain(t *testing.T) {
 }
 
 func TestNormalizePublicURLRejectsDomainHost(t *testing.T) {
-	_, _, err := NormalizePublicURL("https://example.com:443", DefaultPublicPort)
+	_, _, err := NormalizePublicURL("https://example.com:443", "")
 	if err == nil {
 		t.Fatalf("expected domain host to be rejected")
 	}
@@ -87,7 +94,7 @@ func TestParsePublicHostInputRejectsIPv6(t *testing.T) {
 }
 
 func TestNormalizePublicURLRejectsIPv6Host(t *testing.T) {
-	_, _, err := NormalizePublicURL("https://[2001:db8::1]:443", DefaultPublicPort)
+	_, _, err := NormalizePublicURL("https://[2001:db8::1]:443", "")
 	if err == nil {
 		t.Fatalf("expected ipv6 url host to be rejected")
 	}

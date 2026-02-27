@@ -49,18 +49,23 @@ usage() {
   ./install.sh
   ./install.sh --version v1.5.13
   ./install.sh --channel canary
-  ./install.sh --source gitee --channel stable --public-url https://10.0.0.8:8083
-  ./install.sh --public-host 10.0.0.8 --public-port 8083 --non-interactive
+  ./install.sh --source gitee --channel stable --public-url https://10.0.0.8:18443
+  ./install.sh --public-host 10.0.0.8 --public-port 18443 --non-interactive
 
 常用参数:
   --version <ver>            指定安装版本（例如 v1.5.13）
   --channel <name>           版本通道（默认 stable）
   --source <auto|github|gitee>
                             下载源策略（默认 auto=清单 gitee 后 github；安装器测速后在 gitee/github 间自动选择）
-  --public-url <url>         公网访问地址（仅支持 localhost/IPv4），如 https://10.0.0.8:8083
+  --public-url <url>         公网访问地址（仅支持 localhost/IPv4），如 https://10.0.0.8:18443
   --public-host <host>       公网主机（仅支持 localhost/IPv4），如 10.0.0.8
-  --public-port <port>       公网端口（默认 8083）
+  --public-port <port>       公网端口（1-65535，必填）
   --non-interactive          禁用交互向导，需显式提供公网地址
+
+地址输入规则:
+  1) --public-url 与 --public-host/--public-port 二选一
+  2) --public-host 必须配合 --public-port
+  3) 主机仅支持 localhost 或 IPv4
 
 行为说明:
   install 默认会在安装前执行轻清理（compose down --remove-orphans + 清理残留 lunafox-agent 容器），不会删除卷/证书/.env。
@@ -157,6 +162,9 @@ if [ -n "$PUBLIC_URL" ] && { [ -n "$PUBLIC_HOST" ] || [ -n "$PUBLIC_PORT" ]; }; 
 fi
 if [ -n "$PUBLIC_PORT" ] && [ -z "$PUBLIC_HOST" ]; then
 	usage_error "--public-port 需要配合 --public-host 使用"
+fi
+if [ -n "$PUBLIC_HOST" ] && [ -z "$PUBLIC_PORT" ]; then
+	usage_error "--public-host 需要配合 --public-port 使用"
 fi
 
 if ! command -v curl >/dev/null 2>&1; then

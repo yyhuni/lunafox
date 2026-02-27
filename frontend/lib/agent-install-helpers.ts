@@ -6,5 +6,5 @@ export const buildInstallCommand = (token: string, scriptBaseURL: string): strin
   if (!trimmedUrl) return ""
 
   const scriptBaseUrl = normalizeOrigin(trimmedUrl)
-  return `curl -kfsSL "${scriptBaseUrl}/api/agent/install-script?token=${encodeURIComponent(token)}&mode=remote" | bash`
+  return `curl -kfsSL "${scriptBaseUrl}/api/agent/install-script/remote?token=${encodeURIComponent(token)}" | bash`
 }

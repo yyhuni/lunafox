@@ -45,9 +45,6 @@ func NormalizePublicURL(raw string, fallbackPort string) (string, string, error)
 	if port == "" {
 		port = strings.TrimSpace(fallbackPort)
 	}
-	if port == "" {
-		port = DefaultPublicPort
-	}
 	if err := ValidatePublicPort(port); err != nil {
 		return "", "", err
 	}
@@ -70,7 +67,7 @@ func NormalizePublicHostPort(hostRaw string, portRaw string) (string, string, er
 	}
 	port := strings.TrimSpace(portRaw)
 	if port == "" {
-		port = DefaultPublicPort
+		return "", "", fmt.Errorf("公网端口不合法: 不能为空")
 	}
 	if err := ValidatePublicPort(port); err != nil {
 		return "", "", fmt.Errorf("公网端口不合法: %w", err)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/yyhuni/lunafox/agent/internal/config"
@@ -13,14 +14,13 @@ import (
 	"github.com/yyhuni/lunafox/agent/internal/health"
 	"github.com/yyhuni/lunafox/agent/internal/logger"
 	"github.com/yyhuni/lunafox/agent/internal/metrics"
-	"github.com/yyhuni/lunafox/agent/internal/protocol"
+	agentruntime "github.com/yyhuni/lunafox/agent/internal/runtime"
 	"github.com/yyhuni/lunafox/agent/internal/task"
 	"github.com/yyhuni/lunafox/agent/internal/update"
-	agentws "github.com/yyhuni/lunafox/agent/internal/websocket"
 	"go.uber.org/zap"
 )
 
-func Run(ctx context.Context, cfg config.Config, wsURL string) error {
+func Run(ctx context.Context, cfg config.Config) error {
 	configUpdater := config.NewUpdater(cfg)
 
 	version := cfg.AgentVersion
@@ -37,21 +37,21 @@ func Run(ctx context.Context, cfg config.Config, wsURL string) error {
 		zap.String("version", version),
 		zap.String("hostname", hostname),
 		zap.String("server", cfg.ServerURL),
-		zap.String("ws", wsURL),
+		zap.String("runtime", cfg.RuntimeURL),
 		zap.Int("maxTasks", cfg.MaxTasks),
 		zap.Int("cpuThreshold", cfg.CPUThreshold),
 		zap.Int("memThreshold", cfg.MemThreshold),
 		zap.Int("diskThreshold", cfg.DiskThreshold),
 	)
 
-	client := agentws.NewClient(wsURL, cfg.APIKey)
+	runtimeClient := agentruntime.NewClient(cfg.RuntimeURL, cfg.APIKey)
+	workerRuntimeSocket := resolveWorkerRuntimeSocketPath()
 	collector := metrics.NewCollector()
 	healthManager := health.NewManager()
 	taskCounter := &task.Counter{}
-	heartbeat := agentws.NewHeartbeatSender(client, collector, healthManager, version, hostname, taskCounter.Count)
+	heartbeat := agentruntime.NewHeartbeatSender(runtimeClient, collector, healthManager, version, hostname, taskCounter.Count)
 
-	taskClient := task.NewClient(cfg.ServerURL, cfg.APIKey)
-	puller := task.NewPuller(taskClient, collector, taskCounter, cfg.MaxTasks, cfg.CPUThreshold, cfg.MemThreshold, cfg.DiskThreshold)
+	puller := task.NewPuller(runtimeClient, collector, taskCounter, cfg.MaxTasks, cfg.CPUThreshold, cfg.MemThreshold, cfg.DiskThreshold)
 
 	taskQueue := make(chan *domain.Task, cfg.MaxTasks)
 	puller.SetOnTask(func(t *domain.Task) {
@@ -72,13 +72,12 @@ func Run(ctx context.Context, cfg config.Config, wsURL string) error {
 		logger.Log.Info("docker client ready")
 	}
 
-	workerToken := os.Getenv("WORKER_TOKEN")
+	workerToken := strings.TrimSpace(os.Getenv("WORKER_TOKEN"))
 	if workerToken == "" {
-		return errors.New("WORKER_TOKEN environment variable is required")
+		logger.Log.Info("WORKER_TOKEN not configured; worker HTTP runtime token is deprecated")
 	}
-	logger.Log.Info("worker token loaded")
 
-	executor := task.NewExecutor(dockerClient, taskClient, taskCounter, cfg.ServerURL, workerToken)
+	executor := task.NewExecutor(dockerClient, runtimeClient, taskCounter, workerRuntimeSocket)
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
@@ -89,14 +88,12 @@ func Run(ctx context.Context, cfg config.Config, wsURL string) error {
 
 	updater := update.NewUpdater(dockerClient, healthManager, puller, executor, configUpdater, cfg.APIKey, workerToken)
 
-	handler := agentws.NewHandler()
-	handler.OnTaskAvailable(puller.NotifyTaskAvailable)
-	handler.OnTaskCancel(func(taskID int) {
+	runtimeClient.OnTaskCancel(func(taskID int) {
 		logger.Log.Info("task cancel requested", zap.Int("taskId", taskID))
 		executor.MarkCancelled(taskID)
 		executor.CancelTask(taskID)
 	})
-	handler.OnConfigUpdate(func(payload protocol.ConfigUpdatePayload) {
+	runtimeClient.OnConfigUpdate(func(payload domain.ConfigUpdate) {
 		logger.Log.Info("config update received",
 			zap.String("maxTasks", formatOptionalInt(payload.MaxTasks)),
 			zap.String("cpuThreshold", formatOptionalInt(payload.CPUThreshold)),
@@ -112,8 +109,13 @@ func Run(ctx context.Context, cfg config.Config, wsURL string) error {
 		configUpdater.Apply(cfgUpdate)
 		puller.UpdateConfig(cfgUpdate.MaxTasks, cfgUpdate.CPUThreshold, cfgUpdate.MemThreshold, cfgUpdate.DiskThreshold)
 	})
-	handler.OnUpdateRequired(updater.HandleUpdateRequired)
-	client.SetOnMessage(handler.Handle)
+	runtimeClient.OnUpdateRequired(updater.HandleUpdateRequired)
+
+	logger.Log.Info("starting worker runtime UDS server", zap.String("socket", workerRuntimeSocket))
+	workerRuntimeErrCh := make(chan error, 1)
+	go func() {
+		workerRuntimeErrCh <- agentruntime.RunWorkerRuntimeServer(ctx, workerRuntimeSocket, runtimeClient)
+	}()
 
 	logger.Log.Info("starting heartbeat sender")
 	go heartbeat.Start(ctx)
@@ -124,11 +126,31 @@ func Run(ctx context.Context, cfg config.Config, wsURL string) error {
 	logger.Log.Info("starting task executor")
 	go executor.Start(ctx, taskQueue)
 
-	logger.Log.Info("connecting to server websocket")
-	if err := client.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		return err
+	logger.Log.Info("connecting to runtime gRPC stream")
+	runtimeErrCh := make(chan error, 1)
+	go func() {
+		runtimeErrCh <- runtimeClient.Run(ctx)
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case err := <-runtimeErrCh:
+			if err != nil && !errors.Is(err, context.Canceled) {
+				return err
+			}
+			runtimeErrCh = nil
+		case err := <-workerRuntimeErrCh:
+			if err != nil && !errors.Is(err, context.Canceled) {
+				return err
+			}
+			workerRuntimeErrCh = nil
+		}
+		if runtimeErrCh == nil && workerRuntimeErrCh == nil {
+			return nil
+		}
 	}
-	return nil
 }
 
 func formatOptionalInt(value *int) string {
@@ -136,4 +158,12 @@ func formatOptionalInt(value *int) string {
 		return "nil"
 	}
 	return strconv.Itoa(*value)
+}
+
+func resolveWorkerRuntimeSocketPath() string {
+	path := strings.TrimSpace(os.Getenv("LUNAFOX_RUNTIME_SOCKET"))
+	if path == "" {
+		return agentruntime.DefaultWorkerRuntimeSocketPath
+	}
+	return path
 }

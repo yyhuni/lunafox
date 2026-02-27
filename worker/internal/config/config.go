@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	ErrMissingServerURL    = errors.New("missing required configuration: SERVER_URL")
-	ErrMissingServerToken  = errors.New("missing required configuration: SERVER_TOKEN")
+	ErrMissingTaskID       = errors.New("missing required configuration: TASK_ID")
+	ErrMissingAgentSocket  = errors.New("missing required configuration: AGENT_SOCKET")
+	ErrMissingTaskToken    = errors.New("missing required configuration: TASK_TOKEN")
 	ErrMissingScanID       = errors.New("missing required configuration: SCAN_ID")
 	ErrMissingTargetID     = errors.New("missing required configuration: TARGET_ID")
 	ErrMissingTargetName   = errors.New("missing required configuration: TARGET_NAME")
@@ -22,9 +23,10 @@ var (
 
 // Config holds all configuration for the worker
 type Config struct {
-	// Server connection
-	ServerURL   string
-	ServerToken string
+	// Runtime connection
+	TaskID      int
+	AgentSocket string
+	TaskToken   string
 
 	// Task parameters (from environment variables)
 	ScanID       int
@@ -45,8 +47,9 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		ServerURL:    os.Getenv("SERVER_URL"),
-		ServerToken:  os.Getenv("SERVER_TOKEN"),
+		TaskID:       getEnvAsInt("TASK_ID", 0),
+		AgentSocket:  os.Getenv("AGENT_SOCKET"),
+		TaskToken:    os.Getenv("TASK_TOKEN"),
 		ScanID:       getEnvAsInt("SCAN_ID", 0),
 		TargetID:     getEnvAsInt("TARGET_ID", 0),
 		TargetName:   os.Getenv("TARGET_NAME"),
@@ -73,18 +76,16 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-// InputURL returns the URL to download input data for this scan
-func (c *Config) InputURL() string {
-	return c.ServerURL + "/api/scans/" + strconv.Itoa(c.ScanID) + "/input/"
-}
-
 // Validate checks that all required configuration is present
 func (c *Config) Validate() error {
-	if c.ServerURL == "" {
-		return ErrMissingServerURL
+	if c.TaskID == 0 {
+		return ErrMissingTaskID
 	}
-	if c.ServerToken == "" {
-		return ErrMissingServerToken
+	if c.AgentSocket == "" {
+		return ErrMissingAgentSocket
+	}
+	if c.TaskToken == "" {
+		return ErrMissingTaskToken
 	}
 	if c.ScanID == 0 {
 		return ErrMissingScanID
