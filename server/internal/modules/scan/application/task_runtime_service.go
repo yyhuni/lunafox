@@ -38,6 +38,7 @@ func (service *TaskRuntimeService) PullTask(ctx context.Context, agentID int) (*
 	if !ok {
 		return nil, ErrTaskInvalidTransition
 	}
+	// The first successful task pull promotes scan lifecycle from pending to running.
 	if scanStatus == scandomain.ScanStatusPending {
 		domainScan := &scandomain.Scan{Status: scanStatus}
 		if err := domainScan.MarkRunning(); err != nil {
@@ -49,6 +50,7 @@ func (service *TaskRuntimeService) PullTask(ctx context.Context, agentID int) (*
 	}
 
 	config := strings.TrimSpace(task.Config)
+	// Task-level config takes precedence; fall back to scan-level YAML when empty.
 	if config == "" {
 		config = strings.TrimSpace(scan.YamlConfiguration)
 	}
@@ -105,6 +107,7 @@ func (service *TaskRuntimeService) UpdateStatus(ctx context.Context, agentID, ta
 	if err := service.taskStore.UpdateStatus(ctx, taskID, string(nextStatus), errorMessage); err != nil {
 		return err
 	}
+	// Stage unlock and scan-level status transitions happen only after a terminal task result.
 	if scandomain.IsTerminalTaskStatus(nextStatus) {
 		if err := service.unlockNextStageIfReady(ctx, task.ScanID, task.Stage); err != nil {
 			return err
@@ -115,6 +118,7 @@ func (service *TaskRuntimeService) UpdateStatus(ctx context.Context, agentID, ta
 }
 
 func (service *TaskRuntimeService) unlockNextStageIfReady(ctx context.Context, scanID, stage int) error {
+	// Keep stage ordering strict: do not release next stage while current one is still active.
 	active, err := service.taskStore.CountActiveByScanAndStage(ctx, scanID, stage)
 	if err != nil {
 		return err
@@ -127,6 +131,7 @@ func (service *TaskRuntimeService) unlockNextStageIfReady(ctx context.Context, s
 }
 
 func (service *TaskRuntimeService) recalculateScanStatus(ctx context.Context, scanID int, lastErrorMessage string) error {
+	// Recompute scan status from aggregate task states after terminal task updates.
 	pending, running, _, failed, cancelled, err := service.taskStore.GetStatusCountsByScanID(ctx, scanID)
 	if err != nil {
 		return err
@@ -143,5 +148,6 @@ func (service *TaskRuntimeService) recalculateScanStatus(ctx context.Context, sc
 }
 
 func workspaceDir(scanID, taskID int) string {
+	// Shared-data contract: /opt/lunafox is mounted volume across server/agent/worker.
 	return fmt.Sprintf("/opt/lunafox/results/scan_%d/task_%d", scanID, taskID)
 }

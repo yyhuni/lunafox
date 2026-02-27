@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -117,5 +118,136 @@ func TestReadSharedDataVolumeBind(t *testing.T) {
 	}
 	if bind != "lunafox_data:/opt/lunafox" {
 		t.Fatalf("unexpected bind: %s", bind)
+	}
+}
+
+func TestReadOptionalValue(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".env")
+	if err := os.WriteFile(path, []byte("DB_USER=postgres\n"), 0o644); err != nil {
+		t.Fatalf("write env: %v", err)
+	}
+
+	value, err := ReadOptionalValue(path, "DB_USER")
+	if err != nil {
+		t.Fatalf("read optional value: %v", err)
+	}
+	if value != "postgres" {
+		t.Fatalf("unexpected value: %s", value)
+	}
+}
+
+func TestReadOptionalValueReturnsEmptyWhenMissing(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".env")
+	if err := os.WriteFile(path, []byte("DB_USER=postgres\n"), 0o644); err != nil {
+		t.Fatalf("write env: %v", err)
+	}
+
+	value, err := ReadOptionalValue(path, "DB_PASSWORD")
+	if err != nil {
+		t.Fatalf("read optional value: %v", err)
+	}
+	if value != "" {
+		t.Fatalf("expected empty value when key missing, got: %s", value)
+	}
+}
+
+func TestWriteMergedReusesSelectedKeysAndPreservesUnknownKeys(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".env")
+	existing := strings.Join([]string{
+		"JWT_SECRET=jwt-old",
+		"WORKER_TOKEN=worker-old",
+		"DB_USER=custom-user",
+		"CUSTOM_KEY=custom-value",
+		"",
+	}, "\n")
+	if err := os.WriteFile(path, []byte(existing), 0o644); err != nil {
+		t.Fatalf("write env: %v", err)
+	}
+
+	report, err := WriteMerged(path, testData(), []string{"DB_USER"})
+	if err != nil {
+		t.Fatalf("write merged: %v", err)
+	}
+
+	if !slices.Contains(report.ReusedKeys, "DB_USER") {
+		t.Fatalf("expected DB_USER to be reused, got report: %+v", report)
+	}
+	if !slices.Contains(report.PreservedUnknownKeys, "CUSTOM_KEY") {
+		t.Fatalf("expected CUSTOM_KEY to be preserved, got report: %+v", report)
+	}
+
+	dbUser, err := ReadOptionalValue(path, "DB_USER")
+	if err != nil {
+		t.Fatalf("read db user: %v", err)
+	}
+	if dbUser != "custom-user" {
+		t.Fatalf("unexpected db user: %s", dbUser)
+	}
+	jwt, err := ReadOptionalValue(path, "JWT_SECRET")
+	if err != nil {
+		t.Fatalf("read jwt: %v", err)
+	}
+	if jwt != "jwt-new" {
+		t.Fatalf("expected JWT_SECRET to be overwritten by new data, got: %s", jwt)
+	}
+	custom, err := ReadOptionalValue(path, "CUSTOM_KEY")
+	if err != nil {
+		t.Fatalf("read custom key: %v", err)
+	}
+	if custom != "custom-value" {
+		t.Fatalf("unexpected custom key value: %s", custom)
+	}
+}
+
+func TestWriteMergedCreatesFileWhenMissing(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".env")
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("expected env file to not exist")
+	}
+
+	report, err := WriteMerged(path, testData(), []string{"DB_USER"})
+	if err != nil {
+		t.Fatalf("write merged: %v", err)
+	}
+	if len(report.ReusedKeys) != 0 {
+		t.Fatalf("unexpected reused keys: %+v", report.ReusedKeys)
+	}
+	if len(report.PreservedUnknownKeys) != 0 {
+		t.Fatalf("unexpected preserved unknown keys: %+v", report.PreservedUnknownKeys)
+	}
+
+	dbUser, err := ReadOptionalValue(path, "DB_USER")
+	if err != nil {
+		t.Fatalf("read db user: %v", err)
+	}
+	if dbUser != "postgres" {
+		t.Fatalf("unexpected db user: %s", dbUser)
+	}
+}
+
+func testData() Data {
+	return Data{
+		ImageTag:             "dev",
+		ImageRegistry:        "docker.io",
+		ImageNamespace:       "yyhuni",
+		AgentImageRef:        "docker.io/yyhuni/lunafox-agent:dev",
+		WorkerImageRef:       "docker.io/yyhuni/lunafox-worker:dev",
+		SharedDataVolumeBind: "lunafox_data:/opt/lunafox",
+		JWTSecret:            "jwt-new",
+		WorkerToken:          "worker-new",
+		DBHost:               "postgres",
+		DBPassword:           "postgres",
+		RedisHost:            "redis",
+		DBUser:               "postgres",
+		DBName:               "lunafox",
+		DBPort:               "5432",
+		RedisPort:            "6379",
+		Go111Module:          "on",
+		GoProxy:              "https://proxy.golang.org,direct",
+		PublicURL:            "https://example.com:18443",
+		PublicPort:           "18443",
 	}
 }

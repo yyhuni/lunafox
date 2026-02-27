@@ -2,7 +2,7 @@ package config
 
 import "testing"
 
-func TestValidateServerURL(t *testing.T) {
+func TestValidateRuntimeGRPCURL(t *testing.T) {
 	validURLs := []string{
 		"https://example.com",
 		"http://example.com",
@@ -13,23 +13,23 @@ func TestValidateServerURL(t *testing.T) {
 	}
 
 	for _, input := range validURLs {
-		if err := validateServerURL(input); err != nil {
+		if err := validateRuntimeGRPCURL(input); err != nil {
 			t.Fatalf("unexpected error for %s: %v", input, err)
 		}
 	}
 }
 
-func TestValidateServerURLInvalid(t *testing.T) {
-	if err := validateServerURL("example.com"); err == nil {
+func TestValidateRuntimeGRPCURLInvalid(t *testing.T) {
+	if err := validateRuntimeGRPCURL("example.com"); err == nil {
 		t.Fatalf("expected error for missing scheme")
 	}
-	if err := validateServerURL(" "); err == nil {
+	if err := validateRuntimeGRPCURL(" "); err == nil {
 		t.Fatalf("expected error for empty url")
 	}
-	if err := validateServerURL("ftp://example.com"); err == nil {
+	if err := validateRuntimeGRPCURL("ftp://example.com"); err == nil {
 		t.Fatalf("expected error for unsupported scheme")
 	}
-	if err := validateServerURL("https://"); err == nil {
+	if err := validateRuntimeGRPCURL("https://"); err == nil {
 		t.Fatalf("expected error for missing host")
 	}
 }

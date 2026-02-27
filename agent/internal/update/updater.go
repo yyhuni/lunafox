@@ -40,6 +40,10 @@ type Updater struct {
 const (
 	sharedDataVolumeBindEnvKey = "LUNAFOX_SHARED_DATA_VOLUME_BIND"
 	defaultSharedDataMountPath = "/opt/lunafox"
+	runtimeVolumeNameEnvKey    = "LUNAFOX_RUNTIME_VOLUME"
+	defaultRuntimeVolumeName   = "lunafox_runtime"
+	defaultRuntimeSocketPath   = "/run/lunafox/worker-runtime.sock"
+	defaultRuntimeMountPath    = "/run/lunafox"
 )
 
 type dockerClient interface {

@@ -50,28 +50,6 @@ func (h *WordlistHandler) Get(c *gin.Context) {
 	dto.Success(c, toWordlistOutput(wordlist))
 }
 
-// GetByName returns a wordlist by name (for worker API).
-// GET /api/worker/wordlists/:name
-func (h *WordlistHandler) GetByName(c *gin.Context) {
-	name := c.Param("name")
-	if name == "" {
-		dto.BadRequest(c, "Name is required")
-		return
-	}
-
-	wordlist, err := h.svc.GetByName(name)
-	if err != nil {
-		if errors.Is(err, service.ErrWordlistNotFound) {
-			dto.NotFound(c, "Wordlist not found")
-			return
-		}
-		dto.InternalError(c, "Failed to get wordlist")
-		return
-	}
-
-	dto.Success(c, toWordlistOutput(wordlist))
-}
-
 // DownloadByID serves the wordlist file by ID.
 // GET /api/wordlists/:id/download
 func (h *WordlistHandler) DownloadByID(c *gin.Context) {
@@ -92,18 +70,6 @@ func (h *WordlistHandler) DownloadByID(c *gin.Context) {
 	}
 
 	h.serveWordlistFile(c, wordlist.Name)
-}
-
-// DownloadByName serves the wordlist file by name.
-// GET /api/worker/wordlists/:name/download
-func (h *WordlistHandler) DownloadByName(c *gin.Context) {
-	name := c.Param("name")
-	if name == "" {
-		dto.BadRequest(c, "Name is required")
-		return
-	}
-
-	h.serveWordlistFile(c, name)
 }
 
 func (h *WordlistHandler) serveWordlistFile(c *gin.Context, name string) {

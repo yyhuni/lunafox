@@ -137,8 +137,7 @@ ensure_loki_plugin() {
 		return 0
 	fi
 
-	echo "Warning: failed to install Loki Docker plugin (${LOKI_PLUGIN_REFS[*]})." >&2
-	echo "Warning: agent container will start without Loki log driver." >&2
+	echo "Failed to install Loki Docker plugin (${LOKI_PLUGIN_REFS[*]})." >&2
 	return 1
 }
 
@@ -285,19 +284,17 @@ ensure_images() {
 
 resolve_logging_args() {
 	LOGGING_ARGS=()
-	if [ "$USE_LOKI_DRIVER" -eq 1 ]; then
-		LOGGING_ARGS=(
-			--log-driver=loki
-			--log-opt "loki-url=$LOKI_PUSH_URL"
-			--log-opt "loki-tls-insecure-skip-verify=true"
-			--log-opt "no-file=true"
-			--log-opt "mode=non-blocking"
-			--log-opt "loki-batch-size=1048576"
-			--log-opt "max-buffer-size=5m"
-			--log-opt "loki-retries=3"
-			--log-opt "loki-external-labels=agent_id=$AGENT_ID,container_name=lunafox-agent"
-		)
-	fi
+	LOGGING_ARGS=(
+		--log-driver=loki
+		--log-opt "loki-url=$LOKI_PUSH_URL"
+		--log-opt "loki-tls-insecure-skip-verify=true"
+		--log-opt "no-file=true"
+		--log-opt "mode=non-blocking"
+		--log-opt "loki-batch-size=1048576"
+		--log-opt "max-buffer-size=5m"
+		--log-opt "loki-retries=3"
+		--log-opt "loki-external-labels=agent_id=$AGENT_ID,container_name=lunafox-agent"
+	)
 }
 
 resolve_network_args
@@ -311,9 +308,9 @@ if ! validate_loki_push_url; then
 	exit 1
 fi
 
-USE_LOKI_DRIVER=1
 if ! ensure_loki_plugin; then
-	USE_LOKI_DRIVER=0
+	echo "Failed to install Loki Docker plugin, exiting." >&2
+	exit 1
 fi
 probe_loki_push_url
 

@@ -2,8 +2,6 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/yyhuni/lunafox/server/internal/middleware"
-	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 	agenthandler "github.com/yyhuni/lunafox/server/internal/modules/agent/handler"
 )
 
@@ -12,22 +10,13 @@ func RegisterAgentRoutes(
 	api *gin.RouterGroup,
 	protected *gin.RouterGroup,
 	agentHandler *agenthandler.AgentHandler,
-	agentWSHandler *agenthandler.AgentWebSocketHandler,
-	agentTaskHandler *agenthandler.AgentTaskHandler,
 	agentLogHandler *agenthandler.AgentLogHandler,
-	agentRepo agentdomain.AgentRepository,
 ) {
 	runtime := api.Group("/agent")
 	runtime.POST("/register", agentHandler.Register)
 	runtime.GET("/install-script", agentHandler.InstallScript)
-	runtime.GET("/ws", middleware.AgentAuthMiddleware(agentRepo), agentWSHandler.Handle)
-
-	taskAPI := runtime.Group("")
-	taskAPI.Use(middleware.AgentAuthMiddleware(agentRepo))
-	{
-		taskAPI.POST("/tasks/pull", agentTaskHandler.PullTask)
-		taskAPI.PATCH("/tasks/:taskId/status", agentTaskHandler.UpdateTaskStatus)
-	}
+	runtime.GET("/install-script/local", agentHandler.InstallScriptLocal)
+	runtime.GET("/install-script/remote", agentHandler.InstallScriptRemote)
 
 	admin := protected.Group("/admin/agents")
 	{

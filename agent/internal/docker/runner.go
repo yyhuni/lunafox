@@ -16,12 +16,21 @@ import (
 const (
 	sharedDataVolumeBindEnvKey = "LUNAFOX_SHARED_DATA_VOLUME_BIND"
 	defaultSharedDataMountPath = "/opt/lunafox"
+	runtimeVolumeNameEnvKey    = "LUNAFOX_RUNTIME_VOLUME"
+	defaultRuntimeVolumeName   = "lunafox_runtime"
+	defaultRuntimeMountPath    = "/run/lunafox"
 )
 
 // StartWorker starts a worker container for a task and returns the container ID.
-func (c *Client) StartWorker(ctx context.Context, t *domain.Task, serverURL, serverToken string) (string, error) {
+func (c *Client) StartWorker(ctx context.Context, t *domain.Task, agentSocket, taskToken string) (string, error) {
 	if t == nil {
 		return "", fmt.Errorf("task is nil")
+	}
+	if strings.TrimSpace(agentSocket) == "" {
+		return "", fmt.Errorf("agent socket is required")
+	}
+	if strings.TrimSpace(taskToken) == "" {
+		return "", fmt.Errorf("task token is required")
 	}
 	if err := os.MkdirAll(t.WorkspaceDir, 0755); err != nil {
 		return "", fmt.Errorf("prepare workspace: %w", err)
@@ -35,7 +44,11 @@ func (c *Client) StartWorker(ctx context.Context, t *domain.Task, serverURL, ser
 	if err != nil {
 		return "", err
 	}
-	env := buildWorkerEnv(t, serverURL, serverToken)
+	runtimeVolumeBind, err := resolveRuntimeVolumeBind()
+	if err != nil {
+		return "", err
+	}
+	env := buildWorkerEnv(t, agentSocket, taskToken)
 
 	config := &container.Config{
 		Image: image,
@@ -44,7 +57,7 @@ func (c *Client) StartWorker(ctx context.Context, t *domain.Task, serverURL, ser
 	}
 
 	hostConfig := &container.HostConfig{
-		Binds:       []string{sharedDataVolumeBind},
+		Binds:       []string{sharedDataVolumeBind, runtimeVolumeBind},
 		AutoRemove:  false,
 		OomScoreAdj: 500,
 	}
@@ -111,6 +124,17 @@ func resolveSharedDataVolumeBind() (string, error) {
 	return raw, nil
 }
 
+func resolveRuntimeVolumeBind() (string, error) {
+	volumeName := strings.TrimSpace(os.Getenv(runtimeVolumeNameEnvKey))
+	if volumeName == "" {
+		volumeName = defaultRuntimeVolumeName
+	}
+	if !isValidNamedVolumeName(volumeName) {
+		return "", fmt.Errorf("%s must be a Docker named volume", runtimeVolumeNameEnvKey)
+	}
+	return fmt.Sprintf("%s:%s:ro", volumeName, defaultRuntimeMountPath), nil
+}
+
 func isValidNamedVolumeName(value string) bool {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -136,10 +160,9 @@ func isValidNamedVolumeName(value string) bool {
 	return true
 }
 
-func buildWorkerEnv(t *domain.Task, serverURL, serverToken string) []string {
+func buildWorkerEnv(t *domain.Task, agentSocket, taskToken string) []string {
 	return []string{
-		fmt.Sprintf("SERVER_URL=%s", serverURL),
-		fmt.Sprintf("SERVER_TOKEN=%s", serverToken),
+		fmt.Sprintf("TASK_ID=%d", t.ID),
 		fmt.Sprintf("SCAN_ID=%d", t.ScanID),
 		fmt.Sprintf("TARGET_ID=%d", t.TargetID),
 		fmt.Sprintf("TARGET_NAME=%s", t.TargetName),
@@ -147,5 +170,7 @@ func buildWorkerEnv(t *domain.Task, serverURL, serverToken string) []string {
 		fmt.Sprintf("WORKFLOW_NAME=%s", t.WorkflowName),
 		fmt.Sprintf("WORKSPACE_DIR=%s", t.WorkspaceDir),
 		fmt.Sprintf("CONFIG=%s", t.Config),
+		fmt.Sprintf("AGENT_SOCKET=%s", agentSocket),
+		fmt.Sprintf("TASK_TOKEN=%s", taskToken),
 	}
 }

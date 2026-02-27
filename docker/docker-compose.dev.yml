@@ -121,7 +121,7 @@ services:
       frontend:
         condition: service_healthy
     ports:
-      - "${PUBLIC_PORT:-8083}:8083"
+      - "${PUBLIC_PORT:?PUBLIC_PORT is required}:8083"
     volumes:
       - lunafox_ssl:/etc/nginx/ssl:ro
 

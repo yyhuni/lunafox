@@ -136,35 +136,10 @@ is_valid_port() {
 	return 0
 }
 
-extract_port_from_url() {
-	local raw="$1"
-	local host_port="${raw#http://}"
-	host_port="${host_port#https://}"
-	host_port="${host_port%%/*}"
-
-	if [[ "$host_port" =~ \]:([0-9]{1,5})$ ]]; then
-		echo "${BASH_REMATCH[1]}"
-		return 0
-	fi
-	if [[ "$host_port" =~ :([0-9]{1,5})$ ]]; then
-		echo "${BASH_REMATCH[1]}"
-		return 0
-	fi
-	return 1
-}
-
 resolve_public_port_from_env() {
 	local env_file="$1"
 	local port
 	port="$(read_env_value "$env_file" "PUBLIC_PORT")"
-
-	if ! is_valid_port "$port"; then
-		local public_url
-		public_url="$(read_env_value "$env_file" "PUBLIC_URL")"
-		if [ -n "$public_url" ]; then
-			port="$(extract_port_from_url "$public_url" || true)"
-		fi
-	fi
 
 	if ! is_valid_port "$port"; then
 		error "无法解析 PUBLIC_PORT，请检查配置文件: $env_file"

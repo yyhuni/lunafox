@@ -17,8 +17,12 @@ import (
 )
 
 const (
-	installScriptModeRemote = "remote"
-	installScriptModeLocal  = "local"
+	installScriptProfileRemote           = "remote"
+	installScriptProfileLocal            = "local"
+	installScriptLocalDefaultNetworkName = "lunafox_network"
+
+	installScriptModeDeprecatedMessage  = "mode query parameter is no longer supported; use /api/agent/install-script/local or /api/agent/install-script/remote"
+	installScriptProfileRequiredMessage = "Install script profile is required; use /api/agent/install-script/local or /api/agent/install-script/remote"
 )
 
 // CreateRegistrationToken creates a new registration token.
@@ -69,9 +73,34 @@ func (h *AgentHandler) Register(c *gin.Context) {
 	dto.Created(c, dto.AgentRegistrationResponse{AgentID: agent.ID, APIKey: agent.APIKey})
 }
 
-// InstallScript returns an agent installation script.
-// GET /api/agent/install-script?token=...&mode=<remote|local>
+// InstallScript keeps legacy path explicit and avoids silent profile fallback.
+// GET /api/agent/install-script?token=...
 func (h *AgentHandler) InstallScript(c *gin.Context) {
+	if rejectInstallScriptModeQuery(c) {
+		return
+	}
+	dto.BadRequest(c, installScriptProfileRequiredMessage)
+}
+
+// InstallScriptLocal returns install script for local profile.
+// GET /api/agent/install-script/local?token=...
+func (h *AgentHandler) InstallScriptLocal(c *gin.Context) {
+	if rejectInstallScriptModeQuery(c) {
+		return
+	}
+	h.installScriptByProfile(c, installScriptProfileLocal)
+}
+
+// InstallScriptRemote returns install script for remote profile.
+// GET /api/agent/install-script/remote?token=...
+func (h *AgentHandler) InstallScriptRemote(c *gin.Context) {
+	if rejectInstallScriptModeQuery(c) {
+		return
+	}
+	h.installScriptByProfile(c, installScriptProfileRemote)
+}
+
+func (h *AgentHandler) installScriptByProfile(c *gin.Context, profile string) {
 	token := strings.TrimSpace(c.Query("token"))
 	if token == "" {
 		dto.BadRequest(c, "Missing registration token")
@@ -88,7 +117,6 @@ func (h *AgentHandler) InstallScript(c *gin.Context) {
 		}
 	}
 
-	mode := normalizeInstallScriptMode(c.Query("mode"))
 	publicURL, err := validateInstallScriptPublicURL(h.publicURL)
 	if err != nil {
 		dto.InternalError(c, err.Error())
@@ -99,15 +127,22 @@ func (h *AgentHandler) InstallScript(c *gin.Context) {
 		dto.InternalError(c, err.Error())
 		return
 	}
-	agentServerURL := publicURL
-	if mode == installScriptModeLocal {
-		agentServerURL = h.agentInternalURL
+	// REGISTER_URL always goes through PUBLIC_URL (host-side registration request),
+	// while runtime endpoints depend on selected install profile.
+	registerURL := publicURL
+	runtimeGRPCURL := publicURL
+	dockerNetworkDefault := "off"
+	requireDockerNetwork := "0"
+	if profile == installScriptProfileLocal {
+		runtimeGRPCURL = h.runtimeInternalURL
+		dockerNetworkDefault = installScriptLocalDefaultNetworkName
+		requireDockerNetwork = "1"
 	}
 
 	version := h.serverVersion
-	if version == "" {
-		// Keep explicit fallback to avoid generating an empty AGENT_VERSION in script.
-		version = "unknown"
+	if strings.TrimSpace(version) == "" {
+		dto.InternalError(c, "Agent version is not configured")
+		return
 	}
 	// Fail fast on missing runtime contracts so the generated script never carries
 	// ambiguous defaults.
@@ -130,14 +165,15 @@ func (h *AgentHandler) InstallScript(c *gin.Context) {
 
 	script, err := renderInstallScript(agentInstallSHTemplate, installTemplateData{
 		Token:                token,
-		RegisterURL:          publicURL,
-		AgentServerURL:       agentServerURL,
+		RegisterURL:          registerURL,
+		RuntimeGRPCURL:       runtimeGRPCURL,
+		DockerNetworkDefault: dockerNetworkDefault,
+		RequireDockerNetwork: requireDockerNetwork,
 		LokiPushURL:          lokiPushURL,
 		AgentImageRef:        agentImageRef,
 		WorkerImageRef:       workerImageRef,
 		SharedDataVolumeBind: sharedDataVolumeBind,
 		AgentVersion:         version,
-		WorkerToken:          h.workerToken,
 	})
 	if err != nil {
 		dto.InternalError(c, "Failed to build install script")
@@ -148,23 +184,20 @@ func (h *AgentHandler) InstallScript(c *gin.Context) {
 	c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte(script))
 }
 
+func rejectInstallScriptModeQuery(c *gin.Context) bool {
+	if strings.TrimSpace(c.Query("mode")) == "" {
+		return false
+	}
+	dto.BadRequest(c, installScriptModeDeprecatedMessage)
+	return true
+}
+
 func renderInstallScript(tpl *template.Template, data installTemplateData) (string, error) {
 	var buf bytes.Buffer
 	if err := tpl.Execute(&buf, data); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
-}
-
-func normalizeInstallScriptMode(raw string) string {
-	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case "", installScriptModeRemote:
-		return installScriptModeRemote
-	case installScriptModeLocal:
-		return installScriptModeLocal
-	default:
-		return installScriptModeRemote
-	}
 }
 
 func validateInstallScriptPublicURL(raw string) (string, error) {

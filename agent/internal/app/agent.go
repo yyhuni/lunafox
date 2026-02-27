@@ -36,15 +36,14 @@ func Run(ctx context.Context, cfg config.Config) error {
 	logger.Log.Info("agent starting",
 		zap.String("version", version),
 		zap.String("hostname", hostname),
-		zap.String("server", cfg.ServerURL),
-		zap.String("runtime", cfg.RuntimeURL),
+		zap.String("runtimeGrpc", cfg.RuntimeGRPCURL),
 		zap.Int("maxTasks", cfg.MaxTasks),
 		zap.Int("cpuThreshold", cfg.CPUThreshold),
 		zap.Int("memThreshold", cfg.MemThreshold),
 		zap.Int("diskThreshold", cfg.DiskThreshold),
 	)
 
-	runtimeClient := agentruntime.NewClient(cfg.RuntimeURL, cfg.APIKey)
+	runtimeClient := agentruntime.NewClient(cfg.RuntimeGRPCURL, cfg.APIKey)
 	workerRuntimeSocket := resolveWorkerRuntimeSocketPath()
 	collector := metrics.NewCollector()
 	healthManager := health.NewManager()

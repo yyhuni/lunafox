@@ -82,6 +82,26 @@ func TestInstallScriptRemoteUsesPublicURL(t *testing.T) {
 	}
 }
 
+func TestInstallScriptFailsWhenServerVersionMissing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newInstallScriptHandlerForTest("https://public.example.com:8083")
+	handler.serverVersion = ""
+
+	router := gin.New()
+	registerInstallScriptRoutes(router, handler)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/agent/install-script/remote?token=test-token", nil)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d, body=%s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), "Agent version is not configured") {
+		t.Fatalf("unexpected response: %s", recorder.Body.String())
+	}
+}
+
 func TestInstallScriptLocalUsesInternalRuntimeURL(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := newInstallScriptHandlerForTest("https://public.example.com:8083")
@@ -117,6 +137,26 @@ func TestInstallScriptLocalUsesInternalRuntimeURL(t *testing.T) {
 	}
 	if !strings.Contains(body, `LOKI_PUSH_URL="https://public.example.com:8083/loki/api/v1/push"`) {
 		t.Fatalf("expected LOKI_PUSH_URL to use PUBLIC_URL host and /loki/api/v1/push path, body=%s", body)
+	}
+}
+
+func TestInstallScriptLocalFailsWhenRuntimeInternalURLMissing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newInstallScriptHandlerForTest("https://public.example.com:8083")
+	handler.runtimeInternalURL = ""
+
+	router := gin.New()
+	registerInstallScriptRoutes(router, handler)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/agent/install-script/local?token=test-token", nil)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d, body=%s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), "Runtime internal URL is not configured") {
+		t.Fatalf("unexpected response: %s", recorder.Body.String())
 	}
 }
 
@@ -297,6 +337,33 @@ func TestInstallScriptUsesExpectedLokiDriverOptions(t *testing.T) {
 	}
 	if !strings.Contains(body, `--log-opt "loki-batch-size=1048576"`) {
 		t.Fatalf("expected script to set explicit loki-batch-size, body=%s", body)
+	}
+}
+
+func TestInstallScriptFailsFastWhenLokiPluginUnavailable(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newInstallScriptHandlerForTest("https://public.example.com:8083")
+
+	router := gin.New()
+	registerInstallScriptRoutes(router, handler)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/agent/install-script/local?token=test-token", nil)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d, body=%s", recorder.Code, recorder.Body.String())
+	}
+
+	body := recorder.Body.String()
+	if strings.Contains(body, "agent container will start without Loki log driver") {
+		t.Fatalf("expected script to avoid Loki silent downgrade path, body=%s", body)
+	}
+	if strings.Contains(body, "USE_LOKI_DRIVER=0") {
+		t.Fatalf("expected script to avoid disabling Loki driver after plugin install failure, body=%s", body)
+	}
+	if !strings.Contains(body, "Failed to install Loki Docker plugin, exiting.") {
+		t.Fatalf("expected script to fail fast on Loki plugin install failure, body=%s", body)
 	}
 }
 

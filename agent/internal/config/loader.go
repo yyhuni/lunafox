@@ -35,17 +35,17 @@ func Load(args []string) (*Config, error) {
 	}
 
 	cfg := &Config{
-		ServerURL:     strings.TrimSpace(os.Getenv("SERVER_URL")),
-		APIKey:        strings.TrimSpace(os.Getenv("API_KEY")),
-		AgentVersion:  strings.TrimSpace(os.Getenv("AGENT_VERSION")),
-		MaxTasks:      maxTasks,
-		CPUThreshold:  cpuThreshold,
-		MemThreshold:  memThreshold,
-		DiskThreshold: diskThreshold,
+		RuntimeGRPCURL: strings.TrimSpace(os.Getenv("RUNTIME_GRPC_URL")),
+		APIKey:         strings.TrimSpace(os.Getenv("API_KEY")),
+		AgentVersion:   strings.TrimSpace(os.Getenv("AGENT_VERSION")),
+		MaxTasks:       maxTasks,
+		CPUThreshold:   cpuThreshold,
+		MemThreshold:   memThreshold,
+		DiskThreshold:  diskThreshold,
 	}
 
 	fs := flag.NewFlagSet("agent", flag.ContinueOnError)
-	serverURL := fs.String("server-url", cfg.ServerURL, "Server base URL (e.g. https://1.1.1.1:8080)")
+	runtimeGRPCURL := fs.String("runtime-grpc-url", cfg.RuntimeGRPCURL, "Runtime gRPC URL (e.g. https://1.1.1.1:18443)")
 	apiKey := fs.String("api-key", cfg.APIKey, "Agent API key")
 	maxTasksFlag := fs.Int("max-tasks", cfg.MaxTasks, "Maximum concurrent tasks")
 	cpuThresholdFlag := fs.Int("cpu-threshold", cfg.CPUThreshold, "CPU threshold percentage")
@@ -56,7 +56,7 @@ func Load(args []string) (*Config, error) {
 		return nil, err
 	}
 
-	cfg.ServerURL = strings.TrimSpace(*serverURL)
+	cfg.RuntimeGRPCURL = strings.TrimSpace(*runtimeGRPCURL)
 	cfg.APIKey = strings.TrimSpace(*apiKey)
 	cfg.MaxTasks = *maxTasksFlag
 	cfg.CPUThreshold = *cpuThresholdFlag

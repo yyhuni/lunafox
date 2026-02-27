@@ -19,7 +19,6 @@ import (
 	"github.com/yyhuni/lunafox/server/internal/pkg"
 	pkgvalidator "github.com/yyhuni/lunafox/server/internal/pkg/validator"
 	"github.com/yyhuni/lunafox/server/internal/preset"
-	ws "github.com/yyhuni/lunafox/server/internal/websocket"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -29,7 +28,6 @@ type infra struct {
 	redisClient          *redis.Client
 	lokiClient           *loki.Client
 	heartbeatCache       cache.HeartbeatCache
-	wsHub                *ws.Hub
 	jwtManager           *auth.JWTManager
 	presetLoader         *preset.Loader
 	serverVersion        string
@@ -102,14 +100,12 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 		rcCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := redisClient.Ping(rcCtx).Err(); err != nil {
-			pkg.Warn("Failed to connect to Redis, continuing without Redis", zap.Error(err))
 			if closeErr := redisClient.Close(); closeErr != nil {
 				pkg.Warn("Failed to close Redis client after ping failure", zap.Error(closeErr))
 			}
-			redisClient = nil
-		} else {
-			pkg.Info("Redis connected", zap.String("addr", cfg.Redis.Addr()))
+			pkg.Fatal("Failed to connect to Redis", zap.String("addr", cfg.Redis.Addr()), zap.Error(err))
 		}
+		pkg.Info("Redis connected", zap.String("addr", cfg.Redis.Addr()))
 	}
 
 	var heartbeatCache cache.HeartbeatCache
@@ -121,9 +117,6 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 	if err := waitForLokiReady(lokiClient.CheckReady, lokiBootstrapReadyTimeout, lokiBootstrapAttemptTimeout, lokiBootstrapRetryInterval); err != nil {
 		pkg.Fatal("Loki is unavailable during bootstrap", zap.String("loki_url", cfg.LokiURL), zap.Error(err))
 	}
-
-	wsHub := ws.NewHub()
-	go wsHub.Run()
 
 	presetLoader, err := preset.NewLoader()
 	if err != nil {
@@ -139,7 +132,6 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 		redisClient:          redisClient,
 		lokiClient:           lokiClient,
 		heartbeatCache:       heartbeatCache,
-		wsHub:                wsHub,
 		jwtManager:           jwtManager,
 		presetLoader:         presetLoader,
 		serverVersion:        serverVersion,

@@ -94,6 +94,17 @@ func ReadSharedDataVolumeBind(path string) (string, error) {
 	return readRequiredValue(path, "LUNAFOX_SHARED_DATA_VOLUME_BIND")
 }
 
+func ReadOptionalValue(path string, key string) (string, error) {
+	value, err := readRequiredValue(path, key)
+	if err == nil {
+		return value, nil
+	}
+	if errors.Is(err, ErrEnvFileNotFound) || errors.Is(err, ErrEnvKeyNotFound) {
+		return "", nil
+	}
+	return "", err
+}
+
 func readRequiredValue(path string, key string) (string, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {

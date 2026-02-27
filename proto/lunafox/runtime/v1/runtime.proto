@@ -1,0 +1,163 @@
+syntax = "proto3";
+
+package lunafox.runtime.v1;
+
+option go_package = "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1;runtimev1";
+
+service AgentRuntimeService {
+  rpc Connect(stream AgentRuntimeRequest) returns (stream AgentRuntimeEvent);
+}
+
+service AgentDataProxyService {
+  rpc GetProviderConfig(GetProviderConfigRequest) returns (GetProviderConfigResponse);
+  rpc GetWordlistMeta(GetWordlistMetaRequest) returns (GetWordlistMetaResponse);
+  rpc DownloadWordlist(DownloadWordlistRequest) returns (stream DownloadWordlistChunk);
+  rpc BatchUpsertAssets(BatchUpsertAssetsRequest) returns (BatchUpsertAssetsResponse);
+}
+
+service WorkerRuntimeService {
+  rpc GetProviderConfig(GetProviderConfigRequest) returns (GetProviderConfigResponse);
+  rpc EnsureWordlist(EnsureWordlistRequest) returns (EnsureWordlistResponse);
+  rpc PostBatch(PostBatchRequest) returns (PostBatchResponse);
+}
+
+message AgentRuntimeRequest {
+  oneof payload {
+    Heartbeat heartbeat = 1;
+    RequestTask request_task = 2;
+    TaskStatus task_status = 3;
+  }
+}
+
+message HealthStatus {
+  string state = 1;
+  string reason = 2;
+  string message = 3;
+}
+
+message Heartbeat {
+  double cpu_usage = 1;
+  double mem_usage = 2;
+  double disk_usage = 3;
+  int32 running_tasks = 4;
+  string version = 5;
+  string hostname = 6;
+  int64 uptime_seconds = 7;
+  HealthStatus health = 8;
+}
+
+message RequestTask {}
+
+message TaskStatus {
+  int32 task_id = 1;
+  string status = 2;
+  string message = 3;
+  int32 exit_code = 4;
+}
+
+message AgentRuntimeEvent {
+  oneof payload {
+    TaskAssign task_assign = 1;
+    TaskCancel task_cancel = 2;
+    ConfigUpdate config_update = 3;
+    UpdateRequired update_required = 4;
+  }
+}
+
+message TaskAssign {
+  bool found = 1;
+  int32 task_id = 2;
+  int32 scan_id = 3;
+  int32 stage = 4;
+  string workflow_name = 5;
+  int32 target_id = 6;
+  string target_name = 7;
+  string target_type = 8;
+  string workspace_dir = 9;
+  string config = 10;
+}
+
+message TaskCancel {
+  int32 task_id = 1;
+}
+
+message ConfigUpdate {
+  optional int32 max_tasks = 1;
+  optional int32 cpu_threshold = 2;
+  optional int32 mem_threshold = 3;
+  optional int32 disk_threshold = 4;
+}
+
+message UpdateRequired {
+  string target_version = 1;
+  string image_ref = 2;
+}
+
+message GetProviderConfigRequest {
+  int32 scan_id = 1;
+  string tool_name = 2;
+  int32 task_id = 3;
+}
+
+message GetProviderConfigResponse {
+  string content = 1;
+}
+
+message GetWordlistMetaRequest {
+  string wordlist_name = 1;
+  int32 task_id = 2;
+}
+
+message GetWordlistMetaResponse {
+  int32 id = 1;
+  string name = 2;
+  string file_path = 3;
+  string file_hash = 4;
+  int64 file_size = 5;
+  int32 line_count = 6;
+  string description = 7;
+}
+
+message DownloadWordlistRequest {
+  string wordlist_name = 1;
+  int32 task_id = 2;
+}
+
+message DownloadWordlistChunk {
+  bytes data = 1;
+}
+
+message BatchUpsertAssetsRequest {
+  int32 scan_id = 1;
+  int32 target_id = 2;
+  int32 task_id = 3;
+  string data_type = 4;
+  repeated string items_json = 5;
+}
+
+message BatchUpsertAssetsResponse {
+  int32 accepted = 1;
+}
+
+message EnsureWordlistRequest {
+  int32 task_id = 1;
+  string wordlist_name = 2;
+  string local_base_path = 3;
+}
+
+message EnsureWordlistResponse {
+  string local_path = 1;
+  string file_hash = 2;
+}
+
+message PostBatchRequest {
+  int32 scan_id = 1;
+  int32 target_id = 2;
+  int32 task_id = 3;
+  string data_type = 4;
+  repeated string items_json = 5;
+}
+
+message PostBatchResponse {
+  int32 sent = 1;
+}
