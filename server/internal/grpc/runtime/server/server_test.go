@@ -25,7 +25,6 @@ func TestNewRejectsNilService(t *testing.T) {
 		"127.0.0.1:0",
 		nil,
 		service.NewAgentDataProxyService(),
-		service.NewWorkerRuntimeService(),
 	)
 	if err == nil {
 		t.Fatalf("expected error when agent runtime service is nil")
@@ -37,7 +36,6 @@ func TestServerRegistersRuntimeServices(t *testing.T) {
 		"127.0.0.1:0",
 		service.NewAgentRuntimeService(),
 		service.NewAgentDataProxyService(),
-		service.NewWorkerRuntimeService(),
 	)
 	if err != nil {
 		t.Fatalf("new server failed: %v", err)
@@ -82,7 +80,6 @@ func TestServerDataProxyRejectsMissingAgentKey(t *testing.T) {
 			&providerConfigRuntimeStub{content: "key: value"},
 			&wordlistRuntimeStub{},
 		).WithAgentFinder(agentFinderStub{agent: &agentdomain.Agent{ID: 101}}),
-		service.NewWorkerRuntimeService(),
 	)
 	if err != nil {
 		t.Fatalf("new server failed: %v", err)
@@ -134,7 +131,6 @@ func TestServerAgentRuntimeReconnectIntegration(t *testing.T) {
 		"127.0.0.1:0",
 		runtimeSvc,
 		service.NewAgentDataProxyService(),
-		service.NewWorkerRuntimeService(),
 	)
 	if err != nil {
 		t.Fatalf("new server failed: %v", err)
@@ -211,7 +207,6 @@ func TestServerAgentRuntimeRejectsInvalidAgentKey(t *testing.T) {
 		"127.0.0.1:0",
 		runtimeSvc,
 		service.NewAgentDataProxyService(),
-		service.NewWorkerRuntimeService(),
 	)
 	if err != nil {
 		t.Fatalf("new server failed: %v", err)

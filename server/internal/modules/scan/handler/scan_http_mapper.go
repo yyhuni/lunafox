@@ -133,10 +133,3 @@ func toScanStatisticsOutput(stats *scanapp.ScanStatistics) dto.ScanStatisticsRes
 		TotalAssets:     stats.TotalAssets,
 	}
 }
-
-func toWorkerTargetNameOutput(target *scanapp.ScanTargetName) dto.WorkerTargetNameResponse {
-	if target == nil {
-		return dto.WorkerTargetNameResponse{}
-	}
-	return dto.WorkerTargetNameResponse{Name: target.Name, Type: target.Type}
-}

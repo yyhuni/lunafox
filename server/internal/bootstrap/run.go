@@ -3,24 +3,38 @@ package bootstrap
 import (
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/yyhuni/lunafox/server/internal/config"
+	runtimegrpc "github.com/yyhuni/lunafox/server/internal/grpc/runtime/server"
+	runtimesvc "github.com/yyhuni/lunafox/server/internal/grpc/runtime/service"
 	"github.com/yyhuni/lunafox/server/internal/job"
 	"github.com/yyhuni/lunafox/server/internal/middleware"
 	"github.com/yyhuni/lunafox/server/internal/pkg"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 // Run wires dependencies and starts the HTTP server.
 func Run(ctx context.Context, cfg *config.Config, migrationsFS embed.FS) {
-	pkg.Info("Starting server", zap.Int("port", cfg.Server.Port), zap.String("mode", cfg.Server.Mode))
+	pkg.Info(
+		"Starting server",
+		zap.Int("port", cfg.Server.Port),
+		zap.Int("grpc_port", cfg.Server.GRPCPort),
+		zap.String("mode", cfg.Server.Mode),
+	)
 
 	infra := initInfra(cfg, migrationsFS)
 	d := buildDependencies(infra, cfg)
+
+	runtimeServer, err := newRuntimeServer(cfg, d)
+	if err != nil {
+		pkg.Fatal("Failed to initialize runtime gRPC server", zap.Error(err))
+	}
 
 	engine := gin.New()
 	engine.RedirectTrailingSlash = false
@@ -28,7 +42,7 @@ func Run(ctx context.Context, cfg *config.Config, migrationsFS embed.FS) {
 	engine.Use(middleware.Recovery())
 	engine.Use(middleware.Logger())
 
-	registerRoutes(engine, d, cfg.Worker.Token, middleware.AuthMiddleware(infra.jwtManager))
+	registerRoutes(engine, d, middleware.AuthMiddleware(infra.jwtManager))
 
 	jobCtx, jobCancel := context.WithCancel(context.Background())
 	defer jobCancel()
@@ -50,6 +64,13 @@ func Run(ctx context.Context, cfg *config.Config, migrationsFS embed.FS) {
 		}
 	}()
 
+	go func() {
+		pkg.Info("Runtime gRPC listening", zap.String("addr", runtimeServer.Addr()))
+		if err := runtimeServer.Serve(); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			pkg.Fatal("Failed to start runtime gRPC server", zap.Error(err))
+		}
+	}()
+
 	<-ctx.Done()
 	pkg.Info("Shutting down server...")
 	jobCancel()
@@ -58,6 +79,9 @@ func Run(ctx context.Context, cfg *config.Config, migrationsFS embed.FS) {
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		pkg.Error("Server forced to shutdown", zap.Error(err))
+	}
+	if err := runtimeServer.Shutdown(shutdownCtx); err != nil {
+		pkg.Error("Runtime gRPC forced to shutdown", zap.Error(err))
 	}
 
 	if sqlDB, err := infra.db.DB(); err == nil {
@@ -72,4 +96,26 @@ func Run(ctx context.Context, cfg *config.Config, migrationsFS embed.FS) {
 	}
 
 	pkg.Info("Server exited")
+}
+
+func newRuntimeServer(cfg *config.Config, d *deps) (*runtimegrpc.Server, error) {
+	return runtimegrpc.New(
+		fmt.Sprintf(":%d", cfg.Server.GRPCPort),
+		runtimesvc.NewAgentRuntimeServiceWithDeps(
+			d.agentRepo,
+			d.agentRuntimeService,
+			d.agentTaskService,
+			d.runtimeStreamRegistry,
+		),
+		runtimesvc.NewAgentDataProxyServiceWithDeps(
+			d.workerProviderConfigService,
+			d.wordlistService,
+			runtimesvc.AssetBatchUpsertRuntimes{
+				Subdomains: d.subdomainSnapshotService,
+				Websites:   d.websiteSnapshotService,
+				Endpoints:  d.endpointSnapshotService,
+				HostPorts:  d.hostPortSnapshotService,
+			},
+		).WithAgentFinder(d.agentRepo),
+	)
 }

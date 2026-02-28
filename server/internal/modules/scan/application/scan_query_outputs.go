@@ -10,11 +10,6 @@ type QueryScan = scandomain.QueryScan
 
 type QueryStatistics = scandomain.QueryStatistics
 
-type ScanTargetName struct {
-	Name string
-	Type string
-}
-
 type ScanStatistics struct {
 	Total           int64
 	Running         int64

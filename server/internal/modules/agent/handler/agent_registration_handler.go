@@ -134,6 +134,10 @@ func (h *AgentHandler) installScriptByProfile(c *gin.Context, profile string) {
 	dockerNetworkDefault := "off"
 	requireDockerNetwork := "0"
 	if profile == installScriptProfileLocal {
+		if strings.TrimSpace(h.runtimeInternalURL) == "" {
+			dto.InternalError(c, "Runtime internal URL is not configured")
+			return
+		}
 		runtimeGRPCURL = h.runtimeInternalURL
 		dockerNetworkDefault = installScriptLocalDefaultNetworkName
 		requireDockerNetwork = "1"

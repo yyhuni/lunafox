@@ -40,6 +40,8 @@ type workerRuntimeProxyStub struct {
 	postBatchTaskID   int
 	postBatchDataType string
 	postBatchItems    []string
+
+	allowedTaskTokens map[int]string
 }
 
 func (stub *workerRuntimeProxyStub) GetProviderConfig(_ context.Context, _ int, _ string, taskID int) (string, error) {
@@ -85,6 +87,13 @@ func (stub *workerRuntimeProxyStub) BatchUpsertAssets(_ context.Context, _, _, t
 	return stub.postBatchAccepted, nil
 }
 
+func (stub *workerRuntimeProxyStub) ValidateTaskSession(taskID int, taskToken string) bool {
+	if stub.allowedTaskTokens == nil {
+		return false
+	}
+	return stub.allowedTaskTokens[taskID] == taskToken
+}
+
 func TestWorkerRuntimeUDSServerIntegration(t *testing.T) {
 	wordlistContent := []byte("admin\napi\n")
 	wordlistHash := sha256Hex(wordlistContent)
@@ -93,6 +102,9 @@ func TestWorkerRuntimeUDSServerIntegration(t *testing.T) {
 		wordlistMeta:             &WordlistMeta{FileHash: wordlistHash},
 		downloadBytes:            wordlistContent,
 		postBatchAccepted:        2,
+		allowedTaskTokens: map[int]string{
+			7001: "task-token-1",
+		},
 	}
 
 	client := startWorkerRuntimeTestServer(t, proxy)
@@ -172,6 +184,9 @@ func TestWorkerRuntimeEnsureWordlistHashMismatch(t *testing.T) {
 		wordlistMeta:      &WordlistMeta{FileHash: sha256Hex([]byte("expected"))},
 		downloadBytes:     []byte("actual"),
 		postBatchAccepted: 1,
+		allowedTaskTokens: map[int]string{
+			8002: "task-token-2",
+		},
 	}
 	client := startWorkerRuntimeTestServer(t, proxy)
 	authCtx := metadata.AppendToOutgoingContext(context.Background(), grpcauth.TaskTokenHeader, "task-token-2")
@@ -183,6 +198,26 @@ func TestWorkerRuntimeEnsureWordlistHashMismatch(t *testing.T) {
 	})
 	if status.Code(err) != codes.Internal {
 		t.Fatalf("expected internal on hash mismatch, got=%v", err)
+	}
+}
+
+func TestWorkerRuntimeRejectsTaskScopeMismatch(t *testing.T) {
+	proxy := &workerRuntimeProxyStub{
+		getProviderConfigContent: "sources:\n- crtsh",
+		allowedTaskTokens: map[int]string{
+			7001: "task-token-1",
+		},
+	}
+	client := startWorkerRuntimeTestServer(t, proxy)
+	authCtx := metadata.AppendToOutgoingContext(context.Background(), grpcauth.TaskTokenHeader, "task-token-1")
+
+	_, err := client.GetProviderConfig(authCtx, &runtimev1.GetProviderConfigRequest{
+		ScanId:   11,
+		ToolName: "subfinder",
+		TaskId:   7002,
+	})
+	if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("expected permission denied on task scope mismatch, got=%v", err)
 	}
 }
 

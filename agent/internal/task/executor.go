@@ -2,6 +2,8 @@ package task
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
@@ -25,8 +27,7 @@ type Executor struct {
 	docker      DockerRunner
 	client      statusReporter
 	counter     *Counter
-	serverURL   string
-	workerToken string
+	agentSocket string
 	maxRuntime  time.Duration
 
 	mu        sync.Mutex
@@ -43,8 +44,13 @@ type statusReporter interface {
 	UpdateStatus(ctx context.Context, taskID int, status, errorMessage string) error
 }
 
+type taskSessionRegistry interface {
+	RegisterTaskSession(taskID int, taskToken string)
+	ClearTaskSession(taskID int, taskToken string)
+}
+
 type DockerRunner interface {
-	StartWorker(ctx context.Context, t *domain.Task, serverURL, serverToken string) (string, error)
+	StartWorker(ctx context.Context, t *domain.Task, agentSocket, taskToken string) (string, error)
 	Wait(ctx context.Context, containerID string) (int64, error)
 	Stop(ctx context.Context, containerID string) error
 	Remove(ctx context.Context, containerID string) error
@@ -52,13 +58,12 @@ type DockerRunner interface {
 }
 
 // NewExecutor creates an Executor.
-func NewExecutor(dockerClient DockerRunner, taskClient statusReporter, counter *Counter, serverURL, workerToken string) *Executor {
+func NewExecutor(dockerClient DockerRunner, taskClient statusReporter, counter *Counter, agentSocket string) *Executor {
 	return &Executor{
 		docker:      dockerClient,
 		client:      taskClient,
 		counter:     counter,
-		serverURL:   serverURL,
-		workerToken: workerToken,
+		agentSocket: agentSocket,
 		maxRuntime:  defaultMaxRuntime,
 		running:     map[int]context.CancelFunc{},
 		cancelled:   map[int]struct{}{},
@@ -147,8 +152,8 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 		defer e.counter.Dec()
 	}
 
-	if e.workerToken == "" {
-		e.reportStatus(ctx, t.ID, "failed", "missing worker token")
+	if e.agentSocket == "" {
+		e.reportStatus(ctx, t.ID, "failed", "missing worker runtime socket")
 		return
 	}
 	if e.docker == nil {
@@ -159,7 +164,17 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 	runCtx, cancel := context.WithTimeout(ctx, e.maxRuntime)
 	defer cancel()
 
-	containerID, err := e.docker.StartWorker(runCtx, t, e.serverURL, e.workerToken)
+	taskToken, err := generateSessionToken()
+	if err != nil {
+		e.reportStatus(ctx, t.ID, "failed", "generate task token failed")
+		return
+	}
+	if sessionRegistry, ok := e.client.(taskSessionRegistry); ok {
+		sessionRegistry.RegisterTaskSession(t.ID, taskToken)
+		defer sessionRegistry.ClearTaskSession(t.ID, taskToken)
+	}
+
+	containerID, err := e.docker.StartWorker(runCtx, t, e.agentSocket, taskToken)
 	if err != nil {
 		logger.Log.Warn("failed to start worker container",
 			zap.Int("taskId", t.ID),
@@ -353,4 +368,12 @@ func (e *Executor) Shutdown(ctx context.Context) error {
 	case <-done:
 		return nil
 	}
+}
+
+func generateSessionToken() (string, error) {
+	buf := make([]byte, 32)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(buf), nil
 }

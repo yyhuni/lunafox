@@ -15,24 +15,24 @@ type AgentHandler struct {
 	runtimeService       *agentapp.AgentRuntimeService
 	serverVersion        string
 	publicURL            string
-	agentInternalURL     string
+	runtimeInternalURL   string
 	agentImageRef        string
 	workerImageRef       string
 	sharedDataVolumeBind string
-	workerToken          string
 	heartbeatCache       cache.HeartbeatCache
 }
 
 type installTemplateData struct {
 	Token                string
 	RegisterURL          string
-	AgentServerURL       string
+	RuntimeGRPCURL       string
+	DockerNetworkDefault string
+	RequireDockerNetwork string
 	LokiPushURL          string
 	AgentImageRef        string
 	WorkerImageRef       string
 	SharedDataVolumeBind string
 	AgentVersion         string
-	WorkerToken          string
 }
 
 var agentInstallSHTemplate = template.Must(template.New("agent_install.sh").Parse(agentinstall.AgentInstallScript))
@@ -41,19 +41,20 @@ var agentInstallSHTemplate = template.Must(template.New("agent_install.sh").Pars
 func NewAgentHandler(
 	facade *agentapp.AgentFacade,
 	runtimeService *agentapp.AgentRuntimeService,
-	serverVersion, publicURL, agentImageRef, workerImageRef, sharedDataVolumeBind, workerToken string,
+	serverVersion, publicURL, runtimeInternalURL, agentImageRef, workerImageRef, sharedDataVolumeBind string,
 	heartbeatCache cache.HeartbeatCache,
 ) *AgentHandler {
+	runtimeInternalURL = strings.TrimSpace(runtimeInternalURL)
+
 	return &AgentHandler{
 		facade:               facade,
 		runtimeService:       runtimeService,
 		serverVersion:        strings.TrimSpace(serverVersion),
 		publicURL:            strings.TrimSpace(publicURL),
-		agentInternalURL:     "http://server:8080",
+		runtimeInternalURL:   runtimeInternalURL,
 		agentImageRef:        strings.TrimSpace(agentImageRef),
 		workerImageRef:       strings.TrimSpace(workerImageRef),
 		sharedDataVolumeBind: strings.TrimSpace(sharedDataVolumeBind),
-		workerToken:          strings.TrimSpace(workerToken),
 		heartbeatCache:       heartbeatCache,
 	}
 }

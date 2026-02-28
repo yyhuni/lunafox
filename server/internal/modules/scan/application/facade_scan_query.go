@@ -25,20 +25,6 @@ func (service *ScanFacade) GetByID(id int) (*QueryScan, error) {
 	return scan, nil
 }
 
-func (service *ScanFacade) GetTargetName(scanID int) (*ScanTargetName, error) {
-	scan, err := service.queryService.GetScanByID(context.Background(), scanID)
-	if err != nil {
-		if dberrors.IsRecordNotFound(err) {
-			return nil, ErrScanNotFound
-		}
-		return nil, err
-	}
-	if scan.Target == nil {
-		return nil, ErrScanTargetNotFound
-	}
-	return &ScanTargetName{Name: scan.Target.Name, Type: scan.Target.Type}, nil
-}
-
 func (service *ScanFacade) GetStatistics() (*ScanStatistics, error) {
 	stats, err := service.queryService.GetStatistics(context.Background())
 	if err != nil {
