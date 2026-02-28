@@ -6,11 +6,12 @@ import (
 	"testing"
 	"time"
 
+	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
 	grpcauth "github.com/yyhuni/lunafox/server/internal/grpc/runtime/auth"
 	"github.com/yyhuni/lunafox/server/internal/grpc/runtime/service"
-	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
 	agentapp "github.com/yyhuni/lunafox/server/internal/modules/agent/application"
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
+	catalogapp "github.com/yyhuni/lunafox/server/internal/modules/catalog/application"
 	scanapp "github.com/yyhuni/lunafox/server/internal/modules/scan/application"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -70,6 +71,52 @@ func TestServerRegistersRuntimeServices(t *testing.T) {
 	_, callErr := client.GetProviderConfig(context.Background(), &runtimev1.GetProviderConfigRequest{})
 	if code := status.Code(callErr); code != codes.Unimplemented {
 		t.Fatalf("expected unimplemented from skeleton service, got=%s err=%v", code, callErr)
+	}
+}
+
+func TestServerDataProxyRejectsMissingAgentKey(t *testing.T) {
+	srv, err := New(
+		"127.0.0.1:0",
+		service.NewAgentRuntimeService(),
+		service.NewAgentDataProxyServiceWithDeps(
+			&providerConfigRuntimeStub{content: "key: value"},
+			&wordlistRuntimeStub{},
+		).WithAgentFinder(agentFinderStub{agent: &agentdomain.Agent{ID: 101}}),
+		service.NewWorkerRuntimeService(),
+	)
+	if err != nil {
+		t.Fatalf("new server failed: %v", err)
+	}
+
+	go func() {
+		_ = srv.Serve()
+	}()
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(ctx)
+	})
+
+	connCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	conn, err := grpc.DialContext(
+		connCtx,
+		srv.Addr(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+	)
+	if err != nil {
+		t.Fatalf("dial grpc failed: %v", err)
+	}
+	defer conn.Close()
+
+	client := runtimev1.NewAgentDataProxyServiceClient(conn)
+	_, callErr := client.GetProviderConfig(context.Background(), &runtimev1.GetProviderConfigRequest{
+		ScanId:   1,
+		ToolName: "subfinder",
+	})
+	if code := status.Code(callErr); code != codes.Unauthenticated {
+		t.Fatalf("expected unauthenticated, got=%s err=%v", code, callErr)
 	}
 }
 
@@ -233,4 +280,26 @@ func (stub *taskRuntimeStub) PullTask(context.Context, int) (*scanapp.TaskAssign
 
 func (stub *taskRuntimeStub) UpdateStatus(context.Context, int, int, string, string) error {
 	return nil
+}
+
+type providerConfigRuntimeStub struct {
+	content string
+	err     error
+}
+
+func (stub *providerConfigRuntimeStub) GetProviderConfig(_ int, _ string) (string, error) {
+	if stub.err != nil {
+		return "", stub.err
+	}
+	return stub.content, nil
+}
+
+type wordlistRuntimeStub struct{}
+
+func (wordlistRuntimeStub) GetByName(string) (*catalogapp.Wordlist, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (wordlistRuntimeStub) GetFilePath(string) (string, error) {
+	return "", errors.New("not implemented")
 }

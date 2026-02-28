@@ -116,21 +116,25 @@ func TestResolveRuntimeVolumeBind(t *testing.T) {
 		}
 	})
 
-	t.Run("custom volume", func(t *testing.T) {
+	t.Run("ignore env override", func(t *testing.T) {
 		t.Setenv(runtimeVolumeNameEnvKey, "custom_runtime")
 		got, err := resolveRuntimeVolumeBind()
 		if err != nil {
 			t.Fatalf("resolve runtime volume bind: %v", err)
 		}
-		if got != "custom_runtime:/run/lunafox:ro" {
-			t.Fatalf("unexpected custom runtime bind: %s", got)
+		if got != "lunafox_runtime:/run/lunafox:ro" {
+			t.Fatalf("unexpected runtime bind: %s", got)
 		}
 	})
 
-	t.Run("invalid runtime volume", func(t *testing.T) {
+	t.Run("ignore invalid env value", func(t *testing.T) {
 		t.Setenv(runtimeVolumeNameEnvKey, "/host/path")
-		if _, err := resolveRuntimeVolumeBind(); err == nil {
-			t.Fatalf("expected invalid runtime volume to fail")
+		got, err := resolveRuntimeVolumeBind()
+		if err != nil {
+			t.Fatalf("resolve runtime volume bind: %v", err)
+		}
+		if got != "lunafox_runtime:/run/lunafox:ro" {
+			t.Fatalf("unexpected runtime bind: %s", got)
 		}
 	})
 }

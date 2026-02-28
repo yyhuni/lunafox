@@ -180,9 +180,13 @@ func (u *Updater) startNewContainer(ctx context.Context, imageRef, version strin
 	if err != nil {
 		return err
 	}
+	runtimeVolumeName, err := resolveRuntimeVolumeName()
+	if err != nil {
+		return err
+	}
 
 	env := []string{
-		fmt.Sprintf("SERVER_URL=%s", u.cfg.Snapshot().ServerURL),
+		fmt.Sprintf("RUNTIME_GRPC_URL=%s", strings.TrimSpace(u.cfg.Snapshot().RuntimeGRPCURL)),
 		fmt.Sprintf("API_KEY=%s", u.apiKey),
 		fmt.Sprintf("LUNAFOX_AGENT_MAX_TASKS=%d", u.cfg.Snapshot().MaxTasks),
 		fmt.Sprintf("LUNAFOX_AGENT_CPU_THRESHOLD=%d", u.cfg.Snapshot().CPUThreshold),
@@ -191,6 +195,7 @@ func (u *Updater) startNewContainer(ctx context.Context, imageRef, version strin
 		fmt.Sprintf("AGENT_VERSION=%s", version),
 		fmt.Sprintf("WORKER_IMAGE_REF=%s", workerImageRef),
 		fmt.Sprintf("%s=%s", sharedDataVolumeBindEnvKey, sharedDataVolumeBind),
+		fmt.Sprintf("LUNAFOX_RUNTIME_SOCKET=%s", defaultRuntimeSocketPath),
 	}
 	if u.token != "" {
 		env = append(env, fmt.Sprintf("WORKER_TOKEN=%s", u.token))
@@ -206,6 +211,7 @@ func (u *Updater) startNewContainer(ctx context.Context, imageRef, version strin
 		Binds: []string{
 			"/var/run/docker.sock:/var/run/docker.sock",
 			sharedDataVolumeBind,
+			fmt.Sprintf("%s:%s", runtimeVolumeName, defaultRuntimeMountPath),
 		},
 		RestartPolicy: container.RestartPolicy{Name: "unless-stopped"},
 		OomScoreAdj:   -500,
@@ -267,6 +273,13 @@ func resolveSharedDataVolumeBind() (string, error) {
 		}
 	}
 	return raw, nil
+}
+
+func resolveRuntimeVolumeName() (string, error) {
+	if !isValidNamedVolumeName(defaultRuntimeVolumeName) {
+		return "", fmt.Errorf("%s must be a Docker named volume", runtimeVolumeNameEnvKey)
+	}
+	return defaultRuntimeVolumeName, nil
 }
 
 func isValidNamedVolumeName(value string) bool {

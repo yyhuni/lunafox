@@ -20,7 +20,7 @@ AGENT_VERSION="{{.AgentVersion}}"
 WORKER_IMAGE_REF="{{.WorkerImageRef}}"
 LOCAL_AGENT_CONFIG="${LUNAFOX_AGENT_USE_LOCAL_LIMITS:-}"
 SHARED_DATA_VOLUME_BIND="{{.SharedDataVolumeBind}}"
-RUNTIME_VOLUME="${LUNAFOX_RUNTIME_VOLUME:-lunafox_runtime}"
+RUNTIME_VOLUME="lunafox_runtime"
 RUNTIME_SOCKET_PATH="/run/lunafox/worker-runtime.sock"
 
 validate_inputs() {
@@ -328,7 +328,6 @@ $DOCKER_CMD run -d --restart unless-stopped --name lunafox-agent \
 	-e API_KEY="$API_KEY" \
 	-e WORKER_IMAGE_REF="$WORKER_IMAGE_REF" \
 	-e LUNAFOX_SHARED_DATA_VOLUME_BIND="$SHARED_DATA_VOLUME_BIND" \
-	-e LUNAFOX_RUNTIME_VOLUME="$RUNTIME_VOLUME" \
 	-e LUNAFOX_RUNTIME_SOCKET="$RUNTIME_SOCKET_PATH" \
 	-e AGENT_VERSION="$AGENT_VERSION" \
 	-e AGENT_HOSTNAME="$HOSTNAME" \

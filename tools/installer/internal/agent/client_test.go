@@ -114,7 +114,16 @@ func TestDownloadInstallScriptUsesLocalEndpointWithoutModeQuery(t *testing.T) {
 }
 
 func TestBuildInstallEnv(t *testing.T) {
-	env, err := BuildInstallEnv(Config{Mode: "dev", RegisterURL: "https://a", NetworkName: "luna", WorkerToken: "w"})
+	env, err := BuildInstallEnv(Config{
+		Mode:          "dev",
+		RegisterURL:   "https://a",
+		NetworkName:   "luna",
+		WorkerToken:   "w",
+		MaxTasks:      "10",
+		CPUThreshold:  "80",
+		MemThreshold:  "80",
+		DiskThreshold: "85",
+	})
 	if err != nil {
 		t.Fatalf("BuildInstallEnv error: %v", err)
 	}
@@ -131,7 +140,15 @@ func TestBuildInstallEnv(t *testing.T) {
 }
 
 func TestBuildInstallEnvProd(t *testing.T) {
-	env, err := BuildInstallEnv(Config{Mode: "prod", RegisterURL: "https://a", NetworkName: "luna"})
+	env, err := BuildInstallEnv(Config{
+		Mode:          "prod",
+		RegisterURL:   "https://a",
+		NetworkName:   "luna",
+		MaxTasks:      "10",
+		CPUThreshold:  "80",
+		MemThreshold:  "80",
+		DiskThreshold: "85",
+	})
 	if err != nil {
 		t.Fatalf("BuildInstallEnv error: %v", err)
 	}
@@ -148,7 +165,38 @@ func TestBuildInstallEnvRequiresURLs(t *testing.T) {
 	if _, err := BuildInstallEnv(Config{RegisterURL: ""}); err == nil {
 		t.Fatalf("expected missing register url error")
 	}
-	if _, err := BuildInstallEnv(Config{RegisterURL: "https://a"}); err != nil {
+	if _, err := BuildInstallEnv(Config{
+		RegisterURL:   "https://a",
+		MaxTasks:      "10",
+		CPUThreshold:  "80",
+		MemThreshold:  "80",
+		DiskThreshold: "85",
+	}); err != nil {
 		t.Fatalf("unexpected error without agent server url: %v", err)
+	}
+}
+
+func TestBuildInstallEnvUsesDefaultLimitsWhenMissing(t *testing.T) {
+	env, err := BuildInstallEnv(Config{
+		RegisterURL: "https://a",
+	})
+	if err != nil {
+		t.Fatalf("BuildInstallEnv error: %v", err)
+	}
+	flatten := map[string]string{}
+	for _, item := range env {
+		flatten[item.Key] = item.Value
+	}
+	if flatten["LUNAFOX_AGENT_MAX_TASKS"] != "10" {
+		t.Fatalf("expected default max tasks")
+	}
+	if flatten["LUNAFOX_AGENT_CPU_THRESHOLD"] != "80" {
+		t.Fatalf("expected default cpu threshold")
+	}
+	if flatten["LUNAFOX_AGENT_MEM_THRESHOLD"] != "80" {
+		t.Fatalf("expected default mem threshold")
+	}
+	if flatten["LUNAFOX_AGENT_DISK_THRESHOLD"] != "85" {
+		t.Fatalf("expected default disk threshold")
 	}
 }

@@ -1,6 +1,8 @@
 package bootstrap
 
 import (
+	"fmt"
+
 	assetwiring "github.com/yyhuni/lunafox/server/internal/bootstrap/wiring/asset"
 	catalogwiring "github.com/yyhuni/lunafox/server/internal/bootstrap/wiring/catalog"
 	identitywiring "github.com/yyhuni/lunafox/server/internal/bootstrap/wiring/identity"
@@ -10,6 +12,7 @@ import (
 	snapshotwiring "github.com/yyhuni/lunafox/server/internal/bootstrap/wiring/snapshot"
 	workerwiring "github.com/yyhuni/lunafox/server/internal/bootstrap/wiring/worker"
 	"github.com/yyhuni/lunafox/server/internal/config"
+	runtimesvc "github.com/yyhuni/lunafox/server/internal/grpc/runtime/service"
 	agentservice "github.com/yyhuni/lunafox/server/internal/modules/agent/application"
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 	agenthandler "github.com/yyhuni/lunafox/server/internal/modules/agent/handler"
@@ -35,10 +38,10 @@ import (
 	securityservice "github.com/yyhuni/lunafox/server/internal/modules/security/application"
 	securityhandler "github.com/yyhuni/lunafox/server/internal/modules/security/handler"
 	securityrepo "github.com/yyhuni/lunafox/server/internal/modules/security/repository"
+	snapshotservice "github.com/yyhuni/lunafox/server/internal/modules/snapshot/application"
 	snapshothandler "github.com/yyhuni/lunafox/server/internal/modules/snapshot/handler"
 	snapshotrepo "github.com/yyhuni/lunafox/server/internal/modules/snapshot/repository"
 	"github.com/yyhuni/lunafox/server/internal/preset"
-	ws "github.com/yyhuni/lunafox/server/internal/websocket"
 )
 
 type deps struct {
@@ -58,13 +61,9 @@ type deps struct {
 	vulnerabilityHandler *securityhandler.VulnerabilityHandler
 	scanHandler          *scanhandler.ScanHandler
 	scanLogHandler       *scanhandler.ScanLogHandler
-	workerHandler        *cataloghandler.WorkerHandler
-	workerScanHandler    *scanhandler.WorkerScanHandler
 
-	agentHandler     *agenthandler.AgentHandler
-	agentWSHandler   *agenthandler.AgentWebSocketHandler
-	agentTaskHandler *agenthandler.AgentTaskHandler
-	agentLogHandler  *agenthandler.AgentLogHandler
+	agentHandler    *agenthandler.AgentHandler
+	agentLogHandler *agenthandler.AgentLogHandler
 
 	websiteSnapshotHandler       *snapshothandler.WebsiteSnapshotHandler
 	subdomainSnapshotHandler     *snapshothandler.SubdomainSnapshotHandler
@@ -77,6 +76,17 @@ type deps struct {
 
 	agentRepo    agentdomain.AgentRepository
 	scanTaskRepo scanrepo.ScanTaskRepository
+
+	agentRuntimeService *agentservice.AgentRuntimeService
+	agentTaskService    *agentservice.AgentTaskService
+
+	workerProviderConfigService *catalogservice.WorkerProviderConfigService
+	wordlistService             *catalogservice.WordlistFacade
+	subdomainSnapshotService    *snapshotservice.SubdomainSnapshotFacade
+	websiteSnapshotService      *snapshotservice.WebsiteSnapshotFacade
+	endpointSnapshotService     *snapshotservice.EndpointSnapshotFacade
+	hostPortSnapshotService     *snapshotservice.HostPortSnapshotFacade
+	runtimeStreamRegistry       *runtimesvc.AgentStreamRegistry
 }
 
 type repositoryBundle struct {
@@ -117,6 +127,8 @@ type catalogModuleHandlers struct {
 	targetHandler   *cataloghandler.TargetHandler
 	engineHandler   *cataloghandler.EngineHandler
 	wordlistHandler *cataloghandler.WordlistHandler
+
+	wordlistService *catalogservice.WordlistFacade
 }
 
 type assetModuleWiring struct {
@@ -143,19 +155,19 @@ type securityModuleWiring struct {
 type scanModuleWiring struct {
 	scanHandler     *scanhandler.ScanHandler
 	scanLogHandler  *scanhandler.ScanLogHandler
-	workerScanHdlr  *scanhandler.WorkerScanHandler
 	scanTaskRuntime agentservice.ScanTaskRuntimePort
 }
 
 type workerModuleHandlers struct {
-	workerHandler *cataloghandler.WorkerHandler
+	workerProviderConfigService *catalogservice.WorkerProviderConfigService
 }
 
 type agentModuleHandlers struct {
-	agentHandler     *agenthandler.AgentHandler
-	agentWSHandler   *agenthandler.AgentWebSocketHandler
-	agentTaskHandler *agenthandler.AgentTaskHandler
-	agentLogHandler  *agenthandler.AgentLogHandler
+	agentHandler    *agenthandler.AgentHandler
+	agentLogHandler *agenthandler.AgentLogHandler
+
+	agentRuntimeService *agentservice.AgentRuntimeService
+	agentTaskService    *agentservice.AgentTaskService
 }
 
 type snapshotModuleHandlers struct {
@@ -166,18 +178,24 @@ type snapshotModuleHandlers struct {
 	hostPortSnapshotHandler      *snapshothandler.HostPortSnapshotHandler
 	screenshotSnapshotHandler    *snapshothandler.ScreenshotSnapshotHandler
 	vulnerabilitySnapshotHandler *snapshothandler.VulnerabilitySnapshotHandler
+	subdomainSnapshotService     *snapshotservice.SubdomainSnapshotFacade
+	websiteSnapshotService       *snapshotservice.WebsiteSnapshotFacade
+	endpointSnapshotService      *snapshotservice.EndpointSnapshotFacade
+	hostPortSnapshotService      *snapshotservice.HostPortSnapshotFacade
 }
 
 func buildDependencies(infra *infra, cfg *config.Config) *deps {
 	repos := newRepositoryBundle(infra)
+	streamRegistry := runtimesvc.NewAgentStreamRegistry()
+	grpcPublisher := runtimesvc.NewAgentRuntimeEventPublisher(streamRegistry)
 
 	identity := wireIdentityModule(repos, infra)
 	catalog := wireCatalogModule(repos, cfg)
 	asset := wireAssetModule(repos)
 	security := wireSecurityModule(repos)
-	scan := wireScanModule(repos, infra)
+	scan := wireScanModule(repos, infra, grpcPublisher)
 	worker := wireWorkerModule(repos)
-	agent := wireAgentModule(repos, infra, cfg, scan.scanTaskRuntime)
+	agent := wireAgentModule(repos, infra, cfg, scan.scanTaskRuntime, grpcPublisher)
 	snapshot := wireSnapshotModule(repos, asset, security)
 	presetHandler := cataloghandler.NewPresetHandler(preset.NewService(infra.presetLoader))
 
@@ -198,13 +216,9 @@ func buildDependencies(infra *infra, cfg *config.Config) *deps {
 		vulnerabilityHandler: security.vulnerabilityHandler,
 		scanHandler:          scan.scanHandler,
 		scanLogHandler:       scan.scanLogHandler,
-		workerHandler:        worker.workerHandler,
-		workerScanHandler:    scan.workerScanHdlr,
 
-		agentHandler:     agent.agentHandler,
-		agentWSHandler:   agent.agentWSHandler,
-		agentTaskHandler: agent.agentTaskHandler,
-		agentLogHandler:  agent.agentLogHandler,
+		agentHandler:    agent.agentHandler,
+		agentLogHandler: agent.agentLogHandler,
 
 		websiteSnapshotHandler:       snapshot.websiteSnapshotHandler,
 		subdomainSnapshotHandler:     snapshot.subdomainSnapshotHandler,
@@ -217,6 +231,16 @@ func buildDependencies(infra *infra, cfg *config.Config) *deps {
 
 		agentRepo:    repos.agentRepo,
 		scanTaskRepo: repos.scanTaskRepo,
+
+		agentRuntimeService:         agent.agentRuntimeService,
+		agentTaskService:            agent.agentTaskService,
+		workerProviderConfigService: worker.workerProviderConfigService,
+		wordlistService:             catalog.wordlistService,
+		subdomainSnapshotService:    snapshot.subdomainSnapshotService,
+		websiteSnapshotService:      snapshot.websiteSnapshotService,
+		endpointSnapshotService:     snapshot.endpointSnapshotService,
+		hostPortSnapshotService:     snapshot.hostPortSnapshotService,
+		runtimeStreamRegistry:       streamRegistry,
 	}
 }
 
@@ -286,6 +310,7 @@ func wireCatalogModule(repos *repositoryBundle, cfg *config.Config) catalogModul
 		targetHandler:   cataloghandler.NewTargetHandler(targetSvc),
 		engineHandler:   cataloghandler.NewEngineHandler(engineSvc),
 		wordlistHandler: cataloghandler.NewWordlistHandler(wordlistSvc),
+		wordlistService: wordlistSvc,
 	}
 }
 
@@ -332,7 +357,7 @@ func wireSecurityModule(repos *repositoryBundle) securityModuleWiring {
 	}
 }
 
-func wireScanModule(repos *repositoryBundle, infra *infra) scanModuleWiring {
+func wireScanModule(repos *repositoryBundle, infra *infra, notifier agentservice.AgentMessagePublisher) scanModuleWiring {
 	scanQueryStore := scanwiring.NewScanQueryStoreAdapter(repos.scanRepo)
 	scanCommandStore := scanwiring.NewScanCommandStoreAdapter(repos.scanRepo)
 	scanDomainRepository := scanwiring.NewScanDomainRepositoryAdapter(repos.scanRepo)
@@ -349,7 +374,7 @@ func wireScanModule(repos *repositoryBundle, infra *infra) scanModuleWiring {
 		scanCommandStore,
 		scanDomainRepository,
 		scanTaskCanceller,
-		infra.wsHub,
+		notifier,
 		scanTargetLookup,
 	)
 	scanTaskSvc := scanwiring.NewScanTaskApplicationService(scanTaskStore, scanTaskRuntimeStore)
@@ -358,7 +383,6 @@ func wireScanModule(repos *repositoryBundle, infra *infra) scanModuleWiring {
 	return scanModuleWiring{
 		scanHandler:     scanhandler.NewScanHandler(scanSvc),
 		scanLogHandler:  scanhandler.NewScanLogHandler(scanLogSvc),
-		workerScanHdlr:  scanhandler.NewWorkerScanHandler(scanSvc),
 		scanTaskRuntime: scanTaskSvc,
 	}
 }
@@ -368,7 +392,7 @@ func wireWorkerModule(repos *repositoryBundle) workerModuleHandlers {
 	workerSettingsStore := workerwiring.NewWorkerProviderConfigSettingsStoreAdapter(repos.subfinderProviderSettingsRepo)
 	workerSvc := workerwiring.NewWorkerProviderConfigApplicationService(workerScanGuard, workerSettingsStore)
 	return workerModuleHandlers{
-		workerHandler: cataloghandler.NewWorkerHandler(workerSvc),
+		workerProviderConfigService: workerSvc,
 	}
 }
 
@@ -377,6 +401,7 @@ func wireAgentModule(
 	infra *infra,
 	cfg *config.Config,
 	scanTaskRuntime agentservice.ScanTaskRuntimePort,
+	messageBus agentservice.AgentMessagePublisher,
 ) agentModuleHandlers {
 	agentClock := agentinfra.NewSystemClock()
 	agentTokenGenerator := agentinfra.NewCryptoTokenGenerator()
@@ -384,7 +409,7 @@ func wireAgentModule(
 	agentRuntimeSvc := agentservice.NewAgentRuntimeService(
 		repos.agentRepo,
 		infra.heartbeatCache,
-		ws.NewAgentMessagePublisher(infra.wsHub),
+		messageBus,
 		agentClock,
 		infra.serverVersion,
 		infra.agentImageRef,
@@ -398,15 +423,16 @@ func wireAgentModule(
 			agentRuntimeSvc,
 			infra.serverVersion,
 			cfg.PublicURL,
+			fmt.Sprintf("http://server:%d", cfg.Server.GRPCPort),
 			infra.agentImageRef,
 			infra.workerImageRef,
 			infra.sharedDataVolumeBind,
-			cfg.Worker.Token,
 			infra.heartbeatCache,
 		),
-		agentWSHandler:   agenthandler.NewAgentWebSocketHandler(infra.wsHub, agentRuntimeSvc),
-		agentTaskHandler: agenthandler.NewAgentTaskHandler(agentTaskSvc),
-		agentLogHandler:  agenthandler.NewAgentLogHandler(repos.agentRepo, lokiLogQuerySvc),
+		agentLogHandler: agenthandler.NewAgentLogHandler(repos.agentRepo, lokiLogQuerySvc),
+
+		agentRuntimeService: agentRuntimeSvc,
+		agentTaskService:    agentTaskSvc,
 	}
 }
 
@@ -458,5 +484,9 @@ func wireSnapshotModule(
 		hostPortSnapshotHandler:      snapshothandler.NewHostPortSnapshotHandler(hostPortSnapshotSvc),
 		screenshotSnapshotHandler:    snapshothandler.NewScreenshotSnapshotHandler(screenshotSnapshotSvc),
 		vulnerabilitySnapshotHandler: snapshothandler.NewVulnerabilitySnapshotHandler(vulnerabilitySnapshotSvc),
+		subdomainSnapshotService:     subdomainSnapshotSvc,
+		websiteSnapshotService:       websiteSnapshotSvc,
+		endpointSnapshotService:      endpointSnapshotSvc,
+		hostPortSnapshotService:      hostPortSnapshotSvc,
 	}
 }

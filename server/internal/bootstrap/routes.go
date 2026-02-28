@@ -10,7 +10,7 @@ import (
 	securityrouter "github.com/yyhuni/lunafox/server/internal/modules/security/router"
 )
 
-func registerRoutes(engine *gin.Engine, d *deps, workerToken string, jwtMiddleware gin.HandlerFunc) {
+func registerRoutes(engine *gin.Engine, d *deps, jwtMiddleware gin.HandlerFunc) {
 	assetrouter.RegisterHealthRoutes(engine, d.healthHandler)
 
 	api := engine.Group("/api")
@@ -19,14 +19,8 @@ func registerRoutes(engine *gin.Engine, d *deps, workerToken string, jwtMiddlewa
 
 	identityrouter.RegisterIdentityRoutes(api, protected, d.authHandler, d.userHandler, d.orgHandler)
 	catalogrouter.RegisterCatalogRoutes(
-		api,
 		protected,
-		workerToken,
-		d.workerHandler,
 		d.wordlistHandler,
-		d.subdomainSnapshotHandler,
-		d.websiteSnapshotHandler,
-		d.endpointSnapshotHandler,
 		d.targetHandler,
 		d.engineHandler,
 		d.presetHandler,
@@ -50,7 +44,6 @@ func registerRoutes(engine *gin.Engine, d *deps, workerToken string, jwtMiddlewa
 	)
 	assetrouter.RegisterSystemRoutes(protected, d.healthHandler)
 	scanrouter.RegisterScanRoutes(protected, d.scanHandler, d.scanLogHandler)
-	scanrouter.RegisterWorkerScanRoutes(api, workerToken, d.workerScanHandler)
 	securityrouter.RegisterSecurityRoutes(protected, d.vulnerabilityHandler)
-	agentrouter.RegisterAgentRoutes(api, protected, d.agentHandler, d.agentWSHandler, d.agentTaskHandler, d.agentLogHandler, d.agentRepo)
+	agentrouter.RegisterAgentRoutes(api, protected, d.agentHandler, d.agentLogHandler)
 }

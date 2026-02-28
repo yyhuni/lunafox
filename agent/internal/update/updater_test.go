@@ -90,12 +90,12 @@ func TestResolveRuntimeVolumeName(t *testing.T) {
 	}
 
 	t.Setenv(runtimeVolumeNameEnvKey, "custom_runtime")
-	if got, err := resolveRuntimeVolumeName(); err != nil || got != "custom_runtime" {
-		t.Fatalf("expected custom runtime volume name, got=%q err=%v", got, err)
+	if got, err := resolveRuntimeVolumeName(); err != nil || got != "lunafox_runtime" {
+		t.Fatalf("expected runtime volume name from code default, got=%q err=%v", got, err)
 	}
 
 	t.Setenv(runtimeVolumeNameEnvKey, "/host/path")
-	if _, err := resolveRuntimeVolumeName(); err == nil {
-		t.Fatalf("expected invalid runtime volume name error")
+	if got, err := resolveRuntimeVolumeName(); err != nil || got != "lunafox_runtime" {
+		t.Fatalf("expected runtime volume name from code default, got=%q err=%v", got, err)
 	}
 }

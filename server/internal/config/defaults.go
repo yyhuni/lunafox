@@ -9,6 +9,7 @@ import (
 // setDefaults sets default values for configuration.
 func setDefaults(v *viper.Viper) {
 	v.SetDefault("SERVER_PORT", 8080)
+	v.SetDefault("SERVER_GRPC_PORT", 9090)
 	v.SetDefault("GIN_MODE", "release")
 
 	v.SetDefault("DB_HOST", "localhost")
@@ -31,12 +32,12 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("LOG_LEVEL", "info")
 	v.SetDefault("LOG_FORMAT", "json")
 
-	v.SetDefault("JWT_SECRET", "change-me-in-production-use-a-long-random-string")
+	v.SetDefault("JWT_SECRET", "")
 	v.SetDefault("JWT_ACCESS_EXPIRE", "15m")
 	v.SetDefault("JWT_REFRESH_EXPIRE", "168h")
 
 	v.SetDefault("WORDLISTS_BASE_PATH", "/opt/lunafox/wordlists")
-	v.SetDefault("WORKER_TOKEN", "change-me-worker-token")
+	v.SetDefault("WORKER_TOKEN", "")
 	v.SetDefault("PUBLIC_URL", "")
 }
 
@@ -44,8 +45,9 @@ func setDefaults(v *viper.Viper) {
 func GetDefaults() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Port: 8080,
-			Mode: "release",
+			Port:     8080,
+			GRPCPort: 9090,
+			Mode:     "release",
 		},
 		Database: DatabaseConfig{
 			Host:            "localhost",
@@ -71,7 +73,7 @@ func GetDefaults() *Config {
 			Format: "json",
 		},
 		JWT: JWTConfig{
-			Secret:        "change-me-in-production-use-a-long-random-string",
+			Secret:        "",
 			AccessExpire:  15 * time.Minute,
 			RefreshExpire: 168 * time.Hour,
 		},
@@ -79,7 +81,7 @@ func GetDefaults() *Config {
 			WordlistsBasePath: "/opt/lunafox/wordlists",
 		},
 		Worker: WorkerConfig{
-			Token: "change-me-worker-token",
+			Token: "",
 		},
 		PublicURL: "",
 	}

@@ -7,7 +7,6 @@ import (
 )
 
 var (
-	ErrScanTargetNotFound     = errors.New("scan target not found")
 	ErrScanCannotStop         = errors.New("scan cannot be stopped in current status")
 	ErrScanHardDeleteNotReady = errors.New("scan hard delete not implemented")
 	ErrNoTargetsForScan       = errors.New("no targets provided for scan")

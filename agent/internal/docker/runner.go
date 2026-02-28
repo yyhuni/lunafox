@@ -125,10 +125,7 @@ func resolveSharedDataVolumeBind() (string, error) {
 }
 
 func resolveRuntimeVolumeBind() (string, error) {
-	volumeName := strings.TrimSpace(os.Getenv(runtimeVolumeNameEnvKey))
-	if volumeName == "" {
-		volumeName = defaultRuntimeVolumeName
-	}
+	volumeName := defaultRuntimeVolumeName
 	if !isValidNamedVolumeName(volumeName) {
 		return "", fmt.Errorf("%s must be a Docker named volume", runtimeVolumeNameEnvKey)
 	}

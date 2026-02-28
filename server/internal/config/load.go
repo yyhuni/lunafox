@@ -20,7 +20,12 @@ func Load() (*Config, error) {
 	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	return configFromViper(v), nil
+	cfg := configFromViper(v)
+	if err := validateConfig(cfg); err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
 }
 
 func readEnvFile(v *viper.Viper) error {
@@ -42,8 +47,9 @@ func readEnvFile(v *viper.Viper) error {
 func configFromViper(v *viper.Viper) *Config {
 	return &Config{
 		Server: ServerConfig{
-			Port: v.GetInt("SERVER_PORT"),
-			Mode: v.GetString("GIN_MODE"),
+			Port:     v.GetInt("SERVER_PORT"),
+			GRPCPort: v.GetInt("SERVER_GRPC_PORT"),
+			Mode:     v.GetString("GIN_MODE"),
 		},
 		Database: DatabaseConfig{
 			Host:            v.GetString("DB_HOST"),

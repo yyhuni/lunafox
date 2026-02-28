@@ -77,8 +77,14 @@ func (stepEnv) Run(ctx context.Context, installer *Installer) error {
 		PublicURL:            installer.options.PublicURL,
 		PublicPort:           publicPort,
 	}
-	if err := envfile.Write(installer.options.EnvFile, data); err != nil {
+	report, err := envfile.WriteMerged(installer.options.EnvFile, data, []string{
+		"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME",
+	})
+	if err != nil {
 		return fmt.Errorf("写入环境变量文件失败: %w", err)
+	}
+	for _, key := range report.ReusedKeys {
+		installer.printer.Info("检测到已有 %s，已复用", key)
 	}
 
 	installer.printer.Success("配置文件已生成")

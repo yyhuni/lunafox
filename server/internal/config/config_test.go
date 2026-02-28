@@ -18,6 +18,7 @@ func TestConfigDefaults(t *testing.T) {
 		"REDIS_HOST", "REDIS_PORT", "REDIS_PASSWORD", "REDIS_DB",
 		"LOKI_URL",
 		"LOG_LEVEL", "LOG_FORMAT",
+		"JWT_SECRET", "WORKER_TOKEN",
 		"PUBLIC_URL",
 	}
 	for _, env := range envVars {
@@ -25,6 +26,20 @@ func TestConfigDefaults(t *testing.T) {
 			t.Logf("Warning: failed to unset %s: %v", env, err)
 		}
 	}
+	if err := os.Setenv("JWT_SECRET", "jwt-secret-for-config-defaults-test"); err != nil {
+		t.Fatalf("Failed to set JWT_SECRET: %v", err)
+	}
+	if err := os.Setenv("WORKER_TOKEN", "worker-token-for-config-defaults-test"); err != nil {
+		t.Fatalf("Failed to set WORKER_TOKEN: %v", err)
+	}
+	if err := os.Setenv("PUBLIC_URL", "https://public.example.com:8083"); err != nil {
+		t.Fatalf("Failed to set PUBLIC_URL: %v", err)
+	}
+	defer func() {
+		_ = os.Unsetenv("JWT_SECRET")
+		_ = os.Unsetenv("WORKER_TOKEN")
+		_ = os.Unsetenv("PUBLIC_URL")
+	}()
 
 	cfg, err := Load()
 	if err != nil {
@@ -94,8 +109,8 @@ func TestConfigDefaults(t *testing.T) {
 	if cfg.Log.Format != defaults.Log.Format {
 		t.Errorf("Log.Format: expected %s, got %s", defaults.Log.Format, cfg.Log.Format)
 	}
-	if cfg.PublicURL != defaults.PublicURL {
-		t.Errorf("PublicURL: expected %s, got %s", defaults.PublicURL, cfg.PublicURL)
+	if cfg.PublicURL != "https://public.example.com:8083" {
+		t.Errorf("PublicURL: expected %s, got %s", "https://public.example.com:8083", cfg.PublicURL)
 	}
 }
 
@@ -123,6 +138,12 @@ func TestConfigFromEnv(t *testing.T) {
 	if err := os.Setenv("LOKI_URL", "http://custom-loki:3100"); err != nil {
 		t.Fatalf("Failed to set LOKI_URL: %v", err)
 	}
+	if err := os.Setenv("JWT_SECRET", "jwt-secret-for-config-from-env-test"); err != nil {
+		t.Fatalf("Failed to set JWT_SECRET: %v", err)
+	}
+	if err := os.Setenv("WORKER_TOKEN", "worker-token-for-config-from-env-test"); err != nil {
+		t.Fatalf("Failed to set WORKER_TOKEN: %v", err)
+	}
 	if err := os.Setenv("PUBLIC_URL", "https://public.example"); err != nil {
 		t.Fatalf("Failed to set PUBLIC_URL: %v", err)
 	}
@@ -134,6 +155,8 @@ func TestConfigFromEnv(t *testing.T) {
 		_ = os.Unsetenv("DB_TIMEZONE")
 		_ = os.Unsetenv("LOG_LEVEL")
 		_ = os.Unsetenv("LOKI_URL")
+		_ = os.Unsetenv("JWT_SECRET")
+		_ = os.Unsetenv("WORKER_TOKEN")
 		_ = os.Unsetenv("PUBLIC_URL")
 	}()
 
@@ -165,6 +188,68 @@ func TestConfigFromEnv(t *testing.T) {
 	}
 	if cfg.PublicURL != "https://public.example" {
 		t.Errorf("PublicURL: expected https://public.example, got %s", cfg.PublicURL)
+	}
+}
+
+func TestLoadRejectsMissingPublicURL(t *testing.T) {
+	t.Setenv("JWT_SECRET", "jwt-secret-for-missing-public-url-test")
+	t.Setenv("WORKER_TOKEN", "worker-token-for-missing-public-url-test")
+	t.Setenv("PUBLIC_URL", "")
+
+	if _, err := Load(); err == nil {
+		t.Fatal("expected Load to fail when PUBLIC_URL is missing")
+	}
+}
+
+func TestLoadRejectsWeakTokenDefaults(t *testing.T) {
+	t.Setenv("PUBLIC_URL", "https://public.example.com:8083")
+
+	tests := []struct {
+		name        string
+		jwtSecret   string
+		workerToken string
+	}{
+		{
+			name:        "jwt-placeholder",
+			jwtSecret:   "change-me-in-production-use-a-long-random-string",
+			workerToken: "worker-token-valid",
+		},
+		{
+			name:        "worker-placeholder",
+			jwtSecret:   "jwt-secret-valid",
+			workerToken: "change-me-worker-token",
+		},
+		{
+			name:        "jwt-empty",
+			jwtSecret:   "",
+			workerToken: "worker-token-valid",
+		},
+		{
+			name:        "worker-empty",
+			jwtSecret:   "jwt-secret-valid",
+			workerToken: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("JWT_SECRET", tt.jwtSecret)
+			t.Setenv("WORKER_TOKEN", tt.workerToken)
+
+			if _, err := Load(); err == nil {
+				t.Fatal("expected Load to fail for weak token configuration")
+			}
+		})
+	}
+}
+
+func TestLoadRejectsNonHTTPSPublicURL(t *testing.T) {
+	t.Setenv("JWT_SECRET", "jwt-secret-for-public-url-scheme-test")
+	t.Setenv("WORKER_TOKEN", "worker-token-for-public-url-scheme-test")
+	t.Setenv("PUBLIC_URL", "http://public.example.com:8083")
+
+	if _, err := Load(); err == nil {
+		t.Fatal("expected Load to fail for non-https PUBLIC_URL")
 	}
 }
 

@@ -17,8 +17,9 @@ type Config struct {
 
 // ServerConfig holds server-related configuration.
 type ServerConfig struct {
-	Port int    `mapstructure:"SERVER_PORT"`
-	Mode string `mapstructure:"GIN_MODE"`
+	Port     int    `mapstructure:"SERVER_PORT"`
+	GRPCPort int    `mapstructure:"SERVER_GRPC_PORT"`
+	Mode     string `mapstructure:"GIN_MODE"`
 }
 
 // WorkerConfig holds worker-related configuration.
