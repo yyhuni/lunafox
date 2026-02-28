@@ -32,6 +32,9 @@ func TestBuildBakeContentUsesModuleSubdirAsContext(t *testing.T) {
 	if !strings.Contains(content, "target \"worker\" {\n  context = \"/repo/lunafox/worker\"") {
 		t.Fatalf("worker context mismatch, content=%s", content)
 	}
+	if !strings.Contains(content, "contexts = {\n    contracts = \"/repo/lunafox/contracts\"\n  }") {
+		t.Fatalf("contracts context missing, content=%s", content)
+	}
 }
 
 func TestNormalizeImageCandidates(t *testing.T) {

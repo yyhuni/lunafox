@@ -58,7 +58,7 @@ func NewPuller(client TaskPuller, collector MetricsSampler, counter *Counter, ma
 		memThreshold:  memThreshold,
 		diskThreshold: diskThreshold,
 		notifyCh:      make(chan struct{}, 1),
-		emptyBackoff:  []time.Duration{5 * time.Second, 10 * time.Second, 30 * time.Second, 60 * time.Second},
+		emptyBackoff:  []time.Duration{1 * time.Second, 2 * time.Second, 5 * time.Second, 10 * time.Second},
 		errorBackoff:  1 * time.Second,
 		errorMax:      60 * time.Second,
 		randSrc:       rand.New(rand.NewSource(time.Now().UnixNano())),
@@ -179,10 +179,12 @@ func (p *Puller) nextEmptyDelay(loadInterval time.Duration) time.Duration {
 	} else {
 		empty = p.emptyBackoff[len(p.emptyBackoff)-1]
 	}
-	if empty < loadInterval {
-		return loadInterval
+	delay := empty
+	if delay < loadInterval {
+		delay = loadInterval
 	}
-	return empty
+	// Add jitter to reduce synchronized empty pulls across multiple agents.
+	return withJitter(delay, p.randSrc)
 }
 
 func (p *Puller) resetEmptyBackoff() {

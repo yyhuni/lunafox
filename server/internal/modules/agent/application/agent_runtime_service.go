@@ -2,6 +2,8 @@ package application
 
 import (
 	"context"
+	"net"
+	"strings"
 	"time"
 
 	"github.com/yyhuni/lunafox/server/internal/cache"
@@ -50,7 +52,9 @@ func (service *AgentRuntimeService) OnConnected(ctx context.Context, agent *agen
 	agent.Status = "online"
 	agent.ConnectedAt = &now
 	agent.LastHeartbeat = &now
-	agent.IPAddress = ipAddress
+	if parsed := net.ParseIP(strings.TrimSpace(ipAddress)); parsed != nil {
+		agent.IPAddress = parsed.String()
+	}
 
 	if err := service.agentRepo.Update(ctx, agent); err != nil {
 		return err

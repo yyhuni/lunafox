@@ -15,6 +15,17 @@ type runtimeRepoStub struct {
 	agentRepoStub
 	heartbeats []agentdomain.AgentHeartbeatUpdate
 	statuses   []string
+	updated    []*agentdomain.Agent
+	updateErr  error
+}
+
+func (repo *runtimeRepoStub) Update(_ context.Context, agent *agentdomain.Agent) error {
+	if repo.updateErr != nil {
+		return repo.updateErr
+	}
+	copied := *agent
+	repo.updated = append(repo.updated, &copied)
+	return nil
 }
 
 func (repo *runtimeRepoStub) UpdateHeartbeat(_ context.Context, _ int, update agentdomain.AgentHeartbeatUpdate) error {
@@ -120,6 +131,40 @@ func TestAgentRuntimeServiceOnDisconnected(t *testing.T) {
 	}
 	if !cacheStore.deleted {
 		t.Fatalf("expected cache deletion")
+	}
+}
+
+func TestAgentRuntimeServiceOnConnectedUsesProvidedIPAddress(t *testing.T) {
+	repo := &runtimeRepoStub{}
+	now := time.Date(2026, 2, 28, 18, 0, 0, 0, time.UTC)
+	service := NewAgentRuntimeService(repo, nil, &publisherStub{}, fixedClock{now: now}, "", "")
+	agent := &agentdomain.Agent{ID: 1}
+
+	if err := service.OnConnected(context.Background(), agent, "203.0.113.10"); err != nil {
+		t.Fatalf("OnConnected error: %v", err)
+	}
+	if agent.IPAddress != "203.0.113.10" {
+		t.Fatalf("expected ip updated, got %q", agent.IPAddress)
+	}
+	if len(repo.updated) != 1 || repo.updated[0].IPAddress != "203.0.113.10" {
+		t.Fatalf("expected persisted ip update, got %#v", repo.updated)
+	}
+}
+
+func TestAgentRuntimeServiceOnConnectedDoesNotOverwriteIPAddressWhenEmpty(t *testing.T) {
+	repo := &runtimeRepoStub{}
+	now := time.Date(2026, 2, 28, 18, 5, 0, 0, time.UTC)
+	service := NewAgentRuntimeService(repo, nil, &publisherStub{}, fixedClock{now: now}, "", "")
+	agent := &agentdomain.Agent{ID: 2, IPAddress: "198.51.100.2"}
+
+	if err := service.OnConnected(context.Background(), agent, ""); err != nil {
+		t.Fatalf("OnConnected error: %v", err)
+	}
+	if agent.IPAddress != "198.51.100.2" {
+		t.Fatalf("expected existing ip preserved, got %q", agent.IPAddress)
+	}
+	if len(repo.updated) != 1 || repo.updated[0].IPAddress != "198.51.100.2" {
+		t.Fatalf("expected persisted ip unchanged, got %#v", repo.updated)
 	}
 }
 

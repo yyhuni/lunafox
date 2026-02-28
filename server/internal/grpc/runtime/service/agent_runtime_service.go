@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
+	"strings"
 	"sync"
 
 	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
@@ -13,6 +15,7 @@ import (
 	scanapp "github.com/yyhuni/lunafox/server/internal/modules/scan/application"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 )
 
@@ -72,7 +75,7 @@ func (s *AgentRuntimeService) Connect(stream grpc.BidiStreamingServer[runtimev1.
 		return grpcauth.MapError(grpcauth.ErrInvalidAgentKey)
 	}
 
-	if err := s.lifecycle.OnConnected(ctx, agent, ""); err != nil {
+	if err := s.lifecycle.OnConnected(ctx, agent, runtimePeerIP(ctx)); err != nil {
 		return status.Error(codes.Internal, err.Error())
 	}
 
@@ -180,4 +183,42 @@ func (s *AgentRuntimeService) forwardOutboundEvents(
 			}
 		}
 	}
+}
+
+func runtimePeerIP(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	peerInfo, ok := peer.FromContext(ctx)
+	if !ok || peerInfo == nil || peerInfo.Addr == nil {
+		return ""
+	}
+	return normalizeIPAddress(peerInfo.Addr.String())
+}
+
+func normalizeIPAddress(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+	host, _, err := net.SplitHostPort(trimmed)
+	if err == nil {
+		return parseIPAddress(host)
+	}
+	return parseIPAddress(trimmed)
+}
+
+func parseIPAddress(candidate string) string {
+	trimmed := strings.TrimSpace(candidate)
+	if trimmed == "" {
+		return ""
+	}
+	if index := strings.Index(trimmed, "%"); index >= 0 {
+		trimmed = trimmed[:index]
+	}
+	parsed := net.ParseIP(strings.Trim(trimmed, "[]"))
+	if parsed == nil {
+		return ""
+	}
+	return parsed.String()
 }

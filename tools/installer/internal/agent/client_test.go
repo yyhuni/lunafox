@@ -113,6 +113,43 @@ func TestDownloadInstallScriptUsesLocalEndpointWithoutModeQuery(t *testing.T) {
 	}
 }
 
+func TestDownloadInstallScriptFailsFastOnLocalEndpointNotFound(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path == "/api/agent/install-script/local" {
+			writer.WriteHeader(http.StatusNotFound)
+			_, _ = writer.Write([]byte("404 page not found"))
+			return
+		}
+		writer.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	client := newTLSClientForServer(t, server)
+	script, installURL, err := client.DownloadInstallScript(context.Background(), server.URL, "reg-token")
+	if script != "" {
+		t.Fatalf("expected empty script, got: %s", script)
+	}
+	if err == nil {
+		t.Fatalf("expected DownloadInstallScript error")
+	}
+	stageErr, ok := err.(*StageError)
+	if !ok {
+		t.Fatalf("expected StageError, got %T", err)
+	}
+	if stageErr.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got: %d", stageErr.Code)
+	}
+	if !strings.Contains(stageErr.Endpoint, "/api/agent/install-script/local?") {
+		t.Fatalf("expected local endpoint in error, got: %s", stageErr.Endpoint)
+	}
+	if !strings.Contains(stageErr.Message, "404 page not found") {
+		t.Fatalf("unexpected error message: %s", stageErr.Message)
+	}
+	if !strings.Contains(installURL, "/api/agent/install-script/local?") {
+		t.Fatalf("install url should keep local endpoint: %s", installURL)
+	}
+}
+
 func TestBuildInstallEnv(t *testing.T) {
 	env, err := BuildInstallEnv(Config{
 		Mode:          "dev",

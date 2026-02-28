@@ -72,6 +72,7 @@ services:
       - lunafox_data:/opt/lunafox
       - /var/run/docker.sock:/var/run/docker.sock
       - ../server:/workspace/server
+      - ../contracts:/workspace/contracts:ro
       - go-mod-cache:/go/pkg/mod
       - go-build-cache:/root/.cache/go-build
     healthcheck:

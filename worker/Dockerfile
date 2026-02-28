@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 # Worker application image:
 # - build scanner tools in this Dockerfile (no external tools image dependency)
 # - compile worker binary and assemble runtime image
@@ -132,6 +134,7 @@ ENV GOPROXY=$GOPROXY
 WORKDIR /src
 
 # Copy deps first for caching
+COPY --from=contracts . /contracts
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
 	"sync"
 	"testing"
 	"time"
@@ -16,6 +17,7 @@ import (
 	scanapp "github.com/yyhuni/lunafox/server/internal/modules/scan/application"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 )
 
@@ -91,6 +93,29 @@ func TestConnectHandlesRequestTask(t *testing.T) {
 	assign := stream.sent[1].GetTaskAssign()
 	if assign == nil || !assign.Found || assign.TaskId != 11 {
 		t.Fatalf("unexpected task assign event: %+v", stream.sent[1])
+	}
+}
+
+func TestConnectUsesPeerIPAddressForLifecycle(t *testing.T) {
+	agent := &agentdomain.Agent{ID: 19}
+	finder := &agentFinderStub{agent: agent}
+	lifecycle := &runtimeLifecycleStub{}
+	svc := NewAgentRuntimeServiceWithDeps(finder, lifecycle, &taskRuntimeStub{})
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcauth.AgentKeyHeader, "apikey-19"))
+	ctx = peer.NewContext(ctx, &peer.Peer{
+		Addr: &net.TCPAddr{
+			IP:   net.ParseIP("203.0.113.19"),
+			Port: 50001,
+		},
+	})
+	stream := &fakeConnectStream{ctx: ctx}
+
+	if err := svc.Connect(stream); err != nil {
+		t.Fatalf("connect failed: %v", err)
+	}
+	if lifecycle.connectedIP != "203.0.113.19" {
+		t.Fatalf("expected peer ip 203.0.113.19, got %q", lifecycle.connectedIP)
 	}
 }
 
@@ -409,17 +434,19 @@ type runtimeLifecycleStub struct {
 	messages          []agentapp.RuntimeMessageInput
 	connectedCount    int
 	disconnectedCount int
+	connectedIP       string
 	onConnectedErr    error
 	onDisconnectedErr error
 	handleErr         error
 }
 
-func (s *runtimeLifecycleStub) OnConnected(context.Context, *agentdomain.Agent, string) error {
+func (s *runtimeLifecycleStub) OnConnected(_ context.Context, _ *agentdomain.Agent, ipAddress string) error {
 	if s.onConnectedErr != nil {
 		return s.onConnectedErr
 	}
 	s.connected = true
 	s.connectedCount++
+	s.connectedIP = ipAddress
 	return nil
 }
 

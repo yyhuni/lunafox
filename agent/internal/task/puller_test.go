@@ -2,6 +2,7 @@ package task
 
 import (
 	"math/rand"
+	"reflect"
 	"testing"
 	"time"
 
@@ -46,6 +47,7 @@ func TestPullerEnsureTaskHandler(t *testing.T) {
 func TestPullerNextEmptyDelay(t *testing.T) {
 	p := NewPuller(nil, nil, nil, 1, 1, 1, 1)
 	p.emptyBackoff = []time.Duration{5 * time.Second, 10 * time.Second}
+	p.randSrc = nil
 
 	if delay := p.nextEmptyDelay(8 * time.Second); delay != 8*time.Second {
 		t.Fatalf("expected delay to honor load interval, got %v", delay)
@@ -59,6 +61,20 @@ func TestPullerNextEmptyDelay(t *testing.T) {
 	p.resetEmptyBackoff()
 	if p.emptyIdx != 0 {
 		t.Fatalf("expected empty index reset")
+	}
+}
+
+func TestPullerNextEmptyDelayAddsJitter(t *testing.T) {
+	p := NewPuller(nil, nil, nil, 1, 1, 1, 1)
+	p.emptyBackoff = []time.Duration{5 * time.Second}
+	p.randSrc = rand.New(rand.NewSource(1))
+
+	delay := p.nextEmptyDelay(1 * time.Second)
+	if delay <= 5*time.Second {
+		t.Fatalf("expected jittered delay > base delay, got %v", delay)
+	}
+	if delay > 6*time.Second {
+		t.Fatalf("expected jitter <= 20%%, got %v", delay)
 	}
 }
 
@@ -97,5 +113,18 @@ func TestWithJitterRange(t *testing.T) {
 	}
 	if got > delay+(delay/5) {
 		t.Fatalf("expected jitter <= 20%%")
+	}
+}
+
+func TestNewPullerUsesFasterEmptyBackoff(t *testing.T) {
+	p := NewPuller(nil, nil, nil, 1, 1, 1, 1)
+	want := []time.Duration{
+		1 * time.Second,
+		2 * time.Second,
+		5 * time.Second,
+		10 * time.Second,
+	}
+	if !reflect.DeepEqual(p.emptyBackoff, want) {
+		t.Fatalf("unexpected empty backoff: got %v want %v", p.emptyBackoff, want)
 	}
 }

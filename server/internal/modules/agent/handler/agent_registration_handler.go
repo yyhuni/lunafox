@@ -53,7 +53,7 @@ func (h *AgentHandler) Register(c *gin.Context) {
 		req.Token,
 		req.Hostname,
 		req.Version,
-		getForwardedIP(c),
+		"",
 		agentdomain.AgentRegistrationOptions{
 			MaxTasks:      req.MaxTasks,
 			CPUThreshold:  req.CPUThreshold,

@@ -241,6 +241,8 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
+          build-contexts: |
+            contracts=./contracts
           platforms: linux/amd64
           push: true
           provenance: false
@@ -303,6 +305,8 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
+          build-contexts: |
+            contracts=./contracts
           platforms: linux/arm64
           push: true
           provenance: false

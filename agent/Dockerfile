@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 # ============================================
 # Go Agent - build
 # ============================================
@@ -12,6 +14,7 @@ ENV GOPROXY=$GOPROXY
 WORKDIR /src
 
 # Cache dependencies
+COPY --from=contracts . /contracts
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
