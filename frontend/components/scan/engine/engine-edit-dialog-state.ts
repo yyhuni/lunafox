@@ -27,10 +27,6 @@ subdomain_discovery:
     subfinder:
       enabled: true
       timeout: 600      # 10 minutes (required)
-      
-    assetfinder:
-      enabled: true
-      timeout: 600      # 10 minutes (required)
 
 
 # ==================== Port Scan ====================

@@ -15,9 +15,6 @@ subdomain_discovery:
         enabled: true
         timeout-runtime: 3600
         threads-cli: 10
-      assetfinder:
-        enabled: true
-        timeout-runtime: 3600
   bruteforce:
     enabled: true
     tools:
@@ -89,9 +86,6 @@ subdomain_discovery:
         enabled: true
         timeout-runtime: 1800
         threads-cli: 20
-      assetfinder:
-        enabled: true
-        timeout-runtime: 1800
   bruteforce:
     enabled: false
     tools:
@@ -130,9 +124,6 @@ subdomain_discovery:
         enabled: true
         timeout-runtime: 3600
         threads-cli: 10
-      assetfinder:
-        enabled: true
-        timeout-runtime: 3600
   bruteforce:
     enabled: true
     tools:
@@ -236,9 +227,6 @@ subdomain_discovery:
         enabled: true
         timeout-runtime: 3600
         threads-cli: 10
-      assetfinder:
-        enabled: true
-        timeout-runtime: 3600
   bruteforce:
     enabled: false
   permutation:
@@ -324,9 +312,6 @@ subdomain_discovery:
         enabled: true
         timeout-runtime: 3600
         threads-cli: 10
-      assetfinder:
-        enabled: true
-        timeout-runtime: 3600
   bruteforce:
     enabled: true
     tools:
@@ -459,9 +444,6 @@ subdomain_discovery:
         enabled: true
         timeout-runtime: 7200
         threads-cli: 20
-      assetfinder:
-        enabled: true
-        timeout-runtime: 7200
   bruteforce:
     enabled: true
     tools:

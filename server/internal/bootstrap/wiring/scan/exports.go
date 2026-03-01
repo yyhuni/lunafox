@@ -1,6 +1,7 @@
 package scanwiring
 
 import (
+	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 	catalogrepo "github.com/yyhuni/lunafox/server/internal/modules/catalog/repository"
 	scanapp "github.com/yyhuni/lunafox/server/internal/modules/scan/application"
 	scandomain "github.com/yyhuni/lunafox/server/internal/modules/scan/domain"
@@ -35,6 +36,10 @@ func NewScanTaskRuntimeStoreAdapter(repo *scanrepo.ScanRepository) scanapp.TaskR
 	return newScanTaskRuntimeStoreAdapter(repo)
 }
 
+func NewScanTaskRuntimeAgentStoreAdapter(repo agentdomain.AgentRepository) scanapp.TaskRuntimeAgentStore {
+	return newScanTaskRuntimeAgentStoreAdapter(repo)
+}
+
 func NewScanApplicationService(
 	queryStore scanapp.ScanQueryStore,
 	commandStore scanapp.ScanCommandStore,
@@ -46,6 +51,10 @@ func NewScanApplicationService(
 	return scanapp.NewScanFacade(queryStore, commandStore, domainRepository, taskCanceller, notifier, targetLookup)
 }
 
-func NewScanTaskApplicationService(taskStore scanapp.TaskStore, runtimeStore scanapp.TaskRuntimeScanStore) *scanapp.ScanTaskFacade {
-	return scanapp.NewScanTaskFacade(taskStore, runtimeStore)
+func NewScanTaskApplicationService(
+	taskStore scanapp.TaskStore,
+	runtimeStore scanapp.TaskRuntimeScanStore,
+	agentStores ...scanapp.TaskRuntimeAgentStore,
+) *scanapp.ScanTaskFacade {
+	return scanapp.NewScanTaskFacade(taskStore, runtimeStore, agentStores...)
 }

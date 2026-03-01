@@ -19,7 +19,16 @@
   - 解析后映射到每个 workflow 的强类型 `Config` 结构，并执行严格校验。
 - 保留并重建“配置契约能力”：
   - schema 与文档继续提供，但来源由模板迁移为 Go 配置定义（或生成规则）。
-  - server 在创建扫描时继续执行 engine 级配置校验。
+  - server 在创建扫描时仅执行 schema 基础门禁校验（结构、类型、范围、required）。
+  - worker 在解析配置后执行权威业务校验（含跨字段约束），并以 fail-fast 方式拒绝不满足业务规则的配置。
+  - 若出现“server 通过但 worker 拒绝”，视为预期行为，不再追求将全部业务规则塞入 schema。
+  - `unknown key` 保持严格失败，不采用“仅告警放行”策略。
+  - 为避免新旧版本混部导致失败，增加版本/能力门禁调度：
+    - 配置中显式包含 `apiVersion`（`v<major>`）和 `schemaVersion`（`MAJOR.MINOR.PATCH`）。
+    - 首发固定值：`apiVersion=v1`、`schemaVersion=1.0.0`（以 schema 枚举强约束）。
+    - 超出首发允许值的配置在 Server 侧直接拒绝，不进入执行链路。
+    - 调度阶段按 `(workflow, apiVersion, schemaVersion)` 与 worker capability 做精确匹配，不兼容直接拦截。
+  - 统一错误响应结构与错误码枚举，保证前后端在二层校验下的报错语义一致。
   - 生成产物主目录固定为：
     - schema: `server/internal/engineschema/*.schema.json`
     - docs: `docs/config-reference/*.md`
