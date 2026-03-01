@@ -2,11 +2,11 @@
 # Multi-stage build with BuildKit caching
 
 # ==================== Dependencies stage ====================
-FROM node:20.20.0-alpine AS deps
+FROM node:24.14.0-alpine AS deps
 WORKDIR /app
 
 # Install pnpm (pinned for reproducible builds)
-RUN corepack enable && corepack prepare pnpm@10.30.0 --activate
+RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 
 # Copy dependency manifests
 COPY package.json pnpm-lock.yaml ./
@@ -16,10 +16,10 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
 # ==================== Build stage ====================
-FROM node:20.20.0-alpine AS builder
+FROM node:24.14.0-alpine AS builder
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@10.30.0 --activate
+RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 
 # Copy deps
 COPY --from=deps /app/node_modules ./node_modules
@@ -36,7 +36,7 @@ RUN --mount=type=cache,target=/app/.next/cache \
     pnpm build
 
 # ==================== Runtime stage ====================
-FROM node:20.20.0-alpine AS runner
+FROM node:24.14.0-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

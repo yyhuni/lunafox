@@ -7,7 +7,7 @@ services:
   # PostgreSQL (optional; do not start when using a remote database)
   postgres:
     profiles: ["local-db"]
-    image: postgres:16.3-alpine
+    image: postgres:18.3-alpine
     restart: always
     environment:
       POSTGRES_DB: ${DB_NAME}
@@ -24,7 +24,7 @@ services:
       retries: 5
 
   redis:
-    image: redis:7.4.7-alpine
+    image: redis:8.6.1-alpine
     restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -33,7 +33,7 @@ services:
       retries: 5
 
   loki:
-    image: grafana/loki:3.6.6
+    image: grafana/loki:3.6.7
     restart: always
     command: -config.file=/etc/loki/loki-config.yaml
     volumes:

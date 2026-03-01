@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM ubuntu:22.04
+FROM ubuntu:noble-20260113
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG SHFMT_VERSION=v3.10.0

@@ -1,4 +1,4 @@
-FROM nginx:1.28.1-alpine
+FROM nginx:1.28.2-alpine
 
 # 复制 nginx 配置和证书
 COPY nginx.conf /etc/nginx/nginx.conf

@@ -3,7 +3,7 @@ name: lunafox
 services:
   # Agents should be registered and started via install script (/api/agent/install-script)
   postgres:
-    image: postgres:16.3-alpine
+    image: postgres:18.3-alpine
     restart: "on-failure:3"
     environment:
       POSTGRES_DB: ${DB_NAME:-lunafox}
@@ -20,7 +20,7 @@ services:
       retries: 5
 
   redis:
-    image: redis:7.4.7-alpine
+    image: redis:8.6.1-alpine
     restart: "on-failure:3"
     ports:
       - "${REDIS_PORT:-6379}:6379"
@@ -31,7 +31,7 @@ services:
       retries: 5
 
   loki:
-    image: grafana/loki:3.6.6
+    image: grafana/loki:3.6.7
     restart: "on-failure:3"
     command: -config.file=/etc/loki/loki-config.yaml
     volumes:
@@ -83,7 +83,7 @@ services:
       start_period: 60s
 
   frontend:
-    image: node:20.20.0-alpine
+    image: node:24.14.0-alpine
     restart: "on-failure:3"
     environment:
       - NODE_ENV=development
@@ -95,7 +95,7 @@ services:
     ports:
       - "3000:3000"
     working_dir: /app
-    command: sh -c "corepack enable && corepack prepare pnpm@10.30.0 --activate && LOCK_HASH_FILE=node_modules/.pnpm-lock.hash; if [ -f pnpm-lock.yaml ]; then NEW_HASH=$$(sha256sum pnpm-lock.yaml | awk '{print $$1}'); else NEW_HASH=''; fi; if [ ! -d node_modules/.pnpm ] || [ ! -f \"$$LOCK_HASH_FILE\" ] || [ \"$$(cat $$LOCK_HASH_FILE 2>/dev/null)\" != \"$$NEW_HASH\" ]; then pnpm install && echo \"$$NEW_HASH\" > \"$$LOCK_HASH_FILE\"; fi && pnpm dev"
+    command: sh -c "corepack enable && corepack prepare pnpm@10.30.3 --activate && LOCK_HASH_FILE=node_modules/.pnpm-lock.hash; if [ -f pnpm-lock.yaml ]; then NEW_HASH=$$(sha256sum pnpm-lock.yaml | awk '{print $$1}'); else NEW_HASH=''; fi; if [ ! -d node_modules/.pnpm ] || [ ! -f \"$$LOCK_HASH_FILE\" ] || [ \"$$(cat $$LOCK_HASH_FILE 2>/dev/null)\" != \"$$NEW_HASH\" ]; then pnpm install && echo \"$$NEW_HASH\" > \"$$LOCK_HASH_FILE\"; fi && pnpm dev"
     depends_on:
       server:
         condition: service_healthy

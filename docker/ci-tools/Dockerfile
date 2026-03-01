@@ -4,8 +4,8 @@ ARG BASE_TOOLS_IMAGE=ghcr.io/yyhuni/lunafox-base-tools:stable
 FROM ${BASE_TOOLS_IMAGE}
 
 ARG GO_VERSION=1.26.0
-ARG NODE_VERSION=20.20.0
-ARG PNPM_VERSION=10.30.0
+ARG NODE_VERSION=24.14.0
+ARG PNPM_VERSION=10.30.3
 
 ENV GOPATH=/home/runner/go
 ENV GOCACHE=/home/runner/.cache/go-build
