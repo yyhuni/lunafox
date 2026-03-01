@@ -3,7 +3,6 @@ package activity
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yyhuni/lunafox/worker/internal/pkg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/yyhuni/lunafox/worker/internal/pkg"
 	"go.uber.org/zap"
 )
 
@@ -32,7 +31,8 @@ func TestRunner_Run_InvalidTimeout(t *testing.T) {
 
 	res := r.Run(context.Background(), Command{
 		Name:    "test",
-		Command: "echo hi",
+		Binary:  "echo",
+		Args:    []string{"hi"},
 		Timeout: 0,
 	})
 
@@ -48,7 +48,8 @@ func TestRunner_Run_ContextCanceled(t *testing.T) {
 
 	res := r.Run(ctx, Command{
 		Name:    "test",
-		Command: "echo hi",
+		Binary:  "echo",
+		Args:    []string{"hi"},
 		Timeout: time.Second,
 	})
 
@@ -62,12 +63,13 @@ func TestRunner_Run_ExitCode(t *testing.T) {
 
 	res := r.Run(context.Background(), Command{
 		Name:    "test",
-		Command: "exit 3",
+		Binary:  "cat",
+		Args:    []string{"/definitely/not/exist"},
 		Timeout: time.Second,
 	})
 
 	require.Error(t, res.Error)
-	require.Equal(t, 3, res.ExitCode)
+	require.NotEqual(t, 0, res.ExitCode)
 }
 
 func TestRunner_Run_Timeout(t *testing.T) {
@@ -76,7 +78,8 @@ func TestRunner_Run_Timeout(t *testing.T) {
 
 	res := r.Run(context.Background(), Command{
 		Name:    "test",
-		Command: "sleep 0.2",
+		Binary:  "sleep",
+		Args:    []string{"0.2"},
 		Timeout: 50 * time.Millisecond,
 	})
 
@@ -91,7 +94,8 @@ func TestRunner_Run_WritesLogFile(t *testing.T) {
 
 	res := r.Run(context.Background(), Command{
 		Name:    "test",
-		Command: "echo hi",
+		Binary:  "echo",
+		Args:    []string{"hi"},
 		LogFile: logFile,
 		Timeout: time.Second,
 	})
@@ -118,7 +122,7 @@ func TestRunner_StreamOutputTruncatesLongLines(t *testing.T) {
 	long := bytes.Repeat([]byte("a"), ScannerMaxBufSize+100)
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
-	go r.streamOutput(wg, bytes.NewReader(append(long, '\n')), f, "test", "stdout")
+	go r.streamOutput(wg, bytes.NewReader(append(long, '\n')), f, nil, "test", "stdout")
 	wg.Wait()
 	_ = f.Close()
 
@@ -138,7 +142,7 @@ func TestRunner_StreamOutputCleansLines(t *testing.T) {
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
-	go r.streamOutput(wg, strings.NewReader("hello\x1b[31m\r\nworld\x00\n"), f, "test", "stdout")
+	go r.streamOutput(wg, strings.NewReader("hello\x1b[31m\r\nworld\x00\n"), f, nil, "test", "stdout")
 	wg.Wait()
 	_ = f.Close()
 
@@ -157,8 +161,8 @@ func TestRunner_RunParallel_ContextCanceled(t *testing.T) {
 	cancel()
 
 	results := r.RunParallel(ctx, []Command{
-		{Name: "a", Command: "echo a", Timeout: time.Second},
-		{Name: "b", Command: "echo b", Timeout: time.Second},
+		{Name: "a", Binary: "echo", Args: []string{"a"}, Timeout: time.Second},
+		{Name: "b", Binary: "echo", Args: []string{"b"}, Timeout: time.Second},
 	})
 
 	require.Len(t, results, 2)
@@ -176,8 +180,8 @@ func TestRunner_RunSequential_ContextCanceled(t *testing.T) {
 	cancel()
 
 	results := r.RunSequential(ctx, []Command{
-		{Name: "a", Command: "echo a", Timeout: time.Second},
-		{Name: "b", Command: "echo b", Timeout: time.Second},
+		{Name: "a", Binary: "echo", Args: []string{"a"}, Timeout: time.Second},
+		{Name: "b", Binary: "echo", Args: []string{"b"}, Timeout: time.Second},
 	})
 
 	require.Len(t, results, 2)
@@ -233,13 +237,10 @@ func TestRunner_RunParallel_RespectsMaxCmdConcurrency(t *testing.T) {
 	workDir := t.TempDir()
 	r := NewRunner(workDir)
 
-	lockDir := filepath.Join(workDir, "lock")
-	cmdStr := fmt.Sprintf("mkdir %q || exit 99; sleep 0.3; rmdir %q", lockDir, lockDir)
-
 	cmds := []Command{
-		{Name: "c1", Command: cmdStr, Timeout: 5 * time.Second},
-		{Name: "c2", Command: cmdStr, Timeout: 5 * time.Second},
-		{Name: "c3", Command: cmdStr, Timeout: 5 * time.Second},
+		{Name: "c1", Binary: "sleep", Args: []string{"0.3"}, Timeout: 5 * time.Second},
+		{Name: "c2", Binary: "sleep", Args: []string{"0.3"}, Timeout: 5 * time.Second},
+		{Name: "c3", Binary: "sleep", Args: []string{"0.3"}, Timeout: 5 * time.Second},
 	}
 
 	start := time.Now()
@@ -255,4 +256,38 @@ func TestRunner_RunParallel_RespectsMaxCmdConcurrency(t *testing.T) {
 
 	// With concurrency=1 and 3 commands sleeping 0.3s each, total wall time should be ~0.9s.
 	require.GreaterOrEqual(t, elapsed, 750*time.Millisecond)
+}
+
+func TestRunner_Run_BinaryNotFound(t *testing.T) {
+	withNopLogger(t)
+	r := NewRunner(t.TempDir())
+
+	res := r.Run(context.Background(), Command{
+		Name:    "missing",
+		Binary:  "definitely-missing-binary-for-test",
+		Timeout: time.Second,
+	})
+
+	require.Error(t, res.Error)
+	require.Equal(t, ExitCodeError, res.ExitCode)
+	assert.Contains(t, res.Error.Error(), "look up binary")
+}
+
+func TestRunner_Run_ArgInjectionSafe(t *testing.T) {
+	withNopLogger(t)
+	r := NewRunner(t.TempDir())
+	marker := filepath.Join(t.TempDir(), "should-not-exist")
+
+	res := r.Run(context.Background(), Command{
+		Name:    "safe-echo",
+		Binary:  "echo",
+		Args:    []string{"hello;touch", marker},
+		Timeout: time.Second,
+	})
+
+	require.NoError(t, res.Error)
+	require.Equal(t, 0, res.ExitCode)
+	_, err := os.Stat(marker)
+	require.Error(t, err)
+	require.True(t, os.IsNotExist(err))
 }

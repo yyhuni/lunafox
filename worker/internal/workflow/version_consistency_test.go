@@ -77,7 +77,7 @@ func TestWorkflowVersionConsistency(t *testing.T) {
 				"server",
 				"internal",
 				"engineschema",
-				fmt.Sprintf("%s.schema.json", template.Metadata.Name),
+				fmt.Sprintf("%s-v1-%s.schema.json", template.Metadata.Name, template.Metadata.Version),
 			)
 			serverSchema := loadSchemaIdentity(t, serverSchemaPath)
 			require.Equal(

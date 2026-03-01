@@ -186,7 +186,6 @@ func TestLoadAllTemplates(t *testing.T) {
 	// Verify all expected tools are present
 	expectedTools := []string{
 		toolSubfinder,
-		toolAssetfinder,
 		toolSubdomainBruteforce,
 		toolSubdomainResolve,
 		toolSubdomainPermutationResolve,
@@ -409,34 +408,6 @@ func TestCommandGeneration_SubfinderWithProviderConfig(t *testing.T) {
 	t.Logf("Generated command: %s", cmd)
 }
 
-// TestCommandGeneration_Assetfinder tests assetfinder command generation
-func TestCommandGeneration_Assetfinder(t *testing.T) {
-	require.NoError(t, pkg.InitLogger("error"))
-	defer pkg.Sync()
-	tmpl, err := getTemplate(toolAssetfinder)
-	require.NoError(t, err)
-
-	builder := activity.NewCommandBuilder()
-
-	params := map[string]any{
-		"Domain":     "example.com",
-		"OutputFile": "/tmp/output.txt",
-	}
-	config := map[string]any{
-		"timeout-runtime": 3600,
-	}
-
-	cmd, err := builder.Build(tmpl, params, config)
-	require.NoError(t, err)
-
-	assert.Contains(t, cmd, "assetfinder")
-	assert.Contains(t, cmd, "--subs-only")
-	assert.Contains(t, cmd, "example.com")
-	assert.Contains(t, cmd, "> \"/tmp/output.txt\"")
-
-	t.Logf("Generated command: %s", cmd)
-}
-
 // TestCommandGeneration_SubdomainBruteforce tests subdomain-bruteforce command generation
 func TestCommandGeneration_SubdomainBruteforce(t *testing.T) {
 	require.NoError(t, pkg.InitLogger("error"))
@@ -598,29 +569,6 @@ func TestParameterValidation_InvalidType(t *testing.T) {
 	_, err = builder.Build(tmpl, params, config)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "expected integer")
-}
-
-// TestParameterValidation_OptionalParamOmitted tests omitted optional parameters (should succeed)
-func TestParameterValidation_OptionalParamOmitted(t *testing.T) {
-	require.NoError(t, pkg.InitLogger("error"))
-	defer pkg.Sync()
-	tmpl, err := getTemplate(toolAssetfinder)
-	require.NoError(t, err)
-
-	builder := activity.NewCommandBuilder()
-
-	params := map[string]any{
-		"Domain":     "example.com",
-		"OutputFile": "/tmp/output.txt",
-	}
-	// For assetfinder, only timeout-runtime is required; no other CLI params are required
-	config := map[string]any{
-		"timeout-runtime": 3600,
-	}
-
-	cmd, err := builder.Build(tmpl, params, config)
-	require.NoError(t, err)
-	assert.NotEmpty(t, cmd)
 }
 
 // TestInternalParams_SubdomainBruteforce tests correctness of internal_params
@@ -795,7 +743,6 @@ func TestStageAssignment(t *testing.T) {
 	defer pkg.Sync()
 	expectedStages := map[string]string{
 		toolSubfinder:                   stageRecon,
-		toolAssetfinder:                 stageRecon,
 		toolSubdomainBruteforce:         stageBruteforce,
 		toolSubdomainResolve:            stageResolve,
 		toolSubdomainPermutationResolve: stagePermutation,

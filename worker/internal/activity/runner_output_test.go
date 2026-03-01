@@ -36,7 +36,7 @@ func streamToLogFile(t *testing.T, runner *Runner, reader io.Reader) string {
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
-	go runner.streamOutput(wg, reader, file, "test", "stdout")
+	go runner.streamOutput(wg, reader, file, nil, "test", "stdout")
 	wg.Wait()
 	_ = file.Close()
 

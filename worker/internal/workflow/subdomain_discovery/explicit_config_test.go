@@ -13,6 +13,8 @@ func TestValidateExplicitConfig_RequiresStageConfig(t *testing.T) {
 
 func TestValidateExplicitConfig_RequiresEnabledFlags(t *testing.T) {
 	config := map[string]any{
+		"apiVersion":    "v1",
+		"schemaVersion": "1.0.0",
 		stageRecon: map[string]any{
 			"tools": map[string]any{},
 		},
@@ -23,6 +25,8 @@ func TestValidateExplicitConfig_RequiresEnabledFlags(t *testing.T) {
 
 func TestValidateExplicitConfig_AllStagesAndToolsPresent(t *testing.T) {
 	config := map[string]any{
+		"apiVersion":    "v1",
+		"schemaVersion": "1.0.0",
 		stageRecon: map[string]any{
 			"enabled": true,
 			"tools": map[string]any{
@@ -30,10 +34,6 @@ func TestValidateExplicitConfig_AllStagesAndToolsPresent(t *testing.T) {
 					"enabled":         true,
 					"timeout-runtime": 3600,
 					"threads-cli":     10,
-				},
-				toolAssetfinder: map[string]any{
-					"enabled":         true,
-					"timeout-runtime": 3600,
 				},
 			},
 		},

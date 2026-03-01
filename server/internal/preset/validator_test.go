@@ -35,6 +35,8 @@ func TestValidateConfiguration_InvalidYAML(t *testing.T) {
 func TestValidateConfiguration_ValidSubdomainDiscovery(t *testing.T) {
 	config := `
 subdomain_discovery:
+  apiVersion: v1
+  schemaVersion: 1.0.0
   recon:
     enabled: true
     tools:
@@ -42,8 +44,6 @@ subdomain_discovery:
         enabled: true
         timeout-runtime: 3600
         threads-cli: 10
-      assetfinder:
-        enabled: false
   bruteforce:
     enabled: false
     tools:
@@ -73,6 +73,8 @@ func TestValidateConfiguration_InvalidSubdomainDiscovery(t *testing.T) {
 	// Missing required field 'enabled' in subfinder when it should be required
 	config := `
 subdomain_discovery:
+  apiVersion: v1
+  schemaVersion: 1.0.0
   recon:
     enabled: true
     tools:
@@ -110,12 +112,12 @@ func TestValidatePreset_Valid(t *testing.T) {
 		Name: "Test Preset",
 		Configuration: `
 subdomain_discovery:
+  apiVersion: v1
+  schemaVersion: 1.0.0
   recon:
     enabled: false
     tools:
       subfinder:
-        enabled: false
-      assetfinder:
         enabled: false
   bruteforce:
     enabled: false

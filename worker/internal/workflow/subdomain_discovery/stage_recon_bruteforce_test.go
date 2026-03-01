@@ -3,13 +3,12 @@ package subdomain_discovery
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"testing"
 
-	"github.com/yyhuni/lunafox/worker/internal/activity"
-	"github.com/yyhuni/lunafox/worker/internal/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/yyhuni/lunafox/worker/internal/activity"
+	"github.com/yyhuni/lunafox/worker/internal/server"
 )
 
 type stubServerClient struct {
@@ -109,7 +108,7 @@ func TestCreateReconCommandNoProviderConfig(t *testing.T) {
 
 	cmd := w.createReconCommand(ctx, "example.com", toolSubfinder, toolConfig)
 	require.NotNil(t, cmd)
-	assert.NotContains(t, cmd.Command, "-pc")
+	assert.NotContains(t, cmd.Args, "-pc")
 }
 
 func TestRunBruteforceStageMissingWordlist(t *testing.T) {
@@ -155,7 +154,7 @@ func TestRunBruteforceStageInvalidConfig(t *testing.T) {
 
 	result := w.runBruteforceStage(ctx)
 	require.Len(t, result.failed, 1)
-	assert.Contains(t, result.failed[0], "invalid config")
+	assert.Contains(t, result.failed[0], "missing subdomain-wordlist-name")
 }
 
 func TestRunBruteforceStageWordlistError(t *testing.T) {
@@ -198,23 +197,10 @@ func TestCreateBruteforceCommandSuccess(t *testing.T) {
 		"wildcard-batch-cli":              10,
 		"subdomain-wordlist-name-runtime": "wordlist.txt",
 	}
-	normalized, err := normalizeToolConfig(toolSubdomainBruteforce, raw)
-	require.NoError(t, err)
-
-	cmd := w.createBruteforceCommand(ctx, "exa mple.com", normalized, "/tmp/wordlist.txt", "/tmp/resolvers.txt")
-	if cmd == nil {
-		params := map[string]any{
-			"Domain":     "exa mple.com",
-			"OutputFile": filepath.Join(ctx.workDir, "bruteforce_exa_mple.com.txt"),
-			"Wordlist":   "/tmp/wordlist.txt",
-			"Resolvers":  "/tmp/resolvers.txt",
-		}
-		cmdStr, err := buildCommand(toolSubdomainBruteforce, params, normalized)
-		t.Fatalf("expected command, build err=%v, cmd=%s", err, cmdStr)
-	}
+	cmd := w.createBruteforceCommand(ctx, "exa mple.com", raw, "/tmp/wordlist.txt", "/tmp/resolvers.txt")
 	require.NotNil(t, cmd)
-	assert.Contains(t, cmd.Command, "/tmp/wordlist.txt")
-	assert.Contains(t, cmd.Command, "/tmp/resolvers.txt")
+	assert.Contains(t, cmd.Args, "/tmp/wordlist.txt")
+	assert.Contains(t, cmd.Args, "/tmp/resolvers.txt")
 }
 
 func TestRunAllStagesBruteforceFailure(t *testing.T) {

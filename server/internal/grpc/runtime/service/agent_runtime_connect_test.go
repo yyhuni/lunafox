@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -299,6 +300,184 @@ func TestConnectMapsInternalErrors(t *testing.T) {
 		err := svc.Connect(stream)
 		if status.Code(err) != codes.Internal {
 			t.Fatalf("expected internal, got=%v", err)
+		}
+	})
+
+	t.Run("pull task workflow compatibility failure", func(t *testing.T) {
+		svc := NewAgentRuntimeServiceWithDeps(
+			&agentFinderStub{agent: &agentdomain.Agent{ID: 33}},
+			&runtimeLifecycleStub{},
+			&taskRuntimeStub{
+				pullErr: scanapp.NewWorkflowError(
+					scanapp.WorkflowErrorCodeWorkerVersionIncompatible,
+					scanapp.WorkflowErrorStageSchedulerCompatibility,
+					"",
+					"worker 不支持版本",
+					nil,
+				),
+			},
+		)
+		ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcauth.AgentKeyHeader, "apikey-33"))
+		stream := &fakeConnectStream{
+			ctx: ctx,
+			incoming: []*runtimev1.AgentRuntimeRequest{
+				{Payload: &runtimev1.AgentRuntimeRequest_RequestTask{RequestTask: &runtimev1.RequestTask{}}},
+			},
+		}
+		err := svc.Connect(stream)
+		if status.Code(err) != codes.FailedPrecondition {
+			t.Fatalf("expected failed precondition, got=%v", err)
+		}
+	})
+
+	t.Run("pull task schema invalid failure", func(t *testing.T) {
+		svc := NewAgentRuntimeServiceWithDeps(
+			&agentFinderStub{agent: &agentdomain.Agent{ID: 34}},
+			&runtimeLifecycleStub{},
+			&taskRuntimeStub{
+				pullErr: scanapp.NewWorkflowError(
+					scanapp.WorkflowErrorCodeSchemaInvalid,
+					scanapp.WorkflowErrorStageServerSchemaGate,
+					"apiVersion",
+					"缺少 apiVersion",
+					nil,
+				),
+			},
+		)
+		ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcauth.AgentKeyHeader, "apikey-34"))
+		stream := &fakeConnectStream{
+			ctx: ctx,
+			incoming: []*runtimev1.AgentRuntimeRequest{
+				{Payload: &runtimev1.AgentRuntimeRequest_RequestTask{RequestTask: &runtimev1.RequestTask{}}},
+			},
+		}
+		err := svc.Connect(stream)
+		if status.Code(err) != codes.InvalidArgument {
+			t.Fatalf("expected invalid argument, got=%v", err)
+		}
+	})
+
+	t.Run("pull task workflow config invalid failure", func(t *testing.T) {
+		svc := NewAgentRuntimeServiceWithDeps(
+			&agentFinderStub{agent: &agentdomain.Agent{ID: 35}},
+			&runtimeLifecycleStub{},
+			&taskRuntimeStub{
+				pullErr: scanapp.NewWorkflowError(
+					scanapp.WorkflowErrorCodeWorkflowConfigInvalid,
+					scanapp.WorkflowErrorStageWorkerValidate,
+					"recon",
+					"recon stage enabled requires at least one tool enabled",
+					nil,
+				),
+			},
+		)
+		ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcauth.AgentKeyHeader, "apikey-35"))
+		stream := &fakeConnectStream{
+			ctx: ctx,
+			incoming: []*runtimev1.AgentRuntimeRequest{
+				{Payload: &runtimev1.AgentRuntimeRequest_RequestTask{RequestTask: &runtimev1.RequestTask{}}},
+			},
+		}
+		err := svc.Connect(stream)
+		if status.Code(err) != codes.FailedPrecondition {
+			t.Fatalf("expected failed precondition, got=%v", err)
+		}
+		msg := status.Convert(err).Message()
+		if !strings.Contains(msg, scanapp.WorkflowErrorCodeWorkflowConfigInvalid) || !strings.Contains(msg, scanapp.WorkflowErrorStageWorkerValidate) {
+			t.Fatalf("unexpected message: %s", msg)
+		}
+	})
+
+	t.Run("pull task workflow prereq missing failure", func(t *testing.T) {
+		svc := NewAgentRuntimeServiceWithDeps(
+			&agentFinderStub{agent: &agentdomain.Agent{ID: 36}},
+			&runtimeLifecycleStub{},
+			&taskRuntimeStub{
+				pullErr: scanapp.NewWorkflowError(
+					scanapp.WorkflowErrorCodeWorkflowPrereqMissing,
+					scanapp.WorkflowErrorStageWorkerPrereq,
+					"subfinder",
+					"subfinder binary not found",
+					nil,
+				),
+			},
+		)
+		ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcauth.AgentKeyHeader, "apikey-36"))
+		stream := &fakeConnectStream{
+			ctx: ctx,
+			incoming: []*runtimev1.AgentRuntimeRequest{
+				{Payload: &runtimev1.AgentRuntimeRequest_RequestTask{RequestTask: &runtimev1.RequestTask{}}},
+			},
+		}
+		err := svc.Connect(stream)
+		if status.Code(err) != codes.FailedPrecondition {
+			t.Fatalf("expected failed precondition, got=%v", err)
+		}
+		msg := status.Convert(err).Message()
+		if !strings.Contains(msg, scanapp.WorkflowErrorCodeWorkflowPrereqMissing) || !strings.Contains(msg, scanapp.WorkflowErrorStageWorkerPrereq) {
+			t.Fatalf("unexpected message: %s", msg)
+		}
+	})
+
+	t.Run("pull task schema invalid format failure", func(t *testing.T) {
+		svc := NewAgentRuntimeServiceWithDeps(
+			&agentFinderStub{agent: &agentdomain.Agent{ID: 37}},
+			&runtimeLifecycleStub{},
+			&taskRuntimeStub{
+				pullErr: scanapp.NewWorkflowError(
+					scanapp.WorkflowErrorCodeSchemaInvalid,
+					scanapp.WorkflowErrorStageServerSchemaGate,
+					"apiVersion",
+					"apiVersion 格式必须为 v<major>",
+					nil,
+				),
+			},
+		)
+		ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcauth.AgentKeyHeader, "apikey-37"))
+		stream := &fakeConnectStream{
+			ctx: ctx,
+			incoming: []*runtimev1.AgentRuntimeRequest{
+				{Payload: &runtimev1.AgentRuntimeRequest_RequestTask{RequestTask: &runtimev1.RequestTask{}}},
+			},
+		}
+		err := svc.Connect(stream)
+		if status.Code(err) != codes.InvalidArgument {
+			t.Fatalf("expected invalid argument, got=%v", err)
+		}
+		msg := status.Convert(err).Message()
+		if !strings.Contains(msg, "apiVersion") {
+			t.Fatalf("unexpected message: %s", msg)
+		}
+	})
+
+	t.Run("pull task schema invalid enum failure", func(t *testing.T) {
+		svc := NewAgentRuntimeServiceWithDeps(
+			&agentFinderStub{agent: &agentdomain.Agent{ID: 38}},
+			&runtimeLifecycleStub{},
+			&taskRuntimeStub{
+				pullErr: scanapp.NewWorkflowError(
+					scanapp.WorkflowErrorCodeSchemaInvalid,
+					scanapp.WorkflowErrorStageServerSchemaGate,
+					"subdomain_discovery",
+					"引擎 subdomain_discovery 不支持该版本配置",
+					nil,
+				),
+			},
+		)
+		ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcauth.AgentKeyHeader, "apikey-38"))
+		stream := &fakeConnectStream{
+			ctx: ctx,
+			incoming: []*runtimev1.AgentRuntimeRequest{
+				{Payload: &runtimev1.AgentRuntimeRequest_RequestTask{RequestTask: &runtimev1.RequestTask{}}},
+			},
+		}
+		err := svc.Connect(stream)
+		if status.Code(err) != codes.InvalidArgument {
+			t.Fatalf("expected invalid argument, got=%v", err)
+		}
+		msg := status.Convert(err).Message()
+		if !strings.Contains(msg, "不支持该版本配置") {
+			t.Fatalf("unexpected message: %s", msg)
 		}
 	})
 

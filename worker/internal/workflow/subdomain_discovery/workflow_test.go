@@ -74,6 +74,8 @@ func countGoroutinesWithStackFragment(fragment string) int {
 
 func validScanConfig() map[string]any {
 	return map[string]any{
+		"apiVersion":    "v1",
+		"schemaVersion": "1.0.0",
 		stageRecon: map[string]any{
 			"enabled": true,
 			"tools": map[string]any{
@@ -81,10 +83,6 @@ func validScanConfig() map[string]any {
 					"enabled":         true,
 					"timeout-runtime": 3600,
 					"threads-cli":     10,
-				},
-				toolAssetfinder: map[string]any{
-					"enabled":         true,
-					"timeout-runtime": 3600,
 				},
 			},
 		},

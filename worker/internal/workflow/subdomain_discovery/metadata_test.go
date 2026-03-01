@@ -60,7 +60,6 @@ func TestToolsMatchMetadata(t *testing.T) {
 	// Tool names defined in code
 	codeTools := map[string]bool{
 		toolSubfinder:                   true,
-		toolAssetfinder:                 true,
 		toolSubdomainBruteforce:         true,
 		toolSubdomainPermutationResolve: true,
 		toolSubdomainResolve:            true,
@@ -116,7 +115,6 @@ func TestGeneratedConstantsNotEmpty(t *testing.T) {
 
 	// Verify tool constants
 	assert.NotEmpty(t, toolSubfinder, "toolSubfinder should not be empty")
-	assert.NotEmpty(t, toolAssetfinder, "toolAssetfinder should not be empty")
 	assert.NotEmpty(t, toolSubdomainBruteforce, "toolSubdomainBruteforce should not be empty")
 	assert.NotEmpty(t, toolSubdomainPermutationResolve, "toolSubdomainPermutationResolve should not be empty")
 	assert.NotEmpty(t, toolSubdomainResolve, "toolSubdomainResolve should not be empty")

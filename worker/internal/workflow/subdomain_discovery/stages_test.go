@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yyhuni/lunafox/worker/internal/activity"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/yyhuni/lunafox/worker/internal/activity"
 )
 
 func TestStageResultMerge(t *testing.T) {
@@ -58,8 +58,9 @@ func TestCreateReconCommandSuccess(t *testing.T) {
 	cmd := w.createReconCommand(ctx, "exa mple.com", toolSubfinder, toolConfig)
 	require.NotNil(t, cmd)
 	assert.Equal(t, 10*time.Second, cmd.Timeout)
-	assert.Contains(t, cmd.Command, "-pc")
-	assert.Contains(t, cmd.Command, "/tmp/provider.conf")
+	assert.Equal(t, "subfinder", cmd.Binary)
+	assert.Contains(t, cmd.Args, "-pc")
+	assert.Contains(t, cmd.Args, "/tmp/provider.conf")
 	assert.True(t, strings.Contains(filepath.Base(cmd.OutputFile), "exa_mple.com"))
 	assert.True(t, strings.Contains(filepath.Base(cmd.LogFile), "exa_mple.com"))
 }
