@@ -58,6 +58,7 @@ func TestRunExecuteErrorStillRunsCleanup(t *testing.T) {
 	origSyncLogger := syncLogger
 	origNewClient := newClient
 	origGetWorkflow := getWorkflow
+	origDecodeWorkflowConfig := decodeWorkflowConfig
 	origLogger := pkg.Logger
 	t.Cleanup(func() {
 		loadConfig = origLoadConfig
@@ -65,6 +66,7 @@ func TestRunExecuteErrorStillRunsCleanup(t *testing.T) {
 		syncLogger = origSyncLogger
 		newClient = origNewClient
 		getWorkflow = origGetWorkflow
+		decodeWorkflowConfig = origDecodeWorkflowConfig
 		pkg.Logger = origLogger
 	})
 
@@ -96,6 +98,9 @@ func TestRunExecuteErrorStillRunsCleanup(t *testing.T) {
 	getWorkflow = func(name, workDir string) workflow.Workflow {
 		return &fakeWorkflow{execErr: errors.New("boom")}
 	}
+	decodeWorkflowConfig = func(name string, scanConfig map[string]any) (any, error) {
+		return nil, nil
+	}
 
 	err := run(context.Background())
 	if err == nil {
@@ -111,4 +116,3 @@ func TestRunExecuteErrorStillRunsCleanup(t *testing.T) {
 		t.Fatalf("expected logger sync to run on failure")
 	}
 }
-

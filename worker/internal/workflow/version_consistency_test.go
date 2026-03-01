@@ -9,7 +9,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	subdomain "github.com/yyhuni/lunafox/worker/internal/workflow/subdomain_discovery"
+	"github.com/yyhuni/lunafox/worker/internal/workflow"
+	_ "github.com/yyhuni/lunafox/worker/internal/workflow/all"
 )
 
 var workflowVersionRegex = regexp.MustCompile(`^\d+\.\d+\.\d+([\-+][0-9A-Za-z.-]+)?$`)
@@ -52,7 +53,11 @@ func TestWorkflowVersionConsistency(t *testing.T) {
 				contract.SchemaVersion,
 			)
 
-			workerSchemaPath := filepath.Join(contract.Dir, "schema_generated.json")
+			workerSchemaPath := filepath.Join(
+				contract.Dir,
+				"generated",
+				fmt.Sprintf("%s-%s-%s.schema.json", contract.WorkflowName, contract.APIVersion, contract.SchemaVersion),
+			)
 			workerSchema := loadSchemaIdentity(t, workerSchemaPath)
 			require.Equal(
 				t,
@@ -109,15 +114,17 @@ func TestWorkflowVersionConsistency(t *testing.T) {
 }
 
 func listWorkflowContracts() []workflowContract {
-	definition := subdomain.GetContractDefinition()
-	return []workflowContract{
-		{
-			Dir:           "subdomain_discovery",
+	contracts := workflow.ListContracts()
+	out := make([]workflowContract, 0, len(contracts))
+	for _, definition := range contracts {
+		out = append(out, workflowContract{
+			Dir:           definition.WorkflowName,
 			WorkflowName:  definition.WorkflowName,
 			APIVersion:    definition.APIVersion,
 			SchemaVersion: definition.SchemaVersion,
-		},
+		})
 	}
+	return out
 }
 
 func loadSchemaIdentity(t *testing.T, path string) schemaIdentity {

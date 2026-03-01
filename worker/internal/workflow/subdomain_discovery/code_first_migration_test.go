@@ -32,6 +32,8 @@ func TestCodeFirstMigration_NoTinySplitRuntimeFiles(t *testing.T) {
 	runtimeSplitFiles := []string{
 		"stage_runner.go",
 		"subdomain_file_runtime.go",
+		"config_decode_utils.go",
+		"contract_assets.go",
 	}
 
 	for _, runtimeSplitFile := range runtimeSplitFiles {

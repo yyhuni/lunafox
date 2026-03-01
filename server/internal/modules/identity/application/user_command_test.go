@@ -85,7 +85,7 @@ func (stub passwordHasherStub) VerifyPassword(password, hashed string) bool {
 }
 
 func TestUserCommandServiceCreateUser(t *testing.T) {
-	t.Run("用户名已存在", func(t *testing.T) {
+	t.Run("username already exists", func(t *testing.T) {
 		store := &userCommandStoreStub{
 			usernameExists: map[string]bool{"alice": true},
 		}
@@ -97,7 +97,7 @@ func TestUserCommandServiceCreateUser(t *testing.T) {
 		}
 	})
 
-	t.Run("成功创建用户", func(t *testing.T) {
+	t.Run("create user succeeds", func(t *testing.T) {
 		store := &userCommandStoreStub{
 			usernameExists:    map[string]bool{},
 			forceCreateUserID: 100,
@@ -122,7 +122,7 @@ func TestUserCommandServiceCreateUser(t *testing.T) {
 }
 
 func TestUserCommandServiceUpdateUserPassword(t *testing.T) {
-	t.Run("用户不存在", func(t *testing.T) {
+	t.Run("user not found", func(t *testing.T) {
 		store := &userCommandStoreStub{
 			userByID: map[int]*identitydomain.User{},
 		}
@@ -134,7 +134,7 @@ func TestUserCommandServiceUpdateUserPassword(t *testing.T) {
 		}
 	})
 
-	t.Run("旧密码错误", func(t *testing.T) {
+	t.Run("old password mismatch", func(t *testing.T) {
 		store := &userCommandStoreStub{
 			userByID: map[int]*identitydomain.User{1: {
 				ID:       1,
@@ -155,7 +155,7 @@ func TestUserCommandServiceUpdateUserPassword(t *testing.T) {
 		}
 	})
 
-	t.Run("成功更新密码", func(t *testing.T) {
+	t.Run("update password succeeds", func(t *testing.T) {
 		store := &userCommandStoreStub{
 			userByID: map[int]*identitydomain.User{1: {
 				ID:       1,

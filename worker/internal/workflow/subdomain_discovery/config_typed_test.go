@@ -28,7 +28,61 @@ func TestDecodeWorkflowConfigInvalidType(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestValidateAuthoritativeConfig_ServerPassWorkerReject(t *testing.T) {
+func TestDecodeWorkflowConfigRejectsUnknownTopLevelField(t *testing.T) {
+	raw := validAuthoritativeConfigMap()
+	raw["unknown-top-level"] = true
+
+	_, err := decodeWorkflowConfig(raw)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unknown field")
+}
+
+func TestDecodeWorkflowConfigRejectsUnknownNestedField(t *testing.T) {
+	raw := validAuthoritativeConfigMap()
+	recon := raw[stageRecon].(map[string]any)
+	tools := recon["tools"].(map[string]any)
+	subfinder := tools[toolSubfinder].(map[string]any)
+	subfinder["unknown-nested"] = 1
+
+	_, err := decodeWorkflowConfig(raw)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unknown field")
+}
+
+func TestDecodeWorkflowConfigRejectsMissingRequiredFieldWhenEnabled(t *testing.T) {
+	raw := validAuthoritativeConfigMap()
+	recon := raw[stageRecon].(map[string]any)
+	tools := recon["tools"].(map[string]any)
+	subfinder := tools[toolSubfinder].(map[string]any)
+	delete(subfinder, "threads-cli")
+
+	_, err := decodeWorkflowConfig(raw)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "threads-cli")
+}
+
+func TestDecodeWorkflowConfigRejectsMissingRequiredStage(t *testing.T) {
+	raw := validAuthoritativeConfigMap()
+	delete(raw, stageResolve)
+
+	_, err := decodeWorkflowConfig(raw)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), stageResolve)
+}
+
+func TestDecodeTypedWorkflowConfigRejectsUnknownFieldWithoutSchemaRuntime(t *testing.T) {
+	scanConfig := map[string]any{
+		Name: validAuthoritativeConfigMap(),
+	}
+	flow := scanConfig[Name].(map[string]any)
+	flow["unknown-top-level"] = true
+
+	_, err := decodeTypedWorkflowConfig(scanConfig)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "unknown field")
+}
+
+func TestDecodeAndValidateAuthoritativeConfig_ServerPassWorkerReject(t *testing.T) {
 	raw := validAuthoritativeConfigMap()
 	recon := raw[stageRecon].(map[string]any)
 	recon["enabled"] = true
@@ -39,13 +93,12 @@ func TestValidateAuthoritativeConfig_ServerPassWorkerReject(t *testing.T) {
 		"threads-cli":     10,
 	}
 
-	require.NoError(t, validateExplicitConfig(raw))
-	err := validateAuthoritativeConfig(raw)
+	_, err := decodeAndValidateAuthoritativeConfig(raw)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "recon")
 }
 
-func TestValidateAuthoritativeConfig_BruteforceEnabledRequiresWordlist(t *testing.T) {
+func TestDecodeAndValidateAuthoritativeConfig_BruteforceEnabledRequiresWordlist(t *testing.T) {
 	raw := validAuthoritativeConfigMap()
 	bruteforce := raw[stageBruteforce].(map[string]any)
 	bruteforce["enabled"] = true
@@ -60,26 +113,40 @@ func TestValidateAuthoritativeConfig_BruteforceEnabledRequiresWordlist(t *testin
 		"wildcard-batch-cli":              1000000,
 	}
 
-	require.NoError(t, validateExplicitConfig(raw))
-	err := validateAuthoritativeConfig(raw)
+	_, err := decodeAndValidateAuthoritativeConfig(raw)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "subdomain-wordlist-name-runtime")
+}
+
+func TestDecodeAndValidateAuthoritativeConfig_NumericBoundsDeferredToRuntime(t *testing.T) {
+	raw := validAuthoritativeConfigMap()
+	recon := raw[stageRecon].(map[string]any)
+	recon["enabled"] = true
+	tools := recon["tools"].(map[string]any)
+	tools[toolSubfinder] = map[string]any{
+		"enabled":         true,
+		"timeout-runtime": 0,
+		"threads-cli":     0,
+	}
+
+	_, err := decodeAndValidateAuthoritativeConfig(raw)
+	require.NoError(t, err)
 }
 
 func validAuthoritativeConfigMap() map[string]any {
 	return map[string]any{
 		"apiVersion":    ContractAPIVersion,
 		"schemaVersion": ContractSchemaVer,
-			stageRecon: map[string]any{
-				"enabled": true,
-				"tools": map[string]any{
-					toolSubfinder: map[string]any{
-						"enabled":         true,
-						"timeout-runtime": 3600,
-						"threads-cli":     10,
-					},
+		stageRecon: map[string]any{
+			"enabled": true,
+			"tools": map[string]any{
+				toolSubfinder: map[string]any{
+					"enabled":         true,
+					"timeout-runtime": 3600,
+					"threads-cli":     10,
 				},
 			},
+		},
 		stageBruteforce: map[string]any{
 			"enabled": false,
 			"tools": map[string]any{

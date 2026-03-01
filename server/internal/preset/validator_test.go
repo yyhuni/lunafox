@@ -3,6 +3,8 @@ package preset
 import (
 	"fmt"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // validatePreset is a test helper that validates a preset's configuration.
@@ -161,4 +163,20 @@ func TestAllPresetsValid(t *testing.T) {
 
 	// Log summary
 	t.Logf("Validated %d presets successfully", len(presets))
+}
+
+func TestExamplePresetTemplateHasVersionedSubdomainConfig(t *testing.T) {
+	data, err := presetsFS.ReadFile("presets/_example.yaml")
+	if err != nil {
+		t.Fatalf("read _example.yaml failed: %v", err)
+	}
+
+	var preset Preset
+	if err := yaml.Unmarshal(data, &preset); err != nil {
+		t.Fatalf("parse _example.yaml failed: %v", err)
+	}
+
+	if err := ValidateConfiguration(preset.Configuration); err != nil {
+		t.Fatalf("_example.yaml configuration should pass schema validation, got: %v", err)
+	}
 }

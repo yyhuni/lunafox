@@ -3,23 +3,23 @@
 # 默认目标
 help:
 	@echo "Available targets:"
-	@echo "  make generate       - Generate code from templates.yaml"
+	@echo "  make generate       - Generate workflow contracts from code-first definitions"
 	@echo "  make check-naming   - Check naming conventions"
 	@echo "  make test           - Run all tests"
-	@echo "  make test-metadata  - Run metadata consistency tests"
+	@echo "  make test-metadata  - Run contract consistency tests"
 	@echo "  make clean          - Clean generated files"
 	@echo "  make build          - Build the worker binary"
 
 # 生成代码
 generate:
-	@echo "Generating code from templates.yaml..."
+	@echo "Generating workflow contracts from code-first definitions..."
 	@for workflow_dir in internal/workflow/*/; do \
-		if [ -f "$${workflow_dir}templates.yaml" ]; then \
+		if [ -f "$${workflow_dir}contract_definition.go" ]; then \
 			echo "Generating for $${workflow_dir}..."; \
 			go generate "./$${workflow_dir}"; \
 		fi \
 	done
-	@echo "✓ Code generation completed"
+	@echo "✓ Workflow contract generation completed"
 
 check-naming:
 	@echo "Checking naming conventions..."
@@ -32,39 +32,22 @@ test:
 	@echo "Running all tests..."
 	go test -v ./...
 
-# 运行元数据一致性测试
+# 运行契约一致性测试
 test-metadata:
-	@echo "Running metadata consistency tests..."
-	@# 运行版本一致性检查（所有工作流）
-	@echo "Testing version consistency..."; \
-	go test -v ./internal/workflow -run TestWorkflowVersionConsistency || exit 1
-	@# 运行各工作流的元数据测试
-	@for workflow_dir in internal/workflow/*/; do \
-		workflow_name=$$(basename "$$workflow_dir"); \
-		echo "Testing $${workflow_name}..."; \
-		go test -v "./$${workflow_dir}" -run TestStagesMatchMetadata 2>/dev/null || true; \
-		go test -v "./$${workflow_dir}" -run TestToolsMatchMetadata 2>/dev/null || true; \
-		go test -v "./$${workflow_dir}" -run TestStageToolMapping 2>/dev/null || true; \
-	done
-	@echo "✓ Metadata consistency verified"
+	@echo "Running workflow contract consistency tests..."
+	@go test -v ./internal/workflow -run 'TestWorkflowVersionConsistency|TestCodeFirstToolchain_MigratedFromTemplateGenerators'
+	@go test -v ./internal/workflow/subdomain_discovery -run TestCodeFirstMigration_NoLegacyTemplateArtifacts
+	@echo "✓ Contract consistency verified"
 
 # 清理生成的文件
 clean:
 	@echo "Cleaning generated files..."
 	@# Remove worker binary
 	@rm -f worker bin/worker
-	@# Clean generated files for all workflows
-	@for workflow_dir in internal/workflow/*/; do \
-		if [ -f "$${workflow_dir}templates.yaml" ]; then \
-			workflow_name=$$(basename "$$workflow_dir"); \
-			rm -f "$${workflow_dir}constants_generated.go"; \
-			rm -f "../server/internal/engineschema/$${workflow_name}.schema.json"; \
-			rm -f "../server/internal/engineschema/$${workflow_name}.yaml"; \
-		fi \
-	done
-	@# Remove generated docs
-	@rm -f ../docs/config-reference.md
-	@rm -f ../docs/config-reference.zh.md
+	@# Clean generated workflow contract artifacts
+	@rm -f internal/workflow/subdomain_discovery/schema_generated.json
+	@rm -f ../server/internal/engineschema/subdomain_discovery-v1-1.0.0.schema.json
+	@rm -f ../docs/config-reference/subdomain_discovery.md
 	@echo "✓ Cleaned"
 
 # 构建

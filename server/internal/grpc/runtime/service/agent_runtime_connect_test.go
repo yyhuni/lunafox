@@ -312,7 +312,7 @@ func TestConnectMapsInternalErrors(t *testing.T) {
 					scanapp.WorkflowErrorCodeWorkerVersionIncompatible,
 					scanapp.WorkflowErrorStageSchedulerCompatibility,
 					"",
-					"worker 不支持版本",
+					"worker does not support this version",
 					nil,
 				),
 			},
@@ -339,7 +339,7 @@ func TestConnectMapsInternalErrors(t *testing.T) {
 					scanapp.WorkflowErrorCodeSchemaInvalid,
 					scanapp.WorkflowErrorStageServerSchemaGate,
 					"apiVersion",
-					"缺少 apiVersion",
+					"missing apiVersion",
 					nil,
 				),
 			},
@@ -428,7 +428,7 @@ func TestConnectMapsInternalErrors(t *testing.T) {
 					scanapp.WorkflowErrorCodeSchemaInvalid,
 					scanapp.WorkflowErrorStageServerSchemaGate,
 					"apiVersion",
-					"apiVersion 格式必须为 v<major>",
+					"apiVersion must match v<major>",
 					nil,
 				),
 			},
@@ -459,7 +459,7 @@ func TestConnectMapsInternalErrors(t *testing.T) {
 					scanapp.WorkflowErrorCodeSchemaInvalid,
 					scanapp.WorkflowErrorStageServerSchemaGate,
 					"subdomain_discovery",
-					"引擎 subdomain_discovery 不支持该版本配置",
+					"engine subdomain_discovery does not support this configuration version",
 					nil,
 				),
 			},
@@ -476,7 +476,7 @@ func TestConnectMapsInternalErrors(t *testing.T) {
 			t.Fatalf("expected invalid argument, got=%v", err)
 		}
 		msg := status.Convert(err).Message()
-		if !strings.Contains(msg, "不支持该版本配置") {
+		if !strings.Contains(msg, "does not support this configuration version") {
 			t.Fatalf("unexpected message: %s", msg)
 		}
 	})

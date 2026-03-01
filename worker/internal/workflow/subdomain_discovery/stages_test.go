@@ -50,12 +50,13 @@ func TestCreateReconCommandSuccess(t *testing.T) {
 		workDir:            t.TempDir(),
 		providerConfigPath: "/tmp/provider.conf",
 	}
-	toolConfig := map[string]any{
-		"timeout-runtime": 10,
-		"threads-cli":     5,
+	toolConfig := ReconSubfinderToolConfig{
+		Enabled:        true,
+		TimeoutRuntime: 10,
+		ThreadsCLI:     5,
 	}
 
-	cmd := w.createReconCommand(ctx, "exa mple.com", toolSubfinder, toolConfig)
+	cmd := w.createReconCommand(ctx, "exa mple.com", toolConfig)
 	require.NotNil(t, cmd)
 	assert.Equal(t, 10*time.Second, cmd.Timeout)
 	assert.Equal(t, "subfinder", cmd.Binary)
@@ -71,7 +72,7 @@ func TestCreateReconCommandMissingConfig(t *testing.T) {
 	ctx := &workflowContext{
 		workDir: t.TempDir(),
 	}
-	cmd := w.createReconCommand(ctx, "example.com", toolSubfinder, map[string]any{})
+	cmd := w.createReconCommand(ctx, "example.com", ReconSubfinderToolConfig{})
 	assert.Nil(t, cmd)
 }
 
@@ -81,25 +82,11 @@ func TestRunAllStagesNoMergeWithoutFiles(t *testing.T) {
 	ctx := &workflowContext{
 		ctx:     context.Background(),
 		domains: []string{"example.com"},
-		config: map[string]any{
-			stageRecon: map[string]any{
-				"enabled": false,
-			},
-			stageBruteforce: map[string]any{
-				"enabled": false,
-			},
-			stagePermutation: map[string]any{
-				"enabled": true,
-				"tools": map[string]any{
-					toolSubdomainPermutationResolve: map[string]any{"enabled": true},
-				},
-			},
-			stageResolve: map[string]any{
-				"enabled": true,
-				"tools": map[string]any{
-					toolSubdomainResolve: map[string]any{"enabled": true},
-				},
-			},
+		typedConfig: WorkflowConfig{
+			Recon:       ReconStageConfig{Enabled: false},
+			Bruteforce:  BruteforceStageConfig{Enabled: false},
+			Permutation: PermutationStageConfig{Enabled: true},
+			Resolve:     ResolveStageConfig{Enabled: true},
 		},
 		workDir: t.TempDir(),
 	}

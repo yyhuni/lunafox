@@ -133,7 +133,7 @@ func TestAgentQueryServiceGetAgentNotFound(t *testing.T) {
 }
 
 func TestAgentCommandServiceUpdateAndDeleteNotFound(t *testing.T) {
-	t.Run("更新不存在的 agent 映射为业务错误", func(t *testing.T) {
+	t.Run("update missing agent maps to domain error", func(t *testing.T) {
 		service := NewAgentCommandService(&agentCommandStoreStub{agentByID: map[int]*agentdomain.Agent{}})
 		update := agentdomain.AgentConfigUpdate{}
 
@@ -143,7 +143,7 @@ func TestAgentCommandServiceUpdateAndDeleteNotFound(t *testing.T) {
 		}
 	})
 
-	t.Run("删除不存在的 agent 映射为业务错误", func(t *testing.T) {
+	t.Run("delete missing agent maps to domain error", func(t *testing.T) {
 		service := NewAgentCommandService(&agentCommandStoreStub{deleteErr: gorm.ErrRecordNotFound})
 
 		err := service.DeleteAgent(context.Background(), 9)

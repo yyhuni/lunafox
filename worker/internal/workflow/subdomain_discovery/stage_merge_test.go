@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yyhuni/lunafox/worker/internal/activity"
-	"github.com/yyhuni/lunafox/worker/internal/pkg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/yyhuni/lunafox/worker/internal/activity"
+	"github.com/yyhuni/lunafox/worker/internal/pkg"
 	"go.uber.org/zap"
 )
 
@@ -27,15 +27,17 @@ func withNopLogger(t *testing.T) {
 
 func TestBuildWildcardSettings(t *testing.T) {
 	withNopLogger(t)
-	cfg := map[string]any{
-		"wildcard-sample-timeout-runtime":      5,
-		"wildcard-tests-cli":                   3,
-		"wildcard-batch-cli":                   4,
-		"wildcard-sample-multiplier-runtime":   2,
-		"wildcard-expansion-threshold-runtime": 10,
+	cfg := PermutationSubdomainPermutationResolveToolConfig{
+		Enabled:                           true,
+		TimeoutRuntime:                    5,
+		WildcardSampleTimeoutRuntime:      5,
+		WildcardTestsCLI:                  3,
+		WildcardBatchCLI:                  4,
+		WildcardSampleMultiplierRuntime:   2,
+		WildcardExpansionThresholdRuntime: 10,
 	}
 
-	settings, err := buildWildcardSettings(toolSubdomainPermutationResolve, cfg, "/tmp/resolvers.txt")
+	settings, err := buildWildcardSettings(cfg, "/tmp/resolvers.txt")
 	require.NoError(t, err)
 	assert.Equal(t, 5*time.Second, settings.sampleTimeout)
 	assert.Equal(t, 3, settings.tests)
@@ -47,19 +49,21 @@ func TestBuildWildcardSettings(t *testing.T) {
 
 func TestBuildWildcardSettingsInvalid(t *testing.T) {
 	withNopLogger(t)
-	cfg := map[string]any{
-		"wildcard-sample-timeout-runtime":      0,
-		"wildcard-tests-cli":                   1,
-		"wildcard-batch-cli":                   1,
-		"wildcard-sample-multiplier-runtime":   1,
-		"wildcard-expansion-threshold-runtime": 1,
+	cfg := PermutationSubdomainPermutationResolveToolConfig{
+		Enabled:                           true,
+		TimeoutRuntime:                    1,
+		WildcardSampleTimeoutRuntime:      0,
+		WildcardTestsCLI:                  1,
+		WildcardBatchCLI:                  1,
+		WildcardSampleMultiplierRuntime:   1,
+		WildcardExpansionThresholdRuntime: 1,
 	}
 
-	_, err := buildWildcardSettings(toolSubdomainPermutationResolve, cfg, "/tmp/resolvers.txt")
+	_, err := buildWildcardSettings(cfg, "/tmp/resolvers.txt")
 	require.Error(t, err)
 
-	cfg["wildcard-sample-timeout-runtime"] = 1
-	_, err = buildWildcardSettings(toolSubdomainPermutationResolve, cfg, "")
+	cfg.WildcardSampleTimeoutRuntime = 1
+	_, err = buildWildcardSettings(cfg, "")
 	require.Error(t, err)
 }
 
@@ -111,13 +115,20 @@ func TestRunMergeStageMissingConfig(t *testing.T) {
 	withNopLogger(t)
 	w := &Workflow{runner: activity.NewRunner(t.TempDir())}
 	ctx := &workflowContext{
-		ctx:     context.Background(),
-		config:  map[string]any{},
+		ctx: context.Background(),
+		typedConfig: WorkflowConfig{
+			Resolve: ResolveStageConfig{
+				Enabled: true,
+				Tools: ResolveTools{
+					SubdomainResolve: ResolveSubdomainResolveToolConfig{Enabled: true},
+				},
+			},
+		},
 		workDir: t.TempDir(),
 	}
 
 	result := w.runMergeStage(ctx, []string{}, stageResolve, toolSubdomainResolve)
-	assert.Empty(t, result.failed)
+	assert.Equal(t, []string{stageResolve}, result.failed)
 	assert.Empty(t, result.files)
 }
 
@@ -126,16 +137,16 @@ func TestRunMergeStageMissingTools(t *testing.T) {
 	w := &Workflow{runner: activity.NewRunner(t.TempDir())}
 	ctx := &workflowContext{
 		ctx: context.Background(),
-		config: map[string]any{
-			stageResolve: map[string]any{
-				"enabled": true,
+		typedConfig: WorkflowConfig{
+			Resolve: ResolveStageConfig{
+				Enabled: true,
 			},
 		},
 		workDir: t.TempDir(),
 	}
 
 	result := w.runMergeStage(ctx, []string{}, stageResolve, toolSubdomainResolve)
-	assert.Empty(t, result.failed)
+	assert.Equal(t, []string{stageResolve}, result.failed)
 }
 
 func TestRunMergeStageUnknownTool(t *testing.T) {
@@ -143,10 +154,16 @@ func TestRunMergeStageUnknownTool(t *testing.T) {
 	w := &Workflow{runner: activity.NewRunner(t.TempDir())}
 	ctx := &workflowContext{
 		ctx: context.Background(),
-		config: map[string]any{
-			stageResolve: map[string]any{
-				"tools": map[string]any{
-					"missing": map[string]any{},
+		typedConfig: WorkflowConfig{
+			Resolve: ResolveStageConfig{
+				Enabled: true,
+				Tools: ResolveTools{
+					SubdomainResolve: ResolveSubdomainResolveToolConfig{
+						Enabled:        true,
+						TimeoutRuntime: 10,
+						ThreadsCLI:     10,
+						RateLimitCLI:   10,
+					},
 				},
 			},
 		},
@@ -165,13 +182,15 @@ func TestRunMergeStageMergeFilesError(t *testing.T) {
 	w := &Workflow{runner: activity.NewRunner(baseDir)}
 	ctx := &workflowContext{
 		ctx: context.Background(),
-		config: map[string]any{
-			stageResolve: map[string]any{
-				"tools": map[string]any{
-					toolSubdomainResolve: map[string]any{
-						"timeout-runtime": 10,
-						"threads-cli":     10,
-						"rate-limit-cli":  10,
+		typedConfig: WorkflowConfig{
+			Resolve: ResolveStageConfig{
+				Enabled: true,
+				Tools: ResolveTools{
+					SubdomainResolve: ResolveSubdomainResolveToolConfig{
+						Enabled:        true,
+						TimeoutRuntime: 10,
+						ThreadsCLI:     10,
+						RateLimitCLI:   10,
 					},
 				},
 			},

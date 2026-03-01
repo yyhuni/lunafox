@@ -34,17 +34,10 @@ func TestRunReconStageDisabled(t *testing.T) {
 	withNopLogger(t)
 	w := &Workflow{runner: activity.NewRunner(t.TempDir())}
 	ctx := &workflowContext{
-		ctx:     context.Background(),
-		domains: []string{"example.com"},
-		config: map[string]any{
-			stageRecon: map[string]any{
-				"enabled": false,
-				"tools": map[string]any{
-					toolSubfinder: map[string]any{"enabled": true},
-				},
-			},
-		},
-		workDir: t.TempDir(),
+		ctx:         context.Background(),
+		domains:     []string{"example.com"},
+		typedConfig: WorkflowConfig{Recon: ReconStageConfig{Enabled: false}},
+		workDir:     t.TempDir(),
 	}
 
 	result := w.runReconStage(ctx)
@@ -57,14 +50,10 @@ func TestRunReconStageMissingTools(t *testing.T) {
 	withNopLogger(t)
 	w := &Workflow{runner: activity.NewRunner(t.TempDir())}
 	ctx := &workflowContext{
-		ctx:     context.Background(),
-		domains: []string{"example.com"},
-		config: map[string]any{
-			stageRecon: map[string]any{
-				"enabled": true,
-			},
-		},
-		workDir: t.TempDir(),
+		ctx:         context.Background(),
+		domains:     []string{"example.com"},
+		typedConfig: WorkflowConfig{Recon: ReconStageConfig{Enabled: true}},
+		workDir:     t.TempDir(),
 	}
 
 	result := w.runReconStage(ctx)
@@ -77,12 +66,12 @@ func TestRunReconStageMissingConfigForTool(t *testing.T) {
 	ctx := &workflowContext{
 		ctx:     context.Background(),
 		domains: []string{"example.com"},
-		config: map[string]any{
-			stageRecon: map[string]any{
-				"enabled": true,
-				"tools": map[string]any{
-					toolSubfinder: map[string]any{
-						"enabled": true,
+		typedConfig: WorkflowConfig{
+			Recon: ReconStageConfig{
+				Enabled: true,
+				Tools: ReconTools{
+					Subfinder: ReconSubfinderToolConfig{
+						Enabled: true,
 					},
 				},
 			},
@@ -101,12 +90,13 @@ func TestCreateReconCommandNoProviderConfig(t *testing.T) {
 	ctx := &workflowContext{
 		workDir: t.TempDir(),
 	}
-	toolConfig := map[string]any{
-		"timeout-runtime": 10,
-		"threads-cli":     5,
+	toolConfig := ReconSubfinderToolConfig{
+		Enabled:        true,
+		TimeoutRuntime: 10,
+		ThreadsCLI:     5,
 	}
 
-	cmd := w.createReconCommand(ctx, "example.com", toolSubfinder, toolConfig)
+	cmd := w.createReconCommand(ctx, "example.com", toolConfig)
 	require.NotNil(t, cmd)
 	assert.NotContains(t, cmd.Args, "-pc")
 }
@@ -117,12 +107,11 @@ func TestRunBruteforceStageMissingWordlist(t *testing.T) {
 	ctx := &workflowContext{
 		ctx:     context.Background(),
 		domains: []string{"example.com"},
-		config: map[string]any{
-			stageBruteforce: map[string]any{
-				"tools": map[string]any{
-					toolSubdomainBruteforce: map[string]any{
-						"enabled": true,
-					},
+		typedConfig: WorkflowConfig{
+			Bruteforce: BruteforceStageConfig{
+				Enabled: true,
+				Tools: BruteforceTools{
+					SubdomainBruteforce: BruteforceSubdomainBruteforceToolConfig{Enabled: true},
 				},
 			},
 		},
@@ -140,12 +129,11 @@ func TestRunBruteforceStageInvalidConfig(t *testing.T) {
 	ctx := &workflowContext{
 		ctx:     context.Background(),
 		domains: []string{"example.com"},
-		config: map[string]any{
-			stageBruteforce: map[string]any{
-				"tools": map[string]any{
-					toolSubdomainBruteforce: map[string]any{
-						"bad-key": 1,
-					},
+		typedConfig: WorkflowConfig{
+			Bruteforce: BruteforceStageConfig{
+				Enabled: true,
+				Tools: BruteforceTools{
+					SubdomainBruteforce: BruteforceSubdomainBruteforceToolConfig{Enabled: true},
 				},
 			},
 		},
@@ -164,14 +152,16 @@ func TestRunBruteforceStageWordlistError(t *testing.T) {
 		ctx:          context.Background(),
 		domains:      []string{"example.com"},
 		serverClient: stubServerClient{err: errors.New("boom")},
-		config: map[string]any{
-			stageBruteforce: map[string]any{
-				"tools": map[string]any{
-					toolSubdomainBruteforce: map[string]any{
-						"timeout-runtime":                 10,
-						"threads-cli":                     10,
-						"rate-limit-cli":                  10,
-						"subdomain-wordlist-name-runtime": "wordlist.txt",
+		typedConfig: WorkflowConfig{
+			Bruteforce: BruteforceStageConfig{
+				Enabled: true,
+				Tools: BruteforceTools{
+					SubdomainBruteforce: BruteforceSubdomainBruteforceToolConfig{
+						Enabled:                      true,
+						TimeoutRuntime:               10,
+						ThreadsCLI:                   10,
+						RateLimitCLI:                 10,
+						SubdomainWordlistNameRuntime: "wordlist.txt",
 					},
 				},
 			},
@@ -189,13 +179,14 @@ func TestCreateBruteforceCommandSuccess(t *testing.T) {
 	w := &Workflow{}
 	ctx := &workflowContext{workDir: t.TempDir()}
 
-	raw := map[string]any{
-		"timeout-runtime":                 10,
-		"threads-cli":                     10,
-		"rate-limit-cli":                  10,
-		"wildcard-tests-cli":              5,
-		"wildcard-batch-cli":              10,
-		"subdomain-wordlist-name-runtime": "wordlist.txt",
+	raw := BruteforceSubdomainBruteforceToolConfig{
+		Enabled:                      true,
+		TimeoutRuntime:               10,
+		ThreadsCLI:                   10,
+		RateLimitCLI:                 10,
+		WildcardTestsCLI:             5,
+		WildcardBatchCLI:             10,
+		SubdomainWordlistNameRuntime: "wordlist.txt",
 	}
 	cmd := w.createBruteforceCommand(ctx, "exa mple.com", raw, "/tmp/wordlist.txt", "/tmp/resolvers.txt")
 	require.NotNil(t, cmd)
@@ -209,14 +200,12 @@ func TestRunAllStagesBruteforceFailure(t *testing.T) {
 	ctx := &workflowContext{
 		ctx:     context.Background(),
 		domains: []string{"example.com"},
-		config: map[string]any{
-			stageRecon: map[string]any{
-				"enabled": false,
-			},
-			stageBruteforce: map[string]any{
-				"enabled": true,
-				"tools": map[string]any{
-					toolSubdomainBruteforce: map[string]any{},
+		typedConfig: WorkflowConfig{
+			Recon: ReconStageConfig{Enabled: false},
+			Bruteforce: BruteforceStageConfig{
+				Enabled: true,
+				Tools: BruteforceTools{
+					SubdomainBruteforce: BruteforceSubdomainBruteforceToolConfig{Enabled: true},
 				},
 			},
 		},

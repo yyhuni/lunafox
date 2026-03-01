@@ -166,7 +166,7 @@ func TestTargetCommandServiceDeleteAndBulkDelete(t *testing.T) {
 }
 
 func TestTargetCommandServiceBatchCreateTargets(t *testing.T) {
-	t.Run("仅无效目标", func(t *testing.T) {
+	t.Run("only invalid targets", func(t *testing.T) {
 		service := NewTargetCommandService(&targetCommandStoreStub{}, nil)
 		result := service.BatchCreateTargets(context.Background(), []string{"***"}, nil)
 		if result.CreatedCount != 0 || result.FailedCount != 1 {
@@ -174,7 +174,7 @@ func TestTargetCommandServiceBatchCreateTargets(t *testing.T) {
 		}
 	})
 
-	t.Run("组织不存在", func(t *testing.T) {
+	t.Run("organization not found", func(t *testing.T) {
 		orgID := 9
 		orgStore := &organizationStoreStub{existsResult: false}
 		service := NewTargetCommandService(&targetCommandStoreStub{}, orgStore)
@@ -185,7 +185,7 @@ func TestTargetCommandServiceBatchCreateTargets(t *testing.T) {
 		}
 	})
 
-	t.Run("创建并关联组织", func(t *testing.T) {
+	t.Run("create and link organization", func(t *testing.T) {
 		orgID := 1
 		store := &targetCommandStoreStub{
 			findByNamesItems: []catalogdomain.Target{{ID: 11, Name: "example.com", Type: "domain"}},
@@ -202,7 +202,7 @@ func TestTargetCommandServiceBatchCreateTargets(t *testing.T) {
 		}
 	})
 
-	t.Run("组织验证报错", func(t *testing.T) {
+	t.Run("organization validation error", func(t *testing.T) {
 		orgID := 2
 		orgStore := &organizationStoreStub{existsErr: errors.New("db error")}
 		service := NewTargetCommandService(&targetCommandStoreStub{}, orgStore)

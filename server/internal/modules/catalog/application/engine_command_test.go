@@ -69,7 +69,7 @@ func (stub *engineCommandStoreStub) Delete(id int) error {
 }
 
 func TestEngineCommandServiceCreateEngine(t *testing.T) {
-	t.Run("空名称非法", func(t *testing.T) {
+	t.Run("empty name is invalid", func(t *testing.T) {
 		service := NewEngineCommandService(&engineCommandStoreStub{})
 		_, err := service.CreateEngine(context.Background(), "   ", "{}")
 		if !errors.Is(err, ErrInvalidEngine) {
@@ -77,7 +77,7 @@ func TestEngineCommandServiceCreateEngine(t *testing.T) {
 		}
 	})
 
-	t.Run("名称重复", func(t *testing.T) {
+	t.Run("duplicate name", func(t *testing.T) {
 		store := &engineCommandStoreStub{nameExists: map[string]bool{"nmap": true}}
 		service := NewEngineCommandService(store)
 
@@ -87,7 +87,7 @@ func TestEngineCommandServiceCreateEngine(t *testing.T) {
 		}
 	})
 
-	t.Run("成功创建", func(t *testing.T) {
+	t.Run("create succeeds", func(t *testing.T) {
 		store := &engineCommandStoreStub{nameExists: map[string]bool{}}
 		service := NewEngineCommandService(store)
 
@@ -105,7 +105,7 @@ func TestEngineCommandServiceCreateEngine(t *testing.T) {
 }
 
 func TestEngineCommandServiceUpdateAndDelete(t *testing.T) {
-	t.Run("更新命中不存在", func(t *testing.T) {
+	t.Run("update not found", func(t *testing.T) {
 		store := &engineCommandStoreStub{engineByID: map[int]*catalogdomain.ScanEngine{}}
 		service := NewEngineCommandService(store)
 
@@ -115,7 +115,7 @@ func TestEngineCommandServiceUpdateAndDelete(t *testing.T) {
 		}
 	})
 
-	t.Run("删除成功", func(t *testing.T) {
+	t.Run("delete succeeds", func(t *testing.T) {
 		store := &engineCommandStoreStub{engineByID: map[int]*catalogdomain.ScanEngine{3: {ID: 3, Name: "x"}}}
 		service := NewEngineCommandService(store)
 

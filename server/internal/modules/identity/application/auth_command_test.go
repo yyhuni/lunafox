@@ -90,7 +90,7 @@ func (stub *tokenProviderStub) GenerateAccessToken(userID int, username string) 
 }
 
 func TestAuthCommandServiceLogin(t *testing.T) {
-	t.Run("用户不存在", func(t *testing.T) {
+	t.Run("user not found", func(t *testing.T) {
 		service := NewAuthCommandService(
 			&authUserStoreStub{byUsername: map[string]*identitydomain.User{}},
 			passwordVerifierStub{verify: true},
@@ -103,7 +103,7 @@ func TestAuthCommandServiceLogin(t *testing.T) {
 		}
 	})
 
-	t.Run("用户禁用", func(t *testing.T) {
+	t.Run("user disabled", func(t *testing.T) {
 		service := NewAuthCommandService(
 			&authUserStoreStub{byUsername: map[string]*identitydomain.User{"alice": {Username: "alice", IsActive: false}}},
 			passwordVerifierStub{verify: true},
@@ -116,7 +116,7 @@ func TestAuthCommandServiceLogin(t *testing.T) {
 		}
 	})
 
-	t.Run("密码错误", func(t *testing.T) {
+	t.Run("incorrect password", func(t *testing.T) {
 		service := NewAuthCommandService(
 			&authUserStoreStub{byUsername: map[string]*identitydomain.User{"alice": {Username: "alice", IsActive: true, Password: "hash"}}},
 			passwordVerifierStub{verify: false},
@@ -129,7 +129,7 @@ func TestAuthCommandServiceLogin(t *testing.T) {
 		}
 	})
 
-	t.Run("登录成功", func(t *testing.T) {
+	t.Run("login succeeds", func(t *testing.T) {
 		tokens := &tokenProviderStub{
 			pair: &auth.TokenPair{AccessToken: "a", RefreshToken: "r", ExpiresIn: 3600},
 		}
@@ -150,7 +150,7 @@ func TestAuthCommandServiceLogin(t *testing.T) {
 }
 
 func TestAuthCommandServiceRefreshAndCurrentUser(t *testing.T) {
-	t.Run("refresh token 非法", func(t *testing.T) {
+	t.Run("invalid refresh token", func(t *testing.T) {
 		service := NewAuthCommandService(
 			&authUserStoreStub{},
 			passwordVerifierStub{verify: true},
@@ -163,7 +163,7 @@ func TestAuthCommandServiceRefreshAndCurrentUser(t *testing.T) {
 		}
 	})
 
-	t.Run("refresh 成功", func(t *testing.T) {
+	t.Run("refresh succeeds", func(t *testing.T) {
 		tokens := &tokenProviderStub{
 			claims:    &auth.Claims{UserID: 9, Username: "bob"},
 			access:    "new-access",
@@ -180,7 +180,7 @@ func TestAuthCommandServiceRefreshAndCurrentUser(t *testing.T) {
 		}
 	})
 
-	t.Run("当前用户成功", func(t *testing.T) {
+	t.Run("current user succeeds", func(t *testing.T) {
 		service := NewAuthCommandService(
 			&authUserStoreStub{byID: map[int]*identitydomain.User{2: {ID: 2, Username: "u2", Email: "u2@x.com"}}},
 			passwordVerifierStub{verify: true},

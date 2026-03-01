@@ -7,14 +7,14 @@ import (
 )
 
 func TestNewWordlist(t *testing.T) {
-	t.Run("空名称", func(t *testing.T) {
+	t.Run("empty name", func(t *testing.T) {
 		_, err := NewWordlist(" ", "desc")
 		if !errors.Is(err, ErrWordlistNameEmpty) {
 			t.Fatalf("expected ErrWordlistNameEmpty, got %v", err)
 		}
 	})
 
-	t.Run("过长名称", func(t *testing.T) {
+	t.Run("name too long", func(t *testing.T) {
 		name := strings.Repeat("a", MaxWordlistNameLength+1)
 		_, err := NewWordlist(name, "desc")
 		if !errors.Is(err, ErrWordlistNameTooLong) {
@@ -22,14 +22,14 @@ func TestNewWordlist(t *testing.T) {
 		}
 	})
 
-	t.Run("非法控制字符", func(t *testing.T) {
+	t.Run("invalid control character", func(t *testing.T) {
 		_, err := NewWordlist("a\tb", "desc")
 		if !errors.Is(err, ErrWordlistNameInvalid) {
 			t.Fatalf("expected ErrWordlistNameInvalid, got %v", err)
 		}
 	})
 
-	t.Run("描述归一化", func(t *testing.T) {
+	t.Run("description normalization", func(t *testing.T) {
 		description := "  hello\nworld\t!  "
 		wordlist, err := NewWordlist(" dict ", description)
 		if err != nil {

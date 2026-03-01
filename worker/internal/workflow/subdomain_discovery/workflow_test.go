@@ -72,7 +72,7 @@ func countGoroutinesWithStackFragment(fragment string) int {
 	}
 }
 
-func validScanConfig() map[string]any {
+func validWorkflowConfig() map[string]any {
 	return map[string]any{
 		"apiVersion":    "v1",
 		"schemaVersion": "1.0.0",
@@ -105,6 +105,19 @@ func validScanConfig() map[string]any {
 			},
 		},
 	}
+}
+
+func validScanConfig() map[string]any {
+	return map[string]any{
+		Name: validWorkflowConfig(),
+	}
+}
+
+func validTypedWorkflowConfig(t *testing.T) WorkflowConfig {
+	t.Helper()
+	cfg, err := decodeTypedWorkflowConfig(validScanConfig())
+	require.NoError(t, err)
+	return cfg
 }
 
 func TestInitializeMissingConfig(t *testing.T) {
@@ -160,22 +173,84 @@ func TestInitializeNormalizesDomain(t *testing.T) {
 	require.Equal(t, []string{"example.com"}, ctx.domains)
 }
 
-func TestInitializeNestedConfig(t *testing.T) {
+func TestInitializeStoresTypedConfigForExecution(t *testing.T) {
 	withNopLogger(t)
 	w := New(t.TempDir())
-	nested := map[string]any{
-		Name: validScanConfig(),
-	}
-
 	ctx, err := w.initialize(&workflow.Params{
-		ScanConfig:   nested,
+		ScanConfig:   validScanConfig(),
 		TargetType:   "domain",
 		TargetName:   "example.com",
 		WorkDir:      t.TempDir(),
 		ServerClient: providerClient{},
 	})
 	require.NoError(t, err)
-	require.NotNil(t, ctx)
+	require.Equal(t, ContractAPIVersion, ctx.typedConfig.APIVersion)
+	require.Equal(t, ContractSchemaVer, ctx.typedConfig.SchemaVersion)
+	require.True(t, ctx.typedConfig.Recon.Enabled)
+	require.True(t, ctx.typedConfig.Recon.Tools.Subfinder.Enabled)
+}
+
+func TestInitializeUsesPreDecodedWorkflowConfig(t *testing.T) {
+	withNopLogger(t)
+	w := New(t.TempDir())
+	typedCfg := validTypedWorkflowConfig(t)
+
+	ctx, err := w.initialize(&workflow.Params{
+		WorkflowConfig: typedCfg,
+		TargetType:     "domain",
+		TargetName:     "example.com",
+		WorkDir:        t.TempDir(),
+		ServerClient:   providerClient{},
+	})
+	require.NoError(t, err)
+	require.Equal(t, typedCfg, ctx.typedConfig)
+}
+
+func TestInitializeRejectsInvalidTypedWorkflowConfigType(t *testing.T) {
+	withNopLogger(t)
+	w := New(t.TempDir())
+
+	_, err := w.initialize(&workflow.Params{
+		WorkflowConfig: map[string]any{"invalid": true},
+		TargetType:     "domain",
+		TargetName:     "example.com",
+		WorkDir:        t.TempDir(),
+		ServerClient:   providerClient{},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid typed config")
+}
+
+func TestInitializeRejectsInvalidTypedWorkflowConfigValue(t *testing.T) {
+	withNopLogger(t)
+	w := New(t.TempDir())
+	invalidTypedCfg := validTypedWorkflowConfig(t)
+	invalidTypedCfg.APIVersion = ""
+
+	_, err := w.initialize(&workflow.Params{
+		WorkflowConfig: invalidTypedCfg,
+		TargetType:     "domain",
+		TargetName:     "example.com",
+		WorkDir:        t.TempDir(),
+		ServerClient:   providerClient{},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid typed workflow config")
+}
+
+func TestInitializeFlatConfigRejected(t *testing.T) {
+	withNopLogger(t)
+	w := New(t.TempDir())
+
+	_, err := w.initialize(&workflow.Params{
+		ScanConfig:   validWorkflowConfig(),
+		TargetType:   "domain",
+		TargetName:   "example.com",
+		WorkDir:      t.TempDir(),
+		ServerClient: providerClient{},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "missing "+Name+" config")
 }
 
 func TestInitializeProviderConfigWritten(t *testing.T) {

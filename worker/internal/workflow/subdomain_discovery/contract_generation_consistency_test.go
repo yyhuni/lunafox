@@ -25,7 +25,10 @@ func TestContractDefinitionMatchesGeneratedSchemaAndDocs(t *testing.T) {
 	definition := GetContractDefinition()
 	expectedID := fmt.Sprintf("lunafox://schemas/engines/%s/%s", definition.WorkflowName, definition.SchemaVersion)
 
-	workerSchema := loadGeneratedSchema(t, "schema_generated.json")
+	workerSchema := loadGeneratedSchema(
+		t,
+		fmt.Sprintf("generated/%s-%s-%s.schema.json", definition.WorkflowName, definition.APIVersion, definition.SchemaVersion),
+	)
 	require.Equal(t, expectedID, workerSchema.ID)
 	require.Equal(t, definition.WorkflowName, workerSchema.Engine)
 	require.Equal(t, definition.SchemaVersion, workerSchema.EngineVersion)

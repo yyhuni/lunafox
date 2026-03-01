@@ -67,7 +67,7 @@ func (stub *wordlistCommandStoreStub) Delete(id int) error {
 }
 
 func TestWordlistCommandServiceCreateWordlist(t *testing.T) {
-	t.Run("空名称", func(t *testing.T) {
+	t.Run("empty name", func(t *testing.T) {
 		service := NewWordlistCommandService(&wordlistCommandStoreStub{}, t.TempDir(), newWordlistFileStoreTestStub())
 		_, err := service.CreateWordlist(context.Background(), "", "", "a.txt", strings.NewReader("a"))
 		if !errors.Is(err, ErrEmptyName) {
@@ -75,7 +75,7 @@ func TestWordlistCommandServiceCreateWordlist(t *testing.T) {
 		}
 	})
 
-	t.Run("成功创建", func(t *testing.T) {
+	t.Run("create succeeds", func(t *testing.T) {
 		store := &wordlistCommandStoreStub{nameExists: map[string]bool{}}
 		baseDir := t.TempDir()
 		service := NewWordlistCommandService(store, baseDir, newWordlistFileStoreTestStub())
