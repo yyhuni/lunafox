@@ -25,6 +25,23 @@ func TestResolveAgentImageRef(t *testing.T) {
 	}
 }
 
+func TestResolveReleaseVersion(t *testing.T) {
+	t.Setenv("RELEASE_VERSION", "")
+	if _, err := resolveReleaseVersion(); err == nil {
+		t.Fatalf("expected error for missing RELEASE_VERSION")
+	}
+
+	t.Setenv("RELEASE_VERSION", "v1.2")
+	if _, err := resolveReleaseVersion(); err == nil {
+		t.Fatalf("expected error for invalid RELEASE_VERSION")
+	}
+
+	t.Setenv("RELEASE_VERSION", "v1.2.3")
+	if got, err := resolveReleaseVersion(); err != nil || got != "1.2.3" {
+		t.Fatalf("expected normalized RELEASE_VERSION, got %q, err=%v", got, err)
+	}
+}
+
 func TestResolveAgentVersion(t *testing.T) {
 	t.Setenv("AGENT_VERSION", "")
 	if _, err := resolveAgentVersion(); err == nil {
@@ -82,7 +99,7 @@ func TestEnsureRuntimeVersionConsistency(t *testing.T) {
 	}
 
 	if err := ensureRuntimeVersionConsistency("v1.2.4", "1.2.3", "1.2.3"); err == nil {
-		t.Fatalf("expected mismatch between IMAGE_TAG and AGENT_VERSION")
+		t.Fatalf("expected mismatch between RELEASE_VERSION and AGENT_VERSION")
 	}
 
 	if err := ensureRuntimeVersionConsistency("v1.2.3", "1.2.3", "1.2.4"); err == nil {

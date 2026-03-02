@@ -6,11 +6,13 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/yyhuni/lunafox/tools/installer/internal/cli"
+	"github.com/yyhuni/lunafox/tools/installer/internal/release"
 	"github.com/yyhuni/lunafox/tools/installer/internal/ui"
 )
 
@@ -58,6 +60,57 @@ func TestResolveVersionProdUsesExplicitVersion(t *testing.T) {
 	}
 	if installer.version != "v1.2.3" {
 		t.Fatalf("unexpected version: %s", installer.version)
+	}
+}
+
+func TestResolveVersionProdUsesReleaseManifestVersion(t *testing.T) {
+	installer := NewInstaller(cli.Options{
+		Mode:           cli.ModeProd,
+		Version:        "",
+		ImageRegistry:  "docker.io",
+		ImageNamespace: "yyhuni",
+	}, nil, ui.NewPrinter(io.Discard, io.Discard))
+	installer.releaseManifest = &release.Manifest{
+		ReleaseVersion: "1.2.3",
+	}
+
+	if err := installer.resolveVersion(); err != nil {
+		t.Fatalf("resolveVersion failed: %v", err)
+	}
+	if installer.version != "1.2.3" {
+		t.Fatalf("unexpected version: %s", installer.version)
+	}
+}
+
+func TestLoadReleaseManifestInjectsSingleSourceValues(t *testing.T) {
+	dir := t.TempDir()
+	manifestPath := filepath.Join(dir, "release.manifest.yaml")
+	content := `releaseVersion: 1.2.3
+agentVersion: 1.2.3
+workerVersion: 1.2.3
+agentImageRef: docker.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+workerImageRef: docker.io/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+`
+	if err := os.WriteFile(manifestPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+
+	installer := NewInstaller(cli.Options{
+		Mode:            cli.ModeProd,
+		ReleaseManifest: manifestPath,
+	}, nil, ui.NewPrinter(io.Discard, io.Discard))
+
+	if err := installer.loadReleaseManifest(); err != nil {
+		t.Fatalf("loadReleaseManifest failed: %v", err)
+	}
+	if installer.options.Version != "1.2.3" {
+		t.Fatalf("unexpected injected version: %s", installer.options.Version)
+	}
+	if installer.options.AgentImageRef == "" || installer.options.WorkerImageRef == "" {
+		t.Fatalf("expected injected image refs")
+	}
+	if len(installer.options.AgentImageRefs) != 1 || len(installer.options.WorkerImageRefs) != 1 {
+		t.Fatalf("expected single-source image refs")
 	}
 }
 

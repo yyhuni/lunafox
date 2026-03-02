@@ -12,7 +12,7 @@
 
 ### 1.2 版本基线（必须严格一致）
 
-- `server`、`agent`、`worker` 必须使用同一 `IMAGE_TAG` 发布。
+- `server`、`agent`、`worker` 必须使用同一 `RELEASE_VERSION` 发布。
 - 不允许混部：
 - 禁止新 `server` + 旧 `agent/worker`。
 - 禁止旧 `server` + 新 `agent/worker`。
@@ -27,7 +27,7 @@
 - 任务分发、取消、结果回传任一关键链路不可用。
 - 管理面 HTTP API 出现阻断级故障。
 - 回滚动作：
-- 将 `server`、`agent`、`worker` 同时回退到上一个稳定 `IMAGE_TAG`。
+- 将 `server`、`agent`、`worker` 同时回退到上一个稳定 `RELEASE_VERSION`。
 - 恢复旧版 Nginx/LB 配置（同一变更单内保留上一版本配置快照）。
 - 回滚完成后执行最小验证：
 - `GET /health` 返回 `200`。
@@ -39,7 +39,7 @@
 
 ### 2.1 演练检查项
 
-- [ ] 所有组件升级到同一 `IMAGE_TAG`。
+- [ ] 所有组件升级到同一 `RELEASE_VERSION`。
 - [ ] Agent runtime gRPC stream 连通并稳定（无异常重连风暴）。
 - [ ] 任务分发成功（agent 收到 task_assign）。
 - [ ] 任务取消成功（server 下发 task_cancel，agent/worker 正确收敛）。
@@ -109,3 +109,29 @@ grpcurl -insecure \
 - 第 2 步返回 `200`。
 - 第 3 步返回 gRPC `Unauthenticated`（证明 443 -> gRPC upstream 路由生效，且鉴权链路生效）。
 
+## 5. CI 自动生成 Release Manifest（推荐）
+
+在 CI 内统一从构建产物注入三个环境变量，再自动生成 `release.manifest.yaml`：
+
+- `RELEASE_VERSION`
+- `AGENT_IMAGE_REF`（必须 digest）
+- `WORKER_IMAGE_REF`（必须 digest）
+
+示例（GitHub Actions）：
+
+```yaml
+- name: Generate release manifest
+  env:
+    RELEASE_VERSION: ${{ github.ref_name }}
+    AGENT_IMAGE_REF: ${{ steps.build_agent.outputs.image_ref }}
+    WORKER_IMAGE_REF: ${{ steps.build_worker.outputs.image_ref }}
+  run: |
+    make gen-release-manifest
+    make verify-release-contract
+```
+
+说明：
+
+- `make gen-release-manifest` 会自动把 `agentVersion/workerVersion` 设为 `RELEASE_VERSION`。
+- 生成后会调用 `scripts/ci/verify-release-contract.sh` 做发布契约校验。
+- 发布流水线会自动产出并发布 `release.manifest.yaml`（GitHub/Gitee Release 附件），并同步到 `release-channel` 分支的 `manifests/` 目录（按 tag 文件 + stable/canary 别名文件）。

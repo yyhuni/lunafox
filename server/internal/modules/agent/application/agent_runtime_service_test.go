@@ -126,11 +126,11 @@ func TestAgentRuntimeServiceHeartbeatAndUpdateRequired(t *testing.T) {
 	if !publisher.updateSent {
 		t.Fatalf("expected update_required notification")
 	}
-	if publisher.lastUpdatePayload.Version != "2.0.0" {
-		t.Fatalf("expected update payload version 2.0.0, got %q", publisher.lastUpdatePayload.Version)
+	if publisher.lastUpdatePayload.AgentVersion != "2.0.0" {
+		t.Fatalf("expected update payload version 2.0.0, got %q", publisher.lastUpdatePayload.AgentVersion)
 	}
-	if publisher.lastUpdatePayload.ImageRef != "img" {
-		t.Fatalf("expected update payload imageRef img, got %q", publisher.lastUpdatePayload.ImageRef)
+	if publisher.lastUpdatePayload.AgentImageRef != "img" {
+		t.Fatalf("expected update payload imageRef img, got %q", publisher.lastUpdatePayload.AgentImageRef)
 	}
 	if publisher.lastUpdatePayload.WorkerImageRef != "wimg" {
 		t.Fatalf("expected worker image ref wimg, got %q", publisher.lastUpdatePayload.WorkerImageRef)

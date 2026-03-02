@@ -92,6 +92,9 @@ func TestStepEnvGeneratesSecretsOnFirstInstall(t *testing.T) {
 	if workerToken == "" {
 		t.Fatalf("expected generated worker token")
 	}
+	assertEnvValue(t, envPath, "RELEASE_VERSION", "dev")
+	assertEnvValue(t, envPath, "AGENT_VERSION", "dev")
+	assertEnvValue(t, envPath, "WORKER_VERSION", "dev")
 }
 
 func TestStepEnvReusesExistingDBConfig(t *testing.T) {

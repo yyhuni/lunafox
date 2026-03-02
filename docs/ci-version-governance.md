@@ -39,8 +39,10 @@ Release workflow:
 
 Release contracts that must not drift:
 
-- Keep dual channels (`stable`, `canary`) and `SCHEMA_VERSION=2`.
-- Keep digest lists for `AGENT_IMAGE_REFS` and `WORKER_IMAGE_REFS` in channel files.
+- Keep dual channels (`stable`, `canary`) and `SCHEMA_VERSION=3`.
+- Keep channel files as installer index only, with `RELEASE_MANIFEST=manifests/<tag>.yaml`.
+- Keep runtime truth in `release.manifest.yaml` (single source for versions and image digests).
+- Keep versioned release-channel files immutable for rollback/audit (`channels/v*.env`, `manifests/v*.yaml`).
 - Keep four registry digests emitted and verified: DockerHub, GHCR, Tencent TCR, Alibaba ACR.
 - Keep both architectures for published images: `linux/amd64` and `linux/arm64`.
 

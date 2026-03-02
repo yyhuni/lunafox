@@ -329,6 +329,33 @@ func TestParseProdRequiresDigestImageRef(t *testing.T) {
 	}
 }
 
+func TestParseProdAllowsMissingImageRefsForReleaseManifest(t *testing.T) {
+	dir := createTestProjectRoot(t)
+
+	opts, err := parseWithRoot(dir, "--public-url", "https://10.8.0.25:8083")
+	if err != nil {
+		t.Fatalf("expected prod parse to allow missing image refs before manifest injection: %v", err)
+	}
+	if opts.Mode != ModeProd {
+		t.Fatalf("expected prod mode, got %s", opts.Mode)
+	}
+	if len(opts.AgentImageRefs) != 0 || len(opts.WorkerImageRefs) != 0 {
+		t.Fatalf("expected no parsed image refs, got agent=%v worker=%v", opts.AgentImageRefs, opts.WorkerImageRefs)
+	}
+}
+
+func TestParseReleaseManifestPathRelativeToRoot(t *testing.T) {
+	dir := createTestProjectRoot(t)
+	opts, err := parseWithRoot(dir, "--public-url", "https://10.8.0.25:8083", "--release-manifest", "config/release.yaml")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	want := filepath.Join(opts.RootDir, "config", "release.yaml")
+	if opts.ReleaseManifest != want {
+		t.Fatalf("unexpected release manifest path: got=%s want=%s", opts.ReleaseManifest, want)
+	}
+}
+
 func TestParseImageRefsDeduplicateAndKeepOrder(t *testing.T) {
 	dir := createTestProjectRoot(t)
 

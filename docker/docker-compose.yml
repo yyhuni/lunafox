@@ -52,6 +52,7 @@ services:
       - .env
     environment:
       - IMAGE_TAG=${IMAGE_TAG}
+      - RELEASE_VERSION=${RELEASE_VERSION:?RELEASE_VERSION is required}
       - PUBLIC_URL=${PUBLIC_URL:-}
       - LOKI_URL=${LOKI_URL:-http://loki:3100}
       - SERVER_GRPC_PORT=${SERVER_GRPC_PORT:-9090}

@@ -24,8 +24,8 @@ func TestWithJitterRange(t *testing.T) {
 func TestUpdateOnceDockerUnavailable(t *testing.T) {
 	updater := &Updater{}
 	payload := domain.UpdateRequiredPayload{
-		Version:        "v1.0.0",
-		ImageRef:       "yyhuni/lunafox-agent:v1.0.0",
+		AgentVersion:   "v1.0.0",
+		AgentImageRef:  "yyhuni/lunafox-agent:v1.0.0",
 		WorkerImageRef: "yyhuni/lunafox-worker:v1.0.0",
 		WorkerVersion:  "1.0.0",
 	}

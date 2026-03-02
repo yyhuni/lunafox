@@ -1,10 +1,10 @@
 package application
 
-import "github.com/yyhuni/lunafox/server/internal/agentproto"
+import agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 
 // AgentMessagePublisher emits typed messages to runtime connections.
 type AgentMessagePublisher interface {
-	SendConfigUpdate(agentID int, payload agentproto.ConfigUpdatePayload)
-	SendUpdateRequired(agentID int, payload agentproto.UpdateRequiredPayload) bool
+	SendConfigUpdate(agentID int, payload agentdomain.ConfigUpdatePayload)
+	SendUpdateRequired(agentID int, payload agentdomain.UpdateRequiredPayload) bool
 	SendTaskCancel(agentID, taskID int)
 }

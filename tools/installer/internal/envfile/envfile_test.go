@@ -12,6 +12,9 @@ import (
 func TestRenderContainsPublicURL(t *testing.T) {
 	content := Render(Data{
 		ImageTag:             "dev",
+		ReleaseVersion:       "dev",
+		AgentVersion:         "dev",
+		WorkerVersion:        "dev",
 		ImageRegistry:        "docker.io",
 		ImageNamespace:       "yyhuni",
 		AgentImageRef:        "docker.io/yyhuni/lunafox-agent:dev",
@@ -40,6 +43,15 @@ func TestRenderContainsPublicURL(t *testing.T) {
 	}
 	if !strings.Contains(content, "IMAGE_REGISTRY=docker.io") {
 		t.Fatalf("IMAGE_REGISTRY not found in env content: %s", content)
+	}
+	if !strings.Contains(content, "RELEASE_VERSION=dev") {
+		t.Fatalf("RELEASE_VERSION not found in env content: %s", content)
+	}
+	if !strings.Contains(content, "AGENT_VERSION=dev") {
+		t.Fatalf("AGENT_VERSION not found in env content: %s", content)
+	}
+	if !strings.Contains(content, "WORKER_VERSION=dev") {
+		t.Fatalf("WORKER_VERSION not found in env content: %s", content)
 	}
 	if !strings.Contains(content, "AGENT_IMAGE_REF=docker.io/yyhuni/lunafox-agent:dev") {
 		t.Fatalf("AGENT_IMAGE_REF not found in env content: %s", content)
@@ -231,6 +243,9 @@ func TestWriteMergedCreatesFileWhenMissing(t *testing.T) {
 func testData() Data {
 	return Data{
 		ImageTag:             "dev",
+		ReleaseVersion:       "dev",
+		AgentVersion:         "dev",
+		WorkerVersion:        "dev",
 		ImageRegistry:        "docker.io",
 		ImageNamespace:       "yyhuni",
 		AgentImageRef:        "docker.io/yyhuni/lunafox-agent:dev",

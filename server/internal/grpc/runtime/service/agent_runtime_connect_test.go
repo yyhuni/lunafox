@@ -200,8 +200,8 @@ func TestConnectReceivesPublishedDownlinkEvents(t *testing.T) {
 	}
 
 	delivered := publisher.SendUpdateRequired(33, agentdomain.UpdateRequiredPayload{
-		Version:        "v2.1.0",
-		ImageRef:       "registry.example.com/lunafox-agent:v2.1.0",
+		AgentVersion:   "v2.1.0",
+		AgentImageRef:  "registry.example.com/lunafox-agent:v2.1.0",
 		WorkerImageRef: "registry.example.com/lunafox-worker:v2.1.0",
 		WorkerVersion:  "2.1.0",
 	})
@@ -209,8 +209,11 @@ func TestConnectReceivesPublishedDownlinkEvents(t *testing.T) {
 		t.Fatalf("expected update_required event delivery")
 	}
 	updateEvent := stream.mustRecvEvent(t)
-	if updateEvent.GetUpdateRequired() == nil || updateEvent.GetUpdateRequired().GetTargetVersion() != "v2.1.0" {
+	if updateEvent.GetUpdateRequired() == nil || updateEvent.GetUpdateRequired().GetAgentVersion() != "v2.1.0" {
 		t.Fatalf("unexpected update required event: %+v", updateEvent)
+	}
+	if updateEvent.GetUpdateRequired().GetAgentImageRef() != "registry.example.com/lunafox-agent:v2.1.0" {
+		t.Fatalf("unexpected update required agent image ref: %+v", updateEvent)
 	}
 
 	stream.pushRecvError(io.EOF)

@@ -31,7 +31,7 @@ type infra struct {
 	heartbeatCache       cache.HeartbeatCache
 	jwtManager           *auth.JWTManager
 	presetLoader         *preset.Loader
-	serverVersion        string
+	releaseVersion       string
 	agentVersion         string
 	agentImageRef        string
 	workerImageRef       string
@@ -47,14 +47,14 @@ const (
 
 func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 	// Runtime update contract:
-	// - IMAGE_TAG is the server build/version identifier.
+	// - RELEASE_VERSION is the server release/version anchor.
 	// - AGENT_VERSION is the explicit agent semantic version target used in update_required.
 	// - AGENT_IMAGE_REF / WORKER_IMAGE_REF are immutable image targets.
 	// - WORKER_VERSION is the explicit worker semantic version target.
 	// - LUNAFOX_SHARED_DATA_VOLUME_BIND is the single source of shared volume mapping.
-	serverVersion := strings.TrimSpace(os.Getenv("IMAGE_TAG"))
-	if serverVersion == "" {
-		pkg.Fatal("IMAGE_TAG environment variable is required")
+	releaseVersion, err := resolveReleaseVersion()
+	if err != nil {
+		pkg.Fatal("RELEASE_VERSION environment variable is invalid", zap.Error(err))
 	}
 	agentVersion, err := resolveAgentVersion()
 	if err != nil {
@@ -72,7 +72,7 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 	if err != nil {
 		pkg.Fatal("WORKER_VERSION environment variable is invalid", zap.Error(err))
 	}
-	if err := ensureRuntimeVersionConsistency(serverVersion, agentVersion, workerVersion); err != nil {
+	if err := ensureRuntimeVersionConsistency(releaseVersion, agentVersion, workerVersion); err != nil {
 		pkg.Fatal("Runtime version contract is invalid", zap.Error(err))
 	}
 	sharedDataVolumeBind, err := resolveSharedDataVolumeBind()
@@ -150,13 +150,24 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 		heartbeatCache:       heartbeatCache,
 		jwtManager:           jwtManager,
 		presetLoader:         presetLoader,
-		serverVersion:        serverVersion,
+		releaseVersion:       releaseVersion,
 		agentVersion:         agentVersion,
 		agentImageRef:        agentImageRef,
 		workerImageRef:       workerImageRef,
 		workerVersion:        workerVersion,
 		sharedDataVolumeBind: sharedDataVolumeBind,
 	}
+}
+
+func resolveReleaseVersion() (string, error) {
+	version := runtimecontract.NormalizeVersion(os.Getenv("RELEASE_VERSION"))
+	if version == "" {
+		return "", fmt.Errorf("RELEASE_VERSION is required")
+	}
+	if !runtimecontract.IsValidSchemaVersion(version) {
+		return "", fmt.Errorf("RELEASE_VERSION must match MAJOR.MINOR.PATCH(+suffix)")
+	}
+	return version, nil
 }
 
 func resolveAgentVersion() (string, error) {
@@ -265,16 +276,16 @@ func resolveWorkerVersion() (string, error) {
 	return version, nil
 }
 
-func ensureRuntimeVersionConsistency(serverVersion, agentVersion, workerVersion string) error {
-	serverVersion = runtimecontract.NormalizeVersion(serverVersion)
+func ensureRuntimeVersionConsistency(releaseVersion, agentVersion, workerVersion string) error {
+	releaseVersion = runtimecontract.NormalizeVersion(releaseVersion)
 	agentVersion = runtimecontract.NormalizeVersion(agentVersion)
 	workerVersion = runtimecontract.NormalizeVersion(workerVersion)
 
-	if serverVersion == "" {
-		return fmt.Errorf("IMAGE_TAG is required")
+	if releaseVersion == "" {
+		return fmt.Errorf("RELEASE_VERSION is required")
 	}
-	if serverVersion != agentVersion {
-		return fmt.Errorf("IMAGE_TAG (%s) must equal AGENT_VERSION (%s)", serverVersion, agentVersion)
+	if releaseVersion != agentVersion {
+		return fmt.Errorf("RELEASE_VERSION (%s) must equal AGENT_VERSION (%s)", releaseVersion, agentVersion)
 	}
 	if agentVersion != workerVersion {
 		return fmt.Errorf("AGENT_VERSION (%s) must equal WORKER_VERSION (%s)", agentVersion, workerVersion)

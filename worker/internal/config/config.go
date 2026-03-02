@@ -2,10 +2,12 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strconv"
 
 	"github.com/joho/godotenv"
+	"github.com/yyhuni/lunafox/contracts/runtimecontract"
 	"gopkg.in/yaml.v3"
 )
 
@@ -19,6 +21,7 @@ var (
 	ErrMissingTargetType   = errors.New("missing required configuration: TARGET_TYPE")
 	ErrMissingWorkflowName = errors.New("missing required configuration: WORKFLOW_NAME")
 	ErrMissingConfig       = errors.New("missing required configuration: CONFIG")
+	ErrMissingConfigPath   = errors.New("missing required configuration: CONFIG_PATH")
 )
 
 // Config holds all configuration for the worker
@@ -55,12 +58,14 @@ func Load() (*Config, error) {
 		TargetName:   os.Getenv("TARGET_NAME"),
 		TargetType:   os.Getenv("TARGET_TYPE"),
 		WorkflowName: os.Getenv("WORKFLOW_NAME"),
-		WorkspaceDir: getEnvOrDefault("WORKSPACE_DIR", "/opt/lunafox/workspace"),
+		WorkspaceDir: getEnvOrDefault("WORKSPACE_DIR", runtimecontract.DefaultWorkspaceRoot),
 		LogLevel:     getEnvOrDefault("LOG_LEVEL", "info"),
 	}
 
-	// Parse YAML config from environment variable
-	configYAML := os.Getenv("CONFIG")
+	configYAML, err := loadRawTaskConfig()
+	if err != nil {
+		return nil, err
+	}
 	if configYAML != "" {
 		var config map[string]any
 		if err := yaml.Unmarshal([]byte(configYAML), &config); err != nil {
@@ -74,6 +79,17 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func loadRawTaskConfig() (string, error) {
+	if configPath := getEnvOrDefault(runtimecontract.DefaultWorkerConfigPathEnv, ""); configPath != "" {
+		data, err := os.ReadFile(configPath)
+		if err != nil {
+			return "", fmt.Errorf("read %s: %w", runtimecontract.DefaultWorkerConfigPathEnv, err)
+		}
+		return string(data), nil
+	}
+	return "", ErrMissingConfigPath
 }
 
 // Validate checks that all required configuration is present

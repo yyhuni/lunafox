@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/yyhuni/lunafox/server/internal/agentproto"
+	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 )
 
 // HeartbeatData represents agent heartbeat information
@@ -24,7 +24,7 @@ type HeartbeatData struct {
 }
 
 // HealthStatus represents agent health in the heartbeat cache.
-type HealthStatus = agentproto.HealthStatus
+type HealthStatus = agentdomain.HealthStatus
 
 // HeartbeatCache defines the interface for heartbeat cache operations
 type HeartbeatCache interface {

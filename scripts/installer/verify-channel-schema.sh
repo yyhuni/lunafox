@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-EXPECTED_SCHEMA_VERSION="${EXPECTED_SCHEMA_VERSION:-2}"
+EXPECTED_SCHEMA_VERSION="${EXPECTED_SCHEMA_VERSION:-3}"
 
 error() {
 	echo "✗ $*" >&2
@@ -24,14 +24,10 @@ require_key() {
 	fi
 }
 
-require_digest_ref_list() {
+require_release_manifest() {
 	local file="$1"
 	local key="$2"
 	local value
-	local -a parts=()
-	local part=""
-	local trimmed=""
-	local found=0
 
 	value="$(read_env_value "$file" "$key")"
 	if [ -z "$value" ]; then
@@ -39,27 +35,8 @@ require_digest_ref_list() {
 		exit 1
 	fi
 
-	# Release contract (SCHEMA_VERSION=2):
-	# AGENT_IMAGE_REFS / WORKER_IMAGE_REFS must stay as digest ref lists across
-	# DockerHub + GHCR + Tencent TCR + Alibaba ACR so installer probe/fallback
-	# keeps working. Regressing to a single value or legacy single-key form is
-	# not allowed.
-
-	IFS=',' read -r -a parts <<<"$value"
-	for part in "${parts[@]}"; do
-		trimmed="$(printf '%s' "$part" | xargs)"
-		if [ -z "$trimmed" ]; then
-			continue
-		fi
-		if ! printf '%s' "$trimmed" | grep -Eq '^.+@sha256:[a-f0-9]{64}$'; then
-			error "[$file] invalid digest image ref in $key: $trimmed"
-			exit 1
-		fi
-		found=1
-	done
-
-	if [ "$found" -ne 1 ]; then
-		error "[$file] invalid digest image ref list for $key: $value"
+	if ! printf '%s' "$value" | grep -Eq '^manifests/[A-Za-z0-9._-]+\.yaml$'; then
+		error "[$file] invalid $key: $value (expected manifests/<name>.yaml)"
 		exit 1
 	fi
 }
@@ -67,7 +44,7 @@ require_digest_ref_list() {
 forbid_key() {
 	local file="$1"
 	local key="$2"
-	# Hard-cut guard: reject legacy single-value keys in schema v2.
+	# Hard-cut guard: reject legacy keys in schema v3.
 	if grep -Eq "^${key}=" "$file"; then
 		error "[$file] forbidden legacy key: $key"
 		exit 1
@@ -105,10 +82,20 @@ validate_file() {
 		require_key "$file" "${platform}_SHA256"
 	done
 
-	require_key "$file" "IMAGE_REGISTRY"
-	require_key "$file" "IMAGE_NAMESPACE"
-	require_digest_ref_list "$file" "AGENT_IMAGE_REFS"
-	require_digest_ref_list "$file" "WORKER_IMAGE_REFS"
+	require_release_manifest "$file" "RELEASE_MANIFEST"
+	local version release_manifest expected_release_manifest
+	version="$(read_env_value "$file" "VERSION")"
+	release_manifest="$(read_env_value "$file" "RELEASE_MANIFEST")"
+	expected_release_manifest="manifests/${version}.yaml"
+	if [ "$release_manifest" != "$expected_release_manifest" ]; then
+		error "[$file] RELEASE_MANIFEST mismatch: expected ${expected_release_manifest}, got ${release_manifest}"
+		exit 1
+	fi
+
+	forbid_key "$file" "IMAGE_REGISTRY"
+	forbid_key "$file" "IMAGE_NAMESPACE"
+	forbid_key "$file" "AGENT_IMAGE_REFS"
+	forbid_key "$file" "WORKER_IMAGE_REFS"
 	forbid_key "$file" "AGENT_IMAGE_REF"
 	forbid_key "$file" "WORKER_IMAGE_REF"
 }

@@ -93,14 +93,14 @@ func TestDispatchEventCallbacks(t *testing.T) {
 	client.dispatchEvent(&runtimev1.AgentRuntimeEvent{
 		Payload: &runtimev1.AgentRuntimeEvent_UpdateRequired{
 			UpdateRequired: &runtimev1.UpdateRequired{
-				TargetVersion:  "v2.0.0",
-				ImageRef:       "registry.example.com/lunafox-agent:v2.0.0",
+				AgentVersion:   "v2.0.0",
+				AgentImageRef:  "registry.example.com/lunafox-agent:v2.0.0",
 				WorkerImageRef: "registry.example.com/lunafox-worker:v2.0.0",
 				WorkerVersion:  "2.0.0",
 			},
 		},
 	})
-	if updateRequired.Version != "v2.0.0" || updateRequired.ImageRef == "" {
+	if updateRequired.AgentVersion != "v2.0.0" || updateRequired.AgentImageRef == "" {
 		t.Fatalf("unexpected update required payload: %+v", updateRequired)
 	}
 	if updateRequired.WorkerImageRef != "registry.example.com/lunafox-worker:v2.0.0" {

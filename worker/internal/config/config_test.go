@@ -60,7 +60,7 @@ func TestLoadConfigInvalidYAML(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestLoadConfigFallbackToLegacyCONFIGEnv(t *testing.T) {
+func TestLoadConfigRequiresConfigPathEvenIfLegacyCONFIGExists(t *testing.T) {
 	t.Setenv("TASK_ID", "99")
 	t.Setenv("AGENT_SOCKET", "/run/lunafox/worker-runtime.sock")
 	t.Setenv("TASK_TOKEN", "task-token")
@@ -71,9 +71,9 @@ func TestLoadConfigFallbackToLegacyCONFIGEnv(t *testing.T) {
 	t.Setenv("WORKFLOW_NAME", "subdomain_discovery")
 	t.Setenv("CONFIG", "threads: 2\n")
 
-	cfg, err := Load()
-	require.NoError(t, err)
-	assert.EqualValues(t, 2, cfg.Config["threads"])
+	_, err := Load()
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrMissingConfigPath)
 }
 
 func TestValidateMissingFields(t *testing.T) {

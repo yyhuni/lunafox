@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 
-	"github.com/yyhuni/lunafox/server/internal/agentproto"
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 	"github.com/yyhuni/lunafox/server/internal/pkg/dberrors"
 )
@@ -44,12 +43,12 @@ func (service *AgentCommandService) DeleteAgent(ctx context.Context, id int) err
 	return nil
 }
 
-func BuildConfigUpdatePayload(agent *agentdomain.Agent) agentproto.ConfigUpdatePayload {
+func BuildConfigUpdatePayload(agent *agentdomain.Agent) agentdomain.ConfigUpdatePayload {
 	maxTasks := agent.MaxTasks
 	cpu := agent.CPUThreshold
 	mem := agent.MemThreshold
 	disk := agent.DiskThreshold
-	return agentproto.ConfigUpdatePayload{
+	return agentdomain.ConfigUpdatePayload{
 		MaxTasks:      &maxTasks,
 		CPUThreshold:  &cpu,
 		MemThreshold:  &mem,

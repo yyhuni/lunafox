@@ -18,7 +18,7 @@ normalize_exit_codes
 RELEASE_CHANNEL_BRANCH="${LUNAFOX_RELEASE_CHANNEL_BRANCH:-release-channel}"
 GITHUB_REPO="${LUNAFOX_RELEASE_GITHUB_REPO:-yyhuni/lunafox}"
 GITEE_REPO="${LUNAFOX_RELEASE_GITEE_REPO:-yyhuni/lunafox}"
-CHANNEL_SCHEMA_VERSION="${LUNAFOX_CHANNEL_SCHEMA_VERSION:-2}"
+CHANNEL_SCHEMA_VERSION="${LUNAFOX_CHANNEL_SCHEMA_VERSION:-3}"
 
 # CI smoke only: override manifest raw endpoints.
 GITHUB_RAW_BASE="${LUNAFOX_RELEASE_GITHUB_RAW_BASE:-https://raw.githubusercontent.com}"
@@ -220,6 +220,20 @@ manifest_source_candidates() {
 	esac
 }
 
+release_manifest_source_candidates() {
+	case "$SOURCE" in
+	auto)
+		if [ "$VERSION_SOURCE" = "github" ]; then
+			echo "github gitee"
+		else
+			echo "gitee github"
+		fi
+		;;
+	github) echo "github" ;;
+	gitee) echo "gitee" ;;
+	esac
+}
+
 asset_source_candidates() {
 	case "$SOURCE" in
 	auto) echo "gitee github" ;;
@@ -264,17 +278,23 @@ print_retry_hints() {
 	fi
 }
 
+raw_path_url() {
+	local source="$1"
+	local relative_path="$2"
+	case "$source" in
+	github)
+		printf '%s/%s/%s/%s' "${GITHUB_RAW_BASE%/}" "$GITHUB_REPO" "$RELEASE_CHANNEL_BRANCH" "$relative_path"
+		;;
+	gitee)
+		printf '%s/%s/raw/%s/%s' "${GITEE_RAW_BASE%/}" "$GITEE_REPO" "$RELEASE_CHANNEL_BRANCH" "$relative_path"
+		;;
+	esac
+}
+
 manifest_url() {
 	local source="$1"
 	local manifest_name="$2"
-	case "$source" in
-	github)
-		printf '%s/%s/%s/channels/%s' "${GITHUB_RAW_BASE%/}" "$GITHUB_REPO" "$RELEASE_CHANNEL_BRANCH" "$manifest_name"
-		;;
-	gitee)
-		printf '%s/%s/raw/%s/channels/%s' "${GITEE_RAW_BASE%/}" "$GITEE_REPO" "$RELEASE_CHANNEL_BRANCH" "$manifest_name"
-		;;
-	esac
+	raw_path_url "$source" "channels/${manifest_name}"
 }
 
 download_with_retry() {
@@ -343,6 +363,38 @@ validate_manifest_base_url() {
 		error "版本清单字段 ${key_name} 不合法（必须以 http:// 或 https:// 开头）"
 		exit 1
 	fi
+}
+
+validate_release_manifest_ref() {
+	local value="$1"
+	local key_name="$2"
+	if ! printf '%s' "$value" | grep -Eq '^manifests/[A-Za-z0-9._-]+\.yaml$'; then
+		error "版本清单字段 ${key_name} 不合法（必须为 manifests/<name>.yaml）"
+		exit 1
+	fi
+}
+
+read_yaml_value() {
+	local file="$1"
+	local key="$2"
+	awk -v key="$key" '
+		BEGIN { FS=":" }
+		$0 ~ "^[[:space:]]*"key"[[:space:]]*:" {
+			value=substr($0, index($0, ":")+1)
+			gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+			gsub(/^["'"'"']|["'"'"']$/, "", value)
+			print value
+			exit
+		}
+	' "$file"
+}
+
+normalize_version() {
+	local version="$1"
+	version="$(printf '%s' "$version" | tr -d '[:space:]')"
+	version="${version#v}"
+	version="${version#V}"
+	printf '%s' "$version"
 }
 
 probe_asset_source() {
@@ -440,45 +492,6 @@ require_env_value() {
 	printf '%s' "$value"
 }
 
-is_digest_ref() {
-	local ref="$1"
-	printf '%s' "$ref" | grep -Eq '^.+@sha256:[a-f0-9]{64}$'
-}
-
-normalize_digest_ref_list() {
-	local raw="$1"
-	local key_name="$2"
-	local -a parts=()
-	local -a normalized=()
-	local seen=","
-	local part=""
-	local trimmed=""
-	IFS=',' read -r -a parts <<<"$raw"
-	for part in "${parts[@]}"; do
-		trimmed="$(printf '%s' "$part" | xargs)"
-		if [ -z "$trimmed" ]; then
-			continue
-		fi
-		if ! is_digest_ref "$trimmed"; then
-			error "版本清单 ${key_name} 存在非法值（必须为 digest 引用）: $trimmed"
-			exit 1
-		fi
-		case "$seen" in
-		*,"$trimmed",*) continue ;;
-		esac
-		seen="${seen}${trimmed},"
-		normalized+=("$trimmed")
-	done
-	if [ "${#normalized[@]}" -eq 0 ]; then
-		error "版本清单 ${key_name} 不能为空"
-		exit 1
-	fi
-	(
-		IFS=','
-		printf '%s' "${normalized[*]}"
-	)
-}
-
 validate_manifest_schema() {
 	local file="$1"
 	local kind="$2"
@@ -574,11 +587,37 @@ validate_asset_name "$ASSET_NAME" "$ASSET_KEY"
 validate_sha256_value "$EXPECTED_SHA" "$SHA_KEY"
 validate_manifest_base_url "$GITHUB_BASE_URL" "GITHUB_BASE_URL"
 validate_manifest_base_url "$GITEE_BASE_URL" "GITEE_BASE_URL"
-# Schema v2 contract: only digest candidate lists are accepted.
-AGENT_IMAGE_REFS_RAW="$(require_env_value "$VERSION_MANIFEST" "AGENT_IMAGE_REFS")"
-WORKER_IMAGE_REFS_RAW="$(require_env_value "$VERSION_MANIFEST" "WORKER_IMAGE_REFS")"
-AGENT_IMAGE_REFS="$(normalize_digest_ref_list "$AGENT_IMAGE_REFS_RAW" "AGENT_IMAGE_REFS")"
-WORKER_IMAGE_REFS="$(normalize_digest_ref_list "$WORKER_IMAGE_REFS_RAW" "WORKER_IMAGE_REFS")"
+RELEASE_MANIFEST_REL="$(require_env_value "$VERSION_MANIFEST" "RELEASE_MANIFEST")"
+validate_release_manifest_ref "$RELEASE_MANIFEST_REL" "RELEASE_MANIFEST"
+
+RELEASE_MANIFEST_FILE=""
+for source in $(release_manifest_source_candidates); do
+	candidate="$TMP_DIR/release-manifest-${source}.yaml"
+	url="$(raw_path_url "$source" "$RELEASE_MANIFEST_REL")"
+	if download_with_retry "$url" "$candidate" "发布清单(${source})" "$source"; then
+		RELEASE_MANIFEST_FILE="$candidate"
+		break
+	else
+		append_failed_download "release-manifest" "$source" "$url"
+	fi
+done
+if [ -z "$RELEASE_MANIFEST_FILE" ] || [ ! -s "$RELEASE_MANIFEST_FILE" ]; then
+	error "无法下载发布清单: ${RELEASE_MANIFEST_REL}"
+	print_failed_download_summary
+	print_retry_hints
+	exit 1
+fi
+RELEASE_MANIFEST_VERSION="$(read_yaml_value "$RELEASE_MANIFEST_FILE" "releaseVersion")"
+if [ -z "$RELEASE_MANIFEST_VERSION" ]; then
+	error "发布清单缺少 releaseVersion: ${RELEASE_MANIFEST_REL}"
+	exit 1
+fi
+if [ "$(normalize_version "$RELEASE_MANIFEST_VERSION")" != "$(normalize_version "$TARGET_VERSION")" ]; then
+	error "发布清单 releaseVersion 与目标版本不一致"
+	error "目标版本: $TARGET_VERSION"
+	error "发布清单: $RELEASE_MANIFEST_VERSION"
+	exit 1
+fi
 
 if [ -z "$ASSET_NAME" ] || [ -z "$EXPECTED_SHA" ]; then
 	error "版本清单缺少 ${ASSET_KEY} 或 ${SHA_KEY}"
@@ -632,9 +671,7 @@ chmod +x "$INSTALLER_BIN"
 INSTALLER_ARGS=(
 	--root-dir "$ROOT_DIR"
 	--version "$TARGET_VERSION"
-	# Installer selects first successful ref from ordered candidates.
-	--agent-image-refs "$AGENT_IMAGE_REFS"
-	--worker-image-refs "$WORKER_IMAGE_REFS"
+	--release-manifest "$RELEASE_MANIFEST_FILE"
 )
 if [ -n "$PUBLIC_URL" ]; then
 	INSTALLER_ARGS+=(--public-url "$PUBLIC_URL")

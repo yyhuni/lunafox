@@ -36,11 +36,11 @@ func TestUpdateNotifierDedupAndReset(t *testing.T) {
 	if publisher.sendCount != 1 {
 		t.Fatalf("expected first mismatch to send once, got %d", publisher.sendCount)
 	}
-	if publisher.lastPayload.Version != "v2.0.0" {
-		t.Fatalf("expected payload version v2.0.0, got %q", publisher.lastPayload.Version)
+	if publisher.lastPayload.AgentVersion != "v2.0.0" {
+		t.Fatalf("expected payload version v2.0.0, got %q", publisher.lastPayload.AgentVersion)
 	}
-	if publisher.lastPayload.ImageRef != "docker.io/acme/lunafox-agent@sha256:abc" {
-		t.Fatalf("unexpected imageRef %q", publisher.lastPayload.ImageRef)
+	if publisher.lastPayload.AgentImageRef != "docker.io/acme/lunafox-agent@sha256:abc" {
+		t.Fatalf("unexpected imageRef %q", publisher.lastPayload.AgentImageRef)
 	}
 	if publisher.lastPayload.WorkerImageRef != "docker.io/acme/lunafox-worker:v2.0.0" {
 		t.Fatalf("unexpected worker image ref %q", publisher.lastPayload.WorkerImageRef)

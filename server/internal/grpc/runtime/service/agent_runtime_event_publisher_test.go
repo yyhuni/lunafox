@@ -33,8 +33,8 @@ func TestAgentRuntimeEventPublisherPublishesTypedEvents(t *testing.T) {
 	}
 
 	delivered := publisher.SendUpdateRequired(9, agentdomain.UpdateRequiredPayload{
-		Version:        "v2.0.0",
-		ImageRef:       "registry.example.com/lunafox-agent:v2.0.0",
+		AgentVersion:   "v2.0.0",
+		AgentImageRef:  "registry.example.com/lunafox-agent:v2.0.0",
 		WorkerImageRef: "registry.example.com/lunafox-worker:v2.0.0",
 		WorkerVersion:  "2.0.0",
 	})
@@ -43,8 +43,11 @@ func TestAgentRuntimeEventPublisherPublishesTypedEvents(t *testing.T) {
 	}
 
 	updateEvent := mustReceiveRuntimeEvent(t, outbound)
-	if updateEvent.GetUpdateRequired() == nil || updateEvent.GetUpdateRequired().GetTargetVersion() != "v2.0.0" {
+	if updateEvent.GetUpdateRequired() == nil || updateEvent.GetUpdateRequired().GetAgentVersion() != "v2.0.0" {
 		t.Fatalf("unexpected update_required event: %+v", updateEvent)
+	}
+	if updateEvent.GetUpdateRequired().GetAgentImageRef() != "registry.example.com/lunafox-agent:v2.0.0" {
+		t.Fatalf("unexpected agent image ref: %q", updateEvent.GetUpdateRequired().GetAgentImageRef())
 	}
 	if updateEvent.GetUpdateRequired().GetWorkerImageRef() != "registry.example.com/lunafox-worker:v2.0.0" {
 		t.Fatalf("unexpected worker image ref: %q", updateEvent.GetUpdateRequired().GetWorkerImageRef())
@@ -63,7 +66,7 @@ func TestAgentRuntimeEventPublisherPublishesTypedEvents(t *testing.T) {
 func TestAgentRuntimeEventPublisherNoTargetReturnsFalse(t *testing.T) {
 	publisher := NewAgentRuntimeEventPublisher(NewAgentStreamRegistry())
 	delivered := publisher.SendUpdateRequired(100, agentdomain.UpdateRequiredPayload{
-		Version: "v9.9.9",
+		AgentVersion: "v9.9.9",
 	})
 	if delivered {
 		t.Fatalf("expected no delivery when agent has no active stream")
