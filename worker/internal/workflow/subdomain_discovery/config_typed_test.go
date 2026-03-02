@@ -71,11 +71,8 @@ func TestDecodeWorkflowConfigRejectsMissingRequiredStage(t *testing.T) {
 }
 
 func TestDecodeTypedWorkflowConfigRejectsUnknownFieldWithoutSchemaRuntime(t *testing.T) {
-	scanConfig := map[string]any{
-		Name: validAuthoritativeConfigMap(),
-	}
-	flow := scanConfig[Name].(map[string]any)
-	flow["unknown-top-level"] = true
+	scanConfig := validAuthoritativeConfigMap()
+	scanConfig["unknown-top-level"] = true
 
 	_, err := decodeTypedWorkflowConfig(scanConfig)
 	require.Error(t, err)

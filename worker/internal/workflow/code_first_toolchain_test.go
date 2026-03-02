@@ -57,7 +57,7 @@ func TestCodeFirstToolchain_MetadataAndCleanUseDynamicWorkflowDiscovery(t *testi
 
 	require.Contains(t, text, "for workflow_dir in internal/workflow/*/")
 	require.NotContains(t, text, "go test -v ./internal/workflow/subdomain_discovery")
-	require.NotContains(t, text, "internal/workflow/subdomain_discovery/schema_generated.json")
+	require.NotContains(t, text, "schema_generated.json")
 }
 
 func TestCodeFirstToolchain_NoPerWorkflowContractAssetsBoilerplate(t *testing.T) {

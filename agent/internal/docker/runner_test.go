@@ -1,9 +1,11 @@
 package docker
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/yyhuni/lunafox/agent/internal/domain"
+	"github.com/yyhuni/lunafox/contracts/runtimecontract"
 )
 
 func TestResolveWorkerImage(t *testing.T) {
@@ -39,7 +41,7 @@ func TestBuildWorkerEnv(t *testing.T) {
 		Config:       "config-yaml",
 	}
 
-	env := buildWorkerEnv(spec, "/run/lunafox/worker-runtime.sock", "task-token")
+	env := buildWorkerEnv(spec, "/run/lunafox/worker-runtime.sock", "task-token", "/opt/lunafox/results/task_config.yaml")
 	expected := []string{
 		"TASK_ID=0",
 		"SCAN_ID=1",
@@ -48,7 +50,7 @@ func TestBuildWorkerEnv(t *testing.T) {
 		"TARGET_TYPE=domain",
 		"WORKFLOW_NAME=subdomain_discovery",
 		"WORKSPACE_DIR=/opt/lunafox/results",
-		"CONFIG=config-yaml",
+		"CONFIG_PATH=/opt/lunafox/results/task_config.yaml",
 		"AGENT_SOCKET=/run/lunafox/worker-runtime.sock",
 		"TASK_TOKEN=task-token",
 	}
@@ -59,6 +61,39 @@ func TestBuildWorkerEnv(t *testing.T) {
 	for i, item := range expected {
 		if env[i] != item {
 			t.Fatalf("expected env[%d]=%s got %s", i, item, env[i])
+		}
+	}
+}
+
+func TestWriteTaskConfigFile(t *testing.T) {
+	dir := t.TempDir()
+	configPath, err := writeTaskConfigFile(dir, "k: v\n")
+	if err != nil {
+		t.Fatalf("write task config failed: %v", err)
+	}
+	expected := runtimecontract.BuildTaskConfigPath(dir)
+	if configPath != expected {
+		t.Fatalf("unexpected config path: %s", configPath)
+	}
+}
+
+func TestBuildWorkerEnvDoesNotEmbedRawConfigPayload(t *testing.T) {
+	spec := &domain.Task{
+		ScanID:       1,
+		TargetID:     2,
+		TargetName:   "example.com",
+		TargetType:   "domain",
+		WorkflowName: "subdomain_discovery",
+		WorkspaceDir: "/opt/lunafox/results/scan_1/task_1",
+		Config:       strings.Repeat("a", 20000),
+	}
+	env := buildWorkerEnv(spec, "/run/lunafox/worker-runtime.sock", "task-token", "/opt/lunafox/results/scan_1/task_1/task_config.yaml")
+	for _, item := range env {
+		if strings.HasPrefix(item, "CONFIG=") {
+			t.Fatalf("raw CONFIG env should not be used in worker container env")
+		}
+		if strings.Contains(item, spec.Config) {
+			t.Fatalf("sensitive/large config content must not be exposed through env vars")
 		}
 	}
 }

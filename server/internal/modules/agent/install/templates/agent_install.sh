@@ -18,24 +18,27 @@ NETWORK_NAME="${LUNAFOX_AGENT_DOCKER_NETWORK:-{{.DockerNetworkDefault}}}"
 AGENT_IMAGE_REF="{{.AgentImageRef}}"
 AGENT_VERSION="{{.AgentVersion}}"
 WORKER_IMAGE_REF="{{.WorkerImageRef}}"
+WORKER_VERSION="{{.WorkerVersion}}"
 LOCAL_AGENT_CONFIG="${LUNAFOX_AGENT_USE_LOCAL_LIMITS:-}"
 SHARED_DATA_VOLUME_BIND="{{.SharedDataVolumeBind}}"
 RUNTIME_VOLUME="lunafox_runtime"
-RUNTIME_SOCKET_PATH="/run/lunafox/worker-runtime.sock"
+SHARED_DATA_TARGET="/opt/lunafox"
+RUNTIME_MOUNT_PATH="/run/lunafox"
+RUNTIME_SOCKET_PATH="${RUNTIME_MOUNT_PATH}/worker-runtime.sock"
 
 validate_inputs() {
 	local data_volume="" data_target=""
 	IFS=':' read -r data_volume data_target _ <<<"$SHARED_DATA_VOLUME_BIND"
 	if [ -z "${data_volume:-}" ] || [ -z "${data_target:-}" ]; then
-		echo "LUNAFOX_SHARED_DATA_VOLUME_BIND must be '<named-volume>:/opt/lunafox[:mode]'" >&2
+		echo "LUNAFOX_SHARED_DATA_VOLUME_BIND must be '<named-volume>:${SHARED_DATA_TARGET}[:mode]'" >&2
 		exit 1
 	fi
 	if ! [[ "$data_volume" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]]; then
 		echo "LUNAFOX_SHARED_DATA_VOLUME_BIND source must be Docker named volume (not host path)." >&2
 		exit 1
 	fi
-	if [ "$data_target" != "/opt/lunafox" ]; then
-		echo "LUNAFOX_SHARED_DATA_VOLUME_BIND target must be /opt/lunafox" >&2
+	if [ "$data_target" != "$SHARED_DATA_TARGET" ]; then
+		echo "LUNAFOX_SHARED_DATA_VOLUME_BIND target must be ${SHARED_DATA_TARGET}" >&2
 		exit 1
 	fi
 	if ! [[ "$RUNTIME_VOLUME" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]]; then
@@ -327,13 +330,14 @@ $DOCKER_CMD run -d --restart unless-stopped --name lunafox-agent \
 	-e RUNTIME_GRPC_URL="$RUNTIME_GRPC_URL" \
 	-e API_KEY="$API_KEY" \
 	-e WORKER_IMAGE_REF="$WORKER_IMAGE_REF" \
+	-e WORKER_VERSION="$WORKER_VERSION" \
 	-e LUNAFOX_SHARED_DATA_VOLUME_BIND="$SHARED_DATA_VOLUME_BIND" \
 	-e LUNAFOX_RUNTIME_SOCKET="$RUNTIME_SOCKET_PATH" \
 	-e AGENT_VERSION="$AGENT_VERSION" \
 	-e AGENT_HOSTNAME="$HOSTNAME" \
 	-v /var/run/docker.sock:/var/run/docker.sock \
 	-v "$SHARED_DATA_VOLUME_BIND" \
-	-v "${RUNTIME_VOLUME}:/run/lunafox" \
+	-v "${RUNTIME_VOLUME}:${RUNTIME_MOUNT_PATH}" \
 	"$AGENT_IMAGE_REF" >/dev/null
 
 echo "Agent installed and running (container: lunafox-agent)"

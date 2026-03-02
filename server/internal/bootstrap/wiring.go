@@ -412,8 +412,10 @@ func wireAgentModule(
 		infra.heartbeatCache,
 		messageBus,
 		agentClock,
-		infra.serverVersion,
+		infra.agentVersion,
 		infra.agentImageRef,
+		infra.workerImageRef,
+		infra.workerVersion,
 	)
 	agentTaskSvc := agentservice.NewAgentTaskService(scanTaskRuntime)
 	lokiLogQuerySvc := agentservice.NewLokiLogQueryService(infra.lokiClient, cfg.JWT.Secret)
@@ -422,11 +424,12 @@ func wireAgentModule(
 		agentHandler: agenthandler.NewAgentHandler(
 			agentSvc,
 			agentRuntimeSvc,
-			infra.serverVersion,
+			infra.agentVersion,
 			cfg.PublicURL,
 			fmt.Sprintf("http://server:%d", cfg.Server.GRPCPort),
 			infra.agentImageRef,
 			infra.workerImageRef,
+			infra.workerVersion,
 			infra.sharedDataVolumeBind,
 			infra.heartbeatCache,
 		),

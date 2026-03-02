@@ -20,6 +20,7 @@ var (
 	Created            = shared.Created
 	NoContent          = shared.NoContent
 	Error              = shared.Error
+	ErrorWithContract  = shared.ErrorWithContract
 	ErrorWithDetails   = shared.ErrorWithDetails
 	BadRequest         = shared.BadRequest
 	Unauthorized       = shared.Unauthorized

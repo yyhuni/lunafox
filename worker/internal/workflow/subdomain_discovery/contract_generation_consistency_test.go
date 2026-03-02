@@ -23,7 +23,7 @@ type generatedSchemaVersionProp struct {
 
 func TestContractDefinitionMatchesGeneratedSchemaAndDocs(t *testing.T) {
 	definition := GetContractDefinition()
-	expectedID := fmt.Sprintf("lunafox://schemas/engines/%s/%s", definition.WorkflowName, definition.SchemaVersion)
+	expectedID := fmt.Sprintf("lunafox://schemas/engines/%s/%s/%s", definition.WorkflowName, definition.APIVersion, definition.SchemaVersion)
 
 	workerSchema := loadGeneratedSchema(
 		t,

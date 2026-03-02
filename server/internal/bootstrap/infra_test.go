@@ -25,6 +25,23 @@ func TestResolveAgentImageRef(t *testing.T) {
 	}
 }
 
+func TestResolveAgentVersion(t *testing.T) {
+	t.Setenv("AGENT_VERSION", "")
+	if _, err := resolveAgentVersion(); err == nil {
+		t.Fatalf("expected error for missing AGENT_VERSION")
+	}
+
+	t.Setenv("AGENT_VERSION", "v1.2")
+	if _, err := resolveAgentVersion(); err == nil {
+		t.Fatalf("expected error for invalid AGENT_VERSION")
+	}
+
+	t.Setenv("AGENT_VERSION", "v1.2.3")
+	if got, err := resolveAgentVersion(); err != nil || got != "1.2.3" {
+		t.Fatalf("expected normalized AGENT_VERSION, got %q, err=%v", got, err)
+	}
+}
+
 func TestResolveWorkerImageRef(t *testing.T) {
 	t.Setenv("WORKER_IMAGE_REF", "")
 	if _, err := resolveWorkerImageRef(); err == nil {
@@ -39,6 +56,37 @@ func TestResolveWorkerImageRef(t *testing.T) {
 	t.Setenv("WORKER_IMAGE_REF", "docker.io/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
 	if got, err := resolveWorkerImageRef(); err != nil || got == "" {
 		t.Fatalf("expected valid WORKER_IMAGE_REF, got %q, err=%v", got, err)
+	}
+}
+
+func TestResolveWorkerVersion(t *testing.T) {
+	t.Setenv("WORKER_VERSION", "")
+	if _, err := resolveWorkerVersion(); err == nil {
+		t.Fatalf("expected error for missing WORKER_VERSION")
+	}
+
+	t.Setenv("WORKER_VERSION", "v1.2")
+	if _, err := resolveWorkerVersion(); err == nil {
+		t.Fatalf("expected error for invalid WORKER_VERSION")
+	}
+
+	t.Setenv("WORKER_VERSION", "v1.2.3")
+	if got, err := resolveWorkerVersion(); err != nil || got != "1.2.3" {
+		t.Fatalf("expected normalized WORKER_VERSION, got %q, err=%v", got, err)
+	}
+}
+
+func TestEnsureRuntimeVersionConsistency(t *testing.T) {
+	if err := ensureRuntimeVersionConsistency("v1.2.3", "1.2.3", "1.2.3"); err != nil {
+		t.Fatalf("expected versions to be treated as consistent, got %v", err)
+	}
+
+	if err := ensureRuntimeVersionConsistency("v1.2.4", "1.2.3", "1.2.3"); err == nil {
+		t.Fatalf("expected mismatch between IMAGE_TAG and AGENT_VERSION")
+	}
+
+	if err := ensureRuntimeVersionConsistency("v1.2.3", "1.2.3", "1.2.4"); err == nil {
+		t.Fatalf("expected mismatch between AGENT_VERSION and WORKER_VERSION")
 	}
 }
 

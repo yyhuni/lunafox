@@ -23,6 +23,8 @@ func TestAgentRepositoryCreateBackfillsID(t *testing.T) {
 			hostname TEXT,
 			ip_address TEXT,
 			version TEXT,
+			worker_version TEXT,
+			supported_workflows TEXT,
 			max_tasks INTEGER,
 			cpu_threshold INTEGER,
 			mem_threshold INTEGER,

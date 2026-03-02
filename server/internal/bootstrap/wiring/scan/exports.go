@@ -54,7 +54,7 @@ func NewScanApplicationService(
 func NewScanTaskApplicationService(
 	taskStore scanapp.TaskStore,
 	runtimeStore scanapp.TaskRuntimeScanStore,
-	agentStores ...scanapp.TaskRuntimeAgentStore,
+	agentStore scanapp.TaskRuntimeAgentStore,
 ) *scanapp.ScanTaskFacade {
-	return scanapp.NewScanTaskFacade(taskStore, runtimeStore, agentStores...)
+	return scanapp.NewScanTaskFacade(taskStore, runtimeStore, agentStore)
 }

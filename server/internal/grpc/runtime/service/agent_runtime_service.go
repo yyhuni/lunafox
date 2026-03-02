@@ -132,7 +132,7 @@ func (s *AgentRuntimeService) Connect(stream grpc.BidiStreamingServer[runtimev1.
 			// Pull an available scan task from the task scheduler
 			assignment, err := s.taskRuntime.PullTask(ctx, agent.ID)
 			if err != nil {
-				return status.Error(codes.Internal, err.Error())
+				return mapTaskRuntimeError(err)
 			}
 			if err := sendRuntimeEvent(sendMutex, stream, &runtimev1.AgentRuntimeEvent{
 				Payload: &runtimev1.AgentRuntimeEvent_TaskAssign{
@@ -153,12 +153,33 @@ func (s *AgentRuntimeService) Connect(stream grpc.BidiStreamingServer[runtimev1.
 				payload.TaskStatus.Status,
 				payload.TaskStatus.Message,
 			); err != nil {
-				return status.Error(codes.Internal, err.Error())
+				return mapTaskRuntimeError(err)
 			}
 		default:
 			// Ignore unknown payload variants for forward compatibility.
 		}
 	}
+}
+
+func mapTaskRuntimeError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if workflowErr, ok := scanapp.AsWorkflowError(err); ok {
+		code := codes.Internal
+		switch workflowErr.Code {
+		case scanapp.WorkflowErrorCodeSchemaInvalid:
+			code = codes.InvalidArgument
+		case scanapp.WorkflowErrorCodeWorkflowConfigInvalid:
+			code = codes.FailedPrecondition
+		case scanapp.WorkflowErrorCodeWorkflowPrereqMissing:
+			code = codes.FailedPrecondition
+		case scanapp.WorkflowErrorCodeWorkerVersionIncompatible:
+			code = codes.FailedPrecondition
+		}
+		return status.Error(code, workflowErr.Error())
+	}
+	return status.Error(codes.Internal, err.Error())
 }
 
 // forwardOutboundEvents bridges async server-push events from registry channels

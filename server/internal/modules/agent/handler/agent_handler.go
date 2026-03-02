@@ -13,11 +13,12 @@ import (
 type AgentHandler struct {
 	facade               *agentapp.AgentFacade
 	runtimeService       *agentapp.AgentRuntimeService
-	serverVersion        string
+	agentVersion         string
 	publicURL            string
 	runtimeInternalURL   string
 	agentImageRef        string
 	workerImageRef       string
+	workerVersion        string
 	sharedDataVolumeBind string
 	heartbeatCache       cache.HeartbeatCache
 }
@@ -31,6 +32,7 @@ type installTemplateData struct {
 	LokiPushURL          string
 	AgentImageRef        string
 	WorkerImageRef       string
+	WorkerVersion        string
 	SharedDataVolumeBind string
 	AgentVersion         string
 }
@@ -41,7 +43,7 @@ var agentInstallSHTemplate = template.Must(template.New("agent_install.sh").Pars
 func NewAgentHandler(
 	facade *agentapp.AgentFacade,
 	runtimeService *agentapp.AgentRuntimeService,
-	serverVersion, publicURL, runtimeInternalURL, agentImageRef, workerImageRef, sharedDataVolumeBind string,
+	agentVersion, publicURL, runtimeInternalURL, agentImageRef, workerImageRef, workerVersion, sharedDataVolumeBind string,
 	heartbeatCache cache.HeartbeatCache,
 ) *AgentHandler {
 	runtimeInternalURL = strings.TrimSpace(runtimeInternalURL)
@@ -49,11 +51,12 @@ func NewAgentHandler(
 	return &AgentHandler{
 		facade:               facade,
 		runtimeService:       runtimeService,
-		serverVersion:        strings.TrimSpace(serverVersion),
+		agentVersion:         strings.TrimSpace(agentVersion),
 		publicURL:            strings.TrimSpace(publicURL),
 		runtimeInternalURL:   runtimeInternalURL,
 		agentImageRef:        strings.TrimSpace(agentImageRef),
 		workerImageRef:       strings.TrimSpace(workerImageRef),
+		workerVersion:        strings.TrimSpace(workerVersion),
 		sharedDataVolumeBind: strings.TrimSpace(sharedDataVolumeBind),
 		heartbeatCache:       heartbeatCache,
 	}

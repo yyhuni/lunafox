@@ -108,9 +108,7 @@ func validWorkflowConfig() map[string]any {
 }
 
 func validScanConfig() map[string]any {
-	return map[string]any{
-		Name: validWorkflowConfig(),
-	}
+	return validWorkflowConfig()
 }
 
 func validTypedWorkflowConfig(t *testing.T) WorkflowConfig {
@@ -238,19 +236,19 @@ func TestInitializeRejectsInvalidTypedWorkflowConfigValue(t *testing.T) {
 	require.Contains(t, err.Error(), "invalid typed workflow config")
 }
 
-func TestInitializeFlatConfigRejected(t *testing.T) {
+func TestInitializeFlatConfigAccepted(t *testing.T) {
 	withNopLogger(t)
 	w := New(t.TempDir())
 
-	_, err := w.initialize(&workflow.Params{
+	ctx, err := w.initialize(&workflow.Params{
 		ScanConfig:   validWorkflowConfig(),
 		TargetType:   "domain",
 		TargetName:   "example.com",
 		WorkDir:      t.TempDir(),
 		ServerClient: providerClient{},
 	})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "missing "+Name+" config")
+	require.NoError(t, err)
+	require.NotNil(t, ctx)
 }
 
 func TestInitializeProviderConfigWritten(t *testing.T) {

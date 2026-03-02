@@ -1,6 +1,7 @@
 package task
 
 import (
+	"context"
 	"math/rand"
 	"reflect"
 	"testing"
@@ -126,5 +127,49 @@ func TestNewPullerUsesFasterEmptyBackoff(t *testing.T) {
 	}
 	if !reflect.DeepEqual(p.emptyBackoff, want) {
 		t.Fatalf("unexpected empty backoff: got %v want %v", p.emptyBackoff, want)
+	}
+}
+
+type staticCollector struct{}
+
+func (staticCollector) Sample() (float64, float64, float64) { return 0, 0, 0 }
+
+type scriptedPullClient struct {
+	tasks []*domain.Task
+	errs  []error
+	idx   int
+}
+
+func (c *scriptedPullClient) PullTask(ctx context.Context) (*domain.Task, error) {
+	if c.idx >= len(c.tasks) && c.idx >= len(c.errs) {
+		return nil, nil
+	}
+	var task *domain.Task
+	var err error
+	if c.idx < len(c.tasks) {
+		task = c.tasks[c.idx]
+	}
+	if c.idx < len(c.errs) {
+		err = c.errs[c.idx]
+	}
+	c.idx++
+	return task, err
+}
+
+func TestPullerBusinessNoTaskDoesNotIncreaseErrorBackoff(t *testing.T) {
+	client := &scriptedPullClient{
+		tasks: []*domain.Task{nil, nil},
+		errs:  []error{nil, nil},
+	}
+	p := NewPuller(client, staticCollector{}, nil, 1, 100, 100, 100)
+	p.emptyBackoff = []time.Duration{time.Millisecond}
+	p.randSrc = nil
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+
+	_ = p.Run(ctx)
+	if p.errorBackoff != time.Second {
+		t.Fatalf("business no-task path should not increase error backoff, got %v", p.errorBackoff)
 	}
 }

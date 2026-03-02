@@ -3,18 +3,18 @@ package application
 import (
 	"testing"
 
-	"github.com/yyhuni/lunafox/server/internal/agentproto"
+	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 )
 
 type notifierPublisherStub struct {
 	sendCount   int
 	sendSuccess bool
-	lastPayload agentproto.UpdateRequiredPayload
+	lastPayload agentdomain.UpdateRequiredPayload
 }
 
-func (publisher *notifierPublisherStub) SendConfigUpdate(int, agentproto.ConfigUpdatePayload) {}
+func (publisher *notifierPublisherStub) SendConfigUpdate(int, agentdomain.ConfigUpdatePayload) {}
 
-func (publisher *notifierPublisherStub) SendUpdateRequired(_ int, payload agentproto.UpdateRequiredPayload) bool {
+func (publisher *notifierPublisherStub) SendUpdateRequired(_ int, payload agentdomain.UpdateRequiredPayload) bool {
 	publisher.sendCount++
 	publisher.lastPayload = payload
 	return publisher.sendSuccess
@@ -24,7 +24,13 @@ func (publisher *notifierPublisherStub) SendTaskCancel(int, int) {}
 
 func TestUpdateNotifierDedupAndReset(t *testing.T) {
 	publisher := &notifierPublisherStub{sendSuccess: true}
-	notifier := newUpdateNotifier(publisher, "v2.0.0", "docker.io/acme/lunafox-agent@sha256:abc")
+	notifier := newUpdateNotifier(
+		publisher,
+		"v2.0.0",
+		"docker.io/acme/lunafox-agent@sha256:abc",
+		"docker.io/acme/lunafox-worker:v2.0.0",
+		"9.9.9",
+	)
 
 	notifier.maybeSendUpdateRequired(1, "v1.0.0")
 	if publisher.sendCount != 1 {
@@ -35,6 +41,12 @@ func TestUpdateNotifierDedupAndReset(t *testing.T) {
 	}
 	if publisher.lastPayload.ImageRef != "docker.io/acme/lunafox-agent@sha256:abc" {
 		t.Fatalf("unexpected imageRef %q", publisher.lastPayload.ImageRef)
+	}
+	if publisher.lastPayload.WorkerImageRef != "docker.io/acme/lunafox-worker:v2.0.0" {
+		t.Fatalf("unexpected worker image ref %q", publisher.lastPayload.WorkerImageRef)
+	}
+	if publisher.lastPayload.WorkerVersion != "9.9.9" {
+		t.Fatalf("unexpected worker version %q", publisher.lastPayload.WorkerVersion)
 	}
 
 	notifier.maybeSendUpdateRequired(1, "v1.0.0")
@@ -50,6 +62,6 @@ func TestUpdateNotifierDedupAndReset(t *testing.T) {
 }
 
 func TestUpdateNotifierNoSendWhenMessageBusUnavailable(t *testing.T) {
-	notifier := newUpdateNotifier(nil, "v2.0.0", "docker.io/acme/lunafox-agent@sha256:abc")
+	notifier := newUpdateNotifier(nil, "v2.0.0", "docker.io/acme/lunafox-agent@sha256:abc", "docker.io/acme/lunafox-worker:v2.0.0", "9.9.9")
 	notifier.maybeSendUpdateRequired(1, "v1.0.0")
 }

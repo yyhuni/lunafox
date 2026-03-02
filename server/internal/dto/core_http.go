@@ -61,6 +61,8 @@ type ErrorResponse struct {
 // ErrorBody represents the error details.
 type ErrorBody struct {
 	Code    string        `json:"code"`
+	Stage   string        `json:"stage,omitempty"`
+	Field   string        `json:"field,omitempty"`
 	Message string        `json:"message,omitempty"`
 	Details []ErrorDetail `json:"details,omitempty"`
 }
@@ -108,6 +110,18 @@ func ErrorWithDetails(c *gin.Context, status int, code string, message string, d
 			Code:    code,
 			Message: message,
 			Details: details,
+		},
+	})
+}
+
+// ErrorWithContract sends an error response for standardized workflow error contract.
+func ErrorWithContract(c *gin.Context, status int, code, stage, field, message string) {
+	c.JSON(status, ErrorResponse{
+		Error: ErrorBody{
+			Code:    code,
+			Stage:   stage,
+			Field:   field,
+			Message: message,
 		},
 	})
 }

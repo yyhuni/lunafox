@@ -23,7 +23,12 @@ func TestWithJitterRange(t *testing.T) {
 
 func TestUpdateOnceDockerUnavailable(t *testing.T) {
 	updater := &Updater{}
-	payload := domain.UpdateRequiredPayload{Version: "v1.0.0", ImageRef: "yyhuni/lunafox-agent:v1.0.0"}
+	payload := domain.UpdateRequiredPayload{
+		Version:        "v1.0.0",
+		ImageRef:       "yyhuni/lunafox-agent:v1.0.0",
+		WorkerImageRef: "yyhuni/lunafox-worker:v1.0.0",
+		WorkerVersion:  "1.0.0",
+	}
 
 	err := updater.updateOnce(payload)
 	if err == nil {
@@ -34,25 +39,26 @@ func TestUpdateOnceDockerUnavailable(t *testing.T) {
 	}
 }
 
-func TestResolveWorkerImageRef(t *testing.T) {
-	t.Setenv("WORKER_IMAGE_REF", "")
-	if _, err := resolveWorkerImageRef(); err == nil {
-		t.Fatalf("expected missing WORKER_IMAGE_REF error")
+func TestResolveWorkerTargetPrefersPayload(t *testing.T) {
+	imageRef, version, err := resolveWorkerTarget(domain.UpdateRequiredPayload{
+		WorkerImageRef: "ghcr.io/acme/lunafox-worker:v2.1.0",
+		WorkerVersion:  "2.1.0",
+	})
+	if err != nil {
+		t.Fatalf("resolve worker target failed: %v", err)
 	}
-
-	t.Setenv("WORKER_IMAGE_REF", "ghcr.io/acme/lunafox-worker:v9")
-	if got, err := resolveWorkerImageRef(); err != nil || got != "ghcr.io/acme/lunafox-worker:v9" {
-		t.Fatalf("expected raw worker image ref passthrough, got %s, err: %v", got, err)
+	if imageRef != "ghcr.io/acme/lunafox-worker:v2.1.0" || version != "2.1.0" {
+		t.Fatalf("unexpected target: %s %s", imageRef, version)
 	}
+}
 
-	t.Setenv("WORKER_IMAGE_REF", "ghcr.io/acme/lunafox-worker")
-	if _, err := resolveWorkerImageRef(); err == nil {
-		t.Fatalf("expected error for worker image ref without tag or digest")
+func TestResolveWorkerTargetMissingPayloadReturnsError(t *testing.T) {
+	_, _, err := resolveWorkerTarget(domain.UpdateRequiredPayload{})
+	if err == nil {
+		t.Fatalf("expected error when worker target missing")
 	}
-
-	t.Setenv("WORKER_IMAGE_REF", "ghcr.io/acme/lunafox-worker@sha256:abc")
-	if got, err := resolveWorkerImageRef(); err != nil || got != "ghcr.io/acme/lunafox-worker@sha256:abc" {
-		t.Fatalf("expected digest worker image ref passthrough, got %s, err: %v", got, err)
+	if !strings.Contains(err.Error(), "worker image ref is required") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 

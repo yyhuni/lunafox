@@ -5,13 +5,11 @@ import (
 	"errors"
 	"io"
 	"net"
-	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
-	"github.com/yyhuni/lunafox/server/internal/agentproto"
 	grpcauth "github.com/yyhuni/lunafox/server/internal/grpc/runtime/auth"
 	agentapp "github.com/yyhuni/lunafox/server/internal/modules/agent/application"
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
@@ -201,9 +199,11 @@ func TestConnectReceivesPublishedDownlinkEvents(t *testing.T) {
 		t.Fatalf("unexpected task cancel event: %+v", cancelEvent)
 	}
 
-	delivered := publisher.SendUpdateRequired(33, agentproto.UpdateRequiredPayload{
-		Version:  "v2.1.0",
-		ImageRef: "registry.example.com/lunafox-agent:v2.1.0",
+	delivered := publisher.SendUpdateRequired(33, agentdomain.UpdateRequiredPayload{
+		Version:        "v2.1.0",
+		ImageRef:       "registry.example.com/lunafox-agent:v2.1.0",
+		WorkerImageRef: "registry.example.com/lunafox-worker:v2.1.0",
+		WorkerVersion:  "2.1.0",
 	})
 	if !delivered {
 		t.Fatalf("expected update_required event delivery")
@@ -325,8 +325,15 @@ func TestConnectMapsInternalErrors(t *testing.T) {
 			},
 		}
 		err := svc.Connect(stream)
-		if status.Code(err) != codes.FailedPrecondition {
-			t.Fatalf("expected failed precondition, got=%v", err)
+		if err != nil {
+			t.Fatalf("expected stream keepalive for workflow error, got=%v", err)
+		}
+		if len(stream.sent) != 2 {
+			t.Fatalf("expected config_update + empty task_assign, got=%d", len(stream.sent))
+		}
+		assign := stream.sent[1].GetTaskAssign()
+		if assign == nil || assign.GetFound() {
+			t.Fatalf("expected empty task assign event, got=%+v", stream.sent[1])
 		}
 	})
 
@@ -352,8 +359,15 @@ func TestConnectMapsInternalErrors(t *testing.T) {
 			},
 		}
 		err := svc.Connect(stream)
-		if status.Code(err) != codes.InvalidArgument {
-			t.Fatalf("expected invalid argument, got=%v", err)
+		if err != nil {
+			t.Fatalf("expected stream keepalive for workflow error, got=%v", err)
+		}
+		if len(stream.sent) != 2 {
+			t.Fatalf("expected config_update + empty task_assign, got=%d", len(stream.sent))
+		}
+		assign := stream.sent[1].GetTaskAssign()
+		if assign == nil || assign.GetFound() {
+			t.Fatalf("expected empty task assign event, got=%+v", stream.sent[1])
 		}
 	})
 
@@ -379,12 +393,15 @@ func TestConnectMapsInternalErrors(t *testing.T) {
 			},
 		}
 		err := svc.Connect(stream)
-		if status.Code(err) != codes.FailedPrecondition {
-			t.Fatalf("expected failed precondition, got=%v", err)
+		if err != nil {
+			t.Fatalf("expected stream keepalive for workflow error, got=%v", err)
 		}
-		msg := status.Convert(err).Message()
-		if !strings.Contains(msg, scanapp.WorkflowErrorCodeWorkflowConfigInvalid) || !strings.Contains(msg, scanapp.WorkflowErrorStageWorkerValidate) {
-			t.Fatalf("unexpected message: %s", msg)
+		if len(stream.sent) != 2 {
+			t.Fatalf("expected config_update + empty task_assign, got=%d", len(stream.sent))
+		}
+		assign := stream.sent[1].GetTaskAssign()
+		if assign == nil || assign.GetFound() {
+			t.Fatalf("expected empty task assign event, got=%+v", stream.sent[1])
 		}
 	})
 
@@ -410,12 +427,15 @@ func TestConnectMapsInternalErrors(t *testing.T) {
 			},
 		}
 		err := svc.Connect(stream)
-		if status.Code(err) != codes.FailedPrecondition {
-			t.Fatalf("expected failed precondition, got=%v", err)
+		if err != nil {
+			t.Fatalf("expected stream keepalive for workflow error, got=%v", err)
 		}
-		msg := status.Convert(err).Message()
-		if !strings.Contains(msg, scanapp.WorkflowErrorCodeWorkflowPrereqMissing) || !strings.Contains(msg, scanapp.WorkflowErrorStageWorkerPrereq) {
-			t.Fatalf("unexpected message: %s", msg)
+		if len(stream.sent) != 2 {
+			t.Fatalf("expected config_update + empty task_assign, got=%d", len(stream.sent))
+		}
+		assign := stream.sent[1].GetTaskAssign()
+		if assign == nil || assign.GetFound() {
+			t.Fatalf("expected empty task assign event, got=%+v", stream.sent[1])
 		}
 	})
 
@@ -441,12 +461,15 @@ func TestConnectMapsInternalErrors(t *testing.T) {
 			},
 		}
 		err := svc.Connect(stream)
-		if status.Code(err) != codes.InvalidArgument {
-			t.Fatalf("expected invalid argument, got=%v", err)
+		if err != nil {
+			t.Fatalf("expected stream keepalive for workflow error, got=%v", err)
 		}
-		msg := status.Convert(err).Message()
-		if !strings.Contains(msg, "apiVersion") {
-			t.Fatalf("unexpected message: %s", msg)
+		if len(stream.sent) != 2 {
+			t.Fatalf("expected config_update + empty task_assign, got=%d", len(stream.sent))
+		}
+		assign := stream.sent[1].GetTaskAssign()
+		if assign == nil || assign.GetFound() {
+			t.Fatalf("expected empty task assign event, got=%+v", stream.sent[1])
 		}
 	})
 
@@ -472,12 +495,15 @@ func TestConnectMapsInternalErrors(t *testing.T) {
 			},
 		}
 		err := svc.Connect(stream)
-		if status.Code(err) != codes.InvalidArgument {
-			t.Fatalf("expected invalid argument, got=%v", err)
+		if err != nil {
+			t.Fatalf("expected stream keepalive for workflow error, got=%v", err)
 		}
-		msg := status.Convert(err).Message()
-		if !strings.Contains(msg, "does not support this configuration version") {
-			t.Fatalf("unexpected message: %s", msg)
+		if len(stream.sent) != 2 {
+			t.Fatalf("expected config_update + empty task_assign, got=%d", len(stream.sent))
+		}
+		assign := stream.sent[1].GetTaskAssign()
+		if assign == nil || assign.GetFound() {
+			t.Fatalf("expected empty task assign event, got=%+v", stream.sent[1])
 		}
 	})
 

@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -225,7 +226,7 @@ func TestRegisterInvalidContractAPIVersionPanics(t *testing.T) {
 
 	def := validContract("bad-api")
 	def.APIVersion = "version1"
-	require.Panics(t, func() {
+	require.PanicsWithValue(t, fmt.Sprintf("workflow %q invalid contract: %v", "bad-api", "contract apiVersion must match v<major>"), func() {
 		Register(Registration{
 			Name: "bad-api",
 			Factory: func(workDir string) Workflow {
@@ -243,7 +244,7 @@ func TestRegisterInvalidContractSchemaVersionPanics(t *testing.T) {
 
 	def := validContract("bad-schema")
 	def.SchemaVersion = "1.0"
-	require.Panics(t, func() {
+	require.PanicsWithValue(t, fmt.Sprintf("workflow %q invalid contract: %v", "bad-schema", "contract schemaVersion must match MAJOR.MINOR.PATCH(+suffix)"), func() {
 		Register(Registration{
 			Name: "bad-schema",
 			Factory: func(workDir string) Workflow {

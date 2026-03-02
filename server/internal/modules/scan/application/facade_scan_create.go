@@ -13,6 +13,9 @@ func (service *ScanFacade) CreateNormal(req *CreateNormalRequest) (*QueryScan, e
 
 	scan, err := service.createService.CreateNormal(&CreateNormalInput{TargetID: req.TargetID, EngineIDs: req.EngineIDs, EngineNames: req.EngineNames, Configuration: req.Configuration})
 	if err != nil {
+		if _, ok := AsWorkflowError(err); ok {
+			return nil, err
+		}
 		if dberrors.IsRecordNotFound(err) || errors.Is(err, ErrCreateTargetNotFound) {
 			return nil, ErrTargetNotFound
 		}

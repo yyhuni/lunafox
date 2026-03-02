@@ -5,7 +5,7 @@ import (
 	"time"
 
 	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
-	"github.com/yyhuni/lunafox/server/internal/agentproto"
+	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 )
 
 func TestAgentRuntimeEventPublisherPublishesTypedEvents(t *testing.T) {
@@ -16,7 +16,7 @@ func TestAgentRuntimeEventPublisherPublishesTypedEvents(t *testing.T) {
 	publisher := NewAgentRuntimeEventPublisher(registry)
 	maxTasks := 4
 	cpuThreshold := 75
-	publisher.SendConfigUpdate(9, agentproto.ConfigUpdatePayload{
+	publisher.SendConfigUpdate(9, agentdomain.ConfigUpdatePayload{
 		MaxTasks:     &maxTasks,
 		CPUThreshold: &cpuThreshold,
 	})
@@ -32,9 +32,11 @@ func TestAgentRuntimeEventPublisherPublishesTypedEvents(t *testing.T) {
 		t.Fatalf("unexpected cpu_threshold: %d", configEvent.GetConfigUpdate().GetCpuThreshold())
 	}
 
-	delivered := publisher.SendUpdateRequired(9, agentproto.UpdateRequiredPayload{
-		Version:  "v2.0.0",
-		ImageRef: "registry.example.com/lunafox-agent:v2.0.0",
+	delivered := publisher.SendUpdateRequired(9, agentdomain.UpdateRequiredPayload{
+		Version:        "v2.0.0",
+		ImageRef:       "registry.example.com/lunafox-agent:v2.0.0",
+		WorkerImageRef: "registry.example.com/lunafox-worker:v2.0.0",
+		WorkerVersion:  "2.0.0",
 	})
 	if !delivered {
 		t.Fatalf("expected update_required delivery")
@@ -43,6 +45,12 @@ func TestAgentRuntimeEventPublisherPublishesTypedEvents(t *testing.T) {
 	updateEvent := mustReceiveRuntimeEvent(t, outbound)
 	if updateEvent.GetUpdateRequired() == nil || updateEvent.GetUpdateRequired().GetTargetVersion() != "v2.0.0" {
 		t.Fatalf("unexpected update_required event: %+v", updateEvent)
+	}
+	if updateEvent.GetUpdateRequired().GetWorkerImageRef() != "registry.example.com/lunafox-worker:v2.0.0" {
+		t.Fatalf("unexpected worker image ref: %q", updateEvent.GetUpdateRequired().GetWorkerImageRef())
+	}
+	if updateEvent.GetUpdateRequired().GetWorkerVersion() != "2.0.0" {
+		t.Fatalf("unexpected worker version: %q", updateEvent.GetUpdateRequired().GetWorkerVersion())
 	}
 
 	publisher.SendTaskCancel(9, 123)
@@ -54,7 +62,7 @@ func TestAgentRuntimeEventPublisherPublishesTypedEvents(t *testing.T) {
 
 func TestAgentRuntimeEventPublisherNoTargetReturnsFalse(t *testing.T) {
 	publisher := NewAgentRuntimeEventPublisher(NewAgentStreamRegistry())
-	delivered := publisher.SendUpdateRequired(100, agentproto.UpdateRequiredPayload{
+	delivered := publisher.SendUpdateRequired(100, agentdomain.UpdateRequiredPayload{
 		Version: "v9.9.9",
 	})
 	if delivered {

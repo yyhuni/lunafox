@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -63,24 +64,25 @@ func TestWorkflowVersionConsistency(t *testing.T) {
 				t,
 				contract.WorkflowName,
 				workerSchema.Engine,
-				"schema_generated.json x-engine should match workflow name",
+				"worker generated schema x-engine should match workflow name",
 			)
 			require.Equal(
 				t,
 				contract.SchemaVersion,
 				workerSchema.EngineVersion,
-				"schema_generated.json x-engine-version should match schema version",
+				"worker generated schema x-engine-version should match schema version",
 			)
 			expectedID := fmt.Sprintf(
-				"lunafox://schemas/engines/%s/%s",
+				"lunafox://schemas/engines/%s/%s/%s",
 				contract.WorkflowName,
+				contract.APIVersion,
 				contract.SchemaVersion,
 			)
 			require.Equal(
 				t,
 				expectedID,
 				workerSchema.ID,
-				"schema_generated.json $id should include workflow name and schema version",
+				"worker generated schema $id should include workflow name/apiVersion/schemaVersion",
 			)
 
 			serverSchemaPath := filepath.Join(
@@ -107,9 +109,40 @@ func TestWorkflowVersionConsistency(t *testing.T) {
 				t,
 				expectedID,
 				serverSchema.ID,
-				"server schema $id should include workflow name and schema version",
+				"server schema $id should include workflow name/apiVersion/schemaVersion",
 			)
 		})
+	}
+}
+
+func TestWorkflowCatalogConsistencyBetweenWorkerAndServer(t *testing.T) {
+	root := repoRoot(t)
+	workerSet := map[string]struct{}{}
+	for _, contract := range listWorkflowContracts() {
+		workerSet[strings.TrimSpace(contract.WorkflowName)] = struct{}{}
+	}
+
+	serverSet := listServerSchemaEngines(t, root)
+	require.NotEmpty(t, workerSet, "worker contracts must not be empty")
+	require.NotEmpty(t, serverSet, "server schema catalog must not be empty")
+
+	for workflowName := range workerSet {
+		_, ok := serverSet[workflowName]
+		require.Truef(
+			t,
+			ok,
+			"worker workflow %q must exist in server schema catalog",
+			workflowName,
+		)
+	}
+	for workflowName := range serverSet {
+		_, ok := workerSet[workflowName]
+		require.Truef(
+			t,
+			ok,
+			"server schema workflow %q must exist in worker registry contracts",
+			workflowName,
+		)
 	}
 }
 
@@ -142,4 +175,20 @@ func repoRoot(t *testing.T) string {
 	wd, err := os.Getwd()
 	require.NoError(t, err)
 	return filepath.Clean(filepath.Join(wd, "..", "..", ".."))
+}
+
+func listServerSchemaEngines(t *testing.T, root string) map[string]struct{} {
+	t.Helper()
+	pattern := filepath.Join(root, "server", "internal", "engineschema", "*.schema.json")
+	paths, err := filepath.Glob(pattern)
+	require.NoError(t, err)
+
+	set := map[string]struct{}{}
+	for _, path := range paths {
+		schema := loadSchemaIdentity(t, path)
+		name := strings.TrimSpace(schema.Engine)
+		require.NotEmptyf(t, name, "server schema missing x-engine: %s", path)
+		set[name] = struct{}{}
+	}
+	return set
 }

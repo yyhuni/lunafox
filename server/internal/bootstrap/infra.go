@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
+	"github.com/yyhuni/lunafox/contracts/runtimecontract"
 	"github.com/yyhuni/lunafox/server/internal/auth"
 	"github.com/yyhuni/lunafox/server/internal/cache"
 	"github.com/yyhuni/lunafox/server/internal/config"
@@ -31,8 +32,10 @@ type infra struct {
 	jwtManager           *auth.JWTManager
 	presetLoader         *preset.Loader
 	serverVersion        string
+	agentVersion         string
 	agentImageRef        string
 	workerImageRef       string
+	workerVersion        string
 	sharedDataVolumeBind string
 }
 
@@ -44,12 +47,18 @@ const (
 
 func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 	// Runtime update contract:
-	// - IMAGE_TAG is the server-side version anchor used in update_required.
+	// - IMAGE_TAG is the server build/version identifier.
+	// - AGENT_VERSION is the explicit agent semantic version target used in update_required.
 	// - AGENT_IMAGE_REF / WORKER_IMAGE_REF are immutable image targets.
+	// - WORKER_VERSION is the explicit worker semantic version target.
 	// - LUNAFOX_SHARED_DATA_VOLUME_BIND is the single source of shared volume mapping.
 	serverVersion := strings.TrimSpace(os.Getenv("IMAGE_TAG"))
 	if serverVersion == "" {
 		pkg.Fatal("IMAGE_TAG environment variable is required")
+	}
+	agentVersion, err := resolveAgentVersion()
+	if err != nil {
+		pkg.Fatal("AGENT_VERSION environment variable is invalid", zap.Error(err))
 	}
 	agentImageRef, err := resolveAgentImageRef()
 	if err != nil {
@@ -58,6 +67,13 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 	workerImageRef, err := resolveWorkerImageRef()
 	if err != nil {
 		pkg.Fatal("WORKER_IMAGE_REF environment variable is invalid", zap.Error(err))
+	}
+	workerVersion, err := resolveWorkerVersion()
+	if err != nil {
+		pkg.Fatal("WORKER_VERSION environment variable is invalid", zap.Error(err))
+	}
+	if err := ensureRuntimeVersionConsistency(serverVersion, agentVersion, workerVersion); err != nil {
+		pkg.Fatal("Runtime version contract is invalid", zap.Error(err))
 	}
 	sharedDataVolumeBind, err := resolveSharedDataVolumeBind()
 	if err != nil {
@@ -135,10 +151,23 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 		jwtManager:           jwtManager,
 		presetLoader:         presetLoader,
 		serverVersion:        serverVersion,
+		agentVersion:         agentVersion,
 		agentImageRef:        agentImageRef,
 		workerImageRef:       workerImageRef,
+		workerVersion:        workerVersion,
 		sharedDataVolumeBind: sharedDataVolumeBind,
 	}
+}
+
+func resolveAgentVersion() (string, error) {
+	version := runtimecontract.NormalizeVersion(os.Getenv("AGENT_VERSION"))
+	if version == "" {
+		return "", fmt.Errorf("AGENT_VERSION is required")
+	}
+	if !runtimecontract.IsValidSchemaVersion(version) {
+		return "", fmt.Errorf("AGENT_VERSION must match MAJOR.MINOR.PATCH(+suffix)")
+	}
+	return version, nil
 }
 
 func resolveAgentImageRef() (string, error) {
@@ -223,6 +252,34 @@ func resolveWorkerImageRef() (string, error) {
 		return "", fmt.Errorf("WORKER_IMAGE_REF must include tag or digest")
 	}
 	return imageRef, nil
+}
+
+func resolveWorkerVersion() (string, error) {
+	version := runtimecontract.NormalizeVersion(os.Getenv("WORKER_VERSION"))
+	if version == "" {
+		return "", fmt.Errorf("WORKER_VERSION is required")
+	}
+	if !runtimecontract.IsValidSchemaVersion(version) {
+		return "", fmt.Errorf("WORKER_VERSION must match MAJOR.MINOR.PATCH(+suffix)")
+	}
+	return version, nil
+}
+
+func ensureRuntimeVersionConsistency(serverVersion, agentVersion, workerVersion string) error {
+	serverVersion = runtimecontract.NormalizeVersion(serverVersion)
+	agentVersion = runtimecontract.NormalizeVersion(agentVersion)
+	workerVersion = runtimecontract.NormalizeVersion(workerVersion)
+
+	if serverVersion == "" {
+		return fmt.Errorf("IMAGE_TAG is required")
+	}
+	if serverVersion != agentVersion {
+		return fmt.Errorf("IMAGE_TAG (%s) must equal AGENT_VERSION (%s)", serverVersion, agentVersion)
+	}
+	if agentVersion != workerVersion {
+		return fmt.Errorf("AGENT_VERSION (%s) must equal WORKER_VERSION (%s)", agentVersion, workerVersion)
+	}
+	return nil
 }
 
 func resolveSharedDataVolumeBind() (string, error) {

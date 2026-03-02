@@ -1,25 +1,50 @@
-.PHONY: help generate test test-metadata clean build check-naming
+.PHONY: help generate workflow-contracts-gen-all workflow-contracts-gen-workflow workflow-contracts-ci-check test test-metadata clean build check-naming
 
 # 默认目标
 help:
 	@echo "Available targets:"
-	@echo "  make generate       - Generate workflow contracts from code-first definitions"
+	@echo "  make generate       - Generate workflow contracts (authoritative global entry)"
+	@echo "  make workflow-contracts-gen-all      - Authoritative global generation entry"
+	@echo "      optional vars: SERVER_SCHEMA_DIR, DOCS_DIR, WORKER_SCHEMA_BASE_DIR, MIRROR_SCHEMA_DIR"
+	@echo "  make workflow-contracts-gen-workflow - Incremental generation for one workflow (WORKFLOW=<name>)"
+	@echo "  make workflow-contracts-ci-check      - CI gate: regenerate and verify no diffs"
 	@echo "  make check-naming   - Check naming conventions"
 	@echo "  make test           - Run all tests"
 	@echo "  make test-metadata  - Run contract consistency tests"
 	@echo "  make clean          - Clean generated files"
 	@echo "  make build          - Build the worker binary"
 
-# 生成代码
-generate:
-	@echo "Generating workflow contracts from code-first definitions..."
-	@for workflow_dir in internal/workflow/*/; do \
-		if [ -f "$${workflow_dir}contract_definition.go" ]; then \
-			echo "Generating for $${workflow_dir}..."; \
-			go generate "./$${workflow_dir}"; \
-		fi \
-	done
-	@echo "✓ Workflow contract generation completed"
+# 权威全局生成入口
+workflow-contracts-gen-all:
+	@SERVER_SCHEMA_DIR="$(SERVER_SCHEMA_DIR)" \
+		DOCS_DIR="$(DOCS_DIR)" \
+		WORKER_SCHEMA_BASE_DIR="$(WORKER_SCHEMA_BASE_DIR)" \
+		MIRROR_SCHEMA_DIR="$(MIRROR_SCHEMA_DIR)" \
+		bash ./scripts/gen-workflow-contracts.sh
+
+# 对外统一入口（权威）
+generate: workflow-contracts-gen-all
+
+# 本地增量入口（按 workflow 直接生成）
+workflow-contracts-gen-workflow:
+	@if [ -z "$(WORKFLOW)" ]; then \
+		echo "Usage: make workflow-contracts-gen-workflow WORKFLOW=<workflow_name>"; \
+		exit 1; \
+	fi
+	@go run ./cmd/workflow-contract-gen/main.go \
+		-workflow $(WORKFLOW) \
+		-worker-schema-dir ./internal/workflow/$(WORKFLOW)/generated \
+		-server-schema-dir ../server/internal/engineschema \
+		-docs-dir ../docs/config-reference \
+		-typed-go-output ./internal/workflow/$(WORKFLOW)/config_typed_generated.go \
+		-typed-go-package $(WORKFLOW)
+
+# CI 门禁：确保生成产物是最新的
+workflow-contracts-ci-check: workflow-contracts-gen-all
+	@git diff --exit-code -- \
+		./internal/workflow \
+		../server/internal/engineschema \
+		../docs/config-reference
 
 check-naming:
 	@echo "Checking naming conventions..."
@@ -35,8 +60,13 @@ test:
 # 运行契约一致性测试
 test-metadata:
 	@echo "Running workflow contract consistency tests..."
-	@go test -v ./internal/workflow -run 'TestWorkflowVersionConsistency|TestCodeFirstToolchain_MigratedFromTemplateGenerators'
-	@go test -v ./internal/workflow/subdomain_discovery -run TestCodeFirstMigration_NoLegacyTemplateArtifacts
+	@go test -v ./internal/workflow -run 'TestWorkflowVersionConsistency|TestCodeFirstToolchain_MigratedFromTemplateGenerators|TestCodeFirstToolchain_HasAuthoritativeGlobalGenerationEntry|TestCodeFirstToolchain_MetadataAndCleanUseDynamicWorkflowDiscovery|TestCodeFirstToolchain_NoPerWorkflowContractAssetsBoilerplate|TestAllWorkflowsImportFileMatchesWorkflowDirectories'
+	@for workflow_dir in internal/workflow/*/; do \
+		if [ -f "$${workflow_dir}contract_definition.go" ]; then \
+			pkg="./$${workflow_dir%/}"; \
+			go test -v "$$pkg" -run 'TestCodeFirstMigration_NoLegacyTemplateArtifacts|TestContractDefinitionMatchesGeneratedSchemaAndDocs|TestStageMetadataDerivedFromContract|TestGeneratedTypedConfigMatchesContract'; \
+		fi \
+	done
 	@echo "✓ Contract consistency verified"
 
 # 清理生成的文件
@@ -45,9 +75,15 @@ clean:
 	@# Remove worker binary
 	@rm -f worker bin/worker
 	@# Clean generated workflow contract artifacts
-	@rm -f internal/workflow/subdomain_discovery/schema_generated.json
-	@rm -f ../server/internal/engineschema/subdomain_discovery-v1-1.0.0.schema.json
-	@rm -f ../docs/config-reference/subdomain_discovery.md
+	@for workflow_dir in internal/workflow/*/; do \
+		if [ -f "$${workflow_dir}contract_definition.go" ]; then \
+			workflow_name="$$(basename "$${workflow_dir%/}")"; \
+			rm -f "$${workflow_dir}generated/$${workflow_name}-"*.schema.json; \
+			rm -f "$${workflow_dir}config_typed_generated.go"; \
+			rm -f "../docs/config-reference/$${workflow_name}.md"; \
+			rm -f ../server/internal/engineschema/$${workflow_name}-*.schema.json; \
+		fi \
+	done
 	@echo "✓ Cleaned"
 
 # 构建

@@ -71,6 +71,8 @@ openspec/changes/*
 !openspec/changes/update-runtime-auth-hardening/**
 !openspec/changes/refactor-worker-workflow-code-first/
 !openspec/changes/refactor-worker-workflow-code-first/**
+!openspec/changes/refactor-runtime-compatibility-worker-capability/
+!openspec/changes/refactor-runtime-compatibility-worker-capability/**
 AGENTS.md
 WARP.md
 .opencode/

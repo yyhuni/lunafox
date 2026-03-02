@@ -636,6 +636,8 @@ CREATE TABLE IF NOT EXISTS agent (
     hostname        VARCHAR(255),
     ip_address      VARCHAR(45),
     version         VARCHAR(20),
+    worker_version  VARCHAR(64),
+    supported_workflows JSONB NOT NULL DEFAULT '[]'::jsonb,
 
     -- Scheduling configuration (can be dynamically modified via API)
     max_tasks       INT DEFAULT 5,
@@ -667,8 +669,9 @@ CREATE TABLE IF NOT EXISTS scan_task (
     scan_id         INT NOT NULL,
     stage           INT NOT NULL DEFAULT 0,
     workflow_name   VARCHAR(100) NOT NULL,
+    workflow_api_version VARCHAR(16),
+    workflow_schema_version VARCHAR(64),
     status          VARCHAR(20) DEFAULT 'pending',
-    version         VARCHAR(20),
 
     -- Assignment information
     agent_id        INT REFERENCES agent(id),
@@ -704,7 +707,8 @@ COMMENT ON COLUMN registration_token.expires_at IS 'Token expiration time (defau
 COMMENT ON COLUMN scan_task.stage IS 'Stage order index (shared for parallel tasks)';
 COMMENT ON COLUMN scan_task.workflow_name IS 'Workflow name (e.g. subdomain_discovery)';
 COMMENT ON COLUMN scan_task.status IS 'Task status: blocked/pending/running/completed/failed/cancelled';
-COMMENT ON COLUMN scan_task.version IS 'Worker version number reported by agent';
+COMMENT ON COLUMN scan_task.workflow_api_version IS 'Precomputed workflow API version tuple used by scheduler compatibility gate';
+COMMENT ON COLUMN scan_task.workflow_schema_version IS 'Precomputed workflow schema version tuple used by scheduler compatibility gate';
 COMMENT ON COLUMN scan_task.error_message IS 'Error message (truncated by Agent, max 4KB)';
 COMMENT ON INDEX idx_scan_task_pending_order IS 'Supports task pull queries (ordered by stage DESC to prioritize completing existing scans, created_at ASC)';
 COMMENT ON INDEX idx_scan_task_agent_id IS 'Supports querying tasks by agent';

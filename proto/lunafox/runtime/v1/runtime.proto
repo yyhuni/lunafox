@@ -35,6 +35,12 @@ message HealthStatus {
   string message = 3;
 }
 
+message WorkerWorkflowSupport {
+  string workflow = 1;
+  string api_version = 2;
+  string schema_version = 3;
+}
+
 message Heartbeat {
   double cpu_usage = 1;
   double mem_usage = 2;
@@ -44,6 +50,8 @@ message Heartbeat {
   string hostname = 6;
   int64 uptime_seconds = 7;
   HealthStatus health = 8;
+  string worker_version = 9;
+  repeated WorkerWorkflowSupport supported_workflows = 10;
 }
 
 message RequestTask {}
@@ -91,6 +99,8 @@ message ConfigUpdate {
 message UpdateRequired {
   string target_version = 1;
   string image_ref = 2;
+  string worker_image_ref = 3;
+  string worker_version = 4;
 }
 
 message GetProviderConfigRequest {

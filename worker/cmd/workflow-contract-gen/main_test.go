@@ -36,12 +36,18 @@ func TestBuildTypedGo(t *testing.T) {
 func TestResolveOutputPathsFromDirs(t *testing.T) {
 	def := workflowDefForTest()
 	opts := genOptions{
+		workerSchemaDir: "worker/internal/workflow/subdomain_discovery/generated",
 		serverSchemaDir: "server/internal/engineschema",
 		docsDir:         "docs/config-reference",
 	}
 
 	err := resolveOutputPaths(def, &opts)
 	require.NoError(t, err)
+	require.Equal(
+		t,
+		filepath.Join("worker/internal/workflow/subdomain_discovery/generated", "subdomain_discovery-v1-1.0.0.schema.json"),
+		opts.workerSchemaPath,
+	)
 	require.Equal(
 		t,
 		filepath.Join("server/internal/engineschema", "subdomain_discovery-v1-1.0.0.schema.json"),
@@ -57,7 +63,8 @@ func TestResolveOutputPathsFromDirs(t *testing.T) {
 func TestResolveOutputPathsRequiresServerPathOrDir(t *testing.T) {
 	def := workflowDefForTest()
 	opts := genOptions{
-		docsDir: "docs/config-reference",
+		workerSchemaDir: "worker/internal/workflow/subdomain_discovery/generated",
+		docsDir:         "docs/config-reference",
 	}
 
 	err := resolveOutputPaths(def, &opts)
@@ -68,6 +75,7 @@ func TestResolveOutputPathsRequiresServerPathOrDir(t *testing.T) {
 func TestResolveOutputPathsRequiresDocsPathOrDir(t *testing.T) {
 	def := workflowDefForTest()
 	opts := genOptions{
+		workerSchemaDir: "worker/internal/workflow/subdomain_discovery/generated",
 		serverSchemaDir: "server/internal/engineschema",
 	}
 

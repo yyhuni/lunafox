@@ -11,6 +11,7 @@ func TestNewAgentHandlerDoesNotFallbackRuntimeInternalURL(t *testing.T) {
 		"",
 		"docker.io/example/lunafox-agent:v1.2.3",
 		"docker.io/example/lunafox-worker:v1.2.3",
+		"1.2.3",
 		"lunafox_data:/opt/lunafox",
 		nil,
 	)

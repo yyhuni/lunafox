@@ -11,11 +11,12 @@ import (
 
 func newInstallScriptHandlerForTest(publicURL string) *AgentHandler {
 	return &AgentHandler{
-		serverVersion:        "v1.2.3",
+		agentVersion:         "v1.2.3",
 		publicURL:            publicURL,
 		runtimeInternalURL:   "http://server:9090",
 		agentImageRef:        "docker.io/example/lunafox-agent:v1.2.3",
 		workerImageRef:       "docker.io/example/lunafox-worker:v1.2.3",
+		workerVersion:        "1.2.3",
 		sharedDataVolumeBind: "lunafox_data:/opt/lunafox",
 	}
 }
@@ -80,12 +81,15 @@ func TestInstallScriptRemoteUsesPublicURL(t *testing.T) {
 	if !strings.Contains(body, `LOKI_PUSH_URL="https://public.example.com:8083/loki/api/v1/push"`) {
 		t.Fatalf("expected LOKI_PUSH_URL to be rendered as full backend-provided URL, body=%s", body)
 	}
+	if !strings.Contains(body, `WORKER_VERSION="1.2.3"`) || !strings.Contains(body, `-e WORKER_VERSION="$WORKER_VERSION"`) {
+		t.Fatalf("expected WORKER_VERSION to be declared and passed into agent container env, body=%s", body)
+	}
 }
 
-func TestInstallScriptFailsWhenServerVersionMissing(t *testing.T) {
+func TestInstallScriptFailsWhenAgentVersionMissing(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := newInstallScriptHandlerForTest("https://public.example.com:8083")
-	handler.serverVersion = ""
+	handler.agentVersion = ""
 
 	router := gin.New()
 	registerInstallScriptRoutes(router, handler)
@@ -137,6 +141,29 @@ func TestInstallScriptLocalUsesInternalRuntimeURL(t *testing.T) {
 	}
 	if !strings.Contains(body, `LOKI_PUSH_URL="https://public.example.com:8083/loki/api/v1/push"`) {
 		t.Fatalf("expected LOKI_PUSH_URL to use PUBLIC_URL host and /loki/api/v1/push path, body=%s", body)
+	}
+	if !strings.Contains(body, `WORKER_VERSION="1.2.3"`) || !strings.Contains(body, `-e WORKER_VERSION="$WORKER_VERSION"`) {
+		t.Fatalf("expected WORKER_VERSION to be declared and passed into agent container env, body=%s", body)
+	}
+}
+
+func TestInstallScriptFailsWhenWorkerVersionMissing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := newInstallScriptHandlerForTest("https://public.example.com:8083")
+	handler.workerVersion = ""
+
+	router := gin.New()
+	registerInstallScriptRoutes(router, handler)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/agent/install-script/remote?token=test-token", nil)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Fatalf("expected 500, got %d, body=%s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), "Worker version is not configured") {
+		t.Fatalf("unexpected response: %s", recorder.Body.String())
 	}
 }
 

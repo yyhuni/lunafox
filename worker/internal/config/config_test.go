@@ -1,10 +1,13 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/yyhuni/lunafox/contracts/runtimecontract"
 )
 
 func TestLoadConfigSuccess(t *testing.T) {
@@ -18,7 +21,9 @@ func TestLoadConfigSuccess(t *testing.T) {
 	t.Setenv("WORKFLOW_NAME", "subdomain_discovery")
 	t.Setenv("WORKSPACE_DIR", "/tmp/workspace")
 	t.Setenv("LOG_LEVEL", "debug")
-	t.Setenv("CONFIG", "threads: 10\nflag: true\n")
+	configPath := filepath.Join(t.TempDir(), "task_config.yaml")
+	require.NoError(t, os.WriteFile(configPath, []byte("threads: 10\nflag: true\n"), 0600))
+	t.Setenv(runtimecontract.DefaultWorkerConfigPathEnv, configPath)
 
 	cfg, err := Load()
 	require.NoError(t, err)
@@ -47,10 +52,28 @@ func TestLoadConfigInvalidYAML(t *testing.T) {
 	t.Setenv("TARGET_NAME", "example.com")
 	t.Setenv("TARGET_TYPE", "domain")
 	t.Setenv("WORKFLOW_NAME", "subdomain_discovery")
-	t.Setenv("CONFIG", "{bad")
+	configPath := filepath.Join(t.TempDir(), "task_config.yaml")
+	require.NoError(t, os.WriteFile(configPath, []byte("{bad"), 0600))
+	t.Setenv(runtimecontract.DefaultWorkerConfigPathEnv, configPath)
 
 	_, err := Load()
 	require.Error(t, err)
+}
+
+func TestLoadConfigFallbackToLegacyCONFIGEnv(t *testing.T) {
+	t.Setenv("TASK_ID", "99")
+	t.Setenv("AGENT_SOCKET", "/run/lunafox/worker-runtime.sock")
+	t.Setenv("TASK_TOKEN", "task-token")
+	t.Setenv("SCAN_ID", "10")
+	t.Setenv("TARGET_ID", "20")
+	t.Setenv("TARGET_NAME", "example.com")
+	t.Setenv("TARGET_TYPE", "domain")
+	t.Setenv("WORKFLOW_NAME", "subdomain_discovery")
+	t.Setenv("CONFIG", "threads: 2\n")
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.EqualValues(t, 2, cfg.Config["threads"])
 }
 
 func TestValidateMissingFields(t *testing.T) {
