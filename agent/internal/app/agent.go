@@ -24,6 +24,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 	configUpdater := config.NewUpdater(cfg)
 
 	version := cfg.AgentVersion
+	workerVersion := cfg.WorkerVersion
 	hostname := os.Getenv("AGENT_HOSTNAME")
 	if hostname == "" {
 		var err error
@@ -35,6 +36,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 
 	logger.Log.Info("agent starting",
 		zap.String("version", version),
+		zap.String("workerVersion", workerVersion),
 		zap.String("hostname", hostname),
 		zap.String("runtimeGrpc", cfg.RuntimeGRPCURL),
 		zap.Int("maxTasks", cfg.MaxTasks),
@@ -48,7 +50,15 @@ func Run(ctx context.Context, cfg config.Config) error {
 	collector := metrics.NewCollector()
 	healthManager := health.NewManager()
 	taskCounter := &task.Counter{}
-	heartbeat := agentruntime.NewHeartbeatSender(runtimeClient, collector, healthManager, version, hostname, taskCounter.Count)
+	heartbeat := agentruntime.NewHeartbeatSender(
+		runtimeClient,
+		collector,
+		healthManager,
+		version,
+		workerVersion,
+		hostname,
+		taskCounter.Count,
+	)
 
 	puller := task.NewPuller(runtimeClient, collector, taskCounter, cfg.MaxTasks, cfg.CPUThreshold, cfg.MemThreshold, cfg.DiskThreshold)
 

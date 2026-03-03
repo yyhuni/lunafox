@@ -129,12 +129,18 @@ jobs:
 
   prepare-github-release:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, tests-gate, build-installers]
+    needs: [validate-tag, tests-gate, build-installers, build-release-manifest]
     steps:
       - name: Download installer artifact
         uses: actions/download-artifact@v4
         with:
           name: release-installers
+          path: dist/release
+
+      - name: Download release manifest artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-manifest
           path: dist/release
 
       - name: Prepare GitHub draft release (phase 1)
@@ -151,6 +157,7 @@ jobs:
             dist/release/lunafox-installer-darwin-amd64
             dist/release/lunafox-installer-darwin-arm64
             dist/release/checksums.txt
+            dist/release/release.manifest.yaml
           fail_on_unmatched_files: true
           overwrite_files: true
 
@@ -515,15 +522,58 @@ jobs:
           path: dist/image-digests/*.env
           if-no-files-found: error
 
+  build-release-manifest:
+    runs-on: ubuntu-22.04
+    needs: [validate-tag, tests-gate, merge-staging-images]
+    if: >
+      always() &&
+      needs.validate-tag.result == 'success' &&
+      needs.tests-gate.result == 'success' &&
+      needs.merge-staging-images.result == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download image digest artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-image-digests
+          path: dist/image-digests
+
+      - name: Generate release manifest asset
+        run: |
+          set -euo pipefail
+          TAG="${{ needs.validate-tag.outputs.tag }}"
+          [ -n "$TAG" ] || { echo "missing tag"; exit 1; }
+          RELEASE_VERSION="${TAG#v}"
+          agent_dockerhub_ref="$(awk -F= '$1=="DOCKERHUB_REF"{print $2}' dist/image-digests/lunafox-agent.env | tr -d '\r')"
+          worker_dockerhub_ref="$(awk -F= '$1=="DOCKERHUB_REF"{print $2}' dist/image-digests/lunafox-worker.env | tr -d '\r')"
+          [ -n "$agent_dockerhub_ref" ] || { echo "missing agent dockerhub digest ref"; exit 1; }
+          [ -n "$worker_dockerhub_ref" ] || { echo "missing worker dockerhub digest ref"; exit 1; }
+          mkdir -p dist/release
+          RELEASE_VERSION="$RELEASE_VERSION" \
+          AGENT_IMAGE_REF="$agent_dockerhub_ref" \
+          WORKER_IMAGE_REF="$worker_dockerhub_ref" \
+          ./scripts/ci/generate-release-manifest.sh \
+            --output dist/release/release.manifest.yaml \
+            --verify-contract
+
+      - name: Upload release manifest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-manifest
+          path: dist/release/release.manifest.yaml
+          if-no-files-found: error
+
   update-release-channel:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, tests-gate, build-installers, promote-images, finalize-github-release, finalize-gitee-release]
+    needs: [validate-tag, tests-gate, build-installers, build-release-manifest, promote-images, finalize-github-release, finalize-gitee-release]
     if: >
       always() &&
       needs.validate-tag.result == 'success' &&
 
       needs.tests-gate.result == 'success' &&
       needs.build-installers.result == 'success' &&
+      needs.build-release-manifest.result == 'success' &&
       needs.promote-images.result == 'success' &&
       needs.finalize-github-release.result == 'success' &&
       needs.finalize-gitee-release.result == 'success'
@@ -540,11 +590,11 @@ jobs:
           name: release-installers
           path: dist/release
 
-      - name: Download image digest artifacts
+      - name: Download release manifest artifact
         uses: actions/download-artifact@v4
         with:
-          name: release-image-digests
-          path: dist/image-digests
+          name: release-manifest
+          path: dist/release
 
       - name: Generate channel files
         run: |
@@ -553,7 +603,7 @@ jobs:
           CHANNEL="${{ needs.validate-tag.outputs.channel }}"
           CHANNEL_DIR="$GITHUB_WORKSPACE/dist/channel"
           rm -rf "$CHANNEL_DIR"
-          mkdir -p "$CHANNEL_DIR/channels"
+          mkdir -p "$CHANNEL_DIR/channels" "$CHANNEL_DIR/manifests"
 
           CHECKSUM_FILE="dist/release/checksums.txt"
           linux_amd64_sha="$(awk '$2=="lunafox-installer-linux-amd64"{print $1}' "$CHECKSUM_FILE")"
@@ -566,23 +616,17 @@ jobs:
           [ -n "$darwin_amd64_sha" ] || { echo "missing darwin amd64 checksum"; exit 1; }
           [ -n "$darwin_arm64_sha" ] || { echo "missing darwin arm64 checksum"; exit 1; }
 
-          agent_dockerhub_ref="$(awk -F= '$1=="DOCKERHUB_REF"{print $2}' dist/image-digests/lunafox-agent.env | tr -d '\r')"
-          agent_ghcr_ref="$(awk -F= '$1=="GHCR_REF"{print $2}' dist/image-digests/lunafox-agent.env | tr -d '\r')"
-          agent_tcr_ref="$(awk -F= '$1=="TCR_REF"{print $2}' dist/image-digests/lunafox-agent.env | tr -d '\r')"
-          agent_acr_ref="$(awk -F= '$1=="ACR_REF"{print $2}' dist/image-digests/lunafox-agent.env | tr -d '\r')"
-          worker_dockerhub_ref="$(awk -F= '$1=="DOCKERHUB_REF"{print $2}' dist/image-digests/lunafox-worker.env | tr -d '\r')"
-          worker_ghcr_ref="$(awk -F= '$1=="GHCR_REF"{print $2}' dist/image-digests/lunafox-worker.env | tr -d '\r')"
-          worker_tcr_ref="$(awk -F= '$1=="TCR_REF"{print $2}' dist/image-digests/lunafox-worker.env | tr -d '\r')"
-          worker_acr_ref="$(awk -F= '$1=="ACR_REF"{print $2}' dist/image-digests/lunafox-worker.env | tr -d '\r')"
+          [ -f "dist/release/release.manifest.yaml" ] || { echo "missing release manifest artifact"; exit 1; }
+          cp "dist/release/release.manifest.yaml" "$CHANNEL_DIR/manifests/${TAG}.yaml"
 
-          for ref in \
-            "$agent_dockerhub_ref" "$agent_ghcr_ref" "$agent_tcr_ref" "$agent_acr_ref" \
-            "$worker_dockerhub_ref" "$worker_ghcr_ref" "$worker_tcr_ref" "$worker_acr_ref"; do
-            [[ "$ref" =~ ^.+@sha256:[a-f0-9]{64}$ ]] || { echo "invalid digest ref: $ref"; exit 1; }
-          done
+          if [ "$CHANNEL" = "stable" ]; then
+            cp "$CHANNEL_DIR/manifests/${TAG}.yaml" "$CHANNEL_DIR/manifests/stable.yaml"
+          elif [ "$CHANNEL" = "canary" ]; then
+            cp "$CHANNEL_DIR/manifests/${TAG}.yaml" "$CHANNEL_DIR/manifests/canary.yaml"
+          fi
 
           cat > "$CHANNEL_DIR/channels/${TAG}.env" <<EOF
-          SCHEMA_VERSION=2
+          SCHEMA_VERSION=3
           VERSION=${TAG}
           GITHUB_BASE_URL=https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}
           GITEE_BASE_URL=https://gitee.com/${GITEE_OWNER}/${GITEE_REPO}/releases/download/${TAG}
@@ -594,10 +638,7 @@ jobs:
           DARWIN_AMD64_SHA256=${darwin_amd64_sha}
           DARWIN_ARM64_ASSET=lunafox-installer-darwin-arm64
           DARWIN_ARM64_SHA256=${darwin_arm64_sha}
-          IMAGE_REGISTRY=docker.io
-          IMAGE_NAMESPACE=${DOCKERHUB_NAMESPACE}
-          AGENT_IMAGE_REFS=${agent_dockerhub_ref},${agent_ghcr_ref},${agent_tcr_ref},${agent_acr_ref}
-          WORKER_IMAGE_REFS=${worker_dockerhub_ref},${worker_ghcr_ref},${worker_tcr_ref},${worker_acr_ref}
+          RELEASE_MANIFEST=manifests/${TAG}.yaml
           EOF
 
           if [ "$CHANNEL" = "stable" ]; then
@@ -642,13 +683,15 @@ jobs:
           fi
 
           mkdir -p "$WORK_DIR/channels"
+          mkdir -p "$WORK_DIR/manifests"
           cp "$CHANNEL_DIR/channels/"*.env "$WORK_DIR/channels/"
+          cp "$CHANNEL_DIR/manifests/"*.yaml "$WORK_DIR/manifests/"
 
           (
             cd "$WORK_DIR"
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add channels/*.env
+            git add channels/*.env manifests/*.yaml
             if git diff --staged --quiet; then
               echo "release-channel unchanged"
             else
@@ -1199,7 +1242,7 @@ jobs:
 
   finalize-gitee-release:
     runs-on: ubuntu-22.04
-    needs: [validate-tag, tests-gate, build-installers, prepare-gitee-release, promote-images, verify-tcr-images, verify-acr-images]
+    needs: [validate-tag, tests-gate, build-installers, build-release-manifest, prepare-gitee-release, promote-images, verify-tcr-images, verify-acr-images]
     if: always()
     env:
       GITEE_OWNER: ${{ secrets.GITEE_OWNER }}
@@ -1221,6 +1264,7 @@ jobs:
           check_gate "validate-tag" "${{ needs.validate-tag.result }}"
           check_gate "tests-gate" "${{ needs.tests-gate.result }}"
           check_gate "build-installers" "${{ needs.build-installers.result }}"
+          check_gate "build-release-manifest" "${{ needs.build-release-manifest.result }}"
           check_gate "prepare-gitee-release" "${{ needs.prepare-gitee-release.result }}"
           check_gate "promote-images" "${{ needs.promote-images.result }}"
           check_gate "verify-tcr-images" "${{ needs.verify-tcr-images.result }}"
@@ -1238,6 +1282,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: release-installers
+          path: dist/release
+
+      - name: Download release manifest artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-manifest
           path: dist/release
 
       - name: Validate gitee secrets
@@ -1390,7 +1440,8 @@ jobs:
             exit 1
           fi
 
-          for file in dist/release/lunafox-installer-* dist/release/checksums.txt; do
+          [ -f dist/release/release.manifest.yaml ] || { echo "missing dist/release/release.manifest.yaml"; exit 1; }
+          for file in dist/release/lunafox-installer-* dist/release/checksums.txt dist/release/release.manifest.yaml; do
             name="$(basename "$file")"
             curl -fsSL \
               -X POST "${API}/releases/${RELEASE_ID}/attach_files?access_token=${GITEE_TOKEN}" \

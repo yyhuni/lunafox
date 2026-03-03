@@ -9,6 +9,7 @@ func TestLoadConfigFromEnvAndFlags(t *testing.T) {
 	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com:8443")
 	t.Setenv("API_KEY", "abc12345")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
+	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery@v1/1.0.0")
 	t.Setenv("LUNAFOX_AGENT_MAX_TASKS", "5")
 	t.Setenv("LUNAFOX_AGENT_CPU_THRESHOLD", "80")
 	t.Setenv("LUNAFOX_AGENT_MEM_THRESHOLD", "81")
@@ -27,6 +28,12 @@ func TestLoadConfigFromEnvAndFlags(t *testing.T) {
 	}
 	if cfg.WorkerVersion != "1.0.0" {
 		t.Fatalf("expected worker version parsed from image ref, got %q", cfg.WorkerVersion)
+	}
+	if len(cfg.SupportedWorkflows) != 1 {
+		t.Fatalf("expected one supported workflow, got %d", len(cfg.SupportedWorkflows))
+	}
+	if cfg.SupportedWorkflows[0].Workflow != "subdomain_discovery" {
+		t.Fatalf("unexpected workflow capability: %+v", cfg.SupportedWorkflows[0])
 	}
 
 	args := []string{
@@ -59,6 +66,7 @@ func TestLoadConfigWorkerVersionPrefersExplicitEnv(t *testing.T) {
 	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com:8443")
 	t.Setenv("API_KEY", "abc12345")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
+	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery@v1/1.0.0")
 	t.Setenv("WORKER_VERSION", "2.3.4")
 	t.Setenv("WORKER_IMAGE_REF", "ghcr.io/acme/lunafox-worker:1.0.0")
 
@@ -75,6 +83,7 @@ func TestLoadConfigMissingRequired(t *testing.T) {
 	t.Setenv("RUNTIME_GRPC_URL", "")
 	t.Setenv("API_KEY", "")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
+	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery@v1/1.0.0")
 
 	_, err := Load([]string{})
 	if err == nil {
@@ -86,6 +95,7 @@ func TestLoadConfigInvalidEnvValue(t *testing.T) {
 	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com")
 	t.Setenv("API_KEY", "abc")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
+	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery@v1/1.0.0")
 	t.Setenv("LUNAFOX_AGENT_MAX_TASKS", "nope")
 
 	_, err := Load([]string{})
@@ -98,6 +108,7 @@ func TestLoadConfigRequiresExplicitRuntimeGRPCURL(t *testing.T) {
 	t.Setenv("RUNTIME_GRPC_URL", "")
 	t.Setenv("API_KEY", "abc12345")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
+	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery@v1/1.0.0")
 
 	_, err := Load([]string{})
 	if err == nil {
@@ -113,6 +124,8 @@ func TestLoadConfigDoesNotRequireServerURL(t *testing.T) {
 	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com:8443")
 	t.Setenv("API_KEY", "abc12345")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
+	t.Setenv("WORKER_VERSION", "1.2.3")
+	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery@v1/1.0.0")
 
 	cfg, err := Load([]string{})
 	if err != nil {
@@ -120,5 +133,54 @@ func TestLoadConfigDoesNotRequireServerURL(t *testing.T) {
 	}
 	if cfg.RuntimeGRPCURL != "https://runtime.example.com:8443" {
 		t.Fatalf("expected runtime grpc url from env")
+	}
+}
+
+func TestLoadConfigRequiresWorkerVersion(t *testing.T) {
+	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com:8443")
+	t.Setenv("API_KEY", "abc12345")
+	t.Setenv("AGENT_VERSION", "v1.2.3")
+	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery@v1/1.0.0")
+	t.Setenv("WORKER_VERSION", "")
+	t.Setenv("WORKER_IMAGE_REF", "ghcr.io/acme/lunafox-worker@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+
+	_, err := Load([]string{})
+	if err == nil {
+		t.Fatalf("expected error when WORKER_VERSION is missing")
+	}
+	if !strings.Contains(err.Error(), "WORKER_VERSION environment variable is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestLoadConfigRequiresSupportedWorkflows(t *testing.T) {
+	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com:8443")
+	t.Setenv("API_KEY", "abc12345")
+	t.Setenv("AGENT_VERSION", "v1.2.3")
+	t.Setenv("WORKER_VERSION", "1.0.0")
+	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "")
+
+	_, err := Load([]string{})
+	if err == nil {
+		t.Fatalf("expected error when WORKER_SUPPORTED_WORKFLOWS is missing")
+	}
+	if !strings.Contains(err.Error(), "WORKER_SUPPORTED_WORKFLOWS environment variable is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestLoadConfigRejectsInvalidSupportedWorkflowsFormat(t *testing.T) {
+	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com:8443")
+	t.Setenv("API_KEY", "abc12345")
+	t.Setenv("AGENT_VERSION", "v1.2.3")
+	t.Setenv("WORKER_VERSION", "1.0.0")
+	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery:v1:1.0.0")
+
+	_, err := Load([]string{})
+	if err == nil {
+		t.Fatalf("expected error when WORKER_SUPPORTED_WORKFLOWS format is invalid")
+	}
+	if !strings.Contains(err.Error(), "WORKER_SUPPORTED_WORKFLOWS") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

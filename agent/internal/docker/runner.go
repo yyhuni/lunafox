@@ -11,14 +11,15 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/strslice"
 	"github.com/yyhuni/lunafox/agent/internal/domain"
+	"github.com/yyhuni/lunafox/contracts/runtimecontract"
 )
 
 const (
-	sharedDataVolumeBindEnvKey = "LUNAFOX_SHARED_DATA_VOLUME_BIND"
-	defaultSharedDataMountPath = "/opt/lunafox"
-	runtimeVolumeNameEnvKey    = "LUNAFOX_RUNTIME_VOLUME"
-	defaultRuntimeVolumeName   = "lunafox_runtime"
-	defaultRuntimeMountPath    = "/run/lunafox"
+	sharedDataVolumeBindEnvKey = runtimecontract.DefaultSharedDataBindEnv
+	defaultSharedDataMountPath = runtimecontract.SharedDataRoot
+	runtimeVolumeNameEnvKey    = runtimecontract.DefaultRuntimeVolumeEnv
+	defaultRuntimeVolumeName   = runtimecontract.DefaultRuntimeVolumeName
+	defaultRuntimeMountPath    = runtimecontract.DefaultRuntimeMountPath
 )
 
 // StartWorker starts a worker container for a task and returns the container ID.
@@ -35,6 +36,10 @@ func (c *Client) StartWorker(ctx context.Context, t *domain.Task, agentSocket, t
 	if err := os.MkdirAll(t.WorkspaceDir, 0755); err != nil {
 		return "", fmt.Errorf("prepare workspace: %w", err)
 	}
+	configPath, err := writeTaskConfigFile(t.WorkspaceDir, t.Config)
+	if err != nil {
+		return "", err
+	}
 
 	image, err := resolveWorkerImage()
 	if err != nil {
@@ -48,7 +53,7 @@ func (c *Client) StartWorker(ctx context.Context, t *domain.Task, agentSocket, t
 	if err != nil {
 		return "", err
 	}
-	env := buildWorkerEnv(t, agentSocket, taskToken)
+	env := buildWorkerEnv(t, agentSocket, taskToken, configPath)
 
 	config := &container.Config{
 		Image: image,
@@ -157,7 +162,7 @@ func isValidNamedVolumeName(value string) bool {
 	return true
 }
 
-func buildWorkerEnv(t *domain.Task, agentSocket, taskToken string) []string {
+func buildWorkerEnv(t *domain.Task, agentSocket, taskToken, configPath string) []string {
 	return []string{
 		fmt.Sprintf("TASK_ID=%d", t.ID),
 		fmt.Sprintf("SCAN_ID=%d", t.ScanID),
@@ -166,8 +171,16 @@ func buildWorkerEnv(t *domain.Task, agentSocket, taskToken string) []string {
 		fmt.Sprintf("TARGET_TYPE=%s", t.TargetType),
 		fmt.Sprintf("WORKFLOW_NAME=%s", t.WorkflowName),
 		fmt.Sprintf("WORKSPACE_DIR=%s", t.WorkspaceDir),
-		fmt.Sprintf("CONFIG=%s", t.Config),
+		fmt.Sprintf("%s=%s", runtimecontract.DefaultWorkerConfigPathEnv, strings.TrimSpace(configPath)),
 		fmt.Sprintf("AGENT_SOCKET=%s", agentSocket),
 		fmt.Sprintf("TASK_TOKEN=%s", taskToken),
 	}
+}
+
+func writeTaskConfigFile(workspaceDir, configYAML string) (string, error) {
+	path := runtimecontract.BuildTaskConfigPath(workspaceDir)
+	if err := os.WriteFile(path, []byte(configYAML), 0600); err != nil {
+		return "", fmt.Errorf("write task config file: %w", err)
+	}
+	return path, nil
 }

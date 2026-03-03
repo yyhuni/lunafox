@@ -1,6 +1,8 @@
 package domain
 
 type UpdateRequiredPayload struct {
-	Version  string `json:"version"`
-	ImageRef string `json:"imageRef"`
+	AgentVersion   string `json:"agentVersion"`
+	AgentImageRef  string `json:"agentImageRef"`
+	WorkerImageRef string `json:"workerImageRef"`
+	WorkerVersion  string `json:"workerVersion"`
 }

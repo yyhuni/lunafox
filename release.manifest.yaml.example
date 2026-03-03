@@ -1,0 +1,10 @@
+# Single source of truth for production release contract.
+# All versions MUST be semver and equal after v-prefix normalization.
+# Image refs MUST use immutable digest form.
+
+releaseVersion: "1.2.3"
+agentVersion: "1.2.3"
+workerVersion: "1.2.3"
+
+agentImageRef: "docker.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+workerImageRef: "docker.io/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"

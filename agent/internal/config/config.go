@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+
+	"github.com/yyhuni/lunafox/contracts/runtimecontract"
 )
 
 // Config represents runtime settings for the agent.
@@ -12,6 +14,7 @@ type Config struct {
 	RuntimeGRPCURL string
 	APIKey         string
 	AgentVersion   string
+	WorkerVersion  string
 	MaxTasks       int
 	CPUThreshold   int
 	MemThreshold   int
@@ -28,6 +31,12 @@ func (c *Config) Validate() error {
 	}
 	if c.AgentVersion == "" {
 		return errors.New("AGENT_VERSION environment variable is required")
+	}
+	if c.WorkerVersion == "" {
+		return errors.New("WORKER_VERSION environment variable is required")
+	}
+	if !runtimecontract.IsValidSchemaVersion(c.WorkerVersion) {
+		return errors.New("WORKER_VERSION must match MAJOR.MINOR.PATCH(+suffix)")
 	}
 	if c.MaxTasks < 1 {
 		return errors.New("max tasks must be at least 1")

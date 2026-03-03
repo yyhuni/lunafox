@@ -370,7 +370,7 @@ subdomain_discovery:
 	}
 }
 
-func TestTaskRuntimeServicePullTask_DynamicCapabilityByWorkerVersion(t *testing.T) {
+func TestTaskRuntimeServicePullTask_MissingSupportedWorkflowSnapshotFailsClosedEvenWhenVersionMatches(t *testing.T) {
 	taskStore := &taskStoreStub{
 		pulledTask: &TaskRecord{
 			ID:                    404,
@@ -406,11 +406,18 @@ subdomain_discovery:
 	service := NewTaskRuntimeServiceWithAgentStore(taskStore, runtimeStore, agentStore)
 
 	assignment, err := service.PullTask(context.Background(), 1)
-	if err != nil {
-		t.Fatalf("PullTask returned unexpected error: %v", err)
+	if assignment != nil {
+		t.Fatalf("expected no assignment when capability snapshot is missing")
 	}
-	if assignment == nil {
-		t.Fatalf("expected assignment for compatible agent version")
+	workflowErr, ok := AsWorkflowError(err)
+	if !ok {
+		t.Fatalf("expected WorkflowError, got: %v", err)
+	}
+	if workflowErr.Code != WorkflowErrorCodeWorkerVersionIncompatible {
+		t.Fatalf("unexpected code: %s", workflowErr.Code)
+	}
+	if !taskStore.failCalled || taskStore.failedTask != 404 {
+		t.Fatalf("expected task claim failed, got called=%v id=%d", taskStore.failCalled, taskStore.failedTask)
 	}
 }
 

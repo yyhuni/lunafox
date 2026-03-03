@@ -149,7 +149,8 @@ jobs:
           PORT=18983
           trap 'kill "${HTTP_PID:-}" >/dev/null 2>&1 || true; rm -rf "$TMP_DIR"' EXIT
 
-          mkdir -p "$TMP_DIR/repo/raw/branch/channels" "$TMP_DIR/repo/branch/channels" "$TMP_DIR/assets"
+          mkdir -p "$TMP_DIR/repo/raw/branch/channels" "$TMP_DIR/repo/branch/channels" \
+                   "$TMP_DIR/repo/raw/branch/manifests" "$TMP_DIR/repo/branch/manifests" "$TMP_DIR/assets"
           cat > "$TMP_DIR/assets/lunafox-installer-linux-amd64" <<'SCRIPT'
           #!/usr/bin/env bash
           exit 0
@@ -158,19 +159,19 @@ jobs:
           asset_sha="$(sha256sum "$TMP_DIR/assets/lunafox-installer-linux-amd64" | awk '{print $1}')"
 
           cat > "$TMP_DIR/repo/raw/branch/channels/stable.env" <<'EOF_STABLE'
-          SCHEMA_VERSION=2
+          SCHEMA_VERSION=3
           VERSION=v0.0.1
           EOF_STABLE
           cp "$TMP_DIR/repo/raw/branch/channels/stable.env" "$TMP_DIR/repo/branch/channels/stable.env"
 
           cat > "$TMP_DIR/repo/raw/branch/channels/githubok.env" <<'EOF_STABLE_GITHUB'
-          SCHEMA_VERSION=2
+          SCHEMA_VERSION=3
           VERSION=v0.0.3
           EOF_STABLE_GITHUB
           cp "$TMP_DIR/repo/raw/branch/channels/githubok.env" "$TMP_DIR/repo/branch/channels/githubok.env"
 
           cat > "$TMP_DIR/repo/raw/branch/channels/v0.0.1.env" <<EOF_VER
-          SCHEMA_VERSION=2
+          SCHEMA_VERSION=3
           VERSION=v0.0.1
           GITHUB_BASE_URL=http://127.0.0.1:9/assets
           GITEE_BASE_URL=http://127.0.0.1:${PORT}/assets
@@ -182,21 +183,18 @@ jobs:
           DARWIN_AMD64_SHA256=${asset_sha}
           DARWIN_ARM64_ASSET=lunafox-installer-linux-amd64
           DARWIN_ARM64_SHA256=${asset_sha}
-          IMAGE_REGISTRY=docker.io
-          IMAGE_NAMESPACE=yyhuni
-          AGENT_IMAGE_REFS=docker.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,ghcr.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-          WORKER_IMAGE_REFS=docker.io/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,ghcr.io/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,ccr.ccs.tencentyun.com/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          RELEASE_MANIFEST=manifests/v0.0.1.yaml
           EOF_VER
           cp "$TMP_DIR/repo/raw/branch/channels/v0.0.1.env" "$TMP_DIR/repo/branch/channels/v0.0.1.env"
 
           cat > "$TMP_DIR/repo/raw/branch/channels/bad.env" <<'EOF_BAD'
-          SCHEMA_VERSION=2
+          SCHEMA_VERSION=3
           VERSION=v0.0.2
           EOF_BAD
           cp "$TMP_DIR/repo/raw/branch/channels/bad.env" "$TMP_DIR/repo/branch/channels/bad.env"
 
           cat > "$TMP_DIR/repo/raw/branch/channels/v0.0.2.env" <<EOF_BAD_VER
-          SCHEMA_VERSION=2
+          SCHEMA_VERSION=3
           VERSION=v0.0.2
           GITHUB_BASE_URL=http://127.0.0.1:9/assets
           GITEE_BASE_URL=http://127.0.0.1:${PORT}/assets
@@ -208,15 +206,12 @@ jobs:
           DARWIN_AMD64_SHA256=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           DARWIN_ARM64_ASSET=lunafox-installer-linux-amd64
           DARWIN_ARM64_SHA256=cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-          IMAGE_REGISTRY=docker.io
-          IMAGE_NAMESPACE=yyhuni
-          AGENT_IMAGE_REFS=docker.io/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,ghcr.io/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-          WORKER_IMAGE_REFS=docker.io/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,ghcr.io/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,ccr.ccs.tencentyun.com/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+          RELEASE_MANIFEST=manifests/v0.0.2.yaml
           EOF_BAD_VER
           cp "$TMP_DIR/repo/raw/branch/channels/v0.0.2.env" "$TMP_DIR/repo/branch/channels/v0.0.2.env"
 
           cat > "$TMP_DIR/repo/raw/branch/channels/v0.0.3.env" <<EOF_GITHUB_OK
-          SCHEMA_VERSION=2
+          SCHEMA_VERSION=3
           VERSION=v0.0.3
           GITHUB_BASE_URL=http://127.0.0.1:${PORT}/assets
           GITEE_BASE_URL=http://127.0.0.1:9/assets
@@ -228,12 +223,36 @@ jobs:
           DARWIN_AMD64_SHA256=${asset_sha}
           DARWIN_ARM64_ASSET=lunafox-installer-linux-amd64
           DARWIN_ARM64_SHA256=${asset_sha}
-          IMAGE_REGISTRY=docker.io
-          IMAGE_NAMESPACE=yyhuni
-          AGENT_IMAGE_REFS=docker.io/yyhuni/lunafox-agent@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,ghcr.io/yyhuni/lunafox-agent@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,ccr.ccs.tencentyun.com/yyhuni/lunafox-agent@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-agent@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-          WORKER_IMAGE_REFS=docker.io/yyhuni/lunafox-worker@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff,ghcr.io/yyhuni/lunafox-worker@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff,ccr.ccs.tencentyun.com/yyhuni/lunafox-worker@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff,registry.cn-hangzhou.aliyuncs.com/yyhuni/lunafox-worker@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+          RELEASE_MANIFEST=manifests/v0.0.3.yaml
           EOF_GITHUB_OK
           cp "$TMP_DIR/repo/raw/branch/channels/v0.0.3.env" "$TMP_DIR/repo/branch/channels/v0.0.3.env"
+
+          cat > "$TMP_DIR/repo/raw/branch/manifests/v0.0.1.yaml" <<'EOF_MANIFEST_V1'
+          releaseVersion: "0.0.1"
+          agentVersion: "0.0.1"
+          workerVersion: "0.0.1"
+          agentImageRef: "docker.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          workerImageRef: "docker.io/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          EOF_MANIFEST_V1
+          cp "$TMP_DIR/repo/raw/branch/manifests/v0.0.1.yaml" "$TMP_DIR/repo/branch/manifests/v0.0.1.yaml"
+
+          cat > "$TMP_DIR/repo/raw/branch/manifests/v0.0.2.yaml" <<'EOF_MANIFEST_V2'
+          releaseVersion: "0.0.2"
+          agentVersion: "0.0.2"
+          workerVersion: "0.0.2"
+          agentImageRef: "docker.io/yyhuni/lunafox-agent@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          workerImageRef: "docker.io/yyhuni/lunafox-worker@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          EOF_MANIFEST_V2
+          cp "$TMP_DIR/repo/raw/branch/manifests/v0.0.2.yaml" "$TMP_DIR/repo/branch/manifests/v0.0.2.yaml"
+
+          cat > "$TMP_DIR/repo/raw/branch/manifests/v0.0.3.yaml" <<'EOF_MANIFEST_V3'
+          releaseVersion: "0.0.3"
+          agentVersion: "0.0.3"
+          workerVersion: "0.0.3"
+          agentImageRef: "docker.io/yyhuni/lunafox-agent@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          workerImageRef: "docker.io/yyhuni/lunafox-worker@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+          EOF_MANIFEST_V3
+          cp "$TMP_DIR/repo/raw/branch/manifests/v0.0.3.yaml" "$TMP_DIR/repo/branch/manifests/v0.0.3.yaml"
 
           python3 -m http.server "$PORT" --bind 127.0.0.1 --directory "$TMP_DIR" >/tmp/mock-http.log 2>&1 &
           HTTP_PID=$!
@@ -463,7 +482,7 @@ jobs:
         run: go test ./...
 
       - name: Verify release channel schema contract
-        run: bash ./scripts/installer/verify-channel-schema.sh ./tools/installer/testdata/channel-schema/v2.env
+        run: bash ./scripts/installer/verify-channel-schema.sh ./tools/installer/testdata/channel-schema/v3.env
 
       - name: Installer cross-compile smoke
         working-directory: tools/installer
