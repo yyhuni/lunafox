@@ -97,8 +97,8 @@ message ConfigUpdate {
 }
 
 message UpdateRequired {
-  string target_version = 1;
-  string image_ref = 2;
+  string agent_version = 1;
+  string agent_image_ref = 2;
   string worker_image_ref = 3;
   string worker_version = 4;
 }

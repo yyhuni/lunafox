@@ -257,9 +257,11 @@ export const mockScans: ScanRecord[] = [
 
 export const mockScanStatistics: ScanStatistics = {
   total: 156,
+  pending: 1,
   running: 3,
-  completed: 142,
+  completed: 139,
   failed: 11,
+  cancelled: 2,
   totalVulns: 89,
   totalSubdomains: 4823,
   totalEndpoints: 12456,

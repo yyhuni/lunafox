@@ -111,7 +111,7 @@ export function createVulnerabilityColumns({
               className={`transition-[background-color,border-color,color,box-shadow] gap-1.5 cursor-pointer hover:ring-2 hover:ring-offset-1 ${isPending
                 ? "bg-blue-500/10 text-blue-600 border-blue-500/30 hover:ring-blue-500/30 dark:text-blue-400 dark:border-blue-400/30"
                 : "bg-muted/50 text-muted-foreground border-muted-foreground/20 hover:ring-muted-foreground/30"
-              }`}
+                }`}
             >
               <button
                 type="button"
@@ -132,7 +132,7 @@ export function createVulnerabilityColumns({
               className={`transition-[background-color,border-color,color,box-shadow] gap-1.5 cursor-default ${isPending
                 ? "bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400 dark:border-blue-400/30"
                 : "bg-muted/50 text-muted-foreground border-muted-foreground/20"
-              }`}
+                }`}
             >
               {isPending ? (
                 <Circle className="h-3 w-3" />

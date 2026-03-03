@@ -794,7 +794,7 @@
       "startTime": "开始时间",
       "endTime": "结束时间",
       "duration": "耗时",
-      "status": "状态",
+      "statusLabel": "状态",
       "searchPlaceholder": "搜索目标名称...",
       "allStatus": "全部状态",
       "loadFailed": "加载扫描历史失败",
@@ -861,6 +861,10 @@
         "assetsFound": "发现资产",
         "allScanTasks": "所有扫描任务",
         "runningScans": "正在执行的扫描",
+        "pendingScans": "等待执行的扫描",
+        "completedScans": "已完成的扫描",
+        "failedScans": "失败的扫描",
+        "cancelledScans": "已取消的扫描",
         "completedScansFound": "已完成扫描发现",
         "assetTypes": "子域名 + IP + URL + 站点",
         "all": "全部"
@@ -1133,8 +1137,8 @@
       "title": "指纹管理",
       "name": "指纹名称",
       "category": "分类",
-      "import": "导入指纹",
-      "export": "导出指纹",
+      "importLabel": "导入指纹",
+      "exportLabel": "导出指纹",
       "pageDescription": "Web 指纹识别规则管理",
       "helpText": "• EHole: 红队资产识别工具，支持关键词、favicon hash 等识别方式\n• Goby: 攻击面测绘工具，包含大量 Web 应用和设备指纹\n• Wappalyzer: 浏览器扩展，可识别网站使用的技术栈\n• Fingers: HTTP 指纹库，包含详细的规则匹配\n• FingerPrintHub: Nuclei 风格指纹模板，使用 HTTP 匹配器\n• ARL: 资产侦察灯塔指纹规则，YAML 格式",
       "actions": {
@@ -2189,7 +2193,7 @@
   "vulnerabilities": {
     "title": "漏洞管理",
     "description": "查看和管理所有扫描发现的漏洞",
-    "severity": "严重程度",
+    "severityLabel": "严重程度",
     "source": "来源",
     "reviewStatus": {
       "all": "全部",

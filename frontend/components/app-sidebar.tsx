@@ -69,7 +69,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
   const normalize = (p: string) => (p !== "/" && p.endsWith("/") ? p.slice(0, -1) : p)
   const current = normalize(pathname)
-  
+
   const handleNavClick = React.useCallback(() => {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("lunafox:route-progress-start"))
@@ -324,7 +324,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        
+
         {/* System settings navigation menu */}
         <NavSystem items={documents} />
         {showDevTools && (

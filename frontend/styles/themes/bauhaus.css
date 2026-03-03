@@ -3,40 +3,55 @@
 /* Core concept: restrained elegance, cool blue-gray tones, and soft contrast */
 [data-theme="bauhaus"] {
   /* Base color - soft black and white (with cool blues) */
-  --background: oklch(0.985 0.008 260);  /* Milky white with a cool blue tint */
-  --foreground: oklch(0.145 0.02 260);   /* Ink gray with a cool blue tint */
-  
-  --card: oklch(1 0 0);                  /* #FFFFFF - pure white card */
+  --background: oklch(0.985 0.008 260);
+  /* Milky white with a cool blue tint */
+  --foreground: oklch(0.145 0.02 260);
+  /* Ink gray with a cool blue tint */
+
+  --card: oklch(1 0 0);
+  /* #FFFFFF - pure white card */
   --card-foreground: oklch(0.145 0.02 260);
-  
+
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0.02 260);
-  
-  --primary: oklch(0.205 0.02 260);      /* Dark gray with a cool blue tint */
+
+  --primary: oklch(0.205 0.02 260);
+  /* Dark gray with a cool blue tint */
   --primary-foreground: oklch(0.985 0.008 260);
-  
-  --secondary: oklch(0.965 0.01 260);    /* Light cool blue-gray */
+
+  --secondary: oklch(0.965 0.01 260);
+  /* Light cool blue-gray */
   --secondary-foreground: oklch(0.205 0.02 260);
-  
-  --muted: oklch(0.925 0.012 260);       /* Medium cool blue-gray */
-  --muted-foreground: oklch(0.52 0.02 260); /* Secondary text in cool blue */
-  
+
+  --muted: oklch(0.925 0.012 260);
+  /* Medium cool blue-gray */
+  --muted-foreground: oklch(0.52 0.02 260);
+  /* Secondary text in cool blue */
+
   --accent: oklch(0.965 0.01 260);
   --accent-foreground: oklch(0.205 0.02 260);
-  
-  --destructive: oklch(0.60 0.20 25);    /* #EF4444 - coral red */
+
+  --destructive: oklch(0.60 0.20 25);
+  /* #EF4444 - coral red */
   --destructive-foreground: oklch(0.985 0.008 260);
 
-  --border: oklch(0.90 0.012 260);       /* Cool blue border */
+  --border: oklch(0.90 0.012 260);
+  /* Cool blue border */
   --input: oklch(0.925 0.012 260);
-  --ring: oklch(0.78 0.16 75);           /* Amber highlight, aligned with accent color */
+  --ring: oklch(0.78 0.16 75);
+  /* Amber highlight, aligned with accent color */
 
   /* Chart Colors - Modern Harmonics */
-  --chart-1: oklch(0.205 0.02 260);      /* Ink gray with a cool blue tint */
-  --chart-2: oklch(0.60 0.02 260);       /* Medium gray with a cool blue tint */
-  --chart-3: oklch(0.60 0.18 260);       /* Cool blue */
-  --chart-4: oklch(0.65 0.18 25);        /* Coral orange */
-  --chart-5: oklch(0.70 0.17 160);       /* Mint green */
+  --chart-1: oklch(0.205 0.02 260);
+  /* Ink gray with a cool blue tint */
+  --chart-2: oklch(0.60 0.02 260);
+  /* Medium gray with a cool blue tint */
+  --chart-3: oklch(0.60 0.18 260);
+  /* Cool blue */
+  --chart-4: oklch(0.65 0.18 25);
+  /* Coral orange */
+  --chart-5: oklch(0.70 0.17 160);
+  /* Mint green */
 
   /* Sidebar - cool blue */
   --sidebar: oklch(0.99 0.005 260);
@@ -54,7 +69,7 @@
   --radius-md: 0rem;
   --radius-lg: 0rem;
   --radius-xl: 0rem;
-  
+
   /* Font - Monospace Numbers */
   --font-mono: "IBM Plex Mono", "JetBrains Mono", monospace;
 
@@ -84,17 +99,24 @@
   --ark-text-2: var(--muted-foreground);
   --ark-muted: var(--muted-foreground);
   --ark-accent: var(--primary);
-  --ark-active: oklch(0.60 0.18 260); /* Cool blue highlight */
-  --bauhaus-grid: oklch(0.205 0.02 260 / 0.03); /* Cool blue grid */
-  
+  --ark-active: oklch(0.60 0.18 260);
+  /* Cool blue highlight */
+  --bauhaus-grid: oklch(0.205 0.02 260 / 0.03);
+  /* Cool blue grid */
+
   /* Accent Color - Modern Amber Yellow */
-  --highlight: oklch(0.78 0.16 75);   /* #F59E0B - amber yellow */
-  
+  --highlight: oklch(0.78 0.16 75);
+  /* #F59E0B - amber yellow */
+
   /* Semantic Status Colors - Modern Harmonious Colors */
-  --success: oklch(0.65 0.18 160);    /* #10B981 - emerald green */
-  --warning: oklch(0.78 0.16 75);     /* #F59E0B - amber yellow */
-  --error: oklch(0.60 0.20 25);       /* #EF4444 - coral red */
-  --info: oklch(0.60 0.16 250);       /* #3B82F6 - sky blue */
+  --success: oklch(0.65 0.18 160);
+  /* #10B981 - emerald green */
+  --warning: oklch(0.78 0.16 75);
+  /* #F59E0B - amber yellow */
+  --error: oklch(0.60 0.20 25);
+  /* #EF4444 - coral red */
+  --info: oklch(0.60 0.16 250);
+  /* #3B82F6 - sky blue */
 }
 
 /* 
@@ -109,7 +131,8 @@
     linear-gradient(var(--bauhaus-grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--bauhaus-grid) 1px, transparent 1px);
   background-size: 40px 40px;
-  background-attachment: fixed; /* Keep the grid fixed while scrolling */
+  background-attachment: fixed;
+  /* Keep the grid fixed while scrolling */
 }
 
 /* In order for the grid to show up, make sure the main content container has a transparent background */
@@ -121,9 +144,11 @@
 [data-theme="bauhaus"] .bg-card,
 [data-theme="bauhaus"] [data-slot="card"] {
   border: 1px solid var(--border);
-  border-top: 2px solid var(--primary); /* Core feature: bold top border */
+  border-top: 2px solid var(--primary);
+  /* Core feature: bold top border */
   box-shadow: var(--shadow-2xs);
-  border-radius: 0 !important; /* Force square corners */
+  border-radius: 0 !important;
+  /* Force square corners */
   background: var(--card);
 }
 
@@ -336,7 +361,8 @@
   transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
   margin: 0 !important;
   position: relative;
-  overflow: hidden; /* Constrain pseudo-elements to avoid covering submenus */
+  overflow: hidden;
+  /* Constrain pseudo-elements to avoid covering submenus */
 }
 
 
@@ -356,11 +382,14 @@
 
 [data-theme="bauhaus"] [data-slot="sidebar-menu-button"][data-active="true"],
 [data-theme="bauhaus"] [data-sidebar="menu-button"][data-active="true"] {
-  background: transparent; /* Remove default background and use pseudo-element instead */
+  background: transparent;
+  /* Remove default background and use pseudo-element instead */
   color: var(--foreground);
-  border-left: none; /* Remove legacy left border */
+  border-left: none;
+  /* Remove legacy left border */
   font-weight: 600;
-  border-top-left-radius: 0 !important; /* Keep the left edge square */
+  border-top-left-radius: 0 !important;
+  /* Keep the left edge square */
   border-bottom-left-radius: 0 !important;
 }
 
@@ -372,26 +401,28 @@
   inset: 0;
   background: var(--secondary);
   transform: translateX(-101%);
-  opacity: 0; /* Default to fully transparent to prevent edge shadows */
+  opacity: 0;
+  /* Default to fully transparent to prevent edge shadows */
   transition: transform 0.3s cubic-bezier(0.2, 0.0, 0.2, 1), opacity 0.2s ease;
   z-index: 0;
   pointer-events: none;
 }
 
 /* Top-level menu: raise text/icon stacking context */
-[data-theme="bauhaus"] [data-slot="sidebar-menu-button"] > span,
-[data-theme="bauhaus"] [data-slot="sidebar-menu-button"] > svg:not(.ml-auto),
-[data-theme="bauhaus"] [data-sidebar="menu-button"] > span,
-[data-theme="bauhaus"] [data-sidebar="menu-button"] > svg:not(.ml-auto) {
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"]>span,
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"]>svg:not(.ml-auto),
+[data-theme="bauhaus"] [data-sidebar="menu-button"]>span,
+[data-theme="bauhaus"] [data-sidebar="menu-button"]>svg:not(.ml-auto) {
   position: relative;
   z-index: 1;
   transition: transform 0.2s ease;
 }
 
-[data-theme="bauhaus"] [data-slot="sidebar-menu-button"] > svg.ml-auto,
-[data-theme="bauhaus"] [data-sidebar="menu-button"] > svg.ml-auto {
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"]>svg.ml-auto,
+[data-theme="bauhaus"] [data-sidebar="menu-button"]>svg.ml-auto {
   position: relative;
-  z-index: 1; /* Keep the arrow above the slider */
+  z-index: 1;
+  /* Keep the arrow above the slider */
 }
 
 /* Top-level menu: hover state */
@@ -405,14 +436,15 @@
 [data-theme="bauhaus"] [data-slot="sidebar-menu-button"]:hover::before,
 [data-theme="bauhaus"] [data-sidebar="menu-button"]:hover::before {
   transform: translateX(0);
-  opacity: 1; /* Show slider */
+  opacity: 1;
+  /* Show slider */
 }
 
 /* Top-level menu: shift content right on hover */
-[data-theme="bauhaus"] [data-slot="sidebar-menu-button"]:hover > span,
-[data-theme="bauhaus"] [data-slot="sidebar-menu-button"]:hover > svg:not(.ml-auto),
-[data-theme="bauhaus"] [data-sidebar="menu-button"]:hover > span,
-[data-theme="bauhaus"] [data-sidebar="menu-button"]:hover > svg:not(.ml-auto) {
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"]:hover>span,
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"]:hover>svg:not(.ml-auto),
+[data-theme="bauhaus"] [data-sidebar="menu-button"]:hover>span,
+[data-theme="bauhaus"] [data-sidebar="menu-button"]:hover>svg:not(.ml-auto) {
   transform: translateX(4px);
 }
 
@@ -420,8 +452,10 @@
 [data-theme="bauhaus"] [data-slot="sidebar-menu-button"][data-active="true"]::before,
 [data-theme="bauhaus"] [data-sidebar="menu-button"][data-active="true"]::before {
   transform: translateX(0);
-  opacity: 1; /* Show slider */
-  background: var(--secondary); /* Keep background color consistent */
+  opacity: 1;
+  /* Show slider */
+  background: var(--secondary);
+  /* Keep background color consistent */
   /* Remove box-shadow and use ::after instead */
 }
 
@@ -429,22 +463,25 @@
 [data-theme="bauhaus"] [data-slot="sidebar-menu-button"][data-active="true"]::after,
 [data-theme="bauhaus"] [data-sidebar="menu-button"][data-active="true"]::after {
   content: "";
-  display: block !important; /* Force display */
+  display: block !important;
+  /* Force display */
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
   width: 3px;
   background: var(--highlight);
-  z-index: 2; /* Above background and content */
-  border-radius: 0; /* Keep the indicator rectangular */
+  z-index: 2;
+  /* Above background and content */
+  border-radius: 0;
+  /* Keep the indicator rectangular */
 }
 
 /* Top-level menu: keep selected content offset */
-[data-theme="bauhaus"] [data-slot="sidebar-menu-button"][data-active="true"] > span,
-[data-theme="bauhaus"] [data-slot="sidebar-menu-button"][data-active="true"] > svg:not(.ml-auto),
-[data-theme="bauhaus"] [data-sidebar="menu-button"][data-active="true"] > span,
-[data-theme="bauhaus"] [data-sidebar="menu-button"][data-active="true"] > svg:not(.ml-auto) {
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"][data-active="true"]>span,
+[data-theme="bauhaus"] [data-slot="sidebar-menu-button"][data-active="true"]>svg:not(.ml-auto),
+[data-theme="bauhaus"] [data-sidebar="menu-button"][data-active="true"]>span,
+[data-theme="bauhaus"] [data-sidebar="menu-button"][data-active="true"]>svg:not(.ml-auto) {
   transform: translateX(4px);
 }
 
@@ -454,14 +491,14 @@
   display: none;
 }
 
-[data-theme="bauhaus"] [data-collapsible="icon"] [data-slot="sidebar-menu-button"]:hover > span,
-[data-theme="bauhaus"] [data-collapsible="icon"] [data-slot="sidebar-menu-button"]:hover > svg:not(.ml-auto),
-[data-theme="bauhaus"] [data-collapsible="icon"] [data-sidebar="menu-button"]:hover > span,
-[data-theme="bauhaus"] [data-collapsible="icon"] [data-sidebar="menu-button"]:hover > svg:not(.ml-auto),
-[data-theme="bauhaus"] [data-collapsible="icon"] [data-slot="sidebar-menu-button"][data-active="true"] > span,
-[data-theme="bauhaus"] [data-collapsible="icon"] [data-slot="sidebar-menu-button"][data-active="true"] > svg:not(.ml-auto),
-[data-theme="bauhaus"] [data-collapsible="icon"] [data-sidebar="menu-button"][data-active="true"] > span,
-[data-theme="bauhaus"] [data-collapsible="icon"] [data-sidebar="menu-button"][data-active="true"] > svg:not(.ml-auto) {
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-slot="sidebar-menu-button"]:hover>span,
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-slot="sidebar-menu-button"]:hover>svg:not(.ml-auto),
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-sidebar="menu-button"]:hover>span,
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-sidebar="menu-button"]:hover>svg:not(.ml-auto),
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-slot="sidebar-menu-button"][data-active="true"]>span,
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-slot="sidebar-menu-button"][data-active="true"]>svg:not(.ml-auto),
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-sidebar="menu-button"][data-active="true"]>span,
+[data-theme="bauhaus"] [data-collapsible="icon"] [data-sidebar="menu-button"][data-active="true"]>svg:not(.ml-auto) {
   transform: none;
 }
 
@@ -479,17 +516,23 @@
 /* Submenu button */
 [data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"] {
   border-radius: 4px !important;
-  border-top-left-radius: 0 !important; /* Square left edge to keep the orange line rectangular */
-  border-bottom-left-radius: 0 !important; /* Square left edge */
+  border-top-left-radius: 0 !important;
+  /* Square left edge to keep the orange line rectangular */
+  border-bottom-left-radius: 0 !important;
+  /* Square left edge */
   color: var(--muted-foreground);
   padding-left: 36px !important;
-  font-size: 13px; /* Slightly larger font for readability */
-  border-left: none; /* Remove original left border */
+  font-size: 13px;
+  /* Slightly larger font for readability */
+  border-left: none;
+  /* Remove original left border */
   margin-left: 0 !important;
   position: relative;
-  overflow: hidden; /* Prevent slider overflow */
+  overflow: hidden;
+  /* Prevent slider overflow */
   transition: color 0.2s ease;
-  background: transparent; /* No background by default */
+  background: transparent;
+  /* No background by default */
 }
 
 /* Background slider (simulated using pseudo-elements) */
@@ -497,17 +540,22 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: var(--secondary); /* Slider color */
-  transform: translateX(-101%); /* Start just outside the left edge */
-  opacity: 0; /* Fully transparent by default */
-  transition: transform 0.3s cubic-bezier(0.2, 0.0, 0.2, 1), opacity 0.2s ease; /* Smooth easing */
-  z-index: 0; /* Render below text */
+  background: var(--secondary);
+  /* Slider color */
+  transform: translateX(-101%);
+  /* Start just outside the left edge */
+  opacity: 0;
+  /* Fully transparent by default */
+  transition: transform 0.3s cubic-bezier(0.2, 0.0, 0.2, 1), opacity 0.2s ease;
+  /* Smooth easing */
+  z-index: 0;
+  /* Render below text */
   pointer-events: none;
 }
 
 /* The text container needs to be positioned relatively to float above the background */
-[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"] > span,
-[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"] > svg {
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"]>span,
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"]>svg {
   position: relative;
   z-index: 1;
   transition: transform 0.2s ease;
@@ -516,7 +564,8 @@
 /* Hover state */
 [data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"]:hover {
   color: var(--foreground);
-  background: transparent; /* Disable default background */
+  background: transparent;
+  /* Disable default background */
 }
 
 /* Background slides in when hovering */
@@ -526,7 +575,7 @@
 }
 
 /* Shift text slightly right on hover */
-[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"]:hover > span {
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"]:hover>span {
   transform: translateX(4px);
 }
 
@@ -556,11 +605,12 @@
   width: 3px;
   background: var(--highlight);
   z-index: 2;
-  border-radius: 0; /* Keep the indicator rectangular */
+  border-radius: 0;
+  /* Keep the indicator rectangular */
 }
 
 /* Keep selected text offset (optional); the offset strengthens selection feedback. */
-[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"][data-active="true"] > span {
+[data-theme="bauhaus"] [data-slot="sidebar-menu-sub-button"][data-active="true"]>span {
   transform: translateX(4px);
 }
 
@@ -730,8 +780,15 @@
 }
 
 @keyframes bauhaus-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
 }
 
 /* 10. Card Kicker title style */
@@ -794,6 +851,44 @@
 
 @media (max-width: 1024px) {
   [data-theme="bauhaus"] .bauhaus-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 13b. Statistics card 1x6 horizontal layout (large screen) */
+[data-theme="bauhaus"] .bauhaus-stats-row-6 {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1280px) {
+  [data-theme="bauhaus"] .bauhaus-stats-row-6 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  [data-theme="bauhaus"] .bauhaus-stats-row-6 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 13c. Statistics card 1x5 horizontal layout (large screen) */
+[data-theme="bauhaus"] .bauhaus-stats-row-5 {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1280px) {
+  [data-theme="bauhaus"] .bauhaus-stats-row-5 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  [data-theme="bauhaus"] .bauhaus-stats-row-5 {
     grid-template-columns: repeat(2, 1fr);
   }
 }

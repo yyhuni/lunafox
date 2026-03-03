@@ -1,6 +1,6 @@
 import { api } from '@/lib/api-client'
-import type { 
-  GetScansParams, 
+import type {
+  GetScansParams,
   GetScansResponse,
   InitiateScanRequest,
   InitiateScanResponse,
@@ -49,7 +49,7 @@ export async function initiateScan(data: InitiateScanRequest): Promise<InitiateS
   if (!data.targetId) {
     throw new Error('targetId is required')
   }
-  
+
   const createScanRequest = {
     mode: 'normal' as const,
     targetId: data.targetId,
@@ -57,14 +57,14 @@ export async function initiateScan(data: InitiateScanRequest): Promise<InitiateS
     engineNames: data.engineNames,
     configuration: data.configuration,
   }
-  
+
   // Backend returns ScanDetailResponse (wrapped in dto.Success), convert to InitiateScanResponse
   const res = await api.post<ScanRecord>('/scans/', createScanRequest)
-  
+
   // Convert response format: ScanRecord -> InitiateScanResponse
   // Backend returns the scan record directly (via dto.Created)
   const scan = res.data
-  
+
   return {
     message: 'Scan initiated successfully',
     count: 1,
@@ -95,7 +95,7 @@ export async function quickScan(data: QuickScanRequest): Promise<QuickScanRespon
     engineNames: data.engineNames,
     configuration: data.configuration,
   }
-  
+
   const res = await api.post<QuickScanResponse>('/scans/', createScanRequest)
   return res.data
 }
@@ -133,9 +133,11 @@ export async function stopScan(id: number): Promise<{ message: string; revokedTa
  */
 export interface ScanStatistics {
   total: number
+  pending: number
   running: number
   completed: number
   failed: number
+  cancelled: number
   totalVulns: number
   totalSubdomains: number
   totalEndpoints: number
