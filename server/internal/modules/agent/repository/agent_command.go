@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
@@ -49,9 +50,10 @@ func (r *agentRepository) UpdateHeartbeat(ctx context.Context, id int, update ag
 		"updated_at":     now,
 	}
 
-	if update.Version != "" {
-		updates["version"] = update.Version
+	if update.AgentVersion != "" {
+		updates["agent_version"] = update.AgentVersion
 	}
+	updates["worker_version"] = strings.TrimSpace(update.WorkerVersion)
 	if update.Hostname != "" {
 		updates["hostname"] = update.Hostname
 	}

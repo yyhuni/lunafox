@@ -35,23 +35,18 @@ message HealthStatus {
   string message = 3;
 }
 
-message WorkerWorkflowSupport {
-  string workflow = 1;
-  string api_version = 2;
-  string schema_version = 3;
-}
-
 message Heartbeat {
   double cpu_usage = 1;
   double mem_usage = 2;
   double disk_usage = 3;
   int32 running_tasks = 4;
-  string version = 5;
+  string agent_version = 5;
   string hostname = 6;
   int64 uptime_seconds = 7;
   HealthStatus health = 8;
   string worker_version = 9;
-  repeated WorkerWorkflowSupport supported_workflows = 10;
+  reserved 10;
+  reserved "supported_workflows";
 }
 
 message RequestTask {}

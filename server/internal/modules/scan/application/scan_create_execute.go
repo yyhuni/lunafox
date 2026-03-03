@@ -26,22 +26,24 @@ func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*Creat
 
 	root, err := parseYAMLMapping([]byte(configYAML))
 	if err != nil {
-		return nil, fmt.Errorf("%w: parse yaml: %v", ErrCreateInvalidConfig, err)
+		return nil, WrapSchemaInvalid("", "failed to parse configuration YAML", err)
 	}
 	if root == nil {
-		return nil, fmt.Errorf("%w: yaml must be a mapping", ErrCreateInvalidConfig)
-	}
-
-	if len(input.EngineNames) != 1 {
-		return nil, ErrCreateInvalidEngineNames
+		return nil, WrapSchemaInvalid("", "configuration YAML must be an object", nil)
 	}
 
 	engineNames, err := normalizeEngineNames(input.EngineNames)
 	if err != nil {
 		return nil, err
 	}
-	if len(engineNames) != 1 {
+	if len(engineNames) == 0 {
 		return nil, ErrCreateInvalidEngineNames
+	}
+	if err := validateEngineIdentityConsistency(input.EngineIDs, engineNames); err != nil {
+		return nil, err
+	}
+	if err := service.validateEngineCatalogCoverage(engineNames); err != nil {
+		return nil, err
 	}
 
 	for _, engine := range engineNames {
@@ -51,9 +53,9 @@ func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*Creat
 		}
 		if err := engineschema.ValidateYAML(engine, []byte(configYAML)); err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				continue
+				return nil, WrapSchemaInvalid(engine, fmt.Sprintf("engine %s does not support this configuration version", engine), err)
 			}
-			return nil, fmt.Errorf("%w: %s: %v", ErrCreateInvalidConfig, engine, err)
+			return nil, WrapSchemaInvalid(engine, fmt.Sprintf("engine %s configuration failed schema validation", engine), err)
 		}
 	}
 
@@ -97,4 +99,24 @@ func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*Creat
 	}
 	scan.Target = &TargetRef{ID: target.ID, Name: target.Name, Type: target.Type, CreatedAt: timeutil.ToUTC(target.CreatedAt), LastScannedAt: timeutil.ToUTCPtr(target.LastScannedAt), DeletedAt: timeutil.ToUTCPtr(target.DeletedAt)}
 	return scan, nil
+}
+
+func validateEngineIdentityConsistency(engineIDs []int, engineNames []string) error {
+	if len(engineIDs) == 0 {
+		return nil
+	}
+	if len(engineIDs) != len(engineNames) {
+		return ErrCreateInvalidEngineNames
+	}
+	seen := make(map[int]struct{}, len(engineIDs))
+	for _, id := range engineIDs {
+		if id <= 0 {
+			return ErrCreateInvalidEngineNames
+		}
+		if _, exists := seen[id]; exists {
+			return ErrCreateInvalidEngineNames
+		}
+		seen[id] = struct{}{}
+	}
+	return nil
 }

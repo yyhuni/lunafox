@@ -1,6 +1,8 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
 // Agent represents a persistent agent service running on remote VPS.
 type Agent struct {
@@ -9,9 +11,10 @@ type Agent struct {
 	APIKey string `gorm:"type:varchar(8);not null;uniqueIndex" json:"api_key"`
 	Status string `gorm:"type:varchar(20);default:'offline'" json:"status"`
 
-	Hostname  string `gorm:"type:varchar(255)" json:"hostname"`
-	IPAddress string `gorm:"type:varchar(45)" json:"ip_address"`
-	Version   string `gorm:"type:varchar(20)" json:"version"`
+	Hostname      string `gorm:"type:varchar(255)" json:"hostname"`
+	IPAddress     string `gorm:"type:varchar(45)" json:"ip_address"`
+	AgentVersion  string `gorm:"column:agent_version;type:varchar(20)" json:"agent_version"`
+	WorkerVersion string `gorm:"column:worker_version;type:varchar(64)" json:"worker_version"`
 
 	MaxTasks      int `gorm:"default:5" json:"max_tasks"`
 	CPUThreshold  int `gorm:"default:85" json:"cpu_threshold"`

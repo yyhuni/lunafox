@@ -18,6 +18,7 @@ import (
 	"github.com/yyhuni/lunafox/agent/internal/config"
 	"github.com/yyhuni/lunafox/agent/internal/domain"
 	"github.com/yyhuni/lunafox/agent/internal/logger"
+	"github.com/yyhuni/lunafox/contracts/runtimecontract"
 	"go.uber.org/zap"
 )
 
@@ -38,12 +39,12 @@ type Updater struct {
 }
 
 const (
-	sharedDataVolumeBindEnvKey = "LUNAFOX_SHARED_DATA_VOLUME_BIND"
-	defaultSharedDataMountPath = "/opt/lunafox"
-	runtimeVolumeNameEnvKey    = "LUNAFOX_RUNTIME_VOLUME"
-	defaultRuntimeVolumeName   = "lunafox_runtime"
-	defaultRuntimeSocketPath   = "/run/lunafox/worker-runtime.sock"
-	defaultRuntimeMountPath    = "/run/lunafox"
+	sharedDataVolumeBindEnvKey = runtimecontract.DefaultSharedDataBindEnv
+	defaultSharedDataMountPath = runtimecontract.SharedDataRoot
+	runtimeVolumeNameEnvKey    = runtimecontract.DefaultRuntimeVolumeEnv
+	defaultRuntimeVolumeName   = runtimecontract.DefaultRuntimeVolumeName
+	defaultRuntimeSocketPath   = runtimecontract.DefaultRuntimeMountPath + "/" + runtimecontract.WorkerRuntimeSocketName
+	defaultRuntimeMountPath    = runtimecontract.DefaultRuntimeMountPath
 )
 
 type dockerClient interface {
@@ -136,8 +137,8 @@ func (u *Updater) updateOnce(payload domain.UpdateRequiredPayload) error {
 	if u.docker == nil {
 		return fmt.Errorf("docker client unavailable")
 	}
-	imageRef := strings.TrimSpace(payload.ImageRef)
-	version := strings.TrimSpace(payload.Version)
+	imageRef := strings.TrimSpace(payload.AgentImageRef)
+	version := strings.TrimSpace(payload.AgentVersion)
 	if imageRef == "" || version == "" {
 		return fmt.Errorf("invalid update payload")
 	}
@@ -154,6 +155,11 @@ func (u *Updater) updateOnce(payload domain.UpdateRequiredPayload) error {
 		return fmt.Errorf("invalid version from server: %w", err)
 	}
 
+	workerImageRef, workerVersion, err := resolveWorkerTarget(payload)
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
@@ -164,18 +170,20 @@ func (u *Updater) updateOnce(payload domain.UpdateRequiredPayload) error {
 	_, _ = io.Copy(io.Discard, reader)
 	_ = reader.Close()
 
-	if err := u.startNewContainer(ctx, imageRef, version); err != nil {
+	if err := u.startNewContainer(ctx, imageRef, version, workerImageRef, workerVersion); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (u *Updater) startNewContainer(ctx context.Context, imageRef, version string) error {
-	workerImageRef, err := resolveWorkerImageRef()
-	if err != nil {
-		return err
-	}
+func (u *Updater) startNewContainer(
+	ctx context.Context,
+	imageRef string,
+	version string,
+	workerImageRef string,
+	workerVersion string,
+) error {
 	sharedDataVolumeBind, err := resolveSharedDataVolumeBind()
 	if err != nil {
 		return err
@@ -187,13 +195,14 @@ func (u *Updater) startNewContainer(ctx context.Context, imageRef, version strin
 
 	env := []string{
 		fmt.Sprintf("RUNTIME_GRPC_URL=%s", strings.TrimSpace(u.cfg.Snapshot().RuntimeGRPCURL)),
-		fmt.Sprintf("API_KEY=%s", u.apiKey),
+		fmt.Sprintf("%s=%s", config.AgentAPIKeyEnv, u.apiKey),
 		fmt.Sprintf("LUNAFOX_AGENT_MAX_TASKS=%d", u.cfg.Snapshot().MaxTasks),
 		fmt.Sprintf("LUNAFOX_AGENT_CPU_THRESHOLD=%d", u.cfg.Snapshot().CPUThreshold),
 		fmt.Sprintf("LUNAFOX_AGENT_MEM_THRESHOLD=%d", u.cfg.Snapshot().MemThreshold),
 		fmt.Sprintf("LUNAFOX_AGENT_DISK_THRESHOLD=%d", u.cfg.Snapshot().DiskThreshold),
 		fmt.Sprintf("AGENT_VERSION=%s", version),
 		fmt.Sprintf("WORKER_IMAGE_REF=%s", workerImageRef),
+		fmt.Sprintf("WORKER_VERSION=%s", workerVersion),
 		fmt.Sprintf("%s=%s", sharedDataVolumeBindEnvKey, sharedDataVolumeBind),
 		fmt.Sprintf("LUNAFOX_RUNTIME_SOCKET=%s", defaultRuntimeSocketPath),
 	}
@@ -232,15 +241,23 @@ func (u *Updater) startNewContainer(ctx context.Context, imageRef, version strin
 	return nil
 }
 
-func resolveWorkerImageRef() (string, error) {
-	configured := strings.TrimSpace(os.Getenv("WORKER_IMAGE_REF"))
-	if configured == "" {
-		return "", fmt.Errorf("WORKER_IMAGE_REF environment variable is required")
+func resolveWorkerTarget(payload domain.UpdateRequiredPayload) (imageRef string, version string, err error) {
+	candidate := strings.TrimSpace(payload.WorkerImageRef)
+	if candidate == "" {
+		return "", "", fmt.Errorf("worker image ref is required")
 	}
-	if !hasImageTagOrDigest(configured) {
-		return "", fmt.Errorf("WORKER_IMAGE_REF must include tag or digest")
+	if err := validateImageRef(candidate); err != nil {
+		return "", "", fmt.Errorf("invalid worker image ref: %w", err)
 	}
-	return configured, nil
+	// Runtime contract: payload workerVersion must be bare SemVer, no leading v/V.
+	workerVersion := runtimecontract.NormalizeVersion(strings.TrimSpace(payload.WorkerVersion))
+	if workerVersion == "" {
+		return "", "", fmt.Errorf("worker version is required")
+	}
+	if err := validateVersion(workerVersion); err != nil {
+		return "", "", fmt.Errorf("invalid worker version: %w", err)
+	}
+	return candidate, workerVersion, nil
 }
 
 func resolveSharedDataVolumeBind() (string, error) {

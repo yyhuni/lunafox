@@ -92,7 +92,11 @@ export function VulnerabilitiesVerticalView({
             onSelectionChange={state.setSelectedVulnerabilities}
           />
 
-          <VerticalResizeHandle isResizing={isResizing} onMouseDown={startResizing} />
+          <VerticalResizeHandle
+            isResizing={isResizing}
+            onPointerDown={startResizing}
+            ariaLabel={tVuln("resizeListAndDetailPanels")}
+          />
         </div>
 
         {/* Bottom: Detail View */}

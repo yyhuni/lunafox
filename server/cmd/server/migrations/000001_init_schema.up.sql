@@ -635,9 +635,8 @@ CREATE TABLE IF NOT EXISTS agent (
     health_since    TIMESTAMPTZ,
     hostname        VARCHAR(255),
     ip_address      VARCHAR(45),
-    version         VARCHAR(20),
+    agent_version   VARCHAR(20),
     worker_version  VARCHAR(64),
-    supported_workflows JSONB NOT NULL DEFAULT '[]'::jsonb,
 
     -- Scheduling configuration (can be dynamically modified via API)
     max_tasks       INT DEFAULT 5,

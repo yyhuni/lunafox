@@ -18,8 +18,11 @@ var (
 
 type ScanTaskFacade struct{ runtimeService *TaskRuntimeService }
 
-func NewScanTaskFacade(taskStore TaskStore, runtimeStore TaskRuntimeScanStore) *ScanTaskFacade {
-	return &ScanTaskFacade{runtimeService: NewTaskRuntimeService(taskStore, runtimeStore)}
+func NewScanTaskFacade(taskStore TaskStore, runtimeStore TaskRuntimeScanStore, agentStore TaskRuntimeAgentStore) *ScanTaskFacade {
+	if agentStore == nil {
+		panic("agentStore is required")
+	}
+	return &ScanTaskFacade{runtimeService: NewTaskRuntimeServiceWithAgentStore(taskStore, runtimeStore, agentStore)}
 }
 
 func (service *ScanTaskFacade) PullTask(ctx context.Context, agentID int) (*TaskAssignment, error) {

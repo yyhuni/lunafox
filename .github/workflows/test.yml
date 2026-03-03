@@ -58,6 +58,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends shellcheck shfmt ripgrep
 
+      - name: Runtime version contract guard
+        run: |
+          set -euo pipefail
+          # Validate release manifest strict version format (no v/V prefix for
+          # release/agent/worker runtime versions).
+          bash ./scripts/ci/verify-release-contract.sh ./release.manifest.yaml ./.tmp-non-existent.env
+
       - name: Prepare pnpm cache dir
         run: mkdir -p "${PNPM_STORE_PATH}"
 

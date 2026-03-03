@@ -283,8 +283,8 @@ func TestParseVersionAndImageOptions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
-	if opts.Version != "v1.5.13" {
-		t.Fatalf("unexpected version: %s", opts.Version)
+	if opts.ReleaseVersion != "v1.5.13" {
+		t.Fatalf("unexpected release version: %s", opts.ReleaseVersion)
 	}
 	if opts.ImageRegistry != "ghcr.io" {
 		t.Fatalf("unexpected image registry: %s", opts.ImageRegistry)

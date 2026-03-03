@@ -382,8 +382,10 @@ func (c *Client) dispatchEvent(event *runtimev1.AgentRuntimeEvent) {
 		c.stateMu.RUnlock()
 		if handler != nil {
 			handler(domain.UpdateRequiredPayload{
-				Version:  payload.UpdateRequired.TargetVersion,
-				ImageRef: payload.UpdateRequired.ImageRef,
+				AgentVersion:   payload.UpdateRequired.AgentVersion,
+				AgentImageRef:  payload.UpdateRequired.AgentImageRef,
+				WorkerImageRef: payload.UpdateRequired.WorkerImageRef,
+				WorkerVersion:  payload.UpdateRequired.WorkerVersion,
 			})
 		}
 	default:

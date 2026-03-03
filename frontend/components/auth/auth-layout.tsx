@@ -126,6 +126,10 @@ export function AuthLayout({ children }: AuthLayoutProps) {
             {
               "--sidebar-width": "calc(var(--spacing) * 62)",
               "--header-height": "calc(var(--spacing) * 12)",
+              "--vuln-toolbar-h": "56px",
+              "--vuln-table-head-h": "36px",
+              "--vuln-row-h": "45px",
+              "--vuln-detail-head-h": "46px",
             } as React.CSSProperties
           }
         >

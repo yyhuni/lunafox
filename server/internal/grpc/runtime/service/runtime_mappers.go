@@ -43,13 +43,14 @@ func toRuntimeHeartbeatInput(payload *runtimev1.Heartbeat) agentapp.RuntimeMessa
 	input := agentapp.RuntimeMessageInput{
 		Type: agentapp.RuntimeMessageTypeHeartbeat,
 		Heartbeat: &agentapp.HeartbeatItem{
-			CPU:      payload.CpuUsage,
-			Mem:      payload.MemUsage,
-			Disk:     payload.DiskUsage,
-			Tasks:    int(payload.RunningTasks),
-			Version:  payload.Version,
-			Hostname: payload.Hostname,
-			Uptime:   payload.UptimeSeconds,
+			CPU:           payload.CpuUsage,
+			Mem:           payload.MemUsage,
+			Disk:          payload.DiskUsage,
+			Tasks:         int(payload.RunningTasks),
+			AgentVersion:  payload.AgentVersion,
+			WorkerVersion: payload.WorkerVersion,
+			Hostname:      payload.Hostname,
+			Uptime:        payload.UptimeSeconds,
 		},
 	}
 	if payload.Health != nil {

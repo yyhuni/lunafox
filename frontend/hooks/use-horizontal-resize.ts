@@ -1,7 +1,16 @@
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
-export function useVerticalResize(initialHeightPercentage = 40) {
-  const [height, setHeight] = useState(initialHeightPercentage)
+interface UseHorizontalResizeOptions {
+  min?: number
+  max?: number
+}
+
+export function useHorizontalResize(
+  initialWidthPercentage = 30,
+  options: UseHorizontalResizeOptions = {}
+) {
+  const { min = 20, max = 70 } = options
+  const [width, setWidth] = useState(initialWidthPercentage)
   const [isResizing, setIsResizing] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -13,16 +22,17 @@ export function useVerticalResize(initialHeightPercentage = 40) {
       if (!isResizing || !containerRef.current) return
 
       const containerRect = containerRef.current.getBoundingClientRect()
-      const newHeight = ((e.clientY - containerRect.top) / containerRect.height) * 100
-      
-      // Clamp between 20% and 80%
-      setHeight(Math.min(Math.max(newHeight, 20), 80))
+      if (containerRect.width <= 0) return
+
+      const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100
+      setWidth(Math.min(Math.max(newWidth, min), max))
     }
 
     if (isResizing) {
       window.addEventListener("pointermove", handlePointerMove)
       window.addEventListener("pointerup", stopResizing)
-      document.body.style.cursor = "row-resize"
+      window.addEventListener("pointercancel", stopResizing)
+      document.body.style.cursor = "col-resize"
       document.body.style.userSelect = "none"
     } else {
       document.body.style.cursor = ""
@@ -32,10 +42,12 @@ export function useVerticalResize(initialHeightPercentage = 40) {
     return () => {
       window.removeEventListener("pointermove", handlePointerMove)
       window.removeEventListener("pointerup", stopResizing)
+      window.removeEventListener("pointercancel", stopResizing)
       document.body.style.cursor = ""
       document.body.style.userSelect = ""
     }
-  }, [isResizing, stopResizing])
+  }, [isResizing, max, min, stopResizing])
 
-  return { height, isResizing, startResizing, containerRef }
+  return { width, isResizing, startResizing, containerRef }
 }
+

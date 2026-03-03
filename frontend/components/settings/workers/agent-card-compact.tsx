@@ -231,8 +231,8 @@ export function AgentCardCompact({
 
           <div className="space-y-0.5 text-right min-w-0">
             <span className="text-[9px] uppercase text-muted-foreground font-bold tracking-wider">Version</span>
-            <div className="font-mono text-xs truncate" title={agent.version || "-"}>
-              {agent.version || "-"}
+            <div className="font-mono text-xs truncate" title={agent.agentVersion || "-"}>
+              {agent.agentVersion || "-"}
             </div>
           </div>
         </div>

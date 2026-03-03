@@ -15,6 +15,9 @@ var (
 
 var orderedEnvKeys = []string{
 	"IMAGE_TAG",
+	"RELEASE_VERSION",
+	"AGENT_VERSION",
+	"WORKER_VERSION",
 	"IMAGE_REGISTRY",
 	"IMAGE_NAMESPACE",
 	"AGENT_IMAGE_REF",
@@ -39,6 +42,9 @@ type Data struct {
 	ImageRegistry        string
 	ImageNamespace       string
 	ImageTag             string
+	ReleaseVersion       string
+	AgentVersion         string
+	WorkerVersion        string
 	AgentImageRef        string
 	WorkerImageRef       string
 	SharedDataVolumeBind string
@@ -65,6 +71,9 @@ type MergeReport struct {
 func (data Data) toMap() map[string]string {
 	return map[string]string{
 		"IMAGE_TAG":                       data.ImageTag,
+		"RELEASE_VERSION":                 data.ReleaseVersion,
+		"AGENT_VERSION":                   data.AgentVersion,
+		"WORKER_VERSION":                  data.WorkerVersion,
 		"IMAGE_REGISTRY":                  data.ImageRegistry,
 		"IMAGE_NAMESPACE":                 data.ImageNamespace,
 		"AGENT_IMAGE_REF":                 data.AgentImageRef,

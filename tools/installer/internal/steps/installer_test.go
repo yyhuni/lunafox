@@ -30,43 +30,43 @@ func TestBuildBakeContentIncludesCaches(t *testing.T) {
 	}
 }
 
-func TestResolveVersionProdRequiresVersion(t *testing.T) {
+func TestResolveReleaseVersionProdRequiresVersion(t *testing.T) {
 	dir := t.TempDir()
 	installer := NewInstaller(cli.Options{
 		Mode:           cli.ModeProd,
-		Version:        "",
+		ReleaseVersion: "",
 		DockerDir:      filepath.Join(dir, "docker"),
 		ComposeFile:    filepath.Join(dir, "docker", "docker-compose.yml"),
 		ImageRegistry:  "docker.io",
 		ImageNamespace: "yyhuni",
 	}, nil, ui.NewPrinter(io.Discard, io.Discard))
 
-	err := installer.resolveVersion()
+	err := installer.resolveReleaseVersion()
 	if err == nil {
-		t.Fatalf("expected resolveVersion to fail without explicit version")
+		t.Fatalf("expected resolveReleaseVersion to fail without explicit version")
 	}
 }
 
-func TestResolveVersionProdUsesExplicitVersion(t *testing.T) {
+func TestResolveReleaseVersionProdUsesExplicitVersion(t *testing.T) {
 	installer := NewInstaller(cli.Options{
 		Mode:           cli.ModeProd,
-		Version:        "v1.2.3",
+		ReleaseVersion: "v1.2.3",
 		ImageRegistry:  "docker.io",
 		ImageNamespace: "yyhuni",
 	}, nil, ui.NewPrinter(io.Discard, io.Discard))
 
-	if err := installer.resolveVersion(); err != nil {
-		t.Fatalf("resolveVersion failed: %v", err)
+	if err := installer.resolveReleaseVersion(); err != nil {
+		t.Fatalf("resolveReleaseVersion failed: %v", err)
 	}
-	if installer.version != "v1.2.3" {
-		t.Fatalf("unexpected version: %s", installer.version)
+	if installer.releaseVersion != "v1.2.3" {
+		t.Fatalf("unexpected release version: %s", installer.releaseVersion)
 	}
 }
 
-func TestResolveVersionProdUsesReleaseManifestVersion(t *testing.T) {
+func TestResolveReleaseVersionProdUsesReleaseManifestVersion(t *testing.T) {
 	installer := NewInstaller(cli.Options{
 		Mode:           cli.ModeProd,
-		Version:        "",
+		ReleaseVersion: "",
 		ImageRegistry:  "docker.io",
 		ImageNamespace: "yyhuni",
 	}, nil, ui.NewPrinter(io.Discard, io.Discard))
@@ -74,11 +74,11 @@ func TestResolveVersionProdUsesReleaseManifestVersion(t *testing.T) {
 		ReleaseVersion: "1.2.3",
 	}
 
-	if err := installer.resolveVersion(); err != nil {
-		t.Fatalf("resolveVersion failed: %v", err)
+	if err := installer.resolveReleaseVersion(); err != nil {
+		t.Fatalf("resolveReleaseVersion failed: %v", err)
 	}
-	if installer.version != "1.2.3" {
-		t.Fatalf("unexpected version: %s", installer.version)
+	if installer.releaseVersion != "1.2.3" {
+		t.Fatalf("unexpected release version: %s", installer.releaseVersion)
 	}
 }
 
@@ -103,8 +103,8 @@ workerImageRef: docker.io/yyhuni/lunafox-worker@sha256:bbbbbbbbbbbbbbbbbbbbbbbbb
 	if err := installer.loadReleaseManifest(); err != nil {
 		t.Fatalf("loadReleaseManifest failed: %v", err)
 	}
-	if installer.options.Version != "1.2.3" {
-		t.Fatalf("unexpected injected version: %s", installer.options.Version)
+	if installer.options.ReleaseVersion != "1.2.3" {
+		t.Fatalf("unexpected injected release version: %s", installer.options.ReleaseVersion)
 	}
 	if installer.options.AgentImageRef == "" || installer.options.WorkerImageRef == "" {
 		t.Fatalf("expected injected image refs")

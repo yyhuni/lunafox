@@ -40,10 +40,15 @@ type cacheStub struct {
 	setCalled bool
 	setErr    error
 	deleted   bool
+	lastSet   *cache.HeartbeatData
 }
 
-func (cacheStore *cacheStub) Set(_ context.Context, _ int, _ *cache.HeartbeatData) error {
+func (cacheStore *cacheStub) Set(_ context.Context, _ int, data *cache.HeartbeatData) error {
 	cacheStore.setCalled = true
+	if data != nil {
+		copied := *data
+		cacheStore.lastSet = &copied
+	}
 	return cacheStore.setErr
 }
 func (cacheStore *cacheStub) Get(_ context.Context, _ int) (*cache.HeartbeatData, error) {
@@ -89,21 +94,14 @@ func TestAgentRuntimeServiceHeartbeatAndUpdateRequired(t *testing.T) {
 	message := RuntimeMessageInput{
 		Type: RuntimeMessageTypeHeartbeat,
 		Heartbeat: &HeartbeatItem{
-			Version:       "1.0.0",
+			AgentVersion:  "1.0.0",
 			WorkerVersion: "1.0.0",
-			SupportedWorkflows: []WorkerWorkflowSupportItem{
-				{
-					Workflow:      "subdomain_discovery",
-					APIVersion:    "v1",
-					SchemaVersion: "1.0.0",
-				},
-			},
-			Hostname: "node1",
-			CPU:      1,
-			Mem:      2,
-			Disk:     3,
-			Tasks:    1,
-			Uptime:   10,
+			Hostname:      "node1",
+			CPU:           1,
+			Mem:           2,
+			Disk:          3,
+			Tasks:         1,
+			Uptime:        10,
 		},
 	}
 
@@ -114,14 +112,17 @@ func TestAgentRuntimeServiceHeartbeatAndUpdateRequired(t *testing.T) {
 	if len(repo.heartbeats) != 1 {
 		t.Fatalf("expected 1 heartbeat update")
 	}
+	if repo.heartbeats[0].AgentVersion != "1.0.0" {
+		t.Fatalf("expected agent version persisted, got %q", repo.heartbeats[0].AgentVersion)
+	}
 	if repo.heartbeats[0].WorkerVersion != "1.0.0" {
 		t.Fatalf("expected worker version persisted, got %q", repo.heartbeats[0].WorkerVersion)
 	}
-	if len(repo.heartbeats[0].SupportedWorkflows) != 1 {
-		t.Fatalf("expected supported workflow snapshot persisted")
-	}
 	if !cacheStore.setCalled {
 		t.Fatalf("expected heartbeat cache set")
+	}
+	if cacheStore.lastSet == nil || cacheStore.lastSet.WorkerVersion != "1.0.0" {
+		t.Fatalf("expected worker version cached, got %#v", cacheStore.lastSet)
 	}
 	if !publisher.updateSent {
 		t.Fatalf("expected update_required notification")
@@ -196,8 +197,8 @@ func TestAgentRuntimeServiceCacheFailureNonBlocking(t *testing.T) {
 	message := RuntimeMessageInput{
 		Type: RuntimeMessageTypeHeartbeat,
 		Heartbeat: &HeartbeatItem{
-			Version:  "1.0.0",
-			Hostname: "node1",
+			AgentVersion: "1.0.0",
+			Hostname:     "node1",
 		},
 	}
 

@@ -12,6 +12,7 @@ import (
 	"github.com/yyhuni/lunafox/tools/installer/internal/cli"
 	"github.com/yyhuni/lunafox/tools/installer/internal/docker"
 	"github.com/yyhuni/lunafox/tools/installer/internal/execx"
+	"github.com/yyhuni/lunafox/tools/installer/internal/release"
 	"github.com/yyhuni/lunafox/tools/installer/internal/ui"
 )
 
@@ -21,12 +22,14 @@ const (
 )
 
 type Installer struct {
-	options   cli.Options
-	runner    execx.Runner
-	printer   *ui.Printer
-	toolchain docker.Toolchain
-	version   string
-	tlsConfig *tls.Config
+	options        cli.Options
+	runner         execx.Runner
+	printer        *ui.Printer
+	toolchain      docker.Toolchain
+	releaseVersion string
+	tlsConfig      *tls.Config
+
+	releaseManifest *release.Manifest
 }
 
 type Step interface {
@@ -42,12 +45,15 @@ func (installer *Installer) Run(ctx context.Context) error {
 	if err := installer.ensureProjectStructure(); err != nil {
 		return err
 	}
-	if err := installer.resolveVersion(); err != nil {
+	if err := installer.loadReleaseManifest(); err != nil {
+		return err
+	}
+	if err := installer.resolveReleaseVersion(); err != nil {
 		return err
 	}
 	installer.printPathContext()
 
-	installer.printer.Banner(installer.options.Mode, installer.version)
+	installer.printer.Banner(installer.options.Mode, installer.releaseVersion)
 
 	steps := []Step{
 		stepSystem{},
@@ -66,7 +72,7 @@ func (installer *Installer) Run(ctx context.Context) error {
 		}
 	}
 
-	installer.printer.Summary(installer.version, installer.options.ComposeFile, installer.options.PublicURL, strings.Join(installer.toolchain.ComposeCmd, " "))
+	installer.printer.Summary(installer.releaseVersion, installer.options.ComposeFile, installer.options.PublicURL, strings.Join(installer.toolchain.ComposeCmd, " "))
 	return nil
 }
 
@@ -157,23 +163,60 @@ func checkDirWritable(dir string, label string) error {
 	return nil
 }
 
-func (installer *Installer) resolveVersion() error {
+func (installer *Installer) resolveReleaseVersion() error {
 	if installer.options.Mode == cli.ModeDev {
-		installer.version = "dev"
+		installer.releaseVersion = "dev"
 		return nil
 	}
 
-	if version := strings.TrimSpace(installer.options.Version); version != "" {
-		installer.version = version
+	if releaseVersion := strings.TrimSpace(installer.options.ReleaseVersion); releaseVersion != "" {
+		installer.releaseVersion = releaseVersion
+		return nil
+	}
+	if installer.releaseManifest != nil && strings.TrimSpace(installer.releaseManifest.ReleaseVersion) != "" {
+		installer.releaseVersion = strings.TrimSpace(installer.releaseManifest.ReleaseVersion)
 		return nil
 	}
 
-	if version := strings.TrimSpace(buildinfo.Version); version != "" && version != "dev" && version != "unknown" {
-		installer.version = version
+	if releaseVersion := strings.TrimSpace(buildinfo.Version); releaseVersion != "" && releaseVersion != "dev" && releaseVersion != "unknown" {
+		installer.releaseVersion = releaseVersion
 		return nil
 	}
 
 	return fmt.Errorf("生产模式缺少版本号，请通过 --version 传入或使用注入的构建版本")
+}
+
+func (installer *Installer) loadReleaseManifest() error {
+	if installer.options.Mode != cli.ModeProd {
+		return nil
+	}
+	path := strings.TrimSpace(installer.options.ReleaseManifest)
+	if path == "" {
+		path = filepath.Join(installer.options.RootDir, "release.manifest.yaml")
+	}
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("生产模式缺少 release manifest: %s（可从 release.manifest.yaml.example 复制）", path)
+		}
+		return fmt.Errorf("读取 release manifest 失败: %w", err)
+	}
+
+	manifest, err := release.LoadManifest(path)
+	if err != nil {
+		return err
+	}
+	installer.releaseManifest = manifest
+
+	installer.options.ReleaseVersion = manifest.ReleaseVersion
+	installer.options.AgentImageRef = manifest.AgentImageRef
+	installer.options.WorkerImageRef = manifest.WorkerImageRef
+	installer.options.AgentImageRefs = []string{manifest.AgentImageRef}
+	installer.options.WorkerImageRefs = []string{manifest.WorkerImageRef}
+
+	if installer.printer != nil {
+		installer.printer.Info("已加载 release manifest: %s", path)
+	}
+	return nil
 }
 
 func fileExists(path string) bool {

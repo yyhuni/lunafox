@@ -2211,6 +2211,10 @@
     "markAsReviewed": "标记为已审查",
     "markAsPending": "标记为待审查",
     "selected": "已选 {count} 项",
+    "listAriaLabel": "漏洞列表",
+    "resizeListAndDetailPanels": "调整漏洞列表和详情面板大小",
+    "resizeDetailSidePanels": "调整漏洞详情左右面板大小",
+    "emptyFiltered": "未找到符合筛选条件的漏洞。",
     "tooltips": {
       "reviewed": "已审查",
       "pending": "待审查"

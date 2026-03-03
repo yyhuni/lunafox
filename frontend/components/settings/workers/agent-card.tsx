@@ -135,9 +135,9 @@ export function AgentCard({
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <CardTitle className="text-base truncate">{agent.name}</CardTitle>
-              {agent.version && (
+              {agent.agentVersion && (
                 <Badge variant="secondary" className="text-[10px] shrink-0">
-                  {agent.version}
+                  {agent.agentVersion}
                 </Badge>
               )}
             </div>

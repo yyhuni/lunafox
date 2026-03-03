@@ -183,6 +183,6 @@ func newStepEnvInstaller(envPath string) *Installer {
 		GoProxy:        "https://proxy.golang.org,direct",
 		EnvFile:        envPath,
 	}, nil, ui.NewPrinter(io.Discard, io.Discard))
-	installer.version = "dev"
+	installer.releaseVersion = "dev"
 	return installer
 }

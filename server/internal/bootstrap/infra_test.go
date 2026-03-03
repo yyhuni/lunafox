@@ -36,9 +36,9 @@ func TestResolveReleaseVersion(t *testing.T) {
 		t.Fatalf("expected error for invalid RELEASE_VERSION")
 	}
 
-	t.Setenv("RELEASE_VERSION", "v1.2.3")
+	t.Setenv("RELEASE_VERSION", "1.2.3")
 	if got, err := resolveReleaseVersion(); err != nil || got != "1.2.3" {
-		t.Fatalf("expected normalized RELEASE_VERSION, got %q, err=%v", got, err)
+		t.Fatalf("expected valid RELEASE_VERSION, got %q, err=%v", got, err)
 	}
 }
 
@@ -53,9 +53,9 @@ func TestResolveAgentVersion(t *testing.T) {
 		t.Fatalf("expected error for invalid AGENT_VERSION")
 	}
 
-	t.Setenv("AGENT_VERSION", "v1.2.3")
+	t.Setenv("AGENT_VERSION", "1.2.3")
 	if got, err := resolveAgentVersion(); err != nil || got != "1.2.3" {
-		t.Fatalf("expected normalized AGENT_VERSION, got %q, err=%v", got, err)
+		t.Fatalf("expected valid AGENT_VERSION, got %q, err=%v", got, err)
 	}
 }
 
@@ -87,22 +87,26 @@ func TestResolveWorkerVersion(t *testing.T) {
 		t.Fatalf("expected error for invalid WORKER_VERSION")
 	}
 
-	t.Setenv("WORKER_VERSION", "v1.2.3")
+	t.Setenv("WORKER_VERSION", "1.2.3")
 	if got, err := resolveWorkerVersion(); err != nil || got != "1.2.3" {
-		t.Fatalf("expected normalized WORKER_VERSION, got %q, err=%v", got, err)
+		t.Fatalf("expected valid WORKER_VERSION, got %q, err=%v", got, err)
 	}
 }
 
 func TestEnsureRuntimeVersionConsistency(t *testing.T) {
-	if err := ensureRuntimeVersionConsistency("v1.2.3", "1.2.3", "1.2.3"); err != nil {
-		t.Fatalf("expected versions to be treated as consistent, got %v", err)
+	if err := ensureRuntimeVersionConsistency("1.2.3", "1.2.3", "1.2.3"); err != nil {
+		t.Fatalf("expected versions to be consistent, got %v", err)
 	}
 
-	if err := ensureRuntimeVersionConsistency("v1.2.4", "1.2.3", "1.2.3"); err == nil {
+	if err := ensureRuntimeVersionConsistency("v1.2.3", "1.2.3", "1.2.3"); err == nil {
+		t.Fatalf("expected leading-v RELEASE_VERSION to be rejected by consistency check")
+	}
+
+	if err := ensureRuntimeVersionConsistency("1.2.4", "1.2.3", "1.2.3"); err == nil {
 		t.Fatalf("expected mismatch between RELEASE_VERSION and AGENT_VERSION")
 	}
 
-	if err := ensureRuntimeVersionConsistency("v1.2.3", "1.2.3", "1.2.4"); err == nil {
+	if err := ensureRuntimeVersionConsistency("1.2.3", "1.2.3", "1.2.4"); err == nil {
 		t.Fatalf("expected mismatch between AGENT_VERSION and WORKER_VERSION")
 	}
 }

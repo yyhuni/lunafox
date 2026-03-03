@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
-	"github.com/yyhuni/lunafox/server/internal/agentproto"
+	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 )
 
 // defaultAgentStreamBufferSize is the per-connection outbound queue size.
@@ -102,7 +102,7 @@ func NewAgentRuntimeEventPublisher(registry *AgentStreamRegistry) *AgentRuntimeE
 }
 
 // SendConfigUpdate publishes a config_update event as best-effort downlink.
-func (publisher *AgentRuntimeEventPublisher) SendConfigUpdate(agentID int, payload agentproto.ConfigUpdatePayload) {
+func (publisher *AgentRuntimeEventPublisher) SendConfigUpdate(agentID int, payload agentdomain.ConfigUpdatePayload) {
 	if publisher == nil || publisher.registry == nil {
 		return
 	}
@@ -110,23 +110,25 @@ func (publisher *AgentRuntimeEventPublisher) SendConfigUpdate(agentID int, paylo
 		Payload: &runtimev1.AgentRuntimeEvent_ConfigUpdate{
 			ConfigUpdate: toRuntimeConfigUpdate(payload),
 		},
-		})
+	})
 }
 
 // SendUpdateRequired publishes an update_required event and reports whether at
 // least one stream accepted it.
-func (publisher *AgentRuntimeEventPublisher) SendUpdateRequired(agentID int, payload agentproto.UpdateRequiredPayload) bool {
+func (publisher *AgentRuntimeEventPublisher) SendUpdateRequired(agentID int, payload agentdomain.UpdateRequiredPayload) bool {
 	if publisher == nil || publisher.registry == nil {
 		return false
 	}
 	return publisher.registry.Publish(agentID, &runtimev1.AgentRuntimeEvent{
 		Payload: &runtimev1.AgentRuntimeEvent_UpdateRequired{
 			UpdateRequired: &runtimev1.UpdateRequired{
-				TargetVersion: payload.Version,
-				ImageRef:      payload.ImageRef,
+				AgentVersion:   payload.AgentVersion,
+				AgentImageRef:  payload.AgentImageRef,
+				WorkerImageRef: payload.WorkerImageRef,
+				WorkerVersion:  payload.WorkerVersion,
 			},
 		},
-		})
+	})
 }
 
 // SendTaskCancel publishes a task_cancel event as best-effort downlink.
@@ -143,7 +145,7 @@ func (publisher *AgentRuntimeEventPublisher) SendTaskCancel(agentID, taskID int)
 	})
 }
 
-func toRuntimeConfigUpdate(payload agentproto.ConfigUpdatePayload) *runtimev1.ConfigUpdate {
+func toRuntimeConfigUpdate(payload agentdomain.ConfigUpdatePayload) *runtimev1.ConfigUpdate {
 	return &runtimev1.ConfigUpdate{
 		MaxTasks:      intPtrToInt32Ptr(payload.MaxTasks),
 		CpuThreshold:  intPtrToInt32Ptr(payload.CPUThreshold),

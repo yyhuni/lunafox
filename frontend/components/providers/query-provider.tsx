@@ -1,13 +1,12 @@
 "use client"
 
 import React from "react"
-import dynamic from "next/dynamic"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 
-const ReactQueryDevtools = dynamic(
-  () => import("@tanstack/react-query-devtools").then((mod) => mod.ReactQueryDevtools),
-  { ssr: false }
-)
+// const ReactQueryDevtools = dynamic(
+//   () => import("@tanstack/react-query-devtools").then((mod) => mod.ReactQueryDevtools),
+//   { ssr: false }
+// )
 
 interface QueryProviderProps {
   children: React.ReactNode
@@ -67,12 +66,12 @@ export function QueryProvider({ children }: QueryProviderProps) {
     <QueryClientProvider client={queryClient}>
       {children}
       {/* Only show DevTools in development environment */}
-      {process.env.NODE_ENV === 'development' && (
+      {/* {process.env.NODE_ENV === 'development' && (
         <ReactQueryDevtools
           initialIsOpen={false}
           buttonPosition="bottom-right"
         />
-      )}
+      )} */}
     </QueryClientProvider>
   )
 }

@@ -7,21 +7,18 @@ import (
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 )
 
-func TestToAgentOutputSeparatesAgentAndWorkerVersion(t *testing.T) {
+func TestToAgentOutputIncludesAgentAndWorkerVersion(t *testing.T) {
 	now := time.Now().UTC()
 	agent := &agentdomain.Agent{
 		ID:            1,
 		Name:          "agent-1",
 		Status:        "online",
-		Version:       "v2.0.0",
+		AgentVersion:  "v2.0.0",
 		WorkerVersion: "2.0.0",
 		CreatedAt:     now,
 	}
 
 	resp := toAgentOutput(agent, nil)
-	if resp.Version != "v2.0.0" {
-		t.Fatalf("expected legacy version field still populated")
-	}
 	if resp.AgentVersion != "v2.0.0" {
 		t.Fatalf("expected agentVersion field populated")
 	}

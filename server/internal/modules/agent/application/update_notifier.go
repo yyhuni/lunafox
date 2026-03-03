@@ -3,36 +3,41 @@ package application
 import (
 	"sync"
 
-	"github.com/yyhuni/lunafox/server/internal/agentproto"
+	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 )
 
 type updateNotifier struct {
-	messageBus    AgentMessagePublisher
-	serverVersion string
-	agentImageRef string
+	messageBus           AgentMessagePublisher
+	desiredAgentVersion  string
+	agentImageRef        string
+	workerImageRef       string
+	desiredWorkerVersion string
 
 	notifyMu sync.Mutex
 	// notifiedVersion tracks whether update_required has been sent for each agent
-	// while it is still reporting a version different from serverVersion.
+	// while it is still reporting runtime versions different from desired versions.
 	notifiedVersion map[int]bool
 }
 
-func newUpdateNotifier(messageBus AgentMessagePublisher, serverVersion, agentImageRef string) *updateNotifier {
+func newUpdateNotifier(messageBus AgentMessagePublisher, desiredAgentVersion, agentImageRef, workerImageRef, desiredWorkerVersion string) *updateNotifier {
 	return &updateNotifier{
-		messageBus:      messageBus,
-		serverVersion:   serverVersion,
-		agentImageRef:   agentImageRef,
-		notifiedVersion: map[int]bool{},
+		messageBus:           messageBus,
+		desiredAgentVersion:  desiredAgentVersion,
+		agentImageRef:        agentImageRef,
+		workerImageRef:       workerImageRef,
+		desiredWorkerVersion: desiredWorkerVersion,
+		notifiedVersion:      map[int]bool{},
 	}
 }
 
-func (notifier *updateNotifier) maybeSendUpdateRequired(agentID int, agentVersion string) {
-	if notifier == nil || notifier.messageBus == nil || notifier.serverVersion == "" || agentVersion == "" {
+func (notifier *updateNotifier) maybeSendUpdateRequired(agentID int, reportedAgentVersion, reportedWorkerVersion string) {
+	if notifier == nil || notifier.messageBus == nil || notifier.desiredAgentVersion == "" || reportedAgentVersion == "" {
 		return
 	}
-	// Upgrade decision is strict string equality: once heartbeat version equals
-	// serverVersion, clear dedupe state so future mismatches can notify again.
-	if agentVersion == notifier.serverVersion {
+	// Upgrade decision is strict string equality: once heartbeat agentVersion and
+	// workerVersion both equal desired versions, clear dedupe state so future
+	// mismatches can notify again.
+	if reportedAgentVersion == notifier.desiredAgentVersion && reportedWorkerVersion == notifier.desiredWorkerVersion {
 		notifier.setNotified(agentID, false)
 		return
 	}
@@ -41,7 +46,12 @@ func (notifier *updateNotifier) maybeSendUpdateRequired(agentID int, agentVersio
 		return
 	}
 
-	payload := agentproto.UpdateRequiredPayload{Version: notifier.serverVersion, ImageRef: notifier.agentImageRef}
+	payload := agentdomain.UpdateRequiredPayload{
+		AgentVersion:   notifier.desiredAgentVersion,
+		AgentImageRef:  notifier.agentImageRef,
+		WorkerImageRef: notifier.workerImageRef,
+		WorkerVersion:  notifier.desiredWorkerVersion,
+	}
 	if notifier.messageBus.SendUpdateRequired(agentID, payload) {
 		notifier.setNotified(agentID, true)
 	}

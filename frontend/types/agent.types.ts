@@ -27,7 +27,8 @@ export interface Agent {
   status: AgentStatus
   hostname?: string
   ipAddress?: string
-  version?: string
+  agentVersion?: string
+  workerVersion?: string
   maxTasks: number
   cpuThreshold: number
   memThreshold: number
@@ -58,4 +59,3 @@ export interface RegistrationTokenResponse {
   token: string
   expiresAt: string
 }
-

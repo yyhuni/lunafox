@@ -4,8 +4,8 @@ import "testing"
 
 func TestNormalizeVersion(t *testing.T) {
 	cases := map[string]string{
-		"v1.2.3":  "1.2.3",
-		"V2.0.0":  "2.0.0",
+		"v1.2.3":  "v1.2.3",
+		"V2.0.0":  "V2.0.0",
 		" 1.0.0 ": "1.0.0",
 		"":        "",
 	}
@@ -27,8 +27,8 @@ func TestVersionValidators(t *testing.T) {
 	if !IsValidSchemaVersion("1.0.0") {
 		t.Fatalf("expected schemaVersion valid")
 	}
-	if !IsValidSchemaVersion("v1.0.0-beta+1") {
-		t.Fatalf("expected normalized schemaVersion valid")
+	if IsValidSchemaVersion("v1.0.0-beta+1") {
+		t.Fatalf("expected schemaVersion with leading v invalid")
 	}
 	if IsValidSchemaVersion("1.0") {
 		t.Fatalf("expected schemaVersion invalid")

@@ -2193,6 +2193,10 @@
     "markAsReviewed": "Mark Reviewed",
     "markAsPending": "Mark Pending",
     "selected": "{count} selected",
+    "listAriaLabel": "Vulnerability list",
+    "resizeListAndDetailPanels": "Resize vulnerability list and detail panels",
+    "resizeDetailSidePanels": "Resize vulnerability detail side panels",
+    "emptyFiltered": "No vulnerabilities found matching your criteria.",
     "tooltips": {
       "reviewed": "Reviewed",
       "pending": "Pending review"

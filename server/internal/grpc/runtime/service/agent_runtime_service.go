@@ -132,6 +132,16 @@ func (s *AgentRuntimeService) Connect(stream grpc.BidiStreamingServer[runtimev1.
 			// Pull an available scan task from the task scheduler
 			assignment, err := s.taskRuntime.PullTask(ctx, agent.ID)
 			if err != nil {
+				if _, ok := scanapp.AsWorkflowError(err); ok {
+					if sendErr := sendRuntimeEvent(sendMutex, stream, &runtimev1.AgentRuntimeEvent{
+						Payload: &runtimev1.AgentRuntimeEvent_TaskAssign{
+							TaskAssign: toTaskAssign(nil),
+						},
+					}); sendErr != nil {
+						return sendErr
+					}
+					continue
+				}
 				return mapTaskRuntimeError(err)
 			}
 			if err := sendRuntimeEvent(sendMutex, stream, &runtimev1.AgentRuntimeEvent{
@@ -166,20 +176,22 @@ func mapTaskRuntimeError(err error) error {
 		return nil
 	}
 	if workflowErr, ok := scanapp.AsWorkflowError(err); ok {
-		code := codes.Internal
-		switch workflowErr.Code {
-		case scanapp.WorkflowErrorCodeSchemaInvalid:
-			code = codes.InvalidArgument
-		case scanapp.WorkflowErrorCodeWorkflowConfigInvalid:
-			code = codes.FailedPrecondition
-		case scanapp.WorkflowErrorCodeWorkflowPrereqMissing:
-			code = codes.FailedPrecondition
-		case scanapp.WorkflowErrorCodeWorkerVersionIncompatible:
-			code = codes.FailedPrecondition
-		}
-		return status.Error(code, workflowErr.Error())
+		return status.Error(mapWorkflowErrorCode(workflowErr.Code), workflowErr.Error())
 	}
 	return status.Error(codes.Internal, err.Error())
+}
+
+func mapWorkflowErrorCode(code string) codes.Code {
+	switch code {
+	case scanapp.WorkflowErrorCodeSchemaInvalid:
+		return codes.InvalidArgument
+	case scanapp.WorkflowErrorCodeWorkflowConfigInvalid,
+		scanapp.WorkflowErrorCodeWorkflowPrereqMissing,
+		scanapp.WorkflowErrorCodeWorkerVersionIncompatible:
+		return codes.FailedPrecondition
+	default:
+		return codes.Internal
+	}
 }
 
 // forwardOutboundEvents bridges async server-push events from registry channels

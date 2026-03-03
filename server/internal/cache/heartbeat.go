@@ -12,15 +12,16 @@ import (
 
 // HeartbeatData represents agent heartbeat information
 type HeartbeatData struct {
-	CPU       float64       `json:"cpu"`
-	Mem       float64       `json:"mem"`
-	Disk      float64       `json:"disk"`
-	Tasks     int           `json:"tasks"`
-	Version   string        `json:"version"`
-	Hostname  string        `json:"hostname"`
-	Uptime    int64         `json:"uptime"`
-	Health    *HealthStatus `json:"health,omitempty"`
-	UpdatedAt time.Time     `json:"updated_at"`
+	CPU           float64       `json:"cpu"`
+	Mem           float64       `json:"mem"`
+	Disk          float64       `json:"disk"`
+	Tasks         int           `json:"tasks"`
+	AgentVersion  string        `json:"agentVersion"`
+	WorkerVersion string        `json:"workerVersion"`
+	Hostname      string        `json:"hostname"`
+	Uptime        int64         `json:"uptime"`
+	Health        *HealthStatus `json:"health,omitempty"`
+	UpdatedAt     time.Time     `json:"updated_at"`
 }
 
 // HealthStatus represents agent health in the heartbeat cache.

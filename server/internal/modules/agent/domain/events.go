@@ -5,7 +5,8 @@ import "time"
 // AgentHeartbeatUpdate describes runtime fields persisted on heartbeat updates.
 type AgentHeartbeatUpdate struct {
 	LastHeartbeat time.Time
-	Version       string
+	AgentVersion  string
+	WorkerVersion string
 	Hostname      string
 	HealthState   string
 	HealthReason  string
@@ -29,14 +30,15 @@ type AgentInboundEvent struct {
 
 // AgentHeartbeatEvent is a value object extracted from heartbeat payload.
 type AgentHeartbeatEvent struct {
-	CPU      float64
-	Mem      float64
-	Disk     float64
-	Tasks    int
-	Version  string
-	Hostname string
-	Uptime   int64
-	Health   *AgentHealthEvent
+	CPU           float64
+	Mem           float64
+	Disk          float64
+	Tasks         int
+	AgentVersion  string
+	WorkerVersion string
+	Hostname      string
+	Uptime        int64
+	Health        *AgentHealthEvent
 }
 
 // AgentHealthEvent is the domain representation of health state from runtime.

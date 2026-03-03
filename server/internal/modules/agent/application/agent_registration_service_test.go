@@ -111,9 +111,44 @@ func TestAgentRegistrationServiceRegisterInvalidToken(t *testing.T) {
 	tokenRepo := &tokenRepoStub{}
 	service := NewAgentRegistrationService(agentRepo, tokenRepo, fixedClock{now: time.Now().UTC()}, &tokenGenStub{})
 
-	_, err := service.RegisterAgent(context.Background(), "", "host", "1.0", "127.0.0.1", agentdomain.AgentRegistrationOptions{})
+	_, err := service.RegisterAgent(context.Background(), "", "host", "1.0", "1.0", "127.0.0.1", agentdomain.AgentRegistrationOptions{})
 	if !errors.Is(err, ErrRegistrationTokenInvalid) {
 		t.Fatalf("expected ErrRegistrationTokenInvalid, got %v", err)
+	}
+}
+
+func TestAgentRegistrationServiceRegisterPersistsWorkerVersion(t *testing.T) {
+	agentRepo := &agentRepoStub{}
+	tokenRepo := &tokenRepoStub{
+		findResult: &agentdomain.RegistrationToken{Token: "abcd1234"},
+	}
+	service := NewAgentRegistrationService(
+		agentRepo,
+		tokenRepo,
+		fixedClock{now: time.Now().UTC()},
+		&tokenGenStub{values: []string{"deadbeef"}},
+	)
+
+	agent, err := service.RegisterAgent(
+		context.Background(),
+		"abcd1234",
+		"host",
+		"1.0.0",
+		"1.0.0",
+		"127.0.0.1",
+		agentdomain.AgentRegistrationOptions{},
+	)
+	if err != nil {
+		t.Fatalf("RegisterAgent error: %v", err)
+	}
+	if len(agentRepo.created) != 1 {
+		t.Fatalf("expected one created agent, got %d", len(agentRepo.created))
+	}
+	if agentRepo.created[0].WorkerVersion != "1.0.0" {
+		t.Fatalf("expected worker version persisted on create, got %q", agentRepo.created[0].WorkerVersion)
+	}
+	if agent.WorkerVersion != "1.0.0" {
+		t.Fatalf("expected returned agent worker version, got %q", agent.WorkerVersion)
 	}
 }
 
@@ -133,7 +168,7 @@ func TestAgentRegistrationServiceRegisterTokenRecordNotFound(t *testing.T) {
 	tokenRepo := &tokenRepoStub{findErr: gorm.ErrRecordNotFound}
 	service := NewAgentRegistrationService(agentRepo, tokenRepo, fixedClock{now: time.Now().UTC()}, &tokenGenStub{})
 
-	_, err := service.RegisterAgent(context.Background(), "abc123", "host", "1.0", "127.0.0.1", agentdomain.AgentRegistrationOptions{})
+	_, err := service.RegisterAgent(context.Background(), "abc123", "host", "1.0", "1.0", "127.0.0.1", agentdomain.AgentRegistrationOptions{})
 	if !errors.Is(err, ErrRegistrationTokenInvalid) {
 		t.Fatalf("expected ErrRegistrationTokenInvalid, got %v", err)
 	}

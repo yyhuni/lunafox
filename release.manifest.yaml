@@ -1,5 +1,6 @@
 # Single source of truth for production release contract.
 # Replace these placeholder values before running prod installer.
+# Runtime versions must be bare SemVer (e.g. 1.2.3), not v-prefixed.
 
 releaseVersion: "0.0.0-dev"
 agentVersion: "0.0.0-dev"

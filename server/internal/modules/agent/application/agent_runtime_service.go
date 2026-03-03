@@ -14,14 +14,16 @@ import (
 
 // AgentRuntimeService orchestrates WebSocket runtime events.
 type AgentRuntimeService struct {
-	agentRepo       agentdomain.AgentRepository
-	heartbeatCache  HeartbeatCachePort
-	messageBus      AgentMessagePublisher
-	clock           Clock
-	serverVersion   string
-	agentImageRef   string
-	updateNotifier  *updateNotifier
-	messageHandlers map[string]runtimeMessageHandler
+	agentRepo            agentdomain.AgentRepository
+	heartbeatCache       HeartbeatCachePort
+	messageBus           AgentMessagePublisher
+	clock                Clock
+	desiredAgentVersion  string
+	agentImageRef        string
+	workerImageRef       string
+	desiredWorkerVersion string
+	updateNotifier       *updateNotifier
+	messageHandlers      map[string]runtimeMessageHandler
 }
 
 func NewAgentRuntimeService(
@@ -29,21 +31,23 @@ func NewAgentRuntimeService(
 	heartbeatCache HeartbeatCachePort,
 	messageBus AgentMessagePublisher,
 	clock Clock,
-	serverVersion, agentImageRef string,
+	desiredAgentVersion, agentImageRef, workerImageRef, desiredWorkerVersion string,
 ) *AgentRuntimeService {
 	if clock == nil {
 		panic("clock is required")
 	}
 
 	return &AgentRuntimeService{
-		agentRepo:       agentRepo,
-		heartbeatCache:  heartbeatCache,
-		messageBus:      messageBus,
-		clock:           clock,
-		serverVersion:   serverVersion,
-		agentImageRef:   agentImageRef,
-		updateNotifier:  newUpdateNotifier(messageBus, serverVersion, agentImageRef),
-		messageHandlers: newRuntimeMessageDispatcher(),
+		agentRepo:            agentRepo,
+		heartbeatCache:       heartbeatCache,
+		messageBus:           messageBus,
+		clock:                clock,
+		desiredAgentVersion:  desiredAgentVersion,
+		agentImageRef:        agentImageRef,
+		workerImageRef:       workerImageRef,
+		desiredWorkerVersion: desiredWorkerVersion,
+		updateNotifier:       newUpdateNotifier(messageBus, desiredAgentVersion, agentImageRef, workerImageRef, desiredWorkerVersion),
+		messageHandlers:      newRuntimeMessageDispatcher(),
 	}
 }
 
@@ -121,17 +125,18 @@ func (service *AgentRuntimeService) handleHeartbeat(ctx context.Context, agentID
 
 	notifier := service.updateNotifier
 	if notifier == nil {
-		notifier = newUpdateNotifier(service.messageBus, service.serverVersion, service.agentImageRef)
+		notifier = newUpdateNotifier(service.messageBus, service.desiredAgentVersion, service.agentImageRef, service.workerImageRef, service.desiredWorkerVersion)
 		service.updateNotifier = notifier
 	}
-	notifier.maybeSendUpdateRequired(agentID, payload.Version)
+	notifier.maybeSendUpdateRequired(agentID, payload.AgentVersion, payload.WorkerVersion)
 	return nil
 }
 
 func toAgentHeartbeatUpdate(now time.Time, payload HeartbeatItem) agentdomain.AgentHeartbeatUpdate {
 	update := agentdomain.AgentHeartbeatUpdate{
 		LastHeartbeat: now,
-		Version:       payload.Version,
+		AgentVersion:  payload.AgentVersion,
+		WorkerVersion: payload.WorkerVersion,
 		Hostname:      payload.Hostname,
 	}
 
@@ -152,13 +157,14 @@ func toAgentHeartbeatUpdate(now time.Time, payload HeartbeatItem) agentdomain.Ag
 
 func toHeartbeatCacheData(payload HeartbeatItem) *cache.HeartbeatData {
 	cachePayload := &cache.HeartbeatData{
-		CPU:      payload.CPU,
-		Mem:      payload.Mem,
-		Disk:     payload.Disk,
-		Tasks:    payload.Tasks,
-		Version:  payload.Version,
-		Hostname: payload.Hostname,
-		Uptime:   payload.Uptime,
+		CPU:           payload.CPU,
+		Mem:           payload.Mem,
+		Disk:          payload.Disk,
+		Tasks:         payload.Tasks,
+		AgentVersion:  payload.AgentVersion,
+		WorkerVersion: payload.WorkerVersion,
+		Hostname:      payload.Hostname,
+		Uptime:        payload.Uptime,
 	}
 
 	if payload.Health == nil {

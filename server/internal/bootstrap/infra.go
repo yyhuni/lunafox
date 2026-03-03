@@ -160,6 +160,8 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 }
 
 func resolveReleaseVersion() (string, error) {
+	// Runtime contract: release/agent/worker versions use bare SemVer only.
+	// Leading v/V is intentionally rejected to keep one canonical format.
 	version := runtimecontract.NormalizeVersion(os.Getenv("RELEASE_VERSION"))
 	if version == "" {
 		return "", fmt.Errorf("RELEASE_VERSION is required")
@@ -171,6 +173,8 @@ func resolveReleaseVersion() (string, error) {
 }
 
 func resolveAgentVersion() (string, error) {
+	// Runtime contract: release/agent/worker versions use bare SemVer only.
+	// Leading v/V is intentionally rejected to keep one canonical format.
 	version := runtimecontract.NormalizeVersion(os.Getenv("AGENT_VERSION"))
 	if version == "" {
 		return "", fmt.Errorf("AGENT_VERSION is required")
@@ -266,6 +270,8 @@ func resolveWorkerImageRef() (string, error) {
 }
 
 func resolveWorkerVersion() (string, error) {
+	// Runtime contract: release/agent/worker versions use bare SemVer only.
+	// Leading v/V is intentionally rejected to keep one canonical format.
 	version := runtimecontract.NormalizeVersion(os.Getenv("WORKER_VERSION"))
 	if version == "" {
 		return "", fmt.Errorf("WORKER_VERSION is required")

@@ -77,7 +77,7 @@ func (service *AgentRegistrationService) ValidateRegistrationToken(ctx context.C
 	return nil
 }
 
-func (service *AgentRegistrationService) RegisterAgent(ctx context.Context, token, hostname, version, ipAddress string, options agentdomain.AgentRegistrationOptions) (*agentdomain.Agent, error) {
+func (service *AgentRegistrationService) RegisterAgent(ctx context.Context, token, hostname, agentVersion, workerVersion, ipAddress string, options agentdomain.AgentRegistrationOptions) (*agentdomain.Agent, error) {
 	if strings.TrimSpace(token) == "" {
 		return nil, ErrRegistrationTokenInvalid
 	}
@@ -98,7 +98,7 @@ func (service *AgentRegistrationService) RegisterAgent(ctx context.Context, toke
 		return nil, err
 	}
 
-	agent := agentdomain.NewRegisteredAgent(token, hostname, version, ipAddress, apiKey, options)
+	agent := agentdomain.NewRegisteredAgent(token, hostname, agentVersion, workerVersion, ipAddress, apiKey, options)
 	if err := service.agentRepo.Create(ctx, agent); err != nil {
 		return nil, err
 	}

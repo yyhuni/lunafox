@@ -7,14 +7,13 @@ import (
 
 func TestLoadConfigFromEnvAndFlags(t *testing.T) {
 	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com:8443")
-	t.Setenv("API_KEY", "abc12345")
+	t.Setenv("AGENT_API_KEY", "abc12345")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
-	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery@v1/1.0.0")
+	t.Setenv("WORKER_VERSION", "1.0.0")
 	t.Setenv("LUNAFOX_AGENT_MAX_TASKS", "5")
 	t.Setenv("LUNAFOX_AGENT_CPU_THRESHOLD", "80")
 	t.Setenv("LUNAFOX_AGENT_MEM_THRESHOLD", "81")
 	t.Setenv("LUNAFOX_AGENT_DISK_THRESHOLD", "82")
-	t.Setenv("WORKER_IMAGE_REF", "ghcr.io/acme/lunafox-worker:1.0.0")
 
 	cfg, err := Load([]string{})
 	if err != nil {
@@ -27,18 +26,12 @@ func TestLoadConfigFromEnvAndFlags(t *testing.T) {
 		t.Fatalf("expected max tasks from env")
 	}
 	if cfg.WorkerVersion != "1.0.0" {
-		t.Fatalf("expected worker version parsed from image ref, got %q", cfg.WorkerVersion)
-	}
-	if len(cfg.SupportedWorkflows) != 1 {
-		t.Fatalf("expected one supported workflow, got %d", len(cfg.SupportedWorkflows))
-	}
-	if cfg.SupportedWorkflows[0].Workflow != "subdomain_discovery" {
-		t.Fatalf("unexpected workflow capability: %+v", cfg.SupportedWorkflows[0])
+		t.Fatalf("expected worker version from env, got %q", cfg.WorkerVersion)
 	}
 
 	args := []string{
 		"--runtime-grpc-url=https://runtime-override.example.com:9443",
-		"--api-key=deadbeef",
+		"--agent-api-key=deadbeef",
 		"--max-tasks=9",
 		"--cpu-threshold=70",
 		"--mem-threshold=71",
@@ -64,9 +57,8 @@ func TestLoadConfigFromEnvAndFlags(t *testing.T) {
 
 func TestLoadConfigWorkerVersionPrefersExplicitEnv(t *testing.T) {
 	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com:8443")
-	t.Setenv("API_KEY", "abc12345")
+	t.Setenv("AGENT_API_KEY", "abc12345")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
-	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery@v1/1.0.0")
 	t.Setenv("WORKER_VERSION", "2.3.4")
 	t.Setenv("WORKER_IMAGE_REF", "ghcr.io/acme/lunafox-worker:1.0.0")
 
@@ -81,9 +73,8 @@ func TestLoadConfigWorkerVersionPrefersExplicitEnv(t *testing.T) {
 
 func TestLoadConfigMissingRequired(t *testing.T) {
 	t.Setenv("RUNTIME_GRPC_URL", "")
-	t.Setenv("API_KEY", "")
+	t.Setenv("AGENT_API_KEY", "")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
-	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery@v1/1.0.0")
 
 	_, err := Load([]string{})
 	if err == nil {
@@ -93,9 +84,8 @@ func TestLoadConfigMissingRequired(t *testing.T) {
 
 func TestLoadConfigInvalidEnvValue(t *testing.T) {
 	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com")
-	t.Setenv("API_KEY", "abc")
+	t.Setenv("AGENT_API_KEY", "abc")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
-	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery@v1/1.0.0")
 	t.Setenv("LUNAFOX_AGENT_MAX_TASKS", "nope")
 
 	_, err := Load([]string{})
@@ -106,9 +96,8 @@ func TestLoadConfigInvalidEnvValue(t *testing.T) {
 
 func TestLoadConfigRequiresExplicitRuntimeGRPCURL(t *testing.T) {
 	t.Setenv("RUNTIME_GRPC_URL", "")
-	t.Setenv("API_KEY", "abc12345")
+	t.Setenv("AGENT_API_KEY", "abc12345")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
-	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery@v1/1.0.0")
 
 	_, err := Load([]string{})
 	if err == nil {
@@ -122,10 +111,9 @@ func TestLoadConfigRequiresExplicitRuntimeGRPCURL(t *testing.T) {
 func TestLoadConfigDoesNotRequireServerURL(t *testing.T) {
 	t.Setenv("SERVER_URL", "")
 	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com:8443")
-	t.Setenv("API_KEY", "abc12345")
+	t.Setenv("AGENT_API_KEY", "abc12345")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
 	t.Setenv("WORKER_VERSION", "1.2.3")
-	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery@v1/1.0.0")
 
 	cfg, err := Load([]string{})
 	if err != nil {
@@ -138,11 +126,10 @@ func TestLoadConfigDoesNotRequireServerURL(t *testing.T) {
 
 func TestLoadConfigRequiresWorkerVersion(t *testing.T) {
 	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com:8443")
-	t.Setenv("API_KEY", "abc12345")
+	t.Setenv("AGENT_API_KEY", "abc12345")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
-	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery@v1/1.0.0")
 	t.Setenv("WORKER_VERSION", "")
-	t.Setenv("WORKER_IMAGE_REF", "ghcr.io/acme/lunafox-worker@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	t.Setenv("WORKER_IMAGE_REF", "ghcr.io/acme/lunafox-worker:1.2.3")
 
 	_, err := Load([]string{})
 	if err == nil {
@@ -153,34 +140,33 @@ func TestLoadConfigRequiresWorkerVersion(t *testing.T) {
 	}
 }
 
-func TestLoadConfigRequiresSupportedWorkflows(t *testing.T) {
+func TestLoadConfigRejectsLegacyAPIKeyEnv(t *testing.T) {
 	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com:8443")
-	t.Setenv("API_KEY", "abc12345")
+	t.Setenv("AGENT_API_KEY", "")
+	t.Setenv("API_KEY", "legacy-key-should-not-work")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
 	t.Setenv("WORKER_VERSION", "1.0.0")
-	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "")
 
 	_, err := Load([]string{})
 	if err == nil {
-		t.Fatalf("expected error when WORKER_SUPPORTED_WORKFLOWS is missing")
+		t.Fatalf("expected error when only legacy API_KEY is provided")
 	}
-	if !strings.Contains(err.Error(), "WORKER_SUPPORTED_WORKFLOWS environment variable is required") {
+	if !strings.Contains(err.Error(), "AGENT_API_KEY environment variable is required") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestLoadConfigRejectsInvalidSupportedWorkflowsFormat(t *testing.T) {
+func TestLoadConfigRejectsLegacyAPIKeyFlag(t *testing.T) {
 	t.Setenv("RUNTIME_GRPC_URL", "https://runtime.example.com:8443")
-	t.Setenv("API_KEY", "abc12345")
+	t.Setenv("AGENT_API_KEY", "abc12345")
 	t.Setenv("AGENT_VERSION", "v1.2.3")
 	t.Setenv("WORKER_VERSION", "1.0.0")
-	t.Setenv("WORKER_SUPPORTED_WORKFLOWS", "subdomain_discovery:v1:1.0.0")
 
-	_, err := Load([]string{})
+	_, err := Load([]string{"--api-key=legacy"})
 	if err == nil {
-		t.Fatalf("expected error when WORKER_SUPPORTED_WORKFLOWS format is invalid")
+		t.Fatalf("expected error for legacy --api-key flag")
 	}
-	if !strings.Contains(err.Error(), "WORKER_SUPPORTED_WORKFLOWS") {
+	if !strings.Contains(err.Error(), "not defined") || !strings.Contains(err.Error(), "api-key") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }

@@ -80,8 +80,8 @@ func (service *AgentFacade) ValidateRegistrationToken(ctx context.Context, token
 	return nil
 }
 
-func (service *AgentFacade) RegisterAgent(ctx context.Context, token, hostname, version, ipAddress string, options agentdomain.AgentRegistrationOptions) (*agentdomain.Agent, error) {
-	agent, err := service.registrationService.RegisterAgent(ctx, token, hostname, version, ipAddress, options)
+func (service *AgentFacade) RegisterAgent(ctx context.Context, token, hostname, agentVersion, workerVersion, ipAddress string, options agentdomain.AgentRegistrationOptions) (*agentdomain.Agent, error) {
+	agent, err := service.registrationService.RegisterAgent(ctx, token, hostname, agentVersion, workerVersion, ipAddress, options)
 	if err != nil {
 		if errors.Is(err, ErrRegistrationTokenInvalid) {
 			return nil, ErrRegistrationTokenInvalid

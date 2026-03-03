@@ -10,7 +10,8 @@ type RegistrationTokenResponse struct {
 type AgentRegistrationRequest struct {
 	Token         string `json:"token" binding:"required,len=8"`
 	Hostname      string `json:"hostname" binding:"required"`
-	Version       string `json:"version" binding:"required"`
+	AgentVersion  string `json:"agentVersion" binding:"required"`
+	WorkerVersion string `json:"workerVersion" binding:"required"`
 	MaxTasks      *int   `json:"maxTasks" binding:"omitempty,min=1,max=20"`
 	CPUThreshold  *int   `json:"cpuThreshold" binding:"omitempty,min=1,max=100"`
 	MemThreshold  *int   `json:"memThreshold" binding:"omitempty,min=1,max=100"`

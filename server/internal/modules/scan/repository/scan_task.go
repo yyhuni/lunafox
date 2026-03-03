@@ -12,6 +12,7 @@ type ScanTaskRepository interface {
 	GetByID(ctx context.Context, id int) (*ScanTaskRecord, error)
 	PullTask(ctx context.Context, agentID int) (*ScanTaskRecord, error)
 	UpdateStatus(ctx context.Context, id int, status string, errorMessage string) error
+	FailTaskClaim(ctx context.Context, id int, errorMessage string, reason string) error
 	GetStatusCountsByScanID(ctx context.Context, scanID int) (pending, running, completed, failed, cancelled int, err error)
 	CountActiveByScanAndStage(ctx context.Context, scanID, stage int) (int, error)
 	UnlockNextStage(ctx context.Context, scanID, stage int) (int64, error)

@@ -23,7 +23,7 @@ const (
 
 type Options struct {
 	Mode                string
-	Version             string
+	ReleaseVersion      string
 	UseGoProxyCN        bool
 	PublicURL           string
 	PublicPort          string
@@ -37,6 +37,7 @@ type Options struct {
 	WorkerImageRefs     []string
 	AgentNetwork        string
 	SharedDataBind      string
+	ReleaseManifest     string
 
 	RootDir     string
 	DockerDir   string
@@ -59,7 +60,7 @@ func Parse(args []string) (Options, error) {
 
 	dev := false
 	nonInteractive := false
-	version := ""
+	releaseVersion := ""
 	useGoProxyCN := false
 	publicURLRaw := ""
 	publicHostRaw := ""
@@ -70,12 +71,13 @@ func Parse(args []string) (Options, error) {
 	workerImageRefsRaw := strings.TrimSpace(os.Getenv("WORKER_IMAGE_REFS"))
 	agentNetwork := firstNonEmpty(os.Getenv("LUNAFOX_AGENT_DOCKER_NETWORK"), DefaultAgentNetwork)
 	sharedDataBind := firstNonEmpty(os.Getenv("LUNAFOX_SHARED_DATA_VOLUME_BIND"), DefaultSharedDataBind)
+	releaseManifestInput := strings.TrimSpace(os.Getenv("LUNAFOX_RELEASE_MANIFEST"))
 	rootDirInput := ""
 
 	fs := flag.NewFlagSet("lunafox-installer", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	fs.BoolVar(&dev, "dev", false, "开发模式")
-	fs.StringVar(&version, "version", strings.TrimSpace(os.Getenv("LUNAFOX_INSTALLER_VERSION")), "安装版本，例如 v1.5.13")
+	fs.StringVar(&releaseVersion, "version", strings.TrimSpace(os.Getenv("LUNAFOX_INSTALLER_VERSION")), "发布版本，例如 v1.5.13")
 	fs.BoolVar(&useGoProxyCN, "goproxy", false, "使用 goproxy.cn")
 	fs.BoolVar(&nonInteractive, "non-interactive", false, "禁用交互向导，缺少必填参数时直接失败")
 	fs.StringVar(&publicURLRaw, "public-url", "", "公网访问地址（与 --public-host/--public-port 二选一），例如 https://10.0.0.8:18443")
@@ -85,6 +87,7 @@ func Parse(args []string) (Options, error) {
 	fs.StringVar(&imageNamespace, "image-namespace", imageNamespace, "镜像命名空间，例如 yyhuni")
 	fs.StringVar(&agentImageRefsRaw, "agent-image-refs", agentImageRefsRaw, "Agent 镜像候选列表（逗号分隔，按优先级）")
 	fs.StringVar(&workerImageRefsRaw, "worker-image-refs", workerImageRefsRaw, "Worker 镜像候选列表（逗号分隔，按优先级）")
+	fs.StringVar(&releaseManifestInput, "release-manifest", releaseManifestInput, "release manifest 文件路径（默认 <root-dir>/release.manifest.yaml）")
 	fs.StringVar(&rootDirInput, "root-dir", "", "项目根目录（必填）")
 
 	if err := fs.Parse(args); err != nil {
@@ -141,7 +144,7 @@ func Parse(args []string) (Options, error) {
 		return Options{}, fmt.Errorf("--non-interactive 需要配合 --public-url 或 --public-host/--public-port")
 	}
 
-	version = strings.TrimSpace(version)
+	releaseVersion = strings.TrimSpace(releaseVersion)
 	imageRegistry = strings.Trim(strings.TrimSpace(imageRegistry), "/")
 	if imageRegistry == "" {
 		return Options{}, fmt.Errorf("--image-registry 不能为空")
@@ -167,12 +170,6 @@ func Parse(args []string) (Options, error) {
 	}
 
 	if mode == ModeProd {
-		if len(agentImageRefs) == 0 {
-			return Options{}, fmt.Errorf("生产模式必须提供 --agent-image-refs")
-		}
-		if len(workerImageRefs) == 0 {
-			return Options{}, fmt.Errorf("生产模式必须提供 --worker-image-refs")
-		}
 		for _, ref := range agentImageRefs {
 			if !isDigestImageRef(ref) {
 				return Options{}, fmt.Errorf("生产模式要求 --agent-image-refs 使用 digest（@sha256:...）")
@@ -205,6 +202,12 @@ func Parse(args []string) (Options, error) {
 	if err != nil {
 		return Options{}, err
 	}
+	releaseManifest := strings.TrimSpace(releaseManifestInput)
+	if releaseManifest == "" {
+		releaseManifest = filepath.Join(rootDir, "release.manifest.yaml")
+	} else if !filepath.IsAbs(releaseManifest) {
+		releaseManifest = filepath.Join(rootDir, releaseManifest)
+	}
 
 	dockerDir := filepath.Join(rootDir, "docker")
 	composeDev := filepath.Join(dockerDir, "docker-compose.dev.yml")
@@ -216,7 +219,7 @@ func Parse(args []string) (Options, error) {
 
 	return Options{
 		Mode:                mode,
-		Version:             version,
+		ReleaseVersion:      releaseVersion,
 		UseGoProxyCN:        useGoProxyCN,
 		PublicURL:           publicURL,
 		PublicPort:          publicPort,
@@ -230,6 +233,7 @@ func Parse(args []string) (Options, error) {
 		WorkerImageRefs:     workerImageRefs,
 		AgentNetwork:        agentNetwork,
 		SharedDataBind:      sharedDataBind,
+		ReleaseManifest:     releaseManifest,
 		RootDir:             rootDir,
 		DockerDir:           dockerDir,
 		EnvFile:             filepath.Join(dockerDir, ".env"),

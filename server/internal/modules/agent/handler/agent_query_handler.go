@@ -39,13 +39,15 @@ func (h *AgentHandler) ListAgents(c *gin.Context) {
 			data, cacheErr := h.heartbeatCache.Get(c.Request.Context(), agent.ID)
 			if cacheErr == nil && data != nil {
 				heartbeat = &dto.AgentHeartbeatResponse{
-					CPU:       data.CPU,
-					Mem:       data.Mem,
-					Disk:      data.Disk,
-					Tasks:     data.Tasks,
-					Uptime:    data.Uptime,
-					UpdatedAt: timeutil.ToUTC(data.UpdatedAt),
-					Health:    data.Health,
+					CPU:           data.CPU,
+					Mem:           data.Mem,
+					Disk:          data.Disk,
+					Tasks:         data.Tasks,
+					Uptime:        data.Uptime,
+					AgentVersion:  data.AgentVersion,
+					WorkerVersion: data.WorkerVersion,
+					UpdatedAt:     timeutil.ToUTC(data.UpdatedAt),
+					Health:        data.Health,
 				}
 			}
 		}
@@ -79,13 +81,15 @@ func (h *AgentHandler) GetAgent(c *gin.Context) {
 		data, cacheErr := h.heartbeatCache.Get(c.Request.Context(), agent.ID)
 		if cacheErr == nil && data != nil {
 			heartbeat = &dto.AgentHeartbeatResponse{
-				CPU:       data.CPU,
-				Mem:       data.Mem,
-				Disk:      data.Disk,
-				Tasks:     data.Tasks,
-				Uptime:    data.Uptime,
-				UpdatedAt: timeutil.ToUTC(data.UpdatedAt),
-				Health:    data.Health,
+				CPU:           data.CPU,
+				Mem:           data.Mem,
+				Disk:          data.Disk,
+				Tasks:         data.Tasks,
+				Uptime:        data.Uptime,
+				AgentVersion:  data.AgentVersion,
+				WorkerVersion: data.WorkerVersion,
+				UpdatedAt:     timeutil.ToUTC(data.UpdatedAt),
+				Health:        data.Health,
 			}
 		}
 	}

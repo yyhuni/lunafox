@@ -57,7 +57,10 @@ func (stepEnv) Run(ctx context.Context, installer *Installer) error {
 	}
 
 	data := envfile.Data{
-		ImageTag:             installer.version,
+		ImageTag:             installer.releaseVersion,
+		ReleaseVersion:       installer.releaseVersion,
+		AgentVersion:         installer.releaseVersion,
+		WorkerVersion:        installer.releaseVersion,
 		ImageRegistry:        installer.options.ImageRegistry,
 		ImageNamespace:       installer.options.ImageNamespace,
 		AgentImageRef:        agentImageRef,

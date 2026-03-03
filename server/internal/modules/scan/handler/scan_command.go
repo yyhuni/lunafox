@@ -129,6 +129,10 @@ func (h *ScanHandler) Create(c *gin.Context) {
 
 		scan, err := h.svc.CreateNormal(toScanCreateNormalInput(&req))
 		if err != nil {
+			if workflowErr, ok := service.AsWorkflowError(err); ok {
+				dto.ErrorWithContract(c, http.StatusBadRequest, workflowErr.Code, workflowErr.Stage, workflowErr.Field, workflowErr.Message)
+				return
+			}
 			if errors.Is(err, service.ErrTargetNotFound) {
 				dto.NotFound(c, "Target not found")
 				return

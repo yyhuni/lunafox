@@ -45,14 +45,14 @@ func (printer *Printer) Step(current, total int, title string) {
 	fmt.Fprintf(printer.Out, "\n%s %s\n", printer.styleOut(stepLabel, ansiBlue, ansiBold), strings.TrimSpace(title))
 }
 
-func (printer *Printer) Banner(mode, version string) {
+func (printer *Printer) Banner(mode, releaseVersion string) {
 	title := printer.styleOut("LunaFox 安装器", ansiBlue, ansiBold)
 	modeLabel := printer.styleOut(mode, ansiMagenta, ansiBold)
-	versionLabel := printer.styleOut(version, ansiMagenta, ansiBold)
-	fmt.Fprintf(printer.Out, "\n%s | 模式: %s | 版本: %s\n\n", title, modeLabel, versionLabel)
+	releaseVersionLabel := printer.styleOut(releaseVersion, ansiMagenta, ansiBold)
+	fmt.Fprintf(printer.Out, "\n%s | 模式: %s | 版本: %s\n\n", title, modeLabel, releaseVersionLabel)
 }
 
-func (printer *Printer) Summary(imageTag, composeFile, publicURL, composeCmd string) {
+func (printer *Printer) Summary(releaseVersion, composeFile, publicURL, composeCmd string) {
 	line := strings.Repeat("=", 100)
 	sep := strings.Repeat("-", 100)
 
@@ -62,7 +62,7 @@ func (printer *Printer) Summary(imageTag, composeFile, publicURL, composeCmd str
 	fmt.Fprintf(printer.Out, "%s %s\n", printer.styleOut("访问地址   ", ansiBold), publicURL)
 	fmt.Fprintf(printer.Out, "%s admin\n", printer.styleOut("默认账号   ", ansiBold))
 	fmt.Fprintf(printer.Out, "%s admin\n", printer.styleOut("默认密码   ", ansiBold))
-	fmt.Fprintf(printer.Out, "%s %s\n", printer.styleOut("镜像标签   ", ansiBold), imageTag)
+	fmt.Fprintf(printer.Out, "%s %s\n", printer.styleOut("发布版本   ", ansiBold), releaseVersion)
 	fmt.Fprintf(printer.Out, "%s %s\n", printer.styleOut("Compose 文件", ansiBold), composeFile)
 	fmt.Fprintf(printer.Out, "%s\n", printer.styleOut(sep, ansiBlue))
 	fmt.Fprintln(printer.Out, printer.styleOut("常用命令", ansiCyan, ansiBold))

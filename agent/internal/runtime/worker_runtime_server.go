@@ -14,13 +14,14 @@ import (
 
 	grpcauth "github.com/yyhuni/lunafox/agent/internal/grpc/runtime/auth"
 	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
+	"github.com/yyhuni/lunafox/contracts/runtimecontract"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
-const DefaultWorkerRuntimeSocketPath = "/run/lunafox/worker-runtime.sock"
+const DefaultWorkerRuntimeSocketPath = runtimecontract.DefaultRuntimeMountPath + "/" + runtimecontract.WorkerRuntimeSocketName
 
 type WordlistMeta struct {
 	FileHash string

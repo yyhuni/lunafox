@@ -3,7 +3,7 @@ package domain
 import "testing"
 
 func TestNewRegisteredAgentAppliesDefaultsAndNormalization(t *testing.T) {
-	agent := NewRegisteredAgent("abcd1234", "  host-a  ", "1.0.0", " 1.2.3.4 ", "key12345", AgentRegistrationOptions{})
+	agent := NewRegisteredAgent("abcd1234", "  host-a  ", "1.0.0", " 1.2.3 ", " 1.2.3.4 ", "key12345", AgentRegistrationOptions{})
 
 	if agent.Hostname != "host-a" {
 		t.Fatalf("expected normalized hostname, got %q", agent.Hostname)
@@ -13,6 +13,9 @@ func TestNewRegisteredAgentAppliesDefaultsAndNormalization(t *testing.T) {
 	}
 	if agent.Status != "offline" {
 		t.Fatalf("expected offline status, got %q", agent.Status)
+	}
+	if agent.WorkerVersion != "1.2.3" {
+		t.Fatalf("expected worker version normalized, got %q", agent.WorkerVersion)
 	}
 	if agent.MaxTasks != 10 || agent.CPUThreshold != 80 || agent.MemThreshold != 80 || agent.DiskThreshold != 85 {
 		t.Fatalf("expected default config 10/80/80/85, got %d/%d/%d/%d", agent.MaxTasks, agent.CPUThreshold, agent.MemThreshold, agent.DiskThreshold)

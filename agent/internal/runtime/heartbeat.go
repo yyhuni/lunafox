@@ -4,36 +4,46 @@ import (
 	"context"
 	"time"
 
-	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
 	"github.com/yyhuni/lunafox/agent/internal/health"
 	"github.com/yyhuni/lunafox/agent/internal/logger"
 	"github.com/yyhuni/lunafox/agent/internal/metrics"
+	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
 	"go.uber.org/zap"
 )
 
 type HeartbeatSender struct {
-	client      *Client
-	collector   *metrics.Collector
-	health      *health.Manager
-	version     string
-	hostname    string
-	startedAt   time.Time
-	taskCount   func() int
-	interval    time.Duration
-	sendTimeout time.Duration
+	client       *Client
+	collector    *metrics.Collector
+	health       *health.Manager
+	agentVersion string
+	workerVer    string
+	hostname     string
+	startedAt    time.Time
+	taskCount    func() int
+	interval     time.Duration
+	sendTimeout  time.Duration
 }
 
-func NewHeartbeatSender(client *Client, collector *metrics.Collector, healthManager *health.Manager, version, hostname string, taskCount func() int) *HeartbeatSender {
+func NewHeartbeatSender(
+	client *Client,
+	collector *metrics.Collector,
+	healthManager *health.Manager,
+	agentVersion string,
+	workerVersion string,
+	hostname string,
+	taskCount func() int,
+) *HeartbeatSender {
 	return &HeartbeatSender{
-		client:      client,
-		collector:   collector,
-		health:      healthManager,
-		version:     version,
-		hostname:    hostname,
-		startedAt:   time.Now(),
-		taskCount:   taskCount,
-		interval:    5 * time.Second,
-		sendTimeout: 3 * time.Second,
+		client:       client,
+		collector:    collector,
+		health:       healthManager,
+		agentVersion: agentVersion,
+		workerVer:    workerVersion,
+		hostname:     hostname,
+		startedAt:    time.Now(),
+		taskCount:    taskCount,
+		interval:     5 * time.Second,
+		sendTimeout:  3 * time.Second,
 	}
 }
 
@@ -71,7 +81,8 @@ func (sender *HeartbeatSender) sendOnce(ctx context.Context) {
 		MemUsage:      mem,
 		DiskUsage:     disk,
 		RunningTasks:  int32(runningTasks),
-		Version:       sender.version,
+		AgentVersion:  sender.agentVersion,
+		WorkerVersion: sender.workerVer,
 		Hostname:      sender.hostname,
 		UptimeSeconds: uptime,
 		Health: &runtimev1.HealthStatus{

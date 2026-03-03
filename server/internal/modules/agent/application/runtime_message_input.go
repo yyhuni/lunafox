@@ -14,14 +14,15 @@ type RuntimeMessageInput struct {
 
 // HeartbeatItem carries heartbeat metrics used by runtime processing.
 type HeartbeatItem struct {
-	CPU      float64
-	Mem      float64
-	Disk     float64
-	Tasks    int
-	Version  string
-	Hostname string
-	Uptime   int64
-	Health   *HeartbeatHealthItem
+	CPU           float64
+	Mem           float64
+	Disk          float64
+	Tasks         int
+	AgentVersion  string
+	WorkerVersion string
+	Hostname      string
+	Uptime        int64
+	Health        *HeartbeatHealthItem
 }
 
 type HeartbeatHealthItem struct {

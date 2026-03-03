@@ -17,6 +17,7 @@ usage() {
 说明:
   - 从环境变量生成 release manifest（单一发布源）。
   - agentVersion / workerVersion 自动等于 RELEASE_VERSION。
+  - RELEASE_VERSION 必须是裸语义化版本（例如 1.2.3），不允许 v/V 前缀。
   - image ref 必须是 digest 格式（@sha256:...）。
   - --verify-contract 会调用 scripts/ci/verify-release-contract.sh 进行二次校验。
 USAGE
@@ -27,12 +28,17 @@ fail() {
 	exit 1
 }
 
-normalize_version() {
+trim_value() {
 	local value="$1"
-	value="$(echo "$value" | xargs)"
-	value="${value#v}"
-	value="${value#V}"
-	echo "$value"
+	echo "$value" | xargs
+}
+
+reject_leading_v() {
+	local value="$1"
+	local name="$2"
+	if echo "$value" | grep -Eq '^[vV][0-9]'; then
+		fail "$name 不允许使用 v/V 前缀，请使用裸语义化版本（例如 1.2.3）: $value"
+	fi
 }
 
 validate_semver() {
@@ -78,7 +84,7 @@ while [ "$#" -gt 0 ]; do
 	esac
 done
 
-release_version="$(normalize_version "${RELEASE_VERSION:-}")"
+release_version="$(trim_value "${RELEASE_VERSION:-}")"
 agent_image_ref="$(echo "${AGENT_IMAGE_REF:-}" | xargs)"
 worker_image_ref="$(echo "${WORKER_IMAGE_REF:-}" | xargs)"
 
@@ -86,6 +92,9 @@ worker_image_ref="$(echo "${WORKER_IMAGE_REF:-}" | xargs)"
 [ -n "$agent_image_ref" ] || fail "缺少环境变量 AGENT_IMAGE_REF"
 [ -n "$worker_image_ref" ] || fail "缺少环境变量 WORKER_IMAGE_REF"
 
+# Runtime contract is strict: generated release versions must be bare SemVer,
+# not v-prefixed, so all components share one canonical format.
+reject_leading_v "$release_version" "RELEASE_VERSION"
 validate_semver "$release_version" "RELEASE_VERSION"
 validate_digest_ref "$agent_image_ref" "AGENT_IMAGE_REF"
 validate_digest_ref "$worker_image_ref" "WORKER_IMAGE_REF"

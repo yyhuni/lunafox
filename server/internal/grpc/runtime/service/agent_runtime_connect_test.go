@@ -136,7 +136,7 @@ func TestConnectHandlesHeartbeatAndTaskStatus(t *testing.T) {
 						MemUsage:      35.2,
 						DiskUsage:     41.3,
 						RunningTasks:  2,
-						Version:       "v1.2.3",
+						AgentVersion:  "v1.2.3",
 						Hostname:      "agent-1",
 						UptimeSeconds: 1234,
 					},

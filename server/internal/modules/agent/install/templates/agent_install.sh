@@ -218,7 +218,7 @@ register_agent() {
 		disk_threshold_value="${LUNAFOX_AGENT_DISK_THRESHOLD:-85}"
 	fi
 
-	register_payload=$(printf '{"token":"%s","hostname":"%s","version":"%s"' "$TOKEN" "$HOSTNAME" "$AGENT_VERSION")
+	register_payload=$(printf '{"token":"%s","hostname":"%s","agentVersion":"%s","workerVersion":"%s"' "$TOKEN" "$HOSTNAME" "$AGENT_VERSION" "$WORKER_VERSION")
 	if [ -n "$max_tasks_value" ]; then
 		register_payload=$(printf '%s,"maxTasks":%s,"cpuThreshold":%s,"memThreshold":%s,"diskThreshold":%s' \
 			"$register_payload" "$max_tasks_value" "$cpu_threshold_value" "$mem_threshold_value" "$disk_threshold_value")
@@ -234,14 +234,14 @@ register_agent() {
 	}
 
 	AGENT_ID="$(printf '%s' "$response" | sed -n 's/.*"agentId"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -n1)"
-	API_KEY="$(printf '%s' "$response" | sed -n 's/.*"apiKey"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
+	AGENT_API_KEY="$(printf '%s' "$response" | sed -n 's/.*"apiKey"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
 
-	if [ -z "$API_KEY" ]; then
-		API_KEY="${response//$'\r'/}"
-		API_KEY="${API_KEY//$'\n'/}"
+	if [ -z "$AGENT_API_KEY" ]; then
+		AGENT_API_KEY="${response//$'\r'/}"
+		AGENT_API_KEY="${AGENT_API_KEY//$'\n'/}"
 	fi
 
-	if [ -z "$API_KEY" ]; then
+	if [ -z "$AGENT_API_KEY" ]; then
 		echo "Failed to obtain API key" >&2
 		exit 1
 	fi
@@ -328,7 +328,7 @@ $DOCKER_CMD run -d --restart unless-stopped --name lunafox-agent \
 	"${LOGGING_ARGS[@]}" \
 	--hostname "$HOSTNAME" \
 	-e RUNTIME_GRPC_URL="$RUNTIME_GRPC_URL" \
-	-e API_KEY="$API_KEY" \
+	-e AGENT_API_KEY="$AGENT_API_KEY" \
 	-e WORKER_IMAGE_REF="$WORKER_IMAGE_REF" \
 	-e WORKER_VERSION="$WORKER_VERSION" \
 	-e LUNAFOX_SHARED_DATA_VOLUME_BIND="$SHARED_DATA_VOLUME_BIND" \

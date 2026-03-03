@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 
 	model "github.com/yyhuni/lunafox/server/internal/modules/scan/repository/persistence"
 )
@@ -19,7 +20,13 @@ func (r *scanTaskRepository) GetByID(ctx context.Context, id int) (*ScanTaskReco
 // PullTask atomically pulls a pending task and assigns it to an agent.
 func (r *scanTaskRepository) PullTask(ctx context.Context, agentID int) (*ScanTaskRecord, error) {
 	var task model.ScanTask
-	err := r.db.WithContext(ctx).Raw(pullTaskSQL, agentID).Scan(&task).Error
+	if r == nil || r.db == nil {
+		return nil, fmt.Errorf("scan task repository is not initialized")
+	}
+	err := r.db.WithContext(ctx).Raw(
+		pullTaskSQL,
+		agentID,
+	).Scan(&task).Error
 	if err != nil {
 		return nil, err
 	}

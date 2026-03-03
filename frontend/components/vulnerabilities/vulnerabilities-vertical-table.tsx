@@ -17,12 +17,24 @@ import { cn } from "@/lib/utils"
 import { SEVERITY_STYLES } from "@/lib/severity-config"
 import type { Vulnerability, VulnerabilitySeverity } from "@/types/vulnerability.types"
 
-const SEVERITY_CONFIG: Record<VulnerabilitySeverity, { className: string; label: string }> = {
-  critical: { className: SEVERITY_STYLES.critical.className, label: "Critical" },
-  high: { className: SEVERITY_STYLES.high.className, label: "High" },
-  medium: { className: SEVERITY_STYLES.medium.className, label: "Medium" },
-  low: { className: SEVERITY_STYLES.low.className, label: "Low" },
-  info: { className: SEVERITY_STYLES.info.className, label: "Info" },
+const SEVERITY_CONFIG: Record<VulnerabilitySeverity, { label: string; color: string; bgColor: string }> = {
+  critical: { label: "Critical", color: SEVERITY_STYLES.critical.color, bgColor: SEVERITY_STYLES.critical.bgColor },
+  high: { label: "High", color: SEVERITY_STYLES.high.color, bgColor: SEVERITY_STYLES.high.bgColor },
+  medium: { label: "Medium", color: SEVERITY_STYLES.medium.color, bgColor: SEVERITY_STYLES.medium.bgColor },
+  low: { label: "Low", color: SEVERITY_STYLES.low.color, bgColor: SEVERITY_STYLES.low.bgColor },
+  info: { label: "Info", color: SEVERITY_STYLES.info.color, bgColor: SEVERITY_STYLES.info.bgColor },
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const normalized = hex.replace("#", "")
+  const full = normalized.length === 3
+    ? normalized.split("").map((c) => `${c}${c}`).join("")
+    : normalized
+  const int = Number.parseInt(full, 16)
+  const r = (int >> 16) & 255
+  const g = (int >> 8) & 255
+  const b = int & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
 interface VulnerabilitiesVerticalTableProps {
@@ -42,8 +54,9 @@ export function VulnerabilitiesVerticalTable({
   onSelectionChange,
   onToggleReview,
 }: VulnerabilitiesVerticalTableProps) {
+  const tVuln = useTranslations("vulnerabilities")
   const tColumns = useTranslations("columns")
-  const tTooltips = useTranslations("tooltips")
+  const tActions = useTranslations("common.actions")
 
   const selectedSet = React.useMemo(() => new Set(selectedRows.map((r) => r.id)), [selectedRows])
 
@@ -86,6 +99,9 @@ export function VulnerabilitiesVerticalTable({
   const handleToggleRow = useCallback(
     (item: Vulnerability, checked: boolean) => {
       if (checked) {
+        if (selectedRows.some((r) => r.id === item.id)) {
+          return
+        }
         onSelectionChange([...selectedRows, item])
       } else {
         onSelectionChange(selectedRows.filter((r) => r.id !== item.id))
@@ -95,34 +111,34 @@ export function VulnerabilitiesVerticalTable({
   )
 
   return (
-    <div className="flex-1 overflow-auto bg-background relative" role="grid" aria-label="Vulnerability List">
+    <div className="flex-1 overflow-auto bg-background relative" role="grid" aria-label={tVuln("listAriaLabel")}>
       <Table>
-        <TableHeader className="sticky top-0 bg-muted/40/80 backdrop-blur-sm z-10 box-border shadow-none">
+        <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10 box-border shadow-none">
           <TableRow className="hover:bg-transparent border-b-border/60">
-            <TableHead className="w-12 text-center h-9">
+            <TableHead className="w-10 md:w-12 text-center h-[var(--vuln-table-head-h)] leading-none">
               <Checkbox
                 checked={allSelected || (someSelected ? "indeterminate" : false)}
                 onCheckedChange={(checked) => handleToggleAll(checked === true)}
-                className="h-3.5 w-3.5 translate-y-[2px]"
-                aria-label="Select all"
+                className="h-4 w-4 md:h-3.5 md:w-3.5"
+                aria-label={tActions("selectAll")}
               />
             </TableHead>
-            <TableHead className="w-12 text-center h-9 text-[10px] uppercase font-bold tracking-wider">
+            <TableHead className="w-10 md:w-12 text-center h-[var(--vuln-table-head-h)] text-[11px] md:text-xs uppercase font-bold tracking-wider">
               {tColumns("common.status")}
             </TableHead>
-            <TableHead className="w-[100px] h-9 text-[10px] uppercase font-bold tracking-wider">
+            <TableHead className="w-[72px] md:w-[100px] h-[var(--vuln-table-head-h)] text-[11px] md:text-xs uppercase font-bold tracking-wider">
               {tColumns("vulnerability.severity")}
             </TableHead>
-            <TableHead className="min-w-[250px] max-w-[400px] h-9 text-[10px] uppercase font-bold tracking-wider">
+            <TableHead className="min-w-[160px] md:min-w-[250px] max-w-[400px] h-[var(--vuln-table-head-h)] text-[11px] md:text-xs uppercase font-bold tracking-wider">
               {tColumns("vulnerability.vulnType")}
             </TableHead>
-            <TableHead className="w-[120px] h-9 text-[10px] uppercase font-bold tracking-wider">
+            <TableHead className="hidden md:table-cell w-[120px] h-[var(--vuln-table-head-h)] text-[11px] md:text-xs uppercase font-bold tracking-wider">
               {tColumns("vulnerability.source")}
             </TableHead>
-            <TableHead className="min-w-[200px] max-w-[350px] h-9 text-[10px] uppercase font-bold tracking-wider">
+            <TableHead className="hidden lg:table-cell min-w-[200px] max-w-[350px] h-[var(--vuln-table-head-h)] text-[11px] md:text-xs uppercase font-bold tracking-wider">
               {tColumns("common.url")}
             </TableHead>
-            <TableHead className="text-right w-[160px] h-9 text-[10px] uppercase font-bold tracking-wider pr-6">
+            <TableHead className="hidden lg:table-cell text-right w-[160px] h-[var(--vuln-table-head-h)] text-[11px] md:text-xs uppercase font-bold tracking-wider pr-6">
               {tColumns("common.createdAt")}
             </TableHead>
           </TableRow>
@@ -133,7 +149,7 @@ export function VulnerabilitiesVerticalTable({
               <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                 <div className="flex flex-col items-center justify-center gap-2 py-8">
                   <Info className="h-8 w-8 text-muted-foreground/30" />
-                  <p className="text-sm">No vulnerabilities found matching your criteria.</p>
+                  <p className="text-sm">{tVuln("emptyFiltered")}</p>
                 </div>
               </TableCell>
             </TableRow>
@@ -148,39 +164,61 @@ export function VulnerabilitiesVerticalTable({
                   key={item.id}
                   data-state={isActive ? "selected" : undefined}
                   className={cn(
-                    "group cursor-pointer hover:bg-muted/40 transition-colors border-b-border/40",
+                    "group h-[var(--vuln-row-h)] cursor-pointer hover:bg-muted/40 transition-colors border-b-border/40",
                     isActive && "bg-primary/5"
                   )}
-                  onClick={() => onSelect(item)}
+                  onClick={() => {
+                    onSelect(item)
+                    handleToggleRow(item, !isChecked)
+                  }}
                   role="row"
                   aria-selected={isActive}
                 >
-                  <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                  <TableCell
+                    className="text-center leading-none"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Checkbox
                       checked={isChecked}
                       onCheckedChange={(checked) => handleToggleRow(item, checked === true)}
                       className={cn(
-                        "h-3.5 w-3.5 transition-opacity",
-                        isChecked || isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                        "h-4 w-4 md:h-3.5 md:w-3.5 transition-opacity",
+                        isChecked || isActive ? "opacity-100" : "opacity-100 md:opacity-0 md:group-hover:opacity-100"
                       )}
-                      aria-label={`Select vulnerability ${item.id}`}
+                      aria-label={`${tActions("selectRow")} ${item.id}`}
                     />
                   </TableCell>
 
-                  <TableCell className="text-center" onClick={(e) => { e.stopPropagation(); onToggleReview?.(item) }}>
-                    {item.isReviewed ? (
-                      <div className="text-green-600 flex justify-center cursor-pointer" title={tTooltips("reviewed")} aria-label={tTooltips("reviewed")}>
-                        <CheckCircle2 className="h-4 w-4" />
-                      </div>
-                    ) : (
-                      <div className="text-blue-500 flex justify-center cursor-pointer" title={tTooltips("pending")} aria-label={tTooltips("pending")}>
-                        <Circle className="h-4 w-4" />
-                      </div>
-                    )}
+                  <TableCell className="text-center">
+                    <button
+                      type="button"
+                      className="h-11 w-11 md:h-7 md:w-7 inline-flex items-center justify-center rounded-md hover:bg-muted/60 transition-colors"
+                      title={item.isReviewed ? tVuln("markAsPending") : tVuln("markAsReviewed")}
+                      aria-label={item.isReviewed ? tVuln("markAsPending") : tVuln("markAsReviewed")}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onToggleReview?.(item)
+                      }}
+                    >
+                      {item.isReviewed ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-blue-500" />
+                      )}
+                    </button>
                   </TableCell>
 
                   <TableCell>
-                    <Badge className={cn("h-5 px-1.5 text-[10px] font-bold uppercase rounded-sm border-0 w-[5ch] justify-center tracking-wider", severity.className)}>
+                    <Badge
+                      className={cn(
+                        "h-5 px-1.5 text-[10px] font-bold uppercase rounded-sm border w-[4ch] md:w-[5ch] justify-center tracking-wider !bg-[var(--sev-bg)] !text-[var(--sev-fg)] !border-[var(--sev-border)]"
+                      )}
+                      style={{
+                        ["--sev-fg" as string]: severity.color,
+                        ["--sev-bg" as string]: severity.bgColor,
+                        ["--sev-border" as string]: hexToRgba(severity.color, 0.24),
+                      }}
+                    >
                       <span className="sr-only">{severity.label}</span>
                       <span aria-hidden="true">{item.severity.slice(0, 3)}</span>
                     </Badge>
@@ -192,17 +230,17 @@ export function VulnerabilitiesVerticalTable({
                     </div>
                   </TableCell>
 
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <Badge variant="outline" className="h-5 px-2 text-[10px] font-medium text-muted-foreground justify-center shadow-none bg-background/50">
                       {item.source}
                     </Badge>
                   </TableCell>
 
-                  <TableCell className="text-xs text-muted-foreground font-mono opacity-80">
+                  <TableCell className="hidden lg:table-cell text-xs text-muted-foreground font-mono opacity-80">
                     <div className="truncate max-w-[350px]" title={item.url}>{item.url}</div>
                   </TableCell>
 
-                  <TableCell className="text-right text-xs text-muted-foreground tabular-nums pr-6">
+                  <TableCell className="hidden lg:table-cell text-right text-xs text-muted-foreground tabular-nums pr-6">
                     {new Date(item.createdAt).toLocaleDateString()}{" "}
                     <span className="opacity-50 ml-1">
                       {new Date(item.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}

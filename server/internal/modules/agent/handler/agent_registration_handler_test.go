@@ -84,6 +84,9 @@ func TestInstallScriptRemoteUsesPublicURL(t *testing.T) {
 	if !strings.Contains(body, `WORKER_VERSION="1.2.3"`) || !strings.Contains(body, `-e WORKER_VERSION="$WORKER_VERSION"`) {
 		t.Fatalf("expected WORKER_VERSION to be declared and passed into agent container env, body=%s", body)
 	}
+	if !strings.Contains(body, `"workerVersion":"%s"`) {
+		t.Fatalf("expected registration payload template to include workerVersion, body=%s", body)
+	}
 }
 
 func TestInstallScriptFailsWhenAgentVersionMissing(t *testing.T) {

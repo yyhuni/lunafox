@@ -32,7 +32,7 @@ func TestUpdateNotifierDedupAndReset(t *testing.T) {
 		"9.9.9",
 	)
 
-	notifier.maybeSendUpdateRequired(1, "v1.0.0")
+	notifier.maybeSendUpdateRequired(1, "v1.0.0", "9.0.0")
 	if publisher.sendCount != 1 {
 		t.Fatalf("expected first mismatch to send once, got %d", publisher.sendCount)
 	}
@@ -49,13 +49,15 @@ func TestUpdateNotifierDedupAndReset(t *testing.T) {
 		t.Fatalf("unexpected worker version %q", publisher.lastPayload.WorkerVersion)
 	}
 
-	notifier.maybeSendUpdateRequired(1, "v1.0.0")
+	notifier.maybeSendUpdateRequired(1, "v1.0.0", "9.0.0")
 	if publisher.sendCount != 1 {
 		t.Fatalf("expected dedupe to avoid repeated send, got %d", publisher.sendCount)
 	}
 
-	notifier.maybeSendUpdateRequired(1, "v2.0.0")
-	notifier.maybeSendUpdateRequired(1, "v1.0.0")
+	// Full match resets dedupe.
+	notifier.maybeSendUpdateRequired(1, "v2.0.0", "9.9.9")
+	// Worker mismatch alone should still trigger update_required.
+	notifier.maybeSendUpdateRequired(1, "v2.0.0", "8.8.8")
 	if publisher.sendCount != 2 {
 		t.Fatalf("expected reset after match then send again, got %d", publisher.sendCount)
 	}
@@ -63,5 +65,5 @@ func TestUpdateNotifierDedupAndReset(t *testing.T) {
 
 func TestUpdateNotifierNoSendWhenMessageBusUnavailable(t *testing.T) {
 	notifier := newUpdateNotifier(nil, "v2.0.0", "docker.io/acme/lunafox-agent@sha256:abc", "docker.io/acme/lunafox-worker:v2.0.0", "9.9.9")
-	notifier.maybeSendUpdateRequired(1, "v1.0.0")
+	notifier.maybeSendUpdateRequired(1, "v1.0.0", "9.0.0")
 }

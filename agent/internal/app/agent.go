@@ -23,7 +23,7 @@ import (
 func Run(ctx context.Context, cfg config.Config) error {
 	configUpdater := config.NewUpdater(cfg)
 
-	version := cfg.AgentVersion
+	agentVersion := cfg.AgentVersion
 	workerVersion := cfg.WorkerVersion
 	hostname := os.Getenv("AGENT_HOSTNAME")
 	if hostname == "" {
@@ -35,7 +35,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 	}
 
 	logger.Log.Info("agent starting",
-		zap.String("version", version),
+		zap.String("agentVersion", agentVersion),
 		zap.String("workerVersion", workerVersion),
 		zap.String("hostname", hostname),
 		zap.String("runtimeGrpc", cfg.RuntimeGRPCURL),
@@ -54,7 +54,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 		runtimeClient,
 		collector,
 		healthManager,
-		version,
+		agentVersion,
 		workerVersion,
 		hostname,
 		taskCounter.Count,

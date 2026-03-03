@@ -39,12 +39,17 @@ require_non_empty() {
 	fi
 }
 
-normalize_version() {
+trim_value() {
 	local value="$1"
-	value="$(echo "$value" | xargs)"
-	value="${value#v}"
-	value="${value#V}"
-	echo "$value"
+	echo "$value" | xargs
+}
+
+reject_leading_v() {
+	local value="$1"
+	local name="$2"
+	if echo "$value" | grep -Eq '^[vV][0-9]'; then
+		fail "$name 不允许使用 v/V 前缀，请使用裸语义化版本（例如 1.2.3）: $value"
+	fi
 }
 
 validate_semver() {
@@ -79,9 +84,15 @@ require_non_empty "$worker_version" "workerVersion"
 require_non_empty "$agent_image_ref" "agentImageRef"
 require_non_empty "$worker_image_ref" "workerImageRef"
 
-release_version="$(normalize_version "$release_version")"
-agent_version="$(normalize_version "$agent_version")"
-worker_version="$(normalize_version "$worker_version")"
+release_version="$(trim_value "$release_version")"
+agent_version="$(trim_value "$agent_version")"
+worker_version="$(trim_value "$worker_version")"
+
+# Runtime contract is strict: release/agent/worker versions must be bare
+# SemVer and cannot use v/V prefix. Keep this guard in CI to avoid regressions.
+reject_leading_v "$release_version" "releaseVersion"
+reject_leading_v "$agent_version" "agentVersion"
+reject_leading_v "$worker_version" "workerVersion"
 
 validate_semver "$release_version" "releaseVersion"
 validate_semver "$agent_version" "agentVersion"
@@ -95,9 +106,9 @@ validate_digest_ref "$agent_image_ref" "agentImageRef"
 validate_digest_ref "$worker_image_ref" "workerImageRef"
 
 if [ -f "$ENV_FILE" ]; then
-	env_release_version="$(normalize_version "$(read_env_value "$ENV_FILE" "RELEASE_VERSION")")"
-	env_agent_version="$(normalize_version "$(read_env_value "$ENV_FILE" "AGENT_VERSION")")"
-	env_worker_version="$(normalize_version "$(read_env_value "$ENV_FILE" "WORKER_VERSION")")"
+	env_release_version="$(trim_value "$(read_env_value "$ENV_FILE" "RELEASE_VERSION")")"
+	env_agent_version="$(trim_value "$(read_env_value "$ENV_FILE" "AGENT_VERSION")")"
+	env_worker_version="$(trim_value "$(read_env_value "$ENV_FILE" "WORKER_VERSION")")"
 	env_agent_image_ref="$(read_env_value "$ENV_FILE" "AGENT_IMAGE_REF")"
 	env_worker_image_ref="$(read_env_value "$ENV_FILE" "WORKER_IMAGE_REF")"
 
@@ -106,6 +117,10 @@ if [ -f "$ENV_FILE" ]; then
 	require_non_empty "$env_worker_version" "docker/.env: WORKER_VERSION"
 	require_non_empty "$env_agent_image_ref" "docker/.env: AGENT_IMAGE_REF"
 	require_non_empty "$env_worker_image_ref" "docker/.env: WORKER_IMAGE_REF"
+
+	reject_leading_v "$env_release_version" "docker/.env: RELEASE_VERSION"
+	reject_leading_v "$env_agent_version" "docker/.env: AGENT_VERSION"
+	reject_leading_v "$env_worker_version" "docker/.env: WORKER_VERSION"
 
 	if [ "$release_version" != "$env_release_version" ]; then
 		fail "manifest 与 docker/.env RELEASE_VERSION 不一致: $release_version != $env_release_version"

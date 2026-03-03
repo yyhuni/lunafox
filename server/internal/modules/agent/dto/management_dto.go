@@ -3,19 +3,21 @@ package dto
 import (
 	"time"
 
-	"github.com/yyhuni/lunafox/server/internal/agentproto"
+	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 )
 
-type HealthStatus = agentproto.HealthStatus
+type HealthStatus = agentdomain.HealthStatus
 
 type AgentHeartbeatResponse struct {
-	CPU       float64       `json:"cpu"`
-	Mem       float64       `json:"mem"`
-	Disk      float64       `json:"disk"`
-	Tasks     int           `json:"tasks"`
-	Uptime    int64         `json:"uptime"`
-	UpdatedAt time.Time     `json:"updatedAt"`
-	Health    *HealthStatus `json:"health,omitempty"`
+	CPU           float64       `json:"cpu"`
+	Mem           float64       `json:"mem"`
+	Disk          float64       `json:"disk"`
+	Tasks         int           `json:"tasks"`
+	Uptime        int64         `json:"uptime"`
+	AgentVersion  string        `json:"agentVersion,omitempty"`
+	WorkerVersion string        `json:"workerVersion,omitempty"`
+	UpdatedAt     time.Time     `json:"updatedAt"`
+	Health        *HealthStatus `json:"health,omitempty"`
 }
 
 type AgentResponse struct {
@@ -24,7 +26,8 @@ type AgentResponse struct {
 	Status        string                  `json:"status"`
 	Hostname      string                  `json:"hostname,omitempty"`
 	IPAddress     string                  `json:"ipAddress,omitempty"`
-	Version       string                  `json:"version,omitempty"`
+	AgentVersion  string                  `json:"agentVersion,omitempty"`
+	WorkerVersion string                  `json:"workerVersion,omitempty"`
 	MaxTasks      int                     `json:"maxTasks"`
 	CPUThreshold  int                     `json:"cpuThreshold"`
 	MemThreshold  int                     `json:"memThreshold"`

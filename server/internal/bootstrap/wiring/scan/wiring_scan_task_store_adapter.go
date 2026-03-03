@@ -25,6 +25,10 @@ func (adapter *scanTaskStoreAdapter) UpdateStatus(ctx context.Context, id int, s
 	return adapter.repo.UpdateStatus(ctx, id, status, errorMessage)
 }
 
+func (adapter *scanTaskStoreAdapter) FailTaskClaim(ctx context.Context, id int, errorMessage string, reason string) error {
+	return adapter.repo.FailTaskClaim(ctx, id, errorMessage, reason)
+}
+
 func (adapter *scanTaskStoreAdapter) GetStatusCountsByScanID(ctx context.Context, scanID int) (pending, running, completed, failed, cancelled int, err error) {
 	return adapter.repo.GetStatusCountsByScanID(ctx, scanID)
 }

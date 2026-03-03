@@ -22,9 +22,8 @@ func TestAgentRepositoryCreateBackfillsID(t *testing.T) {
 			status TEXT,
 			hostname TEXT,
 			ip_address TEXT,
-			version TEXT,
+			agent_version TEXT,
 			worker_version TEXT,
-			supported_workflows TEXT,
 			max_tasks INTEGER,
 			cpu_threshold INTEGER,
 			mem_threshold INTEGER,
@@ -47,6 +46,7 @@ func TestAgentRepositoryCreateBackfillsID(t *testing.T) {
 	agent := agentdomain.NewRegisteredAgent(
 		"abcd1234",
 		"agent-test",
+		"dev",
 		"dev",
 		"127.0.0.1",
 		"deadbeef",

@@ -32,20 +32,6 @@ func TestReadEngineNameFromSchema(t *testing.T) {
 	}
 }
 
-func TestReadEngineNameFromLegacyFilename(t *testing.T) {
-	engine, ok := readEngineNameFromLegacyFilename("subdomain_discovery-v1-1.0.0.schema.json")
-	if !ok {
-		t.Fatalf("expected legacy filename parse success")
-	}
-	if engine != "subdomain_discovery" {
-		t.Fatalf("unexpected engine name: %q", engine)
-	}
-
-	if _, ok := readEngineNameFromLegacyFilename("invalid.schema.json"); ok {
-		t.Fatalf("expected invalid legacy filename parse to fail")
-	}
-}
-
 func TestExtractSchemaVersionRejectsInvalidFormatsWithStableMessage(t *testing.T) {
 	_, _, err := extractSchemaVersion(map[string]any{
 		"apiVersion":    "version1",

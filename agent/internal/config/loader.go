@@ -6,6 +6,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/yyhuni/lunafox/contracts/runtimecontract"
 )
 
 const (
@@ -36,8 +38,9 @@ func Load(args []string) (*Config, error) {
 
 	cfg := &Config{
 		RuntimeGRPCURL: strings.TrimSpace(os.Getenv("RUNTIME_GRPC_URL")),
-		APIKey:         strings.TrimSpace(os.Getenv("API_KEY")),
+		APIKey:         strings.TrimSpace(os.Getenv(AgentAPIKeyEnv)),
 		AgentVersion:   strings.TrimSpace(os.Getenv("AGENT_VERSION")),
+		WorkerVersion:  resolveWorkerVersion(),
 		MaxTasks:       maxTasks,
 		CPUThreshold:   cpuThreshold,
 		MemThreshold:   memThreshold,
@@ -46,7 +49,7 @@ func Load(args []string) (*Config, error) {
 
 	fs := flag.NewFlagSet("agent", flag.ContinueOnError)
 	runtimeGRPCURL := fs.String("runtime-grpc-url", cfg.RuntimeGRPCURL, "Runtime gRPC URL (e.g. https://1.1.1.1:18443)")
-	apiKey := fs.String("api-key", cfg.APIKey, "Agent API key")
+	apiKey := fs.String("agent-api-key", cfg.APIKey, "Agent API key")
 	maxTasksFlag := fs.Int("max-tasks", cfg.MaxTasks, "Maximum concurrent tasks")
 	cpuThresholdFlag := fs.Int("cpu-threshold", cfg.CPUThreshold, "CPU threshold percentage")
 	memThresholdFlag := fs.Int("mem-threshold", cfg.MemThreshold, "Memory threshold percentage")
@@ -84,4 +87,10 @@ func readEnvInt(key string, fallback int) (int, error) {
 		return 0, fmt.Errorf("invalid %s: %w", key, err)
 	}
 	return parsed, nil
+}
+
+func resolveWorkerVersion() string {
+	// Runtime contract: WORKER_VERSION must be bare SemVer (e.g. 1.2.3),
+	// not v-prefixed, to keep a single canonical format across components.
+	return runtimecontract.NormalizeVersion(strings.TrimSpace(os.Getenv("WORKER_VERSION")))
 }

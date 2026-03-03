@@ -13,7 +13,8 @@ type Agent struct {
 	Status            string
 	Hostname          string
 	IPAddress         string
-	Version           string
+	AgentVersion      string
+	WorkerVersion     string
 	MaxTasks          int
 	CPUThreshold      int
 	MemThreshold      int
@@ -41,7 +42,7 @@ func NewRegistrationToken(token string, expiresAt time.Time) *RegistrationToken 
 	return &RegistrationToken{Token: token, ExpiresAt: expiresAt}
 }
 
-func NewRegisteredAgent(token, hostname, version, ipAddress, apiKey string, options AgentRegistrationOptions) *Agent {
+func NewRegisteredAgent(token, hostname, agentVersion, workerVersion, ipAddress, apiKey string, options AgentRegistrationOptions) *Agent {
 	normalizedHost := NormalizeAgentHostname(hostname)
 
 	agent := &Agent{
@@ -50,7 +51,8 @@ func NewRegisteredAgent(token, hostname, version, ipAddress, apiKey string, opti
 		Status:            "offline",
 		Hostname:          normalizedHost,
 		IPAddress:         strings.TrimSpace(ipAddress),
-		Version:           strings.TrimSpace(version),
+		AgentVersion:      strings.TrimSpace(agentVersion),
+		WorkerVersion:     strings.TrimSpace(workerVersion),
 		RegistrationToken: token,
 	}
 	agent.ApplyConfigUpdate(AgentConfigUpdate(options))

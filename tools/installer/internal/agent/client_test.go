@@ -152,15 +152,14 @@ func TestDownloadInstallScriptFailsFastOnLocalEndpointNotFound(t *testing.T) {
 
 func TestBuildInstallEnv(t *testing.T) {
 	env, err := BuildInstallEnv(Config{
-		Mode:               "dev",
-		RegisterURL:        "https://a",
-		NetworkName:        "luna",
-		WorkerToken:        "w",
-		SupportedWorkflows: "subdomain_discovery@v1/1.0.0",
-		MaxTasks:           "10",
-		CPUThreshold:       "80",
-		MemThreshold:       "80",
-		DiskThreshold:      "85",
+		Mode:          "dev",
+		RegisterURL:   "https://a",
+		NetworkName:   "luna",
+		WorkerToken:   "w",
+		MaxTasks:      "10",
+		CPUThreshold:  "80",
+		MemThreshold:  "80",
+		DiskThreshold: "85",
 	})
 	if err != nil {
 		t.Fatalf("BuildInstallEnv error: %v", err)
@@ -175,21 +174,20 @@ func TestBuildInstallEnv(t *testing.T) {
 	if flatten["WORKER_TOKEN"] != "w" {
 		t.Fatalf("expected worker token")
 	}
-	if flatten["WORKER_SUPPORTED_WORKFLOWS"] != "subdomain_discovery@v1/1.0.0" {
-		t.Fatalf("expected supported workflows")
+	if _, exists := flatten["WORKER_SUPPORTED_WORKFLOWS"]; exists {
+		t.Fatalf("worker supported workflows should not be injected")
 	}
 }
 
 func TestBuildInstallEnvProd(t *testing.T) {
 	env, err := BuildInstallEnv(Config{
-		Mode:               "prod",
-		RegisterURL:        "https://a",
-		NetworkName:        "luna",
-		SupportedWorkflows: "subdomain_discovery@v1/1.0.0",
-		MaxTasks:           "10",
-		CPUThreshold:       "80",
-		MemThreshold:       "80",
-		DiskThreshold:      "85",
+		Mode:          "prod",
+		RegisterURL:   "https://a",
+		NetworkName:   "luna",
+		MaxTasks:      "10",
+		CPUThreshold:  "80",
+		MemThreshold:  "80",
+		DiskThreshold: "85",
 	})
 	if err != nil {
 		t.Fatalf("BuildInstallEnv error: %v", err)
@@ -208,12 +206,11 @@ func TestBuildInstallEnvRequiresURLs(t *testing.T) {
 		t.Fatalf("expected missing register url error")
 	}
 	if _, err := BuildInstallEnv(Config{
-		RegisterURL:        "https://a",
-		SupportedWorkflows: "subdomain_discovery@v1/1.0.0",
-		MaxTasks:           "10",
-		CPUThreshold:       "80",
-		MemThreshold:       "80",
-		DiskThreshold:      "85",
+		RegisterURL:   "https://a",
+		MaxTasks:      "10",
+		CPUThreshold:  "80",
+		MemThreshold:  "80",
+		DiskThreshold: "85",
 	}); err != nil {
 		t.Fatalf("unexpected error without agent server url: %v", err)
 	}
@@ -221,8 +218,7 @@ func TestBuildInstallEnvRequiresURLs(t *testing.T) {
 
 func TestBuildInstallEnvUsesDefaultLimitsWhenMissing(t *testing.T) {
 	env, err := BuildInstallEnv(Config{
-		RegisterURL:        "https://a",
-		SupportedWorkflows: "subdomain_discovery@v1/1.0.0",
+		RegisterURL: "https://a",
 	})
 	if err != nil {
 		t.Fatalf("BuildInstallEnv error: %v", err)
@@ -243,19 +239,7 @@ func TestBuildInstallEnvUsesDefaultLimitsWhenMissing(t *testing.T) {
 	if flatten["LUNAFOX_AGENT_DISK_THRESHOLD"] != "85" {
 		t.Fatalf("expected default disk threshold")
 	}
-	if flatten["WORKER_SUPPORTED_WORKFLOWS"] != "subdomain_discovery@v1/1.0.0" {
-		t.Fatalf("expected configured supported workflows")
-	}
-}
-
-func TestBuildInstallEnvRequiresSupportedWorkflows(t *testing.T) {
-	_, err := BuildInstallEnv(Config{
-		RegisterURL: "https://a",
-	})
-	if err == nil {
-		t.Fatalf("expected missing supported workflows error")
-	}
-	if !strings.Contains(err.Error(), "WORKER_SUPPORTED_WORKFLOWS") {
-		t.Fatalf("unexpected error: %v", err)
+	if _, exists := flatten["WORKER_SUPPORTED_WORKFLOWS"]; exists {
+		t.Fatalf("worker supported workflows should not be injected")
 	}
 }

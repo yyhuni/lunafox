@@ -21,13 +21,15 @@ type Config struct {
 	DiskThreshold  int
 }
 
+const AgentAPIKeyEnv = "AGENT_API_KEY"
+
 // Validate ensures config values are usable.
 func (c *Config) Validate() error {
 	if c.RuntimeGRPCURL == "" {
 		return errors.New("runtime gRPC URL is required")
 	}
 	if c.APIKey == "" {
-		return errors.New("api key is required")
+		return errors.New(AgentAPIKeyEnv + " environment variable is required")
 	}
 	if c.AgentVersion == "" {
 		return errors.New("AGENT_VERSION environment variable is required")

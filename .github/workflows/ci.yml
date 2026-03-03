@@ -43,6 +43,8 @@ jobs:
             frontend_scripts:
               - 'frontend/**'
               - 'scripts/**'
+              - 'release.manifest.yaml'
+              - 'docker/.env.example'
               - 'install.sh'
               - 'start.sh'
               - 'restart.sh'

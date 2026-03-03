@@ -52,7 +52,8 @@ func (h *AgentHandler) Register(c *gin.Context) {
 		c.Request.Context(),
 		req.Token,
 		req.Hostname,
-		req.Version,
+		req.AgentVersion,
+		req.WorkerVersion,
 		"",
 		agentdomain.AgentRegistrationOptions{
 			MaxTasks:      req.MaxTasks,
@@ -143,8 +144,8 @@ func (h *AgentHandler) installScriptByProfile(c *gin.Context, profile string) {
 		requireDockerNetwork = "1"
 	}
 
-	version := h.serverVersion
-	if strings.TrimSpace(version) == "" {
+	agentVersion := h.agentVersion
+	if strings.TrimSpace(agentVersion) == "" {
 		dto.InternalError(c, "Agent version is not configured")
 		return
 	}
@@ -159,6 +160,11 @@ func (h *AgentHandler) installScriptByProfile(c *gin.Context, profile string) {
 	workerImageRef := h.workerImageRef
 	if workerImageRef == "" {
 		dto.InternalError(c, "Worker image ref is not configured")
+		return
+	}
+	workerVersion := h.workerVersion
+	if workerVersion == "" {
+		dto.InternalError(c, "Worker version is not configured")
 		return
 	}
 	sharedDataVolumeBind := h.sharedDataVolumeBind
@@ -176,8 +182,9 @@ func (h *AgentHandler) installScriptByProfile(c *gin.Context, profile string) {
 		LokiPushURL:          lokiPushURL,
 		AgentImageRef:        agentImageRef,
 		WorkerImageRef:       workerImageRef,
+		WorkerVersion:        workerVersion,
 		SharedDataVolumeBind: sharedDataVolumeBind,
-		AgentVersion:         version,
+		AgentVersion:         agentVersion,
 	})
 	if err != nil {
 		dto.InternalError(c, "Failed to build install script")

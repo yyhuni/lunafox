@@ -45,20 +45,20 @@ export function UnifiedHeader() {
       className="flex h-(--header-height) shrink-0 items-center border-b bg-background"
     >
       {/* Logo area - fixed width, consistent with sidebar width */}
-      <div className="flex h-full w-(--sidebar-width) shrink-0 items-center px-4">
-        <Link href="/" className="flex items-center gap-3">
+      <div className="flex h-full w-auto min-w-0 items-center px-3 md:w-(--sidebar-width) md:shrink-0 md:px-4">
+        <Link href="/" className="flex min-w-0 items-center gap-2 md:gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={logoSrc} alt="LunaFox Logo" className="size-7" width={28} height={28} />
-          <div className="flex flex-col gap-0.5 leading-none">
+          <div className="flex min-w-0 flex-col gap-0.5 leading-none">
             <div className="flex items-center gap-2">
-              <span className="text-base font-semibold tracking-tight">
+              <span className="truncate text-base font-semibold tracking-tight">
                 {t("appName")}
               </span>
-              <span className="rounded-sm border border-border px-1.5 py-0.5 text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+              <span className="hidden sm:inline-flex rounded-sm border border-border px-1.5 py-0.5 text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
                 {process.env.NEXT_PUBLIC_IMAGE_TAG || "dev"}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+            <div className="hidden sm:flex items-center gap-2 text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
               <span>Security Console</span>
             </div>
@@ -67,12 +67,12 @@ export function UnifiedHeader() {
       </div>
 
       {/* Right content area */}
-      <div className="flex flex-1 items-center gap-2 px-4">
+      <div className="flex min-w-0 flex-1 items-center gap-1 px-2 md:gap-2 md:px-4">
         {/* Sidebar trigger - mobile only */}
-        <SidebarTrigger className="-ml-1 md:hidden" />
+        <SidebarTrigger className="md:hidden" />
 
         {/* Right button area */}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1 md:gap-2">
           <QuickScanDialog />
           <NotificationDrawer />
           <LanguageSwitcher />

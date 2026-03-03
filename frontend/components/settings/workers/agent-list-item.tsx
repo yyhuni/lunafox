@@ -169,9 +169,9 @@ export function AgentListItem({
 
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <span className="font-medium text-sm truncate">{agent.name}</span>
-            {agent.version && (
+            {agent.agentVersion && (
               <Badge variant="secondary" className="text-[10px] shrink-0">
-                {agent.version}
+                {agent.agentVersion}
               </Badge>
             )}
           </div>

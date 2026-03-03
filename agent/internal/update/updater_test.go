@@ -62,6 +62,19 @@ func TestResolveWorkerTargetMissingPayloadReturnsError(t *testing.T) {
 	}
 }
 
+func TestResolveWorkerTargetMissingWorkerVersionReturnsError(t *testing.T) {
+	_, _, err := resolveWorkerTarget(domain.UpdateRequiredPayload{
+		WorkerImageRef: "ghcr.io/acme/lunafox-worker:v2.1.0",
+		WorkerVersion:  "",
+	})
+	if err == nil {
+		t.Fatalf("expected error when worker version missing")
+	}
+	if !strings.Contains(err.Error(), "worker version is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestResolveSharedDataBind(t *testing.T) {
 	t.Setenv(sharedDataVolumeBindEnvKey, "")
 	if _, err := resolveSharedDataVolumeBind(); err == nil {

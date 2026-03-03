@@ -185,10 +185,11 @@ type Heartbeat struct {
 	MemUsage      float64                `protobuf:"fixed64,2,opt,name=mem_usage,json=memUsage,proto3" json:"mem_usage,omitempty"`
 	DiskUsage     float64                `protobuf:"fixed64,3,opt,name=disk_usage,json=diskUsage,proto3" json:"disk_usage,omitempty"`
 	RunningTasks  int32                  `protobuf:"varint,4,opt,name=running_tasks,json=runningTasks,proto3" json:"running_tasks,omitempty"`
-	Version       string                 `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`
+	AgentVersion  string                 `protobuf:"bytes,5,opt,name=agent_version,json=agentVersion,proto3" json:"agent_version,omitempty"`
 	Hostname      string                 `protobuf:"bytes,6,opt,name=hostname,proto3" json:"hostname,omitempty"`
 	UptimeSeconds int64                  `protobuf:"varint,7,opt,name=uptime_seconds,json=uptimeSeconds,proto3" json:"uptime_seconds,omitempty"`
 	Health        *HealthStatus          `protobuf:"bytes,8,opt,name=health,proto3" json:"health,omitempty"`
+	WorkerVersion string                 `protobuf:"bytes,9,opt,name=worker_version,json=workerVersion,proto3" json:"worker_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -251,9 +252,9 @@ func (x *Heartbeat) GetRunningTasks() int32 {
 	return 0
 }
 
-func (x *Heartbeat) GetVersion() string {
+func (x *Heartbeat) GetAgentVersion() string {
 	if x != nil {
-		return x.Version
+		return x.AgentVersion
 	}
 	return ""
 }
@@ -277,6 +278,13 @@ func (x *Heartbeat) GetHealth() *HealthStatus {
 		return x.Health
 	}
 	return nil
+}
+
+func (x *Heartbeat) GetWorkerVersion() string {
+	if x != nil {
+		return x.WorkerVersion
+	}
+	return ""
 }
 
 type RequestTask struct {
@@ -726,11 +734,13 @@ func (x *ConfigUpdate) GetDiskThreshold() int32 {
 }
 
 type UpdateRequired struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TargetVersion string                 `protobuf:"bytes,1,opt,name=target_version,json=targetVersion,proto3" json:"target_version,omitempty"`
-	ImageRef      string                 `protobuf:"bytes,2,opt,name=image_ref,json=imageRef,proto3" json:"image_ref,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AgentVersion   string                 `protobuf:"bytes,1,opt,name=agent_version,json=agentVersion,proto3" json:"agent_version,omitempty"`
+	AgentImageRef  string                 `protobuf:"bytes,2,opt,name=agent_image_ref,json=agentImageRef,proto3" json:"agent_image_ref,omitempty"`
+	WorkerImageRef string                 `protobuf:"bytes,3,opt,name=worker_image_ref,json=workerImageRef,proto3" json:"worker_image_ref,omitempty"`
+	WorkerVersion  string                 `protobuf:"bytes,4,opt,name=worker_version,json=workerVersion,proto3" json:"worker_version,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UpdateRequired) Reset() {
@@ -763,16 +773,30 @@ func (*UpdateRequired) Descriptor() ([]byte, []int) {
 	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *UpdateRequired) GetTargetVersion() string {
+func (x *UpdateRequired) GetAgentVersion() string {
 	if x != nil {
-		return x.TargetVersion
+		return x.AgentVersion
 	}
 	return ""
 }
 
-func (x *UpdateRequired) GetImageRef() string {
+func (x *UpdateRequired) GetAgentImageRef() string {
 	if x != nil {
-		return x.ImageRef
+		return x.AgentImageRef
+	}
+	return ""
+}
+
+func (x *UpdateRequired) GetWorkerImageRef() string {
+	if x != nil {
+		return x.WorkerImageRef
+	}
+	return ""
+}
+
+func (x *UpdateRequired) GetWorkerVersion() string {
+	if x != nil {
+		return x.WorkerVersion
 	}
 	return ""
 }
@@ -1487,17 +1511,19 @@ const file_lunafox_runtime_v1_runtime_proto_rawDesc = "" +
 	"\fHealthStatus\x12\x14\n" +
 	"\x05state\x18\x01 \x01(\tR\x05state\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x18\n" +
-	"\amessage\x18\x03 \x01(\tR\amessage\"\xa0\x02\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\"\xed\x02\n" +
 	"\tHeartbeat\x12\x1b\n" +
 	"\tcpu_usage\x18\x01 \x01(\x01R\bcpuUsage\x12\x1b\n" +
 	"\tmem_usage\x18\x02 \x01(\x01R\bmemUsage\x12\x1d\n" +
 	"\n" +
 	"disk_usage\x18\x03 \x01(\x01R\tdiskUsage\x12#\n" +
-	"\rrunning_tasks\x18\x04 \x01(\x05R\frunningTasks\x12\x18\n" +
-	"\aversion\x18\x05 \x01(\tR\aversion\x12\x1a\n" +
+	"\rrunning_tasks\x18\x04 \x01(\x05R\frunningTasks\x12#\n" +
+	"\ragent_version\x18\x05 \x01(\tR\fagentVersion\x12\x1a\n" +
 	"\bhostname\x18\x06 \x01(\tR\bhostname\x12%\n" +
 	"\x0euptime_seconds\x18\a \x01(\x03R\ruptimeSeconds\x128\n" +
-	"\x06health\x18\b \x01(\v2 .lunafox.runtime.v1.HealthStatusR\x06health\"\r\n" +
+	"\x06health\x18\b \x01(\v2 .lunafox.runtime.v1.HealthStatusR\x06health\x12%\n" +
+	"\x0eworker_version\x18\t \x01(\tR\rworkerVersionJ\x04\b\n" +
+	"\x10\vR\x13supported_workflows\"\r\n" +
 	"\vRequestTask\"t\n" +
 	"\n" +
 	"TaskStatus\x12\x17\n" +
@@ -1540,10 +1566,12 @@ const file_lunafox_runtime_v1_runtime_proto_rawDesc = "" +
 	"_max_tasksB\x10\n" +
 	"\x0e_cpu_thresholdB\x10\n" +
 	"\x0e_mem_thresholdB\x11\n" +
-	"\x0f_disk_threshold\"T\n" +
-	"\x0eUpdateRequired\x12%\n" +
-	"\x0etarget_version\x18\x01 \x01(\tR\rtargetVersion\x12\x1b\n" +
-	"\timage_ref\x18\x02 \x01(\tR\bimageRef\"i\n" +
+	"\x0f_disk_threshold\"\xae\x01\n" +
+	"\x0eUpdateRequired\x12#\n" +
+	"\ragent_version\x18\x01 \x01(\tR\fagentVersion\x12&\n" +
+	"\x0fagent_image_ref\x18\x02 \x01(\tR\ragentImageRef\x12(\n" +
+	"\x10worker_image_ref\x18\x03 \x01(\tR\x0eworkerImageRef\x12%\n" +
+	"\x0eworker_version\x18\x04 \x01(\tR\rworkerVersion\"i\n" +
 	"\x18GetProviderConfigRequest\x12\x17\n" +
 	"\ascan_id\x18\x01 \x01(\x05R\x06scanId\x12\x1b\n" +
 	"\ttool_name\x18\x02 \x01(\tR\btoolName\x12\x17\n" +
