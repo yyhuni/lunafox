@@ -139,6 +139,9 @@ export interface UnifiedDataTableBehaviorConfig {
 
   // Auto column sizing behavior
   enableAutoColumnSizing?: boolean
+
+  // Let specific columns absorb extra horizontal space
+  expandColumnIds?: string[]
 }
 
 /**

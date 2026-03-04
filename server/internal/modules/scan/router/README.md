@@ -10,7 +10,8 @@
 
 ## Route Matrix (mounted with `/api` prefix)
 - `GET /api/scans`
-- `POST /api/scans`
+- `POST /api/scans/normal`
+- `POST /api/scans/quick`
 - `GET /api/scans/stats`
 - `GET /api/scans/:id`
 - `DELETE /api/scans/:id`

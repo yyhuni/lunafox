@@ -90,4 +90,38 @@ describe("UnifiedDataTable", () => {
     expect(screen.getByText(/page:\{"current":2,"total":4\}/)).toBeInTheDocument()
     expect(screen.getByText(/selected:\{"count":1\}/)).toBeInTheDocument()
   })
+
+  it("可配置扩展列以吃满剩余空间（不强制 width）", () => {
+    const columns: ColumnDef<Row>[] = [
+      {
+        accessorKey: "name",
+        header: "Name",
+        meta: { title: "Name" },
+      },
+      {
+        accessorKey: "id",
+        header: "ID",
+        meta: { title: "ID" },
+      },
+    ]
+
+    renderWithProviders(
+      <UnifiedDataTable<Row>
+        data={[{ id: 1, name: "alpha" }]}
+        columns={columns}
+        getRowId={(row) => String(row.id)}
+        ui={{ hideToolbar: true, hidePagination: true }}
+        behavior={{ enableRowSelection: false, expandColumnIds: ["name"] }}
+      />
+    )
+
+    const nameHeader = screen.getByText("Name").closest("th")
+    const idHeader = screen.getByText("ID").closest("th")
+
+    expect(nameHeader).not.toBeNull()
+    expect(idHeader).not.toBeNull()
+    expect(nameHeader?.style.minWidth).not.toBe("")
+    expect(nameHeader?.style.width).toBe("")
+    expect(idHeader?.style.width).not.toBe("")
+  })
 })

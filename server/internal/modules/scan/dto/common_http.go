@@ -20,6 +20,7 @@ var (
 	Created            = common.Created
 	NoContent          = common.NoContent
 	Error              = common.Error
+	ErrorWithContract  = common.ErrorWithContract
 	ErrorWithDetails   = common.ErrorWithDetails
 	BadRequest         = common.BadRequest
 	Unauthorized       = common.Unauthorized

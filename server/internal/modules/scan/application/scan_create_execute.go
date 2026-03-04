@@ -32,12 +32,9 @@ func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*Creat
 		return nil, WrapSchemaInvalid("", "configuration YAML must be an object", nil)
 	}
 
-	engineNames, err := normalizeEngineNames(input.EngineNames)
-	if err != nil {
+	engineNames := append([]string(nil), input.EngineNames...)
+	if err := validateEngineNamesStrict(engineNames); err != nil {
 		return nil, err
-	}
-	if len(engineNames) == 0 {
-		return nil, ErrCreateInvalidEngineNames
 	}
 	if err := validateEngineIdentityConsistency(input.EngineIDs, engineNames); err != nil {
 		return nil, err
@@ -88,35 +85,14 @@ func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*Creat
 		ScanMode:          CreateScanModeFull,
 		Status:            CreateScanStatusPending,
 	}
-	inputs := []CreateScanInputTarget{{Value: target.Name, InputType: target.Type}}
 
 	tasks, err := buildScanTasks(engineNames, root)
 	if err != nil {
 		return nil, err
 	}
-	if err := service.scanStore.CreateWithInputTargetsAndTasks(scan, inputs, tasks); err != nil {
+	if err := service.scanStore.CreateWithTasks(scan, tasks); err != nil {
 		return nil, err
 	}
 	scan.Target = &TargetRef{ID: target.ID, Name: target.Name, Type: target.Type, CreatedAt: timeutil.ToUTC(target.CreatedAt), LastScannedAt: timeutil.ToUTCPtr(target.LastScannedAt), DeletedAt: timeutil.ToUTCPtr(target.DeletedAt)}
 	return scan, nil
-}
-
-func validateEngineIdentityConsistency(engineIDs []int, engineNames []string) error {
-	if len(engineIDs) == 0 {
-		return nil
-	}
-	if len(engineIDs) != len(engineNames) {
-		return ErrCreateInvalidEngineNames
-	}
-	seen := make(map[int]struct{}, len(engineIDs))
-	for _, id := range engineIDs {
-		if id <= 0 {
-			return ErrCreateInvalidEngineNames
-		}
-		if _, exists := seen[id]; exists {
-			return ErrCreateInvalidEngineNames
-		}
-		seen[id] = struct{}{}
-	}
-	return nil
 }

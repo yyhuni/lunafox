@@ -44,14 +44,12 @@ export async function getScan(id: number): Promise<ScanRecord> {
  * @returns Scan task information
  */
 export async function initiateScan(data: InitiateScanRequest): Promise<InitiateScanResponse> {
-  // Convert InitiateScanRequest to CreateScanRequest format
-  // Backend expects: POST /api/scans with mode="normal"
+  // Backend endpoint: POST /api/scans/normal
   if (!data.targetId) {
     throw new Error('targetId is required')
   }
 
   const createScanRequest = {
-    mode: 'normal' as const,
     targetId: data.targetId,
     engineIds: data.engineIds,
     engineNames: data.engineNames,
@@ -59,7 +57,7 @@ export async function initiateScan(data: InitiateScanRequest): Promise<InitiateS
   }
 
   // Backend returns ScanDetailResponse (wrapped in dto.Success), convert to InitiateScanResponse
-  const res = await api.post<ScanRecord>('/scans/', createScanRequest)
+  const res = await api.post<ScanRecord>('/scans/normal', createScanRequest)
 
   // Convert response format: ScanRecord -> InitiateScanResponse
   // Backend returns the scan record directly (via dto.Created)
@@ -86,17 +84,15 @@ export async function initiateScan(data: InitiateScanRequest): Promise<InitiateS
  * @returns Scan task information
  */
 export async function quickScan(data: QuickScanRequest): Promise<QuickScanResponse> {
-  // Convert QuickScanRequest to CreateScanRequest format
-  // Backend expects: POST /api/scans with mode="quick"
+  // Backend endpoint: POST /api/scans/quick
   const createScanRequest = {
-    mode: 'quick' as const,
     targets: data.targets.map(t => t.name),
     engineIds: data.engineIds,
     engineNames: data.engineNames,
     configuration: data.configuration,
   }
 
-  const res = await api.post<QuickScanResponse>('/scans/', createScanRequest)
+  const res = await api.post<QuickScanResponse>('/scans/quick', createScanRequest)
   return res.data
 }
 

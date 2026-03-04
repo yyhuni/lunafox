@@ -7,23 +7,14 @@ import (
 	"gorm.io/gorm"
 )
 
-// CreateWithInputTargetsAndTasks creates a scan, inputs, and tasks in a single transaction.
-func (r *ScanRepository) CreateWithInputTargetsAndTasks(scan *ScanCreateRecord, inputs []ScanInputTargetRecord, tasks []ScanTaskCreateRecord) error {
+// CreateWithTasks creates a scan and tasks in a single transaction.
+func (r *ScanRepository) CreateWithTasks(scan *ScanCreateRecord, tasks []ScanTaskCreateRecord) error {
 	modelScan := scanCreateRecordToModel(scan)
-	modelInputs := scanInputTargetRecordsToModel(inputs)
 	modelTasks := scanTaskCreateRecordsToModel(tasks)
 
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(modelScan).Error; err != nil {
 			return err
-		}
-		if len(modelInputs) > 0 {
-			for index := range modelInputs {
-				modelInputs[index].ScanID = modelScan.ID
-			}
-			if err := tx.Create(&modelInputs).Error; err != nil {
-				return err
-			}
 		}
 		if len(modelTasks) > 0 {
 			for index := range modelTasks {

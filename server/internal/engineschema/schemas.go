@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
+	"github.com/yyhuni/lunafox/contracts/runtimecontract"
 	"gopkg.in/yaml.v3"
 )
 
@@ -20,19 +21,34 @@ var (
 	schemaCache = map[string]*jsonschema.Schema{}
 )
 
-func getSchema(engine string) (*jsonschema.Schema, error) {
+func schemaCacheKey(engine, apiVersion, schemaVersion string) string {
+	return engine + "|" + apiVersion + "|" + schemaVersion
+}
+
+func schemaFilename(engine, apiVersion, schemaVersion string) string {
+	return fmt.Sprintf("%s-%s-%s.schema.json", engine, apiVersion, schemaVersion)
+}
+
+func getSchema(engine, apiVersion, schemaVersion string) (*jsonschema.Schema, error) {
 	if engine == "" {
 		return nil, fmt.Errorf("engine is required")
 	}
+	if strings.TrimSpace(apiVersion) == "" {
+		return nil, fmt.Errorf("apiVersion is required")
+	}
+	if strings.TrimSpace(schemaVersion) == "" {
+		return nil, fmt.Errorf("schemaVersion is required")
+	}
 
+	cacheKey := schemaCacheKey(engine, apiVersion, schemaVersion)
 	schemaMu.Lock()
-	cached, ok := schemaCache[engine]
+	cached, ok := schemaCache[cacheKey]
 	schemaMu.Unlock()
 	if ok {
 		return cached, nil
 	}
 
-	filename := engine + ".schema.json"
+	filename := schemaFilename(engine, apiVersion, schemaVersion)
 	b, err := schemasFS.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("read schema %q: %w", filename, err)
@@ -48,7 +64,7 @@ func getSchema(engine string) (*jsonschema.Schema, error) {
 	}
 
 	schemaMu.Lock()
-	schemaCache[engine] = compiled
+	schemaCache[cacheKey] = compiled
 	schemaMu.Unlock()
 
 	return compiled, nil
@@ -60,7 +76,12 @@ func Validate(engine string, config map[string]any) error {
 		return fmt.Errorf("config is required")
 	}
 
-	s, err := getSchema(engine)
+	apiVersion, schemaVersion, err := extractSchemaVersion(config)
+	if err != nil {
+		return err
+	}
+
+	s, err := getSchema(engine, apiVersion, schemaVersion)
 	if err != nil {
 		return err
 	}
@@ -81,6 +102,34 @@ func Validate(engine string, config map[string]any) error {
 	}
 
 	return nil
+}
+
+func extractSchemaVersion(config map[string]any) (apiVersion, schemaVersion string, err error) {
+	rawAPIVersion, ok := config["apiVersion"]
+	if !ok {
+		return "", "", fmt.Errorf("apiVersion is required")
+	}
+	apiVersion, ok = rawAPIVersion.(string)
+	if !ok || strings.TrimSpace(apiVersion) == "" {
+		return "", "", fmt.Errorf("apiVersion must be non-empty string")
+	}
+	if !runtimecontract.IsValidAPIVersion(apiVersion) {
+		return "", "", fmt.Errorf("%s", runtimecontract.APIVersionFieldMessage("apiVersion"))
+	}
+
+	rawSchemaVersion, ok := config["schemaVersion"]
+	if !ok {
+		return "", "", fmt.Errorf("schemaVersion is required")
+	}
+	schemaVersion, ok = rawSchemaVersion.(string)
+	if !ok || strings.TrimSpace(schemaVersion) == "" {
+		return "", "", fmt.Errorf("schemaVersion must be non-empty string")
+	}
+	if !runtimecontract.IsValidSchemaVersion(schemaVersion) {
+		return "", "", fmt.Errorf("%s", runtimecontract.SchemaVersionFieldMessage("schemaVersion"))
+	}
+
+	return strings.TrimSpace(apiVersion), strings.TrimSpace(schemaVersion), nil
 }
 
 // ValidateYAML validates a YAML config blob against the engine schema.
@@ -117,18 +166,41 @@ func ListEngines() ([]string, error) {
 	}
 
 	var engines []string
+	seen := map[string]struct{}{}
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
 		}
 
 		name := entry.Name()
-		// Extract engine name from filename: "subdomain_discovery.schema.json" -> "subdomain_discovery"
-		if strings.HasSuffix(name, ".schema.json") {
-			engine := strings.TrimSuffix(name, ".schema.json")
-			engines = append(engines, engine)
+		if !strings.HasSuffix(name, ".schema.json") {
+			continue
 		}
+		engine, metaErr := readEngineNameFromSchema(name)
+		if metaErr != nil || strings.TrimSpace(engine) == "" {
+			continue
+		}
+		engine = strings.TrimSpace(engine)
+		if _, exists := seen[engine]; exists {
+			continue
+		}
+		seen[engine] = struct{}{}
+		engines = append(engines, engine)
 	}
 
 	return engines, nil
+}
+
+func readEngineNameFromSchema(filename string) (string, error) {
+	payload, err := schemasFS.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+	var meta struct {
+		Engine string `json:"x-engine"`
+	}
+	if err := json.Unmarshal(payload, &meta); err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(meta.Engine), nil
 }

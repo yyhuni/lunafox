@@ -195,19 +195,6 @@ CREATE INDEX IF NOT EXISTS idx_scan_target ON scan(target_id);
 CREATE INDEX IF NOT EXISTS idx_scan_status ON scan(status);
 CREATE INDEX IF NOT EXISTS idx_scan_created_at ON scan(created_at);
 CREATE INDEX IF NOT EXISTS idx_scan_deleted_at ON scan(deleted_at);
-
-
--- scan_input_target
-CREATE TABLE IF NOT EXISTS scan_input_target (
-    id SERIAL PRIMARY KEY,
-    scan_id INTEGER NOT NULL REFERENCES scan(id) ON DELETE CASCADE,
-    value VARCHAR(2000) NOT NULL,
-    input_type VARCHAR(10) NOT NULL DEFAULT 'domain',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_scan_input_target_scan ON scan_input_target(scan_id);
-CREATE INDEX IF NOT EXISTS idx_scan_input_target_type ON scan_input_target(input_type);
-
 -- scan_log
 CREATE TABLE IF NOT EXISTS scan_log (
     id BIGSERIAL PRIMARY KEY,

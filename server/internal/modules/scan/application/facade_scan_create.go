@@ -2,6 +2,8 @@ package application
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/yyhuni/lunafox/server/internal/pkg/dberrors"
 )
@@ -23,7 +25,7 @@ func (service *ScanFacade) CreateNormal(req *CreateNormalRequest) (*QueryScan, e
 			return nil, ErrScanInvalidConfig
 		}
 		if errors.Is(err, ErrCreateInvalidEngineNames) {
-			return nil, ErrScanInvalidEngineNames
+			return nil, wrapScanInvalidEngineNames(err)
 		}
 		if errors.Is(err, ErrCreateNoWorkflows) {
 			return nil, ErrScanNoWorkflows
@@ -42,4 +44,16 @@ func createScanToQueryScan(scan *CreateScan) *QueryScan {
 		result.Target = &QueryTargetRef{ID: scan.Target.ID, Name: scan.Target.Name, Type: scan.Target.Type}
 	}
 	return result
+}
+
+func wrapScanInvalidEngineNames(err error) error {
+	if err == nil {
+		return ErrScanInvalidEngineNames
+	}
+	detail := strings.TrimSpace(strings.TrimPrefix(err.Error(), ErrCreateInvalidEngineNames.Error()))
+	detail = strings.TrimSpace(strings.TrimPrefix(detail, ":"))
+	if detail == "" {
+		return ErrScanInvalidEngineNames
+	}
+	return fmt.Errorf("%w: %s", ErrScanInvalidEngineNames, detail)
 }

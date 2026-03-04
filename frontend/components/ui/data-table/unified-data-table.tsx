@@ -94,6 +94,8 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
   const tableClassName = ui?.tableClassName
 
   const enableAutoColumnSizing = behavior?.enableAutoColumnSizing ?? false
+  const expandColumnIds = behavior?.expandColumnIds ?? []
+  const expandColumnIdSet = React.useMemo(() => new Set(expandColumnIds), [expandColumnIds])
 
   // Use table state hook
   const { table, columnSizeVars } = useTableState({
@@ -154,6 +156,28 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
   const virtualRows = enableVirtualScrolling ? rowVirtualizer.getVirtualItems() : []
   const totalSize = enableVirtualScrolling ? rowVirtualizer.getTotalSize() : 0
 
+  const getHeaderWidthStyle = React.useCallback((headerId: string, columnId: string): React.CSSProperties => {
+    const minWidth = `calc(var(--header-${headerId}-size) * 1px)`
+    if (expandColumnIdSet.has(columnId)) {
+      return { minWidth }
+    }
+    return {
+      width: minWidth,
+      minWidth,
+    }
+  }, [expandColumnIdSet])
+
+  const getCellWidthStyle = React.useCallback((columnId: string): React.CSSProperties => {
+    const minWidth = `calc(var(--col-${columnId}-size) * 1px)`
+    if (expandColumnIdSet.has(columnId)) {
+      return { minWidth }
+    }
+    return {
+      width: minWidth,
+      minWidth,
+    }
+  }, [expandColumnIdSet])
+
   return (
     <div className={cn("w-full space-y-4", className)}>
       {/* Toolbar */}
@@ -213,10 +237,7 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
                   <TableHead
                     key={header.id}
                     colSpan={header.colSpan}
-                    style={{
-                      width: `calc(var(--header-${header.id}-size) * 1px)`,
-                      minWidth: `calc(var(--header-${header.id}-size) * 1px)`,
-                    }}
+                    style={getHeaderWidthStyle(header.id, header.column.id)}
                     className="relative group"
                   >
                     {header.isPlaceholder
@@ -255,10 +276,7 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
                           key={cell.id}
-                          style={{
-                            width: `calc(var(--col-${cell.column.id}-size) * 1px)`,
-                            minWidth: `calc(var(--col-${cell.column.id}-size) * 1px)`,
-                          }}
+                          style={getCellWidthStyle(cell.column.id)}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
@@ -277,10 +295,7 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
-                        style={{
-                          width: `calc(var(--col-${cell.column.id}-size) * 1px)`,
-                          minWidth: `calc(var(--col-${cell.column.id}-size) * 1px)`,
-                        }}
+                        style={getCellWidthStyle(cell.column.id)}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>

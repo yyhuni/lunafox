@@ -7,7 +7,8 @@ import (
 
 func registerScanRoutes(protected *gin.RouterGroup, scanHandler *handler.ScanHandler) {
 	protected.GET("/scans", scanHandler.List)
-	protected.POST("/scans", scanHandler.Create)
+	protected.POST("/scans/normal", scanHandler.CreateNormal)
+	protected.POST("/scans/quick", scanHandler.CreateQuick)
 	protected.GET("/scans/stats", scanHandler.Statistics)
 	protected.GET("/scans/:id", scanHandler.GetByID)
 	protected.DELETE("/scans/:id", scanHandler.Delete)

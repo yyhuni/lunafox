@@ -3,13 +3,14 @@ package application
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 )
 
 type scanCreateStoreStub struct{}
 
-func (scanCreateStoreStub) CreateWithInputTargetsAndTasks(*CreateScan, []CreateScanInputTarget, []CreateScanTask) error {
+func (scanCreateStoreStub) CreateWithTasks(*CreateScan, []CreateScanTask) error {
 	return nil
 }
 
@@ -18,7 +19,7 @@ type scanCreateStoreCaptureStub struct {
 	lastTasks []CreateScanTask
 }
 
-func (stub *scanCreateStoreCaptureStub) CreateWithInputTargetsAndTasks(scan *CreateScan, _ []CreateScanInputTarget, tasks []CreateScanTask) error {
+func (stub *scanCreateStoreCaptureStub) CreateWithTasks(scan *CreateScan, tasks []CreateScanTask) error {
 	stub.lastScan = scan
 	stub.lastTasks = tasks
 	return nil
@@ -146,6 +147,84 @@ func TestCreateNormal_RejectsEngineIDsAndNamesMismatch(t *testing.T) {
 	_, err := service.CreateNormal(input)
 	if !errors.Is(err, ErrCreateInvalidEngineNames) {
 		t.Fatalf("expected invalid engine names error, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "must have same length") {
+		t.Fatalf("expected detailed mismatch reason, got: %v", err)
+	}
+}
+
+func TestCreateNormal_RejectsEmptyEngineName(t *testing.T) {
+	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
+		now := time.Now().UTC()
+		return &TargetRef{
+			ID:        1,
+			Name:      "example.com",
+			Type:      "domain",
+			CreatedAt: now,
+		}, nil
+	})
+
+	input := &CreateNormalInput{
+		TargetID:      1,
+		EngineNames:   []string{""},
+		Configuration: validSubdomainDiscoveryConfig("v1", "1.0.0"),
+	}
+	_, err := service.CreateNormal(input)
+	if !errors.Is(err, ErrCreateInvalidEngineNames) {
+		t.Fatalf("expected invalid engine names error, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "engineNames[0] must not be empty") {
+		t.Fatalf("expected detailed empty reason, got: %v", err)
+	}
+}
+
+func TestCreateNormal_RejectsEngineNameWithSurroundingSpaces(t *testing.T) {
+	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
+		now := time.Now().UTC()
+		return &TargetRef{
+			ID:        1,
+			Name:      "example.com",
+			Type:      "domain",
+			CreatedAt: now,
+		}, nil
+	})
+
+	input := &CreateNormalInput{
+		TargetID:      1,
+		EngineNames:   []string{" subdomain_discovery "},
+		Configuration: validSubdomainDiscoveryConfig("v1", "1.0.0"),
+	}
+	_, err := service.CreateNormal(input)
+	if !errors.Is(err, ErrCreateInvalidEngineNames) {
+		t.Fatalf("expected invalid engine names error, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "must not contain leading or trailing spaces") {
+		t.Fatalf("expected detailed spacing reason, got: %v", err)
+	}
+}
+
+func TestCreateNormal_RejectsDuplicateEngineNames(t *testing.T) {
+	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
+		now := time.Now().UTC()
+		return &TargetRef{
+			ID:        1,
+			Name:      "example.com",
+			Type:      "domain",
+			CreatedAt: now,
+		}, nil
+	})
+
+	input := &CreateNormalInput{
+		TargetID:      1,
+		EngineNames:   []string{"subdomain_discovery", "subdomain_discovery"},
+		Configuration: validSubdomainDiscoveryConfig("v1", "1.0.0"),
+	}
+	_, err := service.CreateNormal(input)
+	if !errors.Is(err, ErrCreateInvalidEngineNames) {
+		t.Fatalf("expected invalid engine names error, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "is duplicated") {
+		t.Fatalf("expected detailed duplicate reason, got: %v", err)
 	}
 }
 

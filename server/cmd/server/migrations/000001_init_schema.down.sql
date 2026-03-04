@@ -27,7 +27,6 @@ DROP TABLE IF EXISTS subdomain CASCADE;
 -- Scan related tables
 DROP TABLE IF EXISTS scheduled_scan CASCADE;
 DROP TABLE IF EXISTS scan_log CASCADE;
-DROP TABLE IF EXISTS scan_input_target CASCADE;
 DROP TABLE IF EXISTS scan CASCADE;
 
 -- Settings tables

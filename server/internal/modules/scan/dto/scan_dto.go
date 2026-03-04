@@ -54,11 +54,13 @@ type ScanDetailResponse struct {
 }
 
 type InitiateScanRequest struct {
-	OrganizationID *int     `json:"organizationId" binding:"omitempty"`
-	TargetID       *int     `json:"targetId" binding:"omitempty"`
-	EngineIDs      []int    `json:"engineIds" binding:"required,min=1"`
-	EngineNames    []string `json:"engineNames" binding:"required,min=1"`
-	Configuration  string   `json:"configuration" binding:"required"`
+	OrganizationID *int `json:"organizationId" binding:"omitempty"`
+	TargetID       *int `json:"targetId" binding:"omitempty"`
+	// EngineIDs are persisted for audit/reference and must align with EngineNames by position.
+	EngineIDs []int `json:"engineIds" binding:"required,min=1"`
+	// EngineNames drive runtime planning and schema validation.
+	EngineNames   []string `json:"engineNames" binding:"required,min=1"`
+	Configuration string   `json:"configuration" binding:"required"`
 }
 
 type QuickScanRequest struct {
@@ -68,15 +70,16 @@ type QuickScanRequest struct {
 	Configuration string            `json:"configuration" binding:"required"`
 }
 
-type CreateScanRequest struct {
-	Mode string `json:"mode" binding:"omitempty,oneof=normal quick"`
+type CreateNormalScanRequest struct {
+	TargetID  int   `json:"targetId" binding:"required"`
+	EngineIDs []int `json:"engineIds" binding:"omitempty"`
+	// EngineNames are the authoritative planning input; EngineIDs must align if provided.
+	EngineNames   []string `json:"engineNames" binding:"required,min=1"`
+	Configuration string   `json:"configuration" binding:"required"`
+}
 
-	TargetID int      `json:"targetId" binding:"omitempty"`
-	Targets  []string `json:"targets" binding:"omitempty"`
-
-	EngineIDs     []int    `json:"engineIds" binding:"omitempty"`
-	EngineNames   []string `json:"engineNames" binding:"required,min=1,max=1"`
-	Configuration string   `json:"configuration" binding:"omitempty"`
+type CreateQuickScanRequest struct {
+	Targets []string `json:"targets" binding:"omitempty"`
 }
 
 type QuickScanTarget struct {

@@ -95,7 +95,7 @@ export const mockScans: ScanRecord[] = [
   {
     id: 4,
     targetId: 4,
-    target: { id: 4, name: 'globalfinance.com', type: 'domain' },
+    target: { id: 4, name: 'globalfinance.test.globalfinance.globalfinance.globalfinance.com', type: 'domain' },
     workerName: 'worker-03',
     cachedStats: {
       subdomainsCount: 0,

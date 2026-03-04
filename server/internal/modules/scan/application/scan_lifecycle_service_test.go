@@ -20,7 +20,7 @@ func (stub *lifecycleScanStoreStub) FindByIDs(ids []int) ([]QueryScan, error) {
 	return nil, nil
 }
 
-func (stub *lifecycleScanStoreStub) CreateWithInputTargetsAndTasks(scan *CreateScan, inputs []CreateScanInputTarget, tasks []CreateScanTask) error {
+func (stub *lifecycleScanStoreStub) CreateWithTasks(scan *CreateScan, tasks []CreateScanTask) error {
 	return nil
 }
 

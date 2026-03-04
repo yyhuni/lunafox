@@ -25,8 +25,6 @@ const (
 
 type CreateScan = scandomain.CreateScan
 
-type CreateScanInputTarget = scandomain.CreateScanInputTarget
-
 type CreateScanTask = scandomain.CreateScanTask
 
 type TargetRef = scandomain.CreateTargetRef

@@ -21,8 +21,8 @@ func (adapter *scanCommandStoreAdapter) FindByIDs(ids []int) ([]scanapp.QuerySca
 	return adapter.repo.FindByIDs(ids)
 }
 
-func (adapter *scanCommandStoreAdapter) CreateWithInputTargetsAndTasks(scan *scanapp.CreateScan, inputs []scanapp.CreateScanInputTarget, tasks []scanapp.CreateScanTask) error {
-	return adapter.repo.CreateWithInputTargetsAndTasks(scan, inputs, tasks)
+func (adapter *scanCommandStoreAdapter) CreateWithTasks(scan *scanapp.CreateScan, tasks []scanapp.CreateScanTask) error {
+	return adapter.repo.CreateWithTasks(scan, tasks)
 }
 
 func (adapter *scanCommandStoreAdapter) BulkSoftDelete(ids []int) (int64, []string, error) {
