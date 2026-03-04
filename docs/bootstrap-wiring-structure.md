@@ -44,7 +44,7 @@ server/internal/bootstrap/
 
 负责 catalog 应用层端口适配：
 
-- `engine/target/wordlist` store 适配
+- `workflow-preset/target/wordlist` store 适配（统一 workflow 命名）
 - catalog 与 organization 协同适配
 - `domain <-> persistence` mapper
 
@@ -151,4 +151,3 @@ server/internal/bootstrap/
 - 模块 wiring 代码均位于 `wiring/<module>/`
 - `go test ./...` 通过
 - `make check-architecture` 通过
-

@@ -6,7 +6,7 @@ import { useEditScheduledScanDialogState } from "@/components/scan/scheduled/edi
 import {
   EditScheduledScanDialogHeader,
   EditScheduledScanNameField,
-  EditScheduledScanEngineSection,
+  EditScheduledScanWorkflowSection,
   EditScheduledScanTargetSection,
   EditScheduledScanCronSection,
   EditScheduledScanDialogFooter,
@@ -32,14 +32,14 @@ export function EditScheduledScanDialog({
     cronPresets,
     name,
     setName,
-    engineIds,
+    workflowIds,
     selectedTargetId,
     cronExpression,
     setCronExpression,
     targets,
-    engines,
+    workflows,
     isPending,
-    handleEngineToggle,
+    handleWorkflowToggle,
     handleTargetSelect,
     handleSubmit,
   } = useEditScheduledScanDialogState({
@@ -64,11 +64,11 @@ export function EditScheduledScanDialog({
             onNameChange={setName}
           />
 
-          <EditScheduledScanEngineSection
+          <EditScheduledScanWorkflowSection
             t={t}
-            engines={engines}
-            engineIds={engineIds}
-            onToggle={handleEngineToggle}
+            workflows={workflows}
+            workflowIds={workflowIds}
+            onToggle={handleWorkflowToggle}
           />
 
           <EditScheduledScanTargetSection

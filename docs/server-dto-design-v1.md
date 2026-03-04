@@ -57,7 +57,7 @@ server/internal/modules/
   catalog/
     dto/
       target_models.go
-      engine_models.go
+      workflow_models.go
       wordlist_models.go
       worker_models.go
       preset_models.go

@@ -143,8 +143,8 @@ export function ScanProgressSummary({ data, locale, t }: ScanProgressSummaryProp
       <div className="flex items-start justify-between text-sm gap-4">
         <span className="text-muted-foreground shrink-0">{t("engine")}</span>
         <div className="flex flex-wrap gap-1.5 justify-end">
-          {data.engineNames?.length ? (
-            data.engineNames.map((name) => (
+          {data.workflowNames?.length ? (
+            data.workflowNames.map((name) => (
               <Badge key={name} variant="secondary" className="text-xs whitespace-nowrap">
                 {name}
               </Badge>

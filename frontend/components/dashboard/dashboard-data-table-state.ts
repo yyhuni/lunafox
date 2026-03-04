@@ -2,28 +2,20 @@ import React from "react"
 import { useLocale, useTranslations } from "next-intl"
 import { toast } from "sonner"
 
-import { useAllVulnerabilities } from "@/hooks/use-vulnerabilities"
 import { useScans } from "@/hooks/use-scans"
 import { useResourceMutation } from "@/hooks/_shared/create-resource-mutation"
-import { createVulnerabilityColumns } from "@/components/vulnerabilities/vulnerabilities-columns"
 import { createScanHistoryColumns } from "@/components/scan/history/scan-history-columns"
 import { buildScanProgressData, type ScanProgressData } from "@/components/scan/scan-progress-dialog"
 import { getDateLocale } from "@/lib/date-utils"
 import { buildPaginationInfo, normalizePagination } from "@/hooks/_shared/pagination"
 import { getScan, deleteScan, stopScan } from "@/services/scan.service"
 
-import type { Vulnerability } from "@/types/vulnerability.types"
 import type { ScanRecord } from "@/types/scan.types"
 import type { PaginationInfo } from "@/types/common.types"
 
 export function useDashboardDataTableState() {
   const t = useTranslations()
   const locale = useLocale()
-
-  const [activeTab, setActiveTab] = React.useState("scans")
-
-  const [selectedVuln, setSelectedVuln] = React.useState<Vulnerability | null>(null)
-  const [vulnDialogOpen, setVulnDialogOpen] = React.useState(false)
 
   const [progressData, setProgressData] = React.useState<ScanProgressData | null>(null)
   const [progressDialogOpen, setProgressDialogOpen] = React.useState(false)
@@ -34,13 +26,7 @@ export function useDashboardDataTableState() {
   const [stopDialogOpen, setStopDialogOpen] = React.useState(false)
   const [scanToStop, setScanToStop] = React.useState<ScanRecord | null>(null)
 
-  const [vulnPagination, setVulnPagination] = React.useState({ pageIndex: 0, pageSize: 10 })
   const [scanPagination, setScanPagination] = React.useState({ pageIndex: 0, pageSize: 10 })
-
-  const vulnQuery = useAllVulnerabilities({
-    page: vulnPagination.pageIndex + 1,
-    pageSize: vulnPagination.pageSize,
-  })
 
   const scanQuery = useScans({
     page: scanPagination.pageIndex + 1,
@@ -59,7 +45,6 @@ export function useDashboardDataTableState() {
     skipDefaultErrorHandler: true,
   })
 
-  const vulnerabilities = vulnQuery.data?.vulnerabilities ?? []
   const scans = scanQuery.data?.results ?? []
 
   const formatDate = React.useCallback(
@@ -75,46 +60,6 @@ export function useDashboardDataTableState() {
       })
     },
     [locale]
-  )
-
-  const handleVulnRowClick = React.useCallback((vuln: Vulnerability) => {
-    setSelectedVuln(vuln)
-    setVulnDialogOpen(true)
-  }, [])
-
-  const vulnColumns = React.useMemo(
-    () =>
-      createVulnerabilityColumns({
-        formatDate,
-        handleViewDetail: handleVulnRowClick,
-        t: {
-          columns: {
-            severity: t("columns.vulnerability.severity"),
-            source: t("columns.vulnerability.source"),
-            vulnType: t("columns.vulnerability.vulnType"),
-            url: t("columns.common.url"),
-            createdAt: t("columns.common.createdAt"),
-          },
-          actions: {
-            details: t("common.actions.details"),
-            selectAll: t("common.actions.selectAll"),
-            selectRow: t("common.actions.selectRow"),
-          },
-          tooltips: {
-            vulnDetails: t("tooltips.vulnDetails"),
-            reviewed: t("tooltips.reviewed"),
-            pending: t("tooltips.pending"),
-          },
-          severity: {
-            critical: t("severity.critical"),
-            high: t("severity.high"),
-            medium: t("severity.medium"),
-            low: t("severity.low"),
-            info: t("severity.info"),
-          },
-        },
-      }),
-    [formatDate, handleVulnRowClick, t]
   )
 
   const handleViewProgress = React.useCallback(async (scan: ScanRecord) => {
@@ -213,15 +158,6 @@ export function useDashboardDataTableState() {
     [formatDate, handleViewProgress, handleDelete, handleStop, t]
   )
 
-  const vulnPaginationInfo: PaginationInfo = buildPaginationInfo({
-    ...normalizePagination(
-      vulnQuery.data?.pagination,
-      vulnPagination.pageIndex + 1,
-      vulnPagination.pageSize
-    ),
-    minTotalPages: 1,
-  })
-
   const scanPaginationInfo: PaginationInfo = buildPaginationInfo({
     ...normalizePagination(
       scanQuery.data,
@@ -233,11 +169,6 @@ export function useDashboardDataTableState() {
 
   return {
     t,
-    activeTab,
-    setActiveTab,
-    selectedVuln,
-    vulnDialogOpen,
-    setVulnDialogOpen,
     progressData,
     progressDialogOpen,
     setProgressDialogOpen,
@@ -249,17 +180,11 @@ export function useDashboardDataTableState() {
     scanToStop,
     confirmDelete,
     confirmStop,
-    vulnerabilities,
     scans,
-    vulnColumns,
     scanColumns,
-    vulnQuery,
     scanQuery,
-    vulnPagination,
-    setVulnPagination,
     scanPagination,
     setScanPagination,
-    vulnPaginationInfo,
     scanPaginationInfo,
   }
 }

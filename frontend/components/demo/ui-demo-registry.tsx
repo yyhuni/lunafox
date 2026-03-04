@@ -197,7 +197,7 @@ const chartConfig = {
 }
 
 const mermaidChart = `flowchart LR
-  A[Recon] --> B{Scan Engine}
+  A[Recon] --> B{Scan Workflow}
   B -->|Fast| C[Quick Scan]
   B -->|Deep| D[Full Scan]
   C --> E[Assets]

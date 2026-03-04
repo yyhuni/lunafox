@@ -14,7 +14,7 @@ import {
 import { useInitiateScanDialogState } from "@/components/scan/initiate-scan-dialog-state"
 import {
   InitiateScanConfigStep,
-  InitiateScanEngineSelection,
+  InitiateScanWorkflowSelection,
   InitiateScanFooter,
   InitiateScanOverwriteDialog,
   InitiateScanStepHeader,
@@ -43,13 +43,13 @@ export function InitiateScanDialog({
   const t = useTranslations("scan.initiate")
   const tToast = useTranslations("toast")
   const {
-    engines,
-    isLoadingEngines,
-    isEnginesError,
-    presetEngines,
+    workflows,
+    isLoadingWorkflows,
+    isWorkflowsError,
+    presetWorkflows,
     isLoadingPresets,
     isPresetsError,
-    selectedEngineIds,
+    selectedWorkflowIds,
     selectedPresetId,
     selectMode,
     isSubmitting,
@@ -58,14 +58,14 @@ export function InitiateScanDialog({
     isConfigEdited,
     isYamlValid,
     showOverwriteConfirm,
-    selectedEngines,
+    selectedWorkflows,
     selectedPreset,
     hasConfig,
     canProceedToReview,
     canStart,
     setCurrentStep,
     handleManualConfigChange,
-    handleEngineIdsChange,
+    handleWorkflowIdsChange,
     handlePresetSelect,
     handleOverwriteConfirm,
     handleOverwriteCancel,
@@ -121,22 +121,22 @@ export function InitiateScanDialog({
             <InitiateScanStepHeader steps={steps} currentStep={currentStep} />
 
             {currentStep === 1 && (
-              <InitiateScanEngineSelection
+              <InitiateScanWorkflowSelection
                 t={t}
                 selectMode={selectMode}
                 selectedPresetId={selectedPresetId}
                 selectedPreset={selectedPreset}
-                presetEngines={presetEngines}
+                presetWorkflows={presetWorkflows}
                 isLoadingPresets={isLoadingPresets}
                 isPresetsError={isPresetsError}
-                selectedEngineIds={selectedEngineIds}
-                engines={engines}
-                isLoadingEngines={isLoadingEngines}
-                isEnginesError={isEnginesError}
+                selectedWorkflowIds={selectedWorkflowIds}
+                workflows={workflows}
+                isLoadingWorkflows={isLoadingWorkflows}
+                isWorkflowsError={isWorkflowsError}
                 isSubmitting={isSubmitting}
                 onSelectModeChange={handleSelectModeChange}
                 onPresetSelect={handlePresetSelect}
-                onEngineIdsChange={handleEngineIdsChange}
+                onWorkflowIdsChange={handleWorkflowIdsChange}
               />
             )}
 
@@ -144,13 +144,13 @@ export function InitiateScanDialog({
               <InitiateScanConfigStep
                 t={t}
                 configuration={configuration}
-                selectedEngines={selectedEngines}
+                selectedWorkflows={selectedWorkflows}
                 isConfigEdited={isConfigEdited}
                 isYamlValid={isYamlValid}
                 hasConfig={hasConfig}
                 selectMode={selectMode}
                 selectedPreset={selectedPreset}
-                selectedEngineIds={selectedEngineIds}
+                selectedWorkflowIds={selectedWorkflowIds}
                 isSubmitting={isSubmitting}
                 onConfigChange={handleManualConfigChange}
                 onYamlValidationChange={handleYamlValidationChange}
@@ -164,7 +164,7 @@ export function InitiateScanDialog({
           t={t}
           currentStep={currentStep}
           selectMode={selectMode}
-          selectedEngineIds={selectedEngineIds}
+          selectedWorkflowIds={selectedWorkflowIds}
           selectedPreset={selectedPreset}
           canProceedToReview={canProceedToReview}
           canStart={canStart}

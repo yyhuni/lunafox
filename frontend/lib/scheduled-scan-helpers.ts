@@ -8,7 +8,7 @@ export interface ScheduledScanValidationInput {
   selectedOrgId: number | null
   selectedTargetId: number | null
   selectedPresetId: string | null
-  engineIds: number[]
+  workflowIds: number[]
   configuration: string
   isYamlValid: boolean
   cronExpression: string
@@ -16,7 +16,7 @@ export interface ScheduledScanValidationInput {
 
 export type ScheduledScanValidationError =
   | "form.taskNameRequired"
-  | "form.scanEngineRequired"
+  | "form.scanWorkflowRequired"
   | "form.configurationRequired"
   | "form.yamlInvalid"
   | "form.cronRequired"
@@ -42,7 +42,7 @@ export const validateScheduledScanStep = (
     selectedOrgId,
     selectedTargetId,
     selectedPresetId,
-    engineIds,
+    workflowIds,
     configuration,
     isYamlValid,
     cronExpression,
@@ -53,7 +53,7 @@ export const validateScheduledScanStep = (
       case 1:
         return name.trim() ? null : "form.taskNameRequired"
       case 2:
-        if (!selectedPresetId || engineIds.length === 0) return "form.scanEngineRequired"
+        if (!selectedPresetId || workflowIds.length === 0) return "form.scanWorkflowRequired"
         return null
       case 3:
         if (!configuration.trim()) return "form.configurationRequired"
@@ -75,7 +75,7 @@ export const validateScheduledScanStep = (
       }
       return selectedTargetId ? null : "toast.selectTarget"
     case 3:
-      if (!selectedPresetId || engineIds.length === 0) return "form.scanEngineRequired"
+      if (!selectedPresetId || workflowIds.length === 0) return "form.scanWorkflowRequired"
       return null
     case 4:
       if (!configuration.trim()) return "form.configurationRequired"

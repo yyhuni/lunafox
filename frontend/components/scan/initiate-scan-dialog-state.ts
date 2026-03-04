@@ -1,14 +1,14 @@
 import { useCallback, useMemo, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { mergeEngineConfigurations } from "@/lib/engine-config"
+import { mergeWorkflowConfigurations } from "@/lib/workflow-config"
 import {
   getApiErrorMessage,
   getInitiateScanValidationIssue,
   type InitiateScanSelectMode,
 } from "@/lib/initiate-scan-helpers"
 import { initiateScan } from "@/services/scan.service"
-import { useEngines, usePresetEngines } from "@/hooks/use-engines"
+import { useWorkflows, usePresetWorkflows } from "@/hooks/use-workflows"
 
 type UseInitiateScanDialogStateProps = {
   organizationId?: number
@@ -26,7 +26,7 @@ export function useInitiateScanDialogState({
   tToast,
 }: UseInitiateScanDialogStateProps) {
   const queryClient = useQueryClient()
-  const [selectedEngineIds, setSelectedEngineIds] = useState<number[]>([])
+  const [selectedWorkflowIds, setSelectedWorkflowIds] = useState<number[]>([])
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
   const [selectMode, setSelectMode] = useState<InitiateScanSelectMode>("preset")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -37,56 +37,56 @@ export function useInitiateScanDialogState({
   const [isYamlValid, setIsYamlValid] = useState(true)
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false)
   const [pendingConfigChange, setPendingConfigChange] = useState<string | null>(null)
-  const [pendingEngineIds, setPendingEngineIds] = useState<number[] | null>(null)
+  const [pendingWorkflowIds, setPendingWorkflowIds] = useState<number[] | null>(null)
   const [pendingPresetId, setPendingPresetId] = useState<string | null>(null)
 
-  const { data: engines, isLoading: isLoadingEngines, isError: isEnginesError } = useEngines()
-  const { data: presetEngines, isLoading: isLoadingPresets, isError: isPresetsError } = usePresetEngines()
+  const { data: workflows, isLoading: isLoadingWorkflows, isError: isWorkflowsError } = useWorkflows()
+  const { data: presetWorkflows, isLoading: isLoadingPresets, isError: isPresetsError } = usePresetWorkflows()
 
-  const selectedEngines = useMemo(() => {
-    if (!selectedEngineIds.length || !engines) return []
-    return engines.filter((e) => selectedEngineIds.includes(e.id))
-  }, [selectedEngineIds, engines])
+  const selectedWorkflows = useMemo(() => {
+    if (!selectedWorkflowIds.length || !workflows) return []
+    return workflows.filter((item) => selectedWorkflowIds.includes(item.id))
+  }, [selectedWorkflowIds, workflows])
 
   const selectedPreset = useMemo(() => {
-    if (!presetEngines || !selectedPresetId) return null
-    return presetEngines.find((preset) => preset.id === selectedPresetId) || null
-  }, [presetEngines, selectedPresetId])
+    if (!presetWorkflows || !selectedPresetId) return null
+    return presetWorkflows.find((preset) => preset.id === selectedPresetId) || null
+  }, [presetWorkflows, selectedPresetId])
 
   const handleManualConfigChange = useCallback((value: string) => {
     setConfiguration(value)
     setIsConfigEdited(true)
   }, [])
 
-  const buildConfigFromEngines = useCallback((engineIds: number[]) => {
-    if (!engines) return ""
-    const selected = engines.filter((e) => engineIds.includes(e.id))
-    return mergeEngineConfigurations(selected.map((e) => e.configuration || ""))
-  }, [engines])
+  const buildConfigFromWorkflows = useCallback((workflowIds: number[]) => {
+    if (!workflows) return ""
+    const selected = workflows.filter((item) => workflowIds.includes(item.id))
+    return mergeWorkflowConfigurations(selected.map((item) => item.configuration || ""))
+  }, [workflows])
 
-  const applyEngineSelection = useCallback((engineIds: number[], nextConfig: string) => {
-    setSelectedEngineIds(engineIds)
+  const applyWorkflowSelection = useCallback((workflowIds: number[], nextConfig: string) => {
+    setSelectedWorkflowIds(workflowIds)
     setConfiguration(nextConfig)
     setIsConfigEdited(false)
     setIsYamlValid(true)
   }, [])
 
-  const handleEngineIdsChange = useCallback((engineIds: number[]) => {
-    const nextConfig = buildConfigFromEngines(engineIds)
+  const handleWorkflowIdsChange = useCallback((workflowIds: number[]) => {
+    const nextConfig = buildConfigFromWorkflows(workflowIds)
     if (isConfigEdited && configuration !== nextConfig) {
-      setPendingEngineIds(engineIds)
+      setPendingWorkflowIds(workflowIds)
       setPendingConfigChange(nextConfig)
       setPendingPresetId(null)
       setShowOverwriteConfirm(true)
       return
     }
-    applyEngineSelection(engineIds, nextConfig)
+    applyWorkflowSelection(workflowIds, nextConfig)
     setSelectedPresetId(null)
-  }, [applyEngineSelection, buildConfigFromEngines, configuration, isConfigEdited])
+  }, [applyWorkflowSelection, buildConfigFromWorkflows, configuration, isConfigEdited])
 
   const handlePresetSelect = useCallback((presetId: string, presetConfig: string) => {
     if (isConfigEdited && configuration !== presetConfig) {
-      setPendingEngineIds(null)
+      setPendingWorkflowIds(null)
       setPendingConfigChange(presetConfig)
       setPendingPresetId(presetId)
       setShowOverwriteConfirm(true)
@@ -106,20 +106,20 @@ export function useInitiateScanDialogState({
         setIsConfigEdited(false)
         setIsYamlValid(true)
       } else {
-        const nextEngineIds = pendingEngineIds ?? selectedEngineIds
-        applyEngineSelection(nextEngineIds, pendingConfigChange)
+        const nextWorkflowIds = pendingWorkflowIds ?? selectedWorkflowIds
+        applyWorkflowSelection(nextWorkflowIds, pendingConfigChange)
       }
     }
     setShowOverwriteConfirm(false)
     setPendingConfigChange(null)
-    setPendingEngineIds(null)
+    setPendingWorkflowIds(null)
     setPendingPresetId(null)
-  }, [applyEngineSelection, pendingConfigChange, pendingEngineIds, pendingPresetId, selectedEngineIds])
+  }, [applyWorkflowSelection, pendingConfigChange, pendingWorkflowIds, pendingPresetId, selectedWorkflowIds])
 
   const handleOverwriteCancel = useCallback(() => {
     setShowOverwriteConfirm(false)
     setPendingConfigChange(null)
-    setPendingEngineIds(null)
+    setPendingWorkflowIds(null)
     setPendingPresetId(null)
   }, [])
 
@@ -132,7 +132,7 @@ export function useInitiateScanDialogState({
   }, [])
 
   const resetDialogState = useCallback(() => {
-    setSelectedEngineIds([])
+    setSelectedWorkflowIds([])
     setSelectedPresetId(null)
     setConfiguration("")
     setIsConfigEdited(false)
@@ -141,7 +141,7 @@ export function useInitiateScanDialogState({
     setSelectMode("preset")
     setShowOverwriteConfirm(false)
     setPendingConfigChange(null)
-    setPendingEngineIds(null)
+    setPendingWorkflowIds(null)
     setPendingPresetId(null)
   }, [])
 
@@ -149,7 +149,7 @@ export function useInitiateScanDialogState({
     const issue = getInitiateScanValidationIssue({
       selectMode,
       selectedPresetId,
-      selectedEngineIds,
+      selectedWorkflowIds,
       configuration,
       isYamlValid,
       organizationId,
@@ -165,17 +165,17 @@ export function useInitiateScanDialogState({
 
     setIsSubmitting(true)
     try {
-      const engineIds = selectMode === "custom" ? selectedEngineIds : []
-      const engineNames = selectMode === "custom"
-        ? selectedEngines.slice(0, 1).map((e) => e.name)
+      const workflowIds = selectMode === "custom" ? selectedWorkflowIds : []
+      const workflowNames = selectMode === "custom"
+        ? selectedWorkflows.slice(0, 1).map((item) => item.name)
         : [selectedPresetId as string]
 
       const response = await initiateScan({
         organizationId,
         targetId,
         configuration,
-        engineIds,
-        engineNames,
+        workflowIds,
+        workflowNames,
       })
 
       const scanCount = response.scans?.length || response.count || 0
@@ -206,8 +206,8 @@ export function useInitiateScanDialogState({
     queryClient,
     resetDialogState,
     selectMode,
-    selectedEngineIds,
-    selectedEngines,
+    selectedWorkflowIds,
+    selectedWorkflows,
     selectedPresetId,
     tToast,
     targetId,
@@ -225,19 +225,19 @@ export function useInitiateScanDialogState({
   const hasConfig = configuration.trim().length > 0
   const canProceedToReview = selectMode === "preset"
     ? !!selectedPresetId
-    : selectedEngineIds.length > 0
+    : selectedWorkflowIds.length > 0
   const canStart = configuration.trim().length > 0 &&
     isYamlValid &&
-    (selectMode === "preset" ? !!selectedPresetId : selectedEngineIds.length > 0)
+    (selectMode === "preset" ? !!selectedPresetId : selectedWorkflowIds.length > 0)
 
   return {
-    engines,
-    isLoadingEngines,
-    isEnginesError,
-    presetEngines,
+    workflows,
+    isLoadingWorkflows,
+    isWorkflowsError,
+    presetWorkflows,
     isLoadingPresets,
     isPresetsError,
-    selectedEngineIds,
+    selectedWorkflowIds,
     selectedPresetId,
     selectMode,
     isSubmitting,
@@ -246,14 +246,14 @@ export function useInitiateScanDialogState({
     isConfigEdited,
     isYamlValid,
     showOverwriteConfirm,
-    selectedEngines,
+    selectedWorkflows,
     selectedPreset,
     hasConfig,
     canProceedToReview,
     canStart,
     setCurrentStep,
     handleManualConfigChange,
-    handleEngineIdsChange,
+    handleWorkflowIdsChange,
     handlePresetSelect,
     handleOverwriteConfirm,
     handleOverwriteCancel,

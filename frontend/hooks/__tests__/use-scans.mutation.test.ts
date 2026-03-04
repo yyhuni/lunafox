@@ -67,8 +67,8 @@ describe("use-scans mutation", () => {
       await result.current.mutateAsync({
         targets: [{ name: "example.com" }],
         configuration: "name: quick",
-        engineIds: [1],
-        engineNames: ["nuclei"],
+        workflowIds: [1],
+        workflowNames: ["nuclei"],
       })
     })
 
@@ -96,8 +96,8 @@ describe("use-scans mutation", () => {
         result.current.mutateAsync({
           targets: [{ name: "blocked.com" }],
           configuration: "name: quick",
-          engineIds: [1],
-          engineNames: ["nuclei"],
+          workflowIds: [1],
+          workflowNames: ["nuclei"],
         })
       ).rejects.toBeDefined()
     })
@@ -121,8 +121,8 @@ describe("use-scans mutation", () => {
       await result.current.mutateAsync({
         targetId: 1,
         configuration: "name: nightly",
-        engineIds: [2],
-        engineNames: ["nuclei"],
+        workflowIds: [2],
+        workflowNames: ["nuclei"],
       })
     })
 
@@ -150,8 +150,8 @@ describe("use-scans mutation", () => {
         result.current.mutateAsync({
           targetId: 2,
           configuration: "name: nightly",
-          engineIds: [2],
-          engineNames: ["nuclei"],
+          workflowIds: [2],
+          workflowNames: ["nuclei"],
         })
       ).rejects.toBeDefined()
     })

@@ -91,7 +91,7 @@ export function buildScanProgressData(scan: ScanRecord): ScanProgressData {
   return {
     id: scan.id,
     target: scan.target,
-    engineNames: scan.engineNames || [],
+    workflowNames: scan.workflowNames || [],
     status: scan.status,
     progress: scan.progress,
     currentStage: scan.currentStage,

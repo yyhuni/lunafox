@@ -38,7 +38,7 @@ Each module subdirectory (for example `scan/` or `catalog/`) should include:
 ### 3) Adapter types
 - Pattern: `<module><role>Adapter`
   - Example: `scanTaskStoreAdapter`
-  - Example: `catalogEngineStoreAdapter`
+  - Example: `catalogTargetStoreAdapter`
 
 ## Interface Assertion Rules
 Each module should define `wiring_<module>_adapter_assertions.go` with compile-time assertions in the standard form:

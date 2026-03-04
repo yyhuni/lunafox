@@ -1,12 +1,9 @@
 "use client"
 
 import React from "react"
-import { IconBug, IconRadar } from "@/components/icons"
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { UnifiedDataTable } from "@/components/ui/data-table/unified-data-table"
-import { VulnerabilityDetailDialog } from "@/components/vulnerabilities/vulnerability-detail-dialog"
 import { ScanProgressDialog } from "@/components/scan/scan-progress-dialog"
 import {
   AlertDialog,
@@ -28,12 +25,6 @@ export function DashboardDataDialogs({
 }) {
   return (
     <>
-      <VulnerabilityDetailDialog
-        vulnerability={state.selectedVuln}
-        open={state.vulnDialogOpen}
-        onOpenChange={state.setVulnDialogOpen}
-      />
-
       {state.progressData ? (
         <ScanProgressDialog
           open={state.progressDialogOpen}
@@ -91,82 +82,37 @@ function DashboardTableLoading() {
   )
 }
 
-export function DashboardDataTabs({
+export function DashboardScanTable({
   state,
 }: {
   state: DashboardDataTableState
 }) {
-  const tabsToolbar = (
-    <TabsList>
-      <TabsTrigger value="scans" className="gap-1.5">
-        <IconRadar className="h-4 w-4" />
-        {state.t("navigation.scanHistory")}
-      </TabsTrigger>
-      <TabsTrigger value="vulnerabilities" className="gap-1.5">
-        <IconBug className="h-4 w-4" />
-        {state.t("navigation.vulnerabilities")}
-      </TabsTrigger>
-    </TabsList>
-  )
+  if (state.scanQuery.isLoading) {
+    return <DashboardTableLoading />
+  }
 
   return (
-    <Tabs value={state.activeTab} onValueChange={state.setActiveTab} className="w-full">
-      <TabsContent value="vulnerabilities" className="mt-0">
-        {state.vulnQuery.isLoading ? (
-          <DashboardTableLoading />
-        ) : (
-          <UnifiedDataTable
-            data={state.vulnerabilities}
-            columns={state.vulnColumns}
-            getRowId={(row) => String(row.id)}
-            state={{
-              pagination: state.vulnPagination,
-              onPaginationChange: state.setVulnPagination,
-              paginationInfo: state.vulnPaginationInfo,
-            }}
-            behavior={{
-              enableRowSelection: false,
-            }}
-            actions={{
-              showAddButton: false,
-              showBulkDelete: false,
-            }}
-            ui={{
-              emptyMessage: state.t("common.status.noData"),
-              toolbarLeft: tabsToolbar,
-            }}
-          />
-        )}
-      </TabsContent>
-
-      <TabsContent value="scans" className="mt-0">
-        {state.scanQuery.isLoading ? (
-          <DashboardTableLoading />
-        ) : (
-          <UnifiedDataTable
-            data={state.scans}
-            columns={state.scanColumns}
-            getRowId={(row) => String(row.id)}
-            state={{
-              pagination: state.scanPagination,
-              onPaginationChange: state.setScanPagination,
-              paginationInfo: state.scanPaginationInfo,
-            }}
-            behavior={{
-              enableRowSelection: false,
-              enableAutoColumnSizing: true,
-            }}
-            actions={{
-              showAddButton: false,
-              showBulkDelete: false,
-            }}
-            ui={{
-              emptyMessage: state.t("common.status.noData"),
-              toolbarLeft: tabsToolbar,
-            }}
-          />
-        )}
-      </TabsContent>
-    </Tabs>
+    <UnifiedDataTable
+      data={state.scans}
+      columns={state.scanColumns}
+      getRowId={(row) => String(row.id)}
+      state={{
+        pagination: state.scanPagination,
+        onPaginationChange: state.setScanPagination,
+        paginationInfo: state.scanPaginationInfo,
+      }}
+      behavior={{
+        enableRowSelection: false,
+        enableAutoColumnSizing: true,
+      }}
+      actions={{
+        showAddButton: false,
+        showBulkDelete: false,
+      }}
+      ui={{
+        hideToolbar: true,
+        emptyMessage: state.t("common.status.noData"),
+      }}
+    />
   )
 }

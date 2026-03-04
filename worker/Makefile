@@ -34,7 +34,7 @@ workflow-contracts-gen-workflow:
 	@go run ./cmd/workflow-contract-gen/main.go \
 		-workflow $(WORKFLOW) \
 		-worker-schema-dir ./internal/workflow/$(WORKFLOW)/generated \
-		-server-schema-dir ../server/internal/engineschema \
+		-server-schema-dir ../server/internal/workflowschema \
 		-docs-dir ../docs/config-reference \
 		-typed-go-output ./internal/workflow/$(WORKFLOW)/config_typed_generated.go \
 		-typed-go-package $(WORKFLOW)
@@ -43,7 +43,7 @@ workflow-contracts-gen-workflow:
 workflow-contracts-ci-check: workflow-contracts-gen-all
 	@git diff --exit-code -- \
 		./internal/workflow \
-		../server/internal/engineschema \
+		../server/internal/workflowschema \
 		../docs/config-reference
 
 check-naming:
@@ -81,7 +81,7 @@ clean:
 			rm -f "$${workflow_dir}generated/$${workflow_name}-"*.schema.json; \
 			rm -f "$${workflow_dir}config_typed_generated.go"; \
 			rm -f "../docs/config-reference/$${workflow_name}.md"; \
-			rm -f ../server/internal/engineschema/$${workflow_name}-*.schema.json; \
+			rm -f ../server/internal/workflowschema/$${workflow_name}-*.schema.json; \
 		fi \
 	done
 	@echo "✓ Cleaned"

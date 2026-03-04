@@ -108,55 +108,49 @@ func (h *ScanHandler) Stop(c *gin.Context) {
 	dto.Success(c, dto.StopScanResponse{RevokedTaskCount: revokedCount})
 }
 
-// Create starts a new scan.
-// POST /api/scans
-func (h *ScanHandler) Create(c *gin.Context) {
-	var req dto.CreateScanRequest
+// CreateNormal starts a normal scan.
+// POST /api/scans/normal
+func (h *ScanHandler) CreateNormal(c *gin.Context) {
+	var req dto.CreateNormalScanRequest
 	if !dto.BindJSON(c, &req) {
 		return
 	}
 
-	if req.Mode == "" {
-		req.Mode = "normal"
+	scan, err := h.svc.CreateNormal(toScanCreateNormalInput(&req))
+	if err != nil {
+		if workflowErr, ok := service.AsWorkflowError(err); ok {
+			dto.ErrorWithContract(c, http.StatusBadRequest, workflowErr.Code, workflowErr.Stage, workflowErr.Field, workflowErr.Message)
+			return
+		}
+		if errors.Is(err, service.ErrTargetNotFound) {
+			dto.NotFound(c, "Target not found")
+			return
+		}
+		if errors.Is(err, service.ErrScanInvalidConfig) ||
+			errors.Is(err, service.ErrScanInvalidEngineNames) ||
+			errors.Is(err, service.ErrScanNoWorkflows) {
+			dto.BadRequest(c, err.Error())
+			return
+		}
+		dto.InternalError(c, "Failed to create scan")
+		return
 	}
 
-	switch req.Mode {
-	case "normal":
-		if req.TargetID == 0 {
-			dto.BadRequest(c, "targetId is required for normal mode")
-			return
-		}
+	dto.Created(c, toScanDetailOutput(scan))
+}
 
-		scan, err := h.svc.CreateNormal(toScanCreateNormalInput(&req))
-		if err != nil {
-			if workflowErr, ok := service.AsWorkflowError(err); ok {
-				dto.ErrorWithContract(c, http.StatusBadRequest, workflowErr.Code, workflowErr.Stage, workflowErr.Field, workflowErr.Message)
-				return
-			}
-			if errors.Is(err, service.ErrTargetNotFound) {
-				dto.NotFound(c, "Target not found")
-				return
-			}
-			if errors.Is(err, service.ErrScanInvalidConfig) ||
-				errors.Is(err, service.ErrScanInvalidEngineNames) ||
-				errors.Is(err, service.ErrScanNoWorkflows) {
-				dto.BadRequest(c, err.Error())
-				return
-			}
-			dto.InternalError(c, "Failed to create scan")
-			return
-		}
-
-		dto.Created(c, toScanDetailOutput(scan))
-
-	case "quick":
-		if len(req.Targets) == 0 {
-			dto.BadRequest(c, "targets is required for quick mode")
-			return
-		}
-		dto.Error(c, http.StatusNotImplemented, "NOT_IMPLEMENTED", "Quick scan is not yet implemented")
-
-	default:
-		dto.BadRequest(c, "Invalid mode, must be 'normal' or 'quick'")
+// CreateQuick starts a quick scan.
+// POST /api/scans/quick
+func (h *ScanHandler) CreateQuick(c *gin.Context) {
+	var req dto.CreateQuickScanRequest
+	if !dto.BindJSON(c, &req) {
+		return
 	}
+
+	if len(req.Targets) == 0 {
+		dto.BadRequest(c, "targets is required for quick mode")
+		return
+	}
+
+	dto.Error(c, http.StatusNotImplemented, "NOT_IMPLEMENTED", "Quick scan is not yet implemented")
 }

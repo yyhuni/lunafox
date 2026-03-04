@@ -140,12 +140,10 @@
   background-color: transparent;
 }
 
-/* 2. Reshape the card style - thicker black border at the top */
+/* 2. Reshape the card style - unified border */
 [data-theme="bauhaus"] .bg-card,
 [data-theme="bauhaus"] [data-slot="card"] {
   border: 1px solid var(--border);
-  border-top: 2px solid var(--primary);
-  /* Core feature: bold top border */
   box-shadow: var(--shadow-2xs);
   border-radius: 0 !important;
   /* Force square corners */

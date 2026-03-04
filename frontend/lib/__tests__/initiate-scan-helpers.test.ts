@@ -8,7 +8,7 @@ import {
 const baseInput: InitiateScanValidationInput = {
   selectMode: "preset",
   selectedPresetId: "preset-1",
-  selectedEngineIds: [1],
+  selectedWorkflowIds: [1],
   configuration: "config: true",
   isYamlValid: true,
   organizationId: 1,
@@ -30,8 +30,8 @@ describe("initiate scan helpers", () => {
 
   it("returns validation issues for custom mode", () => {
     expect(
-      getInitiateScanValidationIssue(withOverrides({ selectMode: "custom", selectedEngineIds: [] }))
-    ).toEqual({ titleKey: "noEngineSelected" })
+      getInitiateScanValidationIssue(withOverrides({ selectMode: "custom", selectedWorkflowIds: [] }))
+    ).toEqual({ titleKey: "noWorkflowSelected" })
   })
 
   it("validates configuration and yaml state", () => {

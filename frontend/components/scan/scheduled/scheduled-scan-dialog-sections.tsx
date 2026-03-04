@@ -22,14 +22,14 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { EnginePresetSelector } from "@/components/scan/engine-preset-selector"
+import { WorkflowPresetSelector } from "@/components/scan/workflow-preset-selector"
 import { ScanConfigEditor } from "@/components/scan/scan-config-editor"
 import { cn } from "@/lib/utils"
 import { isCronExpressionValid } from "@/lib/scheduled-scan-helpers"
 import type { ScheduledScanSelectionMode } from "@/lib/scheduled-scan-helpers"
 import type { Organization } from "@/types/organization.types"
 import type { Target } from "@/types/target.types"
-import type { ScanEngine } from "@/types/engine.types"
+import type { ScanWorkflow } from "@/types/workflow.types"
 import {
   IconX,
   IconLoader2,
@@ -359,33 +359,33 @@ export function ScheduledScanTargetSelectionStep({
   )
 }
 
-interface ScheduledScanEngineStepProps {
-  engines: ScanEngine[]
-  engineIds: number[]
+interface ScheduledScanWorkflowStepProps {
+  workflows: ScanWorkflow[]
+  workflowIds: number[]
   selectedPresetId: string | null
   setSelectedPresetId: (value: string | null) => void
-  onEngineIdsChange: (value: number[]) => void
+  onWorkflowIdsChange: (value: number[]) => void
   onConfigChange: (value: string) => void
   disabled: boolean
 }
 
-export function ScheduledScanEngineStep({
-  engines,
-  engineIds,
+export function ScheduledScanWorkflowStep({
+  workflows,
+  workflowIds,
   selectedPresetId,
   setSelectedPresetId,
-  onEngineIdsChange,
+  onWorkflowIdsChange,
   onConfigChange,
   disabled,
-}: ScheduledScanEngineStepProps) {
-  if (engines.length === 0) return null
+}: ScheduledScanWorkflowStepProps) {
+  if (workflows.length === 0) return null
   return (
-    <EnginePresetSelector
-      engines={engines}
-      selectedEngineIds={engineIds}
+    <WorkflowPresetSelector
+      workflows={workflows}
+      selectedWorkflowIds={workflowIds}
       selectedPresetId={selectedPresetId}
       onPresetChange={setSelectedPresetId}
-      onEngineIdsChange={onEngineIdsChange}
+      onWorkflowIdsChange={onWorkflowIdsChange}
       onConfigurationChange={onConfigChange}
       disabled={disabled}
     />
@@ -396,7 +396,7 @@ interface ScheduledScanConfigStepProps {
   configuration: string
   onConfigChange: (value: string) => void
   onValidationChange: (value: boolean) => void
-  selectedEngines: ScanEngine[]
+  selectedWorkflows: ScanWorkflow[]
   isConfigEdited: boolean
   disabled: boolean
 }
@@ -405,7 +405,7 @@ export function ScheduledScanConfigStep({
   configuration,
   onConfigChange,
   onValidationChange,
-  selectedEngines,
+  selectedWorkflows,
   isConfigEdited,
   disabled,
 }: ScheduledScanConfigStepProps) {
@@ -414,7 +414,7 @@ export function ScheduledScanConfigStep({
       configuration={configuration}
       onChange={onConfigChange}
       onValidationChange={onValidationChange}
-      selectedEngines={selectedEngines}
+      selectedWorkflows={selectedWorkflows}
       isConfigEdited={isConfigEdited}
       disabled={disabled}
     />

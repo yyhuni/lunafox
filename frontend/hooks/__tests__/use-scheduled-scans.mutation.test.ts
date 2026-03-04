@@ -64,8 +64,8 @@ describe("use-scheduled-scans mutation", () => {
       await result.current.mutateAsync({
         name: "daily-scan",
         configuration: "name: daily",
-        engineIds: [1],
-        engineNames: ["nuclei"],
+        workflowIds: [1],
+        workflowNames: ["nuclei"],
         targetId: 9,
         cronExpression: "0 9 * * *",
         isEnabled: true,
@@ -96,8 +96,8 @@ describe("use-scheduled-scans mutation", () => {
         result.current.mutateAsync({
           name: "daily-scan",
           configuration: "name: daily",
-          engineIds: [1],
-          engineNames: ["nuclei"],
+          workflowIds: [1],
+          workflowNames: ["nuclei"],
           targetId: 9,
           cronExpression: "0 9 * * *",
           isEnabled: true,

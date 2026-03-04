@@ -96,10 +96,10 @@ export function ScanOverviewHeader({
           <Clock className="h-4 w-4" />
           <span>{t("duration")}: {formatDuration(startedAt, completedAt)}</span>
         </div>
-        {scan.engineNames && scan.engineNames.length > 0 && (
+        {scan.workflowNames && scan.workflowNames.length > 0 && (
           <div className="flex items-center gap-1.5">
             <Cpu className="h-4 w-4" />
-            <span>{scan.engineNames.join(", ")}</span>
+            <span>{scan.workflowNames.join(", ")}</span>
           </div>
         )}
         {scan.workerName && (

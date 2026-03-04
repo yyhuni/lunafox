@@ -11,7 +11,7 @@ import {
 import {
   ScheduledScanBasicInfoStep,
   ScheduledScanConfigStep,
-  ScheduledScanEngineStep,
+  ScheduledScanWorkflowStep,
   ScheduledScanFooter,
   ScheduledScanOverwriteDialog,
   ScheduledScanPresetInfoStep,
@@ -68,7 +68,7 @@ export function CreateScheduledScanDialog({
     goToPrevStep,
     name,
     setName,
-    engineIds,
+    workflowIds,
     selectedPresetId,
     setSelectedPresetId,
     selectionMode,
@@ -83,12 +83,12 @@ export function CreateScheduledScanDialog({
     isConfigEdited,
     showOverwriteConfirm,
     targets,
-    engines,
+    workflows,
     organizations,
-    selectedEngines,
+    selectedWorkflows,
     handlePresetConfigChange,
     handleManualConfigChange,
-    handleEngineIdsChange,
+    handleWorkflowIdsChange,
     handleOverwriteConfirm,
     handleOverwriteCancel,
     handleYamlValidationChange,
@@ -191,14 +191,14 @@ export function CreateScheduledScanDialog({
             />
           )}
 
-          {/* Step 3 (full) / Step 2 (preset): Select Engine */}
+          {/* Step 3 (full) / Step 2 (preset): Select Workflow */}
           {((currentStep === 3 && !hasPreset) || (currentStep === 2 && hasPreset)) && (
-            <ScheduledScanEngineStep
-              engines={engines}
-              engineIds={engineIds}
+            <ScheduledScanWorkflowStep
+              workflows={workflows}
+              workflowIds={workflowIds}
               selectedPresetId={selectedPresetId}
               setSelectedPresetId={setSelectedPresetId}
-              onEngineIdsChange={handleEngineIdsChange}
+              onWorkflowIdsChange={handleWorkflowIdsChange}
               onConfigChange={handlePresetConfigChange}
               disabled={isPending}
             />
@@ -210,7 +210,7 @@ export function CreateScheduledScanDialog({
               configuration={configuration}
               onConfigChange={handleManualConfigChange}
               onValidationChange={handleYamlValidationChange}
-              selectedEngines={selectedEngines}
+              selectedWorkflows={selectedWorkflows}
               isConfigEdited={isConfigEdited}
               disabled={isPending}
             />

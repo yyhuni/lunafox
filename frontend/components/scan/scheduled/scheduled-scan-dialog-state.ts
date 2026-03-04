@@ -4,7 +4,7 @@ import cronstrue from "cronstrue/i18n"
 import { toast } from "sonner"
 import { useStep } from "@/hooks/use-step"
 import { useCreateScheduledScan } from "@/hooks/use-scheduled-scans"
-import { useEngines } from "@/hooks/use-engines"
+import { useWorkflows } from "@/hooks/use-workflows"
 import {
   getConfigConflictMessage,
   validateScheduledScanStep,
@@ -44,7 +44,7 @@ export function useScheduledScanDialogState({
   t,
 }: UseScheduledScanDialogStateProps) {
   const { mutate: createScheduledScan, isPending } = useCreateScheduledScan()
-  const { data: enginesData } = useEngines()
+  const { data: workflowsData } = useWorkflows()
 
   const {
     orgSearchInput,
@@ -62,7 +62,7 @@ export function useScheduledScanDialogState({
   const [currentStep, { goToNextStep, goToPrevStep, reset: resetStep }] = useStep(totalSteps)
 
   const [name, setName] = React.useState("")
-  const [engineIds, setEngineIds] = React.useState<number[]>([])
+  const [workflowIds, setWorkflowIds] = React.useState<number[]>([])
   const [selectedPresetId, setSelectedPresetId] = React.useState<string | null>(null)
   const [selectionMode, setSelectionMode] = React.useState<ScheduledScanSelectionMode>("organization")
   const [selectedOrgId, setSelectedOrgId] = React.useState<number | null>(null)
@@ -99,16 +99,16 @@ export function useScheduledScanDialogState({
     }
   }, [open, presetOrganizationId, presetOrganizationName, presetTargetId, presetTargetName, t])
 
-  const engines = React.useMemo(() => enginesData || [], [enginesData])
+  const workflows = React.useMemo(() => workflowsData || [], [workflowsData])
 
-  const selectedEngines = React.useMemo(() => {
-    if (!engineIds.length || !engines.length) return []
-    return engines.filter((engine) => engineIds.includes(engine.id))
-  }, [engineIds, engines])
+  const selectedWorkflows = React.useMemo(() => {
+    if (!workflowIds.length || !workflows.length) return []
+    return workflows.filter((item) => workflowIds.includes(item.id))
+  }, [workflowIds, workflows])
 
   const resetForm = React.useCallback(() => {
     setName("")
-    setEngineIds([])
+    setWorkflowIds([])
     setSelectedPresetId(null)
     setSelectionMode("organization")
     setSelectedOrgId(null)
@@ -118,8 +118,8 @@ export function useScheduledScanDialogState({
     resetStep()
   }, [resetConfigState, resetStep])
 
-  const handleEngineIdsChange = React.useCallback((newEngineIds: number[]) => {
-    setEngineIds(newEngineIds)
+  const handleWorkflowIdsChange = React.useCallback((newWorkflowIds: number[]) => {
+    setWorkflowIds(newWorkflowIds)
   }, [])
 
   const handleOpenChange = React.useCallback((isOpen: boolean) => {
@@ -144,7 +144,7 @@ export function useScheduledScanDialogState({
       selectedOrgId,
       selectedTargetId,
       selectedPresetId,
-      engineIds,
+      workflowIds,
       configuration,
       isYamlValid,
       cronExpression,
@@ -158,7 +158,7 @@ export function useScheduledScanDialogState({
     configuration,
     cronExpression,
     currentStep,
-    engineIds,
+    workflowIds,
     hasPreset,
     isYamlValid,
     name,
@@ -180,8 +180,8 @@ export function useScheduledScanDialogState({
     const request: CreateScheduledScanRequest = {
       name: name.trim(),
       configuration: configuration.trim(),
-      engineIds: engineIds,
-      engineNames: selectedEngines.map((engine) => engine.name),
+      workflowIds: workflowIds,
+      workflowNames: selectedWorkflows.map((item) => item.name),
       cronExpression: cronExpression.trim(),
     }
     if (selectionMode === "organization" && selectedOrgId) {
@@ -209,12 +209,12 @@ export function useScheduledScanDialogState({
     configuration,
     createScheduledScan,
     cronExpression,
-    engineIds,
+    workflowIds,
     name,
     onOpenChange,
     onSuccess,
     resetForm,
-    selectedEngines,
+    selectedWorkflows,
     selectedOrgId,
     selectedTargetId,
     selectionMode,
@@ -262,8 +262,8 @@ export function useScheduledScanDialogState({
     goToPrevStep,
     name,
     setName,
-    engineIds,
-    setEngineIds,
+    workflowIds,
+    setWorkflowIds,
     selectedPresetId,
     setSelectedPresetId,
     selectionMode,
@@ -280,12 +280,12 @@ export function useScheduledScanDialogState({
     showOverwriteConfirm,
     pendingConfigChange,
     targets,
-    engines,
+    workflows,
     organizations,
-    selectedEngines,
+    selectedWorkflows,
     handlePresetConfigChange,
     handleManualConfigChange,
-    handleEngineIdsChange,
+    handleWorkflowIdsChange,
     handleOverwriteConfirm,
     handleOverwriteCancel,
     handleYamlValidationChange,

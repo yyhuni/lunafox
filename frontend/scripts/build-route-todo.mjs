@@ -15,7 +15,7 @@ const p0Routes = new Set([
   "/[locale]/login",
   "/[locale]/dashboard",
   "/[locale]/scan/history",
-  "/[locale]/scan/engine",
+  "/[locale]/scan/workflow",
   "/[locale]/target",
   "/[locale]/organization",
   "/[locale]/vulnerabilities",

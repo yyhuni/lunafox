@@ -14,7 +14,7 @@ const baseInput: ScheduledScanValidationInput = {
   selectedOrgId: 10,
   selectedTargetId: 20,
   selectedPresetId: "preset-1",
-  engineIds: [1],
+  workflowIds: [1],
   configuration: "scan: true",
   isYamlValid: true,
   cronExpression: "0 2 * * *",
@@ -40,7 +40,7 @@ describe("scheduled scan helpers", () => {
     ).toBe("form.taskNameRequired")
     expect(
       validateScheduledScanStep(withOverrides({ hasPreset: true, currentStep: 2, selectedPresetId: null }))
-    ).toBe("form.scanEngineRequired")
+    ).toBe("form.scanWorkflowRequired")
     expect(
       validateScheduledScanStep(withOverrides({ hasPreset: true, currentStep: 3, configuration: "" }))
     ).toBe("form.configurationRequired")
@@ -61,7 +61,7 @@ describe("scheduled scan helpers", () => {
     ).toBe("toast.selectTarget")
     expect(
       validateScheduledScanStep(withOverrides({ currentStep: 3, selectedPresetId: null }))
-    ).toBe("form.scanEngineRequired")
+    ).toBe("form.scanWorkflowRequired")
     expect(
       validateScheduledScanStep(withOverrides({ currentStep: 4, configuration: "" }))
     ).toBe("form.configurationRequired")

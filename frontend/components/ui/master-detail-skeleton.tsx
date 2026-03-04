@@ -12,7 +12,7 @@ interface MasterDetailSkeletonProps {
 
 /**
  * Master-detail layout skeleton screen
- * Suitable for scan engines, dictionary management, Nuclei templates and other pages
+ * Suitable for scan workflow templates, dictionary management, Nuclei templates and other pages
  */
 export function MasterDetailSkeleton({
   listItemCount = 5,

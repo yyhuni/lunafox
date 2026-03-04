@@ -12,8 +12,8 @@ export type ScanMode = 'organization' | 'target'
 export interface ScheduledScan {
   id: number
   name: string
-  engineIds: number[] // Associated scan engine ID list
-  engineNames: string[] // Associated scan engine name list
+  workflowIds: number[] // Associated workflow template ID list
+  workflowNames: string[] // Associated workflow name list
   organizationId: number | null // Organization ID (organization scan mode)
   organizationName: string | null // Organization name
   targetId: number | null // Target ID (target scan mode)
@@ -32,8 +32,8 @@ export interface ScheduledScan {
 export interface CreateScheduledScanRequest {
   name: string
   configuration: string // YAML configuration string (required)
-  engineIds: number[] // Engine ID list (required)
-  engineNames: string[] // Engine name list (required)
+  workflowIds: number[] // Workflow template ID list (required)
+  workflowNames: string[] // Workflow name list (required)
   organizationId?: number // Organization scan mode
   targetId?: number // Target scan mode
   cronExpression: string // Cron expression, format: minute hour day month weekday
@@ -44,8 +44,8 @@ export interface CreateScheduledScanRequest {
 export interface UpdateScheduledScanRequest {
   name?: string
   configuration?: string // YAML configuration string
-  engineIds?: number[] // Engine ID list (optional, for reference)
-  engineNames?: string[] // Engine name list (optional, for reference)
+  workflowIds?: number[] // Workflow template ID list (optional, for reference)
+  workflowNames?: string[] // Workflow name list (optional, for reference)
   organizationId?: number // Organization scan mode (clears targetId when set)
   targetId?: number // Target scan mode (clears organizationId when set)
   cronExpression?: string

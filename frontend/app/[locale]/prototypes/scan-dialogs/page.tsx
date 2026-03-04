@@ -52,7 +52,7 @@ const presets = [
   {
     id: "custom",
     title: "自定义",
-    desc: "手动选择引擎并编辑配置",
+    desc: "手动选择工作流并编辑配置",
     engines: 0,
     caps: 0,
   },
@@ -107,7 +107,7 @@ function PresetGrid() {
             {preset.tag && <Badge variant="secondary">{preset.tag}</Badge>}
           </div>
           <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{preset.desc}</p>
-          <p className="text-xs text-muted-foreground mt-3">{preset.engines} 个引擎 · {preset.caps} 项能力</p>
+          <p className="text-xs text-muted-foreground mt-3">{preset.engines} 个工作流 · {preset.caps} 项能力</p>
         </div>
       ))}
     </div>
@@ -119,7 +119,7 @@ export default function ScanDialogPrototypesPage() {
     <div className="space-y-10 p-6">
       <div className="space-y-2">
         <h1 className="text-xl font-semibold">发起扫描弹窗 · 原型对齐当前接口</h1>
-        <p className="text-sm text-muted-foreground">以下三套方案基于现有“发起扫描”接口字段（目标/引擎/配置/快速启动）与现有 UI 规范。</p>
+        <p className="text-sm text-muted-foreground">以下三套方案基于现有“发起扫描”接口字段（目标/工作流/配置/快速启动）与现有 UI 规范。</p>
       </div>
 
       {/* Variant A */}
@@ -137,7 +137,7 @@ export default function ScanDialogPrototypesPage() {
                 <PresetGrid />
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">使用引擎</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">使用工作流</p>
                 <div className="flex flex-wrap gap-2">
                   {engineChips.map((chip) => (
                     <Badge key={chip} variant="outline">{chip}</Badge>
@@ -167,7 +167,7 @@ export default function ScanDialogPrototypesPage() {
                     <span>约 18 分钟</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">引擎数量</span>
+                    <span className="text-muted-foreground">工作流数量</span>
                     <span>3 个</span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -187,7 +187,7 @@ export default function ScanDialogPrototypesPage() {
             </div>
           </div>
           <div className="flex flex-col gap-3 border-t px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-sm text-muted-foreground">已选择 3 个引擎 · YAML 校验通过</span>
+            <span className="text-sm text-muted-foreground">已选择 3 个工作流 · YAML 校验通过</span>
             <div className="flex gap-2">
               <Button variant="outline">保存为计划任务</Button>
               <Button>开始扫描</Button>
@@ -245,7 +245,7 @@ export default function ScanDialogPrototypesPage() {
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
                     <div>
-                      <p className="font-medium">已选择 3 个引擎</p>
+                      <p className="font-medium">已选择 3 个工作流</p>
                       <p className="text-xs text-muted-foreground">全量扫描覆盖 6 项能力</p>
                     </div>
                   </div>
@@ -331,7 +331,7 @@ export default function ScanDialogPrototypesPage() {
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">引擎数量</span>
+                    <span className="text-muted-foreground">工作流数量</span>
                     <span>2 个</span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -351,7 +351,7 @@ export default function ScanDialogPrototypesPage() {
             </div>
           </div>
           <div className="flex flex-col gap-3 border-t px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-sm text-muted-foreground">默认方案：全量扫描 · 已选 2 引擎</span>
+            <span className="text-sm text-muted-foreground">默认方案：全量扫描 · 已选 2 工作流</span>
             <div className="flex gap-2">
               <Button variant="outline">保存为默认方案</Button>
               <Button>开始扫描</Button>

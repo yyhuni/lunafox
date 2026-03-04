@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 const STATUS_MESSAGES = [
   "Initializing security modules…",
   "Loading vulnerability database…",
-  "Connecting to scan engine…",
+  "Connecting to scan workflow…",
   "Preparing templates…",
   "Almost ready…",
 ]

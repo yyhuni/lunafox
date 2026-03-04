@@ -18,12 +18,12 @@ make workflow-contracts-ci-check
 
 该命令会重新生成 contract 产物，并校验以下目录无未提交差异：
 - `worker/internal/workflow`
-- `server/internal/engineschema`
+- `server/internal/workflowschema`
 - `docs/config-reference`
 
 ## 可配置输出变量
 `make workflow-contracts-gen-all` 支持以下可选变量：
-- `SERVER_SCHEMA_DIR`：server schema 输出目录（默认 `../server/internal/engineschema`）
+- `SERVER_SCHEMA_DIR`：server workflow schema 输出目录（默认 `../server/internal/workflowschema`，目录名为历史保留）
 - `DOCS_DIR`：文档输出目录（默认 `../docs/config-reference`）
 - `WORKER_SCHEMA_BASE_DIR`：worker schema 根目录（默认每个 workflow 下 `generated/`）
 - `MIRROR_SCHEMA_DIR`：额外镜像输出目录（可选）
@@ -32,7 +32,7 @@ make workflow-contracts-ci-check
 ```bash
 cd worker
 make workflow-contracts-gen-all \
-  SERVER_SCHEMA_DIR=../server/internal/engineschema \
+  SERVER_SCHEMA_DIR=../server/internal/workflowschema \
   DOCS_DIR=../docs/config-reference \
   WORKER_SCHEMA_BASE_DIR=./out/worker-schemas \
   MIRROR_SCHEMA_DIR=./out/mirror
@@ -40,5 +40,5 @@ make workflow-contracts-gen-all \
 
 ## 生成契约约定
 - schema 文件名：`<workflow>-<apiVersion>-<schemaVersion>.schema.json`
-- schema `$id`：`lunafox://schemas/engines/<workflow>/<apiVersion>/<schemaVersion>`
+- schema `$id`：`lunafox://schemas/workflows/<workflow>/<apiVersion>/<schemaVersion>`
 - typed config：`config_typed_generated.go`

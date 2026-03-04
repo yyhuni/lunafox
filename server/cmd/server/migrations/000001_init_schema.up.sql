@@ -64,18 +64,6 @@ CREATE TABLE IF NOT EXISTS organization_target (
 CREATE INDEX IF NOT EXISTS idx_org_target_org ON organization_target(organization_id);
 CREATE INDEX IF NOT EXISTS idx_org_target_target ON organization_target(target_id);
 
--- scan_engine
-CREATE TABLE IF NOT EXISTS scan_engine (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(200) NOT NULL,
-    configuration VARCHAR(10000) NOT NULL DEFAULT '',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-CREATE UNIQUE INDEX IF NOT EXISTS unique_scan_engine_name ON scan_engine(name);
-CREATE INDEX IF NOT EXISTS idx_scan_engine_created_at ON scan_engine(created_at);
-
-
 -- worker_node
 CREATE TABLE IF NOT EXISTS worker_node (
     id SERIAL PRIMARY KEY,
@@ -162,7 +150,6 @@ CREATE TABLE IF NOT EXISTS subfinder_provider_settings (
 CREATE TABLE IF NOT EXISTS scan (
     id SERIAL PRIMARY KEY,
     target_id INTEGER NOT NULL REFERENCES target(id) ON DELETE CASCADE,
-    engine_ids INTEGER[] NOT NULL DEFAULT '{}',
     engine_names JSONB NOT NULL DEFAULT '[]',
     yaml_configuration TEXT NOT NULL DEFAULT '',
     scan_mode VARCHAR(10) NOT NULL DEFAULT 'full',
@@ -210,7 +197,6 @@ CREATE INDEX IF NOT EXISTS idx_scan_log_created_at ON scan_log(created_at);
 CREATE TABLE IF NOT EXISTS scheduled_scan (
     id SERIAL PRIMARY KEY,
     name VARCHAR(200) NOT NULL,
-    engine_ids INTEGER[] NOT NULL DEFAULT '{}',
     engine_names JSONB NOT NULL DEFAULT '[]',
     yaml_configuration TEXT NOT NULL DEFAULT '',
     organization_id INTEGER REFERENCES organization(id) ON DELETE SET NULL,
@@ -567,9 +553,6 @@ CREATE INDEX IF NOT EXISTS idx_website_tech_gin ON website USING GIN (tech);
 
 -- GIN index for endpoint.tech array
 CREATE INDEX IF NOT EXISTS idx_endpoint_tech_gin ON endpoint USING GIN (tech);
-
--- GIN index for scan.engine_ids array
-CREATE INDEX IF NOT EXISTS idx_scan_engine_ids_gin ON scan USING GIN (engine_ids);
 
 -- GIN index for scan.container_ids array
 CREATE INDEX IF NOT EXISTS idx_scan_container_ids_gin ON scan USING GIN (container_ids);

@@ -3,7 +3,7 @@ export type InitiateScanSelectMode = "preset" | "custom"
 export interface InitiateScanValidationInput {
   selectMode: InitiateScanSelectMode
   selectedPresetId: string | null
-  selectedEngineIds: number[]
+  selectedWorkflowIds: number[]
   configuration: string
   isYamlValid: boolean
   organizationId?: number
@@ -11,7 +11,7 @@ export interface InitiateScanValidationInput {
 }
 
 export interface InitiateScanValidationIssue {
-  titleKey: "noPresetSelected" | "noEngineSelected" | "emptyConfig" | "invalidConfig" | "paramError"
+  titleKey: "noPresetSelected" | "noWorkflowSelected" | "emptyConfig" | "invalidConfig" | "paramError"
   descriptionKey?: "paramErrorDesc"
 }
 
@@ -24,7 +24,7 @@ export const getInitiateScanValidationIssue = (
   const {
     selectMode,
     selectedPresetId,
-    selectedEngineIds,
+    selectedWorkflowIds,
     configuration,
     isYamlValid,
     organizationId,
@@ -33,8 +33,8 @@ export const getInitiateScanValidationIssue = (
 
   if (selectMode === "preset") {
     if (!selectedPresetId) return { titleKey: "noPresetSelected" }
-  } else if (selectedEngineIds.length === 0) {
-    return { titleKey: "noEngineSelected" }
+  } else if (selectedWorkflowIds.length === 0) {
+    return { titleKey: "noWorkflowSelected" }
   }
 
   if (!configuration.trim()) return { titleKey: "emptyConfig" }

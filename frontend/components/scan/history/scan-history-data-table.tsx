@@ -83,7 +83,7 @@ export function ScanHistoryDataTable({
       }}
       behavior={{
         enableAutoColumnSizing: true,
-        expandColumnIds: ["target", "cachedStats", "engineNames"],
+        expandColumnIds: ["target", "cachedStats", "workflowNames"],
       }}
       actions={{
         onBulkDelete,

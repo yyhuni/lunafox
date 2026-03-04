@@ -3,9 +3,9 @@ import { toast } from "sonner"
 import { getConfigConflictMessage, isCronExpressionValid } from "@/lib/scheduled-scan-helpers"
 import { useUpdateScheduledScan } from "@/hooks/use-scheduled-scans"
 import { useTargets } from "@/hooks/use-targets"
-import { useEngines } from "@/hooks/use-engines"
+import { useWorkflows } from "@/hooks/use-workflows"
 import type { ScheduledScan, UpdateScheduledScanRequest } from "@/types/scheduled-scan.types"
-import type { ScanEngine } from "@/types/engine.types"
+import type { ScanWorkflow } from "@/types/workflow.types"
 import type { Target } from "@/types/target.types"
 
 interface UseEditScheduledScanDialogStateProps {
@@ -25,7 +25,7 @@ export function useEditScheduledScanDialogState({
 }: UseEditScheduledScanDialogStateProps) {
   const { mutate: updateScheduledScan, isPending } = useUpdateScheduledScan()
   const { data: targetsData } = useTargets()
-  const { data: enginesData } = useEngines()
+  const { data: workflowsData } = useWorkflows()
 
   const cronPresets = React.useMemo(() => [
     { label: t("presets.everyMinute"), value: "* * * * *" },
@@ -38,22 +38,22 @@ export function useEditScheduledScanDialogState({
   ], [t])
 
   const [name, setName] = React.useState("")
-  const [engineIds, setEngineIds] = React.useState<number[]>([])
+  const [workflowIds, setWorkflowIds] = React.useState<number[]>([])
   const [selectedTargetId, setSelectedTargetId] = React.useState<number | null>(null)
   const [cronExpression, setCronExpression] = React.useState("")
 
   React.useEffect(() => {
     if (scheduledScan && open) {
       setName(scheduledScan.name)
-      setEngineIds(scheduledScan.engineIds || [])
+      setWorkflowIds(scheduledScan.workflowIds || [])
       setSelectedTargetId(scheduledScan.targetId || null)
       setCronExpression(scheduledScan.cronExpression || "0 2 * * *")
     }
   }, [scheduledScan, open])
 
-  const handleEngineToggle = React.useCallback((engineId: number, checked: boolean) => {
-    setEngineIds((prev) => (
-      checked ? [...prev, engineId] : prev.filter((id) => id !== engineId)
+  const handleWorkflowToggle = React.useCallback((workflowID: number, checked: boolean) => {
+    setWorkflowIds((prev) => (
+      checked ? [...prev, workflowID] : prev.filter((id) => id !== workflowID)
     ))
   }, [])
 
@@ -68,8 +68,8 @@ export function useEditScheduledScanDialogState({
       toast.error(t("form.taskNameRequired"))
       return
     }
-    if (engineIds.length === 0) {
-      toast.error(t("form.scanEngineRequired"))
+    if (workflowIds.length === 0) {
+      toast.error(t("form.scanWorkflowRequired"))
       return
     }
     if (scheduledScan.scanMode === "target" && !selectedTargetId) {
@@ -83,7 +83,7 @@ export function useEditScheduledScanDialogState({
 
     const request: UpdateScheduledScanRequest = {
       name: name.trim(),
-      engineIds: engineIds,
+      workflowIds: workflowIds,
       cronExpression: cronExpression.trim(),
     }
 
@@ -108,23 +108,23 @@ export function useEditScheduledScanDialogState({
         },
       }
     )
-  }, [cronExpression, engineIds, name, onOpenChange, onSuccess, scheduledScan, selectedTargetId, t, updateScheduledScan])
+  }, [cronExpression, workflowIds, name, onOpenChange, onSuccess, scheduledScan, selectedTargetId, t, updateScheduledScan])
 
   const targets: Target[] = targetsData?.targets || []
-  const engines: ScanEngine[] = enginesData || []
+  const workflows: ScanWorkflow[] = workflowsData || []
 
   return {
     cronPresets,
     name,
     setName,
-    engineIds,
+    workflowIds,
     selectedTargetId,
     cronExpression,
     setCronExpression,
     targets,
-    engines,
+    workflows,
     isPending,
-    handleEngineToggle,
+    handleWorkflowToggle,
     handleTargetSelect,
     handleSubmit,
   }

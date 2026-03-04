@@ -12,7 +12,7 @@
 - `scan`：扫描作业、任务编排、状态流转。
 - `asset`：资产结果（网站、端点、目录、漏洞）查询与聚合视图。
 - `identity`：用户、组织、权限及组织与目标关系。
-- `catalog`：目标、引擎、字典、扫描配置元数据。
+- `catalog`：目标、工作流、字典、扫描配置元数据。
 - `snapshot`：按扫描维度快照写入与查询。
 
 ## 3. 统一语言（Ubiquitous Language）
@@ -64,8 +64,8 @@
 - 已清理 `service/task_plan.go` 重复实现，任务规划由 application 创建用例维护。
 - 已开始迁移 `identity/organization`：新增 `application.OrganizationQueryService` 与 `application.OrganizationCommandService`，`identity/service/organization.go` 已改为门面。
 - 已完成 `identity/user` 迁移：新增 `application.UserQueryService`、`application.UserCommandService`，`identity/service/user.go` 已改为门面并补充 application 单测。
-- 已完成 `catalog/engine` 迁移：新增 `application.EngineQueryService`、`application.EngineCommandService`，`catalog/service/engine.go` 已改为门面并补充 application 单测。
-- `catalog/handler/engine.go` 已补充 `ErrInvalidEngine` 映射，保持输入校验失败时的明确 400 语义。
+- 已完成 `catalog/workflow` 迁移：新增 `application.WorkflowQueryService`、`application.WorkflowCommandService`，`catalog/service/workflow.go` 已改为门面并补充 application 单测。
+- `catalog/handler/workflow.go` 已补充 `ErrInvalidWorkflow` 映射，保持工作流输入校验失败时的明确 400 语义。
 - 已完成 `catalog/target` 迁移：新增 `application.TargetQueryService`、`application.TargetCommandService`，`catalog/service/target*.go`（含 detail/batch）已改为门面。
 - `target` 详情汇总统计与批量创建（含组织关联）已下沉到 application，并补充 application 单测覆盖核心分支。
 - 已完成 `catalog/wordlist` 迁移：新增 `application.WordlistQueryService`、`application.WordlistCommandService`，`catalog/service/wordlist*.go` 已门面化。
@@ -99,7 +99,7 @@
 - 已完成 `scan/service/scan.go` 结构化拆分：按职责拆为 `scan.go`（构造与依赖）、`scan_query.go`（查询口）、`scan_lifecycle.go`（生命周期口），保持行为与错误语义不变。
 - `scan/service` 已满足单文件复杂度收敛目标（核心业务文件不再集中在单一超长文件），并通过 `scan` 模块与全量测试回归。
 - 已完成 `catalog/application/target_command.go` 拆分：按职责拆为 `target_command_common.go`（契约与错误）、`target_command_crud.go`（单体 CRUD 用例）、`target_command_batch.go`（批量创建与组织绑定），单文件已降到阈值内。
-- 已完成 `scan/application/create_normal.go` 拆分：按职责拆为 `create_normal_common.go`（契约与依赖）、`create_normal_execute.go`（创建主流程）、`create_normal_utils.go`（配置解析与引擎归一化）、`create_normal_plan.go`（阶段任务规划）。
+- 已完成 `scan/application/create_normal.go` 拆分：按职责拆为 `create_normal_common.go`（契约与依赖）、`create_normal_execute.go`（创建主流程）、`create_normal_utils.go`（配置解析与工作流归一化）、`create_normal_plan.go`（阶段任务规划）。
 - 本轮拆分后已通过 `go test ./internal/modules/catalog/... ./internal/modules/scan/...` 与 `go test ./...` 全量回归。
 - 已完成 `scan/service` 目录收口：删除空壳 `task_plan.go`，并将响应转换函数并入 `scan_query.go`，目录内非测试文件数降至阈值内。
 - 已完成 `scan/repository` 目录收口：将阶段推进逻辑并入 `status.go`，删除独立 `stage.go`，目录内非测试文件数降至阈值内。
@@ -126,10 +126,10 @@
 - 已新增 `identity/service/adapters.go` 作为 ACL 适配层：集中处理 `domain <-> model` 映射、组织目标关联错误映射（`repository.ErrTargetNotFound -> domain.ErrTargetNotFound`）。
 - `identity/service/organization.go` 已移除对 `repository.OrganizationWithCount` 的外露依赖，改为服务内投影；`identity/handler/organization_targets.go` 已去除 repository 直连错误判断，统一通过 service 错误语义。
 - 本轮改动后已通过：`cd server && go test ./internal/modules/identity/...` 与 `cd server && go test ./...`。
-- 本轮继续推进 `catalog`：已完成 `engine` 链路纯化，`catalog/application/engine_{command,query}.go` 移除对 `catalog/model` 的直接依赖，改为 `catalog/domain.ScanEngine`。
-- `catalog/service/engine.go` 已新增内嵌适配器（repo->domain / domain->model），对外返回契约保持不变；`engine` 应用层单测已同步迁移到 domain 类型。
+- 本轮继续推进 `catalog`：已完成工作流链路纯化，`catalog/application/workflow_{command,query}.go` 移除对 `catalog/model` 的直接依赖，改为 `catalog/domain.ScanWorkflow`。
+- `catalog/service/workflow.go` 已新增内嵌适配器（repo->domain / domain->model），对外返回契约保持不变；工作流应用层单测已同步迁移到 domain 类型 `ScanWorkflow`。
 - `catalog` 子模块回归通过：`cd server && go test ./internal/modules/catalog/...`。
-- 本轮已完成 `catalog` 纯化收口：`catalog/application`（`engine/target/wordlist/worker`）已移除对 `catalog/model|catalog/repository|scan/model` 的直接依赖，统一改为 `catalog/domain` 实体、值对象与投影。
+- 本轮已完成 `catalog` 纯化收口：`catalog/application`（`workflow/target/wordlist/worker`）已移除对 `catalog/model|catalog/repository|scan/model` 的直接依赖，统一改为 `catalog/domain` 实体、值对象与投影。
 - 已补齐 `catalog/domain`：新增/扩展 `Target` 聚合字段、`Wordlist` 实体、`TargetAssetCounts/VulnerabilityCounts` 投影、`SubfinderProviderSettings` 与 `ProviderFormats`，并将 worker provider 配置规则统一下沉到 domain。
 - 已完成 `catalog/service` 适配层：`target/wordlist/worker` 门面通过 adapter 映射 `repository <-> domain <-> model`，handler 对外契约保持不变。
 - 结构约束修复：将 `identity/service/adapters.go` 拆分为 `adapters.go` 与 `organization_adapters.go`，确保 `service/application` 非测试文件无超过 220 行项。

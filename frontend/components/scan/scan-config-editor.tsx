@@ -3,13 +3,13 @@
 import { ScanConfigEditorLayout } from "@/components/scan/scan-config-editor-sections"
 import { useScanConfigEditorState } from "@/components/scan/scan-config-editor-state"
 
-import type { ScanEngine } from "@/types/engine.types"
+import type { ScanWorkflow } from "@/types/workflow.types"
 
 interface ScanConfigEditorProps {
   configuration: string
   onChange: (value: string) => void
   onValidationChange?: (isValid: boolean) => void
-  selectedEngines?: ScanEngine[]
+  selectedWorkflows?: ScanWorkflow[]
   selectedCapabilities?: string[]
   isConfigEdited?: boolean
   disabled?: boolean
@@ -21,7 +21,7 @@ export function ScanConfigEditor({
   configuration,
   onChange,
   onValidationChange,
-  selectedEngines = [],
+  selectedWorkflows = [],
   selectedCapabilities,
   isConfigEdited = false,
   disabled = false,
@@ -29,7 +29,7 @@ export function ScanConfigEditor({
   className,
 }: ScanConfigEditorProps) {
   const state = useScanConfigEditorState({
-    selectedEngines,
+    selectedWorkflows,
     selectedCapabilities,
   })
 

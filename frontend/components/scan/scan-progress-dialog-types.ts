@@ -21,7 +21,7 @@ export interface ScanProgressData {
     name: string
     type: string
   }
-  engineNames: string[]
+  workflowNames: string[]
   status: string
   progress: number
   currentStage?: ScanStage

@@ -12,7 +12,7 @@ const GROUP_META: Record<string, { title: string; description?: string }> = {
   root: { title: "全局与壳层", description: "导航、布局、入口与全局组件" },
   common: { title: "通用组件", description: "多模块共享的基础组件" },
   dashboard: { title: "仪表盘", description: "统计、趋势与监控视图" },
-  scan: { title: "扫描", description: "扫描历史、引擎与计划任务相关" },
+  scan: { title: "扫描", description: "扫描历史、工作流与计划任务相关" },
   target: { title: "目标", description: "目标资产管理与详情视图" },
   organization: { title: "组织", description: "组织与关联资产管理" },
   settings: { title: "系统设置", description: "工作节点、日志与系统配置" },

@@ -20,7 +20,7 @@ import { LoadingSpinner } from "@/components/loading-spinner"
 import { ScanConfigEditor } from "./scan-config-editor"
 import { cn } from "@/lib/utils"
 import type { InitiateScanSelectMode } from "@/lib/initiate-scan-helpers"
-import type { PresetEngine, ScanEngine } from "@/types/engine.types"
+import type { PresetWorkflow, ScanWorkflow } from "@/types/workflow.types"
 
 type TranslationFn = (key: string, params?: Record<string, string | number | Date>) => string
 
@@ -70,41 +70,41 @@ export function InitiateScanStepHeader({ steps, currentStep }: InitiateScanStepH
   )
 }
 
-interface InitiateScanEngineSelectionProps {
+interface InitiateScanWorkflowSelectionProps {
   t: TranslationFn
   selectMode: InitiateScanSelectMode
   selectedPresetId: string | null
-  selectedPreset: PresetEngine | null
-  presetEngines?: PresetEngine[]
+  selectedPreset: PresetWorkflow | null
+  presetWorkflows?: PresetWorkflow[]
   isLoadingPresets: boolean
   isPresetsError: boolean
-  selectedEngineIds: number[]
-  engines?: ScanEngine[]
-  isLoadingEngines: boolean
-  isEnginesError: boolean
+  selectedWorkflowIds: number[]
+  workflows?: ScanWorkflow[]
+  isLoadingWorkflows: boolean
+  isWorkflowsError: boolean
   isSubmitting: boolean
   onSelectModeChange: (value: string) => void
   onPresetSelect: (presetId: string, presetConfig: string) => void
-  onEngineIdsChange: (engineIds: number[]) => void
+  onWorkflowIdsChange: (workflowIds: number[]) => void
 }
 
-export function InitiateScanEngineSelection({
+export function InitiateScanWorkflowSelection({
   t,
   selectMode,
   selectedPresetId,
   selectedPreset,
-  presetEngines,
+  presetWorkflows,
   isLoadingPresets,
   isPresetsError,
-  selectedEngineIds,
-  engines,
-  isLoadingEngines,
-  isEnginesError,
+  selectedWorkflowIds,
+  workflows,
+  isLoadingWorkflows,
+  isWorkflowsError,
   isSubmitting,
   onSelectModeChange,
   onPresetSelect,
-  onEngineIdsChange,
-}: InitiateScanEngineSelectionProps) {
+  onWorkflowIdsChange,
+}: InitiateScanWorkflowSelectionProps) {
   return (
     <div className="p-6 space-y-6">
       <Tabs value={selectMode} onValueChange={onSelectModeChange}>
@@ -131,9 +131,9 @@ export function InitiateScanEngineSelection({
             </div>
           ) : isPresetsError ? (
             <div className="text-sm text-destructive">{t("loadFailed")}</div>
-          ) : presetEngines && presetEngines.length > 0 ? (
+          ) : presetWorkflows && presetWorkflows.length > 0 ? (
             <div className="grid gap-2 sm:grid-cols-2">
-              {presetEngines.map((preset) => {
+              {presetWorkflows.map((preset) => {
                 const isSelected = preset.id === selectedPresetId
                 return (
                   <button
@@ -167,29 +167,29 @@ export function InitiateScanEngineSelection({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium">{t("selectEngineTitle")}</p>
-              <p className="text-xs text-muted-foreground">{t("selectEngineHint")}</p>
+              <p className="text-xs text-muted-foreground">{t("selectWorkflowHint")}</p>
             </div>
-            {selectedEngineIds.length > 0 && (
+            {selectedWorkflowIds.length > 0 && (
               <Badge variant="secondary" className="text-xs">
-                {t("selectedCount", { count: selectedEngineIds.length })}
+                {t("selectedCount", { count: selectedWorkflowIds.length })}
               </Badge>
             )}
           </div>
-          {isLoadingEngines ? (
+          {isLoadingWorkflows ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <LoadingSpinner />
               {t("loading")}
             </div>
-          ) : isEnginesError ? (
+          ) : isWorkflowsError ? (
             <div className="text-sm text-destructive">{t("loadFailed")}</div>
-          ) : engines && engines.length > 0 ? (
+          ) : workflows && workflows.length > 0 ? (
             <div className="grid gap-2 sm:grid-cols-2">
-              {engines.map((engine) => {
-                const isSelected = selectedEngineIds.includes(engine.id)
+              {workflows.map((workflow) => {
+                const isSelected = selectedWorkflowIds.includes(workflow.id)
                 return (
                   <label
-                    key={engine.id}
-                    htmlFor={`initiate-engine-${engine.id}`}
+                    key={workflow.id}
+                    htmlFor={`initiate-workflow-${workflow.id}`}
                     className={cn(
                       "flex items-center gap-3 rounded-lg border px-3 py-2 cursor-pointer transition-[background-color,border-color,color,box-shadow]",
                       isSelected
@@ -198,19 +198,19 @@ export function InitiateScanEngineSelection({
                     )}
                   >
                     <Checkbox
-                      id={`initiate-engine-${engine.id}`}
+                      id={`initiate-workflow-${workflow.id}`}
                       checked={isSelected}
                       onCheckedChange={(checked) => {
-                        const nextIds = checked ? [engine.id] : []
-                        onEngineIdsChange(nextIds)
+                        const nextIds = checked ? [workflow.id] : []
+                        onWorkflowIdsChange(nextIds)
                       }}
                       disabled={isSubmitting}
                       className="h-4 w-4"
                     />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{engine.name}</p>
+                      <p className="text-sm font-medium truncate">{workflow.name}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {engine.configuration ? t("configTitle") : t("noConfig")}
+                        {workflow.configuration ? t("configTitle") : t("noConfig")}
                       </p>
                     </div>
                   </label>
@@ -218,7 +218,7 @@ export function InitiateScanEngineSelection({
               })}
             </div>
           ) : (
-            <div className="text-sm text-muted-foreground">{t("noEngines")}</div>
+            <div className="text-sm text-muted-foreground">{t("noWorkflows")}</div>
           )}
         </TabsContent>
       </Tabs>
@@ -229,13 +229,13 @@ export function InitiateScanEngineSelection({
 interface InitiateScanConfigStepProps {
   t: TranslationFn
   configuration: string
-  selectedEngines: ScanEngine[]
+  selectedWorkflows: ScanWorkflow[]
   isConfigEdited: boolean
   isYamlValid: boolean
   hasConfig: boolean
   selectMode: InitiateScanSelectMode
-  selectedPreset: PresetEngine | null
-  selectedEngineIds: number[]
+  selectedPreset: PresetWorkflow | null
+  selectedWorkflowIds: number[]
   isSubmitting: boolean
   onConfigChange: (value: string) => void
   onYamlValidationChange: (isValid: boolean) => void
@@ -244,13 +244,13 @@ interface InitiateScanConfigStepProps {
 export function InitiateScanConfigStep({
   t,
   configuration,
-  selectedEngines,
+  selectedWorkflows,
   isConfigEdited,
   isYamlValid,
   hasConfig,
   selectMode,
   selectedPreset,
-  selectedEngineIds,
+  selectedWorkflowIds,
   isSubmitting,
   onConfigChange,
   onYamlValidationChange,
@@ -274,7 +274,7 @@ export function InitiateScanConfigStep({
             configuration={configuration}
             onChange={onConfigChange}
             onValidationChange={onYamlValidationChange}
-            selectedEngines={selectedEngines}
+            selectedWorkflows={selectedWorkflows}
             isConfigEdited={isConfigEdited}
             disabled={isSubmitting}
             className="h-[420px]"
@@ -313,14 +313,14 @@ export function InitiateScanConfigStep({
             </div>
           ) : (
             <div className="flex items-start gap-2">
-              {selectedEngineIds.length > 0 ? (
+              {selectedWorkflowIds.length > 0 ? (
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 mt-0.5" />
               ) : (
                 <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
               )}
               <span>
-                {selectedEngineIds.length > 0
-                  ? t("validation.enginesOk", { count: selectedEngineIds.length })
+                {selectedWorkflowIds.length > 0
+                  ? t("validation.enginesOk", { count: selectedWorkflowIds.length })
                   : t("validation.enginesMissing")}
               </span>
             </div>
@@ -351,8 +351,8 @@ interface InitiateScanFooterProps {
   t: TranslationFn
   currentStep: number
   selectMode: InitiateScanSelectMode
-  selectedEngineIds: number[]
-  selectedPreset: PresetEngine | null
+  selectedWorkflowIds: number[]
+  selectedPreset: PresetWorkflow | null
   canProceedToReview: boolean
   canStart: boolean
   isSubmitting: boolean
@@ -366,7 +366,7 @@ export function InitiateScanFooter({
   t,
   currentStep,
   selectMode,
-  selectedEngineIds,
+  selectedWorkflowIds,
   selectedPreset,
   canProceedToReview,
   canStart,
@@ -380,8 +380,8 @@ export function InitiateScanFooter({
     <DialogFooter className="px-6 py-4 border-t shrink-0 bg-background">
       <div className="flex items-center justify-between w-full">
         <div className="text-sm text-muted-foreground">
-          {currentStep === 1 && selectMode === "custom" && selectedEngineIds.length > 0 && (
-            <span className="text-primary">{t("selectedCount", { count: selectedEngineIds.length })}</span>
+          {currentStep === 1 && selectMode === "custom" && selectedWorkflowIds.length > 0 && (
+            <span className="text-primary">{t("selectedCount", { count: selectedWorkflowIds.length })}</span>
           )}
           {currentStep === 1 && selectMode === "preset" && selectedPreset && (
             <span className="text-primary">{selectedPreset.name}</span>

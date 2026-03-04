@@ -1,27 +1,27 @@
 import React from "react"
 
-import { CAPABILITY_CONFIG, parseEngineCapabilities } from "@/lib/engine-config"
+import { CAPABILITY_CONFIG, parseWorkflowCapabilities } from "@/lib/workflow-config"
 
-import type { ScanEngine } from "@/types/engine.types"
+import type { ScanWorkflow } from "@/types/workflow.types"
 
 interface ScanConfigEditorStateOptions {
-  selectedEngines?: ScanEngine[]
+  selectedWorkflows?: ScanWorkflow[]
   selectedCapabilities?: string[]
 }
 
 export function useScanConfigEditorState({
-  selectedEngines = [],
+  selectedWorkflows = [],
   selectedCapabilities: propCapabilities,
 }: ScanConfigEditorStateOptions) {
   const capabilities = React.useMemo(() => {
     if (propCapabilities) return propCapabilities
-    if (!selectedEngines.length) return []
+    if (!selectedWorkflows.length) return []
     const allCaps = new Set<string>()
-    selectedEngines.forEach((engine) => {
-      parseEngineCapabilities(engine.configuration || "").forEach((cap) => allCaps.add(cap))
+    selectedWorkflows.forEach((workflow) => {
+      parseWorkflowCapabilities(workflow.configuration || "").forEach((cap) => allCaps.add(cap))
     })
     return Array.from(allCaps)
-  }, [selectedEngines, propCapabilities])
+  }, [selectedWorkflows, propCapabilities])
 
   const capabilityStyles = React.useMemo(() => {
     return capabilities.map((capKey) => ({

@@ -51,8 +51,8 @@ export async function initiateScan(data: InitiateScanRequest): Promise<InitiateS
 
   const createScanRequest = {
     targetId: data.targetId,
-    engineIds: data.engineIds,
-    engineNames: data.engineNames,
+    workflowIds: data.workflowIds,
+    workflowNames: data.workflowNames,
     configuration: data.configuration,
   }
 
@@ -69,8 +69,8 @@ export async function initiateScan(data: InitiateScanRequest): Promise<InitiateS
     scans: [{
       id: scan.id,
       target: scan.targetId,
-      engineIds: scan.engineIds,
-      engineNames: scan.engineNames,
+      workflowIds: scan.workflowIds,
+      workflowNames: scan.workflowNames,
       status: scan.status,
       createdAt: scan.createdAt,
       updatedAt: scan.stoppedAt || scan.createdAt, // Use stoppedAt if available, otherwise createdAt
@@ -87,8 +87,8 @@ export async function quickScan(data: QuickScanRequest): Promise<QuickScanRespon
   // Backend endpoint: POST /api/scans/quick
   const createScanRequest = {
     targets: data.targets.map(t => t.name),
-    engineIds: data.engineIds,
-    engineNames: data.engineNames,
+    workflowIds: data.workflowIds,
+    workflowNames: data.workflowNames,
     configuration: data.configuration,
   }
 

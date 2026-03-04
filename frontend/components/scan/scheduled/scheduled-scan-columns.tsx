@@ -179,7 +179,7 @@ export const createScheduledScanColumns = ({
     },
   },
   {
-    accessorKey: "engineNames",
+    accessorKey: "workflowNames",
     size: 150,
     minSize: 100,
     meta: { title: t.columns.scanEngine },
@@ -187,13 +187,13 @@ export const createScheduledScanColumns = ({
       <DataTableColumnHeader column={column} title={t.columns.scanEngine} />
     ),
     cell: ({ row }) => {
-      const engineNames = row.original.engineNames || []
-      if (engineNames.length === 0) {
+      const workflowNames = row.original.workflowNames || []
+      if (workflowNames.length === 0) {
         return <span className="text-muted-foreground text-sm">-</span>
       }
       return (
         <div className="flex flex-wrap gap-1">
-          {engineNames.map((name, index) => (
+          {workflowNames.map((name, index) => (
             <Badge key={index} variant="secondary">
               {name}
             </Badge>

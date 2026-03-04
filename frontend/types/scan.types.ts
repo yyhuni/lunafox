@@ -5,7 +5,7 @@
 export type ScanStatus = "pending" | "running" | "completed" | "failed" | "cancelled"
 
 /**
- * Scan stage (dynamic, from engine_config key)
+ * Scan stage (dynamic, from workflow config key)
  */
 export type ScanStage = string
 
@@ -64,8 +64,8 @@ export interface ScanRecord {
   target?: ScanTargetBrief     // Target info (nested object)
   workerName?: string | null   // Worker node name
   cachedStats?: ScanCachedStats // Cached statistics
-  engineIds: number[]          // Engine ID list
-  engineNames: string[]        // Engine name list
+  workflowIds: number[]          // Workflow template ID list
+  workflowNames: string[]        // Workflow name list
   scanMode: string             // Scan mode
   createdAt: string            // Creation time
   stoppedAt?: string           // Stop time
@@ -102,8 +102,8 @@ export interface InitiateScanRequest {
   organizationId?: number  // Organization ID (choose one)
   targetId?: number        // Target ID (choose one)
   configuration: string    // YAML configuration string (required)
-  engineIds: number[]      // Scan engine ID list (required)
-  engineNames: string[]    // Engine name list (required)
+  workflowIds: number[]      // Workflow template ID list (required)
+  workflowNames: string[]    // Workflow name list (required)
 }
 
 /**
@@ -112,8 +112,8 @@ export interface InitiateScanRequest {
 export interface QuickScanRequest {
   targets: { name: string }[]  // Target list
   configuration: string        // YAML configuration string (required)
-  engineIds: number[]          // Scan engine ID list (required)
-  engineNames: string[]        // Engine name list (required)
+  workflowIds: number[]          // Workflow template ID list (required)
+  workflowNames: string[]        // Workflow name list (required)
 }
 
 /**
@@ -140,8 +140,8 @@ export interface QuickScanResponse {
 export interface ScanTask {
   id: number
   target: number           // Target ID
-  engineIds: number[]      // Engine ID list
-  engineNames: string[]    // Engine name list
+  workflowIds: number[]      // Workflow template ID list
+  workflowNames: string[]    // Workflow name list
   status: ScanStatus
   createdAt: string
   updatedAt: string

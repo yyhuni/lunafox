@@ -81,7 +81,7 @@ export function ScanHistoryDialogs({
               {selectedScans.map((scan) => (
                 <li key={scan.id} className="flex items-center justify-between">
                   <span className="font-medium">{scan.target?.name}</span>
-                  <span className="text-muted-foreground text-xs">{scan.engineNames?.join(", ") || "-"}</span>
+                  <span className="text-muted-foreground text-xs">{scan.workflowNames?.join(", ") || "-"}</span>
                 </li>
               ))}
             </ul>

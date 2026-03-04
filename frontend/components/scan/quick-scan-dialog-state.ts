@@ -3,7 +3,7 @@ import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
 import { quickScan } from "@/services/scan.service"
 import { TargetValidator } from "@/lib/target-validator"
-import { useEngines } from "@/hooks/use-engines"
+import { useWorkflows } from "@/hooks/use-workflows"
 
 type UseQuickScanDialogStateProps = {
   t: (key: string, params?: Record<string, string | number | Date>) => string
@@ -16,7 +16,7 @@ export function useQuickScanDialogState({ t }: UseQuickScanDialogStateProps) {
   const queryClient = useQueryClient()
 
   const [targetInput, setTargetInput] = React.useState("")
-  const [selectedEngineIds, setSelectedEngineIds] = React.useState<number[]>([])
+  const [selectedWorkflowIds, setSelectedWorkflowIds] = React.useState<number[]>([])
   const [selectedPresetId, setSelectedPresetId] = React.useState<string | null>(null)
 
   const [configuration, setConfiguration] = React.useState("")
@@ -25,7 +25,7 @@ export function useQuickScanDialogState({ t }: UseQuickScanDialogStateProps) {
   const [showOverwriteConfirm, setShowOverwriteConfirm] = React.useState(false)
   const [pendingConfigChange, setPendingConfigChange] = React.useState<string | null>(null)
 
-  const { data: engines } = useEngines()
+  const { data: workflows } = useWorkflows()
   const lineNumbersRef = React.useRef<HTMLDivElement | null>(null)
 
   const handleTextareaScroll = React.useCallback((event: React.UIEvent<HTMLTextAreaElement>) => {
@@ -49,14 +49,14 @@ export function useQuickScanDialogState({ t }: UseQuickScanDialogStateProps) {
   )
   const hasErrors = invalidInputs.length > 0
 
-  const selectedEngines = React.useMemo(() => {
-    if (!selectedEngineIds.length || !engines) return []
-    return engines.filter((engine) => selectedEngineIds.includes(engine.id))
-  }, [selectedEngineIds, engines])
+  const selectedWorkflows = React.useMemo(() => {
+    if (!selectedWorkflowIds.length || !workflows) return []
+    return workflows.filter((item) => selectedWorkflowIds.includes(item.id))
+  }, [selectedWorkflowIds, workflows])
 
   const resetForm = React.useCallback(() => {
     setTargetInput("")
-    setSelectedEngineIds([])
+    setSelectedWorkflowIds([])
     setSelectedPresetId(null)
     setConfiguration("")
     setIsConfigEdited(false)
@@ -86,8 +86,8 @@ export function useQuickScanDialogState({ t }: UseQuickScanDialogStateProps) {
     setIsConfigEdited(true)
   }, [])
 
-  const handleEngineIdsChange = React.useCallback((engineIds: number[]) => {
-    setSelectedEngineIds(engineIds)
+  const handleWorkflowIdsChange = React.useCallback((workflowIds: number[]) => {
+    setSelectedWorkflowIds(workflowIds)
   }, [])
 
   const handleOverwriteConfirm = React.useCallback(() => {
@@ -109,8 +109,8 @@ export function useQuickScanDialogState({ t }: UseQuickScanDialogStateProps) {
   }, [])
 
   const canProceedToStep2 = validInputs.length > 0 && !hasErrors
-  const canProceedToStep3 = selectedPresetId !== null && selectedEngineIds.length > 0
-  const canSubmit = selectedEngineIds.length > 0 && configuration.trim().length > 0 && isYamlValid
+  const canProceedToStep3 = selectedPresetId !== null && selectedWorkflowIds.length > 0
+  const canSubmit = selectedWorkflowIds.length > 0 && configuration.trim().length > 0 && isYamlValid
 
   const handleNext = React.useCallback(() => {
     if (step === 1 && canProceedToStep2) setStep(2)
@@ -130,7 +130,7 @@ export function useQuickScanDialogState({ t }: UseQuickScanDialogStateProps) {
       toast.error(t("toast.hasInvalidInputs", { count: invalidInputs.length }))
       return
     }
-    if (selectedEngineIds.length === 0) {
+    if (selectedWorkflowIds.length === 0) {
       toast.error(t("toast.selectEngine"))
       return
     }
@@ -146,8 +146,8 @@ export function useQuickScanDialogState({ t }: UseQuickScanDialogStateProps) {
       const response = await quickScan({
         targets: targets.map((name) => ({ name })),
         configuration,
-        engineIds: selectedEngineIds,
-        engineNames: selectedEngines.map((engine) => engine.name),
+        workflowIds: selectedWorkflowIds,
+        workflowNames: selectedWorkflows.map((item) => item.name),
       })
 
       const { targetStats, scans, count } = response
@@ -173,8 +173,8 @@ export function useQuickScanDialogState({ t }: UseQuickScanDialogStateProps) {
     hasErrors,
     invalidInputs.length,
     queryClient,
-    selectedEngineIds,
-    selectedEngines,
+    selectedWorkflowIds,
+    selectedWorkflows,
     t,
     validInputs,
   ])
@@ -186,7 +186,7 @@ export function useQuickScanDialogState({ t }: UseQuickScanDialogStateProps) {
     step,
     targetInput,
     setTargetInput,
-    selectedEngineIds,
+    selectedWorkflowIds,
     selectedPresetId,
     setSelectedPresetId,
     configuration,
@@ -199,11 +199,11 @@ export function useQuickScanDialogState({ t }: UseQuickScanDialogStateProps) {
     validInputs,
     invalidInputs,
     hasErrors,
-    engines,
-    selectedEngines,
+    workflows,
+    selectedWorkflows,
     handlePresetConfigChange,
     handleManualConfigChange,
-    handleEngineIdsChange,
+    handleWorkflowIdsChange,
     handleOverwriteConfirm,
     handleOverwriteCancel,
     handleYamlValidationChange,

@@ -251,7 +251,7 @@ export const createScanHistoryColumns = ({
     enableSorting: false,
   },
   {
-    accessorKey: "engineNames",
+    accessorKey: "workflowNames",
     size: 150,
     minSize: 100,
     maxSize: 200,
@@ -261,13 +261,13 @@ export const createScanHistoryColumns = ({
       <DataTableColumnHeader column={column} title={t.columns.engineName} />
     ),
     cell: ({ row }) => {
-      const engineNames = row.getValue("engineNames") as string[] | undefined
-      if (!engineNames || engineNames.length === 0) {
+      const workflowNames = row.getValue("workflowNames") as string[] | undefined
+      if (!workflowNames || workflowNames.length === 0) {
         return <span className="text-muted-foreground text-sm">-</span>
       }
       return (
         <div className="flex flex-wrap gap-1">
-          {engineNames.map((name, index) => (
+          {workflowNames.map((name, index) => (
             <Badge key={index} variant="secondary" data-badge-type="engine">
               {name}
             </Badge>

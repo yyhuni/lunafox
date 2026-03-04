@@ -128,7 +128,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           },
           {
             title: t('scanEngine'),
-            url: "/scan/engine/",
+            url: "/scan/workflow/",
           },
         ],
       },
@@ -240,7 +240,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: "流程与风格",
       icon: IconRadar,
       items: [
-        { title: "Scan Engine Designs", url: "/scan/engine/demo/" },
+        { title: "Scan Workflow Designs", url: "/scan/workflow/demo/" },
         { title: "Scan Dialogs", url: "/prototypes/scan-dialogs/" },
         { title: "Scan Actions Demo", url: "/prototypes/scan-history-actions/" },
         { title: "Workers Page Layout", url: "/prototypes/workers-page/" },

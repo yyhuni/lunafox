@@ -6,10 +6,8 @@
 
 ## Files
 - `targets.go`: target routes
-- `engines.go`: engine routes
 - `presets.go`: preset routes
 - `wordlists.go`: wordlist routes
-- `worker.go`: worker routes
 
 ## Constraints
 - External callers should only use `RegisterCatalogRoutes`

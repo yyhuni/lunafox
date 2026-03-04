@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 import type { ScheduledScan } from "@/types/scheduled-scan.types"
-import type { ScanEngine } from "@/types/engine.types"
+import type { ScanWorkflow } from "@/types/workflow.types"
 import type { Target } from "@/types/target.types"
 
 type TranslationFn = (key: string, params?: Record<string, string | number | Date>) => string
@@ -58,48 +58,48 @@ export function EditScheduledScanNameField({
   )
 }
 
-interface EditScheduledScanEngineSectionProps {
+interface EditScheduledScanWorkflowSectionProps {
   t: TranslationFn
-  engines: ScanEngine[]
-  engineIds: number[]
-  onToggle: (engineId: number, checked: boolean) => void
+  workflows: ScanWorkflow[]
+  workflowIds: number[]
+  onToggle: (workflowID: number, checked: boolean) => void
 }
 
-export function EditScheduledScanEngineSection({
+export function EditScheduledScanWorkflowSection({
   t,
-  engines,
-  engineIds,
+  workflows,
+  workflowIds,
   onToggle,
-}: EditScheduledScanEngineSectionProps) {
+}: EditScheduledScanWorkflowSectionProps) {
   return (
     <div className="grid gap-2">
       <Label>{t("form.scanEngine")} *</Label>
-      {engineIds.length > 0 && (
+      {workflowIds.length > 0 && (
         <p className="text-xs text-muted-foreground">
-          {t("form.selectedEngines", { count: engineIds.length })}
+          {t("form.selectedWorkflows", { count: workflowIds.length })}
         </p>
       )}
       <div className="border rounded-md p-3 max-h-[150px] overflow-y-auto space-y-2">
-        {engines.length === 0 ? (
+        {workflows.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("form.noEngine")}</p>
         ) : (
-          engines.map((engine) => (
+          workflows.map((workflow) => (
             <label
-              key={engine.id}
-              htmlFor={`edit-engine-${engine.id}`}
+              key={workflow.id}
+              htmlFor={`edit-workflow-${workflow.id}`}
               className={cn(
                 "flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-[background-color,border-color,box-shadow]",
-                engineIds.includes(engine.id)
+                workflowIds.includes(workflow.id)
                   ? "bg-primary/10 border border-primary/30"
                   : "hover:bg-muted/50 border border-transparent"
               )}
             >
               <Checkbox
-                id={`edit-engine-${engine.id}`}
-                checked={engineIds.includes(engine.id)}
-                onCheckedChange={(checked) => onToggle(engine.id, checked as boolean)}
+                id={`edit-workflow-${workflow.id}`}
+                checked={workflowIds.includes(workflow.id)}
+                onCheckedChange={(checked) => onToggle(workflow.id, checked as boolean)}
               />
-              <span className="text-sm">{engine.name}</span>
+              <span className="text-sm">{workflow.name}</span>
             </label>
           ))
         )}

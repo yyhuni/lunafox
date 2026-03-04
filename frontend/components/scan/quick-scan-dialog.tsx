@@ -4,7 +4,7 @@ import * as React from "react"
 import { useTranslations } from "next-intl"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { EnginePresetSelector } from "./engine-preset-selector"
+import { WorkflowPresetSelector } from "./workflow-preset-selector"
 import { ScanConfigEditor } from "./scan-config-editor"
 import { useQuickScanDialogState } from "@/components/scan/quick-scan-dialog-state"
 import {
@@ -27,7 +27,7 @@ export function QuickScanDialog({ trigger }: QuickScanDialogProps) {
     step,
     targetInput,
     setTargetInput,
-    selectedEngineIds,
+    selectedWorkflowIds,
     selectedPresetId,
     setSelectedPresetId,
     configuration,
@@ -39,11 +39,11 @@ export function QuickScanDialog({ trigger }: QuickScanDialogProps) {
     validInputs,
     invalidInputs,
     hasErrors,
-    engines,
-    selectedEngines,
+    workflows,
+    selectedWorkflows,
     handlePresetConfigChange,
     handleManualConfigChange,
-    handleEngineIdsChange,
+    handleWorkflowIdsChange,
     handleOverwriteConfirm,
     handleOverwriteCancel,
     handleYamlValidationChange,
@@ -100,14 +100,14 @@ export function QuickScanDialog({ trigger }: QuickScanDialogProps) {
             />
           )}
 
-          {/* Step 2: Select preset/engines */}
-          {step === 2 && engines && (
-            <EnginePresetSelector
-              engines={engines}
-              selectedEngineIds={selectedEngineIds}
+          {/* Step 2: Select preset/workflows */}
+          {step === 2 && workflows && (
+            <WorkflowPresetSelector
+              workflows={workflows}
+              selectedWorkflowIds={selectedWorkflowIds}
               selectedPresetId={selectedPresetId}
               onPresetChange={setSelectedPresetId}
-              onEngineIdsChange={handleEngineIdsChange}
+              onWorkflowIdsChange={handleWorkflowIdsChange}
               onConfigurationChange={handlePresetConfigChange}
               disabled={isSubmitting}
             />
@@ -119,7 +119,7 @@ export function QuickScanDialog({ trigger }: QuickScanDialogProps) {
               configuration={configuration}
               onChange={handleManualConfigChange}
               onValidationChange={handleYamlValidationChange}
-              selectedEngines={selectedEngines}
+              selectedWorkflows={selectedWorkflows}
               isConfigEdited={isConfigEdited}
               disabled={isSubmitting}
             />
@@ -130,7 +130,7 @@ export function QuickScanDialog({ trigger }: QuickScanDialogProps) {
           step={step}
           validCount={validInputs.length}
           invalidCount={invalidInputs.length}
-          selectedEngineCount={selectedEngineIds.length}
+          selectedWorkflowCount={selectedWorkflowIds.length}
           isSubmitting={isSubmitting}
           canProceedToStep2={canProceedToStep2}
           canProceedToStep3={canProceedToStep3}

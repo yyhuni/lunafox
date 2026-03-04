@@ -155,7 +155,7 @@ interface QuickScanFooterProps {
   step: number
   validCount: number
   invalidCount: number
-  selectedEngineCount: number
+  selectedWorkflowCount: number
   isSubmitting: boolean
   canProceedToStep2: boolean
   canProceedToStep3: boolean
@@ -170,7 +170,7 @@ export function QuickScanFooter({
   step,
   validCount,
   invalidCount,
-  selectedEngineCount,
+  selectedWorkflowCount,
   isSubmitting,
   canProceedToStep2,
   canProceedToStep3,
@@ -188,8 +188,8 @@ export function QuickScanFooter({
         {step === 1 && invalidCount > 0 && (
           <span className="text-destructive ml-2">{t("invalidTargets", { count: invalidCount })}</span>
         )}
-        {step === 2 && selectedEngineCount > 0 && (
-          <span className="text-primary">{t("selectedCount", { count: selectedEngineCount })}</span>
+        {step === 2 && selectedWorkflowCount > 0 && (
+          <span className="text-primary">{t("selectedCount", { count: selectedWorkflowCount })}</span>
         )}
       </div>
       <div className="flex gap-2">
