@@ -3,10 +3,6 @@ package application
 import catalogdomain "github.com/yyhuni/lunafox/server/internal/modules/catalog/domain"
 
 var (
-	ErrEngineNotFound = catalogdomain.ErrEngineNotFound
-	ErrEngineExists   = catalogdomain.ErrEngineExists
-	ErrInvalidEngine  = catalogdomain.ErrInvalidEngine
-
 	ErrTargetNotFound       = catalogdomain.ErrTargetNotFound
 	ErrTargetExists         = catalogdomain.ErrTargetExists
 	ErrInvalidTarget        = catalogdomain.ErrInvalidTarget
@@ -21,4 +17,7 @@ var (
 	ErrFileNotFound     = catalogdomain.ErrWordlistFileNotFound
 	ErrInvalidFileType  = catalogdomain.ErrWordlistInvalidFileType
 	ErrLineTooLong      = catalogdomain.ErrWordlistLineTooLong
+
+	ErrWorkflowNotFound        = catalogdomain.ErrWorkflowNotFound
+	ErrWorkflowProfileNotFound = catalogdomain.ErrWorkflowProfileNotFound
 )

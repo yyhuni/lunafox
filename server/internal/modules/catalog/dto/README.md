@@ -2,7 +2,7 @@
 
 catalog 模块 DTO 规范：
 
-- `*_dto.go`：按资源拆分放置 catalog 业务 DTO（target/wordlist/worker/preset）。
+- `*_dto.go`：按资源拆分放置 catalog 业务 DTO（target/wordlist/worker/profile）。
 - `httpdto_adapter.go`：仅作为薄适配层，重导出 `server/internal/modules/httpdto` 的共享 HTTP DTO 能力（绑定、分页、统一错误响应）。
 
 约束：

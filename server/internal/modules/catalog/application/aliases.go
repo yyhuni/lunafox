@@ -5,4 +5,4 @@ import catalogdomain "github.com/yyhuni/lunafox/server/internal/modules/catalog/
 type Target = catalogdomain.Target
 type Wordlist = catalogdomain.Wordlist
 type Workflow = catalogdomain.Workflow
-type WorkflowPreset = catalogdomain.WorkflowPreset
+type WorkflowProfile = catalogdomain.WorkflowProfile

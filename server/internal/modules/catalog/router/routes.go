@@ -5,16 +5,16 @@ import (
 	"github.com/yyhuni/lunafox/server/internal/modules/catalog/handler"
 )
 
-// RegisterCatalogRoutes registers target/engine/wordlist/preset routes.
+// RegisterCatalogRoutes registers target, wordlist, workflow, and workflow profile routes.
 func RegisterCatalogRoutes(
 	protected *gin.RouterGroup,
 	wordlistHandler *handler.WordlistHandler,
 	targetHandler *handler.TargetHandler,
-	engineHandler *handler.EngineHandler,
-	presetHandler *handler.PresetHandler,
+	workflowHandler *handler.WorkflowHandler,
+	workflowProfileHandler *handler.WorkflowProfileHandler,
 ) {
 	registerTargetRoutes(protected, targetHandler)
-	registerPresetRoutes(protected, presetHandler)
-	registerEngineRoutes(protected, engineHandler)
+	registerWorkflowProfileRoutes(protected, workflowProfileHandler)
+	registerWorkflowRoutes(protected, workflowHandler)
 	registerWordlistRoutes(protected, wordlistHandler)
 }

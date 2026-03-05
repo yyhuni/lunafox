@@ -9,10 +9,6 @@ var (
 	ErrTargetOrgNotFound    = errors.New("organization not found")
 	ErrTargetOrgBindingFail = errors.New("organization target binding failed")
 
-	ErrEngineNotFound = errors.New("engine not found")
-	ErrEngineExists   = errors.New("engine name already exists")
-	ErrInvalidEngine  = errors.New("invalid engine")
-
 	ErrWordlistNotFound        = errors.New("wordlist not found")
 	ErrWordlistExists          = errors.New("wordlist name already exists")
 	ErrWordlistNameEmpty       = errors.New("wordlist name cannot be empty")
@@ -24,4 +20,7 @@ var (
 
 	ErrWorkerScanNotFound = errors.New("scan not found")
 	ErrWorkerToolRequired = errors.New("tool parameter required for provider_config")
+
+	ErrWorkflowNotFound        = errors.New("workflow not found")
+	ErrWorkflowProfileNotFound = errors.New("workflow profile not found")
 )

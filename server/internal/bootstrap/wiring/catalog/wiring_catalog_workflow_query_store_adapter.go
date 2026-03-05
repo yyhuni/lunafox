@@ -15,17 +15,21 @@ func newCatalogWorkflowQueryStoreAdapter() *catalogWorkflowQueryStoreAdapter {
 }
 
 func (adapter *catalogWorkflowQueryStoreAdapter) ListWorkflows(_ context.Context) ([]catalogapp.Workflow, error) {
-	items, err := workflowschema.ListWorkflows()
+	items, err := workflowschema.ListWorkflowMetadata()
 	if err != nil {
 		return nil, err
 	}
 	workflows := make([]catalogapp.Workflow, 0, len(items))
 	for _, item := range items {
-		name := strings.TrimSpace(item)
+		name := strings.TrimSpace(item.Name)
 		if name == "" {
 			continue
 		}
-		workflows = append(workflows, catalogapp.Workflow{Name: name})
+		workflows = append(workflows, catalogapp.Workflow{
+			Name:        name,
+			Title:       strings.TrimSpace(item.Title),
+			Description: strings.TrimSpace(item.Description),
+		})
 	}
 	return workflows, nil
 }

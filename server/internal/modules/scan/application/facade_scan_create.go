@@ -13,7 +13,7 @@ func (service *ScanFacade) CreateNormal(req *CreateNormalRequest) (*QueryScan, e
 		return nil, ErrScanInvalidConfig
 	}
 
-	scan, err := service.createService.CreateNormal(&CreateNormalInput{TargetID: req.TargetID, EngineIDs: req.EngineIDs, EngineNames: req.EngineNames, Configuration: req.Configuration})
+	scan, err := service.createService.CreateNormal(&CreateNormalInput{TargetID: req.TargetID, WorkflowNames: req.WorkflowNames, Configuration: req.Configuration})
 	if err != nil {
 		if _, ok := AsWorkflowError(err); ok {
 			return nil, err
@@ -24,8 +24,8 @@ func (service *ScanFacade) CreateNormal(req *CreateNormalRequest) (*QueryScan, e
 		if errors.Is(err, ErrCreateInvalidConfig) || errors.Is(err, ErrCreateTargetLookupNotReady) {
 			return nil, ErrScanInvalidConfig
 		}
-		if errors.Is(err, ErrCreateInvalidEngineNames) {
-			return nil, wrapScanInvalidEngineNames(err)
+		if errors.Is(err, ErrCreateInvalidWorkflowNames) {
+			return nil, wrapScanInvalidWorkflowNames(err)
 		}
 		if errors.Is(err, ErrCreateNoWorkflows) {
 			return nil, ErrScanNoWorkflows
@@ -39,21 +39,21 @@ func createScanToQueryScan(scan *CreateScan) *QueryScan {
 	if scan == nil {
 		return nil
 	}
-	result := &QueryScan{ID: scan.ID, TargetID: scan.TargetID, EngineIDs: scan.EngineIDs, EngineNames: scan.EngineNames, YamlConfiguration: scan.YamlConfiguration, ScanMode: scan.ScanMode, Status: scan.Status, CreatedAt: scan.CreatedAt}
+	result := &QueryScan{ID: scan.ID, TargetID: scan.TargetID, WorkflowNames: scan.WorkflowNames, YamlConfiguration: scan.YamlConfiguration, ScanMode: scan.ScanMode, Status: scan.Status, CreatedAt: scan.CreatedAt}
 	if scan.Target != nil {
 		result.Target = &QueryTargetRef{ID: scan.Target.ID, Name: scan.Target.Name, Type: scan.Target.Type}
 	}
 	return result
 }
 
-func wrapScanInvalidEngineNames(err error) error {
+func wrapScanInvalidWorkflowNames(err error) error {
 	if err == nil {
-		return ErrScanInvalidEngineNames
+		return ErrScanInvalidWorkflowNames
 	}
-	detail := strings.TrimSpace(strings.TrimPrefix(err.Error(), ErrCreateInvalidEngineNames.Error()))
+	detail := strings.TrimSpace(strings.TrimPrefix(err.Error(), ErrCreateInvalidWorkflowNames.Error()))
 	detail = strings.TrimSpace(strings.TrimPrefix(detail, ":"))
 	if detail == "" {
-		return ErrScanInvalidEngineNames
+		return ErrScanInvalidWorkflowNames
 	}
-	return fmt.Errorf("%w: %s", ErrScanInvalidEngineNames, detail)
+	return fmt.Errorf("%w: %s", ErrScanInvalidWorkflowNames, detail)
 }
