@@ -42,7 +42,7 @@
 - CI 必须执行“重新生成后无 diff”检查，覆盖：
   - `server/internal/workflow/schema`
   - `docs/config-reference`
-  - `server/internal/workflow/profile/presets`
+  - `server/internal/workflow/profile/profiles`
 
 ## Architecture Sketch
 ```text
@@ -50,7 +50,7 @@ contract_definition (code-first)
   -> workflow-contract-gen
       -> schema (server/internal/workflow/schema)
       -> docs (docs/config-reference)
-      -> default preset (server/internal/workflow/profile/presets/<workflow>.default.yaml)
+      -> default preset (server/internal/workflow/profile/profiles/<workflow>.default.yaml)
       -> profile presets (optional, e.g. <workflow>.fast.yaml, <workflow>.deep.yaml)
   -> schema validation gate
   -> preset.Loader embed/load

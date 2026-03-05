@@ -14,9 +14,8 @@ type QueryTargetRef struct {
 type QueryScan struct {
 	ID                     int
 	TargetID               int
-	EngineIDs              []int64
-	EngineNames            []byte
-	YamlConfiguration      string
+	WorkflowNames          []byte
+	YAMLConfiguration      string
 	ScanMode               string
 	Status                 string
 	ResultsDir             string

@@ -22,7 +22,7 @@ func TestBuildScanTasks_IgnoresRootExtraWorkflowKeys(t *testing.T) {
 	if tasks[0].WorkflowName != "subdomain_discovery" {
 		t.Fatalf("unexpected workflow planned: %s", tasks[0].WorkflowName)
 	}
-	if tasks[0].Config == "" {
+	if tasks[0].WorkflowConfigYAML == "" {
 		t.Fatalf("expected task-level workflow config slice to be persisted")
 	}
 }

@@ -36,7 +36,7 @@ func TestResolveOutputPathsFromDirs(t *testing.T) {
 	opts := genOptions{
 		workerSchemaDir:  "worker/internal/workflow/subdomain_discovery/generated",
 		serverSchemaDir:  "server/internal/workflow/schema",
-		serverProfileDir: "server/internal/workflow/profile/presets",
+		serverProfileDir: "server/internal/workflow/profile/profiles",
 		docsDir:          "docs/config-reference",
 	}
 
@@ -54,7 +54,7 @@ func TestResolveOutputPathsFromDirs(t *testing.T) {
 	)
 	require.Equal(
 		t,
-		filepath.Join("server/internal/workflow/profile/presets", "subdomain_discovery.yaml"),
+		filepath.Join("server/internal/workflow/profile/profiles", "subdomain_discovery.yaml"),
 		opts.serverProfilePath,
 	)
 	require.Equal(

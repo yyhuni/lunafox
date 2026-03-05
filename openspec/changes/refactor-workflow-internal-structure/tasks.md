@@ -2,7 +2,7 @@
 - [ ] 1.1 为 `workflow/schema` 与 `workflow/profile` 迁移补充/更新单测基线（先 RED）
 - [ ] 1.2 迁移 `server/internal/workflowschema/*` 到 `server/internal/workflow/schema/*` 并让测试 GREEN
 - [ ] 1.3 迁移 `server/internal/preset/*` 到 `server/internal/workflow/profile/*` 并让测试 GREEN
-- [ ] 1.4 迁移 profile 产物目录 `server/internal/preset/presets/*` 到 `server/internal/workflow/profile/presets/*`
+- [ ] 1.4 迁移 profile 产物目录 `server/internal/preset/presets/*` 到 `server/internal/workflow/profile/profiles/*`
 - [ ] 1.5 删除旧目录，确保无双写/双读路径
 
 ## 2. 依赖与 wiring 收敛

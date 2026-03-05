@@ -7,8 +7,8 @@ import (
 	"io/fs"
 	"strings"
 
-	"github.com/yyhuni/lunafox/server/internal/engineschema"
 	"github.com/yyhuni/lunafox/server/internal/pkg/timeutil"
+	workflowschema "github.com/yyhuni/lunafox/server/internal/workflow/schema"
 )
 
 func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*CreateScan, error) {
@@ -19,12 +19,12 @@ func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*Creat
 		return nil, ErrCreateTargetNotFound
 	}
 
-	configYAML := strings.TrimSpace(input.Configuration)
-	if configYAML == "" {
+	workflowConfigYAML := strings.TrimSpace(input.Configuration)
+	if workflowConfigYAML == "" {
 		return nil, ErrCreateInvalidConfig
 	}
 
-	root, err := parseYAMLMapping([]byte(configYAML))
+	root, err := parseYAMLMapping([]byte(workflowConfigYAML))
 	if err != nil {
 		return nil, WrapSchemaInvalid("", "failed to parse configuration YAML", err)
 	}
@@ -32,27 +32,24 @@ func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*Creat
 		return nil, WrapSchemaInvalid("", "configuration YAML must be an object", nil)
 	}
 
-	engineNames := append([]string(nil), input.EngineNames...)
-	if err := validateEngineNamesStrict(engineNames); err != nil {
+	workflowNames := append([]string(nil), input.WorkflowNames...)
+	if err := validateWorkflowNamesStrict(workflowNames); err != nil {
 		return nil, err
 	}
-	if err := validateEngineIdentityConsistency(input.EngineIDs, engineNames); err != nil {
-		return nil, err
-	}
-	if err := service.validateEngineCatalogCoverage(engineNames); err != nil {
+	if err := service.validateRequestedWorkflows(workflowNames); err != nil {
 		return nil, err
 	}
 
-	for _, engine := range engineNames {
-		engine = strings.TrimSpace(engine)
-		if engine == "" {
+	for _, workflow := range workflowNames {
+		workflow = strings.TrimSpace(workflow)
+		if workflow == "" {
 			continue
 		}
-		if err := engineschema.ValidateYAML(engine, []byte(configYAML)); err != nil {
+		if err := workflowschema.ValidateYAML(workflow, []byte(workflowConfigYAML)); err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				return nil, WrapSchemaInvalid(engine, fmt.Sprintf("engine %s does not support this configuration version", engine), err)
+				return nil, WrapSchemaInvalid(workflow, fmt.Sprintf("workflow %s does not support this configuration version", workflow), err)
 			}
-			return nil, WrapSchemaInvalid(engine, fmt.Sprintf("engine %s configuration failed schema validation", engine), err)
+			return nil, WrapSchemaInvalid(workflow, fmt.Sprintf("workflow %s configuration failed schema validation", workflow), err)
 		}
 	}
 
@@ -67,26 +64,20 @@ func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*Creat
 		return nil, ErrCreateTargetNotFound
 	}
 
-	engineNamesJSON, err := json.Marshal(engineNames)
+	workflowNamesJSON, err := json.Marshal(workflowNames)
 	if err != nil {
 		return nil, err
 	}
 
-	engineIDs := make([]int64, 0, len(input.EngineIDs))
-	for _, id := range input.EngineIDs {
-		engineIDs = append(engineIDs, int64(id))
-	}
-
 	scan := &CreateScan{
 		TargetID:          input.TargetID,
-		EngineIDs:         engineIDs,
-		EngineNames:       engineNamesJSON,
-		YamlConfiguration: configYAML,
+		WorkflowNames:     workflowNamesJSON,
+		YAMLConfiguration: workflowConfigYAML,
 		ScanMode:          CreateScanModeFull,
 		Status:            CreateScanStatusPending,
 	}
 
-	tasks, err := buildScanTasks(engineNames, root)
+	tasks, err := buildScanTasks(workflowNames, root)
 	if err != nil {
 		return nil, err
 	}

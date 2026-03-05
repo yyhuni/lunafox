@@ -169,7 +169,7 @@ func TestCreateNormal_PersistsWorkflowNamesAndTaskConfig(t *testing.T) {
 	if len(names) != 1 || names[0] != "subdomain_discovery" {
 		t.Fatalf("unexpected workflowNames persisted: %v", names)
 	}
-	if len(store.lastTasks) != 1 || store.lastTasks[0].Config == "" {
+	if len(store.lastTasks) != 1 || store.lastTasks[0].WorkflowConfigYAML == "" {
 		t.Fatalf("expected per-task workflow config slice persisted")
 	}
 }

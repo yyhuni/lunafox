@@ -26,16 +26,16 @@ func toTaskAssign(assignment *scanapp.TaskAssignment) *runtimev1.TaskAssign {
 		return &runtimev1.TaskAssign{Found: false}
 	}
 	return &runtimev1.TaskAssign{
-		Found:        true,
-		TaskId:       int32(assignment.TaskID),
-		ScanId:       int32(assignment.ScanID),
-		Stage:        int32(assignment.Stage),
-		WorkflowName: assignment.WorkflowName,
-		TargetId:     int32(assignment.TargetID),
-		TargetName:   assignment.TargetName,
-		TargetType:   assignment.TargetType,
-		WorkspaceDir: assignment.WorkspaceDir,
-		Config:       assignment.Config,
+		Found:              true,
+		TaskId:             int32(assignment.TaskID),
+		ScanId:             int32(assignment.ScanID),
+		Stage:              int32(assignment.Stage),
+		WorkflowName:       assignment.WorkflowName,
+		TargetId:           int32(assignment.TargetID),
+		TargetName:         assignment.TargetName,
+		TargetType:         assignment.TargetType,
+		WorkspaceDir:       assignment.WorkspaceDir,
+		WorkflowConfigYaml: assignment.WorkflowConfigYAML,
 	}
 }
 

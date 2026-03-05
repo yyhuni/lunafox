@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-
-	"gopkg.in/yaml.v3"
 )
 
 // validateProfile is a test helper that validates a profile's configuration.
@@ -162,18 +160,16 @@ func TestAllProfilesValid(t *testing.T) {
 	t.Logf("Validated %d profiles successfully", len(profiles))
 }
 
-func TestExampleProfileTemplateHasVersionedSubdomainConfig(t *testing.T) {
-	data, err := profilesFS.ReadFile("presets/_example.yaml")
+func TestGeneratedSubdomainProfilePassesSchemaValidation(t *testing.T) {
+	loader, err := NewLoader()
 	if err != nil {
-		t.Fatalf("read _example.yaml failed: %v", err)
+		t.Fatalf("NewLoader() failed: %v", err)
 	}
-
-	var profile Profile
-	if err := yaml.Unmarshal(data, &profile); err != nil {
-		t.Fatalf("parse _example.yaml failed: %v", err)
+	profile := loader.GetByID("subdomain_discovery")
+	if profile == nil {
+		t.Fatal("expected generated profile subdomain_discovery")
 	}
-
 	if err := ValidateConfiguration(profile.Configuration); err != nil {
-		t.Fatalf("_example.yaml configuration should pass schema validation, got: %v", err)
+		t.Fatalf("generated profile configuration should pass schema validation, got: %v", err)
 	}
 }

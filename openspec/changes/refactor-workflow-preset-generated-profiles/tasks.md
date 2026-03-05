@@ -6,7 +6,7 @@
 
 ## 2. 产物与命名约定
 - [x] 2.1 确定 preset 产物命名规则（含兼容 id 策略）
-- [x] 2.2 将生成目标接入 `server/internal/workflow/profile/presets`
+- [x] 2.2 将生成目标接入 `server/internal/workflow/profile/profiles`
 - [ ] 2.3 增加回归测试：loader 可正确加载生成产物并保持去重/索引行为
 
 ## 3. 兼容与 API 回归

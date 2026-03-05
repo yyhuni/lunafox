@@ -4,13 +4,13 @@ import "time"
 
 // TaskRecord is the runtime task projection used by task runtime use-cases.
 type TaskRecord struct {
-	ID           int
-	ScanID       int
-	Stage        int
-	WorkflowName string
-	Status       string
-	AgentID      *int
-	Config       string
+	ID                 int
+	ScanID             int
+	Stage              int
+	WorkflowName       string
+	Status             string
+	AgentID            *int
+	WorkflowConfigYAML string
 }
 
 // TaskTargetRef is the minimal target projection required by task runtime flows.
@@ -25,7 +25,7 @@ type TaskScanRecord struct {
 	ID                int
 	TargetID          int
 	Status            string
-	YamlConfiguration string
+	YAMLConfiguration string
 	Target            *TaskTargetRef
 }
 

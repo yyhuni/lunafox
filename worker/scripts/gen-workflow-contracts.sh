@@ -5,7 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "${ROOT_DIR}"
 
-SERVER_SCHEMA_DIR="${SERVER_SCHEMA_DIR:-../server/internal/engineschema}"
+SERVER_SCHEMA_DIR="${SERVER_SCHEMA_DIR:-../server/internal/workflow/schema}"
+SERVER_PROFILE_DIR="${SERVER_PROFILE_DIR:-../server/internal/workflow/profile/profiles}"
 DOCS_DIR="${DOCS_DIR:-../docs/config-reference}"
 WORKER_SCHEMA_BASE_DIR="${WORKER_SCHEMA_BASE_DIR:-}"
 MIRROR_SCHEMA_DIR="${MIRROR_SCHEMA_DIR:-}"
@@ -26,6 +27,7 @@ for workflow_dir in internal/workflow/*/; do
       -workflow "${workflow_name}" \
       -worker-schema-dir "${worker_schema_dir}" \
       -server-schema-dir "${SERVER_SCHEMA_DIR}" \
+      -server-profile-dir "${SERVER_PROFILE_DIR}" \
       -docs-dir "${DOCS_DIR}" \
       -typed-go-output "${workflow_dir}config_typed_generated.go" \
       -typed-go-package "${workflow_name}"

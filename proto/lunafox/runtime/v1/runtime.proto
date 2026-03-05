@@ -77,7 +77,7 @@ message TaskAssign {
   string target_name = 7;
   string target_type = 8;
   string workspace_dir = 9;
-  string config = 10;
+  string workflow_config_yaml = 10;
 }
 
 message TaskCancel {

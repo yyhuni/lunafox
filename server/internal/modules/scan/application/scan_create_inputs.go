@@ -2,14 +2,12 @@ package application
 
 type CreateNormalInput struct {
 	TargetID      int
-	EngineIDs     []int
-	EngineNames   []string
+	WorkflowNames []string
 	Configuration string
 }
 
 type CreateNormalRequest struct {
 	TargetID      int
-	EngineIDs     []int
-	EngineNames   []string
+	WorkflowNames []string
 	Configuration string
 }

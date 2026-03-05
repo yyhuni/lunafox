@@ -9,7 +9,8 @@ type TaskAssignment struct {
 	TargetName   string `json:"targetName"`
 	TargetType   string `json:"targetType"`
 	WorkspaceDir string `json:"workspaceDir"`
-	Config       string `json:"config"`
+	// WorkflowConfigYAML is the workflow-scoped YAML config slice for this task.
+	WorkflowConfigYAML string `json:"workflowConfigYAML"`
 }
 
 type TaskStatusUpdateRequest struct {

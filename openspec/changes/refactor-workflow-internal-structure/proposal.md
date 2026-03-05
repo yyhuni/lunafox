@@ -13,7 +13,7 @@
   - `server/internal/workflow/schema`（承载 schema 读取、metadata 列举、校验）
   - `server/internal/workflow/profile`（承载 profile 类型、加载、校验、服务）
 - 统一 profile 产物目录：
-  - `server/internal/preset/presets` -> `server/internal/workflow/profile/presets`
+  - `server/internal/preset/presets` -> `server/internal/workflow/profile/profiles`
 - 迁移并替换所有 server import：
   - `internal/workflowschema` -> `internal/workflow/schema`
   - `internal/preset` -> `internal/workflow/profile`
@@ -35,7 +35,7 @@
 - Affected code:
   - `server/internal/workflowschema/*` -> `server/internal/workflow/schema/*`
   - `server/internal/preset/*` -> `server/internal/workflow/profile/*`
-  - `server/internal/preset/presets/*` -> `server/internal/workflow/profile/presets/*`
+  - `server/internal/preset/presets/*` -> `server/internal/workflow/profile/profiles/*`
   - `server/internal/bootstrap/*`
   - `server/internal/modules/catalog/*`
   - `server/internal/modules/scan/*`

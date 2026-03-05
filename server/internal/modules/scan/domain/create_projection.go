@@ -16,24 +16,18 @@ type CreateTargetRef struct {
 type CreateScan struct {
 	ID                int
 	TargetID          int
-	EngineIDs         []int64
-	EngineNames       []byte
-	YamlConfiguration string
+	WorkflowNames     []byte
+	YAMLConfiguration string
 	ScanMode          string
 	Status            string
 	CreatedAt         time.Time
 	Target            *CreateTargetRef
 }
 
-// CreateScanInputTarget is the input target projection persisted during scan creation.
-type CreateScanInputTarget struct {
-	Value     string
-	InputType string
-}
-
 // CreateScanTask is the task projection persisted during scan creation.
 type CreateScanTask struct {
-	Stage        int
-	WorkflowName string
-	Status       string
+	Stage              int
+	WorkflowName       string
+	WorkflowConfigYAML string
+	Status             string
 }

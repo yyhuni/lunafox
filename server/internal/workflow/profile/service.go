@@ -1,30 +1,30 @@
-package preset
+package profile
 
 import "errors"
 
-// ErrPresetNotFound is returned when a preset with the given ID is not found.
-var ErrPresetNotFound = errors.New("preset not found")
+// ErrProfileNotFound is returned when a profile with the given ID is not found.
+var ErrProfileNotFound = errors.New("profile not found")
 
-// Service provides business logic for preset engines.
+// Service provides business logic for workflow profiles.
 type Service struct {
 	loader *Loader
 }
 
-// NewService creates a new preset Service.
+// NewService creates a new profile Service.
 func NewService(loader *Loader) *Service {
 	return &Service{loader: loader}
 }
 
-// List returns all available presets.
-func (s *Service) List() []Preset {
+// List returns all available profiles.
+func (s *Service) List() []Profile {
 	return s.loader.List()
 }
 
-// GetByID returns a preset by its ID.
-func (s *Service) GetByID(id string) (*Preset, error) {
-	preset := s.loader.GetByID(id)
-	if preset == nil {
-		return nil, ErrPresetNotFound
+// GetByID returns a profile by its ID.
+func (s *Service) GetByID(id string) (*Profile, error) {
+	profile := s.loader.GetByID(id)
+	if profile == nil {
+		return nil, ErrProfileNotFound
 	}
-	return preset, nil
+	return profile, nil
 }

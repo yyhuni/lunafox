@@ -39,7 +39,7 @@ func createScanToQueryScan(scan *CreateScan) *QueryScan {
 	if scan == nil {
 		return nil
 	}
-	result := &QueryScan{ID: scan.ID, TargetID: scan.TargetID, WorkflowNames: scan.WorkflowNames, YamlConfiguration: scan.YamlConfiguration, ScanMode: scan.ScanMode, Status: scan.Status, CreatedAt: scan.CreatedAt}
+	result := &QueryScan{ID: scan.ID, TargetID: scan.TargetID, WorkflowNames: scan.WorkflowNames, YAMLConfiguration: scan.YAMLConfiguration, ScanMode: scan.ScanMode, Status: scan.Status, CreatedAt: scan.CreatedAt}
 	if scan.Target != nil {
 		result.Target = &QueryTargetRef{ID: scan.Target.ID, Name: scan.Target.Name, Type: scan.Target.Type}
 	}

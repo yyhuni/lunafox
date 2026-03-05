@@ -21,14 +21,13 @@ func toScanQueryInput(query *dto.ScanListQuery) *scanapp.ScanListQuery {
 	}
 }
 
-func toScanCreateNormalInput(req *dto.CreateScanRequest) *scanapp.CreateNormalRequest {
+func toScanCreateNormalInput(req *dto.CreateNormalScanRequest) *scanapp.CreateNormalRequest {
 	if req == nil {
 		return nil
 	}
 	return &scanapp.CreateNormalRequest{
 		TargetID:      req.TargetID,
-		EngineIDs:     req.EngineIDs,
-		EngineNames:   req.EngineNames,
+		WorkflowNames: req.WorkflowNames,
 		Configuration: req.Configuration,
 	}
 }
@@ -36,9 +35,8 @@ func toScanCreateNormalInput(req *dto.CreateScanRequest) *scanapp.CreateNormalRe
 func toScanOutput(scan *scanapp.QueryScan) dto.ScanResponse {
 	if scan == nil {
 		return dto.ScanResponse{
-			EngineIDs:   []int64{},
-			EngineNames: []string{},
-			CachedStats: &dto.ScanCachedStats{},
+			WorkflowNames: []string{},
+			CachedStats:   &dto.ScanCachedStats{},
 		}
 	}
 
@@ -67,21 +65,15 @@ func toScanOutput(scan *scanapp.QueryScan) dto.ScanResponse {
 		},
 	}
 
-	if scan.EngineIDs != nil {
-		response.EngineIDs = scan.EngineIDs
-	} else {
-		response.EngineIDs = []int64{}
-	}
-
-	if scan.EngineNames != nil {
+	if scan.WorkflowNames != nil {
 		var names []string
-		if err := json.Unmarshal(scan.EngineNames, &names); err == nil {
-			response.EngineNames = names
+		if err := json.Unmarshal(scan.WorkflowNames, &names); err == nil {
+			response.WorkflowNames = names
 		} else {
-			response.EngineNames = []string{}
+			response.WorkflowNames = []string{}
 		}
 	} else {
-		response.EngineNames = []string{}
+		response.WorkflowNames = []string{}
 	}
 
 	if scan.Target != nil {
@@ -102,7 +94,7 @@ func toScanDetailOutput(scan *scanapp.QueryScan) dto.ScanDetailResponse {
 
 	response := dto.ScanDetailResponse{
 		ScanResponse:      toScanOutput(scan),
-		YamlConfiguration: scan.YamlConfiguration,
+		YAMLConfiguration: scan.YAMLConfiguration,
 		ResultsDir:        scan.ResultsDir,
 		WorkerID:          scan.WorkerID,
 	}

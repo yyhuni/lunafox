@@ -10,19 +10,18 @@ type ScanListQuery struct {
 }
 
 type ScanResponse struct {
-	ID           int              `json:"id"`
-	TargetID     int              `json:"targetId"`
-	EngineIDs    []int64          `json:"engineIds"`
-	EngineNames  []string         `json:"engineNames"`
-	ScanMode     string           `json:"scanMode"`
-	Status       string           `json:"status"`
-	Progress     int              `json:"progress"`
-	CurrentStage string           `json:"currentStage"`
-	ErrorMessage string           `json:"errorMessage,omitempty"`
-	CreatedAt    time.Time        `json:"createdAt"`
-	StoppedAt    *time.Time       `json:"stoppedAt,omitempty"`
-	Target       *TargetBrief     `json:"target,omitempty"`
-	CachedStats  *ScanCachedStats `json:"cachedStats,omitempty"`
+	ID            int              `json:"id"`
+	TargetID      int              `json:"targetId"`
+	WorkflowNames []string         `json:"workflowNames"`
+	ScanMode      string           `json:"scanMode"`
+	Status        string           `json:"status"`
+	Progress      int              `json:"progress"`
+	CurrentStage  string           `json:"currentStage"`
+	ErrorMessage  string           `json:"errorMessage,omitempty"`
+	CreatedAt     time.Time        `json:"createdAt"`
+	StoppedAt     *time.Time       `json:"stoppedAt,omitempty"`
+	Target        *TargetBrief     `json:"target,omitempty"`
+	CachedStats   *ScanCachedStats `json:"cachedStats,omitempty"`
 }
 
 type TargetBrief struct {
@@ -47,7 +46,7 @@ type ScanCachedStats struct {
 
 type ScanDetailResponse struct {
 	ScanResponse
-	YamlConfiguration string                 `json:"yamlConfiguration,omitempty"`
+	YAMLConfiguration string                 `json:"yamlConfiguration,omitempty"`
 	ResultsDir        string                 `json:"resultsDir,omitempty"`
 	WorkerID          *int                   `json:"workerId,omitempty"`
 	StageProgress     map[string]interface{} `json:"stageProgress,omitempty"`
@@ -56,25 +55,21 @@ type ScanDetailResponse struct {
 type InitiateScanRequest struct {
 	OrganizationID *int `json:"organizationId" binding:"omitempty"`
 	TargetID       *int `json:"targetId" binding:"omitempty"`
-	// EngineIDs are persisted for audit/reference and must align with EngineNames by position.
-	EngineIDs []int `json:"engineIds" binding:"required,min=1"`
-	// EngineNames drive runtime planning and schema validation.
-	EngineNames   []string `json:"engineNames" binding:"required,min=1"`
+	// Selected workflow names drive runtime planning and schema validation.
+	WorkflowNames []string `json:"workflowNames" binding:"required,min=1"`
 	Configuration string   `json:"configuration" binding:"required"`
 }
 
 type QuickScanRequest struct {
 	Targets       []QuickScanTarget `json:"targets" binding:"required,min=1"`
-	EngineIDs     []int             `json:"engineIds"`
-	EngineNames   []string          `json:"engineNames"`
+	WorkflowNames []string          `json:"workflowNames"`
 	Configuration string            `json:"configuration" binding:"required"`
 }
 
 type CreateNormalScanRequest struct {
-	TargetID  int   `json:"targetId" binding:"required"`
-	EngineIDs []int `json:"engineIds" binding:"omitempty"`
-	// EngineNames are the authoritative planning input; EngineIDs must align if provided.
-	EngineNames   []string `json:"engineNames" binding:"required,min=1"`
+	TargetID int `json:"targetId" binding:"required"`
+	// Selected workflow names are the authoritative planning input.
+	WorkflowNames []string `json:"workflowNames" binding:"required,min=1"`
 	Configuration string   `json:"configuration" binding:"required"`
 }
 

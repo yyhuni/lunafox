@@ -7,17 +7,15 @@ import (
 )
 
 const (
-	WorkflowErrorCodeSchemaInvalid             = "SCHEMA_INVALID"
-	WorkflowErrorCodeWorkflowConfigInvalid     = "WORKFLOW_CONFIG_INVALID"
-	WorkflowErrorCodeWorkflowPrereqMissing     = "WORKFLOW_PREREQ_MISSING"
-	WorkflowErrorCodeWorkerVersionIncompatible = "WORKER_VERSION_INCOMPATIBLE"
+	WorkflowErrorCodeSchemaInvalid         = "SCHEMA_INVALID"
+	WorkflowErrorCodeWorkflowConfigInvalid = "WORKFLOW_CONFIG_INVALID"
+	WorkflowErrorCodeWorkflowPrereqMissing = "WORKFLOW_PREREQ_MISSING"
 )
 
 const (
-	WorkflowErrorStageServerSchemaGate       = "server_schema_gate"
-	WorkflowErrorStageWorkerValidate         = "worker_validate"
-	WorkflowErrorStageWorkerPrereq           = "worker_prereq"
-	WorkflowErrorStageSchedulerCompatibility = "scheduler_compatibility_gate"
+	WorkflowErrorStageServerSchemaGate = "server_schema_gate"
+	WorkflowErrorStageWorkerValidate   = "worker_validate"
+	WorkflowErrorStageWorkerPrereq     = "worker_prereq"
 )
 
 // WorkflowError is the standardized validation/compatibility error contract.

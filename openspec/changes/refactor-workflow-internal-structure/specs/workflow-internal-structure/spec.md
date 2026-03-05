@@ -11,7 +11,7 @@
 
 #### Scenario: profile 产物目录统一
 - **WHEN** workflow profile 产物被生成并落盘
-- **THEN** 产物位于 `server/internal/workflow/profile/presets`
+- **THEN** 产物位于 `server/internal/workflow/profile/profiles`
 - **AND** 不再使用 `server/internal/preset/presets`
 
 ### Requirement: Server 运行链路 MUST 只引用新 workflow 域路径

@@ -32,13 +32,13 @@ func TestResolveWorkerImage(t *testing.T) {
 
 func TestBuildWorkerEnv(t *testing.T) {
 	spec := &domain.Task{
-		ScanID:       1,
-		TargetID:     2,
-		TargetName:   "example.com",
-		TargetType:   "domain",
-		WorkflowName: "subdomain_discovery",
-		WorkspaceDir: "/opt/lunafox/results",
-		Config:       "config-yaml",
+		ScanID:             1,
+		TargetID:           2,
+		TargetName:         "example.com",
+		TargetType:         "domain",
+		WorkflowName:       "subdomain_discovery",
+		WorkspaceDir:       "/opt/lunafox/results",
+		WorkflowConfigYAML: "config-yaml",
 	}
 
 	env := buildWorkerEnv(spec, "/run/lunafox/worker-runtime.sock", "task-token", "/opt/lunafox/results/task_config.yaml")
@@ -79,20 +79,20 @@ func TestWriteTaskConfigFile(t *testing.T) {
 
 func TestBuildWorkerEnvDoesNotEmbedRawConfigPayload(t *testing.T) {
 	spec := &domain.Task{
-		ScanID:       1,
-		TargetID:     2,
-		TargetName:   "example.com",
-		TargetType:   "domain",
-		WorkflowName: "subdomain_discovery",
-		WorkspaceDir: "/opt/lunafox/results/scan_1/task_1",
-		Config:       strings.Repeat("a", 20000),
+		ScanID:             1,
+		TargetID:           2,
+		TargetName:         "example.com",
+		TargetType:         "domain",
+		WorkflowName:       "subdomain_discovery",
+		WorkspaceDir:       "/opt/lunafox/results/scan_1/task_1",
+		WorkflowConfigYAML: strings.Repeat("a", 20000),
 	}
 	env := buildWorkerEnv(spec, "/run/lunafox/worker-runtime.sock", "task-token", "/opt/lunafox/results/scan_1/task_1/task_config.yaml")
 	for _, item := range env {
 		if strings.HasPrefix(item, "CONFIG=") {
 			t.Fatalf("raw CONFIG env should not be used in worker container env")
 		}
-		if strings.Contains(item, spec.Config) {
+		if strings.Contains(item, spec.WorkflowConfigYAML) {
 			t.Fatalf("sensitive/large config content must not be exposed through env vars")
 		}
 	}

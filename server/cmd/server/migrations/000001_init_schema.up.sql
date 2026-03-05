@@ -642,7 +642,7 @@ CREATE TABLE IF NOT EXISTS scan_task (
 
     -- Assignment information
     agent_id        INT REFERENCES agent(id),
-    config          TEXT,
+    workflow_config_yaml TEXT,
     error_message   VARCHAR(4096),
 
     -- Timestamps
@@ -674,6 +674,7 @@ COMMENT ON COLUMN registration_token.expires_at IS 'Token expiration time (defau
 COMMENT ON COLUMN scan_task.stage IS 'Stage order index (shared for parallel tasks)';
 COMMENT ON COLUMN scan_task.workflow_name IS 'Workflow name (e.g. subdomain_discovery)';
 COMMENT ON COLUMN scan_task.status IS 'Task status: blocked/pending/running/completed/failed/cancelled';
+COMMENT ON COLUMN scan_task.workflow_config_yaml IS 'Workflow-level YAML config slice for this task';
 COMMENT ON COLUMN scan_task.error_message IS 'Error message (truncated by Agent, max 4KB)';
 COMMENT ON INDEX idx_scan_task_pending_order IS 'Supports task pull queries (ordered by stage DESC to prioritize completing existing scans, created_at ASC)';
 COMMENT ON INDEX idx_scan_task_agent_id IS 'Supports querying tasks by agent';

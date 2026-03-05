@@ -110,12 +110,12 @@ func TestTaskRuntimeServiceUnlockNextStageIfReady_UnlocksWhenNoActiveTasks(t *te
 func TestTaskRuntimeServicePullTask_CompatibleWorkflowReturnsAssignment(t *testing.T) {
 	taskStore := &taskStoreStub{
 		pulledTask: &TaskRecord{
-			ID:           101,
-			ScanID:       9,
-			Stage:        1,
-			WorkflowName: "subdomain_discovery",
-			Config:       "recon:\n  enabled: false\n  tools:\n    subfinder:\n      enabled: false\n",
-			Status:       "pending",
+			ID:                 101,
+			ScanID:             9,
+			Stage:              1,
+			WorkflowName:       "subdomain_discovery",
+			WorkflowConfigYAML: "recon:\n  enabled: false\n  tools:\n    subfinder:\n      enabled: false\n",
+			Status:             "pending",
 		},
 	}
 	runtimeStore := &runtimeScanStoreStub{
@@ -123,7 +123,7 @@ func TestTaskRuntimeServicePullTask_CompatibleWorkflowReturnsAssignment(t *testi
 			ID:       9,
 			TargetID: 88,
 			Status:   "running",
-			YamlConfiguration: `
+			YAMLConfiguration: `
 subdomain_discovery:
   recon:
     enabled: false
@@ -165,12 +165,12 @@ subdomain_discovery:
 func TestTaskRuntimeServicePullTask_MissingTaskConfigSliceFailsFast(t *testing.T) {
 	taskStore := &taskStoreStub{
 		pulledTask: &TaskRecord{
-			ID:           1001,
-			ScanID:       45,
-			Stage:        1,
-			WorkflowName: "subdomain_discovery",
-			Config:       "",
-			Status:       "pending",
+			ID:                 1001,
+			ScanID:             45,
+			Stage:              1,
+			WorkflowName:       "subdomain_discovery",
+			WorkflowConfigYAML: "",
+			Status:             "pending",
 		},
 	}
 	runtimeStore := &runtimeScanStoreStub{
@@ -197,12 +197,12 @@ func TestTaskRuntimeServicePullTask_MissingTaskConfigSliceFailsFast(t *testing.T
 func TestTaskRuntimeServicePullTask_EmptyWorkflowNameFailsAsSchemaInvalid(t *testing.T) {
 	taskStore := &taskStoreStub{
 		pulledTask: &TaskRecord{
-			ID:           1201,
-			ScanID:       46,
-			Stage:        1,
-			WorkflowName: "",
-			Config:       "recon:\n  enabled: false\n  tools:\n    subfinder:\n      enabled: false\n",
-			Status:       "pending",
+			ID:                 1201,
+			ScanID:             46,
+			Stage:              1,
+			WorkflowName:       "",
+			WorkflowConfigYAML: "recon:\n  enabled: false\n  tools:\n    subfinder:\n      enabled: false\n",
+			Status:             "pending",
 		},
 	}
 	runtimeStore := &runtimeScanStoreStub{
@@ -229,12 +229,12 @@ func TestTaskRuntimeServicePullTask_EmptyWorkflowNameFailsAsSchemaInvalid(t *tes
 func TestTaskRuntimeServicePullTask_CompatiblePendingScanPromotesToRunning(t *testing.T) {
 	taskStore := &taskStoreStub{
 		pulledTask: &TaskRecord{
-			ID:           1401,
-			ScanID:       47,
-			Stage:        1,
-			WorkflowName: "subdomain_discovery",
-			Config:       "recon:\n  enabled: false\n  tools:\n    subfinder:\n      enabled: false\n",
-			Status:       "pending",
+			ID:                 1401,
+			ScanID:             47,
+			Stage:              1,
+			WorkflowName:       "subdomain_discovery",
+			WorkflowConfigYAML: "recon:\n  enabled: false\n  tools:\n    subfinder:\n      enabled: false\n",
+			Status:             "pending",
 		},
 	}
 	runtimeStore := &runtimeScanStoreStub{

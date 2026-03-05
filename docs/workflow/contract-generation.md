@@ -19,13 +19,13 @@ make workflow-contracts-ci-check
 该命令会重新生成 contract 产物，并校验以下目录无未提交差异：
 - `worker/internal/workflow`
 - `server/internal/workflow/schema`
-- `server/internal/workflow/profile/presets`
+- `server/internal/workflow/profile/profiles`
 - `docs/config-reference`
 
 ## 可配置输出变量
 `make workflow-contracts-gen-all` 支持以下可选变量：
 - `SERVER_SCHEMA_DIR`：server workflow schema 输出目录（默认 `../server/internal/workflow/schema`）
-- `SERVER_PROFILE_DIR`：server workflow profile preset 输出目录（默认 `../server/internal/workflow/profile/presets`）
+- `SERVER_PROFILE_DIR`：server workflow profile 输出目录（默认 `../server/internal/workflow/profile/profiles`）
 - `DOCS_DIR`：文档输出目录（默认 `../docs/config-reference`）
 - `WORKER_SCHEMA_BASE_DIR`：worker schema 根目录（默认每个 workflow 下 `generated/`）
 - `MIRROR_SCHEMA_DIR`：额外镜像输出目录（可选）
@@ -35,7 +35,7 @@ make workflow-contracts-ci-check
 cd worker
 make workflow-contracts-gen-all \
   SERVER_SCHEMA_DIR=../server/internal/workflow/schema \
-  SERVER_PROFILE_DIR=../server/internal/workflow/profile/presets \
+  SERVER_PROFILE_DIR=../server/internal/workflow/profile/profiles \
   DOCS_DIR=../docs/config-reference \
   WORKER_SCHEMA_BASE_DIR=./out/worker-schemas \
   MIRROR_SCHEMA_DIR=./out/mirror
@@ -44,6 +44,6 @@ make workflow-contracts-gen-all \
 ## 生成契约约定
 - schema 文件名：`<workflow>.schema.json`
 - schema `$id`：`lunafox://schemas/workflows/<workflow>`
-- profile preset 文件名：`<workflow>.yaml`
-- profile preset 来源：contract 中的 `DefaultProfile` + 参数 `Default`
+- profile 文件名：`<workflow>.yaml`
+- profile 来源：contract 中的 `DefaultProfile` + 参数 `Default`
 - typed config：`config_typed_generated.go`

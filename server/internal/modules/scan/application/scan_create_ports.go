@@ -9,7 +9,7 @@ import (
 var (
 	ErrCreateTargetNotFound       = errors.New("target not found")
 	ErrCreateInvalidConfig        = errors.New("invalid scan configuration")
-	ErrCreateInvalidEngineNames   = errors.New("invalid engines: engineNames must be non-empty and align with engineIDs by position")
+	ErrCreateInvalidWorkflowNames = errors.New("invalid workflows: workflowNames must be non-empty")
 	ErrCreateNoWorkflows          = errors.New("no workflows enabled for scan")
 	ErrCreateTargetLookupNotReady = errors.New("target lookup is not configured")
 )

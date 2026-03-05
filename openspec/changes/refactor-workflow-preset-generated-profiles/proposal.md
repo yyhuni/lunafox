@@ -1,7 +1,7 @@
 # Change: Workflow 预设改为“契约生成 + 可选策略覆盖”
 
 ## Why
-当前项目在 workflow 契约层已经实现 code-first 与自动生成（schema/docs/typed config），但 profile 默认配置仍由 `server/internal/workflow/profile/presets/*.yaml` 手工维护。这导致以下问题：
+当前项目在 workflow 契约层已经实现 code-first 与自动生成（schema/docs/typed config），但 profile 默认配置仍由 `server/internal/workflow/profile/profiles/*.yaml` 手工维护。这导致以下问题：
 - 契约与预设存在“双真相源”，容易发生漂移。
 - 预设更新依赖人工同步，难以保证版本一致与可回溯。
 - 关于默认值与场景策略（fast/deep）的语义边界不清晰，影响后续演进。
@@ -14,7 +14,7 @@
   - 场景策略（如 `fast`/`deep`）使用可选 overlay（仅定义差异字段），由生成链合并产出最终配置。
 - 扩展契约生成工具链：
   - 在现有 `workflow-contract-gen`/脚本链路中新增 preset 产物生成。
-  - 生成目标目录固定为 `server/internal/workflow/profile/presets`。
+  - 生成目标目录固定为 `server/internal/workflow/profile/profiles`。
   - 生成后必须执行 schema 校验门禁，失败即中断。
 - 一次性切换（未上线阶段）：
   - 本次改造按 pre-launch 一次性 cutover 执行，不保留旧 preset 兼容路径。

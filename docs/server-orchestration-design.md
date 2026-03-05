@@ -29,7 +29,7 @@
 保留 `scan_task`，并为后续依赖关系预留扩展空间。
 
 #### 表：`scan_task`（现有 + 扩展）
-- `id`, `scan_id`, `stage`, `workflow_name`, `status`, `agent_id`, `config`, `error_message`, timestamps
+- `id`, `scan_id`, `stage`, `workflow_name`, `status`, `agent_id`, `workflow_config_yaml`, `error_message`, timestamps
 - **新增**:
   - `priority` (int, default 0)
   - `attempt` (int, default 0)

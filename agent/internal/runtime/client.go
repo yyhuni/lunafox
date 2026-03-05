@@ -208,15 +208,15 @@ func (c *Client) PullTask(ctx context.Context) (*domain.Task, error) {
 			return nil, nil
 		}
 		return &domain.Task{
-			ID:           int(assign.TaskId),
-			ScanID:       int(assign.ScanId),
-			Stage:        int(assign.Stage),
-			WorkflowName: assign.WorkflowName,
-			TargetID:     int(assign.TargetId),
-			TargetName:   assign.TargetName,
-			TargetType:   assign.TargetType,
-			WorkspaceDir: assign.WorkspaceDir,
-			Config:       assign.Config,
+			ID:                 int(assign.TaskId),
+			ScanID:             int(assign.ScanId),
+			Stage:              int(assign.Stage),
+			WorkflowName:       assign.WorkflowName,
+			TargetID:           int(assign.TargetId),
+			TargetName:         assign.TargetName,
+			TargetType:         assign.TargetType,
+			WorkspaceDir:       assign.WorkspaceDir,
+			WorkflowConfigYAML: assign.WorkflowConfigYaml,
 		}, nil
 	}
 }

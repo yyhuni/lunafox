@@ -1,4 +1,4 @@
-package preset
+package profile
 
 import (
 	"embed"
@@ -9,22 +9,22 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:embed presets/*.yaml
-var presetsFS embed.FS
+//go:embed profiles/*.yaml
+var profilesFS embed.FS
 
-const presetsDir = "presets"
+const profilesDir = "profiles"
 
-// Loader loads and manages preset engine configurations.
+// Loader loads and manages workflow profiles.
 type Loader struct {
-	presets    []Preset
-	presetsMap map[string]*Preset
+	profiles    []Profile
+	profilesMap map[string]*Profile
 }
 
-// NewLoader creates a new Loader and loads all presets from embedded files.
+// NewLoader creates a new Loader and loads all profiles from embedded files.
 func NewLoader() (*Loader, error) {
 	l := &Loader{
-		presets:    []Preset{},
-		presetsMap: make(map[string]*Preset),
+		profiles:    []Profile{},
+		profilesMap: make(map[string]*Profile),
 	}
 
 	if err := l.load(); err != nil {
@@ -36,9 +36,9 @@ func NewLoader() (*Loader, error) {
 
 // load reads all YAML files from the embedded filesystem.
 func (l *Loader) load() error {
-	entries, err := presetsFS.ReadDir(presetsDir)
+	entries, err := profilesFS.ReadDir(profilesDir)
 	if err != nil {
-		return fmt.Errorf("failed to read presets directory: %w", err)
+		return fmt.Errorf("failed to read profiles directory: %w", err)
 	}
 
 	for _, entry := range entries {
@@ -59,51 +59,51 @@ func (l *Loader) load() error {
 			continue
 		}
 
-		filePath := filepath.Join(presetsDir, name)
-		data, err := presetsFS.ReadFile(filePath)
+		filePath := filepath.Join(profilesDir, name)
+		data, err := profilesFS.ReadFile(filePath)
 		if err != nil {
-			return fmt.Errorf("failed to read preset file %s: %w", name, err)
+			return fmt.Errorf("failed to read profile file %s: %w", name, err)
 		}
 
-		var preset Preset
-		if err := yaml.Unmarshal(data, &preset); err != nil {
-			return fmt.Errorf("failed to parse preset file %s: %w", name, err)
+		var profile Profile
+		if err := yaml.Unmarshal(data, &profile); err != nil {
+			return fmt.Errorf("failed to parse profile file %s: %w", name, err)
 		}
 
 		// Validate required fields
-		if preset.ID == "" {
-			return fmt.Errorf("preset file %s: missing required field 'id'", name)
+		if profile.ID == "" {
+			return fmt.Errorf("profile file %s: missing required field 'id'", name)
 		}
-		if preset.Name == "" {
-			return fmt.Errorf("preset file %s: missing required field 'name'", name)
+		if profile.Name == "" {
+			return fmt.Errorf("profile file %s: missing required field 'name'", name)
 		}
-		if preset.Configuration == "" {
-			return fmt.Errorf("preset file %s: missing required field 'configuration'", name)
+		if profile.Configuration == "" {
+			return fmt.Errorf("profile file %s: missing required field 'configuration'", name)
 		}
 
 		// Check for duplicate IDs
-		if _, exists := l.presetsMap[preset.ID]; exists {
-			return fmt.Errorf("duplicate preset id '%s' in file %s", preset.ID, name)
+		if _, exists := l.profilesMap[profile.ID]; exists {
+			return fmt.Errorf("duplicate profile id '%s' in file %s", profile.ID, name)
 		}
 
 		// Validate configuration against schemas
-		if err := ValidateConfiguration(preset.Configuration); err != nil {
-			return fmt.Errorf("preset file %s: %w", name, err)
+		if err := ValidateConfiguration(profile.Configuration); err != nil {
+			return fmt.Errorf("profile file %s: %w", name, err)
 		}
 
-		l.presets = append(l.presets, preset)
-		l.presetsMap[preset.ID] = &l.presets[len(l.presets)-1]
+		l.profiles = append(l.profiles, profile)
+		l.profilesMap[profile.ID] = &l.profiles[len(l.profiles)-1]
 	}
 
 	return nil
 }
 
-// List returns all loaded presets.
-func (l *Loader) List() []Preset {
-	return l.presets
+// List returns all loaded profiles.
+func (l *Loader) List() []Profile {
+	return l.profiles
 }
 
-// GetByID returns a preset by its ID, or nil if not found.
-func (l *Loader) GetByID(id string) *Preset {
-	return l.presetsMap[id]
+// GetByID returns a profile by its ID, or nil if not found.
+func (l *Loader) GetByID(id string) *Profile {
+	return l.profilesMap[id]
 }

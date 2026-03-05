@@ -36,7 +36,7 @@ func (c *Client) StartWorker(ctx context.Context, t *domain.Task, agentSocket, t
 	if err := os.MkdirAll(t.WorkspaceDir, 0755); err != nil {
 		return "", fmt.Errorf("prepare workspace: %w", err)
 	}
-	configPath, err := writeTaskConfigFile(t.WorkspaceDir, t.Config)
+	configPath, err := writeTaskConfigFile(t.WorkspaceDir, t.WorkflowConfigYAML)
 	if err != nil {
 		return "", err
 	}
@@ -177,9 +177,9 @@ func buildWorkerEnv(t *domain.Task, agentSocket, taskToken, configPath string) [
 	}
 }
 
-func writeTaskConfigFile(workspaceDir, configYAML string) (string, error) {
+func writeTaskConfigFile(workspaceDir, taskConfigYAML string) (string, error) {
 	path := runtimecontract.BuildTaskConfigPath(workspaceDir)
-	if err := os.WriteFile(path, []byte(configYAML), 0600); err != nil {
+	if err := os.WriteFile(path, []byte(taskConfigYAML), 0600); err != nil {
 		return "", fmt.Errorf("write task config file: %w", err)
 	}
 	return path, nil

@@ -15,7 +15,7 @@
 1. 目录收敛
 - `server/internal/workflow/schema`：承载 schema 发现、metadata、校验。
 - `server/internal/workflow/profile`：承载 profile 类型、loader、validator、service。
-- `server/internal/workflow/profile/presets`：承载 profile YAML 生成产物目录。
+- `server/internal/workflow/profile/profiles`：承载 profile YAML 生成产物目录。
 
 2. 无行为漂移约束
 - 本次变更仅处理内部目录与依赖路径重构。
@@ -35,11 +35,11 @@
 | --- | --- |
 | `server/internal/workflowschema` | `server/internal/workflow/schema` |
 | `server/internal/preset` | `server/internal/workflow/profile` |
-| `server/internal/preset/presets` | `server/internal/workflow/profile/presets` |
+| `server/internal/preset/presets` | `server/internal/workflow/profile/profiles` |
 | `import .../internal/workflowschema` | `import .../internal/workflow/schema` |
 | `import .../internal/preset` | `import .../internal/workflow/profile` |
 | `worker scripts/Makefile: ../server/internal/workflowschema` | `../server/internal/workflow/schema` |
-| `worker/profile output dir: ../server/internal/preset/presets` | `../server/internal/workflow/profile/presets` |
+| `worker/profile output dir: ../server/internal/preset/presets` | `../server/internal/workflow/profile/profiles` |
 
 ## Risks / Trade-offs
 - 风险：迁移跨度跨 server+worker+docs，容易漏改。
@@ -49,7 +49,7 @@
 
 ## Migration Plan
 1. 复制并迁移 package 到 `internal/workflow/{schema,profile}`，保持 API 面一致。
-2. 迁移 profile 产物目录到 `internal/workflow/profile/presets`。
+2. 迁移 profile 产物目录到 `internal/workflow/profile/profiles`。
 3. 替换 server import 并通过 catalog/scan/bootstrap 测试。
 4. 替换 worker 脚本与 Makefile 默认路径并通过 worker 测试。
 5. 更新 docs 路径说明与相关 OpenSpec 变更中的目录引用。
