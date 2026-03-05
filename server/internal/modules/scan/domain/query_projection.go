@@ -14,7 +14,7 @@ type QueryTargetRef struct {
 type QueryScan struct {
 	ID                     int
 	TargetID               int
-	WorkflowNames          []byte
+	WorkflowIDs            []byte
 	YAMLConfiguration      string
 	ScanMode               string
 	Status                 string

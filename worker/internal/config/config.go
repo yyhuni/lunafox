@@ -12,16 +12,16 @@ import (
 )
 
 var (
-	ErrMissingTaskID       = errors.New("missing required configuration: TASK_ID")
-	ErrMissingAgentSocket  = errors.New("missing required configuration: AGENT_SOCKET")
-	ErrMissingTaskToken    = errors.New("missing required configuration: TASK_TOKEN")
-	ErrMissingScanID       = errors.New("missing required configuration: SCAN_ID")
-	ErrMissingTargetID     = errors.New("missing required configuration: TARGET_ID")
-	ErrMissingTargetName   = errors.New("missing required configuration: TARGET_NAME")
-	ErrMissingTargetType   = errors.New("missing required configuration: TARGET_TYPE")
-	ErrMissingWorkflowName = errors.New("missing required configuration: WORKFLOW_NAME")
-	ErrMissingConfig       = errors.New("missing required configuration: CONFIG")
-	ErrMissingConfigPath   = errors.New("missing required configuration: CONFIG_PATH")
+	ErrMissingTaskID      = errors.New("missing required configuration: TASK_ID")
+	ErrMissingAgentSocket = errors.New("missing required configuration: AGENT_SOCKET")
+	ErrMissingTaskToken   = errors.New("missing required configuration: TASK_TOKEN")
+	ErrMissingScanID      = errors.New("missing required configuration: SCAN_ID")
+	ErrMissingTargetID    = errors.New("missing required configuration: TARGET_ID")
+	ErrMissingTargetName  = errors.New("missing required configuration: TARGET_NAME")
+	ErrMissingTargetType  = errors.New("missing required configuration: TARGET_TYPE")
+	ErrMissingWorkflowID  = errors.New("missing required configuration: WORKFLOW_ID")
+	ErrMissingConfig      = errors.New("missing required configuration: CONFIG")
+	ErrMissingConfigPath  = errors.New("missing required configuration: CONFIG_PATH")
 )
 
 // Config holds all configuration for the worker
@@ -36,7 +36,7 @@ type Config struct {
 	TargetID     int
 	TargetName   string
 	TargetType   string // "domain", "ip", "cidr", "url"
-	WorkflowName string // e.g., "subdomain_discovery", "website_scan"
+	WorkflowID   string // e.g., "subdomain_discovery", "website_scan"
 	WorkspaceDir string // Base directory for workflow execution
 	Config       map[string]any
 
@@ -57,18 +57,18 @@ func Load() (*Config, error) {
 		TargetID:     getEnvAsInt("TARGET_ID", 0),
 		TargetName:   os.Getenv("TARGET_NAME"),
 		TargetType:   os.Getenv("TARGET_TYPE"),
-		WorkflowName: os.Getenv("WORKFLOW_NAME"),
+		WorkflowID:   os.Getenv("WORKFLOW_ID"),
 		WorkspaceDir: getEnvOrDefault("WORKSPACE_DIR", runtimecontract.DefaultWorkspaceRoot),
 		LogLevel:     getEnvOrDefault("LOG_LEVEL", "info"),
 	}
 
-	configYAML, err := loadRawTaskConfig()
+	taskConfigYAML, err := loadRawTaskConfig()
 	if err != nil {
 		return nil, err
 	}
-	if configYAML != "" {
+	if taskConfigYAML != "" {
 		var config map[string]any
-		if err := yaml.Unmarshal([]byte(configYAML), &config); err != nil {
+		if err := yaml.Unmarshal([]byte(taskConfigYAML), &config); err != nil {
 			return nil, err
 		}
 		cfg.Config = config
@@ -115,8 +115,8 @@ func (c *Config) Validate() error {
 	if c.TargetType == "" {
 		return ErrMissingTargetType
 	}
-	if c.WorkflowName == "" {
-		return ErrMissingWorkflowName
+	if c.WorkflowID == "" {
+		return ErrMissingWorkflowID
 	}
 	if c.Config == nil {
 		return ErrMissingConfig

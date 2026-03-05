@@ -4,7 +4,7 @@ type TaskAssignment struct {
 	TaskID       int    `json:"taskId"`
 	ScanID       int    `json:"scanId"`
 	Stage        int    `json:"stage"`
-	WorkflowName string `json:"workflowName"`
+	WorkflowID   string `json:"workflowId"`
 	TargetID     int    `json:"targetId"`
 	TargetName   string `json:"targetName"`
 	TargetType   string `json:"targetType"`

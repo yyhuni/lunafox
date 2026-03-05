@@ -4,7 +4,7 @@ type TaskAssignment struct {
 	TaskID             int
 	ScanID             int
 	Stage              int
-	WorkflowName       string
+	WorkflowID         string
 	TargetID           int
 	TargetName         string
 	TargetType         string

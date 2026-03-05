@@ -16,7 +16,7 @@ type CreateTargetRef struct {
 type CreateScan struct {
 	ID                int
 	TargetID          int
-	WorkflowNames     []byte
+	WorkflowIDs       []byte
 	YAMLConfiguration string
 	ScanMode          string
 	Status            string
@@ -27,7 +27,7 @@ type CreateScan struct {
 // CreateScanTask is the task projection persisted during scan creation.
 type CreateScanTask struct {
 	Stage              int
-	WorkflowName       string
+	WorkflowID         string
 	WorkflowConfigYAML string
 	Status             string
 }

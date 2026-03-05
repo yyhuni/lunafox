@@ -23,15 +23,15 @@ func (adapter *catalogWorkflowProfileQueryStoreAdapter) ListWorkflowProfiles(_ c
 	profiles := adapter.loader.List()
 	result := make([]catalogapp.WorkflowProfile, 0, len(profiles))
 	for _, item := range profiles {
-		workflowNames, err := workflowprofile.ExtractWorkflowNames(item.Configuration)
+		workflowIDs, err := workflowprofile.ExtractWorkflowIDs(item.Configuration)
 		if err != nil {
-			return nil, fmt.Errorf("extract workflow names from profile %q: %w", item.ID, err)
+			return nil, fmt.Errorf("extract workflow ids from profile %q: %w", item.ID, err)
 		}
 		result = append(result, catalogapp.WorkflowProfile{
 			ID:            item.ID,
 			Name:          item.Name,
 			Description:   item.Description,
-			WorkflowNames: workflowNames,
+			WorkflowIDs:   workflowIDs,
 			Configuration: item.Configuration,
 		})
 	}
@@ -46,15 +46,15 @@ func (adapter *catalogWorkflowProfileQueryStoreAdapter) GetWorkflowProfileByID(_
 	if item == nil {
 		return nil, catalogapp.ErrWorkflowProfileNotFound
 	}
-	workflowNames, err := workflowprofile.ExtractWorkflowNames(item.Configuration)
+	workflowIDs, err := workflowprofile.ExtractWorkflowIDs(item.Configuration)
 	if err != nil {
-		return nil, fmt.Errorf("extract workflow names from profile %q: %w", item.ID, err)
+		return nil, fmt.Errorf("extract workflow ids from profile %q: %w", item.ID, err)
 	}
 	return &catalogapp.WorkflowProfile{
 		ID:            item.ID,
 		Name:          item.Name,
 		Description:   item.Description,
-		WorkflowNames: workflowNames,
+		WorkflowIDs:   workflowIDs,
 		Configuration: item.Configuration,
 	}, nil
 }

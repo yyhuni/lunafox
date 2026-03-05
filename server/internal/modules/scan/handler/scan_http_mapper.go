@@ -27,7 +27,7 @@ func toScanCreateNormalInput(req *dto.CreateNormalScanRequest) *scanapp.CreateNo
 	}
 	return &scanapp.CreateNormalRequest{
 		TargetID:      req.TargetID,
-		WorkflowNames: req.WorkflowNames,
+		WorkflowIDs:   req.WorkflowIDs,
 		Configuration: req.Configuration,
 	}
 }
@@ -35,8 +35,8 @@ func toScanCreateNormalInput(req *dto.CreateNormalScanRequest) *scanapp.CreateNo
 func toScanOutput(scan *scanapp.QueryScan) dto.ScanResponse {
 	if scan == nil {
 		return dto.ScanResponse{
-			WorkflowNames: []string{},
-			CachedStats:   &dto.ScanCachedStats{},
+			WorkflowIDs: []string{},
+			CachedStats: &dto.ScanCachedStats{},
 		}
 	}
 
@@ -65,15 +65,15 @@ func toScanOutput(scan *scanapp.QueryScan) dto.ScanResponse {
 		},
 	}
 
-	if scan.WorkflowNames != nil {
+	if scan.WorkflowIDs != nil {
 		var names []string
-		if err := json.Unmarshal(scan.WorkflowNames, &names); err == nil {
-			response.WorkflowNames = names
+		if err := json.Unmarshal(scan.WorkflowIDs, &names); err == nil {
+			response.WorkflowIDs = names
 		} else {
-			response.WorkflowNames = []string{}
+			response.WorkflowIDs = []string{}
 		}
 	} else {
-		response.WorkflowNames = []string{}
+		response.WorkflowIDs = []string{}
 	}
 
 	if scan.Target != nil {

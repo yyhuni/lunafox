@@ -179,7 +179,7 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 		logger.Log.Warn("failed to start worker container",
 			zap.Int("taskId", t.ID),
 			zap.Int("scanId", t.ScanID),
-			zap.String("workflow", t.WorkflowName),
+			zap.String("workflow", t.WorkflowID),
 			zap.String("target", t.TargetName),
 			zap.Error(err),
 		)
@@ -190,7 +190,7 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 	logger.Log.Info("worker container started",
 		zap.Int("taskId", t.ID),
 		zap.Int("scanId", t.ScanID),
-		zap.String("workflow", t.WorkflowName),
+		zap.String("workflow", t.WorkflowID),
 		zap.String("containerId", containerID),
 	)
 	defer func() {

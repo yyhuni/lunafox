@@ -113,7 +113,7 @@ func TestTaskRuntimeServicePullTask_CompatibleWorkflowReturnsAssignment(t *testi
 			ID:                 101,
 			ScanID:             9,
 			Stage:              1,
-			WorkflowName:       "subdomain_discovery",
+			WorkflowID:         "subdomain_discovery",
 			WorkflowConfigYAML: "recon:\n  enabled: false\n  tools:\n    subfinder:\n      enabled: false\n",
 			Status:             "pending",
 		},
@@ -168,7 +168,7 @@ func TestTaskRuntimeServicePullTask_MissingTaskConfigSliceFailsFast(t *testing.T
 			ID:                 1001,
 			ScanID:             45,
 			Stage:              1,
-			WorkflowName:       "subdomain_discovery",
+			WorkflowID:         "subdomain_discovery",
 			WorkflowConfigYAML: "",
 			Status:             "pending",
 		},
@@ -194,13 +194,13 @@ func TestTaskRuntimeServicePullTask_MissingTaskConfigSliceFailsFast(t *testing.T
 	}
 }
 
-func TestTaskRuntimeServicePullTask_EmptyWorkflowNameFailsAsSchemaInvalid(t *testing.T) {
+func TestTaskRuntimeServicePullTask_EmptyWorkflowIDFailsAsSchemaInvalid(t *testing.T) {
 	taskStore := &taskStoreStub{
 		pulledTask: &TaskRecord{
 			ID:                 1201,
 			ScanID:             46,
 			Stage:              1,
-			WorkflowName:       "",
+			WorkflowID:         "",
 			WorkflowConfigYAML: "recon:\n  enabled: false\n  tools:\n    subfinder:\n      enabled: false\n",
 			Status:             "pending",
 		},
@@ -232,7 +232,7 @@ func TestTaskRuntimeServicePullTask_CompatiblePendingScanPromotesToRunning(t *te
 			ID:                 1401,
 			ScanID:             47,
 			Stage:              1,
-			WorkflowName:       "subdomain_discovery",
+			WorkflowID:         "subdomain_discovery",
 			WorkflowConfigYAML: "recon:\n  enabled: false\n  tools:\n    subfinder:\n      enabled: false\n",
 			Status:             "pending",
 		},

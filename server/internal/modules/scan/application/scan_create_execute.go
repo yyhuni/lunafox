@@ -32,15 +32,15 @@ func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*Creat
 		return nil, WrapSchemaInvalid("", "configuration YAML must be an object", nil)
 	}
 
-	workflowNames := append([]string(nil), input.WorkflowNames...)
-	if err := validateWorkflowNamesStrict(workflowNames); err != nil {
+	workflowIds := append([]string(nil), input.WorkflowIDs...)
+	if err := validateWorkflowIDsStrict(workflowIds); err != nil {
 		return nil, err
 	}
-	if err := service.validateRequestedWorkflows(workflowNames); err != nil {
+	if err := service.validateRequestedWorkflows(workflowIds); err != nil {
 		return nil, err
 	}
 
-	for _, workflow := range workflowNames {
+	for _, workflow := range workflowIds {
 		workflow = strings.TrimSpace(workflow)
 		if workflow == "" {
 			continue
@@ -64,20 +64,20 @@ func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*Creat
 		return nil, ErrCreateTargetNotFound
 	}
 
-	workflowNamesJSON, err := json.Marshal(workflowNames)
+	workflowIdsJSON, err := json.Marshal(workflowIds)
 	if err != nil {
 		return nil, err
 	}
 
 	scan := &CreateScan{
 		TargetID:          input.TargetID,
-		WorkflowNames:     workflowNamesJSON,
+		WorkflowIDs:       workflowIdsJSON,
 		YAMLConfiguration: workflowConfigYAML,
 		ScanMode:          CreateScanModeFull,
 		Status:            CreateScanStatusPending,
 	}
 
-	tasks, err := buildScanTasks(workflowNames, root)
+	tasks, err := buildScanTasks(workflowIds, root)
 	if err != nil {
 		return nil, err
 	}

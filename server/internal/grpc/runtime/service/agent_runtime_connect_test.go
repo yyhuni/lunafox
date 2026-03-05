@@ -49,7 +49,7 @@ func TestConnectHandlesRequestTask(t *testing.T) {
 			TaskID:             11,
 			ScanID:             12,
 			Stage:              2,
-			WorkflowName:       "subdomain_discovery",
+			WorkflowID:         "subdomain_discovery",
 			TargetID:           99,
 			TargetName:         "example.com",
 			TargetType:         "domain",

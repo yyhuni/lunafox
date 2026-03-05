@@ -169,7 +169,7 @@ func buildWorkerEnv(t *domain.Task, agentSocket, taskToken, configPath string) [
 		fmt.Sprintf("TARGET_ID=%d", t.TargetID),
 		fmt.Sprintf("TARGET_NAME=%s", t.TargetName),
 		fmt.Sprintf("TARGET_TYPE=%s", t.TargetType),
-		fmt.Sprintf("WORKFLOW_NAME=%s", t.WorkflowName),
+		fmt.Sprintf("WORKFLOW_ID=%s", t.WorkflowID),
 		fmt.Sprintf("WORKSPACE_DIR=%s", t.WorkspaceDir),
 		fmt.Sprintf("%s=%s", runtimecontract.DefaultWorkerConfigPathEnv, strings.TrimSpace(configPath)),
 		fmt.Sprintf("AGENT_SOCKET=%s", agentSocket),

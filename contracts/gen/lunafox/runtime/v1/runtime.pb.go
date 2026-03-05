@@ -511,7 +511,7 @@ type TaskAssign struct {
 	TaskId             int32                  `protobuf:"varint,2,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	ScanId             int32                  `protobuf:"varint,3,opt,name=scan_id,json=scanId,proto3" json:"scan_id,omitempty"`
 	Stage              int32                  `protobuf:"varint,4,opt,name=stage,proto3" json:"stage,omitempty"`
-	WorkflowName       string                 `protobuf:"bytes,5,opt,name=workflow_name,json=workflowName,proto3" json:"workflow_name,omitempty"`
+	WorkflowId         string                 `protobuf:"bytes,5,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
 	TargetId           int32                  `protobuf:"varint,6,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
 	TargetName         string                 `protobuf:"bytes,7,opt,name=target_name,json=targetName,proto3" json:"target_name,omitempty"`
 	TargetType         string                 `protobuf:"bytes,8,opt,name=target_type,json=targetType,proto3" json:"target_type,omitempty"`
@@ -579,9 +579,9 @@ func (x *TaskAssign) GetStage() int32 {
 	return 0
 }
 
-func (x *TaskAssign) GetWorkflowName() string {
+func (x *TaskAssign) GetWorkflowId() string {
 	if x != nil {
-		return x.WorkflowName
+		return x.WorkflowId
 	}
 	return ""
 }
@@ -1538,14 +1538,15 @@ const file_lunafox_runtime_v1_runtime_proto_rawDesc = "" +
 	"taskCancel\x12G\n" +
 	"\rconfig_update\x18\x03 \x01(\v2 .lunafox.runtime.v1.ConfigUpdateH\x00R\fconfigUpdate\x12M\n" +
 	"\x0fupdate_required\x18\x04 \x01(\v2\".lunafox.runtime.v1.UpdateRequiredH\x00R\x0eupdateRequiredB\t\n" +
-	"\apayload\"\xc5\x02\n" +
+	"\apayload\"\xc1\x02\n" +
 	"\n" +
 	"TaskAssign\x12\x14\n" +
 	"\x05found\x18\x01 \x01(\bR\x05found\x12\x17\n" +
 	"\atask_id\x18\x02 \x01(\x05R\x06taskId\x12\x17\n" +
 	"\ascan_id\x18\x03 \x01(\x05R\x06scanId\x12\x14\n" +
-	"\x05stage\x18\x04 \x01(\x05R\x05stage\x12#\n" +
-	"\rworkflow_name\x18\x05 \x01(\tR\fworkflowName\x12\x1b\n" +
+	"\x05stage\x18\x04 \x01(\x05R\x05stage\x12\x1f\n" +
+	"\vworkflow_id\x18\x05 \x01(\tR\n" +
+	"workflowId\x12\x1b\n" +
 	"\ttarget_id\x18\x06 \x01(\x05R\btargetId\x12\x1f\n" +
 	"\vtarget_name\x18\a \x01(\tR\n" +
 	"targetName\x12\x1f\n" +

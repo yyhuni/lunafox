@@ -3,15 +3,15 @@ package dto
 import catalogdomain "github.com/yyhuni/lunafox/server/internal/modules/catalog/domain"
 
 type WorkflowResponse struct {
-	Name        string `json:"name"`
-	Title       string `json:"title,omitempty"`
+	WorkflowID  string `json:"workflowId"`
+	DisplayName string `json:"displayName,omitempty"`
 	Description string `json:"description,omitempty"`
 }
 
 func NewWorkflowResponse(workflow *catalogdomain.Workflow) WorkflowResponse {
 	return WorkflowResponse{
-		Name:        workflow.Name,
-		Title:       workflow.Title,
+		WorkflowID:  workflow.WorkflowID,
+		DisplayName: workflow.DisplayName,
 		Description: workflow.Description,
 	}
 }

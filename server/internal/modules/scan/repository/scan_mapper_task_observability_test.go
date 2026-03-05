@@ -8,10 +8,10 @@ import (
 
 func TestScanTaskModelToRecord_MapsCoreFields(t *testing.T) {
 	item := &model.ScanTask{
-		ID:           91,
-		ScanID:       19,
-		Stage:        2,
-		WorkflowName: "subdomain_discovery",
+		ID:         91,
+		ScanID:     19,
+		Stage:      2,
+		WorkflowID: "subdomain_discovery",
 	}
 
 	record := scanTaskModelToRecord(item)
@@ -21,7 +21,7 @@ func TestScanTaskModelToRecord_MapsCoreFields(t *testing.T) {
 	if record.ID != 91 || record.ScanID != 19 || record.Stage != 2 {
 		t.Fatalf("unexpected mapped core fields: %+v", record)
 	}
-	if record.WorkflowName != "subdomain_discovery" {
-		t.Fatalf("unexpected workflow name: %s", record.WorkflowName)
+	if record.WorkflowID != "subdomain_discovery" {
+		t.Fatalf("unexpected workflow name: %s", record.WorkflowID)
 	}
 }

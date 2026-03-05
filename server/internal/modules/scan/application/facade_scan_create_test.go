@@ -6,23 +6,23 @@ import (
 	"testing"
 )
 
-func TestWrapScanInvalidWorkflowNames_PreservesSentinelAndDetail(t *testing.T) {
-	source := invalidWorkflowNamesf("workflowNames[0] must not be empty")
-	err := wrapScanInvalidWorkflowNames(source)
-	if !errors.Is(err, ErrScanInvalidWorkflowNames) {
-		t.Fatalf("expected ErrScanInvalidWorkflowNames sentinel, got: %v", err)
+func TestWrapScanInvalidWorkflowIDs_PreservesSentinelAndDetail(t *testing.T) {
+	source := invalidWorkflowIDsf("workflowIds[0] must not be empty")
+	err := wrapScanInvalidWorkflowIDs(source)
+	if !errors.Is(err, ErrScanInvalidWorkflowIDs) {
+		t.Fatalf("expected ErrScanInvalidWorkflowIDs sentinel, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), "workflowNames[0] must not be empty") {
+	if !strings.Contains(err.Error(), "workflowIds[0] must not be empty") {
 		t.Fatalf("expected detail to be preserved, got: %v", err)
 	}
 }
 
-func TestWrapScanInvalidWorkflowNames_FallbackToSentinel(t *testing.T) {
-	err := wrapScanInvalidWorkflowNames(ErrCreateInvalidWorkflowNames)
-	if !errors.Is(err, ErrScanInvalidWorkflowNames) {
-		t.Fatalf("expected ErrScanInvalidWorkflowNames sentinel, got: %v", err)
+func TestWrapScanInvalidWorkflowIDs_FallbackToSentinel(t *testing.T) {
+	err := wrapScanInvalidWorkflowIDs(ErrCreateInvalidWorkflowIDs)
+	if !errors.Is(err, ErrScanInvalidWorkflowIDs) {
+		t.Fatalf("expected ErrScanInvalidWorkflowIDs sentinel, got: %v", err)
 	}
-	if err.Error() != ErrScanInvalidWorkflowNames.Error() {
+	if err.Error() != ErrScanInvalidWorkflowIDs.Error() {
 		t.Fatalf("expected generic scan error without detail, got: %v", err)
 	}
 }

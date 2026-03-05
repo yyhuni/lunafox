@@ -29,7 +29,7 @@ func TestRegisterRoutesKeepsManagementHTTPAPIs(t *testing.T) {
 		"POST /api/targets",
 		"GET /api/targets",
 		"GET /api/workflows",
-		"GET /api/workflows/:name",
+		"GET /api/workflows/:workflowId",
 		"GET /api/workflows/profiles",
 		"GET /api/workflows/profiles/:id",
 		"GET /api/wordlists",
@@ -58,9 +58,9 @@ func TestRegisterRoutesKeepsManagementHTTPAPIs(t *testing.T) {
 		"PATCH /api/engines/:id",
 		"DELETE /api/engines/:id",
 		"POST /api/workflows",
-		"PUT /api/workflows/:name",
-		"PATCH /api/workflows/:name",
-		"DELETE /api/workflows/:name",
+		"PUT /api/workflows/:workflowId",
+		"PATCH /api/workflows/:workflowId",
+		"DELETE /api/workflows/:workflowId",
 	}
 
 	for _, key := range unexpected {

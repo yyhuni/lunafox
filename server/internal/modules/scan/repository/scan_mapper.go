@@ -13,8 +13,6 @@ type ScanRecord = scandomain.QueryScan
 // Create-side projections are unified with domain create projections.
 type ScanCreateRecord = scandomain.CreateScan
 
-type ScanInputTargetRecord = scandomain.CreateScanInputTarget
-
 type ScanTaskCreateRecord = scandomain.CreateScanTask
 
 // Runtime/read-side task projection is unified with domain runtime projection.
@@ -53,7 +51,7 @@ func scanModelToTaskRuntimeRecord(item *model.Scan) *TaskRuntimeScanRecord {
 		ID:                item.ID,
 		TargetID:          item.TargetID,
 		Status:            item.Status,
-		YamlConfiguration: item.YamlConfiguration,
+		YAMLConfiguration: item.YAMLConfiguration,
 		Target:            scanTargetModelToTaskRuntimeRecord(item.Target),
 	}
 }
@@ -72,9 +70,8 @@ func scanModelToRecord(item *model.Scan) *ScanRecord {
 	return &ScanRecord{
 		ID:                     item.ID,
 		TargetID:               item.TargetID,
-		EngineIDs:              append([]int64(nil), item.EngineIDs...),
-		EngineNames:            append([]byte(nil), item.EngineNames...),
-		YamlConfiguration:      item.YamlConfiguration,
+		WorkflowIDs:            append([]byte(nil), item.WorkflowIDs...),
+		YAMLConfiguration:      item.YAMLConfiguration,
 		ScanMode:               item.ScanMode,
 		Status:                 item.Status,
 		ResultsDir:             item.ResultsDir,
@@ -115,27 +112,23 @@ func scanCreateRecordToModel(item *ScanCreateRecord) *model.Scan {
 	return &model.Scan{
 		ID:                item.ID,
 		TargetID:          item.TargetID,
-		EngineIDs:         append([]int64(nil), item.EngineIDs...),
-		EngineNames:       append([]byte(nil), item.EngineNames...),
-		YamlConfiguration: item.YamlConfiguration,
+		WorkflowIDs:       append([]byte(nil), item.WorkflowIDs...),
+		YAMLConfiguration: item.YAMLConfiguration,
 		ScanMode:          item.ScanMode,
 		Status:            item.Status,
 		CreatedAt:         timeutil.ToUTC(item.CreatedAt),
 	}
 }
 
-func scanInputTargetRecordsToModel(items []ScanInputTargetRecord) []model.ScanInputTarget {
-	results := make([]model.ScanInputTarget, 0, len(items))
-	for index := range items {
-		results = append(results, model.ScanInputTarget{Value: items[index].Value, InputType: items[index].InputType})
-	}
-	return results
-}
-
 func scanTaskCreateRecordsToModel(items []ScanTaskCreateRecord) []model.ScanTask {
 	results := make([]model.ScanTask, 0, len(items))
 	for index := range items {
-		results = append(results, model.ScanTask{Stage: items[index].Stage, WorkflowName: items[index].WorkflowName, Status: items[index].Status})
+		results = append(results, model.ScanTask{
+			Stage:              items[index].Stage,
+			WorkflowID:         items[index].WorkflowID,
+			WorkflowConfigYAML: items[index].WorkflowConfigYAML,
+			Status:             items[index].Status,
+		})
 	}
 	return results
 }
@@ -144,7 +137,15 @@ func scanTaskModelToRecord(item *model.ScanTask) *ScanTaskRecord {
 	if item == nil {
 		return nil
 	}
-	return &ScanTaskRecord{ID: item.ID, ScanID: item.ScanID, Stage: item.Stage, WorkflowName: item.WorkflowName, Status: item.Status, AgentID: item.AgentID, Config: item.Config}
+	return &ScanTaskRecord{
+		ID:                 item.ID,
+		ScanID:             item.ScanID,
+		Stage:              item.Stage,
+		WorkflowID:         item.WorkflowID,
+		Status:             item.Status,
+		AgentID:            item.AgentID,
+		WorkflowConfigYAML: item.WorkflowConfigYAML,
+	}
 }
 
 func scanLogModelToRecord(item *model.ScanLog) *ScanLogRecord {

@@ -24,13 +24,13 @@ func (service *WorkflowCatalogFacade) ListWorkflows() ([]Workflow, error) {
 	return service.workflowStore.ListWorkflows(context.Background())
 }
 
-// GetWorkflowByName returns a workflow by name.
-func (service *WorkflowCatalogFacade) GetWorkflowByName(name string) (*Workflow, error) {
-	trimmed := strings.TrimSpace(name)
+// GetWorkflowByID returns a workflow by id.
+func (service *WorkflowCatalogFacade) GetWorkflowByID(workflowID string) (*Workflow, error) {
+	trimmed := strings.TrimSpace(workflowID)
 	if trimmed == "" {
 		return nil, ErrWorkflowNotFound
 	}
-	return service.workflowStore.GetWorkflowByName(context.Background(), trimmed)
+	return service.workflowStore.GetWorkflowByID(context.Background(), trimmed)
 }
 
 // ListProfiles returns all workflow profiles.

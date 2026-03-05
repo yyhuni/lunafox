@@ -67,7 +67,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 		logger.Log.Info("task received",
 			zap.Int("taskId", t.ID),
 			zap.Int("scanId", t.ScanID),
-			zap.String("workflow", t.WorkflowName),
+			zap.String("workflow", t.WorkflowID),
 			zap.Int("stage", t.Stage),
 			zap.String("target", t.TargetName),
 		)

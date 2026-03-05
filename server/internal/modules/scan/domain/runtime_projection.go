@@ -7,7 +7,7 @@ type TaskRecord struct {
 	ID                 int
 	ScanID             int
 	Stage              int
-	WorkflowName       string
+	WorkflowID         string
 	Status             string
 	AgentID            *int
 	WorkflowConfigYAML string

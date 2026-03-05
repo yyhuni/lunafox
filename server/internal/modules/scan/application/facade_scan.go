@@ -7,12 +7,12 @@ import (
 )
 
 var (
-	ErrScanCannotStop           = errors.New("scan cannot be stopped in current status")
-	ErrScanHardDeleteNotReady   = errors.New("scan hard delete not implemented")
-	ErrNoTargetsForScan         = errors.New("no targets provided for scan")
-	ErrScanInvalidConfig        = errors.New("invalid scan configuration")
-	ErrScanInvalidWorkflowNames = errors.New("invalid workflowNames")
-	ErrTargetNotFound           = errors.New("target not found")
+	ErrScanCannotStop         = errors.New("scan cannot be stopped in current status")
+	ErrScanHardDeleteNotReady = errors.New("scan hard delete not implemented")
+	ErrNoTargetsForScan       = errors.New("no targets provided for scan")
+	ErrScanInvalidConfig      = errors.New("invalid scan configuration")
+	ErrScanInvalidWorkflowIDs = errors.New("invalid workflowIds")
+	ErrTargetNotFound         = errors.New("target not found")
 )
 
 type ScanFacade struct {

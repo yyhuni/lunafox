@@ -38,10 +38,10 @@ func restoreRegistry(snapshot map[string]registration) {
 
 func validContract(name string) ContractDefinition {
 	return ContractDefinition{
-		WorkflowName: name,
-		DisplayName:  name,
-		Description:  "test contract",
-		TargetTypes:  []string{"domain"},
+		WorkflowID:  name,
+		DisplayName: name,
+		Description: "test contract",
+		TargetTypes: []string{"domain"},
 		Stages: []ContractStageDefinition{
 			{
 				ID:          "stage-1",
@@ -96,11 +96,11 @@ func TestRegisterGetListExists(t *testing.T) {
 
 	contract, err := GetContract("test-workflow")
 	require.NoError(t, err)
-	assert.Equal(t, "test-workflow", contract.WorkflowName)
+	assert.Equal(t, "test-workflow", contract.WorkflowID)
 
 	contracts := ListContracts()
 	require.Len(t, contracts, 1)
-	assert.Equal(t, "test-workflow", contracts[0].WorkflowName)
+	assert.Equal(t, "test-workflow", contracts[0].WorkflowID)
 }
 
 func TestRegisterDuplicatePanics(t *testing.T) {

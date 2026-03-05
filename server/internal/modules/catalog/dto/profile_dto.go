@@ -6,17 +6,17 @@ type ProfileResponse struct {
 	ID            string   `json:"id"`
 	Name          string   `json:"name"`
 	Description   string   `json:"description,omitempty"`
-	WorkflowNames []string `json:"workflowNames"`
+	WorkflowIDs   []string `json:"workflowIds"`
 	Configuration string   `json:"configuration"`
 }
 
 func NewProfileResponse(p *catalogdomain.WorkflowProfile) ProfileResponse {
-	workflowNames := append([]string(nil), p.WorkflowNames...)
+	workflowIDs := append([]string(nil), p.WorkflowIDs...)
 	return ProfileResponse{
 		ID:            p.ID,
 		Name:          p.Name,
 		Description:   p.Description,
-		WorkflowNames: workflowNames,
+		WorkflowIDs:   workflowIDs,
 		Configuration: p.Configuration,
 	}
 }

@@ -13,7 +13,7 @@ import (
 func TestLoadDefinitionFromRegistry(t *testing.T) {
 	def, err := loadDefinition("subdomain_discovery")
 	require.NoError(t, err)
-	require.Equal(t, "subdomain_discovery", def.WorkflowName)
+	require.Equal(t, "subdomain_discovery", def.WorkflowID)
 }
 
 func TestLoadDefinitionUnknownWorkflow(t *testing.T) {
@@ -90,7 +90,7 @@ func TestResolveOutputPathsRequiresDocsPathOrDir(t *testing.T) {
 
 func TestBuildTypedGoToolTypeNamesIncludeStage(t *testing.T) {
 	def := workflow.ContractDefinition{
-		WorkflowName: "demo",
+		WorkflowID: "demo",
 		Stages: []workflow.ContractStageDefinition{
 			{
 				ID: "stage-a",
@@ -119,10 +119,10 @@ func TestBuildSchemaIncludesParamConstraints(t *testing.T) {
 	maxLength := 128
 
 	def := workflow.ContractDefinition{
-		WorkflowName: "demo",
-		DisplayName:  "Demo",
-		Description:  "Demo workflow",
-		TargetTypes:  []string{"domain"},
+		WorkflowID:  "demo",
+		DisplayName: "Demo",
+		Description: "Demo workflow",
+		TargetTypes: []string{"domain"},
 		Stages: []workflow.ContractStageDefinition{
 			{
 				ID:          "recon",
@@ -182,10 +182,10 @@ func TestBuildSchemaIncludesParamConstraints(t *testing.T) {
 
 func TestBuildSchemaUsesDisplayNameForMetadataName(t *testing.T) {
 	def := workflow.ContractDefinition{
-		WorkflowName: "demo_key",
-		DisplayName:  "Demo Workflow",
-		Description:  "Demo workflow",
-		TargetTypes:  []string{"domain"},
+		WorkflowID:  "demo_key",
+		DisplayName: "Demo Workflow",
+		Description: "Demo workflow",
+		TargetTypes: []string{"domain"},
 		Stages: []workflow.ContractStageDefinition{
 			{
 				ID:          "recon",
@@ -212,9 +212,9 @@ func TestBuildSchemaUsesDisplayNameForMetadataName(t *testing.T) {
 func TestBuildProfileYAMLFromContractDefaults(t *testing.T) {
 	minimum := 1
 	def := workflow.ContractDefinition{
-		WorkflowName: "demo",
-		DisplayName:  "Demo Workflow",
-		Description:  "Demo workflow description",
+		WorkflowID:  "demo",
+		DisplayName: "Demo Workflow",
+		Description: "Demo workflow description",
 		DefaultProfile: workflow.ContractProfileDefinition{
 			ID:          "demo_default",
 			Name:        "Demo 默认配置",
@@ -274,9 +274,9 @@ func TestBuildProfileYAMLFromContractDefaults(t *testing.T) {
 func TestBuildProfileYAMLFailsWhenRequiredDefaultMissing(t *testing.T) {
 	minimum := 1
 	def := workflow.ContractDefinition{
-		WorkflowName: "demo",
-		DisplayName:  "Demo Workflow",
-		Description:  "Demo workflow description",
+		WorkflowID:  "demo",
+		DisplayName: "Demo Workflow",
+		Description: "Demo workflow description",
 		Stages: []workflow.ContractStageDefinition{
 			{
 				ID:          "recon",

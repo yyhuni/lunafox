@@ -211,7 +211,7 @@ func (c *Client) PullTask(ctx context.Context) (*domain.Task, error) {
 			ID:                 int(assign.TaskId),
 			ScanID:             int(assign.ScanId),
 			Stage:              int(assign.Stage),
-			WorkflowName:       assign.WorkflowName,
+			WorkflowID:         assign.WorkflowId,
 			TargetID:           int(assign.TargetId),
 			TargetName:         assign.TargetName,
 			TargetType:         assign.TargetType,

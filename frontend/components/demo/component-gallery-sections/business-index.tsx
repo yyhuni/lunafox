@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 const demoRoutes: Record<string, string> = {
   root: "/dashboard/",
-  common: "/prototypes/header-demo-a/",
+  common: "/prototypes/sidebar-variants/",
   dashboard: "/dashboard/",
   scan: "/scan/",
   target: "/target/",
@@ -28,7 +28,7 @@ const demoRoutes: Record<string, string> = {
   notifications: "/settings/notifications/",
   auth: "/login/",
   providers: "/dashboard/",
-  "animate-ui": "/prototypes/dashboard-demo/",
+  "animate-ui": "/dashboard/",
   prototypes: "/prototypes/scan-dialogs/",
   disk: "/settings/database-health/",
   screenshots: "/target/",

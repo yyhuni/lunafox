@@ -24,10 +24,9 @@ func (ScanTargetRef) TableName() string {
 
 // Scan represents a scan job.
 type Scan struct {
-	ID       int `gorm:"primaryKey;autoIncrement" json:"id"`
-	TargetID int `gorm:"column:target_id;not null;index:idx_scan_target" json:"targetId"`
-	// Keep API field as WorkflowNames while DB column uses unified workflow_names.
-	WorkflowNames     datatypes.JSON `gorm:"column:workflow_names;type:jsonb" json:"workflowNames"`
+	ID                int            `gorm:"primaryKey;autoIncrement" json:"id"`
+	TargetID          int            `gorm:"column:target_id;not null;index:idx_scan_target" json:"targetId"`
+	WorkflowIDs       datatypes.JSON `gorm:"column:workflow_ids;type:jsonb" json:"workflowIds"`
 	YAMLConfiguration string         `gorm:"column:yaml_configuration;type:text" json:"yamlConfiguration"`
 	ScanMode          string         `gorm:"column:scan_mode;size:10;default:'full'" json:"scanMode"`
 	Status            string         `gorm:"column:status;size:20;default:'pending';index:idx_scan_status" json:"status"`

@@ -2,8 +2,8 @@ package domain
 
 // Workflow represents a read-only workflow capability entry.
 type Workflow struct {
-	Name        string
-	Title       string
+	WorkflowID  string
+	DisplayName string
 	Description string
 }
 
@@ -12,6 +12,6 @@ type WorkflowProfile struct {
 	ID            string
 	Name          string
 	Description   string
-	WorkflowNames []string
+	WorkflowIDs   []string
 	Configuration string
 }

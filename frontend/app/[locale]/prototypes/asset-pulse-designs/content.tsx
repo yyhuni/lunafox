@@ -8,6 +8,7 @@ import {
 } from "@/components/icons"
 import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
+import { sanitizeBarShapeProps } from "./bar-shape"
 
 // --- Mock Data ---
 const generateData = (days: number) => {
@@ -234,11 +235,16 @@ function VariantMinimalistSpark() {
                 radius={[2, 2, 0, 0]}
                 fillOpacity={0.2}
                 shape={(props: unknown) => {
-                  const barProps = props as React.SVGProps<SVGRectElement> & { index?: number }
+                  const barProps = sanitizeBarShapeProps(props)
                   const isHovered = barProps.index === hovered
                   return (
                     <rect 
-                       {...barProps} 
+                       x={barProps.x}
+                       y={barProps.y}
+                       width={barProps.width}
+                       height={barProps.height}
+                       rx={2}
+                       ry={2}
                        fill={isHovered ? "var(--foreground)" : "var(--muted)"} 
                        className="transition-[color,background-color,border-color,opacity,transform,box-shadow] duration-300"
                     />

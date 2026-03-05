@@ -127,7 +127,7 @@ func (h *ScanHandler) CreateNormal(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, service.ErrScanInvalidConfig) ||
-			errors.Is(err, service.ErrScanInvalidWorkflowNames) ||
+			errors.Is(err, service.ErrScanInvalidWorkflowIDs) ||
 			errors.Is(err, service.ErrScanNoWorkflows) {
 			dto.BadRequest(c, err.Error())
 			return

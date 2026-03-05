@@ -28,12 +28,12 @@ func (stub *workflowQueryStoreForHandlerStub) ListWorkflows(_ context.Context) (
 	return out, nil
 }
 
-func (stub *workflowQueryStoreForHandlerStub) GetWorkflowByName(_ context.Context, name string) (*catalogapp.Workflow, error) {
+func (stub *workflowQueryStoreForHandlerStub) GetWorkflowByID(_ context.Context, workflowID string) (*catalogapp.Workflow, error) {
 	if stub.getErr != nil {
 		return nil, stub.getErr
 	}
 	for i := range stub.workflows {
-		if stub.workflows[i].Name == name {
+		if stub.workflows[i].WorkflowID == workflowID {
 			workflow := stub.workflows[i]
 			return &workflow, nil
 		}
@@ -63,13 +63,13 @@ func TestWorkflowHandlerListSuccess(t *testing.T) {
 	handler := newWorkflowHandlerForTest(&workflowQueryStoreForHandlerStub{
 		workflows: []catalogapp.Workflow{
 			{
-				Name:        "subdomain_discovery",
-				Title:       "Subdomain Discovery",
+				WorkflowID:  "subdomain_discovery",
+				DisplayName: "Subdomain Discovery",
 				Description: "Discover subdomains",
 			},
 			{
-				Name:        "port_scan",
-				Title:       "Port Scan",
+				WorkflowID:  "port_scan",
+				DisplayName: "Port Scan",
 				Description: "Scan open ports",
 			},
 		},
@@ -93,13 +93,13 @@ func TestWorkflowHandlerListSuccess(t *testing.T) {
 	if len(payload) != 2 {
 		t.Fatalf("expected 2 workflows, got %d", len(payload))
 	}
-	if payload[0].Name != "subdomain_discovery" || payload[1].Name != "port_scan" {
+	if payload[0].WorkflowID != "subdomain_discovery" || payload[1].WorkflowID != "port_scan" {
 		t.Fatalf("unexpected workflows payload: %+v", payload)
 	}
-	if payload[0].Title != "Subdomain Discovery" || payload[0].Description != "Discover subdomains" {
+	if payload[0].DisplayName != "Subdomain Discovery" || payload[0].Description != "Discover subdomains" {
 		t.Fatalf("unexpected first workflow metadata: %+v", payload[0])
 	}
-	if payload[1].Title != "Port Scan" || payload[1].Description != "Scan open ports" {
+	if payload[1].DisplayName != "Port Scan" || payload[1].Description != "Scan open ports" {
 		t.Fatalf("unexpected second workflow metadata: %+v", payload[1])
 	}
 }
@@ -130,20 +130,20 @@ func TestWorkflowHandlerListInternalError(t *testing.T) {
 	}
 }
 
-func TestWorkflowHandlerGetByWorkflowNameSuccess(t *testing.T) {
+func TestWorkflowHandlerGetByWorkflowIDSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := newWorkflowHandlerForTest(&workflowQueryStoreForHandlerStub{
 		workflows: []catalogapp.Workflow{
 			{
-				Name:        "subdomain_discovery",
-				Title:       "Subdomain Discovery",
+				WorkflowID:  "subdomain_discovery",
+				DisplayName: "Subdomain Discovery",
 				Description: "Discover subdomains",
 			},
 		},
 	})
 
 	router := gin.New()
-	router.GET("/api/workflows/:name", handler.GetByWorkflowName)
+	router.GET("/api/workflows/:workflowId", handler.GetByWorkflowID)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/workflows/subdomain_discovery", nil)
 	recorder := httptest.NewRecorder()
@@ -157,24 +157,24 @@ func TestWorkflowHandlerGetByWorkflowNameSuccess(t *testing.T) {
 	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
 		t.Fatalf("failed to parse response body: %v", err)
 	}
-	if payload.Name != "subdomain_discovery" {
+	if payload.WorkflowID != "subdomain_discovery" {
 		t.Fatalf("unexpected workflow payload: %+v", payload)
 	}
-	if payload.Title != "Subdomain Discovery" || payload.Description != "Discover subdomains" {
+	if payload.DisplayName != "Subdomain Discovery" || payload.Description != "Discover subdomains" {
 		t.Fatalf("unexpected workflow metadata payload: %+v", payload)
 	}
 }
 
-func TestWorkflowHandlerGetByWorkflowNameNotFound(t *testing.T) {
+func TestWorkflowHandlerGetByWorkflowIDNotFound(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := newWorkflowHandlerForTest(&workflowQueryStoreForHandlerStub{
 		workflows: []catalogapp.Workflow{
-			{Name: "subdomain_discovery"},
+			{WorkflowID: "subdomain_discovery"},
 		},
 	})
 
 	router := gin.New()
-	router.GET("/api/workflows/:name", handler.GetByWorkflowName)
+	router.GET("/api/workflows/:workflowId", handler.GetByWorkflowID)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/workflows/unknown_workflow", nil)
 	recorder := httptest.NewRecorder()
@@ -193,14 +193,14 @@ func TestWorkflowHandlerGetByWorkflowNameNotFound(t *testing.T) {
 	}
 }
 
-func TestWorkflowHandlerGetByWorkflowNameInternalError(t *testing.T) {
+func TestWorkflowHandlerGetByWorkflowIDInternalError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := newWorkflowHandlerForTest(&workflowQueryStoreForHandlerStub{
 		getErr: errors.New("db unavailable"),
 	})
 
 	router := gin.New()
-	router.GET("/api/workflows/:name", handler.GetByWorkflowName)
+	router.GET("/api/workflows/:workflowId", handler.GetByWorkflowID)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/workflows/subdomain_discovery", nil)
 	recorder := httptest.NewRecorder()

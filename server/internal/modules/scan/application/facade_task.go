@@ -31,7 +31,7 @@ func (service *ScanTaskFacade) PullTask(ctx context.Context, agentID int) (*Task
 		return nil, nil
 	}
 
-	pkg.Debug("Task assigned to agent", zap.Int("taskId", assignment.TaskID), zap.Int("agentId", agentID), zap.Int("scanId", assignment.ScanID), zap.Int("stage", assignment.Stage), zap.String("workflow", assignment.WorkflowName))
+	pkg.Debug("Task assigned to agent", zap.Int("taskId", assignment.TaskID), zap.Int("agentId", agentID), zap.Int("scanId", assignment.ScanID), zap.Int("stage", assignment.Stage), zap.String("workflow", assignment.WorkflowID))
 
 	return assignment, nil
 }

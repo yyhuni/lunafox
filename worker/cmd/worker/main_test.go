@@ -78,7 +78,7 @@ func TestRunExecuteErrorStillRunsCleanup(t *testing.T) {
 		TargetID:     22,
 		TargetName:   "example.com",
 		TargetType:   "domain",
-		WorkflowName: "fake-workflow",
+		WorkflowID:   "fake-workflow",
 		WorkspaceDir: "/tmp/workspace",
 		Config:       map[string]any{"a": "b"},
 		LogLevel:     "info",

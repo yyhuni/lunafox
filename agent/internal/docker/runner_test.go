@@ -36,7 +36,7 @@ func TestBuildWorkerEnv(t *testing.T) {
 		TargetID:           2,
 		TargetName:         "example.com",
 		TargetType:         "domain",
-		WorkflowName:       "subdomain_discovery",
+		WorkflowID:         "subdomain_discovery",
 		WorkspaceDir:       "/opt/lunafox/results",
 		WorkflowConfigYAML: "config-yaml",
 	}
@@ -48,7 +48,7 @@ func TestBuildWorkerEnv(t *testing.T) {
 		"TARGET_ID=2",
 		"TARGET_NAME=example.com",
 		"TARGET_TYPE=domain",
-		"WORKFLOW_NAME=subdomain_discovery",
+		"WORKFLOW_ID=subdomain_discovery",
 		"WORKSPACE_DIR=/opt/lunafox/results",
 		"CONFIG_PATH=/opt/lunafox/results/task_config.yaml",
 		"AGENT_SOCKET=/run/lunafox/worker-runtime.sock",
@@ -83,7 +83,7 @@ func TestBuildWorkerEnvDoesNotEmbedRawConfigPayload(t *testing.T) {
 		TargetID:           2,
 		TargetName:         "example.com",
 		TargetType:         "domain",
-		WorkflowName:       "subdomain_discovery",
+		WorkflowID:         "subdomain_discovery",
 		WorkspaceDir:       "/opt/lunafox/results/scan_1/task_1",
 		WorkflowConfigYAML: strings.Repeat("a", 20000),
 	}

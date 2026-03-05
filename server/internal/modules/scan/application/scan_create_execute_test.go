@@ -38,7 +38,7 @@ func TestCreateNormal_SchemaGateFailureReturnsWorkflowError(t *testing.T) {
 
 	input := &CreateNormalInput{
 		TargetID:      1,
-		WorkflowNames: []string{"subdomain_discovery"},
+		WorkflowIDs:   []string{"subdomain_discovery"},
 		Configuration: "subdomain_discovery:\n  recon:\n    enabled: true\n",
 	}
 	_, err := service.CreateNormal(input)
@@ -63,7 +63,7 @@ func TestCreateNormal_SchemaGateFailureReturnsWorkflowError(t *testing.T) {
 	}
 }
 
-func TestCreateNormal_RejectsEmptyWorkflowName(t *testing.T) {
+func TestCreateNormal_RejectsEmptyWorkflowID(t *testing.T) {
 	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
 		now := time.Now().UTC()
 		return &TargetRef{
@@ -76,19 +76,19 @@ func TestCreateNormal_RejectsEmptyWorkflowName(t *testing.T) {
 
 	input := &CreateNormalInput{
 		TargetID:      1,
-		WorkflowNames: []string{""},
+		WorkflowIDs:   []string{""},
 		Configuration: validSubdomainDiscoveryConfig(),
 	}
 	_, err := service.CreateNormal(input)
-	if !errors.Is(err, ErrCreateInvalidWorkflowNames) {
+	if !errors.Is(err, ErrCreateInvalidWorkflowIDs) {
 		t.Fatalf("expected invalid workflow names error, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), "workflowNames[0] must not be empty") {
+	if !strings.Contains(err.Error(), "workflowIds[0] must not be empty") {
 		t.Fatalf("expected detailed empty reason, got: %v", err)
 	}
 }
 
-func TestCreateNormal_RejectsWorkflowNameWithSurroundingSpaces(t *testing.T) {
+func TestCreateNormal_RejectsWorkflowIDWithSurroundingSpaces(t *testing.T) {
 	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
 		now := time.Now().UTC()
 		return &TargetRef{
@@ -101,11 +101,11 @@ func TestCreateNormal_RejectsWorkflowNameWithSurroundingSpaces(t *testing.T) {
 
 	input := &CreateNormalInput{
 		TargetID:      1,
-		WorkflowNames: []string{" subdomain_discovery "},
+		WorkflowIDs:   []string{" subdomain_discovery "},
 		Configuration: validSubdomainDiscoveryConfig(),
 	}
 	_, err := service.CreateNormal(input)
-	if !errors.Is(err, ErrCreateInvalidWorkflowNames) {
+	if !errors.Is(err, ErrCreateInvalidWorkflowIDs) {
 		t.Fatalf("expected invalid workflow names error, got: %v", err)
 	}
 	if !strings.Contains(err.Error(), "must not contain leading or trailing spaces") {
@@ -113,7 +113,7 @@ func TestCreateNormal_RejectsWorkflowNameWithSurroundingSpaces(t *testing.T) {
 	}
 }
 
-func TestCreateNormal_RejectsDuplicateWorkflowNames(t *testing.T) {
+func TestCreateNormal_RejectsDuplicateWorkflowIDs(t *testing.T) {
 	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
 		now := time.Now().UTC()
 		return &TargetRef{
@@ -126,11 +126,11 @@ func TestCreateNormal_RejectsDuplicateWorkflowNames(t *testing.T) {
 
 	input := &CreateNormalInput{
 		TargetID:      1,
-		WorkflowNames: []string{"subdomain_discovery", "subdomain_discovery"},
+		WorkflowIDs:   []string{"subdomain_discovery", "subdomain_discovery"},
 		Configuration: validSubdomainDiscoveryConfig(),
 	}
 	_, err := service.CreateNormal(input)
-	if !errors.Is(err, ErrCreateInvalidWorkflowNames) {
+	if !errors.Is(err, ErrCreateInvalidWorkflowIDs) {
 		t.Fatalf("expected invalid workflow names error, got: %v", err)
 	}
 	if !strings.Contains(err.Error(), "is duplicated") {
@@ -138,7 +138,7 @@ func TestCreateNormal_RejectsDuplicateWorkflowNames(t *testing.T) {
 	}
 }
 
-func TestCreateNormal_PersistsWorkflowNamesAndTaskConfig(t *testing.T) {
+func TestCreateNormal_PersistsWorkflowIDsAndTaskConfig(t *testing.T) {
 	store := &scanCreateStoreCaptureStub{}
 	service := NewScanCreateService(store, func(int) (*TargetRef, error) {
 		now := time.Now().UTC()
@@ -152,7 +152,7 @@ func TestCreateNormal_PersistsWorkflowNamesAndTaskConfig(t *testing.T) {
 
 	input := &CreateNormalInput{
 		TargetID:      1,
-		WorkflowNames: []string{"subdomain_discovery"},
+		WorkflowIDs:   []string{"subdomain_discovery"},
 		Configuration: validSubdomainDiscoveryConfig(),
 	}
 	scan, err := service.CreateNormal(input)
@@ -163,11 +163,11 @@ func TestCreateNormal_PersistsWorkflowNamesAndTaskConfig(t *testing.T) {
 		t.Fatalf("expected scan persisted")
 	}
 	var names []string
-	if err := json.Unmarshal(store.lastScan.WorkflowNames, &names); err != nil {
-		t.Fatalf("unmarshal workflowNames failed: %v", err)
+	if err := json.Unmarshal(store.lastScan.WorkflowIDs, &names); err != nil {
+		t.Fatalf("unmarshal workflowIds failed: %v", err)
 	}
 	if len(names) != 1 || names[0] != "subdomain_discovery" {
-		t.Fatalf("unexpected workflowNames persisted: %v", names)
+		t.Fatalf("unexpected workflowIds persisted: %v", names)
 	}
 	if len(store.lastTasks) != 1 || store.lastTasks[0].WorkflowConfigYAML == "" {
 		t.Fatalf("expected per-task workflow config slice persisted")
@@ -187,7 +187,7 @@ func TestCreateNormal_RejectsWorkflowNotInCatalog(t *testing.T) {
 
 	input := &CreateNormalInput{
 		TargetID:      1,
-		WorkflowNames: []string{"future_workflow"},
+		WorkflowIDs:   []string{"future_workflow"},
 		Configuration: "future_workflow:\n  enabled: true\n",
 	}
 	_, err := service.CreateNormal(input)

@@ -2,12 +2,12 @@ package application
 
 type CreateNormalInput struct {
 	TargetID      int
-	WorkflowNames []string
+	WorkflowIDs   []string
 	Configuration string
 }
 
 type CreateNormalRequest struct {
 	TargetID      int
-	WorkflowNames []string
+	WorkflowIDs   []string
 	Configuration string
 }

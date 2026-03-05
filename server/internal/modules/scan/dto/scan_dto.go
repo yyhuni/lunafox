@@ -10,18 +10,18 @@ type ScanListQuery struct {
 }
 
 type ScanResponse struct {
-	ID            int              `json:"id"`
-	TargetID      int              `json:"targetId"`
-	WorkflowNames []string         `json:"workflowNames"`
-	ScanMode      string           `json:"scanMode"`
-	Status        string           `json:"status"`
-	Progress      int              `json:"progress"`
-	CurrentStage  string           `json:"currentStage"`
-	ErrorMessage  string           `json:"errorMessage,omitempty"`
-	CreatedAt     time.Time        `json:"createdAt"`
-	StoppedAt     *time.Time       `json:"stoppedAt,omitempty"`
-	Target        *TargetBrief     `json:"target,omitempty"`
-	CachedStats   *ScanCachedStats `json:"cachedStats,omitempty"`
+	ID           int              `json:"id"`
+	TargetID     int              `json:"targetId"`
+	WorkflowIDs  []string         `json:"workflowIds"`
+	ScanMode     string           `json:"scanMode"`
+	Status       string           `json:"status"`
+	Progress     int              `json:"progress"`
+	CurrentStage string           `json:"currentStage"`
+	ErrorMessage string           `json:"errorMessage,omitempty"`
+	CreatedAt    time.Time        `json:"createdAt"`
+	StoppedAt    *time.Time       `json:"stoppedAt,omitempty"`
+	Target       *TargetBrief     `json:"target,omitempty"`
+	CachedStats  *ScanCachedStats `json:"cachedStats,omitempty"`
 }
 
 type TargetBrief struct {
@@ -56,20 +56,20 @@ type InitiateScanRequest struct {
 	OrganizationID *int `json:"organizationId" binding:"omitempty"`
 	TargetID       *int `json:"targetId" binding:"omitempty"`
 	// Selected workflow names drive runtime planning and schema validation.
-	WorkflowNames []string `json:"workflowNames" binding:"required,min=1"`
+	WorkflowIDs   []string `json:"workflowIds" binding:"required,min=1"`
 	Configuration string   `json:"configuration" binding:"required"`
 }
 
 type QuickScanRequest struct {
 	Targets       []QuickScanTarget `json:"targets" binding:"required,min=1"`
-	WorkflowNames []string          `json:"workflowNames"`
+	WorkflowIDs   []string          `json:"workflowIds"`
 	Configuration string            `json:"configuration" binding:"required"`
 }
 
 type CreateNormalScanRequest struct {
 	TargetID int `json:"targetId" binding:"required"`
 	// Selected workflow names are the authoritative planning input.
-	WorkflowNames []string `json:"workflowNames" binding:"required,min=1"`
+	WorkflowIDs   []string `json:"workflowIds" binding:"required,min=1"`
 	Configuration string   `json:"configuration" binding:"required"`
 }
 

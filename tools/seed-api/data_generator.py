@@ -662,8 +662,7 @@ class DataGenerator:
         return screenshots
 
     # Scan data templates
-    ENGINE_IDS = [1, 2, 3, 4, 5]
-    ENGINE_NAMES = [
+    WORKFLOW_IDS = [
         "subdomain_discovery",
         "port_scan",
         "web_crawl",
@@ -689,13 +688,12 @@ class DataGenerator:
         Returns:
             Scan initiate request data
         """
-        engine_count = random.randint(1, 3)
-        engine_indices = random.sample(range(len(DataGenerator.ENGINE_IDS)), engine_count)
+        workflow_count = random.randint(1, 3)
+        workflow_indices = random.sample(range(len(DataGenerator.WORKFLOW_IDS)), workflow_count)
 
         return {
             "targetId": target["id"],
-            "engineIds": [DataGenerator.ENGINE_IDS[i] for i in engine_indices],
-            "engineNames": [DataGenerator.ENGINE_NAMES[i] for i in engine_indices],
+            "workflowIds": [DataGenerator.WORKFLOW_IDS[i] for i in workflow_indices],
             "configuration": random.choice(DataGenerator.SCAN_CONFIGURATIONS),
         }
 

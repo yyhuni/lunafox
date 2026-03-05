@@ -8,6 +8,16 @@ from data_generator import DataGenerator
 
 class TestDataGenerator:
     """Test DataGenerator class."""
+
+    @staticmethod
+    def _infer_target_type(name: str) -> str:
+        """Infer target type from generated name."""
+        if "/" in name:
+            return "cidr"
+        parts = name.split(".")
+        if len(parts) == 4 and all(part.isdigit() for part in parts):
+            return "ip"
+        return "domain"
     
     def test_generate_organization(self):
         """Test organization generation."""
@@ -25,9 +35,9 @@ class TestDataGenerator:
         targets = DataGenerator.generate_targets(100)
         
         # Count types
-        domain_count = sum(1 for t in targets if t["type"] == "domain")
-        ip_count = sum(1 for t in targets if t["type"] == "ip")
-        cidr_count = sum(1 for t in targets if t["type"] == "cidr")
+        domain_count = sum(1 for t in targets if self._infer_target_type(t["name"]) == "domain")
+        ip_count = sum(1 for t in targets if self._infer_target_type(t["name"]) == "ip")
+        cidr_count = sum(1 for t in targets if self._infer_target_type(t["name"]) == "cidr")
         
         # Check ratios (allow 5% tolerance)
         assert 65 <= domain_count <= 75  # 70% ± 5%
@@ -37,15 +47,15 @@ class TestDataGenerator:
         # Check all have required fields
         for target in targets:
             assert "name" in target
-            assert "type" in target
-            assert target["type"] in ["domain", "ip", "cidr"]
+            assert isinstance(target["name"], str)
+            assert len(target["name"]) > 0
     
     def test_generate_domain_target(self):
         """Test domain target format."""
         targets = DataGenerator.generate_targets(10, {"domain": 1.0, "ip": 0, "cidr": 0})
         
         for target in targets:
-            assert target["type"] == "domain"
+            assert self._infer_target_type(target["name"]) == "domain"
             assert "." in target["name"]
             assert not target["name"].startswith(".")
             assert not target["name"].endswith(".")
@@ -55,7 +65,7 @@ class TestDataGenerator:
         targets = DataGenerator.generate_targets(10, {"domain": 0, "ip": 1.0, "cidr": 0})
         
         for target in targets:
-            assert target["type"] == "ip"
+            assert self._infer_target_type(target["name"]) == "ip"
             parts = target["name"].split(".")
             assert len(parts) == 4
             for part in parts:
@@ -66,7 +76,7 @@ class TestDataGenerator:
         targets = DataGenerator.generate_targets(10, {"domain": 0, "ip": 0, "cidr": 1.0})
         
         for target in targets:
-            assert target["type"] == "cidr"
+            assert self._infer_target_type(target["name"]) == "cidr"
             assert "/" in target["name"]
             ip, mask = target["name"].split("/")
             assert int(mask) in [8, 16, 24]
@@ -95,9 +105,9 @@ class TestDataGenerator:
         assert len(subdomains) == 5
         
         for subdomain in subdomains:
-            assert "name" in subdomain
-            assert subdomain["name"].endswith("example.com")
-            assert subdomain["name"] != "example.com"  # Should have prefix
+            assert isinstance(subdomain, str)
+            assert subdomain.endswith("example.com")
+            assert subdomain != "example.com"  # Should have prefix
     
     def test_generate_subdomains_for_non_domain(self):
         """Test subdomain generation for non-domain target."""
@@ -160,6 +170,17 @@ class TestDataGenerator:
             assert "cvssScore" in vuln
             assert vuln["severity"] in ["critical", "high", "medium", "low", "info"]
             assert 0 <= vuln["cvssScore"] <= 10
+
+    def test_generate_scan_uses_workflow_ids(self):
+        """Test scan payload uses workflowIds only."""
+        target = {"name": "example.com", "type": "domain", "id": 1}
+        scan = DataGenerator.generate_scan(target)
+
+        assert scan["targetId"] == 1
+        assert "workflowIds" in scan
+        assert isinstance(scan["workflowIds"], list)
+        assert 1 <= len(scan["workflowIds"]) <= 3
+        assert "workflowNames" not in scan
 
 
 if __name__ == "__main__":

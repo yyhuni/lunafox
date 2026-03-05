@@ -18,7 +18,7 @@ func TestLoadConfigSuccess(t *testing.T) {
 	t.Setenv("TARGET_ID", "20")
 	t.Setenv("TARGET_NAME", "example.com")
 	t.Setenv("TARGET_TYPE", "domain")
-	t.Setenv("WORKFLOW_NAME", "subdomain_discovery")
+	t.Setenv("WORKFLOW_ID", "subdomain_discovery")
 	t.Setenv("WORKSPACE_DIR", "/tmp/workspace")
 	t.Setenv("LOG_LEVEL", "debug")
 	configPath := filepath.Join(t.TempDir(), "task_config.yaml")
@@ -35,7 +35,7 @@ func TestLoadConfigSuccess(t *testing.T) {
 	assert.Equal(t, 20, cfg.TargetID)
 	assert.Equal(t, "example.com", cfg.TargetName)
 	assert.Equal(t, "domain", cfg.TargetType)
-	assert.Equal(t, "subdomain_discovery", cfg.WorkflowName)
+	assert.Equal(t, "subdomain_discovery", cfg.WorkflowID)
 	assert.Equal(t, "/tmp/workspace", cfg.WorkspaceDir)
 	assert.Equal(t, "debug", cfg.LogLevel)
 	require.NotNil(t, cfg.Config)
@@ -51,7 +51,7 @@ func TestLoadConfigInvalidYAML(t *testing.T) {
 	t.Setenv("TARGET_ID", "20")
 	t.Setenv("TARGET_NAME", "example.com")
 	t.Setenv("TARGET_TYPE", "domain")
-	t.Setenv("WORKFLOW_NAME", "subdomain_discovery")
+	t.Setenv("WORKFLOW_ID", "subdomain_discovery")
 	configPath := filepath.Join(t.TempDir(), "task_config.yaml")
 	require.NoError(t, os.WriteFile(configPath, []byte("{bad"), 0600))
 	t.Setenv(runtimecontract.DefaultWorkerConfigPathEnv, configPath)
@@ -68,7 +68,7 @@ func TestLoadConfigRequiresConfigPathEvenIfLegacyCONFIGExists(t *testing.T) {
 	t.Setenv("TARGET_ID", "20")
 	t.Setenv("TARGET_NAME", "example.com")
 	t.Setenv("TARGET_TYPE", "domain")
-	t.Setenv("WORKFLOW_NAME", "subdomain_discovery")
+	t.Setenv("WORKFLOW_ID", "subdomain_discovery")
 	t.Setenv("CONFIG", "threads: 2\n")
 
 	_, err := Load()
@@ -78,15 +78,15 @@ func TestLoadConfigRequiresConfigPathEvenIfLegacyCONFIGExists(t *testing.T) {
 
 func TestValidateMissingFields(t *testing.T) {
 	valid := Config{
-		TaskID:       99,
-		AgentSocket:  "/run/lunafox/worker-runtime.sock",
-		TaskToken:    "task-token",
-		ScanID:       1,
-		TargetID:     2,
-		TargetName:   "example.com",
-		TargetType:   "domain",
-		WorkflowName: "subdomain_discovery",
-		Config:       map[string]any{},
+		TaskID:      99,
+		AgentSocket: "/run/lunafox/worker-runtime.sock",
+		TaskToken:   "task-token",
+		ScanID:      1,
+		TargetID:    2,
+		TargetName:  "example.com",
+		TargetType:  "domain",
+		WorkflowID:  "subdomain_discovery",
+		Config:      map[string]any{},
 	}
 
 	tests := []struct {
@@ -101,7 +101,7 @@ func TestValidateMissingFields(t *testing.T) {
 		{name: "missing target id", cfg: func() Config { c := valid; c.TargetID = 0; return c }(), err: ErrMissingTargetID},
 		{name: "missing target name", cfg: func() Config { c := valid; c.TargetName = ""; return c }(), err: ErrMissingTargetName},
 		{name: "missing target type", cfg: func() Config { c := valid; c.TargetType = ""; return c }(), err: ErrMissingTargetType},
-		{name: "missing workflow name", cfg: func() Config { c := valid; c.WorkflowName = ""; return c }(), err: ErrMissingWorkflowName},
+		{name: "missing workflow name", cfg: func() Config { c := valid; c.WorkflowID = ""; return c }(), err: ErrMissingWorkflowID},
 		{name: "missing config", cfg: func() Config { c := valid; c.Config = nil; return c }(), err: ErrMissingConfig},
 	}
 

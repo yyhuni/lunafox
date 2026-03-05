@@ -64,7 +64,6 @@ export interface ScanRecord {
   target?: ScanTargetBrief     // Target info (nested object)
   workerName?: string | null   // Worker node name
   cachedStats?: ScanCachedStats // Cached statistics
-  workflowIds?: number[]         // Legacy field
   workflowNames: string[]        // Workflow name list
   scanMode: string             // Scan mode
   createdAt: string            // Creation time
@@ -138,7 +137,6 @@ export interface QuickScanResponse {
 export interface ScanTask {
   id: number
   target: number           // Target ID
-  workflowIds?: number[]     // Legacy field
   workflowNames: string[]    // Workflow name list
   status: ScanStatus
   createdAt: string

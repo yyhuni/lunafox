@@ -76,14 +76,14 @@ func TestWorkflowProfileHandlerListSuccess(t *testing.T) {
 				ID:            "subdomain_default",
 				Name:          "Subdomain Discovery Default",
 				Description:   "Default subdomain workflow profile",
-				WorkflowNames: []string{"subdomain_discovery"},
+				WorkflowIDs:   []string{"subdomain_discovery"},
 				Configuration: workflowProfileConfigFixture,
 			},
 			{
 				ID:            "subdomain_fast",
 				Name:          "Subdomain Discovery Fast",
 				Description:   "Fast profile",
-				WorkflowNames: []string{"subdomain_discovery"},
+				WorkflowIDs:   []string{"subdomain_discovery"},
 				Configuration: workflowProfileConfigFixture,
 			},
 		},
@@ -110,8 +110,8 @@ func TestWorkflowProfileHandlerListSuccess(t *testing.T) {
 	if payload[0].ID != "subdomain_default" || payload[1].ID != "subdomain_fast" {
 		t.Fatalf("unexpected profiles payload: %+v", payload)
 	}
-	if len(payload[0].WorkflowNames) != 1 || payload[0].WorkflowNames[0] != "subdomain_discovery" {
-		t.Fatalf("unexpected workflowNames in first profile payload: %+v", payload[0])
+	if len(payload[0].WorkflowIDs) != 1 || payload[0].WorkflowIDs[0] != "subdomain_discovery" {
+		t.Fatalf("unexpected workflowIds in first profile payload: %+v", payload[0])
 	}
 }
 
@@ -149,7 +149,7 @@ func TestWorkflowProfileHandlerGetByIDSuccess(t *testing.T) {
 				ID:            "subdomain_default",
 				Name:          "Subdomain Discovery Default",
 				Description:   "Default subdomain workflow profile",
-				WorkflowNames: []string{"subdomain_discovery"},
+				WorkflowIDs:   []string{"subdomain_discovery"},
 				Configuration: workflowProfileConfigFixture,
 			},
 		},
@@ -173,8 +173,8 @@ func TestWorkflowProfileHandlerGetByIDSuccess(t *testing.T) {
 	if payload.ID != "subdomain_default" || payload.Name == "" {
 		t.Fatalf("unexpected profile payload: %+v", payload)
 	}
-	if len(payload.WorkflowNames) != 1 || payload.WorkflowNames[0] != "subdomain_discovery" {
-		t.Fatalf("unexpected workflowNames in profile payload: %+v", payload)
+	if len(payload.WorkflowIDs) != 1 || payload.WorkflowIDs[0] != "subdomain_discovery" {
+		t.Fatalf("unexpected workflowIds in profile payload: %+v", payload)
 	}
 }
 
@@ -186,7 +186,7 @@ func TestWorkflowProfileHandlerGetByIDNotFound(t *testing.T) {
 				ID:            "subdomain_default",
 				Name:          "Subdomain Discovery Default",
 				Description:   "Default subdomain workflow profile",
-				WorkflowNames: []string{"subdomain_discovery"},
+				WorkflowIDs:   []string{"subdomain_discovery"},
 				Configuration: workflowProfileConfigFixture,
 			},
 		},

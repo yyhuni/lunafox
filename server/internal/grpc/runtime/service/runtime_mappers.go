@@ -30,7 +30,7 @@ func toTaskAssign(assignment *scanapp.TaskAssignment) *runtimev1.TaskAssign {
 		TaskId:             int32(assignment.TaskID),
 		ScanId:             int32(assignment.ScanID),
 		Stage:              int32(assignment.Stage),
-		WorkflowName:       assignment.WorkflowName,
+		WorkflowId:         assignment.WorkflowID,
 		TargetId:           int32(assignment.TargetID),
 		TargetName:         assignment.TargetName,
 		TargetType:         assignment.TargetType,
