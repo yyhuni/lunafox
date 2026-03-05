@@ -135,9 +135,9 @@ agent heartbeat
 - `/run/lunafox/worker-runtime.sock` 在多处重复约定。
 - 需要统一配置入口与回退策略，避免路径漂移。
 
-6. 扫描创建单引擎限制与执行能力解耦（P3）
-- 当前创建流程强制 `len(engineNames)==1`，限制未来多 workflow 组合能力。
-- 后续需评估“编排能力”与“当前单引擎业务策略”分离。
+6. 扫描创建单工作流限制与执行能力解耦（P3）
+- 当前创建流程强制 `len(workflowNames)==1`，限制未来多 workflow 组合能力。
+- 后续需评估“编排能力”与“当前单工作流业务策略”分离。
 
 7. 配置封装形态单一化（P3）
 - 调度兼容性解析同时支持根级与 workflow 嵌套两种形态，容易形成隐式歧义。
@@ -168,7 +168,7 @@ agent heartbeat
 - 后续可考虑 server 侧按 workflow 下发最小配置切片，减少跨层解析耦合。
 
 14. schema 发现规则解耦（P3）
-- `engineschema.ListEngines()` 依赖文件命名推断 engine/api/schema 三元组。
+- `workflowschema.ListWorkflows()` 依赖文件命名推断 workflow/api/schema 三元组。
 - 需评估改为显式清单或元数据索引，降低命名规则对运行逻辑的隐式耦合。
 
 15. 跨端 schemaVersion 规则一致性解耦（P1）
@@ -184,8 +184,8 @@ agent heartbeat
 - 需要引入 catalog 适配层，将“可识别 workflow 集合”与“编排元数据”从硬编码切到可扩展来源。
 
 18. 创建期 schema gate 与编排启用集范围对齐（P1/P2）
-- 当前创建链路对 schema 的校验只关注目标 engine 的配置片段，而任务编排启用集会读取整个 root 配置键集合。
-- 存在“schema 校验通过但被 root 额外键启用其他 workflow 任务”的风险，导致 engineNames 契约与任务计划漂移。
+- 当前创建链路对 schema 的校验只关注目标 workflow 的配置片段，而任务编排启用集会读取整个 root 配置键集合。
+- 存在“schema 校验通过但被 root 额外键启用其他 workflow 任务”的风险，导致 workflowNames 契约与任务计划漂移。
 
 19. 调度错误分类与重试策略解耦（P0/P1）
 - `PullTask` 对 schema 解析失败、兼容性不满足等错误统一执行 `ReleaseTaskClaim -> pending`。
@@ -219,9 +219,9 @@ agent heartbeat
 - 任务模型包含 `scan_task.config`，但创建链路默认不填，运行时主要回退到 `scan.yaml_configuration`。
 - “存在字段但无稳定写入策略”会导致维护误解，需明确为正式能力（按任务切片配置）或删除冗余字段。
 
-27. `engineIDs`/`engineNames` 输入契约一致性（P2）
-- 创建链路调度与 schema 校验只依赖 `engineNames`，但 `engineIDs` 会被原样持久化且缺少与 `engineNames` 的一致性校验。
-- 这会造成“展示与审计看到的 engineIDs”与“实际执行/校验 engineNames”语义分离，影响可追踪性与排障。
+27. `workflowIDs`/`workflowNames` 输入契约一致性（P2）
+- 创建链路调度与 schema 校验只依赖 `workflowNames`，但 `workflowIDs` 会被原样持久化且缺少与 `workflowNames` 的一致性校验。
+- 这会造成“展示与审计看到的 workflowIDs”与“实际执行/校验 workflowNames”语义分离，影响可追踪性与排障。
 
 28. 任务配置传输介质解耦（P2/P3）
 - 当前任务配置通过 `CONFIG=<yaml>` 环境变量注入 worker 容器。

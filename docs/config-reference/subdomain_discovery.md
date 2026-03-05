@@ -3,16 +3,7 @@
 <!-- Source: worker/internal/workflow/subdomain_discovery/contract_definition.go -->
 
 - Workflow: `subdomain_discovery`
-- API Version: `v1`
-- Schema Version: `1.0.0`
 - Target Types: `domain`
-
-## Version Fields
-
-| Field | Type | Allowed |
-| --- | --- | --- |
-| `apiVersion` | `string` | `v1` |
-| `schemaVersion` | `string` | `1.0.0` |
 
 ## Stages
 

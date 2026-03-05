@@ -10,7 +10,7 @@ export const FEATURE_LIST = [
   { key: "vuln_scan", label: "Vuln Scan", icon: "🛡️" },
 ] as const
 
-export const MOCK_ENGINES = [
+export const MOCK_WORKFLOWS = [
   {
     id: 1,
     name: "Full Scan Profile",

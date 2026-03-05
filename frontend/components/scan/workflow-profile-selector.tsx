@@ -8,12 +8,12 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import { CAPABILITY_CONFIG, parseWorkflowCapabilities, mergeWorkflowConfigurations } from "@/lib/workflow-config"
-import { usePresetWorkflows } from "@/hooks/use-workflows"
+import { useWorkflowProfiles } from "@/hooks/use-workflows"
 import { LoadingSpinner } from "@/components/loading-spinner"
 
 import type { ScanWorkflow } from "@/types/workflow.types"
 
-export interface WorkflowPreset {
+export interface WorkflowProfileItem {
   id: string
   label: string
   description: string
@@ -21,7 +21,7 @@ export interface WorkflowPreset {
   workflowIds: number[]
 }
 
-interface WorkflowPresetSelectorProps {
+interface WorkflowProfileSelectorProps {
   workflows: ScanWorkflow[]
   selectedWorkflowIds: number[]
   selectedPresetId: string | null
@@ -34,7 +34,7 @@ interface WorkflowPresetSelectorProps {
   contentClassName?: string
 }
 
-export function WorkflowPresetSelector({
+export function WorkflowProfileSelector({
   workflows,
   selectedWorkflowIds,
   selectedPresetId,
@@ -45,16 +45,16 @@ export function WorkflowPresetSelector({
   className,
   showHeader = true,
   contentClassName,
-}: WorkflowPresetSelectorProps) {
+}: WorkflowProfileSelectorProps) {
   const t = useTranslations("scan.initiate")
   const tStages = useTranslations("scan.progress.stages")
   
-  // Get preset workflows from backend
-  const { data: backendPresets, isLoading: isLoadingPresets } = usePresetWorkflows()
+  // Get workflow profiles from backend
+  const { data: backendPresets, isLoading: isLoadingPresets } = useWorkflowProfiles()
 
   // Convert backend presets to component format
-  const workflowPresets = useMemo(() => {
-    const presets: WorkflowPreset[] = []
+  const workflowProfiles = useMemo(() => {
+    const profiles: WorkflowProfileItem[] = []
     
     // Add backend presets
     if (backendPresets && backendPresets.length > 0) {
@@ -62,17 +62,26 @@ export function WorkflowPresetSelector({
         // Parse capabilities from preset configuration
         const caps = parseWorkflowCapabilities(preset.configuration || "")
         
-        // Find matching workflow templates based on capabilities
+        // Prefer explicit workflowNames from backend contract.
         const matchingWorkflowIds: number[] = []
         if (workflows && workflows.length > 0) {
-          workflows.forEach((workflow) => {
-            const workflowCaps = parseWorkflowCapabilities(workflow.configuration || "")
-            // Check if the workflow template has all capabilities required by preset
-            const hasAllCaps = caps.every(cap => workflowCaps.includes(cap))
-            if (hasAllCaps && caps.length > 0) {
-              matchingWorkflowIds.push(workflow.id)
-            }
-          })
+          const preferredNames = (preset.workflowNames || []).map((item) => item.trim()).filter(Boolean)
+          if (preferredNames.length > 0) {
+            workflows.forEach((workflow) => {
+              if (preferredNames.includes(workflow.name)) {
+                matchingWorkflowIds.push(workflow.id)
+              }
+            })
+          } else {
+            // Backward fallback for legacy mock presets without workflowNames.
+            workflows.forEach((workflow) => {
+              const workflowCaps = parseWorkflowCapabilities(workflow.configuration || "")
+              const hasAllCaps = caps.every(cap => workflowCaps.includes(cap))
+              if (hasAllCaps && caps.length > 0) {
+                matchingWorkflowIds.push(workflow.id)
+              }
+            })
+          }
         }
         
         // Choose icon based on capabilities
@@ -81,7 +90,7 @@ export function WorkflowPresetSelector({
           Icon = caps.some(c => ["subdomain_discovery", "port_scan", "site_scan"].includes(c)) ? Zap : Play
         }
         
-        presets.push({
+        profiles.push({
           id: preset.id,
           label: preset.name,
           description: preset.description || "",
@@ -92,7 +101,7 @@ export function WorkflowPresetSelector({
     }
     
     // Add custom option at the end
-    presets.push({
+    profiles.push({
       id: "custom",
       label: t("presets.custom"),
       description: t("presets.customDesc"),
@@ -100,7 +109,7 @@ export function WorkflowPresetSelector({
       workflowIds: [],
     })
     
-    return presets
+    return profiles
   }, [backendPresets, workflows, t])
 
   const selectedWorkflows = useMemo(() => {
@@ -119,8 +128,8 @@ export function WorkflowPresetSelector({
 
   // Get currently selected preset details
   const selectedPreset = useMemo(() => {
-    return workflowPresets.find((item) => item.id === selectedPresetId)
-  }, [workflowPresets, selectedPresetId])
+    return workflowProfiles.find((item) => item.id === selectedPresetId)
+  }, [workflowProfiles, selectedPresetId])
 
   // Get workflow templates for the selected preset
   const matchingWorkflows = useMemo(() => {
@@ -136,7 +145,7 @@ export function WorkflowPresetSelector({
     onConfigurationChange(mergedConfig)
   }, [workflows, onConfigurationChange])
 
-  const handlePresetSelect = useCallback((preset: WorkflowPreset) => {
+  const handlePresetSelect = useCallback((preset: WorkflowProfileItem) => {
     onPresetChange(preset.id)
     if (preset.id !== "custom") {
       // For backend presets, use preset configuration directly
@@ -203,7 +212,7 @@ export function WorkflowPresetSelector({
         )}
         {/* Compact preset cards */}
         <div className="grid gap-3 mb-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-          {workflowPresets.map((preset) => {
+          {workflowProfiles.map((preset) => {
             const isActive = selectedPresetId === preset.id
             const PresetIcon = preset.icon
             const matchedWorkflows = preset.id === "custom" 
@@ -239,7 +248,7 @@ export function WorkflowPresetSelector({
                 <span className="text-sm font-medium">{preset.label}</span>
                 {preset.id !== "custom" && (
                   <span className="text-xs text-muted-foreground mt-1">
-                    {matchedWorkflows.length} {t("presets.enginesCount")}
+                    {matchedWorkflows.length} {t("presets.workflowCount")}
                   </span>
                 )}
               </button>
@@ -274,7 +283,7 @@ export function WorkflowPresetSelector({
             
             {/* Workflows list */}
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-2">{t("presets.usedEngines")}</h4>
+              <h4 className="text-xs font-medium text-muted-foreground mb-2">{t("presets.usedWorkflows")}</h4>
               <div className="flex flex-wrap gap-2">
                 {matchingWorkflows.length > 0 ? (
                   matchingWorkflows.map((workflow) => (
@@ -322,7 +331,7 @@ export function WorkflowPresetSelector({
             
             {/* Workflow template list - selectable */}
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-2">{t("presets.usedEngines")}</h4>
+              <h4 className="text-xs font-medium text-muted-foreground mb-2">{t("presets.usedWorkflows")}</h4>
               <div className="flex flex-wrap gap-2">
                 {workflows?.map((workflow) => {
                   const isSelected = selectedWorkflowIds.includes(workflow.id)

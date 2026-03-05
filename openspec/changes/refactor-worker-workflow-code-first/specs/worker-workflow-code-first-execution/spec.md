@@ -54,27 +54,14 @@ The system MUST use a two-layer validation boundary: server schema validation fo
 - **THEN** validation fails with `SCHEMA_INVALID`
 - **AND** request is not allowed to proceed as warning-only
 
-#### Scenario: Version fields are required and format-constrained at schema gate
+#### Scenario: Legacy version fields are rejected at schema gate
 - **GIVEN** a workflow configuration is submitted
-- **WHEN** `apiVersion` is missing or does not match `v<major>` format
+- **WHEN** configuration includes deprecated fields like `apiVersion` or `schemaVersion`
 - **THEN** server rejects the request with `code=SCHEMA_INVALID`
 - **AND** `stage=server_schema_gate`
 
-#### Scenario: Schema version format is validated at schema gate
-- **GIVEN** a workflow configuration is submitted
-- **WHEN** `schemaVersion` is missing or does not match `MAJOR.MINOR.PATCH`
-- **THEN** server rejects the request with `code=SCHEMA_INVALID`
-- **AND** `stage=server_schema_gate`
-
-#### Scenario: First-release version enum rejects unsupported values
-- **GIVEN** first-release allowed versions are `apiVersion=v1` and `schemaVersion=1.0.0`
-- **AND** a configuration uses version values that are format-valid but not in allowed enum
-- **WHEN** server schema gate validates the request
-- **THEN** server rejects the request with `code=SCHEMA_INVALID`
-- **AND** `stage=server_schema_gate`
-
-#### Scenario: First-release pinned version tuple passes schema gate
-- **GIVEN** a configuration uses `apiVersion=v1` and `schemaVersion=1.0.0`
+#### Scenario: No version fields required for valid config
+- **GIVEN** a configuration contains all required business fields and no version fields
 - **WHEN** server schema gate validates the request
 - **THEN** request passes schema gate
 - **AND** request is eligible for scheduler compatibility checks
@@ -107,25 +94,25 @@ The system MUST return validation failures with a consistent error structure and
 - **THEN** response includes `code=WORKFLOW_PREREQ_MISSING` and `stage=worker_prereq`
 - **AND** response message does not expose internal stack traces
 
-#### Scenario: Worker version incompatibility is blocked before execution
-- **GIVEN** a task has valid `workflow`, `apiVersion`, and `schemaVersion`
-- **AND** no available worker declares support for the exact `(workflow, apiVersion, schemaVersion)` tuple
+#### Scenario: Workflow incompatibility is blocked before execution
+- **GIVEN** a task has a valid `workflow`
+- **AND** no available worker declares support for that workflow
 - **WHEN** scheduler performs compatibility gate checks
 - **THEN** request is rejected with `code=WORKER_VERSION_INCOMPATIBLE`
 - **AND** `stage=scheduler_compatibility_gate`
 - **AND** task is not dispatched to worker
 
-#### Scenario: Worker version compatibility requires exact tuple match
-- **GIVEN** a task has `workflow=subdomain_discovery`, `apiVersion=v1`, and `schemaVersion=1.0.0`
-- **AND** at least one worker declares support for that exact tuple
+#### Scenario: Workflow compatibility allows dispatch
+- **GIVEN** a task has `workflow=subdomain_discovery`
+- **AND** at least one worker declares support for that workflow
 - **WHEN** scheduler performs compatibility gate checks
 - **THEN** task is eligible for dispatch
-- **AND** compatibility gate does not downgrade to fuzzy or partial version matching
+- **AND** compatibility gate does not rely on configuration version tuple matching
 
-#### Scenario: Adding new version requires explicit spec and capability update
-- **GIVEN** team plans to introduce a new config version tuple for an existing workflow
-- **WHEN** version support is extended
-- **THEN** a new OpenSpec change MUST explicitly update allowed version set and compatibility rules
+#### Scenario: Adding new workflow requires explicit spec and capability update
+- **GIVEN** team plans to introduce a new workflow
+- **WHEN** workflow support is extended
+- **THEN** a new OpenSpec change MUST explicitly update workflow capability and compatibility rules
 - **AND** server schema, worker capability declaration, and regression tests MUST be updated together
 
 ### Requirement: Schema and docs contracts MUST be auto-generated from code definitions
@@ -134,28 +121,28 @@ The system MUST auto-generate workflow schema and configuration docs from workfl
 #### Scenario: Contract generation runs in CI
 - **GIVEN** workflow configuration fields are modified in code
 - **WHEN** contract generation runs
-- **THEN** schema artifacts are updated under `server/internal/engineschema`
+- **THEN** schema artifacts are updated under `server/internal/workflowschema`
 - **AND** docs artifacts are updated under `docs/config-reference`
 - **AND** CI fails if generated artifacts are out of date
 
-#### Scenario: Generated schema filenames follow deterministic versioned convention
-- **GIVEN** a workflow configuration version tuple `(workflow, apiVersion, schemaVersion)`
+#### Scenario: Generated schema filenames follow deterministic workflow convention
+- **GIVEN** a workflow configuration schema is generated
 - **WHEN** schema artifacts are generated
-- **THEN** schema filename MUST follow `<workflow>-<apiVersion>-<schemaVersion>.schema.json`
-- **AND** for first-release scope, generated filename is `subdomain_discovery-v1-1.0.0.schema.json`
+- **THEN** schema filename MUST follow `<workflow>.schema.json`
+- **AND** for first-release scope, generated filename is `subdomain_discovery.schema.json`
 - **AND** mirror output, if enabled, uses the exact same filename
 
 #### Scenario: Contracts mirror output is disabled by default
 - **GIVEN** normal development and CI generation flow
 - **WHEN** contract generation runs without explicit distribution flag
-- **THEN** no artifacts are written to `contracts/gen/engineschema`
-- **AND** canonical schema/docs outputs remain in `server/internal/engineschema` and `docs/config-reference`
+- **THEN** no artifacts are written to `contracts/gen/workflowschema`
+- **AND** canonical schema/docs outputs remain in `server/internal/workflowschema` and `docs/config-reference`
 
 #### Scenario: Optional contracts mirror is enabled
 - **GIVEN** repository enables external contract distribution
 - **WHEN** contract generation runs with mirror output enabled
-- **THEN** schema artifacts are mirrored to `contracts/gen/engineschema`
-- **AND** server runtime validation still uses `server/internal/engineschema` as canonical source
+- **THEN** schema artifacts are mirrored to `contracts/gen/workflowschema`
+- **AND** server runtime validation still uses `server/internal/workflowschema` as canonical source
 
 ### Requirement: Command execution MUST avoid shell string injection patterns
 The system MUST execute tool commands using explicit binary and argument lists, and MUST NOT execute user-influenced shell-concatenated command strings.

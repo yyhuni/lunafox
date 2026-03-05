@@ -6,7 +6,8 @@
 
 ## Files
 - `targets.go`: target routes
-- `presets.go`: preset routes
+- `workflows.go`: workflow catalog routes
+- `workflow_presets.go`: workflow preset routes
 - `wordlists.go`: wordlist routes
 
 ## Constraints

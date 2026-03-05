@@ -87,11 +87,11 @@ export {
 // Workflows
 export {
   mockWorkflows,
-  mockPresetWorkflows,
+  mockWorkflowProfiles,
   getMockWorkflows,
   getMockWorkflowById,
-  getMockPresetWorkflows,
-  getMockPresetWorkflowById,
+  getMockWorkflowProfiles,
+  getMockWorkflowProfileById,
 } from './data/workflows'
 
 // Agents

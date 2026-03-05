@@ -25,7 +25,7 @@ import type { ScanWorkflow } from "@/types/workflow.types"
 // Translation type definitions (workflow template management page)
 export interface WorkflowTranslations {
   columns: {
-    engineName: string
+    workflowName: string
     subdomainDiscovery: string
     portScan: string
     siteScan: string
@@ -37,12 +37,12 @@ export interface WorkflowTranslations {
     screenshot: string
   }
   actions: {
-    editEngine: string
+    editWorkflow: string
     delete: string
     openMenu: string
   }
   tooltips: {
-    editEngine: string
+    editWorkflow: string
   }
 }
 
@@ -132,7 +132,7 @@ function WorkflowRowActions({
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={onEdit}>
           <Edit />
-          {t.actions.editEngine}
+          {t.actions.editWorkflow}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -160,9 +160,9 @@ export const createWorkflowColumns = ({
     size: 200,
     minSize: 150,
     maxSize: 350,
-    meta: { title: t.columns.engineName },
+    meta: { title: t.columns.workflowName },
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t.columns.engineName} />
+      <DataTableColumnHeader column={column} title={t.columns.workflowName} />
     ),
     cell: ({ row }) => {
       const name = row.getValue("name") as string
@@ -176,7 +176,7 @@ export const createWorkflowColumns = ({
               {name}
             </button>
           </TooltipTrigger>
-          <TooltipContent>{t.tooltips.editEngine}</TooltipContent>
+          <TooltipContent>{t.tooltips.editWorkflow}</TooltipContent>
         </Tooltip>
       )
     },

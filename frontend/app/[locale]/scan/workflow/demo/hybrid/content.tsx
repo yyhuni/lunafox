@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { MOCK_ENGINES, FEATURE_LIST } from "../data"
+import { MOCK_WORKFLOWS, FEATURE_LIST } from "../data"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,14 +24,14 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 
 export default function HybridDemo() {
-  const [selectedId, setSelectedId] = useState<number>(MOCK_ENGINES[0].id)
+  const [selectedId, setSelectedId] = useState<number>(MOCK_WORKFLOWS[0].id)
   const [search, setSearch] = useState("")
 
-  const filteredEngines = MOCK_ENGINES.filter(e => 
+  const filteredWorkflows = MOCK_WORKFLOWS.filter(e => 
     e.name.toLowerCase().includes(search.toLowerCase())
   )
 
-  const selectedEngine = MOCK_ENGINES.find(e => e.id === selectedId) || MOCK_ENGINES[0]
+  const selectedWorkflow = MOCK_WORKFLOWS.find(e => e.id === selectedId) || MOCK_WORKFLOWS[0]
 
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
@@ -59,7 +59,7 @@ export default function HybridDemo() {
                         <IconSearch className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                         <Input 
                             type="search"
-                            name="engineSearch"
+                            name="workflowSearch"
                             autoComplete="off"
                             aria-label="Search workflows"
                             placeholder="Search workflows…"
@@ -75,44 +75,44 @@ export default function HybridDemo() {
                         <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                             Presets
                         </div>
-                        {filteredEngines.filter(e => e.type === 'preset').map(engine => (
+                        {filteredWorkflows.filter(e => e.type === 'preset').map(workflow => (
                             <button
-                                key={engine.id}
+                                key={workflow.id}
                                 type="button"
-                                onClick={() => setSelectedId(engine.id)}
-                                aria-pressed={selectedId === engine.id}
+                                onClick={() => setSelectedId(workflow.id)}
+                                aria-pressed={selectedId === workflow.id}
                                 className={cn(
                                     "w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-3",
-                                    selectedId === engine.id 
+                                    selectedId === workflow.id 
                                         ? "bg-primary/10 text-primary font-medium" 
                                         : "hover:bg-muted text-muted-foreground hover:text-foreground"
                                 )}
                             >
                                 <IconDatabase className="h-4 w-4 opacity-70" />
-                                <span className="truncate flex-1">{engine.name}</span>
-                                {selectedId === engine.id && <div className="w-1 h-1 rounded-full bg-primary" />}
+                                <span className="truncate flex-1">{workflow.name}</span>
+                                {selectedId === workflow.id && <div className="w-1 h-1 rounded-full bg-primary" />}
                             </button>
                         ))}
 
                         <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4">
                             My Workflows
                         </div>
-                        {filteredEngines.filter(e => e.type === 'user').map(engine => (
+                        {filteredWorkflows.filter(e => e.type === 'user').map(workflow => (
                             <button
-                                key={engine.id}
+                                key={workflow.id}
                                 type="button"
-                                onClick={() => setSelectedId(engine.id)}
-                                aria-pressed={selectedId === engine.id}
+                                onClick={() => setSelectedId(workflow.id)}
+                                aria-pressed={selectedId === workflow.id}
                                 className={cn(
                                     "w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-3",
-                                    selectedId === engine.id 
+                                    selectedId === workflow.id 
                                         ? "bg-primary/10 text-primary font-medium" 
                                         : "hover:bg-muted text-muted-foreground hover:text-foreground"
                                 )}
                             >
                                 <IconServer className="h-4 w-4 opacity-70" />
-                                <span className="truncate flex-1">{engine.name}</span>
-                                {!engine.isValid && <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />}
+                                <span className="truncate flex-1">{workflow.name}</span>
+                                {!workflow.isValid && <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />}
                             </button>
                         ))}
                     </div>
@@ -120,7 +120,7 @@ export default function HybridDemo() {
                 
                 <div className="p-3 border-t bg-muted/5">
                     <div className="flex items-center justify-between text-xs text-muted-foreground px-2">
-                        <span>{filteredEngines.length} workflows total</span>
+                        <span>{filteredWorkflows.length} workflows total</span>
                         <IconSettings className="h-3.5 w-3.5" aria-hidden="true" />
                     </div>
                 </div>
@@ -128,19 +128,19 @@ export default function HybridDemo() {
 
             {/* Right Content / Detail View */}
             <main className="flex-1 flex flex-col min-w-0 bg-background">
-                {selectedEngine ? (
+                {selectedWorkflow ? (
                     <>
                         <div className="px-8 py-6 border-b">
                             <div className="flex items-start justify-between">
                                 <div>
                                     <div className="flex items-center gap-3 mb-2">
-                                        <h2 className="text-2xl font-bold tracking-tight">{selectedEngine.name}</h2>
-                                        {selectedEngine.type === 'preset' ? (
+                                        <h2 className="text-2xl font-bold tracking-tight">{selectedWorkflow.name}</h2>
+                                        {selectedWorkflow.type === 'preset' ? (
                                             <Badge variant="secondary">System Preset</Badge>
                                         ) : (
                                             <Badge variant="outline">Custom Workflow</Badge>
                                         )}
-                                        {selectedEngine.isValid ? (
+                                        {selectedWorkflow.isValid ? (
                                             <Badge className="bg-green-500/15 text-green-600 hover:bg-green-500/25 border-green-200 shadow-none">
                                                 <CheckCircle2 className="h-3 w-3 mr-1" /> Ready
                                             </Badge>
@@ -151,7 +151,7 @@ export default function HybridDemo() {
                                         )}
                                     </div>
                                     <p className="text-muted-foreground max-w-2xl">
-                                        {selectedEngine.description}
+                                        {selectedWorkflow.description}
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -174,7 +174,7 @@ export default function HybridDemo() {
                             <div className="flex items-center gap-6 mt-6 text-sm text-muted-foreground">
                                 <div className="flex items-center gap-2">
                                     <Clock className="h-4 w-4" />
-                                    <span>Updated {new Date(selectedEngine.updatedAt).toLocaleDateString()}</span>
+                                    <span>Updated {new Date(selectedWorkflow.updatedAt).toLocaleDateString()}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <IconSettings className="h-4 w-4" />
@@ -198,7 +198,7 @@ export default function HybridDemo() {
                                             <section>
                                                 <h3 className="text-lg font-semibold mb-4">Enabled Capabilities</h3>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                    {selectedEngine.features.map(featureKey => {
+                                                    {selectedWorkflow.features.map(featureKey => {
                                                         const feature = FEATURE_LIST.find(f => f.key === featureKey)
                                                         return (
                                                             <div key={featureKey} className="flex items-start gap-3 p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
@@ -222,14 +222,14 @@ export default function HybridDemo() {
                                                 <div className="bg-muted/30 rounded-lg p-6 border">
                                                     <h4 className="text-sm font-medium mb-2 text-muted-foreground">Detailed Description</h4>
                                                     <p className="text-sm leading-relaxed max-w-3xl mb-6">
-                                                        {selectedEngine.description || "No description provided."}
+                                                        {selectedWorkflow.description || "No description provided."}
                                                         This workflow is configured to perform specific security checks based on the enabled modules above.
                                                     </p>
                                                     
                                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                                                         <div>
                                                             <div className="text-xs font-medium text-muted-foreground mb-1">Type</div>
-                                                            <div className="text-sm">{selectedEngine.type === 'preset' ? 'System Preset' : 'User Custom'}</div>
+                                                            <div className="text-sm">{selectedWorkflow.type === 'preset' ? 'System Preset' : 'User Custom'}</div>
                                                         </div>
                                                         <div>
                                                             <div className="text-xs font-medium text-muted-foreground mb-1">Created At</div>
@@ -258,10 +258,10 @@ export default function HybridDemo() {
                                         <ScrollArea className="h-full">
                                             <div className="p-6">
                                                 <pre className="font-mono text-sm bg-background p-6 rounded-lg border shadow-sm">
-{`# ${selectedEngine.name} Configuration
+{`# ${selectedWorkflow.name} Configuration
 version: 1.0.0
 enabled_features:
-${selectedEngine.features.map(f => `  - ${f}`).join('\n')}
+${selectedWorkflow.features.map(f => `  - ${f}`).join('\n')}
 
 # Advanced Settings
 concurrency: 5

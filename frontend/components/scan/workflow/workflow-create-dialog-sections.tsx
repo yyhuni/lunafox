@@ -10,15 +10,15 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { parseWorkflowCapabilities } from "@/lib/workflow-config"
-import type { PresetWorkflow } from "@/types/workflow.types"
+import type { WorkflowProfile } from "@/types/workflow.types"
 import type { WorkflowYamlError } from "@/components/scan/workflow/workflow-create-dialog-state"
 
 type TranslationFn = (key: string, params?: Record<string, string | number | Date>) => string
 
 interface WorkflowCreatePresetStepProps {
-  presetWorkflows: PresetWorkflow[]
-  selectedPreset: PresetWorkflow | null
-  onSelectPreset: (preset: PresetWorkflow) => void
+  presetWorkflows: WorkflowProfile[]
+  selectedPreset: WorkflowProfile | null
+  onSelectPreset: (preset: WorkflowProfile) => void
   onCancel: () => void
   onNext: () => void
   t: TranslationFn
@@ -123,7 +123,7 @@ interface WorkflowCreateConfigStepProps {
   onYamlChange: (value: string) => void
   yamlError: WorkflowYamlError
   isSubmitting: boolean
-  preSelectedPreset?: PresetWorkflow
+  preSelectedPreset?: WorkflowProfile
   onBack: () => void
   onCancel: () => void
   onSave: () => void
@@ -153,7 +153,7 @@ export function WorkflowCreateConfigStep({
         <div className="flex flex-col h-full gap-4">
           <div className="space-y-2">
             <Label htmlFor="workflow-name">
-              {t("engineName")} <span className="text-destructive">*</span>
+              {t("workflowName")} <span className="text-destructive">*</span>
             </Label>
             <Input
               id="workflow-name"
@@ -161,7 +161,7 @@ export function WorkflowCreateConfigStep({
               autoComplete="off"
               value={workflowName}
               onChange={(event) => onWorkflowNameChange(event.target.value)}
-              placeholder={t("engineNamePlaceholder")}
+              placeholder={t("workflowNamePlaceholder")}
               disabled={isSubmitting}
               className="max-w-md"
             />
@@ -252,7 +252,7 @@ export function WorkflowCreateConfigStep({
               ) : (
                 <>
                   <Save className="h-4 w-4" />
-                  {t("createEngine")}
+                  {t("createWorkflow")}
                 </>
               )}
             </Button>

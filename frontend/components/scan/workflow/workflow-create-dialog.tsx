@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
-import type { PresetWorkflow } from "@/types/workflow.types"
+import type { WorkflowProfile } from "@/types/workflow.types"
 import { useWorkflowCreateDialogState } from "@/components/scan/workflow/workflow-create-dialog-state"
 import {
   WorkflowCreateConfigStep,
@@ -23,7 +23,7 @@ interface WorkflowCreateDialogProps {
   onOpenChange: (open: boolean) => void
   onSave?: (name: string, yamlContent: string) => Promise<void>
   /** Pre-selected preset (skip step 1) */
-  preSelectedPreset?: PresetWorkflow
+  preSelectedPreset?: WorkflowProfile
 }
 
 /**

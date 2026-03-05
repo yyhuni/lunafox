@@ -64,7 +64,7 @@ export interface ScanRecord {
   target?: ScanTargetBrief     // Target info (nested object)
   workerName?: string | null   // Worker node name
   cachedStats?: ScanCachedStats // Cached statistics
-  workflowIds: number[]          // Workflow template ID list
+  workflowIds?: number[]         // Legacy field
   workflowNames: string[]        // Workflow name list
   scanMode: string             // Scan mode
   createdAt: string            // Creation time
@@ -102,7 +102,6 @@ export interface InitiateScanRequest {
   organizationId?: number  // Organization ID (choose one)
   targetId?: number        // Target ID (choose one)
   configuration: string    // YAML configuration string (required)
-  workflowIds: number[]      // Workflow template ID list (required)
   workflowNames: string[]    // Workflow name list (required)
 }
 
@@ -112,7 +111,6 @@ export interface InitiateScanRequest {
 export interface QuickScanRequest {
   targets: { name: string }[]  // Target list
   configuration: string        // YAML configuration string (required)
-  workflowIds: number[]          // Workflow template ID list (required)
   workflowNames: string[]        // Workflow name list (required)
 }
 
@@ -140,7 +138,7 @@ export interface QuickScanResponse {
 export interface ScanTask {
   id: number
   target: number           // Target ID
-  workflowIds: number[]      // Workflow template ID list
+  workflowIds?: number[]     // Legacy field
   workflowNames: string[]    // Workflow name list
   status: ScanStatus
   createdAt: string

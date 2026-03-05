@@ -49,7 +49,7 @@ export function InitiateScanDialog({
     presetWorkflows,
     isLoadingPresets,
     isPresetsError,
-    selectedWorkflowIds,
+    selectedWorkflowNames,
     selectedPresetId,
     selectMode,
     isSubmitting,
@@ -65,7 +65,7 @@ export function InitiateScanDialog({
     canStart,
     setCurrentStep,
     handleManualConfigChange,
-    handleWorkflowIdsChange,
+    handleWorkflowNamesChange,
     handlePresetSelect,
     handleOverwriteConfirm,
     handleOverwriteCancel,
@@ -83,7 +83,7 @@ export function InitiateScanDialog({
   })
 
   const steps = [
-    { id: 1, title: t("steps.selectEngine") },
+    { id: 1, title: t("steps.selectWorkflow") },
     { id: 2, title: t("steps.editConfig") },
   ]
 
@@ -129,14 +129,14 @@ export function InitiateScanDialog({
                 presetWorkflows={presetWorkflows}
                 isLoadingPresets={isLoadingPresets}
                 isPresetsError={isPresetsError}
-                selectedWorkflowIds={selectedWorkflowIds}
+                selectedWorkflowNames={selectedWorkflowNames}
                 workflows={workflows}
                 isLoadingWorkflows={isLoadingWorkflows}
                 isWorkflowsError={isWorkflowsError}
                 isSubmitting={isSubmitting}
                 onSelectModeChange={handleSelectModeChange}
                 onPresetSelect={handlePresetSelect}
-                onWorkflowIdsChange={handleWorkflowIdsChange}
+                onWorkflowNamesChange={handleWorkflowNamesChange}
               />
             )}
 
@@ -150,7 +150,7 @@ export function InitiateScanDialog({
                 hasConfig={hasConfig}
                 selectMode={selectMode}
                 selectedPreset={selectedPreset}
-                selectedWorkflowIds={selectedWorkflowIds}
+                selectedWorkflowNames={selectedWorkflowNames}
                 isSubmitting={isSubmitting}
                 onConfigChange={handleManualConfigChange}
                 onYamlValidationChange={handleYamlValidationChange}
@@ -164,7 +164,7 @@ export function InitiateScanDialog({
           t={t}
           currentStep={currentStep}
           selectMode={selectMode}
-          selectedWorkflowIds={selectedWorkflowIds}
+          selectedWorkflowNames={selectedWorkflowNames}
           selectedPreset={selectedPreset}
           canProceedToReview={canProceedToReview}
           canStart={canStart}

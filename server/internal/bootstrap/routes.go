@@ -22,8 +22,8 @@ func registerRoutes(engine *gin.Engine, d *deps, jwtMiddleware gin.HandlerFunc) 
 		protected,
 		d.wordlistHandler,
 		d.targetHandler,
-		d.engineHandler,
-		d.presetHandler,
+		d.workflowHandler,
+		d.workflowProfileHandler,
 	)
 	assetrouter.RegisterAssetRoutes(
 		api,

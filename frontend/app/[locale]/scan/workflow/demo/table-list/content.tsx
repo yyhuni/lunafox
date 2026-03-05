@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { MOCK_ENGINES, FEATURE_LIST } from "../data"
+import { MOCK_WORKFLOWS, FEATURE_LIST } from "../data"
 import { 
   Table, 
   TableBody, 
@@ -31,7 +31,7 @@ import Link from "next/link"
 export default function TableListDemo() {
   const [search, setSearch] = useState("")
   
-  const filteredEngines = MOCK_ENGINES.filter(e => 
+  const filteredWorkflows = MOCK_WORKFLOWS.filter(e => 
     e.name.toLowerCase().includes(search.toLowerCase()) || 
     e.type.includes(search.toLowerCase())
   )
@@ -66,7 +66,7 @@ export default function TableListDemo() {
                         <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input 
                             type="search"
-                            name="engineFilter"
+                            name="workflowFilter"
                             autoComplete="off"
                             aria-label="Filter workflows"
                             placeholder="Filter workflows…"
@@ -101,39 +101,39 @@ export default function TableListDemo() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredEngines.map((engine) => (
-                            <TableRow key={engine.id}>
+                        {filteredWorkflows.map((workflow) => (
+                            <TableRow key={workflow.id}>
                                 <TableCell className="font-medium">
                                     <div className="flex flex-col">
-                                        <span>{engine.name}</span>
+                                        <span>{workflow.name}</span>
                                         <span className="text-xs text-muted-foreground truncate max-w-[280px]">
-                                            {engine.description}
+                                            {workflow.description}
                                         </span>
                                     </div>
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex items-center gap-1 flex-wrap">
-                                        {engine.features.slice(0, 3).map(f => (
+                                        {workflow.features.slice(0, 3).map(f => (
                                             <Badge key={f} variant="secondary" className="text-[10px] h-5 px-1 font-normal">
                                                 {FEATURE_LIST.find(item => item.key === f)?.label || f}
                                             </Badge>
                                         ))}
-                                        {engine.features.length > 3 && (
+                                        {workflow.features.length > 3 && (
                                             <Badge variant="outline" className="text-[10px] h-5 px-1 text-muted-foreground">
-                                                +{engine.features.length - 3}
+                                                +{workflow.features.length - 3}
                                             </Badge>
                                         )}
                                     </div>
                                 </TableCell>
                                 <TableCell>
-                                    {engine.type === 'preset' ? (
+                                    {workflow.type === 'preset' ? (
                                         <Badge variant="secondary" className="font-normal">Preset</Badge>
                                     ) : (
                                         <Badge variant="outline" className="font-normal">Custom</Badge>
                                     )}
                                 </TableCell>
                                 <TableCell>
-                                    {engine.isValid ? (
+                                    {workflow.isValid ? (
                                         <div className="flex items-center text-xs text-green-600 dark:text-green-500 font-medium">
                                             <Check className="h-3.5 w-3.5 mr-1" />
                                             Valid
@@ -146,7 +146,7 @@ export default function TableListDemo() {
                                     )}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground text-xs">
-                                    {new Date(engine.updatedAt).toLocaleDateString()}
+                                    {new Date(workflow.updatedAt).toLocaleDateString()}
                                 </TableCell>
                                 <TableCell>
                                     <DropdownMenu>
@@ -172,7 +172,7 @@ export default function TableListDemo() {
             </div>
             
             <div className="text-xs text-muted-foreground text-center">
-                Showing {filteredEngines.length} workflows
+                Showing {filteredWorkflows.length} workflows
             </div>
         </div>
     </div>

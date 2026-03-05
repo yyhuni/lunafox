@@ -4,7 +4,7 @@ import * as React from "react"
 import { useTranslations } from "next-intl"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { WorkflowPresetSelector } from "./workflow-preset-selector"
+import { WorkflowProfileSelector } from "./workflow-profile-selector"
 import { ScanConfigEditor } from "./scan-config-editor"
 import { useQuickScanDialogState } from "@/components/scan/quick-scan-dialog-state"
 import {
@@ -102,7 +102,7 @@ export function QuickScanDialog({ trigger }: QuickScanDialogProps) {
 
           {/* Step 2: Select preset/workflows */}
           {step === 2 && workflows && (
-            <WorkflowPresetSelector
+            <WorkflowProfileSelector
               workflows={workflows}
               selectedWorkflowIds={selectedWorkflowIds}
               selectedPresetId={selectedPresetId}

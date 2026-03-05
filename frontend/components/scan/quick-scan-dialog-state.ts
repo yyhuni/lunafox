@@ -131,7 +131,7 @@ export function useQuickScanDialogState({ t }: UseQuickScanDialogStateProps) {
       return
     }
     if (selectedWorkflowIds.length === 0) {
-      toast.error(t("toast.selectEngine"))
+      toast.error(t("toast.selectWorkflow"))
       return
     }
     if (!configuration.trim()) {
@@ -146,7 +146,6 @@ export function useQuickScanDialogState({ t }: UseQuickScanDialogStateProps) {
       const response = await quickScan({
         targets: targets.map((name) => ({ name })),
         configuration,
-        workflowIds: selectedWorkflowIds,
         workflowNames: selectedWorkflows.map((item) => item.name),
       })
 

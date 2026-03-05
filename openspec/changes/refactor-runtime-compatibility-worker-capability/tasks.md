@@ -58,10 +58,10 @@
 - [x] 10.2 Green: 收敛解析逻辑，去除根级与 workflow 嵌套双路径歧义。
 - [x] 10.3 Refactor: 输出迁移提示与兼容窗口策略。
 
-## 11. 扫描编排能力与单引擎限制解耦（P3）
-- [x] 11.1 Red: 新增测试，分离“业务策略单引擎”与“框架能力可多引擎”的语义边界。
-- [x] 11.2 Green: 设计并实现可扩展编排接口（不要求本轮开放多引擎执行）。
-- [x] 11.3 Refactor: 清理 `len(engineNames)==1` 的隐式耦合注释与错误提示。
+## 11. 扫描编排能力与单工作流限制解耦（P3）
+- [x] 11.1 Red: 新增测试，分离“业务策略单工作流”与“框架能力可多工作流”的语义边界。
+- [x] 11.2 Green: 设计并实现可扩展编排接口（不要求本轮开放多工作流执行）。
+- [x] 11.3 Refactor: 清理 `len(workflowNames)==1` 的隐式耦合注释与错误提示。
 
 ## 12. 生成产物路径耦合解耦（P3）
 - [x] 12.1 Red: 新增测试，验证 contract 生成支持可配置输出映射，不依赖固定目录布局。
@@ -80,8 +80,8 @@
 - [x] 14.3 Red: 新增测试，验证任务下发支持 workflow 最小配置切片。
 - [x] 14.4 Green: 调整 `TaskAssignment` 配置封装，减少 worker 二次解析整段 YAML。
 
-## 15. engineschema 发现规则解耦（P3）
-- [x] 15.1 Red: 新增测试，锁定 engine 发现不依赖文件命名推断副作用。
+## 15. workflowschema 发现规则解耦（P3）
+- [x] 15.1 Red: 新增测试，锁定 workflow 发现不依赖文件命名推断副作用。
 - [x] 15.2 Green: 引入显式 schema 索引/元数据驱动发现机制。
 - [x] 15.3 Refactor: 保留兼容窗口并输出迁移告警。
 
@@ -104,8 +104,8 @@
 - [x] 18.4 Refactor: 清理双写常量与兼容桥接代码，补迁移注释和演进边界。
 
 ## 19. 创建期 schema gate 与编排启用集范围对齐（P1/P2, TDD）
-- [x] 19.1 Red: 新增测试，验证 root 存在额外 workflow 键时，不得在 `engineNames` 之外生成任务计划。
-- [x] 19.2 Red: 新增测试，验证 `engine` 嵌套键存在但非 object 时，创建阶段直接失败而非回退到 root 解析。
+- [x] 19.1 Red: 新增测试，验证 root 存在额外 workflow 键时，不得在 `workflowNames` 之外生成任务计划。
+- [x] 19.2 Red: 新增测试，验证 `workflow` 嵌套键存在但非 object 时，创建阶段直接失败而非回退到 root 解析。
 - [x] 19.3 Green: 统一创建链路配置提取规则，确保 schema 校验输入与任务编排输入同源。
 - [x] 19.4 Refactor: 收敛 `CollectEnabledWorkflowSet` 与创建链路启用策略，避免键存在即启用的隐式语义。
 
@@ -152,9 +152,9 @@
 - [x] 26.3 Green: 在“按任务配置切片”与“删除冗余字段”两方案中选定其一并落地实现。
 - [x] 26.4 Refactor: 更新 repository/domain 注释与 DTO 映射，清除半废弃字段语义。
 
-## 27. `engineIDs`/`engineNames` 输入契约一致性（P2, TDD）
-- [x] 27.1 Red: 新增测试，验证创建请求中 `engineIDs` 与 `engineNames` 存在冲突时必须拒绝。
-- [x] 27.2 Red: 新增测试，验证持久化后的 `engineIDs`/`engineNames` 可双向还原同一引擎集合语义。
+## 27. `workflowIDs`/`workflowNames` 输入契约一致性（P2, TDD）
+- [x] 27.1 Red: 新增测试，验证创建请求中 `workflowIDs` 与 `workflowNames` 存在冲突时必须拒绝。
+- [x] 27.2 Red: 新增测试，验证持久化后的 `workflowIDs`/`workflowNames` 可双向还原同一工作流集合语义。
 - [x] 27.3 Green: 增加输入一致性校验（含 ID->Name 映射验证）并收敛创建链路依赖源。
 - [x] 27.4 Refactor: 更新 API 文档与错误提示，明确两字段的职责与优先级。
 

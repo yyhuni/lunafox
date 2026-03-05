@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { WorkflowPresetSelector } from "@/components/scan/workflow-preset-selector"
+import { WorkflowProfileSelector } from "@/components/scan/workflow-profile-selector"
 import { ScanConfigEditor } from "@/components/scan/scan-config-editor"
 import { cn } from "@/lib/utils"
 import { isCronExpressionValid } from "@/lib/scheduled-scan-helpers"
@@ -380,7 +380,7 @@ export function ScheduledScanWorkflowStep({
 }: ScheduledScanWorkflowStepProps) {
   if (workflows.length === 0) return null
   return (
-    <WorkflowPresetSelector
+    <WorkflowProfileSelector
       workflows={workflows}
       selectedWorkflowIds={workflowIds}
       selectedPresetId={selectedPresetId}

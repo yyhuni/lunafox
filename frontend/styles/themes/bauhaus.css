@@ -185,7 +185,7 @@
   border: 1px solid var(--border) !important;
 }
 
-/* Asset type Badge - transparent background + light border (unified with engine/worker) */
+/* Asset type Badge - transparent background + light border (unified with workflow/worker) */
 [data-theme="bauhaus"] [data-slot="badge"][data-badge-type="subdomain"],
 [data-theme="bauhaus"] [data-slot="badge"][data-badge-type="website"],
 [data-theme="bauhaus"] [data-slot="badge"][data-badge-type="ip"],
@@ -235,7 +235,7 @@
 }
 
 /* Auxiliary Badge - transparent background + light border */
-[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="engine"],
+[data-theme="bauhaus"] [data-slot="badge"][data-badge-type="workflow"],
 [data-theme="bauhaus"] [data-slot="badge"][data-badge-type="worker"] {
   background: transparent !important;
   color: var(--muted-foreground) !important;

@@ -24,7 +24,7 @@ Python Django 后端的 Go 重写版本。
 | 用户 API | 创建、列表、修改密码 |
 | 组织 API | 完整 CRUD（软删除） |
 | 目标 API | 完整 CRUD（软删除、类型自动检测） |
-| 工作流预设 API | 只读（列表/详情） |
+| 工作流配置档案 API | 只读（列表/详情） |
 
 ### 🚧 待实现
 
@@ -82,8 +82,8 @@ GET    /api/targets/:id         # 获取目标
 PUT    /api/targets/:id         # 更新目标
 DELETE /api/targets/:id         # 删除目标
 
-GET    /api/workflows/presets     # 工作流预设列表
-GET    /api/workflows/presets/:id # 工作流预设详情
+GET    /api/workflows/profiles     # 工作流配置档案列表
+GET    /api/workflows/profiles/:id # 工作流配置档案详情
 
 GET    /api/scans/:id/logs      # 扫描日志（afterId 分页，参数: afterId, limit）
 ```

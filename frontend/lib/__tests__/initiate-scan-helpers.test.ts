@@ -8,7 +8,7 @@ import {
 const baseInput: InitiateScanValidationInput = {
   selectMode: "preset",
   selectedPresetId: "preset-1",
-  selectedWorkflowIds: [1],
+  selectedWorkflowNames: ["subdomain_discovery"],
   configuration: "config: true",
   isYamlValid: true,
   organizationId: 1,
@@ -30,7 +30,7 @@ describe("initiate scan helpers", () => {
 
   it("returns validation issues for custom mode", () => {
     expect(
-      getInitiateScanValidationIssue(withOverrides({ selectMode: "custom", selectedWorkflowIds: [] }))
+      getInitiateScanValidationIssue(withOverrides({ selectMode: "custom", selectedWorkflowNames: [] }))
     ).toEqual({ titleKey: "noWorkflowSelected" })
   })
 

@@ -1,7 +1,7 @@
-import type { ScanWorkflow, PresetWorkflow } from '@/types/workflow.types'
+import type { ScanWorkflow, WorkflowProfile } from '@/types/workflow.types'
 
-// Preset workflows (system-defined, read-only)
-export const mockPresetWorkflows: PresetWorkflow[] = [
+// Workflow profiles (system-defined, read-only)
+export const mockWorkflowProfiles: WorkflowProfile[] = [
   {
     id: 'full_scan',
     name: '完整扫描',
@@ -591,10 +591,10 @@ export function getMockWorkflowById(id: number): ScanWorkflow | undefined {
   return mockWorkflows.find(e => e.id === id)
 }
 
-export function getMockPresetWorkflows(): PresetWorkflow[] {
-  return mockPresetWorkflows
+export function getMockWorkflowProfiles(): WorkflowProfile[] {
+  return mockWorkflowProfiles
 }
 
-export function getMockPresetWorkflowById(id: string): PresetWorkflow | undefined {
-  return mockPresetWorkflows.find(e => e.id === id)
+export function getMockWorkflowProfileById(id: string): WorkflowProfile | undefined {
+  return mockWorkflowProfiles.find(e => e.id === id)
 }

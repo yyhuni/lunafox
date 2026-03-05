@@ -141,7 +141,7 @@ export function ScanProgressSummary({ data, locale, t }: ScanProgressSummaryProp
         <span className="font-medium">{data.target?.name}</span>
       </div>
       <div className="flex items-start justify-between text-sm gap-4">
-        <span className="text-muted-foreground shrink-0">{t("engine")}</span>
+        <span className="text-muted-foreground shrink-0">{t("workflow")}</span>
         <div className="flex flex-wrap gap-1.5 justify-end">
           {data.workflowNames?.length ? (
             data.workflowNames.map((name) => (

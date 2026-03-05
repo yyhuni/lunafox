@@ -73,7 +73,7 @@ export function EditScheduledScanWorkflowSection({
 }: EditScheduledScanWorkflowSectionProps) {
   return (
     <div className="grid gap-2">
-      <Label>{t("form.scanEngine")} *</Label>
+      <Label>{t("form.scanWorkflow")} *</Label>
       {workflowIds.length > 0 && (
         <p className="text-xs text-muted-foreground">
           {t("form.selectedWorkflows", { count: workflowIds.length })}
@@ -81,7 +81,7 @@ export function EditScheduledScanWorkflowSection({
       )}
       <div className="border rounded-md p-3 max-h-[150px] overflow-y-auto space-y-2">
         {workflows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("form.noEngine")}</p>
+          <p className="text-sm text-muted-foreground">{t("form.noWorkflow")}</p>
         ) : (
           workflows.map((workflow) => (
             <label

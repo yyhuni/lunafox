@@ -2,7 +2,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { MOCK_ENGINES, FEATURE_LIST } from "../data"
+import { MOCK_WORKFLOWS, FEATURE_LIST } from "../data"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,7 +15,7 @@ import Link from "next/link"
 export default function CardGridDemo() {
   const [search, setSearch] = useState("")
 
-  const filteredEngines = MOCK_ENGINES.filter(e => 
+  const filteredWorkflows = MOCK_WORKFLOWS.filter(e => 
     e.name.toLowerCase().includes(search.toLowerCase()) || 
     e.description?.toLowerCase().includes(search.toLowerCase())
   )
@@ -37,7 +37,7 @@ export default function CardGridDemo() {
             <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input 
               type="search"
-              name="engineSearch"
+              name="workflowSearch"
               autoComplete="off"
               aria-label="Search workflows"
               placeholder="Search workflows…"
@@ -55,19 +55,19 @@ export default function CardGridDemo() {
 
       <ScrollArea className="flex-1 p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-[1600px] mx-auto">
-          {filteredEngines.map((engine) => (
-            <Card key={engine.id} className="group hover:shadow-md transition-[border-color,box-shadow] duration-200 border-muted hover:border-primary/50 flex flex-col">
+          {filteredWorkflows.map((workflow) => (
+            <Card key={workflow.id} className="group hover:shadow-md transition-[border-color,box-shadow] duration-200 border-muted hover:border-primary/50 flex flex-col">
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
                   <div className="space-y-1">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      {engine.name}
-                      {engine.type === 'preset' && (
+                      {workflow.name}
+                      {workflow.type === 'preset' && (
                         <Badge variant="secondary" className="text-[10px] h-5 px-1.5">PRESET</Badge>
                       )}
                     </CardTitle>
                     <CardDescription className="line-clamp-2 min-h-[40px]">
-                      {engine.description}
+                      {workflow.description}
                     </CardDescription>
                   </div>
                   <DropdownMenu>
@@ -92,13 +92,13 @@ export default function CardGridDemo() {
               
               <CardContent className="pb-3 flex-1">
                 <div className="flex flex-wrap gap-1.5 mb-4">
-                  {engine.features.map(f => (
+                  {workflow.features.map(f => (
                     <Badge key={f} variant="outline" className="bg-background/50 font-normal">
                       <span className="mr-1.5">{getFeatureIcon(f)}</span>
                       {FEATURE_LIST.find(item => item.key === f)?.label || f}
                     </Badge>
                   ))}
-                  {engine.features.length === 0 && (
+                  {workflow.features.length === 0 && (
                     <span className="text-sm text-muted-foreground italic">No features enabled</span>
                   )}
                 </div>
@@ -108,9 +108,9 @@ export default function CardGridDemo() {
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1" title="Last Updated">
                         <Clock className="h-3.5 w-3.5" />
-                        <span>{new Date(engine.updatedAt).toLocaleDateString()}</span>
+                        <span>{new Date(workflow.updatedAt).toLocaleDateString()}</span>
                     </div>
-                    {engine.isValid ? (
+                    {workflow.isValid ? (
                         <div className="flex items-center gap-1 text-green-600 dark:text-green-500">
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             <span>Valid</span>
@@ -122,10 +122,10 @@ export default function CardGridDemo() {
                         </div>
                     )}
                 </div>
-                {engine.type === 'user' && (
+                {workflow.type === 'user' && (
                     <div className="flex items-center gap-1" title="Usage Stats">
                         <Activity className="h-3.5 w-3.5" />
-                        <span>{engine.stats.runs} runs</span>
+                        <span>{workflow.stats.runs} runs</span>
                     </div>
                 )}
               </CardFooter>

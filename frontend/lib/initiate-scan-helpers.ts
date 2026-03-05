@@ -3,7 +3,7 @@ export type InitiateScanSelectMode = "preset" | "custom"
 export interface InitiateScanValidationInput {
   selectMode: InitiateScanSelectMode
   selectedPresetId: string | null
-  selectedWorkflowIds: number[]
+  selectedWorkflowNames: string[]
   configuration: string
   isYamlValid: boolean
   organizationId?: number
@@ -24,7 +24,7 @@ export const getInitiateScanValidationIssue = (
   const {
     selectMode,
     selectedPresetId,
-    selectedWorkflowIds,
+    selectedWorkflowNames,
     configuration,
     isYamlValid,
     organizationId,
@@ -33,7 +33,7 @@ export const getInitiateScanValidationIssue = (
 
   if (selectMode === "preset") {
     if (!selectedPresetId) return { titleKey: "noPresetSelected" }
-  } else if (selectedWorkflowIds.length === 0) {
+  } else if (selectedWorkflowNames.length === 0) {
     return { titleKey: "noWorkflowSelected" }
   }
 

@@ -124,7 +124,7 @@
       "notes": ""
     },
     {
-      "id": "route_scan_engine",
+      "id": "route_scan_workflow",
       "routePattern": "/[locale]/scan/workflow",
       "locales": [
         "zh",

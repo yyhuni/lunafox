@@ -26,7 +26,7 @@ export function DashboardScanHistory() {
     columns: {
       target: tColumns("scanHistory.target"),
       summary: tColumns("scanHistory.summary"),
-      engineName: tColumns("scanHistory.engineName"),
+      workflowName: tColumns("scanHistory.workflowName"),
       workerName: tColumns("scanHistory.workerName"),
       createdAt: tColumns("common.createdAt"),
       status: tColumns("common.status"),

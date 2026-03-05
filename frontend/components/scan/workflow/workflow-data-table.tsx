@@ -38,7 +38,7 @@ export function WorkflowDataTable({
       behavior={{ enableRowSelection: false }}
       actions={{
         onAddNew,
-        addButtonLabel: addButtonText || state.tWorkflow("createEngine"),
+        addButtonLabel: addButtonText || state.tWorkflow("createWorkflow"),
         showBulkDelete: false,
       }}
       ui={{

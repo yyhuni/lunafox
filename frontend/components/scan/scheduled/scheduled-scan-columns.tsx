@@ -26,7 +26,7 @@ import type { ScheduledScan } from "@/types/scheduled-scan.types"
 export interface ScheduledScanTranslations {
   columns: {
     taskName: string
-    scanEngine: string
+    scanWorkflow: string
     cronExpression: string
     scope: string
     status: string
@@ -182,9 +182,9 @@ export const createScheduledScanColumns = ({
     accessorKey: "workflowNames",
     size: 150,
     minSize: 100,
-    meta: { title: t.columns.scanEngine },
+    meta: { title: t.columns.scanWorkflow },
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t.columns.scanEngine} />
+      <DataTableColumnHeader column={column} title={t.columns.scanWorkflow} />
     ),
     cell: ({ row }) => {
       const workflowNames = row.original.workflowNames || []

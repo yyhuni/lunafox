@@ -41,7 +41,6 @@ import (
 	snapshotservice "github.com/yyhuni/lunafox/server/internal/modules/snapshot/application"
 	snapshothandler "github.com/yyhuni/lunafox/server/internal/modules/snapshot/handler"
 	snapshotrepo "github.com/yyhuni/lunafox/server/internal/modules/snapshot/repository"
-	"github.com/yyhuni/lunafox/server/internal/preset"
 )
 
 type deps struct {
@@ -50,7 +49,7 @@ type deps struct {
 	userHandler          *identityhandler.UserHandler
 	orgHandler           *identityhandler.OrganizationHandler
 	targetHandler        *cataloghandler.TargetHandler
-	engineHandler        *cataloghandler.EngineHandler
+	workflowHandler      *cataloghandler.WorkflowHandler
 	wordlistHandler      *cataloghandler.WordlistHandler
 	websiteHandler       *websitehandler.WebsiteHandler
 	subdomainHandler     *subdomainhandler.SubdomainHandler
@@ -72,7 +71,7 @@ type deps struct {
 	hostPortSnapshotHandler      *snapshothandler.HostPortSnapshotHandler
 	screenshotSnapshotHandler    *snapshothandler.ScreenshotSnapshotHandler
 	vulnerabilitySnapshotHandler *snapshothandler.VulnerabilitySnapshotHandler
-	presetHandler                *cataloghandler.PresetHandler
+	workflowProfileHandler       *cataloghandler.WorkflowProfileHandler
 
 	agentRepo    agentdomain.AgentRepository
 	scanTaskRepo scanrepo.ScanTaskRepository
@@ -93,7 +92,6 @@ type repositoryBundle struct {
 	userRepo                      *identityrepo.UserRepository
 	orgRepo                       *identityrepo.OrganizationRepository
 	targetRepo                    *catalogrepo.TargetRepository
-	engineRepo                    *catalogrepo.EngineRepository
 	wordlistRepo                  *catalogrepo.WordlistRepository
 	websiteRepo                   *assetrepo.WebsiteRepository
 	subdomainRepo                 *assetrepo.SubdomainRepository
@@ -124,9 +122,10 @@ type identityModuleHandlers struct {
 }
 
 type catalogModuleHandlers struct {
-	targetHandler   *cataloghandler.TargetHandler
-	engineHandler   *cataloghandler.EngineHandler
-	wordlistHandler *cataloghandler.WordlistHandler
+	targetHandler          *cataloghandler.TargetHandler
+	workflowHandler        *cataloghandler.WorkflowHandler
+	workflowProfileHandler *cataloghandler.WorkflowProfileHandler
+	wordlistHandler        *cataloghandler.WordlistHandler
 
 	wordlistService *catalogservice.WordlistFacade
 }
@@ -190,14 +189,13 @@ func buildDependencies(infra *infra, cfg *config.Config) *deps {
 	grpcPublisher := runtimesvc.NewAgentRuntimeEventPublisher(streamRegistry)
 
 	identity := wireIdentityModule(repos, infra)
-	catalog := wireCatalogModule(repos, cfg)
+	catalog := wireCatalogModule(repos, cfg, infra)
 	asset := wireAssetModule(repos)
 	security := wireSecurityModule(repos)
 	scan := wireScanModule(repos, infra, grpcPublisher)
 	worker := wireWorkerModule(repos)
 	agent := wireAgentModule(repos, infra, cfg, scan.scanTaskRuntime, grpcPublisher)
 	snapshot := wireSnapshotModule(repos, asset, security)
-	presetHandler := cataloghandler.NewPresetHandler(preset.NewService(infra.presetLoader))
 
 	return &deps{
 		healthHandler:        assethandler.NewHealthHandler(infra.db, infra.redisClient),
@@ -205,7 +203,7 @@ func buildDependencies(infra *infra, cfg *config.Config) *deps {
 		userHandler:          identity.userHandler,
 		orgHandler:           identity.orgHandler,
 		targetHandler:        catalog.targetHandler,
-		engineHandler:        catalog.engineHandler,
+		workflowHandler:      catalog.workflowHandler,
 		wordlistHandler:      catalog.wordlistHandler,
 		websiteHandler:       asset.websiteHandler,
 		subdomainHandler:     asset.subdomainHandler,
@@ -227,7 +225,7 @@ func buildDependencies(infra *infra, cfg *config.Config) *deps {
 		hostPortSnapshotHandler:      snapshot.hostPortSnapshotHandler,
 		screenshotSnapshotHandler:    snapshot.screenshotSnapshotHandler,
 		vulnerabilitySnapshotHandler: snapshot.vulnerabilitySnapshotHandler,
-		presetHandler:                presetHandler,
+		workflowProfileHandler:       catalog.workflowProfileHandler,
 
 		agentRepo:    repos.agentRepo,
 		scanTaskRepo: repos.scanTaskRepo,
@@ -250,7 +248,6 @@ func newRepositoryBundle(infra *infra) *repositoryBundle {
 		userRepo:                      identityrepo.NewUserRepository(db),
 		orgRepo:                       identityrepo.NewOrganizationRepository(db),
 		targetRepo:                    catalogrepo.NewTargetRepository(db),
-		engineRepo:                    catalogrepo.NewEngineRepository(db),
 		wordlistRepo:                  catalogrepo.NewWordlistRepository(db),
 		websiteRepo:                   assetrepo.NewWebsiteRepository(db),
 		subdomainRepo:                 assetrepo.NewSubdomainRepository(db),
@@ -293,24 +290,25 @@ func wireIdentityModule(repos *repositoryBundle, infra *infra) identityModuleHan
 	}
 }
 
-func wireCatalogModule(repos *repositoryBundle, cfg *config.Config) catalogModuleHandlers {
+func wireCatalogModule(repos *repositoryBundle, cfg *config.Config, infra *infra) catalogModuleHandlers {
 	catalogTargetQueryStore := catalogwiring.NewCatalogTargetQueryStoreAdapter(repos.targetRepo)
 	catalogTargetCommandStore := catalogwiring.NewCatalogTargetCommandStoreAdapter(repos.targetRepo)
-	catalogEngineQueryStore := catalogwiring.NewCatalogEngineQueryStoreAdapter(repos.engineRepo)
-	catalogEngineCommandStore := catalogwiring.NewCatalogEngineCommandStoreAdapter(repos.engineRepo)
 	catalogWordlistQueryStore := catalogwiring.NewCatalogWordlistQueryStoreAdapter(repos.wordlistRepo)
 	catalogWordlistCommandStore := catalogwiring.NewCatalogWordlistCommandStoreAdapter(repos.wordlistRepo)
 	catalogOrganizationTargetBindingStore := catalogwiring.NewCatalogOrganizationTargetBindingStoreAdapter(repos.orgRepo)
+	catalogWorkflowQueryStore := catalogwiring.NewCatalogWorkflowQueryStoreAdapter()
+	catalogWorkflowProfileQueryStore := catalogwiring.NewCatalogWorkflowProfileQueryStoreAdapter(infra.presetLoader)
 
 	targetSvc := catalogservice.NewTargetFacade(catalogTargetQueryStore, catalogTargetCommandStore, catalogOrganizationTargetBindingStore)
-	engineSvc := catalogservice.NewEngineFacade(catalogEngineQueryStore, catalogEngineCommandStore)
 	wordlistSvc := catalogservice.NewWordlistFacade(catalogWordlistQueryStore, catalogWordlistCommandStore, cfg.Storage.WordlistsBasePath)
+	workflowCatalogSvc := catalogservice.NewWorkflowCatalogFacade(catalogWorkflowQueryStore, catalogWorkflowProfileQueryStore)
 
 	return catalogModuleHandlers{
-		targetHandler:   cataloghandler.NewTargetHandler(targetSvc),
-		engineHandler:   cataloghandler.NewEngineHandler(engineSvc),
-		wordlistHandler: cataloghandler.NewWordlistHandler(wordlistSvc),
-		wordlistService: wordlistSvc,
+		targetHandler:          cataloghandler.NewTargetHandler(targetSvc),
+		workflowHandler:        cataloghandler.NewWorkflowHandler(workflowCatalogSvc),
+		workflowProfileHandler: cataloghandler.NewWorkflowProfileHandler(workflowCatalogSvc),
+		wordlistHandler:        cataloghandler.NewWordlistHandler(wordlistSvc),
+		wordlistService:        wordlistSvc,
 	}
 }
 

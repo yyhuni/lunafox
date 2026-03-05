@@ -28,8 +28,10 @@ func TestRegisterRoutesKeepsManagementHTTPAPIs(t *testing.T) {
 		"GET /api/auth/me",
 		"POST /api/targets",
 		"GET /api/targets",
-		"GET /api/engines",
-		"GET /api/engines/presets",
+		"GET /api/workflows",
+		"GET /api/workflows/:name",
+		"GET /api/workflows/profiles",
+		"GET /api/workflows/profiles/:id",
 		"GET /api/wordlists",
 		"GET /api/scans",
 		"POST /api/scans/normal",
@@ -45,6 +47,25 @@ func TestRegisterRoutesKeepsManagementHTTPAPIs(t *testing.T) {
 	for _, key := range expected {
 		if _, ok := registered[key]; !ok {
 			t.Fatalf("management http api missing after runtime grpc cutover: %s", key)
+		}
+	}
+
+	unexpected := []string{
+		"GET /api/engines",
+		"POST /api/engines",
+		"GET /api/engines/:id",
+		"PUT /api/engines/:id",
+		"PATCH /api/engines/:id",
+		"DELETE /api/engines/:id",
+		"POST /api/workflows",
+		"PUT /api/workflows/:name",
+		"PATCH /api/workflows/:name",
+		"DELETE /api/workflows/:name",
+	}
+
+	for _, key := range unexpected {
+		if _, ok := registered[key]; ok {
+			t.Fatalf("legacy catalog-management route must be disabled in memory-only mode: %s", key)
 		}
 	}
 }

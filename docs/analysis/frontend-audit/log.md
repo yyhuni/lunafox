@@ -54,7 +54,7 @@
   - 静态扫描生产路径：重点检查 `toLocale*` 硬编码 locale、Bauhaus Header 文案硬编码、通用日期控件 locale 固定值。
   - 修复 `components/common/bauhaus-page-header.tsx`：接入 `useLocale` + `common.ui` 文案键，消除 `en-US/STATUS/CYCLE/ACTIVE` 硬编码。
   - 修复 `components/scan/scheduled/scheduled-scan-page.tsx`：`toLocaleString("zh-CN")` 改为 `toLocaleString(locale)`。
-  - 修复 `components/scan/engine/scan-engine-page.tsx`：更新时间展示改为 `toLocaleString(locale)`。
+  - 修复 `components/scan/workflow/scan-workflow-page.tsx`：更新时间展示改为 `toLocaleString(locale)`。
   - 修复 `components/ui/datetime-picker.tsx`：日期展示改为 `toLocaleDateString(locale)`。
   - 更新字典：`messages/en.json`、`messages/zh.json` 增补 `common.ui` 的 `statusLabel/cycleLabel/activeStatus`。
 - 新发现：

@@ -1,108 +1,62 @@
 import apiClient from '@/lib/api-client'
-import type { ScanWorkflow, PresetWorkflow } from '@/types/workflow.types'
-import { USE_MOCK, mockDelay, getMockWorkflows, getMockWorkflowById, getMockPresetWorkflows, getMockPresetWorkflowById } from '@/mock'
+import type { ScanWorkflow, WorkflowProfile } from '@/types/workflow.types'
+import {
+  USE_MOCK,
+  mockDelay,
+  getMockWorkflows,
+  getMockWorkflowProfiles,
+  getMockWorkflowProfileById,
+} from '@/mock'
 
 /**
- * Workflow catalog API service
+ * Workflow catalog API service (read-only)
  */
 
-/**
- * Get preset workflow list (system-defined, read-only)
- */
-export async function getPresetWorkflows(): Promise<PresetWorkflow[]> {
+export async function getWorkflowProfiles(): Promise<WorkflowProfile[]> {
   if (USE_MOCK) {
     await mockDelay()
-    return getMockPresetWorkflows()
+    return getMockWorkflowProfiles()
   }
-  const response = await apiClient.get('/workflows/presets/')
+  const response = await apiClient.get('/workflows/profiles/')
   return response.data
 }
 
-/**
- * Get preset workflow by ID
- */
-export async function getPresetWorkflow(id: string): Promise<PresetWorkflow> {
-	if (USE_MOCK) {
-		await mockDelay()
-		const preset = getMockPresetWorkflowById(id)
-		if (!preset) throw new Error('Preset workflow not found')
-		return preset
-	}
-  const response = await apiClient.get(`/workflows/presets/${id}/`)
+export async function getWorkflowProfile(id: string): Promise<WorkflowProfile> {
+  if (USE_MOCK) {
+    await mockDelay()
+    const profile = getMockWorkflowProfileById(id)
+    if (!profile) throw new Error('Workflow profile not found')
+    return profile
+  }
+  const response = await apiClient.get(`/workflows/profiles/${id}/`)
   return response.data
 }
 
-/**
- * Get user workflow template list (stored in database, editable)
- */
 export async function getWorkflows(): Promise<ScanWorkflow[]> {
   if (USE_MOCK) {
     await mockDelay()
-    return getMockWorkflows()
+    return normalizeWorkflows(getMockWorkflows())
   }
-  // Workflow template entries are usually limited; fetch all in one page
-  const response = await apiClient.get('/workflows/', {
-    params: { pageSize: 1000 }
-  })
-  // Backend returns paginated data: { results: [...], total, page, pageSize, totalPages }
-  return response.data.results || response.data
+  const response = await apiClient.get('/workflows/')
+  return normalizeWorkflows(response.data.results || response.data)
 }
 
-/**
- * Get user workflow template details
- */
-export async function getWorkflow(id: number): Promise<ScanWorkflow> {
-  if (USE_MOCK) {
-    await mockDelay()
-    const workflow = getMockWorkflowById(id)
-    if (!workflow) throw new Error('Workflow not found')
-    return workflow
-  }
-  const response = await apiClient.get(`/workflows/${id}/`)
-  return response.data
+type WorkflowPayload = Partial<ScanWorkflow> & {
+  name?: string
 }
 
-/**
- * Create user workflow template
- */
-export async function createWorkflow(data: {
-  name: string
-  configuration: string
-}): Promise<ScanWorkflow> {
-  if (USE_MOCK) {
-    await mockDelay()
-    // Mock create - return a new workflow template with generated ID
-    const newWorkflow: ScanWorkflow = {
-      id: Date.now(),
-      name: data.name,
-      configuration: data.configuration,
-      isValid: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    return newWorkflow
-  }
-  const response = await apiClient.post('/workflows/', data)
-  return response.data
-}
-
-/**
- * Update user workflow template
- */
-export async function updateWorkflow(
-  id: number,
-  data: Partial<{
-    name: string
-    configuration: string
-  }>
-): Promise<ScanWorkflow> {
-  const response = await apiClient.patch(`/workflows/${id}/`, data)
-  return response.data
-}
-
-/**
- * Delete user workflow template
- */
-export async function deleteWorkflow(id: number): Promise<void> {
-  await apiClient.delete(`/workflows/${id}/`)
+function normalizeWorkflows(payload: WorkflowPayload[]): ScanWorkflow[] {
+  return (payload || [])
+    .filter((item): item is WorkflowPayload & { name: string } => typeof item?.name === 'string' && item.name.trim().length > 0)
+    .map((item, index) => ({
+      id: typeof item.id === 'number' ? item.id : index + 1,
+      name: item.name.trim(),
+      title: item.title,
+      description: item.description,
+      version: item.version,
+      configuration: item.configuration,
+      isValid: item.isValid,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    }))
 }

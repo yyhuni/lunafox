@@ -2,7 +2,7 @@
 "use client"
 
 import React, { memo, useMemo, useState } from "react"
-import { MOCK_ENGINES, FEATURE_LIST } from "../data"
+import { MOCK_WORKFLOWS, FEATURE_LIST } from "../data"
 import { ReactFlow, Background, Controls, Handle, Position, NodeProps, Edge, Node } from "@xyflow/react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -32,9 +32,9 @@ const nodeTypes = {
 }
 
 export default function FeatureFlowDemo() {
-  const [selectedEngineId, setSelectedEngineId] = useState(MOCK_ENGINES[0].id)
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState(MOCK_WORKFLOWS[0].id)
   
-  const selectedEngine = MOCK_ENGINES.find(e => e.id === selectedEngineId) || MOCK_ENGINES[0]
+  const selectedWorkflow = MOCK_WORKFLOWS.find(e => e.id === selectedWorkflowId) || MOCK_WORKFLOWS[0]
 
   const { nodes, edges } = useMemo(() => {
     const newNodes: Node[] = []
@@ -66,7 +66,7 @@ export default function FeatureFlowDemo() {
     flowOrder.forEach((step) => {
       if (Array.isArray(step)) {
         // Parallel nodes
-        const enabledInGroup = step.filter(key => selectedEngine.features.includes(key))
+        const enabledInGroup = step.filter(key => selectedWorkflow.features.includes(key))
         if (enabledInGroup.length > 0) {
           const totalWidth = enabledInGroup.length * 200
           const startX = 250 - (totalWidth / 2) + 100 // center align
@@ -103,7 +103,7 @@ export default function FeatureFlowDemo() {
         }
       } else {
         // Single node step
-        if (selectedEngine.features.includes(step)) {
+        if (selectedWorkflow.features.includes(step)) {
           const feature = FEATURE_LIST.find(f => f.key === step)
           const nodeId = step
           
@@ -152,7 +152,7 @@ export default function FeatureFlowDemo() {
     })
 
     return { nodes: newNodes, edges: newEdges }
-  }, [selectedEngine])
+  }, [selectedWorkflow])
 
   return (
     <div className="flex h-full bg-background">
@@ -161,28 +161,28 @@ export default function FeatureFlowDemo() {
         <div className="p-4 border-b">
             <Link href="../demo" className="text-sm text-muted-foreground hover:text-foreground mb-4 block">← Back to Demos</Link>
           <h2 className="font-semibold text-lg">Scan Pipelines</h2>
-          <p className="text-xs text-muted-foreground">Select an engine to visualize its workflow</p>
+          <p className="text-xs text-muted-foreground">Select an workflow to visualize its workflow</p>
         </div>
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-2">
-            {MOCK_ENGINES.map(engine => (
+            {MOCK_WORKFLOWS.map(workflow => (
               <button type="button"
-                key={engine.id}
-                onClick={() => setSelectedEngineId(engine.id)}
+                key={workflow.id}
+                onClick={() => setSelectedWorkflowId(workflow.id)}
                 className={`w-full text-left p-3 rounded-lg border transition-[background-color,border-color,box-shadow] ${
-                  selectedEngineId === engine.id 
+                  selectedWorkflowId === workflow.id 
                     ? 'bg-background border-primary shadow-sm ring-1 ring-primary/20' 
                     : 'bg-transparent border-transparent hover:bg-muted'
                 }`}
               >
                 <div className="flex justify-between items-start mb-1">
-                  <span className="font-medium text-sm">{engine.name}</span>
-                  {engine.type === 'preset' && <Badge variant="secondary" className="text-[10px] px-1 h-4">Preset</Badge>}
+                  <span className="font-medium text-sm">{workflow.name}</span>
+                  {workflow.type === 'preset' && <Badge variant="secondary" className="text-[10px] px-1 h-4">Preset</Badge>}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>{engine.features.length} steps</span>
+                  <span>{workflow.features.length} steps</span>
                   <span>•</span>
-                  <span>{engine.stats.avgTime}</span>
+                  <span>{workflow.stats.avgTime}</span>
                 </div>
               </button>
             ))}
@@ -194,14 +194,14 @@ export default function FeatureFlowDemo() {
       <div className="flex-1 relative">
         <div className="absolute top-4 left-4 z-10 bg-background/80 backdrop-blur p-2 rounded-lg border shadow-sm">
           <h3 className="font-semibold flex items-center gap-2">
-            {selectedEngine.name}
-            {selectedEngine.isValid ? (
+            {selectedWorkflow.name}
+            {selectedWorkflow.isValid ? (
                 <Check className="h-4 w-4 text-green-500" />
             ) : (
                 <AlertCircle className="h-4 w-4 text-amber-500" />
             )}
           </h3>
-          <p className="text-xs text-muted-foreground max-w-md">{selectedEngine.description}</p>
+          <p className="text-xs text-muted-foreground max-w-md">{selectedWorkflow.description}</p>
         </div>
 
         <div className="absolute top-4 right-4 z-10">

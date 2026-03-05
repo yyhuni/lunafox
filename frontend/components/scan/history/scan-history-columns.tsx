@@ -31,7 +31,7 @@ export interface ScanHistoryTranslations {
   columns: {
     target: string
     summary: string
-    engineName: string
+    workflowName: string
     workerName: string
     createdAt: string
     status: string
@@ -256,9 +256,9 @@ export const createScanHistoryColumns = ({
     minSize: 100,
     maxSize: 200,
     enableResizing: false,
-    meta: { title: t.columns.engineName },
+    meta: { title: t.columns.workflowName },
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t.columns.engineName} />
+      <DataTableColumnHeader column={column} title={t.columns.workflowName} />
     ),
     cell: ({ row }) => {
       const workflowNames = row.getValue("workflowNames") as string[] | undefined
@@ -268,7 +268,7 @@ export const createScanHistoryColumns = ({
       return (
         <div className="flex flex-wrap gap-1">
           {workflowNames.map((name, index) => (
-            <Badge key={index} variant="secondary" data-badge-type="engine">
+            <Badge key={index} variant="secondary" data-badge-type="workflow">
               {name}
             </Badge>
           ))}

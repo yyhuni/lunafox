@@ -8,7 +8,8 @@ import {
   type InitiateScanSelectMode,
 } from "@/lib/initiate-scan-helpers"
 import { initiateScan } from "@/services/scan.service"
-import { useWorkflows, usePresetWorkflows } from "@/hooks/use-workflows"
+import { useWorkflows, useWorkflowProfiles } from "@/hooks/use-workflows"
+import type { WorkflowProfile } from "@/types/workflow.types"
 
 type UseInitiateScanDialogStateProps = {
   organizationId?: number
@@ -16,6 +17,29 @@ type UseInitiateScanDialogStateProps = {
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
   tToast: (key: string, params?: Record<string, string | number | Date>) => string
+}
+
+const TOP_LEVEL_WORKFLOW_PATTERN = /^([A-Za-z0-9_-]+)\s*:/gm
+
+function extractWorkflowNamesFromConfiguration(configuration: string): string[] {
+  const names: string[] = []
+  const seen = new Set<string>()
+  const normalized = configuration.replace(/\r\n?/g, "\n")
+  for (const match of normalized.matchAll(TOP_LEVEL_WORKFLOW_PATTERN)) {
+    const name = (match[1] || "").trim()
+    if (!name || seen.has(name)) continue
+    seen.add(name)
+    names.push(name)
+  }
+  return names
+}
+
+function resolveWorkflowProfileNames(preset: WorkflowProfile | null): string[] {
+  if (!preset) return []
+  if (Array.isArray(preset.workflowNames) && preset.workflowNames.length > 0) {
+    return preset.workflowNames.filter((item) => item && item.trim().length > 0)
+  }
+  return extractWorkflowNamesFromConfiguration(preset.configuration || "")
 }
 
 export function useInitiateScanDialogState({
@@ -26,7 +50,7 @@ export function useInitiateScanDialogState({
   tToast,
 }: UseInitiateScanDialogStateProps) {
   const queryClient = useQueryClient()
-  const [selectedWorkflowIds, setSelectedWorkflowIds] = useState<number[]>([])
+  const [selectedWorkflowNames, setSelectedWorkflowNames] = useState<string[]>([])
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
   const [selectMode, setSelectMode] = useState<InitiateScanSelectMode>("preset")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -37,16 +61,17 @@ export function useInitiateScanDialogState({
   const [isYamlValid, setIsYamlValid] = useState(true)
   const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false)
   const [pendingConfigChange, setPendingConfigChange] = useState<string | null>(null)
-  const [pendingWorkflowIds, setPendingWorkflowIds] = useState<number[] | null>(null)
+  const [pendingWorkflowNames, setPendingWorkflowNames] = useState<string[] | null>(null)
   const [pendingPresetId, setPendingPresetId] = useState<string | null>(null)
 
   const { data: workflows, isLoading: isLoadingWorkflows, isError: isWorkflowsError } = useWorkflows()
-  const { data: presetWorkflows, isLoading: isLoadingPresets, isError: isPresetsError } = usePresetWorkflows()
+  const { data: presetWorkflows, isLoading: isLoadingPresets, isError: isPresetsError } = useWorkflowProfiles()
 
   const selectedWorkflows = useMemo(() => {
-    if (!selectedWorkflowIds.length || !workflows) return []
-    return workflows.filter((item) => selectedWorkflowIds.includes(item.id))
-  }, [selectedWorkflowIds, workflows])
+    if (!selectedWorkflowNames.length || !workflows) return []
+    const selectedSet = new Set(selectedWorkflowNames)
+    return workflows.filter((item) => selectedSet.has(item.name))
+  }, [selectedWorkflowNames, workflows])
 
   const selectedPreset = useMemo(() => {
     if (!presetWorkflows || !selectedPresetId) return null
@@ -58,35 +83,36 @@ export function useInitiateScanDialogState({
     setIsConfigEdited(true)
   }, [])
 
-  const buildConfigFromWorkflows = useCallback((workflowIds: number[]) => {
+  const buildConfigFromWorkflows = useCallback((workflowNames: string[]) => {
     if (!workflows) return ""
-    const selected = workflows.filter((item) => workflowIds.includes(item.id))
+    const selectedSet = new Set(workflowNames)
+    const selected = workflows.filter((item) => selectedSet.has(item.name))
     return mergeWorkflowConfigurations(selected.map((item) => item.configuration || ""))
   }, [workflows])
 
-  const applyWorkflowSelection = useCallback((workflowIds: number[], nextConfig: string) => {
-    setSelectedWorkflowIds(workflowIds)
+  const applyWorkflowSelection = useCallback((workflowNames: string[], nextConfig: string) => {
+    setSelectedWorkflowNames(workflowNames)
     setConfiguration(nextConfig)
     setIsConfigEdited(false)
     setIsYamlValid(true)
   }, [])
 
-  const handleWorkflowIdsChange = useCallback((workflowIds: number[]) => {
-    const nextConfig = buildConfigFromWorkflows(workflowIds)
+  const handleWorkflowNamesChange = useCallback((workflowNames: string[]) => {
+    const nextConfig = buildConfigFromWorkflows(workflowNames)
     if (isConfigEdited && configuration !== nextConfig) {
-      setPendingWorkflowIds(workflowIds)
+      setPendingWorkflowNames(workflowNames)
       setPendingConfigChange(nextConfig)
       setPendingPresetId(null)
       setShowOverwriteConfirm(true)
       return
     }
-    applyWorkflowSelection(workflowIds, nextConfig)
+    applyWorkflowSelection(workflowNames, nextConfig)
     setSelectedPresetId(null)
   }, [applyWorkflowSelection, buildConfigFromWorkflows, configuration, isConfigEdited])
 
   const handlePresetSelect = useCallback((presetId: string, presetConfig: string) => {
     if (isConfigEdited && configuration !== presetConfig) {
-      setPendingWorkflowIds(null)
+      setPendingWorkflowNames(null)
       setPendingConfigChange(presetConfig)
       setPendingPresetId(presetId)
       setShowOverwriteConfirm(true)
@@ -106,20 +132,20 @@ export function useInitiateScanDialogState({
         setIsConfigEdited(false)
         setIsYamlValid(true)
       } else {
-        const nextWorkflowIds = pendingWorkflowIds ?? selectedWorkflowIds
-        applyWorkflowSelection(nextWorkflowIds, pendingConfigChange)
+        const nextWorkflowNames = pendingWorkflowNames ?? selectedWorkflowNames
+        applyWorkflowSelection(nextWorkflowNames, pendingConfigChange)
       }
     }
     setShowOverwriteConfirm(false)
     setPendingConfigChange(null)
-    setPendingWorkflowIds(null)
+    setPendingWorkflowNames(null)
     setPendingPresetId(null)
-  }, [applyWorkflowSelection, pendingConfigChange, pendingWorkflowIds, pendingPresetId, selectedWorkflowIds])
+  }, [applyWorkflowSelection, pendingConfigChange, pendingPresetId, pendingWorkflowNames, selectedWorkflowNames])
 
   const handleOverwriteCancel = useCallback(() => {
     setShowOverwriteConfirm(false)
     setPendingConfigChange(null)
-    setPendingWorkflowIds(null)
+    setPendingWorkflowNames(null)
     setPendingPresetId(null)
   }, [])
 
@@ -132,7 +158,7 @@ export function useInitiateScanDialogState({
   }, [])
 
   const resetDialogState = useCallback(() => {
-    setSelectedWorkflowIds([])
+    setSelectedWorkflowNames([])
     setSelectedPresetId(null)
     setConfiguration("")
     setIsConfigEdited(false)
@@ -141,7 +167,7 @@ export function useInitiateScanDialogState({
     setSelectMode("preset")
     setShowOverwriteConfirm(false)
     setPendingConfigChange(null)
-    setPendingWorkflowIds(null)
+    setPendingWorkflowNames(null)
     setPendingPresetId(null)
   }, [])
 
@@ -149,7 +175,7 @@ export function useInitiateScanDialogState({
     const issue = getInitiateScanValidationIssue({
       selectMode,
       selectedPresetId,
-      selectedWorkflowIds,
+      selectedWorkflowNames,
       configuration,
       isYamlValid,
       organizationId,
@@ -163,18 +189,20 @@ export function useInitiateScanDialogState({
       return
     }
 
+    const workflowNames = selectMode === "custom"
+      ? selectedWorkflowNames
+      : resolveWorkflowProfileNames(selectedPreset)
+    if (workflowNames.length === 0) {
+      toast.error(tToast("noWorkflowSelected"))
+      return
+    }
+
     setIsSubmitting(true)
     try {
-      const workflowIds = selectMode === "custom" ? selectedWorkflowIds : []
-      const workflowNames = selectMode === "custom"
-        ? selectedWorkflows.slice(0, 1).map((item) => item.name)
-        : [selectedPresetId as string]
-
       const response = await initiateScan({
         organizationId,
         targetId,
         configuration,
-        workflowIds,
         workflowNames,
       })
 
@@ -206,9 +234,9 @@ export function useInitiateScanDialogState({
     queryClient,
     resetDialogState,
     selectMode,
-    selectedWorkflowIds,
-    selectedWorkflows,
+    selectedPreset,
     selectedPresetId,
+    selectedWorkflowNames,
     tToast,
     targetId,
   ])
@@ -225,10 +253,10 @@ export function useInitiateScanDialogState({
   const hasConfig = configuration.trim().length > 0
   const canProceedToReview = selectMode === "preset"
     ? !!selectedPresetId
-    : selectedWorkflowIds.length > 0
+    : selectedWorkflowNames.length > 0
   const canStart = configuration.trim().length > 0 &&
     isYamlValid &&
-    (selectMode === "preset" ? !!selectedPresetId : selectedWorkflowIds.length > 0)
+    (selectMode === "preset" ? !!selectedPresetId : selectedWorkflowNames.length > 0)
 
   return {
     workflows,
@@ -237,7 +265,7 @@ export function useInitiateScanDialogState({
     presetWorkflows,
     isLoadingPresets,
     isPresetsError,
-    selectedWorkflowIds,
+    selectedWorkflowNames,
     selectedPresetId,
     selectMode,
     isSubmitting,
@@ -253,7 +281,7 @@ export function useInitiateScanDialogState({
     canStart,
     setCurrentStep,
     handleManualConfigChange,
-    handleWorkflowIdsChange,
+    handleWorkflowNamesChange,
     handlePresetSelect,
     handleOverwriteConfirm,
     handleOverwriteCancel,

@@ -1,8 +1,8 @@
 import React from "react"
 import * as yaml from "js-yaml"
 import { toast } from "sonner"
-import { usePresetWorkflows } from "@/hooks/use-workflows"
-import type { PresetWorkflow } from "@/types/workflow.types"
+import { useWorkflowProfiles } from "@/hooks/use-workflows"
+import type { WorkflowProfile } from "@/types/workflow.types"
 
 export type WorkflowYamlError = {
   message: string
@@ -14,7 +14,7 @@ type UseWorkflowCreateDialogStateProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSave?: (name: string, yamlContent: string) => Promise<void>
-  preSelectedPreset?: PresetWorkflow
+  preSelectedPreset?: WorkflowProfile
   t: (key: string, params?: Record<string, string | number | Date>) => string
   tToast: (key: string, params?: Record<string, string | number | Date>) => string
 }
@@ -28,13 +28,13 @@ export function useWorkflowCreateDialogState({
   tToast,
 }: UseWorkflowCreateDialogStateProps) {
   const [step, setStep] = React.useState<1 | 2>(1)
-  const [selectedPreset, setSelectedPreset] = React.useState<PresetWorkflow | null>(null)
+  const [selectedPreset, setSelectedPreset] = React.useState<WorkflowProfile | null>(null)
   const [workflowName, setWorkflowName] = React.useState("")
   const [yamlContent, setYamlContent] = React.useState("")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [yamlError, setYamlError] = React.useState<WorkflowYamlError>(null)
 
-  const { data: presetWorkflows = [] } = usePresetWorkflows()
+  const { data: presetWorkflows = [] } = useWorkflowProfiles()
 
   React.useEffect(() => {
     if (open) {
@@ -81,7 +81,7 @@ export function useWorkflowCreateDialogState({
 
   const handleSave = React.useCallback(async () => {
     if (!workflowName.trim()) {
-      toast.error(tToast("engineNameRequired"))
+      toast.error(tToast("workflowNameRequired"))
       return
     }
 
@@ -105,12 +105,12 @@ export function useWorkflowCreateDialogState({
         await new Promise((resolve) => setTimeout(resolve, 1000))
       }
 
-      toast.success(tToast("engineCreateSuccess"), {
-        description: tToast("engineCreateSuccessDesc", { name: workflowName }),
+      toast.success(tToast("workflowCreateSuccess"), {
+        description: tToast("workflowCreateSuccessDesc", { name: workflowName }),
       })
       onOpenChange(false)
     } catch (error) {
-      toast.error(tToast("engineCreateFailed"), {
+      toast.error(tToast("workflowCreateFailed"), {
         description: error instanceof Error ? error.message : tToast("unknownError"),
       })
     } finally {

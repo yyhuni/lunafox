@@ -127,7 +127,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             url: "/scan/scheduled/",
           },
           {
-            title: t('scanEngine'),
+            title: t('scanWorkflow'),
             url: "/scan/workflow/",
           },
         ],

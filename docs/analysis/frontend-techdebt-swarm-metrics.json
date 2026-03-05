@@ -2087,7 +2087,7 @@
     {
       "timestamp": "2026-02-12T08:52:30+08:00",
       "source": "codex_execution",
-      "scope": "frontend_phase25_auth_agents_tools_engines_mutation_branches_batch",
+      "scope": "frontend_phase25_auth_agents_tools_workflows_mutation_branches_batch",
       "gate_results": {
         "typecheck": "pass",
         "lint_core": "pass",
@@ -4013,8 +4013,8 @@
           "frontend/components/settings/workers/deploy-terminal-dialog-sections.tsx",
           "frontend/components/scan/scan-progress-dialog.tsx",
           "frontend/components/scan/scan-progress-dialog-sections.tsx",
-          "frontend/components/scan/engine/engine-create-dialog.tsx",
-          "frontend/components/scan/engine/engine-create-dialog-sections.tsx",
+          "frontend/components/scan/workflow/workflow-create-dialog.tsx",
+          "frontend/components/scan/workflow/workflow-create-dialog-sections.tsx",
           "frontend/components/fingerprints/import-fingerprint-dialog.tsx",
           "frontend/components/scan/quick-scan-dialog.tsx",
           "frontend/components/scan/quick-scan-dialog-sections.tsx",
@@ -4026,7 +4026,7 @@
         "updated_state_hooks": [
           "frontend/components/settings/workers/deploy-terminal-dialog-state.ts",
           "frontend/components/scan/scan-progress-dialog-state.ts",
-          "frontend/components/scan/engine/engine-create-dialog-state.ts",
+          "frontend/components/scan/workflow/workflow-create-dialog-state.ts",
           "frontend/components/fingerprints/import-fingerprint-dialog-state.ts",
           "frontend/components/scan/quick-scan-dialog-state.ts",
           "frontend/components/organization/targets/link-target-dialog-state.ts"
@@ -4137,7 +4137,7 @@
     {
       "timestamp": "2026-02-12T21:05:00+08:00",
       "source": "codex_execution",
-      "scope": "frontend_phase70_engine_edit_split",
+      "scope": "frontend_phase70_workflow_edit_split",
       "gate_results": {
         "typecheck": "pass",
         "lint_core": "pass",
@@ -4162,14 +4162,14 @@
       },
       "refactor_snapshot": {
         "updated_components": [
-          "frontend/components/scan/engine/engine-edit-dialog.tsx",
-          "frontend/components/scan/engine/engine-edit-dialog-sections.tsx"
+          "frontend/components/scan/workflow/workflow-edit-dialog.tsx",
+          "frontend/components/scan/workflow/workflow-edit-dialog-sections.tsx"
         ],
         "updated_state_hooks": [
-          "frontend/components/scan/engine/engine-edit-dialog-state.ts"
+          "frontend/components/scan/workflow/workflow-edit-dialog-state.ts"
         ],
         "notes": [
-          "extract engine edit dialog state and editor sections"
+          "extract workflow edit dialog state and editor sections"
         ]
       },
       "frontend_scan_snapshot": {

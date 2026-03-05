@@ -13,7 +13,7 @@
     "scanHistory": {
       "target": "目标",
       "summary": "摘要",
-      "engineName": "工作流名称",
+      "workflowName": "工作流名称",
       "workerName": "扫描节点",
       "progress": "进度",
       "subdomains": "子域名",
@@ -83,8 +83,8 @@
       "contentType": "内容类型",
       "createdAt": "创建时间"
     },
-    "engine": {
-      "engineName": "工作流名称",
+    "workflow": {
+      "workflowName": "工作流名称",
       "subdomainDiscovery": "子域名发现",
       "portScan": "端口扫描",
       "siteScan": "站点扫描",
@@ -97,7 +97,7 @@
     },
     "scheduledScan": {
       "taskName": "任务名称",
-      "scanEngine": "扫描工作流",
+      "scanWorkflow": "扫描工作流",
       "cronExpression": "执行周期",
       "scope": "扫描范围",
       "status": "状态",
@@ -133,7 +133,7 @@
     "organizationDetails": "组织详情",
     "initiateScan": "发起扫描",
     "scheduleScan": "计划扫描",
-    "editEngine": "编辑工作流",
+    "editWorkflow": "编辑工作流",
     "viewDetails": "查看详情",
     "unlinkTarget": "解除关联",
     "clickToCopy": "点击复制",
@@ -318,7 +318,7 @@
       "unlinkTargetMessage": "确定要解除目标 \"{name}\" 与此组织的关联吗？此操作只会解除关联关系，目标本身不会被删除。",
       "bulkUnlinkTargetMessage": "此操作将解除以下 {count} 个目标与此组织的关联。目标本身不会被删除，仍可正常使用。",
       "deleteScheduledScanMessage": "确定要删除定时扫描任务 \"{name}\" 吗？此操作无法撤销。",
-      "deleteEngineMessage": "确定要删除工作流「{name}」吗？此操作无法撤销。",
+      "deleteWorkflowMessage": "确定要删除工作流「{name}」吗？此操作无法撤销。",
       "deleteNucleiRepoMessage": "确定要删除仓库「{name}」吗？此操作无法撤销。",
       "deleteWordlistMessage": "确定要删除字典「{name}」吗？此操作无法撤销。"
     }
@@ -334,7 +334,7 @@
     "scan": "扫描",
     "scanHistory": "扫描历史",
     "scheduledScan": "定时扫描",
-    "scanEngine": "扫描工作流",
+    "scanWorkflow": "扫描工作流",
     "tools": "工具",
     "wordlists": "字典管理",
     "fingerprints": "指纹管理",
@@ -702,8 +702,8 @@
       "title": "发起扫描",
       "targetDesc": "为目标",
       "orgDesc": "为组织",
-      "selectEngine": "选择扫描工作流",
-      "selectEngineTitle": "选择工作流",
+      "selectWorkflow": "选择扫描工作流",
+      "selectWorkflowTitle": "选择工作流",
       "selectWorkflowHint": "请选择扫描工作流（单选）",
       "loading": "加载中...",
       "loadFailed": "加载失败",
@@ -722,7 +722,7 @@
       "back": "上一步",
       "next": "下一步",
       "steps": {
-        "selectEngine": "选择工作流",
+        "selectWorkflow": "选择工作流",
         "editConfig": "编辑配置"
       },
       "presets": {
@@ -737,10 +737,10 @@
         "customDesc": "手动选择工作流组合",
         "customHint": "点击选择后手动勾选工作流",
         "selectHint": "请选择一个扫描方案",
-        "selectEngines": "选择工作流",
-        "enginesCount": "个工作流",
+        "selectWorkflows": "选择工作流",
+        "workflowCount": "个工作流",
         "capabilities": "涉及能力",
-        "usedEngines": "使用工作流",
+        "usedWorkflows": "使用工作流",
         "noCapabilities": "请选择工作流",
         "loading": "加载扫描方案中...",
         "noMatchingWorkflows": "暂无匹配的工作流",
@@ -760,13 +760,13 @@
         "title": "校验结果",
         "yamlOk": "YAML 语法正常",
         "yamlError": "YAML 语法有误，请检查",
-        "enginesOk": "已选择 {count} 个工作流",
-        "enginesMissing": "尚未选择扫描工作流",
+        "workflowsOk": "已选择 {count} 个工作流",
+        "workflowsMissing": "尚未选择扫描工作流",
         "presetOk": "已选择预设：{name}",
         "presetMissing": "尚未选择预设",
         "configEdited": "已手动编辑配置",
         "configFromPreset": "当前配置来自预设",
-        "configFromEngine": "当前配置来自所选工作流",
+        "configFromWorkflow": "当前配置来自所选工作流",
         "configMissing": "配置不能为空"
       }
     },
@@ -873,7 +873,7 @@
     "progress": {
       "title": "扫描进度",
       "target": "目标",
-      "engine": "工作流",
+      "workflow": "工作流",
       "startTime": "开始时间",
       "status": "状态",
       "errorReason": "错误原因",
@@ -925,7 +925,7 @@
         "basicInfo": "基本信息",
         "scanMode": "扫描模式",
         "selectTarget": "选择目标",
-        "selectEngine": "选择工作流",
+        "selectWorkflow": "选择工作流",
         "editConfig": "编辑配置",
         "scheduleSettings": "调度设置"
       },
@@ -934,9 +934,9 @@
         "taskNamePlaceholder": "例如：每日安全巡检",
         "taskNameDesc": "为定时任务设置一个易于识别的名称",
         "taskNameRequired": "请输入任务名称",
-        "scanEngine": "扫描工作流",
-        "scanEnginePlaceholder": "选择扫描工作流",
-        "scanEngineDesc": "选择工作流可快速填充配置，也可直接编辑配置",
+        "scanWorkflow": "扫描工作流",
+        "scanWorkflowPlaceholder": "选择扫描工作流",
+        "scanWorkflowDesc": "选择工作流可快速填充配置，也可直接编辑配置",
         "scanWorkflowRequired": "请选择扫描工作流",
         "configuration": "扫描配置",
         "configurationPlaceholder": "请输入 YAML 格式的扫描配置...",
@@ -976,7 +976,7 @@
         "organizationMode": "组织扫描",
         "organizationModeHint": "组织扫描模式下，执行时将动态获取该组织下所有目标",
         "noAvailableTarget": "暂无可用目标",
-        "noEngine": "暂无可用工作流",
+        "noWorkflow": "暂无可用工作流",
         "noConfig": "无配置",
         "capabilitiesCount": "{count} 项能力",
         "selected": "已选择",
@@ -1012,14 +1012,14 @@
         "confirm": "确定覆盖"
       }
     },
-    "engine": {
+    "workflow": {
       "title": "扫描工作流",
       "name": "工作流名称",
       "type": "工作流类型",
       "config": "配置",
       "searchPlaceholder": "搜索我的工作流...",
-      "createEngine": "新建工作流",
-      "engineList": "工作流列表",
+      "createWorkflow": "新建工作流",
+      "workflowList": "工作流列表",
       "presetWorkflows": "预设工作流",
       "myWorkflows": "我的工作流",
       "preset": "预设",
@@ -1031,7 +1031,7 @@
       "enabledFeatures": "已启用功能",
       "configPreview": "配置预览",
       "editConfig": "编辑配置",
-      "cloneAsMyEngine": "克隆为我的工作流",
+      "cloneAsMyWorkflow": "克隆为我的工作流",
       "configNeedsUpdate": "配置需要更新",
       "needsUpdate": "需要更新",
       "selectWorkflowHint": "选择左侧工作流查看详情",
@@ -1052,8 +1052,8 @@
         "editConfigDesc": "自定义工作流名称和配置",
         "nextStep": "下一步",
         "prevStep": "上一步",
-        "engineName": "工作流名称",
-        "engineNamePlaceholder": "请输入工作流名称，例如：全面扫描工作流",
+        "workflowName": "工作流名称",
+        "workflowNamePlaceholder": "请输入工作流名称，例如：全面扫描工作流",
         "yamlConfig": "YAML 配置",
         "syntaxError": "语法错误",
         "syntaxValid": "语法正确",
@@ -1061,7 +1061,7 @@
         "errorLocation": "第 {line} 行，第 {column} 列",
         "confirmClose": "您有未保存的更改，确定要关闭吗？",
         "creating": "创建中...",
-        "createEngine": "创建工作流"
+        "createWorkflow": "创建工作流"
       },
       "edit": {
         "title": "编辑工作流配置 - {name}",
@@ -1663,12 +1663,12 @@
     "noPresetSelected": "请先选择一个扫描方案",
     "emptyConfig": "扫描配置不能为空",
     "invalidConfig": "配置格式无效，请检查 YAML 语法",
-    "engineNameRequired": "请输入工作流名称",
+    "workflowNameRequired": "请输入工作流名称",
     "configRequired": "配置内容不能为空",
     "yamlSyntaxError": "YAML 语法错误",
-    "engineCreateSuccess": "创建成功",
-    "engineCreateSuccessDesc": "创建成功",
-    "engineCreateFailed": "创建失败",
+    "workflowCreateSuccess": "创建成功",
+    "workflowCreateSuccessDesc": "创建成功",
+    "workflowCreateFailed": "创建失败",
     "configSaveSuccess": "保存成功",
     "configSaveSuccessDesc": "保存成功",
     "configSaveFailed": "保存失败",
@@ -1992,7 +1992,7 @@
     "description": "快速创建扫描任务，批量扫描多个目标",
     "steps": {
       "enterTargets": "输入目标",
-      "selectEngine": "选择工作流",
+      "selectWorkflow": "选择工作流",
       "confirmScan": "确认扫描"
     },
     "step1Title": "输入目标",
@@ -2005,7 +2005,7 @@
     "supportedFormats": "支持 域名、IP、CIDR、URL",
     "validTargets": "{count} 个有效目标",
     "invalidTargets": "{count} 个无效",
-    "selectEngine": "选择工作流",
+    "selectWorkflow": "选择工作流",
     "noWorkflows": "暂无可用工作流",
     "capabilities": "{count} 项能力",
     "noConfig": "无配置",
@@ -2025,7 +2025,7 @@
     "confirmTargets": "共 {count} 个扫描目标",
     "andMore": "还有 {count} 个...",
     "selectedWorkflows": "已选工作流",
-    "confirmSummary": "将使用 {engineCount} 个工作流扫描 {targetCount} 个目标",
+    "confirmSummary": "将使用 {workflowCount} 个工作流扫描 {targetCount} 个目标",
     "configTitle": "扫描配置",
     "configEdited": "已编辑",
     "overwriteConfirm": {
@@ -2037,7 +2037,7 @@
     "toast": {
       "noValidTarget": "请输入至少一个有效目标",
       "hasInvalidInputs": "存在 {count} 个无效输入，请修正后继续",
-      "selectEngine": "请选择扫描工作流",
+      "selectWorkflow": "请选择扫描工作流",
       "emptyConfig": "扫描配置不能为空",
       "getWorkflowsFailed": "获取工作流列表失败",
       "createFailed": "创建失败",
@@ -2553,7 +2553,7 @@
       }
     },
     "nav": {
-      "scanEngine": "扫描工作流",
+      "scanWorkflow": "扫描工作流",
       "wordlists": "字典管理"
     },
     "settings": {

@@ -512,11 +512,11 @@ export const businessDemoItems: BusinessDemoItem[] = [
     loader: () => import("@/components/scan/workflow/workflow-edit-dialog"),
   },
   {
-    slug: "scan-workflow-preset-selector",
+    slug: "scan-workflow-profile-selector",
     title: "Workflow Preset Selector",
     group: "scan",
-    modulePath: "@/components/scan/workflow-preset-selector",
-    loader: () => import("@/components/scan/workflow-preset-selector"),
+    modulePath: "@/components/scan/workflow-profile-selector",
+    loader: () => import("@/components/scan/workflow-profile-selector"),
   },
   {
     slug: "scan-history-scan-history-data-table",

@@ -485,7 +485,7 @@ func TestConnectMapsInternalErrors(t *testing.T) {
 					scanapp.WorkflowErrorCodeSchemaInvalid,
 					scanapp.WorkflowErrorStageServerSchemaGate,
 					"subdomain_discovery",
-					"engine subdomain_discovery does not support this configuration version",
+					"workflow subdomain_discovery does not support this configuration version",
 					nil,
 				),
 			},

@@ -136,9 +136,9 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 
 	presetLoader, err := preset.NewLoader()
 	if err != nil {
-		pkg.Fatal("Failed to load preset engines", zap.Error(err))
+		pkg.Fatal("Failed to load profile workflows", zap.Error(err))
 	}
-	pkg.Info("Preset engines loaded", zap.Int("count", len(presetLoader.List())))
+	pkg.Info("Workflow profiles loaded", zap.Int("count", len(presetLoader.List())))
 
 	jwtManager := auth.NewJWTManager(cfg.JWT.Secret, cfg.JWT.AccessExpire, cfg.JWT.RefreshExpire)
 	gin.SetMode(cfg.Server.Mode)

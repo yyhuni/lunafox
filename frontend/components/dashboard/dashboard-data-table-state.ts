@@ -121,7 +121,7 @@ export function useDashboardDataTableState() {
           columns: {
             target: t("columns.scanHistory.target"),
             summary: t("columns.scanHistory.summary"),
-            engineName: t("columns.scanHistory.engineName"),
+            workflowName: t("columns.scanHistory.workflowName"),
             workerName: t("columns.scanHistory.workerName"),
             createdAt: t("columns.common.createdAt"),
             status: t("columns.common.status"),

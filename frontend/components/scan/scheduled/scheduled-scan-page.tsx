@@ -69,7 +69,7 @@ export default function ScheduledScanPage() {
   const translations = React.useMemo(() => ({
     columns: {
       taskName: tColumns("scheduledScan.taskName"),
-      scanEngine: tColumns("scheduledScan.scanEngine"),
+      scanWorkflow: tColumns("scheduledScan.scanWorkflow"),
       cronExpression: tColumns("scheduledScan.cronExpression"),
       scope: tColumns("scheduledScan.scope"),
       status: tColumns("common.status"),

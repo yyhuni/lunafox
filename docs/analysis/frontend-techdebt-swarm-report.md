@@ -98,7 +98,7 @@ Files <400 lines:     467 files (majority, well-sized)
 ### Quality Markers
 
 ```
-TODO comments:        4  (engine dialogs, tool updates)
+TODO comments:        4  (workflow dialogs, tool updates)
 FIXME comments:       0  ✅
 HACK comments:        0  ✅
 @deprecated markers:  1  (LegacyApiResponse type)
@@ -378,7 +378,7 @@ const scanDialogMachine = createMachine({ /* ... */ })
 
 // Split into smaller components
 <InitiateScanDialog>
-  <EngineSelector />
+  <WorkflowSelector />
   <ConfigEditor />
   <ValidationPanel />
 </InitiateScanDialog>
@@ -520,8 +520,8 @@ jobs:
 
 **Evidence:**
 - `/Users/yangyang/Desktop/lunafox/frontend/components/tools/config/opensource-tools-list.tsx:54` - Update checking not implemented
-- `/Users/yangyang/Desktop/lunafox/frontend/components/scan/engine/engine-create-dialog.tsx:132` - API integration pending
-- `/Users/yangyang/Desktop/lunafox/frontend/components/scan/engine/engine-edit-dialog.tsx:129,189` - YAML config loading/saving not implemented
+- `/Users/yangyang/Desktop/lunafox/frontend/components/scan/workflow/workflow-create-dialog.tsx:132` - API integration pending
+- `/Users/yangyang/Desktop/lunafox/frontend/components/scan/workflow/workflow-edit-dialog.tsx:129,189` - YAML config loading/saving not implemented
 
 **Recommended Action:**
 - Implement backend API integrations
@@ -637,7 +637,7 @@ rg "export function use.*Fingerprint" hooks/use-fingerprints.ts | wc -l
 **Evidence:**
 ```typescript
 // Lines 50-80: 17 useState declarations
-const [selectedEngineIds, setSelectedEngineIds] = useState<number[]>([])
+const [selectedWorkflowIds, setSelectedEngineIds] = useState<number[]>([])
 const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null)
 const [selectMode, setSelectMode] = useState<"preset" | "custom">("preset")
 // ... 14 more useState calls
@@ -762,7 +762,7 @@ Test Coverage Risk:      20 files (all untested)
 |-------|------|-------|--------|
 | Scan History | `components/scan/history/scan-history-data-table.tsx` | 168 | ✅ Grouped |
 | Scheduled Scans | `components/scan/scheduled/scheduled-scan-data-table.tsx` | 131 | ✅ Grouped |
-| Engines | `components/scan/engine/engine-data-table.tsx` | 71 | ✅ Grouped |
+| Workflows | `components/scan/workflow/workflow-data-table.tsx` | 71 | ✅ Grouped |
 | Organizations | `components/organization/organization-data-table.tsx` | 91 | ✅ Grouped |
 | Commands | `components/tools/commands/commands-data-table.tsx` | 73 | ✅ Grouped |
 
@@ -945,9 +945,9 @@ This roadmap breaks down the technical debt remediation into three phases, each 
 
 #### Week 4: Fix TypeScript Error & TODOs
 - [ ] Fix `hooks/use-nudge-toast.tsx:133` type error
-- [ ] Implement backend API for engine creation (`components/scan/engine/engine-create-dialog.tsx:132`)
-- [ ] Implement YAML config loading (`components/scan/engine/engine-edit-dialog.tsx:129`)
-- [ ] Implement YAML config saving (`components/scan/engine/engine-edit-dialog.tsx:189`)
+- [ ] Implement backend API for workflow creation (`components/scan/workflow/workflow-create-dialog.tsx:132`)
+- [ ] Implement YAML config loading (`components/scan/workflow/workflow-edit-dialog.tsx:129`)
+- [ ] Implement YAML config saving (`components/scan/workflow/workflow-edit-dialog.tsx:189`)
 - [ ] Implement update checking (`components/tools/config/opensource-tools-list.tsx:54`)
 - [ ] Remove all TODO comments after completion
 
@@ -1594,7 +1594,7 @@ function Component() {
 ```typescript
 type ScanDialogState = {
   step: number
-  selectedEngineIds: number[]
+  selectedWorkflowIds: number[]
   configuration: string
   // ... other state
 }
@@ -3204,7 +3204,7 @@ pnpm typecheck && pnpm lint --max-warnings 0 && pnpm test && pnpm build
      - `/Users/yangyang/Desktop/lunafox/frontend/components/target/targets-data-table.tsx`
      - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/history/scan-history-data-table.tsx`
      - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/scheduled/scheduled-scan-data-table.tsx`
-     - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/engine/engine-data-table.tsx`
+     - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/workflow/workflow-data-table.tsx`
      - `/Users/yangyang/Desktop/lunafox/frontend/components/tools/commands/commands-data-table.tsx`
    - `pnpm run typecheck` ✅
    - `pnpm run lint:core` ✅
@@ -3651,9 +3651,9 @@ pnpm typecheck && pnpm lint --max-warnings 0 && pnpm test && pnpm build
      - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/scan-progress-dialog-utils.ts`
      - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/scan-progress-dialog-state.ts`
      - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/scan-progress-dialog-sections.tsx`
-     - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/engine/engine-create-dialog.tsx`
-     - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/engine/engine-create-dialog-state.ts`
-     - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/engine/engine-create-dialog-sections.tsx`
+     - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/workflow/workflow-create-dialog.tsx`
+     - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/workflow/workflow-create-dialog-state.ts`
+     - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/workflow/workflow-create-dialog-sections.tsx`
      - `/Users/yangyang/Desktop/lunafox/frontend/components/fingerprints/import-fingerprint-dialog.tsx`
      - `/Users/yangyang/Desktop/lunafox/frontend/components/fingerprints/import-fingerprint-dialog-utils.ts`
      - `/Users/yangyang/Desktop/lunafox/frontend/components/fingerprints/import-fingerprint-dialog-state.ts`
@@ -3718,9 +3718,9 @@ pnpm typecheck && pnpm lint --max-warnings 0 && pnpm test && pnpm build
 
 77. **门禁结果（更新到 2026-02-12 21:05 +0800）**
    - 大体量对话框/状态机拆分（六期）：
-     - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/engine/engine-edit-dialog.tsx`
-     - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/engine/engine-edit-dialog-state.ts`
-     - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/engine/engine-edit-dialog-sections.tsx`
+     - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/workflow/workflow-edit-dialog.tsx`
+     - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/workflow/workflow-edit-dialog-state.ts`
+     - `/Users/yangyang/Desktop/lunafox/frontend/components/scan/workflow/workflow-edit-dialog-sections.tsx`
    - `pnpm run typecheck` ✅
    - `pnpm run lint:core` ✅
    - `pnpm run check:datatable-legacy` ✅
