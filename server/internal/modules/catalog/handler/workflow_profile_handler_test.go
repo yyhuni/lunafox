@@ -13,10 +13,10 @@ import (
 	catalogdto "github.com/yyhuni/lunafox/server/internal/modules/catalog/dto"
 )
 
-type workflowProfileQueryStoreForPresetHandlerStub struct {
-	presets []catalogapp.WorkflowProfile
-	listErr error
-	getErr  error
+type workflowProfileQueryStoreForProfileHandlerStub struct {
+	profiles []catalogapp.WorkflowProfile
+	listErr  error
+	getErr   error
 }
 
 const workflowProfileConfigFixture = "subdomain_discovery:\n" +
@@ -41,23 +41,23 @@ const workflowProfileConfigFixture = "subdomain_discovery:\n" +
 	"      subdomain-resolve:\n" +
 	"        enabled: false\n"
 
-func (stub *workflowProfileQueryStoreForPresetHandlerStub) ListWorkflowProfiles(_ context.Context) ([]catalogapp.WorkflowProfile, error) {
+func (stub *workflowProfileQueryStoreForProfileHandlerStub) ListWorkflowProfiles(_ context.Context) ([]catalogapp.WorkflowProfile, error) {
 	if stub.listErr != nil {
 		return nil, stub.listErr
 	}
-	out := make([]catalogapp.WorkflowProfile, len(stub.presets))
-	copy(out, stub.presets)
+	out := make([]catalogapp.WorkflowProfile, len(stub.profiles))
+	copy(out, stub.profiles)
 	return out, nil
 }
 
-func (stub *workflowProfileQueryStoreForPresetHandlerStub) GetWorkflowProfileByID(_ context.Context, id string) (*catalogapp.WorkflowProfile, error) {
+func (stub *workflowProfileQueryStoreForProfileHandlerStub) GetWorkflowProfileByID(_ context.Context, id string) (*catalogapp.WorkflowProfile, error) {
 	if stub.getErr != nil {
 		return nil, stub.getErr
 	}
-	for i := range stub.presets {
-		if stub.presets[i].ID == id {
-			preset := stub.presets[i]
-			return &preset, nil
+	for i := range stub.profiles {
+		if stub.profiles[i].ID == id {
+			profile := stub.profiles[i]
+			return &profile, nil
 		}
 	}
 	return nil, catalogapp.ErrWorkflowProfileNotFound
@@ -70,8 +70,8 @@ func newWorkflowProfileHandlerForTest(store catalogapp.WorkflowProfileQueryStore
 
 func TestWorkflowProfileHandlerListSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	handler := newWorkflowProfileHandlerForTest(&workflowProfileQueryStoreForPresetHandlerStub{
-		presets: []catalogapp.WorkflowProfile{
+	handler := newWorkflowProfileHandlerForTest(&workflowProfileQueryStoreForProfileHandlerStub{
+		profiles: []catalogapp.WorkflowProfile{
 			{
 				ID:            "subdomain_default",
 				Name:          "Subdomain Discovery Default",
@@ -82,7 +82,7 @@ func TestWorkflowProfileHandlerListSuccess(t *testing.T) {
 			{
 				ID:            "subdomain_fast",
 				Name:          "Subdomain Discovery Fast",
-				Description:   "Fast profile preset",
+				Description:   "Fast profile",
 				WorkflowNames: []string{"subdomain_discovery"},
 				Configuration: workflowProfileConfigFixture,
 			},
@@ -105,19 +105,19 @@ func TestWorkflowProfileHandlerListSuccess(t *testing.T) {
 		t.Fatalf("failed to parse response body: %v", err)
 	}
 	if len(payload) != 2 {
-		t.Fatalf("expected 2 presets, got %d", len(payload))
+		t.Fatalf("expected 2 profiles, got %d", len(payload))
 	}
 	if payload[0].ID != "subdomain_default" || payload[1].ID != "subdomain_fast" {
-		t.Fatalf("unexpected presets payload: %+v", payload)
+		t.Fatalf("unexpected profiles payload: %+v", payload)
 	}
 	if len(payload[0].WorkflowNames) != 1 || payload[0].WorkflowNames[0] != "subdomain_discovery" {
-		t.Fatalf("unexpected workflowNames in first preset payload: %+v", payload[0])
+		t.Fatalf("unexpected workflowNames in first profile payload: %+v", payload[0])
 	}
 }
 
 func TestWorkflowProfileHandlerListInternalError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	handler := newWorkflowProfileHandlerForTest(&workflowProfileQueryStoreForPresetHandlerStub{
+	handler := newWorkflowProfileHandlerForTest(&workflowProfileQueryStoreForProfileHandlerStub{
 		listErr: errors.New("load failed"),
 	})
 
@@ -143,8 +143,8 @@ func TestWorkflowProfileHandlerListInternalError(t *testing.T) {
 
 func TestWorkflowProfileHandlerGetByIDSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	handler := newWorkflowProfileHandlerForTest(&workflowProfileQueryStoreForPresetHandlerStub{
-		presets: []catalogapp.WorkflowProfile{
+	handler := newWorkflowProfileHandlerForTest(&workflowProfileQueryStoreForProfileHandlerStub{
+		profiles: []catalogapp.WorkflowProfile{
 			{
 				ID:            "subdomain_default",
 				Name:          "Subdomain Discovery Default",
@@ -171,17 +171,17 @@ func TestWorkflowProfileHandlerGetByIDSuccess(t *testing.T) {
 		t.Fatalf("failed to parse response body: %v", err)
 	}
 	if payload.ID != "subdomain_default" || payload.Name == "" {
-		t.Fatalf("unexpected preset payload: %+v", payload)
+		t.Fatalf("unexpected profile payload: %+v", payload)
 	}
 	if len(payload.WorkflowNames) != 1 || payload.WorkflowNames[0] != "subdomain_discovery" {
-		t.Fatalf("unexpected workflowNames in preset payload: %+v", payload)
+		t.Fatalf("unexpected workflowNames in profile payload: %+v", payload)
 	}
 }
 
 func TestWorkflowProfileHandlerGetByIDNotFound(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	handler := newWorkflowProfileHandlerForTest(&workflowProfileQueryStoreForPresetHandlerStub{
-		presets: []catalogapp.WorkflowProfile{
+	handler := newWorkflowProfileHandlerForTest(&workflowProfileQueryStoreForProfileHandlerStub{
+		profiles: []catalogapp.WorkflowProfile{
 			{
 				ID:            "subdomain_default",
 				Name:          "Subdomain Discovery Default",
@@ -214,7 +214,7 @@ func TestWorkflowProfileHandlerGetByIDNotFound(t *testing.T) {
 
 func TestWorkflowProfileHandlerGetByIDInternalError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	handler := newWorkflowProfileHandlerForTest(&workflowProfileQueryStoreForPresetHandlerStub{
+	handler := newWorkflowProfileHandlerForTest(&workflowProfileQueryStoreForProfileHandlerStub{
 		getErr: errors.New("storage unavailable"),
 	})
 

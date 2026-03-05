@@ -2,7 +2,6 @@ package workflow
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,12 +38,10 @@ func restoreRegistry(snapshot map[string]registration) {
 
 func validContract(name string) ContractDefinition {
 	return ContractDefinition{
-		WorkflowName:  name,
-		DisplayName:   name,
-		Description:   "test contract",
-		APIVersion:    "v1",
-		SchemaVersion: "1.0.0",
-		TargetTypes:   []string{"domain"},
+		WorkflowName: name,
+		DisplayName:  name,
+		Description:  "test contract",
+		TargetTypes:  []string{"domain"},
 		Stages: []ContractStageDefinition{
 			{
 				ID:          "stage-1",
@@ -219,42 +216,6 @@ func TestRegisterContractNameMismatchPanics(t *testing.T) {
 	})
 }
 
-func TestRegisterInvalidContractAPIVersionPanics(t *testing.T) {
-	original := snapshotRegistry()
-	restoreRegistry(make(map[string]registration))
-	t.Cleanup(func() { restoreRegistry(original) })
-
-	def := validContract("bad-api")
-	def.APIVersion = "version1"
-	require.PanicsWithValue(t, fmt.Sprintf("workflow %q invalid contract: %v", "bad-api", "contract apiVersion must match v<major>"), func() {
-		Register(Registration{
-			Name: "bad-api",
-			Factory: func(workDir string) Workflow {
-				return &mockWorkflow{name: "bad-api", workDir: workDir}
-			},
-			Contract: def,
-		})
-	})
-}
-
-func TestRegisterInvalidContractSchemaVersionPanics(t *testing.T) {
-	original := snapshotRegistry()
-	restoreRegistry(make(map[string]registration))
-	t.Cleanup(func() { restoreRegistry(original) })
-
-	def := validContract("bad-schema")
-	def.SchemaVersion = "1.0"
-	require.PanicsWithValue(t, fmt.Sprintf("workflow %q invalid contract: %v", "bad-schema", "contract schemaVersion must match MAJOR.MINOR.PATCH(+suffix)"), func() {
-		Register(Registration{
-			Name: "bad-schema",
-			Factory: func(workDir string) Workflow {
-				return &mockWorkflow{name: "bad-schema", workDir: workDir}
-			},
-			Contract: def,
-		})
-	})
-}
-
 func TestRegisterInvalidContractDuplicateStagePanics(t *testing.T) {
 	original := snapshotRegistry()
 	restoreRegistry(make(map[string]registration))
@@ -267,6 +228,47 @@ func TestRegisterInvalidContractDuplicateStagePanics(t *testing.T) {
 			Name: "bad-stage",
 			Factory: func(workDir string) Workflow {
 				return &mockWorkflow{name: "bad-stage", workDir: workDir}
+			},
+			Contract: def,
+		})
+	})
+}
+
+func TestRegisterInvalidContractMinimumGreaterThanMaximumPanics(t *testing.T) {
+	original := snapshotRegistry()
+	restoreRegistry(make(map[string]registration))
+	t.Cleanup(func() { restoreRegistry(original) })
+
+	def := validContract("bad-min-max")
+	minimum := 10
+	maximum := 1
+	def.Stages[0].Tools[0].Params[0].Minimum = &minimum
+	def.Stages[0].Tools[0].Params[0].Maximum = &maximum
+
+	require.Panics(t, func() {
+		Register(Registration{
+			Name: "bad-min-max",
+			Factory: func(workDir string) Workflow {
+				return &mockWorkflow{name: "bad-min-max", workDir: workDir}
+			},
+			Contract: def,
+		})
+	})
+}
+
+func TestRegisterInvalidContractStringConstraintOnIntegerPanics(t *testing.T) {
+	original := snapshotRegistry()
+	restoreRegistry(make(map[string]registration))
+	t.Cleanup(func() { restoreRegistry(original) })
+
+	def := validContract("bad-integer-pattern")
+	def.Stages[0].Tools[0].Params[0].Pattern = "^[0-9]+$"
+
+	require.Panics(t, func() {
+		Register(Registration{
+			Name: "bad-integer-pattern",
+			Factory: func(workDir string) Workflow {
+				return &mockWorkflow{name: "bad-integer-pattern", workDir: workDir}
 			},
 			Contract: def,
 		})

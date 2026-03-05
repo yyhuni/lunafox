@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	catalogapp "github.com/yyhuni/lunafox/server/internal/modules/catalog/application"
-	"github.com/yyhuni/lunafox/server/internal/workflowschema"
+	workflowschema "github.com/yyhuni/lunafox/server/internal/workflow/schema"
 )
 
 type catalogWorkflowQueryStoreAdapter struct{}

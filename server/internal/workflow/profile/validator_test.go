@@ -1,20 +1,21 @@
-package preset
+package profile
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 )
 
-// validatePreset is a test helper that validates a preset's configuration.
-func validatePreset(preset *Preset) error {
-	if preset == nil {
-		return fmt.Errorf("preset is nil")
+// validateProfile is a test helper that validates a profile's configuration.
+func validateProfile(profile *Profile) error {
+	if profile == nil {
+		return fmt.Errorf("profile is nil")
 	}
 
-	if err := ValidateConfiguration(preset.Configuration); err != nil {
-		return fmt.Errorf("preset '%s': %w", preset.ID, err)
+	if err := ValidateConfiguration(profile.Configuration); err != nil {
+		return fmt.Errorf("profile '%s': %w", profile.ID, err)
 	}
 
 	return nil
@@ -37,8 +38,6 @@ func TestValidateConfiguration_InvalidYAML(t *testing.T) {
 func TestValidateConfiguration_ValidSubdomainDiscovery(t *testing.T) {
 	config := `
 subdomain_discovery:
-  apiVersion: v1
-  schemaVersion: 1.0.0
   recon:
     enabled: true
     tools:
@@ -75,8 +74,6 @@ func TestValidateConfiguration_InvalidSubdomainDiscovery(t *testing.T) {
 	// Missing required field 'enabled' in subfinder when it should be required
 	config := `
 subdomain_discovery:
-  apiVersion: v1
-  schemaVersion: 1.0.0
   recon:
     enabled: true
     tools:
@@ -89,33 +86,33 @@ subdomain_discovery:
 	}
 }
 
-func TestValidateConfiguration_UnknownEngine(t *testing.T) {
-	// Unknown engines should be ignored (no schema to validate against)
+func TestValidateConfiguration_UnknownWorkflow(t *testing.T) {
 	config := `
-unknown_engine:
+unknown_workflow:
   enabled: true
 `
 	err := ValidateConfiguration(config)
-	if err != nil {
-		t.Errorf("ValidateConfiguration() with unknown engine should not error, got: %v", err)
-	}
-}
-
-func TestValidatePreset_Nil(t *testing.T) {
-	err := validatePreset(nil)
 	if err == nil {
-		t.Error("validatePreset() with nil should error")
+		t.Fatal("ValidateConfiguration() should reject unknown workflow keys")
+	}
+	if !strings.Contains(err.Error(), "unknown workflow key") {
+		t.Fatalf("expected unknown workflow key error, got: %v", err)
 	}
 }
 
-func TestValidatePreset_Valid(t *testing.T) {
-	preset := &Preset{
-		ID:   "test_preset",
-		Name: "Test Preset",
+func TestValidateProfile_Nil(t *testing.T) {
+	err := validateProfile(nil)
+	if err == nil {
+		t.Error("validateProfile() with nil should error")
+	}
+}
+
+func TestValidateProfile_Valid(t *testing.T) {
+	profile := &Profile{
+		ID:   "test_profile",
+		Name: "Test Profile",
 		Configuration: `
 subdomain_discovery:
-  apiVersion: v1
-  schemaVersion: 1.0.0
   recon:
     enabled: false
     tools:
@@ -138,45 +135,45 @@ subdomain_discovery:
         enabled: false
 `,
 	}
-	err := validatePreset(preset)
+	err := validateProfile(profile)
 	if err != nil {
-		t.Errorf("validatePreset() with valid preset should not error, got: %v", err)
+		t.Errorf("validateProfile() with valid profile should not error, got: %v", err)
 	}
 }
 
-// TestAllPresetsValid validates all loaded presets have valid configurations.
+// TestAllProfilesValid validates all loaded profiles have valid configurations.
 // This test is intended to be run in CI to catch configuration errors early.
-func TestAllPresetsValid(t *testing.T) {
+func TestAllProfilesValid(t *testing.T) {
 	loader, err := NewLoader()
 	if err != nil {
 		t.Fatalf("NewLoader() failed: %v", err)
 	}
 
-	presets := loader.List()
-	for _, preset := range presets {
-		t.Run(preset.ID, func(t *testing.T) {
-			if err := validatePreset(&preset); err != nil {
-				t.Errorf("Preset '%s' has invalid configuration: %v", preset.ID, err)
+	profiles := loader.List()
+	for _, profile := range profiles {
+		t.Run(profile.ID, func(t *testing.T) {
+			if err := validateProfile(&profile); err != nil {
+				t.Errorf("Profile '%s' has invalid configuration: %v", profile.ID, err)
 			}
 		})
 	}
 
 	// Log summary
-	t.Logf("Validated %d presets successfully", len(presets))
+	t.Logf("Validated %d profiles successfully", len(profiles))
 }
 
-func TestExamplePresetTemplateHasVersionedSubdomainConfig(t *testing.T) {
-	data, err := presetsFS.ReadFile("presets/_example.yaml")
+func TestExampleProfileTemplateHasVersionedSubdomainConfig(t *testing.T) {
+	data, err := profilesFS.ReadFile("presets/_example.yaml")
 	if err != nil {
 		t.Fatalf("read _example.yaml failed: %v", err)
 	}
 
-	var preset Preset
-	if err := yaml.Unmarshal(data, &preset); err != nil {
+	var profile Profile
+	if err := yaml.Unmarshal(data, &profile); err != nil {
 		t.Fatalf("parse _example.yaml failed: %v", err)
 	}
 
-	if err := ValidateConfiguration(preset.Configuration); err != nil {
+	if err := ValidateConfiguration(profile.Configuration); err != nil {
 		t.Fatalf("_example.yaml configuration should pass schema validation, got: %v", err)
 	}
 }

@@ -1,6 +1,9 @@
 package workflowschema
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestListWorkflowsUsesSchemaMetadata(t *testing.T) {
 	workflows, err := ListWorkflows()
@@ -44,16 +47,6 @@ func TestListWorkflowMetadataUsesSchemaFields(t *testing.T) {
 	}
 }
 
-func TestReadWorkflowNameFromSchema(t *testing.T) {
-	workflow, err := readWorkflowNameFromSchema("subdomain_discovery.schema.json")
-	if err != nil {
-		t.Fatalf("readWorkflowNameFromSchema failed: %v", err)
-	}
-	if workflow != "subdomain_discovery" {
-		t.Fatalf("unexpected workflow name: %q", workflow)
-	}
-}
-
 func TestValidateYAMLWithoutVersionFields(t *testing.T) {
 	config := []byte(`
 subdomain_discovery:
@@ -82,5 +75,40 @@ subdomain_discovery:
 `)
 	if err := ValidateYAML("subdomain_discovery", config); err != nil {
 		t.Fatalf("ValidateYAML failed: %v", err)
+	}
+}
+
+func TestValidateYAMLReturnsExplicitErrorWhenWorkflowNodeIsNotMapping(t *testing.T) {
+	config := []byte(`
+subdomain_discovery: not-an-object
+`)
+	err := ValidateYAML("subdomain_discovery", config)
+	if err == nil {
+		t.Fatalf("expected error when workflow node is not mapping")
+	}
+	if got := err.Error(); got == "" || !strings.Contains(got, `workflow "subdomain_discovery" config must be a mapping`) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestParseWorkflowMetadataReturnsErrorWhenWorkflowMissing(t *testing.T) {
+	payload := []byte(`{"title":"No Workflow"}`)
+	_, err := parseWorkflowMetadata(payload, "missing.schema.json")
+	if err == nil {
+		t.Fatalf("expected error when x-workflow is missing")
+	}
+	if !strings.Contains(err.Error(), "missing x-workflow") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestParseWorkflowMetadataReturnsErrorWhenJSONInvalid(t *testing.T) {
+	payload := []byte(`{invalid`)
+	_, err := parseWorkflowMetadata(payload, "broken.schema.json")
+	if err == nil {
+		t.Fatalf("expected error for invalid metadata json")
+	}
+	if !strings.Contains(err.Error(), "decode metadata") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

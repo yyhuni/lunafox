@@ -38,8 +38,8 @@ func TestCreateNormal_SchemaGateFailureReturnsWorkflowError(t *testing.T) {
 
 	input := &CreateNormalInput{
 		TargetID:      1,
-		EngineNames:   []string{"subdomain_discovery"},
-		Configuration: "subdomain_discovery:\n  schemaVersion: 1.0.0\n",
+		WorkflowNames: []string{"subdomain_discovery"},
+		Configuration: "subdomain_discovery:\n  recon:\n    enabled: true\n",
 	}
 	_, err := service.CreateNormal(input)
 	if err == nil {
@@ -63,7 +63,7 @@ func TestCreateNormal_SchemaGateFailureReturnsWorkflowError(t *testing.T) {
 	}
 }
 
-func TestCreateNormal_VersionEnumRejectsUnsupportedAPIVersion(t *testing.T) {
+func TestCreateNormal_RejectsEmptyWorkflowName(t *testing.T) {
 	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
 		now := time.Now().UTC()
 		return &TargetRef{
@@ -76,109 +76,19 @@ func TestCreateNormal_VersionEnumRejectsUnsupportedAPIVersion(t *testing.T) {
 
 	input := &CreateNormalInput{
 		TargetID:      1,
-		EngineNames:   []string{"subdomain_discovery"},
-		Configuration: validSubdomainDiscoveryConfig("v2", "1.0.0"),
+		WorkflowNames: []string{""},
+		Configuration: validSubdomainDiscoveryConfig(),
 	}
 	_, err := service.CreateNormal(input)
-	if err == nil {
-		t.Fatalf("expected schema validation error")
+	if !errors.Is(err, ErrCreateInvalidWorkflowNames) {
+		t.Fatalf("expected invalid workflow names error, got: %v", err)
 	}
-	workflowErr, ok := AsWorkflowError(err)
-	if !ok {
-		t.Fatalf("expected WorkflowError, got: %v", err)
-	}
-	if workflowErr.Code != WorkflowErrorCodeSchemaInvalid {
-		t.Fatalf("unexpected code: %s", workflowErr.Code)
-	}
-	if workflowErr.Stage != WorkflowErrorStageServerSchemaGate {
-		t.Fatalf("unexpected stage: %s", workflowErr.Stage)
-	}
-}
-
-func TestCreateNormal_VersionEnumRejectsUnsupportedSchemaVersion(t *testing.T) {
-	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
-		now := time.Now().UTC()
-		return &TargetRef{
-			ID:        1,
-			Name:      "example.com",
-			Type:      "domain",
-			CreatedAt: now,
-		}, nil
-	})
-
-	input := &CreateNormalInput{
-		TargetID:      1,
-		EngineNames:   []string{"subdomain_discovery"},
-		Configuration: validSubdomainDiscoveryConfig("v1", "1.0.1"),
-	}
-	_, err := service.CreateNormal(input)
-	if err == nil {
-		t.Fatalf("expected schema validation error")
-	}
-	workflowErr, ok := AsWorkflowError(err)
-	if !ok {
-		t.Fatalf("expected WorkflowError, got: %v", err)
-	}
-	if workflowErr.Code != WorkflowErrorCodeSchemaInvalid {
-		t.Fatalf("unexpected code: %s", workflowErr.Code)
-	}
-	if workflowErr.Stage != WorkflowErrorStageServerSchemaGate {
-		t.Fatalf("unexpected stage: %s", workflowErr.Stage)
-	}
-}
-
-func TestCreateNormal_RejectsEngineIDsAndNamesMismatch(t *testing.T) {
-	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
-		now := time.Now().UTC()
-		return &TargetRef{
-			ID:        1,
-			Name:      "example.com",
-			Type:      "domain",
-			CreatedAt: now,
-		}, nil
-	})
-
-	input := &CreateNormalInput{
-		TargetID:      1,
-		EngineIDs:     []int{101, 102},
-		EngineNames:   []string{"subdomain_discovery"},
-		Configuration: validSubdomainDiscoveryConfig("v1", "1.0.0"),
-	}
-	_, err := service.CreateNormal(input)
-	if !errors.Is(err, ErrCreateInvalidEngineNames) {
-		t.Fatalf("expected invalid engine names error, got: %v", err)
-	}
-	if !strings.Contains(err.Error(), "must have same length") {
-		t.Fatalf("expected detailed mismatch reason, got: %v", err)
-	}
-}
-
-func TestCreateNormal_RejectsEmptyEngineName(t *testing.T) {
-	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
-		now := time.Now().UTC()
-		return &TargetRef{
-			ID:        1,
-			Name:      "example.com",
-			Type:      "domain",
-			CreatedAt: now,
-		}, nil
-	})
-
-	input := &CreateNormalInput{
-		TargetID:      1,
-		EngineNames:   []string{""},
-		Configuration: validSubdomainDiscoveryConfig("v1", "1.0.0"),
-	}
-	_, err := service.CreateNormal(input)
-	if !errors.Is(err, ErrCreateInvalidEngineNames) {
-		t.Fatalf("expected invalid engine names error, got: %v", err)
-	}
-	if !strings.Contains(err.Error(), "engineNames[0] must not be empty") {
+	if !strings.Contains(err.Error(), "workflowNames[0] must not be empty") {
 		t.Fatalf("expected detailed empty reason, got: %v", err)
 	}
 }
 
-func TestCreateNormal_RejectsEngineNameWithSurroundingSpaces(t *testing.T) {
+func TestCreateNormal_RejectsWorkflowNameWithSurroundingSpaces(t *testing.T) {
 	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
 		now := time.Now().UTC()
 		return &TargetRef{
@@ -191,19 +101,19 @@ func TestCreateNormal_RejectsEngineNameWithSurroundingSpaces(t *testing.T) {
 
 	input := &CreateNormalInput{
 		TargetID:      1,
-		EngineNames:   []string{" subdomain_discovery "},
-		Configuration: validSubdomainDiscoveryConfig("v1", "1.0.0"),
+		WorkflowNames: []string{" subdomain_discovery "},
+		Configuration: validSubdomainDiscoveryConfig(),
 	}
 	_, err := service.CreateNormal(input)
-	if !errors.Is(err, ErrCreateInvalidEngineNames) {
-		t.Fatalf("expected invalid engine names error, got: %v", err)
+	if !errors.Is(err, ErrCreateInvalidWorkflowNames) {
+		t.Fatalf("expected invalid workflow names error, got: %v", err)
 	}
 	if !strings.Contains(err.Error(), "must not contain leading or trailing spaces") {
 		t.Fatalf("expected detailed spacing reason, got: %v", err)
 	}
 }
 
-func TestCreateNormal_RejectsDuplicateEngineNames(t *testing.T) {
+func TestCreateNormal_RejectsDuplicateWorkflowNames(t *testing.T) {
 	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
 		now := time.Now().UTC()
 		return &TargetRef{
@@ -216,19 +126,19 @@ func TestCreateNormal_RejectsDuplicateEngineNames(t *testing.T) {
 
 	input := &CreateNormalInput{
 		TargetID:      1,
-		EngineNames:   []string{"subdomain_discovery", "subdomain_discovery"},
-		Configuration: validSubdomainDiscoveryConfig("v1", "1.0.0"),
+		WorkflowNames: []string{"subdomain_discovery", "subdomain_discovery"},
+		Configuration: validSubdomainDiscoveryConfig(),
 	}
 	_, err := service.CreateNormal(input)
-	if !errors.Is(err, ErrCreateInvalidEngineNames) {
-		t.Fatalf("expected invalid engine names error, got: %v", err)
+	if !errors.Is(err, ErrCreateInvalidWorkflowNames) {
+		t.Fatalf("expected invalid workflow names error, got: %v", err)
 	}
 	if !strings.Contains(err.Error(), "is duplicated") {
 		t.Fatalf("expected detailed duplicate reason, got: %v", err)
 	}
 }
 
-func TestCreateNormal_PersistsEngineIDsAndNamesWithSameSemanticSet(t *testing.T) {
+func TestCreateNormal_PersistsWorkflowNamesAndTaskConfig(t *testing.T) {
 	store := &scanCreateStoreCaptureStub{}
 	service := NewScanCreateService(store, func(int) (*TargetRef, error) {
 		now := time.Now().UTC()
@@ -242,9 +152,8 @@ func TestCreateNormal_PersistsEngineIDsAndNamesWithSameSemanticSet(t *testing.T)
 
 	input := &CreateNormalInput{
 		TargetID:      1,
-		EngineIDs:     []int{101},
-		EngineNames:   []string{"subdomain_discovery"},
-		Configuration: validSubdomainDiscoveryConfig("v1", "1.0.0"),
+		WorkflowNames: []string{"subdomain_discovery"},
+		Configuration: validSubdomainDiscoveryConfig(),
 	}
 	scan, err := service.CreateNormal(input)
 	if err != nil {
@@ -253,22 +162,19 @@ func TestCreateNormal_PersistsEngineIDsAndNamesWithSameSemanticSet(t *testing.T)
 	if scan == nil || store.lastScan == nil {
 		t.Fatalf("expected scan persisted")
 	}
-	if len(store.lastScan.EngineIDs) != 1 || store.lastScan.EngineIDs[0] != 101 {
-		t.Fatalf("unexpected engineIDs persisted: %v", store.lastScan.EngineIDs)
-	}
 	var names []string
-	if err := json.Unmarshal(store.lastScan.EngineNames, &names); err != nil {
-		t.Fatalf("unmarshal engineNames failed: %v", err)
+	if err := json.Unmarshal(store.lastScan.WorkflowNames, &names); err != nil {
+		t.Fatalf("unmarshal workflowNames failed: %v", err)
 	}
 	if len(names) != 1 || names[0] != "subdomain_discovery" {
-		t.Fatalf("unexpected engineNames persisted: %v", names)
+		t.Fatalf("unexpected workflowNames persisted: %v", names)
 	}
 	if len(store.lastTasks) != 1 || store.lastTasks[0].Config == "" {
 		t.Fatalf("expected per-task workflow config slice persisted")
 	}
 }
 
-func TestCreateNormal_RejectsEngineNotInCatalog(t *testing.T) {
+func TestCreateNormal_RejectsWorkflowNotInCatalog(t *testing.T) {
 	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
 		now := time.Now().UTC()
 		return &TargetRef{
@@ -281,12 +187,12 @@ func TestCreateNormal_RejectsEngineNotInCatalog(t *testing.T) {
 
 	input := &CreateNormalInput{
 		TargetID:      1,
-		EngineNames:   []string{"future_workflow"},
-		Configuration: "future_workflow:\n  apiVersion: v1\n  schemaVersion: 1.0.0\n",
+		WorkflowNames: []string{"future_workflow"},
+		Configuration: "future_workflow:\n  enabled: true\n",
 	}
 	_, err := service.CreateNormal(input)
 	if err == nil {
-		t.Fatalf("expected engine catalog rejection")
+		t.Fatalf("expected workflow catalog rejection")
 	}
 	workflowErr, ok := AsWorkflowError(err)
 	if !ok || workflowErr.Code != WorkflowErrorCodeSchemaInvalid {
@@ -294,10 +200,8 @@ func TestCreateNormal_RejectsEngineNotInCatalog(t *testing.T) {
 	}
 }
 
-func validSubdomainDiscoveryConfig(apiVersion, schemaVersion string) string {
+func validSubdomainDiscoveryConfig() string {
 	return "subdomain_discovery:\n" +
-		"  apiVersion: " + apiVersion + "\n" +
-		"  schemaVersion: " + schemaVersion + "\n" +
 		"  recon:\n" +
 		"    enabled: false\n" +
 		"    tools:\n" +

@@ -19,7 +19,7 @@ import (
 	"github.com/yyhuni/lunafox/server/internal/loki"
 	"github.com/yyhuni/lunafox/server/internal/pkg"
 	pkgvalidator "github.com/yyhuni/lunafox/server/internal/pkg/validator"
-	"github.com/yyhuni/lunafox/server/internal/preset"
+	workflowprofile "github.com/yyhuni/lunafox/server/internal/workflow/profile"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -30,7 +30,7 @@ type infra struct {
 	lokiClient           *loki.Client
 	heartbeatCache       cache.HeartbeatCache
 	jwtManager           *auth.JWTManager
-	presetLoader         *preset.Loader
+	profileLoader        *workflowprofile.Loader
 	releaseVersion       string
 	agentVersion         string
 	agentImageRef        string
@@ -134,11 +134,11 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 		pkg.Fatal("Loki is unavailable during bootstrap", zap.String("loki_url", cfg.LokiURL), zap.Error(err))
 	}
 
-	presetLoader, err := preset.NewLoader()
+	profileLoader, err := workflowprofile.NewLoader()
 	if err != nil {
 		pkg.Fatal("Failed to load profile workflows", zap.Error(err))
 	}
-	pkg.Info("Workflow profiles loaded", zap.Int("count", len(presetLoader.List())))
+	pkg.Info("Workflow profiles loaded", zap.Int("count", len(profileLoader.List())))
 
 	jwtManager := auth.NewJWTManager(cfg.JWT.Secret, cfg.JWT.AccessExpire, cfg.JWT.RefreshExpire)
 	gin.SetMode(cfg.Server.Mode)
@@ -149,7 +149,7 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 		lokiClient:           lokiClient,
 		heartbeatCache:       heartbeatCache,
 		jwtManager:           jwtManager,
-		presetLoader:         presetLoader,
+		profileLoader:        profileLoader,
 		releaseVersion:       releaseVersion,
 		agentVersion:         agentVersion,
 		agentImageRef:        agentImageRef,

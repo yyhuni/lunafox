@@ -47,7 +47,7 @@ The system MUST provide deterministic preset generation outputs and CI checks th
 - **GIVEN** contract or overlay source changes without regenerated artifacts
 - **WHEN** CI runs generation and diff checks
 - **THEN** CI fails with non-empty diff
-- **AND** required output directories include `server/internal/preset/presets`
+- **AND** required output directories include `server/internal/workflow/profile/presets`
 
 ### Requirement: Pre-launch migration MUST cut over in one release without legacy preset compatibility paths
 For pre-launch phase, the system MUST complete generated-preset migration in one release and MUST NOT keep long-lived legacy preset compatibility readers.

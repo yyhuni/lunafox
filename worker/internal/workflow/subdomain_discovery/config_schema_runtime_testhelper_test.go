@@ -74,7 +74,7 @@ func validateExplicitConfig(config map[string]any) error {
 }
 
 func loadGeneratedSchemaBytesForTest() ([]byte, error) {
-	file := fmt.Sprintf("generated/%s-%s-%s.schema.json", Name, ContractAPIVersion, ContractSchemaVer)
+	file := fmt.Sprintf("generated/%s.schema.json", Name)
 	b, err := os.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("read generated schema %s: %w", file, err)

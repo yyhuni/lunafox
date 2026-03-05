@@ -74,8 +74,6 @@ func countGoroutinesWithStackFragment(fragment string) int {
 
 func validWorkflowConfig() map[string]any {
 	return map[string]any{
-		"apiVersion":    "v1",
-		"schemaVersion": "1.0.0",
 		stageRecon: map[string]any{
 			"enabled": true,
 			"tools": map[string]any{
@@ -182,8 +180,6 @@ func TestInitializeStoresTypedConfigForExecution(t *testing.T) {
 		ServerClient: providerClient{},
 	})
 	require.NoError(t, err)
-	require.Equal(t, ContractAPIVersion, ctx.typedConfig.APIVersion)
-	require.Equal(t, ContractSchemaVer, ctx.typedConfig.SchemaVersion)
 	require.True(t, ctx.typedConfig.Recon.Enabled)
 	require.True(t, ctx.typedConfig.Recon.Tools.Subfinder.Enabled)
 }
@@ -223,7 +219,8 @@ func TestInitializeRejectsInvalidTypedWorkflowConfigValue(t *testing.T) {
 	withNopLogger(t)
 	w := New(t.TempDir())
 	invalidTypedCfg := validTypedWorkflowConfig(t)
-	invalidTypedCfg.APIVersion = ""
+	invalidTypedCfg.Recon.Enabled = true
+	invalidTypedCfg.Recon.Tools.Subfinder.Enabled = false
 
 	_, err := w.initialize(&workflow.Params{
 		WorkflowConfig: invalidTypedCfg,

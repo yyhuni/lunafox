@@ -75,6 +75,8 @@ openspec/changes/*
 !openspec/changes/refactor-runtime-compatibility-worker-capability/**
 !openspec/changes/refactor-workflow-preset-generated-profiles/
 !openspec/changes/refactor-workflow-preset-generated-profiles/**
+!openspec/changes/refactor-workflow-internal-structure/
+!openspec/changes/refactor-workflow-internal-structure/**
 AGENTS.md
 WARP.md
 .opencode/

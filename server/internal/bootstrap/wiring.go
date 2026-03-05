@@ -297,7 +297,7 @@ func wireCatalogModule(repos *repositoryBundle, cfg *config.Config, infra *infra
 	catalogWordlistCommandStore := catalogwiring.NewCatalogWordlistCommandStoreAdapter(repos.wordlistRepo)
 	catalogOrganizationTargetBindingStore := catalogwiring.NewCatalogOrganizationTargetBindingStoreAdapter(repos.orgRepo)
 	catalogWorkflowQueryStore := catalogwiring.NewCatalogWorkflowQueryStoreAdapter()
-	catalogWorkflowProfileQueryStore := catalogwiring.NewCatalogWorkflowProfileQueryStoreAdapter(infra.presetLoader)
+	catalogWorkflowProfileQueryStore := catalogwiring.NewCatalogWorkflowProfileQueryStoreAdapter(infra.profileLoader)
 
 	targetSvc := catalogservice.NewTargetFacade(catalogTargetQueryStore, catalogTargetCommandStore, catalogOrganizationTargetBindingStore)
 	wordlistSvc := catalogservice.NewWordlistFacade(catalogWordlistQueryStore, catalogWordlistCommandStore, cfg.Storage.WordlistsBasePath)
@@ -361,7 +361,6 @@ func wireScanModule(repos *repositoryBundle, infra *infra, notifier agentservice
 	scanDomainRepository := scanwiring.NewScanDomainRepositoryAdapter(repos.scanRepo)
 	scanTaskStore := scanwiring.NewScanTaskStoreAdapter(repos.scanTaskRepo)
 	scanTaskRuntimeStore := scanwiring.NewScanTaskRuntimeStoreAdapter(repos.scanRepo)
-	scanTaskRuntimeAgentStore := scanwiring.NewScanTaskRuntimeAgentStoreAdapter(repos.agentRepo)
 	scanLogQueryStore := scanlogwiring.NewScanLogQueryStoreAdapter(repos.scanLogRepo)
 	scanLogCommandStore := scanlogwiring.NewScanLogCommandStoreAdapter(repos.scanLogRepo)
 	scanTaskCanceller := scanwiring.NewScanTaskCancellerAdapter(repos.scanTaskRepo)
@@ -376,7 +375,7 @@ func wireScanModule(repos *repositoryBundle, infra *infra, notifier agentservice
 		notifier,
 		scanTargetLookup,
 	)
-	scanTaskSvc := scanwiring.NewScanTaskApplicationService(scanTaskStore, scanTaskRuntimeStore, scanTaskRuntimeAgentStore)
+	scanTaskSvc := scanwiring.NewScanTaskApplicationService(scanTaskStore, scanTaskRuntimeStore)
 	scanLogSvc := scanlogwiring.NewScanLogApplicationService(scanLogQueryStore, scanLogCommandStore, scanLogLookup)
 
 	return scanModuleWiring{

@@ -21,10 +21,10 @@ func NewProfileResponse(p *catalogdomain.WorkflowProfile) ProfileResponse {
 	}
 }
 
-func NewProfileListResponse(presets []catalogdomain.WorkflowProfile) []ProfileResponse {
-	responses := make([]ProfileResponse, len(presets))
-	for i := range presets {
-		responses[i] = NewProfileResponse(&presets[i])
+func NewProfileListResponse(profiles []catalogdomain.WorkflowProfile) []ProfileResponse {
+	responses := make([]ProfileResponse, len(profiles))
+	for i := range profiles {
+		responses[i] = NewProfileResponse(&profiles[i])
 	}
 	return responses
 }

@@ -17,7 +17,6 @@ func TestMapWorkflowErrorCode(t *testing.T) {
 		{name: "schema invalid", code: scanapp.WorkflowErrorCodeSchemaInvalid, want: codes.InvalidArgument},
 		{name: "workflow config invalid", code: scanapp.WorkflowErrorCodeWorkflowConfigInvalid, want: codes.FailedPrecondition},
 		{name: "workflow prereq missing", code: scanapp.WorkflowErrorCodeWorkflowPrereqMissing, want: codes.FailedPrecondition},
-		{name: "worker incompatible", code: scanapp.WorkflowErrorCodeWorkerVersionIncompatible, want: codes.FailedPrecondition},
 		{name: "unknown", code: "unknown", want: codes.Internal},
 	}
 
@@ -32,10 +31,10 @@ func TestMapWorkflowErrorCode(t *testing.T) {
 
 func TestMapTaskRuntimeErrorWithWorkflowError(t *testing.T) {
 	err := scanapp.NewWorkflowError(
-		scanapp.WorkflowErrorCodeWorkerVersionIncompatible,
-		scanapp.WorkflowErrorStageSchedulerCompatibility,
+		scanapp.WorkflowErrorCodeWorkflowConfigInvalid,
+		scanapp.WorkflowErrorStageServerSchemaGate,
 		"",
-		"incompatible",
+		"invalid config",
 		nil,
 	)
 	mapped := mapTaskRuntimeError(err)

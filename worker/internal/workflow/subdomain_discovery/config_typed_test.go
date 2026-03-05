@@ -11,8 +11,6 @@ func TestDecodeWorkflowConfigSuccess(t *testing.T) {
 
 	cfg, err := decodeWorkflowConfig(raw)
 	require.NoError(t, err)
-	require.Equal(t, ContractAPIVersion, cfg.APIVersion)
-	require.Equal(t, ContractSchemaVer, cfg.SchemaVersion)
 	require.True(t, cfg.Recon.Enabled)
 	require.True(t, cfg.Recon.Tools.Subfinder.Enabled)
 }
@@ -132,8 +130,6 @@ func TestDecodeAndValidateAuthoritativeConfig_NumericBoundsDeferredToRuntime(t *
 
 func validAuthoritativeConfigMap() map[string]any {
 	return map[string]any{
-		"apiVersion":    ContractAPIVersion,
-		"schemaVersion": ContractSchemaVer,
 		stageRecon: map[string]any{
 			"enabled": true,
 			"tools": map[string]any{

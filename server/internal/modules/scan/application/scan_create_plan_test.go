@@ -5,12 +5,10 @@ import "testing"
 func TestBuildScanTasks_IgnoresRootExtraWorkflowKeys(t *testing.T) {
 	root := map[string]any{
 		"subdomain_discovery": map[string]any{
-			"apiVersion":    "v1",
-			"schemaVersion": "1.0.0",
+			"enabled": true,
 		},
 		"url_fetch": map[string]any{
-			"apiVersion":    "v9",
-			"schemaVersion": "9.9.9",
+			"enabled": true,
 		},
 	}
 
@@ -24,15 +22,12 @@ func TestBuildScanTasks_IgnoresRootExtraWorkflowKeys(t *testing.T) {
 	if tasks[0].WorkflowName != "subdomain_discovery" {
 		t.Fatalf("unexpected workflow planned: %s", tasks[0].WorkflowName)
 	}
-	if tasks[0].WorkflowAPIVersion != "v1" || tasks[0].WorkflowSchemaVersion != "1.0.0" {
-		t.Fatalf("expected precomputed workflow tuple, got api=%s schema=%s", tasks[0].WorkflowAPIVersion, tasks[0].WorkflowSchemaVersion)
-	}
 	if tasks[0].Config == "" {
 		t.Fatalf("expected task-level workflow config slice to be persisted")
 	}
 }
 
-func TestBuildScanTasks_RejectsNonObjectEngineConfig(t *testing.T) {
+func TestBuildScanTasks_RejectsNonObjectWorkflowConfig(t *testing.T) {
 	root := map[string]any{
 		"subdomain_discovery": "invalid",
 	}
@@ -53,9 +48,7 @@ func TestBuildScanTasks_RejectsNonObjectEngineConfig(t *testing.T) {
 func TestBuildScanTasks_DoesNotDependOnDomainWorkflowSwitch(t *testing.T) {
 	root := map[string]any{
 		"future_workflow": map[string]any{
-			"apiVersion":    "v1",
-			"schemaVersion": "1.0.0",
-			"enabled":       true,
+			"enabled": true,
 		},
 	}
 

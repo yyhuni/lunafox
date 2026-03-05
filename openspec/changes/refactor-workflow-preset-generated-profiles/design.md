@@ -32,7 +32,7 @@
 - overlay 合并后必须通过 schema 校验。
 
 4. 一次性切换策略（pre-launch）
-- `server/internal/preset/loader.go` 继续从 `presets/*.yaml` 读取。
+- `server/internal/workflow/profile/loader.go` 继续从 `presets/*.yaml` 读取。
 - 不保留旧 preset 命名/旧手工文件兼容读取。
 - 前后端 preset ID 与展示语义按新生成规则同步更新（允许 breaking）。
 - 生成链在构建期运行，运行时只消费静态产物。
@@ -40,17 +40,17 @@
 5. CI 与治理
 - 将 preset 生成纳入 `make generate`（或同等全局入口）。
 - CI 必须执行“重新生成后无 diff”检查，覆盖：
-  - `server/internal/workflowschema`
+  - `server/internal/workflow/schema`
   - `docs/config-reference`
-  - `server/internal/preset/presets`
+  - `server/internal/workflow/profile/presets`
 
 ## Architecture Sketch
 ```text
 contract_definition (code-first)
   -> workflow-contract-gen
-      -> schema (server/internal/workflowschema)
+      -> schema (server/internal/workflow/schema)
       -> docs (docs/config-reference)
-      -> default preset (server/internal/preset/presets/<workflow>.default.yaml)
+      -> default preset (server/internal/workflow/profile/presets/<workflow>.default.yaml)
       -> profile presets (optional, e.g. <workflow>.fast.yaml, <workflow>.deep.yaml)
   -> schema validation gate
   -> preset.Loader embed/load

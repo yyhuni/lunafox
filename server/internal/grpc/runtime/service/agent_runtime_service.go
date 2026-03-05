@@ -186,8 +186,7 @@ func mapWorkflowErrorCode(code string) codes.Code {
 	case scanapp.WorkflowErrorCodeSchemaInvalid:
 		return codes.InvalidArgument
 	case scanapp.WorkflowErrorCodeWorkflowConfigInvalid,
-		scanapp.WorkflowErrorCodeWorkflowPrereqMissing,
-		scanapp.WorkflowErrorCodeWorkerVersionIncompatible:
+		scanapp.WorkflowErrorCodeWorkflowPrereqMissing:
 		return codes.FailedPrecondition
 	default:
 		return codes.Internal

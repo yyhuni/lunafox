@@ -28,9 +28,9 @@ func (h *WordlistHandler) List(c *gin.Context) {
 	dto.Success(c, resp)
 }
 
-// Get returns a wordlist by ID.
+// GetByID returns a wordlist by ID.
 // GET /api/wordlists/:id
-func (h *WordlistHandler) Get(c *gin.Context) {
+func (h *WordlistHandler) GetByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		dto.BadRequest(c, "Invalid wordlist ID")

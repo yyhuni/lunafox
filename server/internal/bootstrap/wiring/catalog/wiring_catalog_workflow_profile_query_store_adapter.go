@@ -5,14 +5,14 @@ import (
 	"fmt"
 
 	catalogapp "github.com/yyhuni/lunafox/server/internal/modules/catalog/application"
-	"github.com/yyhuni/lunafox/server/internal/preset"
+	workflowprofile "github.com/yyhuni/lunafox/server/internal/workflow/profile"
 )
 
 type catalogWorkflowProfileQueryStoreAdapter struct {
-	loader *preset.Loader
+	loader *workflowprofile.Loader
 }
 
-func newCatalogWorkflowProfileQueryStoreAdapter(loader *preset.Loader) *catalogWorkflowProfileQueryStoreAdapter {
+func newCatalogWorkflowProfileQueryStoreAdapter(loader *workflowprofile.Loader) *catalogWorkflowProfileQueryStoreAdapter {
 	return &catalogWorkflowProfileQueryStoreAdapter{loader: loader}
 }
 
@@ -20,12 +20,12 @@ func (adapter *catalogWorkflowProfileQueryStoreAdapter) ListWorkflowProfiles(_ c
 	if adapter.loader == nil {
 		return nil, fmt.Errorf("workflow profile loader is not configured")
 	}
-	presets := adapter.loader.List()
-	result := make([]catalogapp.WorkflowProfile, 0, len(presets))
-	for _, item := range presets {
-		workflowNames, err := preset.ExtractWorkflowNames(item.Configuration)
+	profiles := adapter.loader.List()
+	result := make([]catalogapp.WorkflowProfile, 0, len(profiles))
+	for _, item := range profiles {
+		workflowNames, err := workflowprofile.ExtractWorkflowNames(item.Configuration)
 		if err != nil {
-			return nil, fmt.Errorf("extract workflow names from preset %q: %w", item.ID, err)
+			return nil, fmt.Errorf("extract workflow names from profile %q: %w", item.ID, err)
 		}
 		result = append(result, catalogapp.WorkflowProfile{
 			ID:            item.ID,
@@ -46,9 +46,9 @@ func (adapter *catalogWorkflowProfileQueryStoreAdapter) GetWorkflowProfileByID(_
 	if item == nil {
 		return nil, catalogapp.ErrWorkflowProfileNotFound
 	}
-	workflowNames, err := preset.ExtractWorkflowNames(item.Configuration)
+	workflowNames, err := workflowprofile.ExtractWorkflowNames(item.Configuration)
 	if err != nil {
-		return nil, fmt.Errorf("extract workflow names from preset %q: %w", item.ID, err)
+		return nil, fmt.Errorf("extract workflow names from profile %q: %w", item.ID, err)
 	}
 	return &catalogapp.WorkflowProfile{
 		ID:            item.ID,

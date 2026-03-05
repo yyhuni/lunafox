@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TestRegisterCatalogRoutes_UsesPresetRoutesAndDisablesLegacyCatalogManagementRoutes(t *testing.T) {
+func TestRegisterCatalogRoutes_UsesWorkflowProfileRoutesAndDisablesLegacyCatalogManagementRoutes(t *testing.T) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 

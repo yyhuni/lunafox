@@ -7,5 +7,5 @@ import (
 
 func registerWorkflowRoutes(protected *gin.RouterGroup, workflowHandler *handler.WorkflowHandler) {
 	protected.GET("/workflows", workflowHandler.List)
-	protected.GET("/workflows/:name", workflowHandler.GetByName)
+	protected.GET("/workflows/:name", workflowHandler.GetByWorkflowName)
 }

@@ -306,40 +306,6 @@ func TestConnectMapsInternalErrors(t *testing.T) {
 		}
 	})
 
-	t.Run("pull task workflow compatibility failure", func(t *testing.T) {
-		svc := NewAgentRuntimeServiceWithDeps(
-			&agentFinderStub{agent: &agentdomain.Agent{ID: 33}},
-			&runtimeLifecycleStub{},
-			&taskRuntimeStub{
-				pullErr: scanapp.NewWorkflowError(
-					scanapp.WorkflowErrorCodeWorkerVersionIncompatible,
-					scanapp.WorkflowErrorStageSchedulerCompatibility,
-					"",
-					"worker does not support this workflow",
-					nil,
-				),
-			},
-		)
-		ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcauth.AgentKeyHeader, "apikey-33"))
-		stream := &fakeConnectStream{
-			ctx: ctx,
-			incoming: []*runtimev1.AgentRuntimeRequest{
-				{Payload: &runtimev1.AgentRuntimeRequest_RequestTask{RequestTask: &runtimev1.RequestTask{}}},
-			},
-		}
-		err := svc.Connect(stream)
-		if err != nil {
-			t.Fatalf("expected stream keepalive for workflow error, got=%v", err)
-		}
-		if len(stream.sent) != 2 {
-			t.Fatalf("expected config_update + empty task_assign, got=%d", len(stream.sent))
-		}
-		assign := stream.sent[1].GetTaskAssign()
-		if assign == nil || assign.GetFound() {
-			t.Fatalf("expected empty task assign event, got=%+v", stream.sent[1])
-		}
-	})
-
 	t.Run("pull task schema invalid failure", func(t *testing.T) {
 		svc := NewAgentRuntimeServiceWithDeps(
 			&agentFinderStub{agent: &agentdomain.Agent{ID: 34}},

@@ -4,7 +4,7 @@ import (
 	catalogapp "github.com/yyhuni/lunafox/server/internal/modules/catalog/application"
 	catalogrepo "github.com/yyhuni/lunafox/server/internal/modules/catalog/repository"
 	identityrepo "github.com/yyhuni/lunafox/server/internal/modules/identity/repository"
-	"github.com/yyhuni/lunafox/server/internal/preset"
+	workflowprofile "github.com/yyhuni/lunafox/server/internal/workflow/profile"
 )
 
 func NewCatalogTargetQueryStoreAdapter(repo *catalogrepo.TargetRepository) catalogapp.TargetQueryStore {
@@ -31,6 +31,6 @@ func NewCatalogWorkflowQueryStoreAdapter() catalogapp.WorkflowQueryStore {
 	return newCatalogWorkflowQueryStoreAdapter()
 }
 
-func NewCatalogWorkflowProfileQueryStoreAdapter(loader *preset.Loader) catalogapp.WorkflowProfileQueryStore {
+func NewCatalogWorkflowProfileQueryStoreAdapter(loader *workflowprofile.Loader) catalogapp.WorkflowProfileQueryStore {
 	return newCatalogWorkflowProfileQueryStoreAdapter(loader)
 }
