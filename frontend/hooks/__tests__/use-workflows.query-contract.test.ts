@@ -31,6 +31,11 @@ describe("use-workflows query contract", () => {
         title: "Subdomain Discovery",
         description: "Discover subdomains",
         version: "1.0.0",
+        configuration: {
+          subdomain_discovery: {
+            recon: { enabled: true },
+          },
+        },
       },
     ])
 
@@ -46,16 +51,25 @@ describe("use-workflows query contract", () => {
       title: "Subdomain Discovery",
       description: "Discover subdomains",
       version: "1.0.0",
+      configuration: {
+        subdomain_discovery: {
+          recon: { enabled: true },
+        },
+      },
     })
   })
 
-  it("preset 查询返回 profile 契约（包含 workflowNames）", async () => {
+  it("preset 查询返回 profile 契约（包含 workflowIds 和对象配置）", async () => {
     workflowServiceMocks.getWorkflowProfiles.mockResolvedValue([
       {
         id: "subdomain_discovery.fast",
         name: "Fast Profile",
-        workflowNames: ["subdomain_discovery"],
-        configuration: "subdomain_discovery:\n  recon:\n    enabled: false",
+        workflowIds: ["subdomain_discovery"],
+        configuration: {
+          subdomain_discovery: {
+            recon: { enabled: false },
+          },
+        },
       },
     ])
 
@@ -67,7 +81,12 @@ describe("use-workflows query contract", () => {
 
     expect(result.current.data?.[0]).toMatchObject({
       id: "subdomain_discovery.fast",
-      workflowNames: ["subdomain_discovery"],
+      workflowIds: ["subdomain_discovery"],
+      configuration: {
+        subdomain_discovery: {
+          recon: { enabled: false },
+        },
+      },
     })
   })
 
@@ -75,8 +94,12 @@ describe("use-workflows query contract", () => {
     workflowServiceMocks.getWorkflowProfile.mockResolvedValue({
       id: "subdomain_discovery.default",
       name: "Default Profile",
-      workflowNames: ["subdomain_discovery"],
-      configuration: "subdomain_discovery:\n  recon:\n    enabled: false",
+      workflowIds: ["subdomain_discovery"],
+      configuration: {
+        subdomain_discovery: {
+          recon: { enabled: false },
+        },
+      },
     })
 
     const { result } = renderHookWithProviders(() => useWorkflowProfile("subdomain_discovery.default"))
@@ -86,6 +109,6 @@ describe("use-workflows query contract", () => {
     })
 
     expect(workflowServiceMocks.getWorkflowProfile).toHaveBeenCalledWith("subdomain_discovery.default")
-    expect(result.current.data?.workflowNames).toEqual(["subdomain_discovery"])
+    expect(result.current.data?.workflowIds).toEqual(["subdomain_discovery"])
   })
 })

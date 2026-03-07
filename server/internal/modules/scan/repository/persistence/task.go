@@ -9,17 +9,17 @@ import (
 // ScanTask represents a task in the queue supporting priority scheduling.
 type ScanTask struct {
 	ID         int    `gorm:"primaryKey;autoIncrement" json:"id"`
-	ScanID     int    `gorm:"not null;index:idx_scan_task_scan_id" json:"scan_id"`
+	ScanID     int    `gorm:"not null;index:idx_scan_task_scan_id" json:"scanId"`
 	Stage      int    `gorm:"not null;default:0;index:idx_scan_task_pending_order,priority:2" json:"stage"`
-	WorkflowID string `gorm:"column:workflow_id;type:varchar(100);not null" json:"workflow_id"`
+	WorkflowID string `gorm:"column:workflow_id;type:varchar(100);not null" json:"workflowId"`
 	Status     string `gorm:"type:varchar(20);default:'pending';index:idx_scan_task_pending_order,priority:1" json:"status"`
-	AgentID    *int   `gorm:"index:idx_scan_task_agent_id" json:"agent_id,omitempty"`
+	AgentID    *int   `gorm:"index:idx_scan_task_agent_id" json:"agentId,omitempty"`
 	// WorkflowConfigYAML stores workflow-level YAML slice (not whole scan YAML).
-	WorkflowConfigYAML string     `gorm:"column:workflow_config_yaml;type:text" json:"workflow_config_yaml"`
-	ErrorMessage       string     `gorm:"type:varchar(4096)" json:"error_message,omitempty"`
-	CreatedAt          time.Time  `gorm:"type:timestamptz;default:now();index:idx_scan_task_pending_order,priority:3" json:"created_at"`
-	StartedAt          *time.Time `gorm:"type:timestamptz" json:"started_at,omitempty"`
-	CompletedAt        *time.Time `gorm:"type:timestamptz" json:"completed_at,omitempty"`
+	WorkflowConfigYAML string     `gorm:"column:workflow_config_yaml;type:text" json:"workflowConfigYAML"`
+	ErrorMessage       string     `gorm:"type:varchar(4096)" json:"errorMessage,omitempty"`
+	CreatedAt          time.Time  `gorm:"type:timestamptz;default:now();index:idx_scan_task_pending_order,priority:3" json:"createdAt"`
+	StartedAt          *time.Time `gorm:"type:timestamptz" json:"startedAt,omitempty"`
+	CompletedAt        *time.Time `gorm:"type:timestamptz" json:"completedAt,omitempty"`
 }
 
 func (ScanTask) TableName() string {

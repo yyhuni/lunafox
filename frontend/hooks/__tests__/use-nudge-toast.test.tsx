@@ -61,7 +61,7 @@ describe("useNudgeToast", () => {
 
     expect(React.isValidElement(node)).toBe(true)
     expect(options).toMatchObject({
-      duration: Infinity,
+      duration: 8000,
       position: "bottom-right",
     })
   })

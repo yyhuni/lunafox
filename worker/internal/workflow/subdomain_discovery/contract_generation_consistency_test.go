@@ -8,64 +8,85 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 type generatedSchemaIdentity struct {
 	ID         string                 `json:"$id"`
-	Workflow   string                 `json:"x-workflow"`
 	Properties map[string]interface{} `json:"properties"`
 }
 
-func TestContractDefinitionMatchesGeneratedSchemaAndDocs(t *testing.T) {
-	definition := GetContractDefinition()
-	expectedID := fmt.Sprintf("lunafox://schemas/workflows/%s", definition.WorkflowName)
+type generatedManifestIdentity struct {
+	WorkflowID       string `json:"workflowId"`
+	ConfigSchemaID   string `json:"configSchemaId"`
+	DefaultProfileID string `json:"defaultProfileId"`
+}
 
-	workerSchema := loadGeneratedSchema(
-		t,
-		fmt.Sprintf("generated/%s.schema.json", definition.WorkflowName),
-	)
-	require.Equal(t, expectedID, workerSchema.ID)
-	require.Equal(t, definition.WorkflowName, workerSchema.Workflow)
+type generatedProfileIdentity struct {
+	ID string `yaml:"id"`
+}
+
+func TestContractDefinitionMatchesGeneratedArtifactsAndDocs(t *testing.T) {
+	definition := GetContractDefinition()
+	expectedSchemaID := fmt.Sprintf("lunafox://schemas/workflows/%s", definition.WorkflowID)
+
+	workerSchema := loadGeneratedSchema(t, fmt.Sprintf("generated/%s.schema.json", definition.WorkflowID))
+	require.Equal(t, expectedSchemaID, workerSchema.ID)
 	_, hasAPIVersion := workerSchema.Properties["apiVersion"]
 	_, hasSchemaVersion := workerSchema.Properties["schemaVersion"]
 	require.False(t, hasAPIVersion)
 	require.False(t, hasSchemaVersion)
 
-	root := repoRootFromWorkflowDir(t)
-	serverSchemaPath := filepath.Join(
-		root,
-		"server",
-		"internal",
-		"workflow",
-		"schema",
-		fmt.Sprintf("%s.schema.json", definition.WorkflowName),
-	)
-	serverSchema := loadGeneratedSchema(t, serverSchemaPath)
-	require.Equal(t, expectedID, serverSchema.ID)
-	require.Equal(t, definition.WorkflowName, serverSchema.Workflow)
-	_, hasServerAPIVersion := serverSchema.Properties["apiVersion"]
-	_, hasServerSchemaVersion := serverSchema.Properties["schemaVersion"]
-	require.False(t, hasServerAPIVersion)
-	require.False(t, hasServerSchemaVersion)
+	workerManifest := loadGeneratedManifest(t, fmt.Sprintf("generated/%s.manifest.json", definition.WorkflowID))
+	require.Equal(t, definition.WorkflowID, workerManifest.WorkflowID)
+	require.Equal(t, expectedSchemaID, workerManifest.ConfigSchemaID)
+	require.Equal(t, definition.DefaultProfile.ID, workerManifest.DefaultProfileID)
 
-	docsPath := filepath.Join(root, "docs", "config-reference", definition.WorkflowName+".md")
+	root := repoRootFromWorkflowDir(t)
+	serverSchema := loadGeneratedSchema(t, filepath.Join(root, "server", "internal", "workflow", "schema", fmt.Sprintf("%s.schema.json", definition.WorkflowID)))
+	require.Equal(t, expectedSchemaID, serverSchema.ID)
+
+	serverManifest := loadGeneratedManifest(t, filepath.Join(root, "server", "internal", "workflow", "manifest", fmt.Sprintf("%s.manifest.json", definition.WorkflowID)))
+	require.Equal(t, workerManifest, serverManifest)
+
+	profile := loadGeneratedProfile(t, filepath.Join(root, "server", "internal", "workflow", "profile", "profiles", fmt.Sprintf("%s.yaml", definition.WorkflowID)))
+	require.Equal(t, definition.DefaultProfile.ID, profile.ID)
+
+	docsPath := filepath.Join(root, "docs", "config-reference", definition.WorkflowID+".md")
 	docsBytes, err := os.ReadFile(docsPath)
 	require.NoError(t, err)
 	docs := string(docsBytes)
 	require.Contains(t, docs, fmt.Sprintf("<!-- Source: %s -->", ContractSourcePath))
-	require.Contains(t, docs, fmt.Sprintf("- Workflow: `%s`", definition.WorkflowName))
+	require.Contains(t, docs, fmt.Sprintf("- Workflow: `%s`", definition.WorkflowID))
 	require.NotContains(t, docs, "API Version")
 	require.NotContains(t, docs, "Schema Version")
 }
 
 func loadGeneratedSchema(t *testing.T, path string) generatedSchemaIdentity {
 	t.Helper()
-	data, err := os.ReadFile(path)
+	payload, err := os.ReadFile(path)
 	require.NoErrorf(t, err, "schema file not found: %s", path)
-
 	var schema generatedSchemaIdentity
-	require.NoError(t, json.Unmarshal(data, &schema))
+	require.NoError(t, json.Unmarshal(payload, &schema))
 	return schema
+}
+
+func loadGeneratedManifest(t *testing.T, path string) generatedManifestIdentity {
+	t.Helper()
+	payload, err := os.ReadFile(path)
+	require.NoErrorf(t, err, "manifest file not found: %s", path)
+	var manifest generatedManifestIdentity
+	require.NoError(t, json.Unmarshal(payload, &manifest))
+	return manifest
+}
+
+func loadGeneratedProfile(t *testing.T, path string) generatedProfileIdentity {
+	t.Helper()
+	payload, err := os.ReadFile(path)
+	require.NoErrorf(t, err, "profile file not found: %s", path)
+	var profile generatedProfileIdentity
+	require.NoError(t, yaml.Unmarshal(payload, &profile))
+	return profile
 }
 
 func repoRootFromWorkflowDir(t *testing.T) string {

@@ -1,39 +1,34 @@
-# workflow/schema
+# Workflow Schema
 
-该目录负责读取内嵌的 `*.schema.json`，并提供：
+`server/internal/workflow/schema` 现在只承担两件事：
 
-- workflow 配置校验能力（`ValidateConfigMap` / `ValidateYAML`）
-- workflow 元数据枚举能力（`ListWorkflows` / `ListWorkflowMetadata`）
+- 嵌入并编译 `*.schema.json`
+- 提供 workflow 配置的 JSON Schema 校验能力
 
-## 元数据约束
+它**不再**承担 workflow 目录元数据职责：
 
-每个 schema 文件必须声明：
+- 不再从 schema 解析 `workflowId / displayName / stages`
+- 不再暴露 `ListWorkflowMetadata`
+- 不再把 schema 当成 catalog 的事实源
 
-- `x-workflow`：workflow 唯一标识（程序标识）
-- `x-metadata.name`：workflow 展示名（人类可读）
+## 当前职责
 
-可选字段：
+- `ValidateConfigMap(workflowId, config)`：校验单个 workflow 的配置对象
+- `ValidateYAML(workflowId, yamlBytes)`：校验 YAML；如果存在顶层 `workflowId:` 包装则自动下钻
+- `ListWorkflows()`：通过嵌入的 `*.schema.json` 文件名推导可用 workflowId
 
-- `description`：workflow 描述
+## 工件分层
 
-### DisplayName 规则
+- `schema`：纯 JSON Schema 校验
+- `manifest`：workflow 元数据、阶段/工具声明、默认 profile 引用、默认值语义
+- `profile`：独立 YAML 模板工件
 
-- `DisplayName` 仅来自 `x-metadata.name`
-- 不再回退 `title`
-- 不再回退 `x-workflow`
-- 如果缺少 `x-metadata.name`，`ListWorkflowMetadata` 会返回错误
+## 命名约定
 
-这保证 catalog 接口中的 `displayName` 有单一来源，避免同一 workflow 在不同入口出现命名不一致。
+- schema 文件名：`<workflowId>.schema.json`
+- schema `$id`：`lunafox://schemas/workflows/<workflowId>`
 
-## 示例
+例如：
 
-```json
-{
-  "x-workflow": "subdomain_discovery",
-  "description": "Discover subdomains",
-  "x-metadata": {
-    "name": "Subdomain Discovery"
-  }
-}
-```
-
+- 文件：`subdomain_discovery.schema.json`
+- `$id`：`lunafox://schemas/workflows/subdomain_discovery`

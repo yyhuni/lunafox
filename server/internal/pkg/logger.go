@@ -8,10 +8,15 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const (
+	// LogFieldRequestID is the semantic request correlation field name.
+	LogFieldRequestID = "request.id"
+)
+
 var (
-	// Logger is the global logger instance
+	// Logger is the global logger instance.
 	Logger *zap.Logger
-	// Sugar is the sugared logger for convenience
+	// Sugar is the sugared logger for convenience.
 	Sugar *zap.SugaredLogger
 )
 
@@ -23,13 +28,13 @@ func ensureLogger() {
 	Sugar = Logger.Sugar()
 }
 
-// LogConfig holds logging configuration
+// LogConfig holds logging configuration.
 type LogConfig struct {
 	Level  string
 	Format string
 }
 
-// InitLogger initializes the global logger
+// InitLogger initializes the global logger.
 func InitLogger(cfg *LogConfig) error {
 	level := parseLogLevel(cfg.Level)
 
@@ -57,7 +62,7 @@ func InitLogger(cfg *LogConfig) error {
 	return nil
 }
 
-// parseLogLevel converts string level to zapcore.Level
+// parseLogLevel converts string level to zapcore.Level.
 func parseLogLevel(level string) zapcore.Level {
 	switch strings.ToLower(level) {
 	case "debug":
@@ -75,67 +80,72 @@ func parseLogLevel(level string) zapcore.Level {
 	}
 }
 
-// Sync flushes any buffered log entries
+// Sync flushes any buffered log entries.
 func Sync() {
 	if Logger != nil {
 		_ = Logger.Sync()
 	}
 }
 
-// Debug logs a debug message
+// Debug logs a debug message.
 func Debug(msg string, fields ...zap.Field) {
 	ensureLogger()
 	Logger.Debug(msg, fields...)
 }
 
-// Info logs an info message
+// Info logs an info message.
 func Info(msg string, fields ...zap.Field) {
 	ensureLogger()
 	Logger.Info(msg, fields...)
 }
 
-// Warn logs a warning message
+// Warn logs a warning message.
 func Warn(msg string, fields ...zap.Field) {
 	ensureLogger()
 	Logger.Warn(msg, fields...)
 }
 
-// Error logs an error message
+// Error logs an error message.
 func Error(msg string, fields ...zap.Field) {
 	ensureLogger()
 	Logger.Error(msg, fields...)
 }
 
-// Fatal logs a fatal message and exits
+// Fatal logs a fatal message and exits.
 func Fatal(msg string, fields ...zap.Field) {
 	ensureLogger()
 	Logger.Fatal(msg, fields...)
 }
 
-// With creates a child logger with additional fields
+// With creates a child logger with additional fields.
 func With(fields ...zap.Field) *zap.Logger {
 	ensureLogger()
 	return Logger.With(fields...)
 }
 
-// WithRequestID creates a logger with request ID field
-func WithRequestID(requestID string) *zap.Logger {
-	ensureLogger()
-	return Logger.With(zap.String("requestId", requestID))
+// RequestIDField returns the semantic request ID field.
+func RequestIDField(requestID string) zap.Field {
+	return zap.String(LogFieldRequestID, requestID)
 }
 
-// NewNopLogger returns a no-op logger for testing
+// WithRequestID creates a logger with request ID field.
+func WithRequestID(requestID string) *zap.Logger {
+	ensureLogger()
+	return Logger.With(RequestIDField(requestID))
+}
+
+// NewNopLogger returns a no-op logger for testing.
 func NewNopLogger() *zap.Logger {
 	return zap.NewNop()
 }
 
-// InitTestLogger initializes a test logger that writes to stdout
+// InitTestLogger initializes a test logger that writes to stdout.
 func InitTestLogger() {
 	Logger = zap.NewExample()
 	Sugar = Logger.Sugar()
 }
 
-// InitDefaultLogger initializes logger with default settings
+// InitDefaultLogger initializes logger with default settings.
 func InitDefaultLogger() error {
 	return InitLogger(&LogConfig{
 		Level:  os.Getenv("LOG_LEVEL"),

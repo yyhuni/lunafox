@@ -200,6 +200,39 @@ func TestCreateNormal_RejectsWorkflowNotInCatalog(t *testing.T) {
 	}
 }
 
+func TestCreateNormal_PersistsCanonicalWorkflowYAMLWithDefaults(t *testing.T) {
+	store := &scanCreateStoreCaptureStub{}
+	service := NewScanCreateService(store, func(int) (*TargetRef, error) {
+		now := time.Now().UTC()
+		return &TargetRef{ID: 1, Name: "example.com", Type: "domain", CreatedAt: now}, nil
+	})
+
+	input := &CreateNormalInput{
+		TargetID:      1,
+		WorkflowIDs:   []string{"subdomain_discovery"},
+		Configuration: shortSubdomainDiscoveryConfig(),
+	}
+	scan, err := service.CreateNormal(input)
+	if err != nil {
+		t.Fatalf("CreateNormal returned error: %v", err)
+	}
+	if scan == nil || store.lastScan == nil {
+		t.Fatalf("expected scan persisted")
+	}
+	if !strings.Contains(store.lastScan.YAMLConfiguration, "threads-cli: 10") {
+		t.Fatalf("expected canonical scan YAML to include recon default threads-cli, got: %s", store.lastScan.YAMLConfiguration)
+	}
+	if !strings.Contains(store.lastScan.YAMLConfiguration, "timeout-runtime: 3600") {
+		t.Fatalf("expected canonical scan YAML to include recon default timeout-runtime, got: %s", store.lastScan.YAMLConfiguration)
+	}
+	if len(store.lastTasks) != 1 {
+		t.Fatalf("expected one task, got %d", len(store.lastTasks))
+	}
+	if !strings.Contains(store.lastTasks[0].WorkflowConfigYAML, "threads-cli: 10") {
+		t.Fatalf("expected task workflow slice to include recon default threads-cli, got: %s", store.lastTasks[0].WorkflowConfigYAML)
+	}
+}
+
 func validSubdomainDiscoveryConfig() string {
 	return "subdomain_discovery:\n" +
 		"  recon:\n" +
@@ -222,4 +255,28 @@ func validSubdomainDiscoveryConfig() string {
 		"    tools:\n" +
 		"      subdomain-resolve:\n" +
 		"        enabled: false\n"
+}
+
+func shortSubdomainDiscoveryConfig() string {
+	return `subdomain_discovery:
+  recon:
+    enabled: true
+    tools:
+      subfinder:
+        enabled: true
+  bruteforce:
+    enabled: false
+    tools:
+      subdomain-bruteforce:
+        enabled: false
+  permutation:
+    enabled: false
+    tools:
+      subdomain-permutation-resolve:
+        enabled: false
+  resolve:
+    enabled: false
+    tools:
+      subdomain-resolve:
+        enabled: false`
 }

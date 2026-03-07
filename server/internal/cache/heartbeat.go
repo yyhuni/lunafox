@@ -21,7 +21,7 @@ type HeartbeatData struct {
 	Hostname      string        `json:"hostname"`
 	Uptime        int64         `json:"uptime"`
 	Health        *HealthStatus `json:"health,omitempty"`
-	UpdatedAt     time.Time     `json:"updated_at"`
+	UpdatedAt     time.Time     `json:"updatedAt"`
 }
 
 // HealthStatus represents agent health in the heartbeat cache.

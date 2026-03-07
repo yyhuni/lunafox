@@ -23,14 +23,15 @@ describe('workflow.service catalog contract', () => {
     vi.clearAllMocks()
   })
 
-  it('workflows 元数据会被归一化为只读目录项', async () => {
+  it('workflows 元数据会被归一化为只读目录项和对象配置', async () => {
     apiClientMocks.get.mockResolvedValue({
       data: [
         {
-          name: 'subdomain_discovery',
-          title: 'Subdomain Discovery',
+          workflowId: 'subdomain_discovery',
+          displayName: 'Subdomain Discovery',
           description: 'Discover subdomains',
           version: '1.0.0',
+          configuration: 'subdomain_discovery:\n  recon:\n    enabled: true',
         },
       ],
     })
@@ -45,7 +46,13 @@ describe('workflow.service catalog contract', () => {
         title: 'Subdomain Discovery',
         description: 'Discover subdomains',
         version: '1.0.0',
-        configuration: undefined,
+        configuration: {
+          subdomain_discovery: {
+            recon: {
+              enabled: true,
+            },
+          },
+        },
         isValid: undefined,
         createdAt: undefined,
         updatedAt: undefined,
@@ -53,13 +60,13 @@ describe('workflow.service catalog contract', () => {
     ])
   })
 
-  it('preset 列表保留 workflowNames 字段', async () => {
+  it('preset 列表保留 workflowIds 并把配置归一化为对象', async () => {
     apiClientMocks.get.mockResolvedValue({
       data: [
         {
           id: 'subdomain_discovery.fast',
           name: 'Fast Profile',
-          workflowNames: ['subdomain_discovery'],
+          workflowIds: ['subdomain_discovery'],
           configuration: 'subdomain_discovery: {}',
         },
       ],
@@ -68,6 +75,7 @@ describe('workflow.service catalog contract', () => {
     const presets = await getWorkflowProfiles()
 
     expect(apiClientMocks.get).toHaveBeenCalledWith('/workflows/profiles/')
-    expect(presets[0]?.workflowNames).toEqual(['subdomain_discovery'])
+    expect(presets[0]?.workflowIds).toEqual(['subdomain_discovery'])
+    expect(presets[0]?.configuration).toEqual({ subdomain_discovery: {} })
   })
 })

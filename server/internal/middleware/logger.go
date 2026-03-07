@@ -10,53 +10,42 @@ import (
 )
 
 const (
-	// RequestIDHeader is the header name for request ID
-	RequestIDHeader = "X-Request-ID"
-	// RequestIDKey is the context key for request ID
-	RequestIDKey = "requestId"
+	// RequestIDHeader is the header name for request ID.
+	RequestIDHeader = "Request-Id"
 )
 
-// Logger returns a gin middleware for logging requests
+// Logger returns a gin middleware for logging requests.
 func Logger() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Generate or get request ID
 		requestID := c.GetHeader(RequestIDHeader)
 		if requestID == "" {
 			requestID = uuid.New().String()
 		}
-		c.Set(RequestIDKey, requestID)
+		setRequestID(c, requestID)
 		c.Header(RequestIDHeader, requestID)
 
-		// Start timer
 		start := time.Now()
 		path := c.Request.URL.Path
 		query := c.Request.URL.RawQuery
 
-		// Process request
 		c.Next()
 
-		// Calculate latency
 		latency := time.Since(start)
-
-		// Log request
 		fields := []zap.Field{
-			zap.String("requestId", requestID),
-			zap.Int("status", c.Writer.Status()),
-			zap.String("method", c.Request.Method),
-			zap.String("path", path),
-			zap.String("query", query),
-			zap.String("ip", c.ClientIP()),
-			zap.String("userAgent", c.Request.UserAgent()),
-			zap.Duration("latency", latency),
-			zap.Int("bodySize", c.Writer.Size()),
+			pkg.RequestIDField(requestID),
+			zap.Int("http.response.status_code", c.Writer.Status()),
+			zap.String("http.request.method", c.Request.Method),
+			zap.String("url.path", path),
+			zap.String("url.query", query),
+			zap.String("client.address", c.ClientIP()),
+			zap.String("user_agent.original", c.Request.UserAgent()),
+			zap.Int64("http.server.request.duration_ms", latency.Milliseconds()),
+			zap.Int("http.response.body.size", c.Writer.Size()),
 		}
-
-		// Add error if exists
 		if len(c.Errors) > 0 {
 			fields = append(fields, zap.String("error", c.Errors.String()))
 		}
 
-		// Log based on status code
 		status := c.Writer.Status()
 		switch {
 		case status >= 500:
@@ -67,12 +56,4 @@ func Logger() gin.HandlerFunc {
 			pkg.Info("Request completed", fields...)
 		}
 	}
-}
-
-// GetRequestID returns the request ID from context
-func GetRequestID(c *gin.Context) string {
-	if requestID, exists := c.Get(RequestIDKey); exists {
-		return requestID.(string)
-	}
-	return ""
 }

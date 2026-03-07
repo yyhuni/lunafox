@@ -23,6 +23,7 @@ jobs:
       run_server: ${{ steps.compute.outputs.run_server }}
       run_agent: ${{ steps.compute.outputs.run_agent }}
       run_installer: ${{ steps.compute.outputs.run_installer }}
+      run_interface_naming: ${{ steps.compute.outputs.run_interface_naming }}
     steps:
       - uses: actions/checkout@v4
 
@@ -68,6 +69,38 @@ jobs:
               - 'tools/installer/**'
               - '.github/workflows/test.yml'
               - '.github/workflows/ci.yml'
+            interface_naming:
+              - 'server/**'
+              - 'worker/**'
+              - 'frontend/lib/api-client.ts'
+              - 'frontend/lib/response-parser.ts'
+              - 'frontend/hooks/_shared/pagination.ts'
+              - 'frontend/hooks/_shared/use-stable-pagination-info.ts'
+              - 'frontend/hooks/use-notification-sse.ts'
+              - 'frontend/hooks/use-targets/queries.ts'
+              - 'frontend/hooks/use-endpoints.ts'
+              - 'frontend/hooks/use-vulnerabilities/queries.ts'
+              - 'frontend/hooks/use-organizations.ts'
+              - 'frontend/hooks/_shared/targets-helpers.ts'
+              - 'frontend/services/scheduled-scan.service.ts'
+              - 'frontend/services/organization.service.ts'
+              - 'frontend/services/endpoint.service.ts'
+              - 'frontend/types/notification.types.ts'
+              - 'frontend/types/command.types.ts'
+              - 'frontend/types/endpoint.types.ts'
+              - 'frontend/types/tool.types.ts'
+              - 'frontend/types/subdomain.types.ts'
+              - 'frontend/types/common.types.ts'
+              - 'frontend/types/organization.types.ts'
+              - 'frontend/types/target.types.ts'
+              - 'scripts/ci/check-interface-naming.sh'
+              - 'scripts/ci/check-interface-naming-test.sh'
+              - 'openspec/changes/refactor-interface-naming-standards/**'
+              - 'openspec/changes/refactor-frontend-boundary-naming/**'
+              - 'openspec/project.md'
+              - 'docs/plans/2026-03-06-interface-naming-*'
+              - 'docs/plans/2026-03-06-frontend-boundary-naming*'
+              - '.github/workflows/ci.yml'
 
       - id: compute
         run: |
@@ -80,6 +113,7 @@ jobs:
           run_server='${{ steps.filter.outputs.server }}'
           run_agent='${{ steps.filter.outputs.agent }}'
           run_installer='${{ steps.filter.outputs.installer }}'
+          run_interface_naming='${{ steps.filter.outputs.interface_naming }}'
 
           if [ "$workflows" = "true" ]; then
             run_check_generated=true
@@ -88,6 +122,7 @@ jobs:
             run_server=true
             run_agent=true
             run_installer=true
+            run_interface_naming=true
           fi
 
           {
@@ -97,12 +132,26 @@ jobs:
             echo "run_server=${run_server}"
             echo "run_agent=${run_agent}"
             echo "run_installer=${run_installer}"
+            echo "run_interface_naming=${run_interface_naming}"
           } >> "$GITHUB_OUTPUT"
 
   check-generated:
     needs: detect-changes
     if: needs.detect-changes.outputs.run_check_generated == 'true'
     uses: ./.github/workflows/check-generated-files.yml
+
+  check-interface-naming:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.run_interface_naming == 'true'
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check interface naming
+        run: bash scripts/ci/check-interface-naming.sh
 
   test:
     needs: detect-changes

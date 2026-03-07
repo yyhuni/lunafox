@@ -94,8 +94,8 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
   const tableClassName = ui?.tableClassName
 
   const enableAutoColumnSizing = behavior?.enableAutoColumnSizing ?? false
-  const expandColumnIds = behavior?.expandColumnIds ?? []
-  const expandColumnIdSet = React.useMemo(() => new Set(expandColumnIds), [expandColumnIds])
+  const expandColumnIds = behavior?.expandColumnIds
+  const expandColumnIdSet = React.useMemo(() => new Set(expandColumnIds ?? []), [expandColumnIds])
 
   // Use table state hook
   const { table, columnSizeVars } = useTableState({

@@ -19,10 +19,9 @@ import {
   X as XIcon,
 } from "@/components/icons"
 import { DataTableColumnHeader } from "@/components/ui/data-table/column-header"
-import * as yaml from "js-yaml"
+import { normalizeWorkflowConfiguration } from "@/lib/workflow-config"
 import type { ScanWorkflow } from "@/types/workflow.types"
 
-// Translation type definitions (workflow template management page)
 export interface WorkflowTranslations {
   columns: {
     workflowName: string
@@ -46,45 +45,21 @@ export interface WorkflowTranslations {
   }
 }
 
-/**
- * Parse workflow YAML configuration and detect if features are enabled
- */
 function parseWorkflowFeatures(workflow: ScanWorkflow) {
-  if (workflow.configuration) {
-    try {
-      const config = yaml.load(workflow.configuration) as Record<string, unknown> | null
-      return {
-        subdomain_discovery: !!config?.subdomain_discovery,
-        port_scan: !!config?.port_scan,
-        site_scan: !!config?.site_scan,
-        directory_scan: !!config?.directory_scan,
-        url_fetch: !!config?.url_fetch || !!config?.fetch_url,
-        osint: !!config?.osint,
-        vulnerability_scan: !!config?.vulnerability_scan,
-        waf_detection: !!config?.waf_detection,
-        screenshot: !!config?.screenshot,
-      }
-    } catch (error) {
-      void error
-    }
-  }
-  
+  const config = normalizeWorkflowConfiguration(workflow.configuration)
   return {
-    subdomain_discovery: false,
-    port_scan: false,
-    site_scan: false,
-    directory_scan: false,
-    url_fetch: false,
-    osint: false,
-    vulnerability_scan: false,
-    waf_detection: false,
-    screenshot: false,
+    subdomain_discovery: !!config.subdomain_discovery,
+    port_scan: !!config.port_scan,
+    site_scan: !!config.site_scan,
+    directory_scan: !!config.directory_scan,
+    url_fetch: !!config.url_fetch || !!config.fetch_url,
+    osint: !!config.osint,
+    vulnerability_scan: !!config.vulnerability_scan,
+    waf_detection: !!config.waf_detection,
+    screenshot: !!config.screenshot,
   }
 }
 
-/**
- * Feature support status component
- */
 function FeatureStatus({ enabled }: { enabled?: boolean }) {
   if (enabled) {
     return (
@@ -106,9 +81,6 @@ interface CreateColumnsProps {
   t: WorkflowTranslations
 }
 
-/**
- * Workflow template row actions component
- */
 function WorkflowRowActions({
   onEdit,
   onDelete,
@@ -121,10 +93,7 @@ function WorkflowRowActions({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="flex h-8 w-8 p-0 data-[state=open]:bg-muted"
-        >
+        <Button variant="ghost" className="flex h-8 w-8 p-0 data-[state=open]:bg-muted">
           <MoreHorizontal />
           <span className="sr-only">{t.actions.openMenu}</span>
         </Button>
@@ -135,10 +104,7 @@ function WorkflowRowActions({
           {t.actions.editWorkflow}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={onDelete}
-          className="text-destructive focus:text-destructive"
-        >
+        <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
           <Trash2 />
           {t.actions.delete}
         </DropdownMenuItem>
@@ -147,198 +113,90 @@ function WorkflowRowActions({
   )
 }
 
-/**
- * Create workflow template table column definitions
- */
-export const createWorkflowColumns = ({
-  handleEdit,
-  handleDelete,
-  t,
-}: CreateColumnsProps): ColumnDef<ScanWorkflow>[] => [
-  {
-    accessorKey: "name",
-    size: 200,
-    minSize: 150,
-    maxSize: 350,
-    meta: { title: t.columns.workflowName },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t.columns.workflowName} />
-    ),
-    cell: ({ row }) => {
-      const name = row.getValue("name") as string
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button type="button"
-              onClick={() => handleEdit(row.original)}
-              className="max-w-[300px] truncate font-medium text-left hover:text-primary hover:underline underline-offset-2 cursor-pointer transition-colors"
-            >
-              {name}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>{t.tooltips.editWorkflow}</TooltipContent>
-        </Tooltip>
-      )
+export function createWorkflowColumns({ handleEdit, handleDelete, t }: CreateColumnsProps): ColumnDef<ScanWorkflow>[] {
+  return [
+    {
+      accessorKey: "name",
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t.columns.workflowName} />,
+      cell: ({ row }) => <span className="font-medium">{row.original.title || row.original.name}</span>,
+      enableSorting: true,
+      enableHiding: false,
     },
-  },
-  {
-    id: "subdomain_discovery",
-    meta: { title: t.columns.subdomainDiscovery },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t.columns.subdomainDiscovery} />
-    ),
-    size: 80,
-    minSize: 60,
-    maxSize: 100,
-    enableResizing: false,
-    cell: ({ row }) => {
-      const features = parseWorkflowFeatures(row.original)
-      return <FeatureStatus enabled={features.subdomain_discovery} />
+    {
+      id: "subdomain_discovery",
+      header: t.columns.subdomainDiscovery,
+      cell: ({ row }) => <FeatureStatus enabled={parseWorkflowFeatures(row.original).subdomain_discovery} />,
+      size: 80,
     },
-    enableSorting: false,
-  },
-  {
-    id: "port_scan",
-    meta: { title: t.columns.portScan },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t.columns.portScan} />
-    ),
-    size: 80,
-    minSize: 60,
-    maxSize: 100,
-    enableResizing: false,
-    cell: ({ row }) => {
-      const features = parseWorkflowFeatures(row.original)
-      return <FeatureStatus enabled={features.port_scan} />
+    {
+      id: "port_scan",
+      header: t.columns.portScan,
+      cell: ({ row }) => <FeatureStatus enabled={parseWorkflowFeatures(row.original).port_scan} />,
+      size: 80,
     },
-    enableSorting: false,
-  },
-  {
-    id: "site_scan",
-    meta: { title: t.columns.siteScan },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t.columns.siteScan} />
-    ),
-    size: 80,
-    minSize: 60,
-    maxSize: 100,
-    enableResizing: false,
-    cell: ({ row }) => {
-      const features = parseWorkflowFeatures(row.original)
-      return <FeatureStatus enabled={features.site_scan} />
+    {
+      id: "site_scan",
+      header: t.columns.siteScan,
+      cell: ({ row }) => <FeatureStatus enabled={parseWorkflowFeatures(row.original).site_scan} />,
+      size: 80,
     },
-    enableSorting: false,
-  },
-  {
-    id: "directory_scan",
-    meta: { title: t.columns.directoryScan },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t.columns.directoryScan} />
-    ),
-    size: 80,
-    minSize: 60,
-    maxSize: 100,
-    enableResizing: false,
-    cell: ({ row }) => {
-      const features = parseWorkflowFeatures(row.original)
-      return <FeatureStatus enabled={features.directory_scan} />
+    {
+      id: "directory_scan",
+      header: t.columns.directoryScan,
+      cell: ({ row }) => <FeatureStatus enabled={parseWorkflowFeatures(row.original).directory_scan} />,
+      size: 80,
     },
-    enableSorting: false,
-  },
-  {
-    id: "url_fetch",
-    meta: { title: t.columns.urlFetch },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t.columns.urlFetch} />
-    ),
-    size: 80,
-    minSize: 60,
-    maxSize: 100,
-    enableResizing: false,
-    cell: ({ row }) => {
-      const features = parseWorkflowFeatures(row.original)
-      return <FeatureStatus enabled={features.url_fetch} />
+    {
+      id: "url_fetch",
+      header: t.columns.urlFetch,
+      cell: ({ row }) => <FeatureStatus enabled={parseWorkflowFeatures(row.original).url_fetch} />,
+      size: 80,
     },
-    enableSorting: false,
-  },
-  {
-    id: "osint",
-    meta: { title: t.columns.osint },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t.columns.osint} />
-    ),
-    size: 80,
-    minSize: 60,
-    maxSize: 100,
-    enableResizing: false,
-    cell: ({ row }) => {
-      const features = parseWorkflowFeatures(row.original)
-      return <FeatureStatus enabled={features.osint} />
+    {
+      id: "osint",
+      header: t.columns.osint,
+      cell: ({ row }) => <FeatureStatus enabled={parseWorkflowFeatures(row.original).osint} />,
+      size: 80,
     },
-    enableSorting: false,
-  },
-  {
-    id: "vulnerability_scan",
-    meta: { title: t.columns.vulnerabilityScan },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t.columns.vulnerabilityScan} />
-    ),
-    size: 80,
-    minSize: 60,
-    maxSize: 100,
-    enableResizing: false,
-    cell: ({ row }) => {
-      const features = parseWorkflowFeatures(row.original)
-      return <FeatureStatus enabled={features.vulnerability_scan} />
+    {
+      id: "vulnerability_scan",
+      header: t.columns.vulnerabilityScan,
+      cell: ({ row }) => <FeatureStatus enabled={parseWorkflowFeatures(row.original).vulnerability_scan} />,
+      size: 80,
     },
-    enableSorting: false,
-  },
-  {
-    id: "waf_detection",
-    meta: { title: t.columns.wafDetection },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t.columns.wafDetection} />
-    ),
-    size: 80,
-    minSize: 60,
-    maxSize: 100,
-    enableResizing: false,
-    cell: ({ row }) => {
-      const features = parseWorkflowFeatures(row.original)
-      return <FeatureStatus enabled={features.waf_detection} />
+    {
+      id: "waf_detection",
+      header: t.columns.wafDetection,
+      cell: ({ row }) => <FeatureStatus enabled={parseWorkflowFeatures(row.original).waf_detection} />,
+      size: 80,
     },
-    enableSorting: false,
-  },
-  {
-    id: "screenshot",
-    meta: { title: t.columns.screenshot },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t.columns.screenshot} />
-    ),
-    size: 80,
-    minSize: 60,
-    maxSize: 100,
-    enableResizing: false,
-    cell: ({ row }) => {
-      const features = parseWorkflowFeatures(row.original)
-      return <FeatureStatus enabled={features.screenshot} />
+    {
+      id: "screenshot",
+      header: t.columns.screenshot,
+      cell: ({ row }) => <FeatureStatus enabled={parseWorkflowFeatures(row.original).screenshot} />,
+      size: 80,
     },
-    enableSorting: false,
-  },
-  {
-    id: "actions",
-    size: 60,
-    minSize: 60,
-    maxSize: 60,
-    enableResizing: false,
-    cell: ({ row }) => (
-      <WorkflowRowActions
-        onEdit={() => handleEdit(row.original)}
-        onDelete={() => handleDelete(row.original)}
-        t={t}
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-]
+    {
+      id: "actions",
+      header: () => <span className="sr-only">{t.actions.openMenu}</span>,
+      cell: ({ row }) => (
+        <div className="flex justify-end">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <WorkflowRowActions
+                  onEdit={() => handleEdit(row.original)}
+                  onDelete={() => handleDelete(row.original)}
+                  t={t}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>{t.tooltips.editWorkflow}</TooltipContent>
+          </Tooltip>
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+  ]
+}

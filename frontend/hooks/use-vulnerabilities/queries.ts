@@ -29,8 +29,6 @@ type VulnerabilityListResponse = {
   page?: number
   pageSize?: number
   totalPages?: number
-  page_size?: number
-  total_pages?: number
 }
 
 const DEFAULT_VULNERABILITY_PARAMS = {

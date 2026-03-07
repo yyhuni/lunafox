@@ -18,7 +18,7 @@ export function useScanConfigEditorState({
     if (!selectedWorkflows.length) return []
     const allCaps = new Set<string>()
     selectedWorkflows.forEach((workflow) => {
-      parseWorkflowCapabilities(workflow.configuration || "").forEach((cap) => allCaps.add(cap))
+      parseWorkflowCapabilities(workflow.configuration).forEach((cap) => allCaps.add(cap))
     })
     return Array.from(allCaps)
   }, [selectedWorkflows, propCapabilities])

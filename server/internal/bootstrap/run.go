@@ -24,7 +24,7 @@ func Run(ctx context.Context, cfg *config.Config, migrationsFS embed.FS) {
 	pkg.Info(
 		"Starting server",
 		zap.Int("port", cfg.Server.Port),
-		zap.Int("grpc_port", cfg.Server.GRPCPort),
+		zap.Int("server.grpc.port", cfg.Server.GRPCPort),
 		zap.String("mode", cfg.Server.Mode),
 	)
 

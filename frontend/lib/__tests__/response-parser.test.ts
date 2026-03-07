@@ -40,7 +40,7 @@ describe("response-parser", () => {
     expect(getErrorResponseData(error)).toEqual({ error: { code: "SERVER_ERROR" } })
   })
 
-  it("可提取分页元信息并兼容 snake_case", () => {
+  it("只接受 camelCase 分页元信息", () => {
     const camel = { total: 100, page: 2, pageSize: 20, totalPages: 5 }
     const snake = { total: 100, page: 2, page_size: 20, total_pages: 5 }
 
@@ -50,11 +50,6 @@ describe("response-parser", () => {
       pageSize: 20,
       totalPages: 5,
     })
-    expect(getPaginationMeta(snake)).toEqual({
-      total: 100,
-      page: 2,
-      pageSize: 20,
-      totalPages: 5,
-    })
+    expect(getPaginationMeta(snake)).toBeNull()
   })
 })

@@ -1,5 +1,4 @@
 // Endpoint specific data type definitions
-// Note: Backend returns snake_case, but api-client.ts automatically converts to camelCase
 
 import type { BatchCreateResponse } from './api-response.types'
 
@@ -9,11 +8,11 @@ export interface Endpoint {
 
   // HTTP metadata (may be null in some scenarios)
   method?: string
-	statusCode: number | null       // Backend: status_code (pointer type, may be null)
-	title: string
-	contentLength: number | null    // Backend: content_length (pointer type, may be null)
-	contentType?: string | null     // Backend: content_type (optional)
-	responseTime?: number | null    // Backend: response_time (in seconds, optional)
+  statusCode: number | null
+  title: string
+  contentLength: number | null
+  contentType?: string | null
+  responseTime?: number | null
 
   // Site/endpoint dimension additional info (used by both asset table and snapshot table)
   host?: string
@@ -26,11 +25,11 @@ export interface Endpoint {
   createdAt?: string
 
   // Legacy domain association fields (may not exist in some APIs)
-  domainId?: number               // Backend: domain_id
-  subdomainId?: number            // Backend: subdomain_id
+  domainId?: number
+  subdomainId?: number
   domain?: string
   subdomain?: string
-  updatedAt?: string              // Backend: updated_at
+  updatedAt?: string
 }
 
 // Endpoint list request parameters
@@ -42,29 +41,25 @@ export interface GetEndpointsRequest {
 }
 
 // Endpoint list response data
-// Note: Backend returns snake_case, but api-client.ts automatically converts to camelCase
 export interface GetEndpointsResponse {
   endpoints: Endpoint[]
   total: number
   page: number
-  pageSize: number      // Backend returns camelCase format
-  totalPages: number    // Backend returns camelCase format
-  // Compatibility fields (backward compatible)
-  page_size?: number
-  total_pages?: number
+  pageSize: number
+  totalPages: number
 }
 
 // Create Endpoint request parameters
 export interface CreateEndpointRequest {
-  url: string                      // Required
-  method?: string                  // Optional
-	statusCode?: number | null       // Optional
-	title?: string                   // Optional
-	contentLength?: number | null    // Optional
-	contentType?: string | null      // Optional
-	responseTime?: number | null     // Optional
-	domain?: string                  // Optional
-	subdomain?: string               // Optional
+  url: string
+  method?: string
+  statusCode?: number | null
+  title?: string
+  contentLength?: number | null
+  contentType?: string | null
+  responseTime?: number | null
+  domain?: string
+  subdomain?: string
 }
 
 // Create Endpoint response (extends common batch create response)
@@ -76,12 +71,12 @@ export interface UpdateEndpointRequest {
   url?: string
   method?: string
   statusCode?: number
-	title?: string
-	contentLength?: number
-	contentType?: string | null
-	responseTime?: number | null
-	domain?: string
-	subdomain?: string
+  title?: string
+  contentLength?: number
+  contentType?: string | null
+  responseTime?: number | null
+  domain?: string
+  subdomain?: string
 }
 
 // Batch delete Endpoint request parameters

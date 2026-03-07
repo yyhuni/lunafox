@@ -177,26 +177,6 @@ export function DatabaseHealthView() {
     [t]
   )
 
-  if (!loading && !data) {
-    return (
-      <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-        <PageHeader code="DBH-01" title={tPage("title")} description={tPage("description")} />
-        <div className="px-4 lg:px-6">
-          <Card>
-            <CardContent className="py-10 flex flex-col items-center text-center gap-3">
-              <IconAlertTriangle className="h-10 w-10 text-destructive" />
-              <h3 className="text-base font-semibold">{t("errors.loadFailedTitle")}</h3>
-              <p className="text-sm text-muted-foreground">{t("errors.loadFailedDescription")}</p>
-              <Button onClick={() => refetch()} disabled={isFetching}>
-                {t("errors.retry")}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    )
-  }
-
   const coreSignals = data?.coreSignals
   const optionalSignals = data?.optionalSignals
   const unavailableSignals = data?.unavailableSignals ?? []
@@ -265,6 +245,27 @@ export function DatabaseHealthView() {
         .sort((a, b) => statusRank[b.status] - statusRank[a.status]),
     [corePriorityItems]
   )
+
+  if (!loading && !data) {
+    return (
+      <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+        <PageHeader code="DBH-01" title={tPage("title")} description={tPage("description")} />
+        <div className="px-4 lg:px-6">
+          <Card>
+            <CardContent className="py-10 flex flex-col items-center text-center gap-3">
+              <IconAlertTriangle className="h-10 w-10 text-destructive" />
+              <h3 className="text-base font-semibold">{t("errors.loadFailedTitle")}</h3>
+              <p className="text-sm text-muted-foreground">{t("errors.loadFailedDescription")}</p>
+              <Button onClick={() => refetch()} disabled={isFetching}>
+                {t("errors.retry")}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">

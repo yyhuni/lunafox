@@ -5,75 +5,55 @@ import (
 	"io/fs"
 	"strings"
 
-	"github.com/yyhuni/lunafox/server/internal/engineschema"
+	workflowmanifest "github.com/yyhuni/lunafox/server/internal/workflow/manifest"
 )
 
-func validateEngineIDsAndNamesAlignment(engineIDs []int, engineNames []string) error {
-	if len(engineIDs) == 0 {
-		return nil
+func validateWorkflowIDsStrict(workflowIds []string) error {
+	if len(workflowIds) == 0 {
+		return invalidWorkflowIDsf("workflowIds is required")
 	}
-	if len(engineIDs) != len(engineNames) {
-		return invalidEngineNamesf("engineIds (%d) and engineNames (%d) must have same length", len(engineIDs), len(engineNames))
-	}
-	seen := make(map[int]struct{}, len(engineIDs))
-	for index, id := range engineIDs {
-		if id <= 0 {
-			return invalidEngineNamesf("engineIds[%d] must be greater than 0", index)
+	seen := make(map[string]struct{}, len(workflowIds))
+	for index, workflowID := range workflowIds {
+		if workflowID == "" {
+			return invalidWorkflowIDsf("workflowIds[%d] must not be empty", index)
 		}
-		if _, exists := seen[id]; exists {
-			return invalidEngineNamesf("engineIds[%d]=%d is duplicated", index, id)
+		if strings.TrimSpace(workflowID) != workflowID {
+			return invalidWorkflowIDsf("workflowIds[%d] must not contain leading or trailing spaces", index)
 		}
-		seen[id] = struct{}{}
-	}
-	return nil
-}
-
-func validateEngineNamesStrict(engineNames []string) error {
-	if len(engineNames) == 0 {
-		return invalidEngineNamesf("engineNames is required")
-	}
-	seen := make(map[string]struct{}, len(engineNames))
-	for index, name := range engineNames {
-		if name == "" {
-			return invalidEngineNamesf("engineNames[%d] must not be empty", index)
+		if _, exists := seen[workflowID]; exists {
+			return invalidWorkflowIDsf("workflowIds[%d]=%q is duplicated", index, workflowID)
 		}
-		if strings.TrimSpace(name) != name {
-			return invalidEngineNamesf("engineNames[%d] must not contain leading or trailing spaces", index)
-		}
-		if _, exists := seen[name]; exists {
-			return invalidEngineNamesf("engineNames[%d]=%q is duplicated", index, name)
-		}
-		seen[name] = struct{}{}
+		seen[workflowID] = struct{}{}
 	}
 	return nil
 }
 
-func (service *ScanCreateService) validateRequestedEngines(engineNames []string) error {
-	available, err := engineschema.ListEngines()
+func (service *ScanCreateService) validateRequestedWorkflows(workflowIds []string) error {
+	available, err := workflowmanifest.ListWorkflows()
 	if err != nil {
 		return err
 	}
 	set := make(map[string]struct{}, len(available))
 	for _, item := range available {
-		name := strings.TrimSpace(item)
-		if name == "" {
+		workflowID := strings.TrimSpace(item)
+		if workflowID == "" {
 			continue
 		}
-		set[name] = struct{}{}
+		set[workflowID] = struct{}{}
 	}
-	for _, name := range engineNames {
-		engine := strings.TrimSpace(name)
-		if engine == "" {
+	for _, workflowID := range workflowIds {
+		workflowID = strings.TrimSpace(workflowID)
+		if workflowID == "" {
 			continue
 		}
-		if _, ok := set[engine]; ok {
+		if _, ok := set[workflowID]; ok {
 			continue
 		}
-		return WrapSchemaInvalid(engine, "engine "+engine+" not found in available engine schemas", fs.ErrNotExist)
+		return WrapSchemaInvalid(workflowID, "workflow "+workflowID+" not found in available workflow manifests", fs.ErrNotExist)
 	}
 	return nil
 }
 
-func invalidEngineNamesf(format string, args ...any) error {
-	return fmt.Errorf("%w: %s", ErrCreateInvalidEngineNames, fmt.Sprintf(format, args...))
+func invalidWorkflowIDsf(format string, args ...any) error {
+	return fmt.Errorf("%w: %s", ErrCreateInvalidWorkflowIDs, fmt.Sprintf(format, args...))
 }

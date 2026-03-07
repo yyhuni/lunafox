@@ -7,7 +7,13 @@ import { useTranslations } from "next-intl"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
-import { CAPABILITY_CONFIG, parseWorkflowCapabilities, mergeWorkflowConfigurations } from "@/lib/workflow-config"
+import {
+  CAPABILITY_CONFIG,
+  extractWorkflowIds,
+  mergeWorkflowConfigurations,
+  parseWorkflowCapabilities,
+  serializeWorkflowConfiguration,
+} from "@/lib/workflow-config"
 import { useWorkflowProfiles } from "@/hooks/use-workflows"
 import { LoadingSpinner } from "@/components/loading-spinner"
 
@@ -48,24 +54,20 @@ export function WorkflowProfileSelector({
 }: WorkflowProfileSelectorProps) {
   const t = useTranslations("scan.initiate")
   const tStages = useTranslations("scan.progress.stages")
-  
-  // Get workflow profiles from backend
   const { data: backendPresets, isLoading: isLoadingPresets } = useWorkflowProfiles()
 
-  // Convert backend presets to component format
   const workflowProfiles = useMemo(() => {
     const profiles: WorkflowProfileItem[] = []
-    
-    // Add backend presets
+
     if (backendPresets && backendPresets.length > 0) {
       backendPresets.forEach((preset) => {
-        // Parse capabilities from preset configuration
-        const caps = parseWorkflowCapabilities(preset.configuration || "")
-        
-        // Prefer explicit workflowNames from backend contract.
+        const caps = parseWorkflowCapabilities(preset.configuration)
+
         const matchingWorkflowIds: number[] = []
         if (workflows && workflows.length > 0) {
-          const preferredNames = (preset.workflowNames || []).map((item) => item.trim()).filter(Boolean)
+          const preferredNames = (preset.workflowIds || preset.workflowNames || extractWorkflowIds(preset.configuration))
+            .map((item) => item.trim())
+            .filter(Boolean)
           if (preferredNames.length > 0) {
             workflows.forEach((workflow) => {
               if (preferredNames.includes(workflow.name)) {
@@ -73,9 +75,8 @@ export function WorkflowProfileSelector({
               }
             })
           } else {
-            // Backward fallback for legacy mock presets without workflowNames.
             workflows.forEach((workflow) => {
-              const workflowCaps = parseWorkflowCapabilities(workflow.configuration || "")
+              const workflowCaps = parseWorkflowCapabilities(workflow.configuration)
               const hasAllCaps = caps.every(cap => workflowCaps.includes(cap))
               if (hasAllCaps && caps.length > 0) {
                 matchingWorkflowIds.push(workflow.id)
@@ -83,13 +84,12 @@ export function WorkflowProfileSelector({
             })
           }
         }
-        
-        // Choose icon based on capabilities
+
         let Icon = Server
         if (caps.includes("vuln_scan")) {
           Icon = caps.some(c => ["subdomain_discovery", "port_scan", "site_scan"].includes(c)) ? Zap : Play
         }
-        
+
         profiles.push({
           id: preset.id,
           label: preset.name,
@@ -99,8 +99,7 @@ export function WorkflowProfileSelector({
         })
       })
     }
-    
-    // Add custom option at the end
+
     profiles.push({
       id: "custom",
       label: t("presets.custom"),
@@ -108,7 +107,7 @@ export function WorkflowProfileSelector({
       icon: Settings,
       workflowIds: [],
     })
-    
+
     return profiles
   }, [backendPresets, workflows, t])
 
@@ -121,70 +120,55 @@ export function WorkflowProfileSelector({
     if (!selectedWorkflows.length) return []
     const allCaps = new Set<string>()
     selectedWorkflows.forEach((workflow) => {
-      parseWorkflowCapabilities(workflow.configuration || "").forEach((cap) => allCaps.add(cap))
+      parseWorkflowCapabilities(workflow.configuration).forEach((cap) => allCaps.add(cap))
     })
     return Array.from(allCaps)
   }, [selectedWorkflows])
 
-  // Get currently selected preset details
   const selectedPreset = useMemo(() => {
     return workflowProfiles.find((item) => item.id === selectedPresetId)
   }, [workflowProfiles, selectedPresetId])
 
-  // Get workflow templates for the selected preset
   const matchingWorkflows = useMemo(() => {
     if (!selectedPreset || selectedPreset.id === "custom") return []
     return workflows?.filter((item) => selectedPreset.workflowIds.includes(item.id)) || []
   }, [selectedPreset, workflows])
-  
-  // Update configuration when selected workflow templates change
+
   const updateConfigurationFromWorkflows = useCallback((workflowIds: number[]) => {
     if (!workflows) return
     const selectedItems = workflows.filter((item) => workflowIds.includes(item.id))
-    const mergedConfig = mergeWorkflowConfigurations(selectedItems.map((item) => item.configuration || ""))
-    onConfigurationChange(mergedConfig)
+    const mergedConfig = mergeWorkflowConfigurations(selectedItems.map((item) => item.configuration))
+    onConfigurationChange(serializeWorkflowConfiguration(mergedConfig))
   }, [workflows, onConfigurationChange])
 
   const handlePresetSelect = useCallback((preset: WorkflowProfileItem) => {
     onPresetChange(preset.id)
     if (preset.id !== "custom") {
-      // For backend presets, use preset configuration directly
       const backendPreset = backendPresets?.find(p => p.id === preset.id)
       if (backendPreset && backendPreset.configuration) {
-        // Use preset configuration directly
-        onConfigurationChange(backendPreset.configuration)
-        // Also select matching workflow templates if available
+        onConfigurationChange(serializeWorkflowConfiguration(backendPreset.configuration))
         if (preset.workflowIds.length > 0) {
           onWorkflowIdsChange(preset.workflowIds)
         } else {
-          // If no matching workflow template, clear selection
           onWorkflowIdsChange([])
         }
       } else {
-        // Fallback to workflow-template-based configuration
         onWorkflowIdsChange(preset.workflowIds)
         updateConfigurationFromWorkflows(preset.workflowIds)
       }
-    } else {
-      // Custom mode - keep current selection or clear
-      if (selectedWorkflowIds.length === 0) {
-        onConfigurationChange("")
-      }
+    } else if (selectedWorkflowIds.length === 0) {
+      onConfigurationChange("")
     }
   }, [onPresetChange, onWorkflowIdsChange, updateConfigurationFromWorkflows, selectedWorkflowIds.length, onConfigurationChange, backendPresets])
 
   const handleWorkflowToggle = useCallback((workflowID: number, checked: boolean) => {
-    let newWorkflowIds: number[]
-    if (checked) {
-      newWorkflowIds = [...selectedWorkflowIds, workflowID]
-    } else {
-      newWorkflowIds = selectedWorkflowIds.filter((id) => id !== workflowID)
-    }
+    const newWorkflowIds = checked
+      ? [...selectedWorkflowIds, workflowID]
+      : selectedWorkflowIds.filter((id) => id !== workflowID)
     onWorkflowIdsChange(newWorkflowIds)
     updateConfigurationFromWorkflows(newWorkflowIds)
   }, [selectedWorkflowIds, onWorkflowIdsChange, updateConfigurationFromWorkflows])
 
-  // Show loading state while fetching presets
   if (isLoadingPresets) {
     return (
       <div className={cn("flex flex-col h-full items-center justify-center", className)}>
@@ -210,15 +194,14 @@ export function WorkflowProfileSelector({
             )}
           </div>
         )}
-        {/* Compact preset cards */}
         <div className="grid gap-3 mb-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
           {workflowProfiles.map((preset) => {
             const isActive = selectedPresetId === preset.id
             const PresetIcon = preset.icon
-            const matchedWorkflows = preset.id === "custom" 
-              ? [] 
+            const matchedWorkflows = preset.id === "custom"
+              ? []
               : workflows?.filter((item) => preset.workflowIds.includes(item.id)) || []
-            
+
             return (
               <button
                 key={preset.id}
@@ -255,8 +238,7 @@ export function WorkflowProfileSelector({
             )
           })}
         </div>
-        
-        {/* Selected preset details */}
+
         {selectedPresetId && selectedPresetId !== "custom" && (
           <div className="border rounded-lg p-4 bg-muted/10">
             <div className="flex items-start justify-between mb-3">
@@ -265,8 +247,7 @@ export function WorkflowProfileSelector({
                 <p className="text-sm text-muted-foreground mt-1">{selectedPreset?.description}</p>
               </div>
             </div>
-            
-            {/* Capabilities */}
+
             <div className="mb-4">
               <h4 className="text-xs font-medium text-muted-foreground mb-2">{t("presets.capabilities")}</h4>
               <div className="flex flex-wrap gap-1.5">
@@ -280,96 +261,32 @@ export function WorkflowProfileSelector({
                 })}
               </div>
             </div>
-            
-            {/* Workflows list */}
-            <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-2">{t("presets.usedWorkflows")}</h4>
-              <div className="flex flex-wrap gap-2">
-                {matchingWorkflows.length > 0 ? (
-                  matchingWorkflows.map((workflow) => (
-                    <span key={workflow.id} className="text-sm px-3 py-1.5 bg-background rounded-md border">
-                      {workflow.name}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-xs text-muted-foreground">{t("presets.noMatchingWorkflows")}</span>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Custom mode workflow template selection */}
-        {selectedPresetId === "custom" && (
-          <div className="border rounded-lg p-4 bg-muted/10">
-            <div className="flex items-start justify-between mb-3">
+
+            {matchingWorkflows.length > 0 && (
               <div>
-                <h3 className="font-medium">{selectedPreset?.label}</h3>
-                <p className="text-sm text-muted-foreground mt-1">{selectedPreset?.description}</p>
-                <p className="text-xs text-muted-foreground mt-2">{t("presets.customHint")}</p>
-              </div>
-            </div>
-            
-            {/* Capabilities - dynamically calculated from selected workflow templates */}
-            <div className="mb-4">
-              <h4 className="text-xs font-medium text-muted-foreground mb-2">{t("presets.capabilities")}</h4>
-              <div className="flex flex-wrap gap-1.5">
-                {selectedCapabilities.length > 0 ? (
-                  selectedCapabilities.map((capKey) => {
-                    const config = CAPABILITY_CONFIG[capKey]
+                <h4 className="text-xs font-medium text-muted-foreground mb-2">{t("presets.includedWorkflows")}</h4>
+                <div className="space-y-2">
+                  {matchingWorkflows.map((workflow) => {
+                    const checked = selectedWorkflowIds.includes(workflow.id)
                     return (
-                      <Badge key={capKey} variant="outline" className={cn("text-xs", config?.color)}>
-                        {tStages(capKey)}
-                      </Badge>
+                      <label key={workflow.id} className="flex items-center gap-3 rounded-md border p-3 cursor-pointer hover:bg-muted/20">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(value) => handleWorkflowToggle(workflow.id, Boolean(value))}
+                          disabled={disabled}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{workflow.title || workflow.name}</p>
+                          {workflow.description && (
+                            <p className="text-xs text-muted-foreground truncate">{workflow.description}</p>
+                          )}
+                        </div>
+                      </label>
                     )
-                  })
-                ) : (
-                  <span className="text-xs text-muted-foreground">{t("presets.noCapabilities")}</span>
-                )}
+                  })}
+                </div>
               </div>
-            </div>
-            
-            {/* Workflow template list - selectable */}
-            <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-2">{t("presets.usedWorkflows")}</h4>
-              <div className="flex flex-wrap gap-2">
-                {workflows?.map((workflow) => {
-                  const isSelected = selectedWorkflowIds.includes(workflow.id)
-                  return (
-                    <label
-                      key={workflow.id}
-                      htmlFor={`preset-workflow-${workflow.id}`}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-md cursor-pointer transition-[background-color,border-color,color,box-shadow] border",
-                        isSelected
-                          ? "bg-primary/10 border-primary/30"
-                          : "hover:bg-muted/50 border-border",
-                        disabled && "opacity-50 cursor-not-allowed"
-                      )}
-                    >
-                      <Checkbox
-                        id={`preset-workflow-${workflow.id}`}
-                        checked={isSelected}
-                        onCheckedChange={(checked) => {
-                          handleWorkflowToggle(workflow.id, checked as boolean)
-                        }}
-                        disabled={disabled}
-                        className="h-4 w-4"
-                      />
-                      <span className="text-sm">{workflow.name}</span>
-                    </label>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {/* Empty state */}
-        {!selectedPresetId && (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Server className="h-12 w-12 mb-4 opacity-50" />
-            <p className="text-sm">{t("presets.selectHint")}</p>
+            )}
           </div>
         )}
       </div>

@@ -17,9 +17,9 @@ describe("normalizePagination", () => {
     })
   })
 
-  it("uses snake_case values when camelCase is missing", () => {
+  it("忽略 snake_case 分页字段", () => {
     const result = normalizePagination(
-      { total: 8, page: 3, page_size: 15, total_pages: 2 },
+      { total: 8, page: 3 },
       1,
       10
     )
@@ -27,8 +27,8 @@ describe("normalizePagination", () => {
     expect(result).toEqual({
       total: 8,
       page: 3,
-      pageSize: 15,
-      totalPages: 2,
+      pageSize: 10,
+      totalPages: 0,
     })
   })
 

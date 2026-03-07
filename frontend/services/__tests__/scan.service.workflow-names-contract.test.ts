@@ -23,12 +23,12 @@ vi.mock('@/mock', () => ({
 import { api } from '@/lib/api-client'
 import { initiateScan, quickScan } from '@/services/scan.service'
 
-describe('scan.service workflowNames contract', () => {
+describe('scan.service workflow contract', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('normal scan 请求只发送 workflowNames', async () => {
+  it('normal scan 请求发送 workflowIds 和对象配置', async () => {
     vi.mocked(api.post).mockResolvedValue({
       data: {
         id: 1,
@@ -41,19 +41,19 @@ describe('scan.service workflowNames contract', () => {
 
     await initiateScan({
       targetId: 7,
-      configuration: 'subdomain_discovery: {}',
+      configuration: { subdomain_discovery: {} },
       workflowNames: ['subdomain_discovery'],
     })
 
     expect(api.post).toHaveBeenCalledWith('/scans/normal', {
       targetId: 7,
-      workflowNames: ['subdomain_discovery'],
-      configuration: 'subdomain_discovery: {}',
+      workflowIds: ['subdomain_discovery'],
+      configuration: { subdomain_discovery: {} },
     })
-    expect(vi.mocked(api.post).mock.calls[0]?.[1]).not.toHaveProperty('workflowIds')
+    expect(vi.mocked(api.post).mock.calls[0]?.[1]).not.toHaveProperty('workflowNames')
   })
 
-  it('quick scan 请求只发送 workflowNames', async () => {
+  it('quick scan 请求发送 workflowIds 和对象配置', async () => {
     vi.mocked(api.post).mockResolvedValue({
       data: {
         count: 1,
@@ -66,15 +66,15 @@ describe('scan.service workflowNames contract', () => {
 
     await quickScan({
       targets: [{ name: 'example.com' }],
-      configuration: 'subdomain_discovery: {}',
+      configuration: { subdomain_discovery: {} },
       workflowNames: ['subdomain_discovery'],
     })
 
     expect(api.post).toHaveBeenCalledWith('/scans/quick', {
       targets: ['example.com'],
-      workflowNames: ['subdomain_discovery'],
-      configuration: 'subdomain_discovery: {}',
+      workflowIds: ['subdomain_discovery'],
+      configuration: { subdomain_discovery: {} },
     })
-    expect(vi.mocked(api.post).mock.calls[0]?.[1]).not.toHaveProperty('workflowIds')
+    expect(vi.mocked(api.post).mock.calls[0]?.[1]).not.toHaveProperty('workflowNames')
   })
 })

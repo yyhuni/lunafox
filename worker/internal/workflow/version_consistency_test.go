@@ -19,61 +19,36 @@ type workflowContract struct {
 }
 
 type schemaIdentity struct {
-	ID       string `json:"$id"`
-	Workflow string `json:"x-workflow"`
+	ID string `json:"$id"`
 }
 
-func TestWorkflowSchemaConsistency(t *testing.T) {
+type manifestIdentity struct {
+	WorkflowID       string `json:"workflowId"`
+	ConfigSchemaID   string `json:"configSchemaId"`
+	DefaultProfileID string `json:"defaultProfileId"`
+}
+
+func TestWorkflowSchemaAndManifestConsistency(t *testing.T) {
 	contracts := listWorkflowContracts()
 	root := repoRoot(t)
 
 	for _, contract := range contracts {
 		contract := contract
-
 		t.Run(contract.Dir, func(t *testing.T) {
-			require.NotEmpty(t, contract.WorkflowID, "workflow name is required")
+			require.NotEmpty(t, contract.WorkflowID)
+			expectedSchemaID := fmt.Sprintf("lunafox://schemas/workflows/%s", contract.WorkflowID)
 
-			workerSchemaPath := filepath.Join(
-				contract.Dir,
-				"generated",
-				fmt.Sprintf("%s.schema.json", contract.WorkflowID),
-			)
-			workerSchema := loadSchemaIdentity(t, workerSchemaPath)
-			require.Equal(
-				t,
-				contract.WorkflowID,
-				workerSchema.Workflow,
-				"worker generated schema x-workflow should match workflow name",
-			)
-			expectedID := fmt.Sprintf("lunafox://schemas/workflows/%s", contract.WorkflowID)
-			require.Equal(
-				t,
-				expectedID,
-				workerSchema.ID,
-				"worker generated schema $id should include workflow name",
-			)
+			workerSchema := loadSchemaIdentity(t, filepath.Join(contract.Dir, "generated", fmt.Sprintf("%s.schema.json", contract.WorkflowID)))
+			require.Equal(t, expectedSchemaID, workerSchema.ID)
 
-			serverSchemaPath := filepath.Join(
-				root,
-				"server",
-				"internal",
-				"workflow",
-				"schema",
-				fmt.Sprintf("%s.schema.json", contract.WorkflowID),
-			)
-			serverSchema := loadSchemaIdentity(t, serverSchemaPath)
-			require.Equal(
-				t,
-				contract.WorkflowID,
-				serverSchema.Workflow,
-				"server schema x-workflow should match workflow name",
-			)
-			require.Equal(
-				t,
-				expectedID,
-				serverSchema.ID,
-				"server schema $id should include workflow name",
-			)
+			serverSchema := loadSchemaIdentity(t, filepath.Join(root, "server", "internal", "workflow", "schema", fmt.Sprintf("%s.schema.json", contract.WorkflowID)))
+			require.Equal(t, expectedSchemaID, serverSchema.ID)
+
+			workerManifest := loadManifestIdentity(t, filepath.Join(contract.Dir, "generated", fmt.Sprintf("%s.manifest.json", contract.WorkflowID)))
+			serverManifest := loadManifestIdentity(t, filepath.Join(root, "server", "internal", "workflow", "manifest", fmt.Sprintf("%s.manifest.json", contract.WorkflowID)))
+			require.Equal(t, contract.WorkflowID, workerManifest.WorkflowID)
+			require.Equal(t, expectedSchemaID, workerManifest.ConfigSchemaID)
+			require.Equal(t, workerManifest, serverManifest)
 		})
 	}
 }
@@ -85,27 +60,17 @@ func TestWorkflowCatalogConsistencyBetweenWorkerAndServer(t *testing.T) {
 		workerSet[strings.TrimSpace(contract.WorkflowID)] = struct{}{}
 	}
 
-	serverSet := listServerSchemaWorkflows(t, root)
-	require.NotEmpty(t, workerSet, "worker contracts must not be empty")
-	require.NotEmpty(t, serverSet, "server schema catalog must not be empty")
+	serverSet := listServerManifestWorkflows(t, root)
+	require.NotEmpty(t, workerSet)
+	require.NotEmpty(t, serverSet)
 
 	for workflowID := range workerSet {
 		_, ok := serverSet[workflowID]
-		require.Truef(
-			t,
-			ok,
-			"worker workflow %q must exist in server schema catalog",
-			workflowID,
-		)
+		require.Truef(t, ok, "worker workflow %q must exist in server manifest catalog", workflowID)
 	}
 	for workflowID := range serverSet {
 		_, ok := workerSet[workflowID]
-		require.Truef(
-			t,
-			ok,
-			"server schema workflow %q must exist in worker registry contracts",
-			workflowID,
-		)
+		require.Truef(t, ok, "server workflow %q must exist in worker registry contracts", workflowID)
 	}
 }
 
@@ -113,22 +78,27 @@ func listWorkflowContracts() []workflowContract {
 	contracts := workflow.ListContracts()
 	out := make([]workflowContract, 0, len(contracts))
 	for _, definition := range contracts {
-		out = append(out, workflowContract{
-			Dir:        definition.WorkflowID,
-			WorkflowID: definition.WorkflowID,
-		})
+		out = append(out, workflowContract{Dir: definition.WorkflowID, WorkflowID: definition.WorkflowID})
 	}
 	return out
 }
 
 func loadSchemaIdentity(t *testing.T, path string) schemaIdentity {
 	t.Helper()
-	data, err := os.ReadFile(path)
+	payload, err := os.ReadFile(path)
 	require.NoErrorf(t, err, "schema file not found: %s", path)
+	var identity schemaIdentity
+	require.NoError(t, json.Unmarshal(payload, &identity))
+	return identity
+}
 
-	var schema schemaIdentity
-	require.NoError(t, json.Unmarshal(data, &schema))
-	return schema
+func loadManifestIdentity(t *testing.T, path string) manifestIdentity {
+	t.Helper()
+	payload, err := os.ReadFile(path)
+	require.NoErrorf(t, err, "manifest file not found: %s", path)
+	var identity manifestIdentity
+	require.NoError(t, json.Unmarshal(payload, &identity))
+	return identity
 }
 
 func repoRoot(t *testing.T) string {
@@ -138,17 +108,16 @@ func repoRoot(t *testing.T) string {
 	return filepath.Clean(filepath.Join(wd, "..", "..", ".."))
 }
 
-func listServerSchemaWorkflows(t *testing.T, root string) map[string]struct{} {
+func listServerManifestWorkflows(t *testing.T, root string) map[string]struct{} {
 	t.Helper()
-	pattern := filepath.Join(root, "server", "internal", "workflow", "schema", "*.schema.json")
+	pattern := filepath.Join(root, "server", "internal", "workflow", "manifest", "*.manifest.json")
 	paths, err := filepath.Glob(pattern)
 	require.NoError(t, err)
-
 	set := map[string]struct{}{}
 	for _, path := range paths {
-		schema := loadSchemaIdentity(t, path)
-		name := strings.TrimSpace(schema.Workflow)
-		require.NotEmptyf(t, name, "server schema missing x-workflow: %s", path)
+		manifest := loadManifestIdentity(t, path)
+		name := strings.TrimSpace(manifest.WorkflowID)
+		require.NotEmptyf(t, name, "server manifest missing workflowId: %s", path)
 		set[name] = struct{}{}
 	}
 	return set

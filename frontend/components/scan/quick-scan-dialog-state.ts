@@ -3,6 +3,7 @@ import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
 import { quickScan } from "@/services/scan.service"
 import { TargetValidator } from "@/lib/target-validator"
+import { parseWorkflowConfiguration } from "@/lib/workflow-config"
 import { useWorkflows } from "@/hooks/use-workflows"
 
 type UseQuickScanDialogStateProps = {
@@ -145,7 +146,7 @@ export function useQuickScanDialogState({ t }: UseQuickScanDialogStateProps) {
     try {
       const response = await quickScan({
         targets: targets.map((name) => ({ name })),
-        configuration,
+        configuration: parseWorkflowConfiguration(configuration),
         workflowNames: selectedWorkflows.map((item) => item.name),
       })
 

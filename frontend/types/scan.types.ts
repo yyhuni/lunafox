@@ -1,49 +1,27 @@
-/**
- * Scan task status enum
- * Consistent with backend ScanStatus
- */
+import type { WorkflowConfigurationValue } from '@/types/workflow.types'
+
 export type ScanStatus = "pending" | "running" | "completed" | "failed" | "cancelled"
-
-/**
- * Scan stage (dynamic, from workflow config key)
- */
 export type ScanStage = string
-
-/**
- * Stage progress status
- */
 export type StageStatus = "pending" | "running" | "completed" | "failed" | "cancelled"
 
-/**
- * Single stage progress info
- */
 export interface StageProgressItem {
   status: StageStatus
-  order: number          // Execution order (starting from 0)
-  startedAt?: string     // ISO time string
-  duration?: number      // Execution duration (seconds)
-  detail?: string        // Completion details
-  error?: string         // Error message
-  reason?: string        // Skip reason
+  order: number
+  startedAt?: string
+  duration?: number
+  detail?: string
+  error?: string
+  reason?: string
 }
 
-/**
- * Stage progress dictionary (dynamic keys)
- */
 export type StageProgress = Record<string, StageProgressItem>
 
-/**
- * Target brief info in scan response
- */
 export interface ScanTargetBrief {
   id: number
   name: string
   type: string
 }
 
-/**
- * Cached statistics in scan response
- */
 export interface ScanCachedStats {
   subdomainsCount: number
   websitesCount: number
@@ -60,22 +38,22 @@ export interface ScanCachedStats {
 
 export interface ScanRecord {
   id: number
-  targetId: number             // Target ID
-  target?: ScanTargetBrief     // Target info (nested object)
-  workerName?: string | null   // Worker node name
-  cachedStats?: ScanCachedStats // Cached statistics
-  workflowNames: string[]        // Workflow name list
-  scanMode: string             // Scan mode
-  createdAt: string            // Creation time
-  stoppedAt?: string           // Stop time
+  targetId: number
+  target?: ScanTargetBrief
+  workerName?: string | null
+  cachedStats?: ScanCachedStats
+  workflowNames: string[]
+  scanMode: string
+  createdAt: string
+  stoppedAt?: string
   status: ScanStatus
-  errorMessage?: string        // Error message (has value when failed)
-  progress: number             // 0-100
-  currentStage?: ScanStage     // Current scan stage (only has value in running status)
-  stageProgress?: StageProgress // Stage progress details
-  yamlConfiguration?: string   // YAML configuration string
-  resultsDir?: string          // Results directory
-  workerId?: number            // Worker ID
+  errorMessage?: string
+  progress: number
+  currentStage?: ScanStage
+  stageProgress?: StageProgress
+  yamlConfiguration?: string
+  resultsDir?: string
+  workerId?: number
 }
 
 export interface GetScansParams {
@@ -83,41 +61,32 @@ export interface GetScansParams {
   pageSize?: number
   status?: ScanStatus
   search?: string
-  target?: number  // Filter by target ID
+  target?: number
 }
 
 export interface GetScansResponse {
-  results: ScanRecord[]        // Corresponds to backend results field
+  results: ScanRecord[]
   total: number
   page: number
   pageSize: number
   totalPages: number
 }
 
-/**
- * Initiate scan request parameters (for existing target/organization)
- */
 export interface InitiateScanRequest {
-  organizationId?: number  // Organization ID (choose one)
-  targetId?: number        // Target ID (choose one)
-  configuration: string    // YAML configuration string (required)
-  workflowNames: string[]    // Workflow name list (required)
+  organizationId?: number
+  targetId?: number
+  configuration: WorkflowConfigurationValue
+  workflowNames: string[]
 }
 
-/**
- * Quick scan request parameters (auto-create target and scan)
- */
 export interface QuickScanRequest {
-  targets: { name: string }[]  // Target list
-  configuration: string        // YAML configuration string (required)
-  workflowNames: string[]        // Workflow name list (required)
+  targets: { name: string }[]
+  configuration: WorkflowConfigurationValue
+  workflowNames: string[]
 }
 
-/**
- * Quick scan response
- */
 export interface QuickScanResponse {
-  count: number             // Number of scan tasks created
+  count: number
   targetStats: {
     created: number
     skipped: number
@@ -131,23 +100,17 @@ export interface QuickScanResponse {
   scans: ScanTask[]
 }
 
-/**
- * Single scan task info
- */
 export interface ScanTask {
   id: number
-  target: number           // Target ID
-  workflowNames: string[]    // Workflow name list
+  target: number
+  workflowNames: string[]
   status: ScanStatus
   createdAt: string
   updatedAt: string
 }
 
-/**
- * Initiate scan response
- */
 export interface InitiateScanResponse {
-  message: string          // Success message
-  count: number            // Number of scan tasks created
-  scans: ScanTask[]        // Scan task list
+  message: string
+  count: number
+  scans: ScanTask[]
 }

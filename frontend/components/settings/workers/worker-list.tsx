@@ -10,9 +10,6 @@ import {
 } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import {
-  Card,
-} from "@/components/ui/card"
-import {
   Dialog,
   DialogTrigger,
 } from "@/components/ui/dialog"

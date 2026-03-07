@@ -91,9 +91,8 @@ export const transformBackendNotification = (
   backendNotification: BackendNotification,
   options?: NotificationTransformOptions
 ): Notification => {
-  const createdAtRaw = backendNotification.createdAt ?? backendNotification.created_at
-  const createdDate = createdAtRaw ? new Date(createdAtRaw) : new Date()
-  const isRead = backendNotification.isRead ?? backendNotification.is_read
+  const createdDate = backendNotification.createdAt ? new Date(backendNotification.createdAt) : new Date()
+  const isRead = backendNotification.isRead
   const notification: Notification = {
     id: backendNotification.id,
     type: inferNotificationType(backendNotification.message, backendNotification.category),

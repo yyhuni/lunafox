@@ -1,7 +1,6 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import { useTranslations } from "next-intl"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DataTableSkeleton } from "@/components/ui/data-table-skeleton"
 
@@ -32,8 +31,6 @@ const ScanHistoryList = dynamic(
  * Displays historical records of all scan tasks
  */
 export default function ScanHistoryPage() {
-  const t = useTranslations("scan.history")
-
   return (
     <div className="@container/main flex flex-col gap-4 py-4 md:gap-6 md:py-6">
       {/* Statistics cards */}

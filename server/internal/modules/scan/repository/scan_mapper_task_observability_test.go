@@ -22,6 +22,6 @@ func TestScanTaskModelToRecord_MapsCoreFields(t *testing.T) {
 		t.Fatalf("unexpected mapped core fields: %+v", record)
 	}
 	if record.WorkflowID != "subdomain_discovery" {
-		t.Fatalf("unexpected workflow name: %s", record.WorkflowID)
+		t.Fatalf("unexpected workflow id: %s", record.WorkflowID)
 	}
 }

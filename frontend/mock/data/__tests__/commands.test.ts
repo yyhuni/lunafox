@@ -7,15 +7,15 @@ import {
 } from "@/mock/data/commands"
 
 describe("mock commands", () => {
-  it("returns paginated commands with compatibility fields", () => {
+  it("returns paginated commands with camelCase pagination fields", () => {
     const result = getMockCommands()
 
     expect(result.commands).toHaveLength(mockCommands.length)
     expect(result.total).toBe(mockCommands.length)
     expect(result.totalPages).toBe(1)
-    expect(result.page_size).toBe(result.pageSize)
-    expect(result.total_count).toBe(result.total)
-    expect(result.total_pages).toBe(result.totalPages)
+    expect(result).not.toHaveProperty("page_size")
+    expect(result).not.toHaveProperty("total_count")
+    expect(result).not.toHaveProperty("total_pages")
   })
 
   it("filters by toolId when provided", () => {

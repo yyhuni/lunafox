@@ -85,7 +85,6 @@ export class EndpointService {
       await mockDelay()
       return getMockEndpoints(params)
     }
-    // api-client.ts automatically converts camelCase params to snake_case
     const response = await api.get<GetEndpointsResponse>('/endpoints/', {
       params
     })
@@ -139,7 +138,6 @@ export class EndpointService {
         totalPages,
       }
     }
-    // api-client.ts automatically converts camelCase params to snake_case
     const response = await api.get<GetEndpointsResponse>(`/targets/${targetId}/endpoints/`, {
       params: { ...params, filter }
     })
@@ -209,7 +207,6 @@ export class EndpointService {
    * @returns Promise<CreateEndpointsResponse>
    */
   static async createEndpoints(data: { endpoints: Array<CreateEndpointRequest> }): Promise<CreateEndpointsResponse> {
-    // api-client.ts automatically converts camelCase request body to snake_case
     const response = await api.post<CreateEndpointsResponse>('/endpoints/create/', data)
     return response.data
   }
@@ -230,7 +227,6 @@ export class EndpointService {
    * @returns Promise<BatchDeleteEndpointsResponse>
    */
   static async batchDeleteEndpoints(data: BatchDeleteEndpointsRequest): Promise<BatchDeleteEndpointsResponse> {
-    // api-client.ts automatically converts camelCase request body to snake_case
     const response = await api.post<BatchDeleteEndpointsResponse>('/endpoints/batch-delete/', data)
     return response.data
   }

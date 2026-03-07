@@ -1,7 +1,12 @@
 import { useCallback, useMemo, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { mergeWorkflowConfigurations } from "@/lib/workflow-config"
+import {
+  extractWorkflowIds,
+  mergeWorkflowConfigurations,
+  parseWorkflowConfiguration,
+  serializeWorkflowConfiguration,
+} from "@/lib/workflow-config"
 import {
   getApiErrorMessage,
   getInitiateScanValidationIssue,
@@ -19,27 +24,13 @@ type UseInitiateScanDialogStateProps = {
   tToast: (key: string, params?: Record<string, string | number | Date>) => string
 }
 
-const TOP_LEVEL_WORKFLOW_PATTERN = /^([A-Za-z0-9_-]+)\s*:/gm
-
-function extractWorkflowNamesFromConfiguration(configuration: string): string[] {
-  const names: string[] = []
-  const seen = new Set<string>()
-  const normalized = configuration.replace(/\r\n?/g, "\n")
-  for (const match of normalized.matchAll(TOP_LEVEL_WORKFLOW_PATTERN)) {
-    const name = (match[1] || "").trim()
-    if (!name || seen.has(name)) continue
-    seen.add(name)
-    names.push(name)
-  }
-  return names
-}
-
 function resolveWorkflowProfileNames(preset: WorkflowProfile | null): string[] {
   if (!preset) return []
-  if (Array.isArray(preset.workflowNames) && preset.workflowNames.length > 0) {
-    return preset.workflowNames.filter((item) => item && item.trim().length > 0)
+  const preferred = preset.workflowIds || preset.workflowNames || []
+  if (preferred.length > 0) {
+    return preferred.filter((item) => item && item.trim().length > 0)
   }
-  return extractWorkflowNamesFromConfiguration(preset.configuration || "")
+  return extractWorkflowIds(preset.configuration)
 }
 
 export function useInitiateScanDialogState({
@@ -87,7 +78,7 @@ export function useInitiateScanDialogState({
     if (!workflows) return ""
     const selectedSet = new Set(workflowNames)
     const selected = workflows.filter((item) => selectedSet.has(item.name))
-    return mergeWorkflowConfigurations(selected.map((item) => item.configuration || ""))
+    return serializeWorkflowConfiguration(mergeWorkflowConfigurations(selected.map((item) => item.configuration)))
   }, [workflows])
 
   const applyWorkflowSelection = useCallback((workflowNames: string[], nextConfig: string) => {
@@ -202,7 +193,7 @@ export function useInitiateScanDialogState({
       const response = await initiateScan({
         organizationId,
         targetId,
-        configuration,
+        configuration: parseWorkflowConfiguration(configuration),
         workflowNames,
       })
 

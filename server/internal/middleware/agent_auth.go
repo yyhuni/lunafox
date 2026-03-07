@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
@@ -16,15 +17,21 @@ type AgentFinder interface {
 // AgentAuthMiddleware creates a middleware for agent authentication.
 func AgentAuthMiddleware(agentRepo AgentFinder) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		apiKey := c.GetHeader("X-Agent-Key")
-		if apiKey == "" {
-			apiKey = c.Query("key")
-		}
-		if apiKey == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing API key"})
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
 			c.Abort()
 			return
 		}
+
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
+			c.Abort()
+			return
+		}
+
+		apiKey := parts[1]
 		if len(apiKey) != 8 {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid API key format"})
 			c.Abort()
@@ -38,8 +45,7 @@ func AgentAuthMiddleware(agentRepo AgentFinder) gin.HandlerFunc {
 			return
 		}
 
-		c.Set("agentID", agent.ID)
-		c.Set("agent", agent)
+		setAgent(c, agent)
 		c.Next()
 	}
 }

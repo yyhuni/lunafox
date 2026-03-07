@@ -88,8 +88,8 @@ func (service *LifecycleService) stopActiveForDelete(ctx context.Context, scan *
 	}
 	scanDeleteStopIgnoredTotal.Add(1)
 	pkg.Warn("ignoring stop error during scan deletion",
-		zap.Int("scanId", scan.ID),
-		zap.String("scanStatus", scan.Status),
+		zap.Int("scan.id", scan.ID),
+		zap.String("scan.status", scan.Status),
 		zap.Error(err),
 	)
 	return 0, nil

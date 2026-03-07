@@ -178,10 +178,10 @@ func (s *AgentDataProxyService) BatchUpsertAssets(ctx context.Context, req *runt
 		return nil, status.Error(codes.InvalidArgument, "request is required")
 	}
 	if req.ScanId <= 0 || req.TargetId <= 0 {
-		return nil, status.Error(codes.InvalidArgument, "scan_id and target_id are required")
+		return nil, status.Error(codes.InvalidArgument, "scanId and targetId are required")
 	}
 	if len(req.ItemsJson) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "items_json must not be empty")
+		return nil, status.Error(codes.InvalidArgument, "itemsJson must not be empty")
 	}
 
 	switch req.DataType {
@@ -230,7 +230,7 @@ func (s *AgentDataProxyService) BatchUpsertAssets(ctx context.Context, req *runt
 			return nil, mapBatchUpsertError(err)
 		}
 	default:
-		return nil, status.Errorf(codes.InvalidArgument, "unsupported data_type: %s", req.DataType)
+		return nil, status.Errorf(codes.InvalidArgument, "unsupported dataType: %s", req.DataType)
 	}
 
 	return &runtimev1.BatchUpsertAssetsResponse{Accepted: int32(len(req.ItemsJson))}, nil

@@ -102,13 +102,6 @@ export {
   getMockRegistrationToken,
 } from './data/agents'
 
-// Workers (legacy)
-export {
-  mockWorkers,
-  getMockWorkers,
-  getMockWorkerById,
-} from './data/workers'
-
 // Notifications
 export {
   mockNotifications,

@@ -74,7 +74,7 @@ func (service *AgentRuntimeService) OnDisconnected(ctx context.Context, agentID 
 	}
 	if service.heartbeatCache != nil {
 		if err := service.heartbeatCache.Delete(ctx, agentID); err != nil {
-			pkg.Warn("Failed to clear heartbeat cache on disconnect", zap.Int("agent_id", agentID), zap.Error(err))
+			pkg.Warn("Failed to clear heartbeat cache on disconnect", zap.Int("agent.id", agentID), zap.Error(err))
 		}
 	}
 	return nil

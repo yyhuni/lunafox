@@ -67,16 +67,16 @@ func (m *AgentMonitor) check(ctx context.Context) {
 			lastHeartbeat = *agent.LastHeartbeat
 		}
 		pkg.Info("Marking agent offline due to stale heartbeat",
-			zap.Int("agent_id", agent.ID),
-			zap.Time("lastHeartbeat", lastHeartbeat),
+			zap.Int("agent.id", agent.ID),
+			zap.Time("agent.last_heartbeat", lastHeartbeat),
 			zap.Duration("timeout", m.timeout),
 		)
 		if err := m.agentRepo.UpdateStatus(ctx, agent.ID, "offline"); err != nil {
-			pkg.Warn("Failed to mark agent offline", zap.Int("agent_id", agent.ID), zap.Error(err))
+			pkg.Warn("Failed to mark agent offline", zap.Int("agent.id", agent.ID), zap.Error(err))
 			continue
 		}
 		if err := m.scanTaskRepo.FailTasksForOfflineAgent(ctx, agent.ID); err != nil {
-			pkg.Warn("Failed to fail tasks for offline agent", zap.Int("agent_id", agent.ID), zap.Error(err))
+			pkg.Warn("Failed to fail tasks for offline agent", zap.Int("agent.id", agent.ID), zap.Error(err))
 		}
 	}
 }

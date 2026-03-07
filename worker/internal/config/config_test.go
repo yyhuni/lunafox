@@ -101,7 +101,7 @@ func TestValidateMissingFields(t *testing.T) {
 		{name: "missing target id", cfg: func() Config { c := valid; c.TargetID = 0; return c }(), err: ErrMissingTargetID},
 		{name: "missing target name", cfg: func() Config { c := valid; c.TargetName = ""; return c }(), err: ErrMissingTargetName},
 		{name: "missing target type", cfg: func() Config { c := valid; c.TargetType = ""; return c }(), err: ErrMissingTargetType},
-		{name: "missing workflow name", cfg: func() Config { c := valid; c.WorkflowID = ""; return c }(), err: ErrMissingWorkflowID},
+		{name: "missing workflow id", cfg: func() Config { c := valid; c.WorkflowID = ""; return c }(), err: ErrMissingWorkflowID},
 		{name: "missing config", cfg: func() Config { c := valid; c.Config = nil; return c }(), err: ErrMissingConfig},
 	}
 

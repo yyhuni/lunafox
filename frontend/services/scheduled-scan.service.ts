@@ -10,25 +10,25 @@ import { USE_MOCK, mockDelay, getMockScheduledScans, getMockScheduledScanById } 
 /**
  * Get scheduled scan list
  */
-export async function getScheduledScans(params?: { 
+export async function getScheduledScans(params?: {
   page?: number
   pageSize?: number
   search?: string
   targetId?: number
-  organizationId?: number 
+  organizationId?: number
 }): Promise<GetScheduledScansResponse> {
   if (USE_MOCK) {
     await mockDelay()
     return getMockScheduledScans(params)
   }
-  // Convert camelCase to snake_case for query params (djangorestframework-camel-case doesn't convert query params)
+
   const apiParams: Record<string, unknown> = {}
   if (params?.page) apiParams.page = params.page
   if (params?.pageSize) apiParams.pageSize = params.pageSize
   if (params?.search) apiParams.search = params.search
-  if (params?.targetId) apiParams.target_id = params.targetId
-  if (params?.organizationId) apiParams.organization_id = params.organizationId
-  
+  if (params?.targetId) apiParams.targetId = params.targetId
+  if (params?.organizationId) apiParams.organizationId = params.organizationId
+
   const res = await api.get<GetScheduledScansResponse>('/scheduled-scans/', { params: apiParams })
   return res.data
 }
@@ -90,4 +90,3 @@ export async function toggleScheduledScan(id: number, isEnabled: boolean): Promi
   )
   return res.data
 }
-

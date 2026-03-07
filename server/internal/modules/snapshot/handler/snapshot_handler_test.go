@@ -1694,8 +1694,8 @@ func TestBulkUpsertHandler(t *testing.T) {
 			}
 
 			router := gin.New()
-			router.POST("/api/scans/:scan_id/websites/bulk-upsert", func(c *gin.Context) {
-				scanID := c.Param("scan_id")
+			router.POST("/api/scans/:scanId/websites/bulk-upsert", func(c *gin.Context) {
+				scanID := c.Param("scanId")
 				if scanID == "invalid" {
 					dto.BadRequest(c, "Invalid scan ID")
 					return
@@ -1855,8 +1855,8 @@ func TestListHandler(t *testing.T) {
 			}
 
 			router := gin.New()
-			router.GET("/api/scans/:scan_id/websites", func(c *gin.Context) {
-				scanID := c.Param("scan_id")
+			router.GET("/api/scans/:scanId/websites", func(c *gin.Context) {
+				scanID := c.Param("scanId")
 				if scanID == "invalid" {
 					dto.BadRequest(c, "Invalid scan ID")
 					return
@@ -1959,7 +1959,7 @@ func TestFilterProperties(t *testing.T) {
 			}
 
 			router := gin.New()
-			router.GET("/api/scans/:scan_id/websites", func(c *gin.Context) {
+			router.GET("/api/scans/:scanId/websites", func(c *gin.Context) {
 				var query dto.WebsiteSnapshotListQuery
 				_ = c.ShouldBindQuery(&query)
 				_, _, _ = mockSvc.ListByScan(1, &query)

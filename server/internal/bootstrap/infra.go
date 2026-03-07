@@ -131,7 +131,7 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 
 	lokiClient := loki.NewClient(cfg.LokiURL)
 	if err := waitForLokiReady(lokiClient.CheckReady, lokiBootstrapReadyTimeout, lokiBootstrapAttemptTimeout, lokiBootstrapRetryInterval); err != nil {
-		pkg.Fatal("Loki is unavailable during bootstrap", zap.String("loki_url", cfg.LokiURL), zap.Error(err))
+		pkg.Fatal("Loki is unavailable during bootstrap", zap.String("loki.url", cfg.LokiURL), zap.Error(err))
 	}
 
 	profileLoader, err := workflowprofile.NewLoader()
@@ -239,7 +239,7 @@ func waitForLokiReady(check lokiReadyCheckFunc, totalTimeout, attemptTimeout, re
 		pkg.Warn(
 			"Loki not ready yet, retrying bootstrap probe",
 			zap.Int("attempt", attempt),
-			zap.Duration("retry_in", retryInterval),
+			zap.Duration("retry.interval", retryInterval),
 			zap.Error(err),
 		)
 

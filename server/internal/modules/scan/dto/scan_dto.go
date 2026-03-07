@@ -55,7 +55,7 @@ type ScanDetailResponse struct {
 type InitiateScanRequest struct {
 	OrganizationID *int `json:"organizationId" binding:"omitempty"`
 	TargetID       *int `json:"targetId" binding:"omitempty"`
-	// Selected workflow names drive runtime planning and schema validation.
+	// Selected workflow IDs drive runtime planning and schema validation.
 	WorkflowIDs   []string `json:"workflowIds" binding:"required,min=1"`
 	Configuration string   `json:"configuration" binding:"required"`
 }
@@ -68,7 +68,7 @@ type QuickScanRequest struct {
 
 type CreateNormalScanRequest struct {
 	TargetID int `json:"targetId" binding:"required"`
-	// Selected workflow names are the authoritative planning input.
+	// Selected workflow IDs are the authoritative planning input.
 	WorkflowIDs   []string `json:"workflowIds" binding:"required,min=1"`
 	Configuration string   `json:"configuration" binding:"required"`
 }

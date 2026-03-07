@@ -8,6 +8,9 @@ import (
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 	scanrepo "github.com/yyhuni/lunafox/server/internal/modules/scan/repository"
 	scanmodel "github.com/yyhuni/lunafox/server/internal/modules/scan/repository/persistence"
+	pkg "github.com/yyhuni/lunafox/server/internal/pkg"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 type fakeAgentRepo struct {
@@ -103,5 +106,43 @@ func TestAgentMonitorMarksOfflineAndRecovers(t *testing.T) {
 	}
 	if len(taskRepo.recovered) != 2 {
 		t.Fatalf("expected 2 agents recovered, got %d", len(taskRepo.recovered))
+	}
+}
+
+func TestAgentMonitorLogsSemanticLastHeartbeat(t *testing.T) {
+	core, logs := observer.New(zap.DebugLevel)
+	logger := zap.New(core)
+	previousLogger := pkg.Logger
+	previousSugar := pkg.Sugar
+	pkg.Logger = logger
+	pkg.Sugar = logger.Sugar()
+	defer func() {
+		pkg.Logger = previousLogger
+		pkg.Sugar = previousSugar
+	}()
+
+	heartbeat := time.Now().UTC().Add(-time.Minute)
+	agentRepo := &fakeAgentRepo{agents: []*agentdomain.Agent{{ID: 1, LastHeartbeat: &heartbeat}}}
+	taskRepo := &fakeScanTaskRepo{}
+	monitor := NewAgentMonitor(agentRepo, taskRepo, time.Minute, 2*time.Minute)
+
+	monitor.check(context.Background())
+
+	entries := logs.FilterMessage("Marking agent offline due to stale heartbeat").All()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 stale heartbeat log, got %d", len(entries))
+	}
+	ctx := entries[0].ContextMap()
+	if _, ok := ctx["agent.last_heartbeat"]; !ok {
+		t.Fatalf("expected agent.last_heartbeat field, got %v", ctx)
+	}
+	if _, ok := ctx["agent.id"]; !ok {
+		t.Fatalf("expected agent.id field, got %v", ctx)
+	}
+	if _, ok := ctx["last_heartbeat"]; ok {
+		t.Fatalf("expected legacy last_heartbeat field removed, got %v", ctx)
+	}
+	if _, ok := ctx["agent_id"]; ok {
+		t.Fatalf("expected legacy agent_id field removed, got %v", ctx)
 	}
 }

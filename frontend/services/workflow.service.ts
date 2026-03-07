@@ -1,4 +1,5 @@
 import apiClient from '@/lib/api-client'
+import { normalizeWorkflowConfiguration } from '@/lib/workflow-config'
 import type { ScanWorkflow, WorkflowProfile } from '@/types/workflow.types'
 import {
   USE_MOCK,
@@ -8,17 +9,13 @@ import {
   getMockWorkflowProfileById,
 } from '@/mock'
 
-/**
- * Workflow catalog API service (read-only)
- */
-
 export async function getWorkflowProfiles(): Promise<WorkflowProfile[]> {
   if (USE_MOCK) {
     await mockDelay()
-    return getMockWorkflowProfiles()
+    return normalizeProfiles(getMockWorkflowProfiles())
   }
   const response = await apiClient.get('/workflows/profiles/')
-  return response.data
+  return normalizeProfiles(response.data)
 }
 
 export async function getWorkflowProfile(id: string): Promise<WorkflowProfile> {
@@ -26,10 +23,10 @@ export async function getWorkflowProfile(id: string): Promise<WorkflowProfile> {
     await mockDelay()
     const profile = getMockWorkflowProfileById(id)
     if (!profile) throw new Error('Workflow profile not found')
-    return profile
+    return normalizeProfile(profile)
   }
   const response = await apiClient.get(`/workflows/profiles/${id}/`)
-  return response.data
+  return normalizeProfile(response.data)
 }
 
 export async function getWorkflows(): Promise<ScanWorkflow[]> {
@@ -43,20 +40,54 @@ export async function getWorkflows(): Promise<ScanWorkflow[]> {
 
 type WorkflowPayload = Partial<ScanWorkflow> & {
   name?: string
+  workflowId?: string
+  title?: string
+  displayName?: string
+  configuration?: unknown
+}
+
+type WorkflowProfilePayload = Partial<WorkflowProfile> & {
+  workflowIds?: string[]
+  workflowNames?: string[]
+  configuration?: unknown
 }
 
 function normalizeWorkflows(payload: WorkflowPayload[]): ScanWorkflow[] {
-  return (payload || [])
-    .filter((item): item is WorkflowPayload & { name: string } => typeof item?.name === 'string' && item.name.trim().length > 0)
-    .map((item, index) => ({
+  return (payload || []).reduce<ScanWorkflow[]>((result, item, index) => {
+    const name = typeof item?.name === 'string' && item.name.trim().length > 0
+      ? item.name.trim()
+      : typeof item?.workflowId === 'string' && item.workflowId.trim().length > 0
+        ? item.workflowId.trim()
+        : ''
+    if (!name) {
+      return result
+    }
+    result.push({
       id: typeof item.id === 'number' ? item.id : index + 1,
-      name: item.name.trim(),
-      title: item.title,
+      name,
+      title: item.title ?? item.displayName,
       description: item.description,
       version: item.version,
-      configuration: item.configuration,
+      configuration: normalizeWorkflowConfiguration(item.configuration),
       isValid: item.isValid,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
-    }))
+    })
+    return result
+  }, [])
+}
+
+function normalizeProfiles(payload: WorkflowProfilePayload[]): WorkflowProfile[] {
+  return (payload || []).map(normalizeProfile)
+}
+
+function normalizeProfile(item: WorkflowProfilePayload): WorkflowProfile {
+  return {
+    id: item.id || '',
+    name: item.name || '',
+    description: item.description,
+    workflowIds: (item.workflowIds || item.workflowNames || []).filter(Boolean),
+    workflowNames: (item.workflowNames || item.workflowIds || []).filter(Boolean),
+    configuration: normalizeWorkflowConfiguration(item.configuration),
+  }
 }

@@ -25,8 +25,6 @@ type EndpointListResponse = {
   page?: number
   pageSize?: number
   totalPages?: number
-  page_size?: number
-  total_pages?: number
 }
 
 export type UseTargetsResult = UseQueryResult<TargetSelectResponse, Error>

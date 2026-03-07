@@ -4,12 +4,11 @@ import type { BatchCreateResponse } from "./api-response.types"
 
 // Subdomain related type definitions (renamed from domain.types.ts)
 
-// Basic subdomain type (consistent with frontend camelCase naming convention)
-// Note: Backend returns snake_case, but response interceptor auto-converts to camelCase
+// Basic subdomain type
 export interface Subdomain {
   id: number
   name: string
-  createdAt: string  // Creation time
+  createdAt: string
 }
 
 // Get subdomains list request parameters
@@ -22,8 +21,8 @@ export interface GetSubdomainsResponse {
   domains: Subdomain[]
   total: number
   page: number
-  pageSize: number      // [OK] Using camelCase
-  totalPages: number    // [OK] Using camelCase
+  pageSize: number
+  totalPages: number
 }
 
 // Get all subdomains request parameters
@@ -48,14 +47,13 @@ export type GetSubdomainByIDResponse = Subdomain
 
 // Subdomain data table component props type definition
 export interface SubdomainDataTableProps {
-  data: Subdomain[]                           // Subdomain data array
-  columns: ColumnDef<Subdomain>[]             // Column definitions array
-  onAddNew?: () => void                       // Add new subdomain callback
-  onBulkDelete?: () => void                   // Bulk delete callback
-  onSelectionChange?: (selectedRows: Subdomain[]) => void  // Selected rows change callback
-  searchPlaceholder?: string                  // Search input placeholder
-  searchColumn?: string                       // Column name to search
-  // Pagination related props
+  data: Subdomain[]
+  columns: ColumnDef<Subdomain>[]
+  onAddNew?: () => void
+  onBulkDelete?: () => void
+  onSelectionChange?: (selectedRows: Subdomain[]) => void
+  searchPlaceholder?: string
+  searchColumn?: string
   pagination?: {
     pageIndex: number
     pageSize: number

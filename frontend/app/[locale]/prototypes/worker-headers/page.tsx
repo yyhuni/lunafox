@@ -1,6 +1,5 @@
 "use client"
 
-import { useTranslations } from "next-intl"
 import { WorkerHeaderVariants } from "@/components/prototypes/worker-header-variants"
 
 export default function WorkerHeaderVariantsPage() {

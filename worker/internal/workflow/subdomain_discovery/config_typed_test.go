@@ -8,11 +8,24 @@ import (
 
 func TestDecodeWorkflowConfigSuccess(t *testing.T) {
 	raw := validAuthoritativeConfigMap()
-
 	cfg, err := decodeWorkflowConfig(raw)
 	require.NoError(t, err)
 	require.True(t, cfg.Recon.Enabled)
 	require.True(t, cfg.Recon.Tools.Subfinder.Enabled)
+}
+
+func TestDecodeWorkflowConfigFillsDefaultsWhenEnabledParamMissing(t *testing.T) {
+	raw := validAuthoritativeConfigMap()
+	recon := raw[stageRecon].(map[string]any)
+	tools := recon["tools"].(map[string]any)
+	subfinder := tools[toolSubfinder].(map[string]any)
+	delete(subfinder, "threads-cli")
+	delete(subfinder, "timeout-runtime")
+
+	cfg, err := decodeWorkflowConfig(raw)
+	require.NoError(t, err)
+	require.Equal(t, 10, cfg.Recon.Tools.Subfinder.ThreadsCLI)
+	require.Equal(t, 3600, cfg.Recon.Tools.Subfinder.TimeoutRuntime)
 }
 
 func TestDecodeWorkflowConfigInvalidType(t *testing.T) {
@@ -45,18 +58,6 @@ func TestDecodeWorkflowConfigRejectsUnknownNestedField(t *testing.T) {
 	_, err := decodeWorkflowConfig(raw)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "unknown field")
-}
-
-func TestDecodeWorkflowConfigRejectsMissingRequiredFieldWhenEnabled(t *testing.T) {
-	raw := validAuthoritativeConfigMap()
-	recon := raw[stageRecon].(map[string]any)
-	tools := recon["tools"].(map[string]any)
-	subfinder := tools[toolSubfinder].(map[string]any)
-	delete(subfinder, "threads-cli")
-
-	_, err := decodeWorkflowConfig(raw)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "threads-cli")
 }
 
 func TestDecodeWorkflowConfigRejectsMissingRequiredStage(t *testing.T) {
@@ -93,7 +94,7 @@ func TestDecodeAndValidateAuthoritativeConfig_ServerPassWorkerReject(t *testing.
 	require.Contains(t, err.Error(), "recon")
 }
 
-func TestDecodeAndValidateAuthoritativeConfig_BruteforceEnabledRequiresWordlist(t *testing.T) {
+func TestDecodeAndValidateAuthoritativeConfig_BruteforceEnabledRequiresNonEmptyWordlist(t *testing.T) {
 	raw := validAuthoritativeConfigMap()
 	bruteforce := raw[stageBruteforce].(map[string]any)
 	bruteforce["enabled"] = true

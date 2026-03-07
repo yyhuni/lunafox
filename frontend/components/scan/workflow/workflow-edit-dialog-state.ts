@@ -1,5 +1,6 @@
 import React from "react"
 import * as yaml from "js-yaml"
+import { serializeWorkflowConfiguration } from "@/lib/workflow-config"
 import { toast } from "sonner"
 import type { ScanWorkflow } from "@/types/workflow.types"
 
@@ -108,7 +109,7 @@ export function useWorkflowEditDialogState({
 
   React.useEffect(() => {
     if (workflow && open) {
-      const content = workflow.configuration || generateSampleYaml(workflow)
+      const content = workflow.configuration ? serializeWorkflowConfiguration(workflow.configuration) : generateSampleYaml(workflow)
       setYamlContent(content)
       setHasChanges(false)
       setYamlError(null)

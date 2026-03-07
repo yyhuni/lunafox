@@ -30,13 +30,9 @@ export interface GetCommandsRequest {
 export interface GetCommandsResponse {
   commands: Command[]
   page: number
-  pageSize: number      // Backend returns camelCase format
-  total: number         // Unified total field
-  totalPages: number    // Backend returns camelCase format
-  // Compatibility fields (backward compatible)
-  page_size?: number
-  total_count?: number
-  total_pages?: number
+  pageSize: number
+  total: number
+  totalPages: number
 }
 
 /**

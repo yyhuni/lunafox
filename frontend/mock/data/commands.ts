@@ -223,9 +223,6 @@ export const getMockCommands = (params: GetCommandsRequest = {}): GetCommandsRes
     pageSize,
     total,
     totalPages,
-    page_size: pageSize,
-    total_count: total,
-    total_pages: totalPages,
   }
 }
 

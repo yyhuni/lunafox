@@ -49,20 +49,19 @@ export function useOrganizations(
     }),
     queryFn: () => OrganizationService.getOrganizations(params || {}),
     select: (response) => {
-      // Handle DRF pagination response format
-      const page = params.page || 1
-      const pageSize = params.pageSize || 10
-      const total = response.total || response.count || 0
-      const totalPages = Math.ceil(total / pageSize)
-      
+      const total = response.total ?? 0
+      const page = response.page ?? params.page ?? 1
+      const pageSize = response.pageSize ?? params.pageSize ?? 10
+      const totalPages = response.totalPages ?? Math.ceil(total / pageSize)
+
       return {
-        organizations: response.results || [],
+        organizations: response.results ?? [],
         pagination: {
           total,
           page,
           pageSize,
           totalPages,
-        }
+        },
       }
     },
     enabled: options?.enabled !== undefined ? options.enabled : true,

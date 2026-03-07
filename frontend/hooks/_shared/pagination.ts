@@ -5,8 +5,6 @@ export type PaginationResponse = {
   page?: number
   pageSize?: number
   totalPages?: number
-  page_size?: number
-  total_pages?: number
 }
 
 export const DEFAULT_PAGE = 1
@@ -19,15 +17,8 @@ export const normalizePagination = (
 ): PaginationInfo => {
   const total = response?.total ?? 0
   const page = response?.page ?? fallbackPage ?? DEFAULT_PAGE
-  const pageSize =
-    response?.pageSize ??
-    response?.page_size ??
-    fallbackPageSize ??
-    DEFAULT_PAGE_SIZE
-  const totalPages =
-    response?.totalPages ??
-    response?.total_pages ??
-    0
+  const pageSize = response?.pageSize ?? fallbackPageSize ?? DEFAULT_PAGE_SIZE
+  const totalPages = response?.totalPages ?? 0
 
   return {
     total,

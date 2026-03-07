@@ -170,7 +170,7 @@ export class OrganizationService {
     const response = await api.post<{ message: string }>(
       `/organizations/${data.organizationId}/targets/`,
       {
-        targetId: data.targetId  // Interceptor will convert to target_id
+        targetId: data.targetId
       }
     )
     return response.data
@@ -190,7 +190,7 @@ export class OrganizationService {
     const response = await api.post<{ unlinkedCount: number; message: string }>(
       `/organizations/${data.organizationId}/unlink_targets/`,
       {
-        targetIds: data.targetIds  // Interceptor will convert to target_ids
+        targetIds: data.targetIds
       }
     )
     return response.data

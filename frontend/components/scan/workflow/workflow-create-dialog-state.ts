@@ -2,6 +2,7 @@ import React from "react"
 import * as yaml from "js-yaml"
 import { toast } from "sonner"
 import { useWorkflowProfiles } from "@/hooks/use-workflows"
+import { serializeWorkflowConfiguration } from "@/lib/workflow-config"
 import type { WorkflowProfile } from "@/types/workflow.types"
 
 export type WorkflowYamlError = {
@@ -41,7 +42,7 @@ export function useWorkflowCreateDialogState({
       if (preSelectedPreset) {
         setSelectedPreset(preSelectedPreset)
         setWorkflowName(`${preSelectedPreset.name} (Copy)`)
-        setYamlContent(preSelectedPreset.configuration)
+        setYamlContent(serializeWorkflowConfiguration(preSelectedPreset.configuration))
         setStep(2)
       } else {
         setStep(1)
@@ -121,7 +122,7 @@ export function useWorkflowCreateDialogState({
   const handleNextStep = React.useCallback(() => {
     if (!selectedPreset) return
     setWorkflowName(`${selectedPreset.name} (Copy)`)
-    setYamlContent(selectedPreset.configuration)
+    setYamlContent(serializeWorkflowConfiguration(selectedPreset.configuration))
     setStep(2)
   }, [selectedPreset])
 

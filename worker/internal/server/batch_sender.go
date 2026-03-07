@@ -83,9 +83,9 @@ func (s *BatchSender) Add(item any) error {
 
 		pkg.Logger.Error("Batch queue limit exceeded; dropping new item",
 			zap.String("type", s.dataType),
-			zap.Int("queueLength", queued),
-			zap.Int("maxQueuedItems", limit),
-			zap.Int("droppedTotal", droppedTotal),
+			zap.Int("queue.length", queued),
+			zap.Int("queue.max_items", limit),
+			zap.Int("drop.total", droppedTotal),
 		)
 		return queueOverflowError(s.dataType, queued, limit, 1)
 	}
@@ -154,7 +154,7 @@ func (s *BatchSender) sendBatch() error {
 			pkg.Logger.Error("Non-retryable error sending batch (data validation issue)",
 				zap.String("type", s.dataType),
 				zap.Int("count", len(toSend)),
-				zap.Int("statusCode", httpErr.StatusCode),
+				zap.Int("http.response.status_code", httpErr.StatusCode),
 				zap.String("response", httpErr.Body))
 		} else {
 			pkg.Logger.Error("Failed to send batch after retries",
@@ -182,11 +182,11 @@ func (s *BatchSender) sendBatch() error {
 		if droppedNow > 0 {
 			pkg.Logger.Error("Batch queue overflow after send failure; dropping newest queued items",
 				zap.String("type", s.dataType),
-				zap.Int("queueLength", queued),
-				zap.Int("maxQueuedItems", s.maxQueuedItems),
-				zap.Int("retryCount", retryCount),
-				zap.Int("droppedCount", droppedNow),
-				zap.Int("droppedTotal", droppedTotal),
+				zap.Int("queue.length", queued),
+				zap.Int("queue.max_items", s.maxQueuedItems),
+				zap.Int("retry.count", retryCount),
+				zap.Int("drop.count", droppedNow),
+				zap.Int("drop.total", droppedTotal),
 			)
 			return errors.Join(
 				fmt.Errorf("failed to send %s batch: %w", s.dataType, err),
@@ -196,9 +196,9 @@ func (s *BatchSender) sendBatch() error {
 
 		pkg.Logger.Warn("Batch re-queued for retry",
 			zap.String("type", s.dataType),
-			zap.Int("queueLength", queued),
-			zap.Int("retryCount", retryCount),
-			zap.Int("droppedTotal", droppedTotal),
+			zap.Int("queue.length", queued),
+			zap.Int("retry.count", retryCount),
+			zap.Int("drop.total", droppedTotal),
 		)
 		return fmt.Errorf("failed to send %s batch: %w", s.dataType, err)
 	}
@@ -213,8 +213,8 @@ func (s *BatchSender) sendBatch() error {
 	pkg.Logger.Debug("Batch sent",
 		zap.String("type", s.dataType),
 		zap.Int("count", len(toSend)),
-		zap.Int("totalSent", totalSent),
-		zap.Int("totalBatches", totalBatches))
+		zap.Int("send.item_total", totalSent),
+		zap.Int("send.batch_total", totalBatches))
 
 	return nil
 }

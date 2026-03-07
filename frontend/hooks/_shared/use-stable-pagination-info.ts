@@ -24,7 +24,6 @@ export const useStablePaginationInfo = (
   const normalized = normalizePagination(response, fallbackPage, fallbackPageSize)
   const resolvedTotalPages =
     response?.totalPages ??
-    response?.total_pages ??
     fallbackTotalPages ??
     normalized.totalPages
 

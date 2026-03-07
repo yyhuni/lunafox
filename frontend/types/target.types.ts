@@ -13,11 +13,10 @@ export type TargetType = 'domain' | 'ip' | 'cidr'
 export interface Target {
   id: number
   name: string
-  type: TargetType  // Backend field: type
+  type: TargetType
   description?: string
-  createdAt: string  // Backend field: created_at, auto-converted to createdAt
-  lastScannedAt?: string  // Backend field: last_scanned_at, auto-converted to lastScannedAt
-  // Associated data (added via serializer)
+  createdAt: string
+  lastScannedAt?: string
   organizations?: Array<{
     id: number
     name: string
@@ -50,14 +49,10 @@ export interface TargetDetail extends Target {
  */
 export interface TargetsResponse {
   results: Target[]
-  total: number        // Backend returns total, not count
-  page: number         // Current page number
-  pageSize: number     // Page size
-  totalPages: number   // Total pages
-  // Compatibility fields (for backward compatibility)
-  count?: number       // Optional, equivalent to total
-  next?: string | null
-  previous?: string | null
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
 }
 
 /**
@@ -99,7 +94,7 @@ export interface BatchCreateTargetsRequest {
     name: string
     description?: string
   }>
-  organizationId?: number  // Optional: associate with specified organization
+  organizationId?: number
 }
 
 /**
@@ -115,4 +110,3 @@ export interface BatchCreateTargetsResponse {
   }>
   message: string
 }
-

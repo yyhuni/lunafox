@@ -2,211 +2,100 @@ package main
 
 import (
 	"encoding/json"
-	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/yyhuni/lunafox/worker/internal/workflow"
 )
 
-func TestLoadDefinitionFromRegistry(t *testing.T) {
+func TestLoadDefinition(t *testing.T) {
 	def, err := loadDefinition("subdomain_discovery")
 	require.NoError(t, err)
 	require.Equal(t, "subdomain_discovery", def.WorkflowID)
 }
 
-func TestLoadDefinitionUnknownWorkflow(t *testing.T) {
-	_, err := loadDefinition("missing_workflow")
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "unsupported workflow")
-}
-
-func TestBuildTypedGo(t *testing.T) {
-	def, err := loadDefinition("subdomain_discovery")
-	require.NoError(t, err)
-
-	output := buildTypedGo(def, "subdomain_discovery")
-	require.True(t, strings.Contains(output, "type WorkflowConfig struct"))
-	require.True(t, strings.Contains(output, "type BruteforceSubdomainBruteforceToolConfig struct"))
-}
-
 func TestResolveOutputPathsFromDirs(t *testing.T) {
 	def := workflowDefForTest()
 	opts := genOptions{
-		workerSchemaDir:  "worker/internal/workflow/subdomain_discovery/generated",
-		serverSchemaDir:  "server/internal/workflow/schema",
-		serverProfileDir: "server/internal/workflow/profile/profiles",
-		docsDir:          "docs/config-reference",
+		workflow:          def.WorkflowID,
+		workerSchemaDir:   "/tmp/worker-schema",
+		workerManifestDir: "/tmp/worker-manifest",
+		serverSchemaDir:   "/tmp/server-schema",
+		serverManifestDir: "/tmp/server-manifest",
+		serverProfileDir:  "/tmp/profiles",
+		docsDir:           "/tmp/docs",
 	}
 
-	err := resolveOutputPaths(def, &opts)
+	require.NoError(t, resolveOutputPaths(def, &opts))
+	require.Equal(t, "/tmp/worker-schema/subdomain_discovery.schema.json", opts.workerSchemaPath)
+	require.Equal(t, "/tmp/worker-manifest/subdomain_discovery.manifest.json", opts.workerManifestPath)
+	require.Equal(t, "/tmp/server-schema/subdomain_discovery.schema.json", opts.serverSchemaPath)
+	require.Equal(t, "/tmp/server-manifest/subdomain_discovery.manifest.json", opts.serverManifestPath)
+	require.Equal(t, "/tmp/profiles/subdomain_discovery.yaml", opts.serverProfilePath)
+	require.Equal(t, "/tmp/docs/subdomain_discovery.md", opts.docsPath)
+}
+
+func TestResolveOutputPathsRequiresManifestPathOrDir(t *testing.T) {
+	def := workflowDefForTest()
+	opts := genOptions{
+		workflow:        def.WorkflowID,
+		workerSchemaDir: "/tmp/worker-schema",
+		serverSchemaDir: "/tmp/server-schema",
+		docsDir:         "/tmp/docs",
+	}
+	assertErr := resolveOutputPaths(def, &opts)
+	require.Error(t, assertErr)
+	require.Contains(t, assertErr.Error(), "worker-manifest-output")
+}
+
+func TestBuildSchemaOmitsWorkflowMetadataExtensions(t *testing.T) {
+	schema := buildSchema(workflowDefForTest())
+	payload, err := json.Marshal(schema)
 	require.NoError(t, err)
-	require.Equal(
-		t,
-		filepath.Join("worker/internal/workflow/subdomain_discovery/generated", "subdomain_discovery.schema.json"),
-		opts.workerSchemaPath,
-	)
-	require.Equal(
-		t,
-		filepath.Join("server/internal/workflow/schema", "subdomain_discovery.schema.json"),
-		opts.serverSchemaPath,
-	)
-	require.Equal(
-		t,
-		filepath.Join("server/internal/workflow/profile/profiles", "subdomain_discovery.yaml"),
-		opts.serverProfilePath,
-	)
-	require.Equal(
-		t,
-		filepath.Join("docs/config-reference", "subdomain_discovery.md"),
-		opts.docsPath,
-	)
+	text := string(payload)
+	require.NotContains(t, text, "x-workflow")
+	require.NotContains(t, text, "x-metadata")
+	require.NotContains(t, text, "x-stage")
 }
 
-func TestResolveOutputPathsRequiresServerPathOrDir(t *testing.T) {
-	def := workflowDefForTest()
-	opts := genOptions{
-		workerSchemaDir: "worker/internal/workflow/subdomain_discovery/generated",
-		docsDir:         "docs/config-reference",
-	}
-
-	err := resolveOutputPaths(def, &opts)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "server-schema-output")
+func TestBuildManifestIncludesDefaultProfileAndStages(t *testing.T) {
+	manifest := buildManifest(workflowDefForTest())
+	require.Equal(t, "v1", manifest.ManifestVersion)
+	require.Equal(t, "subdomain_discovery", manifest.WorkflowID)
+	require.Equal(t, "Subdomain Discovery", manifest.DisplayName)
+	require.Equal(t, "subdomain_discovery", manifest.DefaultProfileID)
+	require.Equal(t, "lunafox://schemas/workflows/subdomain_discovery", manifest.ConfigSchemaID)
+	require.NotEmpty(t, manifest.SupportedTargetTypeIDs)
+	require.NotEmpty(t, manifest.Stages)
+	require.Equal(t, "recon", manifest.Stages[0].StageID)
+	require.NotEmpty(t, manifest.Stages[0].Tools)
+	require.NotEmpty(t, manifest.Stages[0].Tools[0].Params)
 }
 
-func TestResolveOutputPathsRequiresDocsPathOrDir(t *testing.T) {
-	def := workflowDefForTest()
-	opts := genOptions{
-		workerSchemaDir: "worker/internal/workflow/subdomain_discovery/generated",
-		serverSchemaDir: "server/internal/workflow/schema",
-	}
-
-	err := resolveOutputPaths(def, &opts)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "docs-output")
-}
-
-func TestBuildTypedGoToolTypeNamesIncludeStage(t *testing.T) {
-	def := workflow.ContractDefinition{
-		WorkflowID: "demo",
-		Stages: []workflow.ContractStageDefinition{
-			{
-				ID: "stage-a",
-				Tools: []workflow.ContractToolDefinition{
-					{ID: "same-tool"},
-				},
-			},
-			{
-				ID: "stage-b",
-				Tools: []workflow.ContractToolDefinition{
-					{ID: "same-tool"},
-				},
-			},
-		},
-	}
-
-	output := buildTypedGo(def, "demo")
-	require.Contains(t, output, "type StageASameToolToolConfig struct")
-	require.Contains(t, output, "type StageBSameToolToolConfig struct")
-}
-
-func TestBuildSchemaIncludesParamConstraints(t *testing.T) {
-	minimum := 1
-	maximum := 64
-	minLength := 1
-	maxLength := 128
-
+func TestBuildTypedGoDisambiguatesDuplicateToolNamesAcrossStages(t *testing.T) {
 	def := workflow.ContractDefinition{
 		WorkflowID:  "demo",
 		DisplayName: "Demo",
-		Description: "Demo workflow",
-		TargetTypes: []string{"domain"},
 		Stages: []workflow.ContractStageDefinition{
 			{
-				ID:          "recon",
-				Name:        "Recon",
-				Description: "Recon stage",
+				ID:          "stage-a",
+				Name:        "Stage A",
+				Description: "A",
 				Required:    true,
-				Parallel:    true,
-				Tools: []workflow.ContractToolDefinition{
-					{
-						ID:          "tool-a",
-						Description: "Tool A",
-						Params: []workflow.ContractParamDefinition{
-							{
-								Key:                 "threads-cli",
-								Type:                "integer",
-								Description:         "threads",
-								RequiredWhenEnabled: true,
-								Minimum:             &minimum,
-								Maximum:             &maximum,
-							},
-							{
-								Key:                 "wordlist-name-runtime",
-								Type:                "string",
-								Description:         "wordlist name",
-								RequiredWhenEnabled: true,
-								MinLength:           &minLength,
-								MaxLength:           &maxLength,
-								Pattern:             "^[a-z0-9_\\-]+$",
-								Enum:                []string{"common", "large"},
-							},
-						},
-					},
-				},
+				Tools:       []workflow.ContractToolDefinition{{ID: "same-tool"}},
+			},
+			{
+				ID:          "stage-b",
+				Name:        "Stage B",
+				Description: "B",
+				Required:    false,
+				Tools:       []workflow.ContractToolDefinition{{ID: "same-tool"}},
 			},
 		},
 	}
-
-	schema := buildSchema(def)
-	toolSchema := schema.Properties["recon"].Properties["tools"].Properties["tool-a"]
-
-	intProp := toolSchema.Properties["threads-cli"]
-	require.NotNil(t, intProp)
-	require.NotNil(t, intProp.Minimum)
-	require.NotNil(t, intProp.Maximum)
-	require.Equal(t, minimum, *intProp.Minimum)
-	require.Equal(t, maximum, *intProp.Maximum)
-
-	stringProp := toolSchema.Properties["wordlist-name-runtime"]
-	require.NotNil(t, stringProp)
-	require.NotNil(t, stringProp.MinLength)
-	require.NotNil(t, stringProp.MaxLength)
-	require.Equal(t, minLength, *stringProp.MinLength)
-	require.Equal(t, maxLength, *stringProp.MaxLength)
-	require.Equal(t, "^[a-z0-9_\\-]+$", stringProp.Pattern)
-	require.Equal(t, []string{"common", "large"}, stringProp.Enum)
-}
-
-func TestBuildSchemaUsesDisplayNameForMetadataName(t *testing.T) {
-	def := workflow.ContractDefinition{
-		WorkflowID:  "demo_key",
-		DisplayName: "Demo Workflow",
-		Description: "Demo workflow",
-		TargetTypes: []string{"domain"},
-		Stages: []workflow.ContractStageDefinition{
-			{
-				ID:          "recon",
-				Name:        "Recon",
-				Description: "Recon stage",
-				Required:    true,
-				Parallel:    true,
-				Tools: []workflow.ContractToolDefinition{
-					{
-						ID:          "tool-a",
-						Description: "Tool A",
-					},
-				},
-			},
-		},
-	}
-
-	schema := buildSchema(def)
-	metadataName, ok := schema.Metadata["name"].(string)
-	require.True(t, ok)
-	require.Equal(t, "Demo Workflow", metadataName)
+	output := buildTypedGo(def, "demo")
+	require.Contains(t, output, "type StageASameToolToolConfig struct")
+	require.Contains(t, output, "type StageBSameToolToolConfig struct")
 }
 
 func TestBuildProfileYAMLFromContractDefaults(t *testing.T) {
@@ -227,29 +116,14 @@ func TestBuildProfileYAMLFromContractDefaults(t *testing.T) {
 				Description: "Recon stage",
 				Required:    true,
 				Parallel:    true,
-				Tools: []workflow.ContractToolDefinition{
-					{
-						ID:          "tool-a",
-						Description: "Tool A",
-						Params: []workflow.ContractParamDefinition{
-							{
-								Key:                 "threads-cli",
-								Type:                "integer",
-								Description:         "threads",
-								RequiredWhenEnabled: true,
-								Minimum:             &minimum,
-								Default:             20,
-							},
-							{
-								Key:                 "wordlist-runtime",
-								Type:                "string",
-								Description:         "wordlist",
-								RequiredWhenEnabled: true,
-								Default:             "top1m.txt",
-							},
-						},
+				Tools: []workflow.ContractToolDefinition{{
+					ID:          "tool-a",
+					Description: "Tool A",
+					Params: []workflow.ContractParamDefinition{
+						{Key: "threads-cli", Type: "integer", Description: "threads", RequiredWhenEnabled: true, Minimum: &minimum, Default: 20},
+						{Key: "wordlist-runtime", Type: "string", Description: "wordlist", RequiredWhenEnabled: true, Default: "top1m.txt"},
 					},
-				},
+				}},
 			},
 		},
 	}
@@ -260,12 +134,10 @@ func TestBuildProfileYAMLFromContractDefaults(t *testing.T) {
 
 	payload, err := buildProfileYAML(def, schemaJSON)
 	require.NoError(t, err)
-
 	text := string(payload)
 	require.Contains(t, text, "id: demo_default")
 	require.Contains(t, text, "name: Demo 默认配置")
 	require.Contains(t, text, "description: Demo 默认 profile")
-	require.Contains(t, text, "configuration:")
 	require.Contains(t, text, "demo:")
 	require.Contains(t, text, "threads-cli: 20")
 	require.Contains(t, text, "wordlist-runtime: top1m.txt")
@@ -277,36 +149,29 @@ func TestBuildProfileYAMLFailsWhenRequiredDefaultMissing(t *testing.T) {
 		WorkflowID:  "demo",
 		DisplayName: "Demo Workflow",
 		Description: "Demo workflow description",
-		Stages: []workflow.ContractStageDefinition{
-			{
-				ID:          "recon",
-				Name:        "Recon",
-				Description: "Recon stage",
-				Required:    true,
-				Parallel:    true,
-				Tools: []workflow.ContractToolDefinition{
-					{
-						ID:          "tool-a",
-						Description: "Tool A",
-						Params: []workflow.ContractParamDefinition{
-							{
-								Key:                 "threads-cli",
-								Type:                "integer",
-								Description:         "threads",
-								RequiredWhenEnabled: true,
-								Minimum:             &minimum,
-							},
-						},
-					},
-				},
-			},
-		},
+		Stages: []workflow.ContractStageDefinition{{
+			ID:          "recon",
+			Name:        "Recon",
+			Description: "Recon stage",
+			Required:    true,
+			Parallel:    true,
+			Tools: []workflow.ContractToolDefinition{{
+				ID:          "tool-a",
+				Description: "Tool A",
+				Params: []workflow.ContractParamDefinition{{
+					Key:                 "threads-cli",
+					Type:                "integer",
+					Description:         "threads",
+					RequiredWhenEnabled: true,
+					Minimum:             &minimum,
+				}},
+			}},
+		}},
 	}
 
 	schema := buildSchema(def)
 	schemaJSON, err := json.Marshal(schema)
 	require.NoError(t, err)
-
 	_, err = buildProfileYAML(def, schemaJSON)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "default value is required")

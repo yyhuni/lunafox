@@ -20,6 +20,7 @@ import { LoadingSpinner } from "@/components/loading-spinner"
 import { ScanConfigEditor } from "./scan-config-editor"
 import { cn } from "@/lib/utils"
 import type { InitiateScanSelectMode } from "@/lib/initiate-scan-helpers"
+import { serializeWorkflowConfiguration } from "@/lib/workflow-config"
 import type { WorkflowProfile, ScanWorkflow } from "@/types/workflow.types"
 
 type TranslationFn = (key: string, params?: Record<string, string | number | Date>) => string
@@ -139,7 +140,7 @@ export function InitiateScanWorkflowSelection({
                   <button
                     key={preset.id}
                     type="button"
-                    onClick={() => onPresetSelect(preset.id, preset.configuration || "")}
+                    onClick={() => onPresetSelect(preset.id, serializeWorkflowConfiguration(preset.configuration))}
                     disabled={isSubmitting}
                     className={cn(
                       "flex flex-col items-start gap-2 rounded-lg border px-3 py-2 text-left transition-[background-color,border-color,color,box-shadow]",

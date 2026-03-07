@@ -275,3 +275,13 @@ func TestLokiLogQueryServiceCursorStableWhenLimitChanges(t *testing.T) {
 		t.Fatalf("unexpected incremental logs: %+v", second.Logs)
 	}
 }
+
+func TestBuildLokiLogQL_UsesProviderCompatibleLabels(t *testing.T) {
+	query := buildLokiLogQL(7, "lunafox-agent")
+	if query != `{agent_id="7",container_name="lunafox-agent"}` {
+		t.Fatalf("unexpected LogQL selector: %q", query)
+	}
+	if strings.Contains(query, "agent.id") || strings.Contains(query, "container.name") {
+		t.Fatalf("expected provider-compatible labels, got %q", query)
+	}
+}

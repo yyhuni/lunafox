@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	workflowschema "github.com/yyhuni/lunafox/server/internal/workflow/schema"
+	workflowmanifest "github.com/yyhuni/lunafox/server/internal/workflow/manifest"
 )
 
 func TestCatalogWorkflowQueryStoreAdapterListWorkflowsSortsByWorkflowID(t *testing.T) {
 	adapter := &catalogWorkflowQueryStoreAdapter{
-		listMetadata: func() ([]workflowschema.WorkflowMetadata, error) {
-			return []workflowschema.WorkflowMetadata{
+		listMetadata: func() ([]workflowmanifest.WorkflowMetadata, error) {
+			return []workflowmanifest.WorkflowMetadata{
 				{WorkflowID: "z_workflow", DisplayName: "Z"},
 				{WorkflowID: "a_workflow", DisplayName: "A"},
 			}, nil
@@ -28,4 +28,3 @@ func TestCatalogWorkflowQueryStoreAdapterListWorkflowsSortsByWorkflowID(t *testi
 		t.Fatalf("expected workflowId ASC order, got %+v", workflows)
 	}
 }
-

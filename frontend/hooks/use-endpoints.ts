@@ -23,8 +23,6 @@ type EndpointPageResponse = {
   page?: number
   pageSize?: number
   totalPages?: number
-  page_size?: number
-  total_pages?: number
 }
 
 // Query Keys

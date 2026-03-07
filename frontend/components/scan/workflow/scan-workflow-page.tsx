@@ -16,6 +16,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import { cn } from "@/lib/utils"
+import { serializeWorkflowConfiguration } from "@/lib/workflow-config"
 import type { WorkflowProfile, ScanWorkflow } from "@/types/workflow.types"
 import { MasterDetailSkeleton } from "@/components/ui/master-detail-skeleton"
 
@@ -246,7 +247,7 @@ export default function ScanWorkflowPage() {
                   <div className="flex-1 flex flex-col min-h-0">
                     <h3 className="text-sm font-medium mb-3 shrink-0">{tWorkflow("configPreview")}</h3>
                     <YamlViewer
-                      value={selection.item.configuration}
+                      value={serializeWorkflowConfiguration(selection.item.configuration)}
                       className="flex-1 min-h-0"
                       showLineNumbers
                     />

@@ -18,7 +18,7 @@ func parseSubdomainItems(itemsJSON []string) ([]snapshotapp.SubdomainSnapshotIte
 	for index := range decoded {
 		name := strings.TrimSpace(decoded[index].Name)
 		if name == "" {
-			return nil, fmt.Errorf("items_json[%d].name is required", index)
+			return nil, fmt.Errorf("itemsJson[%d].name is required", index)
 		}
 		items = append(items, snapshotapp.SubdomainSnapshotItem{Name: name})
 	}
@@ -34,7 +34,7 @@ func parseWebsiteItems(itemsJSON []string) ([]snapshotapp.WebsiteSnapshotItem, e
 	for index := range decoded {
 		item := decoded[index]
 		if strings.TrimSpace(item.URL) == "" {
-			return nil, fmt.Errorf("items_json[%d].url is required", index)
+			return nil, fmt.Errorf("itemsJson[%d].url is required", index)
 		}
 		items = append(items, snapshotapp.WebsiteSnapshotItem{
 			URL:             item.URL,
@@ -63,7 +63,7 @@ func parseEndpointItems(itemsJSON []string) ([]snapshotapp.EndpointSnapshotItem,
 	for index := range decoded {
 		item := decoded[index]
 		if strings.TrimSpace(item.URL) == "" {
-			return nil, fmt.Errorf("items_json[%d].url is required", index)
+			return nil, fmt.Errorf("itemsJson[%d].url is required", index)
 		}
 		items = append(items, snapshotapp.EndpointSnapshotItem{
 			URL:             item.URL,
@@ -92,13 +92,13 @@ func parseHostPortItems(itemsJSON []string) ([]snapshotapp.HostPortSnapshotItem,
 	for index := range decoded {
 		item := decoded[index]
 		if strings.TrimSpace(item.Host) == "" {
-			return nil, fmt.Errorf("items_json[%d].host is required", index)
+			return nil, fmt.Errorf("itemsJson[%d].host is required", index)
 		}
 		if strings.TrimSpace(item.IP) == "" {
-			return nil, fmt.Errorf("items_json[%d].ip is required", index)
+			return nil, fmt.Errorf("itemsJson[%d].ip is required", index)
 		}
 		if item.Port <= 0 || item.Port > 65535 {
-			return nil, fmt.Errorf("items_json[%d].port must be between 1 and 65535", index)
+			return nil, fmt.Errorf("itemsJson[%d].port must be between 1 and 65535", index)
 		}
 		items = append(items, snapshotapp.HostPortSnapshotItem{
 			Host: item.Host,
@@ -114,7 +114,7 @@ func parseJSONItems[T any](itemsJSON []string) ([]T, error) {
 	for index := range itemsJSON {
 		var item T
 		if err := json.Unmarshal([]byte(itemsJSON[index]), &item); err != nil {
-			return nil, fmt.Errorf("items_json[%d] is invalid JSON: %w", index, err)
+			return nil, fmt.Errorf("itemsJson[%d] is invalid JSON: %w", index, err)
 		}
 		items = append(items, item)
 	}

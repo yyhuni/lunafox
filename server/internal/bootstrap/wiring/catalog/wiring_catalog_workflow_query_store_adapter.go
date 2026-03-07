@@ -2,45 +2,57 @@ package catalogwiring
 
 import (
 	"context"
+	"sort"
 	"strings"
 
 	catalogapp "github.com/yyhuni/lunafox/server/internal/modules/catalog/application"
-	workflowschema "github.com/yyhuni/lunafox/server/internal/workflow/schema"
+	workflowmanifest "github.com/yyhuni/lunafox/server/internal/workflow/manifest"
 )
 
-type catalogWorkflowQueryStoreAdapter struct{}
+type catalogWorkflowQueryStoreAdapter struct {
+	listMetadata func() ([]workflowmanifest.WorkflowMetadata, error)
+}
 
 func newCatalogWorkflowQueryStoreAdapter() *catalogWorkflowQueryStoreAdapter {
-	return &catalogWorkflowQueryStoreAdapter{}
+	return &catalogWorkflowQueryStoreAdapter{
+		listMetadata: workflowmanifest.ListWorkflowMetadata,
+	}
 }
 
 func (adapter *catalogWorkflowQueryStoreAdapter) ListWorkflows(_ context.Context) ([]catalogapp.Workflow, error) {
-	items, err := workflowschema.ListWorkflowMetadata()
+	loadMetadata := adapter.listMetadata
+	if loadMetadata == nil {
+		loadMetadata = workflowmanifest.ListWorkflowMetadata
+	}
+	items, err := loadMetadata()
 	if err != nil {
 		return nil, err
 	}
 	workflows := make([]catalogapp.Workflow, 0, len(items))
 	for _, item := range items {
-		name := strings.TrimSpace(item.Name)
-		if name == "" {
+		workflowID := strings.TrimSpace(item.WorkflowID)
+		if workflowID == "" {
 			continue
 		}
 		workflows = append(workflows, catalogapp.Workflow{
-			Name:        name,
-			Title:       strings.TrimSpace(item.Title),
+			WorkflowID:  workflowID,
+			DisplayName: strings.TrimSpace(item.DisplayName),
 			Description: strings.TrimSpace(item.Description),
 		})
 	}
+	sort.Slice(workflows, func(i, j int) bool {
+		return workflows[i].WorkflowID < workflows[j].WorkflowID
+	})
 	return workflows, nil
 }
 
-func (adapter *catalogWorkflowQueryStoreAdapter) GetWorkflowByName(ctx context.Context, name string) (*catalogapp.Workflow, error) {
+func (adapter *catalogWorkflowQueryStoreAdapter) GetWorkflowByID(ctx context.Context, workflowID string) (*catalogapp.Workflow, error) {
 	workflows, err := adapter.ListWorkflows(ctx)
 	if err != nil {
 		return nil, err
 	}
 	for i := range workflows {
-		if workflows[i].Name == name {
+		if workflows[i].WorkflowID == workflowID {
 			workflow := workflows[i]
 			return &workflow, nil
 		}

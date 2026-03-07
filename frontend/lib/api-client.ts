@@ -279,17 +279,15 @@ export default apiClient;
  * Usage examples:
  * 
  * 1. GET request:
- *    api.get('/organizations', { 
- *      params: { pageSize: 10, sortBy: 'name' }  // Use camelCase
+ *    api.get('/organizations', {
+ *      params: { pageSize: 10, sortBy: 'name' }
  *    })
- *    Backend receives: page_size=10&sort_by=name (automatically converted)
  * 
  * 2. POST request:
  *    api.post('/organizations/create', {
- *      organizationName: 'test',  // Use camelCase
+ *      organizationName: 'test',
  *      createdAt: '2024-01-01'
  *    })
- *    Backend receives: organization_name, created_at (automatically converted)
  * 
  * 3. Response data (already camelCase):
  *    const response = await api.get('/organizations')
@@ -312,7 +310,7 @@ export const api = {
   /**
    * POST request
    * @param url - Request path (relative to baseURL)
-   * @param data - Request body data (will be automatically converted to snake_case)
+   * @param data - Request body data, use API contract field names directly
    * @param config - axios config (optional)
    * @returns Promise<AxiosResponse<T>>
    */
@@ -321,7 +319,7 @@ export const api = {
   /**
    * PUT request
    * @param url - Request path (relative to baseURL)
-   * @param data - Request body data (will be automatically converted to snake_case)
+   * @param data - Request body data, use API contract field names directly
    * @param config - axios config (optional)
    * @returns Promise<AxiosResponse<T>>
    */
@@ -330,7 +328,7 @@ export const api = {
   /**
    * PATCH request (partial update)
    * @param url - Request path (relative to baseURL)
-   * @param data - Request body data (will be automatically converted to snake_case)
+   * @param data - Request body data, use API contract field names directly
    * @param config - axios config (optional)
    * @returns Promise<AxiosResponse<T>>
    */

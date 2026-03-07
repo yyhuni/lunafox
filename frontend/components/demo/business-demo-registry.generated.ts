@@ -722,13 +722,6 @@ export const businessDemoItems: BusinessDemoItem[] = [
     loader: () => import("@/components/settings/workers/architecture-flow"),
   },
   {
-    slug: "settings-workers-deploy-terminal-dialog",
-    title: "Deploy Terminal Dialog",
-    group: "settings",
-    modulePath: "@/components/settings/workers/deploy-terminal-dialog",
-    loader: () => import("@/components/settings/workers/deploy-terminal-dialog"),
-  },
-  {
     slug: "settings-workers-metric-progress",
     title: "Metric Progress",
     group: "settings",

@@ -233,19 +233,24 @@ export interface PaginationMeta {
  * @returns pagination metadata, or null if not a paginated response
  */
 export function getPaginationMeta(response: unknown): PaginationMeta | null {
-  if (
-    typeof response === 'object' &&
-    response !== null &&
-    'total' in response &&
-    'page' in response
-  ) {
-    const r = response as Record<string, unknown>;
-    return {
-      total: r.total as number,
-      page: r.page as number,
-      pageSize: (r.pageSize ?? r.page_size) as number,
-      totalPages: (r.totalPages ?? r.total_pages) as number,
-    };
+  if (typeof response !== 'object' || response === null) {
+    return null;
   }
-  return null;
+
+  const r = response as Record<string, unknown>;
+  if (
+    typeof r.total !== 'number' ||
+    typeof r.page !== 'number' ||
+    typeof r.pageSize !== 'number' ||
+    typeof r.totalPages !== 'number'
+  ) {
+    return null;
+  }
+
+  return {
+    total: r.total,
+    page: r.page,
+    pageSize: r.pageSize,
+    totalPages: r.totalPages,
+  };
 }

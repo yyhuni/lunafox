@@ -420,3 +420,53 @@ func (s *fakeDownloadStream) SendHeader(metadata.MD) error { return nil }
 func (s *fakeDownloadStream) SetTrailer(metadata.MD)       {}
 func (s *fakeDownloadStream) SendMsg(any) error            { return nil }
 func (s *fakeDownloadStream) RecvMsg(any) error            { return io.EOF }
+
+func TestDataProxyBatchUpsertAssetsValidationMessagesUseCamelCase(t *testing.T) {
+	svc := NewAgentDataProxyServiceWithDeps(
+		&providerConfigStub{},
+		&wordlistRuntimeStub{},
+		AssetBatchUpsertRuntimes{Subdomains: &subdomainSnapshotRuntimeStub{}},
+	)
+
+	t.Run("missing ids", func(t *testing.T) {
+		_, err := svc.BatchUpsertAssets(context.Background(), &runtimev1.BatchUpsertAssetsRequest{
+			DataType:  "subdomain",
+			ItemsJson: []string{`{"name":"a.example.com"}`},
+		})
+		if status.Code(err) != codes.InvalidArgument {
+			t.Fatalf("expected invalid argument, got=%v", err)
+		}
+		if got := status.Convert(err).Message(); got != "scanId and targetId are required" {
+			t.Fatalf("expected camelCase validation message, got %q", got)
+		}
+	})
+
+	t.Run("empty items", func(t *testing.T) {
+		_, err := svc.BatchUpsertAssets(context.Background(), &runtimev1.BatchUpsertAssetsRequest{
+			ScanId:   1,
+			TargetId: 2,
+			DataType: "subdomain",
+		})
+		if status.Code(err) != codes.InvalidArgument {
+			t.Fatalf("expected invalid argument, got=%v", err)
+		}
+		if got := status.Convert(err).Message(); got != "itemsJson must not be empty" {
+			t.Fatalf("expected camelCase validation message, got %q", got)
+		}
+	})
+
+	t.Run("invalid payload", func(t *testing.T) {
+		_, err := svc.BatchUpsertAssets(context.Background(), &runtimev1.BatchUpsertAssetsRequest{
+			ScanId:    1,
+			TargetId:  2,
+			DataType:  "subdomain",
+			ItemsJson: []string{`{"name":`},
+		})
+		if status.Code(err) != codes.InvalidArgument {
+			t.Fatalf("expected invalid argument, got=%v", err)
+		}
+		if got := status.Convert(err).Message(); got[:9] != "itemsJson" {
+			t.Fatalf("expected itemsJson prefix, got %q", got)
+		}
+	})
+}
