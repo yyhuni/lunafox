@@ -46,15 +46,15 @@ func TestConnectHandlesRequestTask(t *testing.T) {
 	lifecycle := &runtimeLifecycleStub{}
 	tasks := &taskRuntimeStub{
 		pullResult: &scanapp.TaskAssignment{
-			TaskID:             11,
-			ScanID:             12,
-			Stage:              2,
-			WorkflowID:         "subdomain_discovery",
-			TargetID:           99,
-			TargetName:         "example.com",
-			TargetType:         "domain",
-			WorkspaceDir:       "/opt/lunafox/results/scan_12/task_11",
-			WorkflowConfigYAML: "{\"mode\":\"fast\"}",
+			TaskID:         11,
+			ScanID:         12,
+			Stage:          2,
+			WorkflowID:     "subdomain_discovery",
+			TargetID:       99,
+			TargetName:     "example.com",
+			TargetType:     "domain",
+			WorkspaceDir:   "/opt/lunafox/results/scan_12/task_11",
+			WorkflowConfig: map[string]any{"mode": "fast"},
 		},
 	}
 

@@ -19,27 +19,44 @@ type workflowProfileQueryStoreForProfileHandlerStub struct {
 	getErr   error
 }
 
-const workflowProfileConfigFixture = "subdomain_discovery:\n" +
-	"  recon:\n" +
-	"    enabled: false\n" +
-	"    tools:\n" +
-	"      subfinder:\n" +
-	"        enabled: false\n" +
-	"  bruteforce:\n" +
-	"    enabled: false\n" +
-	"    tools:\n" +
-	"      subdomain-bruteforce:\n" +
-	"        enabled: false\n" +
-	"  permutation:\n" +
-	"    enabled: false\n" +
-	"    tools:\n" +
-	"      subdomain-permutation-resolve:\n" +
-	"        enabled: false\n" +
-	"  resolve:\n" +
-	"    enabled: false\n" +
-	"    tools:\n" +
-	"      subdomain-resolve:\n" +
-	"        enabled: false\n"
+func workflowProfileConfigFixture() map[string]any {
+	return map[string]any{
+		"subdomain_discovery": map[string]any{
+			"recon": map[string]any{
+				"enabled": false,
+				"tools": map[string]any{
+					"subfinder": map[string]any{
+						"enabled": false,
+					},
+				},
+			},
+			"bruteforce": map[string]any{
+				"enabled": false,
+				"tools": map[string]any{
+					"subdomain-bruteforce": map[string]any{
+						"enabled": false,
+					},
+				},
+			},
+			"permutation": map[string]any{
+				"enabled": false,
+				"tools": map[string]any{
+					"subdomain-permutation-resolve": map[string]any{
+						"enabled": false,
+					},
+				},
+			},
+			"resolve": map[string]any{
+				"enabled": false,
+				"tools": map[string]any{
+					"subdomain-resolve": map[string]any{
+						"enabled": false,
+					},
+				},
+			},
+		},
+	}
+}
 
 func (stub *workflowProfileQueryStoreForProfileHandlerStub) ListWorkflowProfiles(_ context.Context) ([]catalogapp.WorkflowProfile, error) {
 	if stub.listErr != nil {
@@ -77,14 +94,14 @@ func TestWorkflowProfileHandlerListSuccess(t *testing.T) {
 				Name:          "Subdomain Discovery Default",
 				Description:   "Default subdomain workflow profile",
 				WorkflowIDs:   []string{"subdomain_discovery"},
-				Configuration: workflowProfileConfigFixture,
+				Configuration: workflowProfileConfigFixture(),
 			},
 			{
 				ID:            "subdomain_fast",
 				Name:          "Subdomain Discovery Fast",
 				Description:   "Fast profile",
 				WorkflowIDs:   []string{"subdomain_discovery"},
-				Configuration: workflowProfileConfigFixture,
+				Configuration: workflowProfileConfigFixture(),
 			},
 		},
 	})
@@ -112,6 +129,9 @@ func TestWorkflowProfileHandlerListSuccess(t *testing.T) {
 	}
 	if len(payload[0].WorkflowIDs) != 1 || payload[0].WorkflowIDs[0] != "subdomain_discovery" {
 		t.Fatalf("unexpected workflowIds in first profile payload: %+v", payload[0])
+	}
+	if _, ok := payload[0].Configuration["subdomain_discovery"]; !ok {
+		t.Fatalf("expected configuration object with subdomain_discovery key, got %+v", payload[0].Configuration)
 	}
 }
 
@@ -150,7 +170,7 @@ func TestWorkflowProfileHandlerGetByIDSuccess(t *testing.T) {
 				Name:          "Subdomain Discovery Default",
 				Description:   "Default subdomain workflow profile",
 				WorkflowIDs:   []string{"subdomain_discovery"},
-				Configuration: workflowProfileConfigFixture,
+				Configuration: workflowProfileConfigFixture(),
 			},
 		},
 	})
@@ -176,6 +196,9 @@ func TestWorkflowProfileHandlerGetByIDSuccess(t *testing.T) {
 	if len(payload.WorkflowIDs) != 1 || payload.WorkflowIDs[0] != "subdomain_discovery" {
 		t.Fatalf("unexpected workflowIds in profile payload: %+v", payload)
 	}
+	if _, ok := payload.Configuration["subdomain_discovery"]; !ok {
+		t.Fatalf("expected configuration object with subdomain_discovery key, got %+v", payload.Configuration)
+	}
 }
 
 func TestWorkflowProfileHandlerGetByIDNotFound(t *testing.T) {
@@ -187,7 +210,7 @@ func TestWorkflowProfileHandlerGetByIDNotFound(t *testing.T) {
 				Name:          "Subdomain Discovery Default",
 				Description:   "Default subdomain workflow profile",
 				WorkflowIDs:   []string{"subdomain_discovery"},
-				Configuration: workflowProfileConfigFixture,
+				Configuration: workflowProfileConfigFixture(),
 			},
 		},
 	})

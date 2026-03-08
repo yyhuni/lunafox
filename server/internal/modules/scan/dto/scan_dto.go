@@ -46,31 +46,29 @@ type ScanCachedStats struct {
 
 type ScanDetailResponse struct {
 	ScanResponse
-	YAMLConfiguration string                 `json:"yamlConfiguration,omitempty"`
-	ResultsDir        string                 `json:"resultsDir,omitempty"`
-	WorkerID          *int                   `json:"workerId,omitempty"`
-	StageProgress     map[string]interface{} `json:"stageProgress,omitempty"`
+	Configuration map[string]any         `json:"configuration,omitempty"`
+	ResultsDir    string                 `json:"resultsDir,omitempty"`
+	WorkerID      *int                   `json:"workerId,omitempty"`
+	StageProgress map[string]interface{} `json:"stageProgress,omitempty"`
 }
 
 type InitiateScanRequest struct {
-	OrganizationID *int `json:"organizationId" binding:"omitempty"`
-	TargetID       *int `json:"targetId" binding:"omitempty"`
-	// Selected workflow IDs drive runtime planning and schema validation.
-	WorkflowIDs   []string `json:"workflowIds" binding:"required,min=1"`
-	Configuration string   `json:"configuration" binding:"required"`
+	OrganizationID *int           `json:"organizationId" binding:"omitempty"`
+	TargetID       *int           `json:"targetId" binding:"omitempty"`
+	WorkflowIDs    []string       `json:"workflowIds" binding:"required,min=1"`
+	Configuration  map[string]any `json:"configuration" binding:"required"`
 }
 
 type QuickScanRequest struct {
 	Targets       []QuickScanTarget `json:"targets" binding:"required,min=1"`
 	WorkflowIDs   []string          `json:"workflowIds"`
-	Configuration string            `json:"configuration" binding:"required"`
+	Configuration map[string]any    `json:"configuration" binding:"required"`
 }
 
 type CreateNormalScanRequest struct {
-	TargetID int `json:"targetId" binding:"required"`
-	// Selected workflow IDs are the authoritative planning input.
-	WorkflowIDs   []string `json:"workflowIds" binding:"required,min=1"`
-	Configuration string   `json:"configuration" binding:"required"`
+	TargetID      int            `json:"targetId" binding:"required"`
+	WorkflowIDs   []string       `json:"workflowIds" binding:"required,min=1"`
+	Configuration map[string]any `json:"configuration" binding:"required"`
 }
 
 type CreateQuickScanRequest struct {

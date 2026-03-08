@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScanLogList } from "@/components/scan/scan-log-list"
+import { serializeWorkflowConfiguration } from "@/lib/workflow-config"
 import { cn } from "@/lib/utils"
 import type { ScanRecord, StageProgressItem, StageStatus } from "@/types/scan.types"
 import type { ScanOverviewState } from "@/components/scan/history/scan-overview-state"
@@ -287,7 +288,7 @@ interface ScanLogsPanelProps {
   setAutoRefresh: (value: boolean) => void
   logs: ScanOverviewState["logs"]
   logsLoading: boolean
-  yamlConfiguration?: string | null
+  configuration?: ScanRecord["configuration"] | null
 }
 
 export function ScanLogsPanel({
@@ -299,8 +300,9 @@ export function ScanLogsPanel({
   setAutoRefresh,
   logs,
   logsLoading,
-  yamlConfiguration,
+  configuration,
 }: ScanLogsPanelProps) {
+  const yamlContent = serializeWorkflowConfiguration(configuration)
   return (
     <div className="flex flex-col min-h-0 rounded-lg overflow-hidden border">
       <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b shrink-0">
@@ -334,9 +336,9 @@ export function ScanLogsPanel({
           <ScanLogList logs={logs} loading={logsLoading} />
         ) : (
           <div className="h-full">
-            {yamlConfiguration ? (
+            {yamlContent ? (
               <YamlEditor
-                value={yamlConfiguration}
+                value={yamlContent}
                 onChange={() => {}}
                 disabled={true}
                 className="h-full"

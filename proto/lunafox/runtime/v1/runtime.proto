@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package lunafox.runtime.v1;
 
+import "google/protobuf/struct.proto";
+
 option go_package = "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1;runtimev1";
 
 service AgentRuntimeService {
@@ -77,7 +79,7 @@ message TaskAssign {
   string target_name = 7;
   string target_type = 8;
   string workspace_dir = 9;
-  string workflow_config_yaml = 10;
+  google.protobuf.Struct workflow_config = 10;
 }
 
 message TaskCancel {

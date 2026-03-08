@@ -28,18 +28,17 @@ func (stub *scanCreateStoreCaptureStub) CreateWithTasks(scan *CreateScan, tasks 
 func TestCreateNormal_SchemaGateFailureReturnsWorkflowError(t *testing.T) {
 	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
 		now := time.Now().UTC()
-		return &TargetRef{
-			ID:        1,
-			Name:      "example.com",
-			Type:      "domain",
-			CreatedAt: now,
-		}, nil
+		return &TargetRef{ID: 1, Name: "example.com", Type: "domain", CreatedAt: now}, nil
 	})
 
 	input := &CreateNormalInput{
-		TargetID:      1,
-		WorkflowIDs:   []string{"subdomain_discovery"},
-		Configuration: "subdomain_discovery:\n  recon:\n    enabled: true\n",
+		TargetID:    1,
+		WorkflowIDs: []string{"subdomain_discovery"},
+		Configuration: map[string]any{
+			"subdomain_discovery": map[string]any{
+				"recon": map[string]any{"enabled": true},
+			},
+		},
 	}
 	_, err := service.CreateNormal(input)
 	if err == nil {
@@ -66,12 +65,7 @@ func TestCreateNormal_SchemaGateFailureReturnsWorkflowError(t *testing.T) {
 func TestCreateNormal_RejectsEmptyWorkflowID(t *testing.T) {
 	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
 		now := time.Now().UTC()
-		return &TargetRef{
-			ID:        1,
-			Name:      "example.com",
-			Type:      "domain",
-			CreatedAt: now,
-		}, nil
+		return &TargetRef{ID: 1, Name: "example.com", Type: "domain", CreatedAt: now}, nil
 	})
 
 	input := &CreateNormalInput{
@@ -91,12 +85,7 @@ func TestCreateNormal_RejectsEmptyWorkflowID(t *testing.T) {
 func TestCreateNormal_RejectsWorkflowIDWithSurroundingSpaces(t *testing.T) {
 	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
 		now := time.Now().UTC()
-		return &TargetRef{
-			ID:        1,
-			Name:      "example.com",
-			Type:      "domain",
-			CreatedAt: now,
-		}, nil
+		return &TargetRef{ID: 1, Name: "example.com", Type: "domain", CreatedAt: now}, nil
 	})
 
 	input := &CreateNormalInput{
@@ -116,12 +105,7 @@ func TestCreateNormal_RejectsWorkflowIDWithSurroundingSpaces(t *testing.T) {
 func TestCreateNormal_RejectsDuplicateWorkflowIDs(t *testing.T) {
 	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
 		now := time.Now().UTC()
-		return &TargetRef{
-			ID:        1,
-			Name:      "example.com",
-			Type:      "domain",
-			CreatedAt: now,
-		}, nil
+		return &TargetRef{ID: 1, Name: "example.com", Type: "domain", CreatedAt: now}, nil
 	})
 
 	input := &CreateNormalInput{
@@ -142,12 +126,7 @@ func TestCreateNormal_PersistsWorkflowIDsAndTaskConfig(t *testing.T) {
 	store := &scanCreateStoreCaptureStub{}
 	service := NewScanCreateService(store, func(int) (*TargetRef, error) {
 		now := time.Now().UTC()
-		return &TargetRef{
-			ID:        1,
-			Name:      "example.com",
-			Type:      "domain",
-			CreatedAt: now,
-		}, nil
+		return &TargetRef{ID: 1, Name: "example.com", Type: "domain", CreatedAt: now}, nil
 	})
 
 	input := &CreateNormalInput{
@@ -169,26 +148,26 @@ func TestCreateNormal_PersistsWorkflowIDsAndTaskConfig(t *testing.T) {
 	if len(names) != 1 || names[0] != "subdomain_discovery" {
 		t.Fatalf("unexpected workflowIds persisted: %v", names)
 	}
-	if len(store.lastTasks) != 1 || store.lastTasks[0].WorkflowConfigYAML == "" {
-		t.Fatalf("expected per-task workflow config slice persisted")
+	if store.lastScan.Configuration == nil {
+		t.Fatalf("expected canonical scan configuration object persisted")
+	}
+	if len(store.lastTasks) != 1 || store.lastTasks[0].WorkflowConfig == nil {
+		t.Fatalf("expected per-task workflow config object persisted")
 	}
 }
 
 func TestCreateNormal_RejectsWorkflowNotInCatalog(t *testing.T) {
 	service := NewScanCreateService(scanCreateStoreStub{}, func(int) (*TargetRef, error) {
 		now := time.Now().UTC()
-		return &TargetRef{
-			ID:        1,
-			Name:      "example.com",
-			Type:      "domain",
-			CreatedAt: now,
-		}, nil
+		return &TargetRef{ID: 1, Name: "example.com", Type: "domain", CreatedAt: now}, nil
 	})
 
 	input := &CreateNormalInput{
-		TargetID:      1,
-		WorkflowIDs:   []string{"future_workflow"},
-		Configuration: "future_workflow:\n  enabled: true\n",
+		TargetID:    1,
+		WorkflowIDs: []string{"future_workflow"},
+		Configuration: map[string]any{
+			"future_workflow": map[string]any{"enabled": true},
+		},
 	}
 	_, err := service.CreateNormal(input)
 	if err == nil {
@@ -219,64 +198,121 @@ func TestCreateNormal_PersistsCanonicalWorkflowYAMLWithDefaults(t *testing.T) {
 	if scan == nil || store.lastScan == nil {
 		t.Fatalf("expected scan persisted")
 	}
-	if !strings.Contains(store.lastScan.YAMLConfiguration, "threads-cli: 10") {
-		t.Fatalf("expected canonical scan YAML to include recon default threads-cli, got: %s", store.lastScan.YAMLConfiguration)
+
+	workflowRoot, ok := store.lastScan.Configuration["subdomain_discovery"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected canonical scan object to include subdomain_discovery config, got: %#v", store.lastScan.Configuration)
 	}
-	if !strings.Contains(store.lastScan.YAMLConfiguration, "timeout-runtime: 3600") {
-		t.Fatalf("expected canonical scan YAML to include recon default timeout-runtime, got: %s", store.lastScan.YAMLConfiguration)
+	threads := nestedInt(workflowRoot, "recon", "tools", "subfinder", "threads-cli")
+	if threads != 10 {
+		t.Fatalf("expected default threads-cli 10 in canonical object, got %d", threads)
 	}
 	if len(store.lastTasks) != 1 {
 		t.Fatalf("expected one task, got %d", len(store.lastTasks))
 	}
-	if !strings.Contains(store.lastTasks[0].WorkflowConfigYAML, "threads-cli: 10") {
-		t.Fatalf("expected task workflow slice to include recon default threads-cli, got: %s", store.lastTasks[0].WorkflowConfigYAML)
+	threads = nestedInt(store.lastTasks[0].WorkflowConfig, "recon", "tools", "subfinder", "threads-cli")
+	if threads != 10 {
+		t.Fatalf("expected task workflow object to include recon default threads-cli, got %d", threads)
 	}
 }
 
-func validSubdomainDiscoveryConfig() string {
-	return "subdomain_discovery:\n" +
-		"  recon:\n" +
-		"    enabled: false\n" +
-		"    tools:\n" +
-		"      subfinder:\n" +
-		"        enabled: false\n" +
-		"  bruteforce:\n" +
-		"    enabled: false\n" +
-		"    tools:\n" +
-		"      subdomain-bruteforce:\n" +
-		"        enabled: false\n" +
-		"  permutation:\n" +
-		"    enabled: false\n" +
-		"    tools:\n" +
-		"      subdomain-permutation-resolve:\n" +
-		"        enabled: false\n" +
-		"  resolve:\n" +
-		"    enabled: false\n" +
-		"    tools:\n" +
-		"      subdomain-resolve:\n" +
-		"        enabled: false\n"
+func validSubdomainDiscoveryConfig() map[string]any {
+	return map[string]any{
+		"subdomain_discovery": map[string]any{
+			"recon": map[string]any{
+				"enabled": false,
+				"tools": map[string]any{
+					"subfinder": map[string]any{
+						"enabled": false,
+					},
+				},
+			},
+			"bruteforce": map[string]any{
+				"enabled": false,
+				"tools": map[string]any{
+					"subdomain-bruteforce": map[string]any{
+						"enabled": false,
+					},
+				},
+			},
+			"permutation": map[string]any{
+				"enabled": false,
+				"tools": map[string]any{
+					"subdomain-permutation-resolve": map[string]any{
+						"enabled": false,
+					},
+				},
+			},
+			"resolve": map[string]any{
+				"enabled": false,
+				"tools": map[string]any{
+					"subdomain-resolve": map[string]any{
+						"enabled": false,
+					},
+				},
+			},
+		},
+	}
 }
 
-func shortSubdomainDiscoveryConfig() string {
-	return `subdomain_discovery:
-  recon:
-    enabled: true
-    tools:
-      subfinder:
-        enabled: true
-  bruteforce:
-    enabled: false
-    tools:
-      subdomain-bruteforce:
-        enabled: false
-  permutation:
-    enabled: false
-    tools:
-      subdomain-permutation-resolve:
-        enabled: false
-  resolve:
-    enabled: false
-    tools:
-      subdomain-resolve:
-        enabled: false`
+func shortSubdomainDiscoveryConfig() map[string]any {
+	return map[string]any{
+		"subdomain_discovery": map[string]any{
+			"recon": map[string]any{
+				"enabled": true,
+				"tools": map[string]any{
+					"subfinder": map[string]any{
+						"enabled": true,
+					},
+				},
+			},
+			"bruteforce": map[string]any{
+				"enabled": false,
+				"tools": map[string]any{
+					"subdomain-bruteforce": map[string]any{
+						"enabled": false,
+					},
+				},
+			},
+			"permutation": map[string]any{
+				"enabled": false,
+				"tools": map[string]any{
+					"subdomain-permutation-resolve": map[string]any{
+						"enabled": false,
+					},
+				},
+			},
+			"resolve": map[string]any{
+				"enabled": false,
+				"tools": map[string]any{
+					"subdomain-resolve": map[string]any{
+						"enabled": false,
+					},
+				},
+			},
+		},
+	}
+}
+
+func nestedInt(root map[string]any, path ...string) int {
+	current := any(root)
+	for _, key := range path {
+		mapping, ok := current.(map[string]any)
+		if !ok {
+			return 0
+		}
+		current = mapping[key]
+	}
+	switch value := current.(type) {
+	case int:
+		return value
+	case int32:
+		return int(value)
+	case int64:
+		return int(value)
+	case float64:
+		return int(value)
+	default:
+		return 0
+	}
 }

@@ -13,7 +13,11 @@ func (service *ScanFacade) CreateNormal(req *CreateNormalRequest) (*QueryScan, e
 		return nil, ErrScanInvalidConfig
 	}
 
-	scan, err := service.createService.CreateNormal(&CreateNormalInput{TargetID: req.TargetID, WorkflowIDs: req.WorkflowIDs, Configuration: req.Configuration})
+	scan, err := service.createService.CreateNormal(&CreateNormalInput{
+		TargetID:      req.TargetID,
+		WorkflowIDs:   req.WorkflowIDs,
+		Configuration: req.Configuration,
+	})
 	if err != nil {
 		if _, ok := AsWorkflowError(err); ok {
 			return nil, err
@@ -32,6 +36,7 @@ func (service *ScanFacade) CreateNormal(req *CreateNormalRequest) (*QueryScan, e
 		}
 		return nil, err
 	}
+
 	return createScanToQueryScan(scan), nil
 }
 
@@ -39,10 +44,24 @@ func createScanToQueryScan(scan *CreateScan) *QueryScan {
 	if scan == nil {
 		return nil
 	}
-	result := &QueryScan{ID: scan.ID, TargetID: scan.TargetID, WorkflowIDs: scan.WorkflowIDs, YAMLConfiguration: scan.YAMLConfiguration, ScanMode: scan.ScanMode, Status: scan.Status, CreatedAt: scan.CreatedAt}
-	if scan.Target != nil {
-		result.Target = &QueryTargetRef{ID: scan.Target.ID, Name: scan.Target.Name, Type: scan.Target.Type}
+
+	result := &QueryScan{
+		ID:            scan.ID,
+		TargetID:      scan.TargetID,
+		WorkflowIDs:   scan.WorkflowIDs,
+		Configuration: scan.Configuration,
+		ScanMode:      scan.ScanMode,
+		Status:        scan.Status,
+		CreatedAt:     scan.CreatedAt,
 	}
+	if scan.Target != nil {
+		result.Target = &QueryTargetRef{
+			ID:   scan.Target.ID,
+			Name: scan.Target.Name,
+			Type: scan.Target.Type,
+		}
+	}
+
 	return result
 }
 
@@ -50,10 +69,12 @@ func wrapScanInvalidWorkflowIDs(err error) error {
 	if err == nil {
 		return ErrScanInvalidWorkflowIDs
 	}
+
 	detail := strings.TrimSpace(strings.TrimPrefix(err.Error(), ErrCreateInvalidWorkflowIDs.Error()))
 	detail = strings.TrimSpace(strings.TrimPrefix(detail, ":"))
 	if detail == "" {
 		return ErrScanInvalidWorkflowIDs
 	}
+
 	return fmt.Errorf("%w: %s", ErrScanInvalidWorkflowIDs, detail)
 }

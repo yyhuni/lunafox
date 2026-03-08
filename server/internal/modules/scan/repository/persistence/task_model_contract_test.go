@@ -31,3 +31,24 @@ func TestScanTaskModelWorkflowIDColumnTag(t *testing.T) {
 		t.Fatalf("WorkflowID must map to workflow_id column, got tag: %q", tag)
 	}
 }
+
+func TestScanTaskModelWorkflowConfigUsesJSONBColumn(t *testing.T) {
+	field, ok := reflect.TypeOf(ScanTask{}).FieldByName("WorkflowConfig")
+	if !ok {
+		t.Fatalf("scan task model must define WorkflowConfig field")
+	}
+
+	tag := field.Tag.Get("gorm")
+	if !strings.Contains(tag, "column:workflow_config") {
+		t.Fatalf("WorkflowConfig must map to workflow_config column, got tag: %q", tag)
+	}
+	if !strings.Contains(tag, "type:jsonb") {
+		t.Fatalf("WorkflowConfig must use jsonb column type, got tag: %q", tag)
+	}
+}
+
+func TestScanTaskModelDoesNotPersistLegacyWorkflowConfigYAMLField(t *testing.T) {
+	if _, ok := reflect.TypeOf(ScanTask{}).FieldByName("WorkflowConfigYAML"); ok {
+		t.Fatalf("legacy scan_task.workflow_config_yaml field should be removed from persistence model")
+	}
+}

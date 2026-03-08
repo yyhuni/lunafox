@@ -5,24 +5,19 @@ import (
 	"testing"
 )
 
-func TestTaskAssignmentJSONUsesWorkflowConfigYAMLField(t *testing.T) {
-	payload, err := json.Marshal(TaskAssignment{
-		TaskID:             1,
-		WorkflowConfigYAML: "recon:\n  enabled: true\n",
-	})
+func TestTaskAssignmentJSONUsesWorkflowConfigField(t *testing.T) {
+	payload, err := json.Marshal(TaskAssignment{TaskID: 1, WorkflowConfig: map[string]any{"recon": map[string]any{"enabled": true}}})
 	if err != nil {
 		t.Fatalf("marshal task assignment: %v", err)
 	}
-
 	var got map[string]any
 	if err := json.Unmarshal(payload, &got); err != nil {
 		t.Fatalf("unmarshal task assignment: %v", err)
 	}
-
-	if _, ok := got["workflowConfigYAML"]; !ok {
-		t.Fatalf("expected workflowConfigYAML json key, got: %v", got)
+	if _, ok := got["workflowConfig"]; !ok {
+		t.Fatalf("expected workflowConfig json key, got: %v", got)
 	}
-	if _, exists := got["config"]; exists {
-		t.Fatalf("unexpected legacy config json key, got: %v", got)
+	if _, exists := got["workflowConfigYAML"]; exists {
+		t.Fatalf("unexpected legacy workflowConfigYAML json key, got: %v", got)
 	}
 }

@@ -23,7 +23,6 @@ func TestVersionValidators(t *testing.T) {
 	if IsValidAPIVersion("1") {
 		t.Fatalf("expected apiVersion invalid")
 	}
-
 	if !IsValidSchemaVersion("1.0.0") {
 		t.Fatalf("expected schemaVersion valid")
 	}
@@ -56,7 +55,7 @@ func TestBuildTaskWorkspaceDirAndConfigPath(t *testing.T) {
 		t.Fatalf("unexpected workspace path: %s", workspace)
 	}
 	configPath := BuildTaskConfigPath(workspace)
-	if configPath != "/opt/lunafox/results/scan_7/task_11/task_config.yaml" {
+	if configPath != "/opt/lunafox/results/scan_7/task_11/task_config.json" {
 		t.Fatalf("unexpected config path: %s", configPath)
 	}
 	if DefaultRuntimeSocketPath() != "/run/lunafox/worker-runtime.sock" {

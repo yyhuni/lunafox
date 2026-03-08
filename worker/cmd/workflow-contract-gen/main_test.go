@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/yyhuni/lunafox/worker/internal/workflow"
+	"gopkg.in/yaml.v3"
 )
 
 func TestLoadDefinition(t *testing.T) {
@@ -141,6 +142,12 @@ func TestBuildProfileYAMLFromContractDefaults(t *testing.T) {
 	require.Contains(t, text, "demo:")
 	require.Contains(t, text, "threads-cli: 20")
 	require.Contains(t, text, "wordlist-runtime: top1m.txt")
+
+	var profileDoc struct {
+		Configuration map[string]any `yaml:"configuration"`
+	}
+	require.NoError(t, yaml.Unmarshal(payload, &profileDoc))
+	require.Contains(t, profileDoc.Configuration, "demo")
 }
 
 func TestBuildProfileYAMLFailsWhenRequiredDefaultMissing(t *testing.T) {

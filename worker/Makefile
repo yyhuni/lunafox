@@ -5,7 +5,7 @@ help:
 	@echo "Available targets:"
 	@echo "  make generate       - Generate workflow contracts (authoritative global entry)"
 	@echo "  make workflow-contracts-gen-all      - Authoritative global generation entry"
-	@echo "      optional vars: SERVER_SCHEMA_DIR, SERVER_PROFILE_DIR, DOCS_DIR, WORKER_SCHEMA_BASE_DIR, MIRROR_SCHEMA_DIR"
+	@echo "      optional vars: SERVER_SCHEMA_DIR, SERVER_MANIFEST_DIR, SERVER_PROFILE_DIR, DOCS_DIR, WORKER_SCHEMA_BASE_DIR, MIRROR_SCHEMA_DIR"
 	@echo "  make workflow-contracts-gen-workflow - Incremental generation for one workflow (WORKFLOW=<name>)"
 	@echo "  make workflow-contracts-ci-check      - CI gate: regenerate and verify no diffs"
 	@echo "  make check-naming   - Check naming conventions"
@@ -17,6 +17,7 @@ help:
 # 权威全局生成入口
 workflow-contracts-gen-all:
 	@SERVER_SCHEMA_DIR="$(SERVER_SCHEMA_DIR)" \
+		SERVER_MANIFEST_DIR="$(SERVER_MANIFEST_DIR)" \
 		DOCS_DIR="$(DOCS_DIR)" \
 		WORKER_SCHEMA_BASE_DIR="$(WORKER_SCHEMA_BASE_DIR)" \
 		MIRROR_SCHEMA_DIR="$(MIRROR_SCHEMA_DIR)" \
@@ -31,10 +32,12 @@ workflow-contracts-gen-workflow:
 		echo "Usage: make workflow-contracts-gen-workflow WORKFLOW=<workflow_name>"; \
 		exit 1; \
 	fi
-	@go run ./cmd/workflow-contract-gen/main.go \
+	@go run ./cmd/workflow-contract-gen \
 		-workflow $(WORKFLOW) \
 		-worker-schema-dir ./internal/workflow/$(WORKFLOW)/generated \
+		-worker-manifest-dir ./internal/workflow/$(WORKFLOW)/generated \
 		-server-schema-dir ../server/internal/workflow/schema \
+		-server-manifest-dir ../server/internal/workflow/manifest \
 		-server-profile-dir ../server/internal/workflow/profile/profiles \
 		-docs-dir ../docs/config-reference \
 		-typed-go-output ./internal/workflow/$(WORKFLOW)/config_typed_generated.go \
@@ -45,6 +48,7 @@ workflow-contracts-ci-check: workflow-contracts-gen-all
 	@git diff --exit-code -- \
 		./internal/workflow \
 		../server/internal/workflow/schema \
+		../server/internal/workflow/manifest \
 		../server/internal/workflow/profile/profiles \
 		../docs/config-reference
 
@@ -81,9 +85,11 @@ clean:
 		if [ -f "$${workflow_dir}contract_definition.go" ]; then \
 			workflow_name="$$(basename "$${workflow_dir%/}")"; \
 			rm -f "$${workflow_dir}generated/$${workflow_name}-"*.schema.json; \
+			rm -f "$${workflow_dir}generated/$${workflow_name}.manifest.json"; \
 			rm -f "$${workflow_dir}config_typed_generated.go"; \
 			rm -f "../docs/config-reference/$${workflow_name}.md"; \
 			rm -f ../server/internal/workflow/schema/$${workflow_name}-*.schema.json; \
+			rm -f ../server/internal/workflow/manifest/$${workflow_name}.manifest.json; \
 			rm -f ../server/internal/workflow/profile/profiles/$${workflow_name}.yaml; \
 		fi \
 	done

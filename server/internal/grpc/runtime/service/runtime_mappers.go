@@ -5,6 +5,7 @@ import (
 	agentapp "github.com/yyhuni/lunafox/server/internal/modules/agent/application"
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 	scanapp "github.com/yyhuni/lunafox/server/internal/modules/scan/application"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func toConfigUpdate(agent *agentdomain.Agent) *runtimev1.ConfigUpdate {
@@ -25,17 +26,18 @@ func toTaskAssign(assignment *scanapp.TaskAssignment) *runtimev1.TaskAssign {
 	if assignment == nil {
 		return &runtimev1.TaskAssign{Found: false}
 	}
+
 	return &runtimev1.TaskAssign{
-		Found:              true,
-		TaskId:             int32(assignment.TaskID),
-		ScanId:             int32(assignment.ScanID),
-		Stage:              int32(assignment.Stage),
-		WorkflowId:         assignment.WorkflowID,
-		TargetId:           int32(assignment.TargetID),
-		TargetName:         assignment.TargetName,
-		TargetType:         assignment.TargetType,
-		WorkspaceDir:       assignment.WorkspaceDir,
-		WorkflowConfigYaml: assignment.WorkflowConfigYAML,
+		Found:          true,
+		TaskId:         int32(assignment.TaskID),
+		ScanId:         int32(assignment.ScanID),
+		Stage:          int32(assignment.Stage),
+		WorkflowId:     assignment.WorkflowID,
+		TargetId:       int32(assignment.TargetID),
+		TargetName:     assignment.TargetName,
+		TargetType:     assignment.TargetType,
+		WorkspaceDir:   assignment.WorkspaceDir,
+		WorkflowConfig: marshalWorkflowConfigStruct(assignment.WorkflowConfig),
 	}
 }
 
@@ -61,4 +63,16 @@ func toRuntimeHeartbeatInput(payload *runtimev1.Heartbeat) agentapp.RuntimeMessa
 		}
 	}
 	return input
+}
+
+func marshalWorkflowConfigStruct(config map[string]any) *structpb.Struct {
+	if len(config) == 0 {
+		return nil
+	}
+
+	payload, err := structpb.NewStruct(config)
+	if err != nil {
+		return nil
+	}
+	return payload
 }

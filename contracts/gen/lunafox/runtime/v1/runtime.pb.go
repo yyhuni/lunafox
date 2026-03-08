@@ -9,6 +9,7 @@ package runtimev1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -506,19 +507,19 @@ func (*AgentRuntimeEvent_ConfigUpdate) isAgentRuntimeEvent_Payload() {}
 func (*AgentRuntimeEvent_UpdateRequired) isAgentRuntimeEvent_Payload() {}
 
 type TaskAssign struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Found              bool                   `protobuf:"varint,1,opt,name=found,proto3" json:"found,omitempty"`
-	TaskId             int32                  `protobuf:"varint,2,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	ScanId             int32                  `protobuf:"varint,3,opt,name=scan_id,json=scanId,proto3" json:"scan_id,omitempty"`
-	Stage              int32                  `protobuf:"varint,4,opt,name=stage,proto3" json:"stage,omitempty"`
-	WorkflowId         string                 `protobuf:"bytes,5,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
-	TargetId           int32                  `protobuf:"varint,6,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
-	TargetName         string                 `protobuf:"bytes,7,opt,name=target_name,json=targetName,proto3" json:"target_name,omitempty"`
-	TargetType         string                 `protobuf:"bytes,8,opt,name=target_type,json=targetType,proto3" json:"target_type,omitempty"`
-	WorkspaceDir       string                 `protobuf:"bytes,9,opt,name=workspace_dir,json=workspaceDir,proto3" json:"workspace_dir,omitempty"`
-	WorkflowConfigYaml string                 `protobuf:"bytes,10,opt,name=workflow_config_yaml,json=workflowConfigYaml,proto3" json:"workflow_config_yaml,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Found          bool                   `protobuf:"varint,1,opt,name=found,proto3" json:"found,omitempty"`
+	TaskId         int32                  `protobuf:"varint,2,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	ScanId         int32                  `protobuf:"varint,3,opt,name=scan_id,json=scanId,proto3" json:"scan_id,omitempty"`
+	Stage          int32                  `protobuf:"varint,4,opt,name=stage,proto3" json:"stage,omitempty"`
+	WorkflowId     string                 `protobuf:"bytes,5,opt,name=workflow_id,json=workflowId,proto3" json:"workflow_id,omitempty"`
+	TargetId       int32                  `protobuf:"varint,6,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	TargetName     string                 `protobuf:"bytes,7,opt,name=target_name,json=targetName,proto3" json:"target_name,omitempty"`
+	TargetType     string                 `protobuf:"bytes,8,opt,name=target_type,json=targetType,proto3" json:"target_type,omitempty"`
+	WorkspaceDir   string                 `protobuf:"bytes,9,opt,name=workspace_dir,json=workspaceDir,proto3" json:"workspace_dir,omitempty"`
+	WorkflowConfig *structpb.Struct       `protobuf:"bytes,10,opt,name=workflow_config,json=workflowConfig,proto3" json:"workflow_config,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *TaskAssign) Reset() {
@@ -614,11 +615,11 @@ func (x *TaskAssign) GetWorkspaceDir() string {
 	return ""
 }
 
-func (x *TaskAssign) GetWorkflowConfigYaml() string {
+func (x *TaskAssign) GetWorkflowConfig() *structpb.Struct {
 	if x != nil {
-		return x.WorkflowConfigYaml
+		return x.WorkflowConfig
 	}
-	return ""
+	return nil
 }
 
 type TaskCancel struct {
@@ -1501,7 +1502,7 @@ var File_lunafox_runtime_v1_runtime_proto protoreflect.FileDescriptor
 
 const file_lunafox_runtime_v1_runtime_proto_rawDesc = "" +
 	"\n" +
-	" lunafox/runtime/v1/runtime.proto\x12\x12lunafox.runtime.v1\"\xe8\x01\n" +
+	" lunafox/runtime/v1/runtime.proto\x12\x12lunafox.runtime.v1\x1a\x1cgoogle/protobuf/struct.proto\"\xe8\x01\n" +
 	"\x13AgentRuntimeRequest\x12=\n" +
 	"\theartbeat\x18\x01 \x01(\v2\x1d.lunafox.runtime.v1.HeartbeatH\x00R\theartbeat\x12D\n" +
 	"\frequest_task\x18\x02 \x01(\v2\x1f.lunafox.runtime.v1.RequestTaskH\x00R\vrequestTask\x12A\n" +
@@ -1538,7 +1539,7 @@ const file_lunafox_runtime_v1_runtime_proto_rawDesc = "" +
 	"taskCancel\x12G\n" +
 	"\rconfig_update\x18\x03 \x01(\v2 .lunafox.runtime.v1.ConfigUpdateH\x00R\fconfigUpdate\x12M\n" +
 	"\x0fupdate_required\x18\x04 \x01(\v2\".lunafox.runtime.v1.UpdateRequiredH\x00R\x0eupdateRequiredB\t\n" +
-	"\apayload\"\xc1\x02\n" +
+	"\apayload\"\xd1\x02\n" +
 	"\n" +
 	"TaskAssign\x12\x14\n" +
 	"\x05found\x18\x01 \x01(\bR\x05found\x12\x17\n" +
@@ -1552,9 +1553,9 @@ const file_lunafox_runtime_v1_runtime_proto_rawDesc = "" +
 	"targetName\x12\x1f\n" +
 	"\vtarget_type\x18\b \x01(\tR\n" +
 	"targetType\x12#\n" +
-	"\rworkspace_dir\x18\t \x01(\tR\fworkspaceDir\x120\n" +
-	"\x14workflow_config_yaml\x18\n" +
-	" \x01(\tR\x12workflowConfigYaml\"%\n" +
+	"\rworkspace_dir\x18\t \x01(\tR\fworkspaceDir\x12@\n" +
+	"\x0fworkflow_config\x18\n" +
+	" \x01(\v2\x17.google.protobuf.StructR\x0eworkflowConfig\"%\n" +
 	"\n" +
 	"TaskCancel\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\x05R\x06taskId\"\xf5\x01\n" +
@@ -1670,6 +1671,7 @@ var file_lunafox_runtime_v1_runtime_proto_goTypes = []any{
 	(*EnsureWordlistResponse)(nil),    // 19: lunafox.runtime.v1.EnsureWordlistResponse
 	(*PostBatchRequest)(nil),          // 20: lunafox.runtime.v1.PostBatchRequest
 	(*PostBatchResponse)(nil),         // 21: lunafox.runtime.v1.PostBatchResponse
+	(*structpb.Struct)(nil),           // 22: google.protobuf.Struct
 }
 var file_lunafox_runtime_v1_runtime_proto_depIdxs = []int32{
 	2,  // 0: lunafox.runtime.v1.AgentRuntimeRequest.heartbeat:type_name -> lunafox.runtime.v1.Heartbeat
@@ -1680,27 +1682,28 @@ var file_lunafox_runtime_v1_runtime_proto_depIdxs = []int32{
 	7,  // 5: lunafox.runtime.v1.AgentRuntimeEvent.task_cancel:type_name -> lunafox.runtime.v1.TaskCancel
 	8,  // 6: lunafox.runtime.v1.AgentRuntimeEvent.config_update:type_name -> lunafox.runtime.v1.ConfigUpdate
 	9,  // 7: lunafox.runtime.v1.AgentRuntimeEvent.update_required:type_name -> lunafox.runtime.v1.UpdateRequired
-	0,  // 8: lunafox.runtime.v1.AgentRuntimeService.Connect:input_type -> lunafox.runtime.v1.AgentRuntimeRequest
-	10, // 9: lunafox.runtime.v1.AgentDataProxyService.GetProviderConfig:input_type -> lunafox.runtime.v1.GetProviderConfigRequest
-	12, // 10: lunafox.runtime.v1.AgentDataProxyService.GetWordlistMeta:input_type -> lunafox.runtime.v1.GetWordlistMetaRequest
-	14, // 11: lunafox.runtime.v1.AgentDataProxyService.DownloadWordlist:input_type -> lunafox.runtime.v1.DownloadWordlistRequest
-	16, // 12: lunafox.runtime.v1.AgentDataProxyService.BatchUpsertAssets:input_type -> lunafox.runtime.v1.BatchUpsertAssetsRequest
-	10, // 13: lunafox.runtime.v1.WorkerRuntimeService.GetProviderConfig:input_type -> lunafox.runtime.v1.GetProviderConfigRequest
-	18, // 14: lunafox.runtime.v1.WorkerRuntimeService.EnsureWordlist:input_type -> lunafox.runtime.v1.EnsureWordlistRequest
-	20, // 15: lunafox.runtime.v1.WorkerRuntimeService.PostBatch:input_type -> lunafox.runtime.v1.PostBatchRequest
-	5,  // 16: lunafox.runtime.v1.AgentRuntimeService.Connect:output_type -> lunafox.runtime.v1.AgentRuntimeEvent
-	11, // 17: lunafox.runtime.v1.AgentDataProxyService.GetProviderConfig:output_type -> lunafox.runtime.v1.GetProviderConfigResponse
-	13, // 18: lunafox.runtime.v1.AgentDataProxyService.GetWordlistMeta:output_type -> lunafox.runtime.v1.GetWordlistMetaResponse
-	15, // 19: lunafox.runtime.v1.AgentDataProxyService.DownloadWordlist:output_type -> lunafox.runtime.v1.DownloadWordlistChunk
-	17, // 20: lunafox.runtime.v1.AgentDataProxyService.BatchUpsertAssets:output_type -> lunafox.runtime.v1.BatchUpsertAssetsResponse
-	11, // 21: lunafox.runtime.v1.WorkerRuntimeService.GetProviderConfig:output_type -> lunafox.runtime.v1.GetProviderConfigResponse
-	19, // 22: lunafox.runtime.v1.WorkerRuntimeService.EnsureWordlist:output_type -> lunafox.runtime.v1.EnsureWordlistResponse
-	21, // 23: lunafox.runtime.v1.WorkerRuntimeService.PostBatch:output_type -> lunafox.runtime.v1.PostBatchResponse
-	16, // [16:24] is the sub-list for method output_type
-	8,  // [8:16] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	22, // 8: lunafox.runtime.v1.TaskAssign.workflow_config:type_name -> google.protobuf.Struct
+	0,  // 9: lunafox.runtime.v1.AgentRuntimeService.Connect:input_type -> lunafox.runtime.v1.AgentRuntimeRequest
+	10, // 10: lunafox.runtime.v1.AgentDataProxyService.GetProviderConfig:input_type -> lunafox.runtime.v1.GetProviderConfigRequest
+	12, // 11: lunafox.runtime.v1.AgentDataProxyService.GetWordlistMeta:input_type -> lunafox.runtime.v1.GetWordlistMetaRequest
+	14, // 12: lunafox.runtime.v1.AgentDataProxyService.DownloadWordlist:input_type -> lunafox.runtime.v1.DownloadWordlistRequest
+	16, // 13: lunafox.runtime.v1.AgentDataProxyService.BatchUpsertAssets:input_type -> lunafox.runtime.v1.BatchUpsertAssetsRequest
+	10, // 14: lunafox.runtime.v1.WorkerRuntimeService.GetProviderConfig:input_type -> lunafox.runtime.v1.GetProviderConfigRequest
+	18, // 15: lunafox.runtime.v1.WorkerRuntimeService.EnsureWordlist:input_type -> lunafox.runtime.v1.EnsureWordlistRequest
+	20, // 16: lunafox.runtime.v1.WorkerRuntimeService.PostBatch:input_type -> lunafox.runtime.v1.PostBatchRequest
+	5,  // 17: lunafox.runtime.v1.AgentRuntimeService.Connect:output_type -> lunafox.runtime.v1.AgentRuntimeEvent
+	11, // 18: lunafox.runtime.v1.AgentDataProxyService.GetProviderConfig:output_type -> lunafox.runtime.v1.GetProviderConfigResponse
+	13, // 19: lunafox.runtime.v1.AgentDataProxyService.GetWordlistMeta:output_type -> lunafox.runtime.v1.GetWordlistMetaResponse
+	15, // 20: lunafox.runtime.v1.AgentDataProxyService.DownloadWordlist:output_type -> lunafox.runtime.v1.DownloadWordlistChunk
+	17, // 21: lunafox.runtime.v1.AgentDataProxyService.BatchUpsertAssets:output_type -> lunafox.runtime.v1.BatchUpsertAssetsResponse
+	11, // 22: lunafox.runtime.v1.WorkerRuntimeService.GetProviderConfig:output_type -> lunafox.runtime.v1.GetProviderConfigResponse
+	19, // 23: lunafox.runtime.v1.WorkerRuntimeService.EnsureWordlist:output_type -> lunafox.runtime.v1.EnsureWordlistResponse
+	21, // 24: lunafox.runtime.v1.WorkerRuntimeService.PostBatch:output_type -> lunafox.runtime.v1.PostBatchResponse
+	17, // [17:25] is the sub-list for method output_type
+	9,  // [9:17] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_lunafox_runtime_v1_runtime_proto_init() }

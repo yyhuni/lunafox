@@ -19,9 +19,7 @@ type taskStoreStub struct {
 	unlockStage       int
 }
 
-func (stub *taskStoreStub) GetByID(context.Context, int) (*TaskRecord, error) {
-	return nil, nil
-}
+func (stub *taskStoreStub) GetByID(context.Context, int) (*TaskRecord, error) { return nil, nil }
 
 func (stub *taskStoreStub) PullTask(context.Context, int) (*TaskRecord, error) {
 	if len(stub.pulledTasks) > 0 {
@@ -43,9 +41,7 @@ func (stub *taskStoreStub) CountActiveByScanAndStage(context.Context, int, int) 
 	return stub.countActive, nil
 }
 
-func (stub *taskStoreStub) UpdateStatus(context.Context, int, string, string) error {
-	return nil
-}
+func (stub *taskStoreStub) UpdateStatus(context.Context, int, string, string) error { return nil }
 
 func (stub *taskStoreStub) FailTaskClaim(_ context.Context, id int, errorMessage string, reason string) error {
 	stub.failCalled = true
@@ -108,46 +104,20 @@ func TestTaskRuntimeServiceUnlockNextStageIfReady_UnlocksWhenNoActiveTasks(t *te
 }
 
 func TestTaskRuntimeServicePullTask_CompatibleWorkflowReturnsAssignment(t *testing.T) {
-	taskStore := &taskStoreStub{
-		pulledTask: &TaskRecord{
-			ID:                 101,
-			ScanID:             9,
-			Stage:              1,
-			WorkflowID:         "subdomain_discovery",
-			WorkflowConfigYAML: "recon:\n  enabled: false\n  tools:\n    subfinder:\n      enabled: false\n",
-			Status:             "pending",
+	taskStore := &taskStoreStub{pulledTask: &TaskRecord{
+		ID:         101,
+		ScanID:     9,
+		Stage:      1,
+		WorkflowID: "subdomain_discovery",
+		WorkflowConfig: map[string]any{
+			"recon": map[string]any{
+				"enabled": false,
+				"tools":   map[string]any{"subfinder": map[string]any{"enabled": false}},
+			},
 		},
-	}
-	runtimeStore := &runtimeScanStoreStub{
-		scan: &TaskScanRecord{
-			ID:       9,
-			TargetID: 88,
-			Status:   "running",
-			YAMLConfiguration: `
-subdomain_discovery:
-  recon:
-    enabled: false
-    tools:
-      subfinder:
-        enabled: false
-  bruteforce:
-    enabled: false
-    tools:
-      subdomain-bruteforce:
-        enabled: false
-  permutation:
-    enabled: false
-    tools:
-      subdomain-permutation-resolve:
-        enabled: false
-  resolve:
-    enabled: false
-    tools:
-      subdomain-resolve:
-        enabled: false
-`,
-		},
-	}
+		Status: "pending",
+	}}
+	runtimeStore := &runtimeScanStoreStub{scan: &TaskScanRecord{ID: 9, TargetID: 88, Status: "running"}}
 	service := NewTaskRuntimeService(taskStore, runtimeStore)
 
 	assignment, err := service.PullTask(context.Background(), 1)
@@ -160,22 +130,20 @@ subdomain_discovery:
 	if assignment.TaskID != 101 {
 		t.Fatalf("unexpected task id: %d", assignment.TaskID)
 	}
+	if assignment.WorkflowConfig == nil {
+		t.Fatalf("expected workflow config object on assignment")
+	}
 }
 
-func TestTaskRuntimeServicePullTask_MissingTaskConfigSliceFailsFast(t *testing.T) {
-	taskStore := &taskStoreStub{
-		pulledTask: &TaskRecord{
-			ID:                 1001,
-			ScanID:             45,
-			Stage:              1,
-			WorkflowID:         "subdomain_discovery",
-			WorkflowConfigYAML: "",
-			Status:             "pending",
-		},
-	}
-	runtimeStore := &runtimeScanStoreStub{
-		scan: &TaskScanRecord{ID: 45, TargetID: 23, Status: "pending"},
-	}
+func TestTaskRuntimeServicePullTask_MissingTaskConfigObjectFailsFast(t *testing.T) {
+	taskStore := &taskStoreStub{pulledTask: &TaskRecord{
+		ID:         1001,
+		ScanID:     45,
+		Stage:      1,
+		WorkflowID: "subdomain_discovery",
+		Status:     "pending",
+	}}
+	runtimeStore := &runtimeScanStoreStub{scan: &TaskScanRecord{ID: 45, TargetID: 23, Status: "pending"}}
 	service := NewTaskRuntimeService(taskStore, runtimeStore)
 
 	assignment, err := service.PullTask(context.Background(), 9)
@@ -195,19 +163,17 @@ func TestTaskRuntimeServicePullTask_MissingTaskConfigSliceFailsFast(t *testing.T
 }
 
 func TestTaskRuntimeServicePullTask_EmptyWorkflowIDFailsAsSchemaInvalid(t *testing.T) {
-	taskStore := &taskStoreStub{
-		pulledTask: &TaskRecord{
-			ID:                 1201,
-			ScanID:             46,
-			Stage:              1,
-			WorkflowID:         "",
-			WorkflowConfigYAML: "recon:\n  enabled: false\n  tools:\n    subfinder:\n      enabled: false\n",
-			Status:             "pending",
+	taskStore := &taskStoreStub{pulledTask: &TaskRecord{
+		ID:         1201,
+		ScanID:     46,
+		Stage:      1,
+		WorkflowID: "",
+		WorkflowConfig: map[string]any{
+			"recon": map[string]any{"enabled": false},
 		},
-	}
-	runtimeStore := &runtimeScanStoreStub{
-		scan: &TaskScanRecord{ID: 46, TargetID: 24, Status: "pending"},
-	}
+		Status: "pending",
+	}}
+	runtimeStore := &runtimeScanStoreStub{scan: &TaskScanRecord{ID: 46, TargetID: 24, Status: "pending"}}
 	service := NewTaskRuntimeService(taskStore, runtimeStore)
 
 	assignment, err := service.PullTask(context.Background(), 10)
@@ -227,19 +193,17 @@ func TestTaskRuntimeServicePullTask_EmptyWorkflowIDFailsAsSchemaInvalid(t *testi
 }
 
 func TestTaskRuntimeServicePullTask_CompatiblePendingScanPromotesToRunning(t *testing.T) {
-	taskStore := &taskStoreStub{
-		pulledTask: &TaskRecord{
-			ID:                 1401,
-			ScanID:             47,
-			Stage:              1,
-			WorkflowID:         "subdomain_discovery",
-			WorkflowConfigYAML: "recon:\n  enabled: false\n  tools:\n    subfinder:\n      enabled: false\n",
-			Status:             "pending",
+	taskStore := &taskStoreStub{pulledTask: &TaskRecord{
+		ID:         1401,
+		ScanID:     47,
+		Stage:      1,
+		WorkflowID: "subdomain_discovery",
+		WorkflowConfig: map[string]any{
+			"recon": map[string]any{"enabled": false},
 		},
-	}
-	runtimeStore := &runtimeScanStoreStub{
-		scan: &TaskScanRecord{ID: 47, TargetID: 25, Status: "pending"},
-	}
+		Status: "pending",
+	}}
+	runtimeStore := &runtimeScanStoreStub{scan: &TaskScanRecord{ID: 47, TargetID: 25, Status: "pending"}}
 	service := NewTaskRuntimeService(taskStore, runtimeStore)
 
 	assignment, err := service.PullTask(context.Background(), 13)

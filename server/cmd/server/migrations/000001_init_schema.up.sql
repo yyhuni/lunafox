@@ -151,7 +151,7 @@ CREATE TABLE IF NOT EXISTS scan (
     id SERIAL PRIMARY KEY,
     target_id INTEGER NOT NULL REFERENCES target(id) ON DELETE CASCADE,
     workflow_ids JSONB NOT NULL DEFAULT '[]',
-    yaml_configuration TEXT NOT NULL DEFAULT '',
+    configuration JSONB NOT NULL DEFAULT '{}',
     scan_mode VARCHAR(10) NOT NULL DEFAULT 'full',
     status VARCHAR(20) NOT NULL DEFAULT 'initiated',
     results_dir VARCHAR(100) NOT NULL DEFAULT '',
@@ -198,7 +198,6 @@ CREATE TABLE IF NOT EXISTS scheduled_scan (
     id SERIAL PRIMARY KEY,
     name VARCHAR(200) NOT NULL,
     workflow_ids JSONB NOT NULL DEFAULT '[]',
-    yaml_configuration TEXT NOT NULL DEFAULT '',
     organization_id INTEGER REFERENCES organization(id) ON DELETE SET NULL,
     target_id INTEGER REFERENCES target(id) ON DELETE SET NULL,
     cron_expression VARCHAR(100) NOT NULL DEFAULT '0 2 * * *',
@@ -642,7 +641,7 @@ CREATE TABLE IF NOT EXISTS scan_task (
 
     -- Assignment information
     agent_id        INT REFERENCES agent(id),
-    workflow_config_yaml TEXT,
+    workflow_config JSONB NOT NULL DEFAULT '{}',
     error_message   VARCHAR(4096),
 
     -- Timestamps
@@ -674,7 +673,8 @@ COMMENT ON COLUMN registration_token.expires_at IS 'Token expiration time (defau
 COMMENT ON COLUMN scan_task.stage IS 'Stage order index (shared for parallel tasks)';
 COMMENT ON COLUMN scan_task.workflow_id IS 'Workflow ID (e.g. subdomain_discovery)';
 COMMENT ON COLUMN scan_task.status IS 'Task status: blocked/pending/running/completed/failed/cancelled';
-COMMENT ON COLUMN scan_task.workflow_config_yaml IS 'Workflow-level YAML config slice for this task';
+COMMENT ON COLUMN scan.configuration IS 'Canonical workflow configuration root stored as JSON object';
+COMMENT ON COLUMN scan_task.workflow_config IS 'Canonical workflow-scoped configuration slice stored as JSON object';
 COMMENT ON COLUMN scan_task.error_message IS 'Error message (truncated by Agent, max 4KB)';
 COMMENT ON INDEX idx_scan_task_pending_order IS 'Supports task pull queries (ordered by stage DESC to prioritize completing existing scans, created_at ASC)';
 COMMENT ON INDEX idx_scan_task_agent_id IS 'Supports querying tasks by agent';

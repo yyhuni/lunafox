@@ -27,23 +27,17 @@ func withObservedLogger(t *testing.T) *observer.ObservedLogs {
 
 func TestScanTaskFacadePullTask_LogsSemanticFields(t *testing.T) {
 	logs := withObservedLogger(t)
-	taskStore := &taskStoreStub{
-		pulledTask: &TaskRecord{
-			ID:                 101,
-			ScanID:             9,
-			Stage:              1,
-			WorkflowID:         "subdomain_discovery",
-			WorkflowConfigYAML: "recon:\n  enabled: false\n  tools:\n    subfinder:\n      enabled: false\n",
-			Status:             "pending",
+	taskStore := &taskStoreStub{pulledTask: &TaskRecord{
+		ID:         101,
+		ScanID:     9,
+		Stage:      1,
+		WorkflowID: "subdomain_discovery",
+		WorkflowConfig: map[string]any{
+			"recon": map[string]any{"enabled": false},
 		},
-	}
-	runtimeStore := &runtimeScanStoreStub{
-		scan: &TaskScanRecord{
-			ID:       9,
-			TargetID: 88,
-			Status:   "running",
-		},
-	}
+		Status: "pending",
+	}}
+	runtimeStore := &runtimeScanStoreStub{scan: &TaskScanRecord{ID: 9, TargetID: 88, Status: "running"}}
 	service := NewScanTaskFacade(taskStore, runtimeStore)
 
 	assignment, err := service.PullTask(context.Background(), 7)
@@ -76,10 +70,7 @@ func TestLifecycleServiceStopActiveForDelete_LogsSemanticFields(t *testing.T) {
 	store := &lifecycleScanStoreStub{updateStatusErr: scandomain.ErrScanCannotStop}
 	service := NewLifecycleService(store, nil, nil, nil)
 
-	_, err := service.stopActiveForDelete(context.Background(), &QueryScan{
-		ID:     1001,
-		Status: string(scandomain.ScanStatusRunning),
-	})
+	_, err := service.stopActiveForDelete(context.Background(), &QueryScan{ID: 1001, Status: string(scandomain.ScanStatusRunning)})
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}

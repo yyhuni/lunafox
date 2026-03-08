@@ -12,6 +12,7 @@ func toScanQueryInput(query *dto.ScanListQuery) *scanapp.ScanListQuery {
 	if query == nil {
 		return nil
 	}
+
 	return &scanapp.ScanListQuery{
 		Page:     query.GetPage(),
 		PageSize: query.GetPageSize(),
@@ -25,6 +26,7 @@ func toScanCreateNormalInput(req *dto.CreateNormalScanRequest) *scanapp.CreateNo
 	if req == nil {
 		return nil
 	}
+
 	return &scanapp.CreateNormalRequest{
 		TargetID:      req.TargetID,
 		WorkflowIDs:   req.WorkflowIDs,
@@ -93,10 +95,10 @@ func toScanDetailOutput(scan *scanapp.QueryScan) dto.ScanDetailResponse {
 	}
 
 	response := dto.ScanDetailResponse{
-		ScanResponse:      toScanOutput(scan),
-		YAMLConfiguration: scan.YAMLConfiguration,
-		ResultsDir:        scan.ResultsDir,
-		WorkerID:          scan.WorkerID,
+		ScanResponse:  toScanOutput(scan),
+		Configuration: scan.Configuration,
+		ResultsDir:    scan.ResultsDir,
+		WorkerID:      scan.WorkerID,
 	}
 
 	if scan.StageProgress != nil {
@@ -113,6 +115,7 @@ func toScanStatisticsOutput(stats *scanapp.ScanStatistics) dto.ScanStatisticsRes
 	if stats == nil {
 		return dto.ScanStatisticsResponse{}
 	}
+
 	return dto.ScanStatisticsResponse{
 		Total:           stats.Total,
 		Running:         stats.Running,

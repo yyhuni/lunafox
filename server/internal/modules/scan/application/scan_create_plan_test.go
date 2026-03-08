@@ -22,8 +22,8 @@ func TestBuildScanTasks_IgnoresRootExtraWorkflowKeys(t *testing.T) {
 	if tasks[0].WorkflowID != "subdomain_discovery" {
 		t.Fatalf("unexpected workflow planned: %s", tasks[0].WorkflowID)
 	}
-	if tasks[0].WorkflowConfigYAML == "" {
-		t.Fatalf("expected task-level workflow config slice to be persisted")
+	if tasks[0].WorkflowConfig == nil {
+		t.Fatalf("expected task-level workflow config object to be persisted")
 	}
 }
 
@@ -61,5 +61,8 @@ func TestBuildScanTasks_DoesNotDependOnDomainWorkflowSwitch(t *testing.T) {
 	}
 	if tasks[0].WorkflowID != "future_workflow" {
 		t.Fatalf("unexpected workflow planned: %s", tasks[0].WorkflowID)
+	}
+	if tasks[0].WorkflowConfig == nil {
+		t.Fatalf("expected workflow config object on planned task")
 	}
 }

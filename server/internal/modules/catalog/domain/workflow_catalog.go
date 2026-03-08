@@ -13,5 +13,5 @@ type WorkflowProfile struct {
 	Name          string
 	Description   string
 	WorkflowIDs   []string
-	Configuration string
+	Configuration map[string]any
 }

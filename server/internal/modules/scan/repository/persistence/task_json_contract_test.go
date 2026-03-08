@@ -7,14 +7,14 @@ import (
 
 func TestScanTaskModelJSONTagsUseCamelCase(t *testing.T) {
 	tests := map[string]string{
-		"ScanID":             "scanId",
-		"WorkflowID":         "workflowId",
-		"AgentID":            "agentId,omitempty",
-		"WorkflowConfigYAML": "workflowConfigYAML",
-		"ErrorMessage":       "errorMessage,omitempty",
-		"CreatedAt":          "createdAt",
-		"StartedAt":          "startedAt,omitempty",
-		"CompletedAt":        "completedAt,omitempty",
+		"ScanID":         "scanId",
+		"WorkflowID":     "workflowId",
+		"AgentID":        "agentId,omitempty",
+		"WorkflowConfig": "workflowConfig",
+		"ErrorMessage":   "errorMessage,omitempty",
+		"CreatedAt":      "createdAt",
+		"StartedAt":      "startedAt,omitempty",
+		"CompletedAt":    "completedAt,omitempty",
 	}
 
 	for fieldName, expectedTag := range tests {
