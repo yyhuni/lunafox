@@ -4,13 +4,13 @@ import "time"
 
 // TaskRecord is the runtime task projection used by task runtime use-cases.
 type TaskRecord struct {
-	ID                 int
-	ScanID             int
-	Stage              int
-	WorkflowID         string
-	Status             string
-	AgentID            *int
-	WorkflowConfigYAML string
+	ID             int
+	ScanID         int
+	Stage          int
+	WorkflowID     string
+	Status         string
+	AgentID        *int
+	WorkflowConfig map[string]any
 }
 
 // TaskTargetRef is the minimal target projection required by task runtime flows.
@@ -22,11 +22,11 @@ type TaskTargetRef struct {
 
 // TaskScanRecord is the runtime scan projection required by task runtime flows.
 type TaskScanRecord struct {
-	ID                int
-	TargetID          int
-	Status            string
-	YAMLConfiguration string
-	Target            *TaskTargetRef
+	ID            int
+	TargetID      int
+	Configuration map[string]any
+	Status        string
+	Target        *TaskTargetRef
 }
 
 // ScanLogEntry is the scan log projection shared by application and repository.

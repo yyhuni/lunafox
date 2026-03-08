@@ -15,7 +15,7 @@ type QueryScan struct {
 	ID                     int
 	TargetID               int
 	WorkflowIDs            []byte
-	YAMLConfiguration      string
+	Configuration          map[string]any
 	ScanMode               string
 	Status                 string
 	ResultsDir             string

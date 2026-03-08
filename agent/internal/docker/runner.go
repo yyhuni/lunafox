@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -22,9 +23,8 @@ const (
 	defaultRuntimeMountPath    = runtimecontract.DefaultRuntimeMountPath
 )
 
-// StartWorker starts a worker container for a task and returns the container ID.
-func (c *Client) StartWorker(ctx context.Context, t *domain.Task, agentSocket, taskToken string) (string, error) {
-	if t == nil {
+func (c *Client) StartWorker(ctx context.Context, task *domain.Task, agentSocket, taskToken string) (string, error) {
+	if task == nil {
 		return "", fmt.Errorf("task is nil")
 	}
 	if strings.TrimSpace(agentSocket) == "" {
@@ -33,10 +33,11 @@ func (c *Client) StartWorker(ctx context.Context, t *domain.Task, agentSocket, t
 	if strings.TrimSpace(taskToken) == "" {
 		return "", fmt.Errorf("task token is required")
 	}
-	if err := os.MkdirAll(t.WorkspaceDir, 0755); err != nil {
+	if err := os.MkdirAll(task.WorkspaceDir, 0755); err != nil {
 		return "", fmt.Errorf("prepare workspace: %w", err)
 	}
-	configPath, err := writeTaskConfigFile(t.WorkspaceDir, t.WorkflowConfigYAML)
+
+	configPath, err := writeTaskConfigFile(task.WorkspaceDir, task.WorkflowConfig)
 	if err != nil {
 		return "", err
 	}
@@ -53,25 +54,23 @@ func (c *Client) StartWorker(ctx context.Context, t *domain.Task, agentSocket, t
 	if err != nil {
 		return "", err
 	}
-	env := buildWorkerEnv(t, agentSocket, taskToken, configPath)
 
-	config := &container.Config{
+	env := buildWorkerEnv(task, agentSocket, taskToken, configPath)
+	containerConfig := &container.Config{
 		Image: image,
 		Env:   env,
 		Cmd:   strslice.StrSlice{},
 	}
-
 	hostConfig := &container.HostConfig{
 		Binds:       []string{sharedDataVolumeBind, runtimeVolumeBind},
 		AutoRemove:  false,
 		OomScoreAdj: 500,
 	}
 
-	resp, err := c.cli.ContainerCreate(ctx, config, hostConfig, &network.NetworkingConfig{}, nil, "")
+	resp, err := c.cli.ContainerCreate(ctx, containerConfig, hostConfig, &network.NetworkingConfig{}, nil, "")
 	if err != nil {
 		return "", err
 	}
-
 	if err := c.cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
 		return "", err
 	}
@@ -126,6 +125,7 @@ func resolveSharedDataVolumeBind() (string, error) {
 			return "", fmt.Errorf("%s mode is empty", sharedDataVolumeBindEnvKey)
 		}
 	}
+
 	return raw, nil
 }
 
@@ -142,8 +142,9 @@ func isValidNamedVolumeName(value string) bool {
 	if trimmed == "" {
 		return false
 	}
-	for idx, r := range trimmed {
-		if idx == 0 {
+
+	for index, r := range trimmed {
+		if index == 0 {
 			if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
 				return false
 			}
@@ -159,28 +160,35 @@ func isValidNamedVolumeName(value string) bool {
 			return false
 		}
 	}
+
 	return true
 }
 
-func buildWorkerEnv(t *domain.Task, agentSocket, taskToken, configPath string) []string {
+func buildWorkerEnv(task *domain.Task, agentSocket, taskToken, configPath string) []string {
 	return []string{
-		fmt.Sprintf("TASK_ID=%d", t.ID),
-		fmt.Sprintf("SCAN_ID=%d", t.ScanID),
-		fmt.Sprintf("TARGET_ID=%d", t.TargetID),
-		fmt.Sprintf("TARGET_NAME=%s", t.TargetName),
-		fmt.Sprintf("TARGET_TYPE=%s", t.TargetType),
-		fmt.Sprintf("WORKFLOW_ID=%s", t.WorkflowID),
-		fmt.Sprintf("WORKSPACE_DIR=%s", t.WorkspaceDir),
+		fmt.Sprintf("TASK_ID=%d", task.ID),
+		fmt.Sprintf("SCAN_ID=%d", task.ScanID),
+		fmt.Sprintf("TARGET_ID=%d", task.TargetID),
+		fmt.Sprintf("TARGET_NAME=%s", task.TargetName),
+		fmt.Sprintf("TARGET_TYPE=%s", task.TargetType),
+		fmt.Sprintf("WORKFLOW_ID=%s", task.WorkflowID),
+		fmt.Sprintf("WORKSPACE_DIR=%s", task.WorkspaceDir),
 		fmt.Sprintf("%s=%s", runtimecontract.DefaultWorkerConfigPathEnv, strings.TrimSpace(configPath)),
 		fmt.Sprintf("AGENT_SOCKET=%s", agentSocket),
 		fmt.Sprintf("TASK_TOKEN=%s", taskToken),
 	}
 }
 
-func writeTaskConfigFile(workspaceDir, taskConfigYAML string) (string, error) {
+func writeTaskConfigFile(workspaceDir string, taskConfig map[string]any) (string, error) {
 	path := runtimecontract.BuildTaskConfigPath(workspaceDir)
-	if err := os.WriteFile(path, []byte(taskConfigYAML), 0600); err != nil {
+
+	payload, err := json.Marshal(taskConfig)
+	if err != nil {
+		return "", fmt.Errorf("marshal task config file: %w", err)
+	}
+	if err := os.WriteFile(path, payload, 0600); err != nil {
 		return "", fmt.Errorf("write task config file: %w", err)
 	}
+
 	return path, nil
 }

@@ -144,6 +144,7 @@
 [data-theme="bauhaus"] .bg-card,
 [data-theme="bauhaus"] [data-slot="card"] {
   border: 1px solid var(--border);
+  border-top: 2px solid var(--border);
   box-shadow: var(--shadow-2xs);
   border-radius: 0 !important;
   /* Force square corners */
@@ -309,7 +310,7 @@
 
 [data-theme="bauhaus"] [data-slot="data-table"] {
   border: 1px solid var(--border);
-  border-top: 2px solid var(--primary);
+  border-top: 2px solid var(--border);
   border-radius: 0;
   background: var(--card);
 }

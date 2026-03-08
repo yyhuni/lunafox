@@ -3,28 +3,33 @@ package dto
 import catalogdomain "github.com/yyhuni/lunafox/server/internal/modules/catalog/domain"
 
 type ProfileResponse struct {
-	ID            string   `json:"id"`
-	Name          string   `json:"name"`
-	Description   string   `json:"description,omitempty"`
-	WorkflowIDs   []string `json:"workflowIds"`
-	Configuration string   `json:"configuration"`
+	ID            string         `json:"id"`
+	Name          string         `json:"name"`
+	Description   string         `json:"description,omitempty"`
+	WorkflowIDs   []string       `json:"workflowIds"`
+	Configuration map[string]any `json:"configuration"`
 }
 
-func NewProfileResponse(p *catalogdomain.WorkflowProfile) ProfileResponse {
-	workflowIDs := append([]string(nil), p.WorkflowIDs...)
+func NewProfileResponse(profile *catalogdomain.WorkflowProfile) ProfileResponse {
+	workflowIDs := append([]string(nil), profile.WorkflowIDs...)
+	configuration := make(map[string]any, len(profile.Configuration))
+	for key, value := range profile.Configuration {
+		configuration[key] = value
+	}
+
 	return ProfileResponse{
-		ID:            p.ID,
-		Name:          p.Name,
-		Description:   p.Description,
+		ID:            profile.ID,
+		Name:          profile.Name,
+		Description:   profile.Description,
 		WorkflowIDs:   workflowIDs,
-		Configuration: p.Configuration,
+		Configuration: configuration,
 	}
 }
 
 func NewProfileListResponse(profiles []catalogdomain.WorkflowProfile) []ProfileResponse {
 	responses := make([]ProfileResponse, len(profiles))
-	for i := range profiles {
-		responses[i] = NewProfileResponse(&profiles[i])
+	for index := range profiles {
+		responses[index] = NewProfileResponse(&profiles[index])
 	}
 	return responses
 }
