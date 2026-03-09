@@ -15,6 +15,7 @@ func TestScanTaskModelToRecord_MapsCoreFields(t *testing.T) {
 		Stage:          2,
 		WorkflowID:     "subdomain_discovery",
 		WorkflowConfig: datatypes.JSON([]byte(`{"recon":{"enabled":false}}`)),
+		ErrorMessage:   "decode failed",
 		FailureKind:    "decode_config_failed",
 	}
 
@@ -31,7 +32,7 @@ func TestScanTaskModelToRecord_MapsCoreFields(t *testing.T) {
 	if record.WorkflowConfig == nil {
 		t.Fatalf("expected workflow config object to be mapped")
 	}
-	if record.FailureKind != "decode_config_failed" {
-		t.Fatalf("unexpected failure kind: %s", record.FailureKind)
+	if record.Failure == nil || record.Failure.Kind != "decode_config_failed" || record.Failure.Message != "decode failed" {
+		t.Fatalf("unexpected failure detail: %+v", record.Failure)
 	}
 }

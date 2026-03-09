@@ -6,6 +6,7 @@ import dynamic from "next/dynamic"
 import { DataTableSkeleton } from "@/components/ui/data-table-skeleton"
 import { ScanHistoryDialogs } from "@/components/scan/history/scan-history-list-dialogs"
 import { ScanProgressDialog } from "@/components/scan/scan-progress-dialog"
+import { ScanRuntimeDetailDrawer } from "@/components/scan/history/scan-runtime-detail-drawer"
 
 import type { ScanHistoryListViewState } from "./scan-history-list-view-state"
 
@@ -100,6 +101,12 @@ export function ScanHistoryListDialogsSection({
           data={state.progressData}
         />
       ) : null}
+
+      <ScanRuntimeDetailDrawer
+        open={state.runtimeDetailOpen}
+        onOpenChange={state.setRuntimeDetailOpen}
+        scan={state.scanForRuntimeDetail}
+      />
     </>
   )
 }

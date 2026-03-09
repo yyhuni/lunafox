@@ -112,8 +112,9 @@ func (service *TaskRuntimeService) UpdateStatus(ctx context.Context, agentID, ta
 		if err := service.unlockNextStageIfReady(ctx, task.ScanID, task.Stage); err != nil {
 			return err
 		}
-		return service.recalculateScanStatus(ctx, task.ScanID, errorMessage)
+		return service.recalculateScanStatus(ctx, task.ScanID)
 	}
+
 	return nil
 }
 
@@ -126,12 +127,15 @@ func (service *TaskRuntimeService) unlockNextStageIfReady(ctx context.Context, s
 	if active > 0 {
 		return nil
 	}
+
 	_, err = service.taskStore.UnlockNextStage(ctx, scanID, stage)
 	return err
 }
 
-func (service *TaskRuntimeService) recalculateScanStatus(ctx context.Context, scanID int, lastErrorMessage string) error {
-	// Recompute scan status from aggregate task states after terminal task updates.
+func (service *TaskRuntimeService) recalculateScanStatus(
+	ctx context.Context,
+	scanID int,
+) error {
 	pending, running, _, failed, cancelled, err := service.taskStore.GetStatusCountsByScanID(ctx, scanID)
 	if err != nil {
 		return err

@@ -53,12 +53,17 @@ message Heartbeat {
 
 message RequestTask {}
 
+message FailureDetail {
+  string kind = 1;
+  string message = 2;
+}
+
 message TaskStatus {
   int32 task_id = 1;
   string status = 2;
-  string message = 3;
-  int32 exit_code = 4;
-  string failure_kind = 5;
+  FailureDetail failure = 3;
+  reserved 4, 5;
+  reserved "exit_code", "failure_kind";
 }
 
 message AgentRuntimeEvent {

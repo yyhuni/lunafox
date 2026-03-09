@@ -46,6 +46,7 @@ func (repository *domainScanRepository) Save(ctx context.Context, scan *scandoma
 	updates := map[string]any{
 		"status":        string(scan.Status),
 		"error_message": scan.ErrorMessage,
+		"failure_kind":  "",
 		"progress":      scan.Progress,
 		"current_stage": scan.CurrentStage,
 		"worker_id":     scan.WorkerID,

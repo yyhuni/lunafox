@@ -21,6 +21,7 @@ type QueryScan struct {
 	ResultsDir             string
 	WorkerID               *int
 	ErrorMessage           string
+	Failure                *FailureDetail
 	Progress               int
 	CurrentStage           string
 	StageProgress          []byte

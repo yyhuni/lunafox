@@ -18,6 +18,8 @@ export function useScanHistoryActions({ tToast }: UseScanHistoryActionsProps) {
   const [scanToStop, setScanToStop] = React.useState<ScanRecord | null>(null)
   const [progressDialogOpen, setProgressDialogOpen] = React.useState(false)
   const [progressData, setProgressData] = React.useState<ScanProgressData | null>(null)
+  const [runtimeDetailOpen, setRuntimeDetailOpen] = React.useState(false)
+  const [scanForRuntimeDetail, setScanForRuntimeDetail] = React.useState<ScanRecord | null>(null)
 
   const deleteMutation = useResourceMutation({
     mutationFn: deleteScan,
@@ -110,6 +112,11 @@ export function useScanHistoryActions({ tToast }: UseScanHistoryActionsProps) {
     }
   }, [])
 
+  const handleViewRuntimeDetail = React.useCallback((scan: ScanRecord) => {
+    setScanForRuntimeDetail(scan)
+    setRuntimeDetailOpen(true)
+  }, [])
+
   return {
     selectedScans,
     setSelectedScans,
@@ -124,6 +131,9 @@ export function useScanHistoryActions({ tToast }: UseScanHistoryActionsProps) {
     progressDialogOpen,
     setProgressDialogOpen,
     progressData,
+    runtimeDetailOpen,
+    setRuntimeDetailOpen,
+    scanForRuntimeDetail,
     handleDeleteScan,
     confirmDelete,
     handleBulkDelete,
@@ -131,5 +141,6 @@ export function useScanHistoryActions({ tToast }: UseScanHistoryActionsProps) {
     handleStopScan,
     confirmStop,
     handleViewProgress,
+    handleViewRuntimeDetail,
   }
 }

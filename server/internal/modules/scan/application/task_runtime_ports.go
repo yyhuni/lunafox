@@ -18,3 +18,5 @@ type TaskRecord = scandomain.TaskRecord
 type TaskTargetRef = scandomain.TaskTargetRef
 
 type TaskScanRecord = scandomain.TaskScanRecord
+
+type FailureDetail = scandomain.FailureDetail

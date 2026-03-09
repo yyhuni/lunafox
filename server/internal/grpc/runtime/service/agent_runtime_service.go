@@ -31,7 +31,7 @@ type RuntimeLifecycle interface {
 
 type TaskRuntime interface {
 	PullTask(ctx context.Context, agentID int) (*scanapp.TaskAssignment, error)
-	UpdateStatus(ctx context.Context, agentID, taskID int, status, errorMessage string) error
+	UpdateStatus(ctx context.Context, agentID, taskID int, status string, failure *scanapp.FailureDetail) error
 }
 
 type AgentRuntimeService struct {
@@ -161,7 +161,7 @@ func (s *AgentRuntimeService) Connect(stream grpc.BidiStreamingServer[runtimev1.
 				agent.ID,
 				int(payload.TaskStatus.TaskId),
 				payload.TaskStatus.Status,
-				payload.TaskStatus.Message,
+				toFailureDetail(payload.TaskStatus.GetFailure()),
 			); err != nil {
 				return mapTaskRuntimeError(err)
 			}
@@ -169,6 +169,13 @@ func (s *AgentRuntimeService) Connect(stream grpc.BidiStreamingServer[runtimev1.
 			// Ignore unknown payload variants for forward compatibility.
 		}
 	}
+}
+
+func toFailureDetail(failure *runtimev1.FailureDetail) *scanapp.FailureDetail {
+	if failure == nil {
+		return nil
+	}
+	return &scanapp.FailureDetail{Kind: failure.GetKind(), Message: failure.GetMessage()}
 }
 
 func mapTaskRuntimeError(err error) error {

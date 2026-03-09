@@ -9,5 +9,5 @@ import (
 // ScanTaskRuntimePort describes the scan task runtime dependency for agent task service.
 type ScanTaskRuntimePort interface {
 	PullTask(ctx context.Context, agentID int) (*scanapp.TaskAssignment, error)
-	UpdateStatus(ctx context.Context, agentID, taskID int, status, errorMessage string) error
+	UpdateStatus(ctx context.Context, agentID, taskID int, status string, failure *scanapp.FailureDetail) error
 }

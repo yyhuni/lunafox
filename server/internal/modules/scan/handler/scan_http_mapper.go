@@ -34,6 +34,13 @@ func toScanCreateNormalInput(req *dto.CreateNormalScanRequest) *scanapp.CreateNo
 	}
 }
 
+func toFailureOutput(failure *scanapp.FailureDetail) *dto.FailureResponse {
+	if failure == nil {
+		return nil
+	}
+	return &dto.FailureResponse{Kind: failure.Kind, Message: failure.Message}
+}
+
 func toScanOutput(scan *scanapp.QueryScan) dto.ScanResponse {
 	if scan == nil {
 		return dto.ScanResponse{
@@ -50,6 +57,7 @@ func toScanOutput(scan *scanapp.QueryScan) dto.ScanResponse {
 		Progress:     scan.Progress,
 		CurrentStage: scan.CurrentStage,
 		ErrorMessage: scan.ErrorMessage,
+		Failure:      toFailureOutput(scan.Failure),
 		CreatedAt:    timeutil.ToUTC(scan.CreatedAt),
 		StoppedAt:    timeutil.ToUTCPtr(scan.StoppedAt),
 		CachedStats: &dto.ScanCachedStats{

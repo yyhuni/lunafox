@@ -19,6 +19,6 @@ func (service *AgentTaskService) PullTask(ctx context.Context, agentID int) (*sc
 	return service.runtime.PullTask(ctx, agentID)
 }
 
-func (service *AgentTaskService) UpdateStatus(ctx context.Context, agentID, taskID int, status, errorMessage string) error {
-	return service.runtime.UpdateStatus(ctx, agentID, taskID, status, errorMessage)
+func (service *AgentTaskService) UpdateStatus(ctx context.Context, agentID, taskID int, status string, failure *scanapp.FailureDetail) error {
+	return service.runtime.UpdateStatus(ctx, agentID, taskID, status, failure)
 }

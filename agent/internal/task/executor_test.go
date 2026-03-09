@@ -10,9 +10,9 @@ import (
 )
 
 type fakeReporter struct {
-	status      string
-	msg         string
-	failureKind string
+	status  string
+	msg     string
+	failure *domain.FailureDetail
 }
 
 type fakeDockerRunner struct {
@@ -58,10 +58,14 @@ func (fake *fakeDockerRunner) TailLogs(ctx context.Context, containerID string, 
 	return fake.tailLogsFn(ctx, containerID, lines)
 }
 
-func (f *fakeReporter) UpdateStatus(ctx context.Context, taskID int, status, errorMessage, failureKind string) error {
+func (f *fakeReporter) UpdateStatus(ctx context.Context, taskID int, status string, failure *domain.FailureDetail) error {
 	f.status = status
-	f.msg = errorMessage
-	f.failureKind = failureKind
+	f.failure = failure
+	if failure != nil {
+		f.msg = failure.Message
+	} else {
+		f.msg = ""
+	}
 	return nil
 }
 
@@ -78,8 +82,8 @@ func TestExecutorMissingWorkerRuntimeSocket(t *testing.T) {
 	if reporter.msg == "" {
 		t.Fatalf("expected error message")
 	}
-	if reporter.failureKind != "worker_start_failed" {
-		t.Fatalf("expected worker_start_failed, got %q", reporter.failureKind)
+	if reporter.failure == nil || reporter.failure.Kind != "worker_start_failed" {
+		t.Fatalf("expected worker_start_failed, got %+v", reporter.failure)
 	}
 }
 
@@ -97,8 +101,8 @@ func TestExecutorDockerUnavailable(t *testing.T) {
 	if reporter.msg == "" {
 		t.Fatalf("expected error message")
 	}
-	if reporter.failureKind != "worker_start_failed" {
-		t.Fatalf("expected worker_start_failed, got %q", reporter.failureKind)
+	if reporter.failure == nil || reporter.failure.Kind != "worker_start_failed" {
+		t.Fatalf("expected worker_start_failed, got %+v", reporter.failure)
 	}
 }
 
@@ -257,8 +261,8 @@ func TestExecutorFailurePathUsesTimeoutContexts(t *testing.T) {
 	if !removeHasDeadline {
 		t.Fatalf("expected remove context to have deadline")
 	}
-	if reporter.failureKind != "container_exit_failed" {
-		t.Fatalf("expected container_exit_failed, got %q", reporter.failureKind)
+	if reporter.failure == nil || reporter.failure.Kind != "container_exit_failed" {
+		t.Fatalf("expected container_exit_failed, got %+v", reporter.failure)
 	}
 }
 
@@ -279,8 +283,8 @@ func TestExecutorWaitFailureUsesContainerWaitFailed(t *testing.T) {
 	if reporter.status != "failed" {
 		t.Fatalf("expected failed status, got %s", reporter.status)
 	}
-	if reporter.failureKind != "container_wait_failed" {
-		t.Fatalf("expected container_wait_failed, got %q", reporter.failureKind)
+	if reporter.failure == nil || reporter.failure.Kind != "container_wait_failed" {
+		t.Fatalf("expected container_wait_failed, got %+v", reporter.failure)
 	}
 }
 
@@ -304,8 +308,8 @@ func TestExecutorExitFailureClassifiesDecodeConfigFailure(t *testing.T) {
 	if reporter.status != "failed" {
 		t.Fatalf("expected failed status, got %s", reporter.status)
 	}
-	if reporter.failureKind != "decode_config_failed" {
-		t.Fatalf("expected decode_config_failed, got %q", reporter.failureKind)
+	if reporter.failure == nil || reporter.failure.Kind != "decode_config_failed" {
+		t.Fatalf("expected decode_config_failed, got %+v", reporter.failure)
 	}
 }
 
@@ -329,8 +333,8 @@ func TestExecutorHandleTimeoutUsesDeadlineOnStop(t *testing.T) {
 	if reporter.status != "failed" {
 		t.Fatalf("expected failed status, got %s", reporter.status)
 	}
-	if reporter.failureKind != "task_timeout" {
-		t.Fatalf("expected task_timeout, got %q", reporter.failureKind)
+	if reporter.failure == nil || reporter.failure.Kind != "task_timeout" {
+		t.Fatalf("expected task_timeout, got %+v", reporter.failure)
 	}
 }
 

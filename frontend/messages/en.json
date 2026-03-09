@@ -780,7 +780,13 @@
       "startTime": "Start Time",
       "endTime": "End Time",
       "duration": "Duration",
-      "status": "Status",
+      "status": {
+        "completed": "Completed",
+        "running": "Running",
+        "failed": "Failed",
+        "pending": "Pending",
+        "cancelled": "Cancelled"
+      },
       "searchPlaceholder": "Search target name...",
       "allStatus": "All Status",
       "loadFailed": "Failed to load scan history",
@@ -801,13 +807,6 @@
         "directories": "Directories"
       },
       "directoriesHelp": "Results from directory scanning (e.g. ffuf/dirsearch)",
-      "status": {
-        "completed": "Completed",
-        "running": "Running",
-        "failed": "Failed",
-        "pending": "Pending",
-        "cancelled": "Cancelled"
-      },
       "overview": {
         "loadError": "Failed to load scan data",
         "startedAt": "Started",
@@ -838,6 +837,74 @@
           "high": "High",
           "medium": "Medium",
           "low": "Low"
+        },
+        "runtimeDrawer": {
+          "open": "Runtime Details",
+          "title": "Scan Runtime Details",
+          "emptyTarget": "Unknown Target",
+          "loadError": "Failed to load runtime details",
+          "cards": {
+            "progress": "Progress",
+            "currentStage": "Current stage: {stage}",
+            "tasks": "Tasks",
+            "completedCount": "{count} completed",
+            "failures": "Failed Tasks",
+            "runningCount": "{count} running",
+            "noRunning": "No running tasks",
+            "startedAt": "Started At",
+            "stoppedAt": "Stopped at: {time}",
+            "notStopped": "Not stopped"
+          },
+          "failure": {
+            "title": "Primary Failure Summary",
+            "empty": "No failure summary"
+          },
+          "meta": {
+            "title": "Runtime Overview",
+            "target": "Target",
+            "workflow": "Workflow",
+            "worker": "Worker",
+            "scanId": "Scan ID",
+            "createdAt": "Created At",
+            "stoppedAt": "Stopped At",
+            "currentStage": "Current Stage",
+            "progress": "Progress"
+          },
+          "tasks": {
+            "title": "Runtime Task List",
+            "description": "A stage-by-stage view of runtime steps and failure context.",
+            "empty": "No task information available.",
+            "noDetail": "No additional runtime detail.",
+            "logTitle": "Task Log"
+          },
+          "troubleshooting": {
+            "title": "Troubleshooting",
+            "failureSummary": "Failure Summary",
+            "runtimeMeta": "Runtime Metadata",
+            "noFailure": "No structured failure information."
+          },
+          "vulns": {
+            "title": "Vulnerability Summary"
+          },
+          "debug": {
+            "title": "Debug View",
+            "note": "This area is reserved for demo-stage raw data and can be replaced by a production troubleshooting section later."
+          },
+          "statusSummary": {
+            "title": "Runtime Status",
+            "completed": "Completed Tasks",
+            "running": "Running Tasks",
+            "failed": "Failed Tasks"
+          },
+          "config": {
+            "title": "Scan Configuration"
+          },
+          "scanLogs": {
+            "title": "Scan Logs"
+          },
+          "assets": {
+            "title": "Asset Summary"
+          }
         }
       },
       "stats": {
@@ -1119,7 +1186,46 @@
       "title": "Fingerprints",
       "name": "Fingerprint Name",
       "category": "Category",
-      "import": "Import Fingerprints",
+      "import": {
+        "eholeTitle": "Import EHole Fingerprints",
+        "eholeDesc": "Upload EHole format fingerprint file",
+        "eholeFormatHint": "{\"fingerprint\": [...]}",
+        "eholeInvalidMissing": "Invalid EHole format: missing fingerprint field",
+        "eholeInvalidArray": "Invalid EHole format: fingerprint must be an array",
+        "eholeInvalidFields": "Invalid EHole format: fingerprint missing required fields (cms, keyword)",
+        "gobyTitle": "Import Goby Fingerprints",
+        "gobyDesc": "Upload Goby format fingerprint file",
+        "gobyFormatHint": "[{...}] or {...}",
+        "gobyInvalidFields": "Invalid Goby format: fingerprint missing required fields (product, rule)",
+        "gobyInvalidFormat": "Invalid Goby format: must be array or object",
+        "wappalyzerTitle": "Import Wappalyzer Fingerprints",
+        "wappalyzerDesc": "Upload Wappalyzer format fingerprint file",
+        "wappalyzerFormatHint": "{\"apps\": {...}} or [{...}]",
+        "wappalyzerInvalidApps": "Invalid Wappalyzer format: apps/technologies must be an object",
+        "wappalyzerInvalidFormat": "Invalid Wappalyzer format",
+        "fingersTitle": "Import Fingers Fingerprints",
+        "fingersDesc": "Upload Fingers format fingerprint file",
+        "fingersFormatHint": "[{\"name\": ..., \"rule\": [...]}]",
+        "fingersInvalidFormat": "Invalid Fingers format: must be an array",
+        "fingersInvalidArray": "Invalid Fingers format: must be an array",
+        "fingersInvalidFields": "Invalid Fingers format: fingerprint missing required fields (name, rule)",
+        "fingerprinthubTitle": "Import FingerPrintHub Fingerprints",
+        "fingerprinthubDesc": "Upload FingerPrintHub format fingerprint file",
+        "fingerprinthubFormatHint": "[{\"id\": ..., \"info\": {...}, \"http\": [...]}]",
+        "fingerprinthubInvalidFormat": "Invalid FingerPrintHub format: must be an array",
+        "fingerprinthubInvalidArray": "Invalid FingerPrintHub format: must be an array",
+        "fingerprinthubInvalidFields": "Invalid FingerPrintHub format: fingerprint missing required fields",
+        "arlTitle": "Import ARL Fingerprints",
+        "arlDesc": "Upload ARL format fingerprint file",
+        "arlFormatHint": "YAML format with name and rule fields",
+        "arlInvalidFormat": "Invalid ARL format",
+        "arlInvalidArray": "Invalid ARL format: must be an array",
+        "arlInvalidFields": "Invalid ARL format: fingerprint missing required fields (name, rule)",
+        "emptyData": "Fingerprint data is empty",
+        "supportedFormat": "Supported format:",
+        "importing": "Importing...",
+        "importSuccessDetail": "Import successful: {created} created, {failed} failed"
+      },
       "export": "Export Fingerprints",
       "pageDescription": "Web fingerprint rule management",
       "helpText": "• EHole: Red team asset identification tool, supports keyword, favicon hash and other identification methods\n• Goby: Attack surface mapping tool, contains a large number of web applications and device fingerprints\n• Wappalyzer: Browser extension that can identify the technology stack used by websites\n• Fingers: HTTP fingerprint library with detailed rule matching\n• FingerPrintHub: Nuclei-style fingerprint templates with HTTP matchers\n• ARL: Asset Reconnaissance Lighthouse fingerprint rules in YAML format",
@@ -1292,46 +1398,6 @@
           "name": "Fingerprint name",
           "rule": "Rule content"
         }
-      },
-      "import": {
-        "eholeTitle": "Import EHole Fingerprints",
-        "eholeDesc": "Upload EHole format fingerprint file",
-        "eholeFormatHint": "{\"fingerprint\": [...]}",
-        "eholeInvalidMissing": "Invalid EHole format: missing fingerprint field",
-        "eholeInvalidArray": "Invalid EHole format: fingerprint must be an array",
-        "eholeInvalidFields": "Invalid EHole format: fingerprint missing required fields (cms, keyword)",
-        "gobyTitle": "Import Goby Fingerprints",
-        "gobyDesc": "Upload Goby format fingerprint file",
-        "gobyFormatHint": "[{...}] or {...}",
-        "gobyInvalidFields": "Invalid Goby format: fingerprint missing required fields (product, rule)",
-        "gobyInvalidFormat": "Invalid Goby format: must be array or object",
-        "wappalyzerTitle": "Import Wappalyzer Fingerprints",
-        "wappalyzerDesc": "Upload Wappalyzer format fingerprint file",
-        "wappalyzerFormatHint": "{\"apps\": {...}} or [{...}]",
-        "wappalyzerInvalidApps": "Invalid Wappalyzer format: apps/technologies must be an object",
-        "wappalyzerInvalidFormat": "Invalid Wappalyzer format",
-        "fingersTitle": "Import Fingers Fingerprints",
-        "fingersDesc": "Upload Fingers format fingerprint file",
-        "fingersFormatHint": "[{\"name\": ..., \"rule\": [...]}]",
-        "fingersInvalidFormat": "Invalid Fingers format: must be an array",
-        "fingersInvalidArray": "Invalid Fingers format: must be an array",
-        "fingersInvalidFields": "Invalid Fingers format: fingerprint missing required fields (name, rule)",
-        "fingerprinthubTitle": "Import FingerPrintHub Fingerprints",
-        "fingerprinthubDesc": "Upload FingerPrintHub format fingerprint file",
-        "fingerprinthubFormatHint": "[{\"id\": ..., \"info\": {...}, \"http\": [...]}]",
-        "fingerprinthubInvalidFormat": "Invalid FingerPrintHub format: must be an array",
-        "fingerprinthubInvalidArray": "Invalid FingerPrintHub format: must be an array",
-        "fingerprinthubInvalidFields": "Invalid FingerPrintHub format: fingerprint missing required fields",
-        "arlTitle": "Import ARL Fingerprints",
-        "arlDesc": "Upload ARL format fingerprint file",
-        "arlFormatHint": "YAML format with name and rule fields",
-        "arlInvalidFormat": "Invalid ARL format",
-        "arlInvalidArray": "Invalid ARL format: must be an array",
-        "arlInvalidFields": "Invalid ARL format: fingerprint missing required fields (name, rule)",
-        "emptyData": "Fingerprint data is empty",
-        "supportedFormat": "Supported format:",
-        "importing": "Importing...",
-        "importSuccessDetail": "Import successful: {created} created, {failed} failed"
       }
     },
     "nuclei": {
@@ -2175,7 +2241,13 @@
   "vulnerabilities": {
     "title": "Vulnerability Management",
     "description": "View and manage all vulnerabilities found by scans",
-    "severity": "Severity",
+    "severity": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "info": "Info"
+    },
     "source": "Source",
     "reviewStatus": {
       "all": "All",
@@ -2238,14 +2310,7 @@
         "httpResponse": "HTTP Response"
       }
     },
-    "emptyDetail": "Select a vulnerability to view details.",
-    "severity": {
-      "critical": "Critical",
-      "high": "High",
-      "medium": "Medium",
-      "low": "Low",
-      "info": "Info"
-    }
+    "emptyDetail": "Select a vulnerability to view details."
   },
   "pages": {
     "organization": {

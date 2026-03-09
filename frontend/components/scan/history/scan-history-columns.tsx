@@ -20,7 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Eye, Trash2, MoreHorizontal } from "@/components/icons"
+import { Eye, Trash2, MoreHorizontal, IconTerminal } from "@/components/icons"
 import { DataTableColumnHeader } from "@/components/ui/data-table/column-header"
 import { IconCircleX } from "@/components/icons"
 import { ScanStatusBadge } from "@/components/scan/scan-status-badge"
@@ -39,6 +39,7 @@ export interface ScanHistoryTranslations {
   }
   actions: {
     snapshot: string
+    runtimeDetail: string
     stop: string
     stopScanPending: string
     delete: string
@@ -74,6 +75,7 @@ interface CreateColumnsProps {
   handleDelete: (scan: ScanRecord) => void
   handleStop: (scan: ScanRecord) => void
   handleViewProgress?: (scan: ScanRecord) => void
+  handleViewRuntimeDetail?: (scan: ScanRecord) => void
   statusClickable?: boolean
   t: ScanHistoryTranslations
   hideTargetColumn?: boolean
@@ -87,6 +89,7 @@ export const createScanHistoryColumns = ({
   handleDelete,
   handleStop,
   handleViewProgress,
+  handleViewRuntimeDetail,
   statusClickable = true,
   t,
   hideTargetColumn = false,
@@ -403,6 +406,11 @@ export const createScanHistoryColumns = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleViewRuntimeDetail?.(scan)}>
+                <IconTerminal className="mr-2 h-4 w-4" />
+                {t.actions.runtimeDetail}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               {canStop && (
                 <>
                   <DropdownMenuItem onClick={() => handleStop(scan)}>

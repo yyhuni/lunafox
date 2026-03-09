@@ -42,7 +42,7 @@ type Executor struct {
 }
 
 type statusReporter interface {
-	UpdateStatus(ctx context.Context, taskID int, status, errorMessage, failureKind string) error
+	UpdateStatus(ctx context.Context, taskID int, status string, failure *domain.FailureDetail) error
 }
 
 const (
@@ -100,7 +100,7 @@ func (e *Executor) Start(ctx context.Context, tasks <-chan *domain.Task) {
 				continue
 			}
 			if e.isCancelled(t.ID) {
-				e.reportStatus(ctx, t.ID, "cancelled", "", "")
+				e.reportStatus(ctx, t.ID, "cancelled", nil)
 				e.clearCancelled(t.ID)
 				continue
 			}
@@ -139,23 +139,29 @@ func (e *Executor) MarkCancelled(taskID int) {
 	e.cancelMu.Unlock()
 }
 
-func (e *Executor) reportStatus(ctx context.Context, taskID int, status, errorMessage, failureKind string) {
+func (e *Executor) reportStatus(ctx context.Context, taskID int, status string, failure *domain.FailureDetail) {
 	if e.client == nil {
 		return
 	}
 	if status != "failed" {
-		failureKind = ""
-	} else if failureKind == "" {
-		failureKind = failureKindUnknown
+		failure = nil
+	} else if failure == nil {
+		failure = &domain.FailureDetail{Kind: failureKindUnknown}
+	}
+	if failure != nil {
+		failure = &domain.FailureDetail{Kind: failure.Kind, Message: failure.Message}
+		if strings.TrimSpace(failure.Kind) == "" {
+			failure.Kind = failureKindUnknown
+		}
 	}
 	statusCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 	defer cancel()
-	if err := e.client.UpdateStatus(statusCtx, taskID, status, errorMessage, failureKind); err != nil {
+	if err := e.client.UpdateStatus(statusCtx, taskID, status, failure); err != nil {
 		logger.Log.Warn("failed to report task status",
 			zap.Int("taskId", taskID),
 			zap.String("status", status),
-			zap.String("errorMessage", errorMessage),
-			zap.String("failureKind", failureKind),
+			zap.String("errorMessage", failureMessage(failure)),
+			zap.String("failureKind", failureKindValue(failure)),
 			zap.Error(err),
 		)
 	}
@@ -170,11 +176,11 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 	}
 
 	if e.agentSocket == "" {
-		e.reportStatus(ctx, t.ID, "failed", "missing worker runtime socket", failureKindWorkerStartFailed)
+		e.reportStatus(ctx, t.ID, "failed", newFailureDetail(failureKindWorkerStartFailed, "missing worker runtime socket"))
 		return
 	}
 	if e.docker == nil {
-		e.reportStatus(ctx, t.ID, "failed", "docker client unavailable", failureKindWorkerStartFailed)
+		e.reportStatus(ctx, t.ID, "failed", newFailureDetail(failureKindWorkerStartFailed, "docker client unavailable"))
 		return
 	}
 
@@ -183,7 +189,7 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 
 	taskToken, err := generateSessionToken()
 	if err != nil {
-		e.reportStatus(ctx, t.ID, "failed", "generate task token failed", failureKindWorkerStartFailed)
+		e.reportStatus(ctx, t.ID, "failed", newFailureDetail(failureKindWorkerStartFailed, "generate task token failed"))
 		return
 	}
 	if sessionRegistry, ok := e.client.(taskSessionRegistry); ok {
@@ -201,7 +207,7 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 			zap.Error(err),
 		)
 		message := docker.TruncateErrorMessage(err.Error())
-		e.reportStatus(ctx, t.ID, "failed", message, failureKindWorkerStartFailed)
+		e.reportStatus(ctx, t.ID, "failed", newFailureDetail(failureKindWorkerStartFailed, message))
 		return
 	}
 	logger.Log.Info("worker container started",
@@ -234,7 +240,7 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 			zap.Error(waitErr),
 		)
 		message := docker.TruncateErrorMessage(waitErr.Error())
-		e.reportStatus(ctx, t.ID, "failed", message, failureKindContainerWaitFailed)
+		e.reportStatus(ctx, t.ID, "failed", newFailureDetail(failureKindContainerWaitFailed, message))
 		return
 	}
 
@@ -255,7 +261,7 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 			zap.Int("scanId", t.ScanID),
 			zap.String("containerId", containerID),
 		)
-		e.reportStatus(ctx, t.ID, "completed", "", "")
+		e.reportStatus(ctx, t.ID, "completed", nil)
 		return
 	}
 
@@ -272,7 +278,7 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 		zap.Int64("exitCode", exitCode),
 		zap.String("logExcerpt", message),
 	)
-	e.reportStatus(ctx, t.ID, "failed", message, classifyFailureKind(message))
+	e.reportStatus(ctx, t.ID, "failed", classifyFailureDetail(message))
 }
 
 func (e *Executor) handleCancel(ctx context.Context, t *domain.Task, containerID string) {
@@ -282,7 +288,7 @@ func (e *Executor) handleCancel(ctx context.Context, t *domain.Task, containerID
 		zap.Int("scanId", t.ScanID),
 		zap.String("containerId", containerID),
 	)
-	e.reportStatus(ctx, t.ID, "cancelled", "", "")
+	e.reportStatus(ctx, t.ID, "cancelled", nil)
 }
 
 func (e *Executor) handleTimeout(ctx context.Context, t *domain.Task, containerID string) {
@@ -293,15 +299,34 @@ func (e *Executor) handleTimeout(ctx context.Context, t *domain.Task, containerI
 		zap.String("containerId", containerID),
 	)
 	message := docker.TruncateErrorMessage("task timed out")
-	e.reportStatus(ctx, t.ID, "failed", message, failureKindTaskTimeout)
+	e.reportStatus(ctx, t.ID, "failed", newFailureDetail(failureKindTaskTimeout, message))
 }
 
-func classifyFailureKind(message string) string {
+func classifyFailureDetail(message string) *domain.FailureDetail {
 	trimmed := strings.TrimSpace(strings.ToLower(message))
+	kind := failureKindContainerExitFailed
 	if strings.Contains(trimmed, "decode workflow config") {
-		return failureKindDecodeConfigFailed
+		kind = failureKindDecodeConfigFailed
 	}
-	return failureKindContainerExitFailed
+	return newFailureDetail(kind, message)
+}
+
+func newFailureDetail(kind, message string) *domain.FailureDetail {
+	return &domain.FailureDetail{Kind: kind, Message: message}
+}
+
+func failureKindValue(failure *domain.FailureDetail) string {
+	if failure == nil {
+		return ""
+	}
+	return failure.Kind
+}
+
+func failureMessage(failure *domain.FailureDetail) string {
+	if failure == nil {
+		return ""
+	}
+	return failure.Message
 }
 
 func (e *Executor) trackCancel(taskID int, cancel context.CancelFunc) {

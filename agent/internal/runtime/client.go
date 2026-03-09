@@ -221,7 +221,7 @@ func (c *Client) PullTask(ctx context.Context) (*domain.Task, error) {
 	}
 }
 
-func (c *Client) UpdateStatus(ctx context.Context, taskID int, status, errorMessage, failureKind string) error {
+func (c *Client) UpdateStatus(ctx context.Context, taskID int, status string, failure *domain.FailureDetail) error {
 	if taskID <= 0 {
 		return errors.New("task ID is required")
 	}
@@ -229,10 +229,9 @@ func (c *Client) UpdateStatus(ctx context.Context, taskID int, status, errorMess
 	req := &runtimev1.AgentRuntimeRequest{
 		Payload: &runtimev1.AgentRuntimeRequest_TaskStatus{
 			TaskStatus: &runtimev1.TaskStatus{
-				TaskId:      int32(taskID),
-				Status:      status,
-				Message:     errorMessage,
-				FailureKind: failureKind,
+				TaskId:  int32(taskID),
+				Status:  status,
+				Failure: toProtoFailureDetail(failure),
 			},
 		},
 	}
@@ -242,6 +241,13 @@ func (c *Client) UpdateStatus(ctx context.Context, taskID int, status, errorMess
 	default:
 	}
 	return c.send(req)
+}
+
+func toProtoFailureDetail(failure *domain.FailureDetail) *runtimev1.FailureDetail {
+	if failure == nil {
+		return nil
+	}
+	return &runtimev1.FailureDetail{Kind: failure.Kind, Message: failure.Message}
 }
 
 func (c *Client) SendHeartbeat(ctx context.Context, payload *runtimev1.Heartbeat) error {

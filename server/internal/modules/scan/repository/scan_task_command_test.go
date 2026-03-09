@@ -5,11 +5,12 @@ import (
 	"strings"
 	"testing"
 
+	scandomain "github.com/yyhuni/lunafox/server/internal/modules/scan/domain"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
-func TestScanTaskRepositoryUpdateStatus_PersistsFailureKind(t *testing.T) {
+func TestScanTaskRepositoryUpdateStatus_PersistsFailureDetail(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("file:scan_task_update_status_failure_kind?mode=memory&cache=shared"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
@@ -35,7 +36,8 @@ func TestScanTaskRepositoryUpdateStatus_PersistsFailureKind(t *testing.T) {
 	}
 
 	repo := &scanTaskRepository{db: db}
-	if err := repo.UpdateStatus(context.Background(), 1, taskStatusFailed, "boom", "runtime_error"); err != nil {
+	failure := &scandomain.FailureDetail{Kind: "runtime_error", Message: "boom"}
+	if err := repo.UpdateStatus(context.Background(), 1, taskStatusFailed, failure); err != nil {
 		t.Fatalf("UpdateStatus failed: %v", err)
 	}
 
@@ -52,7 +54,7 @@ func TestScanTaskRepositoryUpdateStatus_PersistsFailureKind(t *testing.T) {
 	}
 }
 
-func TestScanTaskRepositoryFailTaskClaim_PersistsFailureKind(t *testing.T) {
+func TestScanTaskRepositoryFailPulledTask_PersistsFailureDetail(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("file:scan_task_fail_claim_failure_kind?mode=memory&cache=shared"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
@@ -78,8 +80,9 @@ func TestScanTaskRepositoryFailTaskClaim_PersistsFailureKind(t *testing.T) {
 	}
 
 	repo := &scanTaskRepository{db: db}
-	if err := repo.FailTaskClaim(context.Background(), 1, "bad workflow", "schema_invalid"); err != nil {
-		t.Fatalf("FailTaskClaim failed: %v", err)
+	failure := &scandomain.FailureDetail{Kind: "schema_invalid", Message: "bad workflow"}
+	if err := repo.FailPulledTask(context.Background(), 1, failure); err != nil {
+		t.Fatalf("FailPulledTask failed: %v", err)
 	}
 
 	var row struct {

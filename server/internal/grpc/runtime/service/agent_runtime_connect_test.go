@@ -145,10 +145,12 @@ func TestConnectHandlesHeartbeatAndTaskStatus(t *testing.T) {
 			{
 				Payload: &runtimev1.AgentRuntimeRequest_TaskStatus{
 					TaskStatus: &runtimev1.TaskStatus{
-						TaskId:      77,
-						Status:      "failed",
-						Message:     "boom",
-						FailureKind: "runtime_error",
+						TaskId: 77,
+						Status: "failed",
+						Failure: &runtimev1.FailureDetail{
+							Kind:    "runtime_error",
+							Message: "boom",
+						},
 					},
 				},
 			},
@@ -171,8 +173,8 @@ func TestConnectHandlesHeartbeatAndTaskStatus(t *testing.T) {
 	if tasks.updates[0].taskID != 77 || tasks.updates[0].status != "failed" {
 		t.Fatalf("unexpected task status update payload: %+v", tasks.updates[0])
 	}
-	if tasks.updates[0].failureKind != "runtime_error" {
-		t.Fatalf("unexpected failure kind: %+v", tasks.updates[0])
+	if tasks.updates[0].failure == nil || tasks.updates[0].failure.Kind != "runtime_error" || tasks.updates[0].failure.Message != "boom" {
+		t.Fatalf("unexpected failure payload: %+v", tasks.updates[0])
 	}
 }
 
@@ -646,11 +648,10 @@ func (s *runtimeLifecycleStub) HandleMessage(_ context.Context, _ int, message a
 }
 
 type taskUpdate struct {
-	agentID     int
-	taskID      int
-	status      string
-	message     string
-	failureKind string
+	agentID int
+	taskID  int
+	status  string
+	failure *scanapp.FailureDetail
 }
 
 type taskRuntimeStub struct {
@@ -666,7 +667,7 @@ func (s *taskRuntimeStub) PullTask(context.Context, int) (*scanapp.TaskAssignmen
 	return s.pullResult, s.pullErr
 }
 
-func (s *taskRuntimeStub) UpdateStatus(_ context.Context, agentID, taskID int, status, errorMessage, failureKind string) error {
-	s.updates = append(s.updates, taskUpdate{agentID: agentID, taskID: taskID, status: status, message: errorMessage, failureKind: failureKind})
+func (s *taskRuntimeStub) UpdateStatus(_ context.Context, agentID, taskID int, status string, failure *scanapp.FailureDetail) error {
+	s.updates = append(s.updates, taskUpdate{agentID: agentID, taskID: taskID, status: status, failure: failure})
 	return s.updateErr
 }

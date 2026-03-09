@@ -34,6 +34,7 @@ export function DashboardScanHistory() {
     },
     actions: {
       snapshot: tCommon("actions.snapshot"),
+      runtimeDetail: tScan("history.runtimeDrawer.open"),
       stop: tCommon("actions.stop"),
       stopScanPending: tScan("stopScanPending"),
       delete: tCommon("actions.delete"),

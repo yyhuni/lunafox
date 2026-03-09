@@ -852,6 +852,74 @@
           "high": "高危",
           "medium": "中危",
           "low": "低危"
+        },
+        "runtimeDrawer": {
+          "open": "运行详情",
+          "title": "扫描运行详情",
+          "emptyTarget": "未知目标",
+          "loadError": "加载运行详情失败",
+          "cards": {
+            "progress": "总体进度",
+            "currentStage": "当前阶段：{stage}",
+            "tasks": "任务数",
+            "completedCount": "已完成 {count} 个",
+            "failures": "失败任务",
+            "runningCount": "运行中 {count} 个",
+            "noRunning": "当前无运行中任务",
+            "startedAt": "开始时间",
+            "stoppedAt": "结束时间：{time}",
+            "notStopped": "尚未结束"
+          },
+          "failure": {
+            "title": "主失败摘要",
+            "empty": "暂无失败摘要"
+          },
+          "meta": {
+            "title": "运行概览",
+            "target": "目标",
+            "workflow": "工作流",
+            "worker": "扫描节点",
+            "scanId": "扫描 ID",
+            "createdAt": "创建时间",
+            "stoppedAt": "结束时间",
+            "currentStage": "当前阶段",
+            "progress": "进度"
+          },
+          "tasks": {
+            "title": "任务运行清单",
+            "description": "按阶段梳理本次扫描的运行步骤与失败信息。",
+            "empty": "当前没有可展示的任务信息。",
+            "noDetail": "暂无更多运行说明。",
+            "logTitle": "任务日志"
+          },
+          "troubleshooting": {
+            "title": "排障信息",
+            "failureSummary": "失败摘要",
+            "runtimeMeta": "运行元信息",
+            "noFailure": "当前没有结构化失败信息。"
+          },
+          "vulns": {
+            "title": "漏洞统计摘要"
+          },
+          "debug": {
+            "title": "调试视图",
+            "note": "此区域用于 demo 阶段展示抽屉的原始数据形状，后续可替换为更正式的排障区块。"
+          },
+          "statusSummary": {
+            "title": "运行状态",
+            "completed": "已完成任务",
+            "running": "运行中任务",
+            "failed": "失败任务"
+          },
+          "config": {
+            "title": "扫描配置"
+          },
+          "scanLogs": {
+            "title": "整体扫描日志"
+          },
+          "assets": {
+            "title": "扫描结果摘要"
+          }
         }
       },
       "stats": {

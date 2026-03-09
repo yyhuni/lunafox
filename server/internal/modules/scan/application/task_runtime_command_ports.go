@@ -1,5 +1,5 @@
 package application
 
 type TaskRuntimeCommandStore interface {
-	UpdateStatus(id int, status string, errorMessage string) error
+	UpdateStatus(id int, status string, failure *FailureDetail) error
 }

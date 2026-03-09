@@ -3,25 +3,38 @@ package application
 import (
 	"context"
 	"testing"
+	"time"
 )
 
 type taskStoreStub struct {
-	pulledTask         *TaskRecord
-	pulledTasks        []*TaskRecord
-	getByIDFn          func(context.Context, int) (*TaskRecord, error)
-	pullIndex          int
-	countActive        int
-	failCalled         bool
-	failedTask         int
-	failedMessage      string
-	failedRejectCause  string
-	updatedFailureKind string
-	updatedStatus      string
-	updatedTaskID      int
-	updatedMessage     string
-	unlockCalled       bool
-	unlockScanID       int
-	unlockStage        int
+	pulledTask     *TaskRecord
+	pulledTasks    []*TaskRecord
+	getByIDFn      func(context.Context, int) (*TaskRecord, error)
+	listFailedFn   func(context.Context, int) ([]TaskRecord, error)
+	pullIndex      int
+	countActive    int
+	pendingCount   int
+	runningCount   int
+	completedCount int
+	failedCount    int
+	cancelledCount int
+	failCalled     bool
+	failedTask     int
+	failedFailure  *FailureDetail
+	updatedFailure *FailureDetail
+	updatedStatus  string
+	updatedTaskID  int
+	unlockCalled   bool
+	unlockScanID   int
+	unlockStage    int
+}
+
+func cloneFailureDetailForTest(failure *FailureDetail) *FailureDetail {
+	if failure == nil {
+		return nil
+	}
+	cloned := *failure
+	return &cloned
 }
 
 func (stub *taskStoreStub) GetByID(ctx context.Context, id int) (*TaskRecord, error) {
@@ -44,27 +57,32 @@ func (stub *taskStoreStub) PullTask(context.Context, int) (*TaskRecord, error) {
 }
 
 func (stub *taskStoreStub) GetStatusCountsByScanID(context.Context, int) (int, int, int, int, int, error) {
-	return 0, 0, 0, 0, 0, nil
+	return stub.pendingCount, stub.runningCount, stub.completedCount, stub.failedCount, stub.cancelledCount, nil
 }
 
 func (stub *taskStoreStub) CountActiveByScanAndStage(context.Context, int, int) (int, error) {
 	return stub.countActive, nil
 }
 
-func (stub *taskStoreStub) UpdateStatus(_ context.Context, id int, status string, errorMessage string, failureKind string) error {
+func (stub *taskStoreStub) UpdateStatus(_ context.Context, id int, status string, failure *FailureDetail) error {
 	stub.updatedTaskID = id
 	stub.updatedStatus = status
-	stub.updatedMessage = errorMessage
-	stub.updatedFailureKind = failureKind
+	stub.updatedFailure = cloneFailureDetailForTest(failure)
 	return nil
 }
 
-func (stub *taskStoreStub) FailTaskClaim(_ context.Context, id int, errorMessage string, reason string) error {
+func (stub *taskStoreStub) FailTaskClaim(_ context.Context, id int, failure *FailureDetail) error {
 	stub.failCalled = true
 	stub.failedTask = id
-	stub.failedMessage = errorMessage
-	stub.failedRejectCause = reason
+	stub.failedFailure = cloneFailureDetailForTest(failure)
 	return nil
+}
+
+func (stub *taskStoreStub) ListFailedByScanID(ctx context.Context, scanID int) ([]TaskRecord, error) {
+	if stub.listFailedFn != nil {
+		return stub.listFailedFn(ctx, scanID)
+	}
+	return nil, nil
 }
 
 func (stub *taskStoreStub) UnlockNextStage(_ context.Context, scanID, stage int) (int64, error) {
@@ -75,20 +93,20 @@ func (stub *taskStoreStub) UnlockNextStage(_ context.Context, scanID, stage int)
 }
 
 type runtimeScanStoreStub struct {
-	scan              *TaskScanRecord
-	lastUpdatedStatus string
-	lastUpdatedError  string
-	updateCalls       int
+	scan               *TaskScanRecord
+	lastUpdatedStatus  string
+	lastUpdatedFailure *FailureDetail
+	updateCalls        int
 }
 
 func (stub *runtimeScanStoreStub) GetTaskRuntimeByID(int) (*TaskScanRecord, error) {
 	return stub.scan, nil
 }
 
-func (stub *runtimeScanStoreStub) UpdateStatus(_ int, status string, errorMessage string) error {
+func (stub *runtimeScanStoreStub) UpdateStatus(_ int, status string, failure *FailureDetail) error {
 	stub.updateCalls++
 	stub.lastUpdatedStatus = status
-	stub.lastUpdatedError = errorMessage
+	stub.lastUpdatedFailure = cloneFailureDetailForTest(failure)
 	return nil
 }
 
@@ -206,33 +224,93 @@ func TestTaskRuntimeServicePullTask_EmptyWorkflowIDFailsAsSchemaInvalid(t *testi
 	if workflowErr.Field != "workflow" {
 		t.Fatalf("unexpected field: %s", workflowErr.Field)
 	}
-	if taskStore.failedRejectCause != "schema_invalid" {
-		t.Fatalf("expected failure kind %q, got %q", "schema_invalid", taskStore.failedRejectCause)
+	if taskStore.failedFailure == nil || taskStore.failedFailure.Kind != "schema_invalid" {
+		t.Fatalf("expected failure kind %q, got %+v", "schema_invalid", taskStore.failedFailure)
 	}
 }
 
-func TestTaskRuntimeServiceUpdateStatus_PropagatesFailureKind(t *testing.T) {
+func TestTaskRuntimeServiceUpdateStatus_RejectsFailedWithoutFailureMessage(t *testing.T) {
+	service := NewTaskRuntimeService(&taskStoreStub{}, &runtimeScanStoreStub{})
+
+	if err := service.UpdateStatus(context.Background(), 7, 303, "failed", &FailureDetail{Kind: "runtime_error"}); err != ErrTaskInvalidUpdate {
+		t.Fatalf("expected ErrTaskInvalidUpdate, got %v", err)
+	}
+}
+
+func TestTaskRuntimeServiceUpdateStatus_RejectsNonFailedWithFailure(t *testing.T) {
+	service := NewTaskRuntimeService(&taskStoreStub{}, &runtimeScanStoreStub{})
+
+	if err := service.UpdateStatus(context.Background(), 7, 303, "completed", &FailureDetail{Kind: "runtime_error", Message: "boom"}); err != ErrTaskInvalidUpdate {
+		t.Fatalf("expected ErrTaskInvalidUpdate, got %v", err)
+	}
+}
+
+func TestTaskRuntimeServiceUpdateStatus_PropagatesFailureObject(t *testing.T) {
 	agentID := 7
 	taskOwner := agentID
-	taskStore := &taskStoreStub{}
-	taskStore.pulledTask = nil
+	taskStore := &taskStoreStub{pendingCount: 1}
 	service := NewTaskRuntimeService(taskStore, &runtimeScanStoreStub{})
-	taskStoreGetByID := &TaskRecord{ID: 303, ScanID: 99, Stage: 1, WorkflowID: "subdomain_discovery", Status: "running", AgentID: &taskOwner}
-	taskStore.getByIDFn = func(context.Context, int) (*TaskRecord, error) { return taskStoreGetByID, nil }
+	taskStore.getByIDFn = func(context.Context, int) (*TaskRecord, error) {
+		return &TaskRecord{ID: 303, ScanID: 99, Stage: 1, WorkflowID: "subdomain_discovery", Status: "running", AgentID: &taskOwner}, nil
+	}
 
-	err := service.UpdateStatus(context.Background(), agentID, 303, "failed", "boom", "runtime_error")
+	failure := &FailureDetail{Kind: "runtime_error", Message: "boom"}
+	err := service.UpdateStatus(context.Background(), agentID, 303, "failed", failure)
 	if err != nil {
 		t.Fatalf("UpdateStatus returned error: %v", err)
 	}
-	if taskStore.updatedFailureKind != "runtime_error" {
-		t.Fatalf("expected runtime_error, got %q", taskStore.updatedFailureKind)
+	if taskStore.updatedFailure == nil || taskStore.updatedFailure.Kind != "runtime_error" || taskStore.updatedFailure.Message != "boom" {
+		t.Fatalf("expected propagated failure, got %+v", taskStore.updatedFailure)
 	}
 }
 
-func TestNormalizeFailureKind_DoesNotRewriteLegacyCamelCase(t *testing.T) {
-	got := normalizeFailureKind("failed", "runtimeError")
-	if got != "runtimeError" {
-		t.Fatalf("expected legacy value preserved without compatibility rewrite, got %q", got)
+func TestTaskRuntimeServiceRecalculateScanStatus_ProjectsCanonicalFailureByPriority(t *testing.T) {
+	timeoutAt := time.Date(2026, 3, 9, 10, 0, 0, 0, time.UTC)
+	schemaAt := timeoutAt.Add(1 * time.Minute)
+	taskStore := &taskStoreStub{
+		failedCount: 2,
+		listFailedFn: func(context.Context, int) ([]TaskRecord, error) {
+			return []TaskRecord{
+				{ID: 2, ScanID: 88, Stage: 2, Status: "failed", CompletedAt: &timeoutAt, Failure: &FailureDetail{Kind: "task_timeout", Message: "task timed out"}},
+				{ID: 1, ScanID: 88, Stage: 1, Status: "failed", CompletedAt: &schemaAt, Failure: &FailureDetail{Kind: "schema_invalid", Message: "schema invalid"}},
+			}, nil
+		},
+	}
+	runtimeStore := &runtimeScanStoreStub{}
+	service := NewTaskRuntimeService(taskStore, runtimeStore)
+
+	if err := service.recalculateScanStatus(context.Background(), 88); err != nil {
+		t.Fatalf("recalculateScanStatus returned error: %v", err)
+	}
+	if runtimeStore.lastUpdatedStatus != "failed" {
+		t.Fatalf("expected failed scan status, got %q", runtimeStore.lastUpdatedStatus)
+	}
+	if runtimeStore.lastUpdatedFailure == nil || runtimeStore.lastUpdatedFailure.Kind != "schema_invalid" {
+		t.Fatalf("expected schema_invalid canonical failure, got %+v", runtimeStore.lastUpdatedFailure)
+	}
+}
+
+func TestTaskRuntimeServiceRecalculateScanStatus_ProjectsCanonicalFailureStableTieBreak(t *testing.T) {
+	later := time.Date(2026, 3, 9, 11, 1, 0, 0, time.UTC)
+	earlier := time.Date(2026, 3, 9, 11, 0, 0, 0, time.UTC)
+	taskStore := &taskStoreStub{
+		failedCount: 3,
+		listFailedFn: func(context.Context, int) ([]TaskRecord, error) {
+			return []TaskRecord{
+				{ID: 5, ScanID: 89, Stage: 3, Status: "failed", CompletedAt: &later, Failure: &FailureDetail{Kind: "runtime_error", Message: "later stage"}},
+				{ID: 4, ScanID: 89, Stage: 2, Status: "failed", CompletedAt: &later, Failure: &FailureDetail{Kind: "runtime_error", Message: "earlier stage"}},
+				{ID: 3, ScanID: 89, Stage: 2, Status: "failed", CompletedAt: &earlier, Failure: &FailureDetail{Kind: "runtime_error", Message: "earliest completion"}},
+			}, nil
+		},
+	}
+	runtimeStore := &runtimeScanStoreStub{}
+	service := NewTaskRuntimeService(taskStore, runtimeStore)
+
+	if err := service.recalculateScanStatus(context.Background(), 89); err != nil {
+		t.Fatalf("recalculateScanStatus returned error: %v", err)
+	}
+	if runtimeStore.lastUpdatedFailure == nil || runtimeStore.lastUpdatedFailure.Message != "earliest completion" {
+		t.Fatalf("expected stable canonical failure, got %+v", runtimeStore.lastUpdatedFailure)
 	}
 }
 
@@ -265,5 +343,8 @@ func TestTaskRuntimeServicePullTask_CompatiblePendingScanPromotesToRunning(t *te
 	}
 	if runtimeStore.lastUpdatedStatus != "running" {
 		t.Fatalf("expected scan promoted to running, got %q", runtimeStore.lastUpdatedStatus)
+	}
+	if runtimeStore.lastUpdatedFailure != nil {
+		t.Fatalf("expected running scan to clear failure, got %+v", runtimeStore.lastUpdatedFailure)
 	}
 }

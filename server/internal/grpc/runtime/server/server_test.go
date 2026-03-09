@@ -273,7 +273,7 @@ func (stub *taskRuntimeStub) PullTask(context.Context, int) (*scanapp.TaskAssign
 	return nil, nil
 }
 
-func (stub *taskRuntimeStub) UpdateStatus(context.Context, int, int, string, string, string) error {
+func (stub *taskRuntimeStub) UpdateStatus(context.Context, int, int, string, *scanapp.FailureDetail) error {
 	return nil
 }
 

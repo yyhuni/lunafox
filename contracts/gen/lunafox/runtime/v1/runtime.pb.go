@@ -324,20 +324,70 @@ func (*RequestTask) Descriptor() ([]byte, []int) {
 	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{3}
 }
 
+type FailureDetail struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FailureDetail) Reset() {
+	*x = FailureDetail{}
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FailureDetail) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FailureDetail) ProtoMessage() {}
+
+func (x *FailureDetail) ProtoReflect() protoreflect.Message {
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FailureDetail.ProtoReflect.Descriptor instead.
+func (*FailureDetail) Descriptor() ([]byte, []int) {
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *FailureDetail) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *FailureDetail) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
 type TaskStatus struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TaskId        int32                  `protobuf:"varint,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
-	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
-	ExitCode      int32                  `protobuf:"varint,4,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
-	FailureKind   string                 `protobuf:"bytes,5,opt,name=failure_kind,json=failureKind,proto3" json:"failure_kind,omitempty"`
+	Failure       *FailureDetail         `protobuf:"bytes,3,opt,name=failure,proto3" json:"failure,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *TaskStatus) Reset() {
 	*x = TaskStatus{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[4]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -349,7 +399,7 @@ func (x *TaskStatus) String() string {
 func (*TaskStatus) ProtoMessage() {}
 
 func (x *TaskStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[4]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -362,7 +412,7 @@ func (x *TaskStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskStatus.ProtoReflect.Descriptor instead.
 func (*TaskStatus) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{4}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *TaskStatus) GetTaskId() int32 {
@@ -379,25 +429,11 @@ func (x *TaskStatus) GetStatus() string {
 	return ""
 }
 
-func (x *TaskStatus) GetMessage() string {
+func (x *TaskStatus) GetFailure() *FailureDetail {
 	if x != nil {
-		return x.Message
+		return x.Failure
 	}
-	return ""
-}
-
-func (x *TaskStatus) GetExitCode() int32 {
-	if x != nil {
-		return x.ExitCode
-	}
-	return 0
-}
-
-func (x *TaskStatus) GetFailureKind() string {
-	if x != nil {
-		return x.FailureKind
-	}
-	return ""
+	return nil
 }
 
 type AgentRuntimeEvent struct {
@@ -415,7 +451,7 @@ type AgentRuntimeEvent struct {
 
 func (x *AgentRuntimeEvent) Reset() {
 	*x = AgentRuntimeEvent{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[5]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -427,7 +463,7 @@ func (x *AgentRuntimeEvent) String() string {
 func (*AgentRuntimeEvent) ProtoMessage() {}
 
 func (x *AgentRuntimeEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[5]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -440,7 +476,7 @@ func (x *AgentRuntimeEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentRuntimeEvent.ProtoReflect.Descriptor instead.
 func (*AgentRuntimeEvent) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{5}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *AgentRuntimeEvent) GetPayload() isAgentRuntimeEvent_Payload {
@@ -532,7 +568,7 @@ type TaskAssign struct {
 
 func (x *TaskAssign) Reset() {
 	*x = TaskAssign{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[6]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -544,7 +580,7 @@ func (x *TaskAssign) String() string {
 func (*TaskAssign) ProtoMessage() {}
 
 func (x *TaskAssign) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[6]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -557,7 +593,7 @@ func (x *TaskAssign) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskAssign.ProtoReflect.Descriptor instead.
 func (*TaskAssign) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{6}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *TaskAssign) GetFound() bool {
@@ -639,7 +675,7 @@ type TaskCancel struct {
 
 func (x *TaskCancel) Reset() {
 	*x = TaskCancel{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[7]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -651,7 +687,7 @@ func (x *TaskCancel) String() string {
 func (*TaskCancel) ProtoMessage() {}
 
 func (x *TaskCancel) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[7]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -664,7 +700,7 @@ func (x *TaskCancel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskCancel.ProtoReflect.Descriptor instead.
 func (*TaskCancel) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{7}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *TaskCancel) GetTaskId() int32 {
@@ -686,7 +722,7 @@ type ConfigUpdate struct {
 
 func (x *ConfigUpdate) Reset() {
 	*x = ConfigUpdate{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[8]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -698,7 +734,7 @@ func (x *ConfigUpdate) String() string {
 func (*ConfigUpdate) ProtoMessage() {}
 
 func (x *ConfigUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[8]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -711,7 +747,7 @@ func (x *ConfigUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigUpdate.ProtoReflect.Descriptor instead.
 func (*ConfigUpdate) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{8}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ConfigUpdate) GetMaxTasks() int32 {
@@ -754,7 +790,7 @@ type UpdateRequired struct {
 
 func (x *UpdateRequired) Reset() {
 	*x = UpdateRequired{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[9]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -766,7 +802,7 @@ func (x *UpdateRequired) String() string {
 func (*UpdateRequired) ProtoMessage() {}
 
 func (x *UpdateRequired) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[9]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -779,7 +815,7 @@ func (x *UpdateRequired) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRequired.ProtoReflect.Descriptor instead.
 func (*UpdateRequired) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{9}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdateRequired) GetAgentVersion() string {
@@ -821,7 +857,7 @@ type GetProviderConfigRequest struct {
 
 func (x *GetProviderConfigRequest) Reset() {
 	*x = GetProviderConfigRequest{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[10]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -833,7 +869,7 @@ func (x *GetProviderConfigRequest) String() string {
 func (*GetProviderConfigRequest) ProtoMessage() {}
 
 func (x *GetProviderConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[10]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -846,7 +882,7 @@ func (x *GetProviderConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProviderConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetProviderConfigRequest) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{10}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetProviderConfigRequest) GetScanId() int32 {
@@ -879,7 +915,7 @@ type GetProviderConfigResponse struct {
 
 func (x *GetProviderConfigResponse) Reset() {
 	*x = GetProviderConfigResponse{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[11]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -891,7 +927,7 @@ func (x *GetProviderConfigResponse) String() string {
 func (*GetProviderConfigResponse) ProtoMessage() {}
 
 func (x *GetProviderConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[11]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -904,7 +940,7 @@ func (x *GetProviderConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProviderConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetProviderConfigResponse) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{11}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetProviderConfigResponse) GetContent() string {
@@ -924,7 +960,7 @@ type GetWordlistMetaRequest struct {
 
 func (x *GetWordlistMetaRequest) Reset() {
 	*x = GetWordlistMetaRequest{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[12]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -936,7 +972,7 @@ func (x *GetWordlistMetaRequest) String() string {
 func (*GetWordlistMetaRequest) ProtoMessage() {}
 
 func (x *GetWordlistMetaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[12]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -949,7 +985,7 @@ func (x *GetWordlistMetaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWordlistMetaRequest.ProtoReflect.Descriptor instead.
 func (*GetWordlistMetaRequest) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{12}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetWordlistMetaRequest) GetWordlistName() string {
@@ -981,7 +1017,7 @@ type GetWordlistMetaResponse struct {
 
 func (x *GetWordlistMetaResponse) Reset() {
 	*x = GetWordlistMetaResponse{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[13]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -993,7 +1029,7 @@ func (x *GetWordlistMetaResponse) String() string {
 func (*GetWordlistMetaResponse) ProtoMessage() {}
 
 func (x *GetWordlistMetaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[13]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1006,7 +1042,7 @@ func (x *GetWordlistMetaResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWordlistMetaResponse.ProtoReflect.Descriptor instead.
 func (*GetWordlistMetaResponse) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{13}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetWordlistMetaResponse) GetId() int32 {
@@ -1068,7 +1104,7 @@ type DownloadWordlistRequest struct {
 
 func (x *DownloadWordlistRequest) Reset() {
 	*x = DownloadWordlistRequest{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[14]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1080,7 +1116,7 @@ func (x *DownloadWordlistRequest) String() string {
 func (*DownloadWordlistRequest) ProtoMessage() {}
 
 func (x *DownloadWordlistRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[14]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1093,7 +1129,7 @@ func (x *DownloadWordlistRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DownloadWordlistRequest.ProtoReflect.Descriptor instead.
 func (*DownloadWordlistRequest) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{14}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *DownloadWordlistRequest) GetWordlistName() string {
@@ -1119,7 +1155,7 @@ type DownloadWordlistChunk struct {
 
 func (x *DownloadWordlistChunk) Reset() {
 	*x = DownloadWordlistChunk{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[15]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1131,7 +1167,7 @@ func (x *DownloadWordlistChunk) String() string {
 func (*DownloadWordlistChunk) ProtoMessage() {}
 
 func (x *DownloadWordlistChunk) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[15]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1144,7 +1180,7 @@ func (x *DownloadWordlistChunk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DownloadWordlistChunk.ProtoReflect.Descriptor instead.
 func (*DownloadWordlistChunk) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{15}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *DownloadWordlistChunk) GetData() []byte {
@@ -1167,7 +1203,7 @@ type BatchUpsertAssetsRequest struct {
 
 func (x *BatchUpsertAssetsRequest) Reset() {
 	*x = BatchUpsertAssetsRequest{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[16]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1179,7 +1215,7 @@ func (x *BatchUpsertAssetsRequest) String() string {
 func (*BatchUpsertAssetsRequest) ProtoMessage() {}
 
 func (x *BatchUpsertAssetsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[16]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1192,7 +1228,7 @@ func (x *BatchUpsertAssetsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchUpsertAssetsRequest.ProtoReflect.Descriptor instead.
 func (*BatchUpsertAssetsRequest) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{16}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *BatchUpsertAssetsRequest) GetScanId() int32 {
@@ -1239,7 +1275,7 @@ type BatchUpsertAssetsResponse struct {
 
 func (x *BatchUpsertAssetsResponse) Reset() {
 	*x = BatchUpsertAssetsResponse{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[17]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1251,7 +1287,7 @@ func (x *BatchUpsertAssetsResponse) String() string {
 func (*BatchUpsertAssetsResponse) ProtoMessage() {}
 
 func (x *BatchUpsertAssetsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[17]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1264,7 +1300,7 @@ func (x *BatchUpsertAssetsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchUpsertAssetsResponse.ProtoReflect.Descriptor instead.
 func (*BatchUpsertAssetsResponse) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{17}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *BatchUpsertAssetsResponse) GetAccepted() int32 {
@@ -1285,7 +1321,7 @@ type EnsureWordlistRequest struct {
 
 func (x *EnsureWordlistRequest) Reset() {
 	*x = EnsureWordlistRequest{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[18]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1297,7 +1333,7 @@ func (x *EnsureWordlistRequest) String() string {
 func (*EnsureWordlistRequest) ProtoMessage() {}
 
 func (x *EnsureWordlistRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[18]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1310,7 +1346,7 @@ func (x *EnsureWordlistRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnsureWordlistRequest.ProtoReflect.Descriptor instead.
 func (*EnsureWordlistRequest) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{18}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *EnsureWordlistRequest) GetTaskId() int32 {
@@ -1344,7 +1380,7 @@ type EnsureWordlistResponse struct {
 
 func (x *EnsureWordlistResponse) Reset() {
 	*x = EnsureWordlistResponse{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[19]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1356,7 +1392,7 @@ func (x *EnsureWordlistResponse) String() string {
 func (*EnsureWordlistResponse) ProtoMessage() {}
 
 func (x *EnsureWordlistResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[19]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1369,7 +1405,7 @@ func (x *EnsureWordlistResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnsureWordlistResponse.ProtoReflect.Descriptor instead.
 func (*EnsureWordlistResponse) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{19}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *EnsureWordlistResponse) GetLocalPath() string {
@@ -1399,7 +1435,7 @@ type PostBatchRequest struct {
 
 func (x *PostBatchRequest) Reset() {
 	*x = PostBatchRequest{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[20]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1411,7 +1447,7 @@ func (x *PostBatchRequest) String() string {
 func (*PostBatchRequest) ProtoMessage() {}
 
 func (x *PostBatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[20]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1424,7 +1460,7 @@ func (x *PostBatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PostBatchRequest.ProtoReflect.Descriptor instead.
 func (*PostBatchRequest) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{20}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *PostBatchRequest) GetScanId() int32 {
@@ -1471,7 +1507,7 @@ type PostBatchResponse struct {
 
 func (x *PostBatchResponse) Reset() {
 	*x = PostBatchResponse{}
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[21]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1483,7 +1519,7 @@ func (x *PostBatchResponse) String() string {
 func (*PostBatchResponse) ProtoMessage() {}
 
 func (x *PostBatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[21]
+	mi := &file_lunafox_runtime_v1_runtime_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1496,7 +1532,7 @@ func (x *PostBatchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PostBatchResponse.ProtoReflect.Descriptor instead.
 func (*PostBatchResponse) Descriptor() ([]byte, []int) {
-	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{21}
+	return file_lunafox_runtime_v1_runtime_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *PostBatchResponse) GetSent() int32 {
@@ -1533,14 +1569,15 @@ const file_lunafox_runtime_v1_runtime_proto_rawDesc = "" +
 	"\x06health\x18\b \x01(\v2 .lunafox.runtime.v1.HealthStatusR\x06health\x12%\n" +
 	"\x0eworker_version\x18\t \x01(\tR\rworkerVersionJ\x04\b\n" +
 	"\x10\vR\x13supported_workflows\"\r\n" +
-	"\vRequestTask\"\x97\x01\n" +
+	"\vRequestTask\"=\n" +
+	"\rFailureDetail\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\x9f\x01\n" +
 	"\n" +
 	"TaskStatus\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\x05R\x06taskId\x12\x16\n" +
-	"\x06status\x18\x02 \x01(\tR\x06status\x12\x18\n" +
-	"\amessage\x18\x03 \x01(\tR\amessage\x12\x1b\n" +
-	"\texit_code\x18\x04 \x01(\x05R\bexitCode\x12!\n" +
-	"\ffailure_kind\x18\x05 \x01(\tR\vfailureKind\"\xbc\x02\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12;\n" +
+	"\afailure\x18\x03 \x01(\v2!.lunafox.runtime.v1.FailureDetailR\afailureJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\texit_codeR\ffailure_kind\"\xbc\x02\n" +
 	"\x11AgentRuntimeEvent\x12A\n" +
 	"\vtask_assign\x18\x01 \x01(\v2\x1e.lunafox.runtime.v1.TaskAssignH\x00R\n" +
 	"taskAssign\x12A\n" +
@@ -1656,63 +1693,65 @@ func file_lunafox_runtime_v1_runtime_proto_rawDescGZIP() []byte {
 	return file_lunafox_runtime_v1_runtime_proto_rawDescData
 }
 
-var file_lunafox_runtime_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_lunafox_runtime_v1_runtime_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_lunafox_runtime_v1_runtime_proto_goTypes = []any{
 	(*AgentRuntimeRequest)(nil),       // 0: lunafox.runtime.v1.AgentRuntimeRequest
 	(*HealthStatus)(nil),              // 1: lunafox.runtime.v1.HealthStatus
 	(*Heartbeat)(nil),                 // 2: lunafox.runtime.v1.Heartbeat
 	(*RequestTask)(nil),               // 3: lunafox.runtime.v1.RequestTask
-	(*TaskStatus)(nil),                // 4: lunafox.runtime.v1.TaskStatus
-	(*AgentRuntimeEvent)(nil),         // 5: lunafox.runtime.v1.AgentRuntimeEvent
-	(*TaskAssign)(nil),                // 6: lunafox.runtime.v1.TaskAssign
-	(*TaskCancel)(nil),                // 7: lunafox.runtime.v1.TaskCancel
-	(*ConfigUpdate)(nil),              // 8: lunafox.runtime.v1.ConfigUpdate
-	(*UpdateRequired)(nil),            // 9: lunafox.runtime.v1.UpdateRequired
-	(*GetProviderConfigRequest)(nil),  // 10: lunafox.runtime.v1.GetProviderConfigRequest
-	(*GetProviderConfigResponse)(nil), // 11: lunafox.runtime.v1.GetProviderConfigResponse
-	(*GetWordlistMetaRequest)(nil),    // 12: lunafox.runtime.v1.GetWordlistMetaRequest
-	(*GetWordlistMetaResponse)(nil),   // 13: lunafox.runtime.v1.GetWordlistMetaResponse
-	(*DownloadWordlistRequest)(nil),   // 14: lunafox.runtime.v1.DownloadWordlistRequest
-	(*DownloadWordlistChunk)(nil),     // 15: lunafox.runtime.v1.DownloadWordlistChunk
-	(*BatchUpsertAssetsRequest)(nil),  // 16: lunafox.runtime.v1.BatchUpsertAssetsRequest
-	(*BatchUpsertAssetsResponse)(nil), // 17: lunafox.runtime.v1.BatchUpsertAssetsResponse
-	(*EnsureWordlistRequest)(nil),     // 18: lunafox.runtime.v1.EnsureWordlistRequest
-	(*EnsureWordlistResponse)(nil),    // 19: lunafox.runtime.v1.EnsureWordlistResponse
-	(*PostBatchRequest)(nil),          // 20: lunafox.runtime.v1.PostBatchRequest
-	(*PostBatchResponse)(nil),         // 21: lunafox.runtime.v1.PostBatchResponse
-	(*structpb.Struct)(nil),           // 22: google.protobuf.Struct
+	(*FailureDetail)(nil),             // 4: lunafox.runtime.v1.FailureDetail
+	(*TaskStatus)(nil),                // 5: lunafox.runtime.v1.TaskStatus
+	(*AgentRuntimeEvent)(nil),         // 6: lunafox.runtime.v1.AgentRuntimeEvent
+	(*TaskAssign)(nil),                // 7: lunafox.runtime.v1.TaskAssign
+	(*TaskCancel)(nil),                // 8: lunafox.runtime.v1.TaskCancel
+	(*ConfigUpdate)(nil),              // 9: lunafox.runtime.v1.ConfigUpdate
+	(*UpdateRequired)(nil),            // 10: lunafox.runtime.v1.UpdateRequired
+	(*GetProviderConfigRequest)(nil),  // 11: lunafox.runtime.v1.GetProviderConfigRequest
+	(*GetProviderConfigResponse)(nil), // 12: lunafox.runtime.v1.GetProviderConfigResponse
+	(*GetWordlistMetaRequest)(nil),    // 13: lunafox.runtime.v1.GetWordlistMetaRequest
+	(*GetWordlistMetaResponse)(nil),   // 14: lunafox.runtime.v1.GetWordlistMetaResponse
+	(*DownloadWordlistRequest)(nil),   // 15: lunafox.runtime.v1.DownloadWordlistRequest
+	(*DownloadWordlistChunk)(nil),     // 16: lunafox.runtime.v1.DownloadWordlistChunk
+	(*BatchUpsertAssetsRequest)(nil),  // 17: lunafox.runtime.v1.BatchUpsertAssetsRequest
+	(*BatchUpsertAssetsResponse)(nil), // 18: lunafox.runtime.v1.BatchUpsertAssetsResponse
+	(*EnsureWordlistRequest)(nil),     // 19: lunafox.runtime.v1.EnsureWordlistRequest
+	(*EnsureWordlistResponse)(nil),    // 20: lunafox.runtime.v1.EnsureWordlistResponse
+	(*PostBatchRequest)(nil),          // 21: lunafox.runtime.v1.PostBatchRequest
+	(*PostBatchResponse)(nil),         // 22: lunafox.runtime.v1.PostBatchResponse
+	(*structpb.Struct)(nil),           // 23: google.protobuf.Struct
 }
 var file_lunafox_runtime_v1_runtime_proto_depIdxs = []int32{
 	2,  // 0: lunafox.runtime.v1.AgentRuntimeRequest.heartbeat:type_name -> lunafox.runtime.v1.Heartbeat
 	3,  // 1: lunafox.runtime.v1.AgentRuntimeRequest.request_task:type_name -> lunafox.runtime.v1.RequestTask
-	4,  // 2: lunafox.runtime.v1.AgentRuntimeRequest.task_status:type_name -> lunafox.runtime.v1.TaskStatus
+	5,  // 2: lunafox.runtime.v1.AgentRuntimeRequest.task_status:type_name -> lunafox.runtime.v1.TaskStatus
 	1,  // 3: lunafox.runtime.v1.Heartbeat.health:type_name -> lunafox.runtime.v1.HealthStatus
-	6,  // 4: lunafox.runtime.v1.AgentRuntimeEvent.task_assign:type_name -> lunafox.runtime.v1.TaskAssign
-	7,  // 5: lunafox.runtime.v1.AgentRuntimeEvent.task_cancel:type_name -> lunafox.runtime.v1.TaskCancel
-	8,  // 6: lunafox.runtime.v1.AgentRuntimeEvent.config_update:type_name -> lunafox.runtime.v1.ConfigUpdate
-	9,  // 7: lunafox.runtime.v1.AgentRuntimeEvent.update_required:type_name -> lunafox.runtime.v1.UpdateRequired
-	22, // 8: lunafox.runtime.v1.TaskAssign.workflow_config:type_name -> google.protobuf.Struct
-	0,  // 9: lunafox.runtime.v1.AgentRuntimeService.Connect:input_type -> lunafox.runtime.v1.AgentRuntimeRequest
-	10, // 10: lunafox.runtime.v1.AgentDataProxyService.GetProviderConfig:input_type -> lunafox.runtime.v1.GetProviderConfigRequest
-	12, // 11: lunafox.runtime.v1.AgentDataProxyService.GetWordlistMeta:input_type -> lunafox.runtime.v1.GetWordlistMetaRequest
-	14, // 12: lunafox.runtime.v1.AgentDataProxyService.DownloadWordlist:input_type -> lunafox.runtime.v1.DownloadWordlistRequest
-	16, // 13: lunafox.runtime.v1.AgentDataProxyService.BatchUpsertAssets:input_type -> lunafox.runtime.v1.BatchUpsertAssetsRequest
-	10, // 14: lunafox.runtime.v1.WorkerRuntimeService.GetProviderConfig:input_type -> lunafox.runtime.v1.GetProviderConfigRequest
-	18, // 15: lunafox.runtime.v1.WorkerRuntimeService.EnsureWordlist:input_type -> lunafox.runtime.v1.EnsureWordlistRequest
-	20, // 16: lunafox.runtime.v1.WorkerRuntimeService.PostBatch:input_type -> lunafox.runtime.v1.PostBatchRequest
-	5,  // 17: lunafox.runtime.v1.AgentRuntimeService.Connect:output_type -> lunafox.runtime.v1.AgentRuntimeEvent
-	11, // 18: lunafox.runtime.v1.AgentDataProxyService.GetProviderConfig:output_type -> lunafox.runtime.v1.GetProviderConfigResponse
-	13, // 19: lunafox.runtime.v1.AgentDataProxyService.GetWordlistMeta:output_type -> lunafox.runtime.v1.GetWordlistMetaResponse
-	15, // 20: lunafox.runtime.v1.AgentDataProxyService.DownloadWordlist:output_type -> lunafox.runtime.v1.DownloadWordlistChunk
-	17, // 21: lunafox.runtime.v1.AgentDataProxyService.BatchUpsertAssets:output_type -> lunafox.runtime.v1.BatchUpsertAssetsResponse
-	11, // 22: lunafox.runtime.v1.WorkerRuntimeService.GetProviderConfig:output_type -> lunafox.runtime.v1.GetProviderConfigResponse
-	19, // 23: lunafox.runtime.v1.WorkerRuntimeService.EnsureWordlist:output_type -> lunafox.runtime.v1.EnsureWordlistResponse
-	21, // 24: lunafox.runtime.v1.WorkerRuntimeService.PostBatch:output_type -> lunafox.runtime.v1.PostBatchResponse
-	17, // [17:25] is the sub-list for method output_type
-	9,  // [9:17] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	4,  // 4: lunafox.runtime.v1.TaskStatus.failure:type_name -> lunafox.runtime.v1.FailureDetail
+	7,  // 5: lunafox.runtime.v1.AgentRuntimeEvent.task_assign:type_name -> lunafox.runtime.v1.TaskAssign
+	8,  // 6: lunafox.runtime.v1.AgentRuntimeEvent.task_cancel:type_name -> lunafox.runtime.v1.TaskCancel
+	9,  // 7: lunafox.runtime.v1.AgentRuntimeEvent.config_update:type_name -> lunafox.runtime.v1.ConfigUpdate
+	10, // 8: lunafox.runtime.v1.AgentRuntimeEvent.update_required:type_name -> lunafox.runtime.v1.UpdateRequired
+	23, // 9: lunafox.runtime.v1.TaskAssign.workflow_config:type_name -> google.protobuf.Struct
+	0,  // 10: lunafox.runtime.v1.AgentRuntimeService.Connect:input_type -> lunafox.runtime.v1.AgentRuntimeRequest
+	11, // 11: lunafox.runtime.v1.AgentDataProxyService.GetProviderConfig:input_type -> lunafox.runtime.v1.GetProviderConfigRequest
+	13, // 12: lunafox.runtime.v1.AgentDataProxyService.GetWordlistMeta:input_type -> lunafox.runtime.v1.GetWordlistMetaRequest
+	15, // 13: lunafox.runtime.v1.AgentDataProxyService.DownloadWordlist:input_type -> lunafox.runtime.v1.DownloadWordlistRequest
+	17, // 14: lunafox.runtime.v1.AgentDataProxyService.BatchUpsertAssets:input_type -> lunafox.runtime.v1.BatchUpsertAssetsRequest
+	11, // 15: lunafox.runtime.v1.WorkerRuntimeService.GetProviderConfig:input_type -> lunafox.runtime.v1.GetProviderConfigRequest
+	19, // 16: lunafox.runtime.v1.WorkerRuntimeService.EnsureWordlist:input_type -> lunafox.runtime.v1.EnsureWordlistRequest
+	21, // 17: lunafox.runtime.v1.WorkerRuntimeService.PostBatch:input_type -> lunafox.runtime.v1.PostBatchRequest
+	6,  // 18: lunafox.runtime.v1.AgentRuntimeService.Connect:output_type -> lunafox.runtime.v1.AgentRuntimeEvent
+	12, // 19: lunafox.runtime.v1.AgentDataProxyService.GetProviderConfig:output_type -> lunafox.runtime.v1.GetProviderConfigResponse
+	14, // 20: lunafox.runtime.v1.AgentDataProxyService.GetWordlistMeta:output_type -> lunafox.runtime.v1.GetWordlistMetaResponse
+	16, // 21: lunafox.runtime.v1.AgentDataProxyService.DownloadWordlist:output_type -> lunafox.runtime.v1.DownloadWordlistChunk
+	18, // 22: lunafox.runtime.v1.AgentDataProxyService.BatchUpsertAssets:output_type -> lunafox.runtime.v1.BatchUpsertAssetsResponse
+	12, // 23: lunafox.runtime.v1.WorkerRuntimeService.GetProviderConfig:output_type -> lunafox.runtime.v1.GetProviderConfigResponse
+	20, // 24: lunafox.runtime.v1.WorkerRuntimeService.EnsureWordlist:output_type -> lunafox.runtime.v1.EnsureWordlistResponse
+	22, // 25: lunafox.runtime.v1.WorkerRuntimeService.PostBatch:output_type -> lunafox.runtime.v1.PostBatchResponse
+	18, // [18:26] is the sub-list for method output_type
+	10, // [10:18] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_lunafox_runtime_v1_runtime_proto_init() }
@@ -1725,20 +1764,20 @@ func file_lunafox_runtime_v1_runtime_proto_init() {
 		(*AgentRuntimeRequest_RequestTask)(nil),
 		(*AgentRuntimeRequest_TaskStatus)(nil),
 	}
-	file_lunafox_runtime_v1_runtime_proto_msgTypes[5].OneofWrappers = []any{
+	file_lunafox_runtime_v1_runtime_proto_msgTypes[6].OneofWrappers = []any{
 		(*AgentRuntimeEvent_TaskAssign)(nil),
 		(*AgentRuntimeEvent_TaskCancel)(nil),
 		(*AgentRuntimeEvent_ConfigUpdate)(nil),
 		(*AgentRuntimeEvent_UpdateRequired)(nil),
 	}
-	file_lunafox_runtime_v1_runtime_proto_msgTypes[8].OneofWrappers = []any{}
+	file_lunafox_runtime_v1_runtime_proto_msgTypes[9].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_lunafox_runtime_v1_runtime_proto_rawDesc), len(file_lunafox_runtime_v1_runtime_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   3,
 		},

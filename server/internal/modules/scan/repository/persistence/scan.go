@@ -34,6 +34,7 @@ type Scan struct {
 	ContainerIDs           pq.StringArray `gorm:"column:container_ids;type:varchar(100)[]" json:"containerIds"`
 	WorkerID               *int           `gorm:"column:worker_id" json:"workerId"`
 	ErrorMessage           string         `gorm:"column:error_message;size:4096" json:"errorMessage"`
+	FailureKind            string         `gorm:"column:failure_kind;size:100" json:"failureKind"`
 	Progress               int            `gorm:"column:progress;default:0" json:"progress"`
 	CurrentStage           string         `gorm:"column:current_stage;size:50" json:"currentStage"`
 	StageProgress          datatypes.JSON `gorm:"column:stage_progress;type:jsonb" json:"stageProgress"`

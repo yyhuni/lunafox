@@ -129,6 +129,7 @@ export function useDashboardDataTableState() {
           },
           actions: {
             snapshot: t("common.actions.snapshot"),
+            runtimeDetail: t("scan.history.runtimeDrawer.open"),
             stop: t("scan.stopScan"),
             stopScanPending: t("scan.stopScanPending"),
             delete: t("common.actions.delete"),

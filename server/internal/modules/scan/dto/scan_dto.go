@@ -9,6 +9,11 @@ type ScanListQuery struct {
 	Search   string `form:"search" binding:"omitempty"`
 }
 
+type FailureResponse struct {
+	Kind    string `json:"kind"`
+	Message string `json:"message"`
+}
+
 type ScanResponse struct {
 	ID           int              `json:"id"`
 	TargetID     int              `json:"targetId"`
@@ -18,6 +23,7 @@ type ScanResponse struct {
 	Progress     int              `json:"progress"`
 	CurrentStage string           `json:"currentStage"`
 	ErrorMessage string           `json:"errorMessage,omitempty"`
+	Failure      *FailureResponse `json:"failure,omitempty"`
 	CreatedAt    time.Time        `json:"createdAt"`
 	StoppedAt    *time.Time       `json:"stoppedAt,omitempty"`
 	Target       *TargetBrief     `json:"target,omitempty"`
