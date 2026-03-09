@@ -107,8 +107,58 @@ func TestFailTasksSQL_ContainsAgentDisconnectedFailureKind(t *testing.T) {
 	}
 }
 
+func TestFailTasksSQL_UsesAgentDisconnectedOnlyForActiveScans(t *testing.T) {
+	if !strings.Contains(failTasksSQL, "ELSE 'agent_disconnected'") {
+		t.Fatalf("expected active scans to use agent_disconnected")
+	}
+	if !strings.Contains(failTasksSQL, "THEN ''") {
+		t.Fatalf("expected ended/deleted scans to clear failure_kind")
+	}
+	if !strings.Contains(failTasksSQL, "THEN 'Scan deleted'") {
+		t.Fatalf("expected deleted scan branch in error message")
+	}
+	if !strings.Contains(failTasksSQL, "THEN 'Scan already ended'") {
+		t.Fatalf("expected ended scan branch in error message")
+	}
+	if !strings.Contains(failTasksSQL, "ELSE 'Agent offline'") {
+		t.Fatalf("expected active scan branch in error message")
+	}
+}
+
 func TestCanonicalTaskFailureKind_DoesNotRewriteLegacyCamelCase(t *testing.T) {
 	if got := canonicalTaskFailureKind("runtimeError"); got != "runtimeError" {
 		t.Fatalf("expected legacy value preserved without compatibility rewrite, got %q", got)
+	}
+}
+
+func TestScanTaskRepositoryUpdateStatus_RejectsFailedWithoutFailureMessage(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:scan_task_update_status_requires_failure_message?mode=memory&cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite failed: %v", err)
+	}
+	if err := db.Exec(`
+		CREATE TABLE scan_task (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			scan_id INTEGER NOT NULL,
+			stage INTEGER NOT NULL,
+			workflow_id TEXT NOT NULL,
+			status TEXT NOT NULL,
+			agent_id INTEGER,
+			workflow_config JSON,
+			error_message TEXT,
+			failure_kind TEXT NOT NULL DEFAULT '',
+			created_at DATETIME,
+			started_at DATETIME,
+			completed_at DATETIME
+		);
+		INSERT INTO scan_task (id, scan_id, stage, workflow_id, status, failure_kind) VALUES (1, 10, 1, 'subdomain_discovery', 'running', '');
+	`).Error; err != nil {
+		t.Fatalf("setup scan_task table failed: %v", err)
+	}
+
+	repo := &scanTaskRepository{db: db}
+	failure := &scandomain.FailureDetail{Kind: "runtime_error", Message: "   "}
+	if err := repo.UpdateStatus(context.Background(), 1, taskStatusFailed, failure); err == nil {
+		t.Fatalf("expected UpdateStatus to reject empty failure message")
 	}
 }

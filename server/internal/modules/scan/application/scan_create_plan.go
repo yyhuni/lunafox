@@ -1,28 +1,101 @@
 package application
 
 import (
-	"errors"
+	"fmt"
+	"strings"
 
 	scandomain "github.com/yyhuni/lunafox/server/internal/modules/scan/domain"
 )
 
-func buildScanTasks(engineNames []string, root map[string]any) ([]CreateScanTask, error) {
-	enabled := scandomain.CollectEnabledWorkflowSet(engineNames, root)
-	planned, err := scandomain.BuildWorkflowTaskPlan(enabled)
-	if err != nil {
-		if errors.Is(err, scandomain.ErrNoEnabledWorkflows) {
-			return nil, ErrCreateNoWorkflows
-		}
-		return nil, err
+func buildScanTasks(workflowIDs []string, rootConfig map[string]any) ([]CreateScanTask, error) {
+	var taskPlanner workflowTaskPlanner = sequentialWorkflowTaskPlanner{}
+	plannedTaskItems := taskPlanner.Build(workflowIDs)
+	if len(plannedTaskItems) == 0 {
+		return nil, ErrCreateNoWorkflows
 	}
 
-	tasks := make([]CreateScanTask, 0, len(planned))
-	for _, item := range planned {
+	workflowConfigByID := make(map[string]map[string]any, len(workflowIDs))
+	for _, workflowID := range workflowIDs {
+		workflowConfigSlice, err := extractWorkflowConfigSlice(rootConfig, workflowID)
+		if err != nil {
+			return nil, err
+		}
+		workflowConfigByID[workflowID] = workflowConfigSlice
+	}
+
+	tasks := make([]CreateScanTask, 0, len(plannedTaskItems))
+	for _, plannedItem := range plannedTaskItems {
+		workflowConfigSlice, ok := workflowConfigByID[plannedItem.WorkflowID]
+		if !ok {
+			return nil, WrapSchemaInvalid(plannedItem.WorkflowID, "missing workflow config slice", ErrCreateInvalidConfig)
+		}
 		tasks = append(tasks, CreateScanTask{
-			Stage:        item.Stage,
-			WorkflowName: string(item.Workflow),
-			Status:       string(item.InitialStatus),
+			Stage:          plannedItem.Stage,
+			WorkflowID:     plannedItem.WorkflowID,
+			WorkflowConfig: workflowConfigSlice,
+			Status:         plannedItem.InitialStatus,
 		})
 	}
+
 	return tasks, nil
+}
+
+type workflowTaskPlanItem struct {
+	WorkflowID    string
+	Stage         int
+	InitialStatus string
+}
+
+type workflowTaskPlanner interface {
+	Build(workflowIDs []string) []workflowTaskPlanItem
+}
+
+type sequentialWorkflowTaskPlanner struct{}
+
+func (sequentialWorkflowTaskPlanner) Build(workflowIDs []string) []workflowTaskPlanItem {
+	out := make([]workflowTaskPlanItem, 0, len(workflowIDs))
+	for index, workflowID := range workflowIDs {
+		name := strings.TrimSpace(workflowID)
+		if name == "" {
+			continue
+		}
+
+		initialStatus := string(scandomain.TaskStatusBlocked)
+		if len(out) == 0 {
+			initialStatus = string(scandomain.TaskStatusPending)
+		}
+
+		out = append(out, workflowTaskPlanItem{
+			WorkflowID:    name,
+			Stage:         index + 1,
+			InitialStatus: initialStatus,
+		})
+	}
+	return out
+}
+
+func extractWorkflowConfigSlice(rootConfig map[string]any, workflowID string) (map[string]any, error) {
+	if rootConfig == nil {
+		return nil, WrapSchemaInvalid(workflowID, "configuration root must be object", ErrCreateInvalidConfig)
+	}
+
+	rawWorkflowConfig, ok := rootConfig[workflowID]
+	if !ok {
+		return nil, WrapSchemaInvalid(
+			workflowID,
+			fmt.Sprintf("missing %s config; expected nested configuration under key %q", workflowID, workflowID),
+			ErrCreateInvalidConfig,
+		)
+	}
+
+	workflowConfigSlice, ok := rawWorkflowConfig.(map[string]any)
+	if !ok {
+		return nil, WrapSchemaInvalid(
+			workflowID,
+			fmt.Sprintf("workflow %s configuration must be object", workflowID),
+			ErrCreateInvalidConfig,
+		)
+	}
+
+	return workflowConfigSlice, nil
 }

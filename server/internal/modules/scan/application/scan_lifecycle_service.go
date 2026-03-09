@@ -16,10 +16,10 @@ type LifecycleService struct {
 	scanStore      ScanCommandStore
 	taskCanceller  ScanTaskCanceller
 	notifier       TaskCancelNotifier
-	commandService *CommandService
+	commandService *ScanCommandService
 }
 
-func NewLifecycleService(scanStore ScanCommandStore, taskCanceller ScanTaskCanceller, notifier TaskCancelNotifier, commandService *CommandService) *LifecycleService {
+func NewLifecycleService(scanStore ScanCommandStore, taskCanceller ScanTaskCanceller, notifier TaskCancelNotifier, commandService *ScanCommandService) *LifecycleService {
 	return &LifecycleService{scanStore: scanStore, taskCanceller: taskCanceller, notifier: notifier, commandService: commandService}
 }
 
@@ -99,7 +99,7 @@ func (service *LifecycleService) applyStopTransition(ctx context.Context, scanID
 	if service.commandService != nil {
 		return service.commandService.StopScan(ctx, scandomain.ScanID(scanID))
 	}
-	return service.scanStore.UpdateStatus(scanID, string(scandomain.ScanStatusCancelled))
+	return service.scanStore.UpdateStatus(scanID, string(scandomain.ScanStatusCancelled), nil)
 }
 
 func isScanActive(status string) bool {

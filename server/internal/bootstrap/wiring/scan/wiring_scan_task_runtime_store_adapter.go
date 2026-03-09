@@ -15,9 +15,6 @@ func (adapter *scanTaskRuntimeStoreAdapter) GetTaskRuntimeByID(id int) (*scanapp
 	return adapter.repo.GetTaskRuntimeByID(id)
 }
 
-func (adapter *scanTaskRuntimeStoreAdapter) UpdateStatus(id int, status string, errorMessage string) error {
-	if errorMessage == "" {
-		return adapter.repo.UpdateStatus(id, status)
-	}
-	return adapter.repo.UpdateStatus(id, status, errorMessage)
+func (adapter *scanTaskRuntimeStoreAdapter) UpdateStatus(id int, status string, failure *scanapp.FailureDetail) error {
+	return adapter.repo.UpdateStatus(id, status, failure)
 }

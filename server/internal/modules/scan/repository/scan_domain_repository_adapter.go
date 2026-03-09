@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strings"
 
 	scandomain "github.com/yyhuni/lunafox/server/internal/modules/scan/domain"
 	model "github.com/yyhuni/lunafox/server/internal/modules/scan/repository/persistence"
@@ -38,15 +39,16 @@ func (repository *domainScanRepository) FindAll(ctx context.Context, filter scan
 	return results, total, nil
 }
 
-func (repository *domainScanRepository) Save(ctx context.Context, scan *scandomain.Scan) error {
+func (repository *domainScanRepository) SaveScanState(ctx context.Context, scan *scandomain.Scan) error {
 	if scan == nil || scan.ID <= 0 {
 		return scandomain.ErrInvalidScanID
 	}
 
+	if err := repository.repo.UpdateStatus(int(scan.ID), string(scan.Status), domainScanFailure(scan)); err != nil {
+		return err
+	}
+
 	updates := map[string]any{
-		"status":        string(scan.Status),
-		"error_message": scan.ErrorMessage,
-		"failure_kind":  "",
 		"progress":      scan.Progress,
 		"current_stage": scan.CurrentStage,
 		"worker_id":     scan.WorkerID,
@@ -57,6 +59,17 @@ func (repository *domainScanRepository) Save(ctx context.Context, scan *scandoma
 		Model(&model.Scan{}).
 		Where("id = ? AND deleted_at IS NULL", int(scan.ID)).
 		Updates(updates).Error
+}
+
+func domainScanFailure(scan *scandomain.Scan) *scandomain.FailureDetail {
+	if scan == nil || scan.Status != scandomain.ScanStatusFailed {
+		return nil
+	}
+	message := strings.TrimSpace(scan.ErrorMessage)
+	if message == "" {
+		return nil
+	}
+	return &scandomain.FailureDetail{Kind: "unknown", Message: message}
 }
 
 func scanRecordToDomain(scan *ScanRecord) *scandomain.Scan {

@@ -22,22 +22,22 @@ func toConfigUpdate(agent *agentdomain.Agent) *runtimev1.ConfigUpdate {
 	}
 }
 
-func toTaskAssign(assignment *scanapp.TaskAssignment) *runtimev1.TaskAssign {
-	if assignment == nil {
+func toTaskAssign(taskAssignment *scanapp.TaskAssignment) *runtimev1.TaskAssign {
+	if taskAssignment == nil {
 		return &runtimev1.TaskAssign{Found: false}
 	}
 
 	return &runtimev1.TaskAssign{
 		Found:          true,
-		TaskId:         int32(assignment.TaskID),
-		ScanId:         int32(assignment.ScanID),
-		Stage:          int32(assignment.Stage),
-		WorkflowId:     assignment.WorkflowID,
-		TargetId:       int32(assignment.TargetID),
-		TargetName:     assignment.TargetName,
-		TargetType:     assignment.TargetType,
-		WorkspaceDir:   assignment.WorkspaceDir,
-		WorkflowConfig: marshalWorkflowConfigStruct(assignment.WorkflowConfig),
+		TaskId:         int32(taskAssignment.TaskID),
+		ScanId:         int32(taskAssignment.ScanID),
+		Stage:          int32(taskAssignment.Stage),
+		WorkflowId:     taskAssignment.WorkflowID,
+		TargetId:       int32(taskAssignment.TargetID),
+		TargetName:     taskAssignment.TargetName,
+		TargetType:     taskAssignment.TargetType,
+		WorkspaceDir:   taskAssignment.WorkspaceDir,
+		WorkflowConfig: marshalWorkflowConfigStruct(taskAssignment.WorkflowConfig),
 	}
 }
 

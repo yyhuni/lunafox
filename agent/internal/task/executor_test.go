@@ -85,6 +85,9 @@ func TestExecutorMissingWorkerRuntimeSocket(t *testing.T) {
 	if reporter.failure == nil || reporter.failure.Kind != "worker_start_failed" {
 		t.Fatalf("expected worker_start_failed, got %+v", reporter.failure)
 	}
+	if reporter.failure.Message == "" {
+		t.Fatalf("expected failure message")
+	}
 }
 
 func TestExecutorDockerUnavailable(t *testing.T) {
@@ -103,6 +106,9 @@ func TestExecutorDockerUnavailable(t *testing.T) {
 	}
 	if reporter.failure == nil || reporter.failure.Kind != "worker_start_failed" {
 		t.Fatalf("expected worker_start_failed, got %+v", reporter.failure)
+	}
+	if reporter.failure.Message == "" {
+		t.Fatalf("expected failure message")
 	}
 }
 
@@ -264,6 +270,9 @@ func TestExecutorFailurePathUsesTimeoutContexts(t *testing.T) {
 	if reporter.failure == nil || reporter.failure.Kind != "container_exit_failed" {
 		t.Fatalf("expected container_exit_failed, got %+v", reporter.failure)
 	}
+	if reporter.failure.Message != "tool failed" {
+		t.Fatalf("expected tool failed message, got %+v", reporter.failure)
+	}
 }
 
 func TestExecutorWaitFailureUsesContainerWaitFailed(t *testing.T) {
@@ -285,6 +294,9 @@ func TestExecutorWaitFailureUsesContainerWaitFailed(t *testing.T) {
 	}
 	if reporter.failure == nil || reporter.failure.Kind != "container_wait_failed" {
 		t.Fatalf("expected container_wait_failed, got %+v", reporter.failure)
+	}
+	if reporter.failure.Message != "wait failed" {
+		t.Fatalf("expected wait failed message, got %+v", reporter.failure)
 	}
 }
 
@@ -311,6 +323,9 @@ func TestExecutorExitFailureClassifiesDecodeConfigFailure(t *testing.T) {
 	if reporter.failure == nil || reporter.failure.Kind != "decode_config_failed" {
 		t.Fatalf("expected decode_config_failed, got %+v", reporter.failure)
 	}
+	if reporter.failure.Message != "decode workflow config subdomain_discovery: invalid config" {
+		t.Fatalf("unexpected failure message: %+v", reporter.failure)
+	}
 }
 
 func TestExecutorHandleTimeoutUsesDeadlineOnStop(t *testing.T) {
@@ -335,6 +350,9 @@ func TestExecutorHandleTimeoutUsesDeadlineOnStop(t *testing.T) {
 	}
 	if reporter.failure == nil || reporter.failure.Kind != "task_timeout" {
 		t.Fatalf("expected task_timeout, got %+v", reporter.failure)
+	}
+	if reporter.failure.Message != "task timed out" {
+		t.Fatalf("unexpected timeout message: %+v", reporter.failure)
 	}
 }
 

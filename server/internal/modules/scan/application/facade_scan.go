@@ -18,7 +18,7 @@ var (
 type ScanFacade struct {
 	queryStore       ScanQueryStore
 	commandStore     ScanCommandStore
-	commandService   *CommandService
+	commandService   *ScanCommandService
 	queryService     *ScanQueryService
 	lifecycleService *LifecycleService
 	createService    *ScanCreateService
@@ -35,7 +35,7 @@ func NewScanFacade(
 	service := &ScanFacade{queryStore: queryStore, commandStore: scanCommandStore}
 
 	if domainCommandStore != nil {
-		service.commandService = NewCommandService(domainCommandStore, nil)
+		service.commandService = NewScanCommandService(domainCommandStore, nil)
 	}
 
 	if queryStore != nil {

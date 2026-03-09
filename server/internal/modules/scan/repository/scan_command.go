@@ -1,8 +1,11 @@
 package repository
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
+	scandomain "github.com/yyhuni/lunafox/server/internal/modules/scan/domain"
 	model "github.com/yyhuni/lunafox/server/internal/modules/scan/repository/persistence"
 	"gorm.io/gorm"
 )
@@ -67,15 +70,42 @@ func (r *ScanRepository) BulkSoftDelete(ids []int) (int64, []string, error) {
 	return result.RowsAffected, names, result.Error
 }
 
-// UpdateStatus updates scan status.
-func (r *ScanRepository) UpdateStatus(id int, status string, errorMessage ...string) error {
+// UpdateStatus updates scan status with structured failure detail.
+func (r *ScanRepository) UpdateStatus(id int, status string, failure *scandomain.FailureDetail) error {
+	failure, err := normalizeScanFailureDetail(status, failure)
+	if err != nil {
+		return err
+	}
+
 	updates := map[string]interface{}{"status": status}
-	if len(errorMessage) > 0 {
-		updates["error_message"] = errorMessage[0]
+	if failure != nil {
+		updates["error_message"] = failure.Message
+		updates["failure_kind"] = failure.Kind
+	} else {
+		updates["error_message"] = ""
+		updates["failure_kind"] = ""
 	}
 	if status == scanStatusCompleted || status == scanStatusFailed || status == scanStatusCancelled {
 		now := time.Now().UTC()
 		updates["stopped_at"] = &now
 	}
 	return r.db.Model(&model.Scan{}).Where("id = ?", id).Updates(updates).Error
+}
+
+func normalizeScanFailureDetail(status string, failure *scandomain.FailureDetail) (*scandomain.FailureDetail, error) {
+	if strings.TrimSpace(status) != scanStatusFailed {
+		return nil, nil
+	}
+	if failure == nil {
+		return nil, fmt.Errorf("failed scan requires failure detail")
+	}
+	message := strings.TrimSpace(failure.Message)
+	if message == "" {
+		return nil, fmt.Errorf("failed scan requires non-empty failure message")
+	}
+	kind := strings.TrimSpace(failure.Kind)
+	if kind == "" {
+		kind = "unknown"
+	}
+	return &scandomain.FailureDetail{Kind: kind, Message: message}, nil
 }

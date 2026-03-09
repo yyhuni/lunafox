@@ -1,17 +1,27 @@
 package repository
 
+// failTasksSQL reconciles running tasks owned by an offline agent.
+//
+// It only records `agent_disconnected` when the parent scan is still active
+// (`pending` / `running`). If the scan has already ended or been deleted, the
+// task is finalized without an agent-disconnected failure summary to avoid
+// misclassifying normal lifecycle cleanup as an execution failure.
 const failTasksSQL = `
-	UPDATE scan_task st
-	SET
-		status = CASE
-			WHEN s.deleted_at IS NOT NULL OR s.status NOT IN ('` + scanStatusPending + `', '` + scanStatusRunning + `') THEN '` + taskStatusCancelled + `'
-			ELSE '` + taskStatusFailed + `'
-		END,
-		agent_id = NULL,
-		completed_at = NOW(),
-		error_message = CASE
-			WHEN s.deleted_at IS NOT NULL THEN 'Scan deleted'
-			WHEN s.status NOT IN ('` + scanStatusPending + `', '` + scanStatusRunning + `') THEN 'Scan already ended'
+		UPDATE scan_task st
+		SET
+			status = CASE
+				WHEN s.deleted_at IS NOT NULL OR s.status NOT IN ('` + scanStatusPending + `', '` + scanStatusRunning + `') THEN '` + taskStatusCancelled + `'
+				ELSE '` + taskStatusFailed + `'
+			END,
+			agent_id = NULL,
+			completed_at = NOW(),
+			failure_kind = CASE
+				WHEN s.deleted_at IS NOT NULL OR s.status NOT IN ('` + scanStatusPending + `', '` + scanStatusRunning + `') THEN ''
+				ELSE 'agent_disconnected'
+			END,
+			error_message = CASE
+				WHEN s.deleted_at IS NOT NULL THEN 'Scan deleted'
+				WHEN s.status NOT IN ('` + scanStatusPending + `', '` + scanStatusRunning + `') THEN 'Scan already ended'
 			ELSE 'Agent offline'
 		END
 	FROM scan s

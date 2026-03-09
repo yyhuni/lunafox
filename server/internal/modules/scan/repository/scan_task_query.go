@@ -36,6 +36,22 @@ func (r *scanTaskRepository) PullTask(ctx context.Context, agentID int) (*ScanTa
 	return scanTaskModelToRecord(&task), nil
 }
 
+// ListFailedByScanID returns all failed tasks for a scan.
+func (r *scanTaskRepository) ListFailedByScanID(ctx context.Context, scanID int) ([]ScanTaskRecord, error) {
+	var tasks []model.ScanTask
+	err := r.db.WithContext(ctx).
+		Where("scan_id = ? AND status = ?", scanID, taskStatusFailed).
+		Find(&tasks).Error
+	if err != nil {
+		return nil, err
+	}
+	results := make([]ScanTaskRecord, 0, len(tasks))
+	for index := range tasks {
+		results = append(results, *scanTaskModelToRecord(&tasks[index]))
+	}
+	return results, nil
+}
+
 // GetStatusCountsByScanID returns task status counts for a scan.
 func (r *scanTaskRepository) GetStatusCountsByScanID(ctx context.Context, scanID int) (pending, running, completed, failed, cancelled int, err error) {
 	var results []struct {

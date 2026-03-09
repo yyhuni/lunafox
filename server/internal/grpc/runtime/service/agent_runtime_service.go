@@ -130,7 +130,7 @@ func (s *AgentRuntimeService) Connect(stream grpc.BidiStreamingServer[runtimev1.
 		// Handle task requests initiated by the agent (Pull Model)
 		case *runtimev1.AgentRuntimeRequest_RequestTask:
 			// Pull an available scan task from the task scheduler
-			assignment, err := s.taskRuntime.PullTask(ctx, agent.ID)
+			taskAssignment, err := s.taskRuntime.PullTask(ctx, agent.ID)
 			if err != nil {
 				if _, ok := scanapp.AsWorkflowError(err); ok {
 					if sendErr := sendRuntimeEvent(sendMutex, stream, &runtimev1.AgentRuntimeEvent{
@@ -146,7 +146,7 @@ func (s *AgentRuntimeService) Connect(stream grpc.BidiStreamingServer[runtimev1.
 			}
 			if err := sendRuntimeEvent(sendMutex, stream, &runtimev1.AgentRuntimeEvent{
 				Payload: &runtimev1.AgentRuntimeEvent_TaskAssign{
-					TaskAssign: toTaskAssign(assignment),
+					TaskAssign: toTaskAssign(taskAssignment),
 				},
 			}); err != nil {
 				return err

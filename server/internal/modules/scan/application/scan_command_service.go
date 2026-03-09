@@ -17,19 +17,19 @@ func (systemClock) Now() time.Time {
 	return time.Now().UTC()
 }
 
-type CommandService struct {
+type ScanCommandService struct {
 	scanRepo domain.ScanRepository
 	clock    Clock
 }
 
-func NewCommandService(scanRepo domain.ScanRepository, clock Clock) *CommandService {
+func NewScanCommandService(scanRepo domain.ScanRepository, clock Clock) *ScanCommandService {
 	if clock == nil {
 		clock = systemClock{}
 	}
-	return &CommandService{scanRepo: scanRepo, clock: clock}
+	return &ScanCommandService{scanRepo: scanRepo, clock: clock}
 }
 
-func (service *CommandService) StopScan(ctx context.Context, scanID domain.ScanID) error {
+func (service *ScanCommandService) StopScan(ctx context.Context, scanID domain.ScanID) error {
 	scan, err := service.scanRepo.GetByIDNotDeleted(ctx, scanID)
 	if err != nil {
 		return err
@@ -37,5 +37,5 @@ func (service *CommandService) StopScan(ctx context.Context, scanID domain.ScanI
 	if err := scan.Stop(service.clock.Now()); err != nil {
 		return err
 	}
-	return service.scanRepo.Save(ctx, scan)
+	return service.scanRepo.SaveScanState(ctx, scan)
 }

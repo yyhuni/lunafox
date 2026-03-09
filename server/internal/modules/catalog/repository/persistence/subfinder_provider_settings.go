@@ -27,7 +27,7 @@ type SubfinderProviderConfig struct {
 	Enabled   bool   `json:"enabled"`
 	Email     string `json:"email,omitempty"`
 	APIKey    string `json:"api_key,omitempty"`
-	APIId     string `json:"api_id,omitempty"`
+	APIID     string `json:"api_id,omitempty"`
 	APISecret string `json:"api_secret,omitempty"`
 }
 

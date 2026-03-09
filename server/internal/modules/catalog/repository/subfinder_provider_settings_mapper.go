@@ -16,7 +16,7 @@ func subfinderProviderSettingsModelToDomain(settings *model.SubfinderProviderSet
 			Enabled:   providerConfig.Enabled,
 			Email:     providerConfig.Email,
 			APIKey:    providerConfig.APIKey,
-			APIID:     providerConfig.APIId,
+			APIID:     providerConfig.APIID,
 			APISecret: providerConfig.APISecret,
 		}
 	}
@@ -38,7 +38,7 @@ func subfinderProviderSettingsDomainToModel(settings *catalogdomain.SubfinderPro
 			Enabled:   providerConfig.Enabled,
 			Email:     providerConfig.Email,
 			APIKey:    providerConfig.APIKey,
-			APIId:     providerConfig.APIID,
+			APIID:     providerConfig.APIID,
 			APISecret: providerConfig.APISecret,
 		}
 	}

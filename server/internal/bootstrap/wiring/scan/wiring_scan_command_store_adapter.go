@@ -29,6 +29,6 @@ func (adapter *scanCommandStoreAdapter) BulkSoftDelete(ids []int) (int64, []stri
 	return adapter.repo.BulkSoftDelete(ids)
 }
 
-func (adapter *scanCommandStoreAdapter) UpdateStatus(id int, status string, errorMessage ...string) error {
-	return adapter.repo.UpdateStatus(id, status, errorMessage...)
+func (adapter *scanCommandStoreAdapter) UpdateStatus(id int, status string, failure *scanapp.FailureDetail) error {
+	return adapter.repo.UpdateStatus(id, status, failure)
 }

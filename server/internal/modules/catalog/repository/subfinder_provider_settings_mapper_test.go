@@ -13,7 +13,7 @@ func TestSubfinderProviderSettingsModelToDomain(t *testing.T) {
 		Providers: model.SubfinderProviderConfigs{
 			"censys": {
 				Enabled:   true,
-				APIId:     "censys-id",
+				APIID:     "censys-id",
 				APISecret: "censys-secret",
 			},
 			"fofa": {
@@ -66,8 +66,8 @@ func TestSubfinderProviderSettingsDomainToModel(t *testing.T) {
 	if actual.ID != 1 {
 		t.Fatalf("expected id=1, got %d", actual.ID)
 	}
-	if actual.Providers["censys"].APIId != "censys-id" {
-		t.Fatalf("expected censys api id mapped, got %q", actual.Providers["censys"].APIId)
+	if actual.Providers["censys"].APIID != "censys-id" {
+		t.Fatalf("expected censys api id mapped, got %q", actual.Providers["censys"].APIID)
 	}
 	if actual.Providers["censys"].APISecret != "censys-secret" {
 		t.Fatalf("expected censys api secret mapped, got %q", actual.Providers["censys"].APISecret)

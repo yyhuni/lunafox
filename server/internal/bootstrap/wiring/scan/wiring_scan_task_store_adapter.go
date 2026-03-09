@@ -21,12 +21,16 @@ func (adapter *scanTaskStoreAdapter) PullTask(ctx context.Context, agentID int) 
 	return adapter.repo.PullTask(ctx, agentID)
 }
 
-func (adapter *scanTaskStoreAdapter) UpdateStatus(ctx context.Context, id int, status string, errorMessage string, failureKind string) error {
-	return adapter.repo.UpdateStatus(ctx, id, status, errorMessage, failureKind)
+func (adapter *scanTaskStoreAdapter) UpdateStatus(ctx context.Context, id int, status string, failure *scanapp.FailureDetail) error {
+	return adapter.repo.UpdateStatus(ctx, id, status, failure)
 }
 
-func (adapter *scanTaskStoreAdapter) FailTaskClaim(ctx context.Context, id int, errorMessage string, reason string) error {
-	return adapter.repo.FailTaskClaim(ctx, id, errorMessage, reason)
+func (adapter *scanTaskStoreAdapter) FailPulledTask(ctx context.Context, id int, failure *scanapp.FailureDetail) error {
+	return adapter.repo.FailPulledTask(ctx, id, failure)
+}
+
+func (adapter *scanTaskStoreAdapter) ListFailedByScanID(ctx context.Context, scanID int) ([]scanapp.TaskRecord, error) {
+	return adapter.repo.ListFailedByScanID(ctx, scanID)
 }
 
 func (adapter *scanTaskStoreAdapter) GetStatusCountsByScanID(ctx context.Context, scanID int) (pending, running, completed, failed, cancelled int, err error) {

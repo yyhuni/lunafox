@@ -28,7 +28,7 @@ func (stub *lifecycleScanStoreStub) BulkSoftDelete(ids []int) (int64, []string, 
 	return 0, nil, nil
 }
 
-func (stub *lifecycleScanStoreStub) UpdateStatus(id int, status string, errorMessage ...string) error {
+func (stub *lifecycleScanStoreStub) UpdateStatus(id int, status string, failure *FailureDetail) error {
 	return stub.updateStatusErr
 }
 

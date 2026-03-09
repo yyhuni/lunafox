@@ -1,12 +1,37 @@
 package runtime
 
 import (
+	"context"
+	"io"
 	"strings"
 	"testing"
 
 	"github.com/yyhuni/lunafox/agent/internal/domain"
 	runtimev1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/runtime/v1"
+	"google.golang.org/grpc/metadata"
 )
+
+func testingContext() context.Context { return context.Background() }
+
+type fakeConnectClient struct {
+	lastRequest *runtimev1.AgentRuntimeRequest
+}
+
+func (fake *fakeConnectClient) Send(req *runtimev1.AgentRuntimeRequest) error {
+	fake.lastRequest = req
+	return nil
+}
+
+func (fake *fakeConnectClient) Recv() (*runtimev1.AgentRuntimeEvent, error) {
+	return nil, io.EOF
+}
+
+func (fake *fakeConnectClient) Header() (metadata.MD, error) { return metadata.MD{}, nil }
+func (fake *fakeConnectClient) Trailer() metadata.MD         { return metadata.MD{} }
+func (fake *fakeConnectClient) CloseSend() error             { return nil }
+func (fake *fakeConnectClient) Context() context.Context     { return context.Background() }
+func (fake *fakeConnectClient) SendMsg(any) error            { return nil }
+func (fake *fakeConnectClient) RecvMsg(any) error            { return nil }
 
 func TestBuildRuntimeTarget(t *testing.T) {
 	tests := []struct {
@@ -158,5 +183,37 @@ func TestDispatchTaskAssignNotFoundResolvesAsBusinessNoTask(t *testing.T) {
 		}
 	default:
 		t.Fatalf("expected pending pull to receive no-task assignment")
+	}
+}
+
+func TestUpdateStatusSerializesFailureDetail(t *testing.T) {
+	client := NewClient("https://example.com", "agent-key")
+	stream := &fakeConnectClient{}
+	client.stream = stream
+
+	failure := &domain.FailureDetail{Kind: "runtime_error", Message: "boom"}
+	if err := client.UpdateStatus(testingContext(), 12, "failed", failure); err != nil {
+		t.Fatalf("UpdateStatus returned error: %v", err)
+	}
+	status := stream.lastRequest.GetTaskStatus()
+	if status == nil || status.GetTaskId() != 12 || status.GetStatus() != "failed" {
+		t.Fatalf("unexpected task status payload: %+v", status)
+	}
+	if status.GetFailure() == nil || status.GetFailure().GetKind() != "runtime_error" || status.GetFailure().GetMessage() != "boom" {
+		t.Fatalf("unexpected failure payload: %+v", status.GetFailure())
+	}
+}
+
+func TestUpdateStatusOmitsFailureForCompleted(t *testing.T) {
+	client := NewClient("https://example.com", "agent-key")
+	stream := &fakeConnectClient{}
+	client.stream = stream
+
+	if err := client.UpdateStatus(testingContext(), 13, "completed", nil); err != nil {
+		t.Fatalf("UpdateStatus returned error: %v", err)
+	}
+	status := stream.lastRequest.GetTaskStatus()
+	if status == nil || status.GetFailure() != nil {
+		t.Fatalf("expected completed payload without failure: %+v", status)
 	}
 }

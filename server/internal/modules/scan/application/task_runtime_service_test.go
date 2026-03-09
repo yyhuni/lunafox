@@ -71,7 +71,7 @@ func (stub *taskStoreStub) UpdateStatus(_ context.Context, id int, status string
 	return nil
 }
 
-func (stub *taskStoreStub) FailTaskClaim(_ context.Context, id int, failure *FailureDetail) error {
+func (stub *taskStoreStub) FailPulledTask(_ context.Context, id int, failure *FailureDetail) error {
 	stub.failCalled = true
 	stub.failedTask = id
 	stub.failedFailure = cloneFailureDetailForTest(failure)

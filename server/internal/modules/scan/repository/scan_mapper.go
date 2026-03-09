@@ -2,6 +2,7 @@ package repository
 
 import (
 	"encoding/json"
+	"strings"
 
 	scandomain "github.com/yyhuni/lunafox/server/internal/modules/scan/domain"
 	model "github.com/yyhuni/lunafox/server/internal/modules/scan/repository/persistence"
@@ -62,6 +63,7 @@ func scanModelToTaskRuntimeRecord(item *model.Scan) *TaskRuntimeScanRecord {
 		TargetID:      item.TargetID,
 		Configuration: decodeJSONMap(item.Configuration),
 		Status:        item.Status,
+		Failure:       failureDetailFromColumns(item.FailureKind, item.ErrorMessage),
 		Target:        scanTargetModelToTaskRuntimeRecord(item.Target),
 	}
 }
@@ -92,6 +94,7 @@ func scanModelToRecord(item *model.Scan) *ScanRecord {
 		ResultsDir:             item.ResultsDir,
 		WorkerID:               item.WorkerID,
 		ErrorMessage:           item.ErrorMessage,
+		Failure:                failureDetailFromColumns(item.FailureKind, item.ErrorMessage),
 		Progress:               item.Progress,
 		CurrentStage:           item.CurrentStage,
 		StageProgress:          append([]byte(nil), item.StageProgress...),
@@ -163,8 +166,21 @@ func scanTaskModelToRecord(item *model.ScanTask) *ScanTaskRecord {
 		Status:         item.Status,
 		AgentID:        item.AgentID,
 		WorkflowConfig: decodeJSONMap(item.WorkflowConfig),
-		FailureKind:    item.FailureKind,
+		Failure:        failureDetailFromColumns(item.FailureKind, item.ErrorMessage),
+		CompletedAt:    timeutil.ToUTCPtr(item.CompletedAt),
 	}
+}
+
+func failureDetailFromColumns(kind string, message string) *scandomain.FailureDetail {
+	kind = strings.TrimSpace(kind)
+	message = strings.TrimSpace(message)
+	if kind == "" && message == "" {
+		return nil
+	}
+	if kind == "" {
+		kind = "unknown"
+	}
+	return &scandomain.FailureDetail{Kind: kind, Message: message}
 }
 
 func scanLogModelToRecord(item *model.ScanLog) *ScanLogRecord {

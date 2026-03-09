@@ -13,7 +13,7 @@ type ScanFilter struct {
 type ScanRepository interface {
 	GetByIDNotDeleted(ctx context.Context, id ScanID) (*Scan, error)
 	FindAll(ctx context.Context, filter ScanFilter) ([]Scan, int64, error)
-	Save(ctx context.Context, scan *Scan) error
+	SaveScanState(ctx context.Context, scan *Scan) error
 }
 
 type ScanTaskRepository interface {

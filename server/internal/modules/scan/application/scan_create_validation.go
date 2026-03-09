@@ -8,12 +8,12 @@ import (
 	workflowmanifest "github.com/yyhuni/lunafox/server/internal/workflow/manifest"
 )
 
-func validateWorkflowIDsStrict(workflowIds []string) error {
-	if len(workflowIds) == 0 {
+func validateWorkflowIDsStrict(workflowIDs []string) error {
+	if len(workflowIDs) == 0 {
 		return invalidWorkflowIDsf("workflowIds is required")
 	}
-	seen := make(map[string]struct{}, len(workflowIds))
-	for index, workflowID := range workflowIds {
+	seen := make(map[string]struct{}, len(workflowIDs))
+	for index, workflowID := range workflowIDs {
 		if workflowID == "" {
 			return invalidWorkflowIDsf("workflowIds[%d] must not be empty", index)
 		}
@@ -28,7 +28,7 @@ func validateWorkflowIDsStrict(workflowIds []string) error {
 	return nil
 }
 
-func (service *ScanCreateService) validateRequestedWorkflows(workflowIds []string) error {
+func (service *ScanCreateService) validateRequestedWorkflows(workflowIDs []string) error {
 	available, err := workflowmanifest.ListWorkflows()
 	if err != nil {
 		return err
@@ -41,7 +41,7 @@ func (service *ScanCreateService) validateRequestedWorkflows(workflowIds []strin
 		}
 		set[workflowID] = struct{}{}
 	}
-	for _, workflowID := range workflowIds {
+	for _, workflowID := range workflowIDs {
 		workflowID = strings.TrimSpace(workflowID)
 		if workflowID == "" {
 			continue

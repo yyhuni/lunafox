@@ -5,7 +5,7 @@ type ScanCommandStore interface {
 	FindByIDs(ids []int) ([]QueryScan, error)
 	CreateWithTasks(scan *CreateScan, tasks []CreateScanTask) error
 	BulkSoftDelete(ids []int) (int64, []string, error)
-	UpdateStatus(id int, status string, errorMessage ...string) error
+	UpdateStatus(id int, status string, failure *FailureDetail) error
 }
 
 type ScanCreateCommandStore interface {

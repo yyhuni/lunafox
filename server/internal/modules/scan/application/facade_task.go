@@ -23,15 +23,15 @@ func NewScanTaskFacade(taskStore TaskStore, runtimeStore TaskRuntimeScanStore) *
 }
 
 func (service *ScanTaskFacade) PullTask(ctx context.Context, agentID int) (*TaskAssignment, error) {
-	assignment, err := service.runtimeService.PullTask(ctx, agentID)
+	taskAssignment, err := service.runtimeService.PullTask(ctx, agentID)
 	if err != nil {
 		return nil, err
 	}
-	if assignment == nil {
+	if taskAssignment == nil {
 		return nil, nil
 	}
 
-	pkg.Debug("Task assigned to agent", zap.Int("task.id", assignment.TaskID), zap.Int("agent.id", agentID), zap.Int("scan.id", assignment.ScanID), zap.Int("stage", assignment.Stage), zap.String("workflow.id", assignment.WorkflowID))
+	pkg.Debug("Task assigned to agent", zap.Int("task.id", taskAssignment.TaskID), zap.Int("agent.id", agentID), zap.Int("scan.id", taskAssignment.ScanID), zap.Int("stage", taskAssignment.Stage), zap.String("workflow.id", taskAssignment.WorkflowID))
 
-	return assignment, nil
+	return taskAssignment, nil
 }

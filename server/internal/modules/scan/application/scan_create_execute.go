@@ -24,25 +24,25 @@ func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*Creat
 	}
 
 	root := input.Configuration
-	workflowIds := append([]string(nil), input.WorkflowIDs...)
-	if err := validateWorkflowIDsStrict(workflowIds); err != nil {
+	workflowIDs := append([]string(nil), input.WorkflowIDs...)
+	if err := validateWorkflowIDsStrict(workflowIDs); err != nil {
 		return nil, err
 	}
-	if err := service.validateRequestedWorkflows(workflowIds); err != nil {
+	if err := service.validateRequestedWorkflows(workflowIDs); err != nil {
 		return nil, err
 	}
 
-	canonicalRoot, err := workflowdefaulting.NormalizeRootConfig(root, workflowIds)
+	canonicalRoot, err := workflowdefaulting.NormalizeRootConfig(root, workflowIDs)
 	if err != nil {
 		return nil, WrapSchemaInvalid("", "failed to normalize workflow configuration", err)
 	}
 
-	for _, workflow := range workflowIds {
+	for _, workflow := range workflowIDs {
 		workflow = strings.TrimSpace(workflow)
 		if workflow == "" {
 			continue
 		}
-		config, err := extractWorkflowConfig(canonicalRoot, workflow)
+		config, err := extractWorkflowConfigSlice(canonicalRoot, workflow)
 		if err != nil {
 			return nil, err
 		}
@@ -73,20 +73,20 @@ func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*Creat
 		return nil, ErrCreateTargetNotFound
 	}
 
-	workflowIdsJSON, err := json.Marshal(workflowIds)
+	workflowIDsJSON, err := json.Marshal(workflowIDs)
 	if err != nil {
 		return nil, err
 	}
 
 	scan := &CreateScan{
 		TargetID:      input.TargetID,
-		WorkflowIDs:   workflowIdsJSON,
+		WorkflowIDs:   workflowIDsJSON,
 		Configuration: canonicalRoot,
 		ScanMode:      CreateScanModeFull,
 		Status:        CreateScanStatusPending,
 	}
 
-	tasks, err := buildScanTasks(workflowIds, canonicalRoot)
+	tasks, err := buildScanTasks(workflowIDs, canonicalRoot)
 	if err != nil {
 		return nil, err
 	}
