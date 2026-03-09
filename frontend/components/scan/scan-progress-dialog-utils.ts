@@ -96,7 +96,7 @@ export function buildScanProgressData(scan: ScanRecord): ScanProgressData {
     progress: scan.progress,
     currentStage: scan.currentStage,
     startedAt: scan.createdAt,
-    errorMessage: scan.errorMessage,
+    errorMessage: scan.failure?.message || scan.errorMessage,
     stages,
   }
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -41,8 +42,18 @@ type Executor struct {
 }
 
 type statusReporter interface {
-	UpdateStatus(ctx context.Context, taskID int, status, errorMessage string) error
+	UpdateStatus(ctx context.Context, taskID int, status, errorMessage, failureKind string) error
 }
+
+const (
+	failureKindUnknown             = "unknown"
+	failureKindWorkerStartFailed   = "worker_start_failed"
+	failureKindContainerWaitFailed = "container_wait_failed"
+	failureKindTaskTimeout         = "task_timeout"
+	failureKindContainerExitFailed = "container_exit_failed"
+	failureKindDecodeConfigFailed  = "decode_config_failed"
+	failureKindRuntimeError        = "runtime_error"
+)
 
 type taskSessionRegistry interface {
 	RegisterTaskSession(taskID int, taskToken string)
@@ -89,7 +100,7 @@ func (e *Executor) Start(ctx context.Context, tasks <-chan *domain.Task) {
 				continue
 			}
 			if e.isCancelled(t.ID) {
-				e.reportStatus(ctx, t.ID, "cancelled", "")
+				e.reportStatus(ctx, t.ID, "cancelled", "", "")
 				e.clearCancelled(t.ID)
 				continue
 			}
@@ -128,17 +139,23 @@ func (e *Executor) MarkCancelled(taskID int) {
 	e.cancelMu.Unlock()
 }
 
-func (e *Executor) reportStatus(ctx context.Context, taskID int, status, errorMessage string) {
+func (e *Executor) reportStatus(ctx context.Context, taskID int, status, errorMessage, failureKind string) {
 	if e.client == nil {
 		return
 	}
+	if status != "failed" {
+		failureKind = ""
+	} else if failureKind == "" {
+		failureKind = failureKindUnknown
+	}
 	statusCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 	defer cancel()
-	if err := e.client.UpdateStatus(statusCtx, taskID, status, errorMessage); err != nil {
+	if err := e.client.UpdateStatus(statusCtx, taskID, status, errorMessage, failureKind); err != nil {
 		logger.Log.Warn("failed to report task status",
 			zap.Int("taskId", taskID),
 			zap.String("status", status),
 			zap.String("errorMessage", errorMessage),
+			zap.String("failureKind", failureKind),
 			zap.Error(err),
 		)
 	}
@@ -153,11 +170,11 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 	}
 
 	if e.agentSocket == "" {
-		e.reportStatus(ctx, t.ID, "failed", "missing worker runtime socket")
+		e.reportStatus(ctx, t.ID, "failed", "missing worker runtime socket", failureKindWorkerStartFailed)
 		return
 	}
 	if e.docker == nil {
-		e.reportStatus(ctx, t.ID, "failed", "docker client unavailable")
+		e.reportStatus(ctx, t.ID, "failed", "docker client unavailable", failureKindWorkerStartFailed)
 		return
 	}
 
@@ -166,7 +183,7 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 
 	taskToken, err := generateSessionToken()
 	if err != nil {
-		e.reportStatus(ctx, t.ID, "failed", "generate task token failed")
+		e.reportStatus(ctx, t.ID, "failed", "generate task token failed", failureKindWorkerStartFailed)
 		return
 	}
 	if sessionRegistry, ok := e.client.(taskSessionRegistry); ok {
@@ -184,7 +201,7 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 			zap.Error(err),
 		)
 		message := docker.TruncateErrorMessage(err.Error())
-		e.reportStatus(ctx, t.ID, "failed", message)
+		e.reportStatus(ctx, t.ID, "failed", message, failureKindWorkerStartFailed)
 		return
 	}
 	logger.Log.Info("worker container started",
@@ -217,7 +234,7 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 			zap.Error(waitErr),
 		)
 		message := docker.TruncateErrorMessage(waitErr.Error())
-		e.reportStatus(ctx, t.ID, "failed", message)
+		e.reportStatus(ctx, t.ID, "failed", message, failureKindContainerWaitFailed)
 		return
 	}
 
@@ -238,7 +255,7 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 			zap.Int("scanId", t.ScanID),
 			zap.String("containerId", containerID),
 		)
-		e.reportStatus(ctx, t.ID, "completed", "")
+		e.reportStatus(ctx, t.ID, "completed", "", "")
 		return
 	}
 
@@ -255,7 +272,7 @@ func (e *Executor) execute(ctx context.Context, t *domain.Task) {
 		zap.Int64("exitCode", exitCode),
 		zap.String("logExcerpt", message),
 	)
-	e.reportStatus(ctx, t.ID, "failed", message)
+	e.reportStatus(ctx, t.ID, "failed", message, classifyFailureKind(message))
 }
 
 func (e *Executor) handleCancel(ctx context.Context, t *domain.Task, containerID string) {
@@ -265,7 +282,7 @@ func (e *Executor) handleCancel(ctx context.Context, t *domain.Task, containerID
 		zap.Int("scanId", t.ScanID),
 		zap.String("containerId", containerID),
 	)
-	e.reportStatus(ctx, t.ID, "cancelled", "")
+	e.reportStatus(ctx, t.ID, "cancelled", "", "")
 }
 
 func (e *Executor) handleTimeout(ctx context.Context, t *domain.Task, containerID string) {
@@ -276,7 +293,15 @@ func (e *Executor) handleTimeout(ctx context.Context, t *domain.Task, containerI
 		zap.String("containerId", containerID),
 	)
 	message := docker.TruncateErrorMessage("task timed out")
-	e.reportStatus(ctx, t.ID, "failed", message)
+	e.reportStatus(ctx, t.ID, "failed", message, failureKindTaskTimeout)
+}
+
+func classifyFailureKind(message string) string {
+	trimmed := strings.TrimSpace(strings.ToLower(message))
+	if strings.Contains(trimmed, "decode workflow config") {
+		return failureKindDecodeConfigFailed
+	}
+	return failureKindContainerExitFailed
 }
 
 func (e *Executor) trackCancel(taskID int, cancel context.CancelFunc) {

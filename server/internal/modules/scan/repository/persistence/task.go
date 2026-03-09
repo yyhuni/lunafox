@@ -17,6 +17,7 @@ type ScanTask struct {
 	AgentID        *int           `gorm:"index:idx_scan_task_agent_id" json:"agentId,omitempty"`
 	WorkflowConfig datatypes.JSON `gorm:"column:workflow_config;type:jsonb" json:"workflowConfig"`
 	ErrorMessage   string         `gorm:"type:varchar(4096)" json:"errorMessage,omitempty"`
+	FailureKind    string         `gorm:"column:failure_kind;type:varchar(100)" json:"failureKind,omitempty"`
 	CreatedAt      time.Time      `gorm:"type:timestamptz;default:now();index:idx_scan_task_pending_order,priority:3" json:"createdAt"`
 	StartedAt      *time.Time     `gorm:"type:timestamptz" json:"startedAt,omitempty"`
 	CompletedAt    *time.Time     `gorm:"type:timestamptz" json:"completedAt,omitempty"`

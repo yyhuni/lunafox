@@ -22,16 +22,16 @@ type Loader struct {
 
 // NewLoader creates a new Loader and loads all profiles from embedded files.
 func NewLoader() (*Loader, error) {
-	l := &Loader{
+	loader := &Loader{
 		profiles:    []Profile{},
 		profilesMap: make(map[string]*Profile),
 	}
 
-	if err := l.load(); err != nil {
+	if err := loader.load(); err != nil {
 		return nil, err
 	}
 
-	return l, nil
+	return loader, nil
 }
 
 // load reads all YAML files from the embedded filesystem.
@@ -47,54 +47,72 @@ func (l *Loader) load() error {
 		}
 
 		name := entry.Name()
-
-		// Skip files starting with underscore (templates/examples)
-		if strings.HasPrefix(name, "_") {
+		if shouldSkipProfileEntry(name) {
 			continue
 		}
 
-		// Only process .yaml and .yml files
-		ext := strings.ToLower(filepath.Ext(name))
-		if ext != ".yaml" && ext != ".yml" {
-			continue
-		}
-
-		filePath := filepath.Join(profilesDir, name)
-		data, err := profilesFS.ReadFile(filePath)
+		profile, err := loadProfileFile(name)
 		if err != nil {
-			return fmt.Errorf("failed to read profile file %s: %w", name, err)
+			return err
 		}
-
-		var profile Profile
-		if err := yaml.Unmarshal(data, &profile); err != nil {
-			return fmt.Errorf("failed to parse profile file %s: %w", name, err)
+		if err := l.registerProfile(name, profile); err != nil {
+			return err
 		}
-
-		// Validate required fields
-		if profile.ID == "" {
-			return fmt.Errorf("profile file %s: missing required field 'id'", name)
-		}
-		if profile.Name == "" {
-			return fmt.Errorf("profile file %s: missing required field 'name'", name)
-		}
-		if profile.Configuration == "" {
-			return fmt.Errorf("profile file %s: missing required field 'configuration'", name)
-		}
-
-		// Check for duplicate IDs
-		if _, exists := l.profilesMap[profile.ID]; exists {
-			return fmt.Errorf("duplicate profile id '%s' in file %s", profile.ID, name)
-		}
-
-		// Validate configuration against schemas
-		if err := ValidateConfiguration(profile.Configuration); err != nil {
-			return fmt.Errorf("profile file %s: %w", name, err)
-		}
-
-		l.profiles = append(l.profiles, profile)
-		l.profilesMap[profile.ID] = &l.profiles[len(l.profiles)-1]
 	}
 
+	return nil
+}
+
+func shouldSkipProfileEntry(name string) bool {
+	if strings.HasPrefix(name, "_") {
+		return true
+	}
+
+	ext := strings.ToLower(filepath.Ext(name))
+	return ext != ".yaml" && ext != ".yml"
+}
+
+func loadProfileFile(name string) (Profile, error) {
+	filePath := filepath.Join(profilesDir, name)
+	data, err := profilesFS.ReadFile(filePath)
+	if err != nil {
+		return Profile{}, fmt.Errorf("failed to read profile file %s: %w", name, err)
+	}
+
+	var profile Profile
+	if err := yaml.Unmarshal(data, &profile); err != nil {
+		return Profile{}, fmt.Errorf("failed to parse profile file %s: %w", name, err)
+	}
+
+	return profile, nil
+}
+
+func (l *Loader) registerProfile(name string, profile Profile) error {
+	if err := validateLoadedProfile(name, profile); err != nil {
+		return err
+	}
+	if _, exists := l.profilesMap[profile.ID]; exists {
+		return fmt.Errorf("duplicate profile id '%s' in file %s", profile.ID, name)
+	}
+
+	l.profiles = append(l.profiles, profile)
+	l.profilesMap[profile.ID] = &l.profiles[len(l.profiles)-1]
+	return nil
+}
+
+func validateLoadedProfile(name string, profile Profile) error {
+	if profile.ID == "" {
+		return fmt.Errorf("profile file %s: missing required field 'id'", name)
+	}
+	if profile.Name == "" {
+		return fmt.Errorf("profile file %s: missing required field 'name'", name)
+	}
+	if len(profile.Configuration) == 0 {
+		return fmt.Errorf("profile file %s: missing required field 'configuration'", name)
+	}
+	if err := ValidateConfiguration(profile.Configuration); err != nil {
+		return fmt.Errorf("profile file %s: %w", name, err)
+	}
 	return nil
 }
 

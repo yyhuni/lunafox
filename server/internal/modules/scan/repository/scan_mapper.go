@@ -143,6 +143,7 @@ func scanTaskCreateRecordsToModel(items []ScanTaskCreateRecord) []model.ScanTask
 			Stage:          items[index].Stage,
 			WorkflowID:     items[index].WorkflowID,
 			WorkflowConfig: encodeJSONMap(items[index].WorkflowConfig),
+			FailureKind:    "",
 			Status:         items[index].Status,
 		})
 	}
@@ -162,6 +163,7 @@ func scanTaskModelToRecord(item *model.ScanTask) *ScanTaskRecord {
 		Status:         item.Status,
 		AgentID:        item.AgentID,
 		WorkflowConfig: decodeJSONMap(item.WorkflowConfig),
+		FailureKind:    item.FailureKind,
 	}
 }
 

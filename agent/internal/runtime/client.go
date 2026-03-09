@@ -221,7 +221,7 @@ func (c *Client) PullTask(ctx context.Context) (*domain.Task, error) {
 	}
 }
 
-func (c *Client) UpdateStatus(ctx context.Context, taskID int, status, errorMessage string) error {
+func (c *Client) UpdateStatus(ctx context.Context, taskID int, status, errorMessage, failureKind string) error {
 	if taskID <= 0 {
 		return errors.New("task ID is required")
 	}
@@ -229,9 +229,10 @@ func (c *Client) UpdateStatus(ctx context.Context, taskID int, status, errorMess
 	req := &runtimev1.AgentRuntimeRequest{
 		Payload: &runtimev1.AgentRuntimeRequest_TaskStatus{
 			TaskStatus: &runtimev1.TaskStatus{
-				TaskId:  int32(taskID),
-				Status:  status,
-				Message: errorMessage,
+				TaskId:      int32(taskID),
+				Status:      status,
+				Message:     errorMessage,
+				FailureKind: failureKind,
 			},
 		},
 	}

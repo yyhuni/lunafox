@@ -330,6 +330,7 @@ type TaskStatus struct {
 	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
 	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
 	ExitCode      int32                  `protobuf:"varint,4,opt,name=exit_code,json=exitCode,proto3" json:"exit_code,omitempty"`
+	FailureKind   string                 `protobuf:"bytes,5,opt,name=failure_kind,json=failureKind,proto3" json:"failure_kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -390,6 +391,13 @@ func (x *TaskStatus) GetExitCode() int32 {
 		return x.ExitCode
 	}
 	return 0
+}
+
+func (x *TaskStatus) GetFailureKind() string {
+	if x != nil {
+		return x.FailureKind
+	}
+	return ""
 }
 
 type AgentRuntimeEvent struct {
@@ -1525,13 +1533,14 @@ const file_lunafox_runtime_v1_runtime_proto_rawDesc = "" +
 	"\x06health\x18\b \x01(\v2 .lunafox.runtime.v1.HealthStatusR\x06health\x12%\n" +
 	"\x0eworker_version\x18\t \x01(\tR\rworkerVersionJ\x04\b\n" +
 	"\x10\vR\x13supported_workflows\"\r\n" +
-	"\vRequestTask\"t\n" +
+	"\vRequestTask\"\x97\x01\n" +
 	"\n" +
 	"TaskStatus\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\x05R\x06taskId\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x18\n" +
 	"\amessage\x18\x03 \x01(\tR\amessage\x12\x1b\n" +
-	"\texit_code\x18\x04 \x01(\x05R\bexitCode\"\xbc\x02\n" +
+	"\texit_code\x18\x04 \x01(\x05R\bexitCode\x12!\n" +
+	"\ffailure_kind\x18\x05 \x01(\tR\vfailureKind\"\xbc\x02\n" +
 	"\x11AgentRuntimeEvent\x12A\n" +
 	"\vtask_assign\x18\x01 \x01(\v2\x1e.lunafox.runtime.v1.TaskAssignH\x00R\n" +
 	"taskAssign\x12A\n" +

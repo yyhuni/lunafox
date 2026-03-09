@@ -145,9 +145,10 @@ func TestConnectHandlesHeartbeatAndTaskStatus(t *testing.T) {
 			{
 				Payload: &runtimev1.AgentRuntimeRequest_TaskStatus{
 					TaskStatus: &runtimev1.TaskStatus{
-						TaskId:  77,
-						Status:  "running",
-						Message: "started",
+						TaskId:      77,
+						Status:      "failed",
+						Message:     "boom",
+						FailureKind: "runtime_error",
 					},
 				},
 			},
@@ -167,8 +168,11 @@ func TestConnectHandlesHeartbeatAndTaskStatus(t *testing.T) {
 	if len(tasks.updates) != 1 {
 		t.Fatalf("expected task status update once, got=%d", len(tasks.updates))
 	}
-	if tasks.updates[0].taskID != 77 || tasks.updates[0].status != "running" {
+	if tasks.updates[0].taskID != 77 || tasks.updates[0].status != "failed" {
 		t.Fatalf("unexpected task status update payload: %+v", tasks.updates[0])
+	}
+	if tasks.updates[0].failureKind != "runtime_error" {
+		t.Fatalf("unexpected failure kind: %+v", tasks.updates[0])
 	}
 }
 
@@ -642,10 +646,11 @@ func (s *runtimeLifecycleStub) HandleMessage(_ context.Context, _ int, message a
 }
 
 type taskUpdate struct {
-	agentID int
-	taskID  int
-	status  string
-	message string
+	agentID     int
+	taskID      int
+	status      string
+	message     string
+	failureKind string
 }
 
 type taskRuntimeStub struct {
@@ -661,7 +666,7 @@ func (s *taskRuntimeStub) PullTask(context.Context, int) (*scanapp.TaskAssignmen
 	return s.pullResult, s.pullErr
 }
 
-func (s *taskRuntimeStub) UpdateStatus(_ context.Context, agentID, taskID int, status, errorMessage string) error {
-	s.updates = append(s.updates, taskUpdate{agentID: agentID, taskID: taskID, status: status, message: errorMessage})
+func (s *taskRuntimeStub) UpdateStatus(_ context.Context, agentID, taskID int, status, errorMessage, failureKind string) error {
+	s.updates = append(s.updates, taskUpdate{agentID: agentID, taskID: taskID, status: status, message: errorMessage, failureKind: failureKind})
 	return s.updateErr
 }

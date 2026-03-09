@@ -158,6 +158,7 @@ CREATE TABLE IF NOT EXISTS scan (
     container_ids VARCHAR(100)[] NOT NULL DEFAULT '{}',
     worker_id INTEGER,
     error_message VARCHAR(2000) NOT NULL DEFAULT '',
+    failure_kind VARCHAR(100) NOT NULL DEFAULT '',
     progress INTEGER NOT NULL DEFAULT 0,
     current_stage VARCHAR(50) NOT NULL DEFAULT '',
     stage_progress JSONB NOT NULL DEFAULT '{}',
@@ -643,6 +644,7 @@ CREATE TABLE IF NOT EXISTS scan_task (
     agent_id        INT REFERENCES agent(id),
     workflow_config JSONB NOT NULL DEFAULT '{}',
     error_message   VARCHAR(4096),
+    failure_kind    VARCHAR(100) NOT NULL DEFAULT '',
 
     -- Timestamps
     created_at      TIMESTAMPTZ DEFAULT NOW(),
@@ -674,8 +676,10 @@ COMMENT ON COLUMN scan_task.stage IS 'Stage order index (shared for parallel tas
 COMMENT ON COLUMN scan_task.workflow_id IS 'Workflow ID (e.g. subdomain_discovery)';
 COMMENT ON COLUMN scan_task.status IS 'Task status: blocked/pending/running/completed/failed/cancelled';
 COMMENT ON COLUMN scan.configuration IS 'Canonical workflow configuration root stored as JSON object';
+COMMENT ON COLUMN scan.failure_kind IS 'Machine-readable scan failure summary projected from canonical failed task';
 COMMENT ON COLUMN scan_task.workflow_config IS 'Canonical workflow-scoped configuration slice stored as JSON object';
 COMMENT ON COLUMN scan_task.error_message IS 'Error message (truncated by Agent, max 4KB)';
+COMMENT ON COLUMN scan_task.failure_kind IS 'Machine-readable task failure classification for assignment/bootstrap/runtime failures';
 COMMENT ON INDEX idx_scan_task_pending_order IS 'Supports task pull queries (ordered by stage DESC to prioritize completing existing scans, created_at ASC)';
 COMMENT ON INDEX idx_scan_task_agent_id IS 'Supports querying tasks by agent';
 COMMENT ON INDEX idx_scan_task_scan_id IS 'Supports querying tasks by scan';

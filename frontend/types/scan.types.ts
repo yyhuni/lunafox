@@ -8,6 +8,7 @@ export interface StageProgressItem { status: StageStatus; order: number; started
 export type StageProgress = Record<string, StageProgressItem>
 export interface ScanTargetBrief { id: number; name: string; type: string }
 export interface ScanCachedStats { subdomainsCount: number; websitesCount: number; endpointsCount: number; ipsCount: number; directoriesCount: number; screenshotsCount: number; vulnsTotal: number; vulnsCritical: number; vulnsHigh: number; vulnsMedium: number; vulnsLow: number }
+export interface FailureDetail { kind: string; message: string }
 
 export interface ScanRecord {
   id: number
@@ -21,6 +22,7 @@ export interface ScanRecord {
   stoppedAt?: string
   status: ScanStatus
   errorMessage?: string
+  failure?: FailureDetail
   progress: number
   currentStage?: ScanStage
   stageProgress?: StageProgress

@@ -11,6 +11,7 @@ type TaskRecord struct {
 	Status         string
 	AgentID        *int
 	WorkflowConfig map[string]any
+	FailureKind    string
 }
 
 // TaskTargetRef is the minimal target projection required by task runtime flows.

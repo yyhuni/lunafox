@@ -21,8 +21,8 @@ func (adapter *scanTaskStoreAdapter) PullTask(ctx context.Context, agentID int) 
 	return adapter.repo.PullTask(ctx, agentID)
 }
 
-func (adapter *scanTaskStoreAdapter) UpdateStatus(ctx context.Context, id int, status string, errorMessage string) error {
-	return adapter.repo.UpdateStatus(ctx, id, status, errorMessage)
+func (adapter *scanTaskStoreAdapter) UpdateStatus(ctx context.Context, id int, status string, errorMessage string, failureKind string) error {
+	return adapter.repo.UpdateStatus(ctx, id, status, errorMessage, failureKind)
 }
 
 func (adapter *scanTaskStoreAdapter) FailTaskClaim(ctx context.Context, id int, errorMessage string, reason string) error {

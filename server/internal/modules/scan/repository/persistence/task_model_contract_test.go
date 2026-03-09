@@ -52,3 +52,18 @@ func TestScanTaskModelDoesNotPersistLegacyWorkflowConfigYAMLField(t *testing.T) 
 		t.Fatalf("legacy scan_task.workflow_config_yaml field should be removed from persistence model")
 	}
 }
+
+func TestScanTaskModelFailureKindColumnTag(t *testing.T) {
+	field, ok := reflect.TypeOf(ScanTask{}).FieldByName("FailureKind")
+	if !ok {
+		t.Fatalf("scan task model must define FailureKind field")
+	}
+
+	tag := field.Tag.Get("gorm")
+	if !strings.Contains(tag, "column:failure_kind") {
+		t.Fatalf("FailureKind must map to failure_kind column, got tag: %q", tag)
+	}
+	if !strings.Contains(tag, "type:varchar(100)") {
+		t.Fatalf("FailureKind must use varchar(100), got tag: %q", tag)
+	}
+}

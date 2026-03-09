@@ -2,6 +2,7 @@ package task
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -9,8 +10,9 @@ import (
 )
 
 type fakeReporter struct {
-	status string
-	msg    string
+	status      string
+	msg         string
+	failureKind string
 }
 
 type fakeDockerRunner struct {
@@ -56,9 +58,10 @@ func (fake *fakeDockerRunner) TailLogs(ctx context.Context, containerID string, 
 	return fake.tailLogsFn(ctx, containerID, lines)
 }
 
-func (f *fakeReporter) UpdateStatus(ctx context.Context, taskID int, status, errorMessage string) error {
+func (f *fakeReporter) UpdateStatus(ctx context.Context, taskID int, status, errorMessage, failureKind string) error {
 	f.status = status
 	f.msg = errorMessage
+	f.failureKind = failureKind
 	return nil
 }
 
@@ -75,6 +78,9 @@ func TestExecutorMissingWorkerRuntimeSocket(t *testing.T) {
 	if reporter.msg == "" {
 		t.Fatalf("expected error message")
 	}
+	if reporter.failureKind != "worker_start_failed" {
+		t.Fatalf("expected worker_start_failed, got %q", reporter.failureKind)
+	}
 }
 
 func TestExecutorDockerUnavailable(t *testing.T) {
@@ -90,6 +96,9 @@ func TestExecutorDockerUnavailable(t *testing.T) {
 	}
 	if reporter.msg == "" {
 		t.Fatalf("expected error message")
+	}
+	if reporter.failureKind != "worker_start_failed" {
+		t.Fatalf("expected worker_start_failed, got %q", reporter.failureKind)
 	}
 }
 
@@ -248,6 +257,56 @@ func TestExecutorFailurePathUsesTimeoutContexts(t *testing.T) {
 	if !removeHasDeadline {
 		t.Fatalf("expected remove context to have deadline")
 	}
+	if reporter.failureKind != "container_exit_failed" {
+		t.Fatalf("expected container_exit_failed, got %q", reporter.failureKind)
+	}
+}
+
+func TestExecutorWaitFailureUsesContainerWaitFailed(t *testing.T) {
+	reporter := &fakeReporter{}
+	fakeDocker := &fakeDockerRunner{
+		startWorkerFn: func(ctx context.Context, t *domain.Task, agentSocket, taskToken string) (string, error) {
+			return "container-1", nil
+		},
+		waitFn: func(ctx context.Context, containerID string) (int64, error) {
+			return 0, errors.New("wait failed")
+		},
+	}
+
+	exec := NewExecutor(fakeDocker, reporter, nil, "/run/lunafox/worker-runtime.sock")
+	exec.execute(context.Background(), &domain.Task{ID: 12, ScanID: 23})
+
+	if reporter.status != "failed" {
+		t.Fatalf("expected failed status, got %s", reporter.status)
+	}
+	if reporter.failureKind != "container_wait_failed" {
+		t.Fatalf("expected container_wait_failed, got %q", reporter.failureKind)
+	}
+}
+
+func TestExecutorExitFailureClassifiesDecodeConfigFailure(t *testing.T) {
+	reporter := &fakeReporter{}
+	fakeDocker := &fakeDockerRunner{
+		startWorkerFn: func(ctx context.Context, t *domain.Task, agentSocket, taskToken string) (string, error) {
+			return "container-1", nil
+		},
+		waitFn: func(ctx context.Context, containerID string) (int64, error) {
+			return 1, nil
+		},
+		tailLogsFn: func(ctx context.Context, containerID string, lines int) (string, error) {
+			return "decode workflow config subdomain_discovery: invalid config", nil
+		},
+	}
+
+	exec := NewExecutor(fakeDocker, reporter, nil, "/run/lunafox/worker-runtime.sock")
+	exec.execute(context.Background(), &domain.Task{ID: 11, ScanID: 22})
+
+	if reporter.status != "failed" {
+		t.Fatalf("expected failed status, got %s", reporter.status)
+	}
+	if reporter.failureKind != "decode_config_failed" {
+		t.Fatalf("expected decode_config_failed, got %q", reporter.failureKind)
+	}
 }
 
 func TestExecutorHandleTimeoutUsesDeadlineOnStop(t *testing.T) {
@@ -269,6 +328,9 @@ func TestExecutorHandleTimeoutUsesDeadlineOnStop(t *testing.T) {
 	}
 	if reporter.status != "failed" {
 		t.Fatalf("expected failed status, got %s", reporter.status)
+	}
+	if reporter.failureKind != "task_timeout" {
+		t.Fatalf("expected task_timeout, got %q", reporter.failureKind)
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/yyhuni/lunafox/server/internal/pkg/timeutil"
+	workflowdefaulting "github.com/yyhuni/lunafox/server/internal/workflow/defaulting"
 	workflowschema "github.com/yyhuni/lunafox/server/internal/workflow/schema"
 )
 
@@ -18,20 +19,11 @@ func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*Creat
 	if input.TargetID == 0 {
 		return nil, ErrCreateTargetNotFound
 	}
-
-	workflowConfigYAML := strings.TrimSpace(input.Configuration)
-	if workflowConfigYAML == "" {
+	if input.Configuration == nil {
 		return nil, ErrCreateInvalidConfig
 	}
 
-	root, err := parseYAMLMapping([]byte(workflowConfigYAML))
-	if err != nil {
-		return nil, WrapSchemaInvalid("", "failed to parse configuration YAML", err)
-	}
-	if root == nil {
-		return nil, WrapSchemaInvalid("", "configuration YAML must be an object", nil)
-	}
-
+	root := input.Configuration
 	workflowIds := append([]string(nil), input.WorkflowIDs...)
 	if err := validateWorkflowIDsStrict(workflowIds); err != nil {
 		return nil, err
@@ -40,16 +32,33 @@ func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*Creat
 		return nil, err
 	}
 
+	canonicalRoot, err := workflowdefaulting.NormalizeRootConfig(root, workflowIds)
+	if err != nil {
+		return nil, WrapSchemaInvalid("", "failed to normalize workflow configuration", err)
+	}
+
 	for _, workflow := range workflowIds {
 		workflow = strings.TrimSpace(workflow)
 		if workflow == "" {
 			continue
 		}
-		if err := workflowschema.ValidateYAML(workflow, []byte(workflowConfigYAML)); err != nil {
+		config, err := extractWorkflowConfig(canonicalRoot, workflow)
+		if err != nil {
+			return nil, err
+		}
+		if err := workflowschema.ValidateConfigMap(workflow, config); err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
-				return nil, WrapSchemaInvalid(workflow, fmt.Sprintf("workflow %s does not support this configuration version", workflow), err)
+				return nil, WrapSchemaInvalid(
+					workflow,
+					fmt.Sprintf("workflow %s does not support this configuration version", workflow),
+					err,
+				)
 			}
-			return nil, WrapSchemaInvalid(workflow, fmt.Sprintf("workflow %s configuration failed schema validation", workflow), err)
+			return nil, WrapSchemaInvalid(
+				workflow,
+				fmt.Sprintf("workflow %s configuration failed schema validation", workflow),
+				err,
+			)
 		}
 	}
 
@@ -70,20 +79,28 @@ func (service *ScanCreateService) CreateNormal(input *CreateNormalInput) (*Creat
 	}
 
 	scan := &CreateScan{
-		TargetID:          input.TargetID,
-		WorkflowIDs:       workflowIdsJSON,
-		YAMLConfiguration: workflowConfigYAML,
-		ScanMode:          CreateScanModeFull,
-		Status:            CreateScanStatusPending,
+		TargetID:      input.TargetID,
+		WorkflowIDs:   workflowIdsJSON,
+		Configuration: canonicalRoot,
+		ScanMode:      CreateScanModeFull,
+		Status:        CreateScanStatusPending,
 	}
 
-	tasks, err := buildScanTasks(workflowIds, root)
+	tasks, err := buildScanTasks(workflowIds, canonicalRoot)
 	if err != nil {
 		return nil, err
 	}
 	if err := service.scanStore.CreateWithTasks(scan, tasks); err != nil {
 		return nil, err
 	}
-	scan.Target = &TargetRef{ID: target.ID, Name: target.Name, Type: target.Type, CreatedAt: timeutil.ToUTC(target.CreatedAt), LastScannedAt: timeutil.ToUTCPtr(target.LastScannedAt), DeletedAt: timeutil.ToUTCPtr(target.DeletedAt)}
+	scan.Target = &TargetRef{
+		ID:            target.ID,
+		Name:          target.Name,
+		Type:          target.Type,
+		CreatedAt:     timeutil.ToUTC(target.CreatedAt),
+		LastScannedAt: timeutil.ToUTCPtr(target.LastScannedAt),
+		DeletedAt:     timeutil.ToUTCPtr(target.DeletedAt),
+	}
+
 	return scan, nil
 }

@@ -114,13 +114,37 @@ func TestValidateConfiguration_UnknownWorkflow(t *testing.T) {
 	}
 }
 
-func TestExtractWorkflowIDsFromObject(t *testing.T) {
+func TestExtractWorkflowIDsFromObject_OnlyExtracts(t *testing.T) {
 	ids, err := ExtractWorkflowIDs(validSubdomainDiscoveryConfig())
 	if err != nil {
 		t.Fatalf("ExtractWorkflowIDs() returned error: %v", err)
 	}
 	if len(ids) != 1 || ids[0] != "subdomain_discovery" {
 		t.Fatalf("expected [subdomain_discovery], got %v", ids)
+	}
+}
+
+func TestExtractWorkflowIDsFromObject_DoesNotValidateKnownWorkflowSet(t *testing.T) {
+	ids, err := ExtractWorkflowIDs(map[string]any{
+		"unknown_workflow": map[string]any{"enabled": true},
+	})
+	if err != nil {
+		t.Fatalf("ExtractWorkflowIDs() should only extract ids, got: %v", err)
+	}
+	if len(ids) != 1 || ids[0] != "unknown_workflow" {
+		t.Fatalf("expected [unknown_workflow], got %v", ids)
+	}
+}
+
+func TestValidateAndExtractWorkflowIDs_RejectsUnknownWorkflow(t *testing.T) {
+	_, err := ValidateAndExtractWorkflowIDs(map[string]any{
+		"unknown_workflow": map[string]any{"enabled": true},
+	})
+	if err == nil {
+		t.Fatal("ValidateAndExtractWorkflowIDs() should reject unknown workflow keys")
+	}
+	if !strings.Contains(err.Error(), "unknown workflow key") {
+		t.Fatalf("expected unknown workflow key error, got: %v", err)
 	}
 }
 

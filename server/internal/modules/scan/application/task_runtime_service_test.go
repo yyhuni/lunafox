@@ -6,20 +6,30 @@ import (
 )
 
 type taskStoreStub struct {
-	pulledTask        *TaskRecord
-	pulledTasks       []*TaskRecord
-	pullIndex         int
-	countActive       int
-	failCalled        bool
-	failedTask        int
-	failedMessage     string
-	failedRejectCause string
-	unlockCalled      bool
-	unlockScanID      int
-	unlockStage       int
+	pulledTask         *TaskRecord
+	pulledTasks        []*TaskRecord
+	getByIDFn          func(context.Context, int) (*TaskRecord, error)
+	pullIndex          int
+	countActive        int
+	failCalled         bool
+	failedTask         int
+	failedMessage      string
+	failedRejectCause  string
+	updatedFailureKind string
+	updatedStatus      string
+	updatedTaskID      int
+	updatedMessage     string
+	unlockCalled       bool
+	unlockScanID       int
+	unlockStage        int
 }
 
-func (stub *taskStoreStub) GetByID(context.Context, int) (*TaskRecord, error) { return nil, nil }
+func (stub *taskStoreStub) GetByID(ctx context.Context, id int) (*TaskRecord, error) {
+	if stub.getByIDFn != nil {
+		return stub.getByIDFn(ctx, id)
+	}
+	return nil, nil
+}
 
 func (stub *taskStoreStub) PullTask(context.Context, int) (*TaskRecord, error) {
 	if len(stub.pulledTasks) > 0 {
@@ -41,7 +51,13 @@ func (stub *taskStoreStub) CountActiveByScanAndStage(context.Context, int, int) 
 	return stub.countActive, nil
 }
 
-func (stub *taskStoreStub) UpdateStatus(context.Context, int, string, string) error { return nil }
+func (stub *taskStoreStub) UpdateStatus(_ context.Context, id int, status string, errorMessage string, failureKind string) error {
+	stub.updatedTaskID = id
+	stub.updatedStatus = status
+	stub.updatedMessage = errorMessage
+	stub.updatedFailureKind = failureKind
+	return nil
+}
 
 func (stub *taskStoreStub) FailTaskClaim(_ context.Context, id int, errorMessage string, reason string) error {
 	stub.failCalled = true
@@ -189,6 +205,40 @@ func TestTaskRuntimeServicePullTask_EmptyWorkflowIDFailsAsSchemaInvalid(t *testi
 	}
 	if workflowErr.Field != "workflow" {
 		t.Fatalf("unexpected field: %s", workflowErr.Field)
+	}
+	if taskStore.failedRejectCause != "schema_invalid" {
+		t.Fatalf("expected failure kind %q, got %q", "schema_invalid", taskStore.failedRejectCause)
+	}
+}
+
+func TestTaskRuntimeServiceUpdateStatus_PropagatesFailureKind(t *testing.T) {
+	agentID := 7
+	taskOwner := agentID
+	taskStore := &taskStoreStub{}
+	taskStore.pulledTask = nil
+	service := NewTaskRuntimeService(taskStore, &runtimeScanStoreStub{})
+	taskStoreGetByID := &TaskRecord{ID: 303, ScanID: 99, Stage: 1, WorkflowID: "subdomain_discovery", Status: "running", AgentID: &taskOwner}
+	taskStore.getByIDFn = func(context.Context, int) (*TaskRecord, error) { return taskStoreGetByID, nil }
+
+	err := service.UpdateStatus(context.Background(), agentID, 303, "failed", "boom", "runtime_error")
+	if err != nil {
+		t.Fatalf("UpdateStatus returned error: %v", err)
+	}
+	if taskStore.updatedFailureKind != "runtime_error" {
+		t.Fatalf("expected runtime_error, got %q", taskStore.updatedFailureKind)
+	}
+}
+
+func TestNormalizeFailureKind_DoesNotRewriteLegacyCamelCase(t *testing.T) {
+	got := normalizeFailureKind("failed", "runtimeError")
+	if got != "runtimeError" {
+		t.Fatalf("expected legacy value preserved without compatibility rewrite, got %q", got)
+	}
+}
+
+func TestWorkflowErrorCodeToFailureKind_MapsDomainCodes(t *testing.T) {
+	if got := workflowErrorCodeToFailureKind(WorkflowErrorCodeSchemaInvalid); got != "schema_invalid" {
+		t.Fatalf("expected schema_invalid, got %q", got)
 	}
 }
 

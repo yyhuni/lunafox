@@ -58,6 +58,7 @@ message TaskStatus {
   string status = 2;
   string message = 3;
   int32 exit_code = 4;
+  string failure_kind = 5;
 }
 
 message AgentRuntimeEvent {

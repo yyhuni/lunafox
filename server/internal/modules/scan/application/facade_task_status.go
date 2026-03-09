@@ -6,8 +6,8 @@ import (
 )
 
 // UpdateStatus validates and updates task status for an agent.
-func (service *ScanTaskFacade) UpdateStatus(ctx context.Context, agentID, taskID int, status, errorMessage string) error {
-	err := service.runtimeService.UpdateStatus(ctx, agentID, taskID, status, errorMessage)
+func (service *ScanTaskFacade) UpdateStatus(ctx context.Context, agentID, taskID int, status, errorMessage, failureKind string) error {
+	err := service.runtimeService.UpdateStatus(ctx, agentID, taskID, status, errorMessage, failureKind)
 	if err != nil {
 		if errors.Is(err, ErrTaskNotFound) {
 			return ErrScanTaskNotFound
