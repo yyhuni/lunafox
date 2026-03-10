@@ -23,9 +23,11 @@ type schemaIdentity struct {
 }
 
 type manifestIdentity struct {
-	WorkflowID       string `json:"workflowId"`
-	ConfigSchemaID   string `json:"configSchemaId"`
-	DefaultProfileID string `json:"defaultProfileId"`
+	WorkflowID string `json:"workflowId"`
+	Executor   struct {
+		Type string `json:"type"`
+		Ref  string `json:"ref"`
+	} `json:"executor"`
 }
 
 func TestWorkflowSchemaAndManifestConsistency(t *testing.T) {
@@ -38,17 +40,13 @@ func TestWorkflowSchemaAndManifestConsistency(t *testing.T) {
 			require.NotEmpty(t, contract.WorkflowID)
 			expectedSchemaID := fmt.Sprintf("lunafox://schemas/workflows/%s", contract.WorkflowID)
 
-			workerSchema := loadSchemaIdentity(t, filepath.Join(contract.Dir, "generated", fmt.Sprintf("%s.schema.json", contract.WorkflowID)))
-			require.Equal(t, expectedSchemaID, workerSchema.ID)
-
 			serverSchema := loadSchemaIdentity(t, filepath.Join(root, "server", "internal", "workflow", "schema", fmt.Sprintf("%s.schema.json", contract.WorkflowID)))
 			require.Equal(t, expectedSchemaID, serverSchema.ID)
 
-			workerManifest := loadManifestIdentity(t, filepath.Join(contract.Dir, "generated", fmt.Sprintf("%s.manifest.json", contract.WorkflowID)))
 			serverManifest := loadManifestIdentity(t, filepath.Join(root, "server", "internal", "workflow", "manifest", fmt.Sprintf("%s.manifest.json", contract.WorkflowID)))
-			require.Equal(t, contract.WorkflowID, workerManifest.WorkflowID)
-			require.Equal(t, expectedSchemaID, workerManifest.ConfigSchemaID)
-			require.Equal(t, workerManifest, serverManifest)
+			require.Equal(t, contract.WorkflowID, serverManifest.WorkflowID)
+			require.Equal(t, "builtin", serverManifest.Executor.Type)
+			require.Equal(t, contract.WorkflowID, serverManifest.Executor.Ref)
 		})
 	}
 }

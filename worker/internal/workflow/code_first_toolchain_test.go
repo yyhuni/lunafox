@@ -21,18 +21,22 @@ func TestCodeFirstToolchain_MigratedFromTemplateGenerators(t *testing.T) {
 		require.Truef(t, info.IsDir(), "expected directory path: %s", dir)
 	}
 
-	removedDirs := []string{
+	removedPaths := []string{
 		filepath.Join(root, "cmd", "const-gen"),
 		filepath.Join(root, "cmd", "doc-gen"),
 		filepath.Join(root, "cmd", "schema-gen"),
+		filepath.Join(root, "internal", "activity", "command_builder.go"),
+		filepath.Join(root, "internal", "activity", "command_template.go"),
+		filepath.Join(root, "internal", "activity", "config_key_mapper.go"),
+		filepath.Join(root, "internal", "activity", "template_loader.go"),
 	}
-	for _, dir := range removedDirs {
-		_, err := os.Stat(dir)
+	for _, path := range removedPaths {
+		_, err := os.Stat(path)
 		require.Truef(
 			t,
 			errors.Is(err, os.ErrNotExist),
-			"legacy template generator must be removed for code-first migration: %s",
-			dir,
+			"legacy template runtime tooling must be removed for code-first migration: %s",
+			path,
 		)
 	}
 }

@@ -19,8 +19,6 @@ func TestResolveOutputPathsFromDirs(t *testing.T) {
 	def := workflowDefForTest()
 	opts := genOptions{
 		workflow:          def.WorkflowID,
-		workerSchemaDir:   "/tmp/worker-schema",
-		workerManifestDir: "/tmp/worker-manifest",
 		serverSchemaDir:   "/tmp/server-schema",
 		serverManifestDir: "/tmp/server-manifest",
 		serverProfileDir:  "/tmp/profiles",
@@ -28,25 +26,22 @@ func TestResolveOutputPathsFromDirs(t *testing.T) {
 	}
 
 	require.NoError(t, resolveOutputPaths(def, &opts))
-	require.Equal(t, "/tmp/worker-schema/subdomain_discovery.schema.json", opts.workerSchemaPath)
-	require.Equal(t, "/tmp/worker-manifest/subdomain_discovery.manifest.json", opts.workerManifestPath)
 	require.Equal(t, "/tmp/server-schema/subdomain_discovery.schema.json", opts.serverSchemaPath)
 	require.Equal(t, "/tmp/server-manifest/subdomain_discovery.manifest.json", opts.serverManifestPath)
 	require.Equal(t, "/tmp/profiles/subdomain_discovery.yaml", opts.serverProfilePath)
 	require.Equal(t, "/tmp/docs/subdomain_discovery.md", opts.docsPath)
 }
 
-func TestResolveOutputPathsRequiresManifestPathOrDir(t *testing.T) {
+func TestResolveOutputPathsRequiresServerManifestPathOrDir(t *testing.T) {
 	def := workflowDefForTest()
 	opts := genOptions{
 		workflow:        def.WorkflowID,
-		workerSchemaDir: "/tmp/worker-schema",
 		serverSchemaDir: "/tmp/server-schema",
 		docsDir:         "/tmp/docs",
 	}
 	assertErr := resolveOutputPaths(def, &opts)
 	require.Error(t, assertErr)
-	require.Contains(t, assertErr.Error(), "worker-manifest-output")
+	require.Contains(t, assertErr.Error(), "server-manifest-output")
 }
 
 func TestBuildSchemaOmitsWorkflowMetadataExtensions(t *testing.T) {
@@ -59,14 +54,13 @@ func TestBuildSchemaOmitsWorkflowMetadataExtensions(t *testing.T) {
 	require.NotContains(t, text, "x-stage")
 }
 
-func TestBuildManifestIncludesDefaultProfileAndStages(t *testing.T) {
+func TestBuildManifestIncludesExecutorAndStagesOnly(t *testing.T) {
 	manifest := buildManifest(workflowDefForTest())
 	require.Equal(t, "v1", manifest.ManifestVersion)
 	require.Equal(t, "subdomain_discovery", manifest.WorkflowID)
 	require.Equal(t, "Subdomain Discovery", manifest.DisplayName)
-	require.Equal(t, "subdomain_discovery", manifest.DefaultProfileID)
-	require.Equal(t, "lunafox://schemas/workflows/subdomain_discovery", manifest.ConfigSchemaID)
-	require.NotEmpty(t, manifest.SupportedTargetTypeIDs)
+	require.Equal(t, "builtin", manifest.Executor.Type)
+	require.Equal(t, "subdomain_discovery", manifest.Executor.Ref)
 	require.NotEmpty(t, manifest.Stages)
 	require.Equal(t, "recon", manifest.Stages[0].StageID)
 	require.NotEmpty(t, manifest.Stages[0].Tools)
@@ -88,6 +82,9 @@ func TestBuildManifestOmitsConstraintAndDefaultFieldsFromParams(t *testing.T) {
 	require.Contains(t, text, "requiredWhenEnabled")
 	require.Contains(t, text, "valueType")
 	require.Contains(t, text, "configKey")
+	require.NotContains(t, text, "configSchemaId")
+	require.NotContains(t, text, "supportedTargetTypeIds")
+	require.NotContains(t, text, "defaultProfileId")
 }
 
 func TestBuildTypedGoDisambiguatesDuplicateToolNamesAcrossStages(t *testing.T) {
@@ -199,92 +196,6 @@ func TestBuildProfileYAMLFailsWhenRequiredDefaultMissing(t *testing.T) {
 	_, err = buildProfileYAML(def, schemaJSON)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "default value is required")
-}
-
-func TestBuildProfileArtifacts_GeneratesSparseOverlayProfile(t *testing.T) {
-	minimum := 1
-	def := workflow.ContractDefinition{
-		WorkflowID:  "demo",
-		DisplayName: "Demo Workflow",
-		Description: "Demo workflow description",
-		DefaultProfile: workflow.ContractProfileDefinition{
-			ID:          "demo_default",
-			Name:        "Demo 默认配置",
-			Description: "Demo 默认 profile",
-		},
-		ProfileOverlays: []workflow.ContractProfileOverlayDefinition{
-			{
-				ID:          "demo_fast",
-				Name:        "Demo 快速配置",
-				Description: "Demo fast overlay",
-				Configuration: map[string]any{
-					"recon": map[string]any{
-						"tools": map[string]any{
-							"tool-a": map[string]any{
-								"threads-cli": 50,
-							},
-						},
-					},
-				},
-			},
-		},
-		Stages: []workflow.ContractStageDefinition{{
-			ID:          "recon",
-			Name:        "Recon",
-			Description: "Recon stage",
-			Required:    true,
-			Parallel:    true,
-			Tools: []workflow.ContractToolDefinition{{
-				ID:          "tool-a",
-				Description: "Tool A",
-				Params: []workflow.ContractParamDefinition{
-					{Key: "threads-cli", Type: "integer", Description: "threads", RequiredWhenEnabled: true, Minimum: &minimum, Default: 20},
-					{Key: "timeout-runtime", Type: "integer", Description: "timeout", RequiredWhenEnabled: true, Minimum: &minimum, Default: 3600},
-				},
-			}},
-		}},
-	}
-
-	schema := buildSchema(def)
-	schemaJSON, err := json.Marshal(schema)
-	require.NoError(t, err)
-
-	defaultPayload, overlays, err := buildProfileArtifacts(def, schemaJSON)
-	require.NoError(t, err)
-	require.NotEmpty(t, defaultPayload)
-	fastPayload, ok := overlays["demo_fast"]
-	require.True(t, ok)
-
-	var profileDoc struct {
-		Extends       string         `yaml:"extends"`
-		Configuration map[string]any `yaml:"configuration"`
-	}
-	require.NoError(t, yaml.Unmarshal(fastPayload, &profileDoc))
-	require.Equal(t, "demo_default", profileDoc.Extends)
-	demo := profileDoc.Configuration["demo"].(map[string]any)
-	recon := demo["recon"].(map[string]any)
-	tools := recon["tools"].(map[string]any)
-	tool := tools["tool-a"].(map[string]any)
-	require.Equal(t, 50, tool["threads-cli"])
-	require.Equal(t, 3600, tool["timeout-runtime"])
-}
-
-func TestLoadProfileOverlaySources_ReadsSubdomainDiscoveryFast(t *testing.T) {
-	overlays, err := loadProfileOverlaySources("subdomain_discovery")
-	require.NoError(t, err)
-	require.NotEmpty(t, overlays)
-	var fast *workflow.ContractProfileOverlayDefinition
-	for i := range overlays {
-		if overlays[i].ID == "subdomain_discovery_fast" {
-			fast = &overlays[i]
-			break
-		}
-	}
-	require.NotNil(t, fast)
-	recon := fast.Configuration["recon"].(map[string]any)
-	tools := recon["tools"].(map[string]any)
-	subfinder := tools["subfinder"].(map[string]any)
-	require.Equal(t, 30, subfinder["threads-cli"])
 }
 
 func workflowDefForTest() workflow.ContractDefinition {

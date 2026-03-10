@@ -58,6 +58,7 @@ func TestRunExecuteErrorStillRunsCleanup(t *testing.T) {
 	origSyncLogger := syncLogger
 	origNewClient := newClient
 	origGetWorkflow := getWorkflow
+	origResolveExecutorBinding := resolveExecutorBinding
 	origDecodeWorkflowConfig := decodeWorkflowConfig
 	origLogger := pkg.Logger
 	t.Cleanup(func() {
@@ -66,6 +67,7 @@ func TestRunExecuteErrorStillRunsCleanup(t *testing.T) {
 		syncLogger = origSyncLogger
 		newClient = origNewClient
 		getWorkflow = origGetWorkflow
+		resolveExecutorBinding = origResolveExecutorBinding
 		decodeWorkflowConfig = origDecodeWorkflowConfig
 		pkg.Logger = origLogger
 	})
@@ -98,6 +100,9 @@ func TestRunExecuteErrorStillRunsCleanup(t *testing.T) {
 	getWorkflow = func(name, workDir string) workflow.Workflow {
 		return &fakeWorkflow{execErr: errors.New("boom")}
 	}
+	resolveExecutorBinding = func(workflowID string) (workflow.ContractExecutorBinding, error) {
+		return workflow.ContractExecutorBinding{Type: "builtin", Ref: "fake-workflow"}, nil
+	}
 	decodeWorkflowConfig = func(name string, scanConfig map[string]any) (any, error) {
 		return nil, nil
 	}
@@ -114,5 +119,42 @@ func TestRunExecuteErrorStillRunsCleanup(t *testing.T) {
 	}
 	if !syncCalled {
 		t.Fatalf("expected logger sync to run on failure")
+	}
+}
+
+func TestRunRejectsUnsupportedExecutorBinding(t *testing.T) {
+	origLoadConfig := loadConfig
+	origInitLogger := initLogger
+	origSyncLogger := syncLogger
+	origNewClient := newClient
+	origResolveExecutorBinding := resolveExecutorBinding
+	origLogger := pkg.Logger
+	t.Cleanup(func() {
+		loadConfig = origLoadConfig
+		initLogger = origInitLogger
+		syncLogger = origSyncLogger
+		newClient = origNewClient
+		resolveExecutorBinding = origResolveExecutorBinding
+		pkg.Logger = origLogger
+	})
+
+	cfg := &config.Config{TaskID: 101, AgentSocket: "/tmp/agent.sock", TaskToken: "task-token", ScanID: 11, TargetID: 22, TargetName: "example.com", TargetType: "domain", WorkflowID: "fake-workflow", WorkspaceDir: "/tmp/workspace", Config: map[string]any{"a": "b"}, LogLevel: "info"}
+	loadConfig = func() (*config.Config, error) { return cfg, nil }
+	initLogger = func(level string) error { pkg.Logger = zap.NewNop(); return nil }
+	syncLogger = func() {}
+	newClient = func(socketPath, taskToken string, taskID int) (runtimeClient, error) {
+		return &fakeRuntimeClient{}, nil
+	}
+	resolveExecutorBinding = func(workflowID string) (workflow.ContractExecutorBinding, error) {
+		return workflow.ContractExecutorBinding{Type: "plugin", Ref: "x"}, nil
+	}
+	decodeWorkflowConfig = func(name string, scanConfig map[string]any) (any, error) { return nil, nil }
+
+	err := run(context.Background())
+	if err == nil {
+		t.Fatalf("expected unsupported executor error")
+	}
+	if !strings.Contains(err.Error(), "unsupported executor type") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

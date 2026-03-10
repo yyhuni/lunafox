@@ -66,6 +66,28 @@
 - Run: `cd server && go test ./internal/workflow/manifest ./internal/modules/catalog/... -count=1`
 - Expected: 测试通过
 
+### Task 5: 收缩 manifest 顶层字段
+
+**Files:**
+- Modify: `server/internal/workflow/manifest/types.go`
+- Modify: `server/internal/workflow/manifest/validate.go`
+- Modify: `server/internal/workflow/defaulting/defaulting.go`
+- Modify: `worker/cmd/workflow-contract-gen/manifest.go`
+- Test: `server/internal/workflow/manifest/manifests_test.go`
+- Test: `worker/cmd/workflow-contract-gen/main_test.go`
+
+**Step 1: 红灯验证**
+- 先让测试断言 manifest 不再包含 `configSchemaId` / `supportedTargetTypeIds` / `defaultProfileId`
+- 运行 `go test` 验证旧字段仍存在时测试失败
+
+**Step 2: 最小实现**
+- 删除 manifest 三个顶层字段
+- defaulting 直接按 `workflowId` 读取默认 profile
+- 重生成 server manifest/profile/docs
+
+**Step 3: 绿灯验证**
+- 运行 worker/server 相关回归，确认生成链路与默认值归一化通过
+
 ### Task 4: 全量回归
 
 **Files:**

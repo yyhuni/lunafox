@@ -17,6 +17,7 @@ func TestRunLogsSemanticStartupFields(t *testing.T) {
 	origSyncLogger := syncLogger
 	origNewClient := newClient
 	origGetWorkflow := getWorkflow
+	origResolveExecutorBinding := resolveExecutorBinding
 	origDecodeWorkflowConfig := decodeWorkflowConfig
 	origLogger := pkg.Logger
 	t.Cleanup(func() {
@@ -25,6 +26,7 @@ func TestRunLogsSemanticStartupFields(t *testing.T) {
 		syncLogger = origSyncLogger
 		newClient = origNewClient
 		getWorkflow = origGetWorkflow
+		resolveExecutorBinding = origResolveExecutorBinding
 		decodeWorkflowConfig = origDecodeWorkflowConfig
 		pkg.Logger = origLogger
 	})
@@ -58,6 +60,9 @@ func TestRunLogsSemanticStartupFields(t *testing.T) {
 	}
 	getWorkflow = func(name, workDir string) workflow.Workflow {
 		return &fakeWorkflow{}
+	}
+	resolveExecutorBinding = func(workflowID string) (workflow.ContractExecutorBinding, error) {
+		return workflow.ContractExecutorBinding{Type: "builtin", Ref: "fake-workflow"}, nil
 	}
 	decodeWorkflowConfig = func(name string, scanConfig map[string]any) (any, error) {
 		return nil, nil

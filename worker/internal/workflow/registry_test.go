@@ -42,6 +42,10 @@ func validContract(name string) ContractDefinition {
 		DisplayName: name,
 		Description: "test contract",
 		TargetTypes: []string{"domain"},
+		Executor: ContractExecutorBinding{
+			Type: "builtin",
+			Ref:  name,
+		},
 		Stages: []ContractStageDefinition{
 			{
 				ID:          "stage-1",
@@ -66,6 +70,31 @@ func validContract(name string) ContractDefinition {
 			},
 		},
 	}
+}
+
+func TestRegisterMissingExecutorBindingPanics(t *testing.T) {
+	original := snapshotRegistry()
+	restoreRegistry(make(map[string]registration))
+	t.Cleanup(func() { restoreRegistry(original) })
+
+	require.Panics(t, func() {
+		Register(Registration{
+			Name: "broken",
+			Factory: func(workDir string) Workflow {
+				return &mockWorkflow{name: "broken", workDir: workDir}
+			},
+			Contract: ContractDefinition{
+				WorkflowID:  "broken",
+				DisplayName: "broken",
+				Stages: []ContractStageDefinition{{
+					ID:       "stage-1",
+					Name:     "Stage 1",
+					Required: true,
+					Tools:    []ContractToolDefinition{{ID: "tool-1"}},
+				}},
+			},
+		})
+	})
 }
 
 func TestRegisterGetListExists(t *testing.T) {
@@ -182,6 +211,25 @@ func TestGetContractUnknownWorkflow(t *testing.T) {
 	_, err := GetContract("missing-workflow")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not registered")
+}
+
+func TestResolveExecutorBindingReturnsBuiltinBinding(t *testing.T) {
+	original := snapshotRegistry()
+	restoreRegistry(make(map[string]registration))
+	t.Cleanup(func() { restoreRegistry(original) })
+
+	Register(Registration{
+		Name: "bound-workflow",
+		Factory: func(workDir string) Workflow {
+			return &mockWorkflow{name: "bound-workflow", workDir: workDir}
+		},
+		Contract: validContract("bound-workflow"),
+	})
+
+	binding, err := ResolveExecutorBinding("bound-workflow")
+	require.NoError(t, err)
+	assert.Equal(t, "builtin", binding.Type)
+	assert.Equal(t, "bound-workflow", binding.Ref)
 }
 
 func TestRegisterMissingContractPanics(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -74,7 +75,11 @@ func validateExplicitConfig(config map[string]any) error {
 }
 
 func loadGeneratedSchemaBytesForTest() ([]byte, error) {
-	file := fmt.Sprintf("generated/%s.schema.json", Name)
+	root, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("get working directory: %w", err)
+	}
+	file := filepath.Clean(filepath.Join(root, "..", "..", "..", "..", "server", "internal", "workflow", "schema", fmt.Sprintf("%s.schema.json", Name)))
 	b, err := os.ReadFile(file)
 	if err != nil {
 		return nil, fmt.Errorf("read generated schema %s: %w", file, err)
