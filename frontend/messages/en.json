@@ -317,8 +317,9 @@
     "organization": "Organization",
     "target": "Targets",
     "vulnerabilities": "Vulnerabilities",
-    "scan": "Scan",
+    "scan": "Scans",
     "scanHistory": "Scan History",
+    "scheduling": "Scheduling",
     "scheduledScan": "Scheduled Scan",
     "scanWorkflow": "Scan Workflow",
     "tools": "Tools",
@@ -791,6 +792,9 @@
       "allStatus": "All Status",
       "loadFailed": "Failed to load scan history",
       "retry": "Retry",
+      "runtimeDrawer": {
+        "open": "Runtime Details"
+      },
       "taskId": "Scan Task ID: {id}",
       "breadcrumb": {
         "scanHistory": "Scan History"

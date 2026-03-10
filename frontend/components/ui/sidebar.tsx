@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, VariantProps } from "class-variance-authority"
-import { PanelLeftIcon } from "@/components/icons"
+import { PanelLeftIcon, ChevronLeft } from "@/components/icons"
 import { useTranslations } from "next-intl"
 
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -282,11 +282,13 @@ function SidebarTrigger({
 }
 
 function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
-  const { toggleSidebar } = useSidebar()
+  const { toggleSidebar, state } = useSidebar()
   const t = useTranslations("common.ui")
+  const isCollapsed = state === "collapsed"
 
   return (
-    <button type="button"
+    <button
+      type="button"
       data-sidebar="rail"
       data-slot="sidebar-rail"
       aria-label={t("toggleSidebar")}
@@ -294,16 +296,36 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
       onClick={toggleSidebar}
       title={t("toggleSidebar")}
       className={cn(
-        "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-[left,right,transform,background-color] ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",
-        "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
-        "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
-        "hover:group-data-[collapsible=offcanvas]:bg-sidebar group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full",
-        "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
-        "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
+        // Base positioning: fixed on right edge of sidebar, vertically centered
+        // group/rail creates a localized hover zone just for the edge
+        "absolute inset-y-0 z-20 hidden -right-3 w-6 sm:flex items-center justify-center group/rail",
+        // Cursor based on direction
+        "cursor-pointer",
         className
       )}
       {...props}
-    />
+    >
+      {/* The visible handle pill - turned into a small circle */}
+      <span
+        className={cn(
+          "flex items-center justify-center",
+          "size-6 rounded-full",
+          "bg-sidebar border border-sidebar-border shadow-sm",
+          // Only becomes visible when user hovers the specific edge zone, NOT the whole sidebar
+          "opacity-0 group-hover/rail:opacity-100",
+          "transition-all duration-200 ease-in-out",
+          "group-hover/rail:bg-sidebar-accent group-hover/rail:text-sidebar-accent-foreground group-hover/rail:shadow-md hover:scale-110",
+          "text-sidebar-foreground/60",
+        )}
+      >
+        <ChevronLeft
+          className={cn(
+            "size-3.5 transition-transform duration-200",
+            isCollapsed && "rotate-180",
+          )}
+        />
+      </span>
+    </button>
   )
 }
 
@@ -575,7 +597,7 @@ function SidebarMenuAction({
         "peer-data-[size=lg]/menu-button:top-2.5",
         "group-data-[collapsible=icon]:hidden",
         showOnHover &&
-          "peer-data-[active=true]/menu-button:text-sidebar-accent-foreground group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 md:opacity-0",
+        "peer-data-[active=true]/menu-button:text-sidebar-accent-foreground group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 md:opacity-0",
         className
       )}
       {...props}

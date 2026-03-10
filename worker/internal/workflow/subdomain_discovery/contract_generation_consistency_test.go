@@ -17,41 +17,35 @@ type generatedSchemaIdentity struct {
 }
 
 type generatedManifestIdentity struct {
-	WorkflowID       string `json:"workflowId"`
-	ConfigSchemaID   string `json:"configSchemaId"`
-	DefaultProfileID string `json:"defaultProfileId"`
+	WorkflowID string `json:"workflowId"`
 }
 
 type generatedProfileIdentity struct {
-	ID string `yaml:"id"`
+	ID            string                 `yaml:"id"`
+	Name          string                 `yaml:"name"`
+	Description   string                 `yaml:"description"`
+	Configuration map[string]interface{} `yaml:"configuration"`
 }
 
 func TestContractDefinitionMatchesGeneratedArtifactsAndDocs(t *testing.T) {
 	definition := GetContractDefinition()
 	expectedSchemaID := fmt.Sprintf("lunafox://schemas/workflows/%s", definition.WorkflowID)
 
-	workerSchema := loadGeneratedSchema(t, fmt.Sprintf("generated/%s.schema.json", definition.WorkflowID))
-	require.Equal(t, expectedSchemaID, workerSchema.ID)
-	_, hasAPIVersion := workerSchema.Properties["apiVersion"]
-	_, hasSchemaVersion := workerSchema.Properties["schemaVersion"]
-	require.False(t, hasAPIVersion)
-	require.False(t, hasSchemaVersion)
-
-	workerManifest := loadGeneratedManifest(t, fmt.Sprintf("generated/%s.manifest.json", definition.WorkflowID))
-	require.Equal(t, definition.WorkflowID, workerManifest.WorkflowID)
-	require.Equal(t, expectedSchemaID, workerManifest.ConfigSchemaID)
-	require.Equal(t, definition.DefaultProfile.ID, workerManifest.DefaultProfileID)
-
 	root := repoRootFromWorkflowDir(t)
 	serverSchema := loadGeneratedSchema(t, filepath.Join(root, "server", "internal", "workflow", "schema", fmt.Sprintf("%s.schema.json", definition.WorkflowID)))
 	require.Equal(t, expectedSchemaID, serverSchema.ID)
+	_, hasAPIVersion := serverSchema.Properties["apiVersion"]
+	_, hasSchemaVersion := serverSchema.Properties["schemaVersion"]
+	require.False(t, hasAPIVersion)
+	require.False(t, hasSchemaVersion)
 
 	serverManifest := loadGeneratedManifest(t, filepath.Join(root, "server", "internal", "workflow", "manifest", fmt.Sprintf("%s.manifest.json", definition.WorkflowID)))
-	require.Equal(t, workerManifest, serverManifest)
+	require.Equal(t, definition.WorkflowID, serverManifest.WorkflowID)
 
 	profile := loadGeneratedProfile(t, filepath.Join(root, "server", "internal", "workflow", "profile", "profiles", fmt.Sprintf("%s.yaml", definition.WorkflowID)))
-	require.Equal(t, definition.DefaultProfile.ID, profile.ID)
-
+	require.Equal(t, definition.WorkflowID, profile.ID)
+	require.Equal(t, definition.DisplayName, profile.Name)
+	require.Equal(t, definition.Description, profile.Description)
 	docsPath := filepath.Join(root, "docs", "config-reference", definition.WorkflowID+".md")
 	docsBytes, err := os.ReadFile(docsPath)
 	require.NoError(t, err)

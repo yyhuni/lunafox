@@ -30,6 +30,7 @@ interface ScanHistoryDataTableProps {
   pageSizeOptions?: number[]
   statusFilter?: ScanStatus | "all"
   onStatusFilterChange?: (status: ScanStatus | "all") => void
+  onRowClick?: (scan: ScanRecord) => void
 }
 
 /**
@@ -56,6 +57,7 @@ export function ScanHistoryDataTable({
   pageSizeOptions,
   statusFilter = "all",
   onStatusFilterChange,
+  onRowClick,
 }: ScanHistoryDataTableProps) {
   const state = useScanHistoryDataTableState({ searchValue, onSearch })
   const toolbar = (
@@ -84,6 +86,7 @@ export function ScanHistoryDataTable({
       behavior={{
         enableAutoColumnSizing: true,
         expandColumnIds: ["target", "cachedStats", "workflowNames"],
+        onRowClick: onRowClick ? (row) => onRowClick(row as ScanRecord) : undefined,
       }}
       actions={{
         onBulkDelete,

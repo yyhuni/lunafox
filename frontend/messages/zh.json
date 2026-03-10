@@ -333,6 +333,7 @@
     "vulnerabilities": "漏洞",
     "scan": "扫描",
     "scanHistory": "扫描历史",
+    "scheduling": "调度",
     "scheduledScan": "定时扫描",
     "scanWorkflow": "扫描工作流",
     "tools": "工具",
@@ -799,6 +800,9 @@
       "allStatus": "全部状态",
       "loadFailed": "加载扫描历史失败",
       "retry": "重试",
+      "runtimeDrawer": {
+        "open": "运行详情"
+      },
       "taskId": "扫描任务 ID：{id}",
       "breadcrumb": {
         "scanHistory": "扫描历史"

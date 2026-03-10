@@ -20,6 +20,7 @@ import {
   IconKey, // API Key icon
   IconBan, // Blacklist icon
   IconInfoCircle, // About icon
+  IconCalendarEvent, // Scheduling icon
 } from "@/components/icons"
 // Import internationalization hook
 import { useTranslations } from 'next-intl'
@@ -41,7 +42,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  SidebarTrigger,
+  SidebarRail,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -115,13 +116,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       },
       {
         title: t('scan'),
-        url: "/scan/",
+        url: "/scan/history/",
         icon: IconRadar,
+      },
+      {
+        title: t('scheduling'),
+        url: "/scan/scheduled/",
+        icon: IconCalendarEvent,
         items: [
-          {
-            title: t('scanHistory'),
-            url: "/scan/history/",
-          },
           {
             title: t('scheduledScan'),
             url: "/scan/scheduled/",
@@ -248,11 +250,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         {/* Main navigation menu */}
         <SidebarGroup>
-          <div className="flex h-8 items-center justify-between gap-2 px-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:gap-0">
-            <span className="text-sidebar-foreground/70 ring-sidebar-ring text-xs font-medium transition-[max-width,opacity] duration-200 ease-linear whitespace-nowrap overflow-hidden max-w-full group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0">
+          <div className="flex h-8 items-center px-2 group-data-[collapsible=icon]:px-0">
+            <span className="text-sidebar-foreground/70 text-xs font-medium transition-[max-width,opacity] duration-200 ease-linear whitespace-nowrap overflow-hidden max-w-full group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0">
               {t('mainFeatures')}
             </span>
-            <SidebarTrigger className="size-8 text-muted-foreground hover:text-foreground [&>svg]:size-4" />
           </div>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -388,6 +389,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <NavUser user={user} />
       </SidebarFooter>
+
+      {/* Edge handle for collapse/expand */}
+      <SidebarRail />
     </Sidebar>
   )
 }

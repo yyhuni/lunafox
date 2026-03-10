@@ -66,6 +66,7 @@ export function ScanHistoryListTable({
       hidePagination={state.hidePagination}
       statusFilter={state.statusFilter}
       onStatusFilterChange={state.handleStatusFilterChange}
+      onRowClick={state.handleViewRuntimeDetail}
     />
   )
 }

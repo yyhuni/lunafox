@@ -54,29 +54,16 @@ temp/
 
 # AI Assistant directories
 codex/
-openspec/
+# Track all OpenSpec artifacts
+!openspec/
+!openspec/**
 specs/*
 !specs/features/
 specs/features/*
 !specs/features/002-database-health-standardization/
 !specs/features/002-database-health-standardization/**
-# Track selected OpenSpec change artifacts
-!openspec/
-openspec/*
-!openspec/changes/
-openspec/changes/*
-!openspec/changes/update-agent-install-local-only-endpoint-profile/
-!openspec/changes/update-agent-install-local-only-endpoint-profile/**
-!openspec/changes/update-runtime-auth-hardening/
-!openspec/changes/update-runtime-auth-hardening/**
-!openspec/changes/refactor-worker-workflow-code-first/
-!openspec/changes/refactor-worker-workflow-code-first/**
-!openspec/changes/refactor-runtime-compatibility-worker-capability/
-!openspec/changes/refactor-runtime-compatibility-worker-capability/**
-!openspec/changes/refactor-workflow-preset-generated-profiles/
-!openspec/changes/refactor-workflow-preset-generated-profiles/**
-!openspec/changes/refactor-workflow-internal-structure/
-!openspec/changes/refactor-workflow-internal-structure/**
+!specs/features/005-external-workflow-bundle-runtime/
+!specs/features/005-external-workflow-bundle-runtime/**
 AGENTS.md
 WARP.md
 .opencode/

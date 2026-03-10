@@ -96,6 +96,7 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
   const enableAutoColumnSizing = behavior?.enableAutoColumnSizing ?? false
   const expandColumnIds = behavior?.expandColumnIds
   const expandColumnIdSet = React.useMemo(() => new Set(expandColumnIds ?? []), [expandColumnIds])
+  const onRowClick = behavior?.onRowClick
 
   // Use table state hook
   const { table, columnSizeVars } = useTableState({
@@ -264,7 +265,7 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
-                      className="group"
+                      className={cn("group", onRowClick && "cursor-pointer")}
                       style={{
                         position: 'absolute',
                         top: 0,
@@ -277,6 +278,10 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
                         <TableCell
                           key={cell.id}
                           style={getCellWidthStyle(cell.column.id)}
+                          onClick={onRowClick && cell.column.id !== 'select' && cell.column.id !== 'actions'
+                            ? () => onRowClick(row.original)
+                            : undefined
+                          }
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
@@ -290,12 +295,16 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
-                    className="group"
+                    className={cn("group", onRowClick && "cursor-pointer")}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell
                         key={cell.id}
                         style={getCellWidthStyle(cell.column.id)}
+                        onClick={onRowClick && cell.column.id !== 'select' && cell.column.id !== 'actions'
+                          ? () => onRowClick(row.original)
+                          : undefined
+                        }
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>

@@ -1,0 +1,13 @@
+## 1. Implementation
+- [ ] 1.1 为 contract / manifest 命名统一补充失败测试
+- [ ] 1.2 重命名 workflow contract 类型与字段
+- [ ] 1.3 重命名 registration 层类型与字段
+- [ ] 1.4 重命名 contract 相关函数与方法
+- [ ] 1.5 调整 generator 输出的新 manifest 字段命名与 `defaultProfileId` 引用
+- [ ] 1.6 调整 server manifest metadata 解析逻辑
+- [ ] 1.7 拆分 workflow manifest 与 activity template metadata 模型
+- [ ] 1.8 更新 `workflow_metadata` 相关文档与测试，避免继续承担 manifest 语义
+- [ ] 1.9 同步改写 `add-workflow-config-defaulting` 的命名基线文档
+- [ ] 1.10 同步改写 `docs/plans/2026-03-06-workflow-config-defaulting.md` 与 `docs/plans/2026-03-06-workflow-config-defaulting-design.md`
+- [ ] 1.11 重生成 manifest / schema / profile / docs 产物
+- [ ] 1.12 运行 worker / server 相关测试与 OpenSpec 校验

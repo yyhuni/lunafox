@@ -142,6 +142,9 @@ export interface UnifiedDataTableBehaviorConfig {
 
   // Let specific columns absorb extra horizontal space
   expandColumnIds?: string[]
+
+  // Row click callback
+  onRowClick?: (row: unknown) => void
 }
 
 /**
@@ -199,13 +202,13 @@ export interface DataTableToolbarProps {
   isSearching?: boolean
   filterFields?: FilterField[]
   filterExamples?: string[]
-  
+
   // Left side custom content
   leftContent?: ReactNode
-  
+
   // Right side actions
   children?: ReactNode
-  
+
   // Styling
   className?: string
 }
