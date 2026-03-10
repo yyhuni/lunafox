@@ -5,6 +5,12 @@ type Workflow struct {
 	WorkflowID  string
 	DisplayName string
 	Description string
+	Executor    WorkflowExecutorBinding
+}
+
+type WorkflowExecutorBinding struct {
+	Type string
+	Ref  string
 }
 
 // WorkflowProfile represents a read-only workflow profile template.

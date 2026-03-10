@@ -3,8 +3,6 @@
 <!-- Source: worker/internal/workflow/subdomain_discovery/contract_definition.go -->
 
 - Workflow: `subdomain_discovery`
-- Target Types: `domain`
-
 ## Stages
 
 ### `recon` - Reconnaissance

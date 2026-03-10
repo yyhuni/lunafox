@@ -102,3 +102,25 @@
 
 **Step 3: 收尾**
 - 汇总已删除项、保留项与下一轮可继续收缩的字段（如 `configSchemaId` / `supportedTargetTypeIds` / `defaultProfileId`）
+
+### Task 6: 收缩 worker contract 顶层元数据
+
+**Files:**
+- Modify: `worker/internal/workflow/contract_types.go`
+- Modify: `worker/internal/workflow/subdomain_discovery/contract_definition.go`
+- Modify: `worker/cmd/workflow-contract-gen/main.go`
+- Test: `worker/internal/workflow/registry_test.go`
+- Test: `worker/internal/workflow/subdomain_discovery/contract_generation_consistency_test.go`
+
+**Step 1: 红灯验证**
+- 增加断言：`ContractDefinition` 不再暴露 `DefaultProfile` 字段
+- 增加断言：生成 profile 的 `name/description` 直接继承 workflow 顶层 `DisplayName/Description`
+
+**Step 2: 最小实现**
+- 删除 `DefaultProfile` / `ContractProfileDefinition`
+- 删除仅剩文档用途的 `TargetTypes`
+- 生成 profile 直接使用 workflow 顶层展示元数据
+
+**Step 3: 绿灯验证**
+- 重生成 server profile/docs
+- 运行 worker/server 相关回归

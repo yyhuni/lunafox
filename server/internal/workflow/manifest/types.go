@@ -3,14 +3,17 @@ package workflowmanifest
 import "regexp"
 
 type Manifest struct {
-	ManifestVersion        string          `json:"manifestVersion"`
-	WorkflowID             string          `json:"workflowId"`
-	DisplayName            string          `json:"displayName"`
-	Description            string          `json:"description,omitempty"`
-	ConfigSchemaID         string          `json:"configSchemaId"`
-	SupportedTargetTypeIDs []string        `json:"supportedTargetTypeIds"`
-	DefaultProfileID       string          `json:"defaultProfileId"`
-	Stages                 []ManifestStage `json:"stages"`
+	ManifestVersion string           `json:"manifestVersion"`
+	WorkflowID      string           `json:"workflowId"`
+	DisplayName     string           `json:"displayName"`
+	Description     string           `json:"description,omitempty"`
+	Executor        ManifestExecutor `json:"executor"`
+	Stages          []ManifestStage  `json:"stages"`
+}
+
+type ManifestExecutor struct {
+	Type string `json:"type"`
+	Ref  string `json:"ref"`
 }
 
 type ManifestStage struct {
@@ -30,23 +33,10 @@ type ManifestTool struct {
 }
 
 type ManifestParam struct {
-	ConfigKey           string   `json:"configKey"`
-	ValueType           string   `json:"valueType"`
-	Description         string   `json:"description,omitempty"`
-	RequiredWhenEnabled bool     `json:"requiredWhenEnabled"`
-	DefaultValue        any      `json:"defaultValue,omitempty"`
-	Minimum             *int     `json:"minimum,omitempty"`
-	Maximum             *int     `json:"maximum,omitempty"`
-	MinLength           *int     `json:"minLength,omitempty"`
-	MaxLength           *int     `json:"maxLength,omitempty"`
-	Pattern             string   `json:"pattern,omitempty"`
-	Enum                []string `json:"enum,omitempty"`
-}
-
-type WorkflowMetadata struct {
-	WorkflowID  string
-	DisplayName string
-	Description string
+	ConfigKey           string `json:"configKey"`
+	ValueType           string `json:"valueType"`
+	Description         string `json:"description,omitempty"`
+	RequiredWhenEnabled bool   `json:"requiredWhenEnabled"`
 }
 
 var (

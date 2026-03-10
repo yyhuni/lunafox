@@ -119,11 +119,6 @@ func TestBuildProfileYAMLFromContractDefaults(t *testing.T) {
 		WorkflowID:  "demo",
 		DisplayName: "Demo Workflow",
 		Description: "Demo workflow description",
-		DefaultProfile: workflow.ContractProfileDefinition{
-			ID:          "demo_default",
-			Name:        "Demo 默认配置",
-			Description: "Demo 默认 profile",
-		},
 		Stages: []workflow.ContractStageDefinition{
 			{
 				ID:          "recon",
@@ -150,9 +145,9 @@ func TestBuildProfileYAMLFromContractDefaults(t *testing.T) {
 	payload, err := buildProfileYAML(def, schemaJSON)
 	require.NoError(t, err)
 	text := string(payload)
-	require.Contains(t, text, "id: demo_default")
-	require.Contains(t, text, "name: Demo 默认配置")
-	require.Contains(t, text, "description: Demo 默认 profile")
+	require.Contains(t, text, "id: demo")
+	require.Contains(t, text, "name: Demo Workflow")
+	require.Contains(t, text, "description: Demo workflow description")
 	require.Contains(t, text, "demo:")
 	require.Contains(t, text, "threads-cli: 20")
 	require.Contains(t, text, "wordlist-runtime: top1m.txt")

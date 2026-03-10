@@ -37,16 +37,6 @@ func ValidateConfiguration(configuration any) error {
 	return nil
 }
 
-// ExtractWorkflowIDs returns top-level workflow keys in stable order.
-// It only extracts IDs and does not validate whether they are known workflows.
-func ExtractWorkflowIDs(configuration any) ([]string, error) {
-	root, err := normalizeConfiguration(configuration)
-	if err != nil {
-		return nil, err
-	}
-	return extractWorkflowIDsFromConfig(root), nil
-}
-
 // ValidateAndExtractWorkflowIDs returns top-level workflow keys in stable order.
 // Unknown keys are rejected to keep profile contracts strict.
 func ValidateAndExtractWorkflowIDs(configuration any) ([]string, error) {

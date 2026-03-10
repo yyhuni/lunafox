@@ -3,11 +3,9 @@ package workflowmanifest
 import (
 	"fmt"
 	"strings"
-
-	workflowprofile "github.com/yyhuni/lunafox/server/internal/workflow/profile"
 )
 
-func validateManifest(manifest Manifest, knownProfileIDs map[string]struct{}) error {
+func validateManifest(manifest Manifest) error {
 	workflowID := strings.TrimSpace(manifest.WorkflowID)
 	if workflowID == "" {
 		return fmt.Errorf("workflowId is required")
@@ -21,34 +19,18 @@ func validateManifest(manifest Manifest, knownProfileIDs map[string]struct{}) er
 	if strings.TrimSpace(manifest.DisplayName) == "" {
 		return fmt.Errorf("displayName is required")
 	}
-
-	expectedSchemaID := fmt.Sprintf("lunafox://schemas/workflows/%s", workflowID)
-	if strings.TrimSpace(manifest.ConfigSchemaID) != expectedSchemaID {
-		return fmt.Errorf("configSchemaId must be %q", expectedSchemaID)
+	if strings.TrimSpace(manifest.Executor.Type) == "" {
+		return fmt.Errorf("executor.type is required")
 	}
-	if len(manifest.SupportedTargetTypeIDs) == 0 {
-		return fmt.Errorf("supportedTargetTypeIds must not be empty")
+	if strings.TrimSpace(manifest.Executor.Ref) == "" {
+		return fmt.Errorf("executor.ref is required")
 	}
-
-	targetTypes := map[string]struct{}{}
-	for _, targetTypeID := range manifest.SupportedTargetTypeIDs {
-		targetTypeID = strings.TrimSpace(targetTypeID)
-		if targetTypeID == "" {
-			return fmt.Errorf("supportedTargetTypeIds must not contain empty values")
-		}
-		if _, exists := targetTypes[targetTypeID]; exists {
-			return fmt.Errorf("duplicate supportedTargetTypeId %q", targetTypeID)
-		}
-		targetTypes[targetTypeID] = struct{}{}
+	switch strings.TrimSpace(manifest.Executor.Type) {
+	case "builtin", "plugin":
+	default:
+		return fmt.Errorf("unsupported executor.type %q", manifest.Executor.Type)
 	}
 
-	defaultProfileID := strings.TrimSpace(manifest.DefaultProfileID)
-	if defaultProfileID == "" {
-		return fmt.Errorf("defaultProfileId is required")
-	}
-	if _, exists := knownProfileIDs[defaultProfileID]; !exists {
-		return fmt.Errorf("defaultProfileId %q not found", defaultProfileID)
-	}
 	if len(manifest.Stages) == 0 {
 		return fmt.Errorf("stages must not be empty")
 	}
@@ -126,24 +108,6 @@ func validateManifestList(items []Manifest) error {
 		seen[workflowID] = struct{}{}
 	}
 	return nil
-}
-
-func loadKnownProfileIDs() (map[string]struct{}, error) {
-	loader, err := workflowprofile.NewLoader()
-	if err != nil {
-		return nil, fmt.Errorf("load workflow profiles: %w", err)
-	}
-
-	known := make(map[string]struct{}, len(loader.List()))
-	for _, profile := range loader.List() {
-		profileID := strings.TrimSpace(profile.ID)
-		if profileID == "" {
-			continue
-		}
-		known[profileID] = struct{}{}
-	}
-
-	return known, nil
 }
 
 func validateWorkflowID(workflowID string) error {

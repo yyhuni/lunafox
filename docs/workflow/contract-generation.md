@@ -43,6 +43,6 @@ make workflow-contracts-gen-all \
 - schema 文件名：`<workflow>.schema.json`
 - schema `$id`：`lunafox://schemas/workflows/<workflow>`
 - profile 文件名：`<workflow>.yaml`
-- profile 来源：contract 中的 `DefaultProfile` + 参数 `Default`
+- profile 来源：workflow 的 `DisplayName` / `Description` + 参数 `Default`
 - profile `configuration`：直接生成 YAML mapping，不再写入 block-scalar 形式的二次 YAML 字符串
 - typed config：`config_typed_generated.go`

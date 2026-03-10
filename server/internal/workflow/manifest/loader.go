@@ -18,49 +18,27 @@ func manifestFilename(workflowID string) string {
 }
 
 func ListWorkflows() ([]string, error) {
-	items, err := ListWorkflowMetadata()
-	if err != nil {
-		return nil, err
-	}
-
-	workflows := make([]string, 0, len(items))
-	for _, item := range items {
-		if strings.TrimSpace(item.WorkflowID) == "" {
-			continue
-		}
-		workflows = append(workflows, item.WorkflowID)
-	}
-
-	return workflows, nil
-}
-
-func ListWorkflowMetadata() ([]WorkflowMetadata, error) {
 	manifests, err := ListManifests()
 	if err != nil {
 		return nil, err
 	}
 
-	metadata := make([]WorkflowMetadata, 0, len(manifests))
+	workflows := make([]string, 0, len(manifests))
 	for _, manifest := range manifests {
-		metadata = append(metadata, WorkflowMetadata{
-			WorkflowID:  manifest.WorkflowID,
-			DisplayName: manifest.DisplayName,
-			Description: manifest.Description,
-		})
+		workflowID := strings.TrimSpace(manifest.WorkflowID)
+		if workflowID == "" {
+			continue
+		}
+		workflows = append(workflows, workflowID)
 	}
 
-	return metadata, nil
+	return workflows, nil
 }
 
 func ListManifests() ([]Manifest, error) {
 	entries, err := manifestsFS.ReadDir(".")
 	if err != nil {
 		return nil, fmt.Errorf("read manifests directory: %w", err)
-	}
-
-	knownProfileIDs, err := loadKnownProfileIDs()
-	if err != nil {
-		return nil, err
 	}
 
 	manifests := make([]Manifest, 0, len(entries))
@@ -82,7 +60,7 @@ func ListManifests() ([]Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err := validateManifest(manifest, knownProfileIDs); err != nil {
+		if err := validateManifest(manifest); err != nil {
 			return nil, fmt.Errorf("validate manifest %q: %w", name, err)
 		}
 		manifests = append(manifests, manifest)
@@ -105,11 +83,6 @@ func GetManifest(workflowID string) (Manifest, error) {
 		return Manifest{}, fmt.Errorf("workflowId is required")
 	}
 
-	knownProfileIDs, err := loadKnownProfileIDs()
-	if err != nil {
-		return Manifest{}, err
-	}
-
 	filename := manifestFilename(workflowID)
 	payload, err := manifestsFS.ReadFile(filename)
 	if err != nil {
@@ -120,7 +93,7 @@ func GetManifest(workflowID string) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, err
 	}
-	if err := validateManifest(manifest, knownProfileIDs); err != nil {
+	if err := validateManifest(manifest); err != nil {
 		return Manifest{}, err
 	}
 

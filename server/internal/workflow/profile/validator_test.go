@@ -115,22 +115,24 @@ func TestValidateConfiguration_UnknownWorkflow(t *testing.T) {
 }
 
 func TestExtractWorkflowIDsFromObject_OnlyExtracts(t *testing.T) {
-	ids, err := extractWorkflowIDs(validSubdomainDiscoveryConfig())
+	root, err := normalizeConfiguration(validSubdomainDiscoveryConfig())
 	if err != nil {
-		t.Fatalf("extractWorkflowIDs() returned error: %v", err)
+		t.Fatalf("normalizeConfiguration() returned error: %v", err)
 	}
+	ids := extractWorkflowIDsFromConfig(root)
 	if len(ids) != 1 || ids[0] != "subdomain_discovery" {
 		t.Fatalf("expected [subdomain_discovery], got %v", ids)
 	}
 }
 
 func TestExtractWorkflowIDsFromObject_DoesNotValidateKnownWorkflowSet(t *testing.T) {
-	ids, err := extractWorkflowIDs(map[string]any{
+	root, err := normalizeConfiguration(map[string]any{
 		"unknown_workflow": map[string]any{"enabled": true},
 	})
 	if err != nil {
-		t.Fatalf("extractWorkflowIDs() should only extract ids, got: %v", err)
+		t.Fatalf("normalizeConfiguration() should succeed, got: %v", err)
 	}
+	ids := extractWorkflowIDsFromConfig(root)
 	if len(ids) != 1 || ids[0] != "unknown_workflow" {
 		t.Fatalf("expected [unknown_workflow], got %v", ids)
 	}

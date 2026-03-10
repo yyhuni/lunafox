@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -41,7 +42,6 @@ func validContract(name string) ContractDefinition {
 		WorkflowID:  name,
 		DisplayName: name,
 		Description: "test contract",
-		TargetTypes: []string{"domain"},
 		Executor: ContractExecutorBinding{
 			Type: "builtin",
 			Ref:  name,
@@ -70,6 +70,11 @@ func validContract(name string) ContractDefinition {
 			},
 		},
 	}
+}
+
+func TestContractDefinitionDoesNotExposeDefaultProfileField(t *testing.T) {
+	_, exists := reflect.TypeOf(ContractDefinition{}).FieldByName("DefaultProfile")
+	require.False(t, exists, "ContractDefinition should no longer expose DefaultProfile")
 }
 
 func TestRegisterMissingExecutorBindingPanics(t *testing.T) {

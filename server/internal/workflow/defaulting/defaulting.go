@@ -2,15 +2,19 @@ package workflowdefaulting
 
 import (
 	"fmt"
-	"math"
 	"strings"
 
 	workflowmanifest "github.com/yyhuni/lunafox/server/internal/workflow/manifest"
+	workflowprofile "github.com/yyhuni/lunafox/server/internal/workflow/profile"
 )
 
 func NormalizeRootConfig(root map[string]any, workflowIDs []string) (map[string]any, error) {
 	if root == nil {
 		return nil, fmt.Errorf("configuration root must be object")
+	}
+	profileLoader, err := workflowprofile.NewLoader()
+	if err != nil {
+		return nil, fmt.Errorf("load workflow profiles: %w", err)
 	}
 	normalized := deepCopyMap(root)
 	for _, workflowID := range workflowIDs {
@@ -22,6 +26,10 @@ func NormalizeRootConfig(root map[string]any, workflowIDs []string) (map[string]
 		if err != nil {
 			return nil, err
 		}
+		defaultProfile := profileLoader.GetByID(workflowID)
+		if defaultProfile == nil {
+			return nil, fmt.Errorf("default profile %q not found for workflow %q", workflowID, workflowID)
+		}
 		rawWorkflowConfig, ok := normalized[workflowID]
 		if !ok {
 			return nil, fmt.Errorf("missing %s config; expected nested configuration under key %q", workflowID, workflowID)
@@ -30,12 +38,17 @@ func NormalizeRootConfig(root map[string]any, workflowIDs []string) (map[string]
 		if !ok {
 			return nil, fmt.Errorf("workflow %s configuration must be object", workflowID)
 		}
-		normalized[workflowID] = applyManifestDefaults(workflowConfig, manifest)
+		defaultRootConfig := defaultProfile.Configuration
+		defaultWorkflowConfig, ok := asStringAnyMap(defaultRootConfig[workflowID])
+		if !ok {
+			return nil, fmt.Errorf("default profile %q missing workflow config for %q", workflowID, workflowID)
+		}
+		normalized[workflowID] = applyDefaultProfileConfig(workflowConfig, defaultWorkflowConfig, manifest)
 	}
 	return normalized, nil
 }
 
-func applyManifestDefaults(config map[string]any, manifest workflowmanifest.Manifest) map[string]any {
+func applyDefaultProfileConfig(config map[string]any, defaultWorkflowConfig map[string]any, manifest workflowmanifest.Manifest) map[string]any {
 	if config == nil {
 		return nil
 	}
@@ -49,6 +62,7 @@ func applyManifestDefaults(config map[string]any, manifest workflowmanifest.Mani
 		if !ok {
 			continue
 		}
+		defaultStageConfig, _ := asStringAnyMap(defaultWorkflowConfig[stage.StageID])
 		rawTools, ok := stageConfig["tools"]
 		if !ok {
 			continue
@@ -66,46 +80,35 @@ func applyManifestDefaults(config map[string]any, manifest workflowmanifest.Mani
 			if !ok {
 				continue
 			}
+			defaultTools, _ := asStringAnyMap(defaultStageConfig["tools"])
+			defaultToolConfig, _ := asStringAnyMap(defaultTools[tool.ToolID])
 			enabled, _ := toolConfig["enabled"].(bool)
 			if !enabled {
 				continue
 			}
-			for _, param := range tool.Params {
-				if _, exists := toolConfig[param.ConfigKey]; exists || param.DefaultValue == nil {
+			for defaultKey, defaultValue := range defaultToolConfig {
+				if defaultKey == "enabled" {
 					continue
 				}
-				toolConfig[param.ConfigKey] = defaultValueForParam(param)
+				if _, exists := toolConfig[defaultKey]; exists {
+					continue
+				}
+				toolConfig[defaultKey] = deepCopyAny(defaultValue)
 			}
 		}
 	}
 	return normalized
 }
 
-func defaultValueForParam(param workflowmanifest.ManifestParam) any {
-	switch strings.TrimSpace(param.ValueType) {
-	case "integer":
-		switch value := param.DefaultValue.(type) {
-		case int:
-			return value
-		case int32:
-			return int(value)
-		case int64:
-			return int(value)
-		case float64:
-			if math.Trunc(value) == value {
-				return int(value)
-			}
-		}
-	case "boolean":
-		if value, ok := param.DefaultValue.(bool); ok {
-			return value
-		}
-	case "string":
-		if value, ok := param.DefaultValue.(string); ok {
-			return value
-		}
+func asStringAnyMap(value any) (map[string]any, bool) {
+	switch typed := value.(type) {
+	case map[string]any:
+		return typed, true
+	case workflowprofile.WorkflowConfig:
+		return map[string]any(typed), true
+	default:
+		return nil, false
 	}
-	return deepCopyAny(param.DefaultValue)
 }
 
 func deepCopyMap(input map[string]any) map[string]any {

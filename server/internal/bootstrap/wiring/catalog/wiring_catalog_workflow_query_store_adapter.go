@@ -10,21 +10,21 @@ import (
 )
 
 type catalogWorkflowQueryStoreAdapter struct {
-	listMetadata func() ([]workflowmanifest.WorkflowMetadata, error)
+	listManifests func() ([]workflowmanifest.Manifest, error)
 }
 
 func newCatalogWorkflowQueryStoreAdapter() *catalogWorkflowQueryStoreAdapter {
 	return &catalogWorkflowQueryStoreAdapter{
-		listMetadata: workflowmanifest.ListWorkflowMetadata,
+		listManifests: workflowmanifest.ListManifests,
 	}
 }
 
 func (adapter *catalogWorkflowQueryStoreAdapter) ListWorkflows(_ context.Context) ([]catalogapp.Workflow, error) {
-	loadMetadata := adapter.listMetadata
-	if loadMetadata == nil {
-		loadMetadata = workflowmanifest.ListWorkflowMetadata
+	loadManifests := adapter.listManifests
+	if loadManifests == nil {
+		loadManifests = workflowmanifest.ListManifests
 	}
-	items, err := loadMetadata()
+	items, err := loadManifests()
 	if err != nil {
 		return nil, err
 	}
@@ -38,6 +38,10 @@ func (adapter *catalogWorkflowQueryStoreAdapter) ListWorkflows(_ context.Context
 			WorkflowID:  workflowID,
 			DisplayName: strings.TrimSpace(item.DisplayName),
 			Description: strings.TrimSpace(item.Description),
+			Executor: catalogapp.WorkflowExecutorBinding{
+				Type: strings.TrimSpace(item.Executor.Type),
+				Ref:  strings.TrimSpace(item.Executor.Ref),
+			},
 		})
 	}
 	sort.Slice(workflows, func(i, j int) bool {

@@ -12,17 +12,13 @@ type ProfileResponse struct {
 
 func NewProfileResponse(profile *catalogdomain.WorkflowProfile) ProfileResponse {
 	workflowIDs := append([]string(nil), profile.WorkflowIDs...)
-	configuration := make(map[string]any, len(profile.Configuration))
-	for key, value := range profile.Configuration {
-		configuration[key] = value
-	}
 
 	return ProfileResponse{
 		ID:            profile.ID,
 		Name:          profile.Name,
 		Description:   profile.Description,
 		WorkflowIDs:   workflowIDs,
-		Configuration: configuration,
+		Configuration: profile.Configuration,
 	}
 }
 
