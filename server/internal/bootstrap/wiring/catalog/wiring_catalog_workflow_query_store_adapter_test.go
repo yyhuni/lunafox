@@ -9,8 +9,8 @@ import (
 
 func TestCatalogWorkflowQueryStoreAdapterListWorkflowsSortsByWorkflowID(t *testing.T) {
 	adapter := &catalogWorkflowQueryStoreAdapter{
-		listMetadata: func() ([]workflowmanifest.WorkflowMetadata, error) {
-			return []workflowmanifest.WorkflowMetadata{
+		listManifests: func() ([]workflowmanifest.Manifest, error) {
+			return []workflowmanifest.Manifest{
 				{WorkflowID: "z_workflow", DisplayName: "Z"},
 				{WorkflowID: "a_workflow", DisplayName: "A"},
 			}, nil

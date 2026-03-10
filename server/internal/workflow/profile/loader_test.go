@@ -63,3 +63,18 @@ func TestLoaderParsesConfigurationAsObject(t *testing.T) {
 		t.Fatalf("expected subdomain_discovery config to be map, got %T", raw)
 	}
 }
+
+func TestLoaderParsesGeneratedOverlayProfileMetadata(t *testing.T) {
+	loader, err := NewLoader()
+	if err != nil {
+		t.Fatalf("NewLoader() failed: %v", err)
+	}
+
+	profile := loader.GetByID("subdomain_discovery_fast")
+	if profile == nil {
+		t.Fatal("expected generated overlay profile subdomain_discovery_fast")
+	}
+	if profile.Extends != "subdomain_discovery" {
+		t.Fatalf("expected overlay extends subdomain_discovery, got %q", profile.Extends)
+	}
+}

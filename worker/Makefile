@@ -19,7 +19,6 @@ workflow-contracts-gen-all:
 	@SERVER_SCHEMA_DIR="$(SERVER_SCHEMA_DIR)" \
 		SERVER_MANIFEST_DIR="$(SERVER_MANIFEST_DIR)" \
 		DOCS_DIR="$(DOCS_DIR)" \
-		WORKER_SCHEMA_BASE_DIR="$(WORKER_SCHEMA_BASE_DIR)" \
 		MIRROR_SCHEMA_DIR="$(MIRROR_SCHEMA_DIR)" \
 		bash ./scripts/gen-workflow-contracts.sh
 
@@ -34,8 +33,6 @@ workflow-contracts-gen-workflow:
 	fi
 	@go run ./cmd/workflow-contract-gen \
 		-workflow $(WORKFLOW) \
-		-worker-schema-dir ./internal/workflow/$(WORKFLOW)/generated \
-		-worker-manifest-dir ./internal/workflow/$(WORKFLOW)/generated \
 		-server-schema-dir ../server/internal/workflow/schema \
 		-server-manifest-dir ../server/internal/workflow/manifest \
 		-server-profile-dir ../server/internal/workflow/profile/profiles \
@@ -84,8 +81,6 @@ clean:
 	@for workflow_dir in internal/workflow/*/; do \
 		if [ -f "$${workflow_dir}contract_definition.go" ]; then \
 			workflow_name="$$(basename "$${workflow_dir%/}")"; \
-			rm -f "$${workflow_dir}generated/$${workflow_name}-"*.schema.json; \
-			rm -f "$${workflow_dir}generated/$${workflow_name}.manifest.json"; \
 			rm -f "$${workflow_dir}config_typed_generated.go"; \
 			rm -f "../docs/config-reference/$${workflow_name}.md"; \
 			rm -f ../server/internal/workflow/schema/$${workflow_name}-*.schema.json; \

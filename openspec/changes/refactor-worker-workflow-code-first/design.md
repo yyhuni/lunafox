@@ -80,9 +80,9 @@ worker 当前工作流执行路径混合了模板与代码：
   - CI 必须包含“生成后无差异”校验，防止手工编辑漂移。
   - 当前 `subdomain_discovery` 生成命令示例：
     - 默认（不产出 mirror）：
-      `go run worker/cmd/workflow-contract-gen/main.go -workflow subdomain_discovery -worker-schema-output worker/internal/workflow/subdomain_discovery/schema_generated.json -server-schema-output server/internal/workflowschema/subdomain_discovery.schema.json -docs-output docs/config-reference/subdomain_discovery.md`
+      `go run worker/cmd/workflow-contract-gen/main.go -workflow subdomain_discovery -server-schema-output server/internal/workflow/schema/subdomain_discovery.schema.json -server-manifest-output server/internal/workflow/manifest/subdomain_discovery.manifest.json -docs-output docs/config-reference/subdomain_discovery.md`
     - 启用可选 mirror（仅外部分发时）：
-      `go run worker/cmd/workflow-contract-gen/main.go -workflow subdomain_discovery -worker-schema-output worker/internal/workflow/subdomain_discovery/schema_generated.json -server-schema-output server/internal/workflowschema/subdomain_discovery.schema.json -docs-output docs/config-reference/subdomain_discovery.md -mirror-schema-dir contracts/gen/workflowschema`
+      `go run worker/cmd/workflow-contract-gen/main.go -workflow subdomain_discovery -server-schema-output server/internal/workflow/schema/subdomain_discovery.schema.json -server-manifest-output server/internal/workflow/manifest/subdomain_discovery.manifest.json -docs-output docs/config-reference/subdomain_discovery.md -mirror-schema-dir contracts/gen/workflowschema`
 
 5. 扩展策略
 - 默认：仓内新增 workflow，静态注册，随版本发布。

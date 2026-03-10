@@ -66,11 +66,13 @@ func TestWorkflowHandlerListSuccess(t *testing.T) {
 				WorkflowID:  "subdomain_discovery",
 				DisplayName: "Subdomain Discovery",
 				Description: "Discover subdomains",
+				Executor:    catalogapp.WorkflowExecutorBinding{Type: "builtin", Ref: "subdomain_discovery"},
 			},
 			{
 				WorkflowID:  "port_scan",
 				DisplayName: "Port Scan",
 				Description: "Scan open ports",
+				Executor:    catalogapp.WorkflowExecutorBinding{Type: "builtin", Ref: "port_scan"},
 			},
 		},
 	})
@@ -98,6 +100,9 @@ func TestWorkflowHandlerListSuccess(t *testing.T) {
 	}
 	if payload[0].DisplayName != "Subdomain Discovery" || payload[0].Description != "Discover subdomains" {
 		t.Fatalf("unexpected first workflow metadata: %+v", payload[0])
+	}
+	if payload[0].Executor.Type != "builtin" || payload[0].Executor.Ref != "subdomain_discovery" {
+		t.Fatalf("unexpected first workflow executor: %+v", payload[0])
 	}
 	if payload[1].DisplayName != "Port Scan" || payload[1].Description != "Scan open ports" {
 		t.Fatalf("unexpected second workflow metadata: %+v", payload[1])
@@ -138,6 +143,7 @@ func TestWorkflowHandlerGetByWorkflowIDSuccess(t *testing.T) {
 				WorkflowID:  "subdomain_discovery",
 				DisplayName: "Subdomain Discovery",
 				Description: "Discover subdomains",
+				Executor:    catalogapp.WorkflowExecutorBinding{Type: "builtin", Ref: "subdomain_discovery"},
 			},
 		},
 	})
@@ -162,6 +168,9 @@ func TestWorkflowHandlerGetByWorkflowIDSuccess(t *testing.T) {
 	}
 	if payload.DisplayName != "Subdomain Discovery" || payload.Description != "Discover subdomains" {
 		t.Fatalf("unexpected workflow metadata payload: %+v", payload)
+	}
+	if payload.Executor.Type != "builtin" || payload.Executor.Ref != "subdomain_discovery" {
+		t.Fatalf("unexpected workflow executor payload: %+v", payload)
 	}
 }
 

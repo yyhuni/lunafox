@@ -73,6 +73,23 @@ func TestBuildManifestIncludesDefaultProfileAndStages(t *testing.T) {
 	require.NotEmpty(t, manifest.Stages[0].Tools[0].Params)
 }
 
+func TestBuildManifestOmitsConstraintAndDefaultFieldsFromParams(t *testing.T) {
+	manifest := buildManifest(workflowDefForTest())
+	payload, err := json.Marshal(manifest)
+	require.NoError(t, err)
+	text := string(payload)
+	require.NotContains(t, text, "defaultValue")
+	require.NotContains(t, text, "minimum")
+	require.NotContains(t, text, "maximum")
+	require.NotContains(t, text, "minLength")
+	require.NotContains(t, text, "maxLength")
+	require.NotContains(t, text, "pattern")
+	require.NotContains(t, text, "enum")
+	require.Contains(t, text, "requiredWhenEnabled")
+	require.Contains(t, text, "valueType")
+	require.Contains(t, text, "configKey")
+}
+
 func TestBuildTypedGoDisambiguatesDuplicateToolNamesAcrossStages(t *testing.T) {
 	def := workflow.ContractDefinition{
 		WorkflowID:  "demo",
@@ -182,6 +199,92 @@ func TestBuildProfileYAMLFailsWhenRequiredDefaultMissing(t *testing.T) {
 	_, err = buildProfileYAML(def, schemaJSON)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "default value is required")
+}
+
+func TestBuildProfileArtifacts_GeneratesSparseOverlayProfile(t *testing.T) {
+	minimum := 1
+	def := workflow.ContractDefinition{
+		WorkflowID:  "demo",
+		DisplayName: "Demo Workflow",
+		Description: "Demo workflow description",
+		DefaultProfile: workflow.ContractProfileDefinition{
+			ID:          "demo_default",
+			Name:        "Demo 默认配置",
+			Description: "Demo 默认 profile",
+		},
+		ProfileOverlays: []workflow.ContractProfileOverlayDefinition{
+			{
+				ID:          "demo_fast",
+				Name:        "Demo 快速配置",
+				Description: "Demo fast overlay",
+				Configuration: map[string]any{
+					"recon": map[string]any{
+						"tools": map[string]any{
+							"tool-a": map[string]any{
+								"threads-cli": 50,
+							},
+						},
+					},
+				},
+			},
+		},
+		Stages: []workflow.ContractStageDefinition{{
+			ID:          "recon",
+			Name:        "Recon",
+			Description: "Recon stage",
+			Required:    true,
+			Parallel:    true,
+			Tools: []workflow.ContractToolDefinition{{
+				ID:          "tool-a",
+				Description: "Tool A",
+				Params: []workflow.ContractParamDefinition{
+					{Key: "threads-cli", Type: "integer", Description: "threads", RequiredWhenEnabled: true, Minimum: &minimum, Default: 20},
+					{Key: "timeout-runtime", Type: "integer", Description: "timeout", RequiredWhenEnabled: true, Minimum: &minimum, Default: 3600},
+				},
+			}},
+		}},
+	}
+
+	schema := buildSchema(def)
+	schemaJSON, err := json.Marshal(schema)
+	require.NoError(t, err)
+
+	defaultPayload, overlays, err := buildProfileArtifacts(def, schemaJSON)
+	require.NoError(t, err)
+	require.NotEmpty(t, defaultPayload)
+	fastPayload, ok := overlays["demo_fast"]
+	require.True(t, ok)
+
+	var profileDoc struct {
+		Extends       string         `yaml:"extends"`
+		Configuration map[string]any `yaml:"configuration"`
+	}
+	require.NoError(t, yaml.Unmarshal(fastPayload, &profileDoc))
+	require.Equal(t, "demo_default", profileDoc.Extends)
+	demo := profileDoc.Configuration["demo"].(map[string]any)
+	recon := demo["recon"].(map[string]any)
+	tools := recon["tools"].(map[string]any)
+	tool := tools["tool-a"].(map[string]any)
+	require.Equal(t, 50, tool["threads-cli"])
+	require.Equal(t, 3600, tool["timeout-runtime"])
+}
+
+func TestLoadProfileOverlaySources_ReadsSubdomainDiscoveryFast(t *testing.T) {
+	overlays, err := loadProfileOverlaySources("subdomain_discovery")
+	require.NoError(t, err)
+	require.NotEmpty(t, overlays)
+	var fast *workflow.ContractProfileOverlayDefinition
+	for i := range overlays {
+		if overlays[i].ID == "subdomain_discovery_fast" {
+			fast = &overlays[i]
+			break
+		}
+	}
+	require.NotNil(t, fast)
+	recon := fast.Configuration["recon"].(map[string]any)
+	tools := recon["tools"].(map[string]any)
+	subfinder := tools["subfinder"].(map[string]any)
+	require.Equal(t, 30, subfinder["threads-cli"])
 }
 
 func workflowDefForTest() workflow.ContractDefinition {

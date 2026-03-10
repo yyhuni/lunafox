@@ -1,7 +1,7 @@
 # Workflow Contract 生成与路径映射
 
 ## 目标
-- 统一以 `worker/cmd/workflow-contract-gen` 作为 contract/schema/profile/docs/typed 的生成入口。
+- 统一以 `worker/cmd/workflow-contract-gen` 作为 contract 驱动的 server schema/manifest/profile、docs、typed config 生成入口。
 - 支持在不同目录布局下输出生成产物，避免脚本硬编码路径耦合。
 
 ## 默认命令
@@ -27,7 +27,6 @@ make workflow-contracts-ci-check
 - `SERVER_SCHEMA_DIR`：server workflow schema 输出目录（默认 `../server/internal/workflow/schema`）
 - `SERVER_PROFILE_DIR`：server workflow profile 输出目录（默认 `../server/internal/workflow/profile/profiles`）
 - `DOCS_DIR`：文档输出目录（默认 `../docs/config-reference`）
-- `WORKER_SCHEMA_BASE_DIR`：worker schema 根目录（默认每个 workflow 下 `generated/`）
 - `MIRROR_SCHEMA_DIR`：额外镜像输出目录（可选）
 
 示例：
@@ -37,8 +36,7 @@ make workflow-contracts-gen-all \
   SERVER_SCHEMA_DIR=../server/internal/workflow/schema \
   SERVER_PROFILE_DIR=../server/internal/workflow/profile/profiles \
   DOCS_DIR=../docs/config-reference \
-  WORKER_SCHEMA_BASE_DIR=./out/worker-schemas \
-  MIRROR_SCHEMA_DIR=./out/mirror
+    MIRROR_SCHEMA_DIR=./out/mirror
 ```
 
 ## 生成契约约定
