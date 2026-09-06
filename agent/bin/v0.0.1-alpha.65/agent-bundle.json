@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "lunafox.agent-bundle.v1",
+  "releaseTag": "v0.0.1-alpha.65",
+  "version": "0.0.1-alpha.65",
+  "sourceRepository": "yyhuni/lunafox-private",
+  "destinationRepository": "yyhuni/lunafox",
+  "sourceRevision": "3f4b504f6aca82a07200a8e231c3e13f55d664c0",
+  "sourceRevisionDigest": "sha256:48105388b9e16934670bcec4a08d91b5a160aed600602e0c0f1731e59d7a7e69",
+  "publicExportManifestSha256": "sha256:b2e661dbf2ed5190c8ee978f054ec7d377621c12dc720f4c89ea6b7a2bf3121c",
+  "publicProvenanceSha256": "sha256:be2950139de628c8db1f79e0d5ac6fdcc681ed5470ab2e5c10b084054ca5cbda",
+  "publicTreePath": "agent/bin/v0.0.1-alpha.65",
+  "platforms": [
+    "linux/amd64",
+    "linux/arm64"
+  ],
+  "signerIssuer": "https://token.actions.githubusercontent.com",
+  "signerIdentity": "https://github.com/yyhuni/lunafox-private/.github/workflows/release.yml@refs/tags/*",
+  "members": [
+    {
+      "name": "lunafox-agent-linux-amd64",
+      "kind": "agent",
+      "platform": "linux/amd64",
+      "path": "lunafox-agent-linux-amd64",
+      "sha256": "sha256:5e0f28c1eaff1db1156e541b7ea9957109588516f9f9bf1f4b38af3974499b7d",
+      "size": 23896723,
+      "executable": true,
+      "elf": true
+    },
+    {
+      "name": "lunafox-agent-linux-arm64",
+      "kind": "agent",
+      "platform": "linux/arm64",
+      "path": "lunafox-agent-linux-arm64",
+      "sha256": "sha256:0e5f8d1a883ca6ab81d8c54026dce5c07ffa545edab038d1ec93af890718c322",
+      "size": 22436260,
+      "executable": true,
+      "elf": true
+    },
+    {
+      "name": "lunafox-engine-mount-preflight-linux-amd64",
+      "kind": "mount-preflight",
+      "platform": "linux/amd64",
+      "path": "lunafox-engine-mount-preflight-linux-amd64",
+      "sha256": "sha256:2b12a49b754a09e98377c96105c2975a5b48bf6b063eae0b2062ea271e0add2a",
+      "size": 20000987,
+      "executable": true,
+      "elf": true
+    },
+    {
+      "name": "lunafox-engine-mount-preflight-linux-arm64",
+      "kind": "mount-preflight",
+      "platform": "linux/arm64",
+      "path": "lunafox-engine-mount-preflight-linux-arm64",
+      "sha256": "sha256:143872aa1a600ce25451d9319a31c4971846dc306bd85e2e85721be4d2bac5a4",
+      "size": 18804436,
+      "executable": true,
+      "elf": true
+    }
+  ]
+}

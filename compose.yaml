@@ -1,0 +1,251 @@
+# SPDX-License-Identifier: GPL-3.0-only
+name: lunafox
+
+services:
+  postgres:
+    image: postgres:18.3-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:?DB_NAME is required}
+      POSTGRES_USER: ${DB_USER:?DB_USER is required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:8.6.1-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  loki:
+    image: grafana/loki:3.6.7
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./resources/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki_data:/loki
+    healthcheck:
+      test: ["CMD", "/usr/bin/loki", "-verify-config=true", "-config.file=/etc/loki/loki-config.yaml"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  server:
+    image: ${SERVER_IMAGE_REF:?SERVER_IMAGE_REF is required}
+    restart: unless-stopped
+    environment:
+      RELEASE_VERSION: ${RELEASE_VERSION:?RELEASE_VERSION is required}
+      AGENT_VERSION: ${AGENT_VERSION:?AGENT_VERSION is required}
+      AGENT_IMAGE_REF: ${AGENT_IMAGE_REF:?AGENT_IMAGE_REF is required}
+      LUNAFOX_SHARED_DATA_VOLUME_BIND: ${LUNAFOX_SHARED_DATA_VOLUME_BIND:?LUNAFOX_SHARED_DATA_VOLUME_BIND is required}
+      ENGINE_INSTALL_REGISTRY: ${ENGINE_INSTALL_REGISTRY:?ENGINE_INSTALL_REGISTRY is required}
+      PUBLIC_URL: ${PUBLIC_URL:?PUBLIC_URL is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:?DB_USER is required}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      DB_NAME: ${DB_NAME:?DB_NAME is required}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      DB_TIMEZONE: ${DB_TIMEZONE:-UTC}
+      DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-25}
+      DB_MAX_IDLE_CONNS: ${DB_MAX_IDLE_CONNS:-5}
+      DB_CONN_MAX_LIFETIME: ${DB_CONN_MAX_LIFETIME:-300}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: ${REDIS_DB:-0}
+      LOKI_URL: ${LOKI_URL:-http://loki:3100}
+      SERVER_GRPC_PORT: ${SERVER_GRPC_PORT:-9090}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      GIN_MODE: ${GIN_MODE:-release}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      JWT_ACCESS_EXPIRE: ${JWT_ACCESS_EXPIRE:-15m}
+      JWT_REFRESH_EXPIRE: ${JWT_REFRESH_EXPIRE:-168h}
+      WORDLISTS_BASE_PATH: ${WORDLISTS_BASE_PATH:-/opt/lunafox/wordlists}
+      ENGINE_PACKAGE_CACHE_ROOT: ${ENGINE_PACKAGE_CACHE_ROOT:-/opt/lunafox/engine-packages}
+      FINGERPRINT_ARTIFACTS_BASE_PATH: ${FINGERPRINT_ARTIFACTS_BASE_PATH:-/opt/lunafox/fingerprint-artifacts}
+      LOGIN_VISUALS_BASE_PATH: ${LOGIN_VISUALS_BASE_PATH:-/opt/lunafox/login-visuals}
+      WORKFLOW_DEFINITIONS_ROOT: ${WORKFLOW_DEFINITIONS_ROOT:-/usr/local/share/lunafox/workflows}
+      NUCLEI_POC_WORKSPACE_ROOT: ${NUCLEI_POC_WORKSPACE_ROOT:-/var/lib/lunafox/nuclei-poc-workspaces}
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      ALL_PROXY: ${ALL_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-}
+      http_proxy: ${http_proxy:-}
+      https_proxy: ${https_proxy:-}
+      all_proxy: ${all_proxy:-}
+      no_proxy: ${no_proxy:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    expose:
+      - "8080"
+      - "9090"
+    logging:
+      driver: loki
+      options:
+        loki-url: ${LOKI_PUSH_URL:?LOKI_PUSH_URL is required}
+        loki-tls-insecure-skip-verify: "true"
+        no-file: "false"
+        mode: non-blocking
+        loki-batch-size: "1048576"
+        max-buffer-size: 5m
+        loki-retries: "3"
+        loki-external-labels: component=server,container_name=lunafox-server,compose_service=server
+    volumes:
+      - lunafox_data:/opt/lunafox
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthChecks/current"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  frontend:
+    image: ${FRONTEND_IMAGE_REF:?FRONTEND_IMAGE_REF is required}
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000',res=>process.exit(res.statusCode<500?0:1)).on('error',()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  bootstrap:
+    image: ${BOOTSTRAP_IMAGE_REF:?BOOTSTRAP_IMAGE_REF is required}
+    restart: "no"
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      RELEASE_VERSION: ${RELEASE_VERSION:?RELEASE_VERSION is required}
+      AGENT_VERSION: ${AGENT_VERSION:?AGENT_VERSION is required}
+      AGENT_IMAGE_REF: ${AGENT_IMAGE_REF:?AGENT_IMAGE_REF is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      PUBLIC_URL: ${PUBLIC_URL:?PUBLIC_URL is required}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:?DB_USER is required}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      DB_NAME: ${DB_NAME:?DB_NAME is required}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      DB_TIMEZONE: ${DB_TIMEZONE:-UTC}
+      DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-25}
+      DB_MAX_IDLE_CONNS: ${DB_MAX_IDLE_CONNS:-5}
+      DB_CONN_MAX_LIFETIME: ${DB_CONN_MAX_LIFETIME:-300}
+      LOKI_URL: ${LOKI_URL:-http://loki:3100}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      WORDLISTS_BASE_PATH: ${WORDLISTS_BASE_PATH:-/opt/lunafox/wordlists}
+      FINGERPRINT_ARTIFACTS_BASE_PATH: ${FINGERPRINT_ARTIFACTS_BASE_PATH:-/opt/lunafox/fingerprint-artifacts}
+      LOGIN_VISUALS_BASE_PATH: ${LOGIN_VISUALS_BASE_PATH:-/opt/lunafox/login-visuals}
+      WORKFLOW_DEFINITIONS_ROOT: ${WORKFLOW_DEFINITIONS_ROOT:-/usr/local/share/lunafox/workflows}
+      ENGINE_PACKAGE_CACHE_ROOT: ${ENGINE_PACKAGE_CACHE_ROOT:-/opt/lunafox/engine-packages}
+      BOOTSTRAP_SERVER_URL: http://server:8080
+      BOOTSTRAP_AGENT_CONTROL_URL: http://server:9090
+      BOOTSTRAP_NETWORK: lunafox_network
+      ENGINE_INSTALL_INVENTORY_PATH: /bootstrap/engine-inventory.yaml
+      ENGINE_INSTALL_REGISTRY: ${ENGINE_INSTALL_REGISTRY:?ENGINE_INSTALL_REGISTRY is required}
+      FINGERPRINT_BOOTSTRAP_PATH: /bootstrap/fingerprints/web_fingerprint_v4.json
+      WORDLISTS_SOURCE_PATH: /bootstrap/wordlists
+      LUNAFOX_AGENT_STATE_VOLUME: lunafox_agent_state
+      LUNAFOX_ENGINE_EXECUTION_VOLUME: lunafox_engine_execution
+      LUNAFOX_ENGINE_EXECUTION_ROOT: /var/lib/lunafox/engine-execution
+      LUNAFOX_SHARED_DATA_VOLUME_BIND: lunafox_data:/opt/lunafox:rw
+      AGENT_CONTROL_URL: http://server:9090
+      LOKI_PUSH_URL: ${LOKI_PUSH_URL:?LOKI_PUSH_URL is required}
+    volumes:
+      - lunafox_data:/opt/lunafox
+      - lunafox_engine_execution:/var/lib/lunafox/engine-execution
+      - ./resources/fingerprints/web_fingerprint_v4.json:/bootstrap/fingerprints/web_fingerprint_v4.json:ro
+      - ./resources/wordlists:/bootstrap/wordlists:ro
+      - ${ENGINE_INVENTORY_HOST_PATH:?ENGINE_INVENTORY_HOST_PATH is required}:/bootstrap/engine-inventory.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  nginx:
+    image: ${NGINX_IMAGE_REF:?NGINX_IMAGE_REF is required}
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    ports:
+      - "${PUBLIC_PORT:?PUBLIC_PORT is required}:443"
+    volumes:
+      - lunafox_ssl:/etc/nginx/ssl:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --no-check-certificate -O /dev/null https://localhost/healthChecks/current"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  receipt-invalidator:
+    profiles: [helpers]
+    image: busybox:1.36.1
+    restart: "no"
+    entrypoint: ["/bin/sh", "/usr/local/lib/lunafox/receipt-invalidate.sh"]
+    volumes:
+      - lunafox_receipt:/receipt
+      - ./scripts/deploy/receipt/invalidate.sh:/usr/local/lib/lunafox/receipt-invalidate.sh:ro
+
+  receipt-finalizer:
+    profiles: [helpers]
+    image: busybox:1.36.1
+    restart: "no"
+    entrypoint: ["/bin/sh", "/usr/local/lib/lunafox/receipt-finalize.sh"]
+    volumes:
+      - lunafox_receipt:/receipt
+      - ./scripts/deploy/receipt/finalize.sh:/usr/local/lib/lunafox/receipt-finalize.sh:ro
+
+  receipt-verifier:
+    profiles: [helpers]
+    image: busybox:1.36.1
+    restart: "no"
+    read_only: true
+    entrypoint: ["/bin/sh", "/usr/local/lib/lunafox/receipt-verify.sh"]
+    volumes:
+      - lunafox_receipt:/receipt:ro
+      - ./scripts/deploy/receipt/verify.sh:/usr/local/lib/lunafox/receipt-verify.sh:ro
+
+volumes:
+  postgres_data:
+    name: lunafox_postgres
+  lunafox_data:
+    name: lunafox_data
+  lunafox_engine_execution:
+    name: lunafox_engine_execution
+  lunafox_agent_state:
+    name: lunafox_agent_state
+  lunafox_ssl:
+    external: true
+    name: lunafox_ssl
+  lunafox_receipt:
+    external: true
+    name: lunafox_receipt
+  loki_data:
+    name: lunafox_loki
+
+networks:
+  default:
+    name: lunafox_network

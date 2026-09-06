@@ -1,0 +1,204 @@
+syntax = "proto3";
+
+package lunafox.agent.control.v1;
+
+import "lunafox/agent/execution/v1/resolved_engine_execution_plan.proto";
+import "lunafox/engine/execution/v2/engine_execution_diagnostics.proto";
+
+option go_package = "github.com/yyhuni/lunafox/contracts/gen/lunafox/agent/control/v1;agentcontrolv1";
+
+// ControlPlaneService is the long-lived agent control-plane stream between
+// agent and server.
+service ControlPlaneService {
+  rpc Connect(stream ConnectRequest) returns (stream ConnectResponse);
+}
+
+// ConnectRequest carries agent-to-server control-plane messages on the stream.
+message ConnectRequest {
+  reserved 2;
+  reserved "legacy_request_task";
+
+  oneof payload {
+    // register_session establishes the authoritative process session for this stream.
+    RegisterSession register_session = 4;
+
+    // heartbeat reports current agent health and execution state.
+    Heartbeat heartbeat = 1;
+
+    // request_task is the request-correlated container-execution pull lane.
+    RequestTask request_task = 5;
+
+    // terminal_task_result reports the terminal execution result for a previously assigned task.
+    TerminalTaskResult terminal_task_result = 3;
+
+  }
+}
+
+// HealthState describes the coarse-grained agent health category.
+enum HealthState {
+  HEALTH_STATE_UNSPECIFIED = 0;
+  HEALTH_STATE_HEALTHY = 1;
+  HEALTH_STATE_PAUSED = 2;
+}
+
+// HealthStatus is a human-readable summary of the agent health state.
+message HealthStatus {
+  string reason = 2;
+  string message = 3;
+  HealthState state = 1;
+}
+
+// Heartbeat reports current host load, health, and version info.
+message Heartbeat {
+  reserved 1, 2;
+  reserved 11;
+  reserved "instance_id", "session_id", "worker_version";
+
+  string observed_hostname = 3;
+  double cpu_usage = 4;
+  double mem_usage = 5;
+  double disk_usage = 6;
+  int32 running_tasks = 7;
+  string agent_version = 8;
+  int64 uptime_seconds = 9;
+  HealthStatus health = 10;
+  int32 task_slots_used = 12;
+  string agent = 13;
+  string session = 14;
+  string operating_system = 15;
+  string architecture = 16;
+  bool container_runtime_ready = 17;
+  repeated uint32 supported_engine_api_majors = 18;
+  string compatibility_revision = 19;
+}
+
+// TerminalTaskResultState describes the terminal result reported by the agent.
+enum TerminalTaskResultState {
+  TERMINAL_TASK_RESULT_STATE_UNSPECIFIED = 0;
+  TERMINAL_TASK_RESULT_STATE_SUCCEEDED = 1;
+  TERMINAL_TASK_RESULT_STATE_FAILED = 2;
+  TERMINAL_TASK_RESULT_STATE_CANCELLED = 3;
+}
+
+// RequestTask correlates one task pull within the current Agent process
+// session. The identifier is transport correlation and never enters the saved
+// execution plan.
+message RequestTask {
+  string request_id = 1;
+
+  reserved 2 to 536870911;
+}
+
+// FailureDetail captures structured terminal task failure information.
+message FailureDetail {
+  string kind = 1;
+  string message = 2;
+  string display_message = 3;
+}
+
+// TerminalTaskResult reports the terminal execution result for a task owned by the agent.
+message TerminalTaskResult {
+  reserved 1;
+  reserved "task_id";
+
+  TerminalTaskResultState result = 2;
+  FailureDetail failure = 3;
+  string task = 4;
+  lunafox.engine.execution.v2.EngineExecutionDiagnostics diagnostics = 5;
+  string compatibility_revision = 6;
+}
+
+// ConnectResponse is the server-to-agent downlink envelope on the Connect stream.
+// Each payload variant is a control-plane event delivered by the server to the agent.
+message ConnectResponse {
+  reserved 1;
+  reserved "legacy_task_assign";
+
+  oneof payload {
+    SessionReady session_ready = 5;
+    TaskAssign task_assign = 6;
+    TerminalTaskResultAck terminal_task_result_ack = 7;
+    TaskCancel task_cancel = 2;
+    ConfigUpdate config_update = 3;
+    UpdateRequired update_required = 4;
+
+  }
+}
+
+// RegisterSession announces the current process session for a connected agent-control stream.
+message RegisterSession {
+  reserved 1, 2, 5;
+  reserved "instance_id", "session_id", "worker_version";
+
+  string observed_hostname = 3;
+  string agent_version = 4;
+  string agent = 6;
+  string session = 7;
+  string operating_system = 8;
+  string architecture = 9;
+  bool container_runtime_ready = 10;
+  repeated uint32 supported_engine_api_majors = 11;
+  int32 running_tasks = 12;
+  int32 task_slots_used = 13;
+  string compatibility_revision = 14;
+}
+
+// SessionReady confirms that the stream has registered the active agent session.
+message SessionReady {
+  int64 session_epoch = 1;
+  ConfigUpdate config_snapshot = 2;
+  string compatibility_revision = 3;
+}
+
+// TaskAssign is the closed, request-correlated container-execution outcome.
+// All business execution facts live in plan; no_task is an explicit marker and
+// an unset outcome is invalid.
+message TaskAssign {
+  reserved 1 to 23;
+  reserved 27 to 536870911;
+  reserved "found", "task_id", "scan_id", "stage", "workflow_id", "target_id", "target_name", "target_type", "workflow_config", "workspace_dir", "runtime_ref", "task", "workflow", "target", "runtime", "workspace", "task_execution_config", "engine", "engine_package", "package_digest", "engine_api_major", "runtime_source", "engine_operation";
+
+  string request_id = 24;
+  oneof outcome {
+    lunafox.agent.execution.v1.ResolvedEngineExecutionPlan plan = 25;
+    NoTask no_task = 26;
+  }
+}
+
+// NoTask explicitly records that a correlated pull did not claim a task.
+message NoTask {
+  reserved 1 to 536870911;
+}
+
+// TerminalTaskResultAck confirms that Server persisted the terminal state and
+// completed synchronous scan/workflow reconciliation for this fenced session.
+message TerminalTaskResultAck {
+  string task = 1;
+  int64 session_epoch = 2;
+  string compatibility_revision = 3;
+}
+
+// TaskCancel targets a single running task by id.
+message TaskCancel {
+  reserved 1;
+  reserved "task_id";
+
+  string task = 2;
+}
+
+// ConfigUpdate carries optional scheduler guardrail updates for the agent.
+message ConfigUpdate {
+  optional int32 max_tasks = 1;
+  optional int32 cpu_threshold = 2;
+  optional int32 mem_threshold = 3;
+  optional int32 disk_threshold = 4;
+}
+
+// UpdateRequired describes the versions and images the agent should upgrade to.
+message UpdateRequired {
+  string agent_version = 1;
+  reserved 2, 3, 4, 6;
+  reserved "agent_image_ref", "worker_image_ref", "worker_version", "worker_image";
+
+  string agent_image = 5;
+}
