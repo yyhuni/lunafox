@@ -128,6 +128,10 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
+      - name: Install Chromium for browser-backed contract tests
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Validate public frontend source
         working-directory: frontend
         run: |
