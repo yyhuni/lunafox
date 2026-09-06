@@ -1,0 +1,24 @@
+[
+  {
+    "id": "shared-template-id",
+    "info": { "name": "Shared Template One", "severity": "info" },
+    "http": [
+      {
+        "method": "GET",
+        "path": ["{{BaseURL}}/one"],
+        "matchers": [{ "type": "word", "words": ["variant-one"] }]
+      }
+    ]
+  },
+  {
+    "id": "shared-template-id",
+    "info": { "name": "Shared Template Two", "severity": "info" },
+    "http": [
+      {
+        "method": "GET",
+        "path": ["{{BaseURL}}/two"],
+        "matchers": [{ "type": "word", "words": ["variant-two"] }]
+      }
+    ]
+  }
+]

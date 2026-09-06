@@ -1,0 +1,19 @@
+[
+  {
+    "id": "lunafox-conformance",
+    "info": {
+      "name": "LunaFox Conformance",
+      "severity": "info"
+    },
+    "http": [
+      {
+        "matchers": [
+          {
+            "type": "word",
+            "words": ["lunafox-conformance"]
+          }
+        ]
+      }
+    ]
+  }
+]

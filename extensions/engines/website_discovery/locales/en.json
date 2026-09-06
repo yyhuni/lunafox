@@ -1,0 +1,29 @@
+{
+  "engine": {
+    "description": "Probe target-scoped URL lists for live websites and report website findings.",
+    "displayName": "Website Discovery"
+  },
+  "sections": {
+    "httpx": {
+      "description": "Probe Server-materialized URLs using httpx.",
+      "name": "HTTPX",
+      "params": {
+        "rate-limit": {
+          "description": "Maximum httpx requests per second mapped to -rate-limit."
+        },
+        "request-timeout": {
+          "description": "Per-request timeout in seconds mapped to -timeout."
+        },
+        "retries": {
+          "description": "Number of httpx retries mapped to -retries."
+        },
+        "threads": {
+          "description": "Number of concurrent httpx workers mapped to -threads."
+        },
+        "timeout": {
+          "description": "Runtime timeout in seconds for the httpx process."
+        }
+      }
+    }
+  }
+}

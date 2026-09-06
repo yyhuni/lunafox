@@ -1,0 +1,76 @@
+{
+  "manifestVersion": "engine.v5",
+  "engineId": "engine.lunafox.port_scan",
+  "publisher": "lunafox",
+  "execution": {
+    "engineApiMajor": 2,
+    "supportedTargetTypes": [
+      "domain",
+      "ip",
+      "cidr"
+    ],
+    "configSections": [
+      {
+        "id": "naabu_active",
+        "defaultEnabled": true,
+        "params": [
+          {
+            "key": "timeout",
+            "type": "integer",
+            "default": 3600,
+            "minimum": 60
+          },
+          {
+            "key": "threads",
+            "type": "integer",
+            "default": 10,
+            "minimum": 1
+          },
+          {
+            "key": "port-mode",
+            "type": "string",
+            "default": "top-and-custom",
+            "enum": [
+              "top",
+              "custom",
+              "top-and-custom"
+            ]
+          },
+          {
+            "key": "ports",
+            "type": "string",
+            "default": ""
+          },
+          {
+            "key": "top-ports",
+            "type": "string",
+            "default": "100",
+            "enum": [
+              "100",
+              "1000",
+              "full"
+            ]
+          },
+          {
+            "key": "rate",
+            "type": "integer",
+            "default": 100,
+            "minimum": 1
+          }
+        ]
+      },
+      {
+        "id": "naabu_passive",
+        "defaultEnabled": true,
+        "params": [
+          {
+            "key": "timeout",
+            "type": "integer",
+            "default": 600,
+            "minimum": 60
+          }
+        ]
+      }
+    ]
+  }
+}

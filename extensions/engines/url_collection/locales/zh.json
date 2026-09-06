@@ -1,0 +1,92 @@
+{
+  "engine": {
+    "description": "从历史来源和爬取结果中收集目标范围内的 URL，完成规范化后上报端点结果。",
+    "displayName": "URL 收集"
+  },
+  "sections": {
+    "httpx": {
+      "description": "使用 httpx 探测已收集的 URL，并上报已验证的端点元数据。",
+      "name": "HTTPX",
+      "params": {
+        "rate-limit": {
+          "description": "映射到 -rate-limit 的 httpx 每秒请求速率上限。"
+        },
+        "request-timeout": {
+          "description": "映射到 -timeout 的单请求超时时间，单位为秒。"
+        },
+        "retries": {
+          "description": "映射到 -retries 的 httpx 重试次数。"
+        },
+        "threads": {
+          "description": "映射到 -threads 的 httpx 并发 worker 数。"
+        },
+        "timeout": {
+          "description": "httpx 进程的运行超时时间，单位为秒。"
+        }
+      }
+    },
+    "katana": {
+      "description": "使用 Katana 爬取 Server 物化的 URL 种子。",
+      "name": "Katana",
+      "params": {
+        "concurrency": {
+          "description": "映射到 -c 的 Katana 并发抓取 worker 数。"
+        },
+        "delay": {
+          "description": "映射到 -rd 的 Katana 请求间隔，单位为秒。"
+        },
+        "depth": {
+          "description": "映射到 -d 的 Katana 最大爬取深度。"
+        },
+        "rate-limit": {
+          "description": "映射到 -rl 的 Katana 每秒请求速率上限。"
+        },
+        "request-timeout": {
+          "description": "映射到 -timeout 的单请求超时时间，单位为秒。"
+        },
+        "retries": {
+          "description": "映射到 -retry 的 Katana 重试次数。"
+        },
+        "timeout": {
+          "description": "Katana 进程的运行超时时间，单位为秒。"
+        }
+      }
+    },
+    "scan": {
+      "description": "运行引擎扫描阶段。",
+      "name": "扫描",
+      "params": {
+        "timeout": {
+          "description": "扫描超时时间，单位为秒"
+        }
+      }
+    },
+    "uro": {
+      "description": "在可选探测前使用 Uro 规范化并过滤已收集的 URL。",
+      "name": "Uro",
+      "params": {
+        "blacklist": {
+          "description": "映射到 -b 的 Uro 排除文件扩展名。"
+        },
+        "filters": {
+          "description": "映射到 -f 的 Uro 过滤器；允许值用于控制参数、扩展名、内容 URL 和尾部斜杠。"
+        },
+        "timeout": {
+          "description": "Uro 进程的运行超时时间，单位为秒。"
+        },
+        "whitelist": {
+          "description": "映射到 -w 的 Uro 保留文件扩展名。"
+        }
+      }
+    },
+    "waymore": {
+      "description": "使用 Waymore 收集域名目标的历史 URL。",
+      "name": "Waymore",
+      "params": {
+        "timeout": {
+          "description": "Waymore 进程的运行超时时间，单位为秒。"
+        }
+      }
+    }
+  }
+}
