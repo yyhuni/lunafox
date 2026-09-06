@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "lunafox-engine-image-conformance-profile/v1",
+  "target": {
+    "type": "ip",
+    "value": "192.0.2.10"
+  },
+  "noOpEnabledSections": [
+    "naabu_active",
+    "naabu_passive"
+  ],
+  "toolEnabledSections": [
+    "naabu_active",
+    "naabu_passive"
+  ],
+  "gateDefaultProgressAck": false,
+  "toolInputs": [
+    {
+      "kind": "subdomains",
+      "content": "example.com\n"
+    }
+  ],
+  "resultType": "asset.host_port.v1",
+  "toolStubs": [
+    {
+      "tool": "naabu",
+      "source": "tool-stubs/naabu.sh"
+    }
+  ],
+  "argvAssertions": [
+    {
+      "file": "naabu_active.argv",
+      "args": [
+        "-exclude-cdn",
+        "-warm-up-time",
+        "5",
+        "-verify",
+        "-list",
+        "/workspace/naabu-candidates.txt",
+        "-json",
+        "-silent",
+        "-o",
+        "/workspace/naabu_active.jsonl",
+        "-c",
+        "10",
+        "-top-ports",
+        "100",
+        "-rate",
+        "100"
+      ]
+    },
+    {
+      "file": "naabu_passive.argv",
+      "args": [
+        "-list",
+        "/workspace/naabu-candidates.txt",
+        "-passive",
+        "-json",
+        "-silent",
+        "-o",
+        "/workspace/naabu_passive.jsonl"
+      ]
+    }
+  ],
+  "sigtermTool": "naabu",
+  "platformResources": [],
+  "imageLocalProbes": []
+}

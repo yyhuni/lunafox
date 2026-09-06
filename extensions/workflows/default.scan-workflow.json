@@ -1,0 +1,82 @@
+{
+  "scanWorkflowId": "default",
+  "displayName": "Default Scan",
+  "description": "Run the default built-in scan workflow: discover subdomains, scan target-scoped hosts for open ports, probe websites, collect URLs, fingerprint current websites, capture screenshots, then optionally scan directories.",
+  "stages": [
+    {
+      "stageId": "discovery",
+      "steps": [
+        {
+          "stepId": "subdomain_discovery",
+          "engineId": "engine.lunafox.subdomain_discovery",
+          "profileDefaultEnabled": true
+        }
+      ]
+    },
+    {
+      "stageId": "ports",
+      "steps": [
+        {
+          "stepId": "port_scan",
+          "engineId": "engine.lunafox.port_scan",
+          "profileDefaultEnabled": true
+        }
+      ]
+    },
+    {
+      "stageId": "websites",
+      "steps": [
+        {
+          "stepId": "website_discovery",
+          "engineId": "engine.lunafox.website_discovery",
+          "profileDefaultEnabled": true
+        }
+      ]
+    },
+    {
+      "stageId": "url_collection",
+      "steps": [
+        {
+          "stepId": "fingerprint_detection",
+          "engineId": "engine.lunafox.fingerprint_detection",
+          "profileDefaultEnabled": true
+        },
+        {
+          "stepId": "url_collection",
+          "engineId": "engine.lunafox.url_collection",
+          "profileDefaultEnabled": true
+        }
+      ]
+    },
+    {
+      "stageId": "screenshot",
+      "steps": [
+        {
+          "stepId": "screenshot",
+          "engineId": "engine.lunafox.screenshot",
+          "profileDefaultEnabled": true
+        }
+      ]
+    },
+    {
+      "stageId": "directory_scan",
+      "steps": [
+        {
+          "stepId": "directory_scan",
+          "engineId": "engine.lunafox.directory_scan",
+          "profileDefaultEnabled": true
+        }
+      ]
+    },
+    {
+      "stageId": "nuclei_vulnerability",
+      "steps": [
+        {
+          "stepId": "nuclei_vulnerability",
+          "engineId": "engine.lunafox.nuclei_vulnerability",
+          "profileDefaultEnabled": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package lunafox.agent.execution.v1;
+
+import "google/protobuf/duration.proto";
+
+option go_package = "github.com/yyhuni/lunafox/contracts/gen/lunafox/agent/execution/v1;agentexecutionv1";
+
+// ResolvedEngineExecutionPlan is the Server-owned business execution snapshot
+// sent to an Agent. Its top-level groups are intentionally closed: node paths,
+// mounts, credentials, retries, and container policy belong to the Agent.
+message ResolvedEngineExecutionPlan {
+  reserved 8;
+  reserved "inputs";
+
+  string execution = 1;
+  string task = 2;
+  CanonicalTarget target = 3;
+  WorkflowStepScope workflow_step = 4;
+  EngineRelease engine_release = 5;
+  RuntimeImage runtime_image = 6;
+  FinalEngineConfig config = 7;
+  repeated ConfigResourceBinding config_resource_bindings = 9;
+  repeated PlatformResourceBinding platform_resource_bindings = 10;
+  ExecutionLimits limits = 11;
+  repeated RuntimeArtifactBinding runtime_artifact_bindings = 12;
+}
+
+// TargetType is the closed first-phase target domain. IPv6 is deliberately not
+// represented; Server target validation rejects IPv6 before planning.
+enum TargetType {
+  TARGET_TYPE_UNSPECIFIED = 0;
+  TARGET_TYPE_DOMAIN = 1;
+  TARGET_TYPE_IP = 2;
+  TARGET_TYPE_CIDR = 3;
+}
+
+message CanonicalTarget {
+  string resource = 1;
+  TargetType type = 2;
+  string value = 3;
+}
+
+message WorkflowStepScope {
+  string scan = 1;
+  string workflow = 2;
+  string stage_id = 3;
+  string step_id = 4;
+}
+
+message EngineRelease {
+  string engine = 1;
+  string package_digest = 2;
+  uint32 engine_api_major = 3;
+  string compatibility_revision = 4;
+}
+
+message RuntimeImage {
+  repeated string refs = 1;
+}
+
+message FinalEngineConfig {
+  repeated EngineConfigSection sections = 1;
+}
+
+message EngineConfigSection {
+  string section_id = 1;
+  bool enabled = 2;
+  repeated EngineConfigParam params = 3;
+}
+
+message EngineConfigParam {
+  string key = 1;
+  EngineConfigScalar value = 2;
+}
+
+// EngineConfigScalar contains the closed Engine authoring value kinds. A
+// resource-valued parameter is represented by a typed binding below instead.
+message EngineConfigScalar {
+  oneof value {
+    bool bool_value = 1;
+    sint64 integer_value = 2;
+    string string_value = 3;
+    StringArrayValue string_array_value = 4;
+  }
+}
+
+message StringArrayValue {
+  repeated string values = 1;
+}
+
+message ConfigResourceBinding {
+  string section_id = 1;
+  string param_key = 2;
+  string content_type = 3;
+  WordlistDescriptor wordlist = 4;
+}
+
+message WordlistDescriptor {
+  string resource = 1;
+  string basename = 2;
+  uint64 size_bytes = 3;
+  string sha256_digest = 4;
+  uint64 line_count = 5;
+}
+
+message PlatformResourceBinding {
+  string resource_id = 1;
+  string content_type = 2;
+}
+
+message RuntimeArtifactBinding {
+  string artifact_id = 1;
+  string content_type = 2;
+}
+
+message ExecutionLimits {
+  google.protobuf.Duration max_execution_duration = 1;
+  uint32 progress_message_max_bytes = 2;
+  uint32 result_batch_max_items = 3;
+  uint32 result_batch_max_bytes = 4;
+}

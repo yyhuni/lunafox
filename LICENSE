@@ -1,0 +1,17 @@
+LunaFox deployment projection
+
+SPDX-License-Identifier: GPL-3.0-only
+
+Copyright (C) 2026 LunaFox contributors.
+
+This license applies to first-party public Runtime and Engine source, deployment
+scripts, Compose/configuration templates, deployment documentation, and public
+release indexes exported to the public repository. It does not license the
+closed Agent artifact, private signing/release material, closed installer, or
+any other private source.
+
+The complete GNU General Public License version 3 text is available at:
+https://www.gnu.org/licenses/gpl-3.0.txt
+
+This file is a licensing notice for the declared deployment scope. The SPDX
+identifier is intentionally GPL-3.0-only; no "or later" grant is made.

@@ -1,0 +1,23 @@
+{
+  "engine": {
+    "description": "使用受管 FingerprintHub Web 指纹库识别当前网站技术栈。",
+    "displayName": "指纹识别"
+  },
+  "sections": {
+    "observer_ward": {
+      "description": "运行固定版本的 Observer Ward Web 识别器。",
+      "name": "Observer Ward",
+      "params": {
+        "request-timeout": {
+          "description": "单次请求超时时间（秒）"
+        },
+        "threads": {
+          "description": "Observer Ward 并发请求数"
+        },
+        "timeout": {
+          "description": "整个引擎执行超时时间（秒）"
+        }
+      }
+    }
+  }
+}

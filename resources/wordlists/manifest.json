@@ -1,0 +1,22 @@
+{
+  "wordlists": [
+    {
+      "fileName": "dir_default.txt",
+      "description": "Default directory discovery wordlist",
+      "tags": ["default", "directory"],
+      "required": true
+    },
+    {
+      "fileName": "resolvers.txt",
+      "description": "Default DNS resolver list",
+      "tags": ["default", "dns", "resolver"],
+      "required": true
+    },
+    {
+      "fileName": "subdomains-top1million-110000.txt",
+      "description": "Default subdomain discovery wordlist",
+      "tags": ["default", "subdomain"],
+      "required": true
+    }
+  ]
+}

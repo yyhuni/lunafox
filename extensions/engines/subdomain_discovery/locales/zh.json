@@ -1,0 +1,71 @@
+{
+  "engine": {
+    "description": "通过情报收集、可选字典爆破和 DNS 解析验证发现目标域名的子域名",
+    "displayName": "子域名发现"
+  },
+  "sections": {
+    "bruteforce": {
+      "description": "使用字典爆破域名，发现未公开的子域名",
+      "name": "字典爆破",
+      "params": {
+        "rate-limit": {
+          "description": "每秒请求速率限制"
+        },
+        "resolvers": {
+          "description": "PureDNS 爆破使用的解析器列表名称，文件存储在服务端"
+        },
+        "threads": {
+          "description": "并发线程数"
+        },
+        "timeout": {
+          "description": "扫描超时时间，单位为秒"
+        },
+        "wildcard-batch": {
+          "description": "PureDNS 泛解析过滤预缓存候选批处理大小"
+        },
+        "wildcard-filter": {
+          "description": "启用此阶段的 PureDNS 泛解析响应过滤"
+        },
+        "wildcard-probe-count": {
+          "description": "PureDNS 每个域层级的泛解析测试数"
+        },
+        "wordlist": {
+          "description": "子域名字典名称，文件存储在服务端"
+        }
+      }
+    },
+    "recon": {
+      "description": "从多个数据源收集子域名，不直接探测目标",
+      "name": "情报收集",
+      "params": {
+        "threads": {
+          "description": "并发线程数"
+        },
+        "timeout": {
+          "description": "扫描超时时间，单位为秒"
+        }
+      }
+    },
+    "resolve": {
+      "description": "验证发现的子域名当前可通过 DNS 解析，再进入结果入库",
+      "name": "解析验证",
+      "params": {
+        "rate-limit": {
+          "description": "每秒请求速率限制"
+        },
+        "resolvers": {
+          "description": "DNS 解析验证使用的解析器列表名称，文件存储在服务端"
+        },
+        "threads": {
+          "description": "并发线程数"
+        },
+        "timeout": {
+          "description": "扫描超时时间，单位为秒"
+        },
+        "wildcard-filter": {
+          "description": "启用此阶段的 PureDNS 泛解析响应过滤"
+        }
+      }
+    }
+  }
+}
