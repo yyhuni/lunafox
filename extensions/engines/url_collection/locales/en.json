@@ -1,0 +1,92 @@
+{
+  "engine": {
+    "description": "Collect target-scoped URLs from historical sources and crawling, then report endpoint findings.",
+    "displayName": "URL Collection"
+  },
+  "sections": {
+    "httpx": {
+      "description": "Probe collected URLs using httpx and report verified endpoint metadata.",
+      "name": "HTTPX",
+      "params": {
+        "rate-limit": {
+          "description": "Maximum httpx requests per second mapped to -rate-limit."
+        },
+        "request-timeout": {
+          "description": "Per-request timeout in seconds mapped to -timeout."
+        },
+        "retries": {
+          "description": "Number of httpx retries mapped to -retries."
+        },
+        "threads": {
+          "description": "Number of concurrent httpx workers mapped to -threads."
+        },
+        "timeout": {
+          "description": "Runtime timeout in seconds for the httpx process."
+        }
+      }
+    },
+    "katana": {
+      "description": "Crawl Server-materialized URL seeds using Katana.",
+      "name": "Katana",
+      "params": {
+        "concurrency": {
+          "description": "Number of concurrent Katana fetcher workers mapped to -c."
+        },
+        "delay": {
+          "description": "Delay between Katana requests in seconds mapped to -rd."
+        },
+        "depth": {
+          "description": "Maximum Katana crawl depth mapped to -d."
+        },
+        "rate-limit": {
+          "description": "Maximum Katana requests per second mapped to -rl."
+        },
+        "request-timeout": {
+          "description": "Per-request timeout in seconds mapped to -timeout."
+        },
+        "retries": {
+          "description": "Number of Katana retries mapped to -retry."
+        },
+        "timeout": {
+          "description": "Runtime timeout in seconds for the Katana process."
+        }
+      }
+    },
+    "scan": {
+      "description": "Run the engine scan stage.",
+      "name": "Scan",
+      "params": {
+        "timeout": {
+          "description": "Scan timeout in seconds"
+        }
+      }
+    },
+    "uro": {
+      "description": "Filter collected URLs using Uro before optional verification.",
+      "name": "Uro",
+      "params": {
+        "blacklist": {
+          "description": "File extensions excluded by Uro and mapped to -b."
+        },
+        "filters": {
+          "description": "Uro filters mapped to -f; allowed values control parameters, extensions, content URLs, and trailing slashes."
+        },
+        "timeout": {
+          "description": "Runtime timeout in seconds for the Uro process."
+        },
+        "whitelist": {
+          "description": "File extensions retained by Uro and mapped to -w."
+        }
+      }
+    },
+    "waymore": {
+      "description": "Collect historical URLs for domain Targets using Waymore.",
+      "name": "Waymore",
+      "params": {
+        "timeout": {
+          "description": "Runtime timeout in seconds for the Waymore process."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "engine": {
+    "description": "Identify current Website technologies with the managed FingerprintHub Web corpus.",
+    "displayName": "Fingerprint Detection"
+  },
+  "sections": {
+    "observer_ward": {
+      "description": "Run the pinned Observer Ward Web recognizer.",
+      "name": "Observer Ward",
+      "params": {
+        "request-timeout": {
+          "description": "Per-request timeout in seconds"
+        },
+        "threads": {
+          "description": "Concurrent Observer Ward requests"
+        },
+        "timeout": {
+          "description": "Whole Engine execution timeout in seconds"
+        }
+      }
+    }
+  }
+}

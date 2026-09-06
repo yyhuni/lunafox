@@ -1,0 +1,45 @@
+{
+  "manifestVersion": "engine.v5",
+  "engineId": "engine.lunafox.fingerprint_detection",
+  "publisher": "lunafox",
+  "execution": {
+    "engineApiMajor": 2,
+    "supportedTargetTypes": [
+      "domain",
+      "ip",
+      "cidr"
+    ],
+    "executionResources": [
+      "fingerprintLibraryFingerPrintHub"
+    ],
+    "configSections": [
+      {
+        "id": "observer_ward",
+        "defaultEnabled": true,
+        "params": [
+          {
+            "key": "timeout",
+            "type": "integer",
+            "default": 3600,
+            "minimum": 60,
+            "maximum": 604800
+          },
+          {
+            "key": "request-timeout",
+            "type": "integer",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 120
+          },
+          {
+            "key": "threads",
+            "type": "integer",
+            "default": 25,
+            "minimum": 1,
+            "maximum": 200
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+node_modules
+.next
+.turbo
+.factory
+dist
+coverage
+test-results
+*.log

@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package lunafox.engine.execution.v2;
+
+option go_package = "github.com/yyhuni/lunafox/engine-go/protocol;protocol";
+
+// EngineExecutionInputService is the Engine-to-Agent lazy execution-input
+// surface. It shares the task-private UDS listener and authenticated session
+// with reporting, but has independent RPC and error semantics.
+service EngineExecutionInputService {
+  rpc MaterializeExecutionInput(MaterializeExecutionInputRequest) returns (MaterializeExecutionInputResponse);
+}
+
+// Scope is selected from the authenticated task session. The generated adapter
+// fixes role from the closed Registry; hand-written Engine code never sees this
+// wire message or role string.
+message MaterializeExecutionInputRequest {
+  reserved 2 to 536870911;
+  reserved "task", "scan", "execution", "target", "package", "image", "credential", "secret",
+      "session", "lease", "path", "content_type", "digest", "record_count", "request_id";
+
+  string role = 1;
+}
+
+// path is returned only inside the private SDK/generated-adapter transport
+// bridge after Agent publication. Typed Engine handles expose Path(ctx), not a
+// readable path field.
+message MaterializeExecutionInputResponse {
+  reserved 2 to 536870911;
+  reserved "task", "scan", "execution", "role", "content_type", "digest", "record_count";
+
+  string path = 1;
+}
