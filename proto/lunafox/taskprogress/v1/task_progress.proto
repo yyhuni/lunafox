@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package lunafox.taskprogress.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/yyhuni/lunafox/contracts/gen/lunafox/taskprogress/v1;taskprogressv1";
+
+enum TaskProgressLogLevel {
+  TASK_PROGRESS_LOG_LEVEL_UNSPECIFIED = 0;
+  TASK_PROGRESS_LOG_LEVEL_INFO = 1;
+  TASK_PROGRESS_LOG_LEVEL_WARNING = 2;
+  TASK_PROGRESS_LOG_LEVEL_ERROR = 3;
+}
+
+message TaskProgressLogEntry {
+  int64 sequence = 1;
+  TaskProgressLogLevel level = 2;
+  string content = 3;
+  google.protobuf.Timestamp emitted_at = 4;
+}

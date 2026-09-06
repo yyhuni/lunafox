@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "generatedReadOnly": true,
+  "exporterVersion": "public-exporter/v1",
+  "sourceRepository": "yyhuni/lunafox-private",
+  "destinationRepository": "yyhuni/lunafox",
+  "releaseTag": "v0.0.1-alpha.67",
+  "sourceRevisionDigest": "sha256:6d4c07279f3e4bc38583371e4da18e32f09fa2bf841d6d49fc374ec400fa659a",
+  "privateProvenance": "retained in the protected private release evidence; not present in public Git"
+}

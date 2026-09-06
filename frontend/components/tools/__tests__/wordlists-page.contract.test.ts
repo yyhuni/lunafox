@@ -1,0 +1,98 @@
+import { describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs"
+import path from "node:path"
+
+const source = readFileSync(path.resolve(process.cwd(), "components/tools/wordlists-page.tsx"), "utf8")
+const layoutSource = readFileSync(path.resolve(process.cwd(), "components/tools/wordlists-page-layout.ts"), "utf8")
+const cardSource = readFileSync(path.resolve(process.cwd(), "components/tools/wordlist-catalog-card.tsx"), "utf8")
+const drawerSource = readFileSync(path.resolve(process.cwd(), "components/tools/wordlist-detail-drawer.tsx"), "utf8")
+
+describe("wordlists-page contract", () => {
+  it("keeps backend-backed filtering and cursor pagination in the catalog", () => {
+    expect(source).toContain("useWordlistTags")
+    expect(source).toContain("DataTableFacetedFilter")
+    expect(source).toContain("DataTableFacetedFilterGroup")
+    expect(source).toContain("hasSelectedValues={selectedTags.length > 0}")
+    expect(source).toContain("onReset={() => handleTagsChange([])}")
+    expect(source).toContain("WORDLIST_SEARCH_DEBOUNCE_MS = 300")
+    expect(source).toContain("createBusinessListQuery")
+    expect(source).toContain("compileBusinessListFilter")
+    expect(source).toContain("compileBusinessListOrderBy")
+    expect(source).toContain("getCursorPaginationNavigation")
+    expect(source).toContain("getCursorPageTransition")
+    expect(source).not.toContain("WORDLIST_SORT_OPTIONS")
+    expect(source).not.toContain("handleSort")
+    expect(source).not.toContain("sortAscending")
+    expect(source).not.toContain("sortDescending")
+    expect(source).not.toContain("pageSize: 1000")
+    expect(source).not.toContain("<Table")
+  })
+
+  it("renders wordlists as accessible catalog cards that open a shared detail drawer", () => {
+    expect(source).toContain("<WordlistCatalogCard")
+    expect(source).toContain("onSelect={(selected) => setSelectedId(selected.id)}")
+    expect(source).toContain("<WordlistDetailDrawer")
+    expect(source).toContain("open={selectedWordlist !== null}")
+    expect(source).toContain("onOpenChange={(open) => !open && setSelectedId(null)}")
+    expect(cardSource).toContain('aria-label={`${t("detailTitle")}: ${wordlist.fileName}`}')
+    expect(cardSource).toContain("WordlistMetric")
+    expect(cardSource).toContain("visibleTags = wordlist.tags.slice(0, 2)")
+    expect(cardSource).toContain("min-h-48")
+    expect(cardSource).toContain("textRole.sectionTitle")
+    expect(cardSource).toContain("textRole.compactCaption")
+    expect(cardSource).toContain('WORDLIST_CARD_TAGS_CLASS = "flex min-h-8 min-w-0 flex-wrap content-start gap-1 px-3.5 py-2"')
+    expect(cardSource).toContain('WORDLIST_CARD_METRICS_CLASS = "grid grid-cols-2 gap-3 px-3.5 py-2"')
+    expect(cardSource).not.toContain("border-y border-border/60 bg-muted/15")
+    expect(cardSource).not.toContain("divide-x divide-border/60 border-b border-border/60")
+    expect(drawerSource).toContain('from "@/components/shared/detail-drawer"')
+    expect(drawerSource).toContain("<DetailDrawer")
+    expect(drawerSource).toContain("<DetailDrawerTabs")
+    expect(drawerSource).toContain('<DetailDrawerTabsTrigger value="details">')
+    expect(drawerSource).toContain('<DetailDrawerTabsTrigger value="edit">')
+    expect(drawerSource).not.toContain('onClick={() => setActiveTab("edit")}')
+    expect(drawerSource).toContain('<span className={textRole.metadataLabel}>{t("tags")}</span>')
+    expect(drawerSource).toContain("value={activeTab}")
+    expect(drawerSource).toContain("handleDrawerOpenChange")
+    expect(drawerSource).toContain("WordlistEditFooter")
+    expect(drawerSource).toContain("onDelete(wordlist)")
+  })
+
+  it("keeps editing size-gated and moves destructive actions into the drawer", () => {
+    expect(source).toContain("MAX_ONLINE_EDIT_BYTES")
+    expect(source).toContain("canEditContent")
+    expect(source).toContain("wordlist.fileSize !== undefined")
+    expect(source).not.toContain("loadWordlistEditDialog")
+    expect(source).not.toContain("WordlistEditDialog")
+    expect(drawerSource).toContain("useWordlistEditDialogState")
+    expect(drawerSource).toContain('keepMounted')
+    expect(drawerSource).toContain('contentEnabled: activeTab === "edit"')
+    expect(drawerSource).not.toContain('<DetailDrawerTabsContent value="edit" keepMounted')
+    expect(drawerSource).toContain("handleClose")
+    expect(drawerSource).toContain("canEditSelectedContent ? (")
+    expect(drawerSource).toContain('oversizedMetadataOnly')
+    expect(drawerSource).toContain('canEditContent={canEditSelectedContent}')
+    expect(drawerSource).toContain('{t("delete")}')
+  })
+
+  it("keeps the first-screen catalog skeleton under its page-owned ContentHandoff", () => {
+    expect(source).toContain('<ContentHandoff\n      owner="wordlists-page-content"')
+    expect(source).toContain("function WordlistsPageLoadingState")
+    expect(source).toContain("skeleton={<WordlistsPageLoadingState />}")
+    expect(source).toContain('data-slot="wordlists-page-loading-state"')
+    expect(source).toContain("WordlistCatalogCardLoadingState")
+    expect(source).toContain("Array.from({ length: 6 }")
+    expect(source).toContain('<CompactPaginationSkeleton mode="cursor" showSummary buttonCount={3}')
+    expect(layoutSource).toContain('WORDLISTS_CATALOG_CONTROLS_CLASS =\n  "flex flex-wrap items-start justify-between gap-2 border-b py-3"')
+    expect(layoutSource).toContain('WORDLISTS_CATALOG_GRID_CLASS =\n  "grid grid-cols-1 gap-3 py-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"')
+    expect(layoutSource).toContain('WORDLISTS_CATALOG_FOOTER_CLASS = "shrink-0 border-t py-2.5"')
+    expect(layoutSource).toContain("2xl:grid-cols-4")
+  })
+
+  it("pairs the catalog controls and list across loading and resolved content", () => {
+    for (const slot of ["wordlists-controls", "wordlists-list"]) {
+      const marker = `getLoadingStructureSlotAttributes("${slot}")`
+      expect(source.split(marker)).toHaveLength(3)
+    }
+    expect(source).not.toContain("wordlists-inspector")
+  })
+})

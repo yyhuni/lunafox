@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "lunafox-engine-image-conformance-profile/v1",
+  "target": {
+    "type": "domain",
+    "value": "example.com"
+  },
+  "noOpEnabledSections": [
+    "resolve"
+  ],
+  "toolEnabledSections": [
+    "recon",
+    "resolve"
+  ],
+  "gateDefaultProgressAck": true,
+  "toolInputs": [],
+  "resultType": "asset.subdomain.v1",
+  "toolStubs": [
+    {
+      "tool": "subfinder",
+      "source": "tool-stubs/subfinder.sh"
+    },
+    {
+      "tool": "puredns",
+      "source": "tool-stubs/puredns.sh"
+    }
+  ],
+  "argvAssertions": [
+    {
+      "file": "subfinder.argv",
+      "args": [
+        "-d",
+        "example.com",
+        "-all",
+        "-o",
+        "/workspace/recon_subfinder_001.txt",
+        "-v",
+        "-t",
+        "10",
+        "-pc",
+        "/run/lunafox/resources/platform/subfinderProviderConfig/config.yaml"
+      ]
+    },
+    {
+      "file": "puredns.argv",
+      "args": [
+        "resolve",
+        "/workspace/deduplicated_subdomains_001.txt",
+        "-r",
+        "/run/lunafox/resources/config/resolve/resolvers/resolvers.txt",
+        "--write",
+        "/workspace/resolve_puredns_001.txt",
+        "--quiet",
+        "-t",
+        "100",
+        "--rate-limit",
+        "150"
+      ]
+    }
+  ],
+  "sigtermTool": "subfinder",
+  "platformResources": [
+    {
+      "id": "subfinderProviderConfig",
+      "source": "subfinder-provider-config-v2.12.0.yaml",
+      "kind": "toolProviderConfig",
+      "contentType": "application/vnd.lunafox.subfinder-provider-config.v1+yaml",
+      "path": "/run/lunafox/resources/platform/subfinderProviderConfig/config.yaml"
+    }
+  ],
+  "imageLocalProbes": [
+    {
+      "tool": "subfinder",
+      "args": [
+        "-pc",
+        "/run/lunafox/resources/platform/subfinderProviderConfig/config.yaml",
+        "-ls"
+      ],
+      "platformResource": "subfinderProviderConfig",
+      "outputContains": "github"
+    }
+  ]
+}

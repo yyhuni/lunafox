@@ -1,0 +1,316 @@
+import type {
+  BatchDeleteCommandsResponseData,
+  Command,
+  CommandResponseData,
+  CreateCommandRequest,
+  GetCommandsRequest,
+  GetCommandsResponse,
+  UpdateCommandRequest,
+} from "@/types/command.types"
+import { getMockToolById } from "./tools"
+
+export const mockCommands: Command[] = [
+  {
+    id: 1,
+    createdAt: "2024-01-15T10:30:00Z",
+    updatedAt: "2024-01-15T10:30:00Z",
+    toolId: 1,
+    tool: {
+      id: 1,
+      name: "subfinder",
+      type: "opensource",
+      createdAt: "2024-01-01T00:00:00Z",
+      updatedAt: "2024-01-01T00:00:00Z",
+      repoUrl: "https://github.com/projectdiscovery/subfinder",
+      version: "v2.6.5",
+      description: "Fast passive subdomain enumeration tool",
+      categoryNames: ["subdomain", "recon"],
+      directory: "",
+      installCommand: "go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.12.0",
+      updateCommand: "go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.12.0",
+      versionCommand: "subfinder -version",
+    },
+    name: "subdomain_scan",
+    displayName: "Subdomain Scan",
+    description: "Subdomain scanning using subfinder",
+    commandTemplate: "subfinder -d {{domain}} -o {{output}}",
+  },
+  {
+    id: 2,
+    createdAt: "2024-01-16T11:20:00Z",
+    updatedAt: "2024-01-16T11:20:00Z",
+    toolId: 2,
+    tool: {
+      id: 2,
+      name: "nmap",
+      type: "opensource",
+      createdAt: "2024-01-01T00:00:00Z",
+      updatedAt: "2024-01-01T00:00:00Z",
+      repoUrl: "https://github.com/nmap/nmap",
+      version: "7.94",
+      description: "Network exploration tool and security / port scanner",
+      categoryNames: ["port", "network"],
+      directory: "",
+      installCommand: "brew install nmap",
+      updateCommand: "brew upgrade nmap",
+      versionCommand: "nmap --version",
+    },
+    name: "port_scan",
+    displayName: "Port Scan",
+    description: "Port scanning using nmap",
+    commandTemplate: "nmap -sV -p- {{target}} -o {{output}}",
+  },
+  {
+    id: 3,
+    createdAt: "2024-01-17T09:15:00Z",
+    updatedAt: "2024-01-17T09:15:00Z",
+    toolId: 1,
+    tool: {
+      id: 1,
+      name: "subfinder",
+      type: "opensource",
+      createdAt: "2024-01-01T00:00:00Z",
+      updatedAt: "2024-01-01T00:00:00Z",
+      repoUrl: "https://github.com/projectdiscovery/subfinder",
+      version: "v2.6.5",
+      description: "Fast passive subdomain enumeration tool",
+      categoryNames: ["subdomain", "recon"],
+      directory: "",
+      installCommand: "go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.12.0",
+      updateCommand: "go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.12.0",
+      versionCommand: "subfinder -version",
+    },
+    name: "fast_subdomain_scan",
+    displayName: "Fast Subdomain Scan",
+    description: "Fast scanning of common subdomains using subfinder",
+    commandTemplate: "subfinder -d {{domain}} -silent -o {{output}}",
+  },
+  {
+    id: 4,
+    createdAt: "2024-01-18T14:45:00Z",
+    updatedAt: "2024-01-18T14:45:00Z",
+    toolId: 3,
+    tool: {
+      id: 3,
+      name: "nuclei",
+      type: "opensource",
+      createdAt: "2024-01-01T00:00:00Z",
+      updatedAt: "2024-01-01T00:00:00Z",
+      repoUrl: "https://github.com/projectdiscovery/nuclei",
+      version: "v3.1.4",
+      description: "Fast and customisable vulnerability scanner",
+      categoryNames: ["vulnerability", "scanner"],
+      directory: "",
+      installCommand: "go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.7.0",
+      updateCommand: "go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.7.0",
+      versionCommand: "nuclei -version",
+    },
+    name: "vulnerability_scan",
+    displayName: "Vulnerability Scan",
+    description: "Vulnerability scanning using nuclei",
+    commandTemplate: "nuclei -u {{target}} -severity critical,high,medium -o {{output}}",
+  },
+  {
+    id: 5,
+    createdAt: "2024-01-19T16:00:00Z",
+    updatedAt: "2024-01-19T16:00:00Z",
+    toolId: 4,
+    tool: {
+      id: 4,
+      name: "katana",
+      type: "opensource",
+      createdAt: "2024-01-01T00:00:00Z",
+      updatedAt: "2024-01-01T00:00:00Z",
+      repoUrl: "https://github.com/projectdiscovery/katana",
+      version: "v1.0.4",
+      description: "Next-generation crawling and spidering framework",
+      categoryNames: ["crawler", "recon"],
+      directory: "",
+      installCommand: "go install github.com/projectdiscovery/katana/cmd/katana@v1.4.0",
+      updateCommand: "go install github.com/projectdiscovery/katana/cmd/katana@v1.4.0",
+      versionCommand: "katana -version",
+    },
+    name: "web_crawl",
+    displayName: "Web Crawling",
+    description: "Web link crawling using katana",
+    commandTemplate: "katana -u {{target}} -d 3 -o {{output}}",
+  },
+  {
+    id: 6,
+    createdAt: "2024-01-20T10:30:00Z",
+    updatedAt: "2024-01-20T10:30:00Z",
+    toolId: 2,
+    tool: {
+      id: 2,
+      name: "nmap",
+      type: "opensource",
+      createdAt: "2024-01-01T00:00:00Z",
+      updatedAt: "2024-01-01T00:00:00Z",
+      repoUrl: "https://github.com/nmap/nmap",
+      version: "7.94",
+      description: "Network exploration tool and security / port scanner",
+      categoryNames: ["port", "network"],
+      directory: "",
+      installCommand: "brew install nmap",
+      updateCommand: "brew upgrade nmap",
+      versionCommand: "nmap --version",
+    },
+    name: "service_detect",
+    displayName: "Service Detection",
+    description: "Service version detection using nmap",
+    commandTemplate: "nmap -sV {{target}} -o {{output}}",
+  },
+  {
+    id: 7,
+    createdAt: "2024-01-21T13:20:00Z",
+    updatedAt: "2024-01-21T13:20:00Z",
+    toolId: 5,
+    tool: {
+      id: 5,
+      name: "dirsearch",
+      type: "opensource",
+      createdAt: "2024-01-01T00:00:00Z",
+      updatedAt: "2024-01-01T00:00:00Z",
+      repoUrl: "https://github.com/maurosoria/dirsearch",
+      version: "v0.4.3",
+      description: "Web path scanner",
+      categoryNames: ["directory", "recon"],
+      directory: "",
+      installCommand: "pip3 install dirsearch",
+      updateCommand: "pip3 install --upgrade dirsearch",
+      versionCommand: "dirsearch --version",
+    },
+    name: "dir_scan",
+    displayName: "Directory Scan",
+    description: "Directory scanning using dirsearch",
+    commandTemplate: "dirsearch -u {{target}} -e php,html,js -o {{output}}",
+  },
+  {
+    id: 8,
+    createdAt: "2024-01-22T15:10:00Z",
+    updatedAt: "2024-01-22T15:10:00Z",
+    toolId: 3,
+    tool: {
+      id: 3,
+      name: "nuclei",
+      type: "opensource",
+      createdAt: "2024-01-01T00:00:00Z",
+      updatedAt: "2024-01-01T00:00:00Z",
+      repoUrl: "https://github.com/projectdiscovery/nuclei",
+      version: "v3.1.4",
+      description: "Fast and customisable vulnerability scanner",
+      categoryNames: ["vulnerability", "scanner"],
+      directory: "",
+      installCommand: "go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.7.0",
+      updateCommand: "go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.7.0",
+      versionCommand: "nuclei -version",
+    },
+    name: "full_vulnerability_scan",
+    displayName: "Full Vulnerability Scan",
+    description: "Comprehensive vulnerability scanning using nuclei",
+    commandTemplate: "nuclei -u {{target}} -t nuclei-templates/ -o {{output}}",
+  },
+]
+
+let nextMockCommandId = Math.max(...mockCommands.map((command) => command.id)) + 1
+
+function cloneCommand(command: Command): Command {
+  return {
+    ...command,
+    tool: command.tool
+      ? {
+          ...command.tool,
+          categoryNames: [...command.tool.categoryNames],
+        }
+      : undefined,
+  }
+}
+
+export const getMockCommands = (params: GetCommandsRequest = {}): GetCommandsResponse => {
+  const page = params.page || 1
+  const pageSize = params.pageSize || 10
+
+  let filteredCommands = mockCommands
+  if (params.toolId) {
+    filteredCommands = mockCommands.filter(cmd => cmd.toolId === params.toolId)
+  }
+
+  const total = filteredCommands.length
+  const totalPages = Math.ceil(total / pageSize)
+  const startIndex = (page - 1) * pageSize
+  const commands = filteredCommands.slice(startIndex, startIndex + pageSize).map(cloneCommand)
+
+  return {
+    commands,
+    page,
+    pageSize,
+    total,
+    totalPages,
+  }
+}
+
+export const getMockCommandById = (id: number): Command | undefined => {
+  const command = mockCommands.find(cmd => cmd.id === id)
+  return command ? cloneCommand(command) : undefined
+}
+
+export const getMockCommandDeleteCount = (ids: number[]): number =>
+  ids.filter(id => mockCommands.some(cmd => cmd.id === id)).length
+
+export function createMockCommand(data: CreateCommandRequest): CommandResponseData {
+  const timestamp = new Date().toISOString()
+  const command: Command = {
+    id: nextMockCommandId++,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    toolId: data.toolId,
+    tool: getMockToolById(data.toolId),
+    name: data.name,
+    displayName: data.displayName ?? data.name,
+    description: data.description ?? '',
+    commandTemplate: data.commandTemplate,
+  }
+
+  mockCommands.unshift(command)
+  return { command: cloneCommand(command) }
+}
+
+export function updateMockCommand(
+  id: number,
+  data: UpdateCommandRequest
+): CommandResponseData {
+  const index = mockCommands.findIndex((command) => command.id === id)
+  if (index === -1) {
+    throw new Error(`Mock command not found: ${id}`)
+  }
+
+  mockCommands[index] = {
+    ...mockCommands[index],
+    ...data,
+    updatedAt: new Date().toISOString(),
+  }
+
+  return { command: cloneCommand(mockCommands[index]) }
+}
+
+export function deleteMockCommand(id: number): void {
+  const index = mockCommands.findIndex((command) => command.id === id)
+  if (index !== -1) {
+    mockCommands.splice(index, 1)
+  }
+}
+
+export function batchDeleteMockCommands(ids: number[]): BatchDeleteCommandsResponseData {
+  const idsToDelete = new Set(ids)
+  const before = mockCommands.length
+
+  for (let index = mockCommands.length - 1; index >= 0; index -= 1) {
+    if (idsToDelete.has(mockCommands[index].id)) {
+      mockCommands.splice(index, 1)
+    }
+  }
+
+  return {
+    deletedCount: before - mockCommands.length,
+  }
+}
