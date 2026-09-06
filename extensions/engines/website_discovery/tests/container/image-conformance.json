@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "lunafox-engine-image-conformance-profile/v1",
+  "target": {
+    "type": "cidr",
+    "value": "192.0.2.0/32"
+  },
+  "noOpEnabledSections": [
+    "httpx"
+  ],
+  "toolEnabledSections": [
+    "httpx"
+  ],
+  "gateDefaultProgressAck": false,
+  "toolInputs": [
+    {
+      "kind": "hostPorts",
+      "content": "{\"host\":\"example.com\",\"ip\":\"192.0.2.10\",\"port\":443}\n"
+    }
+  ],
+  "resultType": "asset.website.v1",
+  "toolStubs": [
+    {
+      "tool": "httpx",
+      "source": "tool-stubs/httpx.sh"
+    }
+  ],
+  "argvAssertions": [
+    {
+      "file": "httpx.argv",
+      "args": [
+        "-list",
+        "/workspace/httpx-candidates.txt",
+        "-json",
+        "-silent",
+        "-no-color",
+        "-status-code",
+        "-content-type",
+        "-content-length",
+        "-location",
+        "-title",
+        "-server",
+        "-tech-detect",
+        "-cdn",
+        "-vhost",
+        "-include-response",
+        "-rstr",
+        "2000",
+        "-random-agent",
+        "-o",
+        "/workspace/httpx.jsonl",
+        "-threads",
+        "25",
+        "-rate-limit",
+        "150",
+        "-timeout",
+        "10",
+        "-retries",
+        "1"
+      ]
+    }
+  ],
+  "sigtermTool": "httpx",
+  "platformResources": [],
+  "imageLocalProbes": []
+}

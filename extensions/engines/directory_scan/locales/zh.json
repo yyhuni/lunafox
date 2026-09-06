@@ -1,0 +1,59 @@
+{
+  "engine": {
+    "description": "使用 FFUF 和所选字典发现目标范围内的目录路径。",
+    "displayName": "目录扫描"
+  },
+  "sections": {
+    "ffuf": {
+      "description": "配置 FFUF 目录发现。",
+      "name": "FFUF",
+      "params": {
+        "auto-calibration": {
+          "description": "启用 FFUF 自动校准。"
+        },
+        "auto-calibration-mode": {
+          "description": "选择 FFUF ac 或按主机与当前父路径生效的 ach 自动校准。"
+        },
+        "concurrency": {
+          "description": "同时运行的 Website 扫描数量上限。"
+        },
+        "delay": {
+          "description": "原样传给 FFUF 的固定或区间请求延迟，单位为秒。"
+        },
+        "follow-redirects": {
+          "description": "扫描期间跟随 HTTP 重定向。"
+        },
+        "http2": {
+          "description": "HTTPS 请求允许使用 HTTP/2，并保留 HTTP/1 回退。"
+        },
+        "match-codes": {
+          "description": "原样传给 FFUF 的 HTTP 状态码匹配表达式。"
+        },
+        "rate": {
+          "description": "单个进程的请求速率上限；零表示保留 FFUF 不限速语义。"
+        },
+        "recursion": {
+          "description": "启用递归目录发现。"
+        },
+        "recursion-depth": {
+          "description": "递归发现的最大深度。"
+        },
+        "recursion-strategy": {
+          "description": "FFUF 递归策略。"
+        },
+        "request-timeout": {
+          "description": "单次请求超时时间，单位为秒。"
+        },
+        "threads": {
+          "description": "每个 Website FFUF 进程使用的工作线程数。"
+        },
+        "timeout": {
+          "description": "每个 Website FFUF 进程的截止时间，单位为秒。"
+        },
+        "wordlist": {
+          "description": "用于目录发现的服务端管理字典。"
+        }
+      }
+    }
+  }
+}

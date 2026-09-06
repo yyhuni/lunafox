@@ -1,0 +1,131 @@
+{
+  "manifestVersion": "engine.v5",
+  "engineId": "engine.lunafox.subdomain_discovery",
+  "publisher": "lunafox",
+  "execution": {
+    "engineApiMajor": 2,
+    "supportedTargetTypes": [
+      "domain"
+    ],
+    "executionResources": [
+      "subfinderProviderConfig"
+    ],
+    "configSections": [
+      {
+        "id": "recon",
+        "defaultEnabled": true,
+        "params": [
+          {
+            "key": "timeout",
+            "type": "integer",
+            "default": 3600,
+            "minimum": 1
+          },
+          {
+            "key": "threads",
+            "type": "integer",
+            "default": 10,
+            "minimum": 1
+          }
+        ]
+      },
+      {
+        "id": "bruteforce",
+        "params": [
+          {
+            "key": "timeout",
+            "type": "integer",
+            "default": 3600,
+            "minimum": 1
+          },
+          {
+            "key": "wordlist",
+            "type": "string",
+            "default": "subdomains-top1million-110000.txt",
+            "minLength": 1,
+            "resource": {
+              "kind": "wordlist"
+            }
+          },
+          {
+            "key": "resolvers",
+            "type": "string",
+            "default": "resolvers.txt",
+            "minLength": 1,
+            "resource": {
+              "kind": "wordlist"
+            }
+          },
+          {
+            "key": "threads",
+            "type": "integer",
+            "default": 100,
+            "minimum": 1
+          },
+          {
+            "key": "rate-limit",
+            "type": "integer",
+            "default": 150,
+            "minimum": 1
+          },
+          {
+            "key": "wildcard-filter",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "key": "wildcard-probe-count",
+            "type": "integer",
+            "default": 50,
+            "minimum": 1
+          },
+          {
+            "key": "wildcard-batch",
+            "type": "integer",
+            "default": 1000000,
+            "minimum": 1
+          }
+        ]
+      },
+      {
+        "id": "resolve",
+        "defaultEnabled": true,
+        "requiredEnabled": true,
+        "params": [
+          {
+            "key": "timeout",
+            "type": "integer",
+            "default": 3600,
+            "minimum": 1
+          },
+          {
+            "key": "threads",
+            "type": "integer",
+            "default": 100,
+            "minimum": 1
+          },
+          {
+            "key": "rate-limit",
+            "type": "integer",
+            "default": 150,
+            "minimum": 1
+          },
+          {
+            "key": "wildcard-filter",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "key": "resolvers",
+            "type": "string",
+            "default": "resolvers.txt",
+            "minLength": 1,
+            "resource": {
+              "kind": "wordlist"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
