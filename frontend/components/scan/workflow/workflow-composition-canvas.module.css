@@ -1,0 +1,351 @@
+.workbench {
+  --workflow-canvas-background: color-mix(in oklab, var(--background) 82%, var(--muted) 18%);
+  --workflow-canvas-panel: color-mix(in oklab, var(--card) 94%, var(--muted) 6%);
+  --workflow-canvas-panel-border: color-mix(in oklab, var(--border) 88%, var(--foreground) 12%);
+  --workflow-stage-background: color-mix(in oklab, var(--card) 96%, var(--muted) 4%);
+  --workflow-stage-border: color-mix(in oklab, var(--border) 86%, var(--foreground) 14%);
+  --workflow-stage-selected-border: var(--ring);
+  --workflow-stage-selected-shadow: 0 0 0 1px color-mix(in oklab, var(--ring) 44%, transparent);
+  --workflow-step-background: color-mix(in oklab, var(--background) 92%, var(--card) 8%);
+  --workflow-step-border: color-mix(in oklab, var(--border) 78%, var(--foreground) 8%);
+  --workflow-step-selected-background: color-mix(in oklab, var(--background) 88%, var(--ring) 8%);
+  --workflow-step-selected-border: color-mix(in oklab, var(--ring) 76%, var(--border));
+  --workflow-engine-background: color-mix(in oklab, var(--background) 90%, var(--card) 10%);
+  --workflow-engine-border: color-mix(in oklab, var(--border) 82%, var(--foreground) 10%);
+  --workflow-engine-hover-background: color-mix(in oklab, var(--background) 86%, var(--ring) 8%);
+  --workflow-engine-hover-border: color-mix(in oklab, var(--ring) 48%, var(--border));
+  --xy-edge-stroke: color-mix(in oklab, var(--ring) 56%, var(--border));
+  --xy-edge-stroke-width: 2;
+  --xy-background-color: var(--workflow-canvas-background);
+  --xy-background-pattern-color: color-mix(in oklab, var(--muted-foreground) 58%, transparent);
+  --workflow-add-stage-background: var(--card);
+  --workflow-add-stage-foreground: var(--card-foreground);
+  --workflow-add-stage-border: var(--border);
+  --workflow-add-stage-pad-background: var(--card);
+  --xy-handle-background-color: var(--primary);
+  --xy-handle-border-color: var(--card);
+  background: var(--workflow-canvas-background);
+}
+
+.canvasShell {
+  pointer-events: all;
+}
+
+.zoomControls {
+  align-items: center;
+  background: color-mix(in oklab, var(--background) 94%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  gap: 0;
+  overflow: hidden;
+}
+
+.canvasShell :global(.react-flow__panel) {
+  pointer-events: all;
+}
+
+:global([data-theme$="-dark"]) .workbench,
+:global(.dark) .workbench {
+  --workflow-canvas-background: color-mix(in oklab, var(--background) 88%, var(--card) 12%);
+  --workflow-canvas-panel: color-mix(in oklab, var(--card) 88%, var(--background) 12%);
+  --workflow-canvas-panel-border: color-mix(in oklab, white 16%, var(--border));
+  --workflow-stage-background: color-mix(in oklab, var(--card) 90%, var(--background) 10%);
+  --workflow-stage-border: color-mix(in oklab, white 16%, var(--border));
+  --workflow-stage-selected-shadow: 0 0 0 1px color-mix(in oklab, var(--ring) 56%, transparent);
+  --workflow-step-background: color-mix(in oklab, var(--background) 86%, black 8%);
+  --workflow-step-border: color-mix(in oklab, white 12%, var(--border));
+  --workflow-step-selected-background: color-mix(in oklab, var(--background) 74%, var(--ring) 12%);
+  --workflow-step-selected-border: color-mix(in oklab, var(--ring) 78%, white 8%);
+  --workflow-engine-background: color-mix(in oklab, var(--card) 84%, var(--background) 16%);
+  --workflow-engine-border: color-mix(in oklab, white 15%, var(--border));
+  --workflow-engine-hover-background: color-mix(in oklab, var(--card) 78%, var(--ring) 9%);
+  --workflow-engine-hover-border: color-mix(in oklab, var(--ring) 44%, white 8%);
+  --xy-background-pattern-color: color-mix(in oklab, white 48%, transparent);
+  --workflow-add-stage-background: color-mix(in oklab, var(--card) 92%, white 4%);
+  --workflow-add-stage-foreground: var(--card-foreground);
+  --workflow-add-stage-border: color-mix(in oklab, white 22%, var(--border));
+  --workflow-add-stage-pad-background: color-mix(in oklab, var(--card) 96%, white 2%);
+}
+
+.floatingEnginePanel {
+  background: var(--workflow-canvas-panel);
+  border: 1px solid var(--workflow-canvas-panel-border);
+  box-shadow: var(--shadow-sm);
+  pointer-events: all;
+  position: absolute;
+  z-index: 10;
+}
+
+.canvasHeader {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  left: 1rem;
+  min-width: 0;
+  position: absolute;
+  /* Keep long workflow names out of the upper-right canvas actions. */
+  right: 12rem;
+  top: 1rem;
+  z-index: 10;
+}
+
+.canvasHeaderTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floatingEnginePanel {
+  border-radius: var(--radius-overlay);
+  height: min(50rem, calc(100dvh - 6.5rem));
+  left: 1rem;
+  max-height: min(50rem, calc(100dvh - 6.5rem));
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18rem;
+}
+
+.canvasActions {
+  align-items: center;
+  bottom: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  pointer-events: all;
+  position: absolute;
+  right: 1rem;
+  z-index: 10;
+}
+
+.canvasPrimaryActions {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  pointer-events: all;
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  z-index: 10;
+}
+
+.canvasMiniMap {
+  background: var(--workflow-canvas-panel);
+  border: 1px solid var(--workflow-canvas-panel-border);
+  border-radius: var(--radius-overlay);
+  bottom: 1rem;
+  box-shadow: var(--shadow-sm);
+  cursor: grab;
+  left: 1rem;
+  overflow: hidden;
+  pointer-events: all;
+  position: absolute;
+  z-index: 10;
+}
+
+.canvasMiniMap:active {
+  cursor: grabbing;
+}
+
+.canvasMiniMap :global(.react-flow__minimap-svg) {
+  display: block;
+}
+
+.canvasMiniMap :global(.react-flow__minimap-mask) {
+  fill: var(--muted);
+  fill-opacity: 0.72;
+  stroke: var(--ring);
+  stroke-width: 1px;
+}
+
+.canvasMiniMap :global(.react-flow__minimap-node) {
+  fill: var(--ring);
+  fill-opacity: 0.72;
+  stroke: var(--card);
+  stroke-width: 1px;
+}
+
+.stageNode {
+  background: var(--workflow-stage-background);
+  border-color: var(--workflow-stage-border);
+}
+
+.stageNode[data-stage-selected="true"] {
+  border-color: var(--workflow-stage-selected-border);
+  box-shadow: var(--workflow-stage-selected-shadow);
+}
+
+.stageNode[data-stage-drag-over="true"] {
+  background: color-mix(in oklab, var(--workflow-stage-background) 88%, var(--ring) 8%);
+  border-color: var(--workflow-stage-selected-border);
+}
+
+.stepRow {
+  background: var(--workflow-step-background);
+  border-color: var(--workflow-step-border);
+}
+
+.stepRow[data-step-selected="true"] {
+  background: var(--workflow-step-selected-background);
+  border-color: var(--workflow-step-selected-border);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--ring) 18%, transparent);
+}
+
+.engineButton {
+  background: var(--workflow-engine-background);
+  border-color: var(--workflow-engine-border);
+}
+
+.engineButton:hover {
+  background: var(--workflow-engine-hover-background);
+  border-color: var(--workflow-engine-hover-border);
+}
+
+.canvasShell :global([data-stage-drop-target]) {
+  pointer-events: all;
+}
+
+.canvasShell :global(.react-flow) {
+  direction: ltr;
+  background: var(--workflow-canvas-background);
+  pointer-events: all;
+}
+
+.canvasShell :global(.react-flow__container) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.canvasShell :global(.react-flow__pane) {
+  cursor: grab;
+  z-index: 0;
+  pointer-events: all;
+  touch-action: none;
+}
+
+.canvasShell :global(.react-flow__pane:active) {
+  cursor: grabbing;
+}
+
+.canvasShell :global(.react-flow__viewport) {
+  z-index: 2;
+  pointer-events: all;
+  transform-origin: 0 0;
+}
+
+.canvasShell :global(.react-flow__renderer) {
+  z-index: 4;
+  pointer-events: all;
+}
+
+.canvasShell :global(.react-flow__edges),
+.canvasShell :global(.react-flow__edges svg) {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.canvasShell :global(.react-flow__edge-path) {
+  fill: none;
+  stroke: var(--xy-edge-stroke);
+  stroke-width: var(--xy-edge-stroke-width);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.canvasShell :global(.react-flow__edge-text) {
+  fill: var(--muted-foreground);
+  font-size: 0.625rem;
+}
+
+.canvasShell :global(.react-flow__edge.animated .react-flow__edge-path) {
+  stroke-dasharray: 5 7;
+  opacity: 0.84;
+}
+
+.canvasShell :global(.react-flow__nodes) {
+  z-index: 5;
+  pointer-events: none;
+  transform-origin: 0 0;
+}
+
+.canvasShell :global(.react-flow__node) {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: all;
+  user-select: none;
+}
+
+.canvasShell :global(.react-flow__handle) {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  min-height: 8px;
+  border: 1px solid var(--xy-handle-border-color);
+  border-radius: 999px;
+  background: var(--xy-handle-background-color);
+  pointer-events: none;
+}
+
+.canvasShell :global(.react-flow__handle-left) {
+  top: 50%;
+  left: 0;
+  transform: translate(-50%, -50%);
+}
+
+.canvasShell :global(.react-flow__handle-right) {
+  top: 50%;
+  right: 0;
+  transform: translate(50%, -50%);
+}
+
+.canvasShell :global(.react-flow__background) {
+  z-index: -1;
+  pointer-events: none;
+}
+
+.canvasShell :global(.react-flow__background-pattern.dots) {
+  fill: var(--xy-background-pattern-color);
+}
+
+@media (max-width: 767px) {
+  .canvasHeader {
+    left: 0.75rem;
+    right: 7rem;
+    top: 0.75rem;
+  }
+
+  .canvasActionLabel {
+    display: none;
+  }
+
+  .floatingEnginePanel {
+    bottom: auto;
+    left: 0.75rem;
+    max-height: min(15rem, calc(100dvh - 17rem));
+    right: 0.75rem;
+    top: 4.75rem;
+    transform: none;
+    width: auto;
+  }
+
+  .canvasActions {
+    bottom: 0.75rem;
+    right: 0.75rem;
+  }
+
+  .canvasPrimaryActions {
+    right: 0.75rem;
+    top: 0.75rem;
+  }
+
+  .canvasMiniMap {
+    bottom: 4rem;
+    left: 0.75rem;
+  }
+
+}

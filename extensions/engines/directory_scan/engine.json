@@ -1,0 +1,119 @@
+{
+  "manifestVersion": "engine.v5",
+  "engineId": "engine.lunafox.directory_scan",
+  "publisher": "lunafox",
+  "execution": {
+    "engineApiMajor": 2,
+    "supportedTargetTypes": [
+      "domain",
+      "ip",
+      "cidr"
+    ],
+    "configSections": [
+      {
+        "id": "ffuf",
+        "defaultEnabled": true,
+        "params": [
+          {
+            "key": "wordlist",
+            "type": "string",
+            "default": "dir_default.txt",
+            "resource": {
+              "kind": "wordlist"
+            }
+          },
+          {
+            "key": "recursion",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "key": "recursion-depth",
+            "type": "integer",
+            "default": 1,
+            "minimum": 1,
+            "maximum": 5
+          },
+          {
+            "key": "recursion-strategy",
+            "type": "string",
+            "default": "default",
+            "enum": [
+              "default",
+              "greedy"
+            ]
+          },
+          {
+            "key": "auto-calibration",
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "key": "auto-calibration-mode",
+            "type": "string",
+            "default": "ac",
+            "enum": [
+              "ac",
+              "ach"
+            ]
+          },
+          {
+            "key": "match-codes",
+            "type": "string",
+            "default": "200-299,301,302,307,401,403,405,500"
+          },
+          {
+            "key": "concurrency",
+            "type": "integer",
+            "default": 5,
+            "minimum": 1,
+            "maximum": 20
+          },
+          {
+            "key": "threads",
+            "type": "integer",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 100
+          },
+          {
+            "key": "rate",
+            "type": "integer",
+            "default": 0,
+            "minimum": 0,
+            "maximum": 1000
+          },
+          {
+            "key": "delay",
+            "type": "string",
+            "default": "0.1-2.0"
+          },
+          {
+            "key": "request-timeout",
+            "type": "integer",
+            "default": 10,
+            "minimum": 1,
+            "maximum": 120
+          },
+          {
+            "key": "timeout",
+            "type": "integer",
+            "default": 86400,
+            "minimum": 60,
+            "maximum": 604800
+          },
+          {
+            "key": "follow-redirects",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "key": "http2",
+            "type": "boolean",
+            "default": false
+          }
+        ]
+      }
+    ]
+  }
+}

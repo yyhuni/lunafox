@@ -1,0 +1,51 @@
+{
+  "manifestVersion": "engine.v5",
+  "engineId": "engine.lunafox.website_discovery",
+  "publisher": "lunafox",
+  "execution": {
+    "engineApiMajor": 2,
+    "supportedTargetTypes": [
+      "domain",
+      "ip",
+      "cidr"
+    ],
+    "configSections": [
+      {
+        "id": "httpx",
+        "defaultEnabled": true,
+        "params": [
+          {
+            "key": "timeout",
+            "type": "integer",
+            "default": 3600,
+            "minimum": 60
+          },
+          {
+            "key": "threads",
+            "type": "integer",
+            "default": 25,
+            "minimum": 1
+          },
+          {
+            "key": "rate-limit",
+            "type": "integer",
+            "default": 150,
+            "minimum": 1
+          },
+          {
+            "key": "request-timeout",
+            "type": "integer",
+            "default": 10,
+            "minimum": 1
+          },
+          {
+            "key": "retries",
+            "type": "integer",
+            "default": 1,
+            "minimum": 0
+          }
+        ]
+      }
+    ]
+  }
+}

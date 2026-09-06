@@ -1,0 +1,39 @@
+:root {
+  --radius: 6px;
+  --radius-control: 6px;
+  --radius-control-subtle: 3px;
+  --radius-surface: 6px;
+  --radius-overlay: 12px;
+  --radius-overlay-arrow: 6px;
+  --radius-badge: 3px;
+  --radius-pill: 9999px;
+  --radius-round: 9999px;
+  --overlay-backdrop-background: oklch(0 0 0 / 10%);
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", Consolas, monospace;
+  --font-serif: Georgia, "Noto Serif SC", serif;
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+
+  --logo-background: oklch(1 0 0);
+  --brand-mark-foreground: oklch(0.145 0 0);
+  --brand-favicon-background: oklch(0.145 0 0);
+  --brand-favicon-foreground: oklch(0.985 0 0);
+  --progress-stripe: oklch(1 0 0 / 15%);
+  --splash-scanline: oklch(1 0 0 / 8%);
+
+  --support-scratch-text: oklch(1 0 0);
+  --support-scratch-text-muted: oklch(1 0 0 / 70%);
+  --support-hologram-highlight: oklch(1 0 0 / 10%);
+
+  --auth-boot-ring: oklch(1 0 0 / 80%);
+  --auth-boot-ring-subtle: oklch(1 0 0 / 30%);
+  --auth-boot-grid: oklch(1 0 0 / 10%);
+  --auth-boot-progress-track: oklch(1 0 0 / 10%);
+  --auth-boot-dot: oklch(1 0 0 / 30%);
+  --auth-boot-dot-active: oklch(1 0 0 / 80%);
+  --auth-terminal-glow: 0 0 10px oklch(from var(--primary) l c h / 35%), 0 0 18px oklch(from var(--primary) l c h / 20%);
+
+  --terminal-log-debug: oklch(0.72 0.12 180);
+  --terminal-log-warning: oklch(0.84 0.12 95);
+}

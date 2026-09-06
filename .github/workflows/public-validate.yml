@@ -1,0 +1,1333 @@
+name: Public Projection Validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - export/**
+  workflow_dispatch:
+
+# Every PR/export job is secretless and runs on GitHub-hosted infrastructure.
+# Publication is a separate protected-main job with its own least-privilege
+# permissions; no untrusted event can reach that job.
+permissions:
+  contents: read
+
+concurrency:
+  group: public-projection-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PUBLIC_REPOSITORY: yyhuni/lunafox
+  PRIVATE_REPOSITORY: yyhuni/lunafox-private
+
+jobs:
+  validate-export:
+    if: github.repository == 'yyhuni/lunafox'
+    name: Public Source Validation
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Pull requests are validated against the reviewed projection commit,
+          # not GitHub's synthetic merge commit. The latter is not part of the
+          # controlled public history and would fail the fresh-history guard.
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Verify exact exported file manifest and versioned Agent bundle
+        run: node scripts/ci/check-public-export.mjs --require-agent-bundle --json
+
+      - name: Verify Agent bundle schema from the generated Git tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_tag="$(jq -er '.releaseTag' PUBLIC_PROVENANCE.json)"
+          source_revision_digest="$(jq -er '.sourceRevisionDigest' PUBLIC_PROVENANCE.json)"
+          public_provenance_sha256="sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')"
+          node scripts/ci/verify-agent-binary-bundle.mjs \
+            --bundle-dir "agent/bin/$release_tag" --public-export-root "$GITHUB_WORKSPACE" \
+            --tag "$release_tag" --source-revision-digest "$source_revision_digest" \
+            --public-provenance-sha256 "$public_provenance_sha256" --json
+
+      - name: Verify public Runtime source closure
+        run: bash scripts/ci/verify-public-runtime-source.sh --json
+
+      - name: Verify public Runtime Docker descriptors
+        run: node scripts/ci/verify-public-runtime-contexts.mjs --json
+
+      - name: Verify Agent wrapper without private binaries
+        run: node scripts/ci/verify-public-agent-wrapper.mjs --json
+
+      - name: Verify production deployment closure
+        run: bash scripts/ci/verify-public-deployment.sh --evidence dist/public-deployment-evidence.json
+
+      - name: Audit GPL scope and deferred Agent security claims
+        run: node scripts/ci/audit-public-security-scope.mjs --root-dir . --json
+
+      - name: Verify public release policy boundary
+        run: node scripts/ci/check-public-release-policy.mjs --root-dir . --public-only --json
+
+      - name: Verify migration and Engine API release policies
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_tag="$(jq -er '.releaseTag' PUBLIC_PROVENANCE.json)"
+          case "$release_tag" in
+            v[0-9]*.[0-9]*.[0-9]*-alpha.*|v[0-9]*.[0-9]*.[0-9]*-beta.*|v[0-9]*.[0-9]*.[0-9]*-rc.*) release_channel=canary ;;
+            v[0-9]*.[0-9]*.[0-9]*) release_channel=stable ;;
+            *) echo "unsupported generated release tag: $release_tag" >&2; exit 1 ;;
+          esac
+          node scripts/ci/check-migration-baseline-policy.mjs \
+            --release-channel "$release_channel" --deployment-mode disposable
+          node scripts/ci/check-engine-api-major-policy.mjs \
+            --release-channel "$release_channel"
+
+      - name: Verify channel schema and release manifest identity
+        run: |
+          set -euo pipefail
+          channel_dir=channels
+          manifest_dir=manifests
+          if [ -e "$channel_dir" ] || [ -e "$manifest_dir" ]; then
+            [ -d "$channel_dir" ] && [ -d "$manifest_dir" ] || {
+              echo "channels and manifests must be both present directories or both absent" >&2
+              exit 1
+            }
+            if [ -f "$channel_dir/v0.0.1-alpha.57.env" ]; then
+              test -f "$channel_dir/canary.env"
+              test -f "$manifest_dir/v0.0.1-alpha.57.yaml"
+              node scripts/ci/check-public-channel.mjs --root-dir . --require-first-release
+            else
+              node scripts/ci/check-public-channel.mjs --root-dir .
+            fi
+            if rg -n 'alpha\.46|SCHEMA_VERSION=2|IMAGE_REGISTRY=|IMAGE_NAMESPACE=|WORKER_IMAGE|lunafox-installer|checksums\.txt' "$channel_dir" "$manifest_dir"; then
+              echo "retired channel content found" >&2
+              exit 1
+            fi
+            for manifest in "$manifest_dir"/v*.yaml; do
+              [ -f "$manifest" ] || continue
+              tag="$(basename "$manifest" .yaml)"
+              node scripts/ci/verify-public-release.mjs --manifest "$manifest" --tag "$tag" --json
+            done
+          fi
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium for browser-backed contract tests
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Validate public frontend source
+        working-directory: frontend
+        run: |
+          set -euo pipefail
+          pnpm run typecheck
+          pnpm run lint
+          pnpm run test
+          pnpm run check:ui-foundation
+          pnpm run check:service-mock-mode
+          pnpm run check:foundation-ledger
+
+      - name: Upload public validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-source-validation-${{ github.run_id }}
+          path: dist/public-deployment-evidence.json
+          if-no-files-found: warn
+
+  validate-public-go:
+    if: github.repository == 'yyhuni/lunafox'
+    name: Public Go And Extension Validation
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: server
+            directory: server
+          - name: contracts
+            directory: contracts
+          - name: engine-go
+            directory: engine-go
+          - name: extensions
+            directory: extensions/engines
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ matrix.directory }}/go.mod
+      - name: Install server guard dependencies
+        if: matrix.name == 'server'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ripgrep
+      - name: Run public Go tests
+        working-directory: ${{ matrix.directory }}
+        run: go test ./... -count=1
+      - name: Run server boundary checks
+        if: matrix.name == 'server'
+        working-directory: server
+        run: make check-ddd
+      - name: Run public extension contract checks
+        if: matrix.name == 'extensions'
+        working-directory: extensions/engines
+        run: go test ./container -count=1
+
+  validate-public-proto:
+    if: github.repository == 'yyhuni/lunafox'
+    name: Public Proto Validation
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: engine-go/go.mod
+      - name: Install pinned protoc
+        env:
+          PROTOC_VERSION: '33.4'
+          PROTOC_SHA256: c0040ea9aef08fdeb2c74ca609b18d5fdbfc44ea0042fcfbfb38860d35f7dd66
+        run: |
+          set -euo pipefail
+          archive="${RUNNER_TEMP}/protoc-${PROTOC_VERSION}.zip"
+          root="${RUNNER_TEMP}/protoc-${PROTOC_VERSION}"
+          curl --fail --location --retry 3 --retry-delay 2 --output "$archive" \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          printf '%s  %s\n' "$PROTOC_SHA256" "$archive" | sha256sum -c -
+          unzip -q "$archive" -d "$root"
+          echo "$root/bin" >> "$GITHUB_PATH"
+          "$root/bin/protoc" --version | grep -Fx 'libprotoc 33.4'
+      - name: Install pinned Go generators
+        run: |
+          set -euo pipefail
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.10
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
+      - name: Verify generated Proto bindings
+        run: bash proto/scripts/check-generated.sh
+      - name: Run generated binding tests
+        working-directory: contracts
+        run: go test ./gen/... -count=1
+
+  validate-runtime-contexts:
+    if: github.repository == 'yyhuni/lunafox'
+    name: Public Runtime Context Build (${{ matrix.component }})
+    runs-on: ubuntu-22.04
+    needs: [validate-export, validate-public-go, validate-public-proto]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: server
+            context: .
+            dockerfile: server/Dockerfile
+          - component: frontend
+            context: frontend
+            dockerfile: frontend/Dockerfile
+          - component: nginx
+            context: docker/nginx
+            dockerfile: docker/nginx/Dockerfile
+          - component: bootstrap
+            context: .
+            dockerfile: docker/bootstrap/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build public Runtime context without publishing
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: false
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=lunafox-public-context-${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=lunafox-public-context-${{ matrix.component }}
+
+  public-validation:
+    if: >-
+      always() && github.repository == 'yyhuni/lunafox'
+    name: Public Projection Validation
+    runs-on: ubuntu-22.04
+    needs: [validate-export, validate-public-go, validate-public-proto, validate-runtime-contexts]
+    steps:
+      - name: Require every public check to pass
+        run: |
+          set -euo pipefail
+          for result in \
+            "${{ needs.validate-export.result }}" \
+            "${{ needs.validate-public-go.result }}" \
+            "${{ needs.validate-public-proto.result }}" \
+            "${{ needs.validate-runtime-contexts.result }}"; do
+            if [ "$result" != success ]; then
+              echo "public validation dependency did not pass: $result" >&2
+              exit 1
+            fi
+          done
+          echo "Public Projection Validation passed"
+
+  # A generated export PR is the only supported path to public main. This job
+  # fails closed for ordinary community pushes because provenance and merge
+  # history must identify the private source projection and release tag.
+  publish-runtime-images:
+    if: >-
+      github.repository == 'yyhuni/lunafox' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    name: Publish Public Runtime Image (${{ matrix.component }})
+    needs: public-validation
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: server
+            repository: lunafox-server
+            context: .
+            dockerfile: server/Dockerfile
+          - component: frontend
+            repository: lunafox-frontend
+            context: frontend
+            dockerfile: frontend/Dockerfile
+          - component: nginx
+            repository: lunafox-nginx
+            context: docker/nginx
+            dockerfile: docker/nginx/Dockerfile
+          - component: bootstrap
+            repository: lunafox-bootstrap
+            context: .
+            dockerfile: docker/bootstrap/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: source
+        name: Verify generated public provenance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f PUBLIC_PROVENANCE.json
+          generated_read_only="$(jq -r '.generatedReadOnly // false' PUBLIC_PROVENANCE.json)"
+          source_repository="$(jq -r '.sourceRepository // empty' PUBLIC_PROVENANCE.json)"
+          destination_repository="$(jq -r '.destinationRepository // empty' PUBLIC_PROVENANCE.json)"
+          release_tag="$(jq -r '.releaseTag // empty' PUBLIC_PROVENANCE.json)"
+          source_revision_digest="$(jq -r '.sourceRevisionDigest // empty' PUBLIC_PROVENANCE.json)"
+          head_subject="$(git log -1 --format=%s)"
+          merge_subject_pattern="^Merge[[:space:]]pull[[:space:]]request[[:space:]]#[0-9]+[[:space:]]from[[:space:]]yyhuni/export/${release_tag//./\\.}(-retry-[0-9]+)?$"
+          squash_subject_pattern="^chore\\(export\\):[[:space:]]generated[[:space:]]deployment[[:space:]]projection[[:space:]]${release_tag//./\\.}[[:space:]]\\(#[0-9]+\\)$"
+          [ "$generated_read_only" = true ] || { echo "public main is not a generated projection" >&2; exit 1; }
+          [ "$source_repository" = "$PRIVATE_REPOSITORY" ] || { echo "unexpected private source repository: $source_repository" >&2; exit 1; }
+          [ "$destination_repository" = "$PUBLIC_REPOSITORY" ] || { echo "unexpected destination repository: $destination_repository" >&2; exit 1; }
+          [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "invalid generated release tag: $release_tag" >&2; exit 1; }
+          [[ "$source_revision_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid source revision digest" >&2; exit 1; }
+          [[ "$head_subject" =~ $merge_subject_pattern || "$head_subject" =~ $squash_subject_pattern ]] || {
+            echo "public main HEAD is not a generated export merge: $head_subject" >&2
+            exit 1
+          }
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+          echo "source_revision_digest=$source_revision_digest" >> "$GITHUB_OUTPUT"
+          echo "public_export_manifest_sha256=sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - id: preflight
+        name: Check immutable public Runtime reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="ghcr.io/yyhuni/${{ matrix.repository }}"
+          commit_ref="${image}:public-${GITHUB_SHA}"
+          resolve_digest() {
+            docker buildx imagetools inspect "$1" 2>/dev/null | awk '/^Digest:/ {print $2; exit}' || true
+          }
+          commit_digest="$(resolve_digest "$commit_ref")"
+          echo "commit_digest=$commit_digest" >> "$GITHUB_OUTPUT"
+          echo "commit_ref=$commit_ref" >> "$GITHUB_OUTPUT"
+
+      - id: build
+        name: Build and publish immutable public Runtime image
+        if: steps.preflight.outputs.commit_digest == ''
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=lunafox-public-${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=lunafox-public-${{ matrix.component }}
+          tags: ${{ steps.preflight.outputs.commit_ref }}
+
+      - id: digest
+        name: Preserve immutable public Runtime digest
+        env:
+          BUILT_DIGEST: ${{ steps.build.outputs.digest }}
+          EXISTING_DIGEST: ${{ steps.preflight.outputs.commit_digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          image_digest="${BUILT_DIGEST:-$EXISTING_DIGEST}"
+          [[ "$image_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "public Runtime build did not return an immutable digest" >&2; exit 1; }
+          echo "image_digest=$image_digest" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure GHCR package is public
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          visibility="$(gh api "/user/packages/container/${{ matrix.repository }}" --jq '.visibility')"
+          [ "$visibility" = public ] || { echo "GHCR package must be public, got: $visibility" >&2; exit 1; }
+
+      - name: Attest public Runtime image provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/yyhuni/${{ matrix.repository }}
+          subject-digest: ${{ steps.digest.outputs.image_digest }}
+          push-to-registry: true
+
+      - name: Write public Runtime image evidence
+        env:
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+          SOURCE_REVISION_DIGEST: ${{ steps.source.outputs.source_revision_digest }}
+          PUBLIC_EXPORT_MANIFEST_SHA256: ${{ steps.source.outputs.public_export_manifest_sha256 }}
+          PUBLIC_PROVENANCE_SHA256: ${{ steps.source.outputs.public_provenance_sha256 }}
+          IMAGE_DIGEST: ${{ steps.digest.outputs.image_digest }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          dockerfile_sha256="sha256:$(sha256sum "${{ matrix.dockerfile }}" | awk '{print $1}')"
+          lockfile_sha256=""
+          if [ "${{ matrix.component }}" = frontend ]; then
+            lockfile_sha256="sha256:$(sha256sum frontend/pnpm-lock.yaml | awk '{print $1}')"
+          fi
+          jq -n \
+            --arg component "${{ matrix.component }}" \
+            --arg repository "${{ matrix.repository }}" \
+            --arg sourceRepository "$PRIVATE_REPOSITORY" \
+            --arg destinationRepository "$PUBLIC_REPOSITORY" \
+            --arg sourceRevisionDigest "$SOURCE_REVISION_DIGEST" \
+            --arg publicMergeCommit "$GITHUB_SHA" \
+            --arg releaseTag "$RELEASE_TAG" \
+            --arg workflowRun "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --arg workflowIdentity "https://github.com/yyhuni/lunafox/.github/workflows/public-validate.yml@refs/heads/main" \
+            --arg image "ghcr.io/yyhuni/${{ matrix.repository }}@${IMAGE_DIGEST}" \
+            --arg digest "$IMAGE_DIGEST" \
+            --arg publicExportManifestSha256 "$PUBLIC_EXPORT_MANIFEST_SHA256" \
+            --arg publicProvenanceSha256 "$PUBLIC_PROVENANCE_SHA256" \
+            --arg dockerfileSha256 "$dockerfile_sha256" \
+            --arg lockfileSha256 "$lockfile_sha256" \
+            '{schemaVersion:1,status:"published",component:$component,sourceRepository:$sourceRepository,destinationRepository:$destinationRepository,sourceRevisionDigest:$sourceRevisionDigest,publicMergeCommit:$publicMergeCommit,releaseTag:$releaseTag,workflowRun:$workflowRun,workflowIdentity:$workflowIdentity,image:$image,dockerHubImage:("docker.io/yyhuni/" + $repository + "@" + $digest),digest:$digest,publicExportManifestSha256:$publicExportManifestSha256,publicProvenanceSha256:$publicProvenanceSha256,dockerfileSha256:$dockerfileSha256,platforms:["linux/amd64","linux/arm64"],sbom:true,provenance:true,attestation:true,attestationSubject:$image,attestationPredicateType:"https://slsa.dev/provenance/v1"} + (if $component == "frontend" then {lockfileSha256:$lockfileSha256} else {} end)' \
+            > "dist/public-runtime-image-evidence-${{ matrix.component }}.json"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-runtime-image-evidence-${{ matrix.component }}-${{ github.sha }}
+          path: dist/public-runtime-image-evidence-${{ matrix.component }}.json
+          if-no-files-found: error
+
+  # Only a protected public-main push may package the exact Agent version
+  # directory that was merged into the public Git tree. PRs never receive
+  # Registry write permission or a private source/binary fallback.
+  publish-agent-image:
+    if: >-
+      github.repository == 'yyhuni/lunafox' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    name: Package Verified Agent Image
+    needs: public-validation
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    environment: public-release
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@v3
+      - uses: oras-project/setup-oras@v1
+      - uses: sigstore/cosign-installer@v3
+      - id: source
+        name: Bind Agent publication to generated public provenance
+        run: |
+          set -euo pipefail
+          test -f PUBLIC_PROVENANCE.json
+          test "$(jq -er '.generatedReadOnly' PUBLIC_PROVENANCE.json)" = true
+          test "$(jq -er '.sourceRepository' PUBLIC_PROVENANCE.json)" = "$PRIVATE_REPOSITORY"
+          test "$(jq -er '.destinationRepository' PUBLIC_PROVENANCE.json)" = "$PUBLIC_REPOSITORY"
+          release_tag="$(jq -er '.releaseTag' PUBLIC_PROVENANCE.json)"
+          source_revision_digest="$(jq -er '.sourceRevisionDigest' PUBLIC_PROVENANCE.json)"
+          [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || exit 1
+          [[ "$source_revision_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || exit 1
+          head_subject="$(git log -1 --format=%s)"
+          merge_subject_pattern="^Merge[[:space:]]pull[[:space:]]request[[:space:]]#[0-9]+[[:space:]]from[[:space:]]yyhuni/export/${release_tag//./\\.}(-retry-[0-9]+)?$"
+          squash_subject_pattern="^chore\\(export\\):[[:space:]]generated[[:space:]]deployment[[:space:]]projection[[:space:]]${release_tag//./\\.}[[:space:]]\\(#[0-9]+\\)$"
+          [[ "$head_subject" =~ $merge_subject_pattern || "$head_subject" =~ $squash_subject_pattern ]] || {
+            echo "public main HEAD is not the generated export merge: $head_subject" >&2
+            exit 1
+          }
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+          echo "source_revision_digest=$source_revision_digest" >> "$GITHUB_OUTPUT"
+          echo "public_export_manifest_sha256=sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+      - id: verify
+        name: Verify the exact merged Agent tree before creating a Docker context
+        env:
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+          SOURCE_REVISION_DIGEST: ${{ steps.source.outputs.source_revision_digest }}
+          PUBLIC_EXPORT_MANIFEST_SHA256: ${{ steps.source.outputs.public_export_manifest_sha256 }}
+          PUBLIC_PROVENANCE_SHA256: ${{ steps.source.outputs.public_provenance_sha256 }}
+          BUNDLE_DIR: ${{ github.workspace }}/agent/bin/${{ steps.source.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          test -d "$BUNDLE_DIR" || { echo "merged public tree is missing exact Agent directory: $BUNDLE_DIR" >&2; exit 1; }
+          node scripts/ci/verify-agent-binary-bundle.mjs \
+            --bundle-dir "$BUNDLE_DIR" --tag "$RELEASE_TAG" \
+            --source-revision-digest "$SOURCE_REVISION_DIGEST" \
+            --public-export-root "$GITHUB_WORKSPACE" \
+            --public-provenance-sha256 "$PUBLIC_PROVENANCE_SHA256" \
+            --json | tee dist/agent-bundle-verification.json
+          cosign verify-blob \
+            --bundle "$BUNDLE_DIR/agent-bundle.sigstore.json" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp "^https://github\\.com/yyhuni/lunafox-private/\\.github/workflows/release\\.yml@refs/tags/${RELEASE_TAG}$" \
+            "$BUNDLE_DIR/agent-bundle.json"
+          bundle_digest="sha256:$(sha256sum "$BUNDLE_DIR/agent-bundle.json" | awk '{print $1}')"
+          tree_manifest_digest="$(jq -er '.publicExportManifestSha256' "$BUNDLE_DIR/agent-bundle.json")"
+          echo "bundle_dir=$BUNDLE_DIR" >> "$GITHUB_OUTPUT"
+          echo "bundle_digest=$bundle_digest" >> "$GITHUB_OUTPUT"
+          echo "tree_manifest_digest=$tree_manifest_digest" >> "$GITHUB_OUTPUT"
+      - id: build
+        name: Build and publish the multi-architecture Agent image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.verify.outputs.bundle_dir }}
+          file: docker/agent/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=lunafox-public-agent
+          cache-to: type=gha,mode=max,scope=lunafox-public-agent
+          tags: ghcr.io/yyhuni/lunafox-agent:public-${{ github.sha }}
+      - id: digest
+        name: Preserve the immutable Agent image digest
+        env:
+          BUILT_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          [[ "$BUILT_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "Agent build did not return an immutable digest" >&2; exit 1; }
+          echo "image_digest=$BUILT_DIGEST" >> "$GITHUB_OUTPUT"
+      - name: Keylessly sign and verify the public Agent image
+        env:
+          IMAGE_DIGEST: ${{ steps.digest.outputs.image_digest }}
+        run: |
+          set -euo pipefail
+          image="ghcr.io/yyhuni/lunafox-agent@${IMAGE_DIGEST}"
+          cosign sign --yes "$image"
+          cosign verify \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp '^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$' \
+            "$image" >/dev/null
+      - name: Attest the public Agent image
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/yyhuni/lunafox-agent
+          subject-digest: ${{ steps.digest.outputs.image_digest }}
+          push-to-registry: true
+      - name: Write verified Agent image evidence
+        env:
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+          SOURCE_REVISION_DIGEST: ${{ steps.source.outputs.source_revision_digest }}
+          PUBLIC_EXPORT_MANIFEST_SHA256: ${{ steps.source.outputs.public_export_manifest_sha256 }}
+          PUBLIC_PROVENANCE_SHA256: ${{ steps.source.outputs.public_provenance_sha256 }}
+          IMAGE_DIGEST: ${{ steps.digest.outputs.image_digest }}
+          BUNDLE_DIGEST: ${{ steps.verify.outputs.bundle_digest }}
+          BUNDLE_DIR: ${{ steps.verify.outputs.bundle_dir }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          binary_signer_identity="$(jq -er '.signerIdentity' "$BUNDLE_DIR/agent-bundle.json")"
+          dockerfile_sha256="sha256:$(sha256sum docker/agent/Dockerfile | awk '{print $1}')"
+          jq -n \
+            --arg sourceRepository "$PRIVATE_REPOSITORY" \
+            --arg destinationRepository "$PUBLIC_REPOSITORY" \
+            --arg sourceRevisionDigest "$SOURCE_REVISION_DIGEST" \
+            --arg publicMergeCommit "$GITHUB_SHA" \
+            --arg releaseTag "$RELEASE_TAG" \
+            --arg workflowRun "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --arg workflowIdentity "https://github.com/yyhuni/lunafox/.github/workflows/public-validate.yml@refs/heads/main" \
+            --arg image "ghcr.io/yyhuni/lunafox-agent@${IMAGE_DIGEST}" \
+            --arg digest "$IMAGE_DIGEST" \
+            --arg publicExportManifestSha256 "$PUBLIC_EXPORT_MANIFEST_SHA256" \
+            --arg publicProvenanceSha256 "$PUBLIC_PROVENANCE_SHA256" \
+            --arg bundleDigest "$BUNDLE_DIGEST" \
+            --arg treeManifestDigest "${{ steps.verify.outputs.tree_manifest_digest }}" \
+            --arg dockerfileSha256 "$dockerfile_sha256" \
+            --arg binarySignerIdentity "$binary_signer_identity" \
+            '{schemaVersion:1,status:"published",component:"agent",sourceRepository:$sourceRepository,destinationRepository:$destinationRepository,sourceRevisionDigest:$sourceRevisionDigest,publicMergeCommit:$publicMergeCommit,releaseTag:$releaseTag,workflowRun:$workflowRun,workflowIdentity:$workflowIdentity,image:$image,dockerHubImage:("docker.io/yyhuni/lunafox-agent@" + $digest),digest:$digest,publicExportManifestSha256:$publicExportManifestSha256,publicProvenanceSha256:$publicProvenanceSha256,dockerfileSha256:$dockerfileSha256,platforms:["linux/amd64","linux/arm64"],sbom:true,provenance:true,attestation:true,attestationSubject:$image,attestationPredicateType:"https://slsa.dev/provenance/v1",binaryBundleDigest:$bundleDigest,binarySourceRevisionDigest:$sourceRevisionDigest,binaryExportManifestSha256:$publicExportManifestSha256,binaryProvenanceSha256:$publicProvenanceSha256,binaryTreePath:("agent/bin/" + $releaseTag),binaryTreeBaseManifestSha256:$treeManifestDigest,binarySignerIssuer:"https://token.actions.githubusercontent.com",binarySignerIdentity:$binarySignerIdentity,binaryMembers:["lunafox-agent-linux-amd64","lunafox-agent-linux-arm64","lunafox-engine-mount-preflight-linux-amd64","lunafox-engine-mount-preflight-linux-arm64"]}' \
+            > dist/public-runtime-image-evidence-agent.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-runtime-image-evidence-agent-${{ github.sha }}
+          path: |
+            dist/public-runtime-image-evidence-agent.json
+            dist/agent-bundle-verification.json
+          if-no-files-found: error
+
+  # Protected-main Engine publication is intentionally separate from the
+  # public Runtime component matrix. It has public Engine registry credentials
+  # only; no Agent, product, or private release authority is available here.
+  public-engine-runtime-build:
+    if: >-
+      github.repository == 'yyhuni/lunafox' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    name: Build Public Engine Runtime Images
+    needs: public-validation
+    runs-on: ubuntu-22.04
+    environment: public-engine-release
+    permissions:
+      contents: read
+      packages: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: source
+        name: Bind Engine release to generated public merge
+        run: |
+          set -euo pipefail
+          test -f PUBLIC_PROVENANCE.json
+          generated_read_only="$(jq -r '.generatedReadOnly // false' PUBLIC_PROVENANCE.json)"
+          source_repository="$(jq -r '.sourceRepository // empty' PUBLIC_PROVENANCE.json)"
+          destination_repository="$(jq -r '.destinationRepository // empty' PUBLIC_PROVENANCE.json)"
+          release_tag="$(jq -r '.releaseTag // empty' PUBLIC_PROVENANCE.json)"
+          source_revision_digest="$(jq -r '.sourceRevisionDigest // empty' PUBLIC_PROVENANCE.json)"
+          [ "$generated_read_only" = true ] || { echo "public Engine release requires generated projection" >&2; exit 1; }
+          [ "$source_repository" = "$PRIVATE_REPOSITORY" ] || { echo "unexpected source repository: $source_repository" >&2; exit 1; }
+          [ "$destination_repository" = "$PUBLIC_REPOSITORY" ] || { echo "unexpected destination repository: $destination_repository" >&2; exit 1; }
+          [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "invalid release tag" >&2; exit 1; }
+          [[ "$source_revision_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid source revision digest" >&2; exit 1; }
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+          echo "source_revision_digest=$source_revision_digest" >> "$GITHUB_OUTPUT"
+          echo "public_export_manifest_sha256=sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/engine-release/go.mod
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: oras-project/setup-oras@v1
+      - uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Build and publish the complete public Engine image set once
+        env:
+          ENGINE_RELEASE_MODE: production
+          ENGINE_VERSION: ${{ steps.source.outputs.release_tag != '' && steps.source.outputs.release_tag || '' }}
+          ENGINE_IMAGE_TAG: public-${{ github.sha }}
+          ENGINE_IMAGE_BUILD_RESULTS: ${{ github.workspace }}/dist/public-engine-runtime/build-results.json
+          ENGINE_RUNTIME_IMAGE_EVIDENCE_ROOT: ${{ github.workspace }}/dist/public-engine-runtime/registry-evidence
+          ENGINE_IMAGE_SOURCE: https://github.com/yyhuni/lunafox
+          ENGINE_REUSE_EXISTING: true
+          DOCKERHUB_NAMESPACE: yyhuni
+          GITHUB_REPOSITORY_OWNER: yyhuni
+          LUNAFOX_CANONICAL_NAMESPACE: yyhuni
+        run: |
+          set -euo pipefail
+          release_tag="${{ steps.source.outputs.release_tag }}"
+          ENGINE_VERSION="${release_tag#v}" \
+          bash scripts/ci/publish-engine-runtime-images.sh
+          jq -n \
+            --arg releaseTag "$release_tag" \
+            --arg publicMergeCommit "$GITHUB_SHA" \
+            --arg sourceRevisionDigest "${{ steps.source.outputs.source_revision_digest }}" \
+            --arg publicExportManifestSha256 "${{ steps.source.outputs.public_export_manifest_sha256 }}" \
+            --arg publicProvenanceSha256 "${{ steps.source.outputs.public_provenance_sha256 }}" \
+            --arg signerIdentity "https://github.com/yyhuni/lunafox/.github/workflows/public-validate.yml@refs/heads/main" \
+            '{schemaVersion:"lunafox.engine-release-context.v1",releaseTag:$releaseTag,publicMergeCommit:$publicMergeCommit,sourceRevisionDigest:$sourceRevisionDigest,publicExportManifestSha256:$publicExportManifestSha256,publicProvenanceSha256:$publicProvenanceSha256,signerIdentity:$signerIdentity}' \
+            > dist/public-engine-runtime/release-context.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-engine-runtime-build-${{ github.sha }}
+          path: dist/public-engine-runtime/**
+          if-no-files-found: error
+
+  public-engine-runtime-sign:
+    if: >-
+      github.repository == 'yyhuni/lunafox' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    name: Sign Public Engine Runtime Images
+    needs: public-engine-runtime-build
+    runs-on: ubuntu-22.04
+    environment: public-engine-release
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-engine-runtime-build-${{ github.sha }}
+          path: dist/public-engine-runtime
+      - uses: sigstore/cosign-installer@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Keylessly sign and anonymously verify public Engine Runtime Images
+        run: |
+          set -euo pipefail
+          context_file=dist/public-engine-runtime/release-context.json
+          signer="$(jq -er '.signerIdentity' "$context_file")"
+          [[ "$signer" = "https://github.com/yyhuni/lunafox/.github/workflows/public-validate.yml@refs/heads/main" ]] || exit 1
+          evidence_root=dist/public-engine-runtime-evidence
+          mkdir -p "$evidence_root/signatures" "$evidence_root/anonymous-pulls" "$evidence_root/registry"
+          anonymous_config="$(mktemp -d)"
+          trap 'rm -rf "$anonymous_config"' EXIT
+          printf '{"auths":{}}\n' > "$anonymous_config/config.json"
+          jq -c '.engines[]' dist/public-engine-runtime/build-results.json | while read -r engine; do
+            engine_id="$(jq -er '.engineId' <<<"$engine")"
+            index_digest="$(jq -er '.indexDigest' <<<"$engine")"
+            safe_engine_id="${engine_id//[^A-Za-z0-9_.-]/_}"
+            refs=("$(jq -er '.refs[0]' <<<"$engine")" "$(jq -er '.refs[1]' <<<"$engine")")
+            for ref in "${refs[@]}"; do
+              registry_label=ghcr
+              [[ "$ref" = docker.io/* ]] && registry_label=dockerhub
+              signature_file="$evidence_root/signatures/${safe_engine_id}-${registry_label}.json"
+              cosign sign --yes "$ref"
+              DOCKER_CONFIG="$anonymous_config" cosign verify \
+                --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+                --certificate-identity-regexp '^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$' \
+                "$ref" > "$signature_file"
+              jq -e 'type == "array" and length > 0' "$signature_file" >/dev/null
+              DOCKER_CONFIG="$anonymous_config" docker pull "$ref" >/dev/null
+              jq -n --arg engineId "$engine_id" --arg ref "$ref" --arg indexDigest "$index_digest" --arg registry "$registry_label" --arg signatureFile "signatures/${safe_engine_id}-${registry_label}.json" \
+                '{engineId:$engineId,ref:$ref,indexDigest:$indexDigest,registry:$registry,registryAuth:"empty",exactRepoDigestVerified:true,payloadVerified:true,keylessSignatureVerification:$signatureFile}' \
+                > "$evidence_root/anonymous-pulls/${safe_engine_id}-${registry_label}.json"
+            done
+          done
+          jq -s \
+            --slurpfile context "$context_file" \
+            --slurpfile receipt dist/public-engine-runtime/build-results.json \
+            '($receipt[0].engines | map(.engineId) | sort) as $expectedEngineIds |
+             ([.[] | [.engineId,.ref]] | sort) as $observedCandidates |
+             ([$receipt[0].engines[] | .engineId as $engineId | .refs[] | [$engineId,.]] | sort) as $expectedCandidates |
+             {schemaVersion:"lunafox.engine-runtime-image-publication-evidence.v1",passed:($observedCandidates == $expectedCandidates and all(.[]; .registryAuth == "empty")),signerIdentity:$context[0].signerIdentity,publicMergeCommit:$context[0].publicMergeCommit,sourceRevisionDigest:$context[0].sourceRevisionDigest,releaseTag:$context[0].releaseTag,publicExportManifestSha256:$context[0].publicExportManifestSha256,publicProvenanceSha256:$context[0].publicProvenanceSha256,expectedEngineIds:$expectedEngineIds,expectedCandidates:$expectedCandidates,engines:($receipt[0].engines | map({engineId,indexDigest,refs,platforms}) | sort_by(.engineId)),candidates:sort_by(.engineId,.registry)}' \
+            "$evidence_root"/anonymous-pulls/*.json > "$evidence_root/evidence.json"
+          jq -e '.passed == true' "$evidence_root/evidence.json" >/dev/null
+      - name: Attest public Engine Runtime release receipt
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/public-engine-runtime/build-results.json
+          push-to-registry: true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-engine-runtime-evidence-${{ github.sha }}
+          path: |
+            dist/public-engine-runtime-evidence/**
+            dist/public-engine-runtime/release-context.json
+          if-no-files-found: error
+
+  public-engine-package-build:
+    if: >-
+      github.repository == 'yyhuni/lunafox' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    name: Build Public Engine Package v2
+    needs: public-engine-runtime-sign
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-engine-runtime-build-${{ github.sha }}
+          path: dist/public-engine-runtime
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-engine-runtime-evidence-${{ github.sha }}
+          path: dist
+      - name: Generate packages only from the verified public Runtime receipt
+        run: |
+          set -euo pipefail
+          test "$(jq -r '.passed' dist/public-engine-runtime-evidence/evidence.json)" = true
+          release_tag="$(jq -er '.releaseTag' dist/public-engine-runtime/release-context.json)"
+          mkdir -p dist/public-engine-package-v2
+          (cd tools/engine-release && go run . \
+            -command build-packages \
+            -engine-root "$GITHUB_WORKSPACE/extensions/engines" \
+            -build-results "$GITHUB_WORKSPACE/dist/public-engine-runtime/build-results.json" \
+            -engine-version "${release_tag#v}" \
+            -out-root "$GITHUB_WORKSPACE/dist/public-engine-package-v2" \
+            -mode production \
+            -output "$GITHUB_WORKSPACE/dist/public-engine-package-v2/build-results.json")
+          (cd tools/engine-release && go run . \
+            -command validate-package-artifacts \
+            -engine-root "$GITHUB_WORKSPACE/extensions/engines" \
+            -build-results "$GITHUB_WORKSPACE/dist/public-engine-runtime/build-results.json" \
+            -package-build-results "$GITHUB_WORKSPACE/dist/public-engine-package-v2/build-results.json" \
+            -out-root "$GITHUB_WORKSPACE/dist/public-engine-package-v2" \
+            -mode production)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-engine-package-build-${{ github.sha }}
+          path: |
+            dist/public-engine-package-v2/**
+            dist/public-engine-runtime/release-context.json
+          if-no-files-found: error
+
+  public-engine-package-publish:
+    if: >-
+      github.repository == 'yyhuni/lunafox' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    name: Publish Public Engine Package v2
+    needs: public-engine-package-build
+    runs-on: ubuntu-22.04
+    environment: public-engine-release
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-engine-package-build-${{ github.sha }}
+          path: dist
+      - uses: oras-project/setup-oras@v1
+      - uses: sigstore/cosign-installer@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Publish, sign, and verify immutable Engine Package v2 artifacts
+        run: |
+          set -euo pipefail
+          context_file=dist/public-engine-package-v2/../public-engine-runtime/release-context.json
+          [ -f "$context_file" ] || context_file=dist/public-engine-runtime/release-context.json
+          release_tag="$(jq -er '.releaseTag' "$context_file")"
+          signer="$(jq -er '.signerIdentity' "$context_file")"
+          evidence_root=dist/public-engine-package-evidence
+          digest_root=dist/public-engine-package-digests
+          mkdir -p "$evidence_root/descriptors" "$evidence_root/manifests" "$evidence_root/signatures" "$evidence_root/records" "$digest_root"
+          publisher="$(mktemp)"
+          anonymous_config="$(mktemp -d)"
+          trap 'rm -f "$publisher"; rm -rf "$anonymous_config"' EXIT
+          printf '{"auths":{}}\n' > "$anonymous_config/config.json"
+          (cd tools/engine-oci-publish && go build -trimpath -buildvcs=false -o "$publisher" .)
+          shopt -s nullglob
+          archives=(dist/public-engine-package-v2/*.lfengine.tar.gz)
+          [ "${#archives[@]}" -gt 0 ] || { echo "no Engine Package v2 archives" >&2; exit 1; }
+          for archive in "${archives[@]}"; do
+            engine_id="$($publisher --archive "$archive" --print-engine-id)"
+            package_digest="$(jq -er --arg engineId "$engine_id" '.packages[] | select(.engineId == $engineId) | .packageDigest' dist/public-engine-package-v2/build-results.json)"
+            docker_ref="$($publisher --archive "$archive" --repository-prefix "docker.io/yyhuni" --tag "package-v2-${release_tag}")"
+            artifact_digest="${docker_ref##*@}"
+            [[ "$artifact_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || exit 1
+            docker_location="${docker_ref%@*}"
+            ghcr_location="ghcr.io/yyhuni/${docker_location##*/}"
+            oras cp "$docker_ref" "$ghcr_location:package-v2-${release_tag}"
+            ghcr_ref="$ghcr_location@$artifact_digest"
+            for ref in "$docker_ref" "$ghcr_ref"; do
+              registry_label=dockerhub
+              [[ "$ref" = ghcr.io/* ]] && registry_label=ghcr
+              signature_file="$evidence_root/signatures/${engine_id//[^A-Za-z0-9_.-]/_}-${registry_label}.json"
+              cosign sign --yes "$ref"
+              DOCKER_CONFIG="$anonymous_config" cosign verify \
+                --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+                --certificate-identity-regexp '^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$' \
+                "$ref" > "$signature_file"
+              jq -e 'type == "array" and length > 0' "$signature_file" >/dev/null
+              descriptor_file="$evidence_root/descriptors/${engine_id//[^A-Za-z0-9_.-]/_}-${registry_label}.json"
+              oras manifest fetch --registry-config "$anonymous_config/config.json" --descriptor "$ref" > "$descriptor_file"
+              jq -e --arg digest "$artifact_digest" '.digest == $digest' "$descriptor_file" >/dev/null
+            done
+            printf 'ENGINE_ID=%s\nENGINE_REFS=%s,%s\n' "$engine_id" "$docker_ref" "$ghcr_ref" > "$digest_root/${engine_id}.env"
+            jq -n --arg engineId "$engine_id" --arg packageDigest "$package_digest" --arg artifactManifestDigest "$artifact_digest" --arg dockerHubRef "$docker_ref" --arg ghcrRef "$ghcr_ref" \
+              '{engineId:$engineId,packageDigest:$packageDigest,artifactManifestDigest:$artifactManifestDigest,candidates:[{registry:"dockerhub",ref:$dockerHubRef},{registry:"ghcr",ref:$ghcrRef}],registryAuth:"empty",digestEqualityVerified:true,envelopeVerified:true}' \
+              > "$evidence_root/records/${engine_id//[^A-Za-z0-9_.-]/_}.json"
+          done
+          jq -s \
+            --slurpfile context "$context_file" \
+            --slurpfile receipt dist/public-engine-package-v2/build-results.json \
+            '($receipt[0].packages | map(.engineId) | sort) as $expectedEngineIds |
+             (map({engineId,packageDigest,artifactManifestDigest}) | sort_by(.engineId)) as $observed |
+             ($receipt[0].packages | map({engineId,packageDigest}) | sort_by(.engineId)) as $expectedPackages |
+             {schemaVersion:"lunafox.engine-package-v2-publication-evidence.v1",passed:(($observed | map({engineId,packageDigest}) | sort_by(.engineId)) == $expectedPackages),signerIdentity:$context[0].signerIdentity,publicMergeCommit:$context[0].publicMergeCommit,sourceRevisionDigest:$context[0].sourceRevisionDigest,releaseTag:$context[0].releaseTag,publicExportManifestSha256:$context[0].publicExportManifestSha256,publicProvenanceSha256:$context[0].publicProvenanceSha256,expectedEngineIds:$expectedEngineIds,expectedPackages:$expectedPackages,packages:$observed}' "$evidence_root"/records/*.json > "$evidence_root/evidence.json"
+          # Compare records to the generated package receipt without allowing
+          # an archive digest to stand in for its OCI manifest digest.
+          jq -e --slurpfile receipt dist/public-engine-package-v2/build-results.json '(.packages | length) == ($receipt[0].packages | length) and all(.[]; .registryAuth == "empty" and .digestEqualityVerified and .envelopeVerified and (.artifactManifestDigest | test("^sha256:[a-f0-9]{64}$")))' "$evidence_root/evidence.json" >/dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-engine-package-evidence-${{ github.sha }}
+          path: |
+            dist/public-engine-package-evidence/**
+            dist/public-engine-package-digests/**
+            dist/public-engine-package-v2/build-results.json
+            dist/public-engine-runtime/release-context.json
+          if-no-files-found: error
+
+  public-engine-release-manifest:
+    if: >-
+      github.repository == 'yyhuni/lunafox' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    name: Publish Public Engine Release Manifest
+    needs: public-engine-package-publish
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-engine-runtime-build-${{ github.sha }}
+          path: dist/public-engine-runtime
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-engine-runtime-evidence-${{ github.sha }}
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-engine-package-evidence-${{ github.sha }}
+          path: dist
+      - name: Generate and verify the independent Engine manifest
+        run: |
+          set -euo pipefail
+          context_file=dist/public-engine-runtime/release-context.json
+          release_tag="$(jq -er '.releaseTag' "$context_file")"
+          mkdir -p dist/public-engine-release
+          jq -n \
+            --slurpfile context "$context_file" \
+            --slurpfile runtime dist/public-engine-runtime/build-results.json \
+            --slurpfile packages dist/public-engine-package-v2/build-results.json \
+            --slurpfile packageEvidence dist/public-engine-package-evidence/evidence.json \
+            '{schemaVersion:"lunafox.engine-release-manifest.v1",repository:"yyhuni/lunafox",releaseTag:$context[0].releaseTag,publicMergeCommit:$context[0].publicMergeCommit,sourceRevisionDigest:$context[0].sourceRevisionDigest,publicExportManifestSha256:$context[0].publicExportManifestSha256,publicProvenanceSha256:$context[0].publicProvenanceSha256,signerIdentity:$context[0].signerIdentity,engines:[$runtime[0].engines[] as $runtimeItem | ($packages[0].packages[] | select(.engineId == $runtimeItem.engineId)) as $packageItem | ($packageEvidence[0].packages[] | select(.engineId == $runtimeItem.engineId)) as $evidence | {engineId:$runtimeItem.engineId,runtimeImageDigest:$runtimeItem.indexDigest,runtimeImageRefs:$runtimeItem.refs,platforms:$runtimeItem.platforms,packageDigest:$packageItem.packageDigest,packageRuntimeImageDigest:$packageItem.runtimeImageDigest,packageArtifactManifestDigest:$evidence.artifactManifestDigest,packageRefs:($evidence.candidates | map(.ref))}] | sort_by(.engineId)}' \
+            > dist/public-engine-release/engine-release-manifest.json
+          node scripts/ci/verify-public-engine-release.mjs \
+            --manifest dist/public-engine-release/engine-release-manifest.json \
+            --runtime-build-results dist/public-engine-runtime/build-results.json \
+            --package-build-results dist/public-engine-package-v2/build-results.json \
+            --package-digests-dir dist/public-engine-package-digests \
+            --runtime-evidence dist/public-engine-runtime-evidence/evidence.json \
+            --package-evidence dist/public-engine-package-evidence/evidence.json \
+            --tag "$release_tag" \
+            --public-merge-commit "$(jq -er '.publicMergeCommit' "$context_file")" \
+            --source-revision-digest "$(jq -er '.sourceRevisionDigest' "$context_file")" \
+            --export-manifest-sha256 "$(jq -er '.publicExportManifestSha256' "$context_file")" \
+            --public-provenance-sha256 "$(jq -er '.publicProvenanceSha256' "$context_file")" \
+            --workflow-identity "$(jq -er '.signerIdentity' "$context_file")" --json
+          cp dist/public-engine-release/engine-release-manifest.json dist/public-engine-release/manifest.json
+          cp dist/public-engine-runtime/build-results.json dist/public-engine-release/runtime-build-results.json
+          cp dist/public-engine-package-v2/build-results.json dist/public-engine-release/package-build-results.json
+          cp dist/public-engine-runtime-evidence/evidence.json dist/public-engine-release/runtime-evidence.json
+          cp dist/public-engine-package-evidence/evidence.json dist/public-engine-release/package-evidence.json
+          cp -R dist/public-engine-package-digests dist/public-engine-release/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-engine-release
+          path: dist/public-engine-release/**
+          if-no-files-found: error
+
+  # The protected public workflow is the only owner of the final product
+  # release. All component evidence is checked before any final tag, channel,
+  # or GitHub Release mutation is attempted.
+  publish-final-release:
+    if: >-
+      always() &&
+      github.repository == 'yyhuni/lunafox' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.publish-runtime-images.result == 'success' &&
+      needs.publish-agent-image.result == 'success' &&
+      needs.public-engine-release-manifest.result == 'success'
+    name: Publish Final Runtime Release
+    needs: [publish-runtime-images, publish-agent-image, public-engine-release-manifest]
+    runs-on: ubuntu-22.04
+    environment: public-release
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-runtime-image-evidence-server-${{ github.sha }}
+          path: dist/final/runtime/server
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-runtime-image-evidence-frontend-${{ github.sha }}
+          path: dist/final/runtime/frontend
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-runtime-image-evidence-nginx-${{ github.sha }}
+          path: dist/final/runtime/nginx
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-runtime-image-evidence-agent-${{ github.sha }}
+          path: dist/final/runtime/agent
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-runtime-image-evidence-bootstrap-${{ github.sha }}
+          path: dist/final/runtime/bootstrap
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-engine-release
+          path: dist/final/engine
+      - uses: oras-project/setup-oras@v1
+      - uses: sigstore/cosign-installer@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - id: source
+        name: Bind the final release to the generated public merge
+        run: |
+          set -euo pipefail
+          test -f PUBLIC_PROVENANCE.json
+          test "$(jq -er '.generatedReadOnly' PUBLIC_PROVENANCE.json)" = true
+          test "$(jq -er '.sourceRepository' PUBLIC_PROVENANCE.json)" = "$PRIVATE_REPOSITORY"
+          test "$(jq -er '.destinationRepository' PUBLIC_PROVENANCE.json)" = "$PUBLIC_REPOSITORY"
+          release_tag="$(jq -er '.releaseTag' PUBLIC_PROVENANCE.json)"
+          source_revision_digest="$(jq -er '.sourceRevisionDigest' PUBLIC_PROVENANCE.json)"
+          [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || exit 1
+          [[ "$source_revision_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || exit 1
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+          echo "source_revision_digest=$source_revision_digest" >> "$GITHUB_OUTPUT"
+          echo "export_manifest_sha256=sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+      - name: Verify every Runtime image evidence record
+        env:
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+          SOURCE_REVISION_DIGEST: ${{ steps.source.outputs.source_revision_digest }}
+          EXPORT_MANIFEST_SHA256: ${{ steps.source.outputs.export_manifest_sha256 }}
+          PUBLIC_PROVENANCE_SHA256: ${{ steps.source.outputs.public_provenance_sha256 }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist/final/runtime-verification dist/final/runtime-evidence
+          for component in server frontend nginx agent bootstrap; do
+            evidence_file="$(find "dist/final/runtime/$component" -type f -name "public-runtime-image-evidence-${component}.json" -print -quit)"
+            [ -n "$evidence_file" ] || { echo "missing Runtime evidence: $component" >&2; exit 1; }
+            cp "$evidence_file" "dist/final/runtime-evidence/public-runtime-image-evidence-${component}.json"
+            case "$component" in
+              server) dockerfile=server/Dockerfile; lockfile= ;;
+              frontend) dockerfile=frontend/Dockerfile; lockfile=frontend/pnpm-lock.yaml ;;
+              nginx) dockerfile=docker/nginx/Dockerfile; lockfile= ;;
+              agent) dockerfile=docker/agent/Dockerfile; lockfile= ;;
+              bootstrap) dockerfile=docker/bootstrap/Dockerfile; lockfile= ;;
+            esac
+            args=(
+              --evidence "$evidence_file" --component "$component" --tag "$RELEASE_TAG"
+              --source-revision-digest "$SOURCE_REVISION_DIGEST" --public-merge-commit "$GITHUB_SHA"
+              --workflow-run-id "$GITHUB_RUN_ID" --export-manifest-sha256 "$EXPORT_MANIFEST_SHA256"
+              --public-provenance-sha256 "$PUBLIC_PROVENANCE_SHA256"
+              --dockerfile-sha256 "sha256:$(sha256sum "$dockerfile" | awk '{print $1}')" --json
+            )
+            if [ -n "$lockfile" ]; then
+              args+=(--lockfile-sha256 "sha256:$(sha256sum "$lockfile" | awk '{print $1}')")
+            fi
+            node scripts/ci/verify-public-runtime-image-evidence.mjs "${args[@]}" \
+              > "dist/final/runtime-verification/${component}.json"
+          done
+      - name: Verify the independent Engine handoff
+        env:
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+          SOURCE_REVISION_DIGEST: ${{ steps.source.outputs.source_revision_digest }}
+          EXPORT_MANIFEST_SHA256: ${{ steps.source.outputs.export_manifest_sha256 }}
+          PUBLIC_PROVENANCE_SHA256: ${{ steps.source.outputs.public_provenance_sha256 }}
+        run: |
+          set -euo pipefail
+          node scripts/ci/verify-public-engine-release.mjs \
+            --manifest dist/final/engine/manifest.json \
+            --runtime-build-results dist/final/engine/runtime-build-results.json \
+            --package-build-results dist/final/engine/package-build-results.json \
+            --package-digests-dir dist/final/engine/public-engine-package-digests \
+            --runtime-evidence dist/final/engine/runtime-evidence.json \
+            --package-evidence dist/final/engine/package-evidence.json \
+            --tag "$RELEASE_TAG" --public-merge-commit "$GITHUB_SHA" \
+            --source-revision-digest "$SOURCE_REVISION_DIGEST" \
+            --export-manifest-sha256 "$EXPORT_MANIFEST_SHA256" \
+            --public-provenance-sha256 "$PUBLIC_PROVENANCE_SHA256" \
+            --workflow-identity "https://github.com/yyhuni/lunafox/.github/workflows/public-validate.yml@refs/heads/main" \
+            --json | tee dist/final/engine-verification.json
+      - name: Promote every Runtime digest to both final registries
+        env:
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist/final/runtime-digests
+          components=(server frontend nginx agent bootstrap)
+          for component in "${components[@]}"; do
+            evidence="dist/final/runtime-evidence/public-runtime-image-evidence-${component}.json"
+            digest="$(jq -er '.digest' "$evidence")"
+            [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid Runtime digest: $component" >&2; exit 1; }
+            ghcr_ref="ghcr.io/yyhuni/lunafox-${component}@${digest}"
+            docker_ref="docker.io/yyhuni/lunafox-${component}@${digest}"
+            printf 'COMPONENT=%s\nDIGEST=%s\nGHCR_REF=%s\nDOCKERHUB_REF=%s\n' "$component" "$digest" "$ghcr_ref" "$docker_ref" > "dist/final/runtime-digests/${component}.env"
+            oras manifest fetch --descriptor "$ghcr_ref" >/dev/null
+          done
+          for component in "${components[@]}"; do
+            # The existing tag may be reused only when it already names the
+            # exact verified digest; a different tag target is terminal.
+            source_ref="$(awk -F= '$1 == "GHCR_REF" {print $2}' "dist/final/runtime-digests/${component}.env")"
+            digest="$(awk -F= '$1 == "DIGEST" {print $2}' "dist/final/runtime-digests/${component}.env")"
+            for registry in docker.io ghcr.io; do
+              target="${registry}/yyhuni/lunafox-${component}:${RELEASE_TAG}"
+              existing="$(oras manifest fetch --descriptor "$target" 2>/dev/null | jq -r '.digest // empty' || true)"
+              if [ -n "$existing" ] && [ "$existing" != "$digest" ]; then
+                echo "final tag already points to a different digest: $target" >&2
+                exit 1
+              fi
+              if [ -z "$existing" ]; then
+                oras cp "$source_ref" "$target"
+              fi
+              actual="$(oras manifest fetch --descriptor "$target" | jq -er '.digest')"
+              [ "$actual" = "$digest" ] || { echo "cross-registry promotion drift: $target" >&2; exit 1; }
+            done
+          done
+      - name: Sign and verify final Runtime OCI manifests
+        run: |
+          set -euo pipefail
+          anonymous_config="$(mktemp -d)"
+          trap 'rm -rf "$anonymous_config"' EXIT
+          printf '{"auths":{}}\n' > "$anonymous_config/config.json"
+          mkdir -p dist/final/signatures
+          for file in dist/final/runtime-digests/*.env; do
+            component="$(awk -F= '$1 == "COMPONENT" {print $2}' "$file")"
+            digest="$(awk -F= '$1 == "DIGEST" {print $2}' "$file")"
+            for registry in docker.io ghcr.io; do
+              ref="${registry}/yyhuni/lunafox-${component}@${digest}"
+              cosign sign --yes "$ref"
+              DOCKER_CONFIG="$anonymous_config" cosign verify \
+                --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+                --certificate-identity-regexp '^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$' \
+                "$ref" > "dist/final/signatures/${component}-${registry//./_}.json"
+              jq -e 'type == "array" and length > 0' "dist/final/signatures/${component}-${registry//./_}.json" >/dev/null
+            done
+          done
+      - name: Generate and verify the complete release manifest
+        env:
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist/final
+          release_version="${RELEASE_TAG#v}"
+          refs_for() { awk -F= '$1 == "DOCKERHUB_REF" {docker=$2} $1 == "GHCR_REF" {ghcr=$2} END {print docker "," ghcr}' "dist/final/runtime-digests/$1.env"; }
+          RELEASE_VERSION="$release_version" \
+          RUNTIME_SERVER_REFS="$(refs_for server)" \
+          RUNTIME_FRONTEND_REFS="$(refs_for frontend)" \
+          RUNTIME_NGINX_REFS="$(refs_for nginx)" \
+          RUNTIME_AGENT_REFS="$(refs_for agent)" \
+          RUNTIME_BOOTSTRAP_REFS="$(refs_for bootstrap)" \
+          bash scripts/ci/generate-release-manifest.sh \
+            --engine-ref-dir dist/final/engine/public-engine-package-digests \
+            --final-runtime-contract --verify-contract \
+            --output dist/final/release.manifest.yaml
+          node scripts/ci/verify-public-release.mjs \
+            --manifest dist/final/release.manifest.yaml --tag "$RELEASE_TAG" --json \
+            > dist/final/release-verification.json
+      - name: Generate the immutable release provenance record
+        env:
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+          SOURCE_REVISION_DIGEST: ${{ steps.source.outputs.source_revision_digest }}
+          EXPORT_MANIFEST_SHA256: ${{ steps.source.outputs.export_manifest_sha256 }}
+          PUBLIC_PROVENANCE_SHA256: ${{ steps.source.outputs.public_provenance_sha256 }}
+        run: |
+          set -euo pipefail
+          manifest_digest="sha256:$(sha256sum dist/final/release.manifest.yaml | awk '{print $1}')"
+          jq -n \
+            --arg artifactDigest "$manifest_digest" \
+            --arg privateSourceRevision "$SOURCE_REVISION_DIGEST" \
+            --arg workflowIdentity "https://github.com/yyhuni/lunafox/.github/workflows/public-validate.yml@refs/heads/main" \
+            --arg builderRun "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --arg exportManifest "$EXPORT_MANIFEST_SHA256" \
+            --arg publicProvenance "$PUBLIC_PROVENANCE_SHA256" \
+            --arg releaseTag "$RELEASE_TAG" \
+            '{schemaVersion:1,status:"published",releaseTag:$releaseTag,artifactDigest:$artifactDigest,privateSourceRevision:$privateSourceRevision,workflowIdentity:$workflowIdentity,builderRun:$builderRun,exportManifest:$exportManifest,publicProvenance:$publicProvenance,sbom:true,scanEvidence:{runtimeImages:true,engineHandoff:true,signatures:true}}' \
+            > dist/final/public-release-provenance.json
+      - name: Generate and publish the release-channel branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          channel="canary"
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] && channel=stable
+          channel_root="$GITHUB_WORKSPACE/dist/final/channel"
+          rm -rf "$channel_root"
+          mkdir -p "$channel_root/channels" "$channel_root/manifests"
+          channel_worktree="$(mktemp -d)"
+          cleanup() { rm -rf "$channel_worktree"; }
+          trap cleanup EXIT
+          if git clone --depth 1 --branch release-channel "https://x-access-token:${GH_TOKEN}@github.com/${PUBLIC_REPOSITORY}.git" "$channel_worktree" 2>/dev/null; then
+            :
+          else
+            rm -rf "$channel_worktree"
+            mkdir -p "$channel_worktree"
+            git -C "$channel_worktree" init
+            git -C "$channel_worktree" remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${PUBLIC_REPOSITORY}.git"
+            git -C "$channel_worktree" checkout --orphan release-channel
+          fi
+          if [ -d "$channel_worktree/channels" ]; then cp -a "$channel_worktree/channels/." "$channel_root/channels/"; fi
+          if [ -d "$channel_worktree/manifests" ]; then cp -a "$channel_worktree/manifests/." "$channel_root/manifests/"; fi
+          node scripts/ci/generate-public-channel.mjs \
+            --tag "$RELEASE_TAG" --channel "$channel" --manifest dist/final/release.manifest.yaml \
+            --output-dir "$channel_root" --publication-complete
+          node scripts/ci/check-public-channel.mjs --root-dir "$channel_root" --require-first-release
+          rm -rf "$channel_worktree/channels" "$channel_worktree/manifests"
+          mkdir -p "$channel_worktree/channels" "$channel_worktree/manifests"
+          cp -a "$channel_root/channels/." "$channel_worktree/channels/"
+          cp -a "$channel_root/manifests/." "$channel_worktree/manifests/"
+          git -C "$channel_worktree" config user.name "github-actions[bot]"
+          git -C "$channel_worktree" config user.email "github-actions[bot]@users.noreply.github.com"
+          git -C "$channel_worktree" add channels manifests
+          if ! git -C "$channel_worktree" diff --cached --quiet; then
+            git -C "$channel_worktree" commit -m "chore(channel): update $channel to $RELEASE_TAG"
+            git -C "$channel_worktree" push origin release-channel
+          fi
+      - name: Publish the final GitHub Release metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          prerelease=false
+          [[ "$RELEASE_TAG" =~ -(alpha|beta|rc)\.[0-9]+$ ]] && prerelease=true
+          if ! gh release view "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "$RELEASE_TAG" --generate-notes $([ "$prerelease" = true ] && printf '%s' --prerelease)
+          else
+            gh release edit "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" --draft=false --prerelease="$prerelease"
+          fi
+          publish_asset() {
+            local file="$1" name="$(basename "$1")" expected actual url tmp
+            expected="$(sha256sum "$file" | awk '{print $1}')"
+            asset_json="$(gh api "/repos/${PUBLIC_REPOSITORY}/releases/tags/${RELEASE_TAG}" | jq -c --arg name "$name" '.assets[]? | select(.name == $name)' | head -n 1 || true)"
+            if [ -n "$asset_json" ]; then
+              actual="$(jq -r '.digest // empty' <<<"$asset_json")"
+              if [ "$actual" != "sha256:$expected" ]; then
+                url="$(jq -er '.url' <<<"$asset_json")"
+                tmp="$(mktemp)"
+                curl --fail --location --silent --show-error -H 'Accept: application/octet-stream' -H "Authorization: Bearer ${GH_TOKEN}" "$url" -o "$tmp"
+                actual="sha256:$(sha256sum "$tmp" | awk '{print $1}')"
+                rm -f "$tmp"
+              fi
+              [ "$actual" = "sha256:$expected" ] || { echo "final Release asset digest conflict: $name" >&2; exit 1; }
+              return
+            fi
+            gh release upload "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" "$file"
+          }
+          publish_asset dist/final/release.manifest.yaml
+          publish_asset dist/final/public-release-provenance.json
+      - name: Upload the complete final publication evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-final-release-${{ github.sha }}
+          path: |
+            dist/final/release.manifest.yaml
+            dist/final/public-release-provenance.json
+            dist/final/release-verification.json
+            dist/final/runtime-verification/**
+            dist/final/runtime-evidence/**
+            dist/final/engine-verification.json
+            dist/final/signatures/**
+            dist/final/channel/**
+          if-no-files-found: error

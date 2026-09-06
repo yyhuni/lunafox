@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "lunafox-engine-image-conformance-profile/v1",
+  "target": {"type": "domain", "value": "example.com"},
+  "noOpEnabledSections": ["capture"],
+  "toolEnabledSections": ["capture"],
+  "gateDefaultProgressAck": false,
+  "toolInputs": [{"kind": "websiteURLs", "content": "https://example.com\n"}],
+  "resultType": "asset.screenshot.v1",
+  "toolStubs": [
+    {"tool": "httpx", "source": "tool-stubs/httpx.sh"},
+    {"tool": "chromium", "source": "tool-stubs/chromium.sh"},
+    {"tool": "cwebp", "source": "tool-stubs/cwebp.sh"}
+  ],
+  "argvAssertions": [
+    {
+      "file": "httpx.argv",
+      "args": [
+        "-list", "/workspace/httpx-candidates.txt", "-json", "-ss",
+        "-no-screenshot-full-page", "-system-chrome", "-screenshot-timeout", "15s",
+        "-sid", "1s", "-threads", "5", "-retries", "0", "-ho", "window-size=1280,720",
+        "-ho", "force-device-scale-factor=1", "-ob", "-esb", "-ehb", "-srd", "/workspace"
+      ]
+    },
+    {
+      "file": "cwebp.argv",
+      "args": [
+        "-quiet", "-resize", "1", "0", "-q", "72",
+        "/workspace/httpx-fixture-1.png",
+        "-o", "/workspace/.screenshot-f0e6a6a97042a4f1f1c87f5f7d44315b2d852c2df5c7991cc66241bf7072d1c4-800.webp"
+      ]
+    }
+  ],
+  "sigtermTool": "httpx",
+  "platformResources": [],
+  "imageLocalProbes": []
+}
