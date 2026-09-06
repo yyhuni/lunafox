@@ -1,0 +1,59 @@
+{
+  "engine": {
+    "description": "Discover target-scoped directory paths with FFUF and a selected wordlist.",
+    "displayName": "Directory Scan"
+  },
+  "sections": {
+    "ffuf": {
+      "description": "Configure FFUF directory discovery.",
+      "name": "FFUF",
+      "params": {
+        "auto-calibration": {
+          "description": "Enable FFUF automatic calibration."
+        },
+        "auto-calibration-mode": {
+          "description": "Select FFUF ac or per-host-and-parent-path ach automatic calibration."
+        },
+        "concurrency": {
+          "description": "Maximum number of Website scans running at once."
+        },
+        "delay": {
+          "description": "Fixed or ranged request delay in seconds passed unchanged to FFUF."
+        },
+        "follow-redirects": {
+          "description": "Follow HTTP redirects during scanning."
+        },
+        "http2": {
+          "description": "Allow HTTP/2 for HTTPS requests with HTTP/1 fallback."
+        },
+        "match-codes": {
+          "description": "HTTP status matcher expression passed unchanged to FFUF."
+        },
+        "rate": {
+          "description": "Per-process request rate limit; zero keeps FFUF unlimited."
+        },
+        "recursion": {
+          "description": "Enable recursive directory discovery."
+        },
+        "recursion-depth": {
+          "description": "Maximum recursive discovery depth."
+        },
+        "recursion-strategy": {
+          "description": "FFUF recursion strategy."
+        },
+        "request-timeout": {
+          "description": "Per-request timeout in seconds."
+        },
+        "threads": {
+          "description": "FFUF worker threads for each Website process."
+        },
+        "timeout": {
+          "description": "Deadline in seconds for each Website FFUF process."
+        },
+        "wordlist": {
+          "description": "Server-managed wordlist selected for directory discovery."
+        }
+      }
+    }
+  }
+}

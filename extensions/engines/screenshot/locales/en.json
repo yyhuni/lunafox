@@ -1,0 +1,23 @@
+{
+  "engine": {
+    "description": "Capture viewport screenshots for finalized website URLs.",
+    "displayName": "Screenshot"
+  },
+  "sections": {
+    "capture": {
+      "description": "Capture bounded viewport screenshots.",
+      "name": "Screenshot",
+      "params": {
+        "concurrency": {
+          "description": "Concurrent browser pages"
+        },
+        "page-timeout": {
+          "description": "Page wait timeout in seconds"
+        },
+        "retries": {
+          "description": "Additional screenshot attempts per URL"
+        }
+      }
+    }
+  }
+}

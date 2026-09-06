@@ -1,0 +1,23 @@
+{
+  "engine": {
+    "description": "为已确认的网站 URL 生成视口截图。",
+    "displayName": "网页截图"
+  },
+  "sections": {
+    "capture": {
+      "description": "生成受限视口截图。",
+      "name": "网页截图",
+      "params": {
+        "concurrency": {
+          "description": "并发浏览器页面数"
+        },
+        "page-timeout": {
+          "description": "页面等待超时时间，单位为秒"
+        },
+        "retries": {
+          "description": "每个 URL 的额外截图尝试次数"
+        }
+      }
+    }
+  }
+}

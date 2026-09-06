@@ -1,0 +1,24 @@
+[
+  {
+    "id": "last-wins-template",
+    "info": { "name": "Last Wins", "author": "first" },
+    "http": [
+      {
+        "method": "GET",
+        "path": ["{{BaseURL}}/"],
+        "matchers": [{ "type": "word", "words": ["same-http"] }]
+      }
+    ]
+  },
+  {
+    "id": "last-wins-template",
+    "info": { "name": "Last Wins", "author": "second" },
+    "http": [
+      {
+        "method": "GET",
+        "path": ["{{BaseURL}}/"],
+        "matchers": [{ "type": "word", "words": ["same-http"] }]
+      }
+    ]
+  }
+]

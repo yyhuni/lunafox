@@ -1,0 +1,4518 @@
+{
+  "columns": {
+    "common": {
+      "name": "名称",
+      "description": "描述",
+      "createdAt": "创建时间",
+      "updatedAt": "更新时间",
+      "status": "状态",
+      "actions": "操作",
+      "type": "类型",
+      "url": "URL"
+    },
+    "scanHistory": {
+      "target": "目标",
+      "summary": "摘要",
+      "executedEngines": "执行引擎",
+      "triggerType": "来源",
+      "agentName": "执行节点",
+      "progress": "进度",
+      "subdomains": "子域名",
+      "websites": "站点",
+      "ipAddresses": "IP 地址",
+      "endpoints": "URL",
+      "vulnerabilities": "漏洞"
+    },
+    "vulnerability": {
+      "severity": "严重程度",
+      "source": "来源",
+      "vulnType": "漏洞类型",
+      "url": "URL",
+      "createdAt": "创建时间"
+    },
+    "organization": {
+      "organization": "组织名称",
+      "totalTargets": "目标总数",
+      "added": "添加时间"
+    },
+    "target": {
+      "target": "目标名称",
+      "addedOn": "添加时间",
+      "lastScanned": "最后扫描时间"
+    },
+    "subdomain": {
+      "subdomain": "子域名",
+      "createdAt": "创建时间"
+    },
+    "ipAddress": {
+      "ipAddress": "IP 地址",
+      "resolvedIpAddress": "域名解析 IP",
+      "hosts": "主机名",
+      "openPorts": "开放端口",
+      "allHosts": "所有主机",
+      "allOpenPorts": "所有开放端口"
+    },
+    "endpoint": {
+      "title": "标题",
+      "host": "主机名",
+      "contentLength": "内容长度",
+      "location": "跳转地址",
+      "webServer": "Web 服务器",
+      "contentType": "内容类型",
+      "technologies": "指纹",
+      "responseBody": "响应体",
+      "vhost": "虚拟主机",
+      "responseHeaders": "响应头"
+    },
+    "website": {
+      "url": "URL",
+      "host": "主机名",
+      "title": "标题",
+      "statusCode": "状态码",
+      "technologies": "指纹",
+      "contentLength": "内容长度",
+      "location": "跳转地址",
+      "webServer": "Web 服务器",
+      "contentType": "内容类型",
+      "responseBody": "响应体",
+      "responseHeaders": "响应头",
+      "vhost": "虚拟主机",
+      "createdAt": "创建时间"
+    },
+    "directory": {
+      "length": "内容长度",
+      "contentType": "内容类型",
+      "words": "字数",
+      "lines": "行数",
+      "duration": "耗时",
+      "createdAt": "创建时间"
+    },
+    "workflow": {
+      "workflowName": "工作流名称",
+      "subdomainDiscovery": "子域名发现",
+      "portScan": "端口扫描",
+      "websiteDiscovery": "站点发现",
+      "directoryScan": "目录扫描",
+      "urlFetch": "URL 抓取",
+      "osint": "OSINT",
+      "vulnerabilityScan": "漏洞扫描",
+      "wafDetection": "WAF 检测",
+      "screenshot": "截图"
+    },
+    "scheduledScan": {
+      "taskName": "任务名称",
+      "scanWorkflow": "工作流",
+      "engineNames": "引擎",
+      "cronExpression": "执行频率",
+      "scope": "扫描范围",
+      "status": "状态",
+      "nextRun": "下次执行",
+      "handoffResults": "调度结果",
+      "trigger": "触发",
+      "success": "成功",
+      "failure": "失败",
+      "lastRun": "上次触发时间"
+    },
+    "fingerprint": {
+      "name": "名称",
+      "cats": "分类",
+      "rules": "规则",
+      "implies": "依赖",
+      "website": "官网",
+      "cpe": "CPE",
+      "created": "创建时间",
+      "logic": "逻辑",
+      "ruleDetails": "规则详情",
+      "cms": "CMS",
+      "method": "方法",
+      "keyword": "关键字",
+      "type": "类型",
+      "important": "重要"
+    },
+    "command": {
+      "tool": "工具",
+      "commandTemplate": "命令模板"
+    }
+  },
+  "tooltips": {
+    "targetDetails": "目标详情",
+    "viewProgress": "点击查看进度详情",
+    "targetSummary": "目标摘要",
+    "organizationDetails": "组织详情",
+    "initiateScan": "发起扫描",
+    "scheduleScan": "计划扫描",
+    "editWorkflow": "编辑工作流",
+    "viewDetails": "查看详情",
+    "unlinkTarget": "解除关联",
+    "clickToCopy": "点击复制",
+    "expand": "展开",
+    "collapse": "收起",
+    "vulnDetails": "漏洞详情",
+    "copied": "已复制",
+    "allHosts": "所有主机",
+    "allOpenPorts": "所有开放端口",
+    "reviewed": "已审查",
+    "pending": "待审查"
+  },
+  "severity": {
+    "critical": "严重",
+    "high": "高危",
+    "medium": "中危",
+    "low": "低危",
+    "info": "信息"
+  },
+  "common": {
+    "actions": {
+      "save": "保存",
+      "saving": "保存中...",
+      "cancel": "取消",
+      "delete": "删除",
+      "edit": "编辑",
+      "add": "添加",
+      "create": "创建",
+      "update": "更新",
+      "search": "搜索",
+      "searchURL": "搜索 URL",
+      "searchIPOrHost": "搜索 IP 地址或主机名",
+      "searchResolvedIPOrHost": "搜索域名解析 IP 或主机名",
+      "searchSubdomain": "搜索子域名",
+      "refresh": "刷新",
+      "reload": "重新加载",
+      "export": "导出",
+      "import": "导入",
+      "confirm": "确认",
+      "close": "关闭",
+      "submit": "提交",
+      "reset": "重置",
+      "copy": "复制",
+      "download": "下载",
+      "upload": "上传",
+      "view": "查看",
+      "details": "详情",
+      "back": "返回",
+      "next": "下一步",
+      "previous": "上一步",
+      "start": "开始",
+      "stop": "停止",
+      "pause": "暂停",
+      "resume": "继续",
+      "retry": "重试",
+      "snapshot": "详情",
+      "openMenu": "打开菜单",
+      "selectAll": "全选",
+      "deselectAll": "取消全选",
+      "selectRow": "选择行",
+      "website": "官网",
+      "description": "描述",
+      "processing": "处理中...",
+      "confirmDelete": "确认删除",
+      "deleteConfirmMessage": "确定要删除选中的 {count} 条记录吗？此操作不可撤销。",
+      "all": "全部",
+      "filter": "筛选"
+    },
+    "yamlEditor": {
+      "syntaxError": "语法错误",
+      "syntaxValid": "语法正确",
+      "errorLocation": "第 {line} 行，第 {column} 列",
+      "loading": "加载编辑器...",
+      "duplicateKey": "发现重复的配置项 '{key}'，后面的配置会覆盖前面的，请删除重复项"
+    },
+    "language": {
+      "switchLanguage": "切换语言"
+    },
+    "export": {
+      "all": "导出所有",
+      "selected": "导出选中",
+      "important": "导出重点"
+    },
+    "ui": {
+      "toggleSidebar": "切换侧边栏",
+      "sidebarTitle": "侧边栏",
+      "sidebarDescription": "显示移动端侧边栏。",
+      "loading": "加载中",
+      "commandDialog": "命令对话框",
+      "skipToMainContent": "跳转到主要内容",
+      "statusLabel": "状态",
+      "cycleLabel": "周期",
+      "activeStatus": "活跃"
+    },
+    "dateTimePicker": {
+      "executionTime": "执行时间",
+      "selectDateTime": "选择日期和时间"
+    },
+    "dropzone": {
+      "uploadFile": "上传文件",
+      "uploadFiles": "上传文件",
+      "dragOrClick": "拖拽文件到此处或点击选择",
+      "dragOrClickReplace": "拖拽或点击替换文件",
+      "moreFiles": "{files} 等 {count} 个文件",
+      "supports": "支持",
+      "minimum": "最小",
+      "maximum": "最大",
+      "sizeBetween": "大小在 {min} 到 {max} 之间"
+    },
+    "status": {
+      "loading": "加载中...",
+      "loadFailed": "加载失败",
+      "pageLoading": "页面加载中...",
+      "success": "操作成功",
+      "error": "操作失败",
+      "noData": "暂无数据",
+      "pending": "等待中",
+      "running": "运行中",
+      "completed": "已完成",
+      "succeeded": "已完成",
+      "skipped": "已跳过",
+      "blocked": "已阻塞",
+      "failed": "失败",
+      "cancelled": "已取消",
+      "online": "在线",
+      "offline": "离线",
+      "maintenance": "维护中",
+      "degraded": "降级",
+      "active": "活跃",
+      "inactive": "未激活",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "creating": "正在创建...",
+      "updating": "正在更新...",
+      "deleting": "正在删除...",
+      "removing": "正在移除...",
+      "unlinking": "正在解除关联...",
+      "batchCreating": "正在批量创建...",
+      "batchDeleting": "正在批量删除...",
+      "batchRemoving": "正在批量移除...",
+      "updateSuccess": "更新成功",
+      "updateFailed": "更新失败",
+      "uploading": "正在上传..."
+    },
+    "pagination": {
+      "page": "第 {current} 页，共 {total} 页",
+      "rowsPerPage": "每页显示",
+      "total": "共 {count} 条",
+      "first": "首页",
+      "last": "末页",
+      "previous": "上一页",
+      "next": "下一页",
+      "goTo": "跳转到"
+    },
+    "time": {
+      "justNow": "刚刚",
+      "minutesAgo": "{count} 分钟前",
+      "hoursAgo": "{count} 小时前",
+      "daysAgo": "{count} 天前",
+      "weeksAgo": "{count} 周前",
+      "monthsAgo": "{count} 个月前",
+      "yearsAgo": "{count} 年前"
+    },
+    "confirm": {
+      "title": "确认操作",
+      "deleteTitle": "确认删除",
+      "deleteMessage": "确定要删除吗？此操作不可撤销。",
+      "bulkDeleteTitle": "确认批量删除",
+      "bulkDeleteMessage": "确定要删除选中的 {count} 项吗？此操作不可撤销。",
+      "unlinkTitle": "确认解除关联",
+      "unlinkMessage": "确定要解除关联吗？此操作只会解除关联关系，数据本身不会被删除。",
+      "bulkUnlinkTitle": "确认批量解除关联",
+      "bulkUnlinkMessage": "确定要解除选中的 {count} 项的关联吗？数据本身不会被删除。",
+      "stopTitle": "确认停止",
+      "stopMessage": "确定要停止此任务吗？",
+      "yes": "是",
+      "no": "否",
+      "deleteVulnMessage": "此操作无法撤销。这将永久删除漏洞 \"{name}\" 及其相关数据。",
+      "bulkDeleteVulnMessage": "将永久删除 {count} 个漏洞及其相关数据。此操作无法撤销。",
+      "deleteScanMessage": "此操作无法撤销。这将永久删除扫描记录 \"{name}\" 及其相关数据。",
+      "bulkDeleteScanMessage": "将永久删除 {count} 个扫描记录及其相关数据。此操作无法撤销。",
+      "stopScanTitle": "确认停止扫描",
+      "stopScanMessage": "确定要停止扫描任务 \"{name}\" 吗？扫描将会中止，已收集的数据将会保留。",
+      "stopScanAction": "停止扫描",
+      "batchStopScanTitle": "确认停止选中的扫描",
+      "batchStopScanMessage": "将停止 {activeCount} 个活动扫描；{skippedCount} 个终态扫描会被跳过。",
+      "batchStopScanAction": "停止选中项",
+      "deleteOrgMessage": "此操作将永久删除组织 \"{name}\" 并解除其与域名的关联。域名本身不会被删除，仍可正常使用。",
+      "bulkDeleteOrgMessage": "将永久删除 {count} 个组织，并解除其与域名的关联。域名本身不会被删除，仍可正常使用。",
+      "deleting": "删除中...",
+      "deleteToolMessage": "此操作无法撤销。这将永久删除开源工具 \"{name}\" 及其相关配置。",
+      "deleteCustomToolMessage": "此操作无法撤销。这将永久删除自定义工具 \"{name}\" 及其相关配置。",
+      "deleteTargetTitle": "确认删除目标",
+      "deleteTargetMessage": "此操作无法撤销。这将永久删除目标 \"{name}\" 及其所有关联数据。",
+      "bulkDeleteTargetTitle": "确认批量删除目标",
+      "bulkDeleteTargetMessage": "将永久删除 {count} 个目标及其所有关联数据。此操作无法撤销。",
+      "confirmDelete": "确认删除",
+      "confirmUnlink": "确认解除",
+      "unlinkTargetMessage": "确定要解除目标 \"{name}\" 与此组织的关联吗？此操作只会解除关联关系，目标本身不会被删除。",
+      "bulkUnlinkTargetMessage": "将解除 {count} 个目标与此组织的关联。目标本身不会被删除，仍可正常使用。",
+      "bulkDeleteScheduledScanTitle": "确认批量删除定时扫描",
+      "bulkDeleteScheduledScanMessage": "将永久删除 {count} 个定时扫描任务。此操作无法撤销。",
+      "deleteScheduledScanMessage": "确定要删除定时扫描任务 \"{name}\" 吗？此操作无法撤销。",
+      "deleteWorkflowMessage": "确定要删除工作流「{name}」吗？此操作无法撤销。",
+      "bulkDeleteWorkflowMessage": "将永久删除 {count} 个工作流。此操作无法撤销。",
+      "deleteWordlistMessage": "确定要删除字典「{name}」吗？此操作无法撤销。"
+    }
+  },
+  "navigation": {
+    "appName": "月狐",
+    "communityEditionAbbreviation": "社区版",
+    "mainFeatures": "主要功能",
+    "workspace": "工作台",
+    "assetManagement": "资产管理",
+    "riskAndScanning": "风险与扫描",
+    "toolsAndCapabilities": "工具与能力",
+    "systemOperations": "系统运维",
+    "systemConfiguration": "系统配置",
+    "assetsAndRisk": "资产与风险",
+    "scanning": "扫描",
+    "scanResources": "扫描资源",
+    "system": "系统",
+    "scanPlans": "扫描计划",
+    "runtimeStatus": "运行状态",
+    "systemSettings": "系统设置",
+    "overview": "总览",
+    "search": "搜索",
+    "organization": "组织",
+    "target": "目标",
+    "vulnerabilities": "漏洞",
+    "scan": "扫描",
+    "scanHistory": "扫描历史",
+    "scheduling": "调度",
+    "scheduledScan": "定时扫描",
+    "scanWorkflow": "工作流",
+    "scanConfiguration": "扫描配置",
+    "beta": "Beta",
+    "tools": "工具",
+    "engines": "引擎管理",
+    "wordlists": "字典",
+    "fingerprints": "指纹",
+    "nucleiTemplates": "Nuclei POC",
+    "settings": "系统设置",
+    "systemLogs": "系统日志",
+    "databaseHealth": "数据库",
+    "notifications": "通知设置",
+    "apiKeys": "API 密钥",
+    "globalBlacklist": "全局黑名单",
+    "loginVisual": "登录页视觉",
+    "supportAuthor": "支持作者",
+    "devTools": "开发工具",
+    "uiPrototypes": "UI 原型",
+    "about": "关于系统",
+    "quickScan": "快速扫描",
+    "serverResources": "服务器资源占用",
+    "serverResourcesUpdatedAt": "更新于 {time}",
+    "serverResourcesError": "暂时无法获取服务器资源占用。",
+    "switchToDarkTheme": "切换到深色主题",
+    "switchToLightTheme": "切换到浅色主题",
+    "themeMenu": "选择外观",
+    "themeModeLight": "浅色",
+    "themeModeDark": "深色",
+    "themeModeSystem": "跟随系统",
+    "agents": "分布式",
+    "nodesManagement": "节点"
+  },
+  "mcpIntegration": {
+    "open": "连接 MCP",
+    "title": "MCP 连接",
+    "description": "连接外部 AI 客户端。",
+    "endpoint": {
+      "label": "MCP 地址",
+      "copy": "复制 MCP 地址",
+      "copied": "MCP 地址已复制",
+      "copyFailed": "无法复制 MCP 地址"
+    },
+    "key": {
+      "label": "MCP 密钥",
+      "loading": "正在检查密钥状态...",
+      "configured": "已配置",
+      "revealed": "可复制",
+      "emptyDescription": "生成密钥后即可连接 AI 客户端。",
+      "lostDescription": "现有密钥无法再次查看；如已遗失，请重新生成。",
+      "revealedDescription": "该密钥仅显示一次，请在关闭此窗口前复制。",
+      "rotatedDescription": "旧密钥已失效，请在关闭此窗口前复制新密钥。",
+      "statusError": "无法获取 MCP 密钥状态。",
+      "generateError": "无法生成 MCP 密钥，请重试。",
+      "retry": "重试",
+      "generate": "生成 MCP 密钥",
+      "generating": "正在生成...",
+      "copy": "复制 MCP 密钥",
+      "copied": "MCP 密钥已复制",
+      "copyFailed": "无法复制 MCP 密钥",
+      "regenerate": "重新生成 MCP 密钥",
+      "confirmation": {
+        "title": "重新生成 MCP 密钥？",
+        "description": "当前密钥会立即失效，已有客户端必须更新为新密钥后才能继续连接。",
+        "confirm": "重新生成",
+        "cancel": "取消",
+        "processing": "正在重新生成..."
+      }
+    },
+    "configuration": {
+      "label": "客户端配置",
+      "description": "此配置包含仅展示一次的 MCP 密钥，请将其安全保存到所选客户端。",
+      "copy": "复制客户端配置",
+      "copied": "客户端配置已复制",
+      "copyFailed": "无法复制客户端配置",
+      "clients": {
+        "vscode": "VS Code",
+        "cursor": "Cursor",
+        "claudeCode": "Claude Code",
+        "codex": "Codex"
+      }
+    }
+  },
+  "search": {
+    "title": "资产搜索",
+    "hint": "搜索活跃站点和端点 URL",
+    "searching": "搜索中...",
+    "searchPlaceholder": "搜索 URL",
+    "searchAction": "搜索",
+    "loading": "加载中...",
+    "invalidQuery": "请输入有效的 URL 查询或结构化条件",
+    "error": "搜索失败，请稍后重试",
+    "noResults": "未找到匹配的资产",
+    "noResultsHint": "请尝试调整搜索条件",
+    "recentSearches": "最近搜索",
+    "removeRecentSearch": "移除最近搜索",
+    "assetTypes": {
+      "website": "站点",
+      "endpoint": "URL"
+    },
+    "fields": {
+      "host": "主机名",
+      "url": "URL 地址",
+      "title": "页面标题",
+      "tech": "指纹",
+      "status": "HTTP 状态码"
+    },
+    "syntax": {
+      "fields": "字段",
+      "operators": "运算符",
+      "examples": "示例",
+      "contains": "包含匹配",
+      "exact": "精确匹配",
+      "all": "同时满足条件"
+    },
+    "table": {
+      "url": "URL",
+      "host": "主机名",
+      "title": "标题",
+      "status": "状态码",
+      "technologies": "指纹",
+      "contentLength": "内容长度",
+      "location": "跳转地址",
+      "webserver": "Web 服务器",
+      "contentType": "内容类型",
+      "responseBody": "响应体",
+      "responseHeaders": "响应头",
+      "vhost": "VHost",
+      "createdAt": "创建时间"
+    },
+    "card": {
+      "title": "标题",
+      "host": "主机名",
+      "header": "响应头",
+      "body": "响应体",
+      "location": "跳转",
+      "noResponseContent": "暂无响应内容"
+    }
+  },
+  "githubStar": {
+    "openPopover": "查看 GitHub 项目信息",
+    "openRepository": "打开 GitHub 仓库",
+    "stars": "{count} Stars",
+    "goal": "目标 {count}",
+    "remaining": "还差 {count} 个",
+    "forks": "Forks",
+    "watchers": "Watchers",
+    "issues": "Issues",
+    "sprintCta": "帮它冲到 {count}",
+    "cta": "去 GitHub 点赞",
+    "unlock": {
+      "title": "已解锁系统设置：登录页视觉",
+      "description": "现在可以在系统设置中管理登录页左侧的图片或视频。",
+      "confirm": "知道了"
+    }
+  },
+  "overview": {
+    "title": "总览",
+    "stats": {
+      "totalTargets": "目标总数",
+      "totalVulnerabilities": "漏洞总数",
+      "activeScans": "进行中扫描",
+      "completedScans": "已完成扫描",
+      "totalOrganizations": "组织总数",
+      "totalSubdomains": "子域名总数",
+      "totalEndpoints": "URL 总数",
+      "totalWebsites": "站点总数"
+    },
+    "statCards": {
+      "assetsFound": "发现资产",
+      "vulnsFound": "发现漏洞",
+      "monitoredTargets": "监控目标",
+      "runningScans": "正在扫描",
+      "assetsFooter": "子域名 + IP + URL + 站点",
+      "vulnsFooter": "所有扫描发现的漏洞",
+      "targetsFooter": "已添加的目标总数",
+      "scansFooter": "当前运行中的任务",
+      "updatedAt": "统计更新于 {time}",
+      "noData": "暂无数据"
+    },
+    "assetTrend": {
+      "title": "资产趋势",
+      "kicker": "资产脉冲",
+      "description": "每小时更新",
+      "noData": "暂无历史数据",
+      "current": "当前",
+      "subdomains": "子域名",
+      "ips": "IP",
+      "endpoints": "URL",
+      "websites": "站点"
+    },
+    "assetDistribution": {
+      "title": "资产分布",
+      "description": "各类资产数量统计",
+      "totalAssets": "资产总计",
+      "subdomains": "子域名",
+      "ipAddresses": "IP 地址",
+      "endpoints": "URL",
+      "websites": "站点",
+      "count": "数量"
+    },
+    "vulnDistribution": {
+      "title": "漏洞分布",
+      "kicker": "严重度结构",
+      "description": "按严重程度统计",
+      "noData": "暂无漏洞数据",
+      "vulns": "漏洞",
+      "count": "数量"
+    },
+    "recentVulns": {
+      "title": "最近漏洞",
+      "description": "最近发现的安全漏洞",
+      "viewAll": "查看全部",
+      "noData": "暂无漏洞数据"
+    },
+    "pageHeader": {
+      "operationsCommand": "总览",
+      "systemOverview": "系统总览",
+      "networkOnline": "网络：在线",
+      "cycleLabel": "当前时间：",
+      "quickScan": "快速扫描",
+      "addTarget": "添加目标",
+      "viewHighRisk": "查看高危漏洞",
+      "refresh": "刷新总览",
+      "updatedAtLabel": "更新时间：",
+      "updatedAtUnavailable": "暂未更新"
+    },
+    "operational": {
+      "readiness": {
+        "agents": {
+          "label": "Agent 节点",
+          "online": "{count} 在线",
+          "attention": "{count} 告警",
+          "offline": "{count} 离线",
+          "unavailable": "不可用"
+        },
+    "scans": {
+      "label": "扫描",
+          "running": "{count} 运行中",
+          "pending": "{count} 等待",
+          "failed": "{count} 失败",
+          "unavailable": "不可用"
+        },
+        "database": {
+          "label": "数据库",
+          "online": "正常",
+          "degraded": "需关注",
+          "offline": "不可用",
+          "maintenance": "维护中",
+          "unavailable": "不可用",
+          "backlog": "任务积压 {minutes} 分钟"
+        },
+        "resources": {
+          "label": "服务器资源",
+          "normal": "正常",
+          "elevated": "需关注",
+          "usage": "CPU {cpu}% · 内存 {memory}%",
+          "unavailable": "不可用"
+        }
+      },
+      "pending": {
+        "title": "待处理事项",
+        "viewAll": "查看全部",
+        "empty": "暂无待处理事项",
+        "emptyDescription": "当前未发现需要立即处理的风险或运行异常。",
+        "loadFailed": "待处理事项加载失败",
+        "loadFailedDescription": "部分数据源暂时不可用，请重试。",
+        "timeUnavailable": "未同步",
+        "criticalVulnerabilities": "严重漏洞仍待处理",
+        "criticalVulnerabilitiesDescription": "{count} 个严重漏洞仍处于开放状态",
+        "scanFailures": "扫描任务执行失败",
+        "scanFailuresDescription": "{count} 个失败任务需要检查",
+        "agentHealth": "Agent 离线或异常",
+        "agentHealthDescription": "{count} 个节点需要检查",
+        "databaseHealth": "数据库任务积压",
+        "databaseHealthDescription": "最老任务已等待 {minutes} 分钟",
+        "viewVulnerabilities": "处理漏洞",
+        "viewScans": "查看扫描",
+        "viewAgents": "查看节点",
+        "viewDatabase": "查看数据库"
+      },
+      "agentLocationMap": {
+        "title": "Agent 节点分布",
+        "viewAll": "查看全部节点",
+        "totalNodes": "节点总数",
+        "executionCapacity": "执行容量",
+        "coverageLabel": "地图覆盖",
+        "coverageValue": "{positioned}/{total}",
+        "coverageEmpty": "暂无节点",
+        "unpositioned": "{count} 个位置未知",
+        "runtimeUnreported": "{count} 个运行态未上报",
+        "ariaLabel": "Agent 节点地理位置分布地图",
+        "serverLabel": "Server 控制面",
+        "serverDescription": "Server 公网出口位置",
+        "serverMarkerSummary": "位置未知（出口 IP：{ip}）",
+        "serverAriaLabel": "Server 控制面，位置快照：{freshness}，观测出口 IP：{ip}，{inference}",
+        "agentMarkerSummary": "状态：{status}，位置快照：{freshness}",
+        "markerLabel": "{name}，状态：{status}，位置快照：{freshness}，观测出口 IP：{ip}，{inference}",
+        "statusLabel": "状态：{status}",
+        "observedSourceIp": "观测出口 IP：{ip}",
+        "inference": "基于公网出口 IP 推断",
+        "connectionNotice": "连线仅表示可视化调度覆盖，不代表实时网络拓扑",
+        "serverUnknown": "Server 位置未知",
+        "serverExpired": "Server 位置快照已过期",
+        "expiredAgentLocations": "{count} 个 Agent 位置快照已过期",
+        "freshness": {
+          "current": "当前",
+          "expired": "已过期"
+        },
+        "loading": "正在加载 Agent 节点地图",
+        "unavailable": "暂无可用的节点地理位置",
+        "summaryLoadFailed": "集群汇总加载失败",
+        "summaryLoadFailedDescription": "暂时无法读取完整 Agent 集群汇总，请重试。",
+        "summaryStaleTitle": "集群汇总快照已过期",
+        "summaryStaleDescription": "刷新失败，当前仍显示上次成功数据（{time}）。",
+        "retrySummary": "重试汇总",
+        "mapStaleTitle": "地图快照已过期",
+        "mapStaleDescription": "刷新失败，当前仍显示上次成功地图（{time}）。",
+        "retryMap": "重试地图",
+        "loadFailed": "节点地图加载失败",
+        "loadFailedDescription": "暂时无法获取完整 Agent 位置地图，请重试。",
+        "status": {
+          "healthy": "健康",
+          "warning": "预警",
+          "offline": "离线",
+          "unknown": "未知"
+        }
+      },
+      "risk": {
+        "title": "风险摘要",
+        "viewVulnerabilities": "查看漏洞",
+        "open": "开放风险",
+        "severityDistribution": "风险严重度分布",
+        "new": "新增",
+        "newSinceYesterday": "较昨日新增",
+        "newToday": "今日新增",
+        "audited": "已审查",
+        "unaudited": "待审查",
+        "auditUnavailable": "审查统计暂时不可用",
+        "trendTitle": "风险趋势",
+        "trendAriaLabel": "近 7 天开放风险趋势",
+        "trendUnavailable": "风险趋势暂时不可用",
+        "viewRiskDetails": "查看风险详情",
+        "reopened": "重新打开",
+        "closed": "已关闭",
+        "fixed": "已修复",
+        "trend": "较昨日",
+        "loadFailed": "风险摘要加载失败",
+        "loadFailedDescription": "暂时无法获取漏洞统计，请重试。",
+        "unavailable": "暂时无法读取风险数据"
+      },
+      "runtimeDetails": {
+        "unavailable": "不可用",
+        "agents": {
+          "total": "节点总数",
+          "distribution": "实时节点状态",
+          "viewRemaining": "查看其余 {count} 个节点",
+          "viewManagement": "查看节点管理",
+          "healthy": "健康",
+          "warning": "预警",
+          "offline": "离线",
+          "unknown": "未知"
+        },
+    "scans": {
+      "running": "运行中",
+      "pending": "等待中",
+      "failed": "失败",
+      "cancelled": "已取消",
+      "succeeded": "已完成",
+      "viewHistory": "查看扫描历史",
+      "recentTitle": "最近扫描",
+      "recentTarget": "目标",
+      "recentStatus": "状态",
+      "recentCreatedAt": "最近扫描时间",
+      "createdAtUnavailable": "创建时间不可用",
+      "recentLoading": "正在读取最近扫描",
+      "recentUnavailable": "最近扫描暂时不可用",
+      "noRecent": "暂无扫描记录",
+      "targetUnavailable": "目标不可用",
+      "viewRecent": "查看扫描详情"
+        },
+        "database": {
+          "status": "状态",
+          "connectionUsage": "已建立连接占比",
+          "connectionCount": "已建立连接",
+          "taskBacklog": "任务积压",
+          "probeLatency": "探活延迟",
+          "durationSeconds": "{count} 秒",
+          "durationMinutes": "{count} 分钟",
+          "durationHours": "{count} 小时",
+          "viewHealth": "查看数据库健康"
+        },
+        "resources": {
+          "cpu": "CPU",
+          "memory": "内存",
+          "disk": "磁盘",
+          "updatedAt": "更新于 {time}",
+          "updatedAtUnavailable": "暂未更新",
+          "cpuCores": "{count} 核",
+          "memoryUsage": "{used} / {total} GB",
+          "diskUsage": "{used} / {total} GB"
+        }
+      },
+      "assets": {
+        "title": "资产概览",
+        "assets": "资产总量",
+        "targets": "监控目标",
+        "change": "较昨日",
+        "trend": "近 7 天资产变化",
+        "distribution": "资产类型分布",
+        "total": "总计",
+        "loadFailed": "资产概览加载失败",
+        "loadFailedDescription": "暂时无法获取资产统计，请重试。",
+        "unavailable": "暂无数据"
+      }
+    },
+    "activityTabs": {
+      "vulnerabilities": "漏洞",
+      "scanHistory": "扫描历史"
+    },
+    "agentGlobe": {
+      "title": "分布式节点",
+      "metrics": {
+        "onlineNodes": {
+          "label": "在线",
+          "helper": "在线节点数",
+          "waitingHeartbeat": "等待心跳"
+        },
+        "abnormalNodes": {
+          "label": "异常",
+          "helper": "异常节点数",
+          "waitingHeartbeat": "等待心跳"
+        }
+      },
+      "aria": {
+        "globePreview": "分布式节点地球仪预览"
+      }
+    },
+    "lazySections": {
+      "riskStatus": {
+        "title": "风险状态",
+        "totalVulnerabilities": "漏洞总数",
+        "latestCriticalTitle": "最新严重 / 高危漏洞",
+        "headers": {
+          "id": "漏洞编号 / 名称",
+          "severity": "严重等级",
+          "target": "影响目标",
+          "discoveredAt": "发现时间",
+          "status": "处理状态"
+        },
+        "statuses": {
+          "unresolved": "未处理",
+          "inProgress": "处理中",
+          "fixed": "已修复"
+        }
+      },
+      "serverResources": {
+        "title": "server 资源占用",
+        "labels": {
+          "cpu": "CPU",
+          "memory": "内存",
+          "disk": "磁盘"
+        },
+        "details": {
+          "cpuCores": "{count} cores",
+          "memoryUsage": "{used} / {total} GB",
+          "diskUsage": "{used} / {total} GB"
+        },
+        "tooltipTime": "时间 {label}"
+      },
+      "scanStatus": {
+        "title": "扫描状态",
+        "currentTasksTitle": "当前运行中的扫描任务",
+        "headers": {
+          "target": "目标",
+          "phase": "扫描阶段",
+          "progress": "进度",
+          "node": "扫描节点",
+          "status": "状态"
+        },
+        "phases": {
+          "vulnerabilityVerification": "漏洞验证",
+          "portScan": "端口扫描",
+          "subdomainDiscovery": "子域名发现"
+        },
+        "viewAllTasks": "查看全部任务"
+      },
+      "assetStatus": {
+        "title": "资产状态",
+        "cards": {
+          "assetsFound": "发现资产",
+          "monitoredTargets": "监控目标"
+        },
+        "tabs": {
+          "total": "总资产",
+          "subdomains": "子域名",
+          "ips": "IP",
+          "endpoints": "URL",
+          "websites": "站点"
+        },
+        "comparedToYesterday": "较昨日",
+        "distributionTitle": "类型分布",
+        "distributionHeaders": {
+          "type": "类型",
+          "count": "资产数量",
+          "change": "较昨日新增"
+        },
+        "trendTitle": "资产趋势（近7天）",
+        "tooltipDate": "日期 {label}"
+      }
+    }
+  },
+  "dataTable": {
+    "columns": "列",
+    "filter": "筛选",
+    "filterDimensions": "筛选维度",
+    "selected": "已选择 {count} 项",
+    "noResults": "没有找到结果",
+    "selectAll": "全选",
+    "deselectAll": "取消全选",
+    "showColumns": "显示列",
+    "hideColumns": "隐藏列",
+    "sortAsc": "升序",
+    "sortDesc": "降序",
+    "hideColumn": "隐藏此列",
+    "columnActions": "列操作",
+    "sortMethod": "排序方式",
+    "clearSort": "清除排序",
+    "searchFilter": "搜索{title}...",
+    "clearFilter": "清除筛选",
+    "applyFilter": "应用"
+  },
+  "filter": {
+    "fields": {
+      "ip": "IP 地址",
+      "port": "端口号",
+      "host": "主机名",
+      "domain": "域名",
+      "url": "完整 URL",
+      "status": "HTTP 状态码",
+      "title": "页面标题",
+      "source": "数据来源",
+      "path": "URL 路径",
+      "severity": "漏洞严重程度",
+      "name": "名称",
+      "type": "类型"
+    },
+    "syntax": {
+      "operators": "操作符",
+      "containsFuzzy": "包含（模糊）",
+      "exactMatch": "精确匹配",
+      "notEquals": "不等于",
+      "logic": "逻辑",
+      "matchAny": "匹配任意",
+      "matchAll": "匹配全部"
+    },
+    "groups": {
+      "activeFilters": "当前过滤条件",
+      "availableFields": "可用字段",
+      "syntax": "语法",
+      "examples": "示例"
+    },
+    "empty": "输入以过滤...",
+    "descriptions": {
+      "directoryUrl": "目录 URL",
+      "subdomainName": "子域名",
+      "endpointUrl": "URL",
+      "vulnType": "漏洞类型",
+      "scannerSource": "扫描器来源"
+    }
+  },
+  "validation": {
+    "required": "此字段为必填项",
+    "invalidEmail": "请输入有效的邮箱地址",
+    "invalidUrl": "请输入有效的 URL",
+    "invalidDomain": "请输入有效的域名",
+    "invalidIp": "请输入有效的 IP 地址",
+    "minLength": "最少需要 {min} 个字符",
+    "maxLength": "最多允许 {max} 个字符",
+    "minValue": "最小值为 {min}",
+    "maxValue": "最大值为 {max}",
+    "pattern": "格式不正确"
+  },
+  "auth": {
+    "title": "月狐 (LunaFox)",
+    "subtitle": "自动化资产发现与漏洞扫描平台",
+    "login": "登录",
+    "pageTitle": "登录 - 月狐 | 攻击面管理平台",
+    "pageDescription": "月狐 (LunaFox) - 攻击面管理平台 (ASM)，提供自动化资产发现与漏洞扫描",
+    "loggingIn": "登录中...",
+    "logout": "退出登录",
+    "username": "用户名",
+    "usernamePlaceholder": "请输入账户名",
+    "password": "密码",
+    "passwordPlaceholder": "请输入密码",
+    "rememberMe": "记住我",
+    "forgotPassword": "忘记密码",
+    "loginSuccess": "登录成功",
+    "loginFailed": "登录失败",
+    "logoutSuccess": "已退出登录",
+    "sessionExpired": "会话已过期，请重新登录",
+    "visualLogin": {
+      "ariaLabel": "登录",
+      "consoleLabel": "月狐控制台",
+      "usernameLabel": "用户名或邮箱*",
+      "usernamePlaceholder": "admin@example.com",
+      "passwordLabel": "密码*",
+      "passwordPlaceholder": "请输入密码",
+      "submit": "登录",
+      "accessHelp": "需要访问权限？请联系管理员。"
+    },
+    "terminal": {
+      "title": "月狐攻击面管理平台",
+      "subtitle": "安全认证终端",
+      "usernamePrompt": "用户名",
+      "passwordPrompt": "密码",
+      "authenticating": "正在认证...",
+      "processing": "处理中...",
+      "accessGranted": "认证成功。",
+      "welcomeMessage": "欢迎回来，指挥官。",
+      "authFailed": "错误：认证失败。",
+      "invalidCredentials": "凭据无效，请重试。",
+      "shortcuts": "快捷键",
+      "submit": "提交",
+      "cancel": "取消",
+      "clear": "清空",
+      "startEnd": "行首/行尾"
+    },
+    "changePassword": {
+      "title": "修改密码",
+      "desc": "请输入当前密码和新密码",
+      "currentPassword": "当前密码",
+      "newPassword": "新密码",
+      "confirmPassword": "确认新密码",
+      "passwordMismatch": "新密码与确认密码不一致",
+      "passwordTooShort": "新密码长度至少 {min} 位",
+      "cancel": "取消",
+      "save": "保存",
+      "saving": "保存中..."
+    }
+  },
+  "organization": {
+    "title": "组织管理",
+    "name": "组织名称",
+    "description": "描述",
+    "addOrganization": "添加组织",
+    "createOrganization": "创建组织",
+    "editOrganization": "编辑组织",
+    "deleteOrganization": "删除组织",
+    "searchPlaceholder": "搜索组织名称...",
+    "noResults": "暂无组织",
+    "targetCount": "目标数量",
+    "notFound": "组织不存在",
+    "notFoundDesc": "未找到ID为 {id} 的组织",
+    "noDescription": "暂无描述",
+    "createdAt": "创建于 {date}",
+    "targetCountLabel": "{count} 个目标",
+    "detail": {
+      "breadcrumb": "组织",
+      "createdAt": "创建时间：",
+      "updatedAt": "更新时间：",
+      "noScan": "暂无扫描",
+      "tabs": {
+        "targets": "目标资产",
+        "scheduled": "定时扫描"
+      },
+      "metrics": {
+        "totalTargets": "目标总数",
+        "domains": "域名",
+        "ips": "IP",
+        "cidrs": "CIDR",
+        "latestScan": "最近扫描",
+        "scheduledTotal": "定时扫描",
+        "scheduledEnabled": "已启用"
+      },
+      "filters": {
+        "status": "状态",
+        "workflow": "工作流",
+        "allWorkflows": "工作流：全部"
+      }
+    },
+    "dialog": {
+      "addTitle": "创建组织",
+      "addDesc": "创建组织后，可在组织下管理目标资产。",
+      "editTitle": "编辑组织",
+      "addButton": "添加组织",
+      "orgName": "组织名称",
+      "orgNamePlaceholder": "请输入组织名称",
+      "orgDesc": "组织描述",
+      "orgDescOptional": "组织描述（可选）",
+      "orgDescPlaceholder": "请输入组织描述",
+      "addTargets": "同时添加目标（可选）",
+      "targetList": "目标列表",
+      "targetHelp": "支持域名、IP、CIDR，每行一个。",
+      "targetsPlaceholder": "请输入目标，每行一个",
+      "targetExample": "示例：example.com、192.168.1.1、10.0.0.0/8",
+      "targetCount": "已识别 {count} 个目标",
+      "invalidCount": "{count} 个无效",
+      "invalidExample": "例如 第 {line} 行: \"{target}\" - {error}",
+      "targetEmptySummary": "尚未输入任何目标",
+      "targetValidSummary": "已通过校验 {count} 项",
+      "targetBlockingSummary": "{count} 个错误阻止提交",
+      "targetInvalidIssue": "第 {line} 行：\"{target}\" - {error}",
+      "targetInvalidBadge": "非法目标",
+      "collapseDetails": "收起详情",
+      "expandDetails": "展开详情",
+      "cancel": "取消",
+      "create": "创建组织",
+      "creating": "创建组织中...",
+      "creatingTargets": "批量创建目标中...",
+      "update": "更新组织",
+      "updating": "更新中...",
+      "reset": "重置",
+      "changesDetected": "检测到变更，点击更新保存修改",
+      "characters": "{count}/{max} 字符"
+    },
+    "validation": {
+      "nameMin": "组织名称至少需要 {min} 个字符",
+      "nameMax": "组织名称不能超过 {max} 个字符",
+      "descMax": "描述不能超过 {max} 个字符",
+      "targetInvalid": "目标格式无效"
+    },
+    "linkTarget": {
+      "title": "添加目标到组织",
+      "description": "每行输入一个目标，将关联到 \"{name}\"。",
+      "targetLabel": "目标",
+      "organizationLabel": "所属组织",
+      "placeholder": "请输入目标，每行一个\n支持域名、IP、CIDR\n例如：\nexample.com\n192.168.1.1\n10.0.0.0/8",
+      "targetHelper": "支持域名、IP、CIDR，每行一个。",
+      "targetExample": "示例：example.com、192.168.1.1、10.0.0.0/8",
+      "targetCount": "{count} 个目标",
+      "invalidCount": "{count} 个无效",
+      "invalidExample": "例如 第 {line} 行: \"{target}\" - {error}",
+      "emptySummary": "尚未输入任何目标",
+      "validSummary": "已通过校验 {count} 项",
+      "blockingSummary": "{count} 个错误阻止提交",
+      "invalidIssue": "第 {line} 行：\"{target}\" - {error}",
+      "invalidBadge": "非法目标",
+      "collapseDetails": "收起详情",
+      "expandDetails": "展开详情",
+      "creating": "创建中...",
+      "createTarget": "创建目标",
+      "validation": {
+        "required": "请输入至少一个目标",
+        "invalidFormat": "目标格式无效"
+      }
+    }
+  },
+  "organizationSelection": {
+    "searchPlaceholder": "搜索组织名称",
+    "scopeAll": "全部组织",
+    "scopeSelected": "已选择",
+    "selectOrganization": "选择组织 {name}",
+    "clear": "清除全部",
+    "noSelected": "尚未选择组织",
+    "noAvailable": "暂无可选组织",
+    "selectedEmptyHint": "从全部组织中选择后，会在这里显示。",
+    "emptyHint": "当前没有可选组织。",
+    "selectedCount": "已选择 {count} 项",
+    "targetCount": "{count} 个目标",
+    "total": "共 {count} 个组织",
+    "paginationLabel": "组织分页",
+    "firstPage": "回到第一页",
+    "previousPage": "上一页",
+    "nextPage": "下一页",
+    "goToPage": "前往第 {page} 页",
+    "perPage": "每页:",
+    "perPageOption": "{count} 条/页"
+  },
+  "targetSelection": {
+    "searchPlaceholder": "搜索目标名称",
+    "scopeAll": "全部目标",
+    "scopeSelected": "已选择",
+    "selectTarget": "选择目标 {name}",
+    "clear": "清除全部",
+    "noSelected": "尚未选择目标",
+    "noAvailable": "暂无可选目标",
+    "selectedEmptyHint": "从全部目标中选择后，会在这里显示。",
+    "emptyHint": "当前没有可选目标。",
+    "unassociated": "未关联组织",
+    "total": "共 {count} 个目标",
+    "paginationLabel": "目标分页",
+    "firstPage": "回到第一页",
+    "previousPage": "上一页",
+    "nextPage": "下一页",
+    "goToPage": "前往第 {page} 页",
+    "perPage": "每页:",
+    "perPageOption": "{count} 条/页"
+  },
+  "target": {
+    "title": "目标管理",
+    "name": "目标名称",
+    "domain": "域名",
+    "description": "描述",
+    "addTarget": "添加目标",
+    "createTarget": "创建目标",
+    "editTarget": "编辑目标",
+    "deleteTarget": "删除目标",
+    "organization": "所属组织",
+    "types": {
+      "domain": "域名",
+      "ip": "IP",
+      "cidr": "CIDR"
+    },
+    "dialog": {
+      "addTitle": "添加目标",
+      "addDesc": "输入目标，可选关联一个或多个组织。未选择组织时将保存为未关联目标。",
+      "targetList": "目标列表",
+      "targetPlaceholder": "每行输入一个目标",
+      "targetHelper": "支持域名、IP、CIDR，每行一个。",
+      "targetExample": "示例：example.com、192.168.1.1、10.0.0.0/8",
+      "targetCount": "{count} 个目标",
+      "invalidCount": "{count} 个无效目标，例如 第 {line} 行: \"{target}\" - {error}",
+      "emptySummary": "尚未输入任何内容",
+      "validSummary": "已通过校验 {count} 项",
+      "blockingSummary": "{count} 个错误阻止提交",
+      "collapseDetails": "收起详情",
+      "expandDetails": "展开详情",
+      "invalidIssue": "第 {line} 行：\"{target}\" - {error}",
+      "invalidBadge": "非法目标",
+      "invalidFormat": "目标格式无效",
+      "linkOrganization": "关联组织（可选）",
+      "organizationWorkspaceTitle": "选择组织",
+      "organizationWorkspaceHint": "可关联一个或多个组织",
+      "createOrganization": "创建组织",
+      "creating": "创建中...",
+      "addTarget": "添加目标"
+    }
+  },
+  "scan": {
+    "title": "扫描",
+    "startScan": "开始扫描",
+    "stopScan": "停止扫描",
+    "stopScanPending": "停止中...",
+    "agentSelector": {
+      "label": "指定执行节点",
+      "loading": "正在加载执行节点...",
+      "automatic": "自动分配",
+      "automaticHint": "系统根据负载和策略自动选择最优节点",
+      "recommended": "推荐",
+      "cpu": "CPU",
+      "memory": "内存",
+      "disk": "磁盘",
+      "online": "在线",
+      "offline": "离线",
+      "noHeartbeat": "无心跳",
+      "capacity": "{used}/{total} 槽位",
+      "searchPlaceholder": "搜索节点名称、主机名或 IP",
+      "searchEmpty": "未找到匹配的执行节点",
+      "loadFailed": "无法加载执行节点",
+      "refreshFailed": "节点指标刷新失败，当前结果可能已过期",
+      "loadingMore": "正在加载更多执行节点...",
+      "loadMoreFailed": "无法加载更多执行节点",
+      "retry": "重试",
+      "unavailableHint": "该执行节点当前不可用，原指定关系已保留",
+      "selectedHint": "指定后仅由此节点执行",
+      "hint": "离线或不健康节点仍可选择；指定后扫描不会自动切换到其他节点。"
+    },
+    "scanType": "扫描类型",
+    "scanStatus": "扫描状态",
+    "scanProgress": "扫描进度",
+    "scanResult": "扫描结果",
+    "editTask": "编辑任务",
+    "configuration": {
+      "title": "扫描配置",
+      "description": "管理扫描工作流与可用引擎。",
+      "tabsLabel": "扫描配置导航",
+      "workflows": "工作流",
+      "engines": "引擎"
+    },
+    "inputSource": {
+      "label": "扫描输入",
+      "scanSnapshot": "扫描快照",
+      "recommended": "推荐",
+      "scanSnapshotDescription": "仅使用本次扫描已发现的资产，例如扫描发现的子域名，用于后续端口扫描、站点识别等。",
+      "targetInventory": "目标全量资产",
+      "targetInventoryDescription": "使用目标当前已保存的所有资产进行扫描；资产量较大时，扫描耗时可能明显增加。"
+    },
+    "initiate": {
+      "title": "发起扫描",
+      "targetDesc": "为目标",
+      "orgDesc": "为组织",
+      "bulkTargetsDesc": "为已选择的 {count} 个目标发起扫描",
+      "bulkOrganizationsDesc": "为已选择的 {count} 个组织发起扫描",
+      "selectWorkflow": "选择工作流",
+      "workflowListTitle": "选择扫描方案",
+      "workflowListHint": "选择一次扫描要执行的方案；下一步可查看并调整引擎参数",
+      "executionOptions": {
+        "title": "执行选项（可选）"
+      },
+      "loading": "加载中...",
+      "loadFailed": "加载失败",
+      "noWorkflows": "暂无可用工作流",
+      "workflowUnavailable": "不可执行",
+      "workflowSearchPlaceholder": "搜索工作流名称或说明",
+      "workflowSearchEmpty": "未找到匹配的工作流",
+      "capabilities": "{count} 项能力",
+      "noConfig": "无配置",
+      "workflowConfigured": "已配置",
+      "workflowUnconfigured": "未配置",
+      "workflowConfiguredHint": "扫描配置",
+      "workflowUnconfiguredHint": "未配置扫描参数",
+      "initiating": "发起中...",
+      "startScan": "开始扫描",
+      "selectedCount": "已选择 {count} 个工作流",
+      "configTitle": "扫描配置",
+      "configEdited": "已编辑",
+      "configLabel": "扫描配置",
+      "configPlaceholder": "# 在此编辑 YAML 配置",
+      "configHelper": "YAML 格式，定义工作流步骤和引擎参数。",
+      "advancedYamlTitle": "高级模式：YAML 编辑器",
+      "advancedYamlHelper": "直接编辑原始 YAML 配置",
+      "resetDefaults": "重置",
+      "configExample": "示例：steps → subdomain_discovery → engineConfig → recon → enabled: true",
+      "configEmptySummary": "暂无配置",
+      "configValidSummary": "配置格式正确",
+      "configBlockingSummary": "{count} 个配置错误",
+      "configCollapseDetails": "收起详情",
+      "configExpandDetails": "展开详情",
+      "configError": "错误",
+      "advancedConfig": "高级配置",
+      "quickStart": "快速启动",
+      "cancel": "取消",
+      "stepIndicator": "步骤 {current}/{total}",
+      "back": "上一步",
+      "next": "下一步",
+      "engineConfigForm": {
+        "loading": "加载中",
+        "selectWordlist": "选择字典",
+        "wordlistLoadFailed": "字典列表加载失败。",
+        "retryWordlists": "重试",
+        "resourceRequired": "请选择字典。",
+        "off": "关",
+        "on": "开",
+        "unitSeconds": "秒",
+        "minimum": "最小 {value}",
+        "maximum": "最大 {value}",
+        "range": "{min}-{max}",
+        "configSectionCount": "{count} 个配置区",
+        "collapse": "收起",
+        "expand": "展开",
+        "stageLabel": "阶段 {index}: {stageId}",
+        "enabledSummary": "{enabled}/{total} 启用",
+        "lastSectionHint": "至少保留一个配置区；如需关闭整个引擎，请使用外层 Step 开关。"
+      },
+      "steps": {
+        "selectWorkflow": "选择工作流",
+        "editConfig": "编辑配置",
+        "engineConfig": "引擎配置"
+      },
+      "presets": {
+        "title": "推荐组合",
+        "fullScan": "全量扫描",
+        "fullScanDesc": "完整的安全评估，覆盖资产发现到漏洞检测的全部流程",
+        "recon": "信息收集",
+        "reconDesc": "发现和识别目标资产，包括子域名、端口、站点和指纹",
+        "vulnScan": "漏洞扫描",
+        "vulnScanDesc": "对已知资产进行安全漏洞检测",
+        "custom": "自定义",
+        "customDesc": "手动选择工作流组合",
+        "customHint": "点击选择后手动勾选工作流",
+        "selectHint": "请选择一个扫描方案",
+        "selectWorkflows": "选择工作流",
+        "workflowCount": "个工作流",
+        "capabilities": "涉及能力",
+        "usedWorkflows": "使用工作流",
+        "noCapabilities": "请选择工作流",
+        "loading": "加载扫描方案中...",
+        "noMatchingWorkflows": "暂无匹配的工作流",
+        "empty": "暂无预设工作流"
+      },
+      "mode": {
+        "preset": "预设工作流",
+        "custom": "自定义工作流"
+      },
+      "overwriteConfirm": {
+        "title": "覆盖配置确认",
+        "description": "您已手动编辑过配置，切换工作流将覆盖当前配置。是否继续？",
+        "cancel": "取消",
+        "confirm": "确认覆盖"
+      },
+      "validation": {
+        "title": "校验结果",
+        "yamlOk": "YAML 语法正常",
+        "yamlError": "YAML 语法有误，请检查",
+        "workflowsOk": "已选择 {count} 个工作流",
+        "workflowsMissing": "尚未选择工作流",
+        "presetOk": "已选择预设：{name}",
+        "presetMissing": "尚未选择预设",
+        "configEdited": "已手动编辑配置",
+        "configFromPreset": "当前配置来自预设",
+        "configFromWorkflow": "当前配置来自所选工作流",
+        "configMissing": "配置不能为空",
+        "noEnabledSteps": "至少启用一个工作流 Step"
+      },
+      "engineConfiguredSummary": "{count} 个启用",
+      "stageCount": "{count} 个阶段",
+      "configStatus": "配置状态",
+      "configValidShort": "配置有效",
+      "configuredEngineStatus": "配置有效 · {count} 个引擎已配置"
+    },
+    "cron": {
+      "everyMinute": "每分钟",
+      "everyNMinutes": "每 {n} 分钟",
+      "everyHour": "每小时 {minute}分",
+      "everyNHours": "每 {n} 小时 {minute}分",
+      "everyDay": "每天 {time}",
+      "everyWeek": "每{day} {time}",
+      "everyMonth": "每月{day}号 {time}",
+      "weekdays": [
+        "周日",
+        "周一",
+        "周二",
+        "周三",
+        "周四",
+        "周五",
+        "周六"
+      ]
+    },
+    "history": {
+      "title": "扫描历史",
+      "description": "查看和管理所有扫描任务记录",
+      "retention": {
+        "title": "扫描历史保留策略",
+        "summary": "历史保留：至少 {duration}",
+        "automaticCleanupDescription": "扫描结束后，相关历史记录至少保留 {duration}；超过保留期后，系统将在条件满足时自动清理。",
+        "inactiveCleanupDescription": "扫描结束后，相关历史记录至少保留 {duration}；当前不会自动清理。"
+      },
+      "refresh": "刷新扫描历史",
+      "updatedAtLabel": "更新时间：",
+      "updatedAtUnavailable": "暂未更新",
+      "startTime": "开始时间",
+      "endTime": "结束时间",
+      "duration": "耗时",
+      "statusLabel": "状态",
+      "searchPlaceholder": "搜索目标名称...",
+      "allStatus": "全部状态",
+      "loadFailed": "加载扫描历史失败",
+      "retry": "重试",
+      "actions": {
+        "scanDetail": "详情"
+      },
+      "batchStop": {
+        "disabled": "选中的扫描均已处于终态，无法停止。",
+        "inProgress": "正在停止选中的扫描..."
+      },
+      "runtimeDrawer": {
+        "open": "运行详情"
+      },
+      "taskId": "扫描任务 ID：{id}",
+      "breadcrumb": {
+        "scanHistory": "扫描历史"
+      },
+      "tabs": {
+        "overview": "概览",
+        "assets": "资产",
+        "screenshots": "截图",
+        "vulnerabilities": "漏洞",
+        "websites": "站点",
+        "subdomains": "子域名",
+        "ips": "IP 地址",
+        "urls": "URL",
+        "directories": "目录"
+      },
+      "directoriesHelp": "由目录扫描（如 ffuf/dirsearch）发现的路径结果",
+      "status": {
+        "succeeded": "已完成",
+        "running": "扫描中",
+        "failed": "失败",
+        "pending": "等待中",
+        "cancelled": "已取消",
+        "skipped": "已跳过"
+      },
+      "triggerType": {
+        "manual": "手动触发",
+        "scheduled": "定时触发",
+        "ai": "AI 触发"
+      },
+      "overview": {
+        "loadError": "加载扫描数据失败",
+        "startedAt": "开始时间",
+        "duration": "耗时",
+        "inputSource": {
+          "label": "扫描输入",
+          "scanSnapshot": "扫描快照",
+          "targetInventory": "目标全量资产"
+        },
+        "assetsTitle": "发现的资产",
+        "vulnerabilitiesTitle": "漏洞统计",
+        "stagesTitle": "扫描进度",
+        "stagesCompleted": "完成",
+        "logsTitle": "扫描日志",
+        "configTitle": "扫描配置",
+        "autoRefresh": "自动刷新",
+        "autoRefreshEvery": "每 3 秒刷新",
+        "loadingEditor": "加载编辑器中...",
+        "loadingLogs": "加载中...",
+        "noLogs": "暂无日志",
+        "copied": "已复制",
+        "copyAllLogs": "复制全部日志",
+        "noSummary": "暂无摘要",
+        "logCount": "{count} 条记录",
+        "noConfig": "暂无配置信息",
+        "noStages": "暂无阶段进度",
+        "totalFound": "个漏洞",
+        "totalVulns": "共 {count} 个",
+        "viewAll": "查看全部",
+        "cards": {
+          "websites": "站点",
+          "subdomains": "子域名",
+          "ips": "IP 地址",
+          "urls": "URL",
+          "directories": "目录",
+          "screenshots": "截图",
+          "vulnerabilities": "漏洞"
+        },
+        "severity": {
+          "critical": "严重",
+          "high": "高危",
+          "medium": "中危",
+          "low": "低危"
+        },
+        "runtimeDrawer": {
+          "open": "运行详情",
+          "title": "扫描运行详情",
+          "emptyTarget": "未知目标",
+          "loadError": "加载运行详情失败",
+          "cards": {
+            "progress": "总体进度",
+            "currentStage": "当前阶段：{stage}",
+            "tasks": "任务数",
+            "completedCount": "已完成 {count} 个",
+            "failures": "失败任务",
+            "runningCount": "运行中 {count} 个",
+            "noRunning": "当前无运行中任务",
+            "startedAt": "开始时间",
+            "stoppedAt": "结束时间：{time}",
+            "notStopped": "尚未结束"
+          },
+          "failure": {
+            "title": "主失败摘要",
+            "empty": "暂无失败摘要"
+          },
+          "meta": {
+            "title": "运行概览",
+            "target": "目标",
+            "agent": "执行节点",
+            "assignment": "分配方式",
+            "automatic": "自动分配",
+            "pinned": "指定节点",
+            "online": "在线",
+            "offline": "离线",
+            "deleted": "已删除",
+            "stateUnavailable": "当前状态不可用",
+            "healthy": "健康",
+            "warning": "预警",
+            "healthUnknown": "健康状态未知",
+            "workflow": "工作流",
+            "scanId": "扫描 ID",
+            "createdAt": "创建时间",
+            "stoppedAt": "结束时间",
+            "currentStage": "当前阶段",
+            "progress": "进度"
+          },
+          "tasks": {
+            "title": "任务运行清单",
+            "description": "按阶段梳理本次扫描的运行步骤与失败信息。",
+            "empty": "当前没有可展示的任务信息。",
+            "noDetail": "暂无更多运行说明。",
+            "logTitle": "任务日志",
+            "progressTitle": "任务进度",
+            "failureTitle": "失败说明",
+            "noProgress": "暂无任务进度。",
+            "startedAt": "开始时间",
+            "duration": "耗时",
+            "expand": "展开任务详情",
+            "collapse": "收起任务详情",
+            "status": {
+              "interrupted": "已中止",
+              "notStarted": "未执行"
+            },
+            "skipReasons": {
+              "userDisabled": "用户已禁用",
+              "targetNotApplicable": "目标不适用",
+              "planning": "规划阶段跳过，未产生运行日志",
+              "other": "规划阶段跳过：{reason}"
+            },
+            "diagnostics": {
+              "title": "结果投递诊断",
+              "availability": "诊断可用性",
+              "available": "可用",
+              "unavailable": "不可用",
+              "unavailableDescription": "引擎未提供已验证的终态诊断；以上运行状态仍是当前可信依据。",
+              "resultState": "结果投递状态",
+              "failedStage": "失败边界",
+              "errorType": "错误分类",
+              "watermarks": "按结果类型的投递水位",
+              "zeroResultComplete": "未提交任何类型化结果批次；这只表示结果投递完成，不代表未发现资产。",
+              "noWatermarks": "未报告按结果类型的投递水位。",
+              "receivedItems": "已接收",
+              "encodedItems": "已编码",
+              "submittedItems": "已提交",
+              "acknowledgedItems": "已确认",
+              "submittedBatches": "已提交批次",
+              "acknowledgedBatches": "已确认批次",
+              "resultStates": {
+                "complete": "投递完整",
+                "partial": "已确认部分投递",
+                "none": "未确认投递",
+                "unknown": "投递状态未知"
+              },
+              "failedStages": {
+                "unknown": "未知执行边界",
+                "plan_validation": "计划校验",
+                "input_materialization": "输入物化",
+                "resource_materialization": "资源物化",
+                "context_build": "上下文构建",
+                "image_prepare": "镜像准备",
+                "container_create": "容器创建",
+                "container_start": "容器启动",
+                "container_wait": "容器等待",
+                "container_cleanup": "容器清理",
+                "protocol_bootstrap": "协议启动",
+                "execution_projection": "执行投影",
+                "handler": "引擎处理器",
+                "progress_report": "进度上报",
+                "result_encode": "结果编码",
+                "result_submit": "结果提交"
+              },
+              "errorTypes": {
+                "execution_failed": "执行失败",
+                "plan_validation_failed": "计划校验失败",
+                "input_materialization_failed": "输入物化失败",
+                "resource_materialization_failed": "资源物化失败",
+                "context_build_failed": "上下文构建失败",
+                "image_prepare_failed": "镜像准备失败",
+                "container_create_failed": "容器创建失败",
+                "container_start_failed": "容器启动失败",
+                "container_wait_failed": "容器等待失败",
+                "container_cleanup_failed": "容器清理失败",
+                "protocol_bootstrap_failed": "协议启动失败",
+                "handler_failed": "引擎处理器失败",
+                "progress_report_failed": "进度上报失败",
+                "result_encode_failed": "结果编码失败",
+                "result_submit_failed": "结果提交失败",
+                "timeout": "执行超时",
+                "cancelled": "已取消",
+                "oom_killed": "内存不足终止",
+                "agent_session_failed": "执行节点会话失败",
+                "invalid_outcome": "无效终态"
+              }
+            }
+          },
+          "summary": {
+            "title": "运行摘要",
+            "succeeded": "扫描已完成",
+            "tasks": "任务",
+            "taskCount": "{completed}/{total}",
+            "running": "运行中",
+            "duration": "总耗时",
+            "pages": "页面",
+            "risks": "风险"
+          },
+          "details": {
+            "title": "详情信息",
+            "logs": "扫描日志",
+            "allProgress": "全部进度",
+            "config": "扫描配置",
+            "copyConfig": "复制扫描配置",
+            "noRuntimeLogsPlanning": "规划阶段已跳过执行，未产生运行日志",
+            "noRuntimeLogsUserDisabled": "用户已禁用此步骤，未产生运行日志",
+            "noRuntimeLogsTargetNotApplicable": "目标不适用此步骤，未产生运行日志",
+            "assets": "资产结果",
+            "debug": "调试信息",
+            "time": "时间 (UTC+8)",
+            "level": "级别",
+            "source": "来源",
+            "content": "日志内容",
+            "noData": "暂无数据"
+          },
+          "troubleshooting": {
+            "title": "排障信息",
+            "failureSummary": "失败摘要",
+            "runtimeMeta": "运行元信息",
+            "noFailure": "当前没有结构化失败信息。"
+          },
+          "vulns": {
+            "title": "漏洞统计摘要"
+          },
+          "debug": {
+            "title": "调试视图",
+            "note": "此区域用于 demo 阶段展示抽屉的原始数据形状，后续可替换为更正式的排障区块。"
+          },
+          "statusSummary": {
+            "title": "运行状态",
+            "succeeded": "已完成任务",
+            "running": "运行中任务",
+            "failed": "失败任务"
+          },
+          "config": {
+            "title": "扫描配置"
+          },
+          "scanLogs": {
+            "title": "整体扫描日志"
+          },
+          "assets": {
+            "title": "资产结果摘要",
+            "liveHosts": "存活主机"
+          },
+          "sidePanel": {
+            "details": "扫描详情",
+            "modules": "扫描模块",
+            "status": "状态"
+          }
+        }
+      },
+      "stats": {
+        "totalScans": "总扫描数",
+        "running": "进行中",
+        "vulnsFound": "发现漏洞",
+        "assetsFound": "发现资产",
+        "allScanTasks": "所有扫描任务",
+        "runningScans": "正在执行的扫描",
+        "pendingScans": "等待执行的扫描",
+        "completedScans": "已完成的扫描",
+        "failedScans": "失败的扫描",
+        "cancelledScans": "已取消的扫描",
+        "pendingShort": "待处理",
+        "failedNeedsAttention": "需关注",
+        "cancelledShort": "已取消",
+        "completedAll": "全部完成",
+        "completedScansFound": "已完成扫描发现",
+        "assetTypes": "子域名 + IP + URL + 站点",
+        "all": "全部"
+      }
+    },
+    "progress": {
+      "title": "扫描进度",
+      "target": "目标",
+      "workflow": "工作流",
+      "startTime": "开始时间",
+      "status": "状态",
+      "errorReason": "错误原因",
+      "engineCatalogLoading": "正在加载执行引擎信息",
+      "engineCatalogUnavailable": "加载执行引擎信息失败",
+      "totalProgress": "总进度",
+      "tab_stages": "阶段",
+      "tab_logs": "日志",
+      "status_running": "扫描中",
+      "status_cancelled": "已取消",
+      "status_succeeded": "已完成",
+      "status_failed": "失败",
+      "status_pending": "等待中",
+      "stage_running": "进行中",
+      "stage_pending": "等待中",
+      "stage_failed": "失败",
+      "stage_cancelled": "已取消",
+      "stage_skipped": "已跳过",
+      "stage_skipped_user_disabled": "用户已禁用",
+      "stage_skipped_target_not_applicable": "目标不适用",
+      "stages": {
+        "subdomainDiscovery": "子域名发现",
+        "portScan": "端口扫描",
+        "websiteDiscovery": "站点发现",
+        "fingerprintDetect": "指纹识别",
+        "directoryScan": "目录扫描",
+        "urlFetch": "URL 抓取",
+        "vulnScan": "漏洞扫描",
+        "subdomain_discovery": "子域名发现",
+        "port_scan": "端口扫描",
+        "website_discovery": "站点发现",
+        "fingerprint_detect": "指纹识别",
+        "directory_scan": "目录扫描",
+        "url_fetch": "URL 抓取",
+        "vuln_scan": "漏洞扫描",
+        "screenshot": "截图",
+        "web_crawling": "站点抓取",
+        "nuclei_vulnerability": "漏洞扫描"
+      }
+    },
+    "scheduled": {
+      "title": "定时扫描",
+      "description": "管理定时扫描任务的调度与执行",
+      "searchPlaceholder": "搜索任务名称...",
+      "cronExpression": "Cron 表达式",
+      "nextRun": "下次执行",
+      "lastRun": "上次触发时间",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "createTitle": "新建定时扫描",
+      "createDesc": "配置定时扫描任务，设置执行计划",
+      "editTitle": "编辑定时扫描",
+      "editDesc": "修改定时扫描任务配置",
+      "editTabs": {
+        "label": "定时扫描编辑分区",
+        "basicInfo": "基本信息",
+        "scanConfiguration": "扫描配置"
+      },
+      "stepIndicator": "步骤 {current}/{total}",
+      "steps": {
+        "basicInfo": "基本信息",
+        "scanMode": "扫描模式",
+        "selectTarget": "选择目标",
+        "selectWorkflow": "选择工作流",
+        "editConfig": "编辑配置",
+        "scheduleSettings": "调度设置"
+      },
+    "workbench": {
+        "targetColumn": "目标",
+		"overview": {
+		  "loadFailed": "近期执行计划加载失败",
+		  "loadFailedDescription": "暂时无法获取定时任务概览，列表仍可继续使用。",
+		  "retry": "重试",
+		  "stale": {
+			"description": "刷新失败，当前显示最近一次成功快照（{time}）。",
+			"retry": "重新加载"
+		  }
+		},
+        "timeline": {
+          "title": "近期执行计划",
+          "next24HoursCount": "未来 24 小时 · {count} 项",
+          "soon": "即将执行",
+          "empty": "暂无即将执行的定时扫描"
+        },
+        "frequency": {
+          "title": "执行频率分布",
+          "hourly": "每小时",
+          "daily": "每日",
+          "weekly": "每周",
+          "monthly": "每月",
+          "custom": "自定义 Cron",
+          "total": "合计"
+        },
+        "filters": {
+          "enabled": "已启用",
+          "paused": "已暂停"
+      }
+    },
+    "batchStatus": {
+      "enable": "启用",
+      "disable": "停用",
+      "disableTitle": "停用定时扫描",
+      "disableDescription": "停用选中的 {count} 个定时扫描后，将清除未来执行游标并删除尚未尝试的执行记录。"
+    },
+    "form": {
+        "taskName": "任务名称",
+        "taskNamePlaceholder": "例如：每日安全巡检",
+        "taskNameDesc": "为定时任务设置一个易于识别的名称",
+        "taskNameRequired": "请输入任务名称",
+        "scanWorkflow": "工作流",
+        "scanWorkflowPlaceholder": "选择工作流",
+        "scanWorkflowDesc": "选择工作流可快速填充配置，也可直接编辑配置",
+        "scanWorkflowRequired": "请选择工作流",
+        "configuration": "扫描配置",
+        "configurationPlaceholder": "请输入 YAML 格式的扫描配置...",
+        "configurationDesc": "YAML 格式的扫描配置，可选择工作流自动填充或手动编辑",
+        "configurationRequired": "请输入扫描配置",
+        "noEnabledSteps": "至少启用一个工作流 Step",
+        "yamlInvalid": "YAML 配置格式错误，请检查语法",
+        "configEdited": "已编辑",
+        "selectScanMode": "选择扫描模式",
+        "organizationScan": "组织扫描",
+        "organizationScanDesc": "选择组织，执行时动态获取其下所有目标",
+        "targetScan": "目标扫描",
+        "targetScanDesc": "选择固定的目标列表进行扫描",
+        "organizationScanHint": "组织扫描：每次执行时会动态获取组织下的所有目标，新增的目标也会被扫描",
+        "targetScanHint": "目标扫描：扫描固定的目标列表，后续新增的目标不会被扫描",
+        "selectOrganization": "选择组织",
+        "selectTarget": "选择扫描目标",
+        "cronExpression": "Cron 表达式",
+        "cronPlaceholder": "分 时 日 月 周（如：0 2 * * *）",
+        "cronFormat": "格式：分(0-59) 时(0-23) 日(1-31) 月(1-12) 周(0-6，0=周日)",
+        "cronRequired": "Cron 表达式无效，仅支持 5 段格式：分 时 日 月 周",
+        "quickSelect": "快捷选择",
+        "executionPreview": "执行预览",
+        "valid": "有效",
+        "nextExecutionTime": "下次执行时间：",
+        "upcoming": "(即将执行)",
+        "invalidExpression": "无效的表达式",
+        "scanScope": "扫描范围",
+        "organizationMode": "组织扫描",
+        "organizationModeHint": "组织扫描模式下，执行时将动态获取该组织下所有目标",
+        "noAvailableTarget": "暂无可用目标",
+        "noWorkflow": "暂无可用工作流",
+        "noConfig": "无配置",
+        "capabilitiesCount": "{count} 项能力",
+        "selected": "已选择",
+        "selectedWorkflows": "已选择 {count} 个工作流",
+        "scanTarget": "扫描目标",
+        "presetTargetHint": "目标已预设，无法更改。如需扫描其他目标，请从全局定时扫描页面创建。"
+      },
+      "presets": {
+        "everyHour": "每小时",
+        "daily2am": "每天凌晨2点",
+        "daily4am": "每天凌晨4点",
+        "weekly": "每周一凌晨2点",
+        "monthly": "每月1号凌晨2点",
+        "everyMinute": "每分钟",
+        "every5Minutes": "每5分钟"
+      },
+      "buttons": {
+        "previous": "上一步",
+        "next": "下一步",
+        "createTask": "创建任务",
+        "saveChanges": "保存修改",
+        "cancel": "取消"
+      },
+      "toast": {
+        "selectOrganization": "请选择一个组织",
+        "selectTarget": "请选择一个扫描目标",
+        "configConflict": "配置冲突",
+        "noEnabledSteps": "不能创建：所有工作流 Step 都已关闭"
+      },
+      "overwriteConfirm": {
+        "title": "覆盖配置确认",
+        "description": "您已手动编辑了配置，切换工作流将覆盖当前配置。确定要继续吗？",
+        "cancel": "取消",
+        "confirm": "确定覆盖"
+      }
+    },
+    "workflow": {
+      "title": "工作流",
+      "name": "工作流名称",
+      "type": "工作流类型",
+      "config": "配置",
+      "searchPlaceholder": "搜索我的工作流...",
+      "createWorkflow": "新建工作流",
+      "workflowList": "工作流列表",
+      "presetWorkflows": "预设工作流",
+      "myWorkflows": "我的工作流",
+      "preset": "预设",
+      "noMatchingWorkflow": "未找到匹配的工作流",
+      "noWorkflows": "暂无自定义工作流",
+      "featuresEnabled": "{count} 个功能已启用",
+      "featuresCount": "{count} 个功能",
+      "updatedAt": "更新于",
+      "enabledFeatures": "已启用功能",
+      "configPreview": "配置预览",
+      "editConfig": "编辑配置",
+      "cloneAsMyWorkflow": "克隆为我的工作流",
+      "configNeedsUpdate": "配置需要更新",
+      "needsUpdate": "需要更新",
+      "selectWorkflowHint": "选择左侧工作流查看详情",
+      "workflowBadge": "工作流",
+      "management": {
+        "subtitle": "查看所有工作流，快速判断状态、结构和配置入口。",
+        "searchPlaceholder": "搜索工作流名称或描述",
+        "actions": "操作",
+        "reset": "重置",
+        "total": "共 {count} 条",
+        "selected": "已选 {count} 条",
+        "selectAll": "选择所有工作流",
+        "selectRow": "选择工作流 {name}",
+        "noDescription": "暂无描述",
+        "noStructure": "暂无结构信息",
+        "openComposition": "编排",
+        "openBuilder": "打开编排",
+        "openInNew": "打开详情",
+        "backToList": "返回工作流列表",
+        "builderSubtitle": "前端编排草稿，仅支持串行阶段和阶段内并行步骤。",
+        "preview": "预览",
+        "save": "保存",
+        "publish": "发布",
+        "previewTitle": "工作流预览",
+        "advancedOptions": "高级选项",
+        "yamlConfig": "YAML 配置",
+        "advancedBadge": "高级",
+        "noYaml": "当前列表数据未包含 YAML 配置。",
+        "columns": {
+          "id": "工作流 ID",
+          "name": "工作流名称",
+          "description": "描述",
+          "stages": "阶段",
+          "engines": "引擎",
+          "structure": "结构预览"
+        },
+        "metrics": {
+          "stages": "阶段",
+          "engines": "引擎"
+        },
+        "stage": {
+          "discovery": "目标发现",
+          "ports": "端口扫描"
+        }
+      },
+      "canvas": {
+        "title": "编排图",
+        "description": "用阶段表示串行顺序，用同一阶段内的多个步骤表示并行执行。保存后将更新工作流编排。",
+        "editorTitle": "工作流编辑器",
+        "workflowName": "工作流名称",
+        "workflowDescription": "工作流描述",
+        "saveMetadataTitle": "保存工作流",
+        "saveMetadataDescription": "填写工作流名称和描述后保存当前编排。",
+        "confirmSaveMetadata": "保存工作流",
+        "unsavedChanges": "未保存的更改",
+        "mockBadge": "未保存",
+        "engineLibrary": "引擎库",
+        "engineLibraryHint": "拖拽引擎到画布中开始编排",
+        "engineLibraryLoading": "正在加载引擎库...",
+        "engineLibraryError": "引擎库加载失败",
+        "engineLibraryEmpty": "暂无可用引擎",
+        "engineUnavailable": "引擎不可用",
+        "searchEngine": "搜索引擎",
+        "addSerialStage": "追加串行阶段",
+        "addParallelStep": "追加并行步骤",
+        "zoomIn": "放大画布",
+        "zoomOut": "缩小画布",
+        "miniMap": "画布导航图",
+        "autoLayout": "自动排版并居中",
+        "reset": "重置编排草稿",
+        "stageDisplayName": "阶段名称",
+        "renameStage": "重命名",
+        "renameStageTitle": "重命名阶段",
+        "renameStageDescription": "修改此阶段的显示名称。",
+        "cancelStageRename": "取消",
+        "confirmStageRename": "确认重命名",
+        "deleteStage": "删除当前阶段",
+        "deleteStageTitle": "删除阶段？",
+        "deleteStageDescription": "将删除“{name}”及其绑定的引擎。此操作不可撤销。",
+        "cancelStageDelete": "取消",
+        "confirmStageDelete": "确认删除",
+        "stageInspectorDescription": "查看并管理当前阶段绑定的引擎。",
+        "stageEngines": "已绑定引擎",
+        "removeEngine": "移除引擎",
+        "emptyStagePlaceholder": "暂无绑定引擎",
+        "emptyStageDropHint": "拖拽引擎到此处",
+        "serialExecution": "串行",
+        "parallelExecution": "并行",
+        "autoSaved": "自动保存于 14:32:18",
+        "stepInspector": "步骤配置",
+        "selectedEngine": "已选择引擎",
+        "stepSettings": "步骤配置",
+        "yamlConfig": "YAML 配置",
+        "stepName": "步骤名称",
+        "timeout": "超时时间",
+        "concurrency": "并发数",
+        "failureStrategy": "失败策略",
+        "failureContinue": "继续执行其他步骤",
+        "failureStop": "停止当前工作流",
+        "continueOnFailure": "失败后继续",
+        "continueOnFailureHint": "启用后，步骤失败不会中断整个工作流。",
+        "noStepSelected": "选择一个步骤后配置参数。",
+        "yamlHint": "根据当前编排生成，仅用于预览。",
+        "serialStageLabel": "阶段 {count}",
+        "serialStepLabel": "串行步骤 {count}",
+        "parallelStepLabel": "并行步骤 {count}",
+        "mockEngine": "待选择引擎",
+        "stagePanelTitle": "阶段",
+        "stagePanelHint": "选择阶段后，可向其中追加并行步骤。",
+        "stepCount": "{count} 个步骤",
+        "selectedStage": "当前阶段",
+        "defaults": {
+          "discoveryStage": "资产发现",
+          "portsStage": "端口扫描",
+          "subdomainStep": "子域名发现",
+          "portStep": "端口扫描",
+          "subdomainEngine": "subdomain_discovery",
+          "portEngine": "port_scan"
+        },
+        "engineCategories": {
+          "all": "全部",
+          "discovery": "发现",
+          "port": "端口"
+        },
+        "engines": {
+          "subdomain": {
+            "label": "子域名发现",
+            "description": "主动/被动枚举子域名资产",
+            "estimate": "约 2-5 分钟"
+          },
+          "port": {
+            "label": "端口扫描",
+            "description": "扫描目标开放端口与服务",
+            "estimate": "约 2-10 分钟"
+          },
+          "website": {
+            "label": "站点发现",
+            "description": "探测开放服务对应的可访问站点",
+            "estimate": "约 1-5 分钟"
+          },
+          "fingerprint": {
+            "label": "指纹识别",
+            "description": "识别站点技术栈与指纹特征",
+            "estimate": "约 1-5 分钟"
+          },
+          "urlCollection": {
+            "label": "URL 收集",
+            "description": "收集历史与爬取 URL 供后续分析",
+            "estimate": "约 2-10 分钟"
+          },
+          "screenshot": {
+            "label": "网页截图",
+            "description": "为已确认站点生成页面截图",
+            "estimate": "约 1-5 分钟"
+          }
+        }
+      },
+      "details": {
+        "name": "名称",
+        "title": "标题",
+        "description": "描述",
+        "version": "版本"
+      },
+      "features": {
+        "subdomain_discovery": "子域名发现",
+        "port_scan": "端口扫描",
+        "website_discovery": "站点发现",
+        "fingerprint_detect": "指纹识别",
+        "directory_scan": "目录扫描",
+        "screenshot": "站点截图",
+        "url_fetch": "URL 抓取",
+        "vuln_scan": "漏洞扫描"
+      },
+      "create": {
+        "title": "新建工作流",
+        "desc": "创建新的工作流配置，使用 Monaco Editor 编辑 YAML 配置文件，支持语法高亮、自动补全和错误提示。",
+        "selectPresetDesc": "选择一个预设工作流作为模板",
+        "editConfigDesc": "自定义工作流名称和配置",
+        "nextStep": "下一步",
+        "prevStep": "上一步",
+        "workflowName": "工作流名称",
+        "workflowNamePlaceholder": "请输入工作流名称，例如：全面工作流",
+        "yamlConfig": "YAML 配置",
+        "syntaxError": "语法错误",
+        "syntaxValid": "语法正确",
+        "loadingEditor": "加载编辑器...",
+        "errorLocation": "第 {line} 行，第 {column} 列",
+        "confirmClose": "您有未保存的更改，确定要关闭吗？",
+        "creating": "创建中...",
+        "createWorkflow": "创建工作流"
+      },
+      "edit": {
+        "title": "编辑工作流配置 - {name}",
+        "desc": "使用 Monaco Editor 编辑工作流的 YAML 配置文件，支持语法高亮、自动补全和错误提示。",
+        "yamlConfig": "YAML 配置",
+        "syntaxError": "语法错误",
+        "syntaxValid": "语法正确",
+        "loadingEditor": "加载编辑器...",
+        "errorLocation": "第 {line} 行，第 {column} 列",
+        "unsavedChanges": "您有未保存的更改",
+        "confirmClose": "您有未保存的更改，确定要关闭吗？",
+        "saving": "保存中...",
+        "saveConfig": "保存配置"
+      }
+    }
+  },
+  "vulnerability": {
+    "title": "漏洞",
+    "name": "漏洞名称",
+    "severity": "严重程度",
+    "critical": "严重",
+    "high": "高危",
+    "medium": "中危",
+    "low": "低危",
+    "info": "信息",
+    "status": "状态",
+    "open": "待处理",
+    "confirmed": "已确认",
+    "fixed": "已修复",
+    "falsePositive": "误报",
+    "description": "描述",
+    "solution": "解决方案",
+    "reference": "参考链接"
+  },
+  "tools": {
+    "title": "工具",
+    "wordlists": {
+      "title": "字典管理",
+      "name": "字典名称",
+      "type": "类型",
+      "tags": "标签",
+      "count": "条目数",
+      "upload": "上传字典",
+      "download": "下载字典",
+      "uploadDialog": {
+        "title": "上传字典",
+        "desc": "上传字典文件。Server 保存后，Agent 节点会按执行计划物化并缓存所需字典。",
+        "dragHint": "拖拽文件到此处",
+        "selectFile": "选择文件",
+        "fileHint": "支持 .txt 文件，最大 50MB。文件名将作为字典名称。",
+        "descPlaceholder": "例如：基于 dirsearch",
+        "descLabel": "描述（可选）",
+        "tagsLabel": "标签（可选）",
+        "tagsPlaceholder": "例如：目录扫描, API 路径, fuzz",
+        "tagsHint": "支持自定义标签，使用逗号分隔。预置标签仅作为参考。",
+        "tagPickerPlaceholder": "搜索或输入新标签",
+        "inlineTagPlaceholder": "标签名",
+        "recommendedTags": "常用标签",
+        "noTagsSelected": "未选择标签",
+        "removeTag": "移除标签 {tag}",
+        "createTag": "创建 {tag}",
+        "addTag": "添加标签",
+        "cancel": "取消",
+        "uploading": "上传中...",
+        "uploadButton": "上传字典"
+      },
+      "editDialog": {
+        "title": "编辑字典 - {name}",
+        "desc": "编辑字典内容，每行一个条目。保存后会自动更新行数、文件大小和 Hash 值。",
+        "metadata": "字典信息",
+        "displayName": "名称",
+        "description": "描述",
+        "tags": "标签",
+        "tagPickerPlaceholder": "搜索或输入新标签",
+        "inlineTagPlaceholder": "标签名",
+        "recommendedTags": "常用标签",
+        "noTagsSelected": "未选择标签",
+        "removeTag": "移除标签 {tag}",
+        "createTag": "创建 {tag}",
+        "addTag": "添加标签",
+        "content": "字典内容",
+        "lines": "共 {count} 行",
+        "hash": "Hash",
+        "loading": "加载字典内容...",
+        "loadingEditor": "加载编辑器...",
+        "unsavedChanges": "您有未保存的更改",
+        "confirmClose": "您有未保存的更改，确定要关闭吗？",
+        "cancel": "取消",
+        "saving": "保存中...",
+        "save": "保存字典",
+        "oversizedMetadataOnly": "该字典超过 5 MiB，当前只支持编辑描述和标签。内容请下载后本地修改，再重新上传替换。"
+      }
+    },
+    "fingerprints": {
+      "title": "指纹管理",
+      "name": "指纹名称",
+      "category": "分类",
+      "unset": "未设置",
+      "importLabel": "导入指纹",
+      "exportLabel": "导出所有",
+      "export": "导出所有",
+      "pageDescription": "Web 指纹识别规则管理",
+      "fingerprinthubHelpLabel": "FingerprintHub Web 指纹说明",
+      "fingerprinthubHelpText": "这里展示的是 FingerprintHub Web 指纹库。每条规则通过 HTTP 响应中的状态码、标题、Header、正文等特征，识别网站使用的产品、框架或服务；当前使用 Observer Ward 采用的 JSON 聚合格式。",
+      "helpText": "• EHole: 红队资产识别工具，支持关键词、favicon hash 等识别方式\n• Goby: 攻击面测绘工具，包含大量 Web 应用和设备指纹\n• Wappalyzer: 浏览器扩展，可识别网站指纹\n• Fingers: HTTP 指纹库，包含详细的规则匹配\n• FingerPrintHub: Nuclei 风格指纹模板，使用 HTTP 匹配器\n• ARL: 资产侦察灯塔指纹规则，YAML 格式",
+      "actions": {
+        "operations": "操作",
+        "exportAll": "导出所有",
+        "deleteAll": "删除所有",
+        "importFile": "文件导入"
+      },
+      "dialogs": {
+        "exportTitle": "导出所有",
+        "exportDesc": "将导出所有 {count} 条记录。",
+        "deleteSelectedTitle": "删除选中指纹",
+        "deleteSelectedDesc": "确定要删除选中的 {count} 条指纹吗？此操作不可撤销。",
+        "deleteAllTitle": "删除所有指纹",
+        "deleteAllDesc": "确定要删除所有 {count} 条指纹吗？此操作不可撤销。",
+        "confirmExport": "确认导出",
+        "confirmDelete": "确认删除"
+      },
+      "ehole": {
+        "detailsTitle": "EHole 指纹详情"
+      },
+      "goby": {
+        "detailsTitle": "Goby 指纹详情"
+      },
+      "wappalyzer": {
+        "detailsTitle": "Wappalyzer 指纹详情"
+      },
+      "fingers": {
+        "detailsTitle": "Fingers 指纹详情"
+      },
+      "fingerprinthub": {
+        "detailsTitle": "FingerPrintHub 指纹详情"
+      },
+      "arl": {
+        "detailsTitle": "ARL 指纹详情"
+      },
+      "toast": {
+        "exportSuccess": "导出成功",
+        "exportFailed": "导出失败",
+        "deleteSuccess": "删除成功",
+        "deleteFailed": "删除失败"
+      },
+      "form": {
+        "location": "位置",
+        "fpId": "指纹 ID",
+        "author": "作者",
+        "severity": "严重程度",
+        "tags": "标签",
+        "http": "HTTP 匹配规则",
+        "metadata": "元数据",
+        "sourceFile": "来源文件",
+        "link": "参考链接",
+        "rule": "匹配规则",
+        "tag": "标签",
+        "focusLabel": "标记为重点",
+        "defaultPort": "默认端口",
+        "arlRule": "ARL 规则"
+      },
+      "loadFailed": "加载失败",
+      "loadError": "加载指纹数据时出现错误",
+      "searchCms": "搜索 CMS",
+      "searchName": "搜索名称",
+      "reload": "重新加载",
+      "filter": {
+        "ehole": {
+          "cms": "产品/CMS名称",
+          "method": "匹配方式 (keyword, faviconhash...)",
+          "location": "匹配位置 (body, header, title)",
+          "type": "分类",
+          "isImportant": "是否重点资产 (true/false)"
+        },
+        "goby": {
+          "product": "产品名称",
+          "logic": "逻辑表达式"
+        },
+        "wappalyzer": {
+          "name": "应用名称",
+          "description": "应用描述",
+          "website": "官网地址",
+          "cpe": "CPE 标识符",
+          "implies": "依赖项 (如 PHP, MySQL)"
+        },
+        "fingers": {
+          "name": "指纹名称",
+          "link": "参考链接",
+          "tag": "标签",
+          "focus": "重点标记 (true/false)",
+          "defaultPort": "默认端口"
+        },
+        "fingerprinthub": {
+          "fpId": "指纹 ID",
+          "name": "指纹名称",
+          "author": "作者",
+          "tags": "标签",
+          "severity": "严重程度"
+        },
+        "arl": {
+          "name": "指纹名称",
+          "rule": "规则内容"
+        }
+      },
+      "import": {
+        "eholeTitle": "导入 EHole 指纹",
+        "eholeDesc": "上传 EHole 格式的指纹文件",
+        "eholeFormatHint": "{\"fingerprint\": [...]}",
+        "gobyTitle": "导入 Goby 指纹",
+        "gobyDesc": "上传 Goby 格式的指纹文件",
+        "gobyFormatHint": "[{...}] 或 {...}",
+        "wappalyzerTitle": "导入 Wappalyzer 指纹",
+        "wappalyzerDesc": "上传 Wappalyzer 格式的指纹文件",
+        "wappalyzerFormatHint": "{\"apps\": {...}} 或 [{...}]",
+        "fingersTitle": "导入 Fingers 指纹",
+        "fingersDesc": "上传 Fingers 格式的指纹文件",
+        "fingersFormatHint": "[{\"name\": ..., \"rule\": [...]}]",
+        "fingerprinthubTitle": "导入 FingerPrintHub 指纹",
+        "fingerprinthubDesc": "FingerprintHub Web 指纹库（Observer Ward 使用的 JSON 聚合格式）",
+        "fingerprinthubFormatHint": "[{\"id\": ..., \"info\": {...}, \"http\": [...]}]",
+        "arlTitle": "导入 ARL 指纹",
+        "arlDesc": "上传 ARL 格式的指纹文件",
+        "arlFormatHint": "YAML 格式，包含 name 和 rule 字段",
+        "supportedFormat": "支持的格式：",
+        "fileRejected": "请选择一个不超过 30 MiB 的受支持文件。",
+        "importing": "导入中...",
+        "importSuccessDetail": "导入成功：创建 {createdCount} 条，更新 {updatedCount} 条，未变化 {unchangedCount} 条",
+        "diagnostic": {
+          "title": "导入校验失败",
+          "recordLocation": "第 {recordIndex} 条记录，字段 {fieldPath}",
+          "recordIndex": "第 {recordIndex} 条记录",
+          "parserLocation": "第 {line} 行，第 {column} 列",
+          "parserLine": "第 {line} 行",
+          "parserColumn": "第 {column} 列",
+          "unknownReason": "文件未通过导入校验。请检查文件后重试。",
+          "reasons": {
+            "fileRequired": "请先选择要导入的文件。",
+            "fileEmpty": "所选文件为空。",
+            "fileTooLarge": "所选文件超过 30 MiB 限制。",
+            "mimeUnsupported": "所选文件类型不受当前指纹库支持。",
+            "requestInvalid": "上传请求不合法。请选择一个文件后重试。",
+            "requestTooLarge": "上传请求超过允许的大小限制。",
+            "filePartInvalid": "请选择一个文件后重试。",
+            "fileReadFailed": "无法读取所选文件。请重新选择后重试。",
+            "invalidEncoding": "文件必须使用 UTF-8 编码。",
+            "formatInvalid": "文件不是当前指纹库支持的原生格式。",
+            "parseError": "文件存在语法错误。",
+            "requiredFieldMissing": "缺少必填字段。",
+            "invalidFieldType": "字段值类型不合法。",
+            "invalidRuleStructure": "指纹规则结构不合法。",
+            "ruleDepthExceeded": "嵌套规则层级超过允许上限。"
+          }
+        }
+      }
+    },
+    "nuclei": {
+      "title": "Nuclei 模板",
+      "templates": "Templates",
+      "directory": "Directory",
+      "templateWorkspace": "模板管理工作区，按模板维度筛选、定位和查看 YAML。",
+      "templateDirectoryView": "目录视图",
+      "templateName": "模板名称",
+      "author": "作者",
+      "severity": "严重程度",
+      "tags": "标签",
+      "selectTemplate": "选择左侧模板查看内容",
+      "useSearch": "或使用搜索快速定位",
+      "workspaceDetailHint": "从左侧模板列表或目录树选择一个模板后，这里会显示详细元数据与 YAML 源码。",
+      "back": "返回",
+      "searchPlaceholder": "搜索模板...",
+      "workspaceSearchPlaceholder": "搜索模板名称、ID、路径或标签...",
+      "directorySearchPlaceholder": "按文件名或路径搜索目录...",
+      "syncing": "同步中...",
+      "sync": "同步",
+      "templateDirectory": "模板目录",
+      "templateCount": "{count} 个模板",
+      "noMatchingTemplate": "未找到匹配的模板",
+      "noTemplateOrLoadFailed": "暂无模板或加载失败",
+      "templateLoadFailed": "模板详情加载失败",
+      "templateDirectoryEmpty": "目录中暂无可浏览模板",
+      "templateDirectoryEmptyHint": "当前仓库还没有可用的 YAML 模板，或目录树暂时无法加载。",
+      "directorySearchHint": "可以换个关键字试试，或者切回 Templates 视图从筛选条件定位。",
+      "repoName": "仓库 #{id}",
+      "openTemplateDetailFor": "查看模板 {name} 详情",
+      "stats": {
+        "total": "模板总数"
+      },
+      "filters": {
+        "severity": "严重程度",
+        "category": "分类",
+        "tag": "标签"
+      },
+      "columns": {
+        "template": "模板",
+        "severity": "严重程度",
+        "tags": "标签",
+        "category": "分类",
+        "path": "路径"
+      },
+      "metadata": {
+        "templateId": "模板 ID",
+        "pathGroup": "目录归属",
+        "tags": "标签",
+        "author": "作者",
+        "yamlSource": "YAML 源码"
+      }
+    },
+    "config": {
+      "addTool": "添加工具",
+      "editTool": "编辑工具",
+      "addNewTool": "添加新工具",
+      "addCustomTool": "添加自定义工具",
+      "editCustomTool": "编辑自定义工具",
+      "dialogDesc": "配置扫描工具的基本信息和执行命令。标有 * 的字段为必填项。",
+      "customDialogDesc": "配置自定义扫描工具的基本信息。标有 * 的字段为必填项。",
+      "basicInfo": "基本信息",
+      "commandConfig": "命令配置",
+      "toolName": "工具名称",
+      "toolNamePlaceholder": "例如: Nuclei, Subfinder, HTTPX",
+      "toolNameMin": "工具名称至少需要 2 个字符",
+      "toolNameMax": "工具名称不能超过 255 个字符",
+      "repoUrl": "仓库地址",
+      "repoUrlPlaceholder": "https://github.com/projectdiscovery/nuclei",
+      "currentVersion": "当前安装版本",
+      "versionPlaceholder": "v3.0.0",
+      "toolDesc": "工具描述",
+      "toolDescPlaceholder": "描述工具的功能、特点和使用场景...",
+      "categoryTags": "分类标签",
+      "noCategories": "暂无可用分类",
+      "installCommand": "安装命令",
+      "installCommandPlaceholder": "git clone https://github.com/user/tool\n或\ngo install -v github.com/tool@v1.2.3",
+      "installCommandRequired": "安装命令不能为空",
+      "installCommandHint": "示例：",
+      "installCommandGit": "使用 git:",
+      "installCommandGo": "使用 go:",
+      "installCommandNote": "注意：go get 已不再支持，请使用 go install",
+      "updateCommand": "更新命令",
+      "updateCommandPlaceholder": "git pull\n或\ngo install -v github.com/tool@v1.2.3",
+      "updateCommandRequired": "更新命令不能为空",
+      "updateCommandGitHint": "使用 git clone 安装的工具，推荐使用",
+      "updateCommandGoHint": "使用 go install 安装的工具，推荐使用相同的安装命令",
+      "versionCommand": "版本查询命令",
+      "versionCommandPlaceholder": "toolname --version",
+      "versionCommandRequired": "版本查询命令不能为空",
+      "versionCommandAutoGenerated": "已自动生成",
+      "versionCommandHint": "系统会使用此命令检查工具版本并提示更新。常见格式：",
+      "characters": "{count}/{max} 字符",
+      "cancel": "取消",
+      "creating": "创建中...",
+      "saving": "保存中...",
+      "createTool": "创建工具",
+      "saveChanges": "保存修改",
+      "customToolNamePlaceholder": "例如：自定义端口扫描",
+      "customToolDescPlaceholder": "描述工具的功能和用途...",
+      "toolPath": "工具路径",
+      "toolPathPlaceholder": "例如：/opt/security-tools/port-scanner",
+      "toolPathHint": "脚本或工具所在的目录路径",
+      "repository": "仓库",
+      "uncategorized": "未分类",
+      "noDescription": "暂无描述",
+      "checking": "检查中...",
+      "checkUpdate": "检查更新",
+      "noTools": "暂无工具",
+      "noCustomTools": "暂无自定义工具",
+      "directory": "目录"
+    },
+    "commands": {
+      "searchPlaceholder": "搜索命令名称..."
+    }
+  },
+  "settings": {
+    "title": "设置",
+    "systemLogs": {
+      "title": "系统日志",
+      "description": "Server 日志每 2 秒自动刷新一次（轮询模式）",
+      "level": "级别",
+      "message": "消息",
+      "timestamp": "时间",
+      "source": "来源",
+      "noContent": "（暂无日志内容）",
+      "toolbar": {
+        "logFile": "日志",
+        "selectFile": "选择日志文件",
+        "lines": "行数",
+        "linesUnit": "行",
+        "lineWindow": "日志窗口",
+        "searchPlaceholder": "搜索日志...",
+        "download": "下载",
+        "levelAll": "全部级别",
+        "autoRefresh": "自动刷新",
+        "serverSource": "Server 控制面",
+        "systemLogsGroup": "系统日志",
+        "containerLogsGroup": "容器日志"
+      },
+      "logs": {
+        "empty": "暂无日志输出",
+        "lineLimitHint": "日志过多，仅保留最近 {max} 行",
+        "truncated": "已截断",
+        "ready": "就绪",
+        "loadOlder": "加载更早日志",
+        "historyExhausted": "历史已到底",
+        "jumpToLatest": "跳到最新",
+        "pausedHint": "已暂停自动滚屏，日志仍持续更新",
+        "loadingOlderHint": "正在加载更早日志",
+        "catchingUpHint": "正在追赶新日志",
+        "gapDetected": "无法保证日志连续性，可能有缺口",
+        "trimmedNewerHint": "为保留旧历史，内存中的较新日志已裁剪",
+        "openFailed": "打开 Server 日志失败",
+        "errors": {
+          "lokiUnavailable": "Loki 不可用，请检查日志基础设施",
+          "queryTimeout": "日志查询超时，请稍后重试",
+          "badRequest": "请求参数无效",
+          "unknown": "未知错误"
+        },
+        "status": {
+          "idle": "等待开始",
+          "connecting": "连接中",
+          "ready": "就绪",
+          "loadingOlder": "加载更早中",
+          "following": "跟随中",
+          "catchingUp": "追赶中",
+          "paused": "已暂停",
+          "scrollPaused": "已暂停滚动",
+          "error": "错误"
+        },
+        "searchPlaceholder": "搜索已加载日志...",
+        "noMatch": "当前已加载日志中无匹配行",
+        "copied": "已复制",
+        "copyVisible": "复制当前日志",
+        "filterAll": "全部",
+        "filterError": "ERR",
+        "filterWarn": "WRN",
+        "filterInfo": "INF",
+        "filterDebug": "DBG"
+      }
+    },
+    "notifications": {
+      "title": "通知设置",
+      "pageTitle": "通知设置",
+      "pageDesc": "配置 Discord、企业微信和飞书 Webhook 推送目标",
+      "status": {
+        "enabled": "已启用",
+        "disabled": "未启用"
+      },
+      "discord": {
+        "title": "Discord",
+        "description": "将通知推送到你的 Discord 频道",
+        "credentialPlaceholder": "https://discord.com/api/webhooks/..."
+      },
+      "wecom": {
+        "title": "企业微信",
+        "description": "将通知推送到企业微信群机器人",
+        "credentialPlaceholder": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."
+      },
+      "feishu": {
+        "title": "飞书",
+        "description": "将通知推送到飞书自定义机器人",
+        "credentialPlaceholder": "https://open.feishu.cn/open-apis/bot/v2/hook/..."
+      },
+      "destination": {
+        "enabledLabel": "启用 {provider}",
+        "credentialLabel": "Webhook URL",
+        "credentialHelp": "请使用对应服务商的官方 Webhook 地址，准确格式由服务端校验。",
+        "showCredential": "显示 Webhook URL",
+        "hideCredential": "隐藏 Webhook URL",
+        "saveAll": "保存更改",
+        "saveFailed": "无法保存此推送目标。"
+      },
+      "test": {
+        "action": "发送测试",
+        "result": {
+          "delivered": "测试消息已送达。",
+          "invalid_credential": "请检查 Webhook URL 后重试。",
+          "connectivity_failure": "无法连接服务商，请检查 Webhook URL 和网络连接。",
+          "provider_rejected": "服务商拒绝了测试消息，请检查 Webhook 配置。",
+          "internal_failure": "暂时无法完成测试发送，请稍后重试。",
+          "unavailable": "Mock 模式下无法测试发送，未发送任何消息。"
+        }
+      },
+      "remediation": {
+        "required": "已保存的 Webhook 不再符合投递规则。请先更新地址，再启用通知。"
+      },
+      "subscriptions": {
+        "title": "发送以下通知",
+        "description": "订阅按精确通知类型匹配。",
+        "scanSucceeded": "扫描成功",
+        "scanFailed": "扫描失败",
+        "vulnerabilityObserved": "发现漏洞",
+        "agentOffline": "Agent 离线"
+      },
+      "validation": {
+        "credentialRequired": "启用推送目标时必须填写 Webhook URL。",
+        "subscriptionRequired": "启用推送目标前至少选择一种通知类型。"
+      }
+    },
+    "support": {
+      "pageTitle": "共同守护 LunaFox",
+      "pageDesc": "加入 LunaFox 的持续维护，让修复、迭代与文档建设继续稳定向前。",
+      "status": "持续维护中",
+      "hero": {
+        "kicker": "支持作者",
+        "title": "共同守护 LunaFox",
+        "description": "每一次参与，都在帮助 LunaFox 持续修复问题、推进版本迭代并完善文档。",
+        "primaryCta": "参与共建",
+        "secondaryCta": "访问 GitHub"
+      },
+      "tiers": {
+        "title": "选择支持",
+        "badge": "贡献方式",
+        "selectedBadge": "已选择",
+        "action": "选择此项",
+        "customAmount": "自定义",
+        "items": {
+          "starter": {
+            "title": "轻量支持",
+            "description": "为一次小修复或文档更新添一份力。"
+          },
+          "steady": {
+            "title": "稳定维护",
+            "description": "帮助持续处理兼容修复与日常维护。"
+          },
+          "growth": {
+            "title": "持续成长",
+            "description": "支持更完整的体验改进与版本迭代。"
+          },
+          "guardian": {
+            "title": "长期守护",
+            "description": "为项目长期稳定与持续演进提供支持。"
+          },
+          "custom": {
+            "title": "自定心意",
+            "description": "在支付应用中输入你觉得合适的金额。"
+          }
+        },
+        "subLabel": "支持方式"
+      },
+      "qrSection": {
+        "title": "扫码支持",
+        "badge": "实时切换",
+        "currentAmountLabel": "当前支持金额"
+      },
+      "cards": {
+        "alipay": {
+          "title": "支付宝支付",
+          "description": "扫码后按{amount}完成支付。",
+          "hint": "你的支持将优先用于问题修复、版本更新与文档完善。",
+          "alt": "支付宝赞赏二维码"
+        },
+        "wechat": {
+          "title": "微信支付",
+          "description": "扫码后按{amount}完成支付。",
+          "hint": "感谢支持开源维护，这会直接帮助项目更稳定地继续更新。",
+          "alt": "微信赞赏二维码"
+        },
+        "contact": {
+          "title": "作者公众号",
+          "description": "扫码关注公众号，可在底部菜单中找到作者的联系方式。",
+          "alt": "作者公众号二维码"
+        }
+      },
+      "dialog": {
+        "title": "选择支付方式",
+        "thankYouToast": "感谢你的支持，这对 LunaFox 意义重大！"
+      },
+      "footer": {
+        "note": "支持完全自愿，不影响现有功能使用。LunaFox 当前以社区维护方式持续更新，兼容修复、功能迭代与文档维护依赖长期社区支持；若长期支持不足，维护节奏和更新范围可能需要调整。除了赞助，提交 Issue、反馈建议或传播项目，同样是在帮助 LunaFox 继续前进。",
+        "nonMonetary": "除了赞助，也可以通过以下方式支持项目：",
+        "links": {
+          "github": "GitHub 仓库",
+          "issues": "提交 Issue",
+          "docs": "查看文档",
+          "releases": "查看版本进展"
+        }
+      },
+      "unlocked": {
+        "badge": "社区共建",
+        "title": "一起守护 LunaFox 的持续维护",
+        "description": "你的参与会转化为更稳定的版本、更及时的兼容修复和更清晰的文档，让 LunaFox 能够长期服务每一位使用者。",
+        "primaryCta": "参与共建",
+        "impact": {
+          "maintenance": {
+            "title": "稳定维护",
+            "description": "持续修复问题与兼容性回归，保持项目长期可用。"
+          },
+          "growth": {
+            "title": "持续成长",
+            "description": "推进功能、体验与文档迭代，让每个版本更扎实。"
+          },
+          "community": {
+            "title": "开放共建",
+            "description": "赞助、Issue 与传播都能让开源社区继续向前。"
+          }
+        },
+        "wechatPay": "微信支付",
+        "alipay": "支付宝",
+        "contactAuthor": "联系作者"
+      }
+    },
+    "agents": {
+      "title": "Agent 节点",
+      "install": {
+        "title": "部署 Agent 节点",
+        "desc": "通过一键安装命令，在目标机器上部署 Agent 节点。目标机器无需公网，只需可访问服务端地址；若无法访问镜像仓库，请提前拉取镜像或配置私有镜像仓库/镜像加速",
+        "step1Desc": "生成安装令牌，准备好安装命令",
+        "step2Desc": "在目标机器执行命令，并到 Agent 列表确认节点上线状态",
+        "tokenUsage": "有效期内可重复使用",
+        "generateToken": "生成安装令牌",
+        "regenerateToken": "重新生成令牌",
+        "commandTitle": "安装命令",
+        "commandDesc": "复制命令到目标机器终端执行（需要 Docker 权限）。目标机器无需公网，只需可访问服务端；若无法访问镜像仓库，请提前拉取镜像或配置镜像加速/私有仓库",
+        "commandPlaceholder": "生成令牌后显示",
+        "commandStatusReady": "令牌已就绪",
+        "commandStatusGenerating": "正在生成令牌",
+        "commandStatusIdle": "未生成",
+        "commandStatusExpired": "已过期",
+        "commandExpires": "将于 {time} 失效",
+        "localOnlyWarning": "注意：localhost 或 server:8080 仅在同机 Docker 网络环境下可用",
+        "connection": {
+          "waitingTitle": "等待 Agent 连接",
+          "waitingDescription": "正在读取当前注册令牌关联的 Agent",
+          "noAgentsFinal": "观察期间未读取到当前注册令牌关联的 Agent",
+          "registeredTitle": "Agent 已注册，等待上线",
+          "onlineTitle": "关联的 Agent 已上线",
+          "completedTitle": "关联的 Agent 已全部上线",
+          "endedTitle": "安装观察已结束",
+          "summary": "关联 {total} 个，其中 {online} 个已上线，{waiting} 个等待心跳",
+          "waitingHeartbeat": "等待心跳",
+          "detectionError": "暂时无法刷新关联状态，正在继续重试",
+          "initialError": "暂时无法读取注册令牌状态，正在继续重试",
+          "lastKnownError": "刷新失败，当前显示上次成功结果（{time}），正在继续重试",
+          "expiredObserving": "令牌已过期；不会再接受新注册，仍在等待已关联 Agent 上线",
+          "completedDescription": "令牌已过期，安装观察已成功结束；当前结果为最终快照，不再自动刷新",
+          "deadlineDescription": "令牌已过期且观察期限已结束；当前保留最后一次成功结果，不再自动刷新",
+          "deadlineEmptyDescription": "令牌已过期且观察期限已结束；未能获得成功结果，不再自动刷新"
+        },
+        "stepsTitle": "安装步骤",
+        "requirementsTitle": "环境要求",
+        "requirementsDocker": "目标机器已安装并运行 Docker",
+        "requirementsAccess": "目标机器无需公网，但必须可访问服务端地址",
+        "openDialog": "添加 Agent"
+      },
+      "stats": {
+        "total": "总数",
+        "online": "在线",
+        "healthy": "健康",
+        "offline": "离线",
+        "critical": "预警",
+        "warning": "预警",
+        "unknown": "未知",
+        "unhealthy": "预警"
+      },
+      "overview": {
+        "eyebrow": "分布式节点",
+        "title": "集群总览",
+        "refresh": "刷新节点管理",
+        "updatedAtLabel": "更新时间：",
+        "updatedAtUnavailable": "暂未更新",
+        "updated": "最近更新",
+        "agentNodes": "Agent 节点",
+        "onlineNodes": "在线节点",
+        "healthyNodes": "健康节点",
+        "executionCapacity": "执行容量",
+        "totalSlots": "总槽位",
+        "occupiedSlots": "已占用",
+        "availableSlots": "可用",
+        "unavailableSlots": "不可用",
+        "overcommittedSlots": "超额占用",
+        "loadFailed": "集群汇总加载失败",
+        "loadFailedDescription": "暂时无法读取完整 Agent 集群汇总，请重试。",
+        "stale": {
+          "title": "集群汇总快照已过期",
+          "description": "刷新失败，当前仍显示上次成功数据（{time}）。",
+          "retry": "重试汇总"
+        },
+        "clusterState": {
+          "label": "集群状态",
+          "empty": "暂无节点",
+          "healthy": "良好",
+          "needsAttention": "需关注",
+          "critical": "执行容量已饱和",
+          "unknown": "暂无数据",
+          "online": "{online}/{total} 节点在线",
+          "capacity": "{available}/{total} 可用槽位",
+          "attention": "{count} 个节点需关注",
+          "noAttention": "暂无节点预警",
+          "incomplete": "等待完整集群统计",
+          "capacityIncomplete": "等待完整容量汇总",
+          "reasons": {
+            "no_agents": "尚未注册 Agent",
+            "no_available_slots": "无可用执行槽位",
+            "offline_agents": "存在离线节点",
+            "warning_agents": "存在预警节点",
+            "unknown_agents": "存在状态未知节点",
+            "stale_runtime_observations": "存在过期运行时观测",
+            "overcommitted_slots": "存在超额占用槽位"
+          }
+        },
+        "clusterMap": "Agent 节点",
+        "scopeDefault": "全局视图",
+        "customView": "自定义视图",
+        "architectureTitle": "系统架构图",
+        "updatedFallback": "--",
+        "updatedJustNow": "刚刚",
+        "updatedMinutesAgo": "{count} 分钟前",
+        "updatedHoursAgo": "{count} 小时前",
+        "updatedDaysAgo": "{count} 天前",
+        "searchPlaceholder": "搜索 Agent 节点（名称 / IP / Host）",
+        "filterStatus": "状态",
+        "filterAll": "全部",
+        "reset": "重置",
+        "emptyTitle": "没有匹配的 Agent 节点",
+        "emptyDesc": "试试调整搜索词或筛选条件"
+      },
+      "expansion": {
+        "title": "添加 Agent 节点",
+        "desc": "为集群部署新的执行节点",
+        "action": "打开安装器"
+      },
+      "viewArchitecture": "系统架构",
+      "status": {
+        "online": "在线",
+        "offline": "离线",
+        "maintenance": "维护中",
+        "unknown": "未知"
+      },
+      "health": {
+        "ok": "健康",
+        "warning": "预警",
+        "error": "预警",
+        "unknown": "未知"
+      },
+      "distributed nodes": {
+        "title": "Agent 列表",
+        "desc": "查看 Agent 状态、版本与调度配置"
+      },
+      "metrics": {
+        "lastHeartbeat": "最后心跳",
+        "connectedAt": "连接时间",
+        "maxTasks": "最大任务 {value}",
+        "cpuThreshold": "CPU {value}%",
+        "memThreshold": "内存 {value}%",
+        "diskThreshold": "磁盘 {value}%",
+        "cpu": "CPU",
+        "mem": "内存",
+        "disk": "磁盘",
+        "threshold": "阈值: {value}",
+        "tasks": "任务数",
+        "runningTasks": "运行中",
+        "usedTaskSlots": "槽位",
+        "uptime": "运行 {value}",
+        "updatedAt": "更新 {value}"
+      },
+      "actions": {
+        "title": "操作",
+        "config": "配置",
+        "logs": "日志",
+        "delete": "删除",
+        "deleteTitle": "删除 Agent",
+        "deleteDesc": "确定删除 Agent \"{name}\" 吗？此操作不可恢复。",
+        "pause": "暂停"
+      },
+      "config": {
+        "title": "调度配置",
+        "desc": "调整并发任务与资源阈值",
+        "maxTasks": "最大任务数",
+        "maxTasksDesc": "单个 Agent 允许的并发任务上限",
+        "cpuThreshold": "CPU %",
+        "memThreshold": "内存 %",
+        "diskThreshold": "磁盘 %",
+        "save": "保存配置",
+        "saving": "保存中..."
+      },
+      "empty": {
+        "title": "暂无 Agent",
+        "desc": "生成注册令牌并在远程服务器安装 Agent 以开始分布式扫描。",
+        "cta": "生成令牌"
+      },
+      "card": {
+        "warning": "警告",
+        "showDetails": "显示详情",
+        "hideDetails": "隐藏详情",
+        "systemMetrics": "系统指标",
+        "configuration": "配置信息",
+        "host": "主机",
+        "version": "版本",
+        "heartbeat": "心跳",
+        "uptime": "已运行",
+        "realtimeMetricsUnavailable": "实时指标不可用",
+        "waitingForHeartbeat": "等待首次心跳数据..."
+      },
+      "list": {
+        "uptime": "运行"
+      },
+      "logs": {
+        "title": "Agent 日志",
+        "noAgent": "未选择分布式节点",
+        "noDistributedNode": "未选择 Agent",
+        "toolbar": {
+          "linesUnit": "行",
+          "lineWindow": "日志窗口",
+          "autoRefresh": "自动刷新",
+          "agentContainerSource": "Agent 容器 · {container}"
+        },
+        "empty": "暂无日志输出",
+        "lineLimitHint": "日志过多，仅保留最近 {max} 行",
+        "truncated": "已截断",
+        "ready": "就绪",
+        "loadOlder": "加载更早日志",
+        "historyExhausted": "历史已到底",
+        "jumpToLatest": "跳到最新",
+        "pausedHint": "已暂停自动滚屏，日志仍持续更新",
+        "loadingOlderHint": "正在加载更早日志",
+        "catchingUpHint": "正在追赶新日志",
+        "gapDetected": "无法保证日志连续性，可能有缺口",
+        "trimmedNewerHint": "为保留旧历史，内存中的较新日志已裁剪",
+        "openFailed": "打开日志流失败",
+        "errors": {
+          "containerNotFound": "容器不存在或名称错误",
+          "dockerUnavailable": "该分布式节点无法访问 Docker",
+          "dockerApiError": "Docker 日志读取失败",
+          "agentTimeout": "分布式节点响应超时，请稍后重试",
+          "wsSendFailed": "日志请求转发到分布式节点失败",
+          "lokiUnavailable": "Loki 不可用，请检查日志基础设施",
+          "queryTimeout": "日志查询超时，请稍后重试",
+          "agentNotFound": "分布式节点不存在",
+          "agentOffline": "分布式节点离线，无法读取日志",
+          "badRequest": "请求参数无效，请检查容器名",
+          "streamUnavailable": "浏览器不支持流式读取",
+          "unknown": "未知错误"
+        },
+        "status": {
+          "idle": "等待开始",
+          "connecting": "连接中",
+          "ready": "就绪",
+          "loadingOlder": "加载更早中",
+          "following": "跟随中",
+          "catchingUp": "追赶中",
+          "paused": "已暂停",
+          "scrollPaused": "已暂停滚动",
+          "error": "错误"
+        },
+        "searchPlaceholder": "搜索已加载日志...",
+        "noMatch": "当前已加载日志中无匹配行",
+        "copied": "已复制",
+        "copyVisible": "复制当前日志",
+        "copyLine": "复制该行",
+        "filterAll": "全部",
+        "filterError": "ERR",
+        "filterWarn": "WRN",
+        "filterInfo": "INF",
+        "filterDebug": "DBG"
+      },
+      "version": "v{version}",
+      "unknownHost": "未知主机",
+      "connectionIp": {
+        "offline": "未连接",
+        "unobserved": "未观测到"
+      }
+    }
+  },
+  "toast": {
+    "copied": "已复制",
+    "copyFailed": "复制失败",
+    "exportFailed": "导出失败",
+    "deleteSuccess": "删除成功",
+    "deleteFailed": "删除失败",
+    "deletedScanRecord": "删除成功",
+    "stoppedScan": "停止成功",
+    "stopFailed": "停止失败",
+    "bulkDeleteSuccess": "删除成功",
+    "bulkDeleteFailed": "删除失败",
+    "paramError": "参数错误",
+    "paramErrorDesc": "必须提供组织ID或目标ID",
+    "scanInitiated": "扫描已发起",
+    "scanInitiatedDesc": "扫描发起成功",
+    "initiateScanFailed": "发起扫描失败",
+    "noScansCreated": "未创建任何扫描任务",
+    "unknownError": "未知错误",
+    "noWorkflowSelected": "请选择至少一个工作流",
+    "noPresetSelected": "请先选择一个扫描方案",
+    "emptyConfig": "扫描配置不能为空",
+    "invalidConfig": "配置格式无效，请检查 YAML 语法",
+    "noEnabledSteps": "不能启动：所有工作流 Step 都已关闭",
+    "workflowNameRequired": "请输入工作流名称",
+    "configRequired": "配置内容不能为空",
+    "yamlSyntaxError": "YAML 语法错误",
+    "workflowCreateSuccess": "创建成功",
+    "workflowCreateSuccessDesc": "创建成功",
+    "workflowCreateFailed": "创建失败",
+    "configSaveSuccess": "保存成功",
+    "configSaveSuccessDesc": "保存成功",
+    "configSaveFailed": "保存失败",
+    "selectFileFirst": "请先选择文件",
+    "invalidJsonFile": "无效的 JSON 文件",
+    "importSuccess": "导入成功",
+    "importFailed": "导入失败",
+    "loadScanHistoryFailed": "加载失败",
+    "scan": {
+      "quick": {
+        "success": "启动成功",
+        "error": "启动失败"
+      },
+      "stop": {
+        "success": "停止成功",
+        "batchSuccess": "已停止 {stoppedCount} 个扫描，跳过 {skippedCount} 个终态扫描",
+        "batchError": "批量停止失败"
+      },
+      "delete": {
+        "success": "删除成功",
+        "bulkSuccess": "删除成功"
+      },
+      "initiate": {
+        "success": "扫描已发起",
+        "error": "发起失败"
+      },
+      "bulkInitiate": {
+        "success": "已发起 {count} 个扫描",
+        "error": "批量发起失败"
+      }
+    },
+    "scheduledScan": {
+      "create": {
+        "success": "创建成功",
+        "error": "创建失败"
+      },
+      "update": {
+        "success": "更新成功",
+        "error": "更新失败",
+        "oversized": "字典超过 5 MiB，不能在线全文编辑。请下载后本地修改，再重新上传替换。"
+      },
+      "delete": {
+        "success": "删除成功",
+        "bulkSuccess": "删除成功",
+        "error": "删除失败"
+      },
+    "toggle": {
+      "enabled": "启用成功",
+      "disabled": "禁用成功",
+      "error": "切换失败"
+    },
+    "batchStatus": {
+      "enabled": "已启用 {count} 个定时扫描",
+      "disabled": "已停用 {count} 个定时扫描",
+      "error": "定时扫描状态更新失败"
+    }
+  },
+    "target": {
+      "create": {
+        "success": "创建成功",
+        "bulkSuccess": "创建成功",
+        "error": "创建失败"
+      },
+      "update": {
+        "success": "更新成功",
+        "error": "更新失败"
+      },
+      "delete": {
+        "success": "删除成功",
+        "bulkSuccess": "删除成功",
+        "error": "删除失败"
+      },
+      "link": {
+        "success": "关联成功",
+        "error": "关联失败"
+      },
+      "unlink": {
+        "success": "解除关联成功",
+        "bulkSuccess": "解除关联成功",
+        "error": "解除关联失败"
+      }
+    },
+    "organization": {
+      "create": {
+        "success": "创建成功",
+        "error": "创建失败"
+      },
+      "update": {
+        "success": "更新成功",
+        "error": "更新失败"
+      },
+      "delete": {
+        "success": "删除成功",
+        "bulkSuccess": "删除成功",
+        "error": "删除失败"
+      }
+    },
+    "asset": {
+      "subdomain": {
+        "create": {
+          "success": "创建成功",
+          "partialSuccess": "创建成功",
+          "error": "创建失败"
+        },
+        "delete": {
+          "success": "删除成功",
+          "bulkSuccess": "删除成功",
+          "error": "删除失败"
+        }
+      },
+      "website": {
+        "create": {
+          "success": "创建成功",
+          "partialSuccess": "创建成功",
+          "error": "创建失败"
+        },
+        "delete": {
+          "success": "删除成功",
+          "bulkSuccess": "删除成功",
+          "error": "删除失败"
+        }
+      },
+      "endpoint": {
+        "create": {
+          "success": "创建成功",
+          "partialSuccess": "创建成功",
+          "error": "创建失败"
+        },
+        "delete": {
+          "success": "删除成功",
+          "bulkSuccess": "删除成功",
+          "error": "删除失败"
+        }
+      },
+      "directory": {
+        "create": {
+          "success": "创建成功",
+          "partialSuccess": "创建成功",
+          "error": "创建失败"
+        },
+        "delete": {
+          "success": "删除成功",
+          "bulkSuccess": "删除成功",
+          "error": "删除失败"
+        }
+      }
+    },
+    "auth": {
+      "login": {
+        "success": "登录成功"
+      },
+      "logout": {
+        "success": "已登出"
+      },
+      "changePassword": {
+        "success": "修改成功",
+        "error": "修改失败"
+      }
+    },
+    "agent": {
+      "token": {
+        "success": "令牌已生成",
+        "error": "生成令牌失败"
+      },
+      "config": {
+        "success": "配置已更新",
+        "error": "更新失败"
+      },
+      "key": {
+        "success": "API Key 已重置",
+        "error": "重置失败"
+      },
+      "delete": {
+        "success": "已删除 Agent",
+        "error": "删除失败"
+      }
+    },
+    "wordlist": {
+      "upload": {
+        "success": "上传成功",
+        "error": "上传失败"
+      },
+      "update": {
+        "success": "更新成功",
+        "error": "更新失败"
+      },
+      "delete": {
+        "success": "删除成功",
+        "error": "删除失败"
+      }
+    },
+    "notification": {
+      "settings": {
+        "success": "保存成功",
+        "error": "保存失败"
+      },
+      "destination": {
+        "loading": "正在保存通知渠道...",
+        "success": "通知渠道已保存",
+        "error": "无法保存通知渠道"
+      },
+      "destinationBatch": {
+        "loading": "正在保存通知设置...",
+        "success": "通知设置已保存。",
+        "partial": "部分通知设置已保存，请检查标记的推送目标。",
+        "error": "无法保存通知设置，请检查标记的推送目标。"
+      },
+      "markAll": {
+        "loading": "正在标记全部通知为已读...",
+        "success": "全部通知已标记为已读",
+        "error": "无法标记全部通知为已读"
+      },
+      "connection": {
+        "error": "连接错误"
+      }
+    },
+    "apiKeys": {
+      "settings": {
+        "success": "保存成功",
+        "error": "保存失败"
+      }
+    },
+    "tool": {
+      "create": {
+        "success": "创建成功",
+        "error": "创建失败"
+      },
+      "update": {
+        "success": "更新成功",
+        "error": "更新失败"
+      },
+      "delete": {
+        "success": "删除成功",
+        "error": "删除失败"
+      }
+    },
+    "workflow": {
+      "create": {
+        "success": "创建成功",
+        "error": "创建失败"
+      },
+      "update": {
+        "success": "更新成功",
+        "error": "更新失败"
+      },
+      "delete": {
+        "success": "删除成功",
+        "error": "删除失败"
+      }
+    },
+    "command": {
+      "create": {
+        "success": "创建成功",
+        "error": "创建失败"
+      },
+      "update": {
+        "success": "更新成功",
+        "error": "更新失败"
+      },
+      "delete": {
+        "success": "删除成功",
+        "bulkSuccess": "删除成功",
+        "error": "删除失败"
+      }
+    },
+    "nucleiPoc": {
+      "update": {
+        "loading": "保存 POC 状态...",
+        "success": "POC 状态已保存",
+        "error": "POC 状态保存失败，已恢复服务端值"
+      },
+      "activation": {
+        "loading": "正在更新全部 POC 状态...",
+        "success": "已更新 {count} 个 POC",
+        "noChange": "全部 POC 已处于目标状态",
+        "conflict": "请等待同步完成后再批量更新",
+        "error": "批量更新失败，当前目录未改变",
+        "unknown": "批量更新结果未知，正在刷新目录确认状态"
+      }
+    },
+    "systemLog": {
+      "fetch": {
+        "error": "获取失败",
+        "recovered": "已恢复"
+      }
+    },
+    "blacklist": {
+      "save": {
+        "success": "保存成功",
+        "error": "保存失败"
+      }
+    }
+  },
+  "quickScan": {
+    "title": "快速扫描",
+    "description": "快速创建扫描任务，批量扫描多个目标",
+    "steps": {
+      "enterTargets": "输入目标",
+      "selectWorkflow": "选择工作流",
+      "confirmScan": "确认扫描"
+    },
+    "step1Title": "输入目标",
+    "step2Title": "选择工作流",
+    "step3Title": "编辑配置",
+    "stepIndicator": "步骤 {current}/{total}",
+    "step1Hint": "在左侧输入框中输入扫描目标，每行一个",
+    "step": "步骤 {current}/{total} · {title}",
+    "targetPlaceholder": "每行输入一个目标，支持以下格式：\n\n域名: example.com, sub.example.com\nIP地址: 192.168.1.1, 10.0.0.1\nCIDR网段: 192.168.1.0/24, 10.0.0.0/8\nURL: https://example.com/api/v1",
+    "supportedFormats": "支持 域名、IP、CIDR、URL",
+    "validTargets": "{count} 个有效目标",
+    "invalidTargets": "{count} 个无效",
+    "selectWorkflow": "选择工作流",
+    "noWorkflows": "暂无可用工作流",
+    "capabilities": "{count} 项能力",
+    "noConfig": "无配置",
+    "scanTargets": "扫描目标",
+    "totalTargets": "共 {count} 个目标",
+    "previous": "上一步",
+    "back": "上一步",
+    "next": "下一步",
+    "startScan": "开始扫描",
+    "creating": "创建中...",
+    "selectWorkflowHint": "选择左侧工作流查看配置详情",
+    "moreErrors": "还有 {count} 个错误...",
+    "lineError": "行 {lineNumber}: {error}",
+    "loading": "加载中...",
+    "loadFailed": "加载失败",
+    "selectedCount": "已选择 {count} 个",
+    "confirmTargets": "共 {count} 个扫描目标",
+    "andMore": "还有 {count} 个...",
+    "selectedWorkflows": "已选工作流",
+    "confirmSummary": "将使用 {workflowCount} 个工作流扫描 {targetCount} 个目标",
+    "configTitle": "扫描配置",
+    "configEdited": "已编辑",
+    "overwriteConfirm": {
+      "title": "覆盖配置确认",
+      "description": "您已手动编辑过配置，切换工作流将覆盖当前配置。是否继续？",
+      "cancel": "取消",
+      "confirm": "确认覆盖"
+    },
+    "toast": {
+      "noValidTarget": "请输入至少一个有效目标",
+      "hasInvalidInputs": "存在 {count} 个无效输入，请修正后继续",
+      "selectWorkflow": "请选择工作流",
+      "emptyConfig": "扫描配置不能为空",
+      "getWorkflowsFailed": "获取工作流列表失败",
+      "createFailed": "创建失败",
+      "createSuccess": "创建成功",
+      "createSuccessDesc": "",
+      "targetsFailed": "处理失败",
+      "configConflict": "工作流配置冲突"
+    }
+  },
+  "notificationDrawer": {
+    "title": "通知",
+    "markAllRead": "全部已读",
+    "markAllAsRead": "全部标记为已读",
+    "loadMore": "加载更多",
+    "empty": "暂无通知",
+    "filters": {
+      "all": "全部",
+      "scan": "扫描",
+      "vulnerability": "漏洞",
+      "system": "系统"
+    },
+    "categories": {
+      "scan": "扫描任务",
+      "vulnerability": "漏洞发现",
+      "system": "系统消息"
+    },
+    "priorities": {
+      "normal": "普通",
+      "high": "高",
+      "critical": "严重"
+    },
+    "timeGroups": {
+      "today": "今天",
+      "yesterday": "昨天",
+      "earlier": "更早"
+    },
+    "status": {
+      "realtime": "实时",
+      "offline": "离线"
+    },
+    "connection": {
+      "live": "实时",
+      "offline": "离线"
+    }
+  },
+  "errorBoundary": {
+    "title": "发生错误",
+    "description": "出现了未预期的错误",
+    "retry": "重试"
+  },
+  "disk": {
+    "totalCapacity": "总容量",
+    "used": "已使用",
+    "available": "可用空间"
+  },
+  "databaseHealth": {
+    "overview": {
+      "title": "概览",
+      "description": "主数据库的实时状态快照",
+      "role": "角色",
+      "version": "版本",
+      "readOnly": "只读",
+      "uptime": "运行时长",
+      "databaseSize": "数据库大小",
+      "lastCheck": "最近检查",
+      "roleValue": {
+        "primary": "主库",
+        "replica": "从库"
+      },
+      "readOnlyYes": "是",
+      "readOnlyNo": "否"
+    },
+    "instance": {
+      "typeVersion": "类型 / 版本",
+      "roleReadOnly": "角色 / 只读",
+      "autoCheck": "自动检查",
+      "autoCheckValue": "每 {seconds} 秒"
+    },
+    "actions": {
+      "refresh": "刷新数据库健康"
+    },
+    "status": {
+      "online": "在线",
+      "degraded": "降级",
+      "maintenance": "维护中",
+      "offline": "离线"
+    },
+    "metrics": {
+      "probeLatency": "探活延迟",
+      "connections": "已建立连接",
+      "lockWaitCount": "锁等待会话",
+      "cacheHitRate": "缓存命中率",
+      "notAvailable": "不可用",
+      "qps": "QPS",
+      "diskUsage": "磁盘使用率",
+      "walGenerated": "WAL 产生量 (24h)",
+      "deadlocks": "死锁 (1h)",
+      "longTransactions": "长事务",
+      "oldestPendingTaskAge": "最老待处理任务年龄"
+    },
+    "sections": {
+      "snapshot": "健康快照",
+      "snapshotDesc": "来自后端当前数据库健康报告",
+      "core": "核心指标",
+      "coreSignalDesc": "核心健康信号",
+      "coreDetailed": "查看详细核心指标",
+      "coreDetailedDesc": "探活延迟与长事务作为补充诊断信息",
+      "optional": "可选信号",
+      "signals": "运行信号",
+      "signalsWindow": "当前快照",
+      "signalsDesc": "基于 PostgreSQL 统计的运行信号"
+    },
+    "hints": {
+      "probeLatency": "目标 < 100 ms",
+      "connections": "占连接上限 {value}%",
+      "lockWaitCount": "目标 < 2",
+      "deadlocks": "目标 < 0.5 / h",
+      "longTransactions": "目标 < 2",
+      "oldestPendingTaskAge": "目标 < 2 分钟",
+      "cacheHitRate": "目标 > 99%"
+    },
+    "targets": {
+      "connections": "目标 < 上限的 85%",
+      "deadlocks": "目标 < 1"
+    },
+    "impacts": {
+      "connections": "已建立连接接近上限且使用中需求持续升高时，新的查询可能等待可用连接，进而导致任务更新和心跳写入排队。",
+      "lockWaitCount": "锁等待增加会放大 task pull 与状态更新延迟。",
+      "deadlocks1h": "死锁会触发事务回滚，导致任务状态写入重试。",
+      "oldestPendingTaskAgeSec": "调度链路中存在积压任务，可能导致扫描/调度结果延迟，建议立即处理积压任务。",
+      "probeLatencyMs": "探活延迟升高会影响健康检查和任务写入反馈速度。",
+      "longTransactionCount": "长事务会增加锁等待概率，并拖慢任务状态更新。"
+    },
+    "findings": {
+      "title": "诊断建议",
+      "empty": "暂无诊断建议",
+      "evidence": "证据",
+      "recommendation": "建议动作"
+    },
+    "backendFindings": {
+      "oldestPendingTaskAgeSec": {
+        "title": "待处理任务积压时间过长",
+        "description": "最早的待处理或阻塞扫描任务已超过 2 分钟目标等待时间。",
+        "recommendation": "请检查 Agent 可用性与执行容量、任务租约状态，以及扫描任务状态写入是否正常。"
+      },
+      "connectionUsagePercent": {
+        "title": "已建立连接数偏高",
+        "description": "已建立连接数接近已配置的连接池上限；该指标包含使用中和空闲连接。",
+        "recommendation": "请检查连接池上限、使用中连接的持续需求，以及是否存在长时间运行的会话或工作进程。"
+      }
+    },
+    "backendAlerts": {
+      "establishedConnectionCountHigh": {
+        "title": "已建立连接数偏高",
+        "description": "已建立连接数已超过已配置连接池上限的 85%；该指标包含使用中和空闲连接。"
+      },
+      "taskBacklogAgeHigh": {
+        "title": "待处理任务积压时间过长",
+        "description": "最早的待处理扫描任务已等待至少 2 分钟。"
+      },
+      "taskBacklogAgeCritical": {
+        "title": "待处理任务严重积压",
+        "description": "最早的待处理扫描任务已等待至少 10 分钟。"
+      }
+    },
+    "alerts": {
+      "title": "告警",
+      "description": "当前快照产生的告警",
+      "empty": "暂无告警",
+      "severity": {
+        "info": "提示",
+        "warning": "警告",
+        "critical": "严重"
+      },
+      "columns": {
+        "severity": "级别",
+        "name": "名称",
+        "description": "说明",
+        "observedAt": "发生时间"
+      }
+    },
+    "signals": {
+      "normal": "正常",
+      "columns": {
+        "signal": "信号",
+        "current": "当前值",
+        "target": "目标 / 阈值",
+        "status": "状态"
+      }
+    },
+    "errors": {
+      "loadFailedTitle": "加载数据库健康失败",
+      "loadFailedDescription": "当前无法获取数据库健康快照，请稍后重试。",
+      "retry": "重试"
+    },
+    "stale": {
+      "title": "数据可能已过期",
+      "description": "最近一次成功快照时间：{time}"
+    },
+    "unavailable": {
+      "title": "不可用信号",
+      "description": "以下信号当前无法采集，不会直接判定为离线。",
+      "scope": {
+        "core": "核心",
+        "optional": "可选"
+      },
+      "reason": {
+        "permissionDenied": "权限不足",
+        "timeout": "查询超时",
+        "unsupported": "当前环境不支持",
+        "queryFailed": "查询失败",
+        "unknown": "未知原因"
+      }
+    }
+  },
+  "subdomains": {
+    "loadFailed": "加载失败",
+    "loadError": "加载域名数据时出现错误，请重试",
+    "reload": "重新加载"
+  },
+  "vulnerabilities": {
+    "title": "漏洞管理",
+    "description": "查看和管理所有扫描发现的漏洞",
+    "severityLabel": "严重程度",
+    "source": "来源",
+    "reviewStatus": {
+      "all": "全部",
+      "allVulnerabilities": "全部漏洞",
+      "pending": "待审查",
+      "reviewed": "已审查"
+    },
+    "stats": {
+      "criticalFooter": "需要立即处理",
+      "highFooter": "优先排查修复",
+      "mediumFooter": "纳入修复计划",
+      "lowAndInfo": "低危/信息",
+      "lowAndInfoFooter": "持续跟踪确认",
+      "pendingFooter": "等待人工确认",
+      "reviewedFooter": "已完成确认"
+    },
+    "reviewSuccess": "已标记为已审查",
+    "unreviewSuccess": "已标记为待审查",
+    "reviewError": "标记已审查失败",
+    "unreviewError": "标记待审查失败",
+    "bulkReviewLoading": "正在将 {count} 个漏洞标记为已审查...",
+    "bulkUnreviewLoading": "正在将 {count} 个漏洞标记为待审查...",
+    "bulkDeleteLoading": "正在删除 {count} 个漏洞...",
+    "bulkReviewSuccess": "已将 {count} 个漏洞标记为已审查",
+    "bulkUnreviewSuccess": "已将 {count} 个漏洞标记为待审查",
+    "bulkDeleteSuccess": "已删除 {count} 个漏洞",
+    "bulkReviewError": "批量标记已审查失败",
+    "bulkUnreviewError": "批量标记待审查失败",
+    "bulkDeleteError": "批量删除漏洞失败",
+    "markAsReviewed": "标记为已审查",
+    "markAsPending": "标记为待审查",
+    "selected": "已选 {count} 项",
+    "openDetailFor": "打开 {name} 的漏洞详情",
+    "listAriaLabel": "漏洞列表",
+    "resizeListAndDetailPanels": "调整漏洞列表和详情面板大小",
+    "resizeDetailSidePanels": "调整漏洞详情左右面板大小",
+    "emptyFiltered": "未找到符合筛选条件的漏洞。",
+    "tooltips": {
+      "reviewed": "已审查",
+      "pending": "待审查"
+    },
+    "detail": {
+      "identifier": "ID",
+      "cwe": "CWE",
+      "cve": "CVE",
+      "cvss": "CVSS",
+      "vulnUrl": "漏洞 URL",
+      "target": "目标",
+      "details": "详情",
+      "discovered": "发现时间",
+      "cvssScore": "CVSS 基础分",
+      "noRawEvidence": "暂无原始证据数据",
+      "reproduceHint": "在终端运行以下命令以复现此漏洞，请确保拥有正确的授权上下文。",
+      "tabs": {
+        "overview": "概览",
+        "requestResponse": "请求/响应",
+        "evidence": "证据",
+        "reproduce": "复现",
+        "rawData": "原始数据"
+      },
+      "basicInfo": "基本信息",
+      "createdAt": "创建时间",
+      "reviewState": "审查状态",
+      "severity": "严重性",
+      "source": "来源",
+      "httpMethod": "HTTP 方法",
+      "param": "参数",
+      "classification": "漏洞分类",
+      "noClassification": "暂无分类信息",
+      "detailedDesc": "详细描述",
+      "impacts": "影响范围",
+      "remediation": "修复建议",
+      "references": "参考链接",
+      "noReferences": "暂无参考链接",
+      "impactBrowser": "该问题会影响终端用户浏览器侧的安全边界，可能导致脚本执行、会话劫持或敏感页面上下文被利用。",
+      "impactService": "该问题会影响应用接口或服务端暴露面，可能扩大未授权访问、敏感信息暴露或后端执行风险。",
+      "impactGeneral": "该问题会影响当前目标的攻击面可信度，建议结合业务暴露面和资产重要性优先处理。",
+      "remediationDalfox": "对用户输入执行严格的输出编码与上下文转义，避免将未校验内容直接拼接进 HTML、脚本或属性值。",
+      "remediationNuclei": "从服务端入口补齐输入校验、访问控制与错误处理，必要时限制暴露面并收紧敏感资源访问。",
+      "remediationGeneral": "优先修复可直接被利用的入口，再补充监控、回归验证与参考链接中的基线加固措施。",
+      "noEvidence": "暂无证据数据",
+      "curlCommand": "CURL 命令",
+      "curlHint": "复制以下命令到终端执行，即可复现此漏洞",
+      "rawOutput": "原始输出 (JSON)",
+      "rawOutputHint": "扫描工具的完整输出数据",
+      "evidence": {
+        "payload": "Payload",
+        "evidence": "证据",
+        "httpRequest": "HTTP 请求",
+        "httpResponse": "HTTP 响应"
+      }
+    },
+    "emptyDetail": "选择一个漏洞以查看详情",
+    "severity": {
+      "critical": "严重",
+      "high": "高危",
+      "medium": "中危",
+      "low": "低危",
+      "info": "信息"
+    }
+  },
+  "pages": {
+    "engines": {
+      "title": "引擎管理",
+      "description": "查看系统已提供的扫描引擎及其能力信息。",
+      "searchPlaceholder": "搜索引擎",
+      "builtin": "系统内置",
+      "supportedTargets": "支持目标",
+      "executionResources": "执行资源",
+      "none": "无",
+      "viewDetails": "查看详情",
+      "detailDescription": "查看引擎能力、配置定义和安装包身份。",
+      "detailUnavailable": "引擎详情暂时不可用",
+      "overview": "概览",
+      "configuration": "配置",
+      "identity": "引擎身份",
+      "capabilities": "执行能力",
+      "publisher": "发布者",
+      "installedVersion": "内置版本",
+      "packageVersion": "包版本",
+      "manifestVersion": "Manifest 版本",
+      "engineApiVersion": "Engine API",
+      "packageProvenance": "包来源",
+      "packageDigest": "包摘要",
+      "noConfiguration": "该引擎没有可配置项。",
+      "defaultEnabled": "默认启用",
+      "defaultDisabled": "默认关闭",
+      "defaultValue": "默认值",
+      "allowedRange": "允许范围",
+      "allowedValues": "允许值",
+      "resourceBinding": "资源绑定",
+      "catalogUnavailable": "引擎目录暂时不可用",
+      "catalogLoading": "正在加载引擎目录...",
+      "install": "安装引擎",
+      "installDescription": "安装一个公开且不可变的 OCI Engine Package 引用。",
+      "artifactRef": "OCI 制品引用",
+      "engineId": "Engine ID",
+      "currentPackageDigest": "当前包摘要",
+      "proposedPackageDigest": "待替换包摘要",
+      "replaceTitle": "替换已安装的引擎？",
+      "replaceDescription": "该制品声明的 Engine ID 已存在，但包摘要不同。",
+      "replace": "替换"
+    },
+    "organization": {
+      "title": "组织",
+      "description": "管理和查看系统中的所有组织信息"
+    },
+    "target": {
+      "title": "目标",
+      "description": "管理系统中的所有目标信息"
+    },
+    "databaseHealth": {
+      "title": "数据库健康",
+      "description": "监控 PostgreSQL 可用性与性能信号"
+    },
+    "apiKeys": {
+      "title": "API 密钥配置",
+      "description": "配置 subfinder 使用的第三方数据源 API 密钥，用于增强子域名发现与资产识别能力。",
+      "listTitle": "数据源",
+      "providerGroupAriaLabel": "subfinder 数据源",
+      "providerToggleAriaLabel": "{name} 启用状态",
+      "enableLabel": "启用",
+      "searchPlaceholder": "搜索数据源",
+      "getApiKey": "获取 API Key",
+      "save": "保存配置",
+      "saving": "保存中...",
+      "fieldPlaceholder": "输入{field}",
+      "status": {
+        "enabled": "已启用",
+        "unconfigured": "未配置",
+        "disabled": "未启用",
+        "pending": "待保存",
+        "requiresReconfiguration": "需重新配置",
+        "unsupported": "不支持"
+      },
+      "fields": {
+        "apiKey": "API Key",
+        "email": "账号 / 邮箱",
+        "pat": "PAT",
+        "orgId": "组织 ID",
+        "token": "Token",
+        "username": "用户名",
+        "password": "密码",
+        "appId": "App ID",
+        "appSecret": "App Secret",
+        "host": "Host",
+        "baseUrl": "Base URL",
+        "blobrKey": "BLOBR Key"
+      },
+      "password": {
+        "hide": "隐藏 API Key",
+        "show": "显示 API Key",
+        "copy": "复制当前 API Key",
+        "copied": "已复制",
+        "copyFailed": "复制失败"
+      },
+      "securityNotice": {
+        "label": "安全提示：",
+        "description": "密钥仅用于 subfinder 扫描使用，不会明文展示。建议创建专用账号并授予最小权限，定期轮换密钥以降低风险。"
+      }
+    },
+    "wordlists": {
+      "title": "字典管理",
+      "searchPlaceholder": "搜索名称...",
+      "listTitle": "字典列表",
+      "loading": "加载中...",
+      "noMatch": "未找到匹配的字典",
+      "noData": "暂无字典，请先上传",
+      "lines": "行",
+      "rows": "行数",
+      "size": "大小",
+      "id": "ID",
+      "updatedAt": "更新时间",
+      "hash": "Hash",
+      "actionsLabel": "操作",
+      "name": "名称",
+      "tags": "标签",
+      "allWordlists": "全部字典",
+      "tagPanelTitle": "标签",
+      "recommendedTags": "推荐标签",
+      "moreTags": "更多标签",
+      "tagSearchPlaceholder": "搜索标签...",
+      "addTag": "添加标签",
+      "manageTags": "管理标签",
+      "currentFilter": "当前筛选",
+      "clearFilter": "清除筛选",
+      "refresh": "刷新",
+      "filterRail": "标签筛选",
+      "tableSummary": "共 {count} 个字典",
+      "sortBy": "排序方式",
+      "sortAscending": "升序排列",
+      "sortDescending": "降序排列",
+      "detailTitle": "字典详情",
+      "emptyDetailTitle": "选择一个字典查看详情",
+      "emptyDetailDescription": "在当前筛选结果中选中一行后，这里会显示标签、Hash 和文件信息。",
+      "tagEmpty": "未设置标签",
+      "recommendedHint": "预置标签仅作参考，字典标签支持自定义。",
+      "hashCopied": "Hash 已复制到剪贴板",
+      "editContent": "编辑内容",
+      "editMetadata": "编辑信息",
+      "download": "下载",
+      "oversizedEditHint": "该字典超过 5 MiB，不支持在线全文编辑。请下载后本地修改，再重新上传替换。",
+      "delete": "删除",
+      "selectHint": "选择左侧字典查看详情",
+      "idCopied": "ID 已复制到剪贴板"
+    },
+    "nucleiCatalog": {
+      "code": "NCL-01",
+      "title": "Nuclei POC 管理",
+      "description": "浏览同步源中的 POC、漏洞元数据和 YAML 内容。",
+      "search": "搜索名称、模板 ID、标签或 CVE...",
+      "filter": "筛选",
+      "severity": "严重性",
+      "tag": "标签",
+      "all": "全部",
+      "columns": {
+        "name": "POC",
+        "severity": "严重性",
+        "tags": "标签",
+        "status": "状态",
+        "updated": "最近更新"
+      },
+      "actions": {
+        "open": "查看详情",
+        "setEnabled": "{name}：{state}",
+        "batch": "批量操作",
+        "enableAll": "全部开启",
+        "disableAll": "全部关闭",
+        "enableSelected": "启用",
+        "disableSelected": "停用",
+        "selectAll": "选择当前页全部 POC",
+        "selectRow": "选择 POC：{name}"
+      },
+      "batch": {
+        "enableTitle": "确认全部开启",
+        "disableTitle": "确认全部关闭",
+        "enableDescription": "此操作会影响当前已提交的全部 Nuclei POC，不受当前分页、搜索或筛选影响。",
+        "disableDescription": "此操作会影响当前已提交的全部 Nuclei POC，不受当前分页、搜索或筛选影响。",
+        "confirm": "确认执行",
+        "processing": "正在更新目录..."
+      },
+      "selected": {
+        "enableTitle": "确认启用选中的 POC",
+        "disableTitle": "确认停用选中的 POC",
+        "description": "将更新 {count} 个选中的 POC。",
+        "processing": "正在更新选中的 POC...",
+        "confirm": "确认更新"
+      },
+      "status": {
+        "enabled": "已启用",
+        "disabled": "已停用",
+        "updateSuccess": "状态已保存",
+        "updateError": "状态保存失败，已恢复服务端值"
+      },
+      "empty": "没有匹配的 POC",
+      "noCommittedSource": "尚未同步 POC。请选择一个公开 Git 源开始同步。",
+      "sourceError": "当前同步源读取失败",
+      "loadError": "POC 目录加载失败",
+      "retry": "重试",
+      "detail": {
+        "overview": "概览",
+        "yaml": "YAML",
+        "metadata": "元数据",
+        "description": "说明",
+        "templateId": "模板 ID",
+        "path": "相对路径",
+        "contentHash": "内容摘要",
+        "author": "作者",
+        "classification": "漏洞分类",
+        "cve": "CVE",
+        "cwe": "CWE",
+        "cvss": "CVSS",
+        "references": "参考链接",
+        "remediation": "修复建议",
+        "noData": "暂无数据",
+        "copy": "复制 YAML",
+        "copied": "YAML 已复制"
+      },
+      "sync": {
+        "action": "同步 POC",
+        "viewProgress": "查看同步进度",
+        "title": "同步 POC",
+        "sourceDescription": "选择一个公开 HTTPS Git 地址。同步成功后会整体替换当前 POC 目录。",
+        "progressTitle": "同步 POC 进度",
+        "progressDescription": "任务在服务端继续执行；关闭窗口不会取消同步，页面会继续等待结果。",
+        "sourceLabel": "同步源",
+        "sourceGit": "Git 仓库",
+        "sourceGitDescription": "配置官方 Nuclei 模板仓库。",
+        "sourceGitee": "Gitee 国内源",
+        "sourceGiteeDescription": "使用 Gitee 托管的 Git 仓库地址。",
+        "sourceCustom": "自定义 Git 仓库",
+        "sourceCustomDescription": "使用自维护 Git 仓库的公开 HTTPS 地址。",
+        "gitUrl": "Git 仓库地址",
+        "giteeUrl": "Gitee 仓库地址",
+        "giteeUrlPlaceholder": "https://gitee.com/your-org/nuclei-templates.git",
+        "customUrl": "自定义 Git 仓库地址",
+        "customUrlPlaceholder": "https://git.example.com/security/nuclei-templates.git",
+        "invalidUrl": "请输入公开 HTTPS Git 仓库地址，不支持凭据、IP 或本地路径",
+        "invalidGiteeUrl": "请输入有效的 Gitee HTTPS 仓库地址",
+        "submit": "开始同步",
+        "submitting": "正在创建同步任务...",
+        "newSync": "新建同步",
+        "currentSource": "当前生效源",
+        "committedLabel": "已提交",
+        "noSourceLabel": "未配置",
+        "noSource": "尚未同步",
+        "noSourceDescription": "选择一个公开 Git 仓库作为 POC 来源。",
+        "sourceLoadError": "暂时无法读取当前源，请稍后重试。",
+        "notSynced": "尚未完成同步",
+        "commitInfo": "commit {commit} · 同步于 {time}",
+        "progress": "进度",
+        "running": "同步进行中",
+        "runningSummary": "正在执行“{phase}”，以下计数由服务端任务提供。",
+        "waiting": "等待服务端返回任务状态...",
+        "completed": "同步完成",
+        "failed": "同步失败",
+        "error": "同步状态异常",
+        "expired": "任务已过期",
+        "successSummary": "已导入 {count} 个 POC，跳过 {skipped} 个候选文件；commit {commit}。目录已刷新。",
+        "failedSummary": "同步失败，当前目录保持不变。",
+        "expiredSummary": "任务记录已过期，请显式发起新的同步。",
+        "createError": "无法创建同步任务，请检查源地址后重试。",
+        "requestConflict": "这个请求标识已用于其他同步，请重新发起同步。",
+        "activeTaskUnavailable": "已有同步任务正在运行，但暂时无法读取它的进度。请稍后重试。",
+        "taskReadError": "暂时无法读取同步进度，页面会继续重试。",
+        "phaseTimeline": "同步阶段",
+        "skippedSummary": "已跳过 {count} 个候选文件",
+        "viewSamples": "查看样本",
+        "diagnosticsTruncated": "仅展示部分样本。",
+        "failureCodes": {
+          "UNSAFE_SOURCE": "同步源不是允许的公开地址。",
+          "GIT_CLONE_FAILED": "无法读取同步仓库。",
+          "FILE_QUOTA_EXCEEDED": "仓库文件数量超过同步配额。",
+          "YAML_FILE_QUOTA_EXCEEDED": "YAML 文件数量超过同步配额。",
+          "YAML_QUOTA_EXCEEDED": "YAML 总量超过同步配额。",
+          "YAML_SIZE_EXCEEDED": "单个 YAML 文件超过大小限制。",
+          "WORKSPACE_QUOTA_EXCEEDED": "同步工作区超过资源配额。",
+          "TEMPLATE_INVALID": "部分 Nuclei 模板校验失败。",
+          "DUPLICATE_TEMPLATE_ID": "仓库中存在重复的模板 ID。",
+          "EMPTY_CANDIDATE": "仓库中没有有效的 Nuclei 模板。",
+          "DEADLINE_EXCEEDED": "同步任务超过了执行时限。",
+          "PROCESS_INTERRUPTED": "同步任务被中断，未提交新目录。",
+          "SYNC_FAILED": "同步任务未能完成。",
+          "CANDIDATE_STAGE_FAILED": "候选目录处理失败。",
+          "PATH_ESCAPE": "仓库中存在不安全的文件路径。",
+          "SYMLINK_REJECTED": "仓库包含不支持的符号链接。",
+          "SUBMODULE_REJECTED": "仓库包含不支持的子模块。",
+          "GIT_QUOTA_EXCEEDED": "Git 仓库超过同步资源配额。",
+          "GIT_COMMIT_LOOKUP_FAILED": "无法读取仓库提交信息。",
+          "WORKSPACE_UNAVAILABLE": "同步工作区暂时不可用。"
+        },
+        "diagnostics": "跳过样本",
+        "counters": {
+          "filesSeen": "已读取文件",
+          "yamlFilesSeen": "YAML 文件",
+          "templatesValidated": "已校验模板",
+          "bytesRead": "读取字节"
+        },
+        "phases": {
+          "VALIDATING_SOURCE": "校验来源",
+          "CLONING": "拉取仓库",
+          "SCANNING_FILES": "扫描文件",
+          "VALIDATING_TEMPLATES": "校验模板",
+          "COMMITTING": "提交目录",
+          "CLEANING": "收尾处理"
+        }
+      }
+    },
+    "tools": {
+      "title": "工具",
+      "description": "管理与扫描相关的辅助资源，如字典等",
+      "wordlists": {
+        "title": "字典管理",
+        "description": "管理目录扫描等使用的字典文件"
+      },
+      "nuclei": {
+        "title": "Nuclei POC",
+        "description": "集中管理 Nuclei POC 及其 YAML 内容"
+      },
+      "comingSoon": "敬请期待",
+      "stats": {
+        "total": "总数：",
+        "active": "活跃："
+      },
+      "enterManagement": "进入管理",
+      "quickActions": {
+        "title": "快速操作",
+        "description": "常用的工具操作"
+      }
+    },
+    "screenshots": {
+      "filterPlaceholder": "按 URL 过滤...",
+      "loadError": "加载截图失败",
+      "noResults": "没有匹配的截图",
+      "lightboxTitle": "截图预览",
+      "openInNewTab": "在新标签页打开截图 URL",
+      "selectScreenshot": "选择第 {index} 张截图",
+      "openScreenshot": "打开第 {index} 张截图",
+      "previousPage": "上一页",
+      "nextPage": "下一页",
+      "closeLightbox": "关闭预览",
+      "previousScreenshot": "上一张截图",
+      "nextScreenshot": "下一张截图",
+      "empty": {
+        "title": "暂无截图",
+        "description": "启用截图功能进行站点发现后，截图将显示在这里。"
+      }
+    },
+    "targetDetail": {
+      "noDescription": "暂无描述",
+      "breadcrumb": {
+        "targetDetail": "目标详情"
+      },
+      "error": {
+        "title": "加载失败",
+        "message": "获取目标数据时出现错误"
+      },
+      "notFound": {
+        "title": "目标不存在",
+        "message": "未找到ID为 {id} 的目标"
+      },
+      "tabs": {
+        "overview": "概览",
+        "assets": "资产",
+        "screenshots": "截图",
+        "vulnerabilities": "漏洞",
+        "settings": "设置",
+        "blacklist": "黑名单",
+        "scheduledScans": "定时扫描",
+        "websites": "站点",
+        "subdomains": "子域名",
+        "ips": "IP 地址",
+        "urls": "URL",
+        "directories": "目录"
+      },
+      "relations": {
+        "columns": {
+          "screenshot": "截图",
+          "website": "站点",
+          "response": "响应"
+        },
+        "emptyTitle": "暂无站点",
+        "emptyDescription": "扫描发现的站点会在这里与截图和 HTTP 响应信息一同展示。",
+        "noResults": "未找到匹配的站点",
+        "noResultsHint": "请调整搜索内容或筛选条件后重试。",
+        "noScreenshot": "暂无截图",
+        "noScreenshotHint": "该站点尚未采集截图证据",
+        "latestScreenshot": "最新截图",
+        "viewScreenshot": "查看 {url} 的截图",
+        "screenshotAlt": "{url} 的截图",
+        "unknownTitle": "未识别标题",
+        "unknownServer": "未知服务器",
+        "technology": "指纹",
+        "contentType": "内容类型",
+        "responseSize": "响应大小",
+        "responseHeaders": "响应头",
+        "responseBody": "响应体",
+        "location": "跳转",
+        "noResponseContent": "暂无响应内容",
+        "noTechnology": "暂无指纹识别结果",
+        "viewDetails": "详细",
+        "viewRemainingTechnologies": "查看其余 {count} 项指纹",
+        "screenshotPreviewTitle": "站点截图预览",
+        "closeScreenshotPreview": "关闭截图预览",
+        "screenshotPreviewAlt": "{url} 的截图预览",
+        "detail": {
+          "backToList": "返回站点列表",
+          "technology": "指纹",
+          "unknownTitle": "未识别标题",
+          "unknownServer": "未知服务器",
+          "notFound": {
+            "title": "未找到站点",
+            "description": "站点 {id} 不存在，或当前工作区已无法访问。"
+          },
+          "tabs": {
+            "overview": "概览",
+            "ip-addresses": "IP 地址",
+            "urls": "URL",
+            "directories": "目录",
+            "vulnerabilities": "漏洞"
+          },
+          "search": {
+            "ip-addresses": "搜索 IP 地址",
+            "urls": "搜索 URL",
+            "directories": "搜索目录",
+            "vulnerabilities": "搜索漏洞"
+          },
+          "empty": {
+            "ip-addresses": "没有匹配的 IP 地址",
+            "urls": "没有匹配的 URL",
+            "directories": "没有匹配的目录",
+            "vulnerabilities": "没有匹配的漏洞"
+          },
+          "columns": {
+            "ipAddress": "IP 地址",
+            "hostname": "主机名",
+            "ports": "端口",
+            "discoveredAt": "发现时间",
+            "url": "URL",
+            "method": "方法",
+            "contentType": "内容类型",
+            "size": "大小",
+            "directory": "目录",
+            "severity": "严重程度",
+            "vulnerability": "漏洞类型",
+            "source": "来源",
+            "state": "状态"
+          },
+          "severity": {
+            "critical": "严重风险漏洞",
+            "high": "高风险漏洞",
+            "medium": "中风险漏洞",
+            "low": "低风险漏洞",
+            "info": "信息"
+          },
+          "reviewState": {
+            "open": "待处理",
+            "reviewing": "复核中",
+            "resolved": "已解决"
+          },
+          "vulnerabilityTypes": {
+            "adminEndpoint": "暴露管理端点",
+            "missingHeaders": "缺少安全响应头",
+            "versionDisclosure": "技术版本泄露"
+          }
+        }
+      },
+      "directoriesHelp": "由目录扫描阶段发现的结果",
+      "settings": {
+        "loadError": "加载设置失败",
+        "blacklist": {
+          "title": "黑名单规则",
+          "description": "扫描时将自动排除匹配以下规则的资产。",
+          "rulesTitle": "支持的规则类型",
+          "rules": {
+            "domain": "域名通配符，匹配指定后缀",
+            "domainShort": "域名",
+            "keyword": "关键词匹配，包含指定字符串",
+            "keywordShort": "关键词",
+            "ip": "精确匹配 IP 地址",
+            "ipShort": "IP",
+            "cidr": "匹配 IP 网段范围",
+            "cidrShort": "CIDR"
+          },
+          "placeholder": "输入规则，每行一个\n\n示例：\n*.gov\n*.edu\n*cdn*\n192.168.0.0/16\n10.0.0.1",
+          "save": "保存规则"
+        },
+        "scheduledScans": {
+          "title": "定时扫描",
+          "description": "为该目标配置自动执行的扫描任务",
+          "create": "新建定时扫描",
+          "empty": "暂无定时扫描任务",
+          "emptyHint": "点击上方按钮创建定时扫描任务",
+          "enabled": "已启用",
+          "disabled": "已禁用",
+          "nextRun": "下次执行",
+          "runCount": "执行次数",
+          "edit": "编辑",
+          "delete": "删除",
+          "cronDaily": "每天 {time}",
+          "cronWeekly": "每周{day} {time}",
+          "cronMonthly": "每月{day}日 {time}",
+          "weekdays": {
+            "sun": "日",
+            "mon": "一",
+            "tue": "二",
+            "wed": "三",
+            "thu": "四",
+            "fri": "五",
+            "sat": "六"
+          },
+          "deleteConfirm": {
+            "title": "确认删除",
+            "description": "确定要删除定时扫描任务「{name}」吗？此操作无法撤销。",
+            "cancel": "取消",
+            "confirm": "删除"
+          }
+        }
+      },
+      "overview": {
+        "loadError": "加载目标数据失败",
+        "createdAt": "创建时间",
+        "lastScanned": "最后扫描",
+        "assetsTitle": "资产统计",
+        "vulnerabilitiesTitle": "漏洞统计",
+        "scanHistoryTitle": "扫描历史",
+        "recentScans": "最近扫描",
+        "noScans": "暂无扫描记录",
+        "viewAll": "查看全部",
+        "cards": {
+          "websites": "站点",
+          "subdomains": "子域名",
+          "ips": "IP 地址",
+          "urls": "URL",
+          "directories": "目录",
+          "screenshots": "截图",
+          "vulnerabilities": "漏洞总数"
+        },
+        "severity": {
+          "critical": "严重",
+          "high": "高危",
+          "medium": "中危",
+          "low": "低危"
+        },
+        "scanStatus": {
+          "succeeded": "已完成",
+          "running": "运行中",
+          "failed": "失败",
+          "cancelled": "已取消",
+          "pending": "等待中"
+        },
+        "scheduledScans": {
+          "title": "定时扫描",
+          "manage": "管理",
+          "empty": "暂无定时扫描任务",
+          "createFirst": "创建第一个定时扫描",
+          "configured": "已配置",
+          "enabled": "已启用",
+          "nextRun": "下次执行",
+          "today": "今天",
+          "tomorrow": "明天",
+          "more": "+{count} 更多"
+        },
+        "initiateScan": "发起扫描"
+      }
+    },
+    "nav": {
+      "scanWorkflow": "工作流",
+      "wordlists": "字典管理"
+    },
+    "settings": {
+      "loginVisual": {
+        "title": "登录页视觉",
+        "description": "管理桌面登录页左侧视觉",
+        "draft": "未发布草稿",
+        "published": "已发布",
+        "draftHint": "改动尚未影响登录页",
+        "publishedHint": "当前登录页正在使用此视觉",
+        "restore": "恢复默认",
+        "publish": "保存并发布",
+        "saveError": "无法保存登录页视觉。",
+        "preview": "登录页实时预览",
+        "replace": "替换登录页视觉",
+        "replaceHelp": "将鼠标移至左侧视觉区域，即可替换图片或视频。",
+        "username": "用户名或邮箱",
+        "usernamePlaceholder": "admin@example.com",
+        "password": "密码",
+        "login": "登录",
+        "accessHelp": "需要访问权限？请联系管理员。"
+      },
+      "blacklist": {
+        "title": "全局黑名单",
+        "description": "配置供后续扫描使用的全局排除规则。",
+        "loadError": "加载黑名单规则失败",
+        "groups": {
+          "domain": "域名规则",
+          "ipv4": "IPv4 地址",
+          "cidr": "IPv4 CIDR",
+          "invalid": "无效规则",
+          "inherited": "继承的全局规则"
+        },
+        "ruleList": {
+          "title": "规则列表",
+          "description": "查看此策略已保存的规则。",
+          "targetTitle": "目标本地规则",
+          "targetDescription": "分别查看继承规则和目标本地规则。",
+          "inheritedDescription": "继承的全局规则在此处只读。",
+          "valid": "有效",
+          "error": "错误",
+          "emptyDomain": "暂无域名规则",
+          "emptyIPv4": "暂无 IPv4 地址规则",
+          "emptyCidr": "暂无 IPv4 CIDR 规则",
+          "emptyInvalid": "暂无无效规则",
+          "emptyInherited": "暂无继承的全局规则"
+        },
+        "editor": {
+          "title": "规则编辑器",
+          "targetTitle": "目标本地规则编辑器",
+          "description": "支持精确域名、通配域名、IPv4 地址和 IPv4 CIDR，每行一个规则。",
+          "targetDescription": "此处只会保存该目标的本地规则。",
+          "inputLabel": "全局规则",
+          "targetInputLabel": "目标本地规则",
+          "examples": "示例：",
+          "helper": "使用精确域名、以 *. 开头的后代域名、IPv4 地址或 IPv4 CIDR。",
+          "example": "示例：example.com、*.example.com、192.0.2.1、192.0.2.0/24",
+          "emptySummary": "尚未配置规则。空策略是合法的。",
+          "validSummary": "{count} 条有效规则",
+          "blockingSummary": "{count} 条无效规则会阻止保存",
+          "invalidBadge": "无效",
+          "invalidRule": "第 {line} 行：请使用受支持的精确域名、通配域名、IPv4 地址或 IPv4 CIDR。",
+          "validation": "{valid} 条有效规则，{errors} 条错误",
+          "modified": "已修改",
+          "collapseDetails": "收起详情",
+          "expandDetails": "展开详情"
+        },
+        "placeholder": "输入规则，每行一个\n\n示例：\nexample.com\n*.example.com\n192.0.2.1\n192.0.2.0/24",
+        "save": "保存规则",
+        "toast": {
+          "saveSuccess": "保存成功",
+          "saveError": "保存失败",
+          "conflict": "规则已被其他操作更新，已重新加载当前 Server 规则。"
+        }
+      }
+    },
+    "agents": {
+      "title": "Agent 节点",
+      "description": "管理 Agent 安装、健康状态与调度阈值",
+      "viewArchitecture": "系统架构",
+      "flowTitle": "系统架构",
+      "flowDesc": "分布式扫描架构：Server 统一规划与调度，Agent 直接管理 Engine Container 执行并汇总结果",
+      "flowTabDiagram": "架构图",
+      "flowTabRoles": "角色职责",
+      "flowTabSteps": "执行流程",
+      "flowServerTitle": "Server",
+      "flowServerDesc": "中心控制面",
+      "flowVpsTitle": "VPS",
+      "flowLink": "任务下发 / 心跳状态",
+      "flowDiagramTitle": "结构流程图",
+      "flowDiagramDesc": "拓扑关系：1 个 Server → 多个 Agent → 每个节点多个 Engine Container 执行",
+      "flowDiagramNote": "注：Server 与 Agent 之间为双向控制链路；Agent 在本机启动 Engine Container；执行结果按 Engine → Agent → Server 回传。",
+      "flowStatusOnline": "在线",
+      "flowEngineRunning": "运行中",
+      "flowLegendBidirectionalShort": "双向控制链路",
+      "flowLegendLocalShort": "本机调度链路",
+      "flowSummaryTitle": "架构摘要",
+      "flowSummaryControlTitle": "中心调度",
+      "flowSummaryControlDesc": "1 个 Server 统一调度与汇总",
+      "flowSummaryAgentTitle": "多节点 Agent",
+      "flowSummaryAgentDesc": "3 个 Agent 节点并行接收任务",
+      "flowSummaryEngineTitle": "Engine 执行",
+      "flowSummaryEngineDesc": "Agent 启动 Engine Container 并回传执行结果",
+      "flowLegendTitle": "链路图例",
+      "flowLegendControlTitle": "控制链路（双向）",
+      "flowLegendControlDesc": "任务下发 / 心跳状态",
+      "flowLegendLocalTitle": "本机调度链路",
+      "flowLegendLocalDesc": "Agent 在本机启动 Engine Container",
+      "flowLegendResultTitle": "结果回传链路",
+      "flowLegendResultDesc": "Engine → Agent → Server",
+      "flowRolesTitle": "角色与职责",
+      "flowRolesDesc": "了解各个组件的运行位置、通信方式和核心职责",
+      "flowTableRole": "角色",
+      "flowTableLocation": "运行位置",
+      "flowTableResponsibilities": "主要职责",
+      "flowTableComms": "通信/关系",
+      "flowTableQuantity": "数量",
+      "flowServerLocation": "中心服务（控制面）",
+      "flowServerComms": "与 Agent 保持双向通信（下发任务、接收心跳与结果）",
+      "flowServerItem1": "维护注册令牌与 Agent 列表",
+      "flowServerItem2": "下发任务并汇总结果",
+      "flowServerItem3": "监控心跳与健康状态",
+      "flowStepsTitle": "运行流程",
+      "flowStepsDesc": "按注册—调度—执行的顺序快速了解流程",
+      "flowStepTitle1": "Agent 注册",
+      "flowStepTitle2": "任务下发",
+      "flowStepTitle3": "Engine 启动",
+      "flowStepTitle4": "结果回传",
+      "flowStep1": "Agent 启动后向 Server 注册",
+      "flowStep2": "Server 调度任务到 Agent",
+      "flowStep3": "Agent 启动 Engine Container 并执行任务",
+      "flowStep4": "执行结果按 Engine → Agent → Server 回传",
+      "flowAgentRoleTitle": "Agent（分布式节点）",
+      "flowAgentTitle": "Agent",
+      "flowAgentDesc": "协调节点",
+      "flowAgentLocation": "部署在目标机器 / VPS",
+      "flowAgentComms": "接收任务、维护心跳、启动 Engine Container、接收 Engine 结果并回传 Server",
+      "flowAgentItem1": "接收 Server 下发的任务",
+      "flowAgentItem2": "维护心跳并管理 Engine 执行",
+      "flowAgentItem3": "回传运行指标与结果",
+      "flowEngineRoleTitle": "Engine Container（任务执行器）",
+      "flowEngineTitle": "Engine",
+      "flowEngineDesc": "容器化任务执行",
+      "flowEngineLocation": "由 Agent 管理的同机容器",
+      "flowEngineComms": "消费任务上下文，并通过 Agent 回传结果",
+      "flowEngineItem1": "执行一个已规划的扫描任务",
+      "flowEngineItem2": "由 Agent 在本机启动",
+      "flowEngineItem3": "通过 Agent 回传进度和结果"
+    }
+  },
+  "metadata": {
+    "title": "月狐 (LunaFox) - 攻击面管理平台 | ASM",
+    "description": "月狐 (LunaFox) - 攻击面管理平台 (ASM)，提供自动化资产发现、漏洞扫描、子域名枚举、端口扫描等功能。支持分布式扫描、Nuclei 集成、定时任务。",
+    "keywords": "ASM, 攻击面管理, 漏洞扫描, 资产发现, Bug Bounty, 渗透测试, Nuclei, 子域名枚举, 安全工具, EASM, 安全, LunaFox, 月狐",
+    "ogTitle": "月狐 (LunaFox) - 攻击面管理平台",
+    "ogDescription": "攻击面管理平台 (ASM)，提供自动化资产发现与漏洞扫描"
+  },
+  "bulkAdd": {
+    "subdomain": {
+      "title": "批量添加子域名",
+      "description": "输入子域名列表，每行一个。",
+      "belongsTo": "子域名必须属于",
+      "label": "子域名列表",
+      "placeholder": "每行输入一个子域名",
+      "helper": "仅支持合法子域名，每行一个，最多 1000 行。归属关系由后端提交时校验。",
+      "example": "示例：api.example.com",
+      "valid": "有效: {count} 个",
+      "duplicate": "重复: {count} 个",
+      "invalid": "无效: {count} 个",
+      "emptySummary": "尚未输入任何内容",
+      "validSummary": "已通过校验 {count} 项",
+      "blockingSummary": "{count} 个错误阻止提交",
+      "advisorySummary": "{count} 个提示将自动处理",
+      "collapseDetails": "收起详情",
+      "expandDetails": "展开详情",
+      "duplicateIssue": "第 {line} 行：重复项，将自动去重",
+      "invalidIssue": "第 {line} 行：{error}",
+      "duplicateBadge": "重复",
+      "invalidBadge": "非法子域名",
+      "errors": {
+        "empty": "子域名不能为空",
+        "too_long": "子域名长度超出限制",
+        "too_many_lines": "最多支持 1000 行",
+        "format": "子域名格式不正确",
+        "unknown": "子域名格式不正确"
+      },
+      "lineError": "第 {line} 行: \"{value}\" - {error}",
+      "formatInvalid": "格式无效",
+      "creating": "创建中...",
+      "bulkAdd": "批量添加"
+    },
+    "url": {
+      "endpoint": {
+        "title": "批量添加 URL",
+        "description": "输入 URL 列表，每行一个。",
+        "placeholder": "每行输入一个 URL"
+      },
+      "website": {
+        "title": "批量添加站点",
+        "description": "输入站点 URL 列表，每行一个。",
+        "placeholder": "每行输入一个 URL"
+      },
+      "directory": {
+        "title": "批量添加目录",
+        "description": "输入目录 URL 列表，每行一个。",
+        "placeholder": "每行输入一个 URL"
+      },
+      "label": "URL 列表",
+      "helper": "每行输入一个 URL。URL 必须以 http:// 或 https:// 开头，不得包含 NUL、CR 或 LF，且最多 2,000 个 UTF-8 字节。",
+      "example": "示例：https://example.com",
+      "valid": "有效: {count} 个",
+      "duplicate": "重复: {count} 个",
+      "invalid": "无效: {count} 个",
+      "mismatched": "不匹配: {count} 个",
+      "emptySummary": "尚未输入任何内容",
+      "validSummary": "已通过校验 {count} 项",
+      "blockingSummary": "{count} 个错误阻止提交",
+      "advisorySummary": "{count} 个提示将自动处理",
+      "collapseDetails": "收起详情",
+      "expandDetails": "展开详情",
+      "duplicateIssue": "第 {line} 行：重复项，将自动去重",
+      "mismatchIssue": "第 {line} 行：不属于当前目标，需移除或修改后提交",
+      "invalidIssue": "第 {line} 行：{error}",
+      "duplicateBadge": "重复",
+      "invalidBadge": "非法 URL",
+      "mismatchBadge": "不匹配",
+      "errors": {
+        "empty": "URL 不能为空",
+        "too_long": "URL 长度超出限制",
+        "too_many_lines": "最多支持 5,000 行",
+        "protocol": "必须以 http:// 或 https:// 开头",
+        "control": "不得包含 NUL、CR 或 LF 字符",
+        "authority": "必须包含可明确识别的域名或 IPv4 权威主机",
+        "encoding": "必须是合法 UTF-8",
+        "unknown": "URL 格式不正确"
+      },
+      "lineError": "第 {line} 行: \"{value}\" - {error}",
+      "mismatchError": "第 {line} 行: \"{value}\" - URL 不属于目标 {target}，请移除后再提交",
+      "creating": "创建中..."
+    },
+    "common": {
+      "cancel": "取消",
+      "bulkAdd": "批量添加",
+      "formatInvalid": "格式无效"
+    }
+  },
+  "globalSearch": {
+    "search": "搜索",
+    "placeholder": "搜索资产... (host=\"api\" && tech=\"nginx\")",
+    "noResults": "未找到结果",
+    "searchFor": "搜索",
+    "recent": "最近搜索",
+    "quickSearch": "快捷搜索",
+    "hint": "支持 FOFA 风格语法",
+    "toSearch": "搜索"
+  },
+  "errors": {
+    "unknown": "操作失败，请稍后重试",
+    "validation": "输入数据无效",
+    "notFound": "资源未找到",
+    "permissionDenied": "权限不足",
+    "serverError": "服务器错误，请稍后重试",
+    "badRequest": "请求格式错误",
+    "conflict": "资源冲突，请检查后重试",
+    "unauthorized": "请先登录",
+    "rateLimited": "请求过于频繁，请稍后重试"
+  },
+  "about": {
+    "title": "关于月狐",
+    "productName": "月狐 (LunaFox)",
+    "description": "攻击面管理平台",
+    "currentVersion": "当前版本",
+    "latestVersion": "最新版本",
+    "checkUpdate": "检查更新",
+    "checking": "检查中...",
+    "checkFailed": "检查更新失败，请稍后重试",
+    "updateAvailable": "有更新",
+    "upToDate": "已是最新",
+    "viewRelease": "查看发布",
+    "updateHint": "在项目根目录运行以下命令更新：",
+    "changelog": "更新日志",
+    "feedback": "问题反馈",
+    "docs": "使用文档",
+    "supportAuthor": "支持作者"
+  }
+}

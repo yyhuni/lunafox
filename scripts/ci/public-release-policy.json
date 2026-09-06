@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "canonicalRepository": "yyhuni/lunafox",
+  "privateBuilderRepository": "yyhuni/lunafox-private",
+  "canonicalNamespace": "yyhuni",
+  "firstRelease": {
+    "tag": "v0.0.1-alpha.57",
+    "channel": "canary",
+    "stableAllowed": false
+  },
+  "productImages": [
+    "lunafox-server",
+    "lunafox-frontend",
+    "lunafox-nginx",
+    "lunafox-agent",
+    "lunafox-bootstrap"
+  ],
+  "engineRepositoryPattern": "^lunafox-engine-runtime-[a-z0-9][a-z0-9._-]*$",
+  "signer": {
+    "issuer": "https://token.actions.githubusercontent.com",
+    "identityPattern": "^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$"
+  },
+  "binarySigner": {
+    "issuer": "https://token.actions.githubusercontent.com",
+    "identityPattern": "^https://github\\.com/yyhuni/lunafox-private/\\.github/workflows/release\\.yml@refs/tags/\\*$"
+  },
+  "destinationAppCredentials": {
+    "appIdVariable": "LUNAFOX_PUBLIC_REPO_APP_ID",
+    "privateKeySecret": "LUNAFOX_PUBLIC_REPO_APP_PRIVATE_KEY",
+    "preferredScope": "release-environment",
+    "githubFreePrivateFallbackScope": "repository",
+    "storedInstallationTokenAllowed": false
+  },
+  "publicReleaseAutomation": {
+    "authorizationVariable": "LUNAFOX_PUBLIC_RELEASE_AUTOMATION_ENABLED",
+    "default": "false"
+  },
+  "privateReleaseExecution": {
+    "runnerLabelsVariable": "LUNAFOX_PRIVATE_RELEASE_RUNNER_LABELS",
+    "defaultRunnerLabels": ["ubuntu-22.04"],
+    "requiredSelfHostedLabels": ["self-hosted", "linux", "x64", "lunafox-private-x64"],
+    "consumerJobs": "all-private-release-jobs",
+    "arm64Strategy": "go-cross-compile"
+  },
+  "publicMain": {
+    "branch": "main",
+    "stagingBranchPattern": "^export/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:-retry-[0-9]+)?$",
+    "allowDirectPush": false,
+    "allowForcePush": false,
+    "requiredReview": true
+  },
+  "channel": {
+    "branch": "release-channel",
+    "schemaVersion": 3,
+    "firstFiles": [
+      "channels/v0.0.1-alpha.57.env",
+      "channels/canary.env",
+      "manifests/v0.0.1-alpha.57.yaml"
+    ],
+    "versionRecordAppendOnly": true
+  },
+  "provenance": {
+    "requiredFields": [
+      "artifactDigest",
+      "privateSourceRevision",
+      "workflowIdentity",
+      "builderRun",
+      "exportManifest",
+      "sbom",
+      "scanEvidence"
+    ],
+    "longLivedCosignKeysAllowed": false
+  }
+}

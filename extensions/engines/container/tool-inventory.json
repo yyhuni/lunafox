@@ -1,0 +1,126 @@
+{
+  "schemaVersion": "lunafox-engine-image-tool-inventory/v2",
+  "engines": [
+    {
+      "engineId": "engine.lunafox.directory_scan",
+      "directory": "directory_scan",
+      "engineBinary": "directory-scan-engine",
+      "tools": [
+        {
+          "name": "ffuf",
+          "versionArg": "FFUF_VERSION",
+          "version": "v2.2.1"
+        }
+      ]
+    },
+    {
+      "engineId": "engine.lunafox.nuclei_vulnerability",
+      "directory": "nuclei_vulnerability",
+      "engineBinary": "nuclei-vulnerability-engine",
+      "tools": [
+        {
+          "name": "nuclei",
+          "versionArg": "NUCLEI_VERSION",
+          "version": "v3.4.10"
+        }
+      ]
+    },
+    {
+      "engineId": "engine.lunafox.fingerprint_detection",
+      "directory": "fingerprint_detection",
+      "engineBinary": "fingerprint-detection-runtime-engine",
+      "tools": [
+        {
+          "name": "observer-ward",
+          "versionArg": "OBSERVER_WARD_VERSION",
+          "version": "v2026.6.28-lunafox.1"
+        }
+      ]
+    },
+    {
+      "engineId": "engine.lunafox.subdomain_discovery",
+      "directory": "subdomain_discovery",
+      "engineBinary": "subdomain-discovery-runtime-engine",
+      "tools": [
+        {
+          "name": "subfinder",
+          "versionArg": "SUBFINDER_VERSION",
+          "version": "v2.12.0"
+        },
+        {
+          "name": "puredns",
+          "versionArg": "PUREDNS_VERSION",
+          "version": "v2.1.2-0.20260223162428-46bd4c963ec2"
+        },
+        {
+          "name": "massdns",
+          "versionArg": "MASSDNS_VERSION",
+          "version": "v1.1.0"
+        }
+      ]
+    },
+    {
+      "engineId": "engine.lunafox.port_scan",
+      "directory": "port_scan",
+      "engineBinary": "port-scan-runtime-engine",
+      "tools": [
+        {
+          "name": "naabu",
+          "versionArg": "NAABU_VERSION",
+          "version": "v2.4.0"
+        }
+      ]
+    },
+    {
+      "engineId": "engine.lunafox.website_discovery",
+      "directory": "website_discovery",
+      "engineBinary": "website-discovery-runtime-engine",
+      "tools": [
+        {
+          "name": "httpx",
+          "versionArg": "HTTPX_VERSION",
+          "version": "v1.8.1"
+        }
+      ]
+    },
+    {
+      "engineId": "engine.lunafox.url_collection",
+      "directory": "url_collection",
+      "engineBinary": "url-collection-engine",
+      "tools": [
+        {"name": "waymore", "versionArg": "WAYMORE_VERSION", "version": "v8.9"},
+        {"name": "katana", "versionArg": "KATANA_VERSION", "version": "v1.6.1"},
+        {"name": "uro", "versionArg": "URO_VERSION", "version": "v1.0.2"},
+        {"name": "httpx", "versionArg": "HTTPX_VERSION", "version": "v1.10.0"}
+      ]
+    },
+    {
+      "engineId": "engine.lunafox.screenshot",
+      "directory": "screenshot",
+      "engineBinary": "screenshot-runtime-engine",
+      "tools": [
+        {"name": "httpx", "versionArg": "HTTPX_VERSION", "version": "v1.10.0"},
+        {"name": "chromium", "versionArg": "CHROMIUM_VERSION", "version": "v131.0.6778"},
+        {"name": "cwebp", "versionArg": "LIBWEBP_VERSION", "version": "v1.6.0"}
+      ]
+    }
+  ],
+  "productImages": [
+    {
+      "id": "agent",
+      "dockerfile": "agent/Dockerfile"
+    },
+    {
+      "id": "server",
+      "dockerfile": "server/Dockerfile"
+    },
+    {
+      "id": "frontend",
+      "dockerfile": "frontend/Dockerfile"
+    },
+    {
+      "id": "nginx",
+      "dockerfile": "docker/nginx/Dockerfile"
+    }
+  ]
+}
