@@ -1,0 +1,52 @@
+import { describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs"
+import path from "node:path"
+
+const source = readFileSync(path.resolve(process.cwd(), "components/shared/loading/data-table-skeleton.tsx"), "utf8")
+
+describe("data-table-skeleton contract", () => {
+  it("preserves current source markers", () => {
+    expect(source).toContain("export function DataTableSkeleton")
+    expect(source).toContain("className")
+    expect(source).toContain("from \"@/lib/utils\"")
+    expect(source).toContain("from \"@/components/ui/table\"")
+    expect(source).toContain("getLoadingOwnerAttributes")
+    expect(source).toContain("layer?: LoadingLayer")
+    expect(source).toContain('layer = "workspace"')
+    expect(source).toContain("owner?: string")
+    expect(source).toContain("nested?: boolean")
+    expect(source).toContain("if (!owner && !nested)")
+    expect(source).toContain('owner ? getLoadingOwnerAttributes({ owner, layer, intent: "data" }) : {}')
+    expect(source).toContain('if (owner !== undefined && !owner.trim())')
+  })
+
+  it("keeps table skeleton rows on the shared horizontal table rhythm", () => {
+    expect(source).toContain("overflow-x-auto rounded-md border border-border bg-card")
+    expect(source).toContain("TableHeader")
+    expect(source).toContain("TableHead")
+    expect(source).toContain("TableBody")
+    expect(source).toContain("TableCell")
+    expect(source).toContain("TABLE_DENSE_ROW_CLASS")
+    expect(source).toContain("TABLE_DENSE_ROW_ESTIMATED_HEIGHT_PX")
+    expect(source).toContain("TABLE_DENSE_CELL_RHYTHM_CLASS")
+    expect(source).toContain("mobileRows?: number")
+    expect(source).toContain('searchInputWidthMode?: "fixed" | "fill"')
+    expect(source).toContain('searchInputWidthMode = "fixed"')
+    expect(source).toContain('toolbarHeight?: "compact" | "tall"')
+    expect(source).toContain('toolbarHeight = "compact"')
+    expect(source).toContain("withPagination?: boolean")
+    expect(source).toContain("withPagination = true")
+    expect(source).toContain("SearchToolbarSkeleton")
+    expect(source).toContain("CompactPaginationSkeleton")
+    expect(source).toContain("sm:flex-row sm:items-start sm:justify-between")
+    expect(source).not.toContain("sm:flex-row sm:items-center sm:justify-between")
+    expect(source).toContain('toolbarHeight === "tall" ? "standard" : "compact"')
+    expect(source).toContain("inputWidthMode={searchInputWidthMode}")
+    expect(source).toContain("buttonCount={paginationButtonCount >= 4 ? 4 : 2}")
+    expect(source).toContain("{withPagination ? (")
+    expect(source).toContain("md:table-row")
+    expect(source).toContain("flex flex-wrap gap-2 items-center")
+    expect(source).not.toContain("flex flex-col gap-3 border-b border-border")
+    expect(source).not.toContain("border-border border-t flex flex-col gap-3 pt-4")
+  })
+})

@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package lunafox.engine.execution.v2;
+
+option go_package = "github.com/yyhuni/lunafox/engine-go/protocol;protocol";
+
+// EngineExecutionReportingService is the Engine-to-Agent reporting-only
+// surface. Scope is selected from the authenticated task session, never from
+// request fields.
+service EngineExecutionReportingService {
+  rpc ReportProgress(ReportProgressRequest) returns (ReportProgressResponse);
+  rpc SubmitResultBatch(SubmitResultBatchRequest) returns (SubmitResultBatchResponse);
+}
+
+message ReportProgressRequest {
+  reserved 2 to 536870911;
+  reserved "task", "scan", "execution", "target", "package", "image", "request_id", "sequence",
+      "level", "emitted_at", "entries", "summary", "accepted", "count", "success", "credential",
+      "secret", "failure", "terminal";
+
+  // message is a single non-empty bounded UTF-8 progress event.
+  string message = 1;
+}
+
+// An empty response means only that the Server-backed operation completed OK.
+message ReportProgressResponse {}
+
+message SubmitResultBatchRequest {
+  reserved 3 to 536870911;
+  reserved "task", "scan", "execution", "target", "package", "image", "request_id", "sequence",
+      "summary", "accepted", "duplicate", "invalid", "filtered", "unsupported", "total", "success",
+      "credential", "secret", "failure", "terminal";
+
+  // result_type is an explicit canonical Server-owned result descriptor ID.
+  string result_type = 1;
+
+  // items are bounded, independently serialized canonical result items. The
+  // bytes are preserved exactly for an allowed same-session replay.
+  repeated bytes items = 2;
+}
+
+// An empty response means only that the Server-backed whole-batch operation
+// completed OK.
+message SubmitResultBatchResponse {}
