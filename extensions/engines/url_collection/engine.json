@@ -1,0 +1,62 @@
+{
+  "manifestVersion": "engine.v5",
+  "engineId": "engine.lunafox.url_collection",
+  "publisher": "lunafox",
+  "execution": {
+    "engineApiMajor": 2,
+    "supportedTargetTypes": [
+      "domain",
+      "ip",
+      "cidr"
+    ],
+    "configSections": [
+      {
+        "id": "waymore",
+        "defaultEnabled": true,
+        "params": [
+          {
+            "key": "timeout",
+            "type": "integer",
+            "default": 3600,
+            "minimum": 60,
+            "maximum": 604800
+          }
+        ]
+      },
+      {
+        "id": "katana",
+        "defaultEnabled": true,
+        "params": [
+          {"key": "timeout", "type": "integer", "default": 3600, "minimum": 60, "maximum": 604800},
+          {"key": "depth", "type": "integer", "default": 3, "minimum": 1, "maximum": 10},
+          {"key": "concurrency", "type": "integer", "default": 10, "minimum": 1, "maximum": 100},
+          {"key": "rate-limit", "type": "integer", "default": 30, "minimum": 1, "maximum": 500},
+          {"key": "request-timeout", "type": "integer", "default": 10, "minimum": 1, "maximum": 120},
+          {"key": "retries", "type": "integer", "default": 1, "minimum": 0, "maximum": 5},
+          {"key": "delay", "type": "integer", "default": 0, "minimum": 0, "maximum": 30}
+        ]
+      },
+      {
+        "id": "uro",
+        "defaultEnabled": true,
+      "params": [
+          {"key": "timeout", "type": "integer", "default": 600, "minimum": 60, "maximum": 21600},
+          {"key": "whitelist", "type": "stringArray", "default": []},
+          {"key": "blacklist", "type": "stringArray", "default": []},
+          {"key": "filters", "type": "stringArray", "default": [], "enum": ["hasparams", "noparams", "hasext", "noext", "allexts", "keepcontent", "keepslash", "vuln"]}
+      ]
+      },
+      {
+        "id": "httpx",
+        "defaultEnabled": true,
+        "params": [
+          {"key": "timeout", "type": "integer", "default": 3600, "minimum": 60, "maximum": 604800},
+          {"key": "threads", "type": "integer", "default": 25, "minimum": 1, "maximum": 200},
+          {"key": "rate-limit", "type": "integer", "default": 150, "minimum": 1, "maximum": 1000},
+          {"key": "request-timeout", "type": "integer", "default": 10, "minimum": 1, "maximum": 120},
+          {"key": "retries", "type": "integer", "default": 1, "minimum": 0, "maximum": 5}
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "lunafox-engine-image-conformance-profile/v1",
+  "target": {
+    "type": "domain",
+    "value": "example.com"
+  },
+  "noOpEnabledSections": [
+    "ffuf"
+  ],
+  "toolEnabledSections": [
+    "ffuf"
+  ],
+  "gateDefaultProgressAck": false,
+  "toolInputs": [
+    {
+      "kind": "websiteURLs",
+      "content": "https://example.com/app/\n"
+    }
+  ],
+  "resultType": "asset.directory.v1",
+  "toolStubs": [
+    {
+      "tool": "ffuf",
+      "source": "tool-stubs/ffuf.sh"
+    }
+  ],
+  "argvAssertions": [
+    {
+      "file": "ffuf.argv",
+      "args": [
+        "-u",
+        "http://example.comFUZZ",
+        "-w",
+        "/run/lunafox/resources/config/ffuf/wordlist/dir_default.txt",
+        "-json",
+        "-s",
+        "-X",
+        "GET",
+        "-raw",
+        "-ac",
+        "-mc",
+        "200-299,301,302,307,401,403,405,500",
+        "-t",
+        "10",
+        "-rate",
+        "0",
+        "-p",
+        "0.1-2.0",
+        "-timeout",
+        "10"
+      ]
+    }
+  ],
+  "sigtermTool": "ffuf",
+  "platformResources": [],
+  "imageLocalProbes": [
+    {
+      "tool": "ffuf",
+      "args": ["-V"],
+      "outputContains": "ffuf version: 2.2.1"
+    }
+  ]
+}

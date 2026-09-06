@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "repository": "https://github.com/0x727/FingerprintHub.git",
+    "revision": "1ca878524ec242a39629a3704532139917779e9c",
+    "extractedAt": "2026-07-30",
+    "purpose": "Pinned official Observer Ward Web aggregate import/export compatibility baseline only; never runtime seed data."
+  },
+  "fullFixtures": [
+    {
+      "library": "fingerprinthub",
+      "path": "full/fingerprinthub_web.json",
+      "sourcePath": "web_fingerprint_v4.json",
+      "format": "json",
+      "formatVersion": "nuclei-template-aggregate",
+      "sha256": "aab56c335663b9fac71d101319a1bba61afcb9653fedf021c741dce7bc449d4b",
+      "statistics": {
+        "rawRecordCount": 3290,
+        "finalIdentityCount": 3269
+      },
+      "expectedImport": {
+        "outcome": "accepted",
+        "firstImport": { "createdCount": 3269, "updatedCount": 0, "unchangedCount": 0 },
+        "reimport": { "createdCount": 0, "updatedCount": 0, "unchangedCount": 3269 },
+        "nativeExport": "json"
+      }
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "engine": {
+    "description": "探测目标范围内的 URL 列表，发现可访问站点并上报网站结果。",
+    "displayName": "站点发现"
+  },
+  "sections": {
+    "httpx": {
+      "description": "使用 httpx 探测 Server 物化的 URL 列表。",
+      "name": "HTTPX",
+      "params": {
+        "rate-limit": {
+          "description": "映射到 -rate-limit 的 httpx 每秒速率上限。"
+        },
+        "request-timeout": {
+          "description": "映射到 -timeout 的单请求超时时间，单位为秒。"
+        },
+        "retries": {
+          "description": "映射到 -retries 的 httpx 重试次数。"
+        },
+        "threads": {
+          "description": "映射到 -threads 的 httpx 并发 worker 数。"
+        },
+        "timeout": {
+          "description": "httpx 进程的运行超时时间，单位为秒。"
+        }
+      }
+    }
+  }
+}
