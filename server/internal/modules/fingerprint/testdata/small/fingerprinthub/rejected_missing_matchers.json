@@ -1,0 +1,12 @@
+[
+  {
+    "id": "broken-http-template",
+    "info": { "name": "Broken HTTP Template" },
+    "http": [
+      {
+        "method": "GET",
+        "path": ["{{BaseURL}}/"]
+      }
+    ]
+  }
+]

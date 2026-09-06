@@ -1,0 +1,5 @@
+export const SCREENSHOTS_GALLERY_ROOT_CLASS = "space-y-4"
+export const SCREENSHOTS_GALLERY_TOOLBAR_CLASS = "flex gap-4 items-start justify-between"
+export const SCREENSHOTS_GALLERY_TOOLBAR_CONTROLS_CLASS = "flex min-w-0 flex-wrap items-center gap-2"
+export const SCREENSHOTS_GALLERY_TOOLBAR_ACTIONS_CLASS = "flex gap-2 items-center"
+export const SCREENSHOTS_GALLERY_GRID_CLASS = "gap-4 grid grid-cols-2 lg:grid-cols-4 md:grid-cols-3"

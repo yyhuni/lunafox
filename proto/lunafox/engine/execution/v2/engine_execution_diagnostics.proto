@@ -1,0 +1,167 @@
+syntax = "proto3";
+
+package lunafox.engine.execution.v2;
+
+option go_package = "github.com/yyhuni/lunafox/engine-go/protocol;protocol";
+
+// EngineExecutionDiagnosticsService is the generated Engine-to-Agent terminal
+// observation side channel. Scope is recovered exclusively from the existing
+// authenticated task session; requests never carry control-plane identity.
+service EngineExecutionDiagnosticsService {
+  rpc EstablishExecutionDiagnostics(EstablishExecutionDiagnosticsRequest) returns (EstablishExecutionDiagnosticsResponse);
+  rpc ReportTerminalDiagnostics(ReportTerminalDiagnosticsRequest) returns (ReportTerminalDiagnosticsResponse);
+}
+
+// EngineExecutionFailedStage is the closed execution-boundary vocabulary. It
+// never represents cancellation, timeout, OOM, or a concrete error cause.
+enum EngineExecutionFailedStage {
+  ENGINE_EXECUTION_FAILED_STAGE_UNKNOWN = 0;
+  ENGINE_EXECUTION_FAILED_STAGE_PLAN_VALIDATION = 1;
+  ENGINE_EXECUTION_FAILED_STAGE_INPUT_MATERIALIZATION = 2;
+  ENGINE_EXECUTION_FAILED_STAGE_RESOURCE_MATERIALIZATION = 3;
+  ENGINE_EXECUTION_FAILED_STAGE_CONTEXT_BUILD = 4;
+  ENGINE_EXECUTION_FAILED_STAGE_IMAGE_PREPARE = 5;
+  ENGINE_EXECUTION_FAILED_STAGE_CONTAINER_CREATE = 6;
+  ENGINE_EXECUTION_FAILED_STAGE_CONTAINER_START = 7;
+  ENGINE_EXECUTION_FAILED_STAGE_CONTAINER_WAIT = 8;
+  ENGINE_EXECUTION_FAILED_STAGE_CONTAINER_CLEANUP = 9;
+  ENGINE_EXECUTION_FAILED_STAGE_PROTOCOL_BOOTSTRAP = 10;
+  ENGINE_EXECUTION_FAILED_STAGE_EXECUTION_PROJECTION = 11;
+  ENGINE_EXECUTION_FAILED_STAGE_HANDLER = 12;
+  ENGINE_EXECUTION_FAILED_STAGE_PROGRESS_REPORT = 13;
+  ENGINE_EXECUTION_FAILED_STAGE_RESULT_ENCODE = 14;
+  ENGINE_EXECUTION_FAILED_STAGE_RESULT_SUBMIT = 15;
+}
+
+// EngineExecutionErrorType is the closed, low-cardinality reason catalog. It
+// carries no raw error, path, credential, or tool output.
+enum EngineExecutionErrorType {
+  ENGINE_EXECUTION_ERROR_TYPE_UNSPECIFIED = 0;
+  ENGINE_EXECUTION_ERROR_TYPE_EXECUTION_FAILED = 1;
+  ENGINE_EXECUTION_ERROR_TYPE_PLAN_VALIDATION_FAILED = 2;
+  ENGINE_EXECUTION_ERROR_TYPE_INPUT_MATERIALIZATION_FAILED = 3;
+  ENGINE_EXECUTION_ERROR_TYPE_RESOURCE_MATERIALIZATION_FAILED = 4;
+  ENGINE_EXECUTION_ERROR_TYPE_CONTEXT_BUILD_FAILED = 5;
+  ENGINE_EXECUTION_ERROR_TYPE_IMAGE_PREPARE_FAILED = 6;
+  ENGINE_EXECUTION_ERROR_TYPE_CONTAINER_CREATE_FAILED = 7;
+  ENGINE_EXECUTION_ERROR_TYPE_CONTAINER_START_FAILED = 8;
+  ENGINE_EXECUTION_ERROR_TYPE_CONTAINER_WAIT_FAILED = 9;
+  ENGINE_EXECUTION_ERROR_TYPE_CONTAINER_CLEANUP_FAILED = 10;
+  ENGINE_EXECUTION_ERROR_TYPE_PROTOCOL_BOOTSTRAP_FAILED = 11;
+  ENGINE_EXECUTION_ERROR_TYPE_HANDLER_FAILED = 12;
+  ENGINE_EXECUTION_ERROR_TYPE_PROGRESS_REPORT_FAILED = 13;
+  ENGINE_EXECUTION_ERROR_TYPE_RESULT_ENCODE_FAILED = 14;
+  ENGINE_EXECUTION_ERROR_TYPE_RESULT_SUBMIT_FAILED = 15;
+  ENGINE_EXECUTION_ERROR_TYPE_TIMEOUT = 16;
+  ENGINE_EXECUTION_ERROR_TYPE_CANCELLED = 17;
+  ENGINE_EXECUTION_ERROR_TYPE_OOM_KILLED = 18;
+  ENGINE_EXECUTION_ERROR_TYPE_AGENT_SESSION_FAILED = 19;
+  ENGINE_EXECUTION_ERROR_TYPE_INVALID_OUTCOME = 20;
+  ENGINE_EXECUTION_ERROR_TYPE_RESULT_PROTOCOL_FAILED = 21;
+}
+
+// EngineExecutionDiagnosticAvailability distinguishes valid Engine evidence
+// from a missing or rejected terminal diagnostic upload.
+enum EngineExecutionDiagnosticAvailability {
+  ENGINE_EXECUTION_DIAGNOSTIC_AVAILABILITY_UNSPECIFIED = 0;
+  ENGINE_EXECUTION_DIAGNOSTIC_AVAILABILITY_AVAILABLE = 1;
+  ENGINE_EXECUTION_DIAGNOSTIC_AVAILABILITY_UNAVAILABLE = 2;
+}
+
+// EngineExecutionResultState describes typed result-delivery evidence only.
+// It is unrelated to scan coverage or the number of assets a tool found.
+enum EngineExecutionResultState {
+  ENGINE_EXECUTION_RESULT_STATE_UNSPECIFIED = 0;
+  ENGINE_EXECUTION_RESULT_STATE_COMPLETE = 1;
+  ENGINE_EXECUTION_RESULT_STATE_PARTIAL = 2;
+  ENGINE_EXECUTION_RESULT_STATE_NONE = 3;
+  ENGINE_EXECUTION_RESULT_STATE_UNKNOWN = 4;
+}
+
+// EngineExecutionDiagnosticLimit keeps the fixed diagnostic cardinality in the
+// wire contract so every participant enforces the same upper bound.
+enum EngineExecutionDiagnosticLimit {
+  ENGINE_EXECUTION_DIAGNOSTIC_LIMIT_UNSPECIFIED = 0;
+  ENGINE_EXECUTION_DIAGNOSTIC_LIMIT_RESULT_TYPE_COUNT = 16;
+}
+
+// ResultTypeWatermark is the fixed per-canonical-result-type delivery state.
+// Unconfirmed batches are derived as submitted_batches - acknowledged_batches;
+// no individual result, payload, or failed-batch record is retained.
+message ResultTypeWatermark {
+  reserved 8 to 536870911;
+  reserved "item", "items", "payload", "payloads", "result", "results", "failed_batches",
+      "error", "message", "display_message", "tool_output", "stdout", "stderr", "path",
+      "credential", "secret", "task", "scan", "execution", "agent";
+
+  string result_type = 1;
+  uint64 received_items = 2;
+  uint64 encoded_items = 3;
+  uint64 submitted_items = 4;
+  uint64 acknowledged_items = 5;
+  uint64 submitted_batches = 6;
+  uint64 acknowledged_batches = 7;
+}
+
+// EngineTerminalDiagnosticSnapshot is the Engine-generated observation. A
+// successful snapshot omits failed_stage and error_type; a failed snapshot
+// sets both, using UNKNOWN and EXECUTION_FAILED when its boundary is unknown.
+message EngineTerminalDiagnosticSnapshot {
+  reserved 5 to 536870911;
+  reserved "task", "scan", "execution", "agent", "session", "credential", "secret", "error",
+      "message", "display_message", "tool_output", "stdout", "stderr", "path", "failure",
+      "result_state", "availability", "outcome", "exit_code", "oom_killed", "timeout";
+
+  optional EngineExecutionFailedStage failed_stage = 1;
+  optional EngineExecutionErrorType error_type = 2;
+  repeated ResultTypeWatermark result_type_watermarks = 3;
+  string compatibility_revision = 4;
+}
+
+// EngineExecutionDiagnostics is the Agent-owned final terminal snapshot. It
+// combines a validated Engine observation with Agent runtime facts without
+// exposing raw diagnostics or making the side channel part of task success.
+message EngineExecutionDiagnostics {
+  reserved 7 to 536870911;
+  reserved "task", "scan", "execution", "agent", "session", "credential", "secret", "error",
+      "message", "display_message", "tool_output", "stdout", "stderr", "path", "failure",
+      "exit_code", "oom_killed", "timeout", "unconfirmed_batches", "failed_batches";
+
+  EngineExecutionDiagnosticAvailability availability = 1;
+  EngineExecutionResultState result_state = 2;
+  optional EngineExecutionFailedStage failed_stage = 3;
+  optional EngineExecutionErrorType error_type = 4;
+  repeated ResultTypeWatermark result_type_watermarks = 5;
+  string compatibility_revision = 6;
+}
+
+// EstablishExecutionDiagnostics is the mandatory, non-negotiated hard-cut
+// session confirmation. It carries only the fixed matching revision: task and
+// execution scope continue to come exclusively from the authenticated UDS
+// session rather than request fields.
+message EstablishExecutionDiagnosticsRequest {
+  reserved 2 to 536870911;
+  reserved "task", "scan", "execution", "agent", "session", "credential", "secret", "error",
+      "message", "display_message", "tool_output", "stdout", "stderr", "path", "failure",
+      "availability", "result_state", "exit_code", "oom_killed", "timeout";
+
+  string compatibility_revision = 1;
+}
+
+// An empty response confirms only that this authenticated session belongs to
+// the required matching revision. It is not capability negotiation.
+message EstablishExecutionDiagnosticsResponse {}
+
+// ReportTerminalDiagnosticsRequest carries only the Engine observation. Task
+// and execution identity are intentionally absent and recovered from session.
+message ReportTerminalDiagnosticsRequest {
+  reserved 2 to 536870911;
+  reserved "task", "scan", "execution", "agent", "session", "credential", "secret", "error",
+      "message", "display_message", "tool_output", "stdout", "stderr", "path", "failure",
+      "availability", "result_state", "exit_code", "oom_killed", "timeout";
+
+  EngineTerminalDiagnosticSnapshot snapshot = 1;
+}
+
+// An empty response means only that the side-channel observation was accepted.
+message ReportTerminalDiagnosticsResponse {}

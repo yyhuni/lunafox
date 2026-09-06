@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package lunafox.engine.execution.v2;
+
+option go_package = "github.com/yyhuni/lunafox/engine-go/protocol;protocol";
+
+// EngineExecutionContext is the passive, major-selected binary protobuf
+// startup snapshot mounted into an Engine Container. During disposable
+// pre-release development this major is rebuilt in place; after the first
+// stable release, breaking Engine-visible changes require a new major.
+message EngineExecutionContext {
+  reserved 7 to 536870911;
+  reserved "execution", "task", "workflow_step", "workspace", "context_version",
+      "max_execution_duration", "deadline", "absolute_deadline", "host_path", "cache_path",
+      "mount", "mounts", "credential", "uds", "runtime_image", "package", "result_types",
+      "result_allow_set", "generic_bindings", "control_plane_identity", "inputs";
+
+  // target contains only the business target type and canonical value.
+  CanonicalTarget target = 1;
+
+  // compatibility_revision is the fixed post-cut revision shared by every
+  // Engine execution participant. Engines reject a missing or mismatched value
+  // before opening the reporting session.
+  string compatibility_revision = 2;
+
+  // config contains section enablement and validated scalar parameters.
+  EngineExecutionConfig config = 3;
+
+  // config_resources contains one materialized file for each declared
+  // section/parameter resource binding.
+  repeated ConfigResource config_resources = 4;
+
+  // platform_resources contains logical resources needed by this execution.
+  repeated PlatformResource platform_resources = 5;
+
+  // limits contains only progress and result transport limits.
+  ExecutionLimits limits = 6;
+}
+
+// CanonicalTarget is the business type/value Target projection.
+message CanonicalTarget {
+  reserved 3 to 536870911;
+  reserved "resource", "target_id", "target_resource";
+
+  string type = 1;
+  string value = 2;
+}
+
+// EngineExecutionConfig is a closed repeated section/parameter model. It
+// avoids a generic map while allowing each Engine's validated scalar schema.
+message EngineExecutionConfig {
+  reserved 2 to 536870911;
+
+  repeated ConfigSection sections = 1;
+}
+
+message ConfigSection {
+  reserved 4 to 536870911;
+
+  string section_id = 1;
+  optional bool enabled = 2;
+  repeated ConfigValue params = 3;
+}
+
+// ConfigValue admits only the closed value kinds supported by engine.v5 config.
+message ConfigValue {
+  reserved 6 to 536870911;
+
+  string param_key = 1;
+  oneof value {
+    string string_value = 2;
+    int64 integer_value = 3;
+    bool boolean_value = 4;
+    StringArrayValue string_array_value = 5;
+  }
+}
+
+message StringArrayValue {
+  repeated string values = 1;
+}
+
+// ConfigResource is partitioned by the original section ID and parameter key.
+message ConfigResource {
+  reserved 5 to 536870911;
+  reserved "file", "kind", "resource", "record_count", "sha256_digest", "host_path";
+
+  string section_id = 1;
+  string param_key = 2;
+  string content_type = 3;
+  string path = 4;
+}
+
+// PlatformResource is partitioned by one canonical platform-owned logical ID.
+message PlatformResource {
+  reserved 4 to 536870911;
+  reserved "file", "kind", "resource", "record_count", "sha256_digest", "host_path";
+
+  string resource_id = 1;
+  string content_type = 2;
+  string path = 3;
+}
+
+// ExecutionLimits deliberately excludes max_execution_duration and deadlines.
+message ExecutionLimits {
+  reserved 4 to 536870911;
+
+  uint32 progress_message_max_bytes = 1;
+  uint32 result_batch_max_items = 2;
+  uint32 result_batch_max_bytes = 3;
+}
