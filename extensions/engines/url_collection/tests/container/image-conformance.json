@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "lunafox-engine-image-conformance-profile/v1",
+  "target": {"type": "domain", "value": "example.com"},
+  "noOpEnabledSections": ["uro"],
+  "toolEnabledSections": ["waymore", "katana", "uro", "httpx"],
+  "gateDefaultProgressAck": false,
+  "defaultEntrypointExitCode": 1,
+  "toolInputs": [{"kind": "websiteURLs", "content": "https://example.com\n"}],
+  "resultType": "asset.endpoint.v1",
+  "toolStubs": [
+    {"tool": "waymore", "source": "tool-stubs/waymore.sh"},
+    {"tool": "katana", "source": "tool-stubs/katana.sh"},
+    {"tool": "uro", "source": "tool-stubs/uro.sh"},
+    {"tool": "httpx", "source": "tool-stubs/httpx.sh"}
+  ],
+  "argvAssertions": [
+    {"file": "waymore.argv", "args": ["-i", "example.com", "-mode", "U", "-oU", "/workspace/waymore.txt"]},
+    {"file": "katana.argv", "args": ["-list", "/workspace/katana-seeds.txt", "-o", "/workspace/katana.txt", "-silent", "-d", "3", "-c", "10", "-rl", "30", "-timeout", "10", "-retry", "1", "-rd", "0", "-fs", "rdn", "-dr"]},
+    {"file": "uro.argv", "args": ["-i", "/workspace/collector-candidates.txt", "-o", "/workspace/uro.txt"]},
+    {"file": "httpx.argv", "args": ["-list", "/workspace/probe-candidates.txt", "-json", "-silent", "-no-color", "-status-code", "-content-type", "-content-length", "-location", "-title", "-server", "-tech-detect", "-cdn", "-vhost", "-include-response", "-rstr", "2000", "-random-agent", "-threads", "25", "-rate-limit", "150", "-timeout", "10", "-retries", "1", "-o", "/workspace/httpx.jsonl"]}
+  ],
+  "sigtermTool": "katana",
+  "platformResources": [],
+  "imageLocalProbes": []
+}

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "fixtures": [
+    { "id": "fingerprinthub-http-variants", "library": "fingerprinthub", "path": "fingerprinthub/http_variants.json", "outcome": "accepted", "scenario": "same_native_id_distinct_http_preserved" },
+    { "id": "fingerprinthub-last-wins", "library": "fingerprinthub", "path": "fingerprinthub/last_wins.json", "outcome": "accepted", "scenario": "same_identity_last_record_wins" },
+    { "id": "fingerprinthub-record-error", "library": "fingerprinthub", "path": "fingerprinthub/rejected_missing_info_name.json", "outcome": "rejected", "diagnostic": { "kind": "RECORD", "recordIndex": 1, "fieldPath": "info.name", "reason": "REQUIRED_FIELD_MISSING" } },
+    { "id": "fingerprinthub-rule-error", "library": "fingerprinthub", "path": "fingerprinthub/rejected_missing_matchers.json", "outcome": "rejected", "diagnostic": { "kind": "RECORD", "recordIndex": 1, "fieldPath": "http[0].matchers", "reason": "INVALID_RULE_STRUCTURE" } },
+    { "id": "json-syntax-error", "library": "fingerprinthub", "path": "invalid_json_syntax.json", "outcome": "rejected", "diagnostic": { "kind": "SYNTAX", "reason": "INVALID_SYNTAX" } }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "engine": {
+    "description": "Scan Target baselines plus finalized subdomain facts for open network ports and report host-port findings.",
+    "displayName": "Port Scan"
+  },
+  "sections": {
+    "naabu_active": {
+      "description": "Actively probe target-scoped hosts for open TCP ports using naabu.",
+      "name": "Naabu Active",
+      "params": {
+        "port-mode": {
+          "description": "Port selection mode: top scans selected top ports, custom scans only explicit ports, and top-and-custom scans top ports plus explicit ports when provided. The previous top-plus-custom value is no longer accepted."
+        },
+        "ports": {
+          "description": "Explicit ports or ranges mapped to -p when port-mode is custom, or added in top-and-custom when non-empty."
+        },
+        "rate": {
+          "description": "Naabu scan rate mapped to -rate."
+        },
+        "threads": {
+          "description": "Number of concurrent naabu workers mapped to -c."
+        },
+        "timeout": {
+          "description": "Runtime timeout in seconds for the active naabu process."
+        },
+        "top-ports": {
+          "description": "Naabu top ports preset mapped to -top-ports when port-mode is top or top-and-custom; allowed values are 100, 1000, and full."
+        }
+      }
+    },
+    "naabu_passive": {
+      "description": "Collect passive port intelligence for target-scoped hosts using naabu.",
+      "name": "Naabu Passive",
+      "params": {
+        "timeout": {
+          "description": "Runtime timeout in seconds for the passive naabu process."
+        }
+      }
+    }
+  }
+}

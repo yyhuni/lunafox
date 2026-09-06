@@ -1,0 +1,21 @@
+<svg width="320" height="320" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="320" rx="32" fill="#F7FCF8"/>
+  <rect x="28" y="28" width="264" height="264" rx="24" fill="white" stroke="#BBF7D0" stroke-width="4"/>
+  <rect x="52" y="52" width="72" height="72" rx="8" fill="#22C55E"/>
+  <rect x="196" y="52" width="72" height="72" rx="8" fill="#22C55E"/>
+  <rect x="52" y="196" width="72" height="72" rx="8" fill="#22C55E"/>
+  <rect x="74" y="74" width="28" height="28" rx="3" fill="white"/>
+  <rect x="218" y="74" width="28" height="28" rx="3" fill="white"/>
+  <rect x="74" y="218" width="28" height="28" rx="3" fill="white"/>
+  <circle cx="152" cy="110" r="10" fill="#111827"/>
+  <circle cx="184" cy="110" r="10" fill="#111827"/>
+  <circle cx="136" cy="140" r="10" fill="#111827"/>
+  <circle cx="168" cy="140" r="10" fill="#111827"/>
+  <circle cx="200" cy="140" r="10" fill="#111827"/>
+  <circle cx="152" cy="170" r="10" fill="#111827"/>
+  <circle cx="184" cy="170" r="10" fill="#111827"/>
+  <circle cx="136" cy="200" r="10" fill="#111827"/>
+  <circle cx="168" cy="200" r="10" fill="#111827"/>
+  <circle cx="200" cy="200" r="10" fill="#111827"/>
+  <text x="160" y="294" text-anchor="middle" fill="#0F172A" font-size="18" font-family="sans-serif">WECHAT QR</text>
+</svg>

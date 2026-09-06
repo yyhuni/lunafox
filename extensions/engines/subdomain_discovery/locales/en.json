@@ -1,0 +1,71 @@
+{
+  "engine": {
+    "description": "Discover target-domain subdomains through reconnaissance, optional dictionary bruteforce, and DNS resolution",
+    "displayName": "Subdomain Discovery"
+  },
+  "sections": {
+    "bruteforce": {
+      "description": "Bruteforce domains using dictionaries to discover unpublished subdomains",
+      "name": "Dictionary Bruteforce",
+      "params": {
+        "rate-limit": {
+          "description": "Rate limit per second"
+        },
+        "resolvers": {
+          "description": "Resolver list name for PureDNS bruteforce (stored on server)"
+        },
+        "threads": {
+          "description": "Number of concurrent threads"
+        },
+        "timeout": {
+          "description": "Scan timeout in seconds"
+        },
+        "wildcard-batch": {
+          "description": "PureDNS wildcard-filter precache batch size"
+        },
+        "wildcard-filter": {
+          "description": "Enable PureDNS wildcard-response filtering for this stage"
+        },
+        "wildcard-probe-count": {
+          "description": "PureDNS wildcard tests per domain level"
+        },
+        "wordlist": {
+          "description": "Subdomain wordlist name (stored on server)"
+        }
+      }
+    },
+    "recon": {
+      "description": "Collect subdomains from multiple data sources without directly probing the target",
+      "name": "Reconnaissance",
+      "params": {
+        "threads": {
+          "description": "Number of concurrent threads"
+        },
+        "timeout": {
+          "description": "Scan timeout in seconds"
+        }
+      }
+    },
+    "resolve": {
+      "description": "Verify discovered subdomains are currently DNS-resolvable before ingest",
+      "name": "Resolution",
+      "params": {
+        "rate-limit": {
+          "description": "Rate limit per second"
+        },
+        "resolvers": {
+          "description": "Resolver list name for DNS verification (stored on server)"
+        },
+        "threads": {
+          "description": "Number of concurrent threads"
+        },
+        "timeout": {
+          "description": "Scan timeout in seconds"
+        },
+        "wildcard-filter": {
+          "description": "Enable PureDNS wildcard-response filtering for this stage"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+[
+  {
+    "id": "broken-template",
+    "info": { "severity": "info" },
+    "http": [
+      {
+        "method": "GET",
+        "path": ["{{BaseURL}}/"],
+        "matchers": [
+          { "type": "word", "words": ["missing-info-name"] }
+        ]
+      }
+    ]
+  }
+]

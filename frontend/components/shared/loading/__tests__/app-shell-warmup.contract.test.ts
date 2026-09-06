@@ -1,0 +1,43 @@
+import { describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs"
+import path from "node:path"
+
+const source = readFileSync(path.resolve(process.cwd(), "components/shared/loading/app-shell-warmup.tsx"), "utf8")
+
+describe("app-shell-warmup contract", () => {
+  it("owns protected app shell warmup through the real protected shell chrome", () => {
+    expect(source).toContain("export function AppShellWarmup")
+    expect(source).toContain("owner: string")
+    expect(source).toContain("delayMs?: number")
+    expect(source).toContain("getLoadingOwnerAttributes")
+    expect(source).toContain('layer: "app-shell"')
+    expect(source).toContain('intent: "app-shell"')
+    expect(source).toContain('getLoadingOwnerAttributes({ owner, layer: "app-shell", intent: "app-shell" })')
+    expect(source).toContain("app-shell-warmup")
+    expect(source).toContain("AppShellWarmup requires a non-empty owner.")
+    expect(source).toContain("const resolvedDelayMs = delayMs ?? 120")
+    expect(source).toContain('from "@/components/app-sidebar"')
+    expect(source).toContain('from "@/components/unified-header"')
+    expect(source).toContain('from "@/components/ui/sidebar"')
+    expect(source).toContain('from "@/components/auth/protected-app-shell"')
+    expect(source).toContain("protectedAppShellContentFrameClassName")
+    expect(source).toContain("protectedAppShellScrollAreaClassName")
+    expect(source).toContain("<SidebarProvider")
+    expect(source).toContain("<AppSidebar warmup />")
+    expect(source).toContain("<UnifiedHeader warmup />")
+    expect(source).toContain("<SidebarInset")
+    expect(source).toContain("protectedAppShellStyle")
+    expect(source).toContain("className={protectedAppShellScrollAreaClassName}")
+    expect(source).toContain("className={protectedAppShellContentFrameClassName}")
+    expect(source).not.toContain("getProtectedAppShellContentFrameClassName")
+    expect(source).not.toContain('from "next/navigation"')
+    expect(source).toContain("pointer-events-none")
+    expect(source).not.toContain("auth-warmup-shell")
+    expect(source).not.toContain("w-52")
+    expect(source).not.toContain("h-10 items-center justify-between")
+    expect(source).not.toContain("bg-sidebar/80")
+    expect(source).not.toContain("animate-app-fade-in")
+    expect(source).not.toContain("animate-in")
+    expect(source).not.toContain("delay-")
+  })
+})
