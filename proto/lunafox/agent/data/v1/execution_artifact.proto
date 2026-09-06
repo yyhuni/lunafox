@@ -1,0 +1,179 @@
+syntax = "proto3";
+
+package lunafox.agent.data.v1;
+
+option go_package = "github.com/yyhuni/lunafox/contracts/gen/lunafox/agent/data/v1;agentdatav1";
+
+// ExecutionArtifactService streams Server-authorized startup content to an
+// Agent. The operations keep input, config-resource, platform-resource, and
+// late-bound runtime Artifact authorization distinct while sharing one neutral
+// frame shape.
+service ExecutionArtifactService {
+  rpc StreamExecutionInput(StreamExecutionInputRequest) returns (stream ExecutionArtifactFrame);
+  rpc StreamConfigResource(StreamConfigResourceRequest) returns (stream ExecutionArtifactFrame);
+  rpc StreamPlatformResourceContent(StreamPlatformResourceContentRequest) returns (stream ExecutionArtifactFrame);
+  // ExchangeRuntimeArtifact is the only active Nuclei template transport. It
+  // is deliberately bidirectional: the Agent sends the missing digest set
+  // after validating the manifest, and acknowledges publication only after
+  // its local CAS and task directory are complete.
+  rpc ExchangeRuntimeArtifact(stream ExchangeRuntimeArtifactRequest) returns (stream ExchangeRuntimeArtifactResponse);
+}
+
+message StreamExecutionInputRequest {
+  string task = 1;
+  string execution = 2;
+  reserved 3 to 5;
+  reserved "host_list", "web_url_list", "url_seed_list";
+  string role = 6;
+}
+
+message StreamConfigResourceRequest {
+  string task = 1;
+  string execution = 2;
+  string section_id = 3;
+  string param_key = 4;
+}
+
+message StreamPlatformResourceContentRequest {
+  string task = 1;
+  string execution = 2;
+  string resource_id = 3;
+}
+
+message ExecutionArtifactFrame {
+  oneof payload {
+    ExecutionArtifactHeader header = 1;
+    ExecutionArtifactChunk chunk = 2;
+    ExecutionArtifactTrailer trailer = 3;
+  }
+}
+
+message ExecutionArtifactHeader {
+  string task = 1;
+  string execution = 2;
+  oneof binding {
+    ExecutionInputBindingKey execution_input = 3;
+    ConfigResourceBindingKey config_resource = 4;
+    PlatformResourceBindingKey platform_resource = 5;
+  }
+  reserved 8, 9;
+  reserved "nuclei_template_bundle", "runtime_artifact";
+  string content_type = 6;
+  ExecutionArtifactIntegrity expected_integrity = 7;
+}
+
+message ExecutionArtifactChunk {
+  bytes data = 1;
+}
+
+message ExecutionArtifactTrailer {
+  ExecutionArtifactIntegrity integrity = 1;
+}
+
+message ExecutionArtifactIntegrity {
+  uint64 size_bytes = 1;
+  string sha256_digest = 2;
+  optional uint64 record_count = 3;
+}
+
+// The marker messages make the selector oneofs closed without carrying a
+// caller-selected path, filename, content type, or generic artifact kind.
+message ExecutionInputBindingKey {
+  reserved 1 to 3;
+  reserved "host_list", "web_url_list", "url_seed_list";
+  string role = 4;
+}
+message ConfigResourceBindingKey {
+  string section_id = 1;
+  string param_key = 2;
+}
+message PlatformResourceBindingKey {
+  string resource_id = 1;
+}
+
+// RuntimeArtifact exchange messages are kept separate from the generic
+// single-artifact streams. Nuclei preparation uses this exchange exclusively.
+message ExchangeRuntimeArtifactRequest {
+  oneof payload {
+    RuntimeArtifactExchangeBegin begin = 1;
+    MissingBlobDigests missing_blob_digests = 2;
+    MissingBlobDigestsEnd missing_end = 3;
+    RuntimeArtifactPublicationAck publication_ack = 4;
+  }
+}
+
+message RuntimeArtifactExchangeBegin {
+  string task = 1;
+  string execution = 2;
+  string artifact_id = 3;
+  string compatibility_revision = 4;
+}
+
+message MissingBlobDigests {
+  uint64 sequence = 1;
+  repeated string digests = 2;
+}
+
+message MissingBlobDigestsEnd {
+  uint64 sequence = 1;
+  uint64 digest_count = 2;
+}
+
+message RuntimeArtifactPublicationAck {
+  string snapshot_digest = 1;
+  uint64 entry_count = 2;
+}
+
+message ExchangeRuntimeArtifactResponse {
+  oneof payload {
+    RuntimeArtifactManifestFrame manifest_frame = 1;
+    RuntimeArtifactManifestEnd manifest_end = 2;
+    RuntimeArtifactBlobGroup blob_group = 3;
+    RuntimeArtifactBlobEnd blob_end = 4;
+    RuntimeArtifactExchangeEnd exchange_end = 5;
+    RuntimeArtifactExchangeComplete exchange_complete = 6;
+  }
+}
+
+message RuntimeArtifactManifestFrame {
+  uint64 sequence = 1;
+  repeated RuntimeArtifactManifestEntry entries = 2;
+}
+
+message RuntimeArtifactManifestEntry {
+  string relative_path = 1;
+  string sha256_digest = 2;
+  uint64 size_bytes = 3;
+}
+
+message RuntimeArtifactManifestEnd {
+  uint64 sequence = 1;
+  uint64 entry_count = 2;
+  uint64 total_size_bytes = 3;
+  string snapshot_digest = 4;
+}
+
+// One BlobGroup carries one bounded data frame for one digest. Repeating the
+// digest with incrementing sequence values forms a group; BlobEnd terminates
+// it and carries the authoritative size/digest check.
+message RuntimeArtifactBlobGroup {
+  string digest = 1;
+  uint64 sequence = 2;
+  bytes data = 3;
+}
+
+message RuntimeArtifactBlobEnd {
+  string digest = 1;
+  uint64 sequence = 2;
+  uint64 size_bytes = 3;
+  string sha256_digest = 4;
+}
+
+message RuntimeArtifactExchangeEnd {
+  uint64 sequence = 1;
+}
+
+message RuntimeArtifactExchangeComplete {
+  string snapshot_digest = 1;
+  uint64 entry_count = 2;
+}

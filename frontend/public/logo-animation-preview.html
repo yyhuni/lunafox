@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LunaFox Logo 揭晓动画预览</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+        }
+
+        /* ---- 整体容器（最终状态需整体居中） ---- */
+        .logo-reveal-content {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        /* ---- Logo 外层包裹：控制位移 ---- */
+        .logo-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            /* 初始向右偏移，让 logo 在屏幕正中 */
+            /* 文字区域约 ~320px 宽 + 24px gap = ~172px 偏移 */
+            transform: translateX(172px);
+            /* logo 弹跳刚稳住(0.5s)也就是涟漪达到高潮时，开始往左滑，速度略快更利落 */
+            animation: slideToLeft 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.5s forwards;
+        }
+
+        @keyframes slideToLeft {
+            0% {
+                transform: translateX(172px);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
+        }
+
+        /* ---- 缩放容器：带着Logo一起弹出 ---- */
+        .logo-scale-wrapper {
+            position: relative;
+            z-index: 2;
+            width: 88px;
+            height: 88px;
+            transform: scale(0);
+            /* 更具弹跳感、脱落感的钢板弹簧曲线 */
+            animation: logoPop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        /* ---- Logo 圆形图标本体 ---- */
+        .logo-circle {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            z-index: 2;
+        }
+
+        .logo-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        @keyframes logoPop {
+            0% {
+                transform: scale(0);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* ---- 涟漪：冲击波效果，瞬间产生极细极快的向外扩散 ---- */
+        .ripple-svg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 240px;
+            height: 240px;
+            margin-left: -120px;
+            margin-top: -120px;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .ripple-circle {
+            fill: none;
+            stroke: #fff;
+            r: 44px;
+            /* 精准贴合 Logo 本体的半径 (44px) */
+            stroke-width: 0px;
+            opacity: 0;
+            /* 延迟到 logo 达到顶峰附近 (0.2s) 释放反弹力的瞬间爆发 */
+            animation: ringExpand 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+        }
+
+        @keyframes ringExpand {
+            0% {
+                r: 44px;
+                stroke-width: 6px;
+                /* 起点有一点粗度，显得有力量 */
+                opacity: 0.8;
+            }
+
+            100% {
+                r: 100px;
+                stroke-width: 0px;
+                /* 迅速消散无痕 */
+                opacity: 0;
+            }
+        }
+
+        /* ---- 文字 ---- */
+        .text-wrapper {
+            display: flex;
+            align-items: center;
+            margin-left: 24px;
+        }
+
+        .letter {
+            font-size: 56px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 2px;
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(6px);
+            /* 文字在 logo 开始移动的同时就渐显 */
+            animation: letterIn 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+
+        /* 逐字母延迟：跟随 Logo 往左滑的时机出现 */
+        .letter:nth-child(1) {
+            animation-delay: 0.50s;
+        }
+
+        .letter:nth-child(2) {
+            animation-delay: 0.56s;
+        }
+
+        .letter:nth-child(3) {
+            animation-delay: 0.62s;
+        }
+
+        .letter:nth-child(4) {
+            animation-delay: 0.68s;
+        }
+
+        .letter:nth-child(5) {
+            animation-delay: 0.74s;
+        }
+
+        .letter:nth-child(6) {
+            animation-delay: 0.80s;
+        }
+
+        .letter:nth-child(7) {
+            animation-delay: 0.86s;
+        }
+
+        @keyframes letterIn {
+            0% {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            60% {
+                opacity: 0.5;
+                color: rgba(255, 255, 255, 0.5);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+                color: #fff;
+            }
+        }
+
+        /* ---- 重播按钮 ---- */
+        .replay-btn {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 32px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            opacity: 0;
+            animation: fadeIn 0.6s 2.2s forwards;
+        }
+
+        .replay-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .logo-reveal-content {
+                flex-direction: column;
+            }
+
+            .logo-wrapper {
+                transform: translateY(80px);
+                animation-name: slideUp;
+            }
+
+            @keyframes slideUp {
+                0% {
+                    transform: translateY(80px);
+                }
+
+                100% {
+                    transform: translateY(0);
+                }
+            }
+
+            .text-wrapper {
+                margin-left: 0;
+                margin-top: 16px;
+            }
+
+            .letter {
+                font-size: 36px;
+            }
+
+            .logo-circle {
+                width: 72px;
+                height: 72px;
+            }
+
+            .ripple-ring {
+                width: 72px;
+                height: 72px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="logo-reveal-content" id="animContent">
+        <!-- Logo 区域 -->
+        <div class="logo-wrapper">
+            <!-- 整体缩放容器 -->
+            <div class="logo-scale-wrapper">
+                <!-- 涟漪：初始与容器等宽，随其缩放，然后自行向外延展 -->
+                <!-- 涟漪：使用 SVG 来绘制圆环，便于独立控制内外径和线宽 -->
+                <svg class="ripple-svg" viewBox="0 0 240 240">
+                    <circle cx="120" cy="120" class="ripple-circle"></circle>
+                </svg>
+
+                <!-- Logo 圆形图标 -->
+                <div class="logo-circle">
+                    <img src="/images/icon-256.png" alt="LunaFox" />
+                </div>
+            </div>
+        </div>
+
+        <!-- 文字 -->
+        <div class="text-wrapper">
+            <span class="letter">L</span>
+            <span class="letter">u</span>
+            <span class="letter">n</span>
+            <span class="letter">a</span>
+            <span class="letter">F</span>
+            <span class="letter">o</span>
+            <span class="letter">x</span>
+        </div>
+    </div>
+
+    <button class="replay-btn" id="replayBtn" onclick="replay()">重新播放</button>
+
+    <script>
+        function replay() {
+            const container = document.getElementById('animContent');
+            const parent = container.parentNode;
+            const clone = container.cloneNode(true);
+            parent.replaceChild(clone, container);
+            const btn = document.getElementById('replayBtn');
+            btn.style.animation = 'none';
+            btn.offsetHeight;
+            btn.style.animation = 'fadeIn 0.6s 2.2s forwards';
+            btn.style.opacity = '0';
+        }
+    </script>
+</body>
+
+</html>

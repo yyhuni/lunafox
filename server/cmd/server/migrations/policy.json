@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "phase": "disposable-development",
+  "baselineMigration": "000001",
+  "baselineMutable": true,
+  "preserveDataUpgrade": false,
+  "developmentRollback": "git-history-and-empty-state-fresh-install",
+  "stableReleaseAllowed": false,
+  "dataRetainingDeploymentAllowed": false,
+  "freezeTriggers": [
+    "first-public-stable-release",
+    "first-data-retaining-non-disposable-deployment"
+  ]
+}

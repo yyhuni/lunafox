@@ -1,0 +1,40 @@
+"use client"
+
+import * as React from "react"
+import { Suspense } from "react"
+import dynamic from "next/dynamic"
+import { useLocale } from "next-intl"
+
+import { defaultLocale, localeHtmlLang, type Locale } from "@/i18n/config"
+
+const RoutePrefetch = dynamic(
+  () => import("@/components/route-prefetch").then((mod) => mod.RoutePrefetch),
+  { ssr: false }
+)
+
+const RouteProgress = dynamic(
+  () => import("@/components/route-progress").then((mod) => mod.RouteProgress),
+  { ssr: false }
+)
+
+/**
+ * Client-only route UX enhancements.
+ * Keep them out of the server layout to avoid eagerly coupling non-critical code.
+ */
+export function LayoutClientEnhancements() {
+  const locale = useLocale()
+  const resolvedLocale = (locale in localeHtmlLang ? locale : defaultLocale) as Locale
+
+  React.useEffect(() => {
+    document.documentElement.lang = localeHtmlLang[resolvedLocale]
+  }, [resolvedLocale])
+
+  return (
+    <>
+      <Suspense fallback={null}>
+        <RouteProgress />
+      </Suspense>
+      <RoutePrefetch />
+    </>
+  )
+}

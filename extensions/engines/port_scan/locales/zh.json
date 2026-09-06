@@ -1,0 +1,41 @@
+{
+  "engine": {
+    "description": "扫描目标范围内的主机列表，发现开放网络端口并上报主机端口结果。",
+    "displayName": "端口扫描"
+  },
+  "sections": {
+    "naabu_active": {
+      "description": "使用 naabu 主动探测目标范围内主机的开放 TCP 端口。",
+      "name": "Naabu 主动扫描",
+      "params": {
+        "port-mode": {
+          "description": "端口选择模式：top 扫描预设热门端口，custom 只扫描显式端口，top-and-custom 在提供显式端口时合并两者；旧的 top-plus-custom 值不再接受。"
+        },
+        "ports": {
+          "description": "显式端口或端口范围；custom 模式映射到 -p，top-and-custom 模式下非空时会追加。"
+        },
+        "rate": {
+          "description": "映射到 -rate 的 naabu 扫描速率。"
+        },
+        "threads": {
+          "description": "映射到 -c 的 naabu 并发 worker 数。"
+        },
+        "timeout": {
+          "description": "主动 naabu 进程的运行超时时间，单位为秒。"
+        },
+        "top-ports": {
+          "description": "top 或 top-and-custom 模式下映射到 -top-ports 的 naabu 热门端口预设；允许值为 100、1000 和 full。"
+        }
+      }
+    },
+    "naabu_passive": {
+      "description": "使用 naabu 收集目标范围内主机的被动端口情报。",
+      "name": "Naabu 被动收集",
+      "params": {
+        "timeout": {
+          "description": "被动 naabu 进程的运行超时时间，单位为秒。"
+        }
+      }
+    }
+  }
+}
