@@ -38,6 +38,12 @@ jobs:
           # controlled public history and would fail the fresh-history guard.
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
+      - name: Install public deployment guard dependencies
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ripgrep
+
       - uses: pnpm/action-setup@v4
         with:
           version: 10.30.3
@@ -487,6 +493,12 @@ jobs:
       - uses: docker/setup-buildx-action@v3
       - uses: oras-project/setup-oras@v1
       - uses: sigstore/cosign-installer@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
       - id: source
         name: Bind Agent publication to generated public provenance
         run: |
@@ -552,6 +564,13 @@ jobs:
           cache-from: type=gha,scope=lunafox-public-agent
           cache-to: type=gha,mode=max,scope=lunafox-public-agent
           tags: ghcr.io/yyhuni/lunafox-agent:public-${{ github.sha }}
+      - name: Ensure Agent GHCR package is public
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          visibility="$(gh api "/user/packages/container/lunafox-agent" --jq '.visibility')"
+          [ "$visibility" = public ] || { echo "GHCR Agent package must be public, got: $visibility" >&2; exit 1; }
       - id: digest
         name: Preserve the immutable Agent image digest
         env:
