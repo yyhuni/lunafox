@@ -527,7 +527,8 @@ jobs:
             --source-revision-digest "$SOURCE_REVISION_DIGEST" \
             --public-export-root "$GITHUB_WORKSPACE" \
             --public-provenance-sha256 "$PUBLIC_PROVENANCE_SHA256" \
-            --json | tee dist/agent-bundle-verification.json
+            --json | tee "$RUNNER_TEMP/agent-bundle-verification.json"
+          cp "$RUNNER_TEMP/agent-bundle-verification.json" dist/agent-bundle-verification.json
           cosign verify-blob \
             --bundle "$BUNDLE_DIR/agent-bundle.sigstore.json" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
