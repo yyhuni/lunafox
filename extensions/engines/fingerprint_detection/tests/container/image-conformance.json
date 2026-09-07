@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "lunafox-engine-image-conformance-profile/v1",
+  "target": {
+    "type": "domain",
+    "value": "example.com"
+  },
+  "noOpEnabledSections": [
+    "observer_ward"
+  ],
+  "toolEnabledSections": [
+    "observer_ward"
+  ],
+  "gateDefaultProgressAck": false,
+  "toolInputs": [
+    {
+      "kind": "websiteURLs",
+      "content": "https://example.com/app#fragment\n"
+    }
+  ],
+  "resultType": "asset.website_technology.v1",
+  "toolStubs": [
+    {
+      "tool": "observer-ward",
+      "source": "tool-stubs/observer-ward.sh"
+    }
+  ],
+  "argvAssertions": [
+    {
+      "file": "observer_ward.argv",
+      "args": [
+        "-l",
+        "/workspace/observer-ward-candidates.txt",
+        "-p",
+        "/run/lunafox/resources/platform/fingerprintLibraryFingerPrintHub/fingerprinthub_web.json",
+        "--mode",
+        "http",
+        "--timeout",
+        "10",
+        "--thread",
+        "25",
+        "--format",
+        "json",
+        "--silent",
+        "--no-color"
+      ]
+    }
+  ],
+  "sigtermTool": "observer-ward",
+  "platformResources": [
+    {
+      "id": "fingerprintLibraryFingerPrintHub",
+      "source": "fixtures/fingerprinthub_web.json",
+      "kind": "fingerprintLibrary",
+      "contentType": "application/vnd.lunafox.fingerprint-library.fingerprinthub.v1+json",
+      "path": "/run/lunafox/resources/platform/fingerprintLibraryFingerPrintHub/fingerprinthub_web.json"
+    }
+  ],
+  "imageLocalProbes": [
+    {
+      "tool": "observer-ward",
+      "args": ["--version"],
+      "outputContains": "v2026.6.28-lunafox.1"
+    }
+  ]
+}

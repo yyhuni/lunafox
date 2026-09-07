@@ -1,0 +1,4 @@
+# Exclude local build outputs from Docker context.
+server
+seed
+bin/

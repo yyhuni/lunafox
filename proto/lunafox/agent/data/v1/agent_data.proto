@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package lunafox.agent.data.v1;
+
+import "lunafox/taskprogress/v1/task_progress.proto";
+
+option go_package = "github.com/yyhuni/lunafox/contracts/gen/lunafox/agent/data/v1;agentdatav1";
+
+// DataPlaneService serves task-scoped data and persists engine outputs on
+// behalf of connected agents.
+service DataPlaneService {
+  rpc BatchIngestTaskResults(BatchIngestTaskResultsRequest) returns (BatchIngestTaskResultsResponse);
+  rpc BatchWriteTaskProgressLogs(BatchWriteTaskProgressLogsRequest) returns (BatchWriteTaskProgressLogsResponse);
+}
+
+message BatchIngestTaskResultsRequest {
+  reserved 1, 2, 3, 4;
+  reserved "scan_id", "target_id", "task_id", "result_kind";
+
+  repeated string items_json = 5;
+  string task = 6;
+  string target = 7;
+  string result_type = 8;
+}
+
+message BatchIngestTaskResultsResponse {
+  reserved 1;
+  reserved "summary";
+}
+
+message BatchWriteTaskProgressLogsRequest {
+  reserved 1, 2;
+  reserved "scan_id", "task_id";
+
+  string request_id = 3;
+  repeated lunafox.taskprogress.v1.TaskProgressLogEntry entries = 4;
+  string task = 5;
+}
+
+message BatchWriteTaskProgressLogsResponse {
+  BatchWriteSummary summary = 1;
+}
+
+message BatchWriteSummary {
+  int32 accepted_items = 1;
+  int32 duplicate_items = 2;
+  int32 total_items = 3;
+}
