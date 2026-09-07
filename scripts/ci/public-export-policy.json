@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "policyVersion": "2026-09-06",
+  "policyVersion": "2026-09-07",
   "sourceRepository": "yyhuni/lunafox-private",
   "destinationRepository": "yyhuni/lunafox",
   "sourceRefs": {
@@ -18,7 +18,18 @@
     "publicSquashCommitMessagePattern": "^chore\\(export\\): generated deployment projection v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)? \\(#[0-9]+\\)$",
     "bootstrapCommitMessagePattern": "^chore\\(bootstrap\\): initialize public deployment projection$",
     "publicMergeHeadOwner": "yyhuni",
-    "publicMergeCommitMessagePattern": "^Merge pull request #[0-9]+ from [A-Za-z0-9_.-]+/export/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:-retry-[0-9]+)?$"
+    "publicMergeCommitMessagePattern": "^Merge pull request #[0-9]+ from [A-Za-z0-9_.-]+/export/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:-retry-[0-9]+)?$",
+    "approvedMaintenanceCommits": [
+      {
+        "hash": "f95591f97815faf932453751b5d0af6a776fd666",
+        "subject": "fix(ci): keep Agent verification output out of workspace",
+        "authorName": "yang yang",
+        "authorEmail": "84375838+yyhuni@users.noreply.github.com",
+        "committerName": "GitHub",
+        "committerEmail": "noreply@github.com",
+        "parentCount": 1
+      }
+    ]
   },
   "allowlist": {
     "exact": [

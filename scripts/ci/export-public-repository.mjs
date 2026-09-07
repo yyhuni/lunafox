@@ -152,6 +152,7 @@ function compilePolicy(policy) {
   if (policy.sourceRepository !== "yyhuni/lunafox-private") fail("policy sourceRepository must be yyhuni/lunafox-private");
   if (policy.destinationRepository !== "yyhuni/lunafox") fail("policy destinationRepository must be yyhuni/lunafox");
   validateReviewedSecretExceptions(policy);
+  validateApprovedMaintenanceCommits(policy.git);
   const allow = policy.allowlist ?? {};
   const exact = new Set([...(allow.exact ?? []), ...(allow.generatedExact ?? [])]);
   const prefixes = [...(allow.prefixes ?? []), ...(allow.generatedPrefixes ?? [])];
@@ -279,6 +280,41 @@ function validateReviewedSecretExceptions(policy) {
     if (seen.has(key)) fail(`duplicate secret scan exception: ${exception.path}`);
     seen.add(key);
   }
+}
+
+function validateApprovedMaintenanceCommits(policy) {
+  const commits = policy?.approvedMaintenanceCommits ?? [];
+  if (!Array.isArray(commits)) fail("git approvedMaintenanceCommits must be an array");
+  const seen = new Set();
+  const expectedKeys = [
+    "authorEmail",
+    "authorName",
+    "committerEmail",
+    "committerName",
+    "hash",
+    "parentCount",
+    "subject",
+  ];
+  for (const commit of commits) {
+    if (!commit || typeof commit !== "object" ||
+      JSON.stringify(Object.keys(commit).sort()) !== JSON.stringify(expectedKeys)) {
+      fail("approved maintenance commit must declare only hash, subject, author, committer, and parentCount");
+    }
+    if (!/^[0-9a-f]{40}$/.test(commit.hash)) {
+      fail(`approved maintenance commit hash is invalid: ${commit.hash}`);
+    }
+    if (seen.has(commit.hash)) fail(`duplicate approved maintenance commit: ${commit.hash}`);
+    seen.add(commit.hash);
+    for (const field of ["subject", "authorName", "authorEmail", "committerName", "committerEmail"]) {
+      if (typeof commit[field] !== "string" || !commit[field]) {
+        fail(`approved maintenance commit ${field} must be a non-empty string`);
+      }
+    }
+    if (!Number.isInteger(commit.parentCount) || commit.parentCount < 0) {
+      fail(`approved maintenance commit parentCount is invalid: ${commit.hash}`);
+    }
+  }
+  return commits;
 }
 
 function readException(policy, relPath, ruleId, match) {
@@ -487,6 +523,19 @@ function historyRecordKind(record, policy) {
     subject,
   } = record;
   const parentList = parents ? parents.trim().split(/\s+/).filter(Boolean) : [];
+  const approvedMaintenance = (policy.approvedMaintenanceCommits ?? []).find((commit) => commit.hash === hash);
+  if (approvedMaintenance) {
+    const metadataMatches = approvedMaintenance.subject === subject &&
+      approvedMaintenance.authorName === authorName &&
+      approvedMaintenance.authorEmail === authorEmail &&
+      approvedMaintenance.committerName === committerName &&
+      approvedMaintenance.committerEmail === committerEmail &&
+      approvedMaintenance.parentCount === parentList.length;
+    if (!metadataMatches) {
+      fail(`approved maintenance commit metadata does not match policy: ${hash}`);
+    }
+    return { kind: "maintenance", tag: "" };
+  }
   const generatedPattern = new RegExp(policy.publicCommitMessagePattern);
   const squashPattern = new RegExp(
     policy.publicSquashCommitMessagePattern ??
