@@ -815,6 +815,13 @@ function assertPublicWorkflow(workflow, policy) {
     "provenance: mode=max",
     "sbom: true",
     "actions/attest-build-provenance@v2",
+    "docker/login-action@v3",
+    "registry: ghcr.io",
+    "username: ${{ github.actor }}",
+    "password: ${{ github.token }}",
+    "GH_TOKEN: ${{ github.token }}",
+    "/user/packages/container/lunafox-agent",
+    "GHCR Agent package must be public",
   ]) {
     if (!agentPublication.includes(required)) fail(`public Agent publication is missing: ${required}`);
   }
@@ -822,6 +829,14 @@ function assertPublicWorkflow(workflow, policy) {
       agentPublication.includes("stagingIdentity") || agentPublication.includes("agent-input-") ||
       /DOCKERHUB_TOKEN|DOCKERHUB_USERNAME|DOCKERHUB_PASSWORD/.test(agentPublication)) {
     fail("public Agent publication must build only from the verified bundle context without Docker Hub credentials");
+  }
+  const agentGhcrLogin = agentPublication.indexOf("name: Log in to GHCR");
+  const agentBuild = agentPublication.indexOf("name: Build and publish the multi-architecture Agent image");
+  const agentVisibilityCheck = agentPublication.indexOf("name: Ensure Agent GHCR package is public");
+  const agentSign = agentPublication.indexOf("name: Keylessly sign and verify the public Agent image");
+  if (agentGhcrLogin < 0 || agentBuild < 0 || agentVisibilityCheck < 0 || agentSign < 0 ||
+      !(agentGhcrLogin < agentBuild && agentBuild < agentVisibilityCheck && agentVisibilityCheck < agentSign)) {
+    fail("public Agent publication must log in before pushing, then require public GHCR visibility before signing");
   }
   // A public workflow may be exported without the private release workflow;
   // its machine-readable policy still has to pin the same identity.

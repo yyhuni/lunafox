@@ -5,6 +5,10 @@ import crypto from "node:crypto";
 import { pathToFileURL } from "node:url";
 
 const OCI_INDEX_MEDIA_TYPE = "application/vnd.oci.image.index.v1+json";
+const OCI_IMAGE_MANIFEST_MEDIA_TYPE = "application/vnd.oci.image.manifest.v1+json";
+const BUILDKIT_ATTESTATION_REFERENCE_TYPE = "attestation-manifest";
+const BUILDKIT_ATTESTATION_REFERENCE_DIGEST = "vnd.docker.reference.digest";
+const BUILDKIT_ATTESTATION_REFERENCE_TYPE_ANNOTATION = "vnd.docker.reference.type";
 const SHA256 = /^sha256:[a-f0-9]{64}$/;
 
 function usage() {
@@ -53,11 +57,12 @@ function validateIndex(raw, expectedDigest, expectedPlatforms = "linux/amd64,lin
   if (index.artifactType !== undefined && index.artifactType !== "") throw new Error("Engine Runtime Image index must not declare artifactType");
   if (index.subject !== undefined && index.subject !== null) throw new Error("Engine Runtime Image index must not declare subject");
   if (!Array.isArray(index.manifests)) throw new Error("OCI image index manifests must be an array");
-  if (index.manifests.length !== platforms.length) throw new Error(`OCI image index must contain exactly ${platforms.length} platform manifests, got ${index.manifests.length}`);
   const required = new Map(platforms.map((platform) => [platform, 0]));
   const digests = new Set();
+  const platformDescriptors = [];
+  const attestationDescriptors = [];
   for (const [position, descriptor] of index.manifests.entries()) {
-    if (!descriptor || descriptor.mediaType !== "application/vnd.oci.image.manifest.v1+json") {
+    if (!descriptor || descriptor.mediaType !== OCI_IMAGE_MANIFEST_MEDIA_TYPE) {
       throw new Error(`manifests[${position}] must be an OCI image manifest descriptor`);
     }
     if (typeof descriptor.digest !== "string" || !SHA256.test(descriptor.digest)) {
@@ -70,10 +75,45 @@ function validateIndex(raw, expectedDigest, expectedPlatforms = "linux/amd64,lin
     if (digests.has(descriptor.digest)) throw new Error(`manifests[${position}] repeats child digest ${descriptor.digest}`);
     digests.add(descriptor.digest);
     const platform = `${descriptor.platform.os}/${descriptor.platform.architecture}`;
-    if (required.has(platform)) required.set(platform, required.get(platform) + 1);
+    if (platform === "unknown/unknown") {
+      const annotations = descriptor.annotations;
+      if (!annotations || typeof annotations !== "object" || Array.isArray(annotations) ||
+          annotations[BUILDKIT_ATTESTATION_REFERENCE_TYPE_ANNOTATION] !== BUILDKIT_ATTESTATION_REFERENCE_TYPE) {
+        throw new Error(`manifests[${position}] may use unknown/unknown only for a BuildKit attestation descriptor`);
+      }
+      const referencedDigest = annotations[BUILDKIT_ATTESTATION_REFERENCE_DIGEST];
+      if (typeof referencedDigest !== "string" || !SHA256.test(referencedDigest)) {
+        throw new Error(`manifests[${position}] BuildKit attestation must reference a lowercase platform manifest sha256 digest`);
+      }
+      attestationDescriptors.push({ position, referencedDigest });
+      continue;
+    }
+    if (descriptor.platform.os === "unknown" || descriptor.platform.architecture === "unknown") {
+      throw new Error(`manifests[${position}] must not mix an unknown platform dimension with a Runtime Image platform`);
+    }
+    platformDescriptors.push({ position, digest: descriptor.digest, platform });
+  }
+  if (platformDescriptors.length !== platforms.length) {
+    throw new Error(`OCI image index must contain exactly ${platforms.length} platform manifests, got ${platformDescriptors.length}`);
+  }
+  const platformDigests = new Set();
+  for (const descriptor of platformDescriptors) {
+    platformDigests.add(descriptor.digest);
+    if (required.has(descriptor.platform)) required.set(descriptor.platform, required.get(descriptor.platform) + 1);
   }
   for (const [platform, count] of required.entries()) if (count !== 1) throw new Error(`required platform ${platform} must appear exactly once, got ${count}`);
-  return { index, actualDigest, platforms: [...required.keys()] };
+  const attestationReferences = new Map();
+  for (const { position, referencedDigest } of attestationDescriptors) {
+    if (!platformDigests.has(referencedDigest)) {
+      throw new Error(`manifests[${position}] BuildKit attestation must reference a platform manifest in this index`);
+    }
+    const count = (attestationReferences.get(referencedDigest) ?? 0) + 1;
+    if (count > 1) {
+      throw new Error(`BuildKit attestations must have at most one descriptor per platform manifest, repeated ${referencedDigest}`);
+    }
+    attestationReferences.set(referencedDigest, count);
+  }
+  return { index, actualDigest, platforms: [...required.keys()], attestationCount: attestationDescriptors.length };
 }
 
 function main() {
