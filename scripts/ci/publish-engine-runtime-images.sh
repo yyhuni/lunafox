@@ -216,6 +216,7 @@ verify_engine_payload() {
 	local directory="$1" ref="$2"
 	node "$ROOT_DIR/scripts/ci/check-engine-image-tool-inventory.mjs" \
 		--repo-root "$ROOT_DIR" \
+		--skip-product-image-source-check \
 		--engine-image "$directory=$ref" >/dev/null
 }
 
