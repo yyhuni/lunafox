@@ -16,7 +16,8 @@ ARG CHROMIUM_ARM64_SHA256=8f5fc4830b7030b706ccc868e712451330e5eaa4076264f95da3c6
 ARG CHROMIUM_COMMON_AMD64_SHA256=7b1b673f0331b2d9774617504b864a0243d91a3a108f67c61903ae8ff8ba40ed
 ARG CHROMIUM_COMMON_ARM64_SHA256=2c0822f1664de1940ff4c0bd6a0f6225fdeac422753ac57943a68711d783cca6
 ARG LIBWEBP_VERSION=v1.6.0
-ARG LIBWEBP_SHA256=93a852c2b3efafee3723efd4636de855b46f9fe1efddd607e1f42f60fc8f2136
+ARG LIBWEBP_AMD64_SHA256=1c5ffab71efecefa0e3c23516c3a3a1dccb45cc310ae1095c6f14ae268e38067
+ARG LIBWEBP_ARM64_SHA256=69f5eebe203e0f3942fe37986209a1725741be19c152950a4283b376c95ec798
 ARG GOPROXY=https://proxy.golang.org,direct
 
 FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/golang:1.26-bookworm AS httpx-builder
@@ -35,23 +36,25 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     done; \
     test -x /out/httpx
 
-FROM --platform=$TARGETPLATFORM ubuntu:noble AS cwebp-builder
+FROM --platform=$BUILDPLATFORM alpine:3.23.2 AS cwebp-builder
+ARG TARGETARCH
 ARG LIBWEBP_VERSION
-ARG LIBWEBP_SHA256
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl build-essential cmake libpng-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && curl -fsSL "https://github.com/webmproject/libwebp/archive/refs/tags/${LIBWEBP_VERSION}.tar.gz" -o /tmp/libwebp.tar.gz \
-    && printf '%s  %s\n' "$LIBWEBP_SHA256" /tmp/libwebp.tar.gz | sha256sum -c - \
-    && mkdir -p /src \
-    && tar -xzf /tmp/libwebp.tar.gz -C /src \
-    && cmake -S "/src/libwebp-${LIBWEBP_VERSION#v}" -B /src/build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DWEBP_BUILD_CWEBP=ON -DWEBP_BUILD_DWEBP=OFF -DWEBP_BUILD_EXTRAS=OFF -DWEBP_BUILD_GIF2WEBP=OFF -DWEBP_BUILD_IMG2WEBP=OFF -DWEBP_BUILD_VWEBP=OFF -DWEBP_BUILD_WEBPINFO=OFF -DWEBP_BUILD_WEBPMUX=OFF \
-    && cmake --build /src/build --target cwebp --parallel \
-    && install -d -m 0755 /out/bin \
-    && for candidate in /src/build/sharpyuv/cwebp /src/build/cwebp /src/build/examples/cwebp; do \
-         if [ -x "$candidate" ]; then install -m 0755 "$candidate" /out/bin/cwebp; break; fi; \
-       done \
-    && test -x /out/bin/cwebp \
-    && /out/bin/cwebp -version | grep -F '1.6.0'
+ARG LIBWEBP_AMD64_SHA256
+ARG LIBWEBP_ARM64_SHA256
+RUN set -eux; \
+    version="${LIBWEBP_VERSION#v}"; \
+    case "$TARGETARCH" in \
+      amd64) archive="libwebp-${version}-linux-x86-64.tar.gz"; checksum="$LIBWEBP_AMD64_SHA256" ;; \
+      arm64) archive="libwebp-${version}-linux-aarch64.tar.gz"; checksum="$LIBWEBP_ARM64_SHA256" ;; \
+      *) echo "unsupported libwebp target architecture: $TARGETARCH" >&2; exit 1 ;; \
+    esac; \
+    wget -qO "/tmp/$archive" "https://storage.googleapis.com/downloads.webmproject.org/releases/webp/$archive"; \
+    printf '%s  %s\n' "$checksum" "/tmp/$archive" | sha256sum -c -; \
+    mkdir -p /out/bin; \
+    tar -xzf "/tmp/$archive" -C /tmp; \
+    cp /tmp/libwebp-${version}-linux-*/bin/cwebp /out/bin/cwebp; \
+    chmod 0755 /out/bin/cwebp; \
+    test -x /out/bin/cwebp
 
 FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/golang:${ENGINE_GO_VERSION}-bookworm AS engine-builder
 ARG TARGETOS=linux

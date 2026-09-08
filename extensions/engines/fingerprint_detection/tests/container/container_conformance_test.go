@@ -28,7 +28,7 @@ func readContainerAsset(t *testing.T, name string) string {
 func TestDockerfileDefinesPinnedFingerprintRuntimeImage(t *testing.T) {
 	dockerfile := readSibling(t, "Dockerfile")
 	for _, marker := range []string{
-		"FROM --platform=$TARGETPLATFORM rust:1.94-bookworm AS observer-ward-builder",
+		"FROM --platform=$BUILDPLATFORM rust:1.94-bookworm AS observer-ward-builder",
 		"git clone --branch \"$OBSERVER_WARD_VERSION\"",
 		"https://github.com/yyhuni/observer_ward_for_luna.git",
 		"OBSERVER_WARD_VERSION=v2026.6.28-lunafox.1",
