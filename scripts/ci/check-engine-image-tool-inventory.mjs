@@ -19,6 +19,8 @@ Options:
   --docker-command PATH          Docker CLI path for runtime checks
   --product-image ID=REF         Verify a built product image has no engine tools
   --engine-image DIRECTORY=REF   Verify a built engine image has its inventory
+  --skip-product-image-source-check
+                              Verify an Engine image payload without private product Dockerfiles
   --require-runtime-images       Require refs for every product and engine image
   -h, --help                     Show this help
 `;
@@ -39,6 +41,7 @@ function parseArgs(argv) {
     dockerCommand: "docker",
     productImages: new Map(),
     engineImages: new Map(),
+    skipProductImageSourceCheck: false,
     requireRuntimeImages: false,
   };
 
@@ -61,7 +64,8 @@ function parseArgs(argv) {
       const [id, ref] = parseBinding(next(), arg);
       if (args.engineImages.has(id)) throw new Error(`duplicate engine image ref: ${id}`);
       args.engineImages.set(id, ref);
-    } else if (arg === "--require-runtime-images") args.requireRuntimeImages = true;
+    } else if (arg === "--skip-product-image-source-check") args.skipProductImageSourceCheck = true;
+    else if (arg === "--require-runtime-images") args.requireRuntimeImages = true;
     else if (arg === "--help" || arg === "-h") {
       process.stdout.write(usage());
       process.exit(0);
@@ -70,6 +74,17 @@ function parseArgs(argv) {
 
   if (!args.inventoryPath) {
     args.inventoryPath = path.join(args.repoRoot, "extensions/engines/container/tool-inventory.json");
+  }
+  if (args.skipProductImageSourceCheck) {
+    if (args.engineImages.size === 0) {
+      throw new Error("--skip-product-image-source-check requires at least one --engine-image");
+    }
+    if (args.productImages.size !== 0) {
+      throw new Error("--skip-product-image-source-check cannot be combined with --product-image");
+    }
+    if (args.requireRuntimeImages) {
+      throw new Error("--skip-product-image-source-check cannot be combined with --require-runtime-images");
+    }
   }
   return args;
 }
@@ -375,7 +390,9 @@ function validateProductImageSources(repoRoot, inventory) {
       }
     }
   }
+}
 
+function validateRetiredWorkerExclusion(repoRoot) {
   if (fs.existsSync(path.join(repoRoot, "worker"))) {
     throw new Error("retired worker/ module must be absent");
   }
@@ -513,9 +530,15 @@ function main() {
     const args = parseArgs(process.argv.slice(2));
     const inventory = loadInventory(args.inventoryPath);
     validateEngineSources(args.repoRoot, inventory);
-    validateProductImageSources(args.repoRoot, inventory);
+    // Public Engine release projections intentionally exclude private Agent source.
+    // Engine-only payload checks still enforce Engine source and retired-Worker boundaries.
+    if (!args.skipProductImageSourceCheck) validateProductImageSources(args.repoRoot, inventory);
+    validateRetiredWorkerExclusion(args.repoRoot);
     validateRuntimeImages(args, inventory);
-    process.stdout.write(`OK: ${inventory.engines.length} engine image inventories and ${inventory.productImages.length} product image exclusions verified\n`);
+    const sourceScope = args.skipProductImageSourceCheck
+      ? "Engine-only runtime payload"
+      : `${inventory.productImages.length} product image exclusions`;
+    process.stdout.write(`OK: ${inventory.engines.length} engine image inventories and ${sourceScope} verified\n`);
   } catch (error) {
     process.stderr.write(`engine image tool inventory verification failed: ${error.message}\n`);
     process.exit(1);
