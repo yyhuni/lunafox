@@ -888,6 +888,14 @@ function assertPublicWorkflow(workflow, policy) {
       !engineSign.includes("registryAuth:\"empty\"")) {
     fail("public Engine Runtime lane must sign, anonymously verify, and retain evidence");
   }
+  const runtimeReceiptStart = engineSign.indexOf("      - name: Attest public Engine Runtime release receipt");
+  const runtimeReceiptEnd = engineSign.indexOf("\n      - uses: actions/upload-artifact@v4", runtimeReceiptStart);
+  const runtimeReceipt = engineSign.slice(runtimeReceiptStart, runtimeReceiptEnd);
+  if (runtimeReceiptStart < 0 || runtimeReceiptEnd < 0 ||
+      !runtimeReceipt.includes("subject-path: dist/public-engine-runtime/build-results.json") ||
+      runtimeReceipt.includes("push-to-registry:")) {
+    fail("public Engine Runtime release receipt must use its file subject without registry delivery");
+  }
   if (!packageBuild.includes("needs: public-engine-runtime-sign") ||
       !packageBuild.includes("-command build-packages") ||
       !packageBuild.includes("-build-results") ||
