@@ -22,23 +22,21 @@ ARG OBSERVER_WARD_COMMIT
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
-      curl \
       git \
-      musl-tools \
+      gcc-aarch64-linux-gnu \
+      libc6-dev-arm64-cross \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
 RUN set -eux; \
     case "$TARGETARCH" in \
       amd64) \
-        target="x86_64-unknown-linux-musl"; \
+        target="x86_64-unknown-linux-gnu"; \
         ;; \
       arm64) \
-        target="aarch64-unknown-linux-musl"; \
-        curl -fsSL https://musl.cc/aarch64-linux-musl-cross.tgz | tar -xz -C /opt; \
-        export PATH="/opt/aarch64-linux-musl-cross/bin:$PATH"; \
-        export CC_aarch64_unknown_linux_musl=aarch64-linux-musl-gcc; \
-        export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc; \
+        target="aarch64-unknown-linux-gnu"; \
+        export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc; \
+        export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc; \
         ;; \
       *) echo "unsupported Observer Ward target architecture: $TARGETARCH" >&2; exit 1 ;; \
     esac; \

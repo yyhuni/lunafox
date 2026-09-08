@@ -205,7 +205,7 @@ describe("NotificationSettingsPageContent channels", () => {
       },
     })
     expect(wecomEditor.getByLabelText("destination.credentialLabel")).toHaveValue("https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=draft")
-    expect(wecomEditor.getByRole("alert")).toHaveTextContent("destination.saveFailed")
+    await waitFor(() => expect(wecomEditor.getByRole("alert")).toHaveTextContent("destination.saveFailed"))
 
     fireEvent.click(screen.getByRole("button", { name: "destination.saveAll" }))
     await waitFor(() => expect(destinationMutation.mutateAsync).toHaveBeenCalledTimes(3))
@@ -233,7 +233,7 @@ describe("NotificationSettingsPageContent channels", () => {
     }))
     expect(destinationMutation.mutateAsync).not.toHaveBeenCalled()
     expect(wecomEditor.getByLabelText("destination.credentialLabel")).toHaveValue(credential)
-    expect(wecomEditor.getByRole("alert")).toHaveTextContent("test.result.unavailable")
+    await waitFor(() => expect(wecomEditor.getByRole("alert")).toHaveTextContent("test.result.unavailable"))
   })
 
   it("tests the current unsaved Feishu draft without normalizing it or persisting it", async () => {
