@@ -3,13 +3,18 @@
 # ============================================
 # Go Server - build
 # ============================================
-FROM golang:1.26 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26 AS builder
 
+ARG TARGETOS=linux
+ARG TARGETARCH
 ARG GO111MODULE=on
 ARG GOPROXY=https://proxy.golang.org,direct
 
-ENV GO111MODULE=$GO111MODULE
-ENV GOPROXY=$GOPROXY
+ENV GO111MODULE=$GO111MODULE \
+    GOPROXY=$GOPROXY \
+    CGO_ENABLED=0 \
+    GOOS=$TARGETOS \
+    GOARCH=$TARGETARCH
 
 WORKDIR /src
 
@@ -32,7 +37,7 @@ COPY extensions/workflows ./extensions/workflows
 # Build (static where possible)
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
-    cd server && CGO_ENABLED=0 go build -o /out/server ./cmd/server
+    cd server && go build -trimpath -o /out/server ./cmd/server
 
 # ============================================
 # Go Server - runtime

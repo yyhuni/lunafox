@@ -1,4 +1,4 @@
-.PHONY: build run test check-ddd check-architecture check-layer-dependencies check-domain-purity check-no-legacy-layer check-dto-selftest check-repo-selftest check-layer-selftest check-wiring-selftest check-guards-selftest check-no-module-httpdto-adapters check-naming-conventions check-mapper-naming check-wiring-conventions lint lint-new clean deps fmt generate check-router-boundaries check-router-selftest check-handler-boundaries check-handler-selftest
+.PHONY: build run test test-short check-ddd check-architecture check-layer-dependencies check-domain-purity check-no-legacy-layer check-dto-selftest check-repo-selftest check-layer-selftest check-wiring-selftest check-guards-selftest check-no-module-httpdto-adapters check-naming-conventions check-mapper-naming check-wiring-conventions lint lint-new clean deps fmt generate check-router-boundaries check-router-selftest check-handler-boundaries check-handler-selftest
 
 # Build the server binary
 build:
@@ -88,6 +88,9 @@ check-no-module-httpdto-adapters:
 # Run tests
 test:
 	go test -v ./...
+
+test-short:
+	go test -short ./...
 
 # Run tests with coverage report
 test-coverage:
