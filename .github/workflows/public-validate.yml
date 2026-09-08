@@ -959,7 +959,9 @@ jobs:
              {schemaVersion:"lunafox.engine-package-v2-publication-evidence.v1",passed:(($observed | map({engineId,packageDigest}) | sort_by(.engineId)) == $expectedPackages),signerIdentity:$context[0].signerIdentity,publicMergeCommit:$context[0].publicMergeCommit,sourceRevisionDigest:$context[0].sourceRevisionDigest,releaseTag:$context[0].releaseTag,publicExportManifestSha256:$context[0].publicExportManifestSha256,publicProvenanceSha256:$context[0].publicProvenanceSha256,expectedEngineIds:$expectedEngineIds,expectedPackages:$expectedPackages,packages:$observed}' "$evidence_root"/records/*.json > "$evidence_root/evidence.json"
           # Compare records to the generated package receipt without allowing
           # an archive digest to stand in for its OCI manifest digest.
-          jq -e --slurpfile receipt dist/public-engine-package-v2/build-results.json '(.packages | length) == ($receipt[0].packages | length) and all(.[]; .registryAuth == "empty" and .digestEqualityVerified and .envelopeVerified and (.artifactManifestDigest | test("^sha256:[a-f0-9]{64}$")))' "$evidence_root/evidence.json" >/dev/null
+          # The evidence file is an object; iterate only its package records,
+          # otherwise metadata strings are treated as records by jq.
+          jq -e --slurpfile receipt dist/public-engine-package-v2/build-results.json '(.packages | length) == ($receipt[0].packages | length) and all(.packages[]; .registryAuth == "empty" and .digestEqualityVerified and .envelopeVerified and (.artifactManifestDigest | test("^sha256:[a-f0-9]{64}$")))' "$evidence_root/evidence.json" >/dev/null
       - uses: actions/upload-artifact@v4
         with:
           name: public-engine-package-evidence-${{ github.sha }}
