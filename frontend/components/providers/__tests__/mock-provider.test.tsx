@@ -3,9 +3,13 @@ import { describe, expect, it, vi } from "vitest"
 
 const startMockWorker = vi.fn(async () => undefined)
 
-vi.mock("@/mock/config", () => ({
-  USE_MOCK: true,
-}))
+vi.mock("@/mock/config", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/mock/config")>()
+  return {
+    ...actual,
+    USE_MOCK: true,
+  }
+})
 
 vi.mock("@/mock/browser", () => ({
   startMockWorker,

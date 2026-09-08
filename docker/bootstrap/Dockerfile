@@ -2,12 +2,17 @@
 
 # This Dockerfile is part of the public Runtime source closure. The resulting
 # image is a one-shot bootstrap runtime that starts the private Agent artifact.
-FROM golang:1.26 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26 AS builder
 
+ARG TARGETOS=linux
+ARG TARGETARCH
 ARG GO111MODULE=on
 ARG GOPROXY=https://proxy.golang.org,direct
-ENV GO111MODULE=$GO111MODULE
-ENV GOPROXY=$GOPROXY
+ENV GO111MODULE=$GO111MODULE \
+    GOPROXY=$GOPROXY \
+    CGO_ENABLED=0 \
+    GOOS=$TARGETOS \
+    GOARCH=$TARGETARCH
 
 WORKDIR /src
 COPY contracts/go.mod contracts/go.sum ./contracts/
@@ -23,7 +28,7 @@ COPY server ./server
 COPY extensions/workflows ./extensions/workflows
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
-    cd server && CGO_ENABLED=0 go build -trimpath -buildvcs=false -o /out/server ./cmd/server
+    cd server && go build -trimpath -buildvcs=false -o /out/server ./cmd/server
 
 FROM docker:28.5.2-cli
 

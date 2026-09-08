@@ -18,6 +18,11 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // @ts-expect-error Vitest InlineConfig type definition omits environmentMatchGlobs
+    environmentMatchGlobs: [
+      ["**/*.contract.test.*", "node"],
+      ["**/*.types.test.*", "node"],
+    ],
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
     include: ["**/*.{test,spec}.{ts,tsx}"],

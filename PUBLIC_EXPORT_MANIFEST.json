@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:52d0cb898cb9b8fe38803117ae550e52ca036679c2e165114115320f7f5a785c",
-  "releaseTag": "v0.0.1-alpha.78",
+  "sourceRevisionDigest": "sha256:d63e91e034878c5f7d941dd51e67f40798d835b52b4350f57693d0fa2b3b0e04",
+  "releaseTag": "v0.0.1-alpha.80",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".github/workflows/public-validate.yml",
@@ -42,7 +42,7 @@
       "type": "file",
       "mode": "0644",
       "size": 430,
-      "sha256": "7f3d71d3af8d5ac61edad517967b747cb48b2f9ca80383ff8c1255efebb86d25"
+      "sha256": "1fe94a361d6698ef5aad7897125662124c45d398ab8877a3a25b7b67aeffffa7"
     },
     {
       "path": "README.md",
@@ -52,49 +52,49 @@
       "sha256": "47239f6a2ca544c43970c5b6446b949aa38dc8d05788f8736b10be57042640cc"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.78/agent-bundle.json",
+      "path": "agent/bin/v0.0.1-alpha.80/agent-bundle.json",
       "type": "file",
       "mode": "0644",
       "size": 2226,
-      "sha256": "117de67f996f8cc559e6db6f59b436e759fa67ce7750d3b58e16e617c1b7238c"
+      "sha256": "be465f567c442fca66d59168d887552049aebe1a825bd6507cbfb965f5105045"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.78/agent-bundle.sha256",
+      "path": "agent/bin/v0.0.1-alpha.80/agent-bundle.sha256",
       "type": "file",
       "mode": "0644",
       "size": 402,
       "sha256": "d38b5306aaaa038e9ba9ab9bf25dd311800142c2c7f8f24ca1ec04a9cecdcb29"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.78/agent-bundle.sigstore.json",
+      "path": "agent/bin/v0.0.1-alpha.80/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
       "size": 9285,
-      "sha256": "f67809112c23b40f9a7ac94449a9404b534da01aedcee2c565eabba0a9ecf47c"
+      "sha256": "2401979b1a4e66d46602d3127fa25d8f519a31b4c80aa5276ede42c6f4255af1"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.78/lunafox-agent-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.80/lunafox-agent-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 23896723,
       "sha256": "5e0f28c1eaff1db1156e541b7ea9957109588516f9f9bf1f4b38af3974499b7d"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.78/lunafox-agent-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.80/lunafox-agent-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 22436260,
       "sha256": "0e5f8d1a883ca6ab81d8c54026dce5c07ffa545edab038d1ec93af890718c322"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.78/lunafox-engine-mount-preflight-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.80/lunafox-engine-mount-preflight-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 20000987,
       "sha256": "2b12a49b754a09e98377c96105c2975a5b48bf6b063eae0b2062ea271e0add2a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.78/lunafox-engine-mount-preflight-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.80/lunafox-engine-mount-preflight-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 18804436,
@@ -909,8 +909,8 @@
       "path": "docker/bootstrap/Dockerfile",
       "type": "file",
       "mode": "0644",
-      "size": 1565,
-      "sha256": "92af6ffa2f2e3eb2915883249c19a07c3b234cd66f258307e761173a652e9ab1"
+      "size": 1679,
+      "sha256": "340af58df74809c9c9babf9b48428fa1e90eb1fffc4e3b00868b71428e62ef93"
     },
     {
       "path": "docker/bootstrap/bootstrap.sh",
@@ -3184,8 +3184,8 @@
       "path": "frontend/Dockerfile",
       "type": "file",
       "mode": "0644",
-      "size": 1897,
-      "sha256": "dd1dcb7630e2325b9c3f1ff9f33f3029af970abf250c35c0c64b433ad8cdd659"
+      "size": 1949,
+      "sha256": "6ca061d0dd039bcab4363d8c89e6b97047d184e32f9ba5a9fe7d8454675448df"
     },
     {
       "path": "frontend/README.md",
@@ -6481,8 +6481,8 @@
       "path": "frontend/components/providers/__tests__/mock-provider.test.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 1352,
-      "sha256": "b1f50784b9d1f4fc48198f47bd6b231c307cda5f571209da01d3e7fa5f6f4358"
+      "size": 1474,
+      "sha256": "9af60886ae2f3cddc1de8f69e8e3897a48f41d8478510f6dabbdcfdacf9a8d48"
     },
     {
       "path": "frontend/components/providers/__tests__/query-provider.contract.test.ts",
@@ -16435,15 +16435,15 @@
       "path": "frontend/vitest.config.ts",
       "type": "file",
       "mode": "0644",
-      "size": 682,
-      "sha256": "5440244559cb977ec500a386a01d5cb9020fbd32ecb20a6a5d69e505c3bdfd76"
+      "size": 883,
+      "sha256": "9755305a81bf3cf45b6cbafaeac4ef003f0003bdc726321697cbd144c0026b2b"
     },
     {
       "path": "frontend/vitest.setup.ts",
       "type": "file",
       "mode": "0644",
-      "size": 2021,
-      "sha256": "9084f64e1085556a6dcec58a8ac2ca6f8cfe7ff11cb292265cd5dae4dd7e7036"
+      "size": 3279,
+      "sha256": "39565118895845d2c86bda249e811e173c907f71d4f8cbc8c3b8c8550b50afd7"
     },
     {
       "path": "install.sh",
@@ -16820,15 +16820,15 @@
       "path": "server/Dockerfile",
       "type": "file",
       "mode": "0644",
-      "size": 1910,
-      "sha256": "24fd310de847b3e6012645310c3f827ac1cd2dcbdb7e7b996db212045029e445"
+      "size": 2034,
+      "sha256": "eb5f7e516219a09c9dc0d7b101dadfd7b0e0784a38585007a0069851681cd728"
     },
     {
       "path": "server/Makefile",
       "type": "file",
       "mode": "0644",
-      "size": 3470,
-      "sha256": "3dbfe07889518ca93937ff0b948bb7b0b6a6aa9917541001b902f6c21364745b"
+      "size": 3516,
+      "sha256": "5365645159cd49a13b7636526944152fa3d25bac025768e2116513997ebf0dc1"
     },
     {
       "path": "server/README.md",

@@ -2,7 +2,7 @@
 # Multi-stage build with BuildKit caching
 
 # ==================== Dependencies stage ====================
-FROM node:24.14.0-alpine AS deps
+FROM --platform=$BUILDPLATFORM node:24.14.0-alpine AS deps
 WORKDIR /app
 
 # Install pnpm (pinned for reproducible builds)
@@ -34,7 +34,7 @@ EXPOSE 3000
 CMD ["pnpm", "dev"]
 
 # ==================== Build stage ====================
-FROM node:24.14.0-alpine AS builder
+FROM --platform=$BUILDPLATFORM node:24.14.0-alpine AS builder
 WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
