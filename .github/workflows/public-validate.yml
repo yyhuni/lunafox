@@ -804,8 +804,8 @@ jobs:
       - name: Attest public Engine Runtime release receipt
         uses: actions/attest-build-provenance@v2
         with:
+          # File attestations use GitHub Attestations; registry delivery only supports OCI image subjects.
           subject-path: dist/public-engine-runtime/build-results.json
-          push-to-registry: true
       - uses: actions/upload-artifact@v4
         with:
           name: public-engine-runtime-evidence-${{ github.sha }}
