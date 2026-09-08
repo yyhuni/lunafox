@@ -588,7 +588,7 @@ jobs:
           cosign sign --yes "$image"
           cosign verify \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-identity-regexp '^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$' \
+            --certificate-identity-regexp '^https://github\.com/yyhuni/lunafox/\.github/workflows/public-validate\.yml@refs/heads/main$' \
             "$image" >/dev/null
       - name: Attest the public Agent image
         uses: actions/attest-build-provenance@v2
@@ -783,7 +783,7 @@ jobs:
               cosign sign --yes "$ref"
               DOCKER_CONFIG="$anonymous_config" cosign verify \
                 --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-                --certificate-identity-regexp '^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$' \
+                --certificate-identity-regexp '^https://github\.com/yyhuni/lunafox/\.github/workflows/public-validate\.yml@refs/heads/main$' \
                 "$ref" > "$signature_file"
               jq -e 'type == "array" and length > 0' "$signature_file" >/dev/null
               DOCKER_CONFIG="$anonymous_config" docker pull "$ref" >/dev/null
@@ -938,7 +938,7 @@ jobs:
               cosign sign --yes "$ref"
               DOCKER_CONFIG="$anonymous_config" cosign verify \
                 --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-                --certificate-identity-regexp '^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$' \
+                --certificate-identity-regexp '^https://github\.com/yyhuni/lunafox/\.github/workflows/public-validate\.yml@refs/heads/main$' \
                 "$ref" > "$signature_file"
               jq -e 'type == "array" and length > 0' "$signature_file" >/dev/null
               descriptor_file="$evidence_root/descriptors/${engine_id//[^A-Za-z0-9_.-]/_}-${registry_label}.json"
@@ -1218,7 +1218,7 @@ jobs:
               cosign sign --yes "$ref"
               DOCKER_CONFIG="$anonymous_config" cosign verify \
                 --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-                --certificate-identity-regexp '^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$' \
+                --certificate-identity-regexp '^https://github\.com/yyhuni/lunafox/\.github/workflows/public-validate\.yml@refs/heads/main$' \
                 "$ref" > "dist/final/signatures/${component}-${registry//./_}.json"
               jq -e 'type == "array" and length > 0' "dist/final/signatures/${component}-${registry//./_}.json" >/dev/null
             done

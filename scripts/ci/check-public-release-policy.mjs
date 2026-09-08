@@ -875,10 +875,15 @@ function assertPublicWorkflow(workflow, policy) {
       !engineBuild.includes("packages: write")) {
     fail("public Engine Runtime build must use the validated production publisher and public registry permissions");
   }
+  const publicCosignIdentityRegexp = "'^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$'";
+  const overescapedPublicCosignIdentityRegexp = "'^https://github\\\\.com/yyhuni/lunafox/\\\\.github/workflows/public-validate\\\\.yml@refs/heads/main$'";
+  if (workflow.includes(overescapedPublicCosignIdentityRegexp) || countOccurrences(workflow, publicCosignIdentityRegexp) !== 4) {
+    fail("public workflow must pass the exact single-escaped main workflow identity to cosign");
+  }
   if (!engineSign.includes("needs: public-engine-runtime-build") ||
       !engineSign.includes("cosign sign --yes") ||
       !engineSign.includes("cosign verify") ||
-      !engineSign.includes("public-validate\\\\.yml@refs/heads/main") ||
+      !engineSign.includes("public-validate\\.yml@refs/heads/main") ||
       !engineSign.includes("public-engine-runtime-evidence-") ||
       !engineSign.includes("registryAuth:\"empty\"")) {
     fail("public Engine Runtime lane must sign, anonymously verify, and retain evidence");
