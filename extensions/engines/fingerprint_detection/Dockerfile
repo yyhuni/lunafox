@@ -15,13 +15,14 @@ ARG GOPROXY=https://proxy.golang.org,direct
 # Build Observer Ward for the target architecture from the immutable LunaFox
 # fork tag. The peeled commit check prevents an annotated tag from silently
 # moving.
-FROM --platform=$TARGETPLATFORM rust:1.94-bookworm AS observer-ward-builder
+FROM --platform=$BUILDPLATFORM rust:1.94-bookworm AS observer-ward-builder
 ARG TARGETARCH
 ARG OBSERVER_WARD_VERSION
 ARG OBSERVER_WARD_COMMIT
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
+      curl \
       git \
       musl-tools \
     && rm -rf /var/lib/apt/lists/*
@@ -29,8 +30,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /src
 RUN set -eux; \
     case "$TARGETARCH" in \
-      amd64) target="x86_64-unknown-linux-musl" ;; \
-      arm64) target="aarch64-unknown-linux-musl" ;; \
+      amd64) \
+        target="x86_64-unknown-linux-musl"; \
+        ;; \
+      arm64) \
+        target="aarch64-unknown-linux-musl"; \
+        curl -fsSL https://musl.cc/aarch64-linux-musl-cross.tgz | tar -xz -C /opt; \
+        export PATH="/opt/aarch64-linux-musl-cross/bin:$PATH"; \
+        export CC_aarch64_unknown_linux_musl=aarch64-linux-musl-gcc; \
+        export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-musl-gcc; \
+        ;; \
       *) echo "unsupported Observer Ward target architecture: $TARGETARCH" >&2; exit 1 ;; \
     esac; \
     git clone --branch "$OBSERVER_WARD_VERSION" --depth=1 \
