@@ -914,6 +914,10 @@ function assertPublicWorkflow(workflow, policy) {
       !packagePublish.includes("public-engine-package-digests")) {
     fail("public Engine Package lane must publish, sign, verify, and retain digest evidence");
   }
+  const packageEvidenceValidation = 'all(.packages[]; .registryAuth == "empty" and .digestEqualityVerified and .envelopeVerified and (.artifactManifestDigest | test("^sha256:[a-f0-9]{64}$")))';
+  if (!packagePublish.includes(packageEvidenceValidation) || packagePublish.includes('all(.[]; .registryAuth == "empty"')) {
+    fail("public Engine Package lane must validate each package evidence record");
+  }
   if (!engineManifest.includes("needs: public-engine-package-publish") ||
       !engineManifest.includes("engine-release-manifest.json") ||
       !engineManifest.includes("verify-public-engine-release.mjs") ||
