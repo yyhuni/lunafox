@@ -596,7 +596,7 @@ function historyRecordKind(record, policy) {
   return { kind: "generated", tag: subject.match(generatedTagPattern)?.[1] ?? "" };
 }
 
-function validateFreshGitHistory(root, policy, expectedTag = "") {
+function validateFreshGitHistory(root, policy, expectedTag = "", { allowExistingPublicTags = false } = {}) {
   const log = runGit(root, [
     "log",
     "--format=%H%x00%P%x00%an%x00%ae%x00%cn%x00%ce%x00%s",
@@ -636,7 +636,10 @@ function validateFreshGitHistory(root, policy, expectedTag = "") {
   if (rootCount !== 1) fail(`public history must contain exactly one root commit, found ${rootCount}`);
   const refs = runGit(root, ["for-each-ref", "--format=%(refname)"]).trim().split("\n").filter(Boolean);
   for (const ref of refs) {
-    if (ref.startsWith("refs/tags/") || ref.startsWith("refs/heads/private/")) {
+    // Fresh exporter output must not carry source tags. A public workflow
+    // checkout legitimately retains historical public release tags, so only
+    // that verifier opts into accepting them.
+    if (ref.startsWith("refs/heads/private/") || (!allowExistingPublicTags && ref.startsWith("refs/tags/"))) {
       fail(`public export contains private ref: ${ref}`);
     }
   }

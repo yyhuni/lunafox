@@ -199,7 +199,7 @@ function validatePublicExport(options) {
   }
   const findings = scanExportTree(repoRoot, policy);
   if (findings.length > 0) fail(`public secret scan failed: ${JSON.stringify(findings)}`);
-  validateFreshGitHistory(repoRoot, policy.git, manifest.releaseTag);
+  validateFreshGitHistory(repoRoot, policy.git, manifest.releaseTag, { allowExistingPublicTags: true });
 
   const result = {
     schemaVersion: 1,

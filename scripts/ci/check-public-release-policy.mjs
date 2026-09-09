@@ -35,7 +35,9 @@ const DESTINATION_APP_JOBS = [
   "request-public-export-auto-merge",
 ];
 const PUBLIC_ENGINE_JOBS = [
+  "public-engine-runtime-discover",
   "public-engine-runtime-build",
+  "public-engine-runtime-aggregate",
   "public-engine-runtime-sign",
   "public-engine-package-build",
   "public-engine-package-publish",
@@ -848,7 +850,9 @@ function assertPublicWorkflow(workflow, policy) {
     fail("public main policy must disable direct and force pushes");
   }
 
+  const engineDiscovery = jobBlock(workflow, "public-engine-runtime-discover");
   const engineBuild = jobBlock(workflow, "public-engine-runtime-build");
+  const engineAggregate = jobBlock(workflow, "public-engine-runtime-aggregate");
   const engineSign = jobBlock(workflow, "public-engine-runtime-sign");
   const packageBuild = jobBlock(workflow, "public-engine-package-build");
   const packagePublish = jobBlock(workflow, "public-engine-package-publish");
@@ -862,26 +866,59 @@ function assertPublicWorkflow(workflow, policy) {
     }
     assertGitHubHostedRunner(block, name);
   }
-  for (const [name, block] of [["public Engine Runtime build", engineBuild], ["public Engine Runtime sign", engineSign], ["public Engine Package build", packageBuild], ["public Engine Package publish", packagePublish], ["public Engine release manifest", engineManifest]]) {
+  for (const [name, block] of [["public Engine Runtime discovery", engineDiscovery], ["public Engine Runtime build", engineBuild], ["public Engine Runtime aggregate", engineAggregate], ["public Engine Runtime sign", engineSign], ["public Engine Package build", packageBuild], ["public Engine Package publish", packagePublish], ["public Engine release manifest", engineManifest]]) {
     if (/agent\/|lunafox-private|PRIVATE_TRUSTED_RUNNER|GITHUB_PAT|COSIGN_PRIVATE_KEY/.test(block)) {
       fail(`${name} must not contain private Agent/release authority`);
     }
   }
-  if (!engineBuild.includes("needs: public-validation") ||
-      !engineBuild.includes("public-engine-runtime-build") ||
+  if (!engineDiscovery.includes("needs: public-validation") ||
+      !engineDiscovery.includes("outputs:") ||
+      !engineDiscovery.includes("steps.matrix.outputs.matrix") ||
+      !engineDiscovery.includes("-command discover") ||
+      !engineDiscovery.includes("PUBLIC_PROVENANCE.json") ||
+      !engineDiscovery.includes("PUBLIC_EXPORT_MANIFEST.json") ||
+      !engineDiscovery.includes("public-engine-runtime-discovery-") ||
+      engineDiscovery.includes("packages: write") ||
+      engineDiscovery.includes("environment: public-engine-release")) {
+    fail("public Engine Runtime discovery must source-bind and emit the dynamic matrix without publication authority");
+  }
+  if (!engineBuild.includes("needs: public-engine-runtime-discover") ||
+      !engineBuild.includes("strategy:") ||
+      !engineBuild.includes("fail-fast: true") ||
+      !engineBuild.includes("max-parallel: 3") ||
+      !engineBuild.includes("fromJSON(needs.public-engine-runtime-discover.outputs.matrix)") ||
+      !engineBuild.includes("ENGINE_RELEASE_ENGINE_ID") ||
+      !engineBuild.includes("matrix.engineId") ||
+      !engineBuild.includes("public-engine-runtime-shard-") ||
       !engineBuild.includes("publish-engine-runtime-images.sh") ||
       !engineBuild.includes("ENGINE_RELEASE_MODE: production") ||
       !engineBuild.includes("ENGINE_REUSE_EXISTING: true") ||
       !engineBuild.includes("LUNAFOX_CANONICAL_NAMESPACE: yyhuni") ||
       !engineBuild.includes("packages: write")) {
-    fail("public Engine Runtime build must use the validated production publisher and public registry permissions");
+    fail("public Engine Runtime build must use a bounded source-derived matrix and the validated production publisher");
+  }
+  if (/continue-on-error\s*:/.test(engineBuild) || /fail-fast\s*:\s*false/.test(engineBuild)) {
+    fail("public Engine Runtime matrix must fail fast without optional children");
+  }
+  if (!engineAggregate.includes("needs: [public-engine-runtime-discover, public-engine-runtime-build]") ||
+      !engineAggregate.includes("aggregate-engine-runtime-image-shards.sh") ||
+      !engineAggregate.includes("ENGINE_RUNTIME_IMAGE_DISCOVERY") ||
+      !engineAggregate.includes("ENGINE_RUNTIME_IMAGE_SHARDS_ROOT") ||
+      !engineAggregate.includes("ENGINE_RUNTIME_IMAGE_AGGREGATE_OUTPUT_ROOT") ||
+      !engineAggregate.includes("pattern: public-engine-runtime-shard-") ||
+      !engineAggregate.includes("merge-multiple: false") ||
+      !engineAggregate.includes("name: public-engine-runtime-build-")) {
+    fail("public Engine Runtime aggregate must strictly restore the complete receipt from every shard");
+  }
+  if (/packages:\s*write|id-token:\s*write|attestations:\s*write|environment:\s*public-engine-release|docker\/login-action|cosign /.test(engineAggregate)) {
+    fail("public Engine Runtime aggregate must not receive publishing or signing authority");
   }
   const publicCosignIdentityRegexp = "'^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$'";
   const overescapedPublicCosignIdentityRegexp = "'^https://github\\\\.com/yyhuni/lunafox/\\\\.github/workflows/public-validate\\\\.yml@refs/heads/main$'";
   if (workflow.includes(overescapedPublicCosignIdentityRegexp) || countOccurrences(workflow, publicCosignIdentityRegexp) !== 4) {
     fail("public workflow must pass the exact single-escaped main workflow identity to cosign");
   }
-  if (!engineSign.includes("needs: public-engine-runtime-build") ||
+  if (!engineSign.includes("needs: public-engine-runtime-aggregate") ||
       !engineSign.includes("cosign sign --yes") ||
       !engineSign.includes("cosign verify") ||
       !engineSign.includes("public-validate\\.yml@refs/heads/main") ||

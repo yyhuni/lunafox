@@ -11,6 +11,7 @@ MODE="${ENGINE_RELEASE_MODE:-development}"
 VERSION="${ENGINE_VERSION:-}"
 OUTPUT="${ENGINE_IMAGE_BUILD_RESULTS:-$ROOT_DIR/dist/engine-runtime-images/build-results.json}"
 EVIDENCE_ROOT="${ENGINE_RUNTIME_IMAGE_EVIDENCE_ROOT:-$(dirname "$OUTPUT")/registry-evidence}"
+SELECTED_ENGINE_ID="${ENGINE_RELEASE_ENGINE_ID:-}"
 REGISTRY_PUBLIC_HOST="${ENGINE_REGISTRY_PUBLIC_HOST:-localhost:${ENGINE_REGISTRY_PUBLIC_PORT:-5000}}"
 REGISTRY_PUBLISHER_HOST="${ENGINE_REGISTRY_PUBLISHER_HOST:-$REGISTRY_PUBLIC_HOST}"
 REGISTRY_TRANSPORT_HOST="${ENGINE_REGISTRY_TRANSPORT_HOST:-$REGISTRY_PUBLIC_HOST}"
@@ -39,6 +40,8 @@ Environment:
   ENGINE_IMAGE_BUILD_RESULTS  Output build-result JSON path
   ENGINE_RUNTIME_IMAGE_EVIDENCE_ROOT
                               Production raw descriptor evidence directory
+  ENGINE_RELEASE_ENGINE_ID    Optional canonical Engine ID; emits one verified
+                              Runtime Image receipt and evidence shard
   ENGINE_REGISTRY_PUBLIC_HOST Host-reachable dev Registry (default localhost:5000)
   ENGINE_REGISTRY_PUBLISHER_HOST
                               Publisher-process Registry endpoint; defaults to public host
@@ -335,12 +338,21 @@ docker buildx inspect "$BUILDER_NAME" --bootstrap >/dev/null
 discovery_bin="$tmp_dir/engine-release"
 (cd "$ROOT_DIR/tools/engine-release" && go build -trimpath -buildvcs=false -o "$discovery_bin" .)
 discovery="$tmp_dir/discovery.json"
-"$discovery_bin" -command discover -engine-root "$ENGINE_ROOT" -output "$discovery"
+discovery_args=(-command discover -engine-root "$ENGINE_ROOT" -output "$discovery")
+if [ -n "$SELECTED_ENGINE_ID" ]; then
+	# The release tool validates this against the full canonical discovery before
+	# any image build starts; the shell never owns a handwritten Engine set.
+	discovery_args+=(-engine-id "$SELECTED_ENGINE_ID")
+fi
+"$discovery_bin" "${discovery_args[@]}"
 
 records_dir="$tmp_dir/records"
 mkdir -p "$records_dir"
 engine_count="$(jq '.engines | length' "$discovery")"
 [ "$engine_count" -gt 0 ] || fail "discovery found no engines"
+if [ -n "$SELECTED_ENGINE_ID" ]; then
+	[ "$engine_count" -eq 1 ] || fail "selected Engine discovery must contain exactly one Engine"
+fi
 
 while IFS=$'\t' read -r engine_id directory dockerfile build_context repository; do
 	[ -n "$engine_id" ] || fail "discovery returned an empty engineId"
@@ -523,5 +535,9 @@ jq -s --arg schema 'lunafox.engine-runtime-image-build-results.v1' --arg mode "$
 	'{schemaVersion:$schema,mode:$mode,engines:(sort_by(.engineId))}' \
 	"$records_dir"/*.json >"$OUTPUT"
 
-"$discovery_bin" -command validate-build-results -engine-root "$ENGINE_ROOT" -build-results "$OUTPUT" -mode "$MODE" >/dev/null
+validation_args=(-command validate-build-results -engine-root "$ENGINE_ROOT" -build-results "$OUTPUT" -mode "$MODE")
+if [ -n "$SELECTED_ENGINE_ID" ]; then
+	validation_args+=(-engine-id "$SELECTED_ENGINE_ID")
+fi
+"$discovery_bin" "${validation_args[@]}" >/dev/null
 echo "wrote verified Engine Runtime Image build results: $OUTPUT"

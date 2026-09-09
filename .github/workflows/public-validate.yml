@@ -637,20 +637,20 @@ jobs:
           if-no-files-found: error
 
   # Protected-main Engine publication is intentionally separate from the
-  # public Runtime component matrix. It has public Engine registry credentials
-  # only; no Agent, product, or private release authority is available here.
-  public-engine-runtime-build:
+  # public Runtime component matrix. Discovery is the source-bound membership
+  # authority; only its selected matrix children receive Registry credentials.
+  public-engine-runtime-discover:
     if: >-
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main'
-    name: Build Public Engine Runtime Images
+    name: Discover Public Engine Runtime Image Matrix
     needs: public-validation
     runs-on: ubuntu-22.04
-    environment: public-engine-release
     permissions:
       contents: read
-      packages: write
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
     defaults:
       run:
         shell: bash
@@ -663,6 +663,7 @@ jobs:
         run: |
           set -euo pipefail
           test -f PUBLIC_PROVENANCE.json
+          test -f PUBLIC_EXPORT_MANIFEST.json
           generated_read_only="$(jq -r '.generatedReadOnly // false' PUBLIC_PROVENANCE.json)"
           source_repository="$(jq -r '.sourceRepository // empty' PUBLIC_PROVENANCE.json)"
           destination_repository="$(jq -r '.destinationRepository // empty' PUBLIC_PROVENANCE.json)"
@@ -680,6 +681,99 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: tools/engine-release/go.mod
+      - id: matrix
+        name: Discover source-bound Engine matrix
+        run: |
+          set -euo pipefail
+          mkdir -p dist/public-engine-runtime-discovery
+          (cd tools/engine-release && go run . \
+            -command discover \
+            -engine-root "$GITHUB_WORKSPACE/extensions/engines" \
+            -output "$GITHUB_WORKSPACE/dist/public-engine-runtime-discovery/discovery.json")
+          jq -ce '
+            .engines as $engines |
+            if ($engines | type != "array" or length == 0) then
+              error("discovery contains no Engines")
+            else
+              ($engines | map(
+                .engineId as $engineId |
+                if ($engineId | test("^engine\\.lunafox\\.[a-z][a-z0-9_]*$")) then . else error("non-canonical Engine ID") end |
+                {engineId:$engineId,artifactKey:($engineId | gsub("[^A-Za-z0-9_.-]"; "_"))}
+              )) as $entries |
+              if (($entries | map(.artifactKey) | unique | length) != ($entries | length)) then
+                error("Engine artifact keys must be unique")
+              else
+                {include:$entries}
+              end
+            end
+          ' dist/public-engine-runtime-discovery/discovery.json \
+            | tee dist/public-engine-runtime-discovery/matrix.json
+          echo "matrix=$(jq -c . dist/public-engine-runtime-discovery/matrix.json)" >> "$GITHUB_OUTPUT"
+      - name: Write source-bound Engine release context
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg releaseTag "${{ steps.source.outputs.release_tag }}" \
+            --arg publicMergeCommit "$GITHUB_SHA" \
+            --arg sourceRevisionDigest "${{ steps.source.outputs.source_revision_digest }}" \
+            --arg publicExportManifestSha256 "${{ steps.source.outputs.public_export_manifest_sha256 }}" \
+            --arg publicProvenanceSha256 "${{ steps.source.outputs.public_provenance_sha256 }}" \
+            --arg signerIdentity "https://github.com/yyhuni/lunafox/.github/workflows/public-validate.yml@refs/heads/main" \
+            '{schemaVersion:"lunafox.engine-release-context.v1",releaseTag:$releaseTag,publicMergeCommit:$publicMergeCommit,sourceRevisionDigest:$sourceRevisionDigest,publicExportManifestSha256:$publicExportManifestSha256,publicProvenanceSha256:$publicProvenanceSha256,signerIdentity:$signerIdentity}' \
+            > dist/public-engine-runtime-discovery/release-context.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-engine-runtime-discovery-${{ github.sha }}
+          path: dist/public-engine-runtime-discovery/**
+          if-no-files-found: error
+
+  public-engine-runtime-build:
+    if: >-
+      github.repository == 'yyhuni/lunafox' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    name: Build Public Engine Runtime Image (${{ matrix.engineId }})
+    needs: public-engine-runtime-discover
+    runs-on: ubuntu-22.04
+    environment: public-engine-release
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      max-parallel: 3
+      matrix: ${{ fromJSON(needs.public-engine-runtime-discover.outputs.matrix) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-engine-runtime-discovery-${{ github.sha }}
+          path: dist
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/engine-release/go.mod
+      - name: Verify selected Engine against source-bound discovery
+        run: |
+          set -euo pipefail
+          current_discovery="$(mktemp)"
+          trap 'rm -f "$current_discovery"' EXIT
+          (cd tools/engine-release && go run . \
+            -command discover \
+            -engine-root "$GITHUB_WORKSPACE/extensions/engines" \
+            -output "$current_discovery")
+          cmp -s dist/public-engine-runtime-discovery/discovery.json "$current_discovery"
+          jq -e \
+            --arg engineId "${{ matrix.engineId }}" \
+            --arg artifactKey "${{ matrix.artifactKey }}" '
+              [.engines[] | select(.engineId == $engineId)] as $selected |
+              ($selected | length) == 1 and
+              $artifactKey == ($engineId | gsub("[^A-Za-z0-9_.-]"; "_"))
+            ' dist/public-engine-runtime-discovery/discovery.json >/dev/null
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: oras-project/setup-oras@v1
@@ -693,13 +787,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
-      - name: Build and publish the complete public Engine image set once
+      - name: Build and publish the selected public Engine image once
         env:
           ENGINE_RELEASE_MODE: production
-          ENGINE_VERSION: ${{ steps.source.outputs.release_tag != '' && steps.source.outputs.release_tag || '' }}
+          ENGINE_RELEASE_ENGINE_ID: ${{ matrix.engineId }}
           ENGINE_IMAGE_TAG: public-${{ github.sha }}
-          ENGINE_IMAGE_BUILD_RESULTS: ${{ github.workspace }}/dist/public-engine-runtime/build-results.json
-          ENGINE_RUNTIME_IMAGE_EVIDENCE_ROOT: ${{ github.workspace }}/dist/public-engine-runtime/registry-evidence
+          ENGINE_IMAGE_BUILD_RESULTS: ${{ github.workspace }}/dist/public-engine-runtime-shard/build-results.json
+          ENGINE_RUNTIME_IMAGE_EVIDENCE_ROOT: ${{ github.workspace }}/dist/public-engine-runtime-shard/registry-evidence
           ENGINE_IMAGE_SOURCE: https://github.com/yyhuni/lunafox
           ENGINE_REUSE_EXISTING: true
           DOCKERHUB_NAMESPACE: yyhuni
@@ -707,18 +801,56 @@ jobs:
           LUNAFOX_CANONICAL_NAMESPACE: yyhuni
         run: |
           set -euo pipefail
-          release_tag="${{ steps.source.outputs.release_tag }}"
+          release_tag="$(jq -er '.releaseTag' dist/public-engine-runtime-discovery/release-context.json)"
           ENGINE_VERSION="${release_tag#v}" \
-          bash scripts/ci/publish-engine-runtime-images.sh
-          jq -n \
-            --arg releaseTag "$release_tag" \
-            --arg publicMergeCommit "$GITHUB_SHA" \
-            --arg sourceRevisionDigest "${{ steps.source.outputs.source_revision_digest }}" \
-            --arg publicExportManifestSha256 "${{ steps.source.outputs.public_export_manifest_sha256 }}" \
-            --arg publicProvenanceSha256 "${{ steps.source.outputs.public_provenance_sha256 }}" \
-            --arg signerIdentity "https://github.com/yyhuni/lunafox/.github/workflows/public-validate.yml@refs/heads/main" \
-            '{schemaVersion:"lunafox.engine-release-context.v1",releaseTag:$releaseTag,publicMergeCommit:$publicMergeCommit,sourceRevisionDigest:$sourceRevisionDigest,publicExportManifestSha256:$publicExportManifestSha256,publicProvenanceSha256:$publicProvenanceSha256,signerIdentity:$signerIdentity}' \
-            > dist/public-engine-runtime/release-context.json
+            bash scripts/ci/publish-engine-runtime-images.sh
+          test "$(jq -er '.engines | length' dist/public-engine-runtime-shard/build-results.json)" = 1
+          test "$(jq -er '.engines[0].engineId' dist/public-engine-runtime-shard/build-results.json)" = "${{ matrix.engineId }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-engine-runtime-shard-${{ github.sha }}-${{ matrix.artifactKey }}
+          path: dist/public-engine-runtime-shard/**
+          if-no-files-found: error
+
+  public-engine-runtime-aggregate:
+    if: >-
+      github.repository == 'yyhuni/lunafox' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    name: Aggregate Public Engine Runtime Image Receipts
+    needs: [public-engine-runtime-discover, public-engine-runtime-build]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-engine-runtime-discovery-${{ github.sha }}
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: public-engine-runtime-shard-${{ github.sha }}-*
+          path: dist/public-engine-runtime-shards
+          merge-multiple: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/engine-release/go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Verify shard coverage and restore the complete Runtime Image receipt
+        env:
+          ENGINE_RELEASE_MODE: production
+          ENGINE_ROOT: ${{ github.workspace }}/extensions/engines
+          ENGINE_RUNTIME_IMAGE_DISCOVERY: ${{ github.workspace }}/dist/public-engine-runtime-discovery/discovery.json
+          ENGINE_RUNTIME_IMAGE_RELEASE_CONTEXT: ${{ github.workspace }}/dist/public-engine-runtime-discovery/release-context.json
+          ENGINE_RUNTIME_IMAGE_SHARDS_ROOT: ${{ github.workspace }}/dist/public-engine-runtime-shards
+          ENGINE_RUNTIME_IMAGE_AGGREGATE_OUTPUT_ROOT: ${{ github.workspace }}/dist/public-engine-runtime
+        run: bash scripts/ci/aggregate-engine-runtime-image-shards.sh
       - uses: actions/upload-artifact@v4
         with:
           name: public-engine-runtime-build-${{ github.sha }}
@@ -731,7 +863,7 @@ jobs:
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main'
     name: Sign Public Engine Runtime Images
-    needs: public-engine-runtime-build
+    needs: public-engine-runtime-aggregate
     runs-on: ubuntu-22.04
     environment: public-engine-release
     permissions:

@@ -14,6 +14,7 @@ import (
 func main() {
 	command := flag.String("command", "", "discover, validate-build-results, build-packages, validate-package-build-results, or validate-package-artifacts")
 	engineRoot := flag.String("engine-root", "./extensions/engines", "builtin engine source root")
+	engineID := flag.String("engine-id", "", "optional canonical Engine selection for discover and validate-build-results")
 	resultsPath := flag.String("build-results", "", "verified runtime image build results JSON")
 	packageResultsPath := flag.String("package-build-results", "", "Engine Package build results JSON")
 	previousPackageResultsPath := flag.String("previous-package-build-results", "", "optional previous Engine Package build results JSON")
@@ -23,13 +24,13 @@ func main() {
 	output := flag.String("output", "", "optional JSON output path; stdout by default")
 	flag.Parse()
 
-	if err := runCommand(*command, *engineRoot, *resultsPath, *packageResultsPath, *previousPackageResultsPath, *engineVersion, *outRoot, *mode, *output, os.Stdout); err != nil {
+	if err := runCommand(*command, *engineRoot, *engineID, *resultsPath, *packageResultsPath, *previousPackageResultsPath, *engineVersion, *outRoot, *mode, *output, os.Stdout); err != nil {
 		log.Print(err)
 		os.Exit(1)
 	}
 }
 
-func runCommand(command, engineRoot, resultsPath, packageResultsPath, previousPackageResultsPath, version, outRoot, expectedMode, outputPath string, stdout io.Writer) error {
+func runCommand(command, engineRoot, selectedEngineID, resultsPath, packageResultsPath, previousPackageResultsPath, version, outRoot, expectedMode, outputPath string, stdout io.Writer) error {
 	command = strings.TrimSpace(command)
 	if command == "" {
 		return fmt.Errorf("-command is required")
@@ -40,12 +41,19 @@ func runCommand(command, engineRoot, resultsPath, packageResultsPath, previousPa
 		if err != nil {
 			return err
 		}
+		discovery, err = selectEngineDiscovery(discovery, selectedEngineID)
+		if err != nil {
+			return err
+		}
 		payload, err := encodeDiscovery(discovery)
 		if err != nil {
 			return err
 		}
 		return writeCommandOutput(outputPath, payload, stdout)
 	case "validate-package-build-results":
+		if err := rejectSelectedEngineForPackageCommand(command, selectedEngineID); err != nil {
+			return err
+		}
 		packageResults, err := readPackageBuildResults(packageResultsPath)
 		if err != nil {
 			return err
@@ -68,9 +76,20 @@ func runCommand(command, engineRoot, resultsPath, packageResultsPath, previousPa
 		}
 		return writeCommandOutput(outputPath, append(payload, '\n'), stdout)
 	case "validate-build-results", "build-packages", "validate-package-artifacts":
+		if command != "validate-build-results" {
+			if err := rejectSelectedEngineForPackageCommand(command, selectedEngineID); err != nil {
+				return err
+			}
+		}
 		discovery, err := discoverEngineSources(engineRoot)
 		if err != nil {
 			return err
+		}
+		if command == "validate-build-results" {
+			discovery, err = selectEngineDiscovery(discovery, selectedEngineID)
+			if err != nil {
+				return err
+			}
 		}
 		if strings.TrimSpace(resultsPath) == "" {
 			return fmt.Errorf("-build-results is required")
@@ -132,6 +151,29 @@ func runCommand(command, engineRoot, resultsPath, packageResultsPath, previousPa
 	default:
 		return fmt.Errorf("unsupported -command %q", command)
 	}
+}
+
+func selectEngineDiscovery(discovery Discovery, selectedEngineID string) (Discovery, error) {
+	if selectedEngineID == "" {
+		return discovery, nil
+	}
+	if strings.TrimSpace(selectedEngineID) != selectedEngineID {
+		return Discovery{}, fmt.Errorf("-engine-id must be a canonical discovered engineId without surrounding whitespace")
+	}
+	for _, source := range discovery.Engines {
+		if source.EngineID == selectedEngineID {
+			discovery.Engines = []EngineSource{source}
+			return discovery, nil
+		}
+	}
+	return Discovery{}, fmt.Errorf("-engine-id %q is not a canonical discovered engineId", selectedEngineID)
+}
+
+func rejectSelectedEngineForPackageCommand(command, selectedEngineID string) error {
+	if selectedEngineID == "" {
+		return nil
+	}
+	return fmt.Errorf("-engine-id is only supported by discover and validate-build-results; %s requires the complete discovered Engine set", command)
 }
 
 func readPackageBuildResults(path string) (PackageBuildResults, error) {
