@@ -330,6 +330,14 @@ function validateNucleiReleasePin(instructions, dockerfile, engine) {
   }
 }
 
+function validateScreenshotChromiumDownload(instructions, dockerfile, engine) {
+  if (engine.engineId !== "engine.lunafox.screenshot") return;
+  const retryCommand = 'apt-get -o Acquire::Retries=3 download "chromium=${CHROMIUM_PACKAGE_VERSION}" "chromium-common=${CHROMIUM_PACKAGE_VERSION}"';
+  if (!instructionContains(instructions, retryCommand)) {
+    throw new Error(`${dockerfile} must use bounded APT retries when downloading the pinned Chromium packages`);
+  }
+}
+
 function validateEngineSources(repoRoot, inventory) {
   const inventoryDirectories = inventory.engines.map((engine) => engine.directory).sort();
   const discoveredDirectories = discoverEngineDirectories(repoRoot);
@@ -348,6 +356,7 @@ function validateEngineSources(repoRoot, inventory) {
     }
     assertDockerfileUsesSourceOwnedConformance(instructions, dockerfile, engine);
     validateNucleiReleasePin(instructions, dockerfile, engine);
+    validateScreenshotChromiumDownload(instructions, dockerfile, engine);
     validateURLCollectionPythonLock(repoRoot, dockerfile, instructions, engine);
 
     const assigned = new Map(engine.tools.map((tool) => [tool.name, tool]));

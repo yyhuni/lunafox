@@ -853,6 +853,7 @@ function assertPublicWorkflow(workflow, policy) {
   const packageBuild = jobBlock(workflow, "public-engine-package-build");
   const packagePublish = jobBlock(workflow, "public-engine-package-publish");
   const engineManifest = jobBlock(workflow, "public-engine-release-manifest");
+  const finalRelease = jobBlock(workflow, "publish-final-release");
   for (const [name, block] of PUBLIC_ENGINE_JOBS.map((name) => [name, jobBlock(workflow, name)])) {
     if (!block.includes("github.repository == 'yyhuni/lunafox'") ||
         !block.includes("github.event_name == 'push'") ||
@@ -918,11 +919,26 @@ function assertPublicWorkflow(workflow, policy) {
   if (!packagePublish.includes(packageEvidenceValidation) || packagePublish.includes('all(.[]; .registryAuth == "empty"')) {
     fail("public Engine Package lane must validate each package evidence record");
   }
+  const packageEvidenceRecordProjection = 'map({engineId,packageDigest,artifactManifestDigest,candidates,registryAuth,digestEqualityVerified,envelopeVerified})';
+  if (!packagePublish.includes(packageEvidenceRecordProjection)) {
+    fail("public Engine Package lane must retain registry verification evidence in aggregate records");
+  }
   if (!engineManifest.includes("needs: public-engine-package-publish") ||
       !engineManifest.includes("engine-release-manifest.json") ||
       !engineManifest.includes("verify-public-engine-release.mjs") ||
       !engineManifest.includes("name: public-engine-release")) {
     fail("public Engine lane must publish an independently verified manifest handoff");
+  }
+  if (!finalRelease.includes('node scripts/ci/check-public-channel.mjs --root-dir "$channel_root"') ||
+      finalRelease.includes("check-public-channel.mjs --root-dir \"$channel_root\" --require-first-release")) {
+    fail("public final release must validate the actual append-only channel without requiring an absent historical first record");
+  }
+  if (!finalRelease.includes("final tag cross-registry drift") ||
+      !finalRelease.includes("reused_final_tag=true") ||
+      !finalRelease.includes("REUSED_FINAL_TAG") ||
+      !finalRelease.includes('DOCKER_CONFIG="$anonymous_config" cosign verify') ||
+      !finalRelease.includes('"^https://github\\\\.com/yyhuni/lunafox/\\\\.github/workflows/public-validate\\\\.yml@refs/heads/main$"')) {
+    fail("public final release must anonymously verify and reuse a consistent immutable final tag on a maintenance retry");
   }
 }
 

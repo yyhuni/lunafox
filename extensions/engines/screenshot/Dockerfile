@@ -94,7 +94,8 @@ LABEL org.opencontainers.image.source="${ENGINE_IMAGE_SOURCE}" \
 ENV PATH=/opt/lunafox-tools/bin:$PATH
 WORKDIR /workspace
 # Chromium is installed from a dated Debian security snapshot so both target
-# architectures use the same browser build. The package bytes are checked
+# architectures use the same browser build. Snapshot CDN disconnects are
+# retried a bounded number of times; accepted package bytes are still checked
 # against the snapshot's published SHA256 values before apt resolves runtime
 # dependencies.
 # HTTPX JSON output initializes its optional DIT classifier. A local empty
@@ -104,7 +105,7 @@ RUN set -eux; \
     printf '%s\n' 'deb [check-valid-until=no] http://snapshot.debian.org/archive/debian-security/20241123T102846Z bookworm-security main' > /etc/apt/sources.list.d/lunafox-chromium.list; \
     apt-get update; \
     apt-get install -y --no-install-recommends ca-certificates python3 fonts-liberation; \
-    apt-get download "chromium=${CHROMIUM_PACKAGE_VERSION}" "chromium-common=${CHROMIUM_PACKAGE_VERSION}"; \
+    apt-get -o Acquire::Retries=3 download "chromium=${CHROMIUM_PACKAGE_VERSION}" "chromium-common=${CHROMIUM_PACKAGE_VERSION}"; \
     case "$TARGETARCH" in \
       amd64) chromium_sha="$CHROMIUM_AMD64_SHA256"; common_sha="$CHROMIUM_COMMON_AMD64_SHA256" ;; \
       arm64) chromium_sha="$CHROMIUM_ARM64_SHA256"; common_sha="$CHROMIUM_COMMON_ARM64_SHA256" ;; \
