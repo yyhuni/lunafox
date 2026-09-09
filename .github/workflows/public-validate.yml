@@ -1177,19 +1177,51 @@ jobs:
           set -euo pipefail
           mkdir -p dist/final/runtime-digests
           components=(server frontend nginx agent bootstrap)
+          resolve_digest() {
+            oras manifest fetch --descriptor "$1" 2>/dev/null | jq -r '.digest // empty' || true
+          }
+          anonymous_config="$(mktemp -d)"
+          trap 'rm -rf "$anonymous_config"' EXIT
+          printf '{"auths":{}}\n' > "$anonymous_config/config.json"
           for component in "${components[@]}"; do
             evidence="dist/final/runtime-evidence/public-runtime-image-evidence-${component}.json"
-            digest="$(jq -er '.digest' "$evidence")"
-            [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid Runtime digest: $component" >&2; exit 1; }
-            ghcr_ref="ghcr.io/yyhuni/lunafox-${component}@${digest}"
-            docker_ref="docker.io/yyhuni/lunafox-${component}@${digest}"
-            printf 'COMPONENT=%s\nDIGEST=%s\nGHCR_REF=%s\nDOCKERHUB_REF=%s\n' "$component" "$digest" "$ghcr_ref" "$docker_ref" > "dist/final/runtime-digests/${component}.env"
-            oras manifest fetch --descriptor "$ghcr_ref" >/dev/null
+            expected_digest="$(jq -er '.digest' "$evidence")"
+            [[ "$expected_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid Runtime digest: $component" >&2; exit 1; }
+            ghcr_ref="ghcr.io/yyhuni/lunafox-${component}@${expected_digest}"
+            docker_ref="docker.io/yyhuni/lunafox-${component}@${expected_digest}"
+            docker_target="docker.io/yyhuni/lunafox-${component}:${RELEASE_TAG}"
+            ghcr_target="ghcr.io/yyhuni/lunafox-${component}:${RELEASE_TAG}"
+            docker_existing="$(resolve_digest "$docker_target")"
+            ghcr_existing="$(resolve_digest "$ghcr_target")"
+            if [ -n "$docker_existing" ] && [ -n "$ghcr_existing" ] && [ "$docker_existing" != "$ghcr_existing" ]; then
+              echo "final tag cross-registry drift: $component" >&2
+              exit 1
+            fi
+            existing_digest="${ghcr_existing:-$docker_existing}"
+            digest="$expected_digest"
+            source_ref="$ghcr_ref"
+            reused_final_tag=false
+            if [ -n "$existing_digest" ] && [ "$existing_digest" != "$expected_digest" ]; then
+              existing_target="$ghcr_target"
+              [ -n "$ghcr_existing" ] || existing_target="$docker_target"
+              existing_location="${existing_target%:*}"
+              existing_ref="${existing_location}@${existing_digest}"
+              # A later workflow-only maintenance merge must not replace a
+              # versioned release tag. Reuse it only after anonymous trust
+              # verification against the canonical public workflow identity.
+              DOCKER_CONFIG="$anonymous_config" cosign verify \
+                --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+                --certificate-identity-regexp "^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$" \
+                "$existing_ref" >/dev/null
+              digest="$existing_digest"
+              source_ref="$existing_ref"
+              reused_final_tag=true
+            fi
+            printf 'COMPONENT=%s\nDIGEST=%s\nEXPECTED_BUILD_DIGEST=%s\nREUSED_FINAL_TAG=%s\nSOURCE_REF=%s\nGHCR_REF=%s\nDOCKERHUB_REF=%s\n' "$component" "$digest" "$expected_digest" "$reused_final_tag" "$source_ref" "ghcr.io/yyhuni/lunafox-${component}@${digest}" "docker.io/yyhuni/lunafox-${component}@${digest}" > "dist/final/runtime-digests/${component}.env"
+            oras manifest fetch --descriptor "$source_ref" >/dev/null
           done
           for component in "${components[@]}"; do
-            # The existing tag may be reused only when it already names the
-            # exact verified digest; a different tag target is terminal.
-            source_ref="$(awk -F= '$1 == "GHCR_REF" {print $2}' "dist/final/runtime-digests/${component}.env")"
+            source_ref="$(awk -F= '$1 == "SOURCE_REF" {print $2}' "dist/final/runtime-digests/${component}.env")"
             digest="$(awk -F= '$1 == "DIGEST" {print $2}' "dist/final/runtime-digests/${component}.env")"
             for registry in docker.io ghcr.io; do
               target="${registry}/yyhuni/lunafox-${component}:${RELEASE_TAG}"
