@@ -753,7 +753,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: public-engine-runtime-discovery-${{ github.sha }}
-          path: dist
+          path: dist/public-engine-runtime-discovery
       - uses: actions/setup-go@v5
         with:
           go-version-file: tools/engine-release/go.mod
@@ -830,7 +830,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: public-engine-runtime-discovery-${{ github.sha }}
-          path: dist
+          path: dist/public-engine-runtime-discovery
       - uses: actions/download-artifact@v4
         with:
           pattern: public-engine-runtime-shard-${{ github.sha }}-*
