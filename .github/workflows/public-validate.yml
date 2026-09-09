@@ -954,7 +954,7 @@ jobs:
             --slurpfile context "$context_file" \
             --slurpfile receipt dist/public-engine-package-v2/build-results.json \
             '($receipt[0].packages | map(.engineId) | sort) as $expectedEngineIds |
-             (map({engineId,packageDigest,artifactManifestDigest}) | sort_by(.engineId)) as $observed |
+             (map({engineId,packageDigest,artifactManifestDigest,candidates,registryAuth,digestEqualityVerified,envelopeVerified}) | sort_by(.engineId)) as $observed |
              ($receipt[0].packages | map({engineId,packageDigest}) | sort_by(.engineId)) as $expectedPackages |
              {schemaVersion:"lunafox.engine-package-v2-publication-evidence.v1",passed:(($observed | map({engineId,packageDigest}) | sort_by(.engineId)) == $expectedPackages),signerIdentity:$context[0].signerIdentity,publicMergeCommit:$context[0].publicMergeCommit,sourceRevisionDigest:$context[0].sourceRevisionDigest,releaseTag:$context[0].releaseTag,publicExportManifestSha256:$context[0].publicExportManifestSha256,publicProvenanceSha256:$context[0].publicProvenanceSha256,expectedEngineIds:$expectedEngineIds,expectedPackages:$expectedPackages,packages:$observed}' "$evidence_root"/records/*.json > "$evidence_root/evidence.json"
           # Compare records to the generated package receipt without allowing
