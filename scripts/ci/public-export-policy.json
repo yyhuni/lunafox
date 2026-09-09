@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "policyVersion": "2026-09-07",
+  "policyVersion": "2026-09-09",
   "sourceRepository": "yyhuni/lunafox-private",
   "destinationRepository": "yyhuni/lunafox",
   "sourceRefs": {
@@ -32,6 +32,15 @@
       {
         "hash": "1e7eb68ac134bf103d5b157d5a35ddd61d05a895",
         "subject": "fix(ci): make public Agent publication release-ready",
+        "authorName": "yang yang",
+        "authorEmail": "84375838+yyhuni@users.noreply.github.com",
+        "committerName": "GitHub",
+        "committerEmail": "noreply@github.com",
+        "parentCount": 1
+      },
+      {
+        "hash": "ddbb2f57ed67920bfef07a6da098a513175a508d",
+        "subject": "chore(export): generated deployment projection v0.0.1-alpha.84",
         "authorName": "yang yang",
         "authorEmail": "84375838+yyhuni@users.noreply.github.com",
         "committerName": "GitHub",
