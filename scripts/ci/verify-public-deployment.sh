@@ -59,6 +59,7 @@ for file in README.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTIFACTS.md \
 	scripts/ci/verify-public-release.mjs scripts/ci/verify-public-main-merge.mjs \
 	scripts/ci/verify-public-runtime-contexts.mjs scripts/ci/verify-public-runtime-image-evidence.mjs \
 	scripts/ci/verify-public-runtime-source.sh scripts/ci/publish-engine-runtime-images.sh \
+	scripts/ci/aggregate-engine-runtime-image-shards.sh \
 	scripts/ci/check-engine-image-tool-inventory.mjs scripts/ci/verify-distribution-registry-v2.mjs \
 	scripts/ci/verify-runtime-image-index.mjs; do
 	require_file "$file"

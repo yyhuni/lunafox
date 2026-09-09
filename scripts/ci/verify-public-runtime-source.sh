@@ -67,6 +67,7 @@ required_files=(
 	docker/bootstrap/Dockerfile
 	docker/bootstrap/bootstrap.sh
 	scripts/ci/publish-engine-runtime-images.sh
+	scripts/ci/aggregate-engine-runtime-image-shards.sh
 	scripts/ci/check-engine-image-tool-inventory.mjs
 	scripts/ci/verify-distribution-registry-v2.mjs
 	scripts/ci/verify-runtime-image-index.mjs
@@ -113,14 +114,18 @@ if [ -e "$ROOT_DIR/agent" ]; then
 		agent-bundle.sigstore.json
 	)
 	while IFS= read -r -d '' path; do
-		[ -f "$path" ] && [ ! -L "$path" ] || fail "public Agent bundle contains a non-regular member: ${path#"$ROOT_DIR"/}"
+		if [ ! -f "$path" ] || [ -L "$path" ]; then
+			fail "public Agent bundle contains a non-regular member: ${path#"$ROOT_DIR"/}"
+		fi
 	done < <(find "$bundle_dir" -mindepth 1 -maxdepth 1 -print0)
 	agent_bundle_file_count="$(find "$bundle_dir" -mindepth 1 -maxdepth 1 -type f -print | wc -l | tr -d ' ')"
 	[ "$agent_bundle_file_count" -eq "${#agent_bundle_members[@]}" ] ||
 		fail "public Agent bundle must contain exactly ${#agent_bundle_members[@]} files"
 	for member in "${agent_bundle_members[@]}"; do
 		member_path="$bundle_dir/$member"
-		[ -f "$member_path" ] && [ ! -L "$member_path" ] || fail "public Agent bundle member is missing: agent/bin/$release_tag/$member"
+		if [ ! -f "$member_path" ] || [ -L "$member_path" ]; then
+			fail "public Agent bundle member is missing: agent/bin/$release_tag/$member"
+		fi
 	done
 fi
 
