@@ -44,11 +44,19 @@ Run discovery without building or publishing images:
 make engine-release-discover
 ```
 
+`-engine-id` is an optional, exact canonical selection only for `discover` and
+`validate-build-results`. It is checked against the complete current discovery
+before output is written. Package build and package validation commands reject
+it, so a one-Engine receipt cannot become a partial Package release.
+
 ## Image receipt flow
 
 `scripts/ci/publish-engine-runtime-images.sh` consumes discovery in canonical
-`engineId` order. One Buildx invocation per discovered Engine publishes one OCI
-image index. Production always builds `linux/amd64` and `linux/arm64`;
+`engineId` order. It normally publishes the complete discovered set, and its
+`ENGINE_RELEASE_ENGINE_ID` publisher input selects exactly one canonical Engine
+when a protected workflow matrix child needs a receipt shard. One Buildx
+invocation per selected Engine publishes one OCI image index. Production always
+builds `linux/amd64` and `linux/arm64`;
 development defaults to the host Docker daemon platform and accepts an explicit
 supported-platform override for cross-platform verification. The publisher
 resolves the actual index bytes, verifies their digest and exact requested
@@ -62,6 +70,14 @@ HTTP Registry transport.
 extra, reordered, or mismatched records. Package generation can consume only a
 receipt that matches the current validated Dockerfile/build-context/repository
 inputs. It never invents a fallback ref.
+
+The protected public workflow dynamically discovers matrix membership, bounds
+multi-platform publication to three fail-fast children, and runs
+`scripts/ci/aggregate-engine-runtime-image-shards.sh` before signing. The
+aggregate compares its discovery artifact to the checked-out source, requires
+one valid receipt and matching Registry evidence shard for every discovered
+Engine, and restores the existing complete receipt artifact. Signing and all
+Package stages consume only that restored complete receipt.
 
 ## Package artifact receipt
 
@@ -102,6 +118,7 @@ documented by `scripts/ci/publish-engine-runtime-images.sh --help`.
 
 ```bash
 cd tools/engine-release && go test ./... -count=1
+bash scripts/ci/aggregate-engine-runtime-image-shards-selftest.sh
 make verify-engine-release-contract-selftest
 node scripts/ci/check-engine-release-contract.mjs
 ```
