@@ -142,6 +142,7 @@ const REQUIRED_PUBLIC_RUNTIME_EXACT = [
   "scripts/ci/check-migration-baseline-policy.mjs",
   "scripts/ci/check-engine-api-major-policy.mjs",
   "scripts/ci/publish-engine-runtime-images.sh",
+  "scripts/ci/aggregate-engine-runtime-image-shards.sh",
   "scripts/ci/check-engine-image-tool-inventory.mjs",
   "scripts/ci/verify-distribution-registry-v2.mjs",
   "scripts/ci/verify-runtime-image-index.mjs",
@@ -858,6 +859,20 @@ function assertPublicWorkflow(workflow, policy) {
   const packagePublish = jobBlock(workflow, "public-engine-package-publish");
   const engineManifest = jobBlock(workflow, "public-engine-release-manifest");
   const finalRelease = jobBlock(workflow, "publish-final-release");
+  const engineDiscoveryArtifactName = "public-engine-runtime-discovery-${{ github.sha }}";
+  const engineDiscoveryArtifactDirectory = "dist/public-engine-runtime-discovery";
+  const engineDiscoveryArtifactUpload = [
+    "      - uses: actions/upload-artifact@v4",
+    "        with:",
+    `          name: ${engineDiscoveryArtifactName}`,
+    `          path: ${engineDiscoveryArtifactDirectory}/**`,
+  ].join("\n");
+  const engineDiscoveryArtifactDownload = [
+    "      - uses: actions/download-artifact@v4",
+    "        with:",
+    `          name: ${engineDiscoveryArtifactName}`,
+    `          path: ${engineDiscoveryArtifactDirectory}`,
+  ].join("\n");
   for (const [name, block] of PUBLIC_ENGINE_JOBS.map((name) => [name, jobBlock(workflow, name)])) {
     if (!block.includes("github.repository == 'yyhuni/lunafox'") ||
         !block.includes("github.event_name == 'push'") ||
@@ -878,9 +893,10 @@ function assertPublicWorkflow(workflow, policy) {
       !engineDiscovery.includes("PUBLIC_PROVENANCE.json") ||
       !engineDiscovery.includes("PUBLIC_EXPORT_MANIFEST.json") ||
       !engineDiscovery.includes("public-engine-runtime-discovery-") ||
+      !engineDiscovery.includes(engineDiscoveryArtifactUpload) ||
       engineDiscovery.includes("packages: write") ||
       engineDiscovery.includes("environment: public-engine-release")) {
-    fail("public Engine Runtime discovery must source-bind and emit the dynamic matrix without publication authority");
+    fail("public Engine Runtime discovery must source-bind and emit the dynamic matrix with its canonical artifact layout and without publication authority");
   }
   if (!engineBuild.includes("needs: public-engine-runtime-discover") ||
       !engineBuild.includes("strategy:") ||
@@ -897,6 +913,9 @@ function assertPublicWorkflow(workflow, policy) {
       !engineBuild.includes("packages: write")) {
     fail("public Engine Runtime build must use a bounded source-derived matrix and the validated production publisher");
   }
+  if (!engineBuild.includes(engineDiscoveryArtifactDownload)) {
+    fail("public Engine Runtime build must restore source-bound discovery at its canonical artifact path");
+  }
   if (/continue-on-error\s*:/.test(engineBuild) || /fail-fast\s*:\s*false/.test(engineBuild)) {
     fail("public Engine Runtime matrix must fail fast without optional children");
   }
@@ -909,6 +928,9 @@ function assertPublicWorkflow(workflow, policy) {
       !engineAggregate.includes("merge-multiple: false") ||
       !engineAggregate.includes("name: public-engine-runtime-build-")) {
     fail("public Engine Runtime aggregate must strictly restore the complete receipt from every shard");
+  }
+  if (!engineAggregate.includes(engineDiscoveryArtifactDownload)) {
+    fail("public Engine Runtime aggregate must restore source-bound discovery at its canonical artifact path");
   }
   if (/packages:\s*write|id-token:\s*write|attestations:\s*write|environment:\s*public-engine-release|docker\/login-action|cosign /.test(engineAggregate)) {
     fail("public Engine Runtime aggregate must not receive publishing or signing authority");
