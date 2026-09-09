@@ -53,6 +53,74 @@ func TestDiscoverEngineSourcesCollectsEveryValidatedDefinitionInCanonicalOrder(t
 	}
 }
 
+func TestRunCommandSelectsOneCanonicalDiscoveredEngine(t *testing.T) {
+	root := t.TempDir()
+	writeEngineSource(t, root, "port_scan", "engine.lunafox.port_scan", true)
+	writeEngineSource(t, root, "website_discovery", "engine.lunafox.website_discovery", true)
+
+	var output strings.Builder
+	if err := runCommand("discover", root, "engine.lunafox.port_scan", "", "", "", "", "", "", "", &output); err != nil {
+		t.Fatalf("runCommand(discover selected Engine) error = %v", err)
+	}
+	var discovery Discovery
+	if err := json.Unmarshal([]byte(output.String()), &discovery); err != nil {
+		t.Fatalf("decode selected discovery output: %v", err)
+	}
+	if got, want := []string{discovery.Engines[0].EngineID}, []string{"engine.lunafox.port_scan"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("selected discovery engines = %#v, want %#v", got, want)
+	}
+}
+
+func TestRunCommandRejectsUnknownOrNonCanonicalEngineSelection(t *testing.T) {
+	root := writeEngineSourceTree(t, true)
+	for _, engineID := range []string{"engine.lunafox.unknown", " engine.lunafox.subdomain_discovery"} {
+		t.Run(engineID, func(t *testing.T) {
+			err := runCommand("discover", root, engineID, "", "", "", "", "", "", "", &strings.Builder{})
+			if err == nil || !strings.Contains(err.Error(), "-engine-id") {
+				t.Fatalf("runCommand(discover, %q) error = %v, want selected Engine rejection", engineID, err)
+			}
+		})
+	}
+}
+
+func TestRunCommandValidatesSelectedEngineReceipt(t *testing.T) {
+	root := t.TempDir()
+	writeEngineSource(t, root, "port_scan", "engine.lunafox.port_scan", true)
+	writeEngineSource(t, root, "website_discovery", "engine.lunafox.website_discovery", true)
+	fullDiscovery, err := discoverEngineSources(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	selectedDiscovery, err := selectEngineDiscovery(fullDiscovery, "engine.lunafox.port_scan")
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload, err := json.Marshal(validDevelopmentResults(selectedDiscovery))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resultsPath := filepath.Join(t.TempDir(), "build-results.json")
+	if err := os.WriteFile(resultsPath, payload, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := runCommand("validate-build-results", root, "engine.lunafox.port_scan", resultsPath, "", "", "", "", buildModeDevelopment, "", &strings.Builder{}); err != nil {
+		t.Fatalf("runCommand(validate selected receipt) error = %v", err)
+	}
+}
+
+func TestRunCommandRejectsSelectedEngineForPackageCommands(t *testing.T) {
+	root := writeEngineSourceTree(t, true)
+	for _, command := range []string{"build-packages", "validate-package-build-results", "validate-package-artifacts"} {
+		t.Run(command, func(t *testing.T) {
+			err := runCommand(command, root, "engine.lunafox.subdomain_discovery", "", "", "", "", "", "", "", &strings.Builder{})
+			if err == nil || !strings.Contains(err.Error(), "requires the complete discovered Engine set") {
+				t.Fatalf("runCommand(%s with selected Engine) error = %v, want package partial-receipt rejection", command, err)
+			}
+		})
+	}
+}
+
 func TestDiscoverEngineSourcesDoesNotReadLegacyRuntimeOrSourcePackageImageIdentity(t *testing.T) {
 	root := writeEngineSourceTree(t, true)
 	engineDir := filepath.Join(root, "subdomain_discovery")
@@ -324,8 +392,8 @@ func validDevelopmentResults(discovery Discovery) RuntimeImageBuildResults {
 			IndexDigest:    releaseTestDigestA,
 			IndexMediaType: ociImageIndexMediaType,
 			Platforms:      []string{"linux/amd64", "linux/arm64"},
-			Refs:           []string{"localhost:5000/lunafox-engine-runtime-subdomain-discovery@" + releaseTestDigestA},
-			SourceRef:      "localhost:5000/lunafox-engine-runtime-subdomain-discovery@" + releaseTestDigestA,
+			Refs:           []string{"localhost:5000/" + source.Repository + "@" + releaseTestDigestA},
+			SourceRef:      "localhost:5000/" + source.Repository + "@" + releaseTestDigestA,
 		}},
 	}
 }
