@@ -32,6 +32,12 @@ const AGENT_BUNDLE_FILES = Object.freeze([
   "agent-bundle.sha256",
   "agent-bundle.sigstore.json",
 ]);
+const TEMP_REPOSITORY_CLEANUP_OPTIONS = Object.freeze({
+  recursive: true,
+  force: true,
+  maxRetries: 8,
+  retryDelay: 100,
+});
 
 function fail(message) { throw new Error(message); }
 
@@ -387,6 +393,17 @@ function destinationOwnedPaths(exportDir) {
   return paths.sort();
 }
 
+// Temporary-repository cleanup happens after the immutable remote push. A
+// transient runner filesystem race must not turn a successful publication into
+// a failed job or force a retry branch.
+function removeTemporaryRepository(repository, remove = fs.rmSync, warn = (message) => process.stderr.write(message)) {
+  try {
+    remove(repository, TEMP_REPOSITORY_CLEANUP_OPTIONS);
+  } catch (error) {
+    warn(`warning: failed to clean temporary public export repository ${repository}: ${error.message}\n`);
+  }
+}
+
 function pushProjection({ exportDir, remoteUrl, branch, baseSha, tag, token, destinationPaths = [], destinationOwnedRoot = "" }) {
   const repository = fs.mkdtempSync(path.join(process.env.RUNNER_TEMP || os.tmpdir(), "lunafox-public-export-git-"));
   const message = `chore(export): generated deployment projection ${tag}`;
@@ -450,7 +467,7 @@ function pushProjection({ exportDir, remoteUrl, branch, baseSha, tag, token, des
     });
     return commitSha;
   } finally {
-    fs.rmSync(repository, { recursive: true, force: true });
+    removeTemporaryRepository(repository);
   }
 }
 
@@ -558,5 +575,6 @@ export {
   publish,
   publicationState,
   rejectFallbackCredentials,
+  removeTemporaryRepository,
   verifyDestinationInstallation,
 };
