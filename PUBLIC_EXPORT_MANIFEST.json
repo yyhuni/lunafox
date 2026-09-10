@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:e2d0de715abec57857c63580d123429202c7bd44d04187301591c3e9fdf0dee0",
-  "releaseTag": "v0.0.1-alpha.91",
+  "sourceRevisionDigest": "sha256:3d021edb3832742f462048aa41b85af7cc64e494f90ae370d89c1ba003fdfa03",
+  "releaseTag": "v0.0.1-alpha.92",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".github/workflows/public-validate.yml",
@@ -42,7 +42,7 @@
       "type": "file",
       "mode": "0644",
       "size": 430,
-      "sha256": "1077eea11b159a7c8df319c0283ef8367ccc3f99e893b583d251260a747c6b26"
+      "sha256": "392fa04e1633aaab4dda854b75b57d92b4d1e8ed83209b766c566aac482c6626"
     },
     {
       "path": "README.md",
@@ -52,49 +52,49 @@
       "sha256": "30b3f115e8f1bd2373586fa376cbc6bb87a8c71ce9ab4a437092185586551ef8"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.91/agent-bundle.json",
+      "path": "agent/bin/v0.0.1-alpha.92/agent-bundle.json",
       "type": "file",
       "mode": "0644",
       "size": 2226,
-      "sha256": "ceb31a4be2a997ef84916cd2564f052679617f5f2816caa016b737abe9f54ed8"
+      "sha256": "c68c3061e2f0d42b1f3ba6bf99c454bc333f9a5c983188fb42435c9b42503575"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.91/agent-bundle.sha256",
+      "path": "agent/bin/v0.0.1-alpha.92/agent-bundle.sha256",
       "type": "file",
       "mode": "0644",
       "size": 402,
       "sha256": "d38b5306aaaa038e9ba9ab9bf25dd311800142c2c7f8f24ca1ec04a9cecdcb29"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.91/agent-bundle.sigstore.json",
+      "path": "agent/bin/v0.0.1-alpha.92/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
       "size": 9285,
-      "sha256": "a8bc7599b0f7690e2d72dba352f17b4cc38c977a15301d780322bf0f0ee1764c"
+      "sha256": "6ff77a5b7817ef343684d02810f6ca2411b62bb19de918325bedabaa430d444f"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.91/lunafox-agent-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.92/lunafox-agent-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 23896723,
       "sha256": "5e0f28c1eaff1db1156e541b7ea9957109588516f9f9bf1f4b38af3974499b7d"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.91/lunafox-agent-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.92/lunafox-agent-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 22436260,
       "sha256": "0e5f8d1a883ca6ab81d8c54026dce5c07ffa545edab038d1ec93af890718c322"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.91/lunafox-engine-mount-preflight-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.92/lunafox-engine-mount-preflight-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 20000987,
       "sha256": "2b12a49b754a09e98377c96105c2975a5b48bf6b063eae0b2062ea271e0add2a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.91/lunafox-engine-mount-preflight-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.92/lunafox-engine-mount-preflight-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 18804436,
@@ -19991,8 +19991,8 @@
       "path": "server/internal/modules/agent/handler/agent_install_e2e_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 12073,
-      "sha256": "300d6fa13c5a90a6453efaee8b6a008694cc2130a14dea5045b9b28ea6ad5f18"
+      "size": 15535,
+      "sha256": "831d3fa07e86f2d0a6477b84268b32c180a65446c3ff9cefcef25796babccd47"
     },
     {
       "path": "server/internal/modules/agent/handler/agent_list_heartbeat_test.go",
