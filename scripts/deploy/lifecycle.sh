@@ -10,6 +10,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/compose.yaml"
 ENV_FILE="$ROOT_DIR/.env"
 CHANNEL_DIR="$ROOT_DIR/channels"
+MANIFEST_DIR="$ROOT_DIR/manifests"
 STATE_DIR="$ROOT_DIR/.lunafox"
 ENGINE_INVENTORY_PATH="$STATE_DIR/engine-inventory.yaml"
 
@@ -24,6 +25,9 @@ MIN_DOCKER_API="1.45"
 MIN_COMPOSE_VERSION="2.24.0"
 DEFAULT_CHANNEL="stable"
 DEFAULT_REGISTRY="dockerhub"
+CANONICAL_RELEASE_CHANNEL_URL="https://raw.githubusercontent.com/yyhuni/lunafox/release-channel"
+RELEASE_METADATA_CONNECT_TIMEOUT="10"
+RELEASE_METADATA_MAX_TIME="30"
 
 OWNED_VOLUMES=(lunafox_postgres lunafox_data lunafox_engine_execution lunafox_agent_state lunafox_loki "$SSL_VOLUME" "$RECEIPT_VOLUME")
 ENGINE_PACKAGE_SELECTED_REFS=()
@@ -66,6 +70,21 @@ register_temp_dir() {
 	TEMP_DIRS+=("$1")
 }
 
+atomic_install_metadata_file() {
+	local source="$1" target="$2" label="$3"
+	if [ -e "$target" ] || [ -L "$target" ]; then
+		die "refusing to overwrite existing release metadata: $label"
+	fi
+	# The target directories are created only after validation. `mv -n` keeps a
+	# concurrent writer from turning the final rename into an overwrite; the
+	# source check below converts a no-op into an explicit failure.
+	mv -n -- "$source" "$target" || die "could not atomically install $label"
+	[ ! -e "$source" ] || die "release metadata appeared while installing $label"
+	if [ ! -f "$target" ] || [ -L "$target" ]; then
+		die "atomically installed $label is missing or unsafe"
+	fi
+}
+
 die() {
 	printf 'LunaFox deployment error: %s\n' "$*" >&2
 	exit 1
@@ -96,6 +115,8 @@ Usage:
 Only Ubuntu Server 22.04/24.04 with rootful native Linux Docker Engine is
 officially supported. Docker Hub is the default; --registry ghcr switches the
 entire immutable release closure. No automatic registry fallback is performed.
+When channels/ and manifests/ are absent during install, the selected release
+metadata is fetched from the canonical public release-channel automatically.
 USAGE
 }
 
@@ -397,6 +418,50 @@ certificate_text_san() {
 
 channel_file() { printf '%s/%s.env' "$CHANNEL_DIR" "$1"; }
 
+release_metadata_state() {
+	local channels_present=0 manifests_present=0
+	[ -e "$CHANNEL_DIR" ] && channels_present=1
+	[ -e "$MANIFEST_DIR" ] && manifests_present=1
+	if [ "$channels_present" -eq 0 ] && [ "$manifests_present" -eq 0 ]; then
+		printf 'absent\n'
+		return
+	fi
+	if [ "$channels_present" -eq 1 ] && [ "$manifests_present" -eq 1 ] &&
+		[ -d "$CHANNEL_DIR" ] && [ ! -L "$CHANNEL_DIR" ] &&
+		[ -d "$MANIFEST_DIR" ] && [ ! -L "$MANIFEST_DIR" ]; then
+		printf 'present\n'
+		return
+	fi
+	die "release metadata is incomplete; channels/ and manifests/ must both be complete directories (remove both and retry on a clean checkout)"
+}
+
+download_canonical_release_file() {
+	local relative="$1" destination="$2" url http_code curl_error
+	case "$relative" in
+	channels/stable.env | channels/canary.env | manifests/v[0-9]*.yaml) ;;
+	*) die "refusing to fetch an unsupported release metadata path: $relative" ;;
+	esac
+	command -v curl >/dev/null 2>&1 || die "curl is required to fetch release metadata"
+	url="${CANONICAL_RELEASE_CHANNEL_URL}/${relative}"
+	curl_error="$(mktemp)"
+	register_temp_file "$curl_error"
+	# Redirects are disabled beyond the canonical response: a changed host must
+	# never become an implicit release metadata source.
+	if ! http_code="$(curl --disable --fail --silent --show-error --location --max-redirs 0 \
+		--proto '=https' --proto-redir '=https' --tlsv1.2 \
+		--connect-timeout "$RELEASE_METADATA_CONNECT_TIMEOUT" \
+		--max-time "$RELEASE_METADATA_MAX_TIME" --write-out '%{http_code}' \
+		--output "$destination" "$url" 2>"$curl_error")"; then
+		if [ "$http_code" = 404 ] && [ "$relative" = channels/stable.env ]; then
+			die "stable channel is not published; install the first canary explicitly with --channel canary"
+		fi
+		die "could not fetch canonical release metadata: $relative (HTTP ${http_code:-000})"
+	fi
+	[ "$http_code" = 200 ] || die "canonical release metadata returned unexpected HTTP status for $relative: ${http_code:-000}"
+	[ -s "$destination" ] || die "canonical release metadata is empty: $relative"
+	[ ! -L "$destination" ] || die "canonical release metadata is a symlink: $relative"
+}
+
 file_mode() {
 	local file="$1" mode
 	mode="$(stat -c '%a' -- "$file" 2>/dev/null || true)"
@@ -462,15 +527,11 @@ resolve_manifest_path() {
 	MANIFEST_PATH="$manifest_real"
 }
 
-require_channel() {
+validate_channel_record() {
 	local file key expected_tag
-	file="$(channel_file "$CHANNEL")"
-	if [ ! -f "$file" ]; then
-		if [ "$CHANNEL" = stable ]; then
-			die "stable channel is not published; install the first canary explicitly with --channel canary"
-		fi
-		die "release channel is missing: $CHANNEL"
-	fi
+	file="$1"
+	[ -f "$file" ] || die "release channel record is missing: $file"
+	[ ! -L "$file" ] || die "release channel record must not be a symlink: $file"
 	validate_env_file_structure "$file"
 	require_env_keys "$file" SCHEMA_VERSION VERSION RELEASE_MANIFEST RELEASE_MANIFEST_SHA256
 	[ "$(env_value "$file" SCHEMA_VERSION)" = 3 ] || die "release channel must use schema v3"
@@ -485,8 +546,86 @@ require_channel() {
 	while IFS= read -r key; do
 		case "$key" in SCHEMA_VERSION | VERSION | RELEASE_MANIFEST | RELEASE_MANIFEST_SHA256) ;; *) die "release channel contains unsupported key: $key" ;; esac
 	done < <(awk -F= '/^[A-Za-z_][A-Za-z0-9_]*=/{print $1}' "$file")
+}
+
+verify_manifest_digest() {
+	local file="$1" expected="$2" actual
+	[ -f "$file" ] || die "release manifest is missing: $MANIFEST_REL"
+	[ ! -L "$file" ] || die "release manifest must not be a symlink: $MANIFEST_REL"
+	actual="$(sha256sum "$file" | awk '{print $1}')"
+	[ "$actual" = "$expected" ] || die "release manifest digest does not match the channel"
+}
+
+exact_checkout_release_tag() {
+	local tags tag found=""
+	[ -e "$ROOT_DIR/.git" ] || return 0
+	command -v git >/dev/null 2>&1 || die "git is required to validate an exact release tag checkout"
+	tags="$(git -C "$ROOT_DIR" tag --points-at HEAD 2>/dev/null || true)"
+	while IFS= read -r tag; do
+		[ -n "$tag" ] || continue
+		[[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]] || continue
+		if [ -n "$found" ] && [ "$found" != "$tag" ]; then
+			die "exact checkout has multiple release tags; refusing ambiguous release identity"
+		fi
+		found="$tag"
+	done <<<"$tags"
+	[ -z "$found" ] || [ "$found" = "$RELEASE_TAG" ] || die "release channel VERSION $RELEASE_TAG does not match exact checkout tag $found"
+}
+
+hydrate_release_channel_metadata() {
+	local state channel_tmp staging_dir staged_manifest channel_target manifest_target channel_install_tmp manifest_install_tmp
+	state="$(release_metadata_state)"
+	[ "$state" = absent ] || return 0
+
+	channel_tmp="$(mktemp)"
+	register_temp_file "$channel_tmp"
+	download_canonical_release_file "channels/${CHANNEL}.env" "$channel_tmp"
+	validate_channel_record "$channel_tmp"
+	exact_checkout_release_tag
+
+	staging_dir="$(mktemp -d "$ROOT_DIR/.release-metadata.XXXXXX")"
+	register_temp_dir "$staging_dir"
+	staged_manifest="$staging_dir/$(basename -- "$MANIFEST_REL")"
+	download_canonical_release_file "$MANIFEST_REL" "$staged_manifest"
+	verify_manifest_digest "$staged_manifest" "$MANIFEST_SHA256"
+	MANIFEST_PATH="$staged_manifest"
+	validate_manifest_for_release
+
+	# Recheck the empty-state boundary immediately before creating either target
+	# directory; a concurrent writer must not cause an existing deployment to be
+	# silently merged with freshly fetched metadata.
+	if [ -e "$CHANNEL_DIR" ] || [ -e "$MANIFEST_DIR" ]; then
+		die "release metadata appeared while fetching; refusing to merge or overwrite it"
+	fi
+	mkdir "$CHANNEL_DIR" "$MANIFEST_DIR" || die "could not create release metadata directories"
+	channel_target="$CHANNEL_DIR/${CHANNEL}.env"
+	manifest_target="$MANIFEST_DIR/$(basename -- "$MANIFEST_REL")"
+	channel_install_tmp="$(mktemp "$CHANNEL_DIR/.${CHANNEL}.env.XXXXXX")"
+	manifest_install_tmp="$(mktemp "$MANIFEST_DIR/.$(basename -- "$MANIFEST_REL").XXXXXX")"
+	register_temp_file "$channel_install_tmp"
+	register_temp_file "$manifest_install_tmp"
+	chmod 0644 "$channel_install_tmp" "$manifest_install_tmp"
+	cp "$channel_tmp" "$channel_install_tmp" || die "could not stage release channel record"
+	cp "$staged_manifest" "$manifest_install_tmp" || die "could not stage release manifest"
+	atomic_install_metadata_file "$channel_install_tmp" "$channel_target" "release channel record"
+	atomic_install_metadata_file "$manifest_install_tmp" "$manifest_target" "release manifest"
+	MANIFEST_PATH="$manifest_target"
+	info "release metadata fetched from canonical release-channel"
+}
+
+require_channel() {
+	local file
+	file="$(channel_file "$CHANNEL")"
+	if [ ! -f "$file" ]; then
+		if [ "$CHANNEL" = stable ]; then
+			die "stable channel is not published; install the first canary explicitly with --channel canary"
+		fi
+		die "release channel is missing: $CHANNEL"
+	fi
+	validate_channel_record "$file"
+	exact_checkout_release_tag
 	resolve_manifest_path "$MANIFEST_REL"
-	[ "$(sha256sum "$MANIFEST_PATH" | awk '{print $1}')" = "$MANIFEST_SHA256" ] || die "release manifest digest does not match the channel"
+	verify_manifest_digest "$MANIFEST_PATH" "$MANIFEST_SHA256"
 }
 
 yaml_runtime_refs() {
@@ -1214,6 +1353,7 @@ ensure_no_port_conflict() {
 install() {
 	preflight_mutating
 	validate_host "$PUBLIC_HOST"
+	hydrate_release_channel_metadata
 	require_channel
 	parse_manifest verify
 	if [ "$RESET" -eq 1 ]; then

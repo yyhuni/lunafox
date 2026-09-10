@@ -156,6 +156,11 @@ if rg -n 'docker/docker-compose|scripts/(?:cli|installer)|tools/installer|lunafo
 fi
 
 lifecycle="$ROOT_DIR/scripts/deploy/lifecycle.sh"
+grep -Fq 'CANONICAL_RELEASE_CHANNEL_URL="https://raw.githubusercontent.com/yyhuni/lunafox/release-channel"' "$lifecycle" || fail "lifecycle must use the fixed canonical release-channel source"
+grep -Fq 'hydrate_release_channel_metadata' "$lifecycle" || fail "install must hydrate missing release metadata"
+grep -Fq "mv -n -- \"\$source\" \"\$target\"" "$lifecycle" || fail "release metadata installation must not overwrite a concurrent target"
+grep -Fq -- '--disable' "$lifecycle" || fail "release metadata fetch must ignore user curl configuration"
+grep -Fq -- '--max-redirs 0' "$lifecycle" || fail "release metadata fetch must reject redirects"
 grep -Fq 'ensure_fresh_runtime_volumes' "$lifecycle" || fail "fresh install must provision all runtime volumes before bootstrap"
 grep -Fq 'require_runtime_volumes' "$lifecycle" || fail "ordinary lifecycle commands must reject missing runtime volumes"
 grep -Fq 'stop_project_agent' "$lifecycle" || fail "stop lifecycle must manage the bootstrap-created Agent"

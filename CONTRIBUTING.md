@@ -22,8 +22,8 @@ Public tests must run against the exported closure. Generated test reports,
 screenshots, coverage, browser caches, test-results, test plans, logs,
 dependency directories, framework/build output, and TLS material remain
 private. The public pull-request workflow is deliberately secretless and
-validates source plus `push: false` builds. After a generated export PR is
-approved and merged into protected `main`, the public workflow publishes
+validates source plus `push: false` builds. After a generated export PR passes
+the required public validation and merges into protected `main`, the public workflow publishes
 immutable GHCR digests with SBOM/provenance evidence for Server, Frontend,
 Nginx, and Bootstrap. The private release workflow builds and signs the Agent
 binary bundle and exports its exact seven-file directory under
@@ -34,6 +34,8 @@ The private release run ends when it requests protected auto-merge for the
 generated export PR. Its success means `public handoff requested`; final
 publication status comes from the public repository Actions run and GitHub
 Release, which may still be pending or may fail independently.
+Contributors without repository write permission cannot enable native auto-merge
+for their own PRs; a passing check alone does not merge a community contribution.
 There is no private Runtime Image fallback or bridge manifest; missing evidence
 fails the release before final-manifest generation.
 
