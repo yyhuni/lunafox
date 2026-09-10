@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -109,6 +110,64 @@ func TestAgentInstallScriptRegistersAndConnects(t *testing.T) {
 	waitForAgentInstallE2ESignal(t, ctx, control.heartbeats, "first Agent heartbeat")
 }
 
+func TestAgentInstallE2EImageBuildArgsMatchDockerfileContract(t *testing.T) {
+	rootDir := agentInstallE2ERepoRoot(t)
+	dockerfile, err := os.ReadFile(filepath.Join(rootDir, "agent", "Dockerfile"))
+	if err != nil {
+		if agentInstallE2ECanSkipAbsentDockerfileContract(rootDir, err) {
+			// Public projections validate the signed Agent bundle, not private Docker build inputs.
+			t.Skip("Agent Dockerfile is intentionally omitted from the generated public projection")
+		}
+		t.Fatalf("read Agent Dockerfile: %v", err)
+	}
+	args := agentInstallE2EImageBuildArgs(
+		rootDir,
+		"lunafox-agent-install-e2e:test",
+		strings.Repeat("a", 40),
+		agentInstallE2EManifestDigest("lunafox-agent-install-e2e:test"),
+	)
+
+	for _, context := range []struct {
+		name string
+		path string
+	}{
+		{name: "contracts", path: filepath.Join(rootDir, "contracts")},
+		{name: "engine-go", path: filepath.Join(rootDir, "engine-go")},
+		{name: "proto", path: filepath.Join(rootDir, "proto")},
+	} {
+		if !strings.Contains(string(dockerfile), "COPY --from="+context.name+" .") {
+			t.Fatalf("Dockerfile no longer declares named context %q", context.name)
+		}
+		if !agentInstallE2EHasOption(args, "--build-context", context.name+"="+context.path) {
+			t.Fatalf("E2E build is missing named context %q", context.name)
+		}
+	}
+	for _, name := range []string{"PUBLIC_MERGE_SHA", "PUBLIC_EXPORT_MANIFEST_SHA256"} {
+		if !strings.Contains(string(dockerfile), "ARG "+name) {
+			t.Fatalf("Dockerfile no longer declares build arg %q", name)
+		}
+		if !agentInstallE2EHasBuildArg(args, name) {
+			t.Fatalf("E2E build is missing non-empty build arg %q", name)
+		}
+	}
+}
+
+func TestAgentInstallE2ECanSkipAbsentDockerfileContract(t *testing.T) {
+	rootDir := t.TempDir()
+	if agentInstallE2ECanSkipAbsentDockerfileContract(rootDir, os.ErrNotExist) {
+		t.Fatal("private source must not skip an absent Agent Dockerfile")
+	}
+	if err := os.WriteFile(filepath.Join(rootDir, "PUBLIC_PROVENANCE.json"), []byte("{}\n"), 0o600); err != nil {
+		t.Fatalf("write public projection marker: %v", err)
+	}
+	if !agentInstallE2ECanSkipAbsentDockerfileContract(rootDir, os.ErrNotExist) {
+		t.Fatal("generated public projection must skip an absent private Agent Dockerfile")
+	}
+	if agentInstallE2ECanSkipAbsentDockerfileContract(rootDir, os.ErrPermission) {
+		t.Fatal("only an absent Dockerfile may be skipped in a public projection")
+	}
+}
+
 type agentInstallE2ETokenStore struct {
 	token *agentdomain.RegistrationToken
 }
@@ -212,22 +271,87 @@ func ensureAgentInstallE2ECleanStart(t *testing.T, ctx context.Context, dockerBi
 
 func buildAgentInstallE2EImage(t *testing.T, ctx context.Context, dockerBin, imageRef string) {
 	t.Helper()
+	rootDir := agentInstallE2ERepoRoot(t)
+	publicMergeSHA, err := agentInstallE2ECurrentRevision(ctx, rootDir)
+	if err != nil {
+		t.Fatalf("resolve Agent build revision: %v", err)
+	}
+	args := agentInstallE2EImageBuildArgs(rootDir, imageRef, publicMergeSHA, agentInstallE2EManifestDigest(imageRef))
+	if _, err := runAgentInstallE2EDocker(ctx, dockerBin, args...); err != nil {
+		t.Fatalf("build Agent image: %v", err)
+	}
+}
+
+func agentInstallE2ERepoRoot(t *testing.T) string {
+	t.Helper()
 	packageDir, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("resolve package directory: %v", err)
 	}
-	rootDir := filepath.Clean(filepath.Join(packageDir, "../../../../.."))
-	if _, err := runAgentInstallE2EDocker(
-		ctx,
-		dockerBin,
+	return filepath.Clean(filepath.Join(packageDir, "../../../../.."))
+}
+
+// agentInstallE2ECanSkipAbsentDockerfileContract preserves strict private-source
+// checks while allowing generated public projections to omit private Agent build inputs.
+func agentInstallE2ECanSkipAbsentDockerfileContract(rootDir string, err error) bool {
+	return os.IsNotExist(err) && agentInstallE2EIsPublicProjectionRoot(rootDir)
+}
+
+func agentInstallE2EIsPublicProjectionRoot(rootDir string) bool {
+	_, err := os.Stat(filepath.Join(rootDir, "PUBLIC_PROVENANCE.json"))
+	return err == nil
+}
+
+func agentInstallE2ECurrentRevision(ctx context.Context, rootDir string) (string, error) {
+	output, err := exec.CommandContext(ctx, "git", "-C", rootDir, "rev-parse", "HEAD").CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("git rev-parse HEAD: %w\n%s", err, output)
+	}
+	revision := strings.TrimSpace(string(output))
+	if len(revision) != 40 {
+		return "", fmt.Errorf("git rev-parse HEAD returned an invalid revision %q", revision)
+	}
+	return revision, nil
+}
+
+func agentInstallE2EManifestDigest(imageRef string) string {
+	digest := sha256.Sum256([]byte("agent-install-e2e:" + imageRef))
+	return fmt.Sprintf("sha256:%x", digest)
+}
+
+func agentInstallE2EImageBuildArgs(rootDir, imageRef, publicMergeSHA, publicExportManifestSHA256 string) []string {
+	// The local smoke image has no release manifest; use an explicit synthetic
+	// digest while binding the other provenance marker to the checked-out revision.
+	return []string{
 		"build",
-		"--build-context", "contracts="+filepath.Join(rootDir, "contracts"),
+		"--build-context", "contracts=" + filepath.Join(rootDir, "contracts"),
+		"--build-context", "engine-go=" + filepath.Join(rootDir, "engine-go"),
+		"--build-context", "proto=" + filepath.Join(rootDir, "proto"),
+		"--build-arg", "PUBLIC_MERGE_SHA=" + publicMergeSHA,
+		"--build-arg", "PUBLIC_EXPORT_MANIFEST_SHA256=" + publicExportManifestSHA256,
 		"--file", filepath.Join(rootDir, "agent", "Dockerfile"),
 		"--tag", imageRef,
 		filepath.Join(rootDir, "agent"),
-	); err != nil {
-		t.Fatalf("build Agent image: %v", err)
 	}
+}
+
+func agentInstallE2EHasOption(args []string, option, value string) bool {
+	for index := 0; index+1 < len(args); index++ {
+		if args[index] == option && args[index+1] == value {
+			return true
+		}
+	}
+	return false
+}
+
+func agentInstallE2EHasBuildArg(args []string, name string) bool {
+	prefix := name + "="
+	for index := 0; index+1 < len(args); index++ {
+		if args[index] == "--build-arg" && strings.HasPrefix(args[index+1], prefix) && len(args[index+1]) > len(prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func startAgentInstallE2EServer(t *testing.T, api http.Handler, grpcServer *grpc.Server) *httptest.Server {

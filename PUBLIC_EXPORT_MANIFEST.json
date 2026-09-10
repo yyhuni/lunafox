@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:e2d0de715abec57857c63580d123429202c7bd44d04187301591c3e9fdf0dee0",
-  "releaseTag": "v0.0.1-alpha.91",
+  "sourceRevisionDigest": "sha256:3e6f70b639a6e3cf4e5961ecb44243b1277e45afa9714d57a071690b764e1248",
+  "releaseTag": "v0.0.1-alpha.94",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".github/workflows/public-validate.yml",
@@ -42,7 +42,7 @@
       "type": "file",
       "mode": "0644",
       "size": 430,
-      "sha256": "1077eea11b159a7c8df319c0283ef8367ccc3f99e893b583d251260a747c6b26"
+      "sha256": "05efba08328067a729b2bf0be765193c520d6b4efdd626a4a7faca56f3114ce0"
     },
     {
       "path": "README.md",
@@ -52,49 +52,49 @@
       "sha256": "30b3f115e8f1bd2373586fa376cbc6bb87a8c71ce9ab4a437092185586551ef8"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.91/agent-bundle.json",
+      "path": "agent/bin/v0.0.1-alpha.94/agent-bundle.json",
       "type": "file",
       "mode": "0644",
       "size": 2226,
-      "sha256": "ceb31a4be2a997ef84916cd2564f052679617f5f2816caa016b737abe9f54ed8"
+      "sha256": "ba1e2f99533b2bb22146f32679dc291a9c94ce15c0ff6a063b932dcc7e1b61df"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.91/agent-bundle.sha256",
+      "path": "agent/bin/v0.0.1-alpha.94/agent-bundle.sha256",
       "type": "file",
       "mode": "0644",
       "size": 402,
       "sha256": "d38b5306aaaa038e9ba9ab9bf25dd311800142c2c7f8f24ca1ec04a9cecdcb29"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.91/agent-bundle.sigstore.json",
+      "path": "agent/bin/v0.0.1-alpha.94/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
       "size": 9285,
-      "sha256": "a8bc7599b0f7690e2d72dba352f17b4cc38c977a15301d780322bf0f0ee1764c"
+      "sha256": "987e23a6bdf8564a39b0b205b84e42af9c95bd66cf191072f6250b17f3a7b9d0"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.91/lunafox-agent-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.94/lunafox-agent-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 23896723,
       "sha256": "5e0f28c1eaff1db1156e541b7ea9957109588516f9f9bf1f4b38af3974499b7d"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.91/lunafox-agent-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.94/lunafox-agent-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 22436260,
       "sha256": "0e5f8d1a883ca6ab81d8c54026dce5c07ffa545edab038d1ec93af890718c322"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.91/lunafox-engine-mount-preflight-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.94/lunafox-engine-mount-preflight-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 20000987,
       "sha256": "2b12a49b754a09e98377c96105c2975a5b48bf6b063eae0b2062ea271e0add2a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.91/lunafox-engine-mount-preflight-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.94/lunafox-engine-mount-preflight-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 18804436,
@@ -16694,8 +16694,8 @@
       "path": "scripts/ci/publish-public-export.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 26897,
-      "sha256": "2ed9fae0feda973d8fc77fada365f63f0b734a48a81b8bede26415680c3191a4"
+      "size": 27553,
+      "sha256": "08d4496ac8187d3d2c30f618be7439bce9bddbc0b3dab3472d2cb4c037df49be"
     },
     {
       "path": "scripts/ci/verify-agent-binary-bundle.mjs",
@@ -19928,8 +19928,8 @@
       "path": "server/internal/modules/agent/handler/README.md",
       "type": "file",
       "mode": "0644",
-      "size": 3544,
-      "sha256": "96c195340aff3937ae61dcce7fb820add4af962b07428b10edd19d1ebf6ed466"
+      "size": 3937,
+      "sha256": "7f2fcc3990fc3d9d9ec63804a14ada5e2e6fa6b56d1302fb7a5183c6a609b341"
     },
     {
       "path": "server/internal/modules/agent/handler/agent_cluster_summary_handler.go",
@@ -19991,8 +19991,8 @@
       "path": "server/internal/modules/agent/handler/agent_install_e2e_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 12073,
-      "sha256": "300d6fa13c5a90a6453efaee8b6a008694cc2130a14dea5045b9b28ea6ad5f18"
+      "size": 17031,
+      "sha256": "c48828ed806128487018e0f97770a2feddb559c31636653c8f4c4d09588a09ed"
     },
     {
       "path": "server/internal/modules/agent/handler/agent_list_heartbeat_test.go",
