@@ -18,6 +18,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	agentcontrolv1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/agent/control/v1"
+	engineexecutionpb "github.com/yyhuni/lunafox/engine-go/protocol"
 	grpcauth "github.com/yyhuni/lunafox/server/internal/grpc/planeauth"
 	agentapp "github.com/yyhuni/lunafox/server/internal/modules/agent/application"
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
@@ -219,7 +220,10 @@ func (server *agentInstallE2EControlServer) Connect(stream grpc.BidiStreamingSer
 		return status.Error(codes.InvalidArgument, "Agent did not register a control-plane session")
 	}
 	if err := stream.Send(&agentcontrolv1.ConnectResponse{Payload: &agentcontrolv1.ConnectResponse_SessionReady{
-		SessionReady: &agentcontrolv1.SessionReady{SessionEpoch: 1},
+		SessionReady: &agentcontrolv1.SessionReady{
+			SessionEpoch:          1,
+			CompatibilityRevision: engineexecutionpb.EngineExecutionDiagnosticsCompatibilityRevision,
+		},
 	}}); err != nil {
 		return err
 	}
