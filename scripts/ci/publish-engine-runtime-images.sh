@@ -27,6 +27,9 @@ TAG="${ENGINE_IMAGE_TAG:-}"
 REUSE_EXISTING="${ENGINE_REUSE_EXISTING:-false}"
 BUILDER_NAME="${ENGINE_BUILDER_NAME:-lunafox-engine-release}"
 BUILDER_NETWORK="${ENGINE_BUILDER_NETWORK:-}"
+REGISTRY_INSPECT_ATTEMPTS="${ENGINE_REGISTRY_INSPECT_ATTEMPTS:-6}"
+REGISTRY_INSPECT_INITIAL_DELAY_SECONDS="${ENGINE_REGISTRY_INSPECT_INITIAL_DELAY_SECONDS:-2}"
+REGISTRY_INSPECT_MAX_DELAY_SECONDS="${ENGINE_REGISTRY_INSPECT_MAX_DELAY_SECONDS:-8}"
 PROXY_VARIABLES=(HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy)
 
 usage() {
@@ -62,6 +65,12 @@ Environment:
                               Comma-separated Linux platforms; development defaults to the Docker daemon platform
   ENGINE_IMAGE_TAG            Optional immutable staging tag
   ENGINE_REUSE_EXISTING       Reuse an existing protected production tag on retry
+  ENGINE_REGISTRY_INSPECT_ATTEMPTS
+                              Maximum attempts for post-push Registry reads (default 6)
+  ENGINE_REGISTRY_INSPECT_INITIAL_DELAY_SECONDS
+                              Initial delay between post-push Registry reads (default 2)
+  ENGINE_REGISTRY_INSPECT_MAX_DELAY_SECONDS
+                              Maximum delay between post-push Registry reads (default 8)
 USAGE
 }
 
@@ -223,6 +232,41 @@ verify_engine_payload() {
 		--engine-image "$directory=$ref" >/dev/null
 }
 
+retry_registry_inspect() {
+	local ref="$1"
+	shift
+	local attempt=1 delay="$REGISTRY_INSPECT_INITIAL_DELAY_SECONDS"
+	local output_file error_file
+	output_file="$(mktemp "$tmp_dir/registry-inspect-output.XXXXXX")"
+	error_file="$(mktemp "$tmp_dir/registry-inspect-error.XXXXXX")"
+
+	# A Registry may acknowledge a manifest write before its read replicas expose
+	# the tag. Retry only the read and preserve the final error so a real auth or
+	# descriptor failure still stops the release rather than being downgraded.
+	while :; do
+		: >"$output_file"
+		: >"$error_file"
+		if "$@" "$ref" >"$output_file" 2>"$error_file"; then
+			cat "$output_file"
+			rm -f "$output_file" "$error_file"
+			return 0
+		fi
+		if [ "$attempt" -ge "$REGISTRY_INSPECT_ATTEMPTS" ]; then
+			cat "$error_file" >&2
+			rm -f "$output_file" "$error_file"
+			return 1
+		fi
+		printf 'Registry inspect failed for %s (attempt %s/%s); retrying in %ss\n' \
+			"$ref" "$attempt" "$REGISTRY_INSPECT_ATTEMPTS" "$delay" >&2
+		sleep "$delay"
+		if [ "$delay" -lt "$REGISTRY_INSPECT_MAX_DELAY_SECONDS" ]; then
+			delay=$((delay * 2))
+			[ "$delay" -le "$REGISTRY_INSPECT_MAX_DELAY_SECONDS" ] || delay="$REGISTRY_INSPECT_MAX_DELAY_SECONDS"
+		fi
+		attempt=$((attempt + 1))
+	done
+}
+
 while [ "$#" -gt 0 ]; do
 	case "$1" in
 	-h | --help)
@@ -243,6 +287,18 @@ done
 [ -n "$REGISTRY_TRANSPORT_HOST" ] || fail "ENGINE_REGISTRY_TRANSPORT_HOST is required"
 [ "$REGISTRY_TRANSPORT_INSECURE" = true ] || [ "$REGISTRY_TRANSPORT_INSECURE" = false ] ||
 	fail "ENGINE_REGISTRY_TRANSPORT_INSECURE must be true or false"
+[[ "$REGISTRY_INSPECT_ATTEMPTS" =~ ^[1-9][0-9]*$ ]] ||
+	fail "ENGINE_REGISTRY_INSPECT_ATTEMPTS must be a positive integer"
+[[ "$REGISTRY_INSPECT_INITIAL_DELAY_SECONDS" =~ ^[0-9]+$ ]] ||
+	fail "ENGINE_REGISTRY_INSPECT_INITIAL_DELAY_SECONDS must be a non-negative integer"
+[[ "$REGISTRY_INSPECT_MAX_DELAY_SECONDS" =~ ^[0-9]+$ ]] ||
+	fail "ENGINE_REGISTRY_INSPECT_MAX_DELAY_SECONDS must be a non-negative integer"
+[ "$REGISTRY_INSPECT_ATTEMPTS" -le 12 ] ||
+	fail "ENGINE_REGISTRY_INSPECT_ATTEMPTS must not exceed 12"
+[ "$REGISTRY_INSPECT_MAX_DELAY_SECONDS" -le 60 ] ||
+	fail "ENGINE_REGISTRY_INSPECT_MAX_DELAY_SECONDS must not exceed 60 seconds"
+[ "$REGISTRY_INSPECT_INITIAL_DELAY_SECONDS" -le "$REGISTRY_INSPECT_MAX_DELAY_SECONDS" ] ||
+	fail "ENGINE_REGISTRY_INSPECT_INITIAL_DELAY_SECONDS must not exceed ENGINE_REGISTRY_INSPECT_MAX_DELAY_SECONDS"
 case "$REGISTRY_PUBLIC_HOST:$REGISTRY_PUBLISHER_HOST:$REGISTRY_TRANSPORT_HOST" in
 *[[:space:]/]*) fail "Registry hosts must be host[:port] values without whitespace, scheme, or path" ;;
 esac
@@ -447,11 +503,11 @@ while IFS=$'\t' read -r engine_id directory dockerfile build_context repository;
 		# transport network. Inspect the same object through its public endpoint.
 		# Consume the complete inspect stream: exiting awk early can make buildx
 		# report SIGPIPE as exit 255 under pipefail after a successful push.
-		index_digest="$(docker buildx imagetools inspect --builder "$BUILDER_NAME" "$inspect_ref" | awk '/^Digest:/ && digest == "" { digest = $2 } END { print digest }')"
+		index_digest="$(retry_registry_inspect "$inspect_ref" docker buildx imagetools inspect --builder "$BUILDER_NAME" | awk '/^Digest:/ && digest == "" { digest = $2 } END { print digest }')"
 	fi
 	[[ "$index_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || fail "invalid image index digest for $engine_id: $index_digest"
 	raw_index="$tmp_dir/${safe_engine_id}.index.json"
-	docker buildx imagetools inspect --builder "$BUILDER_NAME" --raw "$inspect_ref" >"$raw_index"
+	retry_registry_inspect "$inspect_ref" docker buildx imagetools inspect --builder "$BUILDER_NAME" --raw >"$raw_index"
 	node "$ROOT_DIR/scripts/ci/verify-runtime-image-index.mjs" \
 		--raw-file "$raw_index" \
 		--expected-digest "$index_digest" \
@@ -479,10 +535,10 @@ while IFS=$'\t' read -r engine_id directory dockerfile build_context repository;
 		# oras copies the already-built index and blobs. It never rebuilds the
 		# engine image for GHCR, so both candidates retain one digest identity.
 		oras cp "$docker_ref" "$ghcr_tag_ref"
-		ghcr_digest="$(docker buildx imagetools inspect --builder "$BUILDER_NAME" "$ghcr_tag_ref" | awk '/^Digest:/ && digest == "" { digest = $2 } END { print digest }')"
+		ghcr_digest="$(retry_registry_inspect "$ghcr_tag_ref" docker buildx imagetools inspect --builder "$BUILDER_NAME" | awk '/^Digest:/ && digest == "" { digest = $2 } END { print digest }')"
 		[ "$ghcr_digest" = "$index_digest" ] || fail "cross-Registry Runtime Image digest drift for $engine_id: Docker Hub=$index_digest GHCR=$ghcr_digest"
 		ghcr_raw="$tmp_dir/${safe_engine_id}.ghcr.index.json"
-		docker buildx imagetools inspect --builder "$BUILDER_NAME" --raw "$ghcr_tag_ref" >"$ghcr_raw"
+		retry_registry_inspect "$ghcr_tag_ref" docker buildx imagetools inspect --builder "$BUILDER_NAME" --raw >"$ghcr_raw"
 		node "$ROOT_DIR/scripts/ci/verify-runtime-image-index.mjs" \
 			--raw-file "$ghcr_raw" \
 			--expected-digest "$index_digest" \
