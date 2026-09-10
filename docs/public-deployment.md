@@ -25,19 +25,29 @@ Engine Runtime Images and Engine Packages are public artifacts. First-party
 Engine source is GPL-3.0-only. Included third-party components remain governed
 by their applicable licenses and attribution terms.
 
-## First release and channels
+## Release channels
 
-The first release is `v0.0.1-alpha.57` on `canary`. The public
-`release-channel` branch starts with schema-v3 records:
+Source tags/main and mutable `release-channel` metadata are published
+separately. On a clean work tree, the install command fetches
+`channels/<channel>.env` and its `manifests/<version>.yaml` from the fixed
+`https://raw.githubusercontent.com/yyhuni/lunafox/release-channel/` source,
+validates schema-v3, version, path, and SHA-256, and only then enters the
+Compose lifecycle. A manual fetch or checkout of `release-channel` is not
+required.
 
-- `channels/v0.0.1-alpha.57.env`
-- `channels/canary.env`
-- `manifests/v0.0.1-alpha.57.yaml`
+When complete local `channels/` and `manifests/` directories already exist,
+install reuses and revalidates them without network access or overwriting. A
+single directory, incomplete files, download failure, or validation failure is
+fail-closed. An exact release-tag checkout must also match channel `VERSION`.
+If an interrupted operation leaves partial metadata, start from a clean work
+tree and remove both incomplete directories only after confirming that no
+deployment state exists.
 
-There is no `stable.env` until migration and data-retention governance gates
-are approved. Version records are append-only. Corrections use a new
-prerelease tag and never rebind a previously published digest, manifest,
-channel record, or public tree.
+The default channel is stable. Until a stable alias is governed and published,
+omitting `--channel` explicitly directs the operator to canary and never
+silently selects a prerelease. Channel records remain append-only; corrections
+use a new prerelease tag and never rebind an existing digest, manifest, channel
+record, or public tree.
 
 Schema v2, alpha.46, legacy image variables, installer assets, and
 `checksums.txt` are retired. No automatic migration from an old private

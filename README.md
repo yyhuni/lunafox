@@ -13,18 +13,27 @@ standalone installer source are not published here.
 
 ## Install
 
-The first public release is the canary `v0.0.1-alpha.57`. On a clean supported
-host, choose the canary explicitly:
+On a clean supported host, use a public `main` or release-tag work tree and run:
 
 ```bash
 ./install.sh --channel canary --public-host example.example
 ```
 
-The default channel is stable. Until a governed stable alias exists, omitting
-`--channel` fails closed with canary guidance; it never silently selects a
-canary. Docker Hub is the default image source. `--registry ghcr` switches the
-entire immutable image and Engine Package closure; there is no mixed-source or
-automatic fallback.
+During install, the lifecycle fetches the selected schema-v3 channel record and
+manifest from the fixed public `release-channel` source, then writes them to
+local `channels/` and `manifests/` only after validation. No manual fetch or
+checkout of another branch is required. When the work tree is an exact release
+tag, that tag must match the channel version. A complete local metadata set is
+reused without network access; partial metadata, network errors, or digest and
+version failures stop installation without fallback. After an interrupted
+attempt, start from a clean work tree, or remove incomplete `channels/` and
+`manifests/` only after confirming that no deployment state exists.
+
+The default channel remains stable. Until a stable alias is governed and
+published, omitting `--channel` gives explicit canary guidance and never
+silently selects a prerelease. Docker Hub is the default image source;
+`--registry ghcr` switches the complete immutable image and Engine Package
+closure, with no mixed-source or automatic fallback.
 
 ## Lifecycle
 
@@ -93,7 +102,7 @@ product publication. Public pull requests do not automatically synchronize
 back.
 
 Public pull-request CI validates this closure without secrets and performs
-non-publishing Docker builds. Only a reviewed generated export merged into
+non-publishing Docker builds. Only a validated generated export merged through
 protected `main` can publish the four public Runtime Images. Dependency
 directories, framework output, coverage, screenshots, logs, test-results,
 test plans, caches, TLS material, Agent source, and private release inputs

@@ -117,15 +117,19 @@ function assertPublicValidation(checkRuns, statuses = [], expectedSha = "") {
 
 function assertProtection(protection) {
   const reviews = protection?.required_pull_request_reviews;
-  if (!reviews) fail("public main branch protection does not require pull-request review");
-  if (!Number.isInteger(reviews.required_approving_review_count) || reviews.required_approving_review_count < 1) {
-    fail("public main branch protection must require at least one approving review");
+  if (!reviews) fail("public main branch protection does not require pull-request protection");
+  if (reviews.required_approving_review_count !== 0) {
+    fail("public main branch protection must require zero approving reviews for trusted release auto-merge");
   }
   if (protection?.enforce_admins?.enabled !== true) fail("public main branch protection must enforce rules for administrators");
+  if (protection?.required_conversation_resolution?.enabled !== true) {
+    fail("public main branch protection must require conversation resolution");
+  }
   if (protection?.allow_force_pushes?.enabled === true) fail("public main must reject force pushes");
   if (protection?.allow_deletions?.enabled === true) fail("public main must reject branch deletion");
   const requiredChecks = protection?.required_status_checks;
   if (!requiredChecks) fail("public main branch protection must require status checks");
+  if (requiredChecks.strict !== true) fail("public main branch protection must require up-to-date status checks");
   const checkNames = [
     ...(Array.isArray(requiredChecks.checks) ? requiredChecks.checks.map((check) => check?.context) : []),
     ...(Array.isArray(requiredChecks.contexts) ? requiredChecks.contexts : []),
@@ -134,8 +138,10 @@ function assertProtection(protection) {
     fail("public main branch protection must require Public Projection Validation");
   }
   return {
-    requiredReview: true,
+    requiredPullRequest: true,
+    requiredApprovingReviews: 0,
     requiredChecks: checkNames,
+    strictRequiredChecks: true,
     forcePushDisabled: protection?.allow_force_pushes?.enabled !== true,
   };
 }
@@ -155,7 +161,7 @@ async function verify(options) {
       mergeSha: options.mergeSha,
       branchPattern: `export/${options.tag}`,
       requiredCheck: "Public Projection Validation",
-      requiresProtectedReview: true,
+      requiredApprovingReviews: 0,
     };
   }
   let fixture;
