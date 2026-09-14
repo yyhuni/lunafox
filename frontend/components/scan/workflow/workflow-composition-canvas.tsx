@@ -41,7 +41,11 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { DetailDrawer } from "@/components/shared/detail-drawer"
+import {
+  DetailDrawer,
+  DETAIL_DRAWER_COMPACT_BODY_CLASS,
+  DETAIL_DRAWER_COMPACT_FOOTER_CLASS,
+} from "@/components/shared/detail-drawer"
 import { CopyButton } from "@/components/shared/feedback/copy-button"
 import {
   ArrowLeft,
@@ -58,6 +62,7 @@ import {
 import type { WorkflowEngineLibraryItem } from "@/lib/engine-catalog"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { narrowFormDialogContentClassName } from "@/lib/ui/overlay-styles"
 import type { ScanWorkflowStageView } from "@/types/scan-workflow.types"
 
 import styles from "./workflow-composition-canvas.module.css"
@@ -639,6 +644,7 @@ export function WorkflowCompositionCanvas({
       className={cn("relative flex h-full min-h-0 flex-1 overflow-hidden", styles.workbench, className)}
       data-workflow-composition-canvas="mock-only"
       data-workflow-builder="floating-canvas"
+      data-workspace-width="full"
     >
       <div className={cn("absolute inset-0", styles.canvasShell)} data-workflow-builder-canvas="serial-parallel">
         <ReactFlow
@@ -792,7 +798,7 @@ function WorkflowSaveMetadataDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className={narrowFormDialogContentClassName}>
         <form
           onSubmit={(event) => {
             event.preventDefault()
@@ -804,7 +810,7 @@ function WorkflowSaveMetadataDialog({
             <DialogTitle>{t("canvas.saveMetadataTitle")}</DialogTitle>
             <DialogDescription>{t("canvas.saveMetadataDescription")}</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-5">
+          <div className="grid gap-3 py-3">
             <div className="grid gap-2">
               <Label htmlFor="workflow-display-name">{t("canvas.workflowName")}</Label>
               <Input
@@ -928,7 +934,7 @@ function WorkflowRenameStageDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className={narrowFormDialogContentClassName}>
         <form
           onSubmit={(event) => {
             event.preventDefault()
@@ -939,7 +945,7 @@ function WorkflowRenameStageDialog({
             <DialogTitle>{t("canvas.renameStageTitle")}</DialogTitle>
             <DialogDescription>{t("canvas.renameStageDescription")}</DialogDescription>
           </DialogHeader>
-          <div className="py-5">
+          <div className="py-3">
             <Label htmlFor="workflow-stage-display-name">{t("canvas.stageDisplayName")}</Label>
             <Input
               id="workflow-stage-display-name"
@@ -998,7 +1004,7 @@ function WorkflowStageInspector({
       className="sm:max-w-md"
     >
       <div className="flex min-h-0 flex-1 flex-col" data-stage-inspector="workflow-builder">
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        <div className={DETAIL_DRAWER_COMPACT_BODY_CLASS}>
           <section className="space-y-3">
             <h2 className={textRole.sectionTitle}>{t("canvas.stageEngines")}</h2>
             {stage?.steps.length ? (
@@ -1038,7 +1044,7 @@ function WorkflowStageInspector({
             )}
           </section>
         </div>
-        <div className="space-y-2 border-t px-6 py-4">
+        <div className={cn("space-y-2", DETAIL_DRAWER_COMPACT_FOOTER_CLASS)}>
           {stage ? (
             <Button type="button" variant="surface" layout="fullWidth" disabled={readOnly} onClick={() => onRename(stage)}>
               <semanticIcons.action.edit className="size-4" />
@@ -1163,12 +1169,12 @@ function WorkflowYamlDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-3xl">
-        <DialogHeader className="border-b px-6 py-4 pr-12">
+        <DialogHeader className="border-b px-4 py-3 pr-14">
           <DialogTitle>{t("canvas.yamlConfig")}</DialogTitle>
           <DialogDescription>{t("canvas.yamlHint")}</DialogDescription>
         </DialogHeader>
-        <div className="relative p-6" data-yaml-inspector="workflow-builder">
-          <div className="absolute top-8 right-8 z-10">
+        <div className="relative px-4 py-3" data-yaml-inspector="workflow-builder">
+          <div className="absolute top-5 right-6 z-10">
             <CopyButton
               value={yamlPreview}
               copyLabel={tActions("copy")}

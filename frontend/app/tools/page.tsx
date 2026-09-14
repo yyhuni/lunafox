@@ -7,6 +7,10 @@ import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { getTranslations } from "next-intl/server"
+import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_PAGE_SHELL_CLASS,
+} from "@/components/shared/layout/page-shell-density"
 
 /**
  * Tools overview page
@@ -42,7 +46,7 @@ export default async function ToolsPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+    <div className={COMPACT_PAGE_SHELL_CLASS}>
       <PageHeader
         code="TLS-01"
         title={t("title")}
@@ -50,10 +54,14 @@ export default async function ToolsPage() {
       />
 
       {/* Statistics cards */}
-      <div className="px-4 lg:px-6">
-        <div className="grid gap-4 md:grid-cols-2">
+      <div className={COMPACT_CONTENT_GUTTER_CLASS}>
+        <div className="grid gap-3 md:grid-cols-2">
           {modules.map((module) => (
-            <Card key={module.title} className="relative hover:shadow-lg transition-shadow">
+            <Card
+              key={module.title}
+              variant="compact"
+              className="relative hover:shadow-lg transition-shadow"
+            >
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -69,9 +77,9 @@ export default async function ToolsPage() {
                 <CardDescription>{module.description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {/* Statistics information */}
-                  <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-3">
                     <div className="flex items-baseline gap-1">
                       <span className={textRole.metadataLabel}>{t("stats.total")}</span>
                       <span className={textRole.metadataValueStrong}>{module.stats.total}</span>
@@ -105,8 +113,8 @@ export default async function ToolsPage() {
       </div>
 
       {/* Quick actions */}
-      <div className="px-4 lg:px-6">
-        <Card>
+      <div className={COMPACT_CONTENT_GUTTER_CLASS}>
+        <Card variant="compact">
           <CardHeader>
             <CardTitle>{t("quickActions.title")}</CardTitle>
             <CardDescription>

@@ -25,8 +25,11 @@ describe("card contract", () => {
 
   it("adds semantic card aliases while preserving current shell styling", () => {
     expect(source).toContain("shell:")
+    expect(source).toContain('compact: "gap-3 py-4"')
     expect(source).toContain("metric:")
     expect(source).toContain("data-card-variant")
+    expect(source).toContain("CardDensityContext")
+    expect(source).toContain('data-density={density}')
   })
 
   it("keeps the shared production panel rhythm on the default card shell", () => {
@@ -41,5 +44,6 @@ describe("card contract", () => {
     expect(source).toContain("data-density")
     expect(source).toContain("compact")
     expect(source).toContain("py-2.5")
+    expect(source).toContain('resolvedDensity === "compact" ? "px-4" : "px-6"')
   })
 })

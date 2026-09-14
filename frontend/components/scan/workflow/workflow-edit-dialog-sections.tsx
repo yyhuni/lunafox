@@ -18,7 +18,7 @@ interface WorkflowEditHeaderProps {
 
 export function WorkflowEditHeader({ workflowName, t }: WorkflowEditHeaderProps) {
   return (
-    <DialogHeader className="border-b pb-4 pt-6 px-6">
+    <DialogHeader className="border-b px-4 py-3 pr-14">
       <DialogTitle className="flex gap-2 items-center">
         <FileCode className="h-5 w-5" />
         {t("title", { name: workflowName ?? "" })}
@@ -46,7 +46,7 @@ export function WorkflowEditEditor({
   onChange,
 }: WorkflowEditEditorProps) {
   return (
-    <div className="flex-1 overflow-hidden px-6 py-4">
+    <div className="flex-1 overflow-hidden px-4 py-3">
       <div className="flex flex-col gap-2 h-full">
         <div className="flex items-center justify-between">
           <Label>{t("yamlConfig")}</Label>
@@ -115,7 +115,7 @@ export function WorkflowEditFooter({
   onSave,
 }: WorkflowEditFooterProps) {
   return (
-    <DialogFooter className="border-t gap-2 px-6 py-4">
+    <DialogFooter className="border-t gap-2 px-4 py-3">
       <Button
         type="button"
         onClick={onSave}

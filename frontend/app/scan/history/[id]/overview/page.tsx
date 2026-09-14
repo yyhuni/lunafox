@@ -1,4 +1,5 @@
 import { ScanOverview } from "@/components/scan/history/scan-overview"
+import { DetailAssetContentFrame } from "@/components/shared/layout/detail-asset-content-frame"
 
 /**
  * Scan overview page
@@ -13,8 +14,8 @@ export default async function ScanOverviewPage({
   const scanId = Number(id)
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col px-4 lg:px-6">
+    <DetailAssetContentFrame className="flex min-h-0 min-w-0 flex-1 flex-col">
       <ScanOverview scanId={scanId} />
-    </div>
+    </DetailAssetContentFrame>
   )
 }

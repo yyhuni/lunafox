@@ -14,7 +14,7 @@ describe("page contract", () => {
   })
 
   it("keeps the overview dashboard on the shared route-shell rhythm", () => {
-    expect(pageSource).toContain('className="flex flex-col gap-4 py-4 md:gap-5 md:pt-5 md:pb-6"')
+    expect(pageSource).toContain("COMPACT_PAGE_RHYTHM_CLASS")
     expect(pageSource).toContain("<OverviewPageContent />")
     expect(pageSource).not.toContain("px-4 lg:px-6")
     expect(pageSource).not.toContain("AppShellWarmup")

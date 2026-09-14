@@ -65,7 +65,7 @@ describe("scan-overview contract", () => {
 
   it("uses the desktop workbench side panel from the xl breakpoint", () => {
     expect(source).toContain("SCAN_OVERVIEW_WORKBENCH_CLASS")
-    expect(layoutSource).toContain("flex min-h-0 min-w-0 flex-1 flex-col gap-4 xl:flex-row xl:items-start")
+    expect(layoutSource).toContain("flex min-h-0 min-w-0 flex-1 flex-col gap-3 xl:flex-row xl:items-start")
     expect(source).not.toContain("2xl:flex-row")
   })
 

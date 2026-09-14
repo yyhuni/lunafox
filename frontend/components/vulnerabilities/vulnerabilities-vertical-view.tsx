@@ -16,6 +16,8 @@ import { VulnerabilityDetailDrawer } from "./vulnerability-detail-drawer"
 import {
   VulnerabilitiesDetailViewDialogs,
 } from "./vulnerabilities-detail-view-sections"
+import { COMPACT_SECTION_GAP_CLASS } from "@/components/shared/layout/page-shell-density"
+import { cn } from "@/lib/utils"
 
 import type { Vulnerability } from "@/types/vulnerability.types"
 
@@ -54,7 +56,7 @@ export function VulnerabilitiesVerticalView({
   const loadingRowCount = getDataTableSkeletonRowCount(state.pagination.pageSize)
 
   const loadingState = (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 md:gap-6">
+    <div className={cn("flex min-h-0 flex-1 flex-col", COMPACT_SECTION_GAP_CLASS)}>
       <div {...getLoadingStructureSlotAttributes("vulnerabilities-severity-summary")}>
         <VulnerabilityStatCardsLoadingState />
       </div>
@@ -109,7 +111,7 @@ export function VulnerabilitiesVerticalView({
       skeletonClassName="flex min-h-0 flex-1 flex-col"
       contentClassName="flex min-h-0 flex-1 flex-col"
     >
-      <div className="flex min-h-0 flex-1 flex-col gap-4 md:gap-6">
+      <div className={cn("flex min-h-0 flex-1 flex-col", COMPACT_SECTION_GAP_CLASS)}>
         <div {...getLoadingStructureSlotAttributes("vulnerabilities-severity-summary")}>
           <VulnerabilityStatCards
             counts={state.severityCounts}

@@ -1,5 +1,6 @@
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { COMPACT_SECTION_GAP_CLASS } from "@/components/shared/layout/page-shell-density"
 
 export const AGENT_OVERVIEW_HEADER_CLASS =
   "flex min-w-0 flex-col items-start gap-2 @4xl/main:flex-row @4xl/main:items-center @4xl/main:justify-between"
@@ -8,7 +9,7 @@ export const AGENT_OVERVIEW_TITLE_GROUP_CLASS =
   "flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"
 
 export const AGENT_CLUSTER_SUMMARY_ROOT_CLASS =
-  "flex min-w-0 flex-wrap gap-y-4 border-y border-border py-4"
+  "flex min-w-0 flex-wrap gap-y-3 border-y border-border py-3"
 
 export const AGENT_CLUSTER_SUMMARY_STATE_CLASS =
   "flex min-w-0 w-full flex-col items-start justify-center @4xl/main:w-1/2 @5xl/main:w-1/4 @5xl/main:items-center @5xl/main:px-5"
@@ -43,7 +44,7 @@ export const AGENT_LIST_TOOLBAR_REGION_SLOT = "agent-list-toolbar-region"
 export const AGENT_LIST_RESULTS_PRIMARY_REGION_SLOT = "agent-list-results-primary-region"
 
 export const AGENT_CARD_GRID_CLASS =
-  "grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3 @7xl/main:grid-cols-4"
+  `grid grid-cols-1 ${COMPACT_SECTION_GAP_CLASS} @xl/main:grid-cols-2 @5xl/main:grid-cols-3 @7xl/main:grid-cols-4`
 
 // Keeps the single-node installation affordance aligned with a regular card cell.
 export const AGENT_EXPANSION_SLOT_MIN_HEIGHT_CLASS = "min-h-[252px]"
@@ -62,7 +63,7 @@ export const AGENT_CARD_TITLE_CLASS = cn(textRole.bodyStrong, "leading-none trun
 export const AGENT_CARD_IP_CLASS =
   "font-mono mt-1 opacity-80 text-[10px] text-muted-foreground truncate"
 
-export const AGENT_CARD_BODY_CLASS = "flex-1 p-4 space-y-4"
+export const AGENT_CARD_BODY_CLASS = "flex-1 p-3 space-y-3"
 
 export const AGENT_CARD_INFO_GRID_CLASS = "gap-x-4 gap-y-2 grid grid-cols-2 text-[11px]"
 

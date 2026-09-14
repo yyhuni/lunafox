@@ -37,6 +37,7 @@ import {
   SCREENSHOTS_GALLERY_TOOLBAR_CONTROLS_CLASS,
 } from "./screenshots-gallery-layout"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { DetailAssetContentFrame } from "@/components/shared/layout/detail-asset-content-frame"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 import { ScreenshotSortControl } from "./screenshot-sort-control"
@@ -118,14 +119,16 @@ export function ScreenshotsGalleryRouteFallback({
   }
 
   return (
-    <div className={SCREENSHOTS_GALLERY_ROOT_CLASS}>
-      <ScreenshotsGalleryToolbarLoadingState showSelectionAction={showSelectionAction} />
-      <div className={SCREENSHOTS_GALLERY_GRID_CLASS}>
-        {Array.from({ length: itemCount }).map((_, index) => (
-          <ScreenshotsGalleryItemLoadingState key={index} />
-        ))}
+    <DetailAssetContentFrame>
+      <div className={SCREENSHOTS_GALLERY_ROOT_CLASS}>
+        <ScreenshotsGalleryToolbarLoadingState showSelectionAction={showSelectionAction} />
+        <div className={SCREENSHOTS_GALLERY_GRID_CLASS}>
+          {Array.from({ length: itemCount }).map((_, index) => (
+            <ScreenshotsGalleryItemLoadingState key={index} />
+          ))}
+        </div>
       </div>
-    </div>
+    </DetailAssetContentFrame>
   )
 }
 
@@ -324,18 +327,18 @@ export function ScreenshotsGalleryContent({
       ) : null}
 
       <Dialog open={state.lightboxOpen} onOpenChange={state.setLightboxOpen}>
-        <DialogContent className="bg-[var(--media-overlay-background)] border-none max-h-[90vh] max-w-[90vw] p-0">
+        <DialogContent showCloseButton={false} className="bg-[var(--media-overlay-background)] border-none max-h-[90vh] max-w-[90vw] p-0">
           <DialogTitle className="sr-only">{state.t("lightboxTitle")}</DialogTitle>
           <div className="flex h-full items-center justify-center relative w-full">
             <Button
               type="button"
               variant="ghost"
-              size="icon-lg"
+              size="icon-sm"
               onClick={() => state.setLightboxOpen(false)}
-              className="absolute bg-background/10 hover:bg-background/20 right-4 rounded-full top-4 z-50"
+              className="overlay-close-control absolute right-4 top-4 z-50"
               aria-label={state.t("closeLightbox")}
             >
-              <X className="h-6 text-background w-6" />
+              <X className="size-3.5" />
             </Button>
 
             {state.screenshots.length > 1 ? (

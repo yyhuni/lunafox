@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl"
 
 import { AppErrorState } from "@/components/shared/feedback/app-error-state"
 import { ContentHandoff } from "@/components/shared/loading/content-handoff"
-import { DetailDrawer } from "@/components/shared/detail-drawer"
+import { DetailDrawer, DETAIL_DRAWER_COMPACT_BODY_CLASS } from "@/components/shared/detail-drawer"
 import { getDataTableSkeletonRowCount } from "@/components/shared/loading/data-table-skeleton"
 import { ImportFingerprintDialog } from "@/components/fingerprints/import-fingerprint-dialog"
 import { useFingerprintFacetOptions } from "@/hooks/use-fingerprints/filter-options"
@@ -283,7 +283,7 @@ export function FingerprintLibraryWorkspace<
           onOpenChange={handleDrawerOpenChange}
           title={tFingerprints("title")}
         >
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          <div className={DETAIL_DRAWER_COMPACT_BODY_CLASS}>
             <AppErrorState
               error={normalizeError(detailError)}
               onRetry={detailQuery.refetch}

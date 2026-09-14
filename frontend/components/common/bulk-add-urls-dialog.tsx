@@ -51,7 +51,7 @@ export function BulkAddUrlsDialog({ targetId, assetType, targetName, targetType,
         <BulkAddUrlsDialogHeader title={labels.title} description={labels.description}/>
 
         <form onSubmit={handleSubmit}>
-          <div className="gap-4 grid py-4">
+          <div className="gap-3 grid py-3">
             <BulkAddUrlsInput tUrl={tUrl} placeholder={labels.placeholder} inputText={inputText} lineNumbersRef={lineNumbersRef} textareaRef={textareaRef} onInputChange={handleInputChange} onScroll={handleTextareaScroll} isPending={mutation.isPending} lineCount={lineCount} validationResult={validationResult}/>
           </div>
 

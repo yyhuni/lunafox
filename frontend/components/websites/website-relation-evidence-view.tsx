@@ -680,12 +680,12 @@ export function RelationScreenshotPreviewDialog({
             <Button
               type="button"
               variant="ghost"
-              size="icon-lg"
+              size="icon-sm"
               onClick={() => onOpenChange(false)}
-              className="absolute right-4 top-4 z-50 rounded-full bg-background/10 hover:bg-background/20"
+              className="overlay-close-control absolute right-4 top-4 z-50"
               aria-label={t("closeScreenshotPreview")}
             >
-              <X className="size-6 text-background" />
+              <X className="size-3.5" />
             </Button>
             <div className="flex flex-col items-center gap-4 p-8">
               {/* eslint-disable-next-line @next/next/no-img-element */}

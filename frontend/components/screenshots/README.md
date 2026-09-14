@@ -20,3 +20,5 @@ actions, or derive a terminal page from `totalSize`.
 - Gallery item loading may remain aspect-ratio media placeholders because the resolved cards are screenshot media frames, but the surrounding grid must stay shared through `SCREENSHOTS_GALLERY_GRID_CLASS`.
 - `ScreenshotsGalleryRouteFallback` accepts an explicit stable first-frame item count and an optional target-only selection-action slot. Target detail uses three items plus that action slot because this preserves one desktop grid row and two narrow-screen rows without waiting for unavailable target metadata. Other detail shells may omit both props and retain the shared eight-card/no-target-action defaults; an explicit count must be a positive integer.
 - `screenshots-gallery-skeleton.tsx` has been hard-cut. Keep normal query loading inside `ScreenshotsGalleryLoadingState` / `ScreenshotsGalleryContent` so loading and resolved gallery shells share the same owner.
+
+The lightbox owns one custom `overlay-close-control` and disables DialogContent’s default close button to avoid duplicate close affordances. It retains the same localized label and close handler.

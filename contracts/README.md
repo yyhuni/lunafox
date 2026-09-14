@@ -31,6 +31,7 @@ packages.
 | `contracts/results` | Server result-registry helper | Ordered, versioned result descriptors plus Server-side closed decoding, Schema-basics admission, and complex validation. It is not an Engine authoring or normalization surface. |
 | `contracts/versioning` | canonical value helper | Shared semantic-version normalization and validation. |
 | `contracts/agentinstall` | canonical value helper | Shared agent installation defaults used by Server-generated install scripts and installer tooling. |
+| `contracts/releasemanifest` | release contract | Strict immutable Compose release inventory shared by installer, release verification, and upgrade control planes; owns release digest and upgrade/migration metadata validation. |
 | `contracts/scanworkflow` | protocol contract | Formal scan workflow definition JSON DTOs, strict decoder, and semantic validators; every Step requires the boolean `profileDefaultEnabled` orchestration metadata. |
 | `contracts/scanworkflow/configuration` | canonical value helper | Scan workflow dynamic configuration object normalization and strict `configuration.steps.<stepId>` envelope validation; requests require exact Step coverage, `enabled: true` requires `engineConfig`, `enabled: false` forbids it, and callers provide known steps and own catalog/Engine Definition validation. Server Profiles are a separate all-disabled draft shape with complete Engine defaults and do not pass through request fallback. |
 | `contracts/sharedstorage` | canonical value helper | Deterministic shared storage path constants and builders. |
@@ -201,6 +202,20 @@ returns the existing empty acknowledgement shape.
   credentials are injected by Agent/runtimekit. Engine manifests, config
   declarations, and runtime install environment overrides must not make those
   platform-owned inputs engine-controlled.
+- Release/upgrade boundaries are owned by `contracts/releasemanifest` and the
+  Server/host adapters around it: a supported target is a single-node Compose
+  maintenance operation identified by one immutable manifest digest. The
+  Server-to-host handoff may contain only `operationId`, a fixed action, and that
+  digest; it must not carry image refs, paths, commands, migration versions, or
+  credentials. The production Server must not mount the Docker socket.
+- Agent replacement remains an Agent control-plane concern. The host upgrader
+  must not replace Agent containers; Server uses the existing `update_required`
+  lifecycle and includes Agent reconnect, target match, health, and claim
+  readiness in completion evidence. A completion receipt is only deployment
+  proof and never overrides the database Operation or host journal. The MVP has
+  no automatic backup, data-retention rollback, or `migrate down` recovery;
+  migration failures after the irreversible checkpoint require explicit
+  recovery.
 - Examples, scaffold output, and conformance tests verify contracts. Long-lived
   semantics belong in OpenSpec or package documentation.
 - Generated bindings under `contracts/gen` are regenerated from source inputs;

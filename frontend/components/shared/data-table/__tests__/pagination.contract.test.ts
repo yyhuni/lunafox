@@ -22,9 +22,9 @@ describe("pagination contract", () => {
   })
 
   it("keeps pagination readable when controls wrap on mobile", () => {
-    expect(source).toContain("flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between")
+    expect(source).toContain("flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between")
     expect(source).toContain("w-full sm:flex-1")
-    expect(source).toContain("flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-4")
+    expect(source).toContain("flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3")
     expect(source).toContain("textRole.metadataLabel")
     expect(source).toContain('"whitespace-nowrap", textRole.metadataLabel')
     expect(source).toContain("textRole.metadataValue")

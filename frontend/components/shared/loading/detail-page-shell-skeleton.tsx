@@ -7,6 +7,10 @@ import {
   type LoadingIntent,
   type LoadingLayer,
 } from "@/components/shared/loading/loading-owner"
+import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_PAGE_RHYTHM_CLASS,
+} from "@/components/shared/layout/page-shell-density"
 
 interface DetailPageShellSkeletonProps {
   owner?: string
@@ -59,15 +63,15 @@ export function DetailPageShellSkeleton({
     <div
       {...ownerAttributes}
       data-slot="detail-page-shell-skeleton"
-      className={cn("flex flex-col gap-4 py-4 md:gap-6 md:py-6", className)}
+      className={cn("flex flex-col", COMPACT_PAGE_RHYTHM_CLASS, className)}
     >
-      <div className="flex items-center gap-2 text-sm px-4 lg:px-6">
+      <div className={cn("flex items-center gap-2 text-sm", COMPACT_CONTENT_GUTTER_CLASS)}>
         <Skeleton className="h-4 w-16 rounded-full" />
         <span className="text-muted-foreground">/</span>
         <Skeleton className="h-4 w-32 rounded-full" />
       </div>
 
-      <div className="px-4 lg:px-6">
+      <div className={COMPACT_CONTENT_GUTTER_CLASS}>
         <Tabs value={`tab-${activePrimaryTabIndex}`}>
           <TabsList>
             {Array.from({ length: resolvedPrimaryTabCount }).map((_, index) => (
@@ -95,7 +99,7 @@ export function DetailPageShellSkeleton({
       </div>
 
       {showSecondaryNav ? (
-        <div className="px-4 lg:px-6">
+        <div className={COMPACT_CONTENT_GUTTER_CLASS}>
           <Tabs value="secondary-tab-0">
             <TabsList variant="content">
               {Array.from({ length: secondaryTabCount }).map((_, index) => (

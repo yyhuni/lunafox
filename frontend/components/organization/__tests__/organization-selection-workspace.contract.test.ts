@@ -25,7 +25,7 @@ describe("organization-selection-workspace contract", () => {
     expect(source).toContain("{showSelectionCount ? (")
     expect(source).toContain("sm:grid-cols-2")
     expect(source).toContain('className="border-t bg-muted/30 sm:h-18"')
-    expect(source).toContain('<SelectTrigger size="sm" className="w-28">')
+    expect(source).toContain('<SelectTrigger size="sm" className={SELECTION_WORKSPACE_SCOPE_TRIGGER_CLASS}>')
     expect(source).toContain('<Checkbox className="mt-2"')
     expect(source).toContain("isSelected && \"border-border\"")
     expect(source).toContain("isSelected && \"text-foreground\"")

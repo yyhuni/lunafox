@@ -48,4 +48,9 @@ describe("create-scheduled-scan-dialog contract", () => {
     expect(source).not.toContain("ScheduledScanConfigStep")
     expect(source).not.toContain("currentStep === 5")
   })
+
+  it("keeps ordinary workflow options on the compact form rhythm", () => {
+    expect(source).toContain('className="space-y-3 border-t pt-3"')
+    expect(source).not.toContain('className="space-y-5 border-t pt-6"')
+  })
 })

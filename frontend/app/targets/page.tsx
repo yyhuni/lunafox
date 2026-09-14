@@ -1,12 +1,16 @@
 import { PageHeader } from "@/components/common/page-header"
 import { AllTargetsDetailView } from "@/components/target/all-targets-detail-view"
 import { getTranslations } from "next-intl/server"
+import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_PAGE_SHELL_CLASS,
+} from "@/components/shared/layout/page-shell-density"
 
 export default async function AllTargetsPage() {
   const t = await getTranslations("pages.target")
 
   return (
-    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+    <div className={COMPACT_PAGE_SHELL_CLASS}>
       <PageHeader
         code="TGT-01"
         title={t("title")}
@@ -14,7 +18,7 @@ export default async function AllTargetsPage() {
       />
 
       {/* Target list */}
-      <div className="px-4 lg:px-6">
+      <div className={COMPACT_CONTENT_GUTTER_CLASS}>
         <AllTargetsDetailView />
       </div>
     </div>

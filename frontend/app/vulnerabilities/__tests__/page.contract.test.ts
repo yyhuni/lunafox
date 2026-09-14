@@ -35,15 +35,15 @@ describe("page contract", () => {
   })
 
   it("uses the shared production page shell rhythm instead of route-local full-page padding", () => {
-    expect(source).toContain("gap-4 py-4 md:gap-6 md:py-6")
-    expect(source).toContain("px-4 lg:px-6")
+    expect(source).toContain("COMPACT_CONTAINER_PAGE_SHELL_CLASS")
+    expect(source).toContain("COMPACT_CONTENT_GUTTER_CLASS")
     expect(source).toContain("min-h-0")
     expect(source).not.toContain("p-4 md:p-6")
   })
 
   it("provides the primary vulnerabilities workspace with a bounded flex height chain", () => {
-    expect(source).toContain('className="@container/main flex min-h-0 flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6"')
-    expect(source).toContain('className="flex min-h-0 flex-1 flex-col px-4 lg:px-6"')
+    expect(source).toContain('className={COMPACT_CONTAINER_PAGE_SHELL_CLASS}')
+    expect(source).toContain('className={`flex min-h-0 flex-1 flex-col ${COMPACT_CONTENT_GUTTER_CLASS}`}')
   })
 
   it("renders a page-level header above the vulnerabilities workspace", () => {

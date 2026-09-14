@@ -4,6 +4,7 @@ import dynamic from "next/dynamic"
 
 import { DirectoriesDataTable } from "./directories-data-table"
 import { useDirectoryTableColumns } from "./directories-columns"
+import { DetailAssetContentFrame } from "@/components/shared/layout/detail-asset-content-frame"
 import { ConfirmDialog } from "@/components/shared/feedback/confirm-dialog"
 import {
   deferredInteractionUnmountDelayMs,
@@ -75,7 +76,7 @@ export function DirectoriesViewRouteFallback({
   const { columns } = useDirectoryTableColumns()
 
   return (
-    <div className="px-4 lg:px-6">
+    <DetailAssetContentFrame>
       <DirectoriesDataTable
         data={[]}
         columns={columns}
@@ -93,7 +94,7 @@ export function DirectoriesViewRouteFallback({
         initialLoading
         loadingRowCount={rowCount}
       />
-    </div>
+    </DetailAssetContentFrame>
   )
 }
 

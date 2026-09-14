@@ -6,6 +6,10 @@ import {
   getLoadingOwnerAttributes,
   type LoadingLayer,
 } from "@/components/shared/loading/loading-owner"
+import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_PAGE_RHYTHM_CLASS,
+} from "@/components/shared/layout/page-shell-density"
 
 interface CardGridSkeletonProps {
   owner?: string
@@ -35,8 +39,9 @@ export function CardGridSkeleton({
   }
 
   const containerClass = cn(
-    "flex flex-col gap-4",
-    withPadding && "px-4 lg:px-6",
+    "flex flex-col",
+    COMPACT_PAGE_RHYTHM_CLASS,
+    withPadding && COMPACT_CONTENT_GUTTER_CLASS,
     className
   )
 
@@ -58,9 +63,9 @@ export function CardGridSkeleton({
         </div>
       )}
 
-      <div className="gap-4 grid grid-cols-1 lg:grid-cols-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="gap-3 grid grid-cols-1 lg:grid-cols-3 md:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: cards }).map((_, index) => (
-          <div key={index} className="bg-card border border-border rounded-xl p-4 shadow-2xs space-y-4">
+          <div key={index} className="bg-card border border-border rounded-xl p-4 shadow-2xs space-y-3">
             <div className="space-y-2">
               <Skeleton className="h-5 w-3/4" />
               <Skeleton className="h-4 w-full rounded-full" />

@@ -1,6 +1,10 @@
 import { PageHeader } from "@/components/common/page-header"
 import { OrganizationList } from "@/components/organization/organization-list"
 import { getTranslations } from "next-intl/server"
+import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_PAGE_SHELL_CLASS,
+} from "@/components/shared/layout/page-shell-density"
 
 /**
  * Organization management page
@@ -10,7 +14,7 @@ export default async function OrganizationPage() {
   const t = await getTranslations("pages.organization")
 
   return (
-    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+    <div className={COMPACT_PAGE_SHELL_CLASS}>
       <PageHeader
         code="ORG-01"
         title={t("title")}
@@ -18,7 +22,7 @@ export default async function OrganizationPage() {
       />
 
       {/* Organization list component */}
-      <div className="px-4 lg:px-6">
+      <div className={COMPACT_CONTENT_GUTTER_CLASS}>
         <OrganizationList />
       </div>
     </div>

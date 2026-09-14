@@ -65,6 +65,9 @@ import {
   isMockWordlistEditable,
   getMockUpdateCheckResult,
   getMockVersionInfo,
+  createMockUpgradeOperation,
+  getMockUpgradeOperation,
+  retryMockUpgradeOperation,
   getMockWebsites,
   getMockLoginVisualSettings,
   getMockLoginVisualDiscoverability,
@@ -779,11 +782,32 @@ async function resolveMockApi(request: Request) {
   if (method === "GET" && path === "/system/disk-stats") {
     return json(getMockDiskStats())
   }
-  if (method === "GET" && path === "/system/version") {
-    return json(getMockVersionInfo())
-  }
-  if (method === "GET" && path === "/system/check-update") {
+  if (method === "POST" && path === "/system:checkForUpdates") {
     return json(getMockUpdateCheckResult())
+  }
+  if (method === "POST" && path === "/upgradeOperations") {
+    const body = await request.json() as { requestId?: unknown; manifestId?: unknown; manifestDigest?: unknown; confirmed?: unknown }
+    if (typeof body.requestId !== "string" || typeof body.manifestId !== "string" || typeof body.manifestDigest !== "string" || body.confirmed !== true) {
+      return json({ error: { code: "INVALID_ARGUMENT", message: "requestId, manifestId, manifestDigest and confirmed are required." } }, { status: 400 })
+    }
+    return json(createMockUpgradeOperation({ requestId: body.requestId, manifestId: body.manifestId, manifestDigest: body.manifestDigest }), { status: 201 })
+  }
+  {
+    const operationMatch = path.match(/^\/upgradeOperations\/([^/:]+)$/)
+    if (method === "GET" && operationMatch) {
+      const operation = getMockUpgradeOperation()
+      return operation && operation.operationId === operationMatch[1]
+        ? json(operation)
+        : json({ error: { code: "NOT_FOUND", message: "Upgrade operation not found." } }, { status: 404 })
+    }
+  }
+  {
+    const retryMatch = path.match(/^\/upgradeOperations\/([^/:]+):retry$/)
+    if (method === "POST" && retryMatch) {
+      const operation = getMockUpgradeOperation()
+      if (!operation || operation.operationId !== retryMatch[1]) return json({ error: { code: "NOT_FOUND", message: "Upgrade operation not found." } }, { status: 404 })
+      return json(retryMockUpgradeOperation())
+    }
   }
   if (method === "GET" && path === "/users/current/notifications") {
     return json(getMockNotifications({

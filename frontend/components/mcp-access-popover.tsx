@@ -20,6 +20,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { useGenerateMcpKey, useMcpKeyStatus } from "@/hooks/use-mcp-key"
 import { textRole } from "@/lib/typography"
+import { COMPACT_FORM_OVERLAY_INSET_CLASS } from "@/components/shared/layout/page-shell-density"
 import { shellOverlaySideOffsets } from "@/lib/ui/overlay-styles"
 import { cn } from "@/lib/utils"
 import type { McpKeyGeneration } from "@/types/mcp-key.types"
@@ -160,8 +161,8 @@ export function McpAccessPopover() {
         <McpIcon className="size-4" />
         <span className="sr-only">{t("open")}</span>
       </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={shellOverlaySideOffsets.header} collisionPadding={12} className="w-80 p-0 sm:w-[28rem]">
-        <div className="space-y-4 p-4">
+      <PopoverContent align="end" sideOffset={shellOverlaySideOffsets.header} collisionPadding={12} className="w-80 p-0 sm:w-112">
+        <div className={cn("space-y-3", COMPACT_FORM_OVERLAY_INSET_CLASS)}>
           <div className="flex items-center gap-3">
             <div className="radius-control flex size-9 shrink-0 items-center justify-center bg-primary/10 text-primary">
               <McpIcon className="size-4" />

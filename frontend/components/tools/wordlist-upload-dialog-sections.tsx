@@ -54,7 +54,7 @@ export function WordlistUploadDropzone({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
       className={cn(
-        "relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors",
+        "relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-4 transition-colors",
         isDragActive
           ? "border-primary bg-primary/5"
           : "border-muted-foreground/25 hover:border-muted-foreground/50",
@@ -130,7 +130,7 @@ export function WordlistUploadFields({
   onTagsChange,
 }: WordlistUploadFieldsProps) {
   return (
-    <div className="gap-4 grid">
+    <div className="gap-3 grid">
       <div className="space-y-2">
         <Label htmlFor="description">{t("descLabel")}</Label>
         <Input

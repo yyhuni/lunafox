@@ -702,6 +702,10 @@ html[data-theme-sync] *::after {
   animation: loading-skeleton-wave 1.8s linear infinite;
 }
 
+.scan-running-loader {
+  animation: loading-spinner-rotate 1s linear infinite;
+}
+
 .loading-spinner {
   animation: loading-spinner-rotate 0.75s linear infinite;
 }
@@ -883,6 +887,7 @@ html[data-theme-sync] *::after {
   .architecture-flow-connector-result-pulse,
   .loading-skeleton::after,
   .loading-spinner,
+  .scan-running-loader,
   .loading-handoff__skeleton,
   .loading-handoff__content,
   .loading-content-reveal,
@@ -1090,5 +1095,32 @@ html[data-theme-sync] *::after {
   .lunafox-glitch-text::before,
   .lunafox-glitch-text::after {
     animation: none !important;
+  }
+}
+
+/* Shared overlay close treatment keeps the hit target larger than the glyph. */
+button.overlay-close-control {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  color: var(--muted-foreground);
+  background-color: transparent;
+}
+
+button.overlay-close-control:hover {
+  color: var(--foreground);
+  background-color: var(--muted);
+}
+
+button.overlay-close-control svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: inherit;
+}
+
+@media (any-pointer: coarse) {
+  button.overlay-close-control {
+    width: 2rem;
+    height: 2rem;
   }
 }

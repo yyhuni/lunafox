@@ -17,4 +17,9 @@ describe("wordlist-upload-dialog contract", () => {
     expect(source).not.toContain("onNameChange")
     expect(source).toContain("canSubmit={!!file}")
   })
+
+  it("uses the shared scrollable compact form dialog rhythm for its long tag selector", () => {
+    expect(source).toContain("scrollableFormDialogContentClassName")
+    expect(source).toContain('className="space-y-3"')
+  })
 })

@@ -6,10 +6,13 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { UnifiedHeader } from "@/components/unified-header"
 import { useSessionRenewal } from "@/hooks/use-session-renewal"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { ContentReveal } from "@/components/shared/loading/content-reveal"
 import {
   protectedAppShellContentFrameClassName,
+  protectedAppShellContentStyle,
   protectedAppShellScrollAreaClassName,
+  protectedAppShellScrollViewportClassName,
   protectedAppShellStyle,
 } from "@/components/auth/protected-app-shell"
 
@@ -48,15 +51,19 @@ export function ProtectedAuthLayout({
         <div className="flex flex-1 flex-col min-h-0">
           <UnifiedHeader />
           <SidebarInset className="flex flex-1 flex-col min-h-0">
-            <div className={protectedAppShellScrollAreaClassName}>
-              <div className={protectedAppShellContentFrameClassName}>
-                <Suspense fallback={<RouteBootHandoffBlocker />}>
-                  <ContentReveal owner="auth-layout-route-content" className="flex min-h-0 flex-1 flex-col">
-                    {children}
-                  </ContentReveal>
-                </Suspense>
-              </div>
-            </div>
+            <ScrollArea
+              className={protectedAppShellScrollAreaClassName}
+              contentClassName={protectedAppShellContentFrameClassName}
+              contentStyle={protectedAppShellContentStyle}
+              type="always"
+              viewportClassName={protectedAppShellScrollViewportClassName}
+            >
+              <Suspense fallback={<RouteBootHandoffBlocker />}>
+                <ContentReveal owner="auth-layout-route-content" className="flex min-h-0 flex-1 flex-col">
+                  {children}
+                </ContentReveal>
+              </Suspense>
+            </ScrollArea>
           </SidebarInset>
         </div>
       </div>

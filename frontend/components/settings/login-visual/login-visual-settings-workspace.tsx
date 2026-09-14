@@ -15,6 +15,7 @@ import { HiddenReadinessRouteBoundary } from "@/components/shared/loading/hidden
 import { getLoadingStructureSlotAttributes } from "@/components/shared/loading/loading-owner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   useLoginVisualSettings,
   useLoginVisualPreview,
@@ -24,6 +25,13 @@ import {
 } from "@/hooks/use-login-visual"
 import { normalizeError } from "@/lib/errors/normalize-error"
 import { textRole } from "@/lib/typography"
+import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_FULL_PAGE_SHELL_CLASS,
+  COMPACT_PAGE_SCROLL_AREA_CLASS,
+  COMPACT_PAGE_SCROLL_AREA_CONTENT_CLASS,
+  COMPACT_PAGE_SCROLL_AREA_VIEWPORT_CLASS,
+} from "@/components/shared/layout/page-shell-density"
 import type { LoginVisualKind, LoginVisualMedia } from "@/types/login-visual.types"
 
 const loginPreviewReferenceWidth = 1440
@@ -193,11 +201,16 @@ function LoginVisualSettingsPageLayout({
   const t = useTranslations("pages.settings.loginVisual")
 
   return (
-    <div data-loading-hidden-readiness={hiddenReadiness ? "true" : undefined} className="flex h-full min-h-0 flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
+    <div data-loading-hidden-readiness={hiddenReadiness ? "true" : undefined} className={COMPACT_FULL_PAGE_SHELL_CLASS}>
       <header {...getLoadingStructureSlotAttributes("login-visual-header")}>
         <PageHeader code="SET-06" description={t("description")} title={t("title")} />
       </header>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 [scrollbar-gutter:stable] lg:px-6">
+      <ScrollArea
+        className={COMPACT_PAGE_SCROLL_AREA_CLASS}
+        contentClassName={`${COMPACT_PAGE_SCROLL_AREA_CONTENT_CLASS} flex min-h-full flex-col ${COMPACT_CONTENT_GUTTER_CLASS}`}
+        type="always"
+        viewportClassName={COMPACT_PAGE_SCROLL_AREA_VIEWPORT_CLASS}
+      >
         <div className="flex w-full flex-1 flex-col justify-center">
           <div {...getLoadingStructureSlotAttributes("login-visual-preview")}>
             <p className={`mb-4 flex items-center gap-1.5 border-b border-border pb-3 ${textRole.helperText}`}>
@@ -211,7 +224,7 @@ function LoginVisualSettingsPageLayout({
           </div>
           {mutationError ? <p className="mt-3 text-sm text-destructive" role="alert">{mutationError}</p> : null}
         </div>
-      </div>
+      </ScrollArea>
     </div>
   )
 }

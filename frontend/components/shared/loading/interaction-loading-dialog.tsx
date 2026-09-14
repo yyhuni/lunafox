@@ -8,6 +8,8 @@ import { Spinner } from "@/components/shared/loading/spinner"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { compactFormDialogContentClassName } from "@/lib/ui/overlay-styles"
+import { cn } from "@/lib/utils"
 
 interface InteractionLoadingDialogProps {
   open: boolean
@@ -28,12 +30,12 @@ export function InteractionLoadingDialog({
 }: InteractionLoadingDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={className}>
+      <DialogContent className={cn(compactFormDialogContentClassName, className)}>
         <div
           {...getLoadingOwnerAttributes({ owner, layer: "interaction", intent: "interaction" })}
           data-loading-phase="loading"
           aria-busy="true"
-          className="space-y-6"
+          className="space-y-3"
         >
           <DialogHeader className="text-left">
             <div className="flex items-center gap-2">

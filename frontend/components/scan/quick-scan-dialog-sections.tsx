@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/drawer"
 import { AddTargetInputSection } from "@/components/target/add-target-dialog-sections"
 import { EdgePanelHeader } from "@/components/shared/edge-panel-header"
+import { COMPACT_FORM_OVERLAY_INSET_CLASS } from "@/components/shared/layout/page-shell-density"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 type TranslationFn = (key: string, params?: Record<string, string | number | Date>) => string
@@ -33,7 +34,7 @@ export function QuickScanHeader({
   stepHeader,
 }: QuickScanHeaderProps) {
   return (
-    <DrawerHeader className="shrink-0 bg-card px-5 pt-4 text-left sm:px-6">
+    <DrawerHeader className={cn("shrink-0 bg-card text-left", COMPACT_FORM_OVERLAY_INSET_CLASS)}>
       <EdgePanelHeader
         variant="workbench"
         leading={<Zap className="size-7" />}
@@ -50,7 +51,7 @@ export function QuickScanHeader({
             </span>
             <DrawerClose
               render={(
-                <Button
+                <Button className="overlay-close-control"
                   type="button"
                   variant="ghost"
                   size="icon-sm"

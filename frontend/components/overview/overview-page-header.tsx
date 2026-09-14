@@ -54,14 +54,14 @@ export function OverviewPageHeader({
               updatedAtUnavailable={t("updatedAtUnavailable")}
               className="text-muted-foreground hover:text-foreground xl:hidden"
             />
-            <Button variant="outline" size="default" onClick={() => setIsAddTargetOpen(true)}>
+            <Button variant="outline" size="sm" onClick={() => setIsAddTargetOpen(true)}>
               <AddIcon aria-hidden="true" />
               <span className="hidden sm:inline">{t("addTarget")}</span>
               <span className="sr-only sm:hidden">{t("addTarget")}</span>
             </Button>
             <QuickScanDialog
               trigger={(
-                <Button variant="primary" size="default">
+                <Button variant="primary" size="sm">
                   <RunIcon aria-hidden="true" />
                   <span className="hidden sm:inline">{t("quickScan")}</span>
                   <span className="sr-only sm:hidden">{t("quickScan")}</span>

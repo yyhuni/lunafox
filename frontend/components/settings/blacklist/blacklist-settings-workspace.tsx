@@ -237,6 +237,7 @@ export function BlacklistSettingsWorkspace({
         <div className={embedded ? BLACKLIST_EMBEDDED_CONTENT_SHELL_CLASS : BLACKLIST_CONTENT_SHELL_CLASS}>
           <div className={BLACKLIST_WORKBENCH_GRID_CLASS}>
             <Card
+              variant="compact"
               {...getLoadingStructureSlotAttributes("blacklist-list")}
               data-testid="blacklist-rule-list"
               className={BLACKLIST_RULE_LIST_CARD_CLASS}
@@ -307,7 +308,7 @@ export function BlacklistSettingsWorkspace({
               </CardContent>
             </Card>
 
-            <Card data-testid="blacklist-rule-editor" className={BLACKLIST_EDITOR_CARD_CLASS}>
+            <Card variant="compact" data-testid="blacklist-rule-editor" className={BLACKLIST_EDITOR_CARD_CLASS}>
               <CardHeader
                 {...getLoadingStructureSlotAttributes("blacklist-controls")}
                 className={BLACKLIST_EDITOR_HEADER_CLASS}

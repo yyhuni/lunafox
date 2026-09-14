@@ -1,4 +1,5 @@
 import { OverviewPageContent } from "@/components/overview/overview-page-content"
+import { COMPACT_PAGE_RHYTHM_CLASS } from "@/components/shared/layout/page-shell-density"
 
 /**
  * Overview page component
@@ -8,7 +9,7 @@ import { OverviewPageContent } from "@/components/overview/overview-page-content
 export default function Page() {
   return (
     // Content area containing cards, charts and data tables
-    <div className="flex flex-col gap-4 py-4 md:gap-5 md:pt-5 md:pb-6">
+    <div className={`flex flex-col ${COMPACT_PAGE_RHYTHM_CLASS}`}>
       <OverviewPageContent />
     </div>
   )

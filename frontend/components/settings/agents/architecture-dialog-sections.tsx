@@ -116,19 +116,19 @@ export function ArchitectureSummaryPanel({ t }: ArchitectureSummaryPanelProps) {
   return (
     <aside className="min-h-0 border-r">
       <ScrollArea className="h-full">
-        <div className="space-y-6 p-6">
-          <section className="space-y-4">
+        <div className="space-y-4 px-4 py-3">
+          <section className="space-y-3">
             <h3 className={textRole.sectionTitle}>{t("flowSummaryTitle")}</h3>
-            <div className="space-y-6">
+            <div className="space-y-4">
               {summaryItems.map((item) => (
                 <SummaryItem key={item.title} {...item} />
               ))}
             </div>
           </section>
 
-          <section className="space-y-4 border-t pt-6">
+          <section className="space-y-3 border-t pt-4">
             <h3 className={textRole.sectionTitle}>{t("flowLegendTitle")}</h3>
-            <div className="space-y-5">
+            <div className="space-y-4">
               <LegendLine
                 description={t("flowLegendControlDesc")}
                 title={t("flowLegendControlTitle")}

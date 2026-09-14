@@ -25,7 +25,8 @@ describe("master-detail-skeleton contract", () => {
   })
 
   it("top-aligns header actions with search controls in loading state", () => {
-    expect(source).toContain('className="flex gap-4 items-start justify-between lg:px-6 px-4 py-4"')
-    expect(source).not.toContain('className="flex gap-4 items-center justify-between lg:px-6 px-4 py-4"')
+    expect(source).toContain("COMPACT_CONTENT_GUTTER_CLASS")
+    expect(source).toContain('className={`flex gap-3 items-start justify-between py-3 ${COMPACT_CONTENT_GUTTER_CLASS}`}')
+    expect(source).not.toContain('className="flex gap-3 items-center justify-between lg:px-6 px-4 py-3"')
   })
 })

@@ -1,14 +1,25 @@
+import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_FULL_PAGE_SHELL_CLASS,
+  COMPACT_PAGE_SCROLL_AREA_CLASS,
+  COMPACT_PAGE_SCROLL_AREA_CONTENT_CLASS,
+  COMPACT_PAGE_SCROLL_AREA_VIEWPORT_CLASS,
+} from "@/components/shared/layout/page-shell-density"
+
 export const DATABASE_HEALTH_WORKSPACE_HANDOFF_CLASS =
   "flex h-full min-h-0 flex-1 flex-col"
 
 export const DATABASE_HEALTH_WORKSPACE_STATE_CLASS = "flex h-full min-h-0 flex-1 flex-col"
 
-export const DATABASE_HEALTH_PAGE_SHELL_CLASS =
-  "flex h-full min-h-0 flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6"
+export const DATABASE_HEALTH_PAGE_SHELL_CLASS = COMPACT_FULL_PAGE_SHELL_CLASS
+
+export const DATABASE_HEALTH_CONTENT_SCROLL_AREA_CLASS = COMPACT_PAGE_SCROLL_AREA_CLASS
+
+export const DATABASE_HEALTH_CONTENT_SCROLL_VIEWPORT_CLASS =
+  COMPACT_PAGE_SCROLL_AREA_VIEWPORT_CLASS
 
 export const DATABASE_HEALTH_CONTENT_SHELL_CLASS =
-  "min-h-0 flex-1 space-y-4 overflow-y-auto px-4 [scrollbar-gutter:stable] lg:px-6"
-
+  `${COMPACT_PAGE_SCROLL_AREA_CONTENT_CLASS} space-y-3 ${COMPACT_CONTENT_GUTTER_CLASS}`
 
 export const DATABASE_HEALTH_SECTION_PANEL_CLASS = "gap-0 overflow-hidden py-0"
 
@@ -24,12 +35,12 @@ export const DATABASE_HEALTH_SNAPSHOT_AUTO_CHECK_CLASS =
 export const DATABASE_HEALTH_SECTION_HEADER_CLASS = "border-b px-4 py-3 [.border-b]:pb-3"
 
 export const DATABASE_HEALTH_SECTION_HEADER_WITH_DESCRIPTION_CLASS =
-  "border-b px-4 py-4 [.border-b]:pb-4"
+  "border-b px-4 py-3 [.border-b]:pb-3"
 
 export const DATABASE_HEALTH_SECTION_BODY_FLUSH_CLASS = "p-0"
 
 export const DATABASE_HEALTH_SNAPSHOT_GRID_CLASS =
-  "grid grid-cols-2 gap-px bg-border/60 p-0 md:grid-cols-3 xl:grid-cols-6"
+  "grid grid-cols-1 gap-px bg-border/60 p-0 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6"
 
 export const DATABASE_HEALTH_CONTEXT_STAT_CLASS = "min-w-0 bg-card px-4 py-3"
 
@@ -49,7 +60,7 @@ export const DATABASE_HEALTH_FINDING_TITLE_GROUP_CLASS = "flex flex-wrap items-c
 
 export const DATABASE_HEALTH_FINDING_DETAIL_GRID_CLASS = "mt-3 grid gap-3 lg:grid-cols-2"
 
-export const DATABASE_HEALTH_SECONDARY_GRID_CLASS = "grid gap-4 xl:grid-cols-2"
+export const DATABASE_HEALTH_SECONDARY_GRID_CLASS = "grid gap-3 xl:grid-cols-2"
 
 export const DATABASE_HEALTH_TABLE_CONTENT_CLASS = "overflow-x-auto p-0"
 

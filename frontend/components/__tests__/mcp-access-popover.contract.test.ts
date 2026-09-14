@@ -13,6 +13,12 @@ describe("MCP access popover contract", () => {
     expect(source).toContain('aria-label={t("open")}')
   })
 
+  it("uses the compact form rhythm for the actionable configuration surface", () => {
+    expect(source).toContain("COMPACT_FORM_OVERLAY_INSET_CLASS")
+    expect(source).toContain('className={cn("space-y-3", COMPACT_FORM_OVERLAY_INSET_CLASS)}')
+    expect(source).not.toContain('className="space-y-4 p-4"')
+  })
+
   it("keeps the same-origin address copyable and owns one-time key clearing", () => {
     expect(source).toContain('const MCP_PATH = "/mcp"')
     expect(source).toContain("window.location.origin")

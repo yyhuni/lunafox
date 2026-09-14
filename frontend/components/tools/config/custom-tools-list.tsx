@@ -117,12 +117,12 @@ export function CustomToolsList() {
       owner="custom-tools-list-content"
       isLoading={isInitialLoading}
       skeleton={<CardGridSkeleton cards={4} />}
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-3"
     >
       {/* Tool list */}
-      <div className="gap-6 grid grid-cols-1 lg:grid-cols-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="gap-3 grid grid-cols-1 lg:grid-cols-3 md:grid-cols-2 xl:grid-cols-4">
         {customTools.map((tool: Tool) => (
-          <Card key={tool.id} className="flex flex-col h-full hover:shadow-lg transition-shadow">
+          <Card key={tool.id} variant="compact" className="flex flex-col h-full hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className={cn(textRole.panelTitle, "truncate")} title={tool.name}>{tool.name}</CardTitle>
               <CardDescription className="line-clamp-2" title={tool.description || tCommon("status.noData")}>
@@ -155,7 +155,7 @@ export function CustomToolsList() {
               </div>
             </CardHeader>
             <CardContent className="flex-1">
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {/* Tool directory */}
                 <div className="bg-muted p-3 rounded-md">
                   <div className="flex gap-2 items-center mb-1 text-muted-foreground text-sm">
@@ -179,6 +179,7 @@ export function CustomToolsList() {
             <CardFooter className="flex gap-2 pt-0">
               <Button
                 variant="outline"
+                size="sm"
                 className="flex-1"
                 onClick={() => handleEditTool(tool)}
               >
@@ -187,6 +188,7 @@ export function CustomToolsList() {
               </Button>
               <Button
                 variant="outline"
+                size="sm"
                 className="flex-1"
                 onClick={() => handleDeleteTool(tool.id)}
               >

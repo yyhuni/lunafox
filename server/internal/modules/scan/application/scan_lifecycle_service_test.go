@@ -29,17 +29,21 @@ func (stub *lifecycleScanStoreStub) UpdateScanStatus(id int, status string, fail
 }
 
 type lifecycleScanStopStoreStub struct {
-	err          error
-	outcome      *ScanStopOutcome
-	batchErr     error
-	batchOutcome *BatchScanStopOutcome
-	calls        int
-	batchCalls   int
-	ctx          context.Context
-	scanID       int
-	batchIDs     []int
-	stopped      time.Time
-	onCall       func()
+	err                error
+	outcome            *ScanStopOutcome
+	batchErr           error
+	batchOutcome       *BatchScanStopOutcome
+	calls              int
+	batchCalls         int
+	ctx                context.Context
+	scanID             int
+	batchIDs           []int
+	stopped            time.Time
+	onCall             func()
+	upgradeErr         error
+	upgradeOutcome     *UpgradeScanStopOutcome
+	upgradeCalls       int
+	upgradeOperationID string
 }
 
 func (stub *lifecycleScanStopStoreStub) StopActiveScan(ctx context.Context, scanID int, stoppedAt time.Time) (*ScanStopOutcome, error) {
@@ -62,6 +66,15 @@ func (stub *lifecycleScanStopStoreStub) BatchStopActiveScans(ctx context.Context
 		stub.onCall()
 	}
 	return stub.batchOutcome, stub.batchErr
+}
+
+func (stub *lifecycleScanStopStoreStub) StopAllActiveScansForUpgrade(_ context.Context, operationID string, _ time.Time) (*UpgradeScanStopOutcome, error) {
+	stub.upgradeCalls++
+	stub.upgradeOperationID = operationID
+	if stub.onCall != nil {
+		stub.onCall()
+	}
+	return stub.upgradeOutcome, stub.upgradeErr
 }
 
 type lifecycleTaskCancelNotifierStub struct {
@@ -275,5 +288,60 @@ func TestLifecycleServiceBatchStopScansDoesNotStartAfterCallerCancellation(t *te
 	}
 	if store.batchCalls != 0 {
 		t.Fatalf("cancelled batch stop called repository %d times", store.batchCalls)
+	}
+}
+
+func TestLifecycleServiceUpgradeStopCommitsBeforeBestEffortNotifications(t *testing.T) {
+	notifier := &lifecycleTaskCancelNotifierStub{delivered: true}
+	store := &lifecycleScanStopStoreStub{upgradeOutcome: &UpgradeScanStopOutcome{
+		CancelledScanCount:     2,
+		CancelledTaskCount:     3,
+		NotificationCandidates: []BatchScanStopNotification{{ScanID: 41, TaskID: 42, AgentID: 43}},
+	}}
+	store.onCall = func() {
+		if len(notifier.calls) != 0 {
+			t.Fatal("upgrade cancellation notification sent before commit")
+		}
+	}
+	service := NewLifecycleService(nil, store, notifier)
+	outcome, err := service.StopAllActiveForUpgrade(context.Background(), "upgrade-op-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if outcome.CancelledScanCount != 2 || outcome.CancelledTaskCount != 3 || store.upgradeCalls != 1 || store.upgradeOperationID != "upgrade-op-1" {
+		t.Fatalf("upgrade stop outcome=%#v calls=%d operation=%q", outcome, store.upgradeCalls, store.upgradeOperationID)
+	}
+	if len(notifier.calls) != 1 || notifier.calls[0] != (ScanStopNotification{TaskID: 42, AgentID: 43}) {
+		t.Fatalf("notification calls=%#v", notifier.calls)
+	}
+}
+
+func TestLifecycleServiceUpgradeStopKeepsCommittedCancellationWhenNotificationFails(t *testing.T) {
+	notifier := &lifecycleTaskCancelNotifierStub{delivered: false}
+	store := &lifecycleScanStopStoreStub{upgradeOutcome: &UpgradeScanStopOutcome{
+		CancelledScanCount: 1, CancelledTaskCount: 1,
+		NotificationCandidates: []BatchScanStopNotification{{ScanID: 51, TaskID: 52, AgentID: 53}},
+	}}
+	service := NewLifecycleService(nil, store, notifier)
+	before := scanStopCancelDeliveryFailedTotal.Value()
+	outcome, err := service.StopAllActiveForUpgrade(context.Background(), "upgrade-op-2")
+	if err != nil || outcome == nil || outcome.CancelledTaskCount != 1 {
+		t.Fatalf("outcome=%#v err=%v", outcome, err)
+	}
+	if got := scanStopCancelDeliveryFailedTotal.Value(); got != before+1 {
+		t.Fatalf("notification failure metric=%d want=%d", got, before+1)
+	}
+}
+
+func TestLifecycleServiceUpgradeStopRejectsCancelledContextWithoutRepositoryCall(t *testing.T) {
+	store := &lifecycleScanStopStoreStub{upgradeOutcome: &UpgradeScanStopOutcome{}}
+	service := NewLifecycleService(nil, store, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := service.StopAllActiveForUpgrade(ctx, "upgrade-op-3"); !errors.Is(err, context.Canceled) {
+		t.Fatalf("error=%v", err)
+	}
+	if store.upgradeCalls != 0 {
+		t.Fatalf("repository calls=%d", store.upgradeCalls)
 	}
 }

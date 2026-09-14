@@ -6,6 +6,10 @@ import {
   getLoadingOwnerAttributes,
   type LoadingLayer,
 } from "@/components/shared/loading/loading-owner"
+import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_PAGE_RHYTHM_CLASS,
+} from "@/components/shared/layout/page-shell-density"
 
 interface SettingsPageSkeletonProps {
   owner?: string
@@ -26,31 +30,31 @@ export function SettingsPageSkeleton({
     <div
       {...(owner ? getLoadingOwnerAttributes({ owner, layer, intent: "route" }) : {})}
       data-slot="settings-page-skeleton"
-      className={cn("space-y-6 px-4 py-4 md:py-6 lg:px-6", className)}
+      className={cn("flex flex-col", COMPACT_CONTENT_GUTTER_CLASS, COMPACT_PAGE_RHYTHM_CLASS, className)}
     >
       <div className="space-y-3">
         <Skeleton className="h-8 w-52" />
         <Skeleton className="h-4 w-80 max-w-full" />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-border bg-card/70 p-5 shadow-2xs">
-          <div className="space-y-4">
+      <div className="grid gap-3 lg:grid-cols-2">
+        <div className="rounded-xl border border-border bg-card/70 p-4 shadow-2xs">
+          <div className="space-y-3">
             <Skeleton className="h-5 w-32" />
             <Input aria-hidden="true" disabled tabIndex={-1} className="disabled:opacity-100" />
             <Skeleton className="h-24 w-full rounded-xl" />
             <ActionSkeleton size="lg" widthClassName="w-28" />
           </div>
         </div>
-        <div className="space-y-4">
-          <div className="rounded-xl border border-border bg-card/70 p-5 shadow-2xs">
+        <div className="space-y-3">
+          <div className="rounded-xl border border-border bg-card/70 p-4 shadow-2xs">
             <div className="space-y-3">
               <Skeleton className="h-5 w-24" />
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-4/5" />
             </div>
           </div>
-          <div className="rounded-xl border border-border bg-card/70 p-5 shadow-2xs">
+          <div className="rounded-xl border border-border bg-card/70 p-4 shadow-2xs">
             <div className="space-y-3">
               <Skeleton className="h-5 w-28" />
               <Input aria-hidden="true" disabled tabIndex={-1} className="disabled:opacity-100" />

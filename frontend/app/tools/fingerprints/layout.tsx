@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl"
 import { PageHeader } from "@/components/common/page-header"
 import { Info } from "@/components/icons"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { COMPACT_PAGE_SHELL_CLASS } from "@/components/shared/layout/page-shell-density"
 
 function FingerprintDescriptionHelp({ label, description }: { label: string; description: string }) {
   return (
@@ -34,7 +35,7 @@ function FingerprintDescriptionHelp({ label, description }: { label: string; des
 export default function FingerprintsLayout({ children }: { children: ReactNode }) {
   const t = useTranslations("tools.fingerprints")
   return (
-    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+    <div className={COMPACT_PAGE_SHELL_CLASS}>
       <PageHeader
         code="FPR-01"
         title={t("title")}

@@ -53,7 +53,7 @@ interface AddToolBasicInfoSectionProps {
     onRemoveCategory: (name: string) => void;
 }
 export function AddToolBasicInfoSection({ t, form, isPending, availableCategories, selectedCategories, onToggleCategory, onRemoveCategory, }: AddToolBasicInfoSectionProps) {
-    return (<div className="space-y-4">
+    return (<div className="space-y-3">
       <h3 className={cn(textRole.sectionTitle, "text-muted-foreground")}>{t("basicInfo")}</h3>
 
       <FormField control={form.control} name="name" render={({ field }) => (<FormItem>
@@ -99,7 +99,7 @@ interface AddToolCommandSectionProps {
     isPending: boolean;
 }
 export function AddToolCommandSection({ t, form, isPending, }: AddToolCommandSectionProps) {
-    return (<div className="space-y-4">
+    return (<div className="space-y-3">
       <h3 className={cn(textRole.sectionTitle, "text-muted-foreground")}>{t("commandConfig")}</h3>
 
       <FormField control={form.control} name="installCommand" render={({ field }) => (<FormItem>

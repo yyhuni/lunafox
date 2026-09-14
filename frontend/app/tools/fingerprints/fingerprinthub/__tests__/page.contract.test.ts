@@ -7,7 +7,7 @@ const source = readFileSync(path.resolve(process.cwd(), "app/tools/fingerprints/
 describe("page contract", () => {
   it("preserves current source markers", () => {
     expect(source).toContain("export default function FingerPrintHubFingerprintPage")
-    expect(source).toContain("className")
+    expect(source).toContain("DetailAssetContentFrame")
     expect(source).toContain("from \"@/components/fingerprints/fingerprinthub-fingerprint-view\"")
     expect(source).not.toContain('"use client"')
   })

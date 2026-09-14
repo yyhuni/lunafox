@@ -21,7 +21,7 @@ describe("add-target-dialog contract", () => {
     expect(source).toContain('from "@/components/shared/form-drawer"')
     expect(source).toContain('from "@/lib/ui/overlay-styles"')
     expect(source).toContain("scanWorkbenchDrawerContentClassName")
-    expect(source).toContain('bodyClassName="gap-6 px-5 py-5 sm:px-6 sm:py-6"')
+    expect(source).toContain('bodyClassName="gap-3 px-4 py-3"')
     expect(source).not.toContain("DialogContent")
     expect(source).not.toContain("scrollableFormDialogContentClassName")
   })

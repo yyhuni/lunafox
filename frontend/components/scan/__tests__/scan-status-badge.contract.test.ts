@@ -31,7 +31,7 @@ describe("scan-status-badge contract", () => {
     expect(source).toContain('variant === "icon-only"')
     expect(source).toContain('role="img"')
     expect(source).toContain('aria-label={label}')
-    expect(source).toContain('status === "running" && "animate-spin"')
+    expect(source).toContain('case "running": return RunningStatusIcon')
     expect(source).toContain("semanticIcons.status.failed")
     expect(source).toContain("semanticIcons.status.cancelled")
     expect(source).not.toContain("IconCircleX")

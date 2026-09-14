@@ -19,4 +19,9 @@ describe("asset-distribution-chart contract", () => {
     expect(source).not.toContain('endpoint: "var(--chart-3)"')
     expect(source).not.toContain('website: "var(--chart-4)"')
   })
+
+  it("uses compact card chrome while preserving the chart's controlled height", () => {
+    expect(source).toContain('<Card variant="compact">')
+    expect(source).toContain('className="aspect-auto h-40 w-full"')
+  })
 })

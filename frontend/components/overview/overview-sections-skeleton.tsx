@@ -12,6 +12,8 @@ import {
   OVERVIEW_ASSET_METRIC_CLASS,
   OVERVIEW_ASSET_METRICS_GRID_CLASS,
   OVERVIEW_ASSET_OVERVIEW_GRID_CLASS,
+  OVERVIEW_ASSET_TREND_CHART_CLASS,
+  OVERVIEW_ASSET_TREND_PANEL_CLASS,
   OVERVIEW_AGENT_LOCATION_MAP_BODY_CLASS,
   OVERVIEW_AGENT_LOCATION_MAP_HEADER_CLASS,
   OVERVIEW_AGENT_LOCATION_MAP_STATUS_LEGEND_CLASS,
@@ -60,6 +62,7 @@ import {
 } from "@/components/overview/overview-section-layouts"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { COMPACT_SECTION_STACK_CLASS } from "@/components/shared/layout/page-shell-density"
 
 function OverviewTextSkeleton({
   roleClassName,
@@ -181,7 +184,7 @@ function OverviewRiskSummarySkeleton({ className }: { className?: string } = {})
           </div>
         </div>
         <div className={OVERVIEW_RISK_SUMMARY_METRICS_CLASS}>
-          <div className="min-w-0 space-y-4">
+          <div className={cn("min-w-0", COMPACT_SECTION_STACK_CLASS)}>
             <div className={OVERVIEW_TREND_HEADER_CLASS}>
               <OverviewTextSkeleton roleClassName={textRole.sectionTitle} reserveText={t("trendTitle")} />
             </div>
@@ -210,7 +213,7 @@ function OverviewAssetOverviewSkeleton() {
       contentClassName="pt-1"
     >
       <div className={OVERVIEW_ASSET_OVERVIEW_GRID_CLASS}>
-        <div className="space-y-6">
+        <div className={COMPACT_SECTION_STACK_CLASS}>
           <div className={OVERVIEW_ASSET_METRICS_GRID_CLASS}>
             {Array.from({ length: 2 }).map((_, index) => (
               <div key={index} className={OVERVIEW_ASSET_METRIC_CLASS}>
@@ -224,7 +227,7 @@ function OverviewAssetOverviewSkeleton() {
             ))}
           </div>
           <div className={OVERVIEW_ASSET_DISTRIBUTION_CHART_CLASS}>
-            <div className="grid h-full min-w-0 content-center gap-3 pl-6">
+            <div className="grid h-full min-w-0 content-center gap-3 pl-4">
               {Array.from({ length: 4 }).map((_, index) => (
                 <div key={index} className="grid min-w-0 grid-cols-[48px_minmax(0,1fr)_84px] items-center gap-2">
                   <OverviewTextSkeleton roleClassName={textRole.caption} className="w-10" />
@@ -235,12 +238,12 @@ function OverviewAssetOverviewSkeleton() {
             </div>
           </div>
         </div>
-        <div className="space-y-4 border-t pt-5 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
+        <div className={OVERVIEW_ASSET_TREND_PANEL_CLASS}>
           <div className="flex items-center justify-between gap-3">
             <OverviewTextSkeleton roleClassName={textRole.sectionTitle} className="w-40" />
             <OverviewTextSkeleton roleClassName={textRole.caption} className="w-8" />
           </div>
-          <Skeleton className={cn("w-full", OVERVIEW_ASSET_CHART_SHELL_CLASS)} />
+          <Skeleton className={cn("w-full", OVERVIEW_ASSET_TREND_CHART_CLASS, OVERVIEW_ASSET_CHART_SHELL_CLASS)} />
         </div>
       </div>
     </OverviewSectionPanel>
@@ -254,7 +257,7 @@ function OverviewScanQueueSkeleton() {
         <div className={OVERVIEW_RUNTIME_DETAILS_CARD_HEADER_CLASS}>
           <Skeleton className="size-4 rounded-none" />
           <OverviewTextSkeleton roleClassName={textRole.sectionTitle} className="w-16" />
-          <Skeleton className="ml-auto h-5 w-24 rounded-none" />
+          <Skeleton className="ml-auto h-[19.5px] w-24 rounded-none" />
         </div>
         <div className={OVERVIEW_RUNTIME_SCAN_BODY_CLASS}>
           <div className={OVERVIEW_RUNTIME_SCAN_STATUS_GRID_CLASS}>
@@ -278,7 +281,7 @@ function OverviewScanQueueSkeleton() {
                 </div>
                 <Skeleton className="size-8 shrink-0 rounded-none" />
               </div>
-              <ScrollArea className="min-h-0 flex-1" contentClassName="min-w-0">
+              <ScrollArea className="min-h-0 flex-1" contentClassName="min-w-0 xl:h-full">
                 <div className={OVERVIEW_RUNTIME_SCAN_RECENT_ROWS_CLASS}>
                   {Array.from({ length: 6 }).map((_, index) => (
                     <div key={index} className={OVERVIEW_RUNTIME_SCAN_RECENT_ROW_CLASS}>
@@ -317,7 +320,7 @@ function OverviewRuntimeDetailsSkeleton() {
           <div className={OVERVIEW_RUNTIME_DATABASE_BODY_CLASS}>
             <div className={OVERVIEW_RUNTIME_DATABASE_STATUS_ANCHOR_CLASS}>
               <OverviewTextSkeleton roleClassName={textRole.caption} className="w-10" />
-              <OverviewTextSkeleton roleClassName={textRole.metricValueDisplay} className="w-16" />
+              <OverviewTextSkeleton roleClassName={textRole.bodyStrong} className="w-16" />
             </div>
             <div className={OVERVIEW_RUNTIME_DATABASE_METRIC_GRID_CLASS}>
               {Array.from({ length: 2 }).map((_, index) => (

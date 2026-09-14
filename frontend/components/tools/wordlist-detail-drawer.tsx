@@ -10,6 +10,11 @@ import {
   DetailDrawerTabsContent,
   DetailDrawerTabsList,
   DetailDrawerTabsTrigger,
+  DETAIL_DRAWER_COMPACT_BODY_CLASS,
+  DETAIL_DRAWER_COMPACT_FIELD_GRID_CLASS,
+  DETAIL_DRAWER_COMPACT_FOOTER_CLASS,
+  DETAIL_DRAWER_COMPACT_INSET_CLASS,
+  DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS,
 } from "@/components/shared/detail-drawer"
 import { CopyButton } from "@/components/shared/feedback/copy-button"
 import { Badge } from "@/components/ui/badge"
@@ -87,7 +92,7 @@ export function WordlistDetailDrawer({
           value={activeTab}
           onValueChange={(value) => setActiveTab(value as WordlistDetailDrawerTab)}
         >
-          <DetailDrawerTabsList className="px-6" aria-label={tCommon("actions.details")}>
+          <DetailDrawerTabsList aria-label={tCommon("actions.details")}>
             <DetailDrawerTabsTrigger value="details">
               {tCommon("actions.details")}
             </DetailDrawerTabsTrigger>
@@ -97,8 +102,8 @@ export function WordlistDetailDrawer({
           </DetailDrawerTabsList>
 
           <DetailDrawerTabsContent value="details" keepMounted className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-              <div className="space-y-6">
+            <div className={DETAIL_DRAWER_COMPACT_BODY_CLASS}>
+              <div className={DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS}>
                 <div className="space-y-2">
                   <span className={textRole.metadataLabel}>{t("tags")}</span>
                   <div className="flex min-w-0 flex-wrap gap-1.5">
@@ -110,7 +115,7 @@ export function WordlistDetailDrawer({
                   </div>
                 </div>
 
-                <dl className="grid grid-cols-1 gap-x-6 gap-y-5 border-y border-border/70 py-5 sm:grid-cols-2">
+                <dl className={cn(DETAIL_DRAWER_COMPACT_FIELD_GRID_CLASS, "border-y border-border/70 py-3")}>
                   <WordlistDetailField label={t("rows")} value={wordlist.lineCount?.toLocaleString() ?? "-"} />
                   <WordlistDetailField label={t("size")} value={formatWordlistFileSize(wordlist.fileSize)} />
                   <WordlistDetailField label={t("updatedAt")} value={formatWordlistUpdatedAt(wordlist.updatedAt, locale)} />
@@ -135,9 +140,10 @@ export function WordlistDetailDrawer({
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-end gap-2 border-t px-6 py-4">
+            <div className={cn("flex flex-wrap items-center justify-end gap-2", DETAIL_DRAWER_COMPACT_FOOTER_CLASS)}>
               <Button
                 variant="outline"
+                size="sm"
                 className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                 onClick={() => onDelete(wordlist)}
               >
@@ -149,7 +155,7 @@ export function WordlistDetailDrawer({
 
           <DetailDrawerTabsContent value="edit" className="min-h-0 flex-1 overflow-hidden">
             <div className="flex h-full min-h-0 flex-col">
-              <div className="min-h-0 flex-1 overflow-hidden px-6 py-4">
+              <div className={cn("min-h-0 flex-1 overflow-hidden", DETAIL_DRAWER_COMPACT_INSET_CLASS)}>
                 <div className="flex h-full min-h-0 flex-col gap-2">
                   <WordlistEditMetadata
                     t={tEdit}
@@ -192,6 +198,7 @@ export function WordlistDetailDrawer({
                 hasMetadataChanges={editState.hasMetadataChanges}
                 onSaveDialog={editState.handleSaveDialog}
                 canEditContent={canEditSelectedContent}
+                className={DETAIL_DRAWER_COMPACT_FOOTER_CLASS}
               />
             </div>
           </DetailDrawerTabsContent>

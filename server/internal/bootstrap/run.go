@@ -64,6 +64,9 @@ func Run(ctx context.Context, cfg *config.Config, migrationsFS embed.FS) {
 		d.registrationTokenCleanupJob.Start(jobCtx)
 	}
 	d.scheduledScanController.Start(jobCtx)
+	if d.upgradeRecoveryJob != nil {
+		d.upgradeRecoveryJob.Start(jobCtx)
+	}
 	d.occurrenceRetentionJob.Start(jobCtx)
 	d.targetCleanupRunner.Start(jobCtx)
 	d.serverLocationScheduler.Start(jobCtx)
@@ -123,6 +126,7 @@ func Run(ctx context.Context, cfg *config.Config, migrationsFS embed.FS) {
 		}
 	}
 	waitForManagedBackgroundJob(shutdownCtx, "scheduled scan controller", d.scheduledScanController)
+	waitForManagedBackgroundJob(shutdownCtx, "upgrade recovery job", d.upgradeRecoveryJob)
 	waitForManagedBackgroundJob(shutdownCtx, "scheduled scan occurrence retention", d.occurrenceRetentionJob)
 	waitForManagedBackgroundJob(shutdownCtx, "Target cleanup runner", d.targetCleanupRunner)
 	waitForManagedBackgroundJob(shutdownCtx, "notification outbox worker", d.notificationOutboxWorker)

@@ -10,4 +10,9 @@ describe("agent-dialog contract", () => {
     expect(source).toContain("className")
     expect(source).toContain("from \"next-intl\"")
   })
+
+  it("uses the shared compact form dialog tier", () => {
+    expect(source).toContain("compactFormDialogContentClassName")
+    expect(source).toContain('className="space-y-3"')
+  })
 })

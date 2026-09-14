@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, } from "@/components/ui/dialog";
 import { useAddCustomToolDialogState } from "@/components/tools/config/add-custom-tool-dialog-state";
 import { AddCustomToolDialogHeader, AddCustomToolNameField, AddCustomToolDescriptionField, AddCustomToolPathField, AddCustomToolCategoriesField, AddCustomToolFooter, } from "@/components/tools/config/add-custom-tool-dialog-sections";
+import { compactFormDialogContentClassName } from "@/lib/ui/overlay-styles";
 import type { Tool } from "@/types/tool.types";
 interface AddCustomToolDialogProps {
     tool?: Tool;
@@ -27,11 +28,11 @@ export function AddCustomToolDialog({ tool, onAdd, open: externalOpen, onOpenCha
             {t("addTool")}
           </DialogTrigger>)}
 
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className={`${compactFormDialogContentClassName} sm:max-w-[500px]`}>
         <AddCustomToolDialogHeader t={t} isEditMode={isEditMode}/>
 
         <form onSubmit={handleSubmit}>
-          <div className="gap-6 grid py-4">
+          <div className="gap-3 grid py-3">
             <AddCustomToolNameField t={t} value={formData.name} isSubmitting={isSubmitting} onChange={(value) => setFormField("name", value)}/>
             <AddCustomToolDescriptionField t={t} value={formData.description} isSubmitting={isSubmitting} onChange={(value) => setFormField("description", value)}/>
             <AddCustomToolPathField t={t} value={formData.directory} isSubmitting={isSubmitting} onChange={(value) => setFormField("directory", value)}/>

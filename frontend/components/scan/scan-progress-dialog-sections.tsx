@@ -1,5 +1,7 @@
 "use client"
 
+import { RunningStatusIcon } from "@/components/scan/scan-status-badge"
+
 import type { ScanProgressData, StageDetail } from "@/components/scan/scan-progress-dialog-types"
 import type { StageStatus } from "@/types/scan.types"
 import { Badge } from "@/components/ui/badge"
@@ -35,7 +37,7 @@ function PulsingDot({ className }: { className?: string }) {
 export function ScanStatusIcon({ status }: { status: string }) {
   switch (status) {
     case "running":
-      return <PulsingDot className={getScanStatusTextClass(status)} />
+      return <RunningStatusIcon className="h-5 w-5" style={{ fontSize: 20 }} />
     case "succeeded":
       return <semanticIcons.status.success className={cn("h-5 w-5", getScanStatusTextClass(status))} />
     case "skipped":
@@ -67,7 +69,7 @@ function StageStatusIcon({ status }: { status: StageStatus }) {
     case "succeeded":
       return <semanticIcons.status.success className={cn("h-5 w-5", getScanStatusTextClass(status))} />
     case "running":
-      return <PulsingDot className={getScanStatusTextClass(status)} />
+      return <RunningStatusIcon className="h-5 w-5" style={{ fontSize: 20 }} />
     case "failed":
       return <semanticIcons.status.failed className={cn("h-5 w-5", getScanStatusTextClass(status))} />
     case "cancelled":

@@ -154,6 +154,11 @@ overview retains its manual refresh behavior; the scan history list has its own
 page-level foreground polling described above and must not gain polling from
 this runtime detail state hook.
 
+The runtime drawer's outer structured summary/task stack and its loading state
+use the shared compact detail-drawer body and section rhythm. Raw progress logs
+and the YAML configuration retain their existing code/log viewer padding and
+scroll ownership inside that compact outer shell.
+
 ## Retention Notice
 
 `/scan/history/` displays a compact retention summary beside the page-header

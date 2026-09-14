@@ -26,6 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
 import {
   useNotificationDestinations,
@@ -65,6 +66,8 @@ import {
   NOTIFICATION_CHANNEL_DETAIL_TITLE_ROW_CLASS,
   NOTIFICATION_SETTINGS_ACTION_BAR_CLASS,
   NOTIFICATION_SETTINGS_CHANNEL_WORKBENCH_CLASS,
+  NOTIFICATION_SETTINGS_CONTENT_SCROLL_AREA_CLASS,
+  NOTIFICATION_SETTINGS_CONTENT_SCROLL_VIEWPORT_CLASS,
   NOTIFICATION_SETTINGS_CONTENT_SHELL_CLASS,
   NOTIFICATION_SETTINGS_PAGE_SHELL_CLASS,
   NOTIFICATION_SETTINGS_WORKSPACE_STATE_CLASS,
@@ -471,7 +474,12 @@ export default function NotificationSettingsPageContent({
         <PageHeader code="NTF-01" title={pageTitle} description={pageDescription} />
       </header>
 
-      <div className={NOTIFICATION_SETTINGS_CONTENT_SHELL_CLASS}>
+      <ScrollArea
+        className={NOTIFICATION_SETTINGS_CONTENT_SCROLL_AREA_CLASS}
+        contentClassName={NOTIFICATION_SETTINGS_CONTENT_SHELL_CLASS}
+        type="always"
+        viewportClassName={NOTIFICATION_SETTINGS_CONTENT_SCROLL_VIEWPORT_CLASS}
+      >
         {settingsError ? (
           <AppErrorState
             variant="section"
@@ -490,7 +498,7 @@ export default function NotificationSettingsPageContent({
                 const draft = destinationDrafts[provider] ?? cloneDestinationDraft(destination)
 
                 return (
-                  <Card key={provider} className={NOTIFICATION_CHANNEL_EDITOR_CARD_CLASS} data-testid={`notification-channel-editor-${provider}`}>
+                  <Card key={provider} variant="compact" className={NOTIFICATION_CHANNEL_EDITOR_CARD_CLASS} data-testid={`notification-channel-editor-${provider}`}>
                     <NotificationDestinationEditor
                       provider={provider}
                       draft={draft}
@@ -515,7 +523,7 @@ export default function NotificationSettingsPageContent({
             </div>
           </div>
         ) : null}
-      </div>
+      </ScrollArea>
     </div>
   )
 

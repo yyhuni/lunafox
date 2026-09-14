@@ -14,6 +14,7 @@ import { ActionSkeleton } from "@/components/shared/loading/action-skeleton"
 import { CompactPaginationSkeleton } from "@/components/shared/loading/compact-pagination-skeleton"
 import { getLoadingStructureSlotAttributes } from "@/components/shared/loading/loading-owner"
 import { SelectShellSkeleton } from "@/components/shared/loading/select-shell-skeleton"
+import { COMPACT_CONTENT_GUTTER_CLASS } from "@/components/shared/layout/page-shell-density"
 import { normalizeError } from "@/lib/errors/normalize-error"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
@@ -228,7 +229,13 @@ function AssetSearchBar({ state, className }: { state: SearchPageState; classNam
 
 function SearchResultsToolbarRegion({ children }: { children: React.ReactNode }) {
   return (
-    <div {...getLoadingStructureSlotAttributes("search-results-toolbar")} className="sticky top-0 z-10 border-b bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div
+      {...getLoadingStructureSlotAttributes("search-results-toolbar")}
+      className={cn(
+        "sticky top-0 z-10 border-b bg-background/95 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+        COMPACT_CONTENT_GUTTER_CLASS,
+      )}
+    >
       <div className="flex flex-wrap items-center gap-3">{children}</div>
     </div>
   )
@@ -239,7 +246,14 @@ function SearchResultsBodyRegion({ children }: { children: React.ReactNode }) {
 }
 
 function SearchResultsPaginationRegion({ children }: { children: React.ReactNode }) {
-  return <div {...getLoadingStructureSlotAttributes("search-results-pagination")} className="border-t px-4 py-3">{children}</div>
+  return (
+    <div
+      {...getLoadingStructureSlotAttributes("search-results-pagination")}
+      className={cn("border-t py-3", COMPACT_CONTENT_GUTTER_CLASS)}
+    >
+      {children}
+    </div>
+  )
 }
 
 function SearchResultsLoadingState({
@@ -278,7 +292,7 @@ function SearchResultsLoadingState({
       </SearchResultsToolbarRegion>
 
       <SearchResultsBodyRegion>
-        <div className="flex-1 overflow-auto p-4">
+        <div className={cn("flex-1 overflow-auto py-3", COMPACT_CONTENT_GUTTER_CLASS)}>
           {showWebsiteExport ? <SearchWebsitesDataTableLoadingState pagination={pagination} rowCount={websiteLoadingRowCount} /> : (
             <div className="mx-auto max-w-4xl space-y-4">
               {Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-56 w-full rounded-md" />)}
@@ -354,12 +368,12 @@ export function SearchPageContent({ state }: { state: SearchPageState }) {
                 error={normalizeError(state.error, { notFoundKind: "unexpected-error" })}
                 onRetry={state.refetch}
                 variant="section"
-                className="flex-1 px-4"
+                className={cn("flex-1", COMPACT_CONTENT_GUTTER_CLASS)}
               />
             ) : null}
 
             {!state.error && state.data?.results.length === 0 ? (
-              <div className="flex flex-1 flex-col items-center justify-center p-4">
+              <div className={cn("flex flex-1 flex-col items-center justify-center py-3", COMPACT_CONTENT_GUTTER_CLASS)}>
                 <div className="text-center">
                   <Search className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                   <h3 className={cn("mb-2", textRole.panelTitle)}>{state.t("noResults")}</h3>
@@ -369,7 +383,7 @@ export function SearchPageContent({ state }: { state: SearchPageState }) {
             ) : null}
 
             {!state.error && state.data && state.data.results.length > 0 ? (
-              <div className="flex-1 overflow-auto p-4">
+              <div className={cn("flex-1 overflow-auto py-3", COMPACT_CONTENT_GUTTER_CLASS)}>
                 {state.assetType === "website" ? (
                   <SearchWebsitesDataTable
                     model={websiteResultModel}

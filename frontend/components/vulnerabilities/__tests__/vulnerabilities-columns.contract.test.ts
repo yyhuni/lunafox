@@ -61,10 +61,11 @@ describe("vulnerabilities-columns contract", () => {
     expect(source).not.toContain("Eye")
   })
 
-  it("leaves vulnerability type as text because the whole row opens details", () => {
+  it("keeps vulnerability type read-only and single-line while the whole row opens details", () => {
     const vulnTypeColumn = sourceBetween('accessorKey: "vulnType"', 'accessorKey: "url"')
 
-    expect(vulnTypeColumn).toContain('return vulnType')
+    expect(vulnTypeColumn).toContain('className={cn("block min-w-0 truncate", textRole.tableCellPrimary)}')
+    expect(vulnTypeColumn).toContain('title={vulnType}')
     expect(vulnTypeColumn).not.toContain("handleViewDetail")
     expect(vulnTypeColumn).not.toContain("event.stopPropagation()")
     expect(vulnTypeColumn).not.toContain("data-row-click-exempt")

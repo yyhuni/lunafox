@@ -41,7 +41,7 @@ describe("organization-detail-view contract", () => {
   })
 
   it("mounts the detail loading owner with the drawer instead of staging a delayed body", () => {
-    expect(source).toContain('<div className="min-h-0 flex-1 overflow-y-auto py-5">')
+    expect(source).toContain('<div className="min-h-0 flex-1 overflow-y-auto py-3">')
     expect(source).not.toContain("DETAIL_DRAWER_CONTENT_DEFER_MS")
     expect(source).not.toContain("shouldRenderBody")
     expect(source).not.toContain("prefers-reduced-motion: reduce")

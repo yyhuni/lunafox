@@ -144,6 +144,12 @@ func configFromViper(v *viper.Viper) *Config {
 		Notification: NotificationConfig{
 			VulnerabilityThreshold: v.GetString("NOTIFICATION_VULNERABILITY_THRESHOLD"),
 		},
+		Upgrade: UpgradeConfig{
+			DeploymentRoot:      v.GetString("LUNAFOX_UPGRADE_DEPLOYMENT_ROOT"),
+			ManifestPath:        v.GetString("RELEASE_MANIFEST_PATH"),
+			MigrationPolicyPath: v.GetString("MIGRATION_POLICY_PATH"),
+			SocketPath:          v.GetString("LUNAFOX_UPGRADE_SOCKET_PATH"),
+		},
 		PublicURL: v.GetString("PUBLIC_URL"),
 	}
 }

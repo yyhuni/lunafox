@@ -48,7 +48,7 @@ describe("vulnerabilities-vertical-view contract", () => {
   })
 
   it("keeps the loading skeleton geometry aligned with the resolved vulnerability list", () => {
-    expect(source).toContain('className="flex min-h-0 flex-1 flex-col gap-4 md:gap-6"')
+    expect(source).toContain("COMPACT_SECTION_GAP_CLASS")
     expect(source).toContain("<VulnerabilityStatCardsLoadingState />")
     expect(source).not.toContain("VulnerabilityStatCardsSkeleton")
     expect(source).toContain("<VulnerabilitiesDataTable")

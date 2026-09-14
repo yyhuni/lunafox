@@ -1,4 +1,5 @@
 import type { ComponentProps, ReactNode } from "react"
+import { useTranslations } from "next-intl"
 
 import { PageHeader } from "@/components/common/page-header"
 import {
@@ -8,6 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   TABLE_DENSE_CELL_RHYTHM_CLASS,
   TABLE_DENSE_ROW_CLASS,
@@ -23,6 +25,8 @@ import { cn } from "@/lib/utils"
 
 import {
   DATABASE_HEALTH_ALERT_TABLE_COLUMN_COUNT,
+  DATABASE_HEALTH_CONTENT_SCROLL_AREA_CLASS,
+  DATABASE_HEALTH_CONTENT_SCROLL_VIEWPORT_CLASS,
   DATABASE_HEALTH_CONTENT_SHELL_CLASS,
   DATABASE_HEALTH_CONTEXT_STAT_CLASS,
   DATABASE_HEALTH_CORE_METRIC_CLASS,
@@ -55,21 +59,27 @@ function DatabaseHealthTextPlaceholder({
   roleClassName,
   className,
   lines = 1,
+  reserveText,
   collapseExtraLinesAt,
 }: {
   roleClassName: string
   className?: string
   lines?: number
+  reserveText?: string
   collapseExtraLinesAt?: "lg"
 }) {
   // Preserve the resolved text role's line box so loading cannot shift panel rhythm.
   return (
     <div aria-hidden="true" className={cn("relative", roleClassName, className)}>
-      {Array.from({ length: lines }).map((_, index) => (
-        <span key={index} className={cn("block invisible", index > 0 && collapseExtraLinesAt === "lg" && "lg:hidden")}>
-          {"\u00a0"}
-        </span>
-      ))}
+      {reserveText ? (
+        <span className="invisible">{reserveText}</span>
+      ) : (
+        Array.from({ length: lines }).map((_, index) => (
+          <span key={index} className={cn("block invisible", index > 0 && collapseExtraLinesAt === "lg" && "lg:hidden")}>
+            {"\u00a0"}
+          </span>
+        ))
+      )}
       <Skeleton className="absolute inset-0" />
     </div>
   )
@@ -134,6 +144,8 @@ export function DatabaseHealthLoadingState({
   pageDescription: string
   className?: string
 }) {
+  const t = useTranslations("databaseHealth")
+
   if (owner !== undefined && !owner.trim()) {
     throw new Error("DatabaseHealthLoadingState requires a non-empty owner.")
   }
@@ -148,7 +160,12 @@ export function DatabaseHealthLoadingState({
         <PageHeader code="DBH-01" title={pageTitle} description={pageDescription} />
       </div>
 
-      <div className={DATABASE_HEALTH_CONTENT_SHELL_CLASS}>
+      <ScrollArea
+        className={DATABASE_HEALTH_CONTENT_SCROLL_AREA_CLASS}
+        contentClassName={DATABASE_HEALTH_CONTENT_SHELL_CLASS}
+        type="always"
+        viewportClassName={DATABASE_HEALTH_CONTENT_SCROLL_VIEWPORT_CLASS}
+      >
         <DatabaseHealthSectionPanel {...getLoadingStructureSlotAttributes("database-health-snapshot")}>
           <CardHeader className={DATABASE_HEALTH_SNAPSHOT_HEADER_CLASS}>
             <div className="min-w-0">
@@ -172,7 +189,10 @@ export function DatabaseHealthLoadingState({
           <CardContent className={DATABASE_HEALTH_SNAPSHOT_GRID_CLASS}>
             {Array.from({ length: CONTEXT_STAT_LOADING_COUNT }).map((_, index) => (
               <div key={index} className={DATABASE_HEALTH_CONTEXT_STAT_CLASS}>
-                <Skeleton className="h-5 w-24 max-w-full" />
+                <DatabaseHealthTextPlaceholder
+                  roleClassName={textRole.metadataValueStrong}
+                  className="w-24 max-w-full"
+                />
                 <DatabaseHealthTextPlaceholder
                   roleClassName={textRole.caption}
                   className="mt-1 w-20 max-w-full"
@@ -192,7 +212,10 @@ export function DatabaseHealthLoadingState({
             <div className={DATABASE_HEALTH_CORE_METRIC_GRID_CLASS}>
               {Array.from({ length: CORE_METRIC_LOADING_COUNT }).map((_, index) => (
                 <div key={index} className={DATABASE_HEALTH_CORE_METRIC_CLASS}>
-                  <Skeleton className="h-5 w-28 max-w-full" />
+                  <DatabaseHealthTextPlaceholder
+                    roleClassName={textRole.tableCellSecondary}
+                    className="w-28 max-w-full"
+                  />
                   <DatabaseHealthTextPlaceholder
                     roleClassName={textRole.metricValueDisplay}
                     className="mt-2 w-20"
@@ -230,8 +253,7 @@ export function DatabaseHealthLoadingState({
                     <DatabaseHealthTextPlaceholder
                       roleClassName={textRole.bodySubtle}
                       className="mt-2 w-80 max-w-full"
-                      lines={2}
-                      collapseExtraLinesAt="lg"
+                      reserveText={t("backendFindings.oldestPendingTaskAgeSec.description")}
                     />
                   </div>
                   <DatabaseHealthBadgePlaceholder className="w-24" />
@@ -250,7 +272,7 @@ export function DatabaseHealthLoadingState({
                     <DatabaseHealthTextPlaceholder
                       roleClassName={textRole.body}
                       className="mt-1 w-72 max-w-full"
-                      lines={2}
+                      reserveText={t("backendFindings.oldestPendingTaskAgeSec.recommendation")}
                     />
                   </div>
                 </div>
@@ -288,7 +310,7 @@ export function DatabaseHealthLoadingState({
             </CardContent>
           </DatabaseHealthSectionPanel>
         </div>
-      </div>
+      </ScrollArea>
     </div>
   )
 }

@@ -55,4 +55,10 @@ describe("target-overview-sections contract", () => {
     expect(source).not.toContain("group-hover:w-")
     expect(source).not.toContain("group-hover:translate-x")
   })
+
+  it("uses compact card sections for resolved and loading summaries", () => {
+    expect(source).toContain('<Card key={i} variant="compact">')
+    expect(source).toContain('<Card variant="compact" className="flex flex-col">')
+    expect(source).toContain('className="space-y-3"')
+  })
 })

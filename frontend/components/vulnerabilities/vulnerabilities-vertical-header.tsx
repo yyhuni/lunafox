@@ -102,7 +102,6 @@ export function VulnerabilitiesVerticalHeader({
             variant="outline"
             size="sm"
             className={cn(
-              "gap-2",
               getStatusToneInteractiveOutlineClass("success")
             )}
             onClick={onBulkMarkAsReviewed}
@@ -114,7 +113,6 @@ export function VulnerabilitiesVerticalHeader({
             variant="outline"
             size="sm"
             className={cn(
-              "gap-2",
               getStatusToneInteractiveOutlineClass("muted")
             )}
             onClick={onBulkMarkAsPending}

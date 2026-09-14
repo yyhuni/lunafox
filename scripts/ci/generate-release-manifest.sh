@@ -58,6 +58,9 @@ done
 
 release_version="$(echo "${RELEASE_VERSION:-}" | xargs)"
 [[ "$release_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][-0-9A-Za-z.+_]+)?$ ]] || fail "RELEASE_VERSION 必须是裸语义化版本"
+release_major="${release_version%%.*}"
+release_major_number=$((10#$release_major))
+next_release_major=$((release_major_number + 1))
 if [ "${RUNTIME_WORKER_REFS+x}" = x ]; then
 	fail "RUNTIME_WORKER_REFS 已删除，Engine Runtime Image 由 package v2 绑定"
 fi
@@ -139,9 +142,24 @@ for engine_ref_file in "${engine_ref_files[@]}"; do
 	append_group engine "$engine_id" "$engine_refs" "$engine_ref_file"
 done
 
-# The public projection owns the Compose release-manifest schema.  Keeping this
-# check outside tools/installer prevents the retired host-binary path from
-# becoming an implicit release prerequisite.
+cat >>"$tmp_file" <<EOF
+upgrade:
+  manifestId: "lunafox-$release_version"
+  deploymentMode: "single-node-compose"
+  compatibilityRange: ">=${release_major_number}.0.0 <${next_release_major}.0.0"
+  maintenanceWindowMinutes: 15
+  requiresAdminConfirmation: true
+  databaseMigration:
+    hasDatabaseMigration: false
+    migrationType: "none"
+    migrationId: ""
+    checksum: ""
+    policyVersion: 1
+EOF
+
+# The shared Go contract owns strict manifest decoding. The public projection
+# separately owns publication policy checks; keeping this check outside the
+# installer avoids making the retired host-binary path a release prerequisite.
 node "$ROOT_DIR/scripts/ci/verify-public-release.mjs" \
 	--manifest "$tmp_file" \
 	--tag "v$release_version" >/dev/null

@@ -31,6 +31,7 @@ import {
 } from "@/components/scan/initiate-scan-dialog-sections"
 import { useTranslations, useLocale } from "next-intl"
 import type { Locale } from "@/i18n/config"
+import { COMPACT_FORM_OVERLAY_INSET_CLASS } from "@/components/shared/layout/page-shell-density"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 
@@ -170,7 +171,7 @@ export function CreateScheduledScanSheet({
         showCloseButton={false}
         className={scanWorkbenchDrawerContentClassName}
       >
-        <SheetHeader className="shrink-0 border-b bg-card px-5 pt-4 text-left sm:px-6">
+        <SheetHeader className={cn("shrink-0 border-b bg-card text-left", COMPACT_FORM_OVERLAY_INSET_CLASS)}>
           <EdgePanelHeader
             variant="workbench"
             leading={<semanticIcons.concept.scheduledScan className="size-7" />}
@@ -183,7 +184,7 @@ export function CreateScheduledScanSheet({
                 </span>
                 <SheetClose
                   render={(
-                    <Button
+                    <Button className="overlay-close-control"
                       type="button"
                       variant="ghost"
                       size="icon-sm"
@@ -201,7 +202,7 @@ export function CreateScheduledScanSheet({
 
         <div className="flex-1 min-h-0 min-w-0 max-w-full overflow-hidden">
           {currentStep === 1 && (
-            <div className="h-full min-w-0 max-w-full space-y-6 overflow-y-auto p-6">
+            <div className="h-full min-w-0 max-w-full space-y-3 overflow-y-auto px-4 py-3">
               {hasPreset ? (
                 <ScheduledScanPresetInfoStep
                   t={t}
@@ -253,7 +254,7 @@ export function CreateScheduledScanSheet({
 
           {/* Step 2: Reuse the quick-scan workflow and Agent selection surfaces. */}
           {currentStep === 2 && (
-            <div className="h-full min-w-0 max-w-full overflow-y-auto p-6 space-y-6">
+            <div className="h-full min-w-0 max-w-full overflow-y-auto px-4 py-3 space-y-3">
               <InitiateScanWorkflowSelection
                 t={tInitiate}
                 workflows={workflows}
@@ -263,7 +264,7 @@ export function CreateScheduledScanSheet({
                 isSubmitting={isPending || isWorkflowConfigLoading}
                 onWorkflowNamesChange={(workflowNames) => void handleWorkflowNamesChange(workflowNames)}
               />
-              <div className="space-y-5 border-t pt-6">
+              <div className="space-y-3 border-t pt-3">
                 <ScanInputSourceSelector
                   id="create-scheduled-scan-input-source"
                   value={inputSource}
@@ -277,7 +278,7 @@ export function CreateScheduledScanSheet({
 
           {/* Step 3: Reuse the quick-scan scan-options editor. */}
           {currentStep === 3 && (
-            <div className="flex h-full min-w-0 max-w-full flex-col overflow-hidden p-6">
+            <div className="flex h-full min-w-0 max-w-full flex-col overflow-hidden px-4 py-3">
               <InitiateScanConfigStep
                 t={tInitiate}
                 configuration={configuration}
@@ -303,7 +304,7 @@ export function CreateScheduledScanSheet({
 
           {/* Step 4: Keep schedule configuration separate from scan scope and options. */}
           {currentStep === 4 && (
-            <div className="h-full min-w-0 max-w-full overflow-y-auto p-6">
+            <div className="h-full min-w-0 max-w-full overflow-y-auto px-4 py-3">
               <ScheduledScanScheduleStep
                 t={t}
                 cronExpression={cronExpression}

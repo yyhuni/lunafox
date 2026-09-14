@@ -7,7 +7,7 @@ const source = readFileSync(path.resolve(process.cwd(), "app/scan/history/[id]/d
 describe("page contract", () => {
   it("preserves current source markers", () => {
     expect(source).toContain("export default async function ScanDirectoriesPage")
-    expect(source).toContain("className")
+    expect(source).toContain("DetailAssetContentFrame")
     expect(source).toContain("from \"@/components/directories/directories-view\"")
   })
 

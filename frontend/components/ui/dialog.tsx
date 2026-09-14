@@ -88,7 +88,7 @@ function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            render={<Button type="button" variant="ghost" size="icon-sm" aria-label={tActions("close")} className="absolute top-4 right-4 opacity-70 hover:opacity-100"/>}
+            render={<Button type="button" variant="ghost" size="icon-sm" aria-label={tActions("close")} className="overlay-close-control absolute top-3 right-3"/>}
           >
             <semanticIcons.action.cancel />
           </DialogPrimitive.Close>

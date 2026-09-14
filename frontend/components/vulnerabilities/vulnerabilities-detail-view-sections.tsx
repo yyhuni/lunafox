@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsCountBadge, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { VulnerabilitiesDataTable } from "./vulnerabilities-data-table"
 import { createVulnerabilityColumns, type VulnerabilityTranslations } from "./vulnerabilities-columns"
+import { DetailAssetContentFrame } from "@/components/shared/layout/detail-asset-content-frame"
 
 import type { VulnerabilitiesDetailViewState } from "./vulnerabilities-detail-view-state"
 import type { Vulnerability } from "@/types/vulnerability.types"
@@ -161,10 +162,12 @@ export function VulnerabilitiesDetailViewLoadingState({
 
 export function VulnerabilitiesDetailViewRouteFallback({ rowCount }: { rowCount: number }) {
   return (
-    <div className="space-y-4">
-      <VulnerabilitiesRouteFallbackReviewTabs />
-      <VulnerabilitiesRouteFallbackTable rows={rowCount} />
-    </div>
+    <DetailAssetContentFrame>
+      <div className="space-y-3">
+        <VulnerabilitiesRouteFallbackReviewTabs />
+        <VulnerabilitiesRouteFallbackTable rows={rowCount} />
+      </div>
+    </DetailAssetContentFrame>
   )
 }
 

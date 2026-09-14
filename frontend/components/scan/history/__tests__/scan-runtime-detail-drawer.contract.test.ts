@@ -140,8 +140,11 @@ describe("scan-runtime-detail-drawer contract", () => {
   })
 
   it("keeps runtime drawer content from widening the shared side panel", () => {
-    expect(source).toContain('className="min-w-0 max-w-full space-y-6"')
-    expect(source).toContain('className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-6 py-5 [scrollbar-gutter:stable]"')
+    expect(source).toContain("DETAIL_DRAWER_COMPACT_BODY_CLASS")
+    expect(source).toContain("DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS")
+    expect(source).toContain('className={cn("min-w-0 max-w-full", DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS)}')
+    expect(source).toContain('className={cn(DETAIL_DRAWER_COMPACT_BODY_CLASS, "min-w-0 overflow-x-hidden [scrollbar-gutter:stable]")}')
+    expect(source).not.toContain('className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-6 py-5 [scrollbar-gutter:stable]"')
     expect(source).toContain('className="min-w-0 space-y-3"')
     expect(source).toContain('className="min-w-0 overflow-hidden rounded-lg border border-border/60 bg-card"')
     expect(source).toContain('from "@/components/scan/history/scan-runtime-detail-layout"')

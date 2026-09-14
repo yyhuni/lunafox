@@ -57,11 +57,11 @@ describe("sidebar contract", () => {
   it("owns the primary sidebar navigation geometry, typography, and active marker", () => {
     expect(source).toContain("min-h-8")
     expect(source).toContain("px-2.5 py-1.5")
-    expect(source).toContain("gap-3")
+    expect(source).toContain("gap-2")
     expect(source).toContain("rounded-lg")
     expect(source).toContain("[&>svg]:size-4")
     expect(source).toContain("textRole.navLabel")
-    expect(source).toContain("[&>span]:leading-5")
+    expect(source).toContain("[&>span]:leading-[18px]")
     expect(source).toContain("hover:bg-sidebar-accent")
     expect(source).toContain("data-[active=true]:bg-sidebar-accent")
     expect(source).toContain("text-sidebar-foreground/65")
@@ -116,12 +116,12 @@ describe("sidebar contract", () => {
 
     expect(groupLabelSource).toContain('data-sidebar="group-label"')
     expect(groupLabelSource).toContain("pointer-events-none")
-    expect(groupLabelSource).toContain("flex h-8 shrink-0 items-center overflow-hidden whitespace-nowrap px-3")
+    expect(groupLabelSource).toContain("flex h-7 shrink-0 items-center overflow-hidden whitespace-nowrap px-3")
     expect(source).toContain("textRole.helperText")
     expect(groupLabelSource).toContain("transition-[opacity]")
     expect(groupLabelSource).toContain("duration-100")
     expect(groupLabelSource).toContain("motion-reduce:transition-none")
-    expect(groupLabelSource).toContain("group-data-[collapsible=icon]:-mt-8")
+    expect(groupLabelSource).toContain("group-data-[collapsible=icon]:-mt-7")
     expect(groupLabelSource).toContain("group-data-[collapsible=icon]:opacity-0")
     expect(groupLabelSource).toContain("group-data-[collapsible=icon]:transition-none")
     expect(groupLabelSource).not.toContain("transition-opacity duration-200")
@@ -185,7 +185,7 @@ describe("sidebar contract", () => {
   })
 
   it("keeps default sidebar framing in the component tree", () => {
-    expect(source).toContain('const SIDEBAR_WIDTH = "16rem"')
+    expect(source).toContain('const SIDEBAR_WIDTH = "14rem"')
     expect(source).toContain('const SIDEBAR_WIDTH_MOBILE = "16rem"')
     expect(source).toContain('const SIDEBAR_WIDTH_ICON = "3rem"')
     expect(source).toContain('"(min-width: 768px) and (max-width: 1279px)"')
@@ -269,7 +269,7 @@ describe("sidebar contract", () => {
   it("clamps navigation label line-height inside sidebar menu primitives so the 32px shell density renders as specified", () => {
     expect(source).toContain("min-h-8")
     expect(source).toContain("h-8")
-    expect(source).toContain("[&>span]:leading-5")
+    expect(source).toContain("[&>span]:leading-[18px]")
     expect(source).not.toContain("[&>span]:leading-normal")
   })
 })

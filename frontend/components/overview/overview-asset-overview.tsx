@@ -15,6 +15,8 @@ import {
   OVERVIEW_ASSET_METRIC_CLASS,
   OVERVIEW_ASSET_METRICS_GRID_CLASS,
   OVERVIEW_ASSET_OVERVIEW_GRID_CLASS,
+  OVERVIEW_ASSET_TREND_CHART_CLASS,
+  OVERVIEW_ASSET_TREND_PANEL_CLASS,
   OverviewSectionPanel,
 } from "@/components/overview/overview-section-layouts"
 import { formatAssetTrendAxisTick, formatOverviewDateTick, formatOverviewSignedChange } from "@/components/overview/overview-axis-format"
@@ -24,6 +26,7 @@ import { getTrendToneTextClass } from "@/lib/status-config"
 import { normalizeError } from "@/lib/errors/normalize-error"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { COMPACT_SECTION_STACK_CLASS } from "@/components/shared/layout/page-shell-density"
 
 const AssetIcon = semanticIcons.concept.asset
 const TargetIcon = semanticIcons.concept.target
@@ -151,7 +154,7 @@ export function OverviewAssetOverview() {
     >
       {assets.data ? (
         <div className={OVERVIEW_ASSET_OVERVIEW_GRID_CLASS}>
-          <div className="min-w-0 space-y-6">
+          <div className={cn("min-w-0", COMPACT_SECTION_STACK_CLASS)}>
             <div className={OVERVIEW_ASSET_METRICS_GRID_CLASS}>
               <div className={OVERVIEW_ASSET_METRIC_CLASS}>
                 <div className="flex items-center gap-2">
@@ -229,7 +232,7 @@ export function OverviewAssetOverview() {
             </div>
           </div>
 
-          <div className="min-w-0 border-t pt-5 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
+          <div className={OVERVIEW_ASSET_TREND_PANEL_CLASS}>
             <div className="flex items-center justify-between gap-3">
               <h3 className={textRole.sectionTitle}>{t("trend")}</h3>
               <span className={textRole.caption}>{history.data?.length ?? 0}d</span>
@@ -241,7 +244,8 @@ export function OverviewAssetOverview() {
             ) : (
               <div
                 className={cn(
-                  "overview-chart-enter mt-4",
+                  "overview-chart-enter",
+                  OVERVIEW_ASSET_TREND_CHART_CLASS,
                   isTrendAnimationActive && "overview-chart-draw",
                   OVERVIEW_ASSET_CHART_SHELL_CLASS,
                 )}

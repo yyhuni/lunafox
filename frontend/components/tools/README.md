@@ -51,6 +51,9 @@ calculate total pages or add numbered or last navigation.
   viewport-bound catalog classes in `wordlists-page-layout.ts`. Loading cards,
   results, and pagination must scroll inside that surface; they must not alter
   the first-screen route height as data becomes available.
+- The catalog grid owns a 12px gap and a 12px top/bottom edge inset, matching
+  the controls, page shell, and pagination rhythm. Loading and resolved grids
+  must continue to share that one layout constant.
 - Its paired first-screen slots are `wordlists-controls` and `wordlists-list`;
   `ContentHandoff` owns the common `surface` slot. A selected wordlist opens in
   the shared `DetailDrawer` as an interaction-local detail surface rather than
@@ -58,6 +61,11 @@ calculate total pages or add numbered or last navigation.
 - `wordlist-catalog-card` is one accessible action that opens the selected
   wordlist's detail drawer. Keep editing and deletion in that drawer so the
   catalog remains a browsing surface without nested card actions.
+- Both tabs of `WordlistDetailDrawer` align their outer body and footer with the
+  shared compact detail-drawer edge. The edit tab passes that compact footer
+  class into `WordlistEditFooter`, while `WordlistEditEditor` continues to own
+  its viewport and scroll geometry; do not apply the drawer override to the
+  standalone editor dialog.
 - Loading reuses `WordlistCatalogCardLoadingState` in the same responsive grid
   as resolved cards. Recheck desktop and narrow frames before changing the card
   count or geometry.
