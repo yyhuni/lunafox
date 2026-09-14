@@ -13,6 +13,7 @@ function makeSummary(overrides: Partial<AgentClusterSummary> = {}): AgentCluster
     resourceName: "agentClusterSummaries/current",
     generatedAt: "2026-08-04T07:00:00Z",
     executionFreshnessSeconds: 15,
+    agentLimit: 3,
     totalNodes: 1201,
     healthyCount: 1000,
     warningCount: 100,
@@ -51,7 +52,7 @@ describe("AgentOverviewSection", () => {
   it("renders the authoritative full-cluster counts and Server-owned conclusion", () => {
     render(<AgentOverviewSection {...baseProps} summary={makeSummary()} />)
 
-    expect(screen.getByText("1201")).toBeInTheDocument()
+    expect(screen.getByText("1201/3")).toBeInTheDocument()
     expect(screen.getByText("overview.clusterState.needsAttention")).toBeInTheDocument()
     expect(screen.getByText(/overview\.clusterState\.reasons\.offline_agents/)).toBeInTheDocument()
     expect(screen.getByText(/overview\.clusterState\.reasons\.stale_runtime_observations/)).toBeInTheDocument()
@@ -100,7 +101,7 @@ describe("AgentOverviewSection", () => {
     )
 
     expect(screen.queryByTestId("agent-overview-stale-alert")).not.toBeInTheDocument()
-    expect(screen.getByText("1202")).toBeInTheDocument()
+    expect(screen.getByText("1202/3")).toBeInTheDocument()
   })
 
   it("renders the explicit empty cluster state without treating it as a query failure", () => {

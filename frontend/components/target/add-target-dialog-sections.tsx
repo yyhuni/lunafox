@@ -136,7 +136,7 @@ export function AddTargetOrganizationPicker({
   isPending,
 }: AddTargetOrganizationPickerProps) {
   return (
-    <Collapsible defaultOpen={false} className="border-t border-border/60 pt-4">
+    <Collapsible defaultOpen={false} className="border-t border-border/60 pt-3">
       <CollapsibleTrigger
         render={(
           <Button
@@ -154,7 +154,7 @@ export function AddTargetOrganizationPicker({
           <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-[color,transform] duration-200 motion-reduce:transition-none group-hover:text-foreground group-data-[panel-open]:rotate-90" />
         </span>
       </CollapsibleTrigger>
-      <CollapsibleContent className="pt-4">
+      <CollapsibleContent className="pt-3">
         <OrganizationSelectionWorkspace
           id="add-target-organization-workspace"
           title={t("organizationWorkspaceTitle")}

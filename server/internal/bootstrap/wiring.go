@@ -87,6 +87,11 @@ import (
 	targetcleanupapp "github.com/yyhuni/lunafox/server/internal/modules/targetcleanup/application"
 	targetcleanupinfra "github.com/yyhuni/lunafox/server/internal/modules/targetcleanup/infrastructure"
 	targetcleanuprepo "github.com/yyhuni/lunafox/server/internal/modules/targetcleanup/repository"
+	upgradeapp "github.com/yyhuni/lunafox/server/internal/modules/upgrade/application"
+	upgradedomain "github.com/yyhuni/lunafox/server/internal/modules/upgrade/domain"
+	upgradehandler "github.com/yyhuni/lunafox/server/internal/modules/upgrade/handler"
+	upgradeinfra "github.com/yyhuni/lunafox/server/internal/modules/upgrade/infrastructure"
+	upgraderepo "github.com/yyhuni/lunafox/server/internal/modules/upgrade/repository"
 	"gorm.io/gorm"
 )
 
@@ -162,6 +167,8 @@ type deps struct {
 	serverLocationReader    *systemservice.ServerLocationReader
 	serverLocationScheduler *systemservice.ServerLocationScheduler
 	geolocationCoordinator  *geolocation.Coordinator
+	upgradeHandler          *upgradehandler.UpgradeHandler
+	upgradeRecoveryJob      managedBackgroundJob
 
 	executionProviderConfigSource *catalogservice.ExecutionProviderConfigSource
 	executionWordlistSource       *catalogservice.ExecutionWordlistSource
@@ -288,7 +295,7 @@ type scanModuleWiring struct {
 	scanTaskSvc             *scanapp.ScanTaskFacade
 	taskProgressLogService  scanapp.TaskProgressLogApplicationService
 	scanSvc                 *scanapp.ScanFacade
-	scheduledScanController managedBackgroundJob
+	scheduledScanController *scheduledscanapp.SchedulerController
 	occurrenceRetentionJob  managedBackgroundJob
 }
 
@@ -437,6 +444,51 @@ func buildDependencies(infra *infra, cfg *config.Config) (*deps, error) {
 	resultIngestSummary := resultingestwiring.NewResultingestScanResultSummaryUpdaterAdapter(repos.scanRepo)
 	resultIngestCoordinator := resultingestwiring.NewResultIngestMaterializationCoordinator(infra.db)
 	resultIngest := resultingestapp.NewResultIngestFacade(resultingestapp.ResultIngestFacadeDependencies{Subdomains: snapshot.subdomainSnapshotService, ScanSummary: resultIngestSummary, HostPorts: snapshot.hostPortSnapshotService, Websites: snapshot.websiteSnapshotService, WebsiteTechnologies: asset.websiteSvc, Endpoints: snapshot.endpointSnapshotService, Directories: snapshot.directorySnapshotService, Screenshots: snapshot.screenshotSnapshotService, Vulnerabilities: snapshot.vulnerabilitySnapshotService, Materialization: resultIngestCoordinator})
+	manifestLoader, err := upgradeapp.NewManifestLoader(upgradeapp.ManifestLoadConfig{
+		Path:          cfg.Upgrade.ManifestPath,
+		DeploymentDir: cfg.Upgrade.DeploymentRoot,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("configure release manifest loader: %w", err)
+	}
+	migrationPolicySource := upgradeapp.MigrationPolicyFunc(func(context.Context) (upgradedomain.MigrationPolicy, error) {
+		return upgradeapp.LoadMigrationPolicy(cfg.Upgrade.MigrationPolicyPath)
+	})
+	upgradeOperationRepository := upgraderepo.NewUpgradeOperationRepository(infra.db)
+	upgradeAuthorizer := upgraderepo.NewActiveSuperuserRepository(infra.db)
+	hostUpgradeDispatcher, err := upgradeinfra.NewHostUpgradeDispatcher(cfg.Upgrade.SocketPath)
+	if err != nil {
+		return nil, fmt.Errorf("configure host upgrade dispatcher: %w", err)
+	}
+	upgradeCoordinator := newUpgradePreDispatchCoordinator(scan.scanSvc, scan.scheduledScanController)
+	upgradeAgentSource := newUpgradeAgentSource(repos.agentRepo, grpcPublisher, time.Now)
+	upgradeVerifier, err := newUpgradeVerifier(infra, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("configure upgrade verifier: %w", err)
+	}
+	upgradeService, err := upgradeapp.NewUpgradeService(upgradeapp.ServiceConfig{
+		ManifestSource:        manifestLoader,
+		MigrationPolicySource: migrationPolicySource,
+		Repository:            upgradeOperationRepository,
+		Authorizer:            upgradeAuthorizer,
+		Dispatcher:            hostUpgradeDispatcher,
+		Coordinator:           upgradeCoordinator,
+		AgentSource:           upgradeAgentSource,
+		Verifier:              upgradeVerifier,
+		CurrentVersion:        infra.releaseVersion,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("wire upgrade service: %w", err)
+	}
+	upgradeJournalReader, err := upgradeapp.NewFileJournalEventReader(cfg.Upgrade.DeploymentRoot)
+	if err != nil {
+		return nil, fmt.Errorf("configure upgrade journal reader: %w", err)
+	}
+	upgradeRecoveryJob, err := upgradeapp.NewRecoveryJob(upgradeService, upgradeJournalReader, 0)
+	if err != nil {
+		return nil, fmt.Errorf("wire upgrade recovery job: %w", err)
+	}
+	upgradeHandler := upgradehandler.NewUpgradeHandler(upgradeService)
 	mcpRegistry := mcptools.NewRegistry(mcpadapters.NewReaders(mcpadapters.Dependencies{
 		Targets:         catalog.targetSvc,
 		Organizations:   identity.organizationSvc,
@@ -565,6 +617,8 @@ func buildDependencies(infra *infra, cfg *config.Config) (*deps, error) {
 		resultIngestService:           resultIngest,
 		taskProgressLogService:        scan.taskProgressLogService,
 		runtimeStreamRegistry:         streamRegistry,
+		upgradeHandler:                upgradeHandler,
+		upgradeRecoveryJob:            upgradeRecoveryJob,
 	}, nil
 }
 

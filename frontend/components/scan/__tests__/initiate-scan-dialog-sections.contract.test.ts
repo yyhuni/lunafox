@@ -84,6 +84,14 @@ describe("initiate-scan-dialog-sections contract", () => {
     )
   })
 
+  it("keeps ordinary scan form sections on the compact rhythm", () => {
+    expect(source).toContain('className="grid gap-3"')
+    expect(source).toContain('className="mt-3 border-t border-border/60 pt-3"')
+    expect(source).toContain('className="space-y-3 pt-3"')
+    expect(source).not.toContain('className="grid gap-4"')
+    expect(source).not.toContain('className="space-y-4 pt-4"')
+  })
+
   it("shows workflow identity instead of configuration status badges", () => {
     expect(source).toContain("workflow.displayName || workflow.name")
     expect(source).toContain("workflow.description")

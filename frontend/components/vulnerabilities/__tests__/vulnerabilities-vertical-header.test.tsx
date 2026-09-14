@@ -56,7 +56,7 @@ describe("VulnerabilitiesVerticalHeader", () => {
 
     expect(searchbox).toHaveAttribute("data-input-size", "sm")
     expect(searchbox.className).toContain("h-8")
-    expect(searchbox.className).toContain("pl-9")
+    expect(searchbox.className).toContain("pl-7")
     expect(searchbox.className).not.toContain("md:h-8")
     expect(searchbox.className).not.toContain("bg-background/50")
 

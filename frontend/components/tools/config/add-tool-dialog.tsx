@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form } from "@/components/ui/form";
 import { useAddToolDialogState } from "@/components/tools/config/add-tool-dialog-state";
 import { AddToolBasicInfoSection, AddToolCommandSection, AddToolDialogFooter, } from "@/components/tools/config/add-tool-dialog-sections";
+import { compactFormDialogContentClassName } from "@/lib/ui/overlay-styles";
 // Import type definitions
 import type { Tool } from "@/types/tool.types";
 // Component props type definition
@@ -37,7 +38,7 @@ export function AddToolDialog({ tool, onAdd, open: externalOpen, onOpenChange: e
             {t("addTool")}
           </DialogTrigger>)}
 
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[700px]">
+      <DialogContent className={`${compactFormDialogContentClassName} max-h-[90vh] overflow-y-auto sm:max-w-[700px]`}>
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <ToolIcon />
@@ -50,7 +51,7 @@ export function AddToolDialog({ tool, onAdd, open: externalOpen, onOpenChange: e
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="gap-6 grid py-4">
+            <div className="gap-3 grid py-3">
               <AddToolBasicInfoSection t={t} form={form} isPending={isSubmitting} availableCategories={availableCategories} selectedCategories={watchCategoryNames} onToggleCategory={handleCategoryToggle} onRemoveCategory={handleCategoryRemove}/>
 
               <AddToolCommandSection t={t} form={form} isPending={isSubmitting}/>

@@ -61,6 +61,26 @@ if (typeof window !== "undefined") {
   if (typeof HTMLElement !== "undefined" && !HTMLElement.prototype.scrollIntoView) {
     HTMLElement.prototype.scrollIntoView = vi.fn()
   }
+
+  // Base UI checks active viewport animations while ScrollArea unmounts. jsdom
+  // does not implement this browser API, but an empty animation list matches
+  // the test environment's non-visual behavior.
+  if (typeof Element !== "undefined" && !Element.prototype.getAnimations) {
+    Object.defineProperty(Element.prototype, "getAnimations", {
+      value: () => [],
+      writable: true,
+      configurable: true,
+    })
+  }
+
+  // Keep Base UI dialog teardown synchronous in jsdom. The environment has no
+  // visual animation timeline, while ScrollArea still needs the getAnimations
+  // shim above to inspect its viewport during setup and cleanup.
+  Object.defineProperty(globalThis, "BASE_UI_ANIMATIONS_DISABLED", {
+    value: true,
+    writable: true,
+    configurable: true,
+  })
 }
 
 let mockServerInstance: (typeof import("./mock/server"))["mockServer"] | null = null
@@ -69,23 +89,26 @@ let mockResetFns: {
   resetMockScheduledScans: () => unknown
   resetMockMcpKey: () => unknown
   resetMockLoginVisualDiscoverability: () => unknown
+  resetMockUpgradeOperation: () => unknown
 } | null = null
 
 async function getMockPlatform() {
   if (!mockServerInstance) {
     const serverMod = await import("./mock/server")
     mockServerInstance = serverMod.mockServer
-    const [scenariosMod, scheduledScansMod, mcpKeyMod, loginVisualMod] = await Promise.all([
+    const [scenariosMod, scheduledScansMod, mcpKeyMod, loginVisualMod, versionMod] = await Promise.all([
       import("./mock/scenarios"),
       import("./mock/data/scheduled-scans"),
       import("./mock/data/mcp-key"),
       import("./mock/data/login-visual"),
+      import("./mock/data/version"),
     ])
     mockResetFns = {
       resetMockScenario: scenariosMod.resetMockScenario,
       resetMockScheduledScans: scheduledScansMod.resetMockScheduledScans,
       resetMockMcpKey: mcpKeyMod.resetMockMcpKey,
       resetMockLoginVisualDiscoverability: loginVisualMod.resetMockLoginVisualDiscoverability,
+      resetMockUpgradeOperation: versionMod.resetMockUpgradeOperation,
     }
   }
   return { mockServer: mockServerInstance, resetFns: mockResetFns }
@@ -106,6 +129,7 @@ afterEach(async () => {
     resetFns?.resetMockScheduledScans()
     resetFns?.resetMockMcpKey()
     resetFns?.resetMockLoginVisualDiscoverability()
+    resetFns?.resetMockUpgradeOperation()
   }
 })
 

@@ -156,7 +156,7 @@ export function TargetsDataTable({
         ui={{
           emptyMessage: state.t("noData"),
           showColumnVisibility: false,
-          rowDensity: "comfortable",
+          rowDensity: "dense",
           toolbarLeft: (
             <SimpleSearchToolbar
               value={state.localSearchValue}

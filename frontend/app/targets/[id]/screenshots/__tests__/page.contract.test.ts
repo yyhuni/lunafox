@@ -7,7 +7,7 @@ const source = readFileSync(path.resolve(process.cwd(), "app/targets/[id]/screen
 describe("page contract", () => {
   it("preserves current source markers", () => {
     expect(source).toContain("export default async function ScreenshotsPage")
-    expect(source).toContain("className")
+    expect(source).toContain("DetailAssetContentFrame")
     expect(source).toContain("from \"@/components/screenshots/screenshots-gallery\"")
   })
 

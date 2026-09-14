@@ -5,6 +5,7 @@ import React from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AppErrorState } from "@/components/shared/feedback/app-error-state"
 import { UnifiedDataTable } from "@/components/shared/data-table/unified-data-table"
+import { TABLE_DENSE_ROW_CLASS } from "@/components/ui/table"
 import { ScanProgressDialog } from "@/components/scan/scan-progress-dialog"
 import {
   AlertDialog,
@@ -75,7 +76,7 @@ function OverviewTableLoading() {
   return (
     <div className="space-y-2">
       {[...Array(5)].map((_, i) => (
-        <Skeleton key={i} className="h-12 w-full" />
+        <Skeleton key={i} className={`${TABLE_DENSE_ROW_CLASS} w-full`} />
       ))}
     </div>
   )

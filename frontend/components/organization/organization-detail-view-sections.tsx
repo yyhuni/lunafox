@@ -35,6 +35,10 @@ import { Tabs, TabsContent, TabsCountBadge, TabsList, TabsTrigger } from "@/comp
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_SECTION_STACK_CLASS,
+} from "@/components/shared/layout/page-shell-density"
+import {
   deferredInteractionUnmountDelayMs,
   useDeferredInteractionMount,
 } from "@/hooks/use-deferred-interaction-mount"
@@ -148,7 +152,7 @@ function OrganizationDetailSummaryRegion({ children }: { children: React.ReactNo
   return (
     <div
       {...getLoadingStructureSlotAttributes("organization-detail-summary")}
-      className="space-y-5"
+      className={COMPACT_SECTION_STACK_CLASS}
     >
       {children}
     </div>
@@ -202,11 +206,11 @@ export function OrganizationDetailViewLoadingState({
 }) {
   const tOrg = useTranslations("organization") as OrganizationTranslation
 
-  // The page workbench owns this inset; the drawer already supplies it outside ContentHandoff.
+  // The page shell owns the route inset; the drawer supplies its own scroll-body inset.
   return (
     <div
       data-slot="organization-detail-view-loading-state"
-      className={cn("space-y-5", summarySurface === "page" && "py-5")}
+      className={COMPACT_SECTION_STACK_CLASS}
     >
       <OrganizationDetailSummaryRegion>
         <OrganizationDetailHeader
@@ -220,7 +224,7 @@ export function OrganizationDetailViewLoadingState({
       </OrganizationDetailSummaryRegion>
 
       <OrganizationDetailPrimaryTableRegion>
-        <Tabs value="targets" className="gap-4 px-4 lg:px-6">
+        <Tabs value="targets" className={cn("gap-3", COMPACT_CONTENT_GUTTER_CLASS)}>
           <TabsList variant="content" size="md">
             <TabsTrigger value="targets" variant="content" size="md" disabled>
               <Skeleton className="h-4 w-16 rounded-full" />
@@ -311,9 +315,9 @@ function OrganizationDetailHeader({
     : updatedAtText
 
   return (
-    <div className="space-y-5 px-4 lg:px-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0 space-y-4">
+    <div className={cn(COMPACT_SECTION_STACK_CLASS, COMPACT_CONTENT_GUTTER_CLASS)}>
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0 space-y-3">
           <div className="flex min-w-0 items-center gap-4">
             <OrganizationInitial name={organizationName} loading={loading} />
             <div className="min-w-0">
@@ -360,9 +364,9 @@ function OrganizationDetailHeader({
 
         <div className="flex shrink-0 flex-wrap items-center gap-2 md:justify-end">
           {loading ? (
-            <ActionSkeleton widthClassName="w-28" className="shrink-0" />
+            <ActionSkeleton size="sm" widthClassName="w-28" className="shrink-0" />
           ) : state ? (
-            <Button type="button" variant="outline" onClick={state.handleEditOrganization}>
+            <Button type="button" variant="outline" size="sm" onClick={state.handleEditOrganization}>
               <EditIcon className="h-4 w-4" />
               {state.tOrg("editOrganization")}
             </Button>
@@ -454,7 +458,7 @@ function OrganizationSummaryStrip({
       : "sm:col-span-2 xl:col-span-2"
 
   return (
-    <div className="px-4 lg:px-6">
+    <div className={COMPACT_CONTENT_GUTTER_CLASS}>
       <div className={summaryGridClassName}>
         <OrganizationMetric
           icon={<TotalTargetsIcon className="h-4 w-4" />}
@@ -597,7 +601,7 @@ export function OrganizationDetailViewTable({
   const targetStableSurfaceRowCount = getDataTableSkeletonRowCount(state.pagination.pageSize)
 
   return (
-    <div className="space-y-5">
+    <div className={COMPACT_SECTION_STACK_CLASS}>
       <OrganizationDetailSummaryRegion>
         <OrganizationDetailHeader state={state} />
         <OrganizationSummaryStrip state={state} surface={summarySurface} />
@@ -607,7 +611,7 @@ export function OrganizationDetailViewTable({
         <Tabs
           value={state.activeTab}
           onValueChange={(value) => state.setActiveTab(value as OrganizationDetailTab)}
-          className="gap-4 px-4 lg:px-6"
+          className={cn("gap-3", COMPACT_CONTENT_GUTTER_CLASS)}
         >
           <TabsList variant="content" size="md">
             <TabsTrigger value="targets" variant="content" size="md">
@@ -733,7 +737,7 @@ export function OrganizationDetailViewWorkbench({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-      <div className={cn("min-h-0 flex-1 overflow-y-auto py-5", activeActionPanel && "hidden lg:block")}>
+      <div className={cn("min-h-0 flex-1 overflow-y-auto", activeActionPanel && "hidden lg:block")}>
         <OrganizationDetailViewTable state={state} />
       </div>
 

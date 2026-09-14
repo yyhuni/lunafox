@@ -16,6 +16,7 @@ import { useScan } from "@/hooks/use-scans";
 import { useTranslations } from "next-intl";
 import { VulnerabilitiesDetailViewRouteFallback } from "@/components/vulnerabilities/vulnerabilities-detail-view-sections";
 import { WebSitesViewRouteFallback } from "@/components/websites/websites-view-sections";
+import { DetailAssetContentFrame } from "@/components/shared/layout/detail-asset-content-frame";
 import {
     ScanHistoryDetailShellContent,
     SCAN_HISTORY_DETAIL_SHELL_HANDOFF_CLASS,
@@ -127,9 +128,9 @@ export default function ScanHistoryLayout({ children, }: {
     const totalAssets = counts.websites + counts.subdomains + counts["ip-addresses"] + counts.endpoints;
     const renderChildLoadingState = () => {
         if (primaryTab === "overview") {
-            return (<div className="flex min-h-0 min-w-0 flex-1 flex-col px-4 lg:px-6">
+            return (<DetailAssetContentFrame className="flex min-h-0 min-w-0 flex-1 flex-col">
           <ScanOverviewLoadingState />
-        </div>);
+        </DetailAssetContentFrame>);
         }
         if (primaryTab === "directories") {
             return <DirectoriesViewRouteFallback rowCount={INITIAL_DIRECTORY_FALLBACK_ROW_COUNT} totalSize={0} />;

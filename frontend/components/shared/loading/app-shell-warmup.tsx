@@ -6,12 +6,15 @@ import { useTranslations } from "next-intl"
 import { AppSidebar } from "@/components/app-sidebar"
 import {
   protectedAppShellContentFrameClassName,
+  protectedAppShellContentStyle,
   protectedAppShellScrollAreaClassName,
+  protectedAppShellScrollViewportClassName,
   protectedAppShellStyle,
 } from "@/components/auth/protected-app-shell"
 import { getLoadingOwnerAttributes } from "@/components/shared/loading/loading-owner"
 import { UnifiedHeader } from "@/components/unified-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 
 interface AppShellWarmupProps {
@@ -65,11 +68,15 @@ export function AppShellWarmup({
         <div className="flex flex-1 flex-col min-h-0">
           <UnifiedHeader warmup />
           <SidebarInset className="flex flex-1 flex-col min-h-0">
-            <div className={protectedAppShellScrollAreaClassName}>
-              <div className={protectedAppShellContentFrameClassName}>
-                <div aria-hidden="true" className="flex flex-1" />
-              </div>
-            </div>
+            <ScrollArea
+              className={protectedAppShellScrollAreaClassName}
+              contentClassName={protectedAppShellContentFrameClassName}
+              contentStyle={protectedAppShellContentStyle}
+              type="always"
+              viewportClassName={protectedAppShellScrollViewportClassName}
+            >
+              <div aria-hidden="true" className="flex flex-1" />
+            </ScrollArea>
           </SidebarInset>
         </div>
       </div>

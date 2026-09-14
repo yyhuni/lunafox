@@ -60,6 +60,7 @@ function makeSummary(overrides: Partial<AgentClusterSummary> = {}): AgentCluster
     resourceName: "agentClusterSummaries/current",
     generatedAt: "2026-08-04T07:00:00Z",
     executionFreshnessSeconds: 15,
+    agentLimit: 3,
     totalNodes: 1201,
     healthyCount: 1000,
     warningCount: 100,

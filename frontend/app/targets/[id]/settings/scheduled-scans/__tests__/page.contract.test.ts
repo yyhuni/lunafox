@@ -12,7 +12,8 @@ describe("scheduled scans page contract", () => {
     expect(source).toContain("export default async function TargetScheduledScansPage")
     expect(source).toContain("from \"@/components/target/target-settings\"")
     expect(source).toContain('section="scheduled-scans"')
-    expect(source).toContain("className=\"flex min-h-0 flex-1 flex-col px-4 lg:px-6\"")
+    expect(source).toContain('from "@/components/shared/layout/detail-asset-content-frame"')
+    expect(source).toContain('className="flex min-h-0 flex-1 flex-col"')
   })
 
   it("does not add a route-level dynamic blank fallback", () => {

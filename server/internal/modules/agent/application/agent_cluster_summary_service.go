@@ -31,6 +31,7 @@ func (service *AgentClusterSummaryService) Current(ctx context.Context) (AgentCl
 	}
 	conclusion := mapAgentClusterConclusion(aggregate)
 	return AgentClusterSummary{
+		AgentLimit:                agentdomain.DeploymentAgentLimit,
 		GeneratedAt:               generatedAt,
 		ExecutionFreshnessSeconds: int(agentdomain.AgentExecutionFreshness.Seconds()),
 		Nodes: AgentClusterNodeCounts{

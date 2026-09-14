@@ -77,7 +77,8 @@ describe("system-logs-view contract", () => {
   })
 
   it("lets the log viewport fill the remaining page space", () => {
-    expect(layoutSource).toContain("flex min-h-0 flex-1 flex-col px-4 lg:px-6")
+    expect(layoutSource).toContain("SYSTEM_LOGS_CONTENT_SHELL_CLASS")
+    expect(layoutSource).toContain("flex min-h-0 flex-1 flex-col ${COMPACT_CONTENT_GUTTER_CLASS}")
     expect(layoutSource).toContain("flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border")
     expect(source).toContain("SYSTEM_LOGS_CONTENT_SHELL_CLASS")
     expect(source).toContain("SYSTEM_LOGS_TERMINAL_SHELL_CLASS")

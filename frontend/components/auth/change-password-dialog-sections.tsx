@@ -40,7 +40,7 @@ export function ChangePasswordFormFields({
   onConfirmPasswordChange,
 }: ChangePasswordFormFieldsProps) {
   return (
-    <div className="gap-4 grid py-4">
+    <div className="gap-3 grid py-3">
       <div className="gap-2 grid">
         <Label htmlFor="oldPassword">{t("currentPassword")}</Label>
         <Input

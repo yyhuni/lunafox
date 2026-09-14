@@ -8,6 +8,7 @@ import { DataTableColumnHeader } from "@/components/shared/data-table/column-hea
 import { TimestampCell } from "@/components/shared/data-table/timestamp-cell";
 import { getSeverityVariant } from "@/lib/severity-config";
 import { getStatusToneTextClass } from "@/lib/status-config";
+import { textRole } from "@/lib/typography";
 import { cn } from "@/lib/utils";
 import { vulnerabilitiesTableColumnLayout } from "./vulnerabilities-table-layout";
 import type { Vulnerability, VulnerabilitySeverity } from "@/types/vulnerability.types";
@@ -116,7 +117,9 @@ export function createVulnerabilityColumns({ formatDate, t, includeSelection = t
             maxSize: vulnerabilitiesTableColumnLayout.vulnType.maxSize,
             cell: ({ row }) => {
                 const vulnType = row.getValue("vulnType") as string;
-                return vulnType;
+                return (<span className={cn("block min-w-0 truncate", textRole.tableCellPrimary)} title={vulnType}>
+          {vulnType}
+        </span>);
             },
         },
         {

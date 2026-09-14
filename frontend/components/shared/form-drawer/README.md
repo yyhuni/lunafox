@@ -21,9 +21,9 @@
 - Backdrop: inherits the shared shadcn base-nova overlay from `SheetContent`; callers must not pass local backdrop variants or bypass blur.
 - Motion: `FormDrawer` always uses the shared edge-panel transform transition, while its backdrop transitions only opacity. The shared Sheet primitive stages a dynamically loaded controlled drawer's first `open=true` frame so the transition is not skipped; users requesting reduced motion open without that frame staging. `formDrawerContentClassName` owns layout and width only; forms must mount their visible loading or content shell with the panel instead of delaying body rendering.
 - Width: shared form drawer tier, currently aligned with existing form dialog width.
-- Header: `px-5 py-4 sm:px-6`, bottom border, and the shared `EdgePanelHeader` `form` variant. It retains the shared `min-h-8` title row and follows the quick-scan hierarchy with a `size-10` semantic icon container, `textRole.sectionTitle` title, `textRole.helperText` description, and one close action.
-- Body: scrolls independently with `px-6 py-4` and a `gap-4` form rhythm.
-- Footer: fixed at the bottom with `border-t px-6 py-4`.
+- Header: compact `px-4 py-3`, bottom border, and the shared `EdgePanelHeader` `form` variant. It retains the shared `min-h-8` title row and follows the quick-scan hierarchy with a `size-10` semantic icon container, `textRole.sectionTitle` title, `textRole.helperText` description, and one close action.
+- Body: scrolls independently with compact `px-4 py-3` and a `gap-3` form rhythm.
+- Footer: fixed at the bottom with `border-t px-4 py-3`.
 - Close: uses `SheetClose` with a shared `Button size="icon-sm"` and translated close label.
 
 ## Embedded Panel

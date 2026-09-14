@@ -51,7 +51,7 @@ describe("app-sidebar contract", () => {
   })
 
   it("keeps the product brand block compact and optically aligned", () => {
-    expect(source).toContain("min-h-12")
+    expect(source).toContain("min-h-11")
     expect(source).toContain("size-7")
     expect(source).toContain("size-8 shrink-0 items-center justify-center")
     expect(source).toContain("gap-2")
@@ -210,8 +210,8 @@ describe("app-sidebar contract", () => {
   })
 
   it("aligns the collapsible child rail to the first and last child buttons", () => {
-    expect(source).toContain("relative my-2 pl-6")
-    expect(source).not.toContain("relative my-2 pl-8")
+    expect(source).toContain("relative my-1 pl-6")
+    expect(source).not.toContain("relative my-1 pl-8")
     expect(source).toContain("before:top-1")
     expect(source).toContain("before:bottom-1")
     expect(source).not.toContain("before:bottom-3")

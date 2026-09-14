@@ -10,4 +10,8 @@ describe("disk-stat-cards contract", () => {
     expect(source).toContain("className")
     expect(source).toContain("from \"next-intl\"")
   })
+
+  it("uses compact card chrome for the small resource summaries", () => {
+    expect(source).toContain('<Card variant="compact" className="@container/card">')
+  })
 })

@@ -33,7 +33,7 @@ const buttonVariants = cva(
       },
       size: {
         default: `${buttonStructuralSizeClassNames.default} px-4 py-2 has-[>svg]:px-3`,
-        sm: `${buttonStructuralSizeClassNames.sm} gap-1.5 px-3 has-[>svg]:px-2.5`,
+        sm: `${buttonStructuralSizeClassNames.sm} gap-1.5 px-3 text-[13px] has-[>svg]:px-2.5`,
         lg: `${buttonStructuralSizeClassNames.lg} px-6 has-[>svg]:px-4`,
         "action-card": `${buttonStructuralSizeClassNames["action-card"]} justify-start whitespace-normal px-4 py-3 text-left`,
         content: buttonStructuralSizeClassNames.content,

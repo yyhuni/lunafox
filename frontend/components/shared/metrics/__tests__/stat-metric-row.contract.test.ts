@@ -28,4 +28,14 @@ describe("stat-metric-row contract", () => {
     expect(source).not.toContain("min-w-[1ch]")
     expect(source).not.toContain("inline-block w-12 select-none")
   })
+
+  it("keeps the shared strip on the compact Linear-style rhythm", () => {
+    expect(source).toContain("min-h-20")
+    expect(source).toContain("gap-3 px-3 py-3")
+    expect(source).toContain("px-3 py-2.5")
+    expect(source).toContain('className={cn("mt-2 truncate"')
+    expect(source).toContain('className={cn("mt-2 flex min-w-0 items-center gap-1.5"')
+    expect(source).not.toContain("min-h-22")
+    expect(source).not.toContain("@xl/main:px-8")
+  })
 })

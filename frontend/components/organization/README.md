@@ -157,9 +157,10 @@ Required rules:
   resolved `OrganizationDetailHeader` and `OrganizationSummaryStrip` structures
   with loading value slots instead of drawing a separate header/metric skeleton.
 - The detail page-owned loading state must keep the page wrapper
-  `flex flex-col gap-4 py-4 md:gap-6 md:py-6`, and the page loading state must
-  keep the resolved workbench `py-5` inset. The drawer passes
-  `summarySurface="drawer"` because its scroll body already owns that inset.
+  the shared compact page-shell rhythm (`gap-3 py-3`). The
+  resolved workbench and its loading counterpart must not add a second
+  page-only inset; the page shell owns that outer whitespace. The drawer passes
+  `summarySurface="drawer"` because its scroll body owns its own `py-3` inset.
 - Reason: the drawer can open from a selected list row before the detail query
   resolves. Reusing the resolved structure keeps avatar, title, metadata,
   action slot, metric grid, tabs, and embedded table geometry aligned through

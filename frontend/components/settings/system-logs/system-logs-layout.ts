@@ -1,3 +1,8 @@
+import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_FULL_PAGE_SHELL_CLASS,
+} from "@/components/shared/layout/page-shell-density"
+
 export const SYSTEM_LOGS_DEFAULT_LINES = 100
 
 export const SYSTEM_LOGS_WORKSPACE_HANDOFF_CLASS =
@@ -5,13 +10,12 @@ export const SYSTEM_LOGS_WORKSPACE_HANDOFF_CLASS =
 
 export const SYSTEM_LOGS_WORKSPACE_STATE_CLASS = "flex h-full min-h-0 flex-1 flex-col"
 
-export const SYSTEM_LOGS_PAGE_SHELL_CLASS =
-  "flex h-full min-h-0 flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6"
+export const SYSTEM_LOGS_PAGE_SHELL_CLASS = COMPACT_FULL_PAGE_SHELL_CLASS
 
 export const SYSTEM_LOGS_HEADER_SHELL_CLASS = "relative"
 
 export const SYSTEM_LOGS_HEADER_OVERLAY_SHELL_CLASS =
-  "pointer-events-none absolute inset-0 px-4 lg:px-6"
+  `pointer-events-none absolute inset-0 ${COMPACT_CONTENT_GUTTER_CLASS}`
 
 export const SYSTEM_LOGS_HEADER_TITLE_ROW_CLASS = "mb-2 flex items-end gap-2"
 
@@ -22,7 +26,7 @@ export const SYSTEM_LOGS_HEADER_RULE_CLASS =
   "h-1.5 flex-1 bg-[repeating-linear-gradient(45deg,transparent,transparent_4px,currentColor_4px,currentColor_5px)] text-primary/10"
 
 export const SYSTEM_LOGS_CONTENT_SHELL_CLASS =
-  "flex min-h-0 flex-1 flex-col px-4 lg:px-6"
+  `flex min-h-0 flex-1 flex-col ${COMPACT_CONTENT_GUTTER_CLASS}`
 
 export const SYSTEM_LOGS_TERMINAL_SHELL_CLASS =
   "flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border"

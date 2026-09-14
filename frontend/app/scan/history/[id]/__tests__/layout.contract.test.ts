@@ -20,10 +20,12 @@ describe("layout contract", () => {
   })
 
   it("keeps detail tabs in local horizontal scrollers on narrow screens", () => {
-    expect(shellLayoutSource).toContain('"overflow-x-auto px-4 lg:px-6"')
+    expect(shellLayoutSource).toContain("SCAN_HISTORY_DETAIL_SHELL_PRIMARY_TABS_CLASS")
+    expect(shellLayoutSource).toContain('`overflow-x-auto ${COMPACT_CONTENT_GUTTER_CLASS}`')
     expect(source).toContain('className="w-max min-w-full"')
     expect(source).toContain('className="max-w-none min-w-max"')
-    expect(shellLayoutSource).toContain('"flex min-w-0 items-center overflow-x-auto px-4 lg:px-6"')
+    expect(shellLayoutSource).toContain("SCAN_HISTORY_DETAIL_SHELL_SECONDARY_TABS_CLASS")
+    expect(shellLayoutSource).toContain('`flex min-w-0 items-center overflow-x-auto ${COMPACT_CONTENT_GUTTER_CLASS}`')
   })
 
   it("renders the target display name instead of the AIP resource name in the breadcrumb", () => {
@@ -145,7 +147,7 @@ describe("layout contract", () => {
     expect(source).toContain("skeletonClassName={SCAN_HISTORY_DETAIL_SHELL_HANDOFF_CLASS}")
     expect(source).toContain("contentClassName={SCAN_HISTORY_DETAIL_SHELL_HANDOFF_CLASS}")
     expect(shellLayoutSource).toContain('export const SCAN_HISTORY_DETAIL_SHELL_HANDOFF_CLASS = "flex h-full min-h-0 flex-1 flex-col"')
-    expect(shellLayoutSource).toContain('"flex h-full min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden py-4 md:gap-6 md:py-6"')
+    expect(shellLayoutSource).toContain("COMPACT_FULL_PAGE_SHELL_CLASS")
     expect(shellLayoutSource).toContain('className={cn("flex min-h-0 flex-1 flex-col", className)}')
     expect(shellLayoutSource).toContain('<Skeleton className="h-5 w-20 shrink-0 rounded-full" />')
   })

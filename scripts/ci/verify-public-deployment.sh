@@ -147,6 +147,19 @@ awk '
 if grep -Eq '^[[:space:]]+build:' "$compose"; then
 	fail "public production Compose must consume released images and never build source"
 fi
+server_block="$(
+	awk '
+		/^  server:[[:space:]]*$/ { active=1; next }
+		active && /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { active=0 }
+		active { print }
+	' "$compose"
+)"
+if grep -Fq '/var/run/docker.sock:/var/run/docker.sock' <<<"$server_block"; then
+	fail "public production server must not mount the Docker socket"
+fi
+grep -Fq 'single-node Compose' "$ROOT_DIR/docs/public-deployment.md" || fail "public deployment docs must define single-node Compose upgrade scope"
+grep -Fq 'does not replace Agent containers' "$ROOT_DIR/docs/public-deployment.md" || fail "public deployment docs must preserve Agent update_required ownership"
+grep -Fq 'completion receipt' "$ROOT_DIR/docs/public-deployment.md" || fail "public deployment docs must document receipt semantics"
 # The lifecycle implementation contains literal retired-name checks so it can
 # fail closed when handed a stale manifest. Scan operational inputs here;
 # validator/policy source may mention those names as detection rules.

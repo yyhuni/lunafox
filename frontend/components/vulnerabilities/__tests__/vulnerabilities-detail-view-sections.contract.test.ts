@@ -19,6 +19,12 @@ describe("vulnerabilities-detail-view-sections contract", () => {
     expect(source).not.toContain("fillAvailableHeight")
   })
 
+  it("keeps the state-less route fallback on the shared detail gutter", () => {
+    expect(source).toContain('from "@/components/shared/layout/detail-asset-content-frame"')
+    expect(source).toContain("<DetailAssetContentFrame>")
+    expect(source).toContain('className="space-y-3"')
+  })
+
   it("uses the vulnerabilities-specific loading structure for review tabs and table geometry", () => {
     expect(source).toContain("state: VulnerabilitiesDetailViewState")
     expect(source).toContain("<VulnerabilitiesDataTable")

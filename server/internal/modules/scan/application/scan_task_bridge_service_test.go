@@ -552,6 +552,29 @@ func TestScanTaskBridgeServiceDuplicateTerminalResultRetriesWorkflowReconciliati
 	}
 }
 
+func TestScanTaskBridgeServiceRejectsLateAgentResultAfterUpgradeCancellation(t *testing.T) {
+	const (
+		agentID      = 7
+		sessionID    = "session-upgrade"
+		sessionEpoch = int64(11)
+	)
+	taskStore := &taskStoreStub{
+		getByIDFn: func(context.Context, int) (*ScanTaskRecord, error) {
+			return assignedTaskRecordForTest(ScanTaskRecord{
+				ID: 303, ScanID: 44, ScanWorkflowStageOrder: 1, Status: string(scandomain.TaskStatusCancelled),
+			}, agentID, sessionID, sessionEpoch), nil
+		},
+	}
+	service := newScanTaskBridgeServiceForTest(taskStore, &scanTaskRuntimeScanStoreStub{})
+	err := service.ReportTerminalTaskResult(context.Background(), agentID, sessionID, sessionEpoch, 303, string(scandomain.TaskStatusSucceeded), nil)
+	if err != ErrScanTaskInvalidTransition {
+		t.Fatalf("late result error = %v, want ErrScanTaskInvalidTransition", err)
+	}
+	if taskStore.updatedTaskID != 0 {
+		t.Fatalf("late result rewrote cancelled task: %d", taskStore.updatedTaskID)
+	}
+}
+
 func TestScanTaskBridgeServiceDuplicateFailedResultRejectsDifferentFailureSnapshot(t *testing.T) {
 	agentID := 7
 	sessionID := "session-7"

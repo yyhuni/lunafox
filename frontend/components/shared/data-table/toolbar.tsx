@@ -55,6 +55,7 @@ export function DataTableToolbar({
   
   // Use translation as default placeholder
   const placeholder = searchPlaceholder ?? t('search')
+  const toolbarGapClassName = toolbarDensity === "compact" ? "gap-1.5" : "gap-2"
   
   const {
     value: localSearchValue,
@@ -68,12 +69,13 @@ export function DataTableToolbar({
   }
 
   const leftContentClassName = cn(
-    "flex w-full min-w-0 flex-wrap items-center gap-2 sm:flex-1",
+    "flex w-full min-w-0 flex-wrap items-center sm:flex-1",
+    toolbarGapClassName,
     !leftContent && "sm:max-w-xl"
   )
 
   return (
-    <div className={cn("flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between", className)}>
+    <div className={cn("flex flex-col sm:flex-row sm:items-start sm:justify-between", toolbarGapClassName, className)}>
       {/* Left: Search/Filter */}
       <div className={leftContentClassName}>
         {leftContent ? (
@@ -105,7 +107,7 @@ export function DataTableToolbar({
 
       {/* Right: Action buttons */}
       {children && (
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+        <div className={cn("flex w-full flex-wrap items-center sm:w-auto sm:justify-end", toolbarGapClassName)}>
           {children}
         </div>
       )}

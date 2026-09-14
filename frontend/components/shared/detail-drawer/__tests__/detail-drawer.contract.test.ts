@@ -41,15 +41,20 @@ describe("detail-drawer shared contract", () => {
   })
 
   it("delegates detail header geometry and metadata slots to the shared detail variant", () => {
+    expect(source).toContain('export const DETAIL_DRAWER_COMPACT_GUTTER_CLASS = COMPACT_CONTENT_GUTTER_CLASS')
+    expect(source).toContain('export const DETAIL_DRAWER_COMPACT_INSET_CLASS = `${DETAIL_DRAWER_COMPACT_GUTTER_CLASS} py-3`')
+    expect(source).toContain("export const DETAIL_DRAWER_COMPACT_BODY_CLASS")
+    expect(source).toContain("export const DETAIL_DRAWER_COMPACT_FOOTER_CLASS")
+    expect(source).toContain('className={cn("border-b text-left", DETAIL_DRAWER_COMPACT_INSET_CLASS, headerClassName)}')
     expect(source).toContain('titleMeta={titleMeta}')
     expect(source).toContain('headerMeta={headerMeta}')
     expect(source).toContain('actions={(')
-    expect(source).toContain('className="shrink-0"')
+    expect(source).toContain('className="overlay-close-control shrink-0"')
   })
 
   it("keeps the drawer close affordance on the shared quiet icon button", () => {
     expect(source).toContain('showCloseButton={false}')
-    expect(source).toContain('render={<Button type="button" variant="ghost" size="icon-sm" aria-label={tActions("close")} className="shrink-0"/>}')
+    expect(source).toContain('render={<Button type="button" variant="ghost" size="icon-sm" aria-label={tActions("close")} className="overlay-close-control shrink-0"/>}')
     expect(source).toContain("<semanticIcons.action.cancel />")
     expect(source).toContain('import { semanticIcons } from "@/components/icons"')
     expect(source).not.toContain("focus:ring-")
@@ -83,6 +88,7 @@ describe("detail-drawer shared contract", () => {
 
   it("keeps drawer tabs as quiet secondary navigation instead of primary page chrome", () => {
     expect(source).toContain("border-border/70\"")
+    expect(source).toContain('variant === "content" && DETAIL_DRAWER_COMPACT_GUTTER_CLASS')
     expect(source).toContain("data-active:border-foreground")
     expect(source).toContain("data-active:text-foreground")
     expect(source).toContain("focus-visible:ring-2 focus-visible:ring-ring/40")
@@ -95,5 +101,8 @@ describe("detail-drawer shared contract", () => {
     expect(indexSource).toContain("DetailDrawerTabsList")
     expect(indexSource).toContain("DetailDrawerTabsTrigger")
     expect(indexSource).toContain("DetailDrawerTabsContent")
+    expect(indexSource).toContain("DETAIL_DRAWER_COMPACT_BODY_CLASS")
+    expect(indexSource).toContain("DETAIL_DRAWER_COMPACT_FIELD_GRID_CLASS")
+    expect(indexSource).toContain("DETAIL_DRAWER_COMPACT_FOOTER_CLASS")
   })
 })

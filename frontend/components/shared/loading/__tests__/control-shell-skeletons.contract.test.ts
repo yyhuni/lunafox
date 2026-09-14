@@ -71,7 +71,7 @@ describe("control-shell skeleton contracts", () => {
     expect(compactPaginationSource).toContain('mode = "numbered"')
     expect(compactPaginationSource).toContain("showSummary?: boolean")
     expect(compactPaginationSource).toContain("buttonCount?: 2 | 3 | 4")
-    expect(compactPaginationSource).toContain("sm:gap-4")
+    expect(compactPaginationSource).toContain("sm:gap-3")
   })
 
   it("keeps generic page-section toolbar search on the shared search toolbar skeleton", () => {

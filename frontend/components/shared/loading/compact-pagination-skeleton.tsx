@@ -32,17 +32,17 @@ export function CompactPaginationSkeleton({
     <div
       data-slot="compact-pagination-skeleton"
       aria-hidden="true"
-      className={cn("flex flex-col gap-3 px-2 sm:flex-row sm:items-center sm:justify-between", className)}
+      className={cn("flex flex-col gap-2 px-2 sm:flex-row sm:items-center sm:justify-between", className)}
     >
-      {showSummary ? <Skeleton className={cn("h-5 rounded-full", summaryWidthClassName)} /> : null}
+      {showSummary ? <Skeleton className={cn("h-4 rounded-full", summaryWidthClassName)} /> : null}
 
-      <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-4">
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
         <div className="flex items-center gap-2">
-          <Skeleton className={cn("h-5 rounded-full", rowsPerPageLabelWidthClassName)} />
+          <Skeleton className={cn("h-4 rounded-full", rowsPerPageLabelWidthClassName)} />
           <SelectShellSkeleton size="sm" widthClassName={pageSizeWidthClassName} valueWidthClassName="w-8" />
         </div>
 
-        {!isCursorPagination ? <Skeleton className={cn("h-5 rounded-full", pageValueWidthClassName)} /> : null}
+        {!isCursorPagination ? <Skeleton className={cn("h-4 rounded-full", pageValueWidthClassName)} /> : null}
 
         <div className="flex items-center gap-2">
           {showFirstButton ? <ActionSkeleton size="icon-sm" className={isCursorPagination ? undefined : "hidden lg:block"} /> : null}

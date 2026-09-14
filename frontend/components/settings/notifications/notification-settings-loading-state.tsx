@@ -24,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -53,6 +54,8 @@ import {
   NOTIFICATION_CHANNEL_ICON_CLASS,
   NOTIFICATION_CHANNELS_STACK_CLASS,
   NOTIFICATION_SETTINGS_CHANNEL_WORKBENCH_CLASS,
+  NOTIFICATION_SETTINGS_CONTENT_SCROLL_AREA_CLASS,
+  NOTIFICATION_SETTINGS_CONTENT_SCROLL_VIEWPORT_CLASS,
   NOTIFICATION_SETTINGS_CONTENT_SHELL_CLASS,
   NOTIFICATION_SETTINGS_PAGE_SHELL_CLASS,
   NOTIFICATION_SETTINGS_ACTION_BAR_CLASS,
@@ -99,7 +102,7 @@ function NotificationDestinationEditorLoadingState({
   const providerTitle = t(`${provider}.title`)
 
   return (
-    <Card className={NOTIFICATION_CHANNEL_EDITOR_CARD_CLASS}>
+    <Card variant="compact" className={NOTIFICATION_CHANNEL_EDITOR_CARD_CLASS}>
       <Collapsible open={isExpanded} className="flex min-w-0 flex-1 flex-col">
         <CardHeader className={NOTIFICATION_CHANNEL_DETAIL_HEADER_CLASS}>
           <div className={NOTIFICATION_CHANNEL_DETAIL_HEADER_LAYOUT_CLASS}>
@@ -155,8 +158,8 @@ function NotificationDestinationEditorLoadingState({
                 {Array.from({ length: supportedKindCount }, (_, index) => (
                   <div key={index} className={NOTIFICATION_SUBSCRIPTION_ITEM_CLASS}>
                     <Checkbox disabled />
-                    <div aria-hidden="true" className={textRole.bodySubtle}>
-                      <Skeleton className="inline-block h-5 w-32 align-middle" />
+                    <div aria-hidden="true" className={cn("flex items-center", textRole.bodySubtle)}>
+                      <Skeleton className="h-4 w-32" />
                     </div>
                   </div>
                 ))}
@@ -202,7 +205,12 @@ export function NotificationSettingsPageLoadingState({
         <PageHeader code="NTF-01" title={pageTitle} description={pageDescription} />
       </header>
 
-      <div className={NOTIFICATION_SETTINGS_CONTENT_SHELL_CLASS}>
+      <ScrollArea
+        className={NOTIFICATION_SETTINGS_CONTENT_SCROLL_AREA_CLASS}
+        contentClassName={NOTIFICATION_SETTINGS_CONTENT_SHELL_CLASS}
+        type="always"
+        viewportClassName={NOTIFICATION_SETTINGS_CONTENT_SCROLL_VIEWPORT_CLASS}
+      >
         <div
           {...getLoadingStructureSlotAttributes("notification-settings-channel-workbench")}
           className={NOTIFICATION_SETTINGS_CHANNEL_WORKBENCH_CLASS}
@@ -226,7 +234,7 @@ export function NotificationSettingsPageLoadingState({
             </div>
           </div>
         </div>
-      </div>
+      </ScrollArea>
     </div>
   )
 }

@@ -1,18 +1,28 @@
 import React from "react"
 import { 
   IconClock, 
-  IconLoader2, 
   semanticIcons,
 } from "@/components/icons"
 import { getScanStatusColorVar } from "@/lib/status-config"
 import { cn } from "@/lib/utils"
 import { ScanStatus } from "@/types/scan.types"
 
+export function RunningStatusIcon({ className, style, ...props }: React.ComponentProps<"span">) {
+  return (
+    <span {...props} aria-hidden="true" className={cn("inline-block shrink-0", className)} style={{ color: getScanStatusColorVar("running"), ...style }}>
+      <svg className="scan-running-loader size-full" viewBox="0 0 32 32" fill="none">
+        <circle cx="16" cy="16" r="14" strokeWidth="3" className="stroke-muted-foreground/35" />
+        <circle cx="16" cy="16" r="14" strokeWidth="3" stroke="currentColor" strokeDasharray="38 80" strokeLinecap="round" />
+      </svg>
+    </span>
+  )
+}
+
 const getStatusIcon = (status: ScanStatus) => {
   switch (status) {
     case "succeeded": return semanticIcons.status.success
     case "failed": return semanticIcons.status.failed
-    case "running": return IconLoader2
+    case "running": return RunningStatusIcon
     case "pending": return IconClock
     case "cancelled": return semanticIcons.status.cancelled
     default: return IconClock
@@ -49,7 +59,7 @@ export const ScanStatusBadge = React.memo(function ScanStatusBadge({
                 title={label}
                 className={cn("inline-flex size-4 shrink-0 items-center justify-center", className)}
             >
-                <Icon aria-hidden="true" className={cn("size-3.5", status === "running" && "animate-spin")} style={{ color }} />
+                <Icon aria-hidden="true" className={"size-3.5"} style={{ color, fontSize: 14 }} />
             </span>
         )
     }
@@ -66,7 +76,7 @@ export const ScanStatusBadge = React.memo(function ScanStatusBadge({
                 "flex items-center gap-2.5 h-8 rounded-lg transition-colors max-w-40",
                 className
             )}>
-                <Icon className={cn("w-3.5 h-3.5 flex-shrink-0", status === "running" && "animate-spin")} style={{ color }} />
+                <Icon className={"w-3.5 h-3.5 flex-shrink-0"} style={{ color, fontSize: 14 }} />
                 <div className="flex flex-1 flex-col h-full justify-center min-w-0 py-1">
                     <div className={cn("flex items-center justify-between leading-none", status !== "pending" && "mb-1.5")}>
                         <span className="font-bold text-[10px] tracking-wider uppercase" style={{ color }}>{label}</span>
@@ -104,7 +114,7 @@ export const ScanStatusBadge = React.memo(function ScanStatusBadge({
             <div className="flex items-center justify-between relative w-full z-10">
                 <div className="flex gap-1.5 items-center">
                     {(variant === "icon" || variant === "filled") && (
-                        <Icon className={cn("w-3 h-3", status === "running" && "animate-spin")} style={{ color }} />
+                        <Icon className={"w-3 h-3"} style={{ color, fontSize: 12 }} />
                     )}
                     <span className="font-bold leading-none text-[10px] tracking-tight uppercase" style={{ color }}>
                         {label}

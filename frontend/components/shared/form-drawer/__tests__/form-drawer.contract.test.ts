@@ -37,8 +37,10 @@ describe("form-drawer contract", () => {
 
   it("keeps form drawer body and footer as owned regions", () => {
     expect(source).toContain("flex h-full min-h-0 w-full flex-col")
-    expect(source).toContain("overflow-y-auto px-6 py-4")
-    expect(source).toContain("border-t px-6 py-4")
+    expect(source).toContain("COMPACT_FORM_OVERLAY_INSET_CLASS")
+    expect(source).toContain("COMPACT_FORM_OVERLAY_SECTION_GAP_CLASS")
+    expect(readmeSource).toContain("px-4 py-3")
+    expect(readmeSource).toContain("gap-3")
     expect(source).toContain("FormDrawerFrame")
   })
 
@@ -72,7 +74,7 @@ describe("form-drawer contract", () => {
 
   it("keeps drawer and embedded panel close affordances on shared quiet icon buttons", () => {
     expect(source).toContain('showCloseButton={false}')
-    expect(source).toContain('render={<Button type="button" variant="ghost" size="icon-sm" aria-label={tActions("close")} disabled={closeDisabled}/>}')
+    expect(source).toContain('render={<Button className="overlay-close-control" type="button" variant="ghost" size="icon-sm" aria-label={tActions("close")} disabled={closeDisabled}/>}')
     expect(source).toContain('variant="ghost" size="icon-sm" aria-label={tActions("close")} disabled={closeDisabled} onClick={onClose}')
     expect(source).toContain("<semanticIcons.action.cancel />")
     expect(source).toContain('import { semanticIcons } from "@/components/icons"')

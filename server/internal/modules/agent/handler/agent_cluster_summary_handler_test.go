@@ -27,6 +27,7 @@ func TestAgentClusterSummaryHandlerCurrentReturnsCanonicalProjection(t *testing.
 	gin.SetMode(gin.TestMode)
 	generatedAt := time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)
 	handler := NewAgentClusterSummaryHandler(&agentClusterSummaryHandlerServiceStub{summary: agentapp.AgentClusterSummary{
+		AgentLimit:                3,
 		GeneratedAt:               generatedAt,
 		ExecutionFreshnessSeconds: 15,
 		Nodes:                     agentapp.AgentClusterNodeCounts{Total: 4, Healthy: 1, Warning: 1, Offline: 1, Unknown: 1, Stale: 2},
@@ -50,7 +51,7 @@ func TestAgentClusterSummaryHandlerCurrentReturnsCanonicalProjection(t *testing.
 	if response.Name != "agentClusterSummaries/current" || !response.GeneratedAt.Equal(generatedAt) || response.ExecutionFreshnessSeconds != 15 {
 		t.Fatalf("summary identity = %#v", response)
 	}
-	if response.TotalNodes != 4 || response.HealthyCount != 1 || response.WarningCount != 1 || response.OfflineCount != 1 || response.UnknownCount != 1 || response.StaleAgentCount != 2 {
+	if response.AgentLimit != 3 || response.TotalNodes != 4 || response.HealthyCount != 1 || response.WarningCount != 1 || response.OfflineCount != 1 || response.UnknownCount != 1 || response.StaleAgentCount != 2 {
 		t.Fatalf("summary counts = %#v", response)
 	}
 	if response.ExecutionCapacity.ConfiguredSlots != 12 || response.ExecutionCapacity.OccupiedSlots != 3 || response.ExecutionCapacity.AvailableSlots != 2 || response.ExecutionCapacity.UnavailableSlots != 7 || response.ExecutionCapacity.OvercommittedSlots != 1 {

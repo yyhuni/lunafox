@@ -9,6 +9,10 @@ import {
   DetailDrawerTabsContent,
   DetailDrawerTabsList,
   DetailDrawerTabsTrigger,
+  DETAIL_DRAWER_COMPACT_BODY_CLASS,
+  DETAIL_DRAWER_COMPACT_FIELD_GRID_CLASS,
+  DETAIL_DRAWER_COMPACT_INSET_CLASS,
+  DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS,
 } from "@/components/shared/detail-drawer"
 import { AppErrorState } from "@/components/shared/feedback/app-error-state"
 import { CopyButton } from "@/components/shared/feedback/copy-button"
@@ -94,7 +98,7 @@ function EngineCatalogDetailBody({
       notFoundKind: "resource-not-found",
     })
     return (
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+      <div className={DETAIL_DRAWER_COMPACT_BODY_CLASS}>
         <AppErrorState
           error={{ ...normalizedError, retryable: true }}
           title={t("detailUnavailable")}
@@ -109,15 +113,15 @@ function EngineCatalogDetailBody({
 
   return (
     <DetailDrawerTabs defaultValue="overview">
-      <DetailDrawerTabsList className="px-6">
+      <DetailDrawerTabsList>
         <DetailDrawerTabsTrigger value="overview">{t("overview")}</DetailDrawerTabsTrigger>
         <DetailDrawerTabsTrigger value="configuration">{t("configuration")}</DetailDrawerTabsTrigger>
       </DetailDrawerTabsList>
 
-      <DetailDrawerTabsContent value="overview" className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-        <div className="space-y-6">
+      <DetailDrawerTabsContent value="overview" className={cn("min-h-0 flex-1 overflow-y-auto", DETAIL_DRAWER_COMPACT_INSET_CLASS)}>
+        <div className={DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS}>
           <EngineDrawerSection label={t("identity")}>
-            <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+            <dl className={DETAIL_DRAWER_COMPACT_FIELD_GRID_CLASS}>
               <EngineDetailField label={t("engineId")} value={detail.engineId} mono className="sm:col-span-2" />
               <EngineDetailField label={t("publisher")} value={detail.publisher} />
               <EngineDetailField label={t("packageVersion")} value={detail.packageVersion} mono />
@@ -138,13 +142,13 @@ function EngineCatalogDetailBody({
         </div>
       </DetailDrawerTabsContent>
 
-      <DetailDrawerTabsContent value="configuration" className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+      <DetailDrawerTabsContent value="configuration" className={cn("min-h-0 flex-1 overflow-y-auto", DETAIL_DRAWER_COMPACT_INSET_CLASS)}>
         {localized.execution.configSections.length === 0 ? (
           <p className={textRole.bodySubtle}>{t("noConfiguration")}</p>
         ) : (
-          <div className="space-y-7">
+          <div className={DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS}>
             {localized.execution.configSections.map((section) => (
-              <section key={section.id} className="min-w-0 space-y-4 border-b border-border/70 pb-7 last:border-b-0 last:pb-0">
+              <section key={section.id} className="min-w-0 space-y-3 border-b border-border/70 pb-3 last:border-b-0 last:pb-0">
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0 space-y-1">
                     <h3 className={textRole.sectionTitle}>{section.name}</h3>
@@ -175,9 +179,9 @@ function EngineCatalogDetailLoadingState() {
       {...getLoadingOwnerAttributes({ owner: "engine-catalog-detail", layer: "interaction", intent: "interaction" })}
       data-loading-phase="loading"
       aria-busy="true"
-      className="min-h-0 flex-1 overflow-y-auto px-6 py-5"
+      className={DETAIL_DRAWER_COMPACT_BODY_CLASS}
     >
-      <div className="space-y-6">
+      <div className={DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS}>
         <Skeleton className="h-9 w-48 radius-control" />
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 4 }, (_, index) => (
@@ -187,7 +191,7 @@ function EngineCatalogDetailLoadingState() {
             </div>
           ))}
         </div>
-        <div className="space-y-3 border-y border-border/70 py-5">
+        <div className="space-y-3 border-y border-border/70 py-3">
           <Skeleton className="h-4 w-28 radius-control" />
           <Skeleton className="h-16 w-full radius-control" />
           <Skeleton className="h-16 w-full radius-control" />
@@ -199,7 +203,7 @@ function EngineCatalogDetailLoadingState() {
 
 function EngineDrawerSection({ label, children }: React.PropsWithChildren<{ label: string }>) {
   return (
-    <section className="min-w-0 space-y-4 border-b border-border/70 pb-6 last:border-b-0 last:pb-0">
+    <section className="min-w-0 space-y-3 border-b border-border/70 pb-3 last:border-b-0 last:pb-0">
       <h3 className={textRole.sectionTitle}>{label}</h3>
       {children}
     </section>
@@ -283,7 +287,7 @@ function EngineParameterDetail({ param }: { param: EngineParamDefinition }) {
         </div>
         <Badge variant="outline">{param.type}</Badge>
       </div>
-      <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+      <dl className={DETAIL_DRAWER_COMPACT_FIELD_GRID_CLASS}>
         <ParameterMetadataField label={t("defaultValue")} value={formatParameterValue(param.default, t("none"))} />
         {range ? <ParameterMetadataField label={t("allowedRange")} value={range} /> : null}
         {param.enum?.length ? <ParameterMetadataField label={t("allowedValues")} value={param.enum.join(", ")} /> : null}

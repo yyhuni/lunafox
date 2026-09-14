@@ -1,21 +1,27 @@
+import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_FLEX_PAGE_SHELL_CLASS,
+} from "@/components/shared/layout/page-shell-density"
+
 export const BLACKLIST_PAGE_SHELL_CLASS =
-  "flex min-h-0 flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6"
+  COMPACT_FLEX_PAGE_SHELL_CLASS
 
-export const BLACKLIST_CONTENT_SHELL_CLASS = "flex min-h-0 flex-1 flex-col gap-4 px-4 lg:px-6"
+export const BLACKLIST_CONTENT_SHELL_CLASS =
+  `flex min-h-0 flex-1 flex-col gap-3 ${COMPACT_CONTENT_GUTTER_CLASS}`
 
-export const BLACKLIST_EMBEDDED_PAGE_SHELL_CLASS = "flex min-h-0 flex-1 flex-col gap-4"
+export const BLACKLIST_EMBEDDED_PAGE_SHELL_CLASS = "flex min-h-0 flex-1 flex-col gap-3"
 
-export const BLACKLIST_EMBEDDED_CONTENT_SHELL_CLASS = "flex min-h-0 flex-1 flex-col gap-4"
+export const BLACKLIST_EMBEDDED_CONTENT_SHELL_CLASS = "flex min-h-0 flex-1 flex-col gap-3"
 
-export const BLACKLIST_WORKBENCH_GRID_CLASS = "grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-3"
+export const BLACKLIST_WORKBENCH_GRID_CLASS = "grid gap-3 lg:min-h-0 lg:flex-1 lg:grid-cols-3"
 
-export const BLACKLIST_RULE_LIST_CARD_CLASS = "flex min-h-0 flex-col gap-4 overflow-hidden"
+export const BLACKLIST_RULE_LIST_CARD_CLASS = "flex min-h-0 flex-col gap-3 overflow-hidden"
 
-export const BLACKLIST_RULE_LIST_HEADER_CLASS = "pb-3"
+export const BLACKLIST_RULE_LIST_HEADER_CLASS = "px-4 pb-2.5"
 
 // Small screens need a stable viewport; desktop bounds the list to the workbench height.
 // Rule counts are data-dependent, so both states scroll inside this shared surface.
-export const BLACKLIST_RULE_LIST_CONTENT_CLASS = "h-96 min-h-0 flex-none space-y-4 overflow-auto lg:h-auto lg:flex-1"
+export const BLACKLIST_RULE_LIST_CONTENT_CLASS = "h-96 min-h-0 flex-none space-y-3 overflow-auto lg:h-auto lg:flex-1"
 
 export const BLACKLIST_RULE_GROUP_TRIGGER_CLASS =
   "flex w-full justify-start items-center gap-2 py-2 text-left transition-colors hover:bg-transparent hover:text-foreground dark:hover:bg-transparent"
@@ -33,7 +39,7 @@ export const BLACKLIST_RULE_STATUS_CELL_CLASS = "flex w-8 shrink-0 items-center 
 
 export const BLACKLIST_EDITOR_CARD_CLASS = "flex min-h-0 flex-col gap-0 overflow-hidden py-0 lg:col-span-2"
 
-export const BLACKLIST_EDITOR_HEADER_CLASS = "p-6 pb-4"
+export const BLACKLIST_EDITOR_HEADER_CLASS = "px-4 pb-2.5 pt-3"
 
 export const BLACKLIST_EDITOR_HEADER_ROW_CLASS = "flex flex-wrap items-start justify-between gap-3"
 

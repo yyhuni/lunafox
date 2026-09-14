@@ -49,3 +49,13 @@ func (service *ScanFacade) BatchStop(ctx context.Context, ids []int) (*BatchScan
 	}
 	return result, nil
 }
+
+// StopAllActiveForUpgrade is the deployment-wide maintenance stop used by
+// the system upgrade coordinator. The lifecycle service owns the transaction
+// and post-commit Agent notifications.
+func (service *ScanFacade) StopAllActiveForUpgrade(ctx context.Context, operationID string) (*UpgradeScanStopOutcome, error) {
+	if service.lifecycleService == nil {
+		return nil, errors.New("scan lifecycle service not initialized")
+	}
+	return service.lifecycleService.StopAllActiveForUpgrade(ctx, operationID)
+}

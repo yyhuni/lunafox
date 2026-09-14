@@ -22,9 +22,9 @@ func TestAgentRegistrationTransactionSupportsConcurrentInterleavedTokens(t *test
 
 	repository := &agentRepository{db: db}
 	start := make(chan struct{})
-	errorsByAgent := make(chan error, 12)
+	errorsByAgent := make(chan error, 3)
 	var group sync.WaitGroup
-	for index := 0; index < 12; index++ {
+	for index := 0; index < 3; index++ {
 		index := index
 		group.Add(1)
 		go func() {
@@ -59,8 +59,12 @@ func TestAgentRegistrationTransactionSupportsConcurrentInterleavedTokens(t *test
 		if err := db.Model(&model.Agent{}).Where("registration_token_id = ?", tokenID).Count(&count).Error; err != nil {
 			t.Fatalf("count token %d agents: %v", tokenID, err)
 		}
-		if count != 6 {
-			t.Fatalf("token %d agent count = %d, want 6", tokenID, count)
+		want := int64(2)
+		if tokenID == 2 {
+			want = 1
+		}
+		if count != want {
+			t.Fatalf("token %d agent count = %d, want %d", tokenID, count, want)
 		}
 		var token model.RegistrationToken
 		if err := db.First(&token, tokenID).Error; err != nil {

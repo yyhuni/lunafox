@@ -38,14 +38,16 @@ field, and footer action geometry lives in `notification-settings-layout.ts`.
   then uses one shared save action to PATCH only dirty providers. A partial
   success advances only the successful baseline; failed drafts stay editable
   with provider-local feedback.
-- Channel card headers use the shared 24px spacing rhythm. Their enablement
+- Channel card headers use the shared compact spacing rhythm. Their enablement
   switches keep the title, saved status, and switch visible, while collapsing
   credential, subscription, test, remediation, and error details for disabled
   drafts. Re-enabling restores those details without discarding the draft.
 - The page content shell is the only vertical scroll owner. Channel cards and
   the shared save action keep their natural height in one document-flow stack;
   the save action scrolls after the final card and must never shrink editors or
-  create an inner card scrollbar.
+  create an inner card scrollbar. It uses the shared overlay `ScrollArea` and
+  the page scroll-area constants from `notification-settings-layout.ts`, so a
+  long channel stack does not reserve width from the compact right gutter.
 - When changing the destination editor stack or webhook field layout,
   update the layout contract and the local contract test before editing the
   resolved and loading views.

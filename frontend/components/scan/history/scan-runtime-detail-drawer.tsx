@@ -1,5 +1,7 @@
 "use client"
 
+import { RunningStatusIcon } from "@/components/scan/scan-status-badge"
+
 import React from "react"
 import Link from "next/link"
 import { useLocale, useTranslations } from "next-intl"
@@ -12,6 +14,8 @@ import {
   DetailDrawerTabsContent,
   DetailDrawerTabsList,
   DetailDrawerTabsTrigger,
+  DETAIL_DRAWER_COMPACT_BODY_CLASS,
+  DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS,
 } from "@/components/shared/detail-drawer"
 import { CopyButton } from "@/components/shared/feedback/copy-button"
 import { ContentHandoff } from "@/components/shared/loading/content-handoff"
@@ -24,7 +28,6 @@ import {
   Circle,
   IconBan,
   IconClock,
-  IconLoader2,
   semanticIcons,
 } from "@/components/icons"
 import { ScanLogList } from "@/components/scan/scan-log-list"
@@ -171,7 +174,7 @@ function statusIcon(status: RuntimeTaskPresentationStatus) {
     case "failed":
       return <semanticIcons.status.failed className={className} />
     case "running":
-      return <IconLoader2 className={cn(className, "animate-spin")} />
+      return <RunningStatusIcon className={className} style={{ fontSize: 16 }} />
     case "pending":
       return <IconClock className={className} />
     case "interrupted":
@@ -261,9 +264,8 @@ export function RuntimeHeader({
           </h2>
           <Badge
             variant={getScanStatusBadgeVariant(status)}
-            className={cn("gap-1.5 px-2 py-0.5 text-xs", getScanStatusClasses(status))}
+            className={cn("px-2 py-0.5 text-xs", getScanStatusClasses(status))}
           >
-            {statusIcon(status)}
             {statusLabel(status)}
           </Badge>
           <Badge variant="outline" className="px-2 py-0.5 text-xs text-muted-foreground">
@@ -918,7 +920,7 @@ export function RuntimeDetailTabsPanel({
 
 function ScanRuntimeDetailDrawerLoadingState() {
   return (
-    <div {...getLoadingOwnerAttributes({ owner: "scan-runtime-detail-drawer", layer: "interaction", intent: "interaction" })} className="space-y-6">
+    <div {...getLoadingOwnerAttributes({ owner: "scan-runtime-detail-drawer", layer: "interaction", intent: "interaction" })} className={DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS}>
       <section className="space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <Skeleton className="h-8 w-56" />
@@ -1086,7 +1088,7 @@ export function ScanRuntimeDetailDrawer({ open, onOpenChange, scan }: ScanRuntim
   }, [open])
 
   const runtimeContent = runtimeScan ? (
-    <div className="min-w-0 max-w-full space-y-6">
+    <div className={cn("min-w-0 max-w-full", DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS)}>
       <RuntimeHeader scan={runtimeScan} tasks={runtimeTasks} now={runtimeDurationNow} locale={locale} t={t} statusLabel={tStatus} />
       <RuntimeSummarySection scan={runtimeScan} tasks={runtimeTasks} t={t} />
       <RuntimeTaskList tasks={runtimeTasks} taskProgressLogsByTaskId={taskProgressLogsByTaskId} now={runtimeDurationNow} t={t} statusLabel={tStatus} />
@@ -1112,7 +1114,7 @@ export function ScanRuntimeDetailDrawer({ open, onOpenChange, scan }: ScanRuntim
       onOpenChange={onOpenChange}
       title={t("runtimeDrawer.title")}
     >
-      <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-6 py-5 [scrollbar-gutter:stable]">
+      <div className={cn(DETAIL_DRAWER_COMPACT_BODY_CLASS, "min-w-0 overflow-x-hidden [scrollbar-gutter:stable]")}>
         {showErrorState ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 py-16 text-center">
             <AlertTriangle className="mb-3 h-8 w-8 text-destructive" />

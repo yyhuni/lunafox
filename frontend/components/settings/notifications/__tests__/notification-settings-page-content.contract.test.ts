@@ -36,6 +36,8 @@ describe("notification-settings-page-content contract", () => {
   it("derives the resolved page and loading state from one channel workbench layout contract", () => {
     const sharedLayoutConstants = [
       "NOTIFICATION_SETTINGS_CHANNEL_WORKBENCH_CLASS",
+      "NOTIFICATION_SETTINGS_CONTENT_SCROLL_AREA_CLASS",
+      "NOTIFICATION_SETTINGS_CONTENT_SCROLL_VIEWPORT_CLASS",
       "NOTIFICATION_CHANNELS_STACK_CLASS",
       "NOTIFICATION_CHANNEL_EDITOR_CARD_CLASS",
       "NOTIFICATION_CHANNEL_DETAIL_HEADER_CLASS",
@@ -71,11 +73,17 @@ describe("notification-settings-page-content contract", () => {
   })
 
   it("keeps the full channel stack in the page scroll region instead of shrinking editors for the save action", () => {
-    expect(layoutSource).toContain('NOTIFICATION_SETTINGS_CONTENT_SHELL_CLASS =\n  "flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 [scrollbar-gutter:stable] lg:px-6"')
+    expect(layoutSource).toContain("NOTIFICATION_SETTINGS_CONTENT_SHELL_CLASS")
+    expect(layoutSource).toContain("COMPACT_PAGE_SCROLL_AREA_CLASS")
+    expect(layoutSource).toContain("COMPACT_PAGE_SCROLL_AREA_CONTENT_CLASS")
+    expect(layoutSource).toContain("COMPACT_PAGE_SCROLL_AREA_VIEWPORT_CLASS")
+    expect(layoutSource).not.toContain("scrollbar-gutter:stable")
+    expect(source).toContain('import { ScrollArea } from "@/components/ui/scroll-area"')
+    expect(loadingSource).toContain('import { ScrollArea } from "@/components/ui/scroll-area"')
     expect(layoutSource).toContain('NOTIFICATION_SETTINGS_CHANNEL_WORKBENCH_CLASS = "flex w-full min-w-0"')
-    expect(layoutSource).toContain('NOTIFICATION_CHANNELS_STACK_CLASS = "flex w-full min-w-0 flex-col gap-4"')
+    expect(layoutSource).toContain('NOTIFICATION_CHANNELS_STACK_CLASS = "flex w-full min-w-0 flex-col gap-3"')
     expect(layoutSource).toContain('NOTIFICATION_CHANNEL_EDITOR_CARD_CLASS =\n  "flex min-w-0 shrink-0 flex-col gap-0 overflow-hidden py-0"')
-    expect(layoutSource).toContain('NOTIFICATION_CHANNEL_DETAIL_CONTENT_CLASS = "space-y-5 py-6"')
+    expect(layoutSource).toContain('NOTIFICATION_CHANNEL_DETAIL_CONTENT_CLASS = "space-y-3 px-4 py-3"')
     expect(layoutSource).toContain('NOTIFICATION_SETTINGS_ACTION_BAR_CLASS = "flex shrink-0 items-center justify-end gap-3"')
   })
 
@@ -112,8 +120,8 @@ describe("notification-settings-page-content contract", () => {
     expect(loadingSource).toContain("destinationByProvider")
     expect(loadingSource).toContain("<Collapsible open={isExpanded}")
     expect(loadingSource).toContain("supportedKindCount")
-    expect(loadingSource).toContain('<div aria-hidden="true" className={textRole.bodySubtle}>')
-    expect(loadingSource).toContain('<Skeleton className="inline-block h-5 w-32 align-middle" />')
+    expect(loadingSource).toContain('<div aria-hidden="true" className={cn("flex items-center", textRole.bodySubtle)}>')
+    expect(loadingSource).toContain('<Skeleton className="h-4 w-32" />')
     expect(loadingSource).toContain("feishu: semanticIcons.concept.notification")
     expect(loadingSource).not.toContain('provider: "inbox"')
   })
@@ -154,11 +162,11 @@ describe("notification-settings-page-content contract", () => {
     expect(source).not.toContain("new URL(")
   })
 
-  it("keeps resolved and loading channel headers on the balanced spacing path", () => {
-    expect(layoutSource).toContain('NOTIFICATION_CHANNEL_DETAIL_HEADER_CLASS = "border-b pt-6"')
+  it("keeps resolved and loading channel headers on the compact spacing path", () => {
+    expect(layoutSource).toContain('NOTIFICATION_CHANNEL_DETAIL_HEADER_CLASS = "border-b px-4 pt-3"')
     expect(source).toContain('<CardHeader className={NOTIFICATION_CHANNEL_DETAIL_HEADER_CLASS}>')
     expect(loadingSource).toContain('<CardHeader className={NOTIFICATION_CHANNEL_DETAIL_HEADER_CLASS}>')
-    expect(source).not.toContain('density="compact"')
-    expect(loadingSource).not.toContain('density="compact"')
+    expect(source).toContain('<Card key={provider} variant="compact"')
+    expect(loadingSource).toContain('<Card variant="compact"')
   })
 })

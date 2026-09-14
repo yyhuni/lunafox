@@ -2,7 +2,11 @@
 
 import type { ReactNode } from "react"
 
-import { DetailDrawer } from "@/components/shared/detail-drawer"
+import {
+  DetailDrawer,
+  DETAIL_DRAWER_COMPACT_BODY_CLASS,
+  DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS,
+} from "@/components/shared/detail-drawer"
 import { getLoadingOwnerAttributes } from "@/components/shared/loading/loading-owner"
 import { Spinner } from "@/components/shared/loading/spinner"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -35,9 +39,9 @@ export function InteractionLoadingDrawer({
         {...getLoadingOwnerAttributes({ owner, layer: "interaction", intent: "interaction" })}
         data-loading-phase="loading"
         aria-busy="true"
-        className="min-h-0 flex-1 overflow-y-auto py-5"
+        className={DETAIL_DRAWER_COMPACT_BODY_CLASS}
       >
-        <div className="space-y-5 px-4 lg:px-6">
+        <div className={DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS}>
           <div className="flex items-center gap-2">
             <Spinner className="text-muted-foreground" />
             <div className="min-w-0">

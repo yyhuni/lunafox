@@ -69,10 +69,10 @@ const StatMetric = memo(function StatMetric({
 }: StatMetricProps) {
   if (featured) {
     return (
-      <div className="flex min-h-22 items-center gap-4 px-4 py-5 @xl/main:justify-center @xl/main:px-8">
+      <div className="flex min-h-20 items-center gap-3 px-3 py-3 @xl/main:justify-center @xl/main:px-4">
         <span className={cn("size-3 rounded-full", tone.dot)} aria-hidden="true" />
         <div className="min-w-0">
-          <div className="flex items-baseline gap-3">
+          <div className="flex items-baseline gap-2">
             {loading ? (
               <MetricValueSkeleton featured />
             ) : (
@@ -85,19 +85,19 @@ const StatMetric = memo(function StatMetric({
             )}
             <span className={cn(textRole.sectionTitle, tone.label)}>{title}</span>
           </div>
-          <div className={cn("mt-3 truncate", textRole.bodySubtle, tone.footer)}>{footer}</div>
+          <div className={cn("mt-2 truncate", textRole.bodySubtle, tone.footer)}>{footer}</div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-22 flex-col justify-center px-4 py-4 @xl/main:px-6">
-      <div className={cn("flex min-w-0 items-center gap-2", textRole.helperText, tone.label)}>
+    <div className="flex min-h-20 flex-col justify-center px-3 py-2.5 @xl/main:px-4">
+      <div className={cn("flex min-w-0 items-center gap-1.5", textRole.helperText, tone.label)}>
         {icon ? <span className="shrink-0 [&_svg]:size-4">{icon}</span> : null}
         <span className="truncate">{title}</span>
       </div>
-      <div className="mt-3">
+      <div className="mt-2">
         {loading ? (
           <MetricValueSkeleton />
         ) : (
@@ -106,7 +106,7 @@ const StatMetric = memo(function StatMetric({
           </span>
         )}
       </div>
-      <div className={cn("mt-3 flex min-w-0 items-center gap-2", textRole.helperText, tone.footer)}>
+      <div className={cn("mt-2 flex min-w-0 items-center gap-1.5", textRole.helperText, tone.footer)}>
         <span className={cn("size-1.5 rounded-full", tone.dot)} aria-hidden="true" />
         <span className="truncate">{footer}</span>
       </div>

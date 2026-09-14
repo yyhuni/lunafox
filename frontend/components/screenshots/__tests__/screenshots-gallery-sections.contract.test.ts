@@ -34,7 +34,7 @@ describe("screenshots-gallery-sections contract", () => {
 
   it("top-aligns gallery toolbar actions with the search controls", () => {
     expect(source).toContain("SCREENSHOTS_GALLERY_TOOLBAR_CLASS")
-    expect(layoutSource).toContain('export const SCREENSHOTS_GALLERY_TOOLBAR_CLASS = "flex gap-4 items-start justify-between"')
+    expect(layoutSource).toContain('export const SCREENSHOTS_GALLERY_TOOLBAR_CLASS = "flex gap-3 items-start justify-between"')
     expect(source).not.toContain('className="flex gap-4 items-center justify-between"')
   })
 

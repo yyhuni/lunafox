@@ -90,6 +90,7 @@ export interface AgentClusterSummary {
   resourceName: 'agentClusterSummaries/current'
   generatedAt: string
   executionFreshnessSeconds: 15
+  agentLimit: number
   totalNodes: number
   healthyCount: number
   warningCount: number

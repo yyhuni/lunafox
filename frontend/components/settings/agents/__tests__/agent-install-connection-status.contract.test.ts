@@ -32,6 +32,7 @@ describe("Agent installation connection feedback contract", () => {
   it("keeps the approved inline status and removes the prototype controls", () => {
     expect(componentSource).toContain("export function AgentInstallConnectionStatus")
     expect(componentSource).toContain('aria-live="polite"')
+    expect(componentSource).toContain('className="mt-3 min-h-14 border-t pt-3"')
     expect(componentSource).toContain("AnimatePresence")
     expect(componentSource).toContain("motion-reduce:animate-none")
     expect(componentSource).not.toContain("installDemo")

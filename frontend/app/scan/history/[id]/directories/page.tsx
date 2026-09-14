@@ -1,4 +1,5 @@
 import { DirectoriesView } from "@/components/directories/directories-view"
+import { DetailAssetContentFrame } from "@/components/shared/layout/detail-asset-content-frame"
 
 export default async function ScanDirectoriesPage({
   params,
@@ -9,8 +10,8 @@ export default async function ScanDirectoriesPage({
   const scanId = Number(id)
 
   return (
-    <div className="px-4 lg:px-6">
+    <DetailAssetContentFrame>
       <DirectoriesView scanId={scanId} />
-    </div>
+    </DetailAssetContentFrame>
   )
 }

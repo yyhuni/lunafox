@@ -25,10 +25,10 @@ describe("table contract", () => {
   })
 
   it("exports shared table row rhythms for dense and identity-led business lists", () => {
-    expect(source).toContain('TABLE_DENSE_ROW_CLASS = "h-12"')
-    expect(source).toContain('TABLE_DENSE_CELL_RHYTHM_CLASS = "px-2 py-1"')
-    expect(source).toContain("TABLE_DENSE_ROW_RHYTHM_HEIGHT_PX = 48")
-    expect(source).toContain("TABLE_DENSE_ROW_ESTIMATED_HEIGHT_PX = 49")
+    expect(source).toContain('TABLE_DENSE_ROW_CLASS = "h-10"')
+    expect(source).toContain('TABLE_DENSE_CELL_RHYTHM_CLASS = "px-2 py-0.5"')
+    expect(source).toContain("TABLE_DENSE_ROW_RHYTHM_HEIGHT_PX = 40")
+    expect(source).toContain("TABLE_DENSE_ROW_ESTIMATED_HEIGHT_PX = 41")
     expect(source).toContain('TABLE_COMFORTABLE_ROW_CLASS = "h-16"')
     expect(source).toContain('TABLE_COMFORTABLE_CELL_RHYTHM_CLASS = "px-2 py-2"')
     expect(source).toContain("TABLE_COMFORTABLE_ROW_RHYTHM_HEIGHT_PX = 64")

@@ -3,6 +3,13 @@
 `frontend/components/shared/metrics/` owns fixed-height metric-strip primitives
 such as `StatMetricRow`.
 
+`StatMetricRow` uses the compact workbench rhythm: an 80px minimum strip with
+12px featured padding, 12px ordinary horizontal padding, 10px ordinary
+vertical padding, and 8px vertical spacing between the value, label, and footer
+slots. The strip keeps its shared divider and inline loading geometry; callers
+should not recreate the row with page-local `min-h`, `px`, `py`, or margin
+utilities.
+
 `SegmentedMetricProgress` owns compact and panel segmented usage bars. It keeps
 status-colored segments by default, and value text also follows status tone by
 default so threshold-bearing Agent metrics can highlight warning/error values.

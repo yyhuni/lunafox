@@ -13,3 +13,5 @@ agent 模块 DTO 规范：
 - `AgentListQuery` 使用 lowerCamelCase 边界字段：`pageSize`、`pageToken`、`filter`、`orderBy`。DTO 层不声明 `page`、独立 `status`、`include` 或 `sort*` 兼容字段；旧参数拒绝在 handler 层显式完成。
 - Agent 管理资源以 `connectionIp` 作为唯一当前连接地址；detail 中的 `observedSourceIp`/`observedIpGeneration` 仅表示 GeoIP 公网观测，且与最后成功 `location.sourceObservedIp` provenance 分离。任何一个 GeoIP 字段都不能作为管理地址或空值回退；`locationState` 固定为 `current`、`expired` 或 `unknown`，unknown 时 `location` 为 `null`。
 - 注册令牌创建 DTO 只在创建响应返回一次 bearer `token`，并同时返回 `agentRegistrationTokens/{registration_token}` canonical `name`；后续资源 DTO 仅返回 `name`、`expiresAt`、`state=active|expired` 与完整归因 `agents`，不得再次携带 secret。
+
+- 集群摘要必填只读 `agentLimit` 与 `totalNodes` 表达部署注册配额，不是任务槽位上限；当前 `agentLimit=3`。

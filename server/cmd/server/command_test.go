@@ -50,6 +50,11 @@ func TestParseServerCommand(t *testing.T) {
 			wantKind: serverCommandWordlistResourceMigration,
 		},
 		{
+			name:     "upgrade migration uses the fixed migrate up command",
+			args:     []string{"server", "migrate", "up"},
+			wantKind: serverCommandMigrationUp,
+		},
+		{
 			name:     "image path executable resetadmin uses bounded reset command",
 			args:     []string{"resetadmin"},
 			wantKind: serverCommandResetAdmin,

@@ -24,10 +24,12 @@ import { useCreateScanWorkflow, useScanWorkflowList, useUpdateScanWorkflow } fro
 import { useEngineCatalog } from "@/hooks/use-engine-catalog"
 import { Button } from "@/components/ui/button"
 import { buildWorkflowEngineLibrary } from "@/lib/engine-catalog"
+import { COMPACT_CONTENT_GUTTER_CLASS } from "@/components/shared/layout/page-shell-density"
 import type { Locale } from "@/i18n/config"
 import type { ScanWorkflow, ScanWorkflowStageView } from "@/types/scan-workflow.types"
 
 import { createWorkflowManagementColumns, type WorkflowManagementColumnRow } from "./scan-workflow-management-columns"
+import { SCAN_WORKFLOW_TABLE_LOADING_ROW_HEIGHT_PX } from "./scan-workflow-page-layout"
 import { WorkflowCompositionCanvas } from "./workflow-composition-canvas"
 
 type WorkflowView = "management" | "builder"
@@ -63,7 +65,7 @@ function ScanWorkflowPrimaryRegion({ children }: { children: React.ReactNode }) 
   return (
     <div
       {...getLoadingStructureSlotAttributes("scan-workflow-primary-region")}
-      className="min-h-0 px-4 lg:px-6"
+      className={`min-h-0 ${COMPACT_CONTENT_GUTTER_CLASS}`}
     >
       {children}
     </div>
@@ -135,7 +137,7 @@ export function ScanWorkflowPageLoadingState({
                 pageSizeOptions: [10, 20, 50],
                 loading: true,
                 loadingRowCount: 1,
-                loadingRowHeightEstimate: 50.5,
+                loadingRowHeightEstimate: SCAN_WORKFLOW_TABLE_LOADING_ROW_HEIGHT_PX,
               }}
           />
         </ScanWorkflowPrimaryRegion>

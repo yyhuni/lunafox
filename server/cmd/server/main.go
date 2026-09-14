@@ -35,6 +35,12 @@ func main() {
 		}
 		return
 	}
+	if command.kind == serverCommandMigrationUp {
+		if code := runDatabaseMigrationFromRuntime(); code != 0 {
+			os.Exit(code)
+		}
+		return
+	}
 	if command.kind == serverCommandFingerprintBootstrap {
 		databaseConfig, err := config.LoadDatabaseConfig()
 		if err != nil {

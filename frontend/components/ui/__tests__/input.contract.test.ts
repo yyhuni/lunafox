@@ -17,7 +17,7 @@ describe("input contract", () => {
   it("owns standard and compact input heights through shared sizes", () => {
     expect(source).toContain("size:")
     expect(source).toContain('default: "h-9"')
-    expect(source).toContain('sm: "h-8"')
+    expect(source).toContain('sm: "h-8 text-[13px] md:text-[13px]"')
     expect(source).toContain("data-input-size")
   })
 

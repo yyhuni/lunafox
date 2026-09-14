@@ -27,6 +27,10 @@ import {
 } from "@/components/scan/initiate-scan-dialog-sections"
 import { EdgePanelHeader } from "@/components/shared/edge-panel-header"
 import {
+  COMPACT_FORM_OVERLAY_HORIZONTAL_INSET_CLASS,
+  COMPACT_FORM_OVERLAY_INSET_CLASS,
+} from "@/components/shared/layout/page-shell-density"
+import {
   scanWorkbenchDrawerContentClassName,
 } from "@/lib/ui/overlay-styles"
 import { textRole } from "@/lib/typography"
@@ -155,7 +159,7 @@ export function InitiateScanDrawer({
           className={cn(scanWorkbenchDrawerContentClassName, "data-[swipe-direction=right]:sm:max-w-[640px]")}
         >
           <form className="flex h-full min-h-0 w-full flex-col">
-            <DrawerHeader className="shrink-0 bg-card px-5 pt-4 text-left sm:px-6">
+            <DrawerHeader className={cn("shrink-0 bg-card text-left", COMPACT_FORM_OVERLAY_INSET_CLASS)}>
               <EdgePanelHeader
                 variant="workbench"
                 leading={<Play className="size-7" />}
@@ -172,7 +176,7 @@ export function InitiateScanDrawer({
                     </span>
                     <DrawerClose
                       render={(
-                        <Button
+                        <Button className="overlay-close-control"
                           type="button"
                           variant="ghost"
                           size="icon-sm"
@@ -192,10 +196,11 @@ export function InitiateScanDrawer({
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <section
                 className={cn(
-                  "min-h-0 flex-1 px-5 sm:px-6",
+                  "min-h-0 flex-1",
+                  COMPACT_FORM_OVERLAY_HORIZONTAL_INSET_CLASS,
                   currentStep === 2
                     ? "flex flex-col overflow-hidden py-3"
-                    : "overflow-y-auto py-5"
+                    : "overflow-y-auto py-3"
                 )}
               >
                 {currentStep === 1 && (
@@ -245,7 +250,7 @@ export function InitiateScanDrawer({
               </section>
             </div>
 
-            <div className="shrink-0 border-t bg-card px-5 py-4 sm:px-6">
+            <div className={cn("shrink-0 border-t bg-card", COMPACT_FORM_OVERLAY_INSET_CLASS)}>
               <InitiateScanFooter
                 t={t}
                 currentStep={currentStep}

@@ -96,6 +96,10 @@ func (h *AgentHandler) Register(c *gin.Context) {
 		},
 	)
 	if err != nil {
+		if errors.Is(err, agentdomain.ErrAgentQuotaExceeded) {
+			httpdto.Error(c, http.StatusTooManyRequests, "AGENT_QUOTA_EXCEEDED", "Agent limit reached. Delete an existing Agent before retrying.")
+			return
+		}
 		if errors.Is(err, agentapp.ErrRegistrationTokenInvalid) {
 			httpdto.BadRequest(c, "Invalid or expired registration token")
 			return

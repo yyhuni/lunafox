@@ -37,6 +37,8 @@ type SchedulerController struct {
 	waiter     RuntimeWaiter
 	logger     EventLogger
 	startOnce  sync.Once
+	stateMu    sync.RWMutex
+	paused     bool
 	done       chan struct{}
 }
 
@@ -85,6 +87,35 @@ func (controller *SchedulerController) Done() <-chan struct{} {
 	return controller.done
 }
 
+// Pause prevents new scheduled occurrences from being materialized or handed
+// off while a maintenance operation is preparing to update the deployment.
+func (controller *SchedulerController) Pause() {
+	if controller == nil {
+		return
+	}
+	controller.stateMu.Lock()
+	controller.paused = true
+	controller.stateMu.Unlock()
+}
+
+func (controller *SchedulerController) Resume() {
+	if controller == nil {
+		return
+	}
+	controller.stateMu.Lock()
+	controller.paused = false
+	controller.stateMu.Unlock()
+}
+
+func (controller *SchedulerController) IsPaused() bool {
+	if controller == nil {
+		return false
+	}
+	controller.stateMu.RLock()
+	defer controller.stateMu.RUnlock()
+	return controller.paused
+}
+
 func (controller *SchedulerController) run(ctx context.Context) {
 	defer close(controller.done)
 	for ctx.Err() == nil {
@@ -108,6 +139,9 @@ func (controller *SchedulerController) run(ctx context.Context) {
 func (controller *SchedulerController) RunPass(ctx context.Context) SchedulerPassResult {
 	if controller == nil || controller.repository == nil || controller.dispatcher == nil || controller.clock == nil {
 		return SchedulerPassResult{PreAttemptError: true, Err: fmt.Errorf("scheduled scan controller is not configured")}
+	}
+	if controller.IsPaused() {
+		return SchedulerPassResult{PreAttemptError: true, Err: fmt.Errorf("scheduled scan controller is paused")}
 	}
 	evaluationAt := controller.clock.Now().UTC()
 	dueSchedules, err := controller.repository.ListDueSchedules(ctx, evaluationAt)

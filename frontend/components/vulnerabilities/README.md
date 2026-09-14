@@ -4,6 +4,12 @@
 
 漏洞详情只通过整行激活，漏洞类型单元格保持只读文本，不再提供重复的行内详情按钮。
 
+## 详情抽屉密度
+
+- `VulnerabilityDetailContent` 的 tabs rail、结构化概览和元数据行必须复用
+  `DetailDrawer` 的紧凑 gutter / inset / section rhythm，保持与抽屉标题区同一条水平轴。
+- `基本信息`、`漏洞分类`等结构化卡片保持标准紧凑面板内边距；证据、原始数据和复现的代码块属于内容驱动阅读区，保留其内部内边距与高度限制。
+
 Target、scan、global 和 website-scoped 漏洞列表只使用相邻 cursor 导航：总数是信息摘要，
 当前响应 token 授权下一页，当前查询 token cache 授权上一页。纵向 header 不得把总数转换成页码、
 首页 reset 或相邻 token 导航；不得提供末页、页码或当前页导航。
@@ -25,6 +31,8 @@ Target、scan、global 和 website-scoped 漏洞列表只使用相邻 cursor 导
   流：页面负责正常纵向滚动，表头随表格行一起滚动，分页显示在带边框表格之外。
   保留已有的 `stableSurfaceRowCount` 首帧预留，但不要新增路由高度填充、固定表头
   或同框分页变体。
+- 漏洞类型列保持单行截断并通过原生 `title` 暴露完整值，避免长标识把紧凑行
+  撑成多行；loading 行使用共享 40px dense rhythm 与解析态保持一致。
 - `VulnerabilitiesDetailViewLoadingState` 必须接收完整 `VulnerabilitiesDetailViewState`，并把搜索、review tab、严重程度、来源、漏洞类型、排序、分页、列定义传给同一个表格 owner。
 - `VulnerabilitiesVerticalView` 的 loading state 也必须复用当前 state 的 `VulnerabilitiesDataTable`。统计卡可以使用 `VulnerabilityStatCardsLoadingState`，但漏洞表格和 review tabs 不要回退到假列或假翻译 wrapper。
 - `VulnerabilitiesVerticalView` 的 loading 与 resolved 分支必须把同一组 `vulnerabilities-table-toolbar`、`vulnerabilities-rows`、`vulnerabilities-pagination` `loadingSlots` 传给 `VulnerabilitiesDataTable`；共享表格在两个阶段各渲染一次这些区域，不能额外包一套仿表格骨架。

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SELECTION_WORKSPACE_SCOPE_TRIGGER_CLASS } from "@/components/shared/layout/selection-workspace-layout"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 import type { Target } from "@/types/target.types"
@@ -173,7 +174,7 @@ export function TargetSelectionWorkspace({
           <Select value={scope} onValueChange={(value) => {
             if (value === "all" || value === "selected") setScope(value)
           }} disabled={disabled}>
-            <SelectTrigger size="sm" className="w-32"><SelectValue>{scope === "all" ? t("scopeAll") : t("scopeSelected")}</SelectValue></SelectTrigger>
+            <SelectTrigger size="sm" className={SELECTION_WORKSPACE_SCOPE_TRIGGER_CLASS}><SelectValue>{scope === "all" ? t("scopeAll") : t("scopeSelected")}</SelectValue></SelectTrigger>
             <SelectContent width="content-fit">
               <SelectItem value="all">{t("scopeAll")}</SelectItem>
               <SelectItem value="selected">{t("scopeSelected")}</SelectItem>

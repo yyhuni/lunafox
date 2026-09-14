@@ -34,6 +34,7 @@ import { AgentOverviewSection } from "./agent-overview-section";
 import { AgentOverviewLoadingState } from "./agent-overview-loading-state";
 import { ArchitectureDialog } from "./architecture-dialog";
 import { AgentResultsRegion } from "./agent-results-region";
+import { COMPACT_SECTION_STACK_CLASS } from "@/components/shared/layout/page-shell-density";
 import { AGENT_CARD_GRID_CLASS, AGENT_LIST_TOOLBAR_REGION_SLOT, AGENT_TOOLBAR_ACTIONS_CLASS, AGENT_TOOLBAR_CONTROLS_CLASS, AGENT_TOOLBAR_FILTERS_CLASS, AGENT_TOOLBAR_ROOT_CLASS, AGENT_TOOLBAR_SEARCH_MAX_WIDTH_CLASS, } from "./agent-layout-contract";
 const AgentConfigDialog = dynamic(() => import("./agent-dialog").then((mod) => ({
     default: mod.AgentConfigDialog,
@@ -88,7 +89,8 @@ function countOptions(options: Array<{ value: string; count?: number }> | undefi
     return (options ?? []).reduce((total, option) => values.includes(option.value) ? total + (option.count ?? 0) : total, 0);
 }
 
-function EmptyState({ onOpenInstall }: {
+function EmptyState({ onOpenInstall, disabled }: {
+    disabled: boolean;
     onOpenInstall: () => void;
 }) {
     const t = useTranslations("settings.agents");
@@ -98,7 +100,7 @@ function EmptyState({ onOpenInstall }: {
       </div>
       <h3 className={cn("mb-2", textRole.panelTitle)}>{t("empty.title")}</h3>
       <p className={cn("max-w-md mb-6", textRole.bodySubtle)}>{t("empty.desc")}</p>
-      <Button onClick={onOpenInstall}>{t("empty.cta")}</Button>
+      <Button disabled={disabled} onClick={onOpenInstall}>{t("empty.cta")}</Button>
     </div>);
 }
 export function AgentList() {
@@ -130,6 +132,8 @@ export function AgentList() {
     const compiledFilter = combineFilterClauses(searchFilter, statusFilter);
     const compiledOrderBy = compileBusinessListOrderBy(query.sorting, AGENT_SORTABLE_FIELDS) ?? "createdAt desc";
     const clusterSummary = useAgentClusterSummary({ refetchInterval: 15000 });
+    const quotaReached = clusterSummary.data !== undefined && clusterSummary.data.totalNodes >= clusterSummary.data.agentLimit;
+    const addDisabled = !clusterSummary.data || quotaReached;
     const { data, isSuccess, refetch } = useAgents({
         pageSize,
         pageToken: query.pageToken,
@@ -269,8 +273,8 @@ export function AgentList() {
             // handled by hook
         }
     };
-    return (<div className="min-w-0 space-y-6">
-      <div className="mb-6 space-y-4">
+    return (<div className={cn("min-w-0", COMPACT_SECTION_STACK_CLASS)}>
+      <div className={cn("mb-3", COMPACT_SECTION_STACK_CLASS)}>
         <ContentHandoff owner="agent-list-overview" layer="section" isLoading={isInitialSectionLoading} skeleton={<AgentOverviewLoadingState />} mountContentWhileLoading>
           <AgentOverviewSection
             summary={clusterSummary.data}
@@ -307,7 +311,7 @@ export function AgentList() {
 
             <div className={AGENT_TOOLBAR_ACTIONS_CLASS}>
               <Dialog open={installOpen} onOpenChange={setInstallOpen}>
-                <DialogTrigger render={<Button type="button" variant="surface" size="sm" />}>
+                <DialogTrigger render={<Button type="button" variant="surface" size="sm" disabled={addDisabled} />}>
                   <AgentIcon className="size-4" />
                   {t("install.openDialog")}
                 </DialogTrigger>
@@ -325,11 +329,12 @@ export function AgentList() {
 
           </div>
         </ContentHandoff>
+        {quotaReached ? <p role="status" className={textRole.helperText}>{t("quota.reached")}</p> : null}
       </div>
 
       <ContentHandoff owner="agent-list-results" layer="section" isLoading={isInitialSectionLoading} skeleton={<AgentCardsLoadingState />} mountContentWhileLoading>
         <AgentResultsRegion>
-          {!hasVisibleAgents && isUnfilteredFirstPage ? (<EmptyState onOpenInstall={() => setInstallOpen(true)}/>) : !hasVisibleAgents ? (<Card className="border-dashed px-6 py-14 text-center">
+          {!hasVisibleAgents && isUnfilteredFirstPage ? (<EmptyState disabled={addDisabled} onOpenInstall={() => setInstallOpen(true)}/>) : !hasVisibleAgents ? (<Card variant="compact" className="border-dashed px-4 py-10 text-center">
               <h3 className={textRole.panelTitle}>{t("overview.emptyTitle")}</h3>
               <p className={cn("mt-2", textRole.bodySubtle)}>{t("overview.emptyDesc")}</p>
               <Button variant="outline" className="mt-4 self-center" onClick={handleResetFilters}>
@@ -341,6 +346,7 @@ export function AgentList() {
                 title={t("expansion.title")}
                 description={t("expansion.desc")}
                 actionLabel={t("expansion.action")}
+                disabled={addDisabled}
                 onOpenInstall={() => setInstallOpen(true)}
               />) : null}
             </div>)}

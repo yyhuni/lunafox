@@ -53,8 +53,9 @@ describe("page-header contract", () => {
     expect(source).toContain('className="ml-auto shrink-0"')
   })
 
-  it("lets the page shell own the 16px header-to-content gap", () => {
-    expect(source).toContain('className={cn("px-4 lg:px-6", className)}')
+  it("lets the page shell own the shared header-to-content gap", () => {
+    expect(source).toContain('from "@/components/shared/layout/page-shell-density"')
+    expect(source).toContain('className={cn(COMPACT_CONTENT_GUTTER_CLASS, className)}')
     expect(source).not.toContain('compact ? "mb-0" : "mb-2"')
     expect(source).toContain('description ? (compact ? "mb-1" : "mb-2") : "mb-0"')
   })
@@ -75,15 +76,15 @@ describe("page-header contract", () => {
   it("delegates responsive outer-shell rhythm to the shared route-shell contract", () => {
     expect(source).not.toContain("mb-4")
     expect(source).not.toContain("mb-6")
-    expect(uiFoundationReadme).toContain("md:gap-6")
-    expect(uiFoundationReadme).toContain("flex flex-col gap-4 py-4 md:gap-6 md:py-6")
+    expect(uiFoundationReadme).toContain('COMPACT_PAGE_RHYTHM_CLASS` (`gap-3 py-3`)')
+    expect(uiFoundationReadme).toContain("COMPACT_PAGE_RHYTHM_CLASS")
   })
 
   it("documents the shared page header spacing contract", () => {
     expect(uiFoundationReadme).toContain("Page Header Spacing Standards")
-    expect(uiFoundationReadme).toContain("16px")
-    expect(uiFoundationReadme).toContain("gap-4")
-    expect(uiFoundationReadme).toContain("md:gap-6")
+    expect(uiFoundationReadme).toContain("12px")
+    expect(uiFoundationReadme).toContain("gap-3")
+    expect(uiFoundationReadme).toContain("px-3")
     expect(uiFoundationReadme).toContain("PageHeader")
   })
 })

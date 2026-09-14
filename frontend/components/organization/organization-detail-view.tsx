@@ -142,7 +142,7 @@ function OrganizationDetailDrawerViewLoaded({
       sidecar={sidecar}
       onSidecarClose={handleSidecarClose}
     >
-      <div className="min-h-0 flex-1 overflow-y-auto py-5">
+      <div className="min-h-0 flex-1 overflow-y-auto py-3">
         <ContentHandoff
             owner="organization-detail-drawer-content"
             isLoading={isInitialLoading}

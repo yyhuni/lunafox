@@ -11,6 +11,7 @@ import { motion, useSpring, useTransform } from "framer-motion"
 import { getTrendToneBadgeClass } from "@/lib/status-config"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { COMPACT_CONTENT_GUTTER_CLASS } from "@/components/shared/layout/page-shell-density"
 
 const VulnerabilitiesMetricIcon = semanticIcons.concept.vulnerability
 const AssetMetricIcon = semanticIcons.concept.asset
@@ -79,11 +80,12 @@ const StatCard = memo(function StatCard({
   const formattedIndex = index !== undefined ? String(index).padStart(2, "0") : undefined
   
   return (
-    <Card 
-      className="@container/card min-h-28 justify-between border-t border-border/70 py-4 shadow-none" 
+    <Card
+      variant="compact"
+      className="@container/card min-h-24 justify-between border-t border-border/70 shadow-none"
       data-card-index={formattedIndex}
     >
-      <CardHeader className="grid-cols-[1fr_auto] gap-2 px-6">
+      <CardHeader className="grid-cols-[1fr_auto] gap-2 px-4">
         <CardDescription className={cn("flex items-center gap-2", textRole.metadataLabel)}>
           <span className="text-muted-foreground">{icon}</span>
           <span>{title}</span>
@@ -100,7 +102,7 @@ const StatCard = memo(function StatCard({
           <MetricSparkline />
         </div>
       </CardHeader>
-      <div className={cn("px-6", textRole.bodySubtle)}>{footer}</div>
+      <div className={cn("px-4", textRole.bodySubtle)}>{footer}</div>
     </Card>
   )
 })
@@ -110,7 +112,7 @@ export function OverviewStatCards({ className, gridClassName }: { className?: st
   const t = useTranslations("overview.statCards")
 
   return (
-    <div className={cn("px-4 lg:px-6", className)}>
+    <div className={cn(COMPACT_CONTENT_GUTTER_CLASS, className)}>
       <div className={cn("overview-stats-row grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4", gridClassName)}>
         <StatCard
           title={t("assetsFound")}

@@ -109,7 +109,7 @@ export function EditScheduledScanDialog({
         />
       )}
     >
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col gap-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col gap-3">
         <TabsList variant="content" className="w-full justify-start border-b" aria-label={t("editTabs.label")}>
           <TabsTrigger value="basic" variant="content">
             {t("editTabs.basicInfo")}
@@ -120,7 +120,7 @@ export function EditScheduledScanDialog({
         </TabsList>
 
         <TabsContent value="basic" keepMounted className="min-h-0 overflow-y-auto pr-1">
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             <EditScheduledScanNameField
               t={t}
               name={displayName}

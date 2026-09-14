@@ -46,6 +46,7 @@ func toAgentClusterSummaryOutput(summary agentapp.AgentClusterSummary) dto.Agent
 		GeneratedAt:               summary.GeneratedAt.UTC(),
 		ExecutionFreshnessSeconds: summary.ExecutionFreshnessSeconds,
 		TotalNodes:                summary.Nodes.Total,
+		AgentLimit:                summary.AgentLimit,
 		HealthyCount:              summary.Nodes.Healthy,
 		WarningCount:              summary.Nodes.Warning,
 		OfflineCount:              summary.Nodes.Offline,
