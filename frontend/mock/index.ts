@@ -313,9 +313,14 @@ export {
 // Version
 export {
   mockVersionInfo,
+  mockCandidateManifest,
   mockUpdateCheckResult,
   getMockVersionInfo,
   getMockUpdateCheckResult,
+  createMockUpgradeOperation,
+  getMockUpgradeOperation,
+  retryMockUpgradeOperation,
+  resetMockUpgradeOperation,
 } from './data/version'
 
 // Screenshots

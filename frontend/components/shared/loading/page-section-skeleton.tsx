@@ -6,6 +6,11 @@ import {
   getLoadingOwnerAttributes,
   type LoadingLayer,
 } from "@/components/shared/loading/loading-owner"
+import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_PAGE_RHYTHM_CLASS,
+  COMPACT_SECTION_STACK_CLASS,
+} from "@/components/shared/layout/page-shell-density"
 
 interface PageSectionSkeletonProps {
   owner?: string
@@ -30,7 +35,7 @@ export function PageSectionSkeleton({
     <div
       {...(owner ? getLoadingOwnerAttributes({ owner, layer, intent: "route" }) : {})}
       data-slot="page-section-skeleton"
-      className={cn("space-y-6 px-4 py-4 md:py-6 lg:px-6", className)}
+      className={cn("flex flex-col", COMPACT_CONTENT_GUTTER_CLASS, COMPACT_PAGE_RHYTHM_CLASS, className)}
     >
       <div className="space-y-3">
         <Skeleton className="h-8 w-40" />
@@ -52,9 +57,9 @@ export function PageSectionSkeleton({
         </div>
       ) : null}
 
-      <div className="space-y-4">
+      <div className={COMPACT_SECTION_STACK_CLASS}>
         {Array.from({ length: sectionCount }).map((_, index) => (
-          <div key={index} className="rounded-xl border border-border bg-card/70 p-5 shadow-2xs">
+          <div key={index} className="rounded-xl border border-border bg-card/70 p-4 shadow-2xs">
             <div className="space-y-3">
               <Skeleton className="h-5 w-32" />
               <Skeleton className="h-4 w-full" />

@@ -24,7 +24,7 @@ interface WordlistEditHeaderProps {
 
 export function WordlistEditHeader({ t, name }: WordlistEditHeaderProps) {
   return (
-    <DialogHeader className="border-b pb-4 pt-6 px-6">
+    <DialogHeader className="border-b px-4 py-3 pr-14">
       <DialogTitle className="flex gap-2 items-center">
         <FileText className="h-5 w-5" />
         {t("title", { name })}
@@ -158,6 +158,7 @@ interface WordlistEditFooterProps {
   hasMetadataChanges: boolean
   onSaveDialog: () => void
   canEditContent: boolean
+  className?: string
 }
 
 export function WordlistEditFooter({
@@ -168,13 +169,14 @@ export function WordlistEditFooter({
   hasMetadataChanges,
   onSaveDialog,
   canEditContent,
+  className,
 }: WordlistEditFooterProps) {
   const isSavingAny = isSaving || isSavingMetadata
   const hasAnyChanges = hasChanges || hasMetadataChanges
   const canSave = (canEditContent && hasChanges) || hasMetadataChanges
 
   return (
-    <DialogFooter className="border-t gap-2 px-6 py-4">
+    <DialogFooter className={cn("border-t gap-2 px-4 py-3", className)}>
       {canEditContent || hasAnyChanges ? (
         <Button
           type="button"

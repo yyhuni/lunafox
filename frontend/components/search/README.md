@@ -4,6 +4,10 @@
 
 - The search route must directly import `SearchPage`.
 - `search-initial-page-shell.tsx` owns the resolved initial-state geometry and quick-search tag constants. It is part of `SearchPage`, not a protected-shell navigation fallback.
+- Its centered command composition is intentional, but its outer page whitespace
+  must use the shared compact page rhythm and `COMPACT_CONTENT_GUTTER_CLASS`;
+  do not reintroduce a local full-page `px-*` convention for the initial or
+  result state.
 - Sidebar or protected-shell pending state must not inject a search skeleton. Once navigation commits, `SearchPage` decides whether to show its initial tool surface, its local result `ContentHandoff`, or already-ready content.
 - Do not wrap the route in `lazyPage(..., null)` or `next/dynamic` with
   `loading: () => null`.

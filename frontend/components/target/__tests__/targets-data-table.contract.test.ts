@@ -45,8 +45,8 @@ describe("targets-data-table contract", () => {
     expect(source).not.toContain('enableAutoColumnSizing: true')
   })
 
-  it("uses the shared comfortable row rhythm for target identity cells", () => {
-    expect(source).toContain('rowDensity: "comfortable"')
+  it("uses the shared dense row rhythm for target identity cells", () => {
+    expect(source).toContain('rowDensity: "dense"')
   })
 
   it("renders selected-row scan and delete actions through the shared action bar", () => {

@@ -48,11 +48,16 @@ separate lookalike skeleton.
 - Snapshot title and auto-check text placeholders MUST retain the resolved typography line boxes through `DatabaseHealthTextPlaceholder`; fixed-height skeleton bars change the mobile header height and cause the snapshot slot to jump at handoff.
 - Core-metric titles, values, and detail rows follow the same typography-line-box rule so the single-column mobile metric stack has the same height before and after handoff.
 - The first findings placeholder preserves the two-line mobile description, evidence-wrap, and recommendation rhythm of the first resolved finding; its description collapses back to one line at `lg` to match the wider resolved layout. Keep that representative first row aligned when changing the diagnostics mock or finding layout.
-- Snapshot metadata contains six database-backed values and uses the shared 2/3/6-column grid from `database-health-layout.ts`. Keep the loading count and resolved item count aligned so wide layouts form one complete row without an empty slot.
+- Snapshot metadata contains six database-backed values and uses the shared 1/2/3/6-column responsive grid from `database-health-layout.ts`. It stays single-column on narrow screens so localized timestamps cannot be clipped, then forms complete rows from the `sm` breakpoint onward. Keep the loading count and resolved item count aligned so wide layouts form one complete row without an empty slot.
 - The route boundary, resolved shell, and loading shell share a viewport-bound
   workspace contract from `database-health-layout.ts`. Snapshot, diagnostics,
   and alert text may vary by locale and payload, so the content region scrolls
   internally; neither branch may expand the route owner's first-screen height.
+- The database content region is a shared overlay `ScrollArea`, using the
+  scroll-area, viewport, and content constants from
+  `database-health-layout.ts` in both resolved and loading branches. A native
+  page-content scrollbar would reserve width and make the visible right gutter
+  wider than the left 12px gutter.
 - The page also pairs `database-health-header`, `database-health-snapshot`,
   `database-health-metrics`, and `database-health-findings` across loading and
   resolved branches. `ContentHandoff` provides the outer `surface` slot.

@@ -370,6 +370,7 @@ export function getMockAgentClusterSummary() {
     name: 'agentClusterSummaries/current',
     generatedAt: MOCK_AGENT_OPERATIONAL_GENERATED_AT,
     executionFreshnessSeconds: 15,
+    agentLimit: 3,
     totalNodes: 10,
     healthyCount: 6,
     warningCount: 2,

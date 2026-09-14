@@ -31,6 +31,8 @@ describe("dialog contract", () => {
 
   it("exports shared dialog width tiers for route-level forms", () => {
     expect(overlaySource).toContain("scrollableFormDialogContentClassName")
+    expect(overlaySource).toContain("compactFormDialogContentClassName")
+    expect(overlaySource).toContain("COMPACT_FORM_DIALOG_CONTENT_CLASS")
     expect(overlaySource).toContain("max-h-[90vh]")
     expect(overlaySource).toContain("sm:max-w-[650px]")
     expect(overlaySource).toContain("radius-overlay")
@@ -44,7 +46,7 @@ describe("dialog contract", () => {
   it("renders the default close control as the shared quiet icon button with focus-visible state", () => {
     expect(source).toContain('import { Button } from "@/components/ui/button"')
     expect(source).toContain('<DialogPrimitive.Close')
-    expect(source).toContain('render={<Button type="button" variant="ghost" size="icon-sm" aria-label={tActions("close")} className="absolute top-4 right-4 opacity-70 hover:opacity-100"/>}')
+    expect(source).toContain('render={<Button type="button" variant="ghost" size="icon-sm" aria-label={tActions("close")} className="overlay-close-control absolute top-3 right-3"/>}')
     expect(source).toContain('<semanticIcons.action.cancel />')
     expect(source).toContain('import { semanticIcons } from "@/components/icons"')
     expect(source).not.toContain("focus:ring-")

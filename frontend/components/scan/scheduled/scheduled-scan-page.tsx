@@ -49,6 +49,7 @@ import {
   getCursorPageTransition,
   getCursorPaginationNavigation,
 } from "@/components/shared/data-table/business-list-query"
+import { COMPACT_PAGE_SHELL_CLASS } from "@/components/shared/layout/page-shell-density"
 
 export interface ScheduledScanPageProps {
   onReady?: () => void
@@ -402,7 +403,7 @@ export default function ScheduledScanPage({
   if (isLoading && deferInitialSkeleton) return null
 
   const pageContent = (
-    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+    <div className={COMPACT_PAGE_SHELL_CLASS}>
       <ScheduledScanPageHeader
         title={tScan("scheduled.title")}
         description={tScan("scheduled.description")}

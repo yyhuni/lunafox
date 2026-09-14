@@ -99,3 +99,8 @@
 - 代码守卫：更新 `__tests__/agent-list.contract.test.ts` 与 `__tests__/agent-status.contract.test.ts`
 - 基础回归：`cd frontend && pnpm run test`
 - 浏览器验收：检查 `/settings/agents/` 在窄桌面宽度和常规桌面宽度下的 overview、toolbar 和 results handoff 高度；若怀疑同层分段亮相，用 `LOADING_SMOKE_TARGET_IDS=route_settings_agents LOADING_SMOKE_TIMELINE_MS=700,1300,2200,4000 node scripts/run-loading-handoff-smoke.mjs` 抓共享时间线
+
+## Deployment quota
+
+- Agent 用量由集群摘要的 `totalNodes/agentLimit` 表达，含默认及离线节点，存量超额也如实显示。服务端固定3，前端不得自造默认上限或从筛选列表计数。
+- 达到上限时工具栏、空态、扩容入口均禁用；摘要未知时不启用添加。保留已有摘要失败提示与安装观察结果，删除成功依赖既有摘要失效刷新恢复入口。

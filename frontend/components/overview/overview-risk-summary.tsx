@@ -33,6 +33,7 @@ import { getTrendToneColorVar, getTrendToneTextClass } from "@/lib/status-config
 import { normalizeError } from "@/lib/errors/normalize-error"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { COMPACT_SECTION_STACK_CLASS } from "@/components/shared/layout/page-shell-density"
 
 const RISK_TREND_CHART_MARGIN = { top: 8, right: 0, bottom: 0, left: 0 }
 const RISK_TREND_TOOLTIP_STYLE = {
@@ -206,7 +207,7 @@ export function OverviewRiskSummary({ className }: { className?: string } = {}) 
             </div>
           </div>
           <div className={OVERVIEW_RISK_SUMMARY_METRICS_CLASS}>
-            <div className="min-w-0 space-y-4">
+            <div className={cn("min-w-0", COMPACT_SECTION_STACK_CLASS)}>
               <div className={OVERVIEW_TREND_HEADER_CLASS}>
                 <h3 className={textRole.sectionTitle}>{t("trendTitle")}</h3>
               </div>

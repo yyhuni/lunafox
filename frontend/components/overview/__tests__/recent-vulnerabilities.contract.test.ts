@@ -25,7 +25,10 @@ describe("recent-vulnerabilities contract", () => {
   it("uses the shared dense table rhythm for overview vulnerability rows", () => {
     expect(source).toContain("TABLE_DENSE_ROW_CLASS")
     expect(source).toContain("TABLE_DENSE_CELL_RHYTHM_CLASS")
-    expect(source).toContain('className="h-12 w-full"')
-    expect(source).not.toContain('className="h-10 w-full"')
+    expect(source).toContain('className={cn(TABLE_DENSE_ROW_CLASS, "w-full")}')
+  })
+
+  it("uses the compact card rhythm for the ordinary overview panel", () => {
+    expect(source).toContain('<Card variant="compact">')
   })
 })

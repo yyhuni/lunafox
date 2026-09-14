@@ -15,8 +15,9 @@ describe("page contract", () => {
   })
 
   it("keeps the top-level target list in normal page flow", () => {
-    expect(source).toContain('className="flex flex-col gap-4 py-4 md:gap-6 md:py-6"')
-    expect(source).toContain('className="px-4 lg:px-6"')
+    expect(source).toContain("COMPACT_PAGE_SHELL_CLASS")
+    expect(source).toContain("COMPACT_CONTENT_GUTTER_CLASS")
+    expect(source).toContain("className={COMPACT_CONTENT_GUTTER_CLASS}")
     expect(source).not.toContain("min-h-0")
     expect(source).not.toContain("h-svh")
     expect(source).not.toContain("h-screen")

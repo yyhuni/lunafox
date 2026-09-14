@@ -17,7 +17,7 @@ export function ArchitectureDialog({ trigger }: {
             width: "min(1184px, calc(100vw - 48px))",
             height: "min(720px, calc(100vh - 48px))",
         }}>
-        <div className="flex items-center justify-between gap-6 border-b pl-6 pr-14 py-5">
+        <div className="flex items-center justify-between gap-3 border-b pl-4 pr-14 py-3">
           <ArchitectureDialogHeader t={t}/>
         </div>
         <ArchitectureCommandCenter isOpen={open} t={t}/>

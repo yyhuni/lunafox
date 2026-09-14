@@ -19,6 +19,7 @@ import {
 } from "@/lib/status-config"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { COMPACT_SECTION_STACK_CLASS } from "@/components/shared/layout/page-shell-density"
 import type {
   AgentClusterExecutionCapacity,
   AgentClusterState,
@@ -65,6 +66,7 @@ const LOADING_SUMMARY: AgentClusterSummary = {
   resourceName: "agentClusterSummaries/current",
   generatedAt: "2026-01-01T00:00:00Z",
   executionFreshnessSeconds: 15,
+    agentLimit: 3,
   totalNodes: 10,
   healthyCount: 6,
   warningCount: 2,
@@ -73,9 +75,9 @@ const LOADING_SUMMARY: AgentClusterSummary = {
   staleAgentCount: 0,
   executionCapacity: {
     configuredSlots: 70,
-    occupiedSlots: 31,
-    availableSlots: 30,
-    unavailableSlots: 9,
+    occupiedSlots: 21,
+    availableSlots: 27,
+    unavailableSlots: 22,
     overcommittedSlots: 0,
   },
   clusterState: "needsAttention",
@@ -145,7 +147,7 @@ function ClusterNodeSummary({
         <div className="min-w-0">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <span data-featured="true" className={textRole.metricValueDisplay}>
-              {loading ? <InlineLoadingText text={String(summary.totalNodes)} /> : String(summary.totalNodes)}
+              {loading ? <InlineLoadingText text={`${summary.totalNodes}/${summary.agentLimit}`} /> : `${summary.totalNodes}/${summary.agentLimit}`}
             </span>
             <span className={textRole.bodyStrong}>{t("overview.agentNodes")}</span>
           </div>
@@ -382,7 +384,7 @@ function AgentOverviewLayout({
     <div
       {...getLoadingStructureSlotAttributes(AGENT_LIST_OVERVIEW_REGION_SLOT)}
       data-testid={loading ? "agent-overview-loading-state" : "agent-overview-section"}
-      className="space-y-4"
+      className={COMPACT_SECTION_STACK_CLASS}
     >
       <AgentOverviewHeader loading={loading} refreshControl={refreshControl} />
       {staleNotice}
@@ -425,7 +427,7 @@ export function AgentOverviewSection(props: AgentOverviewSectionProps) {
       <div
         {...getLoadingStructureSlotAttributes(AGENT_LIST_OVERVIEW_REGION_SLOT)}
         data-testid="agent-overview-error-state"
-        className="space-y-4"
+        className={COMPACT_SECTION_STACK_CLASS}
       >
         <AgentOverviewHeader loading={false} refreshControl={refreshControl} />
         <AppErrorState

@@ -267,7 +267,7 @@ export function ScheduledScanDataTable({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <ScheduledScanTableToolbar
         localSearchValue={state.localSearchValue}
         handleSearchInputChange={state.handleSearchInputChange}

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/netip"
@@ -15,6 +16,9 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// agentQuotaAdvisoryLock serializes registrations across Server and bootstrap processes.
+const agentQuotaAdvisoryLock int64 = 0x4c46414751554f54
+
 // Create creates a new agent.
 func (r *agentRepository) Create(ctx context.Context, agent *agentdomain.Agent) error {
 	if agent == nil {
@@ -24,7 +28,25 @@ func (r *agentRepository) Create(ctx context.Context, agent *agentdomain.Agent) 
 		return fmt.Errorf("agent registration token identity is required")
 	}
 	record := domainAgentToModel(agent)
+	var options *sql.TxOptions
+	if r.db.Dialector.Name() == "postgres" {
+		options = &sql.TxOptions{Isolation: sql.LevelReadCommitted}
+	}
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if tx.Dialector.Name() == "postgres" {
+			// Count in a separate READ COMMITTED statement after the lock: a waiter
+			// must see the previous registration's commit, even with another token.
+			if err := tx.Exec("SELECT pg_advisory_xact_lock(?)", agentQuotaAdvisoryLock).Error; err != nil {
+				return err
+			}
+		}
+		var count int64
+		if err := tx.Model(&model.Agent{}).Count(&count).Error; err != nil {
+			return err
+		}
+		if count >= agentdomain.DeploymentAgentLimit {
+			return agentdomain.ErrAgentQuotaExceeded
+		}
 		attribution := tx.Model(&model.RegistrationToken{}).
 			Where("id = ? AND expires_at > CURRENT_TIMESTAMP", agent.RegistrationTokenID).
 			Update("ever_attributed_at", gorm.Expr("COALESCE(ever_attributed_at, CURRENT_TIMESTAMP)"))
@@ -35,7 +57,7 @@ func (r *agentRepository) Create(ctx context.Context, agent *agentdomain.Agent) 
 			return agentdomain.ErrRegistrationTokenInvalid
 		}
 		return tx.Create(record).Error
-	})
+	}, options)
 	if err != nil {
 		return err
 	}

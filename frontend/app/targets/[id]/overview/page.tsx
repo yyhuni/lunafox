@@ -1,4 +1,5 @@
 import { TargetOverview } from "@/components/target/target-overview"
+import { DetailAssetContentFrame } from "@/components/shared/layout/detail-asset-content-frame"
 
 /**
  * Target overview page
@@ -13,8 +14,8 @@ export default async function TargetOverviewPage({
   const targetId = Number(id)
 
   return (
-    <div className="px-4 lg:px-6">
+    <DetailAssetContentFrame>
       <TargetOverview targetId={targetId} />
-    </div>
+    </DetailAssetContentFrame>
   )
 }

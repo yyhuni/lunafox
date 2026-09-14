@@ -12,6 +12,7 @@ type AgentExpansionSlotProps = {
   title: string
   description: string
   actionLabel: string
+  disabled?: boolean
   onOpenInstall: () => void
 }
 
@@ -20,6 +21,7 @@ export function AgentExpansionSlot({
   description,
   actionLabel,
   onOpenInstall,
+  disabled,
 }: AgentExpansionSlotProps) {
   return (
     <Button
@@ -27,6 +29,7 @@ export function AgentExpansionSlot({
       variant="outline"
       size="content"
       onClick={onOpenInstall}
+      disabled={disabled}
       className={cn(
         AGENT_EXPANSION_SLOT_MIN_HEIGHT_CLASS,
         "group w-full flex-col gap-4 rounded-lg border-dashed bg-muted/10 px-6 py-8 text-center shadow-none hover:border-primary/40 hover:bg-primary/[0.03]"

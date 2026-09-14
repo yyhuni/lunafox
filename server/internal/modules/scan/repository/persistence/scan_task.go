@@ -32,6 +32,11 @@ type ScanTask struct {
 	CreatedAt                     time.Time      `gorm:"column:created_at;autoCreateTime;index:idx_scan_task_created_at" json:"createdAt"`
 	StartedAt                     *time.Time     `gorm:"column:started_at" json:"startedAt,omitempty"`
 	CompletedAt                   *time.Time     `gorm:"column:completed_at" json:"completedAt,omitempty"`
+	// Lifecycle cancellation writes these fields through explicit, guarded SQL;
+	// the persistence model only projects them when the baseline has the audit
+	// columns, keeping disposable test schemas usable for ordinary task writes.
+	CancellationReason            string         `gorm:"column:cancellation_reason;->" json:"cancellationReason,omitempty"`
+	CancellationOperationID       string         `gorm:"column:cancellation_operation_id;->" json:"cancellationOperationId,omitempty"`
 }
 
 func (ScanTask) TableName() string {

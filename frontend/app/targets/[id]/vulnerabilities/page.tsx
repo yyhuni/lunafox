@@ -1,4 +1,5 @@
 import { VulnerabilitiesDetailView } from "@/components/vulnerabilities/vulnerabilities-detail-view"
+import { DetailAssetContentFrame } from "@/components/shared/layout/detail-asset-content-frame"
 
 /**
  * Target vulnerabilities page
@@ -13,8 +14,8 @@ export default async function TargetVulnerabilitiesPage({
   const targetId = Number(id)
 
   return (
-    <div className="px-4 lg:px-6">
+    <DetailAssetContentFrame>
       <VulnerabilitiesDetailView targetId={targetId} />
-    </div>
+    </DetailAssetContentFrame>
   )
 }

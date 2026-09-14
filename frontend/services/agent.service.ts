@@ -308,6 +308,7 @@ function parseAgentClusterSummary(value: unknown): AgentClusterSummary {
     resourceName: CLUSTER_SUMMARY_NAME,
     generatedAt: requireTimestamp(record.generatedAt, 'agentClusterSummary.generatedAt'),
     executionFreshnessSeconds: 15,
+    agentLimit: requireInteger(record.agentLimit, 'agentClusterSummary.agentLimit', 1),
     totalNodes,
     healthyCount,
     warningCount,

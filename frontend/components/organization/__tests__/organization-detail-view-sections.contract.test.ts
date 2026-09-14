@@ -113,7 +113,7 @@ describe("organization-detail-view-sections contract", () => {
     expect(source).toContain('data-slot="organization-detail-targets-table-loading-state"')
     expect(source).not.toContain('data-slot="organization-detail-targets-table-skeleton"')
     expect(source).toContain('summarySurface = "page"')
-    expect(source).toContain('summarySurface === "page" && "py-5"')
+    expect(source).toContain('className={COMPACT_SECTION_STACK_CLASS}')
     expect(source).toContain("surface === \"drawer\"")
     expect(source).toContain("<TargetsDataTable")
     expect(source).toContain("columns={state.targetColumns}")

@@ -16,6 +16,7 @@ const (
 	serverCommandAgentBootstrap
 	serverCommandResetAdmin
 	serverCommandWordlistResourceMigration
+	serverCommandMigrationUp
 )
 
 type serverCommand struct {
@@ -90,6 +91,9 @@ func parseServerCommand(args []string) (serverCommand, error) {
 			return serverCommand{kind: serverCommandWordlistResourceMigration, program: program}, nil
 		}
 	}
+	if len(args) == 3 && args[1] == "migrate" && args[2] == "up" {
+		return serverCommand{kind: serverCommandMigrationUp, program: program}, nil
+	}
 
 	return serverCommand{program: program}, fmt.Errorf("%s", serverUsage(program))
 }
@@ -98,5 +102,5 @@ func serverUsage(program string) string {
 	if program == "" || program == "." {
 		program = "server"
 	}
-	return fmt.Sprintf("Usage: %s [engine-bootstrap|fingerprint-bootstrap <staged-corpus-path>|wordlist-bootstrap <manifest-path> <source-directory>|agent-bootstrap <credentials-path> <hostname> <agent-version>|resetadmin|wordlist-resource-migrate]\n", program)
+	return fmt.Sprintf("Usage: %s [engine-bootstrap|fingerprint-bootstrap <staged-corpus-path>|wordlist-bootstrap <manifest-path> <source-directory>|agent-bootstrap <credentials-path> <hostname> <agent-version>|resetadmin|wordlist-resource-migrate|migrate up]\n", program)
 }

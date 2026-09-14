@@ -3,6 +3,10 @@ import * as React from "react"
 import { getLoadingStructureSlotAttributes } from "@/components/shared/loading/loading-owner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_FULL_PAGE_SHELL_CLASS,
+} from "@/components/shared/layout/page-shell-density"
 import { cn } from "@/lib/utils"
 
 export const TARGET_DETAIL_SHELL_SLOTS = {
@@ -15,10 +19,10 @@ export const TARGET_DETAIL_SHELL_SLOTS = {
 // The outer handoff and both state wrappers must establish the same definite
 // viewport workspace before a child route contributes its own scroll height.
 export const TARGET_DETAIL_SHELL_HANDOFF_CLASS = "flex h-full min-h-0 flex-1 flex-col"
-export const TARGET_DETAIL_SHELL_CLASS = "flex h-full min-h-0 flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6"
-export const TARGET_DETAIL_SHELL_HEADER_CLASS = "flex min-w-0 items-center gap-2 overflow-x-auto px-4 text-sm lg:px-6"
-export const TARGET_DETAIL_SHELL_PRIMARY_TABS_CLASS = "flex items-center justify-between px-4 lg:px-6"
-export const TARGET_DETAIL_SHELL_SECONDARY_TABS_CLASS = "flex items-center px-4 lg:px-6"
+export const TARGET_DETAIL_SHELL_CLASS = COMPACT_FULL_PAGE_SHELL_CLASS
+export const TARGET_DETAIL_SHELL_HEADER_CLASS = `flex min-w-0 items-center gap-2 overflow-x-auto text-sm ${COMPACT_CONTENT_GUTTER_CLASS}`
+export const TARGET_DETAIL_SHELL_PRIMARY_TABS_CLASS = `flex items-center justify-between ${COMPACT_CONTENT_GUTTER_CLASS}`
+export const TARGET_DETAIL_SHELL_SECONDARY_TABS_CLASS = `flex items-center ${COMPACT_CONTENT_GUTTER_CLASS}`
 
 export function TargetDetailShellLayout({ className, ...props }: React.ComponentProps<"div">) {
   return <div {...props} className={cn(TARGET_DETAIL_SHELL_CLASS, className)} />

@@ -14,7 +14,9 @@ type ScrollAreaStyle = React.CSSProperties & {
 type ScrollAreaProps = ScrollAreaPrimitive.Root.Props & {
   type?: ScrollAreaType
   scrollHideDelay?: number
+  viewportClassName?: string
   contentClassName?: string
+  contentStyle?: React.CSSProperties
 }
 
 const ScrollArea = React.forwardRef<
@@ -25,7 +27,9 @@ const ScrollArea = React.forwardRef<
     {
       className,
       children,
+      viewportClassName,
       contentClassName,
+      contentStyle,
       type: scrollAreaType = "scroll",
       scrollHideDelay = 600,
       style,
@@ -45,8 +49,8 @@ const ScrollArea = React.forwardRef<
       }
       {...props}
     >
-      <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
-        <ScrollAreaPrimitive.Content className={contentClassName}>{children}</ScrollAreaPrimitive.Content>
+      <ScrollAreaPrimitive.Viewport className={cn("h-full w-full rounded-[inherit]", viewportClassName)}>
+        <ScrollAreaPrimitive.Content className={contentClassName} style={contentStyle}>{children}</ScrollAreaPrimitive.Content>
       </ScrollAreaPrimitive.Viewport>
       <ScrollBar scrollAreaType={scrollAreaType} />
       <ScrollAreaPrimitive.Corner />

@@ -15,6 +15,7 @@ type Config struct {
 	ScanHistoryRetention ScanHistoryRetentionConfig
 	TargetCleanup        TargetCleanupConfig
 	Notification         NotificationConfig
+	Upgrade              UpgradeConfig
 	PublicURL            string
 }
 
@@ -106,4 +107,13 @@ type TargetCleanupConfig struct {
 // It intentionally has no runtime mutation or per-destination threshold.
 type NotificationConfig struct {
 	VulnerabilityThreshold string `mapstructure:"NOTIFICATION_VULNERABILITY_THRESHOLD"`
+}
+
+// UpgradeConfig describes server-owned paths for the independent host
+// upgrader. None of these values are accepted from HTTP requests.
+type UpgradeConfig struct {
+	DeploymentRoot      string `mapstructure:"LUNAFOX_UPGRADE_DEPLOYMENT_ROOT"`
+	ManifestPath        string `mapstructure:"RELEASE_MANIFEST_PATH"`
+	MigrationPolicyPath string `mapstructure:"MIGRATION_POLICY_PATH"`
+	SocketPath          string `mapstructure:"LUNAFOX_UPGRADE_SOCKET_PATH"`
 }

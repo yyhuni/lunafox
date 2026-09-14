@@ -28,7 +28,7 @@ interface EditScheduledScanNameFieldProps {
     onNameChange: (value: string) => void;
 }
 export function EditScheduledScanNameField({ t, name, onNameChange, }: EditScheduledScanNameFieldProps) {
-    return (<div className="gap-4 grid">
+    return (<div className="gap-3 grid">
       <div className="gap-2 grid">
         <Label htmlFor="edit-name">{t("form.taskName")} *</Label>
         <Input id="edit-name" name="taskName" autoComplete="off" placeholder={t("form.taskNamePlaceholder")} value={name} onChange={(event) => onNameChange(event.target.value)}/>
@@ -81,7 +81,7 @@ interface EditScheduledScanCronSectionProps {
     disabled?: boolean;
 }
 export function EditScheduledScanCronSection({ t, cronExpression, onCronChange, cronPresets, onPresetSelect, disabled = false, }: EditScheduledScanCronSectionProps) {
-    return (<div className="gap-4 grid">
+    return (<div className="gap-3 grid">
       <div className="gap-2 grid">
         <Label>{t("form.cronExpression")} *</Label>
         <Input name="cronExpression" autoComplete="off" placeholder={t("form.cronPlaceholder")} value={cronExpression} onChange={(event) => onCronChange(event.target.value)} className="font-mono" disabled={disabled}/>

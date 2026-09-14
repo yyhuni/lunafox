@@ -142,7 +142,7 @@ function InitiateScanPanelState({
   description?: string
 }) {
   return (
-    <div className="radius-surface flex min-h-32 items-center justify-center border border-dashed bg-muted/20 p-6 text-center">
+    <div className="radius-surface flex min-h-32 items-center justify-center border border-dashed bg-muted/20 p-4 text-center">
       <div className="grid justify-items-center gap-2">
         <span className="radius-round flex size-10 items-center justify-center border bg-background text-muted-foreground">
           {icon}
@@ -184,8 +184,8 @@ export function InitiateScanWorkflowSelection({
   }
 
   return (
-    <div className="grid gap-4">
-      <div className="grid gap-4">
+    <div className="grid gap-3">
+      <div className="grid gap-3">
         <div className="space-y-1">
           <p className={textRole.sectionTitle}>{t("workflowListTitle")}</p>
           <p className={textRole.helperText}>{t("workflowListHint")}</p>
@@ -277,7 +277,7 @@ export function InitiateScanExecutionOptions({
   onAgentChange,
 }: InitiateScanExecutionOptionsProps) {
   return (
-    <Collapsible defaultOpen={false} className="mt-5 border-t border-border/60 pt-4">
+    <Collapsible defaultOpen={false} className="mt-3 border-t border-border/60 pt-3">
       <CollapsibleTrigger
         render={(
           <Button
@@ -292,7 +292,7 @@ export function InitiateScanExecutionOptions({
           {t("executionOptions.title")}
         </span>
       </CollapsibleTrigger>
-      <CollapsibleContent className="space-y-5 pt-4">
+      <CollapsibleContent className="space-y-3 pt-3">
         <ScanInputSourceSelector
           id="initiate-scan-input-source"
           value={inputSource}

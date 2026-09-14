@@ -66,6 +66,9 @@ expected_entries_for_module() {
 	system)
 		echo "RegisterSystemRoutes"
 		;;
+	upgrade)
+		echo "RegisterUpgradeRoutes"
+		;;
 	*)
 		echo ""
 		;;

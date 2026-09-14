@@ -10,4 +10,9 @@ describe("add-tool-dialog contract", () => {
     expect(source).toContain("className")
     expect(source).toContain("from \"react\"")
   })
+
+  it("uses the shared compact form dialog rhythm", () => {
+    expect(source).toContain("compactFormDialogContentClassName")
+    expect(source).toContain('className="gap-3 grid py-3"')
+  })
 })

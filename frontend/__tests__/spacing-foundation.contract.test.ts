@@ -19,6 +19,11 @@ const productionOuterRhythmSources = [
   }
 })
 
+const pageShellDensitySource = readFileSync(
+  path.resolve(process.cwd(), "components/shared/layout/page-shell-density.ts"),
+  "utf8"
+)
+
 const productionGutterSources = [
   "app/targets/page.tsx",
   "app/organizations/page.tsx",
@@ -48,27 +53,24 @@ function getCompanionLayoutSource(filePath: string) {
 
 describe("spacing-foundation contract", () => {
   it("keeps core production page shells on the shared outer rhythm", () => {
+    expect(pageShellDensitySource).toContain('COMPACT_PAGE_RHYTHM_CLASS = "gap-3 py-3"')
     for (const { filePath, source } of productionOuterRhythmSources) {
-      expect(source).toContain("gap-4")
-      expect(source).toContain("py-4")
-
-      // The command-only overview header has a reviewed tighter desktop rhythm.
-      if (filePath === "app/overview/page.tsx") {
-        expect(source).toContain("md:gap-5")
-        expect(source).toContain("md:pt-5")
-        expect(source).toContain("md:pb-6")
-        continue
-      }
-
-      expect(source).toContain("md:gap-6")
-      expect(source).toContain("md:py-6")
+      expect(source).toMatch(/COMPACT_[A-Z_]+_SHELL_CLASS|COMPACT_PAGE_RHYTHM_CLASS/)
+      expect(filePath).toBeTruthy()
     }
   })
 
   it("keeps core production page shells on the shared gutter contract", () => {
+    expect(pageShellDensitySource).toContain('COMPACT_CONTENT_GUTTER_CLASS = "px-3"')
+    expect(pageShellDensitySource).toContain('COMPACT_FORM_OVERLAY_HORIZONTAL_INSET_CLASS = "px-4"')
+    expect(pageShellDensitySource).toContain('COMPACT_FORM_OVERLAY_VERTICAL_INSET_CLASS = "py-3"')
+    expect(pageShellDensitySource).toContain('COMPACT_FORM_OVERLAY_SECTION_GAP_CLASS = "gap-3"')
+    expect(pageShellDensitySource).toContain('COMPACT_FORM_DIALOG_CONTENT_CLASS')
+    expect(pageShellDensitySource).toContain('COMPACT_PAGE_SCROLL_AREA_CLASS = "min-h-0 min-w-0 flex-1"')
+    expect(pageShellDensitySource).toContain('COMPACT_PAGE_SCROLL_AREA_CONTENT_CLASS = "!min-w-0 w-full"')
+    expect(pageShellDensitySource).toContain('COMPACT_PAGE_SCROLL_AREA_VIEWPORT_CLASS = "!overflow-x-hidden"')
     for (const { source } of productionGutterSources) {
-      expect(source).toContain("px-4")
-      expect(source).toContain("lg:px-6")
+      expect(source).toContain("COMPACT_CONTENT_GUTTER_CLASS")
     }
   })
 

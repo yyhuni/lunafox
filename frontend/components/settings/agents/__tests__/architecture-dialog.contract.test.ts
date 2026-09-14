@@ -22,7 +22,7 @@ describe("architecture-dialog contract", () => {
   })
 
   it("reserves a right-side gutter for the dialog close button", () => {
-    expect(source).toContain("pl-6 pr-14 py-5")
+    expect(source).toContain("pl-4 pr-14 py-3")
     expect(source).not.toContain("border-b px-6 py-5")
   })
 })

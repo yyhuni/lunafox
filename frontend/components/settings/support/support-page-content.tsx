@@ -244,10 +244,10 @@ export default function SupportPageContent({
 
           <Dialog open={!!selectedTier} onOpenChange={(open) => !open && setSelectedTier(null)}>
             <DialogContent className="overflow-hidden rounded-[calc(var(--radius)*4)] border-0 bg-background/95 p-0 shadow-2xl backdrop-blur-xl sm:max-w-[420px]">
-              <DialogHeader className="px-6 pt-8 text-center">
+              <DialogHeader className="px-4 pt-3 pr-14 text-center">
                 <DialogTitle>{t("dialog.title")}</DialogTitle>
               </DialogHeader>
-              <div className="relative flex flex-col items-center space-y-8 px-8 pb-8 pt-6">
+              <div className="relative flex flex-col items-center space-y-4 px-4 pb-3">
                 <div className="relative z-10 flex w-full gap-2 rounded-full border border-border/80 bg-muted/30 p-1.5 shadow-inner">
                   {SUPPORT_METHODS.map((method) => (
                     <button

@@ -2,6 +2,10 @@ import type { ReactNode } from "react"
 
 import { Search } from "@/components/icons"
 import { Badge } from "@/components/ui/badge"
+import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_PAGE_RHYTHM_CLASS,
+} from "@/components/shared/layout/page-shell-density"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 
@@ -43,11 +47,13 @@ export function SearchInitialPageShell({
   return (
     <div
       className={cn(
-        "relative flex flex-1 flex-col items-center justify-center overflow-hidden px-4",
+        "relative flex flex-1 flex-col items-center justify-center overflow-hidden",
+        COMPACT_CONTENT_GUTTER_CLASS,
+        COMPACT_PAGE_RHYTHM_CLASS,
         animated && "animate-in fade-in slide-in-from-bottom-4 duration-300"
       )}
     >
-      <div className="-mt-16 flex w-full max-w-4xl flex-col items-center gap-6">
+      <div className="-mt-12 flex w-full max-w-4xl flex-col items-center gap-4">
         {children}
       </div>
     </div>

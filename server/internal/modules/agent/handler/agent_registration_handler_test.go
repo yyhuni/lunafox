@@ -652,3 +652,36 @@ func TestInstallScriptSetsContainerNameLabelForLokiQueryCompatibility(t *testing
 		t.Fatalf("expected script to pin container_name label for query compatibility, body=%s", body)
 	}
 }
+
+func TestInstallRegistrationPreservesQuotaErrorBody(t *testing.T) {
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusTooManyRequests)
+		_, _ = w.Write([]byte(`{"error":{"message":"Delete an existing Agent before retrying.","status":"RESOURCE_EXHAUSTED","details":[{"reason":"AGENT_QUOTA_EXCEEDED"}]}}`))
+	}))
+	defer api.Close()
+	router := gin.New()
+	registerInstallScriptRoutes(router, newInstallScriptHandlerForTest("https://public.example.com"))
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/v1/agents:downloadInstallScript?registrationToken=test-token&profile=external", nil))
+	script := recorder.Body.String()
+	start := strings.Index(script, "register_agent() {")
+	end := strings.Index(script[start:], "\n}\n")
+	if start < 0 || end < 0 {
+		t.Fatal("registration function missing")
+	}
+	// Run the rendered registration function against a real HTTP rejection without
+	// invoking Docker provisioning, which is unrelated to the error-body contract.
+	command := exec.Command("bash", "-c", `set -euo pipefail
+TOKEN=test-token
+HOSTNAME=node
+AGENT_VERSION=1.2.3
+LOCAL_AGENT_CONFIG=0
+REGISTER_URL="$1"
+curl_opts=(-sSL --connect-timeout 2 --max-time 5)
+`+script[start:start+end+3]+"\nregister_agent\necho unexpected-success\n", "quota-install-test", api.URL)
+	output, err := command.CombinedOutput()
+	if err == nil || !strings.Contains(string(output), "AGENT_QUOTA_EXCEEDED") || !strings.Contains(string(output), "Delete an existing Agent") || strings.Contains(string(output), "unexpected-success") {
+		t.Fatalf("err=%v output=%s", err, output)
+	}
+}

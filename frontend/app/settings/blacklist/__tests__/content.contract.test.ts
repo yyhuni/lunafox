@@ -88,11 +88,15 @@ describe("blacklist settings workspace contract", () => {
     }
 
     expect(layoutSource).toContain(
-      'export const BLACKLIST_WORKBENCH_GRID_CLASS = "grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-3"'
+      'export const BLACKLIST_WORKBENCH_GRID_CLASS = "grid gap-3 lg:min-h-0 lg:flex-1 lg:grid-cols-3"'
     )
     expect(layoutSource).toContain(
-      'export const BLACKLIST_RULE_LIST_CONTENT_CLASS = "h-96 min-h-0 flex-none space-y-4 overflow-auto lg:h-auto lg:flex-1"'
+      'export const BLACKLIST_RULE_LIST_CONTENT_CLASS = "h-96 min-h-0 flex-none space-y-3 overflow-auto lg:h-auto lg:flex-1"'
     )
+    expect(layoutSource).toContain('export const BLACKLIST_RULE_LIST_HEADER_CLASS = "px-4 pb-2.5"')
+    expect(layoutSource).toContain('export const BLACKLIST_EDITOR_HEADER_CLASS = "px-4 pb-2.5 pt-3"')
+    expect(source).toContain('variant="compact"')
+    expect(loadingStateSource).toContain('variant="compact"')
     expect(source).toContain("collapsedGroups")
     expect(source).toContain("toggleRuleGroup")
     expect(source).toContain("aria-expanded")

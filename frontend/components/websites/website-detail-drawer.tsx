@@ -4,6 +4,9 @@ import { useTranslations } from "next-intl"
 
 import {
   DetailDrawer,
+  DETAIL_DRAWER_COMPACT_BODY_CLASS,
+  DETAIL_DRAWER_COMPACT_FIELD_GRID_CLASS,
+  DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS,
 } from "@/components/shared/detail-drawer"
 import { CopyButton } from "@/components/shared/feedback/copy-button"
 import { HttpStatusBadge } from "@/components/shared/status/http-status-badge"
@@ -45,13 +48,12 @@ export function WebsiteDetailDrawer({
           {website.url}
         </div>
       ) : null}
-      headerClassName="py-3"
     >
       {website ? (
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-          <div className="space-y-7">
+        <div className={DETAIL_DRAWER_COMPACT_BODY_CLASS}>
+          <div className={DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS}>
             <WebsiteDrawerSection label={tActions("details")}>
-              <dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+              <dl className={DETAIL_DRAWER_COMPACT_FIELD_GRID_CLASS}>
                 <WebsiteDetailField label={tColumns("website.url")} value={website.url} className="sm:col-span-2" />
                 <WebsiteDetailField label={tColumns("website.host")} value={website.host} />
                 <WebsiteDetailField label={tColumns("website.title")} value={website.title} />
@@ -66,7 +68,7 @@ export function WebsiteDetailDrawer({
 
             <WebsiteDrawerSection label={tColumns("website.technologies")}>
               {website.tech.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {website.tech.map((technology) => (
                     <Badge key={technology} variant="outline">{technology}</Badge>
                   ))}

@@ -7,5 +7,7 @@ const source = readFileSync(path.resolve(process.cwd(), "vitest.setup.ts"), "utf
 describe("vitest.setup contract", () => {
   it("preserves current source markers", () => {
     expect(source).toContain("from \"react\"")
+    expect(source).toContain("Element.prototype.getAnimations")
+    expect(source).toContain("BASE_UI_ANIMATIONS_DISABLED")
   })
 })

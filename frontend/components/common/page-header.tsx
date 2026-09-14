@@ -2,6 +2,7 @@
 
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { COMPACT_CONTENT_GUTTER_CLASS } from "@/components/shared/layout/page-shell-density"
 
 interface PageHeaderProps {
   /** Page code, such as "TGT-01" */
@@ -40,14 +41,14 @@ export function PageHeader({
   descriptionAction,
   descriptionSupplement,
   middle,
-  density = "normal",
+  density = "compact",
 }: PageHeaderProps) {
   const displayCode = code ?? "PAGE"
   const compact = density === "compact"
   const hasMiddle = Boolean(middle)
 
   return (
-    <div className={cn("px-4 lg:px-6", className)}>
+    <div className={cn(COMPACT_CONTENT_GUTTER_CLASS, className)}>
       {breadcrumbItems && breadcrumbItems.length > 0 ? (
         <div className={cn("flex gap-2 items-center mb-2", textRole.caption)}>
           {breadcrumbItems.map((item, index) => (

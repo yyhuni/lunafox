@@ -87,7 +87,7 @@ case "$AGENT_IMAGE_REF" in
 	force_local_images=1
 	;;
 esac
-curl_opts=("-fsSL" "--connect-timeout" "10" "--max-time" "30" "-k")
+curl_opts=("-sSL" "--connect-timeout" "10" "--max-time" "30" "-k")
 
 if ! command -v docker >/dev/null 2>&1; then
 	echo "Docker is required. Install it first: https://docs.docker.com/engine/install/" >&2
@@ -218,7 +218,7 @@ resolve_network_args() {
 
 register_agent() {
 	local max_tasks_value="" cpu_threshold_value="" mem_threshold_value="" disk_threshold_value=""
-	local register_payload response
+	local register_payload response http_status
 
 	echo "Registering agent..."
 	if [ "$LOCAL_AGENT_CONFIG" = "1" ] || [ "$LOCAL_AGENT_CONFIG" = "true" ]; then
@@ -238,10 +238,18 @@ register_agent() {
 	response=$(curl "${curl_opts[@]}" \
 		-X POST "$REGISTER_URL/v1/agents:register" \
 		-H "Content-Type: application/json" \
-		-d "$register_payload" 2>&1) || {
+		-d "$register_payload" -w '\n%{http_code}' 2>&1) || {
 		echo "Registration failed: $response" >&2
 		exit 1
 	}
+
+	# Keep the error body: curl -f discards the actionable quota rejection.
+	http_status="${response##*$'\n'}"
+	response="${response%$'\n'*}"
+	if [[ ! "$http_status" =~ ^2[0-9][0-9]$ ]]; then
+		echo "Registration failed (HTTP $http_status): $response" >&2
+		exit 1
+	fi
 
 	AGENT_ID="$(printf '%s' "$response" | sed -n 's/.*"agentId"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -n1)"
 	AGENT_INSTANCE_ID="$(printf '%s' "$response" | sed -n 's/.*"instanceId"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"

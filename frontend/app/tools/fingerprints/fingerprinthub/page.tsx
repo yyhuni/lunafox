@@ -1,9 +1,10 @@
 import { FingerPrintHubFingerprintView } from "@/components/fingerprints/fingerprinthub-fingerprint-view"
+import { DetailAssetContentFrame } from "@/components/shared/layout/detail-asset-content-frame"
 
 export default function FingerPrintHubFingerprintPage() {
   return (
-    <div className="px-4 lg:px-6">
+    <DetailAssetContentFrame>
       <FingerPrintHubFingerprintView />
-    </div>
+    </DetailAssetContentFrame>
   )
 }

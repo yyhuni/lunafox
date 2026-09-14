@@ -47,7 +47,7 @@ func TestAgentClusterSummaryServiceUsesOneClockInstantAndMapsProjection(t *testi
 		t.Fatalf("Current: %v", err)
 	}
 	wantGeneratedAt := now.UTC()
-	if store.calls != 1 || !store.generatedAt.Equal(wantGeneratedAt) || !summary.GeneratedAt.Equal(wantGeneratedAt) {
+	if summary.AgentLimit != 3 || store.calls != 1 || !store.generatedAt.Equal(wantGeneratedAt) || !summary.GeneratedAt.Equal(wantGeneratedAt) {
 		t.Fatalf("generation instant store=%s summary=%s calls=%d", store.generatedAt, summary.GeneratedAt, store.calls)
 	}
 	if summary.ExecutionFreshnessSeconds != 15 || summary.Nodes.Total != 3 || summary.Nodes.Healthy != 2 || summary.Nodes.Offline != 1 || summary.Nodes.Stale != 1 {

@@ -62,6 +62,11 @@ containers, rootless Docker, remote daemons, and unlisted distributions are
 experimental only. The scripts warn on an unlisted distribution but still
 enforce actual Docker, network, image-pull, volume, port, and health checks.
 
+The resident Server service does not mount the host Docker socket. Any
+privileged deployment lifecycle must run through the independently managed
+host-side boundary; a Server or browser request never becomes a Docker command
+proxy.
+
 Lifecycle commands use the caller's already authorized default local Docker
 context. They do not run implicit `sudo`, change contexts, install plugins, or
 modify systemd, daemon, socket, group, or firewall configuration. An enabled
@@ -76,6 +81,30 @@ the release manifest and channel as an immutable digest. Docker Hub
 matching `ghcr.io/yyhuni` candidate for every artifact. Per-service overrides,
 mixed registries, automatic fallback, third-party registries, and offline
 `docker image load` archives are not supported.
+
+## System upgrade boundary
+
+The supported upgrade surface is a single-node Compose maintenance window.
+Short periods of Server, Frontend, Nginx, database, logging, or Agent
+unavailability are expected; HA, rolling/zero-downtime upgrades, automatic
+backups, data-retention rollback, and cross-node recovery are outside this MVP.
+The current `disposable-development` migration policy does not make a release
+data-retaining. `migrate down` is a development/test teardown and is never an
+automatic upgrade recovery action.
+
+The resident Server service does not mount `/var/run/docker.sock`. A separately
+managed host upgrader owns privileged Compose operations through the private
+`.lunafox/upgrade/upgrader.sock` boundary and accepts only an operation ID, a
+fixed action, and an immutable manifest digest. It re-reads the fixed release
+manifest and never accepts browser-supplied image references, paths, commands,
+migration versions, or credentials.
+
+The host upgrader does not replace Agent containers. After host services recover,
+Server sends the existing `update_required` target and waits for each in-scope
+Agent to reconnect, match the target version/digest, report healthy, and become
+claim-ready. A completion receipt records only that host deployment completed;
+the database Upgrade Operation and host journal remain the sources of truth and
+must agree on operation ID and manifest digest before the operation can succeed.
 
 The `lunafox-bootstrap` Dockerfile and entrypoint are public GPL-3.0-only build
 inputs, while the Agent it starts remains closed. The bootstrap service is
@@ -161,3 +190,7 @@ licenses and attribution terms. The notice grants bounded internal self-hosting
 and backup use only for the closed Agent artifact; source access, modification,
 public redistribution, external registry mirroring, hosted/SaaS operation,
 white-label use, and resale require the stated written exception.
+
+## Agent limit
+
+The official MVP permits three registered Agents per deployment, shared by all administrators. The bootstrap Agent and offline Agents count toward this limit. Deleting an Agent successfully releases its slot immediately. Existing deployments above three retain their Agents and reconnect behavior but cannot register another until fewer than three remain. Registration commands do not reserve slots; concurrent registration is checked by Server. This version has no configurable limit, membership activation, or anti-bypass enforcement against modified open-source Server builds.

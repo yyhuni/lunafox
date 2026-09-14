@@ -93,14 +93,18 @@ function InitialDataTableChromePlaceholder({
   toolbarDensity: "compact" | "standard"
 }) {
   const actionSize = toolbarDensity === "standard" ? "default" : "sm"
+  const toolbarGapClassName = toolbarDensity === "compact" ? "gap-1.5" : "gap-2"
+  // Initial filter placeholders are siblings of the route-owned toolbar content;
+  // keep their wrap gap aligned with the compact facet groups they represent.
+  const leftToolbarGapClassName = filterCount > 0 ? "gap-2" : toolbarGapClassName
 
   return (
     <div
       data-slot="data-table-initial-toolbar-skeleton"
       aria-hidden="true"
-      className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
+      className={cn("flex flex-col sm:flex-row sm:items-start sm:justify-between", toolbarGapClassName)}
     >
-      <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:flex-1">
+      <div className={cn("flex w-full min-w-0 flex-wrap items-center sm:flex-1", leftToolbarGapClassName)}>
         <SearchToolbarSkeleton
           toolbarDensity={toolbarDensity}
         />
@@ -109,7 +113,7 @@ function InitialDataTableChromePlaceholder({
         ))}
       </div>
       {actionCount > 0 ? (
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+        <div className={cn("flex w-full flex-wrap items-center sm:w-auto sm:justify-end", toolbarGapClassName)}>
           {Array.from({ length: actionCount }).map((_, index) => (
             <ActionSkeleton key={index} size={actionSize} widthClassName="w-24" />
           ))}
@@ -560,7 +564,7 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
       data-loading-controlled-table-skeleton-variant={isInitialLoading ? "initial" : undefined}
       data-loading-presentation={isLoading ? loadingPresentation : undefined}
       aria-busy={isLoading || undefined}
-      className={cn("w-full min-w-0 space-y-4", className)}
+      className={cn("w-full min-w-0 space-y-3", className)}
     >
       {/* Toolbar */}
       {!hideToolbar && (

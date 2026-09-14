@@ -19,6 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   TABLE_DENSE_CELL_RHYTHM_CLASS,
   TABLE_DENSE_ROW_CLASS,
@@ -42,6 +43,8 @@ import {
   DatabaseHealthSectionPanel as SectionPanel,
 } from "@/components/settings/database-health/database-health-loading-state"
 import {
+  DATABASE_HEALTH_CONTENT_SCROLL_AREA_CLASS,
+  DATABASE_HEALTH_CONTENT_SCROLL_VIEWPORT_CLASS,
   DATABASE_HEALTH_CONTENT_SHELL_CLASS,
   DATABASE_HEALTH_CONTEXT_STAT_CLASS,
   DATABASE_HEALTH_CORE_METRIC_CLASS,
@@ -547,7 +550,12 @@ export function DatabaseHealthView({
         <div {...getLoadingStructureSlotAttributes("database-health-header")}>
           <PageHeader code="DBH-01" title={pageTitle} description={pageDescription} />
         </div>
-        <div className={DATABASE_HEALTH_CONTENT_SHELL_CLASS}>
+        <ScrollArea
+          className={DATABASE_HEALTH_CONTENT_SCROLL_AREA_CLASS}
+          contentClassName={DATABASE_HEALTH_CONTENT_SHELL_CLASS}
+          type="always"
+          viewportClassName={DATABASE_HEALTH_CONTENT_SCROLL_VIEWPORT_CLASS}
+        >
           <AppErrorState
             error={normalizeError(query.error, { notFoundKind: "unexpected-error" })}
             title={t("errors.loadFailedTitle")}
@@ -555,7 +563,7 @@ export function DatabaseHealthView({
             onRetry={refetch}
             variant="section"
           />
-        </div>
+        </ScrollArea>
       </div>
     )
   }
@@ -566,7 +574,12 @@ export function DatabaseHealthView({
         <PageHeader code="DBH-01" title={pageTitle} description={pageDescription} />
       </div>
 
-      <div className={DATABASE_HEALTH_CONTENT_SHELL_CLASS}>
+      <ScrollArea
+        className={DATABASE_HEALTH_CONTENT_SCROLL_AREA_CLASS}
+        contentClassName={DATABASE_HEALTH_CONTENT_SHELL_CLASS}
+        type="always"
+        viewportClassName={DATABASE_HEALTH_CONTENT_SCROLL_VIEWPORT_CLASS}
+      >
         {stale && (
           <Alert variant="destructive">
             <IconAlertTriangle className="h-4 w-4" />
@@ -745,7 +758,7 @@ export function DatabaseHealthView({
             </CardContent>
           </SectionPanel>
         )}
-      </div>
+      </ScrollArea>
     </div>
   )
 }

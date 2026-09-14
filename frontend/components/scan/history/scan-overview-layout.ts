@@ -1,7 +1,7 @@
 export const SCAN_OVERVIEW_WORKBENCH_CLASS =
-  "flex min-h-0 min-w-0 flex-1 flex-col gap-4 xl:flex-row xl:items-start"
+  "flex min-h-0 min-w-0 flex-1 flex-col gap-3 xl:flex-row xl:items-start"
 
-export const SCAN_OVERVIEW_PRIMARY_COLUMN_CLASS = "flex min-w-0 flex-1 flex-col gap-4"
+export const SCAN_OVERVIEW_PRIMARY_COLUMN_CLASS = "flex min-w-0 flex-1 flex-col gap-3"
 
 export const SCAN_OVERVIEW_SIDE_PANEL_CLASS = "w-full shrink-0 xl:w-80"
 

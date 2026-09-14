@@ -15,6 +15,7 @@ import (
 	scheduledscanrouter "github.com/yyhuni/lunafox/server/internal/modules/scheduledscan/router"
 	securityrouter "github.com/yyhuni/lunafox/server/internal/modules/security/router"
 	systemrouter "github.com/yyhuni/lunafox/server/internal/modules/system/router"
+	upgraderouter "github.com/yyhuni/lunafox/server/internal/modules/upgrade/router"
 )
 
 func registerRoutes(engine *gin.Engine, d *deps, jwtMiddleware gin.HandlerFunc) {
@@ -72,5 +73,8 @@ func registerRoutes(engine *gin.Engine, d *deps, jwtMiddleware gin.HandlerFunc) 
 		nucleipocrouter.RegisterNucleiPOCRoutes(protected, d.nucleiPocHandler)
 	}
 	systemrouter.RegisterSystemRoutes(protected, d.serverLogHandler, d.runtimeMetricsHandler)
+	if d.upgradeHandler != nil {
+		upgraderouter.RegisterUpgradeRoutes(protected, d.upgradeHandler)
+	}
 	agentrouter.RegisterAgentRoutes(api, protected, d.agentHandler, d.agentLogHandler, d.agentClusterSummaryHandler, d.agentLocationMapHandler)
 }

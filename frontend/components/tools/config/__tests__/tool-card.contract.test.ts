@@ -10,4 +10,8 @@ describe("tool-card contract", () => {
     expect(source).toContain("className")
     expect(source).toContain("from \"@/components/ui/card\"")
   })
+
+  it("uses the shared compact card density for repeated tool items", () => {
+    expect(source).toContain('<Card variant="compact"')
+  })
 })

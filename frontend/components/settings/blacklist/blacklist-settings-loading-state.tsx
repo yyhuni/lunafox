@@ -15,6 +15,7 @@ import {
   getLoadingStructureSlotAttributes,
 } from "@/components/shared/loading/loading-owner"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { textRole } from "@/lib/typography"
@@ -68,15 +69,21 @@ function LoadingRuleGroup({
 }) {
   return (
     <section>
-      <div className={BLACKLIST_RULE_GROUP_TRIGGER_CLASS}>
+      <Button
+        type="button"
+        variant="ghost"
+        disabled
+        aria-expanded={false}
+        className={BLACKLIST_RULE_GROUP_TRIGGER_CLASS}
+      >
         <Skeleton className="h-4 w-4 rounded-sm" />
-        <h3 className={textRole.sectionTitle}>{title}</h3>
+        <span className={textRole.sectionTitle}>{title}</span>
         <Badge variant="secondary" className="rounded-full px-1.5 py-0">
           <span className="inline-flex">
             <Skeleton className="h-4 w-4 rounded-full" />
           </span>
         </Badge>
-      </div>
+      </Button>
       <div className={BLACKLIST_RULE_GROUP_TABLE_CLASS}>
         {rowWidths.map((width, index) => (
           <div
@@ -138,6 +145,7 @@ export function BlacklistSettingsLoadingState({
       <div className={embedded ? BLACKLIST_EMBEDDED_CONTENT_SHELL_CLASS : BLACKLIST_CONTENT_SHELL_CLASS}>
         <div className={BLACKLIST_WORKBENCH_GRID_CLASS}>
           <Card
+            variant="compact"
             {...getLoadingStructureSlotAttributes("blacklist-list")}
             className={BLACKLIST_RULE_LIST_CARD_CLASS}
           >
@@ -157,7 +165,7 @@ export function BlacklistSettingsLoadingState({
             </CardContent>
           </Card>
 
-          <Card className={BLACKLIST_EDITOR_CARD_CLASS}>
+          <Card variant="compact" className={BLACKLIST_EDITOR_CARD_CLASS}>
             <CardHeader
               {...getLoadingStructureSlotAttributes("blacklist-controls")}
               className={BLACKLIST_EDITOR_HEADER_CLASS}

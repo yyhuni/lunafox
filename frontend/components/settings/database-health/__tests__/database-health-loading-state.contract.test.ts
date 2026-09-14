@@ -32,6 +32,8 @@ describe("database-health-loading-state contract", () => {
   it("derives resolved and loading geometry from the shared layout contract", () => {
     const sharedLayoutConstants = [
       "DATABASE_HEALTH_PAGE_SHELL_CLASS",
+      "DATABASE_HEALTH_CONTENT_SCROLL_AREA_CLASS",
+      "DATABASE_HEALTH_CONTENT_SCROLL_VIEWPORT_CLASS",
       "DATABASE_HEALTH_CONTENT_SHELL_CLASS",
       "DATABASE_HEALTH_SECTION_PANEL_CLASS",
       "DATABASE_HEALTH_SNAPSHOT_HEADER_CLASS",
@@ -64,18 +66,20 @@ describe("database-health-loading-state contract", () => {
       }
     }
     expect(viewSource).toContain("DatabaseHealthSectionPanel as SectionPanel")
-    expect(layoutSource).toContain("grid-cols-2")
+    expect(layoutSource).toContain("sm:grid-cols-2")
     expect(layoutSource).toContain("md:grid-cols-3")
     expect(layoutSource).toContain("xl:grid-cols-6")
     expect(layoutSource).toContain("gap-px bg-border/60")
     expect(loadingStateSource).toContain("const CONTEXT_STAT_LOADING_COUNT = 6")
     expect(loadingStateSource).toContain('DatabaseHealthTextPlaceholder roleClassName={textRole.sectionTitle} className="w-20"')
+    expect(loadingStateSource).toContain('roleClassName={textRole.metadataValueStrong}')
+    expect(loadingStateSource).toContain('roleClassName={textRole.tableCellSecondary}')
     expect(loadingStateSource).toContain("roleClassName={textRole.metricValueDisplay}")
     expect(loadingStateSource).toContain('DatabaseHealthTextPlaceholder roleClassName={textRole.caption} className="w-20"')
     expect(loadingStateSource).toContain('DatabaseHealthTextPlaceholder roleClassName={textRole.caption} className="w-24"')
     expect(loadingStateSource).toContain("lines = 1")
-    expect(loadingStateSource).toContain("lines={2}")
-    expect(loadingStateSource).toContain('collapseExtraLinesAt="lg"')
+    expect(loadingStateSource).toContain('reserveText={t("backendFindings.oldestPendingTaskAgeSec.description")}')
+    expect(loadingStateSource).toContain('reserveText={t("backendFindings.oldestPendingTaskAgeSec.recommendation")}')
     expect(loadingStateSource).toContain('DatabaseHealthBadgePlaceholder className="w-40"')
     expect(loadingStateSource).toContain('DatabaseHealthBadgePlaceholder className="w-36"')
 
@@ -84,7 +88,14 @@ describe("database-health-loading-state contract", () => {
     expect(viewSource).not.toContain('className="space-y-4 px-4 lg:px-6"')
     expect(viewSource).not.toContain('className="p-0"')
     expect(layoutSource).toContain("export const DATABASE_HEALTH_SECTION_HEADER_WITH_DESCRIPTION_CLASS")
-    expect(layoutSource).toContain('DATABASE_HEALTH_CONTENT_SHELL_CLASS =\n  "min-h-0 flex-1 space-y-4 overflow-y-auto px-4 [scrollbar-gutter:stable] lg:px-6"')
+    expect(layoutSource).toContain("DATABASE_HEALTH_CONTENT_SHELL_CLASS")
+    expect(layoutSource).toContain("COMPACT_PAGE_SCROLL_AREA_CLASS")
+    expect(layoutSource).toContain("COMPACT_PAGE_SCROLL_AREA_CONTENT_CLASS")
+    expect(layoutSource).toContain("COMPACT_PAGE_SCROLL_AREA_VIEWPORT_CLASS")
+    expect(layoutSource).not.toContain("scrollbar-gutter:stable")
+    expect(viewSource).toContain('import { ScrollArea } from "@/components/ui/scroll-area"')
+    expect(loadingStateSource).toContain('import { ScrollArea } from "@/components/ui/scroll-area"')
+    expect(`${viewSource}\n${loadingStateSource}`).toContain('type="always"')
     expect(viewSource).toContain("DATABASE_HEALTH_SECTION_HEADER_WITH_DESCRIPTION_CLASS")
     expect(viewSource).not.toContain('className="border-b px-6 py-4"')
     expect(viewSource).not.toContain("<LoadingTable rows={OPTIONAL_SIGNAL_COUNT} columns={4}")

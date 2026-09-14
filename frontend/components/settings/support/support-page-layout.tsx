@@ -1,23 +1,24 @@
 import * as React from "react"
 
+import { COMPACT_CONTENT_GUTTER_CLASS } from "@/components/shared/layout/page-shell-density"
 import { cn } from "@/lib/utils"
 
 export const SUPPORT_PAGE_ROUTE_SURFACE_CLASS =
-  "mx-auto flex min-h-[max(70vh,calc(100vh-4rem))] w-full max-w-[1200px] flex-col items-center justify-start overflow-x-clip p-4 py-8 md:p-8"
+  `mx-auto flex min-h-[max(70vh,calc(100vh-4rem))] w-full max-w-[1200px] flex-col items-center justify-start overflow-x-clip py-4 ${COMPACT_CONTENT_GUTTER_CLASS}`
 
 export const SUPPORT_PAGE_MAIN_CLASS =
   "relative z-10 mx-auto flex w-full max-w-5xl flex-col justify-start md:min-h-0 md:flex-1 md:justify-center"
 
-export const SUPPORT_PAGE_CONTENT_STACK_CLASS = "flex w-full flex-col gap-10 md:gap-12"
+export const SUPPORT_PAGE_CONTENT_STACK_CLASS = "flex w-full flex-col gap-8 md:gap-10"
 
-export const SUPPORT_PAGE_HEADER_CLASS = "flex flex-col items-center gap-5 text-center"
+export const SUPPORT_PAGE_HEADER_CLASS = "flex flex-col items-center gap-4 text-center"
 
-export const SUPPORT_PAGE_HEADER_CONTENT_CLASS = "flex max-w-3xl flex-col items-center gap-5"
+export const SUPPORT_PAGE_HEADER_CONTENT_CLASS = "flex max-w-3xl flex-col items-center gap-4"
 
 export const SUPPORT_PAGE_VALUE_BAND_LIST_CLASS =
   "grid border-y border-border md:grid-cols-3 md:divide-x md:divide-border"
 
-export const SUPPORT_PAGE_VALUE_BAND_ITEM_CLASS = "flex gap-4 px-2 py-5 text-left md:px-6"
+export const SUPPORT_PAGE_VALUE_BAND_ITEM_CLASS = "flex gap-4 px-2 py-4 text-left md:px-6"
 
 export const SUPPORT_PAGE_ACTIONS_CLASS = "flex flex-col items-center gap-3 sm:flex-row sm:justify-center"
 
@@ -25,7 +26,7 @@ export const SUPPORT_PAGE_FOOTER_CLASS =
   "flex w-full flex-col items-center gap-3 text-center text-xs text-muted-foreground/70"
 
 export const SUPPORT_TIER_CARD_CLASS =
-  "group relative flex h-full min-h-[168px] flex-col items-start justify-between rounded-lg border p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+  "group relative flex h-full min-h-[168px] flex-col items-start justify-between rounded-lg border p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
 
 export const SUPPORT_PAGE_TIER_OPTIONS_LOADING_SLOT = {
   "data-loading-slot": "support-page-tier-options",

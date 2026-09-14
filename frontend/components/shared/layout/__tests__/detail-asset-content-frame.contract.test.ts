@@ -15,7 +15,8 @@ describe("detail asset content frame contract", () => {
   it("owns the shared responsive gutter and stable slot", () => {
     expect(source).toContain("export function DetailAssetContentFrame")
     expect(source).toContain("data-slot=\"detail-asset-content-frame\"")
-    expect(source).toContain('cn("px-4 pb-4 md:pb-6 lg:px-6", className)')
+    expect(source).toContain('from "@/components/shared/layout/page-shell-density"')
+    expect(source).toContain('className={cn(COMPACT_CONTENT_GUTTER_CLASS, "pb-3", className)}')
     expect(source).toContain('React.ComponentProps<"div">')
   })
 

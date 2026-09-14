@@ -17,8 +17,9 @@ import {
 } from "@/components/shared/data-table/selected-row-action-bar"
 import { SimpleSearchToolbar } from "@/components/shared/data-table/simple-search-toolbar"
 import { useSimpleSearchState } from "@/components/shared/data-table/use-simple-search"
-import { TABLE_DENSE_ROW_ESTIMATED_HEIGHT_PX } from "@/components/ui/table"
+import { TABLE_DENSE_ROW_RHYTHM_HEIGHT_PX } from "@/components/ui/table"
 import { Tabs, TabsCountBadge, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { COMPACT_SECTION_STACK_CLASS } from "@/components/shared/layout/page-shell-density"
 import type { Vulnerability, VulnerabilitySeverity, VulnerabilitySeverityCounts } from "@/types/vulnerability.types"
 import type {
   CursorPaginationNavigation,
@@ -279,7 +280,7 @@ export function VulnerabilitiesDataTable({
 
   return (
     <>
-      <div className="space-y-4">
+      <div className={COMPACT_SECTION_STACK_CLASS}>
         {onReviewFilterChange && (
           <VulnerabilityReviewTabs
             value={reviewFilter}
@@ -330,7 +331,7 @@ export function VulnerabilitiesDataTable({
             loadingPresentation: loading ? "initial" : undefined,
             initialLoadingToolbarFilterCount: vulnerabilityFacetPanelItems.length > 0 ? 1 : 0,
             loadingRowCount,
-            loadingRowHeightEstimate: TABLE_DENSE_ROW_ESTIMATED_HEIGHT_PX,
+            loadingRowHeightEstimate: TABLE_DENSE_ROW_RHYTHM_HEIGHT_PX,
             stableSurfaceRowCount,
             loadingSlots,
           }}

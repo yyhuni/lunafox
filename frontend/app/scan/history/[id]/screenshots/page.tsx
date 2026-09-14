@@ -1,4 +1,5 @@
 import { ScreenshotsGallery } from "@/components/screenshots/screenshots-gallery"
+import { DetailAssetContentFrame } from "@/components/shared/layout/detail-asset-content-frame"
 
 export default async function ScanScreenshotsPage({
   params,
@@ -9,8 +10,8 @@ export default async function ScanScreenshotsPage({
   const scanId = Number(id)
 
   return (
-    <div className="px-4 lg:px-6">
+    <DetailAssetContentFrame>
       <ScreenshotsGallery scanId={scanId} />
-    </div>
+    </DetailAssetContentFrame>
   )
 }

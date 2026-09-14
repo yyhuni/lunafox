@@ -182,6 +182,7 @@ describe("agent.service contract", () => {
         name: "agentClusterSummaries/current",
         generatedAt: "2026-08-04T00:00:00Z",
         executionFreshnessSeconds: 15,
+    agentLimit: 3,
         totalNodes: 10,
         healthyCount: 6,
         warningCount: 2,
@@ -205,6 +206,7 @@ describe("agent.service contract", () => {
 
     expect(api.get).toHaveBeenCalledWith("/admin/agentClusterSummaries/current", undefined)
     expect(result.resourceName).toBe("agentClusterSummaries/current")
+    expect(result.agentLimit).toBe(3)
     expect(result.executionCapacity).toEqual({
       configuredSlots: 70,
       occupiedSlots: 21,
@@ -212,6 +214,18 @@ describe("agent.service contract", () => {
       unavailableSlots: 22,
       overcommittedSlots: 0,
     })
+  })
+
+  it.each([undefined, null, 0, -1, "3"])("rejects missing or invalid Agent quota %s", async (agentLimit) => {
+    vi.mocked(api.get).mockResolvedValue({ data: {
+      name: "agentClusterSummaries/current", generatedAt: "2026-08-04T00:00:00Z",
+      executionFreshnessSeconds: 15, agentLimit, totalNodes: 0,
+      healthyCount: 0, warningCount: 0, offlineCount: 0, unknownCount: 0, staleAgentCount: 0,
+      executionCapacity: { configuredSlots: 0, occupiedSlots: 0, availableSlots: 0, unavailableSlots: 0, overcommittedSlots: 0 },
+      clusterState: "empty", reasonCodes: ["no_agents"],
+      locationCoverage: { positionedCount: 0, unpositionedCount: 0 },
+    } } as never)
+    await expect(agentService.getAgentClusterSummary()).rejects.toThrow()
   })
 
   it("adapts a complete location map and preserves nullable radius", async () => {

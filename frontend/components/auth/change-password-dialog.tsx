@@ -12,6 +12,7 @@ import {
   ChangePasswordError,
   ChangePasswordDialogFooter,
 } from "@/components/auth/change-password-dialog-sections"
+import { compactFormDialogContentClassName } from "@/lib/ui/overlay-styles"
 
 interface ChangePasswordDialogProps {
   open: boolean
@@ -39,7 +40,7 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[400px]">
+      <DialogContent className={`${compactFormDialogContentClassName} sm:max-w-[400px]`}>
         <ChangePasswordDialogHeader t={t} />
         <form onSubmit={handleSubmit}>
           <ChangePasswordFormFields

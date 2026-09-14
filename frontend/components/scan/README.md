@@ -3,7 +3,12 @@
 This module owns scan launch, scheduled scan creation, scan progress, and scan history surfaces.
 
 `ScanStatusBadge` owns the canonical scan-status glyph, tone, and running-state
-rotation used by scan history. Its `icon-only` variant is for compact status
+rotation used by scan history and overview. Running icons use the shared
+`scan-running-loader` smooth SVG ring (one turn per second), scaled to
+its existing icon slot, with reduced-motion support. The rounded foreground arc
+uses currentColor directly, matching the running-status text without color mixing
+or opacity reduction; the full track uses muted-foreground at 35% opacity.
+Labels and progress retain their semantic tones. Its `icon-only` variant is for compact status
 columns and retains the localized status as the icon's accessible name and hover hint.
 
 ## Trigger Provenance
@@ -131,6 +136,11 @@ The desktop workflow canvas vertically centers the floating Engine library at
 its bounded available height so the internal list can show more Engines before
 scrolling; the narrow-layout override remains deliberately shorter and
 top-aligned to preserve canvas space.
+
+The stage inspector is an ordinary `DetailDrawer`: its structured engine list
+and fixed action row use the shared compact body/footer insets. Do not carry
+that treatment into the canvas, Engine library, or YAML inspector; those remain
+content-driven surfaces with their own viewport geometry.
 
 The composition builder loads its Engine library through the hook-owned
 installed Engine Catalog and uses each complete `engineId` as the only Engine

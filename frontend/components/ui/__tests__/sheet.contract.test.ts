@@ -85,6 +85,7 @@ describe("sheet contract", () => {
     expect(optOutFiles).toEqual([
       "components/notifications/notification-drawer-sections.tsx",
       "components/scan/scheduled/create-scheduled-scan-dialog.tsx",
+      "components/screenshots/screenshots-gallery-sections.tsx",
       "components/shared/detail-drawer/detail-drawer.tsx",
       "components/shared/form-drawer/form-drawer.tsx",
     ])

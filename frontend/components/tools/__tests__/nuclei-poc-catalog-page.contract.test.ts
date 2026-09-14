@@ -120,4 +120,9 @@ describe("nuclei-poc-catalog-page contract", () => {
     expect(source).toContain('className={cn("break-all font-mono", textRole.caption)}')
     expect(source).toContain('className="absolute inset-0 radius-badge"')
   })
+
+  it("uses compact geometry for structured details while retaining YAML reading space", () => {
+    expect(source).toContain("DETAIL_DRAWER_COMPACT_INSET_CLASS")
+    expect(source).toContain('className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-3"')
+  })
 })

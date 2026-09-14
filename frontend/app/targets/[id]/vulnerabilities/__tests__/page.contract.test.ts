@@ -7,7 +7,7 @@ const source = readFileSync(path.resolve(process.cwd(), "app/targets/[id]/vulner
 describe("page contract", () => {
   it("preserves current source markers", () => {
     expect(source).toContain("export default async function TargetVulnerabilitiesPage")
-    expect(source).toContain("className")
+    expect(source).toContain("DetailAssetContentFrame")
     expect(source).toContain("from \"@/components/vulnerabilities/vulnerabilities-detail-view\"")
     expect(source).toContain("params: Promise<{ id: string }>")
     expect(source).toContain("const { id } = await params")

@@ -29,6 +29,8 @@ describe("overview-sections-skeleton contract", () => {
       "OVERVIEW_RISK_SUMMARY_GRID_CLASS",
       "OVERVIEW_ASSET_OVERVIEW_GRID_CLASS",
       "OVERVIEW_ASSET_CHART_SHELL_CLASS",
+      "OVERVIEW_ASSET_TREND_PANEL_CLASS",
+      "OVERVIEW_ASSET_TREND_CHART_CLASS",
     ]
 
     for (const constant of constants) {
@@ -67,7 +69,7 @@ describe("overview-sections-skeleton contract", () => {
     expect(layoutSource).toContain("OVERVIEW_RUNTIME_DETAILS_GRID_CLASS")
     expect(layoutSource).toContain("OVERVIEW_RUNTIME_DETAILS_ITEM_CLASS")
     expect(layoutSource).toContain("OVERVIEW_RUNTIME_DETAILS_ITEM_CONTENT_CLASS")
-    expect(layoutSource).toContain('flex h-full min-h-52 flex-col gap-4')
+    expect(layoutSource).toContain('flex h-full min-h-52 flex-col gap-3')
     expect(layoutSource).toContain('h-full min-w-0')
     expect(layoutSource).toContain('OVERVIEW_RUNTIME_SCAN_BODY_CLASS')
     expect(layoutSource).toContain('OVERVIEW_RUNTIME_DATABASE_BODY_CLASS')
@@ -88,7 +90,7 @@ describe("overview-sections-skeleton contract", () => {
     expect(source).toContain("OVERVIEW_RUNTIME_DATABASE_DIAGNOSTIC_GRID_CLASS")
     expect(source).toContain("OVERVIEW_RUNTIME_RESOURCE_LIST_CLASS")
     expect(source).toContain('Skeleton className="size-4 rounded-none"')
-    expect(source).toContain('Skeleton className="ml-auto h-5 w-24 rounded-none"')
+    expect(source).toContain('Skeleton className="ml-auto h-[19.5px] w-24 rounded-none"')
     expect(layoutSource).toContain("OVERVIEW_RUNTIME_SCAN_STATUS_GRID_CLASS")
     expect(layoutSource).toContain("OVERVIEW_RUNTIME_SCAN_STATUS_ITEM_CLASS")
     expect(layoutSource).toContain("OVERVIEW_RUNTIME_SCAN_RECENT_CLASS")

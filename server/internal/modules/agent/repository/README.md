@@ -27,3 +27,5 @@ agent 模块 repository 规范：
 - Agent 地图查询不得复用管理列表或 page token；离线 Agent 仍可返回 marker，缺失/无效位置必须在 repository 边界排除。
 - Agent 管理列表 `List` 必须按 canonical 顺序执行：先 join `agent_runtime_status`，再应用白名单 `filter`，再应用 `createdAt + id` 稳定排序，最后分页。`totalSize` 必须统计筛选后的全集，不得只统计当前页。
 - `/settings/agents/` 公开 contains 搜索依赖 PostgreSQL `pg_trgm`：`agent.display_name`、`agent_runtime_status.observed_hostname`、`agent_runtime_status.connection_ip` 必须在 baseline migration 中有 trigram 索引；`agent(created_at, id)`、`agent.status`、`agent_runtime_status(health_state, agent_id)` 是排序/筛选的审计依据。
+
+- Agent Create 使用事务级 advisory lock `agentQuotaAdvisoryLock` 串行化 PostgreSQL 注册，在 READ COMMITTED 下拿锁后独立查询全部身份数量再写入；不同令牌和进程共用此边界。不要改成进程锁或事务外 count。SQLite 仅用于单连接契约测试，生产并发保证由 PostgreSQL 验证。真实数据库测试：`LUNAFOX_AGENT_QUOTA_POSTGRES_DSN="... search_path=agent_quota_contract" go test ./internal/modules/agent/repository -run TestAgentQuotaPostgres -count=1`；测试会创建并删除该专用 schema，不得指向生产数据。

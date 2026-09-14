@@ -76,7 +76,7 @@ interface ScheduledScanScopeStepProps {
     onSelectTarget: (id: number) => void;
 }
 export function ScheduledScanScopeStep({ t, className, name, setName, selectionMode, setSelectionMode, orgSearchInput, setOrgSearchInput, orgPageSize, setOrgPageSize, organizationTotalCount, organizationPaginationNavigation, onFirstOrgPage, onPreviousOrgPage, onNextOrgPage, targetSearchInput, setTargetSearchInput, targetPageSize, setTargetPageSize, targetTotalCount, targetPaginationNavigation, onFirstTargetPage, onPreviousTargetPage, onNextTargetPage, isOrgFetching, isTargetFetching, organizations, targets, selectedOrgId, selectedTargetId, setSelectedOrgId, setSelectedTargetId, onSelectOrg, onSelectTarget, }: ScheduledScanScopeStepProps) {
-    return (<div className={cn("min-w-0 max-w-full space-y-6", className)}>
+    return (<div className={cn("min-w-0 max-w-full space-y-3", className)}>
       <div className="space-y-2">
         <Label htmlFor="name">{t("form.taskName")} *</Label>
         <Input id="name" name="taskName" autoComplete="off" placeholder={t("form.taskNamePlaceholder")} value={name} onChange={(event) => setName(event.target.value)}/>
@@ -85,7 +85,7 @@ export function ScheduledScanScopeStep({ t, className, name, setName, selectionM
       <Separator />
       <div className="space-y-3">
         <Label>{t("form.scanScope")}</Label>
-        <div className="gap-4 grid grid-cols-1 sm:grid-cols-2">
+        <div className="gap-3 grid grid-cols-1 sm:grid-cols-2">
           <Button type="button" variant="outline" size="action-card" layout="actionTile" selected={selectionMode === "organization"} onClick={() => {
             setSelectionMode("organization");
             setSelectedTargetId(null);
@@ -116,7 +116,7 @@ export function ScheduledScanScopeStep({ t, className, name, setName, selectionM
 
       <Separator />
 
-      <div className="min-w-0 max-w-full space-y-4">
+      <div className="min-w-0 max-w-full space-y-3">
         {selectionMode === "organization" ? (<ScheduledScanOrganizationPicker t={t} isLoading={isOrgFetching} orgSearchInput={orgSearchInput} setOrgSearchInput={setOrgSearchInput} orgPageSize={orgPageSize} setOrgPageSize={setOrgPageSize} organizationTotalCount={organizationTotalCount} organizationPaginationNavigation={organizationPaginationNavigation} onFirstOrgPage={onFirstOrgPage} onPreviousOrgPage={onPreviousOrgPage} onNextOrgPage={onNextOrgPage} organizations={organizations} selectedOrgId={selectedOrgId} setSelectedOrgId={setSelectedOrgId} onSelectOrg={onSelectOrg}/>) : (<TargetSelectionWorkspace id="scheduled-scan-target-workspace" title={t("form.selectTarget")} hint={t("form.targetScanHint")} targets={targets} selectedTargetId={selectedTargetId} totalCount={targetTotalCount} canFirstPage={targetPaginationNavigation.canFirstPage ?? false} canPreviousPage={targetPaginationNavigation.canPreviousPage} canNextPage={targetPaginationNavigation.canNextPage} pageSize={targetPageSize} pageSizeOptions={SCHEDULED_SCAN_TARGET_PICKER_PAGE_SIZE_OPTIONS} searchQuery={targetSearchInput} isLoading={isTargetFetching} onSearchQueryChange={setTargetSearchInput} onFirstPage={onFirstTargetPage} onPreviousPage={onPreviousTargetPage} onNextPage={onNextTargetPage} onPageSizeChange={setTargetPageSize} onToggleTarget={(target) => onSelectTarget(target.id)} onClearTarget={() => setSelectedTargetId(null)}/>) }
       </div>
     </div>);
@@ -131,7 +131,7 @@ interface ScheduledScanPresetInfoStepProps {
     presetTargetId?: number;
 }
 export function ScheduledScanPresetInfoStep({ t, className, name, setName, presetTargetName, presetOrganizationName, presetTargetId, }: ScheduledScanPresetInfoStepProps) {
-    return (<div className={cn("min-w-0 max-w-full space-y-6", className)}>
+    return (<div className={cn("min-w-0 max-w-full space-y-3", className)}>
       <div className="space-y-2">
         <Label htmlFor="name">{t("form.taskName")} *</Label>
         <Input id="name" name="taskName" autoComplete="off" placeholder={t("form.taskNamePlaceholder")} value={name} onChange={(event) => setName(event.target.value)}/>
@@ -140,7 +140,7 @@ export function ScheduledScanPresetInfoStep({ t, className, name, setName, prese
       <Separator />
       <div className="space-y-3">
         <Label>{t("form.scanTarget")}</Label>
-        <div className="bg-muted/50 border flex min-w-0 gap-2 items-center overflow-hidden p-4 rounded-lg">
+        <div className="bg-muted/50 border flex min-w-0 gap-2 items-center overflow-hidden px-4 py-3 rounded-lg">
           <TargetIcon className="h-5 shrink-0 text-muted-foreground w-5"/>
           <span className="min-w-0 flex-1 truncate font-medium">{presetTargetName || presetOrganizationName}</span>
           <Badge variant="secondary" className="ml-auto shrink-0">
@@ -165,7 +165,7 @@ interface ScheduledScanScheduleStepProps {
     disabled?: boolean;
 }
 export function ScheduledScanScheduleStep({ t, className, cronExpression, setCronExpression, cronPresets, getCronDescription, getNextExecutions, disabled = false, }: ScheduledScanScheduleStepProps) {
-    return (<div className={cn("min-w-0 max-w-full space-y-6", className)}>
+    return (<div className={cn("min-w-0 max-w-full space-y-3", className)}>
       <div className="space-y-2">
         <Label>{t("form.cronExpression")} *</Label>
         <Input name="cronExpression" autoComplete="off" placeholder={t("form.cronPlaceholder")} value={cronExpression} onChange={(event) => setCronExpression(event.target.value)} className="font-mono" disabled={disabled}/>
@@ -179,7 +179,7 @@ export function ScheduledScanScheduleStep({ t, className, cronExpression, setCro
               </Badge>))}
         </div>
       </div>
-      <div className="bg-muted/50 border min-w-0 overflow-hidden p-4 rounded-lg space-y-3">
+      <div className="bg-muted/50 border min-w-0 overflow-hidden px-4 py-3 rounded-lg space-y-3">
         <div className="flex min-w-0 gap-2 items-center">
           <IconClock className="h-4 shrink-0 text-muted-foreground w-4"/>
           <span className="min-w-0 flex-1 truncate font-medium">{t("form.executionPreview")}</span>
@@ -204,7 +204,7 @@ interface ScheduledScanFooterProps {
     onSubmit: () => void;
 }
 export function ScheduledScanFooter({ t, currentStep, totalSteps, isPending, onPrev, onNext, onSubmit, }: ScheduledScanFooterProps) {
-    return (<div className="border-t flex justify-between px-6 py-4">
+    return (<div className="border-t flex justify-between px-4 py-3">
       {currentStep > 1 ? (<Button variant="outline" onClick={onPrev}>
           <IconChevronLeft className="h-4 mr-1 w-4"/>{t("buttons.previous")}
         </Button>) : <div />}

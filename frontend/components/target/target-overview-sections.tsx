@@ -22,6 +22,7 @@ import { getSeverityColor } from "@/lib/severity-config"
 import { getStatusToneTextClass } from "@/lib/status-config"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { COMPACT_SECTION_GAP_CLASS, COMPACT_SECTION_STACK_CLASS } from "@/components/shared/layout/page-shell-density"
 import {
   deferredInteractionUnmountDelayMs,
   useDeferredInteractionMount,
@@ -51,7 +52,7 @@ type SummarySeverity = "critical" | "high" | "medium" | "low"
 
 function TargetOverviewTopBar({ children }: { children: React.ReactNode }) {
   return (
-    <div className="-mt-4 flex flex-wrap gap-3 items-end justify-between">
+    <div className="-mt-3 flex flex-wrap gap-3 items-end justify-between md:-mt-4">
       {children}
     </div>
   )
@@ -87,7 +88,7 @@ function TargetOverviewSection({
 }) {
   return (
     <div>
-      <h3 className={cn("mb-4", textRole.sectionTitle)}>{title}</h3>
+      <h3 className={cn("mb-3", textRole.sectionTitle)}>{title}</h3>
       {children}
     </div>
   )
@@ -95,7 +96,7 @@ function TargetOverviewSection({
 
 function TargetAssetCardGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="gap-4 grid lg:grid-cols-6 md:grid-cols-2">
+    <div className={cn("grid lg:grid-cols-6 md:grid-cols-2", COMPACT_SECTION_GAP_CLASS)}>
       {children}
     </div>
   )
@@ -127,7 +128,7 @@ function TargetAssetCardShell({
 
 function TargetSummaryCardGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="gap-4 grid md:grid-cols-2">
+    <div className={cn("grid md:grid-cols-2", COMPACT_SECTION_GAP_CLASS)}>
       {children}
     </div>
   )
@@ -135,7 +136,7 @@ function TargetSummaryCardGrid({ children }: { children: React.ReactNode }) {
 
 export function TargetOverviewLoadingState() {
   return (
-    <div className="space-y-6">
+    <div className={COMPACT_SECTION_STACK_CLASS}>
       <TargetOverviewTopBar>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Skeleton className="h-5 w-40 rounded-full" />
@@ -166,8 +167,8 @@ export function TargetOverviewLoadingState() {
 
       <TargetSummaryCardGrid>
         {[...Array(2)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
+          <Card key={i} variant="compact">
+            <CardHeader className="flex flex-row items-center justify-between pb-2.5 space-y-0">
               <TargetOverviewTextPlaceholder roleClassName={textRole.sectionTitle} className="w-24" />
               <Skeleton className="h-4 w-4" />
             </CardHeader>
@@ -211,7 +212,7 @@ export function TargetOverviewContent({
   ]
 
   return (
-    <div className="space-y-6">
+    <div className={COMPACT_SECTION_STACK_CLASS}>
       <TargetOverviewTopBar>
         <div className={cn("flex flex-wrap gap-x-4 gap-y-2 items-center", textRole.bodySubtle)}>
           <div className="flex gap-1.5 items-center">
@@ -269,8 +270,8 @@ export function TargetOverviewContent({
       </TargetOverviewSection>
 
       <TargetSummaryCardGrid>
-        <Card className="flex flex-col">
-          <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
+        <Card variant="compact" className="flex flex-col">
+          <CardHeader className="flex flex-row items-center justify-between pb-2.5 space-y-0">
             <div className="flex gap-2 items-center">
               <Clock className="h-4 text-muted-foreground w-4" />
               <CardTitle>{state.t("scheduledScans.title")}</CardTitle>
@@ -349,8 +350,8 @@ export function TargetOverviewContent({
         </Card>
 
         <Link href={`/targets/${state.targetId}/vulnerabilities/`} className="block">
-          <Card className="cursor-pointer flex flex-col h-full hover:border-primary/50 transition-colors">
-            <CardHeader className="flex flex-row items-center justify-between pb-3 space-y-0">
+          <Card variant="compact" className="cursor-pointer flex flex-col h-full hover:border-primary/50 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between pb-2.5 space-y-0">
               <div className="flex gap-2 items-center">
                 <VulnerabilityIcon className="h-4 text-muted-foreground w-4" />
                 <CardTitle>{state.t("vulnerabilitiesTitle")}</CardTitle>
@@ -360,7 +361,7 @@ export function TargetOverviewContent({
                 <ChevronRight className="h-3 ml-1 w-3" />
               </Button>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <div className="flex gap-2 items-baseline">
                 <span data-featured="true" className={textRole.metricValueDisplay}>{state.vulnSummary.total}</span>
                 <span className={textRole.bodySubtle}>{state.t("cards.vulnerabilities")}</span>

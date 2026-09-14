@@ -18,3 +18,5 @@ agent 模块补充规则：
 - **跨模块边界**：`agent_task_service.go` 只依赖 provider 模块暴露的 application bridge port，例如 `ScanTaskBridgePort`，不直接依赖对方内部 orchestration service。
 - **历史迁移**：无历史聚合文件。
 - **删除与 pinned Scan**：`AgentCommandService` 通过窄 `AgentDeletionLifecycle` 端口把删除交给 Scan repository 的同一数据库事务。删除前必须终止该 Agent 尚未开始的 pinned Scan task（`failure_kind=agent_deleted`）并收敛 Scan；不得清空 `scan.agent_id`、把任务重新入队或把 pinned Scan 降级为自动分配。运行中的任务仍由 session disconnect/fence 路径产生 `agent_disconnected`。
+
+- **部署配额**：Server 统一固定最多3个已注册 Agent，默认 bootstrap 与离线节点均计入。只有创建新身份检查配额，超额存量的重连和运行不受限制；删除事务提交后释放名额。令牌生成不预留名额。

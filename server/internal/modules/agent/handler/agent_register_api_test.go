@@ -16,10 +16,14 @@ import (
 )
 
 type handlerAgentStoreStub struct {
-	created []*agentdomain.Agent
+	created   []*agentdomain.Agent
+	createErr error
 }
 
 func (stub *handlerAgentStoreStub) Create(_ context.Context, agent *agentdomain.Agent) error {
+	if stub.createErr != nil {
+		return stub.createErr
+	}
 	stub.created = append(stub.created, agent)
 	agent.ID = 42
 	return nil
@@ -263,5 +267,36 @@ func TestRegistrationTokenCreateAndReadUseCanonicalNonSecretResource(t *testing.
 	}
 	if _, exists := first["ipAddress"]; exists {
 		t.Fatalf("current attributed Agent projection retained legacy ipAddress: %#v", agents[0])
+	}
+}
+
+func TestRegisterReturnsQuotaErrorWithoutCreatingIdentity(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	store := &handlerAgentStoreStub{createErr: agentdomain.ErrAgentQuotaExceeded}
+	tokens := &handlerTokenStoreStub{token: &agentdomain.RegistrationToken{ID: 1, Token: "abcd1234"}}
+	facade := agentapp.NewAgentFacade(agentapp.NewAgentQueryService(store), agentapp.NewAgentCommandService(store), agentapp.NewAgentRegistrationService(store, tokens, handlerClockStub{now: time.Now()}, &handlerTokenGenStub{values: []string{"deadbeef"}}))
+	handler := NewAgentHandler(facade, runtimeConfigPublisherStub{}, "v1.2.3", "https://public.example.com", "http://server:9090", "docker.io/example/agent:v1.2.3", "lunafox_data:/opt/lunafox", nil)
+	router := gin.New()
+	router.POST("/v1/agents:register", handler.Register)
+	request := httptest.NewRequest(http.MethodPost, "/v1/agents:register", strings.NewReader(`{"token":"abcd1234","observedHostname":"node","agentVersion":"1.2.3"}`))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusTooManyRequests || len(store.created) != 0 {
+		t.Fatalf("status=%d created=%d body=%s", recorder.Code, len(store.created), recorder.Body.String())
+	}
+	var body struct {
+		Error struct {
+			Status  string `json:"status"`
+			Details []struct {
+				Reason string `json:"reason"`
+			} `json:"details"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Error.Status != "RESOURCE_EXHAUSTED" || len(body.Error.Details) != 1 || body.Error.Details[0].Reason != "AGENT_QUOTA_EXCEEDED" {
+		t.Fatalf("unexpected error: %s", recorder.Body.String())
 	}
 }

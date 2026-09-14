@@ -1,3 +1,4 @@
+import { RunningStatusIcon } from "@/components/scan/scan-status-badge"
 import React from "react"
 import Link from "next/link"
 import {
@@ -124,7 +125,7 @@ export function ScanOverviewHeader({
 
   return (
     <div className="flex items-center justify-between">
-      <div className={cn("flex gap-6 items-center", textRole.bodySubtle)}>
+      <div className={cn("flex gap-4 items-center", textRole.bodySubtle)}>
         <div className="flex gap-1.5 items-center">
           <Calendar className="h-4 w-4" />
           <span>{t("startedAt")}: {formatDate(startedAt, locale)}</span>
@@ -151,7 +152,11 @@ export function ScanOverviewHeader({
         </div>
       </div>
       <Badge variant={statusVariant} className={statusVariant === "outline" ? statusStyle : undefined}>
-        <StatusIcon className={`h-3.5 w-3.5 mr-1.5 ${statusIconConfig.animate ? "animate-spin" : ""}`} />
+        {scan.status === "running" ? (
+          <RunningStatusIcon className="h-3.5 w-3.5 mr-1.5" />
+        ) : (
+          <StatusIcon className={`h-3.5 w-3.5 mr-1.5 ${statusIconConfig.animate ? "animate-spin" : ""}`} />
+        )}
         {tStatus(scan.status)}
       </Badge>
     </div>
@@ -167,8 +172,8 @@ interface ScanOverviewAssetsProps {
 export function ScanOverviewAssets({ t, assetCards, showTitle = true }: ScanOverviewAssetsProps) {
   return (
     <div>
-      {showTitle ? <h3 className={cn("mb-4", textRole.sectionTitle)}>{t("assetsTitle")}</h3> : null}
-      <div className="gap-4 grid lg:grid-cols-6 md:grid-cols-2">
+      {showTitle ? <h3 className={cn("mb-3", textRole.sectionTitle)}>{t("assetsTitle")}</h3> : null}
+      <div className="gap-3 grid lg:grid-cols-6 md:grid-cols-2">
         {assetCards.map((card) => (
           <Link key={card.title} href={card.href} className="block">
             <div
@@ -214,7 +219,7 @@ interface ScanVulnerabilitySummaryProps {
 export function ScanVulnerabilitySummary({ t, scanId, vulnSummary }: ScanVulnerabilitySummaryProps) {
   return (
     <Link href={`/scan/history/${scanId}/vulnerabilities/`} className="block">
-      <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+      <Card variant="compact" className="cursor-pointer hover:border-primary/50 transition-colors">
         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
           <CardTitle>{t("vulnerabilitiesTitle")}</CardTitle>
           <ChevronRight className="h-4 text-muted-foreground w-4" />

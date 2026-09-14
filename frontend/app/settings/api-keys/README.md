@@ -27,6 +27,10 @@ and footer action layout classes live in `api-keys-settings-layout.ts`.
   viewport-bound workbench classes from `api-keys-settings-layout.ts`. Provider
   and credential form growth must scroll inside their card/content regions, not
   change the first-screen route surface during loading handoff.
+- Provider rows keep their 40px identity tile but use the shared 12px compact
+  vertical inset. The credential form stack and security notice use the same
+  compact card rhythm in ready and loading states; do not restore a looser
+  row-only or default-card variant on either branch.
 - The route pairs `api-keys-header`, `api-keys-provider-list`,
   `api-keys-provider-detail`, and `api-keys-notice` between its loading and
   resolved branches. `ContentHandoff` owns the surrounding `surface` slot.

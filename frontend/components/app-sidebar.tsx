@@ -101,7 +101,7 @@ function AppSidebarCollapsibleNavItem({ collapsedMenuKey, current, isCollapsedDe
             <IconChevronRight className="ml-auto"/>
           </CollapsibleTrigger>
         {shouldRenderSubItems ? (<CollapsibleContent>
-            <SidebarMenuSub className="relative my-2 pl-6 before:absolute before:top-1 before:bottom-1 before:left-4 before:w-px before:rounded-full before:bg-sidebar-border/60 before:content-['']">
+            <SidebarMenuSub className="relative my-1 pl-6 before:absolute before:top-1 before:bottom-1 before:left-4 before:w-px before:rounded-full before:bg-sidebar-border/60 before:content-['']">
               {item.items!.map((subItem) => {
                 const subUrl = normalize(subItem.url);
                 const isSubActive = current === subUrl || current.startsWith(subUrl + "/");
@@ -360,7 +360,7 @@ export function AppSidebar({ warmup = false, ...props }: React.ComponentProps<ty
     // collapsible="icon" means the sidebar can be collapsed to icon-only mode
     <Sidebar collapsible="icon" {...props}>
       {isCollapsedDesktop && collapsedMenu ? (<CollapsedSidebarSubmenu current={current} menu={collapsedMenu} normalize={normalize} onClose={closeCollapsedMenu} onCloseImmediately={closeCollapsedMenuImmediately} onKeepOpen={clearCollapsedMenuCloseTimer}/>) : null}
-      <SidebarHeader className="border-b-0 min-h-12 justify-center py-1">
+      <SidebarHeader className="border-b-0 min-h-11 justify-center py-0.5">
         {/* Preserve the logo's vertical anchor while the shell width transitions. */}
         <Link href="/overview/" prefetch={sidebarLinkPrefetch} className="flex h-8 w-full gap-2 items-center min-w-0 overflow-hidden rounded-lg px-2.5 transition-colors duration-200 ease-linear hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:p-0">
           <div className="flex size-8 shrink-0 items-center justify-center">
