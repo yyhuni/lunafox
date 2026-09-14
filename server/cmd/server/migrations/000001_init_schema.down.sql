@@ -87,6 +87,7 @@ DROP TABLE IF EXISTS wordlist CASCADE;
 DROP TABLE IF EXISTS engine CASCADE;
 
 -- Core tables
+DROP TABLE IF EXISTS upgrade_operation CASCADE;
 DROP TABLE IF EXISTS login_visual_discovery CASCADE;
 DROP TABLE IF EXISTS mcp_key CASCADE;
 DROP TABLE IF EXISTS organization_target CASCADE;

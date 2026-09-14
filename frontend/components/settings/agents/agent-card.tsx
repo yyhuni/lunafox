@@ -79,7 +79,7 @@ export function AgentCard({ agentNode, onConfig, onDelete, }: AgentCardProps) {
     }, [agentNode.lastHeartbeat]);
     // Determine whether the heartbeat has expired (more than 30 seconds)
     const isHeartbeatStale = lastHeartbeatSeconds !== null && lastHeartbeatSeconds > 30;
-    return (<Card className={cn("transition-[background-color,border-color,box-shadow,opacity] duration-200 hover:shadow-md", getAgentRuntimeBorderClass(agentNode.status), getAgentRuntimeShellClass(agentNode.status))}>
+    return (<Card variant="compact" className={cn("transition-[background-color,border-color,box-shadow,opacity] duration-200 hover:shadow-md", getAgentRuntimeBorderClass(agentNode.status), getAgentRuntimeShellClass(agentNode.status))}>
       <CardHeader className="pb-3">
         <div className="flex gap-3 items-start justify-between">
           <div className="flex-1 min-w-0 space-y-2">

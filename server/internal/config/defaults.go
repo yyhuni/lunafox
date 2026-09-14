@@ -13,6 +13,7 @@ const (
 	DefaultLoginVisualsRoot         = "/opt/lunafox/login-visuals"
 	DefaultWorkflowDefinitionsRoot  = "/usr/local/share/lunafox/workflows"
 	DefaultNucleiPocWorkspaceRoot   = "/var/lib/lunafox/nuclei-poc-workspaces"
+	DefaultUpgradeDeploymentRoot    = "/opt/lunafox"
 
 	// Bound untrusted OCI package downloads and cache writes unless deployment
 	// configuration explicitly opts into a larger quota.
@@ -67,6 +68,10 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("TARGET_CLEANUP_MAX_BATCHES_PER_RUN", 100)
 	v.SetDefault("TARGET_CLEANUP_MAX_RUN_DURATION", "5m")
 	v.SetDefault("NOTIFICATION_VULNERABILITY_THRESHOLD", "high")
+	v.SetDefault("LUNAFOX_UPGRADE_DEPLOYMENT_ROOT", DefaultUpgradeDeploymentRoot)
+	v.SetDefault("RELEASE_MANIFEST_PATH", DefaultUpgradeDeploymentRoot+"/release.manifest.yaml")
+	v.SetDefault("MIGRATION_POLICY_PATH", "/usr/local/share/lunafox/migrations/policy.json")
+	v.SetDefault("LUNAFOX_UPGRADE_SOCKET_PATH", DefaultUpgradeDeploymentRoot+"/.lunafox/upgrade/upgrader.sock")
 }
 
 // GetDefaults returns a Config with all default values (for testing).
@@ -128,6 +133,12 @@ func GetDefaults() *Config {
 			MaxRunDuration:   5 * time.Minute,
 		},
 		Notification: NotificationConfig{VulnerabilityThreshold: "high"},
+		Upgrade: UpgradeConfig{
+			DeploymentRoot:      DefaultUpgradeDeploymentRoot,
+			ManifestPath:        DefaultUpgradeDeploymentRoot + "/release.manifest.yaml",
+			MigrationPolicyPath: "/usr/local/share/lunafox/migrations/policy.json",
+			SocketPath:          DefaultUpgradeDeploymentRoot + "/.lunafox/upgrade/upgrader.sock",
+		},
 		PublicURL:    "",
 	}
 }

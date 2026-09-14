@@ -29,7 +29,7 @@ export function ToolCard({ tool, onCheckUpdate, onEdit, onDelete, isChecking = f
   const displayName = tool.name.charAt(0).toUpperCase() + tool.name.slice(1)
   
   return (
-    <Card className="flex flex-col h-full hover:shadow-lg transition-shadow">
+    <Card variant="compact" className="flex flex-col h-full hover:shadow-lg transition-shadow">
       <CardHeader className="space-y-2">
         {/* Tool name */}
         <CardTitle 
@@ -103,6 +103,7 @@ export function ToolCard({ tool, onCheckUpdate, onEdit, onDelete, isChecking = f
       <CardFooter className="flex gap-2">
         <Button
           variant="default"
+          size="sm"
           className="flex-1"
           onClick={() => onCheckUpdate?.(tool.id)}
           disabled={isChecking}

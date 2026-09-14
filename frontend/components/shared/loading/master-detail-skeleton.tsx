@@ -8,6 +8,7 @@ import {
   getLoadingOwnerAttributes,
   type LoadingLayer,
 } from "@/components/shared/loading/loading-owner"
+import { COMPACT_CONTENT_GUTTER_CLASS } from "@/components/shared/layout/page-shell-density"
 
 interface MasterDetailSkeletonProps {
   owner?: string
@@ -38,7 +39,7 @@ export function MasterDetailSkeleton({
   return (
     <div {...(owner ? getLoadingOwnerAttributes({ owner, layer, intent: "data" }) : {})} data-slot="master-detail-skeleton" className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex gap-4 items-start justify-between lg:px-6 px-4 py-4">
+      <div className={`flex gap-3 items-start justify-between py-3 ${COMPACT_CONTENT_GUTTER_CLASS}`}>
         {title ? (
           <h1 className={cn("shrink-0", textRole.pageTitle)}>{title}</h1>
         ) : (
@@ -88,9 +89,9 @@ export function MasterDetailSkeleton({
               </div>
             </div>
           </div>
-          <div className="flex-1 p-6 space-y-6">
+          <div className="flex-1 p-4 space-y-4">
             <div className="space-y-3 rounded-xl border border-border bg-card/70 p-4 shadow-2xs">
-              <div className="gap-4 grid grid-cols-2">
+              <div className="gap-3 grid grid-cols-2">
                 <div className="space-y-2">
                   <Skeleton className="h-3 w-16" />
                   <Skeleton className="h-6 w-24" />
@@ -107,7 +108,7 @@ export function MasterDetailSkeleton({
               </div>
             </div>
           </div>
-          <div className="border-t flex gap-2 items-center px-6 py-4">
+          <div className="border-t flex gap-2 items-center px-4 py-3">
             <ActionSkeleton size="sm" widthClassName="w-24" />
             <div className="flex-1" />
             <ActionSkeleton size="sm" widthClassName="w-20" />

@@ -29,7 +29,10 @@ export function SearchInput({
       {showIcon ? (
         <IconSearch
           aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+          className={cn(
+            "pointer-events-none absolute top-1/2 -translate-y-1/2 text-muted-foreground",
+            isStandardDensity ? "left-3 size-4" : "left-2.5 size-3.5"
+          )}
         />
       ) : null}
       <Input
@@ -37,10 +40,17 @@ export function SearchInput({
         type="search"
         size={isStandardDensity ? "default" : "sm"}
         autoComplete={autoComplete ?? "off"}
-        className={cn(showIcon && "pl-9", loading && "pr-9", className)}
+        className={cn(
+          showIcon && (isStandardDensity ? "pl-9" : "pl-7"),
+          loading && (isStandardDensity ? "pr-9" : "pr-8"),
+          className
+        )}
       />
       {loading ? (
-        <Spinner className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Spinner className={cn(
+          "pointer-events-none absolute top-1/2 -translate-y-1/2 text-muted-foreground",
+          isStandardDensity ? "right-3" : "right-2.5"
+        )} />
       ) : null}
     </div>
   )

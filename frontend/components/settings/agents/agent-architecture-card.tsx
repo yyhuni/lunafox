@@ -56,7 +56,7 @@ export function AgentArchitectureCard() {
   ]
 
   return (
-    <Card className="shadow-none">
+    <Card variant="compact" className="shadow-none">
       <CardHeader className="pb-3">
         <CardTitle className={textRole.sectionTitle}>{t("flowTitle")}</CardTitle>
         <CardDescription className={textRole.helperText}>{t("flowDesc")}</CardDescription>

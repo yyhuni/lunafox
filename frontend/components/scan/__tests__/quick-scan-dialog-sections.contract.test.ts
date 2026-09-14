@@ -39,6 +39,12 @@ describe("quick-scan-dialog-sections contract", () => {
     expect(source).not.toContain("QuickScanTrigger")
   })
 
+  it("uses the shared compact inset for the drawer header", () => {
+    expect(source).toContain("COMPACT_FORM_OVERLAY_INSET_CLASS")
+    expect(source).toContain('className={cn("shrink-0 bg-card text-left", COMPACT_FORM_OVERLAY_INSET_CLASS)}')
+    expect(source).not.toContain("px-5 pt-4")
+  })
+
   it("reuses the add-target bulk input shell for the quick scan target step", () => {
     expect(source).toContain("AddTargetInputSection")
     expect(source).toContain("tTargetDialog")

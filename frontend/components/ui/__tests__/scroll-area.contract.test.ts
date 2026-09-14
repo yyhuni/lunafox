@@ -18,8 +18,12 @@ describe("scroll-area contract", () => {
 
   it("lets constrained surfaces override the Base UI content intrinsic width", () => {
     expect(source).toContain("contentClassName")
+    expect(source).toContain("contentStyle")
+    expect(source).toContain("viewportClassName")
+    expect(source).toContain('className={cn("h-full w-full rounded-[inherit]", viewportClassName)}')
     expect(source).toContain("<ScrollAreaPrimitive.Content")
     expect(source).toContain("className={contentClassName}")
+    expect(source).toContain("style={contentStyle}")
   })
 
   it("keeps custom scrollbars stable and perceptible", () => {

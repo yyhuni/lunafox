@@ -28,4 +28,11 @@ describe("overview-stat-cards contract", () => {
     expect(source).toContain("monitoredTargets")
     expect(source).toContain("runningScans")
   })
+
+  it("uses compact card sections without changing the metric hit area contract", () => {
+    expect(source).toContain('variant="compact"')
+    expect(source).toContain("min-h-24")
+    expect(source).toContain('className="grid-cols-[1fr_auto] gap-2 px-4"')
+    expect(source).toContain('cn("px-4", textRole.bodySubtle)')
+  })
 })

@@ -58,8 +58,8 @@ describe("engine-installation-page loading contract", () => {
       expect(source).toContain(`getLoadingStructureSlotAttributes("${slot}")`)
     }
 
-    expect(source).toContain("skeletonClassName=\"space-y-6\"")
-    expect(source).toContain("contentClassName=\"space-y-6\"")
+    expect(source).toContain("skeletonClassName=\"space-y-3\"")
+    expect(source).toContain("contentClassName=\"space-y-3\"")
     expect(source).toContain("disabled={disabled}")
   })
 

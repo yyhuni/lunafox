@@ -139,7 +139,7 @@ export function AddOrganizationTargetsField<TFieldValues extends FieldValues>({
       control={formControl}
       name={name}
       render={({ field }) => (
-        <FormItem className="mt-2 gap-3 border-t border-border/60 pt-4">
+        <FormItem className="mt-2 gap-3 border-t border-border/60 pt-3">
           <div className="flex items-start justify-between gap-3">
             <Button
               type="button"

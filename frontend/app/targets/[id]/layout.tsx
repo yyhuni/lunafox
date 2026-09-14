@@ -22,6 +22,8 @@ import { useTarget } from "@/hooks/use-targets";
 import { useTranslations } from "next-intl";
 import { createAppError } from "@/lib/errors/app-error";
 import { normalizeError } from "@/lib/errors/normalize-error";
+import { COMPACT_PAGE_SHELL_CLASS } from "@/components/shared/layout/page-shell-density";
+import { DetailAssetContentFrame } from "@/components/shared/layout/detail-asset-content-frame";
 import type { TargetDetail } from "@/types/target.types";
 import {
     TargetDetailShellContent,
@@ -184,26 +186,26 @@ export default function TargetLayout({ children, }: {
     const isEndpointRoute = primaryTab === "assets" && secondaryTab === "endpoints";
     const renderChildLoadingState = () => {
         if (primaryTab === "overview") {
-            return (<div className="px-4 lg:px-6">
+            return (<DetailAssetContentFrame className="flex min-h-0 flex-1 flex-col">
           <TargetOverviewLoadingState />
-        </div>);
+        </DetailAssetContentFrame>);
         }
         if (primaryTab === "directories") {
             return <DirectoriesViewRouteFallback rowCount={INITIAL_DIRECTORY_FALLBACK_ROW_COUNT} totalSize={0} showBulkAdd />;
         }
         if (primaryTab === "screenshots") {
-            return <div className="px-4 lg:px-6"><ScreenshotsGalleryRouteFallback itemCount={INITIAL_SCREENSHOT_FALLBACK_ITEM_COUNT} showSelectionAction /></div>;
+            return <ScreenshotsGalleryRouteFallback itemCount={INITIAL_SCREENSHOT_FALLBACK_ITEM_COUNT} showSelectionAction />;
         }
         if (primaryTab === "vulnerabilities") {
-            return <div className="px-4 lg:px-6"><VulnerabilitiesDetailViewRouteFallback rowCount={INITIAL_DETAIL_FALLBACK_ROW_COUNT} /></div>;
+            return <VulnerabilitiesDetailViewRouteFallback rowCount={INITIAL_DETAIL_FALLBACK_ROW_COUNT} />;
         }
         if (primaryTab === "settings") {
             const settingsSection = secondaryTab === "scheduled-scans" ? "scheduled-scans" : "blacklist";
-            return <div className="flex min-h-0 flex-1 flex-col px-4 lg:px-6"><TargetSettingsRouteFallback rowCount={INITIAL_DETAIL_FALLBACK_ROW_COUNT} section={settingsSection} /></div>;
+            return <DetailAssetContentFrame className="flex min-h-0 flex-1 flex-col"><TargetSettingsRouteFallback rowCount={INITIAL_DETAIL_FALLBACK_ROW_COUNT} section={settingsSection} /></DetailAssetContentFrame>;
         }
         if (primaryTab === "assets") {
             if (secondaryTab === "websites") {
-                return <div className="px-4 lg:px-6">{isWebsiteDetailRoute ? <WebsiteRelationDetailLoadingState /> : <WebsiteRelationEvidenceLoadingState />}</div>;
+                return <DetailAssetContentFrame>{isWebsiteDetailRoute ? <WebsiteRelationDetailLoadingState /> : <WebsiteRelationEvidenceLoadingState />}</DetailAssetContentFrame>;
             }
             if (secondaryTab === "subdomains") {
                 return <SubdomainsDetailViewRouteFallback rowCount={DETAIL_FALLBACK_TABLE_ROW_COUNT} />;
@@ -215,7 +217,7 @@ export default function TargetLayout({ children, }: {
                 return <EndpointsDetailViewRouteFallback rowCount={ENDPOINTS_DETAIL_FALLBACK_ROW_COUNT} />;
             }
         }
-        return <div className="px-4 lg:px-6"><WebsiteRelationEvidenceLoadingState /></div>;
+        return <DetailAssetContentFrame><WebsiteRelationEvidenceLoadingState /></DetailAssetContentFrame>;
     };
     const renderShellLoadingState = () => (<TargetDetailShellLoadingState primaryTabLabels={primaryTabLabels} activePrimaryTabIndex={activePrimaryTabIndex} secondaryTabLabels={secondaryTabLabels} activeSecondaryTabIndex={activeSecondaryTabIndex} showSecondaryNav={showSecondaryNav}>
       {renderChildLoadingState()}
@@ -223,12 +225,12 @@ export default function TargetLayout({ children, }: {
     let metadataErrorState: React.ReactNode = null;
     if (!isLoading && error) {
         const isMissingTarget = normalizedError?.kind === "resource-not-found";
-        metadataErrorState = (<div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+        metadataErrorState = (<div className={COMPACT_PAGE_SHELL_CLASS}>
         <AppErrorState error={normalizedError ?? createAppError("unexpected-error")} title={isMissingTarget ? t("notFound.title") : undefined} description={isMissingTarget ? t("notFound.message", { id }) : undefined} resourceLabel={t("breadcrumb.targetDetail")} actionHref="/targets/"/>
       </div>);
     }
     else if (!isLoading && !target) {
-        metadataErrorState = (<div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+        metadataErrorState = (<div className={COMPACT_PAGE_SHELL_CLASS}>
         <AppErrorState error={createAppError("resource-not-found", { retryable: false })} title={t("notFound.title")} description={t("notFound.message", { id })} resourceLabel={t("breadcrumb.targetDetail")} actionHref="/targets/"/>
       </div>);
     }

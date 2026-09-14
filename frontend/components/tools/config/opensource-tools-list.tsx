@@ -129,10 +129,10 @@ export function OpensourceToolsList() {
       owner="opensource-tools-list-content"
       isLoading={isInitialLoading}
       skeleton={<CardGridSkeleton cards={4} />}
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-3"
     >
       {/* Tool list */}
-      <div className="gap-6 grid grid-cols-1 lg:grid-cols-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="gap-3 grid grid-cols-1 lg:grid-cols-3 md:grid-cols-2 xl:grid-cols-4">
         {tools.map((tool: Tool) => (
           <ToolCard 
             key={tool.id} 

@@ -38,7 +38,7 @@ export function BulkAddSubdomainsDialog({ targetId, targetName, open: externalOp
         <BulkAddSubdomainsHeader title={t("title")} description={t("description")} targetName={targetName} t={t}/>
 
         <form onSubmit={handleSubmit}>
-          <div className="gap-4 grid py-4">
+          <div className="gap-3 grid py-3">
             <BulkAddSubdomainsInput t={t} inputText={inputText} placeholder={t("placeholder")} lineNumbersRef={lineNumbersRef} textareaRef={textareaRef} onInputChange={handleInputChange} onScroll={handleTextareaScroll} isPending={bulkCreateSubdomains.isPending} lineCount={lineCount} validationResult={validationResult}/>
           </div>
 

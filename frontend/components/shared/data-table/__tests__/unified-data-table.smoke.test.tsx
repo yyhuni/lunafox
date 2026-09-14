@@ -763,7 +763,7 @@ describe("UnifiedDataTable", () => {
     const tableSurface = container.querySelector<HTMLDivElement>('[data-slot="data-table"]')
 
     expect(tableSurface).toHaveAttribute("data-stable-surface-row-count", "3")
-    expect(tableSurface).toHaveStyle({ minHeight: "184px" })
+    expect(tableSurface).toHaveStyle({ minHeight: "160px" })
     expect(container.querySelectorAll("tbody tr")).toHaveLength(3)
     expect(container.querySelectorAll('[data-slot="data-table-spacer-row"]')).toHaveLength(0)
 
@@ -905,7 +905,7 @@ describe("UnifiedDataTable", () => {
     const bodyRows = Array.from(container.querySelectorAll("tbody tr"))
 
     expect(bodyRows).toHaveLength(3)
-    expect(bodyRows.every((row) => row.className.includes("h-12"))).toBe(true)
+    expect(bodyRows.every((row) => row.className.includes("h-10"))).toBe(true)
     expect(bodyRows.every((row) => (row.getAttribute("style") ?? "") === "")).toBe(true)
     expect(screen.queryByText("No results")).not.toBeInTheDocument()
   })

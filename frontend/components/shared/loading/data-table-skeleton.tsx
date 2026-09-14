@@ -7,6 +7,7 @@ import {
   type LoadingLayer,
 } from "@/components/shared/loading/loading-owner"
 import { SearchToolbarSkeleton } from "@/components/shared/loading/search-toolbar-skeleton"
+import { COMPACT_CONTENT_GUTTER_CLASS } from "@/components/shared/layout/page-shell-density"
 import {
   TABLE_DENSE_CELL_RHYTHM_CLASS,
   TABLE_DENSE_ROW_ESTIMATED_HEIGHT_PX,
@@ -87,8 +88,8 @@ export function DataTableSkeleton({
   const narrowRows = mobileRows ?? rows
   const renderedRows = Math.max(rows, narrowRows)
   const containerClass = cn(
-    "space-y-4",
-    withPadding && "px-4 lg:px-6",
+    "space-y-3",
+    withPadding && COMPACT_CONTENT_GUTTER_CLASS,
     className
   )
 

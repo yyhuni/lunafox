@@ -147,7 +147,7 @@ export function AgentInstallConnectionStatus({
   )
 
   return (
-    <div className="mt-4 min-h-14 border-t pt-4" aria-live="polite">
+    <div className="mt-3 min-h-14 border-t pt-3" aria-live="polite">
       <StatusTransition phase={phase} reducedMotion={prefersReducedMotion ?? false}>
         {content}
       </StatusTransition>

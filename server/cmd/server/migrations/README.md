@@ -7,6 +7,18 @@ The repository is in the `disposable-development` phase recorded by
 upgrade, or in-flight task recovery contract. The only migration files are the
 squashed `000001_init_schema.up.sql` and `000001_init_schema.down.sql` pair.
 
+## Upgrade Operation Baseline
+
+The squashed `000001` baseline includes `upgrade_operation`, the Server-owned
+user-visible Upgrade Operation record. It binds one request ID to one immutable
+Manifest identity/digest and stores phase timestamps, migration status,
+cancelled Scan/Task counts, Agent readiness totals, observed component digests,
+and bounded diagnostics. The host journal and completion receipt remain
+separate; neither is a replacement for this database record. The table is part
+of the disposable fresh-install baseline and must not be treated as a
+data-retaining forward migration until an explicit phase-transition change
+freezes this schema and defines backup/recovery semantics.
+
 Before the baseline freezes, maintainers may update and squash `000001` so a
 new empty database directly receives the current schema. Historical cutover SQL
 and compatibility migrations must not accumulate in this development baseline.

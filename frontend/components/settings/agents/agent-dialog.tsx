@@ -12,6 +12,7 @@ import {
   AgentConfigFormFields,
   AgentConfigDialogFooter,
 } from "@/components/settings/agents/agent-dialog-sections"
+import { compactFormDialogContentClassName } from "@/lib/ui/overlay-styles"
 import type { Agent } from "@/types/agent.types"
 
 interface AgentConfigDialogProps {
@@ -35,10 +36,10 @@ export function AgentConfigDialog({ open, onOpenChange, agentNode }: AgentConfig
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[420px]">
+      <DialogContent className={`${compactFormDialogContentClassName} sm:max-w-[420px]`}>
         <AgentConfigDialogHeader t={t} />
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-3">
             <AgentConfigFormFields
               t={t}
               control={form.control}

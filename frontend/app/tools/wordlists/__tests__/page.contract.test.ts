@@ -15,7 +15,7 @@ describe("page contract", () => {
     expect(source).toContain('description={t("description")}')
     expect(source).toContain("WORDLISTS_PAGE_SHELL_CLASS")
     expect(source).toContain("WORDLISTS_CONTENT_SHELL_CLASS")
-    expect(layoutSource).toContain('WORDLISTS_PAGE_SHELL_CLASS =\n  "flex h-full min-h-0 flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6"')
+    expect(layoutSource).toContain("COMPACT_FULL_PAGE_SHELL_CLASS")
     expect(layoutSource).toContain('WORDLISTS_WORKSPACE_HANDOFF_CLASS = "flex h-full min-h-0 flex-1 flex-col"')
     expect(layoutSource).toContain('WORDLISTS_WORKSPACE_SURFACE_CLASS =\n  "flex h-full min-h-0 flex-1 flex-col overflow-hidden"')
   })

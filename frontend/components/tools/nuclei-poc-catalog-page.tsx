@@ -27,7 +27,17 @@ import { TimestampCell } from "@/components/shared/data-table/timestamp-cell"
 import type { SelectedRowActionBarAction } from "@/components/shared/data-table/selected-row-action-bar"
 import { CopyButton } from "@/components/shared/feedback/copy-button"
 import { AppErrorState } from "@/components/shared/feedback/app-error-state"
-import { DetailDrawer, DetailDrawerTabs, DetailDrawerTabsContent, DetailDrawerTabsList, DetailDrawerTabsTrigger } from "@/components/shared/detail-drawer"
+import {
+  DetailDrawer,
+  DetailDrawerTabs,
+  DetailDrawerTabsContent,
+  DetailDrawerTabsList,
+  DetailDrawerTabsTrigger,
+  DETAIL_DRAWER_COMPACT_BODY_CLASS,
+  DETAIL_DRAWER_COMPACT_FIELD_GRID_CLASS,
+  DETAIL_DRAWER_COMPACT_INSET_CLASS,
+  DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS,
+} from "@/components/shared/detail-drawer"
 import { ContentHandoff } from "@/components/shared/loading/content-handoff"
 import { getDataTableSkeletonRowCount } from "@/components/shared/loading/data-table-skeleton"
 import { RefreshSpinner } from "@/components/shared/loading/spinner"
@@ -53,6 +63,8 @@ import { normalizeError } from "@/lib/errors/normalize-error"
 import { getStatusToneTextClass } from "@/lib/status-config"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { COMPACT_CONTENT_GUTTER_CLASS } from "@/components/shared/layout/page-shell-density"
+import { compactFormDialogContentClassName } from "@/lib/ui/overlay-styles"
 
 type NucleiPocSyncSourceKind = NucleiPocSourceType
 
@@ -454,7 +466,7 @@ function NucleiPocCatalogWorkspace() {
       isLoading={listQuery.isPending || sourceQuery.isPending}
       skeleton={<NucleiPocCatalogLoadingState columns={columns} />}
     >
-      <div className="flex flex-col px-4 lg:px-6">
+      <div className={cn("flex flex-col", COMPACT_CONTENT_GUTTER_CLASS)}>
         <div {...getLoadingStructureSlotAttributes("nuclei-poc-catalog-source")}>
           <NucleiPocSyncSourceStatus source={sourceQuery.data} loading={sourceQuery.isPending} error={sourceQuery.isError} locale={locale} />
         </div>
@@ -546,7 +558,7 @@ function NucleiPocCatalogLoadingState({
 }) {
   const locale = useLocale()
   return (
-    <div className="flex flex-col px-4 lg:px-6">
+    <div className={cn("flex flex-col", COMPACT_CONTENT_GUTTER_CLASS)}>
       <div {...getLoadingStructureSlotAttributes("nuclei-poc-catalog-source")}>
         <NucleiPocSyncSourceStatus source={undefined} loading error={false} locale={locale} />
       </div>
@@ -867,7 +879,7 @@ export function NucleiPocSyncDialog({
     { value: "gitee", label: t("sync.sourceGitee"), description: t("sync.sourceGiteeDescription") },
     { value: "custom", label: t("sync.sourceCustom"), description: t("sync.sourceCustomDescription") },
   ] as const
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-h-[min(90vh,720px)] overflow-y-auto sm:max-w-lg"><DialogHeader><DialogTitle>{showProgress ? t("sync.progressTitle") : t("sync.title")}</DialogTitle><DialogDescription>{showProgress ? t("sync.progressDescription") : t("sync.sourceDescription")}</DialogDescription></DialogHeader>{showProgress ? <SyncTaskProgress task={task} failedPhase={failedPhase} error={taskError} errorKind={errorKind} expired={taskExpired} /> : <form noValidate className="grid gap-5" onSubmit={(event) => { event.preventDefault(); onSubmit() }}><div className="grid gap-2"><Label id="nuclei-poc-sync-source-kind-label">{t("sync.sourceLabel")}</Label><RadioGroup value={sourceKind} onValueChange={onSourceKindChange} aria-labelledby="nuclei-poc-sync-source-kind-label" disabled={isSubmitting} className="gap-2">{sourceOptions.map((option) => { const optionId = `nuclei-poc-sync-source-${option.value}`; const selected = sourceKind === option.value; return <label key={option.value} htmlFor={optionId} className={cn("radius-control flex min-w-0 cursor-pointer items-start gap-3 border px-3 py-2.5 transition-colors", selected ? "border-primary/60 bg-primary/10" : "border-border", isSubmitting && "cursor-not-allowed opacity-60")}><RadioGroupItem id={optionId} value={option.value} disabled={isSubmitting} className="mt-0.5" /><span className="min-w-0"><span className={textRole.bodyStrong}>{option.label}</span><span className={cn("mt-0.5 block", textRole.helperText)}>{option.description}</span></span></label> })}</RadioGroup></div><div className="grid gap-2"><Label htmlFor="nuclei-poc-sync-source-url">{sourceUrlLabel}</Label><Input id="nuclei-poc-sync-source-url" type="url" value={sourceUrl} onChange={(event) => onSourceUrlChange(event.target.value)} placeholder={sourceUrlPlaceholder} autoComplete="url" inputMode="url" maxLength={512} disabled={isSubmitting} aria-invalid={hasSourceError} aria-describedby={hasSourceError ? "nuclei-poc-sync-source-url-error" : undefined} required />{hasSourceError ? <FieldError id="nuclei-poc-sync-source-url-error">{isGiteeSource ? t("sync.invalidGiteeUrl") : t("sync.invalidUrl")}</FieldError> : null}</div><DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>{tCommon("cancel")}</Button><Button type="submit" loading={isSubmitting} loadingLabel={t("sync.submitting")}>{t("sync.submit")}</Button></DialogFooter></form>}{showProgress ? <DialogFooter>{isTerminal || taskExpired || hasRecoverableError ? <Button type="button" variant="outline" onClick={onStartNew}>{t("sync.newSync")}</Button> : null}<Button type="button" onClick={() => onOpenChange(false)}>{tCommon("close")}</Button></DialogFooter> : null}</DialogContent></Dialog>
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className={`${compactFormDialogContentClassName} max-h-[min(90vh,720px)] overflow-y-auto sm:max-w-lg`}><DialogHeader><DialogTitle>{showProgress ? t("sync.progressTitle") : t("sync.title")}</DialogTitle><DialogDescription>{showProgress ? t("sync.progressDescription") : t("sync.sourceDescription")}</DialogDescription></DialogHeader>{showProgress ? <SyncTaskProgress task={task} failedPhase={failedPhase} error={taskError} errorKind={errorKind} expired={taskExpired} /> : <form noValidate className="grid gap-3" onSubmit={(event) => { event.preventDefault(); onSubmit() }}><div className="grid gap-2"><Label id="nuclei-poc-sync-source-kind-label">{t("sync.sourceLabel")}</Label><RadioGroup value={sourceKind} onValueChange={onSourceKindChange} aria-labelledby="nuclei-poc-sync-source-kind-label" disabled={isSubmitting} className="gap-2">{sourceOptions.map((option) => { const optionId = `nuclei-poc-sync-source-${option.value}`; const selected = sourceKind === option.value; return <label key={option.value} htmlFor={optionId} className={cn("radius-control flex min-w-0 cursor-pointer items-start gap-3 border px-3 py-2.5 transition-colors", selected ? "border-primary/60 bg-primary/10" : "border-border", isSubmitting && "cursor-not-allowed opacity-60")}><RadioGroupItem id={optionId} value={option.value} disabled={isSubmitting} className="mt-0.5" /><span className="min-w-0"><span className={textRole.bodyStrong}>{option.label}</span><span className={cn("mt-0.5 block", textRole.helperText)}>{option.description}</span></span></label> })}</RadioGroup></div><div className="grid gap-2"><Label htmlFor="nuclei-poc-sync-source-url">{sourceUrlLabel}</Label><Input id="nuclei-poc-sync-source-url" type="url" value={sourceUrl} onChange={(event) => onSourceUrlChange(event.target.value)} placeholder={sourceUrlPlaceholder} autoComplete="url" inputMode="url" maxLength={512} disabled={isSubmitting} aria-invalid={hasSourceError} aria-describedby={hasSourceError ? "nuclei-poc-sync-source-url-error" : undefined} required />{hasSourceError ? <FieldError id="nuclei-poc-sync-source-url-error">{isGiteeSource ? t("sync.invalidGiteeUrl") : t("sync.invalidUrl")}</FieldError> : null}</div><DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>{tCommon("cancel")}</Button><Button type="submit" loading={isSubmitting} loadingLabel={t("sync.submitting")}>{t("sync.submit")}</Button></DialogFooter></form>}{showProgress ? <DialogFooter>{isTerminal || taskExpired || hasRecoverableError ? <Button type="button" variant="outline" onClick={onStartNew}>{t("sync.newSync")}</Button> : null}<Button type="button" onClick={() => onOpenChange(false)}>{tCommon("close")}</Button></DialogFooter> : null}</DialogContent></Dialog>
 }
 
 const SYNC_FAILURE_CODES = new Set([
@@ -945,7 +957,80 @@ function NucleiPocDetailDrawer({ name, open, onOpenChange }: { name: string | nu
   const locale = useLocale()
   const query = useNucleiPocDetail(name, open)
   const item = query.data
-  return <DetailDrawer open={open} onOpenChange={onOpenChange} title={item?.displayName ?? name?.replace(/^nucleiPocs\//, "") ?? ""} description={item?.templateId ?? name ?? undefined} titleMeta={item ? <Badge variant={getSeverityVariant(item.severity)}>{tSeverity(item.severity)}</Badge> : null} headerMeta={item ? <span className={cn("min-w-0 truncate font-mono", textRole.caption)} title={item.name}>{item.name}</span> : null}>{query.isPending ? <DetailLoading /> : query.isError ? <CatalogError error={query.error} onRetry={() => void query.refetch()} /> : item ? <DetailDrawerTabs defaultValue="overview"><DetailDrawerTabsList className="px-6"><DetailDrawerTabsTrigger value="overview">{t("detail.overview")}</DetailDrawerTabsTrigger><DetailDrawerTabsTrigger value="yaml">{t("detail.yaml")}</DetailDrawerTabsTrigger></DetailDrawerTabsList><div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-5"><DetailDrawerTabsContent value="overview" className="space-y-7"><section className="space-y-3"><h3 className={textRole.sectionTitle}>{t("detail.metadata")}</h3><dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2"><PocDetailField label={t("detail.templateId")} value={item.templateId} mono /><PocDetailField label={t("detail.path")} value={item.relativePath} mono /><PocDetailField label={t("detail.author")} value={item.author || t("detail.noData")} /><PocDetailField label={t("columns.status")} value={<PocEnabledStatus enabled={item.isEnabled} />} /><PocDetailField label={t("columns.updated")} value={formatDateByLocale(item.updatedAt, locale)} /><PocDetailField label={t("columns.tags")} value={<PocTagCell tags={item.tags} showAll />} className="sm:col-span-2" /><PocDetailField label={t("detail.description")} value={item.description || t("detail.noData")} className="sm:col-span-2" /></dl></section><section className="space-y-3"><h3 className={textRole.sectionTitle}>{t("detail.classification")}</h3><dl className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2"><PocDetailField label={t("detail.cve")} value={item.cve.length ? item.cve.join(", ") : t("detail.noData")} mono /><PocDetailField label={t("detail.cwe")} value={item.cwe.length ? item.cwe.join(", ") : t("detail.noData")} mono /><PocDetailField label={t("detail.contentHash")} value={item.contentSha256} mono /></dl></section>{item.references.length ? <section className="space-y-3"><h3 className={textRole.sectionTitle}>{t("detail.references")}</h3><div className="space-y-2">{item.references.map((reference) => <a key={reference} href={reference} target="_blank" rel="noreferrer" className={cn("flex min-w-0 items-start gap-2 break-all text-primary hover:underline", textRole.body)}><REFERENCE_ICON className="mt-0.5 size-4 shrink-0" />{reference}</a>)}</div></section> : null}{item.remediation ? <section className="space-y-3"><h3 className={textRole.sectionTitle}>{t("detail.remediation")}</h3><p className={cn("whitespace-pre-wrap break-words", textRole.body)}>{item.remediation}</p></section> : null}</DetailDrawerTabsContent><DetailDrawerTabsContent value="yaml" className="flex min-h-0 flex-col"><CodeRegion value={item.content} copyLabel={t("detail.copy")} copiedLabel={t("detail.copied")} /></DetailDrawerTabsContent></div></DetailDrawerTabs> : null}</DetailDrawer>
+
+  return (
+    <DetailDrawer
+      open={open}
+      onOpenChange={onOpenChange}
+      title={item?.displayName ?? name?.replace(/^nucleiPocs\//, "") ?? ""}
+      description={item?.templateId ?? name ?? undefined}
+      titleMeta={item ? <Badge variant={getSeverityVariant(item.severity)}>{tSeverity(item.severity)}</Badge> : null}
+      headerMeta={item ? <span className={cn("min-w-0 truncate font-mono", textRole.caption)} title={item.name}>{item.name}</span> : null}
+    >
+      {query.isPending ? <DetailLoading /> : null}
+      {query.isError ? <CatalogDetailError error={query.error} onRetry={() => void query.refetch()} /> : null}
+      {item ? (
+        <DetailDrawerTabs defaultValue="overview">
+          <DetailDrawerTabsList>
+            <DetailDrawerTabsTrigger value="overview">{t("detail.overview")}</DetailDrawerTabsTrigger>
+            <DetailDrawerTabsTrigger value="yaml">{t("detail.yaml")}</DetailDrawerTabsTrigger>
+          </DetailDrawerTabsList>
+
+          <DetailDrawerTabsContent value="overview" className={cn("min-h-0 flex-1 overflow-y-auto", DETAIL_DRAWER_COMPACT_INSET_CLASS)}>
+            <div className={DETAIL_DRAWER_COMPACT_SECTION_STACK_CLASS}>
+              <section className="space-y-3">
+                <h3 className={textRole.sectionTitle}>{t("detail.metadata")}</h3>
+                <dl className={DETAIL_DRAWER_COMPACT_FIELD_GRID_CLASS}>
+                  <PocDetailField label={t("detail.templateId")} value={item.templateId} mono />
+                  <PocDetailField label={t("detail.path")} value={item.relativePath} mono />
+                  <PocDetailField label={t("detail.author")} value={item.author || t("detail.noData")} />
+                  <PocDetailField label={t("columns.status")} value={<PocEnabledStatus enabled={item.isEnabled} />} />
+                  <PocDetailField label={t("columns.updated")} value={formatDateByLocale(item.updatedAt, locale)} />
+                  <PocDetailField label={t("columns.tags")} value={<PocTagCell tags={item.tags} showAll />} className="sm:col-span-2" />
+                  <PocDetailField label={t("detail.description")} value={item.description || t("detail.noData")} className="sm:col-span-2" />
+                </dl>
+              </section>
+
+              <section className="space-y-3">
+                <h3 className={textRole.sectionTitle}>{t("detail.classification")}</h3>
+                <dl className={DETAIL_DRAWER_COMPACT_FIELD_GRID_CLASS}>
+                  <PocDetailField label={t("detail.cve")} value={item.cve.length ? item.cve.join(", ") : t("detail.noData")} mono />
+                  <PocDetailField label={t("detail.cwe")} value={item.cwe.length ? item.cwe.join(", ") : t("detail.noData")} mono />
+                  <PocDetailField label={t("detail.contentHash")} value={item.contentSha256} mono />
+                </dl>
+              </section>
+
+              {item.references.length ? (
+                <section className="space-y-3">
+                  <h3 className={textRole.sectionTitle}>{t("detail.references")}</h3>
+                  <div className="space-y-2">
+                    {item.references.map((reference) => (
+                      <a key={reference} href={reference} target="_blank" rel="noreferrer" className={cn("flex min-w-0 items-start gap-2 break-all text-primary hover:underline", textRole.body)}>
+                        <REFERENCE_ICON className="mt-0.5 size-4 shrink-0" />
+                        {reference}
+                      </a>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
+              {item.remediation ? (
+                <section className="space-y-3">
+                  <h3 className={textRole.sectionTitle}>{t("detail.remediation")}</h3>
+                  <p className={cn("whitespace-pre-wrap break-words", textRole.body)}>{item.remediation}</p>
+                </section>
+              ) : null}
+            </div>
+          </DetailDrawerTabsContent>
+
+          {/* YAML remains a code-viewer reading surface, not an ordinary compact body. */}
+          <DetailDrawerTabsContent value="yaml" className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-3">
+            <CodeRegion value={item.content} copyLabel={t("detail.copy")} copiedLabel={t("detail.copied")} />
+          </DetailDrawerTabsContent>
+        </DetailDrawerTabs>
+      ) : null}
+    </DetailDrawer>
+  )
 }
 
 function buildNucleiPocFilter(keyword: string, severities: string[], tags: string[]) {
@@ -972,8 +1057,12 @@ function CatalogError({ error, onRetry }: { error: unknown; onRetry: () => void 
   return <AppErrorState error={normalizeError(error, { notFoundKind: "unexpected-error" })} resourceLabel="Nuclei POC" variant="section" onRetry={onRetry} />
 }
 
+function CatalogDetailError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  return <div className={DETAIL_DRAWER_COMPACT_BODY_CLASS}><CatalogError error={error} onRetry={onRetry} /></div>
+}
+
 function DetailLoading() {
-  return <div className="grid gap-4 px-6 py-5"><Skeleton className="h-5 w-32" /><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
+  return <div className={cn("grid gap-3", DETAIL_DRAWER_COMPACT_BODY_CLASS)}><Skeleton className="h-5 w-32" /><Skeleton className="h-24 w-full" /><Skeleton className="h-24 w-full" /></div>
 }
 
 function PocTagCell({ tags, showAll = false }: { tags: string[]; showAll?: boolean }) {

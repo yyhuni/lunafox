@@ -10,4 +10,10 @@ describe("custom-tools-list contract", () => {
     expect(source).toContain("className")
     expect(source).toContain("from \"react\"")
   })
+
+  it("keeps the repeated tool grid on the compact section rhythm", () => {
+    expect(source).toContain('className="gap-3 grid grid-cols-1 lg:grid-cols-3 md:grid-cols-2 xl:grid-cols-4"')
+    expect(source).toContain('<Card key={tool.id} variant="compact"')
+    expect(source).toContain('className="space-y-3"')
+  })
 })

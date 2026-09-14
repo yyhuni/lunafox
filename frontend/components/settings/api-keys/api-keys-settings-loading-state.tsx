@@ -223,6 +223,7 @@ export function ApiKeysSettingsLoadingState({
 
         <Card
           {...getLoadingStructureSlotAttributes("api-keys-notice")}
+          variant="compact"
           className={API_KEYS_SECURITY_NOTICE_CARD_CLASS}
         >
           <CardContent className={API_KEYS_SECURITY_NOTICE_CONTENT_CLASS}>

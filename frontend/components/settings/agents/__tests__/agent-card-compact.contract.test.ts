@@ -114,4 +114,9 @@ describe("agent-card-compact contract", () => {
     expect(loadingSource).not.toContain("col-span-6")
     expect(loadingSource).not.toContain("ml-auto")
   })
+
+  it("keeps the repeated card body and unavailable state compact", () => {
+    expect(loadingSource).toContain('AGENT_CARD_BODY_CLASS')
+    expect(source).toContain('bg-muted/20 py-4 text-center')
+  })
 })

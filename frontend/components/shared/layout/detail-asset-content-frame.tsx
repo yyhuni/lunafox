@@ -1,5 +1,6 @@
 import * as React from "react"
 
+import { COMPACT_CONTENT_GUTTER_CLASS } from "@/components/shared/layout/page-shell-density"
 import { cn } from "@/lib/utils"
 
 export type DetailAssetContentFrameProps = React.ComponentProps<"div">
@@ -12,7 +13,7 @@ export function DetailAssetContentFrame({
     <div
       {...props}
       data-slot="detail-asset-content-frame"
-      className={cn("px-4 pb-4 md:pb-6 lg:px-6", className)}
+      className={cn(COMPACT_CONTENT_GUTTER_CLASS, "pb-3", className)}
     />
   )
 }

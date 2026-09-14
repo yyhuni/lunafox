@@ -18,7 +18,7 @@ import {
 
 export function AgentCardCompactLoadingState() {
   return (
-    <Card data-testid="agent-skeleton-card" className={AGENT_CARD_SHELL_CLASS}>
+    <Card variant="compact" data-testid="agent-skeleton-card" className={AGENT_CARD_SHELL_CLASS}>
       <div className={AGENT_CARD_HEADER_CLASS}>
         <div className={AGENT_CARD_HEADER_CONTENT_CLASS}>
           <Skeleton className="h-5 w-16 rounded-full" />

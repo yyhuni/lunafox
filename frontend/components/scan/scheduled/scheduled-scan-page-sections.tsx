@@ -26,6 +26,10 @@ import {
   SCHEDULED_SCAN_TABLE_LOADING_ROW_HEIGHT_PX,
   SCHEDULED_SCAN_TIMELINE_BODY_CLASS,
 } from "@/components/scan/scheduled/scheduled-scan-page-layout"
+import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_PAGE_SHELL_CLASS,
+} from "@/components/shared/layout/page-shell-density"
 
 const TargetScopeIcon = semanticIcons.concept.target
 const OrganizationScopeIcon = semanticIcons.concept.organization
@@ -57,7 +61,7 @@ export function ScheduledScanInsightGrid({
   return (
     <div
       {...getLoadingStructureSlotAttributes("scheduled-scan-insight-grid")}
-      className="px-4 lg:px-6"
+      className={COMPACT_CONTENT_GUTTER_CLASS}
     >
       {children}
     </div>
@@ -96,7 +100,7 @@ export function ScheduledScanTableSectionShell({
   return (
     <div
       {...getLoadingStructureSlotAttributes("scheduled-scan-table")}
-      className="px-4 pt-2 lg:px-6"
+      className={COMPACT_CONTENT_GUTTER_CLASS}
     >
       {children}
     </div>
@@ -385,7 +389,7 @@ export function ScheduledScanPageLoadingState({
   const tScan = useTranslations("scan")
 
   return (
-    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+    <div className={COMPACT_PAGE_SHELL_CLASS}>
       <ScheduledScanPageHeader
         title={tScan("scheduled.title")}
         description={tScan("scheduled.description")}

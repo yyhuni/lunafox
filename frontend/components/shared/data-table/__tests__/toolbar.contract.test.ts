@@ -22,11 +22,12 @@ describe("toolbar contract", () => {
   })
 
   it("wraps data-table toolbar controls on narrow viewports", () => {
-    expect(source).toContain("flex flex-col gap-2 sm:flex-row")
+    expect(source).toContain("flex flex-col sm:flex-row sm:items-start sm:justify-between")
+    expect(source).toContain('const toolbarGapClassName = toolbarDensity === "compact" ? "gap-1.5" : "gap-2"')
     expect(source).toContain("sm:items-start")
     expect(source).not.toContain("sm:items-center")
-    expect(source).toContain("flex w-full min-w-0 flex-wrap items-center gap-2")
-    expect(source).toContain("flex w-full flex-wrap items-center gap-2")
+    expect(source).toContain("flex w-full min-w-0 flex-wrap items-center sm:flex-1")
+    expect(source).toContain("flex w-full flex-wrap items-center sm:w-auto sm:justify-end")
     expect(source).not.toContain("space-x-2")
   })
 

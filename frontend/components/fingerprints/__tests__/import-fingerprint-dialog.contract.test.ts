@@ -13,4 +13,9 @@ describe("import-fingerprint-dialog contract", () => {
     expect(source).toContain("<Alert variant=\"destructive\"")
     expect(source).toContain("from \"react\"")
   })
+
+  it("uses the shared compact form dialog tier", () => {
+    expect(source).toContain("compactFormDialogContentClassName")
+    expect(source).toContain('className="py-3"')
+  })
 })

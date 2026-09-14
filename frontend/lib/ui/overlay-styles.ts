@@ -1,3 +1,5 @@
+import { COMPACT_FORM_DIALOG_CONTENT_CLASS } from "@/components/shared/layout/page-shell-density"
+
 export const floatingContentMotionClassName =
   "data-[open]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[open]:fade-in-0 data-[ending-style]:zoom-out-95 data-[starting-style]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
 
@@ -36,10 +38,12 @@ export const drawerPanelMotionClassName =
   "transform-gpu will-change-transform"
 
 export const centeredOverlayPanelClassName =
-  "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 radius-overlay border bg-card p-6 text-card-foreground shadow-lg duration-200 data-[open]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[open]:fade-in-0 data-[ending-style]:zoom-out-95 data-[starting-style]:zoom-in-95"
+  "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-3 radius-overlay border bg-card px-4 py-3 text-card-foreground shadow-lg duration-200 data-[open]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[open]:fade-in-0 data-[ending-style]:zoom-out-95 data-[starting-style]:zoom-in-95"
 
 export const scrollableFormDialogContentClassName =
-  "max-h-[90vh] overflow-y-auto sm:max-w-[650px]"
+  `${COMPACT_FORM_DIALOG_CONTENT_CLASS} max-h-[90vh] overflow-y-auto sm:max-w-[650px]`
+
+export const compactFormDialogContentClassName = COMPACT_FORM_DIALOG_CONTENT_CLASS
 
 export const formDrawerContentClassName =
   `${drawerPanelMotionClassName} min-w-0 w-full max-w-full gap-0 p-0 sm:max-w-[650px]`
@@ -51,7 +55,7 @@ export const editorDialogPanelClassName =
   "flex h-[90vh] flex-col p-0"
 
 export const narrowFormDialogContentClassName =
-  "sm:max-w-md"
+  `${COMPACT_FORM_DIALOG_CONTENT_CLASS} sm:max-w-md`
 
 export const edgeOverlayPanelBaseClassName =
   "fixed z-50 flex min-w-0 max-w-full flex-col gap-4 border border-border bg-card text-card-foreground shadow-lg transition-transform duration-[var(--motion-duration-shell)] ease-[var(--motion-ease-standard)] will-change-transform"

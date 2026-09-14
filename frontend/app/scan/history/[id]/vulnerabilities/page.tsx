@@ -1,4 +1,5 @@
 import { VulnerabilitiesDetailView } from "@/components/vulnerabilities/vulnerabilities-detail-view"
+import { DetailAssetContentFrame } from "@/components/shared/layout/detail-asset-content-frame"
 
 export default async function ScanHistoryVulnerabilitiesPage({
   params,
@@ -9,8 +10,8 @@ export default async function ScanHistoryVulnerabilitiesPage({
   const scanId = Number(id)
 
   return (
-    <div className="px-4 lg:px-6">
+    <DetailAssetContentFrame>
       <VulnerabilitiesDetailView scanId={scanId} />
-    </div>
+    </DetailAssetContentFrame>
   )
 }

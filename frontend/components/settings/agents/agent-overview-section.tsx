@@ -19,6 +19,7 @@ import {
 } from "@/lib/status-config"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { COMPACT_SECTION_STACK_CLASS } from "@/components/shared/layout/page-shell-density"
 import type {
   AgentClusterExecutionCapacity,
   AgentClusterState,
@@ -73,9 +74,9 @@ const LOADING_SUMMARY: AgentClusterSummary = {
   staleAgentCount: 0,
   executionCapacity: {
     configuredSlots: 70,
-    occupiedSlots: 31,
-    availableSlots: 30,
-    unavailableSlots: 9,
+    occupiedSlots: 21,
+    availableSlots: 27,
+    unavailableSlots: 22,
     overcommittedSlots: 0,
   },
   clusterState: "needsAttention",
@@ -382,7 +383,7 @@ function AgentOverviewLayout({
     <div
       {...getLoadingStructureSlotAttributes(AGENT_LIST_OVERVIEW_REGION_SLOT)}
       data-testid={loading ? "agent-overview-loading-state" : "agent-overview-section"}
-      className="space-y-4"
+      className={COMPACT_SECTION_STACK_CLASS}
     >
       <AgentOverviewHeader loading={loading} refreshControl={refreshControl} />
       {staleNotice}
@@ -425,7 +426,7 @@ export function AgentOverviewSection(props: AgentOverviewSectionProps) {
       <div
         {...getLoadingStructureSlotAttributes(AGENT_LIST_OVERVIEW_REGION_SLOT)}
         data-testid="agent-overview-error-state"
-        className="space-y-4"
+        className={COMPACT_SECTION_STACK_CLASS}
       >
         <AgentOverviewHeader loading={false} refreshControl={refreshControl} />
         <AppErrorState

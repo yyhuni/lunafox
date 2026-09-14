@@ -54,6 +54,9 @@ describe("wordlists-page contract", () => {
     expect(drawerSource).toContain("value={activeTab}")
     expect(drawerSource).toContain("handleDrawerOpenChange")
     expect(drawerSource).toContain("WordlistEditFooter")
+    expect(drawerSource).toContain("DETAIL_DRAWER_COMPACT_INSET_CLASS")
+    expect(drawerSource).toContain('className={cn("min-h-0 flex-1 overflow-hidden", DETAIL_DRAWER_COMPACT_INSET_CLASS)}')
+    expect(drawerSource).toContain('className={DETAIL_DRAWER_COMPACT_FOOTER_CLASS}')
     expect(drawerSource).toContain("onDelete(wordlist)")
   })
 
@@ -83,7 +86,7 @@ describe("wordlists-page contract", () => {
     expect(source).toContain("Array.from({ length: 6 }")
     expect(source).toContain('<CompactPaginationSkeleton mode="cursor" showSummary buttonCount={3}')
     expect(layoutSource).toContain('WORDLISTS_CATALOG_CONTROLS_CLASS =\n  "flex flex-wrap items-start justify-between gap-2 border-b py-3"')
-    expect(layoutSource).toContain('WORDLISTS_CATALOG_GRID_CLASS =\n  "grid grid-cols-1 gap-3 py-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"')
+    expect(layoutSource).toContain('WORDLISTS_CATALOG_GRID_CLASS =\n  "grid grid-cols-1 gap-3 py-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"')
     expect(layoutSource).toContain('WORDLISTS_CATALOG_FOOTER_CLASS = "shrink-0 border-t py-2.5"')
     expect(layoutSource).toContain("2xl:grid-cols-4")
   })

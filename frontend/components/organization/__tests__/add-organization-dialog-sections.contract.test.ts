@@ -24,7 +24,7 @@ describe("add-organization-dialog-sections contract", () => {
     expect(source).toContain("isTargetsExpanded")
     expect(source).toContain("onToggleTargetsExpanded")
     expect(source).toContain("ChevronRight")
-    expect(source).toContain('className="mt-2 gap-3 border-t border-border/60 pt-4"')
+    expect(source).toContain('className="mt-2 gap-3 border-t border-border/60 pt-3"')
     expect(source).toContain("aria-expanded={isTargetsExpanded}")
     expect(source).toContain("justify-start gap-2")
     expect(source).toContain('className="flex min-w-0 items-center gap-2"')

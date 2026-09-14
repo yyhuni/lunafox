@@ -63,7 +63,7 @@ export function WordlistEditDialog({
         <div className="flex flex-col h-full">
           <WordlistEditHeader t={t} name={wordlist?.fileName || ""} />
 
-          <div className="flex-1 overflow-hidden px-6 py-4">
+          <div className="flex-1 overflow-hidden px-4 py-3">
             <div className="flex flex-col gap-2 h-full">
               <WordlistEditMetadata
                 t={t}

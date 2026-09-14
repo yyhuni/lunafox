@@ -24,6 +24,7 @@ import {
 } from "@/components/fingerprints/fingerprint-import-diagnostic"
 import { useImportFingerprintDialogState } from "@/components/fingerprints/import-fingerprint-dialog-state"
 import { FINGERPRINT_IMPORT_MAX_FILE_SIZE } from "@/components/fingerprints/import-fingerprint-dialog-utils"
+import { compactFormDialogContentClassName } from "@/lib/ui/overlay-styles"
 
 interface ImportFingerprintDialogProps {
   open: boolean
@@ -87,7 +88,7 @@ export function ImportFingerprintDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className={`${compactFormDialogContentClassName} sm:max-w-[500px]`}>
         <DialogHeader>
           <DialogTitle>{config.title}</DialogTitle>
           <DialogDescription>
@@ -95,7 +96,7 @@ export function ImportFingerprintDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
+        <div className="py-3">
           <Dropzone
             src={files}
             onDrop={handleDrop}
@@ -117,7 +118,7 @@ export function ImportFingerprintDialog({
           </p>
 
           {importFailure ? (
-            <Alert variant="destructive" className="mt-4">
+            <Alert variant="destructive" className="mt-3">
               <IconAlertTriangle aria-hidden="true" />
               <AlertTitle>{t("import.diagnostic.title")}</AlertTitle>
               <AlertDescription>

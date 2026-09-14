@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"expvar"
+	"strings"
 	"time"
 
 	scandomain "github.com/yyhuni/lunafox/server/internal/modules/scan/domain"
@@ -104,6 +105,53 @@ func (service *LifecycleService) BatchStopScans(ctx context.Context, scanIDs []i
 		}
 		scanStopCancelDeliveryFailedTotal.Add(1)
 		pkg.Warn("scan task cancellation notification was not accepted",
+			zap.Int("agent.id", candidate.AgentID),
+			zap.Int("scan.id", candidate.ScanID),
+			zap.Int("task.id", candidate.TaskID),
+		)
+	}
+	return outcome, nil
+}
+
+// StopAllActiveForUpgrade commits one deployment-wide cancellation before the
+// privileged host handoff. It deliberately does not wait for Agents or task
+// processes to acknowledge cancellation; the durable cancelled state is the
+// fence that rejects late results and future claims.
+func (service *LifecycleService) StopAllActiveForUpgrade(ctx context.Context, operationID string) (*UpgradeScanStopOutcome, error) {
+	if ctx == nil {
+		return nil, context.Canceled
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if service == nil || service.stopStore == nil {
+		return nil, errors.New("scan stop store not initialized")
+	}
+	store, ok := service.stopStore.(UpgradeScanStopStore)
+	if !ok {
+		return nil, errors.New("upgrade scan stop store is not configured")
+	}
+	if strings.TrimSpace(operationID) == "" {
+		return nil, errors.New("upgrade operation id is required")
+	}
+	stoppedAt := time.Now().UTC()
+	if service.clock != nil {
+		stoppedAt = service.clock.Now().UTC()
+	}
+	outcome, err := store.StopAllActiveScansForUpgrade(ctx, operationID, stoppedAt)
+	if err != nil {
+		return nil, err
+	}
+	if outcome == nil {
+		return nil, errors.New("upgrade scan stop store returned no outcome")
+	}
+	for _, candidate := range outcome.NotificationCandidates {
+		delivered := service.notifier != nil && service.notifier.TrySendTaskCancel(candidate.AgentID, candidate.ScanID, candidate.TaskID)
+		if delivered {
+			continue
+		}
+		scanStopCancelDeliveryFailedTotal.Add(1)
+		pkg.Warn("upgrade task cancellation notification was not accepted",
 			zap.Int("agent.id", candidate.AgentID),
 			zap.Int("scan.id", candidate.ScanID),
 			zap.Int("task.id", candidate.TaskID),

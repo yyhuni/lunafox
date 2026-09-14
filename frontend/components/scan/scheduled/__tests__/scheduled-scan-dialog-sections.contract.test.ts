@@ -89,4 +89,11 @@ describe("scheduled-scan-dialog-sections contract", () => {
     expect(createDialogSource).not.toContain("timeZone={timeZone}")
     expect(createDialogSource).toMatch(/currentStep === 4[\s\S]*ScheduledScanScheduleStep/)
   })
+
+  it("keeps ordinary scheduled form sections on the compact rhythm", () => {
+    expect(source).toContain('min-w-0 max-w-full space-y-3')
+    expect(source).toContain('border-t flex justify-between px-4 py-3')
+    expect(source).not.toContain('min-w-0 max-w-full space-y-6')
+    expect(source).not.toContain('border-t flex justify-between px-6 py-4')
+  })
 })

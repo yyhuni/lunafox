@@ -1,27 +1,30 @@
 import type { ComponentProps, ReactNode } from "react"
 
+import { COMPACT_CONTENT_GUTTER_CLASS } from "@/components/shared/layout/page-shell-density"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 
-export const OVERVIEW_TOP_GRID_CLASS = "grid grid-cols-1 items-stretch gap-4 px-4 lg:px-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]"
-export const OVERVIEW_MIDDLE_GRID_CLASS = "grid grid-cols-1 items-stretch gap-4 px-4 lg:px-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]"
-export const OVERVIEW_SINGLE_SECTION_CLASS = "px-4 py-6 lg:px-6"
-export const OVERVIEW_SECTIONS_SHELL_CLASS = "divide-y divide-border border-y border-border"
+export const OVERVIEW_TOP_GRID_CLASS = `grid grid-cols-1 items-stretch gap-3 ${COMPACT_CONTENT_GUTTER_CLASS} xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]`
+export const OVERVIEW_MIDDLE_GRID_CLASS = `grid grid-cols-1 items-stretch gap-3 ${COMPACT_CONTENT_GUTTER_CLASS} lg:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]`
+export const OVERVIEW_SINGLE_SECTION_CLASS = `${COMPACT_CONTENT_GUTTER_CLASS} py-3`
+// Divider strokes share the page gutter without adding a second content inset.
+export const OVERVIEW_SECTIONS_SHELL_CLASS =
+  "relative [&>div]:relative [&>div]:before:pointer-events-none [&>div]:before:absolute [&>div]:before:inset-x-3 [&>div]:before:top-0 [&>div]:before:border-t [&>div]:before:border-border [&>div:last-child]:after:pointer-events-none [&>div:last-child]:after:absolute [&>div:last-child]:after:inset-x-3 [&>div:last-child]:after:bottom-0 [&>div:last-child]:after:border-b [&>div:last-child]:after:border-border"
 export const OVERVIEW_RUNTIME_REGION_LOADING_SLOT = "overview-runtime-region"
 export const OVERVIEW_ASSET_REGION_LOADING_SLOT = "overview-asset-region"
 export const OVERVIEW_OPERATIONAL_REGION_LOADING_SLOT = "overview-operational-region"
 export const OVERVIEW_LATEST_CRITICAL_TABLE_CLASS = "min-w-[520px]"
 export const OVERVIEW_CURRENT_TASKS_TABLE_CLASS = "min-w-[620px]"
-export const OVERVIEW_ASSET_TOP_METRICS_CLASS = "grid grid-cols-1 gap-4 border-b pb-4 sm:grid-cols-2"
+export const OVERVIEW_ASSET_TOP_METRICS_CLASS = "grid grid-cols-1 gap-3 border-b pb-3 sm:grid-cols-2"
 export const OVERVIEW_ASSET_TOP_METRIC_ITEM_CLASS = "border-b pb-3 last:border-b-0 last:pb-0 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-4 sm:last:border-r-0"
 export const OVERVIEW_ASSET_METRIC_LABEL_ROW_CLASS = "flex items-center gap-3"
 export const OVERVIEW_ASSET_DISTRIBUTION_HEADER_GRID_CLASS = "grid grid-cols-[minmax(0,1fr)_96px_96px] gap-3 border-b px-3 py-2"
 export const OVERVIEW_ASSET_DISTRIBUTION_ROW_CLASS = "grid grid-cols-[minmax(0,1fr)_96px_96px] items-center gap-3 px-3 py-3"
-export const OVERVIEW_TREND_HEADER_CLASS = "flex flex-wrap items-start justify-between gap-4"
-export const OVERVIEW_RISK_RING_LEGEND_CLASS = "flex min-w-0 flex-col items-center gap-5 sm:flex-row"
+export const OVERVIEW_TREND_HEADER_CLASS = "flex flex-wrap items-start justify-between gap-3"
+export const OVERVIEW_RISK_RING_LEGEND_CLASS = "flex min-w-0 flex-col items-center gap-4 sm:flex-row"
 export const OVERVIEW_RISK_RING_CLASS = "relative size-44 shrink-0"
-export const OVERVIEW_RISK_LEGEND_CLASS = "w-full min-w-0 flex-1 space-y-3"
-export const OVERVIEW_RISK_LEGEND_ROW_CLASS = "flex w-full min-w-0 items-center justify-between gap-4 px-0 py-1"
+export const OVERVIEW_RISK_LEGEND_CLASS = "w-full min-w-0 flex-1 space-y-2"
+export const OVERVIEW_RISK_LEGEND_ROW_CLASS = "flex w-full min-w-0 items-center justify-between gap-3 px-0 py-1"
 export const OVERVIEW_RISK_TREND_CHART_CLASS = "h-24 min-w-0"
 export const OVERVIEW_SERVER_RESOURCE_CHART_CLASS = "overview-chart-enter h-full min-h-24 min-w-0"
 export const OVERVIEW_SERVER_RESOURCE_METRIC_VALUE_ROW_CLASS =
@@ -30,39 +33,44 @@ export const OVERVIEW_SCAN_SUMMARY_GRID_CLASS = "grid grid-cols-1 divide-y divid
 export const OVERVIEW_SCAN_SUMMARY_ITEM_CLASS = "flex min-h-20 flex-col justify-center px-3 py-3"
 export const OVERVIEW_CURRENT_TASKS_HEADER_CLASS = "mb-2 flex items-center justify-between gap-3"
 export const OVERVIEW_CURRENT_TASKS_TABLE_VIEWPORT_CLASS = "overflow-x-auto border-t"
-export const OVERVIEW_OPERATIONAL_GRID_CLASS = "grid grid-cols-1 items-stretch gap-0 px-4 py-6 lg:px-6 xl:grid-cols-2 [&>section+section]:border-t [&>section+section]:border-border xl:[&>section+section]:border-l xl:[&>section+section]:border-t-0 xl:[&>section+section]:pl-8 xl:[&>section:first-child]:pr-8 [&>section]:min-w-0"
+export const OVERVIEW_OPERATIONAL_GRID_CLASS = `grid grid-cols-1 items-stretch gap-0 ${COMPACT_CONTENT_GUTTER_CLASS} py-3 xl:grid-cols-2 [&>section+section]:border-t [&>section+section]:border-border xl:[&>section+section]:border-l xl:[&>section+section]:border-t-0 xl:[&>section+section]:pl-4 xl:[&>section:first-child]:pr-4 [&>section]:min-w-0`
 export const OVERVIEW_AGENT_LOCATION_MAP_HEADER_CLASS = "flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2"
 export const OVERVIEW_AGENT_LOCATION_MAP_BODY_CLASS = "flex min-w-0 flex-col pt-3 xl:min-h-0 xl:flex-1"
 // Only the primary visualizations gain height on wide canvases; compact metrics keep their established rhythm.
 export const OVERVIEW_AGENT_LOCATION_MAP_SURFACE_CLASS = "relative h-full min-h-0 w-full @7xl/main:h-80"
 export const OVERVIEW_AGENT_LOCATION_MAP_STATUS_LEGEND_CLASS = "pointer-events-none absolute bottom-2 right-2 z-10 flex max-w-[calc(100%-1rem)] flex-wrap items-center justify-end gap-x-3 gap-y-1 text-foreground"
 export const OVERVIEW_ACTION_ITEM_CLASS = "flex min-w-0 items-center gap-3 border-b py-4 last:border-b-0 first:pt-0 last:pb-0"
-export const OVERVIEW_RISK_SUMMARY_GRID_CLASS = "grid min-w-0 gap-5 sm:grid-cols-[minmax(0,1.1fr)_minmax(180px,0.9fr)]"
+export const OVERVIEW_RISK_SUMMARY_GRID_CLASS = "grid min-w-0 gap-4 sm:grid-cols-[minmax(0,1.1fr)_minmax(180px,0.9fr)]"
 export const OVERVIEW_RISK_SEVERITY_LIST_CLASS = "grid gap-2"
 export const OVERVIEW_RISK_SEVERITY_ROW_CLASS = "flex min-w-0 items-center justify-between gap-3 py-1"
-export const OVERVIEW_RISK_SUMMARY_METRICS_CLASS = "flex min-w-0 flex-col gap-4 border-t pt-5 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0"
+export const OVERVIEW_RISK_SUMMARY_METRICS_CLASS = "flex min-w-0 flex-col gap-3 border-t pt-4 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0"
 export const OVERVIEW_RISK_SUMMARY_DETAILS_CLASS = "grid gap-2"
 export const OVERVIEW_RISK_SUMMARY_DETAIL_ROW_CLASS = "flex min-w-0 items-center justify-between gap-3"
-export const OVERVIEW_ASSET_OVERVIEW_GRID_CLASS = "grid min-w-0 gap-0 xl:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.2fr)] xl:[&>div:first-child]:pr-6"
+export const OVERVIEW_ASSET_OVERVIEW_GRID_CLASS = "grid min-w-0 gap-0 xl:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.2fr)] xl:[&>div:first-child]:pr-4"
 export const OVERVIEW_ASSET_METRICS_GRID_CLASS = "grid grid-cols-2 divide-x border-b"
-export const OVERVIEW_ASSET_METRIC_CLASS = "flex min-w-0 flex-col gap-2 px-4 py-4 first:pl-0 last:pr-0"
+export const OVERVIEW_ASSET_METRIC_CLASS = "flex min-w-0 flex-col gap-2 px-4 py-3 first:pl-0 last:pr-0"
+export const OVERVIEW_ASSET_TREND_PANEL_CLASS = "flex min-w-0 flex-col border-t pt-4 xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0"
+export const OVERVIEW_ASSET_TREND_CHART_CLASS = "mt-4"
 // Keep the four distribution rows spread through the left column's remaining visualization slot.
 export const OVERVIEW_ASSET_DISTRIBUTION_CHART_CLASS = "aspect-auto h-56 min-h-0 w-full"
-export const OVERVIEW_ASSET_CHART_SHELL_CLASS = "h-56 min-w-0 @7xl/main:h-80"
+// In the two-column row the left metrics/distribution determine height; the
+// chart fills the remainder below its title without stretching the whole page.
+export const OVERVIEW_ASSET_CHART_SHELL_CLASS = "h-56 min-w-0 xl:min-h-56 xl:flex-1"
 export const OVERVIEW_RUNTIME_DETAILS_SECTION_CLASS = "min-w-0"
 export const OVERVIEW_RUNTIME_DETAILS_GRID_CLASS =
   "grid min-w-0 grid-cols-1 gap-0 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,0.75fr)_minmax(0,0.75fr)]"
-export const OVERVIEW_RUNTIME_DETAILS_CARD_SECTION_CLASS = "h-full min-w-0 border-t border-border pt-6 first:border-t-0 first:pt-0 xl:border-l xl:border-t-0 xl:pt-0 xl:pl-8 xl:pr-8 xl:first:border-l-0 xl:first:pl-0 xl:last:pr-0"
+export const OVERVIEW_RUNTIME_DETAILS_CARD_SECTION_CLASS = "h-full min-w-0 border-t border-border pt-4 first:border-t-0 first:pt-0 xl:border-l xl:border-t-0 xl:pt-0 xl:pl-4 xl:pr-4 xl:first:border-l-0 xl:first:pl-0 xl:last:pr-0"
 export const OVERVIEW_RUNTIME_DETAILS_ITEM_CLASS = "h-full min-w-0"
-export const OVERVIEW_RUNTIME_DETAILS_ITEM_CONTENT_CLASS = "flex h-full min-h-52 flex-col gap-4"
+export const OVERVIEW_RUNTIME_DETAILS_ITEM_CONTENT_CLASS = "flex h-full min-h-52 flex-col gap-3"
 export const OVERVIEW_RUNTIME_SCAN_CARD_CONTENT_CLASS = "gap-2"
 export const OVERVIEW_RUNTIME_DETAILS_CARD_HEADER_CLASS = "flex min-w-0 items-center gap-3"
 export const OVERVIEW_RUNTIME_SCAN_BODY_CLASS = "flex min-h-0 min-w-0 flex-1 flex-col"
 export const OVERVIEW_RUNTIME_SCAN_STATUS_GRID_CLASS = "grid grid-cols-5 divide-x border-b border-border pb-2"
 export const OVERVIEW_RUNTIME_SCAN_STATUS_ITEM_CLASS = "flex min-w-0 flex-col items-center gap-1.5 px-2 text-center first:pl-0 last:pr-0 sm:px-3"
-export const OVERVIEW_RUNTIME_SCAN_RECENT_LIST_CLASS = "h-[197px] min-w-0 shrink-0"
+// Match the map's row height on desktop while preserving the compact stacked viewport.
+export const OVERVIEW_RUNTIME_SCAN_RECENT_LIST_CLASS = "h-[197px] min-w-0 shrink-0 xl:flex-1"
 export const OVERVIEW_RUNTIME_SCAN_RECENT_CLASS = "flex h-full min-h-0 min-w-0 flex-col gap-1"
-export const OVERVIEW_RUNTIME_SCAN_RECENT_ROWS_CLASS = "grid min-w-0 gap-0.5"
+export const OVERVIEW_RUNTIME_SCAN_RECENT_ROWS_CLASS = "grid min-w-0 gap-0.5 xl:h-full xl:auto-rows-fr"
 export const OVERVIEW_RUNTIME_SCAN_RECENT_ROW_CLASS = "grid min-w-0"
 export const OVERVIEW_RUNTIME_SCAN_RECENT_HEADER_CLASS = "flex min-w-0 items-center gap-3"
 export const OVERVIEW_RUNTIME_SCAN_RECENT_COLUMN_HEADER_CLASS = "flex min-w-0 items-center gap-3 border-b border-border pb-1"
@@ -94,7 +102,7 @@ export function OverviewSectionPanel({
   return (
     <section data-slot="overview-section-panel" className={cn("min-w-0", className)}>
       {title || action ? (
-        <div data-slot="overview-section-header" className="mb-4 flex min-w-0 items-start justify-between gap-3">
+        <div data-slot="overview-section-header" className="mb-3 flex min-w-0 items-start justify-between gap-3">
           {title ? <div data-slot="overview-section-title" className={textRole.sectionTitle}>{title}</div> : <span />}
           {action ? <div data-slot="overview-section-action" className="shrink-0 self-start">{action}</div> : null}
         </div>
@@ -153,13 +161,13 @@ export function OverviewAssetStatusLayout({
 }) {
   return (
     <OverviewSectionPanel title={title} className={className}>
-      <div className="grid min-w-0 gap-6 @2xl/panel:grid-cols-[minmax(280px,0.8fr)_minmax(420px,1.2fr)]">
-        <div className="grid min-w-0 gap-4">
+      <div className="grid min-w-0 gap-4 @2xl/panel:grid-cols-[minmax(280px,0.8fr)_minmax(420px,1.2fr)]">
+        <div className="grid min-w-0 gap-3">
           {topMetrics}
           {distribution}
         </div>
 
-        <div className="flex min-w-0 flex-col border-t pt-4 @2xl/panel:border-l @2xl/panel:border-t-0 @2xl/panel:pl-6 @2xl/panel:pt-0">
+        <div className="flex min-w-0 flex-col border-t pt-4 @2xl/panel:border-l @2xl/panel:border-t-0 @2xl/panel:pl-4 @2xl/panel:pt-0">
           {trendHeader}
           {trendChart}
         </div>
@@ -181,10 +189,10 @@ export function OverviewRiskStatusLayout({
 }) {
   return (
     <OverviewSectionPanel title={title} className={className}>
-      <div className="grid min-w-0 gap-6 @2xl/panel:grid-cols-[minmax(220px,280px)_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-4 @2xl/panel:grid-cols-[minmax(220px,280px)_minmax(0,1fr)]">
         {ringAndLegend}
 
-        <div className="flex min-w-0 flex-col border-t pt-4 @2xl/panel:border-l @2xl/panel:border-t-0 @2xl/panel:pl-6 @2xl/panel:pt-0">
+        <div className="flex min-w-0 flex-col border-t pt-4 @2xl/panel:border-l @2xl/panel:border-t-0 @2xl/panel:pl-4 @2xl/panel:pt-0">
           {latestCriticalTable}
         </div>
       </div>
@@ -214,7 +222,7 @@ export function OverviewServerResourceUsageLayout({
       className={className}
       contentClassName={contentClassName}
     >
-      <div className="flex h-full min-h-0 flex-col gap-4">
+      <div className="flex h-full min-h-0 flex-col gap-3">
         {metricSelector}
         <div className="min-h-0 flex-1">
           {chart}

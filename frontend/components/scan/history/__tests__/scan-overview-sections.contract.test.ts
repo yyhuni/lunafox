@@ -79,4 +79,8 @@ describe("scan-overview-sections contract", () => {
   it("avoids layout-shifting hover motion", () => {
     expect(source).not.toContain("group-hover:translate-x")
   })
+
+  it("uses compact card chrome for the vulnerability summary", () => {
+    expect(source).toContain('<Card variant="compact" className="cursor-pointer')
+  })
 })

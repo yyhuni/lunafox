@@ -11,7 +11,8 @@ describe("scan-workflow-page contract", () => {
     expect(source).toContain("BusinessListDataTable")
     expect(source).toContain("createWorkflowManagementColumns")
     expect(source).toContain('data-slot="scan-workflow-page-loading-state"')
-    expect(source).toContain("loadingRowHeightEstimate: 50.5")
+    expect(source).toContain("SCAN_WORKFLOW_TABLE_LOADING_ROW_HEIGHT_PX")
+    expect(source).toContain("loadingRowHeightEstimate: SCAN_WORKFLOW_TABLE_LOADING_ROW_HEIGHT_PX")
     expect(source).toContain("function ScanWorkflowToolbar")
     expect(source).toContain("function ScanWorkflowPrimaryRegion")
     expect(source).toContain('getLoadingStructureSlotAttributes("scan-workflow-toolbar")')
@@ -66,6 +67,20 @@ describe("scan-workflow-page contract", () => {
     expect(source).toContain('tWorkflow("createWorkflow")')
     expect(source).toContain("showColumnVisibility: false")
     expect(source).not.toContain("DataTableFacetedFilter")
+  })
+
+  it("keeps the canvas inspector on its controlled drawer geometry", () => {
+    const canvasSource = readFileSync(
+      path.resolve(process.cwd(), "components/scan/workflow/workflow-composition-canvas.tsx"),
+      "utf8"
+    )
+
+    expect(canvasSource).toContain("DETAIL_DRAWER_COMPACT_BODY_CLASS")
+    expect(canvasSource).toContain('className={DETAIL_DRAWER_COMPACT_BODY_CLASS}')
+    expect(canvasSource).toContain("DETAIL_DRAWER_COMPACT_FOOTER_CLASS")
+    expect(canvasSource).toContain('cn("space-y-2", DETAIL_DRAWER_COMPACT_FOOTER_CLASS)')
+    expect(canvasSource).not.toContain('className="min-h-0 flex-1 overflow-y-auto px-6 py-5"')
+    expect(canvasSource).not.toContain('className="space-y-2 border-t px-6 py-4"')
   })
 
   it("uses only active cursor response availability and resets the query shape before effects commit", () => {

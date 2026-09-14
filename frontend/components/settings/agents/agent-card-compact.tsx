@@ -112,7 +112,7 @@ function AgentCardCompactResolved({
   })
 
   return (
-    <Card className={cn(
+    <Card variant="compact" className={cn(
       AGENT_CARD_SHELL_CLASS,
       "hover:shadow-md",
       getAgentRuntimeShellClass(agentNode.status)
@@ -195,7 +195,7 @@ function AgentCardCompactResolved({
           </div>
         ) : (
           <div
-            className={cn("rounded border border-border border-dashed bg-muted/20 py-6 text-center", textRole.helperText)}
+            className={cn("rounded border border-border border-dashed bg-muted/20 py-4 text-center", textRole.helperText)}
             data-testid="agent-realtime-metrics-unavailable"
           >
             {t("card.realtimeMetricsUnavailable")}

@@ -25,9 +25,13 @@ import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 import type { Locale } from "@/i18n/config"
 import type { EngineCatalogSummary } from "@/types/engine-catalog.types"
+import {
+  COMPACT_CONTENT_GUTTER_CLASS,
+  COMPACT_FLEX_PAGE_SHELL_CLASS,
+} from "@/components/shared/layout/page-shell-density"
 
 const ENGINE_CATALOG_GRID_CLASS =
-  "grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3 @7xl/main:grid-cols-4"
+  "grid grid-cols-1 gap-3 @xl/main:grid-cols-2 @5xl/main:grid-cols-3 @7xl/main:grid-cols-4"
 
 // The built-in catalog has a stable initial window of eight entries. The
 // loading grid reserves that real first-frame card rhythm instead of showing an
@@ -150,14 +154,14 @@ export function EngineInstallationPage({ embedded = false }: { embedded?: boolea
 
   const content = (
     <>
-      <div className="px-4 lg:px-6">
+      <div className={COMPACT_CONTENT_GUTTER_CLASS}>
         <ContentHandoff
           owner="engine-catalog-content"
           layer="workspace"
           isLoading={catalog.isPending}
           skeleton={<EngineCatalogLoadingState searchPlaceholder={t("searchPlaceholder")} installLabel={t("install")} />}
-          skeletonClassName="space-y-6"
-          contentClassName="space-y-6"
+          skeletonClassName="space-y-3"
+          contentClassName="space-y-3"
         >
           <EngineCatalogControls
             value={search}
@@ -250,7 +254,7 @@ export function EngineInstallationPage({ embedded = false }: { embedded?: boolea
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
+    <div className={COMPACT_FLEX_PAGE_SHELL_CLASS}>
       <PageHeader code="TLS-04" title={t("title")} description={t("description")} />
       {content}
     </div>

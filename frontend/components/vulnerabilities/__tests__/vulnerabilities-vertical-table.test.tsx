@@ -34,7 +34,7 @@ describe("VulnerabilitiesVerticalTable", () => {
 
     expect(firstDataRow?.className).toContain("hover:bg-secondary")
     expect(firstDataRow?.className).toContain("data-[state=selected]:bg-secondary/70")
-    expect(firstDataRow?.className).toContain("h-12")
+    expect(firstDataRow?.className).toContain("h-10")
     expect(firstDataRow?.className).not.toContain("h-[var(--vuln-row-h)]")
     expect(firstDataRow?.className).not.toContain("hover:bg-muted/40")
     expect(firstDataRow?.className).not.toContain("bg-primary/5")
@@ -69,18 +69,18 @@ describe("VulnerabilitiesVerticalTable", () => {
     }
 
     expect(typeCell?.className).toContain("px-2")
-    expect(typeCell?.className).toContain("py-1")
+    expect(typeCell?.className).toContain("py-0.5")
     expect(typeCell?.className).not.toContain("h-9")
 
     expect(sourceBadge.className).not.toContain("bg-background/50")
     expect(sourceBadge.className).toContain("text-muted-foreground")
 
     expect(urlCell?.className).toContain("text-muted-foreground")
-    expect(urlCell?.className).toContain("text-sm")
+    expect(urlCell?.className).toContain("text-xs")
     expect(urlCell?.className).not.toContain("opacity-80")
 
     expect(createdAtCell?.className).toContain("text-muted-foreground")
-    expect(createdAtCell?.className).toContain("text-sm")
+    expect(createdAtCell?.className).toContain("text-xs")
     expect(createdAtCell?.className).not.toContain("opacity-80")
   })
 

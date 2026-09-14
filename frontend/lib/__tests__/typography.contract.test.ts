@@ -48,17 +48,17 @@ describe("typography foundation contract", () => {
     }
   })
 
-  it("keeps the production-readable scale centered on 24/18/14/12/11 roles", () => {
+  it("keeps the production-readable scale centered on 20/16/13/12/11 roles", () => {
     if (!existsSync(typographyPath)) {
       expect.fail("lib/typography.ts is missing")
     }
 
     const source = readFileSync(typographyPath, "utf8")
 
-    expect(source).toContain('pageTitle: "text-2xl')
+    expect(source).toContain('pageTitle: "text-xl')
     expect(source).toContain('pageTitleDisplay:')
-    expect(source).toContain('panelTitle: "text-lg')
-    expect(source).toContain('sectionTitle: "text-sm font-semibold')
+    expect(source).toContain('panelTitle: "text-base')
+    expect(source).toContain('sectionTitle: "text-[13px] font-semibold')
     expect(source).toContain('metricValueDisplay:')
     expect(source).toContain('metricValueDisplay: "[font-family:var(--font-display)] text-xl font-medium text-foreground leading-none tracking-tight tabular-nums data-[featured=true]:text-3xl data-[featured=true]:font-semibold"')
     expect(source).toContain('bodyLarge: "text-base')
@@ -68,7 +68,7 @@ describe("typography foundation contract", () => {
     expect(source).toContain('compactPrimary: "text-xs font-medium text-foreground leading-4 tracking-normal"')
     expect(source).toContain('compactCaption: "text-[11px] font-normal text-muted-foreground leading-4 tracking-normal"')
     expect(source).toContain('tableHeader: "text-[12px]')
-    expect(source).toContain('tab: "text-sm')
+    expect(source).toContain('tab: "text-[13px]')
     expect(source).toContain('badge: "text-[11px]')
   })
 
@@ -93,8 +93,8 @@ describe("typography foundation contract", () => {
     }
 
     const source = readFileSync(typographyPath, "utf8")
-    expect(source).toContain('tableCellPrimary: "text-sm font-medium text-foreground leading-5 tracking-normal"')
-    expect(source).toContain('tableCellSecondary: "text-sm font-normal text-muted-foreground leading-5 tracking-normal"')
+    expect(source).toContain('tableCellPrimary: "text-[13px] font-medium text-foreground leading-[18px] tracking-normal"')
+    expect(source).toContain('tableCellSecondary: "text-xs font-normal text-muted-foreground leading-4 tracking-normal"')
   })
 
   it("makes compact table-header and badge line-height explicit at 16px", () => {
@@ -115,9 +115,9 @@ describe("typography foundation contract", () => {
 
     const source = readFileSync(typographyPath, "utf8")
     expect(source).toContain('helperText: "text-xs font-normal text-muted-foreground leading-4 tracking-normal"')
-    expect(source).toContain('metadataLabel: "text-sm font-normal text-muted-foreground leading-5 tracking-normal"')
-    expect(source).toContain('metadataValue: "text-sm font-normal text-foreground leading-5 tracking-normal"')
-    expect(source).toContain('metadataValueStrong: "text-sm font-medium text-foreground leading-5 tracking-normal"')
-    expect(source).toContain('tab: "text-sm font-medium leading-5 tracking-normal normal-case"')
+    expect(source).toContain('metadataLabel: "text-xs font-normal text-muted-foreground leading-4 tracking-normal"')
+    expect(source).toContain('metadataValue: "text-xs font-normal text-foreground leading-4 tracking-normal"')
+    expect(source).toContain('metadataValueStrong: "text-xs font-medium text-foreground leading-4 tracking-normal"')
+    expect(source).toContain('tab: "text-[13px] font-medium leading-[18px] tracking-normal normal-case"')
   })
 })

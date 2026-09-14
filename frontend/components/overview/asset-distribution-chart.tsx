@@ -57,7 +57,7 @@ export function AssetDistributionChart() {
   const total = chartData.reduce((sum, item) => sum + item.count, 0)
 
   return (
-    <Card>
+    <Card variant="compact">
       <CardHeader>
         <CardTitle>{t("title")}</CardTitle>
         <CardDescription>{t("description")}</CardDescription>

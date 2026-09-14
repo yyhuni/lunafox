@@ -4,6 +4,10 @@ import { ScanHistoryPageRefresh } from "@/components/scan/history/scan-history-p
 import { ScanHistoryRetentionSummary } from "@/components/scan/history/scan-history-retention-summary"
 import { ScanHistoryStatCards } from "@/components/scan/history/scan-history-stat-cards"
 import { ScanHistoryList } from "@/components/scan/history/scan-history-list"
+import {
+  COMPACT_CONTAINER_PAGE_SHELL_CLASS,
+  COMPACT_CONTENT_GUTTER_CLASS,
+} from "@/components/shared/layout/page-shell-density"
 
 /**
  * Scan history page
@@ -13,7 +17,7 @@ export default async function ScanHistoryPage() {
   const tScan = await getTranslations("scan")
 
   return (
-    <div className="@container/main flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+    <div className={COMPACT_CONTAINER_PAGE_SHELL_CLASS}>
       <PageHeader
         code="SCH-HIS"
         title={tScan("history.title")}
@@ -23,12 +27,12 @@ export default async function ScanHistoryPage() {
       />
 
       {/* Statistics strip */}
-      <div className="px-4 lg:px-6">
+      <div className={COMPACT_CONTENT_GUTTER_CLASS}>
         <ScanHistoryStatCards />
       </div>
 
       {/* Scan history list */}
-      <div className="px-4 lg:px-6">
+      <div className={COMPACT_CONTENT_GUTTER_CLASS}>
         <ScanHistoryList />
       </div>
     </div>

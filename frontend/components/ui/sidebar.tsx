@@ -29,7 +29,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
-const SIDEBAR_WIDTH = "16rem"
+const SIDEBAR_WIDTH = "14rem"
 const SIDEBAR_WIDTH_MOBILE = "16rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_COMPACT_DESKTOP_MEDIA_QUERY =
@@ -485,9 +485,9 @@ function SidebarGroupLabel({
       data-slot="sidebar-group-label"
       data-sidebar="group-label"
       className={cn(
-        "pointer-events-none ring-sidebar-ring flex h-8 shrink-0 items-center overflow-hidden whitespace-nowrap px-3 outline-hidden transition-[opacity] duration-100 ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        "pointer-events-none ring-sidebar-ring flex h-7 shrink-0 items-center overflow-hidden whitespace-nowrap px-3 outline-hidden transition-[opacity] duration-100 ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         textRole.helperText,
-        "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:transition-none",
+        "group-data-[collapsible=icon]:-mt-7 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:transition-none",
         className
       )}
       {...props}
@@ -578,7 +578,7 @@ function SidebarNavigationPendingIndicator({
 const sidebarMenuButtonVariants = cva(
   cn(
     // Keep the active marker centered on the disclosure-chevron axis without changing layout.
-    "peer/menu-button ring-sidebar-ring relative flex h-auto min-h-8 w-full items-center gap-3 overflow-hidden rounded-lg bg-transparent px-2.5 py-1.5 text-left outline-hidden focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 [&>span]:truncate [&>span]:leading-5 [&>svg]:size-4 [&>svg]:shrink-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:[&>svg:not(.ml-auto)]:text-sidebar-accent-foreground has-data-[sidebar-navigation-pending=true]:bg-sidebar-accent/70 has-data-[sidebar-navigation-pending=true]:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-semibold data-[active=true]:after:absolute data-[active=true]:after:right-4 data-[active=true]:after:translate-x-px data-[active=true]:after:top-1/2 data-[active=true]:after:z-20 data-[active=true]:after:block data-[active=true]:after:size-1.5 data-[active=true]:after:-translate-y-1/2 data-[active=true]:after:rounded-full data-[active=true]:after:bg-sidebar-primary data-[active=true]:after:content-[''] data-[active=true]:[&>svg:not(.ml-auto)]:text-sidebar-primary has-[>svg.ml-auto]:data-[active=true]:after:hidden data-[sidebar-has-badge=true]:data-[active=true]:after:hidden data-[panel-open]:[&>svg.ml-auto]:rotate-90 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! group-data-[collapsible=icon]:after:hidden group-data-[collapsible=icon]:data-[active=true]:after:hidden",
+    "peer/menu-button ring-sidebar-ring relative flex h-auto min-h-8 w-full items-center gap-2 overflow-hidden rounded-lg bg-transparent px-2.5 py-1.5 text-left outline-hidden focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 [&>span]:truncate [&>span]:leading-[18px] [&>svg]:size-4 [&>svg]:shrink-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:[&>svg:not(.ml-auto)]:text-sidebar-accent-foreground has-data-[sidebar-navigation-pending=true]:bg-sidebar-accent/70 has-data-[sidebar-navigation-pending=true]:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-semibold data-[active=true]:after:absolute data-[active=true]:after:right-4 data-[active=true]:after:translate-x-px data-[active=true]:after:top-1/2 data-[active=true]:after:z-20 data-[active=true]:after:block data-[active=true]:after:size-1.5 data-[active=true]:after:-translate-y-1/2 data-[active=true]:after:rounded-full data-[active=true]:after:bg-sidebar-primary data-[active=true]:after:content-[''] data-[active=true]:[&>svg:not(.ml-auto)]:text-sidebar-primary has-[>svg.ml-auto]:data-[active=true]:after:hidden data-[sidebar-has-badge=true]:data-[active=true]:after:hidden data-[panel-open]:[&>svg.ml-auto]:rotate-90 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! group-data-[collapsible=icon]:after:hidden group-data-[collapsible=icon]:data-[active=true]:after:hidden",
     sidebarMenuContentMotionClassName,
     sidebarNavigationCommittedActiveSuppressionClassName,
     textRole.navLabel,
@@ -764,7 +764,7 @@ function SidebarMenuSub({ className, ...props }: React.ComponentProps<"ul">) {
       data-slot="sidebar-menu-sub"
       data-sidebar="menu-sub"
       className={cn(
-        "flex min-w-0 flex-col gap-2 px-0 py-1",
+        "flex min-w-0 flex-col gap-1 px-0 py-1",
         "group-data-[collapsible=icon]:hidden",
         className
       )}
@@ -807,7 +807,7 @@ function SidebarMenuSubButton({
       data-size={size}
       data-active={isActive}
       className={cn(
-        "ring-sidebar-ring relative flex min-h-8 min-w-0 items-center gap-2 rounded-lg bg-transparent py-1.5 pr-6 pl-3.5 outline-hidden focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span]:truncate [&>span]:leading-5 [&>svg]:size-4 [&>svg]:shrink-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground has-data-[sidebar-navigation-pending=true]:bg-sidebar-accent/70 has-data-[sidebar-navigation-pending=true]:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-medium data-[active=true]:after:absolute data-[active=true]:after:right-2 data-[active=true]:after:top-1/2 data-[active=true]:after:size-1.5 data-[active=true]:after:-translate-y-1/2 data-[active=true]:after:rounded-full data-[active=true]:after:bg-sidebar-primary data-[active=true]:after:content-['']",
+        "ring-sidebar-ring relative flex min-h-8 min-w-0 items-center gap-2 rounded-lg bg-transparent py-1.5 pr-6 pl-3.5 outline-hidden focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span]:truncate [&>span]:leading-[18px] [&>svg]:size-4 [&>svg]:shrink-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground has-data-[sidebar-navigation-pending=true]:bg-sidebar-accent/70 has-data-[sidebar-navigation-pending=true]:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-medium data-[active=true]:after:absolute data-[active=true]:after:right-2 data-[active=true]:after:top-1/2 data-[active=true]:after:size-1.5 data-[active=true]:after:-translate-y-1/2 data-[active=true]:after:rounded-full data-[active=true]:after:bg-sidebar-primary data-[active=true]:after:content-['']",
         sidebarMenuContentMotionClassName,
         sidebarNavigationCommittedActiveSuppressionClassName,
         size === "sm" ? textRole.helperText : textRole.navLabel,

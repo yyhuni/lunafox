@@ -34,6 +34,7 @@ import { AgentOverviewSection } from "./agent-overview-section";
 import { AgentOverviewLoadingState } from "./agent-overview-loading-state";
 import { ArchitectureDialog } from "./architecture-dialog";
 import { AgentResultsRegion } from "./agent-results-region";
+import { COMPACT_SECTION_STACK_CLASS } from "@/components/shared/layout/page-shell-density";
 import { AGENT_CARD_GRID_CLASS, AGENT_LIST_TOOLBAR_REGION_SLOT, AGENT_TOOLBAR_ACTIONS_CLASS, AGENT_TOOLBAR_CONTROLS_CLASS, AGENT_TOOLBAR_FILTERS_CLASS, AGENT_TOOLBAR_ROOT_CLASS, AGENT_TOOLBAR_SEARCH_MAX_WIDTH_CLASS, } from "./agent-layout-contract";
 const AgentConfigDialog = dynamic(() => import("./agent-dialog").then((mod) => ({
     default: mod.AgentConfigDialog,
@@ -269,8 +270,8 @@ export function AgentList() {
             // handled by hook
         }
     };
-    return (<div className="min-w-0 space-y-6">
-      <div className="mb-6 space-y-4">
+    return (<div className={cn("min-w-0", COMPACT_SECTION_STACK_CLASS)}>
+      <div className={cn("mb-3", COMPACT_SECTION_STACK_CLASS)}>
         <ContentHandoff owner="agent-list-overview" layer="section" isLoading={isInitialSectionLoading} skeleton={<AgentOverviewLoadingState />} mountContentWhileLoading>
           <AgentOverviewSection
             summary={clusterSummary.data}
@@ -329,7 +330,7 @@ export function AgentList() {
 
       <ContentHandoff owner="agent-list-results" layer="section" isLoading={isInitialSectionLoading} skeleton={<AgentCardsLoadingState />} mountContentWhileLoading>
         <AgentResultsRegion>
-          {!hasVisibleAgents && isUnfilteredFirstPage ? (<EmptyState onOpenInstall={() => setInstallOpen(true)}/>) : !hasVisibleAgents ? (<Card className="border-dashed px-6 py-14 text-center">
+          {!hasVisibleAgents && isUnfilteredFirstPage ? (<EmptyState onOpenInstall={() => setInstallOpen(true)}/>) : !hasVisibleAgents ? (<Card variant="compact" className="border-dashed px-4 py-10 text-center">
               <h3 className={textRole.panelTitle}>{t("overview.emptyTitle")}</h3>
               <p className={cn("mt-2", textRole.bodySubtle)}>{t("overview.emptyDesc")}</p>
               <Button variant="outline" className="mt-4 self-center" onClick={handleResetFilters}>

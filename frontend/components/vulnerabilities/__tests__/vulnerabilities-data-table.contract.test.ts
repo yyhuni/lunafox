@@ -19,7 +19,7 @@ describe("vulnerabilities-data-table contract", () => {
   it("places review filters above the business-list table instead of in the right toolbar", () => {
     expect(source).toContain("function VulnerabilityReviewTabs")
     expect(source).toContain('variant="content"')
-    expect(source).toContain('"space-y-4"')
+    expect(source).toContain("COMPACT_SECTION_STACK_CLASS")
     expect(source).not.toContain('className="mb-0 gap-0"')
     expect(source).toContain("totalCount?: number")
     expect(source).not.toContain("rightToolbarContent")
@@ -125,8 +125,8 @@ describe("vulnerabilities-data-table contract", () => {
   it("uses the shared initial-loading presentation for cold list skeletons", () => {
     expect(source).toContain('loadingPresentation: loading ? "initial" : undefined')
     expect(source).toContain('from "@/components/ui/table"')
-    expect(source).toContain("TABLE_DENSE_ROW_ESTIMATED_HEIGHT_PX")
-    expect(source).toContain("loadingRowHeightEstimate: TABLE_DENSE_ROW_ESTIMATED_HEIGHT_PX")
+    expect(source).toContain("TABLE_DENSE_ROW_RHYTHM_HEIGHT_PX")
+    expect(source).toContain("loadingRowHeightEstimate: TABLE_DENSE_ROW_RHYTHM_HEIGHT_PX")
   })
 
   it("forwards the parent-owned geometry slots to the shared table shell", () => {
@@ -138,7 +138,7 @@ describe("vulnerabilities-data-table contract", () => {
   })
 
   it("keeps review tabs and the shared table in natural flow", () => {
-    expect(source).toContain('className="space-y-4"')
+    expect(source).toContain("COMPACT_SECTION_STACK_CLASS")
     expect(source).not.toContain("fillAvailableHeight")
   })
 })

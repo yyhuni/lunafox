@@ -22,6 +22,10 @@ import {
   QuickScanTargetStep,
 } from "@/components/scan/quick-scan-dialog-sections"
 import { useQuickScanDialogState } from "@/components/scan/quick-scan-dialog-state"
+import {
+  COMPACT_FORM_OVERLAY_HORIZONTAL_INSET_CLASS,
+  COMPACT_FORM_OVERLAY_INSET_CLASS,
+} from "@/components/shared/layout/page-shell-density"
 import { scanWorkbenchDrawerContentClassName } from "@/lib/ui/overlay-styles"
 import { cn } from "@/lib/utils"
 import type { Locale } from "@/i18n/config"
@@ -146,10 +150,11 @@ export function QuickScanDialog({ trigger }: QuickScanDialogProps) {
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <section
               className={cn(
-                "min-h-0 flex-1 px-5 sm:px-6",
+                "min-h-0 flex-1",
+                COMPACT_FORM_OVERLAY_HORIZONTAL_INSET_CLASS,
                 step === 3
                   ? "flex flex-col overflow-hidden py-3"
-                  : "overflow-y-auto py-5"
+                  : "overflow-y-auto py-3"
               )}
             >
               {step === 1 && (
@@ -212,7 +217,7 @@ export function QuickScanDialog({ trigger }: QuickScanDialogProps) {
             </section>
           </div>
 
-          <div className="shrink-0 border-t bg-card px-5 py-4 sm:px-6">
+          <div className={cn("shrink-0 border-t bg-card", COMPACT_FORM_OVERLAY_INSET_CLASS)}>
             {step === 1 ? (
               <QuickScanFooter
                 t={t}

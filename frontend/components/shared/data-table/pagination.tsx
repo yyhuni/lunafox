@@ -64,7 +64,7 @@ interface DataTablePaginationProps<TData> {
 }
 
 const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 200, 500, 1000]
-const MOBILE_STACK_LAYOUT_CLASSNAME = "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+const MOBILE_STACK_LAYOUT_CLASSNAME = "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
 
 export function SharedCompactPagination({
   pageSize,
@@ -124,7 +124,7 @@ export function SharedCompactPagination({
         </div>
       ) : null}
 
-      <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-4">
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
         <div className="flex items-center gap-2">
           <Label htmlFor={rowsPerPageId} className={cn("whitespace-nowrap", textRole.metadataLabel)}>
             {t("rowsPerPage")}

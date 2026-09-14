@@ -26,6 +26,63 @@ CREATE TABLE IF NOT EXISTS auth_user (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_auth_user_username ON auth_user(username);
 
+-- upgrade_operation is the durable Server-side source of truth for a
+-- user-visible system upgrade. It stores release identity, phase timestamps,
+-- migration/agent summaries, and cancellation counts only; host journal and
+-- completion receipts remain separate sources with the same operation ID.
+CREATE TABLE IF NOT EXISTS upgrade_operation (
+    id UUID PRIMARY KEY,
+    request_id UUID NOT NULL UNIQUE,
+    operator_id INTEGER NOT NULL REFERENCES auth_user(id) ON DELETE RESTRICT,
+    manifest_id VARCHAR(200) NOT NULL CHECK (btrim(manifest_id) <> ''),
+    manifest_digest VARCHAR(71) NOT NULL CHECK (manifest_digest ~ '^sha256:[a-f0-9]{64}$'),
+    release_version VARCHAR(64) NOT NULL CHECK (btrim(release_version) <> ''),
+    compatibility_range VARCHAR(128) NOT NULL CHECK (btrim(compatibility_range) <> ''),
+    maintenance_window_minutes INTEGER NOT NULL CHECK (maintenance_window_minutes BETWEEN 1 AND 1440),
+    status VARCHAR(32) NOT NULL DEFAULT 'queued' CHECK (status IN (
+        'queued', 'stopping', 'preflight', 'updating', 'migrating',
+        'restarting', 'agent_verifying', 'verifying', 'succeeded', 'failed',
+        'needs_recovery', 'needs_attention'
+    )),
+    migration_status VARCHAR(32) NOT NULL DEFAULT 'not_started' CHECK (migration_status IN (
+        'not_started', 'running', 'succeeded', 'failed', 'unknown'
+    )),
+    migration_type VARCHAR(32) NOT NULL DEFAULT 'none' CHECK (migration_type IN (
+        'none', 'compatible', 'preserve-data', 'destructive'
+    )),
+    migration_id VARCHAR(200) NOT NULL DEFAULT '',
+    migration_checksum VARCHAR(71) NOT NULL DEFAULT '' CHECK (
+        migration_checksum = '' OR migration_checksum ~ '^sha256:[a-f0-9]{64}$'
+    ),
+    CONSTRAINT upgrade_operation_migration_identity CHECK (
+        (migration_type = 'none' AND migration_id = '' AND migration_checksum = '')
+        OR (migration_type <> 'none' AND btrim(migration_id) <> '' AND migration_checksum ~ '^sha256:[a-f0-9]{64}$')
+    ),
+    cancelled_scan_count INTEGER NOT NULL DEFAULT 0 CHECK (cancelled_scan_count >= 0),
+    cancelled_task_count INTEGER NOT NULL DEFAULT 0 CHECK (cancelled_task_count >= 0),
+    agent_desired_version VARCHAR(64) NOT NULL DEFAULT '',
+    agent_target_digest VARCHAR(71) NOT NULL DEFAULT '' CHECK (
+        agent_target_digest = '' OR agent_target_digest ~ '^sha256:[a-f0-9]{64}$'
+    ),
+    agent_expected_count INTEGER NOT NULL DEFAULT 0 CHECK (agent_expected_count >= 0),
+    agent_ready_count INTEGER NOT NULL DEFAULT 0 CHECK (agent_ready_count >= 0),
+    agent_missing_count INTEGER NOT NULL DEFAULT 0 CHECK (agent_missing_count >= 0),
+    agent_unhealthy_count INTEGER NOT NULL DEFAULT 0 CHECK (agent_unhealthy_count >= 0),
+    agent_expectations JSONB NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(agent_expectations) = 'array'),
+    agent_verification_deadline TIMESTAMPTZ,
+    observed_digests JSONB NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(observed_digests) = 'object'),
+    stage_times JSONB NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(stage_times) = 'object'),
+    diagnostic TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_upgrade_operation_status_created_at
+    ON upgrade_operation(status, created_at, id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_upgrade_operation_one_active
+    ON upgrade_operation ((TRUE))
+    WHERE status NOT IN ('succeeded', 'failed', 'needs_recovery', 'needs_attention');
+
 -- login_visual_discovery is account-owned cosmetic state. It deliberately
 -- grants no media-management authority; that remains an active-superuser check.
 CREATE TABLE IF NOT EXISTS login_visual_discovery (
@@ -376,6 +433,8 @@ CREATE TABLE IF NOT EXISTS scan (
     stage_progress JSONB NOT NULL DEFAULT '{}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     stopped_at TIMESTAMPTZ,
+    cancellation_reason VARCHAR(100) NOT NULL DEFAULT '',
+    cancellation_operation_id VARCHAR(128) NOT NULL DEFAULT '',
     deleted_at TIMESTAMPTZ,
     -- Cached statistics
     cached_subdomains_count INTEGER NOT NULL DEFAULT 0,
@@ -463,6 +522,8 @@ CREATE TABLE IF NOT EXISTS scan_task (
     failure_detail VARCHAR(500) NOT NULL DEFAULT '',
     engine_diagnostics JSONB,
     skip_reason VARCHAR(1000) NOT NULL DEFAULT '',
+    cancellation_reason VARCHAR(100) NOT NULL DEFAULT '',
+    cancellation_operation_id VARCHAR(128) NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
@@ -1422,4 +1483,8 @@ COMMENT ON COLUMN scan_task.failure_kind IS 'Machine-readable task failure class
 COMMENT ON COLUMN scan_task.failure_detail IS 'Optional controlled customer-facing diagnostic for a task failure';
 COMMENT ON COLUMN scan_task.engine_diagnostics IS 'Bounded Agent-owned Engine terminal diagnostic snapshot; null before terminal submission and never a log or result-item store';
 COMMENT ON COLUMN scan_task.skip_reason IS 'Non-failure reason explaining why an intentionally non-applicable workflow task was skipped';
+COMMENT ON COLUMN scan.cancellation_reason IS 'Stable reason for an explicit lifecycle cancellation, including system upgrade maintenance';
+COMMENT ON COLUMN scan.cancellation_operation_id IS 'Upgrade Operation identity that committed a maintenance cancellation, when applicable';
+COMMENT ON COLUMN scan_task.cancellation_reason IS 'Stable reason for an explicit task cancellation, including system upgrade maintenance';
+COMMENT ON COLUMN scan_task.cancellation_operation_id IS 'Upgrade Operation identity that committed a maintenance cancellation, when applicable';
 COMMENT ON INDEX idx_scan_task_pending_order IS 'Supports task pull queries over executable scan tasks';

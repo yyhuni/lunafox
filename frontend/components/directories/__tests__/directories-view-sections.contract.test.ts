@@ -12,7 +12,7 @@ describe("directories-view-sections contract", () => {
     expect(viewSource).toContain('notFoundKind: "unexpected-error"')
     expect(viewSource).toContain('variant="section"')
     expect(source).toContain("export function DirectoriesViewRouteFallback")
-    expect(source).toContain("className")
+    expect(source).toContain("DetailAssetContentFrame")
   })
 
   it("keeps the table loading state aligned to the route gutter", () => {
@@ -27,7 +27,9 @@ describe("directories-view-sections contract", () => {
     expect(source).toContain("<DirectoriesDataTable")
     expect(source).toContain('paginationNavigation={{ mode: "cursor", canFirstPage: false, canPreviousPage: false, canNextPage: false }}')
     expect(source).toContain("cursorPaginationSummary={{ total: totalSize }}")
-    expect(source).toContain('<div className="px-4 lg:px-6">')
+    expect(source).toContain('from "@/components/shared/layout/detail-asset-content-frame"')
+    expect(source).toContain("<DetailAssetContentFrame>")
+    expect(source).toContain("</DetailAssetContentFrame>")
     expect(source).not.toContain("DataTableSkeleton")
     expect(source).not.toContain("DIRECTORIES_ROUTE_FALLBACK_COLUMN_COUNT")
     expect(source).not.toContain("DIRECTORIES_ROUTE_FALLBACK_TOOLBAR_BUTTON_COUNT")
