@@ -1,4 +1,5 @@
 -- DESTRUCTIVE DEVELOPMENT/TEST TEARDOWN ONLY.
+DROP TABLE IF EXISTS deployment_agent_bootstrap;
 -- This drops all schema data and is not a production data or in-flight task rollback.
 -- Drop tables in reverse dependency order
 
