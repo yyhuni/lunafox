@@ -177,7 +177,7 @@ func writeUpgradeError(c *gin.Context, err error) {
 		if diagnostic.Field != "" {
 			metadata["field"] = diagnostic.Field
 		}
-		if diagnostic.Code == domain.ErrorCodeUpgradeNoUpdateAvailable {
+		if diagnostic.Code == domain.ErrorCodeUpgradeNoUpdateAvailable || diagnostic.Code == domain.ErrorCodeReleaseCompatibilityUnsupported {
 			httpdto.ErrorWithStatusAndTypedDetails(c, status, string(diagnostic.Code), "FAILED_PRECONDITION", diagnostic.Reason, metadata, diagnostic)
 		} else {
 			httpdto.ErrorWithTypedDetails(c, status, string(diagnostic.Code), diagnostic.Reason, metadata, diagnostic)

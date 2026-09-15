@@ -66,6 +66,10 @@ required_files=(
 	docker/nginx/nginx.conf
 	docker/bootstrap/Dockerfile
 	docker/bootstrap/bootstrap.sh
+	server/cmd/lunafox-upgrader/main.go
+	server/internal/modules/upgrade/upgrader/compose.go
+	server/internal/modules/upgrade/upgrader/daemon.go
+	server/internal/modules/upgrade/upgrader/journal.go
 	scripts/ci/publish-engine-runtime-images.sh
 	scripts/ci/aggregate-engine-runtime-image-shards.sh
 	scripts/ci/check-engine-image-tool-inventory.mjs
@@ -79,6 +83,13 @@ required_files=(
 for file in "${required_files[@]}"; do
 	[ -f "$ROOT_DIR/$file" ] || fail "required public Runtime input is missing: $file"
 done
+
+grep -Fq 'go build -trimpath -buildvcs=false -o /out/lunafox-upgrader ./cmd/lunafox-upgrader' "$ROOT_DIR/docker/bootstrap/Dockerfile" ||
+	fail "Bootstrap Runtime Image must build the Compose upgrader"
+grep -Eq 'docker-cli=[0-9].*-r[0-9]+' "$ROOT_DIR/docker/bootstrap/Dockerfile" ||
+	fail "Bootstrap Runtime Image must pin Docker CLI"
+grep -Eq 'docker-cli-compose=[0-9].*-r[0-9]+' "$ROOT_DIR/docker/bootstrap/Dockerfile" ||
+	fail "Bootstrap Runtime Image must pin the Compose plugin"
 
 for forbidden in tools/installer worker docker/base-tools docker/ci-tools docker/dev-engine-publisher docker/nginx/ssl; do
 	[ ! -e "$ROOT_DIR/$forbidden" ] || fail "private or development path is present in public Runtime tree: $forbidden"

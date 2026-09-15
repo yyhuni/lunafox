@@ -99,6 +99,43 @@ func TestUpgradeHandlerReturnsStructuredMigrationDiagnostic(t *testing.T) {
 		t.Fatalf("diagnostic detail = %#v", response.Error.Details)
 	}
 }
+
+func TestUpgradeHandlerReturnsCompatibilityFailureAsPrecondition(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	service := &handlerContractService{createErr: domain.NewReleaseCompatibilityUnsupported()}
+	engine := gin.New()
+	manager := auth.NewJWTManager("test-secret-key-32-chars-long!!", time.Minute, time.Hour)
+	engine.Use(middleware.AuthMiddleware(manager, handlerTokenVersionReader{version: 1}))
+	RegisterTestUpgradeHandler(engine, NewUpgradeHandler(service))
+	token, _, err := manager.GenerateAccessToken(7, "admin", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodPost, "/v1/upgradeOperations", strings.NewReader(`{"requestId":"22222222-2222-4222-8222-222222222222","manifestId":"release-1.1.0","manifestDigest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","confirmed":true}`))
+	request.Header.Set("Authorization", "Bearer "+token)
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+	engine.ServeHTTP(recorder, request)
+
+	var response struct {
+		Error struct {
+			Status  string `json:"status"`
+			Details []struct {
+				Reason string `json:"reason"`
+				Code   string `json:"code"`
+			} `json:"details"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	if recorder.Code != http.StatusBadRequest || response.Error.Status != "FAILED_PRECONDITION" || len(response.Error.Details) < 2 {
+		t.Fatalf("compatibility precondition response = %s", recorder.Body.String())
+	}
+	if response.Error.Details[0].Reason != "RELEASE_COMPATIBILITY_UNSUPPORTED" || response.Error.Details[1].Code != string(domain.ErrorCodeReleaseCompatibilityUnsupported) {
+		t.Fatalf("compatibility diagnostic details = %#v", response.Error.Details)
+	}
+}
 func (service *handlerContractService) GetOperation(_ context.Context, userID int, operationID string) (*domain.Operation, error) {
 	service.getUserID = userID
 	service.getOperationID = operationID

@@ -148,6 +148,12 @@ const REQUIRED_PUBLIC_RUNTIME_EXACT = [
   "scripts/ci/verify-distribution-registry-v2.mjs",
   "scripts/ci/verify-runtime-image-index.mjs",
 ];
+const REQUIRED_PUBLIC_UPGRADER_PATHS = [
+  "server/cmd/lunafox-upgrader/main.go",
+  "server/internal/modules/upgrade/upgrader/compose.go",
+  "server/internal/modules/upgrade/upgrader/daemon.go",
+  "server/internal/modules/upgrade/upgrader/journal.go",
+];
 
 function fail(message) { throw new Error(message); }
 
@@ -1086,6 +1092,17 @@ function assertExportPolicy(exportPolicy) {
     }
   }
   const requiredPaths = new Set(exportPolicy.requiredPaths ?? []);
+  for (const required of REQUIRED_PUBLIC_UPGRADER_PATHS) {
+    if (!requiredPaths.has(required)) {
+      fail(`export policy is missing required public upgrader path: ${required}`);
+    }
+  }
+  const bootstrapDescriptor = exportPolicy.publicRuntimeImages.find((item) => item.component === "bootstrap");
+  for (const required of REQUIRED_PUBLIC_UPGRADER_PATHS) {
+    if (!(bootstrapDescriptor?.requiredPaths ?? []).includes(required)) {
+      fail(`Bootstrap Runtime descriptor is missing upgrader input: ${required}`);
+    }
+  }
   for (const required of REQUIRED_PUBLIC_FRONTEND_PATHS) {
     if (!requiredPaths.has(required)) {
       fail(`export policy is missing required public frontend path: ${required}`);
