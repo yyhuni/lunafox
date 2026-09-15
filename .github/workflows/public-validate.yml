@@ -1410,6 +1410,24 @@ jobs:
           node scripts/ci/verify-public-release.mjs \
             --manifest dist/final/release.manifest.yaml --tag "$RELEASE_TAG" --json \
             > dist/final/release-verification.json
+      - name: Build immutable Docker Compose deployment packages
+        env:
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          node --test scripts/ci/generate-compose-deployment.test.mjs
+          node scripts/ci/generate-compose-deployment.mjs \
+            --manifest dist/final/release.manifest.yaml --tag "$RELEASE_TAG" \
+            --output dist/final/deployment > dist/final/deployment-packages.json
+          [ "$(jq 'length' dist/final/deployment-packages.json)" -eq 2 ]
+          jq -r '.[] | [.name,.sha256] | @tsv' dist/final/deployment-packages.json |
+            while IFS=$'\t' read -r name expected; do
+              file="dist/final/deployment/$name"
+              [ -f "$file" ]
+              actual="$(sha256sum "$file" | awk '{print $1}')"
+              [ "$actual" = "$expected" ]
+              unzip -t "$file" >/dev/null
+            done
       - name: Generate the immutable release provenance record
         env:
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
@@ -1505,6 +1523,8 @@ jobs:
           }
           publish_asset dist/final/release.manifest.yaml
           publish_asset dist/final/public-release-provenance.json
+          for file in dist/final/deployment/*.zip; do publish_asset "$file"; done
+          publish_asset dist/final/deployment-packages.json
       - name: Upload the complete final publication evidence
         uses: actions/upload-artifact@v4
         with:
@@ -1513,6 +1533,8 @@ jobs:
             dist/final/release.manifest.yaml
             dist/final/public-release-provenance.json
             dist/final/release-verification.json
+            dist/final/deployment/*.zip
+            dist/final/deployment-packages.json
             dist/final/runtime-verification/**
             dist/final/runtime-evidence/**
             dist/final/engine-verification.json
