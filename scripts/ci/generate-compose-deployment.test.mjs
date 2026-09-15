@@ -7,13 +7,13 @@ import { execFileSync } from 'node:child_process';
 import { generate } from './generate-compose-deployment.mjs';
 
 const root = path.resolve(import.meta.dirname, '../..');
-function fixture(t) {
+function fixture(t, version = '1.2.3') {
  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'compose-package-test-'));
  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
  const manifest = path.join(dir, 'release.yaml');
  const runtime = ['server','frontend','nginx','agent','bootstrap'].map(name => `  - name: ${name}\n    refs:\n      - docker.io/yyhuni/lunafox-${name}@sha256:${'a'.repeat(64)}\n      - ghcr.io/yyhuni/lunafox-${name}@sha256:${'a'.repeat(64)}\n`).join('');
- fs.writeFileSync(manifest, `releaseVersion: "1.2.3"\nruntimeImages:\n${runtime}enginePackages:\n  - refs:\n      - docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:${'b'.repeat(64)}\n      - ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:${'b'.repeat(64)}\n`);
- return { root, manifest, tag:'v1.2.3', output:path.join(dir,'output'), dir };
+ fs.writeFileSync(manifest, `releaseVersion: "${version}"\nruntimeImages:\n${runtime}enginePackages:\n  - refs:\n      - docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:${'b'.repeat(64)}\n      - ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:${'b'.repeat(64)}\n`);
+ return { root, manifest, tag:`v${version}`, output:path.join(dir,'output'), dir };
 }
 
 function renderCompose(dir, compose, configuration, databaseMode, overrides = {}) {
@@ -52,6 +52,7 @@ test('packages are reproducible, registry-complete, and contain editable config'
   assert.match(content['README.md'],/Docker Compose 2\.24\.0/);
   assert.match(content['README.md'],/DATABASE_MODE=external/);
   assert.match(content['compose.yaml'],/^  config-init:$/m);
+  assert.match(content['compose.yaml'],/^  upgrader:$/m);
   assert.match(content['compose.yaml'],/environment: DB_PASSWORD/);
   assert.match(content['compose.yaml'],/environment: JWT_SECRET/);
   assert.doesNotMatch(content['compose.yaml'],/PUBLIC_URL:/);
@@ -61,11 +62,19 @@ test('packages are reproducible, registry-complete, and contain editable config'
   assert.doesNotMatch(content['compose.yaml'],/--image-ref "\$(?:docker\.io|ghcr\.io)\//);
   const registry=artifact.name.includes('dockerhub')?'docker.io':'ghcr.io';
   assert.match(content['compose.yaml'],new RegExp(`${registry}/yyhuni/lunafox-agent@sha256:`));
+  assert.match(content['compose.yaml'],/RELEASE_CHANNEL: stable/);
+  assert.match(content['compose.yaml'],/RELEASE_METADATA_BASE_URL: https:\/\/raw\.githubusercontent\.com\/yyhuni\/lunafox\/release-channel/);
+  assert.match(content['compose.yaml'],new RegExp(`RELEASE_REGISTRY: ${registry.replace('.', '\\.')}`));
   assert.doesNotMatch(content['engine-inventory.yaml'],registry==='docker.io'?/ghcr.io/:/docker.io/);
   const renderDir = path.join(options.dir, artifact.name);
   fs.mkdirSync(renderDir, { recursive: true });
   const embedded = renderCompose(renderDir, content['compose.yaml'], content['.env'], 'embedded');
   assert.ok(embedded.services.postgres);
+  assert.equal(embedded.services.upgrader.network_mode, 'none');
+  assert.equal(embedded.services.upgrader.ports, undefined);
+  assert.ok(embedded.services.upgrader.volumes.some(volume => volume.source === '/var/run/docker.sock' && volume.target === '/var/run/docker.sock' && volume.read_only !== true));
+  assert.ok(embedded.services.upgrader.volumes.some(volume => volume.source === 'lunafox_upgrade_state' && volume.target === '/deployment/.lunafox/upgrade'));
+  assert.ok(embedded.services.server.volumes.some(volume => volume.source === 'lunafox_upgrade_state' && volume.target === '/opt/lunafox/.lunafox/upgrade'));
   assert.equal(embedded.services.server.depends_on.postgres.condition, 'service_healthy');
   assert.equal(embedded.services.server.depends_on.postgres.required, false);
   assert.equal(embedded.services.migrate.depends_on.postgres.required, false);
@@ -82,7 +91,27 @@ test('packages are reproducible, registry-complete, and contain editable config'
    assert.equal(external.services[service].environment.DB_SSLMODE, 'require');
   }
   assert.equal(external.services['config-init'].environment.DATABASE_MODE, 'external');
+
+  const extracted = path.join(options.dir, `extracted-${artifact.name}`);
+  execFileSync('python3', ['-c', 'import sys,zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])', path.join(options.output, artifact.name), extracted]);
+  const persistedDigest = 'f'.repeat(64);
+  fs.writeFileSync(path.join(extracted, 'compose.override.yaml'), `services:\n  server:\n    image: ${registry}/yyhuni/lunafox-server@sha256:${persistedDigest}\n    environment:\n      RELEASE_VERSION: 1.2.4\n`);
+  const restarted = JSON.parse(execFileSync('docker', ['compose', 'config', '--format', 'json'], {
+   cwd: extracted,
+   encoding: 'utf8',
+   env: { ...process.env, DATABASE_MODE: 'embedded', COMPOSE_PROFILES: 'embedded' },
+  }));
+  assert.equal(restarted.services.server.image, `${registry}/yyhuni/lunafox-server@sha256:${persistedDigest}`);
+  assert.equal(restarted.services.server.environment.RELEASE_VERSION, '1.2.4');
  }
+});
+
+test('prerelease packages pin the canary channel', t => {
+ const options = fixture(t, '1.2.3-alpha.1');
+ const [artifact] = generate(options);
+ const script = `import zipfile,sys\nwith zipfile.ZipFile(sys.argv[1]) as z:\n print(z.read('compose.yaml').decode())`;
+ const compose = execFileSync('python3', ['-c', script, path.join(options.output, artifact.name)], { encoding: 'utf8' });
+ assert.match(compose, /RELEASE_CHANNEL: canary/);
 });
 
 for(const failure of ['missing-image','bad-digest','development','missing-manifest','unknown-image']){

@@ -28,23 +28,28 @@ COPY server ./server
 COPY extensions/workflows ./extensions/workflows
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
-    cd server && go build -trimpath -buildvcs=false -o /out/server ./cmd/server
+    cd server && \
+    go build -trimpath -buildvcs=false -o /out/server ./cmd/server && \
+    go build -trimpath -buildvcs=false -o /out/lunafox-upgrader ./cmd/lunafox-upgrader
 
 FROM alpine:3.23.5
 
 RUN apk add --no-cache \
     bash \
     ca-certificates \
+    docker-cli=29.5.2-r0 \
+    docker-cli-compose=2.40.3-r6 \
     openssl
 
 WORKDIR /app
 COPY --from=builder /out/server /usr/local/bin/server
+COPY --from=builder /out/lunafox-upgrader /usr/local/bin/lunafox-upgrader
 COPY --from=builder /src/extensions/workflows /usr/local/share/lunafox/workflows
 COPY docker/bootstrap/bootstrap.sh /usr/local/bin/lunafox-bootstrap
 COPY docker/bootstrap/cert-init.sh /usr/local/bin/lunafox-cert-init
 COPY docker/bootstrap/config-init.sh /usr/local/bin/lunafox-config-init
-RUN chmod 0755 /usr/local/bin/lunafox-bootstrap /usr/local/bin/lunafox-cert-init /usr/local/bin/lunafox-config-init
+RUN chmod 0755 /usr/local/bin/lunafox-bootstrap /usr/local/bin/lunafox-cert-init /usr/local/bin/lunafox-config-init /usr/local/bin/lunafox-upgrader
 
-# The image is intentionally one-shot; Compose controls when this command is
-# created and waits for its zero exit status before starting the public edge.
+# Compose selects explicit entrypoints for the long-running upgrader and the
+# one-shot helpers. The default remains the business bootstrap command.
 ENTRYPOINT ["/usr/local/bin/lunafox-bootstrap"]

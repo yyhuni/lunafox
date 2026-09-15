@@ -9,6 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { validateManifest, parseRuntimeBlocks, parseEngineBlocks } from './verify-public-release.mjs';
 
 const defaultRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const releaseMetadataBaseURL = 'https://raw.githubusercontent.com/yyhuni/lunafox/release-channel';
 const zipProgram = `import pathlib,sys,zipfile
 root=pathlib.Path(sys.argv[1])
 with zipfile.ZipFile(sys.argv[2], 'w', compression=zipfile.ZIP_STORED) as archive:
@@ -67,6 +68,9 @@ export function generate({ root = defaultRoot, manifest, tag, output }) {
    const selected = new Map(runtime.map(block => [`${block.name.toUpperCase()}_IMAGE_REF`, block.refs.find(ref => ref.registry === registry).raw]));
    selected.set('RELEASE_VERSION', tag.slice(1));
    selected.set('AGENT_VERSION', tag.slice(1));
+   selected.set('RELEASE_CHANNEL', tag.includes('-') ? 'canary' : 'stable');
+   selected.set('RELEASE_METADATA_BASE_URL', releaseMetadataBaseURL);
+   selected.set('RELEASE_REGISTRY', registry);
    selected.set('ENGINE_INSTALL_REGISTRY', registry);
    selected.set('ENGINE_INVENTORY_HOST_PATH', './engine-inventory.yaml');
    selected.set('LUNAFOX_SHARED_DATA_VOLUME_BIND', 'lunafox_data:/opt/lunafox:rw');

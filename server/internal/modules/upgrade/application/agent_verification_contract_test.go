@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/yyhuni/lunafox/contracts/releasemanifest"
 	"github.com/yyhuni/lunafox/server/internal/modules/upgrade/domain"
 )
 
@@ -200,6 +201,73 @@ func TestAgentVerificationDeadlineProducesNeedsAttention(t *testing.T) {
 	}
 	if verifier.calls != 0 {
 		t.Fatalf("final verifier ran despite missing Agent readiness: %d calls", verifier.calls)
+	}
+}
+
+func TestAgentVerificationRecoversAtVerifyingWithOriginalManifestTarget(t *testing.T) {
+	manifest, err := LoadReleaseManifest(fixturePath("release.manifest.yaml"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	advanced := *manifest
+	advanced.ReleaseVersion = "1.2.4"
+	advanced.Upgrade.ManifestID = "lunafox-1.2.4"
+	manifestSource := &targetManifestSourceStub{
+		current: &advanced,
+		targets: map[string]*releasemanifest.Manifest{manifest.Digest(): manifest},
+	}
+	targetDigest := runtimeAgentDigest(manifest)
+	agentSource := &agentVerificationSourceStub{expectations: []domain.AgentExpectation{{
+		AgentID: 44, DesiredVersion: manifest.ReleaseVersion, TargetDigest: targetDigest,
+		ObservedVersion: manifest.ReleaseVersion, Connected: true, Healthy: true, ClaimReady: true,
+	}}}
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	service.manifestSource = manifestSource
+	service.agentSource = agentSource
+	service.verifier = &agentVerificationVerifierStub{passed: true}
+	now := time.Date(2026, 9, 13, 14, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return now }
+	deadline := now.Add(time.Hour)
+	operation := &domain.Operation{
+		OperationID:               "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+		RequestID:                 "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+		OperatorID:                7,
+		ManifestID:                manifest.Upgrade.ManifestID,
+		ManifestDigest:            manifest.Digest(),
+		ReleaseVersion:            manifest.ReleaseVersion,
+		CompatibilityRange:        manifest.Upgrade.CompatibilityRange,
+		Status:                    domain.StatusRestarting,
+		MigrationStatus:           domain.MigrationStatusNotStarted,
+		MigrationType:             "none",
+		AgentDesiredVersion:       manifest.ReleaseVersion,
+		AgentTargetDigest:         targetDigest,
+		AgentExpectations:         append([]domain.AgentExpectation(nil), agentSource.expectations...),
+		AgentSummary:              domain.AgentSummary{Expected: 1, Ready: 1},
+		AgentVerificationDeadline: &deadline,
+		ObservedDigests:           map[string]string{},
+		StageTimes:                map[domain.Status]time.Time{domain.StatusRestarting: now.Add(-time.Minute)},
+		CreatedAt:                 now.Add(-time.Hour),
+		UpdatedAt:                 now.Add(-time.Minute),
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+
+	updated, err := service.ReconcileHostEvent(context.Background(), HostUpgradeEvent{
+		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest,
+		Stage: string(domain.StatusVerifying), FromJournal: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != domain.StatusSucceeded {
+		t.Fatalf("recovered status = %q, want succeeded", updated.Status)
+	}
+	if manifestSource.loadedTarget != manifest.Digest() {
+		t.Fatalf("verification loaded digest = %q, want %q", manifestSource.loadedTarget, manifest.Digest())
+	}
+	if agentSource.notifyCalls != 1 {
+		t.Fatalf("recovered update_required notifications = %d, want 1", agentSource.notifyCalls)
 	}
 }
 

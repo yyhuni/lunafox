@@ -3,6 +3,7 @@ module github.com/yyhuni/lunafox/contracts
 go 1.26.0
 
 require (
+	github.com/blang/semver v3.5.1+incompatible
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/sigstore/protobuf-specs v0.5.1
@@ -20,7 +21,6 @@ replace github.com/yyhuni/lunafox/engine-go => ../engine-go
 
 require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
-	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467 // indirect

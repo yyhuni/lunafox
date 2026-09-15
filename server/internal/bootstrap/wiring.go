@@ -444,12 +444,9 @@ func buildDependencies(infra *infra, cfg *config.Config) (*deps, error) {
 	resultIngestSummary := resultingestwiring.NewResultingestScanResultSummaryUpdaterAdapter(repos.scanRepo)
 	resultIngestCoordinator := resultingestwiring.NewResultIngestMaterializationCoordinator(infra.db)
 	resultIngest := resultingestapp.NewResultIngestFacade(resultingestapp.ResultIngestFacadeDependencies{Subdomains: snapshot.subdomainSnapshotService, ScanSummary: resultIngestSummary, HostPorts: snapshot.hostPortSnapshotService, Websites: snapshot.websiteSnapshotService, WebsiteTechnologies: asset.websiteSvc, Endpoints: snapshot.endpointSnapshotService, Directories: snapshot.directorySnapshotService, Screenshots: snapshot.screenshotSnapshotService, Vulnerabilities: snapshot.vulnerabilitySnapshotService, Materialization: resultIngestCoordinator})
-	manifestLoader, err := upgradeapp.NewManifestLoader(upgradeapp.ManifestLoadConfig{
-		Path:          cfg.Upgrade.ManifestPath,
-		DeploymentDir: cfg.Upgrade.DeploymentRoot,
-	})
+	manifestSource, err := newUpgradeManifestSource(cfg.Upgrade)
 	if err != nil {
-		return nil, fmt.Errorf("configure release manifest loader: %w", err)
+		return nil, fmt.Errorf("configure release manifest source: %w", err)
 	}
 	migrationPolicySource := upgradeapp.MigrationPolicyFunc(func(context.Context) (upgradedomain.MigrationPolicy, error) {
 		return upgradeapp.LoadMigrationPolicy(cfg.Upgrade.MigrationPolicyPath)
@@ -467,7 +464,7 @@ func buildDependencies(infra *infra, cfg *config.Config) (*deps, error) {
 		return nil, fmt.Errorf("configure upgrade verifier: %w", err)
 	}
 	upgradeService, err := upgradeapp.NewUpgradeService(upgradeapp.ServiceConfig{
-		ManifestSource:        manifestLoader,
+		ManifestSource:        manifestSource,
 		MigrationPolicySource: migrationPolicySource,
 		Repository:            upgradeOperationRepository,
 		Authorizer:            upgradeAuthorizer,
@@ -476,6 +473,7 @@ func buildDependencies(infra *infra, cfg *config.Config) (*deps, error) {
 		AgentSource:           upgradeAgentSource,
 		Verifier:              upgradeVerifier,
 		CurrentVersion:        infra.releaseVersion,
+		Registry:              cfg.Upgrade.Registry,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("wire upgrade service: %w", err)

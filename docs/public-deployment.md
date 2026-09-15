@@ -78,9 +78,11 @@ docker compose restart
 docker compose down
 ```
 
-The internal Agent is a Compose service, so all four commands include it.
+The internal Agent and restricted upgrader are Compose services, so all four
+commands include them.
 `down` removes containers and the project network while retaining named
-volumes. Do not add `--volumes` unless permanent state deletion is intended and
+volumes, including `lunafox_upgrade_state`. Do not add `--volumes` unless
+permanent state deletion is intended and
 has been backed up. No command in this deployment automatically migrates,
 resets, or deletes an older deployment.
 
@@ -141,9 +143,51 @@ The resident Agent checks the socket, platform, API version, and exact volume
 identities again when it starts. Unsupported capability fails explicitly; there
 is no weaker whole-volume fallback. Server never receives the Docker socket.
 
-The Compose-managed Agent has in-container self-update disabled. Upgrade its
-digest by using a newer deployment package and Compose. Existing remote Agent
-installation and self-update behavior are unchanged.
+The Compose-managed Agent has in-container self-update disabled. The restricted
+upgrader updates its fixed `agent` service from the release Manifest. Existing
+remote Agent installation and `update_required` self-update behavior are
+unchanged.
+
+## System updates
+
+The release package fixes its `stable` or `canary` channel, public metadata
+source, and Docker Hub or GHCR Registry inside `compose.yaml`. These values are
+release inputs and are not editable installation settings. The Server fetches
+the current schema-v3 channel record over HTTPS, validates its bounded Manifest
+path and raw SHA-256, then caches the immutable Manifest in
+`lunafox_upgrade_state`. It only offers a candidate whose semantic version is
+newer than the running release.
+
+An administrator can check, confirm, and start an eligible update through the
+existing frontend update control. Server sends only the Operation ID, fixed
+action, and Manifest digest through the shared Unix Socket. The Compose-managed
+upgrader continues if the browser closes or Server is recreated. It has no
+network port and uses a fixed project, file set, command argv, service allowlist,
+and `--no-deps` recreation. Server never receives the Docker Socket.
+
+The upgrader's read-write Docker Socket grants control of the local Docker
+daemon. The service also mounts the extracted package directory so it can read
+`compose.yaml` and `.env` and atomically install `compose.override.yaml` after
+service, migration, Agent, health, and digest verification. Keep that override
+with the extracted directory: ordinary `docker compose up -d`, `start`, and
+`restart` automatically retain the confirmed image and version target without
+rewriting database, public address, or secret settings.
+
+The completion receipt proves only that the bounded Compose deployment work
+finished. Server reconciles it with the database Operation, journal, migration,
+service, API, and Agent evidence before reporting success. A migration failure
+or uncertain outcome requires recovery; an Agent timeout requires attention.
+The current `disposable-development` policy still provides no preserve-data
+rollback or automatic backup.
+
+Automatic update supports compatible image-only releases. A release that
+changes the Compose structure, named volumes, initialization resources, or the
+upgrader protocol must declare itself incompatible; download its new deployment
+ZIP, preserve the documented state, review its README, and run Compose from the
+new extracted directory. The running release must satisfy the Manifest's
+`upgrade.compatibilityRange`; otherwise the update remains visible but cannot
+create an automatic Upgrade Operation. This is also the manual fallback if the
+host cannot expose its local Docker Socket to the upgrader container.
 
 ## Logs
 
@@ -157,9 +201,9 @@ The collector preserves the existing selectors
 `{component="server",container_name="lunafox-server"}` and
 `{agent_id="<id>",container_name="lunafox-agent"}`. It does not collect its own
 output. No Loki Docker plugin is installed or required. Docker socket access is
-limited to the Compose Agent, its one-shot capability preflight, and the
-collector plus development-only tooling; the resident Server has no Docker
-control path.
+limited to the restricted upgrader, Compose Agent, its one-shot capability
+preflight, and the collector plus development-only tooling; the resident Server
+has no Docker control path.
 
 ## Certificates and recovery
 
@@ -169,11 +213,13 @@ unexpired, match the configured host, and share the private key. Partial or
 invalid state fails rather than being overwritten. This release does not add
 ACME, user certificate import, or automatic renewal.
 
-Use `docker compose logs config-init agent-preflight migrate bootstrap cert-init agent` to
+Use `docker compose logs config-init agent-preflight migrate bootstrap cert-init agent upgrader` to
 diagnose a failed one-shot or Agent startup. Correct configuration or explicitly
-repair the named volume state, then repeat `docker compose up -d`. There is no receipt
-or hidden host lifecycle database; Compose exit status, dependency conditions,
-container state, and service health are the deployment status.
+repair the named volume state, then repeat `docker compose up -d`. For ordinary
+initialization, Compose exit status, dependency conditions, container state,
+and service health are the deployment status. Upgrade journal and completion
+receipt files live only in `lunafox_upgrade_state` and are reconciled by the
+Upgrade Operation API.
 
 When upgrading from a package that stored credentials only in `.env`, keep the
 existing non-empty `DB_PASSWORD` and `JWT_SECRET` for the first start of the new

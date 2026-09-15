@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/google/uuid"
 	"github.com/yyhuni/lunafox/contracts/ociartifact"
 	"github.com/yyhuni/lunafox/contracts/releasemanifest"
@@ -29,6 +30,7 @@ type ServiceConfig struct {
 	AgentSource              AgentUpgradeSource
 	Verifier                 UpgradeVerifier
 	CurrentVersion           string
+	Registry                 string
 	Now                      func() time.Time
 	AgentVerificationTimeout time.Duration
 }
@@ -46,6 +48,7 @@ type Service struct {
 	agentSource              AgentUpgradeSource
 	verifier                 UpgradeVerifier
 	currentVersion           string
+	registry                 string
 	now                      func() time.Time
 	agentVerificationTimeout time.Duration
 	mu                       sync.Mutex
@@ -61,6 +64,16 @@ var (
 func NewService(config ServiceConfig) (*Service, error) {
 	if config.ManifestSource == nil || config.MigrationPolicySource == nil || config.Repository == nil || config.Authorizer == nil {
 		return nil, ErrUpgradeDependency
+	}
+	currentVersion := strings.TrimSpace(config.CurrentVersion)
+	if currentVersion != "" {
+		if _, err := semver.Parse(currentVersion); err != nil {
+			return nil, fmt.Errorf("current release version is invalid: %w", err)
+		}
+	}
+	registry := strings.TrimSpace(config.Registry)
+	if registry != "" && registry != "docker.io" && registry != "ghcr.io" {
+		return nil, fmt.Errorf("upgrade registry must be docker.io or ghcr.io")
 	}
 	now := config.Now
 	if now == nil {
@@ -79,7 +92,8 @@ func NewService(config ServiceConfig) (*Service, error) {
 		coordinator:              config.Coordinator,
 		agentSource:              config.AgentSource,
 		verifier:                 config.Verifier,
-		currentVersion:           strings.TrimSpace(config.CurrentVersion),
+		currentVersion:           currentVersion,
+		registry:                 registry,
 		now:                      now,
 		agentVerificationTimeout: verificationTimeout,
 		agentNotifiedOperations:  make(map[string]struct{}),
@@ -143,10 +157,21 @@ func (service *Service) CheckForUpdates(ctx context.Context, userID int) (CheckF
 	if err != nil {
 		return CheckForUpdatesResult{}, err
 	}
+	hasUpdate, err := service.hasNewerRelease(manifest.ReleaseVersion)
+	if err != nil {
+		return CheckForUpdatesResult{}, err
+	}
 	result := CheckForUpdatesResult{
 		CurrentVersion: service.currentVersion,
-		HasUpdate:      service.currentVersion == "" || service.currentVersion != manifest.ReleaseVersion,
+		HasUpdate:      hasUpdate,
 		Manifest:       summary,
+	}
+	if compatibilityErr := service.checkReleaseCompatibility(manifest.Upgrade.CompatibilityRange); compatibilityErr != nil {
+		if diagnostic, ok := domain.DiagnosticOf(compatibilityErr); ok && diagnostic.Code == domain.ErrorCodeReleaseCompatibilityUnsupported {
+			result.Diagnostic = &diagnostic
+			return result, nil
+		}
+		return CheckForUpdatesResult{}, compatibilityErr
 	}
 	policy, err := service.migrationPolicySource.Load(ctx)
 	if err != nil {
@@ -203,8 +228,15 @@ func (service *Service) CreateOperation(ctx context.Context, userID int, input C
 	}, manifest); err != nil {
 		return nil, false, err
 	}
-	if service.currentVersion != "" && service.currentVersion == manifest.ReleaseVersion {
+	hasUpdate, err := service.hasNewerRelease(manifest.ReleaseVersion)
+	if err != nil {
+		return nil, false, err
+	}
+	if !hasUpdate {
 		return nil, false, domain.NewUpgradeNoUpdateAvailable()
+	}
+	if err := service.checkReleaseCompatibility(manifest.Upgrade.CompatibilityRange); err != nil {
+		return nil, false, err
 	}
 	policy, err := service.migrationPolicySource.Load(ctx)
 	if err != nil {
@@ -350,7 +382,7 @@ func (service *Service) RetryOperation(ctx context.Context, userID int, operatio
 	if operation.Status != domain.StatusFailed && operation.Status != domain.StatusNeedsRecovery && operation.Status != domain.StatusNeedsAttention {
 		return nil, domain.ErrUpgradeRetryNotAllowed
 	}
-	manifest, err := service.manifestSource.Load()
+	manifest, err := service.loadTargetManifest(operation.ManifestDigest)
 	if err != nil {
 		return nil, err
 	}
@@ -393,6 +425,49 @@ func (service *Service) RetryOperation(ctx context.Context, userID int, operatio
 		return operation, err
 	}
 	return operation, nil
+}
+
+func (service *Service) loadTargetManifest(digest string) (*releasemanifest.Manifest, error) {
+	if source, ok := service.manifestSource.(TargetManifestSource); ok {
+		return source.LoadTarget(digest)
+	}
+	return service.manifestSource.Load()
+}
+
+func (service *Service) hasNewerRelease(candidate string) (bool, error) {
+	if service.currentVersion == "" {
+		return true, nil
+	}
+	targetVersion, err := semver.Parse(strings.TrimSpace(candidate))
+	if err != nil {
+		return false, domain.WrapManifestInvalid(fmt.Errorf("release version is invalid: %w", err))
+	}
+	currentVersion, err := semver.Parse(service.currentVersion)
+	if err != nil {
+		return false, fmt.Errorf("current release version is invalid: %w", err)
+	}
+	return targetVersion.GT(currentVersion), nil
+}
+
+func (service *Service) checkReleaseCompatibility(rawRange string) error {
+	compatibilityRange, err := semver.ParseRange(rawRange)
+	if err != nil {
+		return domain.WrapManifestInvalid(fmt.Errorf("upgrade compatibility range is invalid: %w", err))
+	}
+	if compatibilityRange == nil {
+		return domain.WrapManifestInvalid(errors.New("upgrade compatibility range is invalid"))
+	}
+	if service.currentVersion == "" {
+		return nil
+	}
+	currentVersion, err := semver.Parse(service.currentVersion)
+	if err != nil {
+		return fmt.Errorf("current release version is invalid: %w", err)
+	}
+	if !compatibilityRange(currentVersion) {
+		return domain.NewReleaseCompatibilityUnsupported()
+	}
+	return nil
 }
 
 // Compatibility aliases make the application boundary easy to consume while
@@ -559,7 +634,21 @@ func (service *Service) agentTarget(manifest *releasemanifest.Manifest) (AgentUp
 	if digest == "" {
 		return AgentUpgradeTarget{}, domain.WrapManifestInvalid(fmt.Errorf("agent runtime image digest is required"))
 	}
-	return AgentUpgradeTarget{Version: manifest.ReleaseVersion, Digest: digest, ImageRef: refs[0]}, nil
+	imageRef := refs[0]
+	if service.registry != "" {
+		imageRef = ""
+		for _, candidate := range refs {
+			parsed, parseErr := ociartifact.ParseDigestReference(candidate)
+			if parseErr == nil && parsed.Registry == service.registry {
+				imageRef = candidate
+				break
+			}
+		}
+		if imageRef == "" {
+			return AgentUpgradeTarget{}, domain.WrapManifestInvalid(fmt.Errorf("agent runtime image has no candidate for registry %s", service.registry))
+		}
+	}
+	return AgentUpgradeTarget{Version: manifest.ReleaseVersion, Digest: digest, ImageRef: imageRef}, nil
 }
 
 func summarizeAgentExpectations(expectations []domain.AgentExpectation) domain.AgentSummary {
