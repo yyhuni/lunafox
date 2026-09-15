@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/blang/semver"
 	"github.com/yyhuni/lunafox/contracts/ociartifact"
 	"github.com/yyhuni/lunafox/contracts/ocidistribution"
 	"go.yaml.in/yaml/v3"
@@ -248,6 +249,10 @@ func validateUpgradeMetadata(metadata UpgradeMetadata) error {
 	}
 	if metadata.CompatibilityRange == "" || metadata.CompatibilityRange != strings.TrimSpace(metadata.CompatibilityRange) || len(metadata.CompatibilityRange) > 128 {
 		return fmt.Errorf("upgrade.compatibilityRange must be non-empty and canonical")
+	}
+	compatibilityRange, err := semver.ParseRange(metadata.CompatibilityRange)
+	if err != nil || compatibilityRange == nil {
+		return fmt.Errorf("upgrade.compatibilityRange must be a valid semantic version range")
 	}
 	if metadata.MaintenanceWindowMinutes < 1 || metadata.MaintenanceWindowMinutes > 1440 {
 		return fmt.Errorf("upgrade.maintenanceWindowMinutes must be between 1 and 1440")

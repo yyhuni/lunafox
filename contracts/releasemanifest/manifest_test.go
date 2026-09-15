@@ -90,6 +90,13 @@ func TestParseValidatesDatabaseMigrationMetadata(t *testing.T) {
 	}
 }
 
+func TestParseRejectsMalformedCompatibilityRange(t *testing.T) {
+	manifest := strings.Replace(validManifest(), `compatibilityRange: ">=1.0.0 <2.0.0"`, `compatibilityRange: "not-a-range"`, 1)
+	if _, err := Parse([]byte(manifest)); err == nil || !strings.Contains(err.Error(), "valid semantic version range") {
+		t.Fatalf("expected malformed compatibility range rejection, got %v", err)
+	}
+}
+
 func validManifest() string {
 	return `releaseVersion: 1.2.3
 runtimeImages:

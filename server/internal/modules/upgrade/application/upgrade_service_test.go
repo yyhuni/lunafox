@@ -321,6 +321,109 @@ func TestCreateOperationRejectsWhenTargetReleaseIsAlreadyCurrent(t *testing.T) {
 	}
 }
 
+func TestUpgradeServiceOnlyOffersStrictlyNewerSemanticVersion(t *testing.T) {
+	tests := map[string]struct {
+		current   string
+		hasUpdate bool
+	}{
+		"older candidate":     {current: "1.2.4", hasUpdate: false},
+		"same candidate":      {current: "1.2.3", hasUpdate: false},
+		"stable after canary": {current: "1.2.3-alpha.1", hasUpdate: true},
+		"newer candidate":     {current: "1.2.2", hasUpdate: true},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			service, _ := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+			service.currentVersion = test.current
+			result, err := service.CheckForUpdates(context.Background(), 7)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.HasUpdate != test.hasUpdate {
+				t.Fatalf("HasUpdate = %t, want %t", result.HasUpdate, test.hasUpdate)
+			}
+		})
+	}
+}
+
+func TestUpgradeServiceReportsIncompatibleReleaseAsIneligible(t *testing.T) {
+	manifest := manifestWithCompatibilityRange(t, ">=2.0.0 <3.0.0")
+	service, _ := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	service.manifestSource = ManifestSourceFunc(func() (*releasemanifest.Manifest, error) { return manifest, nil })
+
+	result, err := service.CheckForUpdates(context.Background(), 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.HasUpdate || result.Eligible || result.Diagnostic == nil {
+		t.Fatalf("compatibility gate result = %#v, want visible but ineligible update", result)
+	}
+	if result.Diagnostic.Code != domain.ErrorCodeReleaseCompatibilityUnsupported || result.Diagnostic.Field != "upgrade.compatibilityRange" {
+		t.Fatalf("compatibility diagnostic = %#v", result.Diagnostic)
+	}
+}
+
+func TestCreateOperationRejectsIncompatibleRelease(t *testing.T) {
+	manifest := manifestWithCompatibilityRange(t, ">=2.0.0 <3.0.0")
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	service.manifestSource = ManifestSourceFunc(func() (*releasemanifest.Manifest, error) { return manifest, nil })
+
+	operation, created, err := service.CreateOperation(context.Background(), 7, CreateUpgradeOperationInput{
+		RequestID: uuidTestRequestID, ManifestID: manifest.Upgrade.ManifestID, ManifestDigest: manifest.Digest(), Confirmed: true,
+	})
+	if operation != nil || created || !errors.Is(err, domain.ErrReleaseCompatibilityUnsupported) {
+		t.Fatalf("incompatible target create = operation=%#v created=%t err=%v", operation, created, err)
+	}
+	if len(repository.byID) != 0 {
+		t.Fatalf("incompatible target persisted an operation: %#v", repository.byID)
+	}
+}
+
+func TestUpgradeServiceRejectsMalformedCompatibilityRange(t *testing.T) {
+	manifest := manifestWithCompatibilityRange(t, ">=1.0.0 <2.0.0")
+	manifest.Upgrade.CompatibilityRange = "not-a-range"
+	service, _ := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	service.manifestSource = ManifestSourceFunc(func() (*releasemanifest.Manifest, error) { return manifest, nil })
+
+	if _, err := service.CheckForUpdates(context.Background(), 7); !errors.Is(err, domain.ErrReleaseManifestInvalid) {
+		t.Fatalf("malformed compatibility range error = %v", err)
+	}
+}
+
+func TestCreateOperationRejectsOlderTargetRelease(t *testing.T) {
+	manifest, err := LoadReleaseManifest(fixturePath("release.manifest.yaml"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	service.currentVersion = "1.2.4"
+	operation, created, err := service.CreateOperation(context.Background(), 7, CreateUpgradeOperationInput{
+		RequestID: uuidTestRequestID, ManifestID: manifest.Upgrade.ManifestID, ManifestDigest: manifest.Digest(), Confirmed: true,
+	})
+	if operation != nil || created || !errors.Is(err, domain.ErrUpgradeNoUpdateAvailable) {
+		t.Fatalf("older target create = operation=%#v created=%t err=%v", operation, created, err)
+	}
+	if len(repository.byID) != 0 {
+		t.Fatalf("older target persisted an operation: %#v", repository.byID)
+	}
+}
+
+func TestAgentTargetUsesDeploymentRegistry(t *testing.T) {
+	manifest, err := LoadReleaseManifest(fixturePath("release.manifest.yaml"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	service, _ := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	service.registry = "ghcr.io"
+	target, err := service.agentTarget(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(target.ImageRef, "ghcr.io/") {
+		t.Fatalf("Agent image = %q, want GHCR candidate", target.ImageRef)
+	}
+}
+
 func TestRetryOperationKeepsManifestTarget(t *testing.T) {
 	manifest, err := LoadReleaseManifest(fixturePath("../testdata/release.manifest.yaml"), "")
 	if err != nil {
@@ -348,7 +451,87 @@ func TestRetryOperationKeepsManifestTarget(t *testing.T) {
 	}
 }
 
+func TestRetryOperationLoadsImmutableTargetAfterChannelAdvancement(t *testing.T) {
+	original, err := LoadReleaseManifest(fixturePath("../testdata/release.manifest.yaml"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	advanced := *original
+	advanced.ReleaseVersion = "1.2.4"
+	advanced.Upgrade.ManifestID = "lunafox-1.2.4"
+	source := &targetManifestSourceStub{
+		current: &advanced,
+		targets: map[string]*releasemanifest.Manifest{original.Digest(): original},
+	}
+	dispatcher := &upgradeDispatcherStub{}
+	service, repository := newUpgradeServiceForTest(t, dispatcher)
+	service.manifestSource = source
+	// Operation creation represents the earlier channel state. Persist it
+	// directly so the retry runs after the source has advanced.
+	now := time.Now().UTC()
+	operation := &domain.Operation{
+		OperationID:     "33333333-3333-4333-8333-333333333333",
+		RequestID:       uuidTestRequestID,
+		OperatorID:      7,
+		ManifestID:      original.Upgrade.ManifestID,
+		ManifestDigest:  original.Digest(),
+		ReleaseVersion:  original.ReleaseVersion,
+		Status:          domain.StatusFailed,
+		MigrationStatus: domain.MigrationStatusNotStarted,
+		StageTimes:      map[domain.Status]time.Time{domain.StatusFailed: now},
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+	repository.byRequest[operation.RequestID] = operation
+	repository.byID[operation.OperationID] = operation
+	repository.active = operation
+
+	retried, err := service.RetryOperation(context.Background(), 7, operation.OperationID, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if source.loadedTarget != original.Digest() {
+		t.Fatalf("LoadTarget digest = %q, want %q", source.loadedTarget, original.Digest())
+	}
+	if retried.ManifestDigest != original.Digest() {
+		t.Fatalf("retry digest = %q, want original %q", retried.ManifestDigest, original.Digest())
+	}
+}
+
+type targetManifestSourceStub struct {
+	current      *releasemanifest.Manifest
+	targets      map[string]*releasemanifest.Manifest
+	loadedTarget string
+}
+
+func (source *targetManifestSourceStub) Load() (*releasemanifest.Manifest, error) {
+	return source.current, nil
+}
+
+func (source *targetManifestSourceStub) LoadTarget(digest string) (*releasemanifest.Manifest, error) {
+	source.loadedTarget = digest
+	manifest := source.targets[digest]
+	if manifest == nil {
+		return nil, errors.New("target manifest not found")
+	}
+	return manifest, nil
+}
+
 const uuidTestRequestID = "22222222-2222-4222-8222-222222222222"
+
+func manifestWithCompatibilityRange(t *testing.T, compatibilityRange string) *releasemanifest.Manifest {
+	t.Helper()
+	raw, err := os.ReadFile(fixturePath("release.manifest.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw = []byte(strings.Replace(string(raw), `compatibilityRange: ">=1.0.0 <2.0.0"`, `compatibilityRange: "`+compatibilityRange+`"`, 1))
+	manifest, err := releasemanifest.Parse(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return manifest
+}
 
 func TestUpgradeFixtureIsReadable(t *testing.T) {
 	if _, err := os.Stat(fixturePath("release.manifest.yaml")); err != nil {

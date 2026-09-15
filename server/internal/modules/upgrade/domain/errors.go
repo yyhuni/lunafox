@@ -16,6 +16,7 @@ const (
 	ErrorCodeReleaseManifestIdentityMismatch    ErrorCode = "release_manifest_identity_mismatch"
 	ErrorCodeReleaseManifestTargetInvalid       ErrorCode = "release_manifest_target_invalid"
 	ErrorCodeReleaseManifestTargetMismatch      ErrorCode = "release_manifest_target_mismatch"
+	ErrorCodeReleaseCompatibilityUnsupported    ErrorCode = "release_compatibility_unsupported"
 	ErrorCodeMigrationMetadataMissing           ErrorCode = "migration_metadata_missing"
 	ErrorCodeMigrationUnsupported               ErrorCode = "migration_unsupported"
 	ErrorCodeMigrationPolicyDisallowsDataRetain ErrorCode = "migration_policy_disallows_data_retention"
@@ -41,6 +42,7 @@ var (
 	ErrReleaseManifestIdentityMismatch    = errors.New("release manifest identity does not match release version")
 	ErrReleaseManifestTargetInvalid       = errors.New("release manifest target is invalid")
 	ErrReleaseManifestTargetMismatch      = errors.New("release manifest target does not match the operation")
+	ErrReleaseCompatibilityUnsupported    = errors.New("release is not compatible with the current deployment package")
 	ErrMigrationMetadataMissing           = errors.New("release manifest migration metadata is missing")
 	ErrMigrationUnsupported               = errors.New("release manifest migration is unsupported")
 	ErrMigrationPolicyDisallowsDataRetain = errors.New("migration policy disallows data retention")
@@ -53,7 +55,7 @@ var (
 	ErrUpgradeHostUnavailable             = errors.New("host upgrader is unavailable")
 	ErrUpgradeNotFound                    = errors.New("upgrade operation not found")
 	ErrUpgradeRetryNotAllowed             = errors.New("upgrade operation cannot be retried in its current state")
-	ErrUpgradeNoUpdateAvailable           = errors.New("no upgrade is available; the target release is already current")
+	ErrUpgradeNoUpdateAvailable           = errors.New("no upgrade is available; the target release is not newer than the current release")
 	ErrUpgradeTransitionConflict          = errors.New("upgrade operation transition conflicts with a newer state")
 )
 
@@ -148,7 +150,11 @@ func NewManifestTargetInvalid(field, reason string) error {
 // application and HTTP boundaries while leaving the current version out of
 // the diagnostic body.
 func NewUpgradeNoUpdateAvailable() error {
-	return newPolicyError(ErrorCodeUpgradeNoUpdateAvailable, ErrUpgradeNoUpdateAvailable, "preflight", "releaseVersion", "the target release is already current; no update is available")
+	return newPolicyError(ErrorCodeUpgradeNoUpdateAvailable, ErrUpgradeNoUpdateAvailable, "preflight", "releaseVersion", "the target release is not newer than the current release")
+}
+
+func NewReleaseCompatibilityUnsupported() error {
+	return newPolicyError(ErrorCodeReleaseCompatibilityUnsupported, ErrReleaseCompatibilityUnsupported, "preflight", "upgrade.compatibilityRange", "the running release is outside the automatic upgrade compatibility range; download the new deployment package")
 }
 
 func WrapMigrationMetadataMissing(cause error) error {

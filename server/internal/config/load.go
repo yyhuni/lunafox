@@ -239,6 +239,9 @@ func configFromViper(v *viper.Viper) *Config {
 		Upgrade: UpgradeConfig{
 			DeploymentRoot:      v.GetString("LUNAFOX_UPGRADE_DEPLOYMENT_ROOT"),
 			ManifestPath:        v.GetString("RELEASE_MANIFEST_PATH"),
+			ReleaseChannel:      v.GetString("RELEASE_CHANNEL"),
+			MetadataBaseURL:     v.GetString("RELEASE_METADATA_BASE_URL"),
+			Registry:            v.GetString("RELEASE_REGISTRY"),
 			MigrationPolicyPath: v.GetString("MIGRATION_POLICY_PATH"),
 			SocketPath:          v.GetString("LUNAFOX_UPGRADE_SOCKET_PATH"),
 		},

@@ -13,6 +13,13 @@ type ManifestSource interface {
 	Load() (*releasemanifest.Manifest, error)
 }
 
+// TargetManifestSource reloads immutable bytes for an already persisted
+// operation. A mutable release-channel alias must never change a retry target.
+type TargetManifestSource interface {
+	ManifestSource
+	LoadTarget(string) (*releasemanifest.Manifest, error)
+}
+
 // MigrationPolicySource reads the policy selected by the deployment. The
 // policy is evaluated again for every create/retry operation.
 type MigrationPolicySource interface {

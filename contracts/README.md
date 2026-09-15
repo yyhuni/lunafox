@@ -204,15 +204,16 @@ returns the existing empty acknowledgement shape.
   declarations, and runtime install environment overrides must not make those
   platform-owned inputs engine-controlled.
 - Release/upgrade boundaries are owned by `contracts/releasemanifest` and the
-  Server/host adapters around it: a supported target is a single-node Compose
+  Server/Compose-upgrader adapters around it: a supported target is a single-node Compose
   maintenance operation identified by one immutable manifest digest. The
   Server-to-host handoff may contain only `operationId`, a fixed action, and that
   digest; it must not carry image refs, paths, commands, migration versions, or
   credentials. The production Server must not mount the Docker socket.
-- Agent replacement remains an Agent control-plane concern. The host upgrader
-  must not replace Agent containers; Server uses the existing `update_required`
-  lifecycle and includes Agent reconnect, target match, health, and claim
-  readiness in completion evidence. A completion receipt is only deployment
+- The fixed resident Agent is replaced through its Compose service by the same
+  manifest-bound upgrader. Remote Agents remain an Agent control-plane concern;
+  Server uses the existing `update_required` lifecycle and includes Agent
+  reconnect, target match, health, and claim readiness in completion evidence.
+  A completion receipt is only deployment
   proof and never overrides the database Operation or host journal. The MVP has
   no automatic backup, data-retention rollback, or `migrate down` recovery;
   migration failures after the irreversible checkpoint require explicit
