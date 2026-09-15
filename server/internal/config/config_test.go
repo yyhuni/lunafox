@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/spf13/viper"
 )
 
@@ -374,21 +375,58 @@ func TestLoadRejectsNonHTTPSPublicURL(t *testing.T) {
 	}
 }
 
-// TestDatabaseDSN tests the DSN generation
 func TestDatabaseDSN(t *testing.T) {
-	cfg := &DatabaseConfig{
-		Host:     "localhost",
-		Port:     5432,
-		User:     "postgres",
-		Password: "secret",
-		Name:     "testdb",
-		SSLMode:  "disable",
-		TimeZone: "UTC",
+	tests := []struct {
+		name string
+		cfg  DatabaseConfig
+	}{
+		{
+			name: "reserved characters",
+			cfg: DatabaseConfig{
+				Host:     "database.example",
+				Port:     6543,
+				User:     "luna fox/$user",
+				Password: "space ' $ # ? & / password",
+				Name:     "luna/fox database",
+				SSLMode:  "require",
+				TimeZone: "Asia/Shanghai",
+			},
+		},
+		{
+			name: "unbracketed IPv6 host",
+			cfg: DatabaseConfig{
+				Host:     "2001:db8::1",
+				Port:     5432,
+				User:     "postgres",
+				Password: "secret",
+				Name:     "lunafox",
+				SSLMode:  "disable",
+				TimeZone: "UTC",
+			},
+		},
 	}
 
-	expected := "host=localhost port=5432 user=postgres password=secret dbname=testdb sslmode=disable TimeZone=UTC"
-	if cfg.DSN() != expected {
-		t.Errorf("DSN: expected %s, got %s", expected, cfg.DSN())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parsed, err := pgx.ParseConfig(tt.cfg.DSN())
+			if err != nil {
+				t.Fatalf("parse DSN: %v", err)
+			}
+			if parsed.Host != tt.cfg.Host || parsed.Port != uint16(tt.cfg.Port) ||
+				parsed.User != tt.cfg.User || parsed.Password != tt.cfg.Password ||
+				parsed.Database != tt.cfg.Name {
+				t.Fatalf("DSN fields changed during parsing: got host=%q port=%d user=%q password=%q database=%q", parsed.Host, parsed.Port, parsed.User, parsed.Password, parsed.Database)
+			}
+			if parsed.RuntimeParams["TimeZone"] != tt.cfg.TimeZone {
+				t.Fatalf("TimeZone changed during parsing: got %q", parsed.RuntimeParams["TimeZone"])
+			}
+			if tt.cfg.SSLMode == "disable" && parsed.TLSConfig != nil {
+				t.Fatal("sslmode=disable unexpectedly enabled TLS")
+			}
+			if tt.cfg.SSLMode != "disable" && parsed.TLSConfig == nil {
+				t.Fatalf("sslmode=%s did not enable TLS", tt.cfg.SSLMode)
+			}
+		})
 	}
 }
 

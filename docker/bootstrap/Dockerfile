@@ -42,7 +42,8 @@ COPY --from=builder /out/server /usr/local/bin/server
 COPY --from=builder /src/extensions/workflows /usr/local/share/lunafox/workflows
 COPY docker/bootstrap/bootstrap.sh /usr/local/bin/lunafox-bootstrap
 COPY docker/bootstrap/cert-init.sh /usr/local/bin/lunafox-cert-init
-RUN chmod 0755 /usr/local/bin/lunafox-bootstrap /usr/local/bin/lunafox-cert-init
+COPY docker/bootstrap/config-init.sh /usr/local/bin/lunafox-config-init
+RUN chmod 0755 /usr/local/bin/lunafox-bootstrap /usr/local/bin/lunafox-cert-init /usr/local/bin/lunafox-config-init
 
 # The image is intentionally one-shot; Compose controls when this command is
 # created and waits for its zero exit status before starting the public edge.

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:047dba25d78c0864dc383bb909c607dac2e99739561b9439ecc04d6f168959e2",
-  "releaseTag": "v0.0.1-alpha.104",
+  "sourceRevisionDigest": "sha256:a94626871ab5ddee9fd363ad4865934ac5879e1f2e25db33a20185837ffb2b87",
+  "releaseTag": "v0.0.1-alpha.106",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".github/workflows/public-validate.yml",
@@ -13,8 +13,8 @@
       "path": ".env.example",
       "type": "file",
       "mode": "0644",
-      "size": 440,
-      "sha256": "2e6d3a2905326293d6ea6eac25d1ac90f11dfc716b4ad4d6b999be94bcac6ca8"
+      "size": 806,
+      "sha256": "c30ee9827944e7f076ea43273e6bbc7adf518a842b634bdcbf1e0acac20854b5"
     },
     {
       "path": "CONTRIBUTING.md",
@@ -42,59 +42,59 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "8d362a832dc569b33251e6d687752322bb6094bb18a7b53e93bbd629fc02bf61"
+      "sha256": "1128f1146bd21d4b2e4610aa1f1acbb2ebbe3eabd2bc1d7d7dd50f14822a0211"
     },
     {
       "path": "README.md",
       "type": "file",
       "mode": "0644",
-      "size": 3262,
-      "sha256": "583c40a9ca3eb118dae8e64915d4c4c6e83646ffca4ffd8474bef450ccf60cb2"
+      "size": 3777,
+      "sha256": "cb98842c0654853d91a0867b89c74667186df1ee748e221dc256d8f0da3fa24b"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.104/agent-bundle.json",
+      "path": "agent/bin/v0.0.1-alpha.106/agent-bundle.json",
       "type": "file",
       "mode": "0644",
       "size": 2229,
-      "sha256": "2dbfe81a8728cf76ceb35d65ba51cef767c71cfc4ddff0692a8d32d7d1f1e285"
+      "sha256": "b7d0383c8fa65a5a870a9fca6d28c76cfc07fe3c88d10fe3f34a8e08a165e9a0"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.104/agent-bundle.sha256",
+      "path": "agent/bin/v0.0.1-alpha.106/agent-bundle.sha256",
       "type": "file",
       "mode": "0644",
       "size": 402,
       "sha256": "0774bfb8bb3fc62fcb473fcb80dd364cc4df141c603e25cd038b4238ad513976"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.104/agent-bundle.sigstore.json",
+      "path": "agent/bin/v0.0.1-alpha.106/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
-      "size": 9313,
-      "sha256": "cf78e407dce1d6c6d65db9727091883567589f89270c63b413b8e75f7e065b5f"
+      "size": 9321,
+      "sha256": "cc2c9d105e0bd478c4f0216a05c4b6105e008afc5f6e1d04cd0e6608280d53c5"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.104/lunafox-agent-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.106/lunafox-agent-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 23904517,
       "sha256": "5f89f64cc0230ee90ea5e1d90e5e3490b92389e678d67bef62c71480cd4469dd"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.104/lunafox-agent-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.106/lunafox-agent-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 22504286,
       "sha256": "6097dd4e0536b91d27c7a28d64f82d22eab63228f508c9df305743c5ce0fc0ae"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.104/lunafox-engine-mount-preflight-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.106/lunafox-engine-mount-preflight-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 20000987,
       "sha256": "2b12a49b754a09e98377c96105c2975a5b48bf6b063eae0b2062ea271e0add2a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.104/lunafox-engine-mount-preflight-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.106/lunafox-engine-mount-preflight-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 18804436,
@@ -104,8 +104,8 @@
       "path": "compose.yaml",
       "type": "file",
       "mode": "0644",
-      "size": 12839,
-      "sha256": "60a6934d30c019668d85a056e67946575537995f9262d16ea9a064b4d4410445"
+      "size": 14214,
+      "sha256": "b353d8392a427bbecbe31d6ed80cf2f5403fb749f5e698b31f9eedf78d7a134b"
     },
     {
       "path": "contracts/README.md",
@@ -958,8 +958,8 @@
       "path": "docker/bootstrap/Dockerfile",
       "type": "file",
       "mode": "0644",
-      "size": 1786,
-      "sha256": "54f6b3f89c45de970312e2bb1c2e58fd628447d7d2bb853f3c248898d11f55b5"
+      "size": 1893,
+      "sha256": "79113ce41e8a1da5f94d42ce1bf40e1a2c96ea5649308cdf865fe2ebe37a48e2"
     },
     {
       "path": "docker/bootstrap/bootstrap.sh",
@@ -974,6 +974,13 @@
       "mode": "0755",
       "size": 2217,
       "sha256": "2b748ef4242c8b8b7f8cdc54c83e0be2df3e3c22b885e8e82d12535c262e12a0"
+    },
+    {
+      "path": "docker/bootstrap/config-init.sh",
+      "type": "file",
+      "mode": "0755",
+      "size": 6367,
+      "sha256": "b6628c9a2b08233b74915afaad2bb6932cabc1ba1e0549ab087074b9f693aaac"
     },
     {
       "path": "docker/nginx/Dockerfile",
@@ -993,8 +1000,8 @@
       "path": "docs/public-deployment.md",
       "type": "file",
       "mode": "0644",
-      "size": 7337,
-      "sha256": "50e44fcdacbddda6fcd66623e28f6a172e140c8481b164038b3fdaea8c5e8b84"
+      "size": 10328,
+      "sha256": "f772aab9c372569c3407c4995508cfb1c301194d9b817a14a5b691b6c15795b0"
     },
     {
       "path": "engine-go/README.md",
@@ -16722,8 +16729,8 @@
       "path": "scripts/ci/check-public-release-policy.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 70182,
-      "sha256": "6967adcb3acd58a4639ac9ee8691f1198f2487979dd4920447317e5e869d94f0"
+      "size": 70219,
+      "sha256": "e5e82b5dc1f178825247d26070fbafe1aba288ae69f7c8ebec306ee98da24639"
     },
     {
       "path": "scripts/ci/export-public-repository.mjs",
@@ -16743,8 +16750,8 @@
       "path": "scripts/ci/generate-compose-deployment.test.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 3133,
-      "sha256": "cf34ce58746646b3b4baa0958055f91f8904ff31f3d845ab195d4ef478f139e0"
+      "size": 6246,
+      "sha256": "db51303d37ad39967310cc0f5cb25426d09f43e487898056a3c06b82f6fd1474"
     },
     {
       "path": "scripts/ci/generate-public-channel.mjs",
@@ -16764,8 +16771,8 @@
       "path": "scripts/ci/public-export-policy.json",
       "type": "file",
       "mode": "0644",
-      "size": 19299,
-      "sha256": "39cda3f7be6073fc026a1fdd349bc2158d39ed2e9b63deda5bf7b78fc6ffd657"
+      "size": 19541,
+      "sha256": "f0559cca75e96fb6309506829f6b168acaaf406861a049f0ccfd205f9feb93a4"
     },
     {
       "path": "scripts/ci/public-release-policy.json",
@@ -16803,6 +16810,13 @@
       "sha256": "256091f9fb4672f8d785e5aa2ab887dbe4cad678ef7f50b19f868777415fbad2"
     },
     {
+      "path": "scripts/ci/verify-compose-config-init-selftest.sh",
+      "type": "file",
+      "mode": "0755",
+      "size": 8399,
+      "sha256": "469d2261bedb5036876520aa1c17016389b089d90a27f6b2f3c3f91d2fd6771d"
+    },
+    {
       "path": "scripts/ci/verify-distribution-registry-v2.mjs",
       "type": "file",
       "mode": "0644",
@@ -16820,8 +16834,8 @@
       "path": "scripts/ci/verify-public-deployment.sh",
       "type": "file",
       "mode": "0755",
-      "size": 11470,
-      "sha256": "95b6f36ee19a20fc59b9d47e21c68707f4a9460f09b2d28871090ba620cced93"
+      "size": 19587,
+      "sha256": "d41e2074bb346017dae08e618c834ffc2834c6786e6caa7f210361c6262e4d8b"
     },
     {
       "path": "scripts/ci/verify-public-engine-release-selftest.mjs",
@@ -18283,15 +18297,15 @@
       "path": "server/internal/config/address.go",
       "type": "file",
       "mode": "0644",
-      "size": 407,
-      "sha256": "76bfde7d31a9b0ca71f59a5c91ed24e9be82221c4706d24f7185a64b1f096952"
+      "size": 636,
+      "sha256": "b55583b7111f4a616bda2e2fe6d07542f472cc844ec6adcb3eb9e8e12228969a"
     },
     {
       "path": "server/internal/config/config_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 14740,
-      "sha256": "ada0bc3d20626f411006f8003399c85821bfe301731df9e64a5ea601965c0b9c"
+      "size": 15891,
+      "sha256": "27078a8502805cbed6be617a1ea369005b1672dacda18aa1ddbe883e417357df"
     },
     {
       "path": "server/internal/config/defaults.go",
@@ -18304,8 +18318,8 @@
       "path": "server/internal/config/load.go",
       "type": "file",
       "mode": "0644",
-      "size": 5673,
-      "sha256": "400e67d300250895b2ff356b28c9b497dbc39224324ff3aaefbbe84c03ea5cb2"
+      "size": 8542,
+      "sha256": "ea5bfb7374557d08d19d8216f30bba273cf2a5af043d48e592a9aff4b0ffe0a1"
     },
     {
       "path": "server/internal/config/types.go",
