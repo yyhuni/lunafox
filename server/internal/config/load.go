@@ -2,6 +2,10 @@ package config
 
 import (
 	"fmt"
+	"net"
+	"net/url"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -19,6 +23,15 @@ func Load() (*Config, error) {
 
 	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	if err := resolveSecretFile(v, "DB_PASSWORD", "DB_PASSWORD_FILE"); err != nil {
+		return nil, err
+	}
+	if err := resolveSecretFile(v, "JWT_SECRET", "JWT_SECRET_FILE"); err != nil {
+		return nil, err
+	}
+	if err := resolvePublicURL(v); err != nil {
+		return nil, err
+	}
 
 	cfg := configFromViper(v)
 	if err := validateConfig(cfg); err != nil {
@@ -40,6 +53,9 @@ func LoadDatabaseConfig() (*DatabaseConfig, error) {
 
 	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	if err := resolveSecretFile(v, "DB_PASSWORD", "DB_PASSWORD_FILE"); err != nil {
+		return nil, err
+	}
 
 	cfg := DatabaseConfig{
 		Host:            v.GetString("DB_HOST"),
@@ -57,6 +73,82 @@ func LoadDatabaseConfig() (*DatabaseConfig, error) {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+func resolvePublicURL(v *viper.Viper) error {
+	if strings.TrimSpace(v.GetString("PUBLIC_URL")) != "" {
+		return nil
+	}
+
+	host := strings.TrimSpace(v.GetString("PUBLIC_HOST"))
+	port := strings.TrimSpace(v.GetString("PUBLIC_PORT"))
+	if host == "" && port == "" {
+		return nil
+	}
+	if host == "" {
+		return fmt.Errorf("PUBLIC_HOST is required when PUBLIC_URL is not set")
+	}
+	if port == "" {
+		return fmt.Errorf("PUBLIC_PORT is required when PUBLIC_URL is not set")
+	}
+	portNumber, err := strconv.Atoi(port)
+	if err != nil || portNumber < 1 || portNumber > 65535 {
+		return fmt.Errorf("PUBLIC_PORT must be an integer between 1 and 65535")
+	}
+
+	if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
+		host = strings.TrimSuffix(strings.TrimPrefix(host, "["), "]")
+	}
+	if host == "" || strings.ContainsAny(host, "/?#@") {
+		return fmt.Errorf("PUBLIC_HOST must be a hostname or IP address without scheme, port, or path")
+	}
+	if net.ParseIP(host) == nil && strings.Contains(host, ":") {
+		return fmt.Errorf("PUBLIC_HOST must not include a port")
+	}
+
+	// net.JoinHostPort preserves hostnames and brackets IPv6 literals correctly.
+	v.Set("PUBLIC_URL", (&url.URL{Scheme: "https", Host: net.JoinHostPort(host, port)}).String())
+	return nil
+}
+
+func resolveSecretFile(v *viper.Viper, valueKey, fileKey string) error {
+	path := strings.TrimSpace(v.GetString(fileKey))
+	if path == "" {
+		return nil
+	}
+	if v.GetString(valueKey) != "" {
+		return fmt.Errorf("%s and %s cannot both be set", valueKey, fileKey)
+	}
+
+	info, err := os.Lstat(path)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", fileKey, err)
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("%s must reference a regular file", fileKey)
+	}
+	if info.Mode().Perm()&0o077 != 0 {
+		return fmt.Errorf("%s must not be accessible by group or others", fileKey)
+	}
+	if info.Size() == 0 || info.Size() > 64*1024 {
+		return fmt.Errorf("%s must contain between 1 and 65536 bytes", fileKey)
+	}
+
+	value, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", fileKey, err)
+	}
+	if strings.TrimSpace(string(value)) == "" {
+		return fmt.Errorf("%s must not be empty", fileKey)
+	}
+	if strings.ContainsAny(string(value), "\r\n\x00") {
+		return fmt.Errorf("%s must contain exactly one line", fileKey)
+	}
+
+	// Set has higher precedence than environment and file configuration, so all
+	// commands consume the validated file as the single secret source.
+	v.Set(valueKey, string(value))
+	return nil
 }
 
 func readEnvFile(v *viper.Viper) error {

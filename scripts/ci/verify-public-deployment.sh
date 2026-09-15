@@ -52,12 +52,12 @@ for file in README.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTIFACTS.md \
 	docs/public-deployment.md compose.yaml .env.example \
 	resources/loki/loki-config.yaml resources/alloy/config.alloy \
 	resources/fingerprints/web_fingerprint_v4.json resources/wordlists/manifest.json \
-	docker/bootstrap/Dockerfile docker/bootstrap/bootstrap.sh docker/bootstrap/cert-init.sh \
+	docker/bootstrap/Dockerfile docker/bootstrap/bootstrap.sh docker/bootstrap/cert-init.sh docker/bootstrap/config-init.sh \
 	docker/nginx/Dockerfile docker/nginx/nginx.conf \
 	scripts/ci/audit-public-security-scope.mjs scripts/ci/check-public-channel.mjs \
 	scripts/ci/check-public-release-policy.mjs scripts/ci/generate-compose-deployment.mjs \
 	scripts/ci/generate-compose-deployment.test.mjs scripts/ci/verify-public-release.mjs \
-	scripts/ci/verify-compose-cert-init-selftest.sh \
+	scripts/ci/verify-compose-cert-init-selftest.sh scripts/ci/verify-compose-config-init-selftest.sh \
 	scripts/ci/verify-public-runtime-source.sh scripts/ci/verify-public-runtime-contexts.mjs; do
 	require_file "$file"
 done
@@ -80,38 +80,42 @@ if [ -e "$ROOT_DIR/tools" ]; then
 	done
 fi
 
-bash "$ROOT_DIR/scripts/ci/verify-public-runtime-source.sh" --root-dir "$ROOT_DIR"
-node "$ROOT_DIR/scripts/ci/verify-public-runtime-contexts.mjs" --root-dir "$ROOT_DIR"
-node --test "$ROOT_DIR/scripts/ci/generate-compose-deployment.test.mjs"
-bash "$ROOT_DIR/scripts/ci/verify-compose-cert-init-selftest.sh"
-
 compose="$ROOT_DIR/compose.yaml"
-compose_json="$(
+render_compose() {
+	local db_user="$1" db_name="$2" db_password="$3" jwt_secret="$4" public_host="$5" public_port="$6"
 	env \
-		DB_NAME=lunafox \
-		DB_USER=postgres \
-		DB_PASSWORD=placeholder \
-		JWT_SECRET=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+		DB_NAME="$db_name" \
+		DB_USER="$db_user" \
+		DB_PASSWORD="$db_password" \
+		JWT_SECRET="$jwt_secret" \
 		SERVER_IMAGE_REF=docker.io/yyhuni/lunafox-server@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
 		FRONTEND_IMAGE_REF=docker.io/yyhuni/lunafox-frontend@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb \
 		NGINX_IMAGE_REF=docker.io/yyhuni/lunafox-nginx@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc \
 		AGENT_IMAGE_REF=docker.io/yyhuni/lunafox-agent@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd \
 		BOOTSTRAP_IMAGE_REF=docker.io/yyhuni/lunafox-bootstrap@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee \
 		RELEASE_VERSION=1.2.3 AGENT_VERSION=1.2.3 \
-		PUBLIC_HOST=example.invalid PUBLIC_URL=https://example.invalid PUBLIC_PORT=443 \
+		PUBLIC_HOST="$public_host" PUBLIC_PORT="$public_port" \
 		ENGINE_INVENTORY_HOST_PATH=./engine-inventory.yaml ENGINE_INSTALL_REGISTRY=docker.io \
 		LUNAFOX_SHARED_DATA_VOLUME_BIND=lunafox_data:/opt/lunafox:rw \
 		docker compose -f "$compose" config --format json
-)" || fail "root Compose configuration is invalid"
+}
+compose_json="$(render_compose '' '' '' '' localhost 443)" || fail "root Compose configuration with default inputs is invalid"
+custom_compose_json="$(render_compose lunafox_app lunafox_custom operator-db-password operator-jwt-secret example.invalid 8443)" || fail "custom Compose configuration is invalid"
 
 jq -e '
-  (.services | keys | sort) == (["agent","agent-preflight","alloy","bootstrap","cert-init","frontend","loki","migrate","nginx","postgres","redis","server"] | sort) and
+  (.services | keys | sort) == (["agent","agent-preflight","alloy","bootstrap","cert-init","config-init","frontend","loki","migrate","nginx","postgres","redis","server"] | sort) and
   (all(.services[]; .build == null)) and
   (all(.services[]; .logging.driver == "json-file" and .logging.options["max-size"] == "10m" and .logging.options["max-file"] == "3")) and
   (.services.bootstrap.restart == "no") and
   (.services.migrate.restart == "no") and
   (.services["agent-preflight"].restart == "no") and
   (.services["cert-init"].restart == "no") and
+  (.services["config-init"].restart == "no") and
+  (.services["config-init"].network_mode == "none") and
+  (.services.postgres.depends_on["config-init"].condition == "service_completed_successfully") and
+  (.services.migrate.depends_on["config-init"].condition == "service_completed_successfully") and
+  (.services.bootstrap.depends_on["config-init"].condition == "service_completed_successfully") and
+  (.services.server.depends_on["config-init"].condition == "service_completed_successfully") and
   (.services.server.depends_on.bootstrap.condition == "service_completed_successfully") and
   (.services.bootstrap.depends_on["agent-preflight"].condition == "service_completed_successfully") and
   (.services.bootstrap.depends_on.migrate.condition == "service_completed_successfully") and
@@ -121,9 +125,50 @@ jq -e '
   (.services.nginx.depends_on["cert-init"].condition == "service_completed_successfully") and
   (.services.agent.container_name == "lunafox-agent") and
   (.services.agent.environment.LUNAFOX_AGENT_DISABLE_SELF_UPDATE == "true") and
+  (.services.postgres.environment.POSTGRES_DB == "lunafox") and
+  (.services.postgres.environment.POSTGRES_USER == "postgres") and
+  (.services.server.environment.DB_NAME == "lunafox") and
+  (.services.server.environment.DB_USER == "postgres") and
+  (.services.server.environment.PUBLIC_HOST == "localhost") and
+  (.services.server.environment.PUBLIC_PORT == "443") and
+  (.services.nginx.ports | any(.target == 443 and .published == "443")) and
+  (.services.server.environment.PUBLIC_URL == null) and
   (.services.server.labels["lunafox.logs.component"] == "server") and
   (.services.agent.labels["lunafox.logs.component"] == "agent")
 ' <<<"$compose_json" >/dev/null || fail "Compose service graph or bounded logging contract is invalid"
+
+jq -e '
+  (.services.postgres.environment.POSTGRES_DB == "lunafox_custom") and
+  (.services.postgres.environment.POSTGRES_USER == "lunafox_app") and
+  (.services.server.environment.DB_NAME == "lunafox_custom") and
+  (.services.server.environment.DB_USER == "lunafox_app") and
+  (.services.bootstrap.environment.DB_NAME == "lunafox_custom") and
+  (.services.bootstrap.environment.DB_USER == "lunafox_app") and
+  (.services.migrate.environment.DB_NAME == "lunafox_custom") and
+  (.services.migrate.environment.DB_USER == "lunafox_app") and
+  (.services.postgres.healthcheck.test | tostring | contains("pg_isready -U lunafox_app -d lunafox_custom")) and
+  (.services.server.environment.PUBLIC_HOST == "example.invalid") and
+  (.services.server.environment.PUBLIC_PORT == "8443") and
+  (.services.nginx.ports | any(.target == 443 and .published == "8443"))
+' <<<"$custom_compose_json" >/dev/null || fail "database identity or public address overrides are not propagated consistently"
+
+jq -e '
+  (.secrets.db_password_input.environment == "DB_PASSWORD") and
+  (.secrets.jwt_secret_input.environment == "JWT_SECRET") and
+  (.services["config-init"].secrets | any(.source == "db_password_input" and .target == "db-password-input")) and
+  (.services["config-init"].secrets | any(.source == "jwt_secret_input" and .target == "jwt-secret-input")) and
+  (.services["config-init"].volumes | any(.source == "lunafox_config" and .target == "/var/lib/lunafox-config" and .read_only != true)) and
+  (.services.postgres.environment.POSTGRES_PASSWORD == null) and
+  (.services.postgres.environment.POSTGRES_PASSWORD_FILE == "/run/lunafox-config/db-password") and
+  (.services.server.environment.DB_PASSWORD == null) and
+  (.services.server.environment.JWT_SECRET == null) and
+  (.services.server.environment.DB_PASSWORD_FILE == "/run/lunafox-config/db-password") and
+  (.services.server.environment.JWT_SECRET_FILE == "/run/lunafox-config/jwt-secret") and
+  (.services.server.volumes | any(.source == "lunafox_config" and .target == "/run/lunafox-config" and .read_only == true)) and
+  (.services.bootstrap.volumes | any(.source == "lunafox_config" and .target == "/run/lunafox-config" and .read_only == true)) and
+  (.services.migrate.volumes | any(.source == "lunafox_config" and .target == "/run/lunafox-config" and .read_only == true)) and
+  (.volumes.lunafox_config.name == "lunafox_config")
+' <<<"$compose_json" >/dev/null || fail "Compose persistent secret boundary is invalid"
 
 socket_owners="$(jq -r '.services | to_entries[] | select(any(.value.volumes[]?; .source == "/var/run/docker.sock")) | .key' <<<"$compose_json" | sort)"
 [ "$socket_owners" = $'agent\nagent-preflight\nalloy' ] || fail "only Agent, its one-shot preflight, and Alloy may mount the Docker socket"
@@ -147,7 +192,7 @@ jq -e '
   | all(test("^docker\\.io/.+@sha256:[a-f0-9]{64}$"))
 ' <<<"$compose_json" >/dev/null || fail "third-party resident images must be digest-qualified"
 
-for key in SERVER_IMAGE_REF FRONTEND_IMAGE_REF NGINX_IMAGE_REF AGENT_IMAGE_REF BOOTSTRAP_IMAGE_REF; do
+for key in SERVER_IMAGE_REF FRONTEND_IMAGE_REF NGINX_IMAGE_REF AGENT_IMAGE_REF BOOTSTRAP_IMAGE_REF PUBLIC_HOST PUBLIC_PORT; do
 	grep -Fq "\${${key}:?${key} is required}" "$compose" || fail "source Compose must require ${key}"
 done
 if rg -n 'lunafox-loki|LOKI_PLUGIN_REF|logging:[[:space:]]*loki' "$compose" "$ROOT_DIR/.env.example" "$ROOT_DIR/resources/alloy/config.alloy"; then
@@ -163,11 +208,25 @@ for marker in \
 	rg -q "$marker" "$ROOT_DIR/resources/alloy/config.alloy" || fail "Alloy configuration is missing: $marker"
 done
 
-grep -Eq '^DB_PASSWORD=$' "$ROOT_DIR/.env.example" || fail ".env.example must leave DB_PASSWORD for the operator"
-grep -Eq '^JWT_SECRET=$' "$ROOT_DIR/.env.example" || fail ".env.example must leave JWT_SECRET for the operator"
+grep -Eq '^PUBLIC_HOST=localhost$' "$ROOT_DIR/.env.example" || fail ".env.example must provide the local public host"
+grep -Eq '^PUBLIC_PORT=443$' "$ROOT_DIR/.env.example" || fail ".env.example must provide the HTTPS public port"
+grep -Eq '^DB_USER=postgres$' "$ROOT_DIR/.env.example" || fail ".env.example must provide the database user default"
+grep -Eq '^DB_NAME=lunafox$' "$ROOT_DIR/.env.example" || fail ".env.example must provide the database name default"
+grep -Eq '^DB_PASSWORD=$' "$ROOT_DIR/.env.example" || fail ".env.example must leave DB_PASSWORD empty for automatic generation"
+grep -Eq '^JWT_SECRET=$' "$ROOT_DIR/.env.example" || fail ".env.example must leave JWT_SECRET empty for automatic generation"
+if grep -Eq '^PUBLIC_URL=' "$ROOT_DIR/.env.example"; then
+	fail ".env.example must not expose derived PUBLIC_URL"
+fi
 if ! grep -Eiq 'GENERATED' "$ROOT_DIR/.env.example" || ! grep -Eiq 'READ[- ]ONLY' "$ROOT_DIR/.env.example"; then
 	fail ".env.example lacks complete generated/read-only marker"
 fi
+
+bash "$ROOT_DIR/scripts/ci/verify-public-runtime-source.sh" --root-dir "$ROOT_DIR"
+node "$ROOT_DIR/scripts/ci/verify-public-runtime-contexts.mjs" --root-dir "$ROOT_DIR"
+node --test "$ROOT_DIR/scripts/ci/generate-compose-deployment.test.mjs"
+bash "$ROOT_DIR/scripts/ci/verify-compose-cert-init-selftest.sh"
+bash "$ROOT_DIR/scripts/ci/verify-compose-config-init-selftest.sh"
+
 grep -Fq 'docker compose up -d' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must use direct Compose startup"
 grep -Fq 'PowerShell' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must cover native Windows PowerShell"
 grep -Fq 'docker compose down' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must document direct Compose shutdown"

@@ -19,10 +19,16 @@ also pinned by multi-platform manifest digest in Compose. Registry candidates
 are never mixed and there is no automatic fallback.
 
 Keep the extracted directory: `.env` is the installation's host-owned
-configuration and relative resource paths resolve from this directory. Set all
-blank required values before starting. `DB_PASSWORD` and `JWT_SECRET` must be
-independent random secrets and must not be committed or printed in support
-logs.
+configuration and relative resource paths resolve from this directory. Review
+`PUBLIC_HOST` and `PUBLIC_PORT`; the internal HTTPS `PUBLIC_URL` is derived from
+them. `DB_USER=postgres` and `DB_NAME=lunafox` are editable defaults.
+
+`DB_PASSWORD` and `JWT_SECRET` are optional first-start inputs. Leave them empty
+to generate independent random values, or set `DB_PASSWORD` before the first
+start to choose the database password. A previous deployment's non-empty values
+are adopted when it first upgrades to the configuration volume. Inputs reach
+only the initializer as Compose secret files and must not be committed or
+printed in support logs.
 
 ## Start and lifecycle
 
@@ -59,18 +65,29 @@ resets, or deletes an older deployment.
 
 Compose expresses initialization through one-shot services:
 
-1. `agent-preflight` uses the released Agent image to verify Docker API,
+1. `config-init` generates or adopts the database password and JWT secret,
+   validates repeated inputs, and persists both as mode-0600 files in
+   `lunafox_config`.
+2. `agent-preflight` uses the released Agent image to verify Docker API,
    exact named-volume identities, volume-subpath isolation, and read-only
    execution mounts through a real sibling container round trip.
-2. `cert-init` creates or validates the certificate and private key in
+3. `cert-init` creates or validates the certificate and private key in
    `lunafox_ssl`.
-3. `migrate` applies the embedded database schema after PostgreSQL is healthy.
-4. `bootstrap` waits for both preflight and migration, installs the verified
+4. PostgreSQL starts only after configuration initialization, then `migrate`
+   applies the embedded database schema after PostgreSQL is healthy.
+5. `bootstrap` waits for both preflight and migration, installs the verified
    Engine inventory and default resources, then creates or validates the
    internal Agent credential.
-5. Server starts only after bootstrap succeeds. Agent starts after both
+6. Server starts only after bootstrap succeeds. Agent starts after both
    bootstrap and Server health succeed; Nginx starts after certificate, Server,
    and Frontend readiness.
+
+Repeated startup reuses the files in `lunafox_config`. A later non-empty
+`DB_PASSWORD` or `JWT_SECRET` that differs from the persisted value fails before
+PostgreSQL and application services start; Compose does not rotate live
+credentials. Back up `lunafox_config` with `lunafox_postgres`. Deleting only the
+configuration volume while retaining the database volume loses the password
+needed to open that database.
 
 The credential is a mode-0600 regular JSON file in `lunafox_agent_state` and is
 never passed through the host environment or Docker container metadata.
@@ -122,11 +139,17 @@ unexpired, match the configured host, and share the private key. Partial or
 invalid state fails rather than being overwritten. This release does not add
 ACME, user certificate import, or automatic renewal.
 
-Use `docker compose logs agent-preflight migrate bootstrap cert-init agent` to
+Use `docker compose logs config-init agent-preflight migrate bootstrap cert-init agent` to
 diagnose a failed one-shot or Agent startup. Correct configuration or explicitly
 repair the named volume state, then repeat `docker compose up -d`. There is no receipt
 or hidden host lifecycle database; Compose exit status, dependency conditions,
 container state, and service health are the deployment status.
+
+When upgrading from a package that stored credentials only in `.env`, keep the
+existing non-empty `DB_PASSWORD` and `JWT_SECRET` for the first start of the new
+package. `config-init` copies them into `lunafox_config`. After that migration,
+empty inputs reuse the persisted files. A conflicting value fails explicitly;
+online password and JWT rotation are outside this deployment workflow.
 
 Administrator password reset remains available through the service command:
 
