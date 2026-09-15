@@ -22,8 +22,8 @@ func RunFingerprintBootstrap(ctx context.Context, databaseConfig *config.Databas
 	return bootstrap.RunFingerprintBootstrap(ctx, databaseConfig, corpusPath)
 }
 
-// RunWordlistBootstrap imports the immutable default wordlist resources without
-// starting the long-lived Server runtime.
+// RunWordlistBootstrap imports or validates the immutable default wordlist
+// resources without starting the long-lived Server runtime.
 func RunWordlistBootstrap(ctx context.Context, databaseConfig *config.DatabaseConfig, basePath, manifestPath, sourcePath string) error {
 	return bootstrap.RunWordlistBootstrap(ctx, databaseConfig, basePath, manifestPath, sourcePath)
 }
