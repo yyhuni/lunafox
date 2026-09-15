@@ -1,44 +1,64 @@
 # SPDX-License-Identifier: GPL-3.0-only
 name: lunafox
-
 services:
   postgres:
-    image: postgres:18.3-alpine
+    image: docker.io/library/postgres@sha256:54451ecb8ab38c24c3ec123f2fd501303a3a1856a5c66e98cecf2460d5e1e9d7
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:?DB_NAME is required}
       POSTGRES_USER: ${DB_USER:?DB_USER is required}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+    - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test:
+      - CMD-SHELL
+      - pg_isready -U ${DB_USER} -d ${DB_NAME}
       interval: 5s
       timeout: 5s
       retries: 20
-
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   redis:
-    image: redis:8.6.1-alpine
+    image: docker.io/library/redis@sha256:2afba59292f25f5d1af200496db41bea2c6c816b059f57ae74703a50a03a27d0
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test:
+      - CMD
+      - redis-cli
+      - ping
       interval: 5s
       timeout: 5s
       retries: 20
-
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   loki:
-    image: grafana/loki:3.6.7
+    image: docker.io/grafana/loki@sha256:3c8fd3570dd9219951a60d3f919c7f31923d10baee578b77bc26c4a0b32d092d
     restart: unless-stopped
     command: -config.file=/etc/loki/loki-config.yaml
     volumes:
-      - ./resources/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
-      - loki_data:/loki
+    - ./resources/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+    - loki_data:/loki
     healthcheck:
-      test: ["CMD", "/usr/bin/loki", "-verify-config=true", "-config.file=/etc/loki/loki-config.yaml"]
+      test:
+      - CMD
+      - /usr/bin/loki
+      - -verify-config=true
+      - -config.file=/etc/loki/loki-config.yaml
       interval: 10s
       timeout: 5s
       retries: 20
-
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   server:
     image: ${SERVER_IMAGE_REF:?SERVER_IMAGE_REF is required}
     restart: unless-stopped
@@ -92,29 +112,31 @@ services:
         condition: service_healthy
       loki:
         condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
     expose:
-      - "8080"
-      - "9090"
+    - '8080'
+    - '9090'
     logging:
-      driver: lunafox-loki
+      driver: json-file
       options:
-        loki-url: ${LOKI_PUSH_URL:?LOKI_PUSH_URL is required}
-        loki-tls-insecure-skip-verify: "true"
-        no-file: "false"
-        mode: non-blocking
-        loki-batch-size: "1048576"
-        max-buffer-size: 5m
-        loki-retries: "3"
-        loki-external-labels: component=server,container_name=lunafox-server,compose_service=server
+        max-size: 10m
+        max-file: '3'
     volumes:
-      - lunafox_data:/opt/lunafox
+    - lunafox_data:/opt/lunafox
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/healthChecks/current"]
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8080/healthChecks/current
       interval: 10s
       timeout: 5s
       retries: 30
       start_period: 60s
-
+    labels:
+      lunafox.logs.component: server
+      lunafox.logs.container: lunafox-server
   frontend:
     image: ${FRONTEND_IMAGE_REF:?FRONTEND_IMAGE_REF is required}
     restart: unless-stopped
@@ -122,24 +144,33 @@ services:
       server:
         condition: service_healthy
     expose:
-      - "3000"
+    - '3000'
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000',res=>process.exit(res.statusCode<500?0:1)).on('error',()=>process.exit(1))"]
+      test:
+      - CMD
+      - node
+      - -e
+      - require('http').get('http://localhost:3000',res=>process.exit(res.statusCode<500?0:1)).on('error',()=>process.exit(1))
       interval: 5s
       timeout: 5s
       retries: 30
       start_period: 20s
-
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   bootstrap:
     image: ${BOOTSTRAP_IMAGE_REF:?BOOTSTRAP_IMAGE_REF is required}
-    restart: "no"
+    restart: 'no'
     depends_on:
-      server:
-        condition: service_healthy
+      agent-preflight:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
     environment:
       RELEASE_VERSION: ${RELEASE_VERSION:?RELEASE_VERSION is required}
       AGENT_VERSION: ${AGENT_VERSION:?AGENT_VERSION is required}
-      AGENT_IMAGE_REF: ${AGENT_IMAGE_REF:?AGENT_IMAGE_REF is required}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       PUBLIC_URL: ${PUBLIC_URL:?PUBLIC_URL is required}
       DB_HOST: ${DB_HOST:-postgres}
@@ -159,9 +190,6 @@ services:
       LOGIN_VISUALS_BASE_PATH: ${LOGIN_VISUALS_BASE_PATH:-/opt/lunafox/login-visuals}
       WORKFLOW_DEFINITIONS_ROOT: ${WORKFLOW_DEFINITIONS_ROOT:-/usr/local/share/lunafox/workflows}
       ENGINE_PACKAGE_CACHE_ROOT: ${ENGINE_PACKAGE_CACHE_ROOT:-/opt/lunafox/engine-packages}
-      BOOTSTRAP_SERVER_URL: http://server:8080
-      BOOTSTRAP_AGENT_CONTROL_URL: http://server:9090
-      BOOTSTRAP_NETWORK: lunafox_network
       ENGINE_INSTALL_INVENTORY_PATH: /bootstrap/engine-inventory.yaml
       ENGINE_INSTALL_REGISTRY: ${ENGINE_INSTALL_REGISTRY:?ENGINE_INSTALL_REGISTRY is required}
       FINGERPRINT_BOOTSTRAP_PATH: /bootstrap/fingerprints/web_fingerprint_v4.json
@@ -170,16 +198,73 @@ services:
       LUNAFOX_ENGINE_EXECUTION_VOLUME: lunafox_engine_execution
       LUNAFOX_ENGINE_EXECUTION_ROOT: /var/lib/lunafox/engine-execution
       LUNAFOX_SHARED_DATA_VOLUME_BIND: lunafox_data:/opt/lunafox:rw
-      AGENT_CONTROL_URL: http://server:9090
-      LOKI_PUSH_URL: ${LOKI_PUSH_URL:?LOKI_PUSH_URL is required}
     volumes:
-      - lunafox_data:/opt/lunafox
-      - lunafox_engine_execution:/var/lib/lunafox/engine-execution
-      - ./resources/fingerprints/web_fingerprint_v4.json:/bootstrap/fingerprints/web_fingerprint_v4.json:ro
-      - ./resources/wordlists:/bootstrap/wordlists:ro
-      - ${ENGINE_INVENTORY_HOST_PATH:?ENGINE_INVENTORY_HOST_PATH is required}:/bootstrap/engine-inventory.yaml:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-
+    - lunafox_data:/opt/lunafox
+    - lunafox_engine_execution:/var/lib/lunafox/engine-execution
+    - ./resources/fingerprints/web_fingerprint_v4.json:/bootstrap/fingerprints/web_fingerprint_v4.json:ro
+    - ./resources/wordlists:/bootstrap/wordlists:ro
+    - ${ENGINE_INVENTORY_HOST_PATH:?ENGINE_INVENTORY_HOST_PATH is required}:/bootstrap/engine-inventory.yaml:ro
+    - lunafox_agent_state:/var/lib/lunafox-agent
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  migrate:
+    image: ${BOOTSTRAP_IMAGE_REF:?BOOTSTRAP_IMAGE_REF is required}
+    restart: 'no'
+    entrypoint:
+    - /usr/local/bin/server
+    command:
+    - migrate
+    - up
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:?DB_USER is required}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      DB_NAME: ${DB_NAME:?DB_NAME is required}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      DB_TIMEZONE: ${DB_TIMEZONE:-UTC}
+      DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-25}
+      DB_MAX_IDLE_CONNS: ${DB_MAX_IDLE_CONNS:-5}
+      DB_CONN_MAX_LIFETIME: ${DB_CONN_MAX_LIFETIME:-300}
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  agent-preflight:
+    image: ${AGENT_IMAGE_REF:?AGENT_IMAGE_REF is required}
+    restart: 'no'
+    network_mode: none
+    entrypoint:
+    - /bin/sh
+    - -ec
+    command:
+    - |
+      exec /usr/local/bin/lunafox-engine-mount-preflight \
+        --profile capability \
+        --image-ref "$$AGENT_IMAGE_REF" \
+        --execution-volume lunafox_engine_execution \
+        --execution-root /var/lib/lunafox/engine-execution \
+        --shared-volume lunafox_data \
+        --shared-root /opt/lunafox \
+        --run-id "compose-$$HOSTNAME"
+    environment:
+      AGENT_IMAGE_REF: ${AGENT_IMAGE_REF:?AGENT_IMAGE_REF is required}
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - lunafox_data:/opt/lunafox
+    - lunafox_engine_execution:/var/lib/lunafox/engine-execution
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   nginx:
     image: ${NGINX_IMAGE_REF:?NGINX_IMAGE_REF is required}
     restart: unless-stopped
@@ -188,45 +273,91 @@ services:
         condition: service_healthy
       frontend:
         condition: service_healthy
+      cert-init:
+        condition: service_completed_successfully
     ports:
-      - "${PUBLIC_PORT:?PUBLIC_PORT is required}:443"
+    - ${PUBLIC_PORT:?PUBLIC_PORT is required}:443
     volumes:
-      - lunafox_ssl:/etc/nginx/ssl:ro
+    - lunafox_ssl:/etc/nginx/ssl:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --no-check-certificate -O /dev/null https://localhost/healthChecks/current"]
+      test:
+      - CMD-SHELL
+      - wget -q --no-check-certificate -O /dev/null https://localhost/healthChecks/current
       interval: 10s
       timeout: 5s
       retries: 30
       start_period: 20s
-
-  receipt-invalidator:
-    profiles: [helpers]
-    image: busybox:1.36.1
-    restart: "no"
-    entrypoint: ["/bin/sh", "/usr/local/lib/lunafox/receipt-invalidate.sh"]
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  cert-init:
+    image: ${BOOTSTRAP_IMAGE_REF:?BOOTSTRAP_IMAGE_REF is required}
+    restart: 'no'
+    entrypoint:
+    - /usr/local/bin/lunafox-cert-init
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?PUBLIC_HOST is required}
     volumes:
-      - lunafox_receipt:/receipt
-      - ./scripts/deploy/receipt/invalidate.sh:/usr/local/lib/lunafox/receipt-invalidate.sh:ro
-
-  receipt-finalizer:
-    profiles: [helpers]
-    image: busybox:1.36.1
-    restart: "no"
-    entrypoint: ["/bin/sh", "/usr/local/lib/lunafox/receipt-finalize.sh"]
+    - lunafox_ssl:/etc/nginx/ssl
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  agent:
+    image: ${AGENT_IMAGE_REF:?AGENT_IMAGE_REF is required}
+    container_name: lunafox-agent
+    hostname: lunafox-agent
+    restart: unless-stopped
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      server:
+        condition: service_healthy
+    environment:
+      AGENT_CONTROL_URL: http://server:9090
+      AGENT_BOOTSTRAP_CREDENTIALS_PATH: /var/lib/lunafox-agent/bootstrap.json
+      AGENT_VERSION: ${AGENT_VERSION:?AGENT_VERSION is required}
+      AGENT_HOSTNAME: lunafox-agent
+      LUNAFOX_AGENT_CONTAINER_NAME: lunafox-agent
+      LUNAFOX_AGENT_DISABLE_SELF_UPDATE: 'true'
+      LUNAFOX_SHARED_DATA_VOLUME_BIND: lunafox_data:/opt/lunafox:rw
+      LUNAFOX_ENGINE_EXECUTION_VOLUME: lunafox_engine_execution
+      LUNAFOX_ENGINE_EXECUTION_ROOT: /var/lib/lunafox/engine-execution
     volumes:
-      - lunafox_receipt:/receipt
-      - ./scripts/deploy/receipt/finalize.sh:/usr/local/lib/lunafox/receipt-finalize.sh:ro
-
-  receipt-verifier:
-    profiles: [helpers]
-    image: busybox:1.36.1
-    restart: "no"
-    read_only: true
-    entrypoint: ["/bin/sh", "/usr/local/lib/lunafox/receipt-verify.sh"]
+    - /var/run/docker.sock:/var/run/docker.sock
+    - lunafox_data:/opt/lunafox
+    - lunafox_engine_execution:/var/lib/lunafox/engine-execution
+    - lunafox_agent_state:/var/lib/lunafox-agent
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    labels:
+      lunafox.logs.component: agent
+      lunafox.logs.container: lunafox-agent
+  alloy:
+    image: docker.io/grafana/alloy@sha256:b8ec653c44235fbe910879145dac3597d66b0aaecf60bcbbe82580767771a839
+    restart: unless-stopped
+    command:
+    - run
+    - --storage.path=/var/lib/alloy/data
+    - /etc/alloy/config.alloy
+    depends_on:
+      loki:
+        condition: service_healthy
     volumes:
-      - lunafox_receipt:/receipt:ro
-      - ./scripts/deploy/receipt/verify.sh:/usr/local/lib/lunafox/receipt-verify.sh:ro
-
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - ./resources/alloy/config.alloy:/etc/alloy/config.alloy:ro
+    - alloy_data:/var/lib/alloy/data
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
 volumes:
   postgres_data:
     name: lunafox_postgres
@@ -237,14 +368,11 @@ volumes:
   lunafox_agent_state:
     name: lunafox_agent_state
   lunafox_ssl:
-    external: true
     name: lunafox_ssl
-  lunafox_receipt:
-    external: true
-    name: lunafox_receipt
   loki_data:
     name: lunafox_loki
-
+  alloy_data:
+    name: lunafox_alloy
 networks:
   default:
     name: lunafox_network

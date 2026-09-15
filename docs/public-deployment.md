@@ -1,215 +1,153 @@
-# Public deployment contract
+# Public Docker Compose deployment
 
 > **GENERATED / READ-ONLY** - edit the private source and regenerate this
 > projection through the protected release workflow.
 
-This repository publishes a small Compose-first deployment closure. The root
-`compose.yaml`, `.env.example`, `resources/`, lifecycle scripts, release
-indexes, notices, secretless validators, and the approved generated/read-only
-Frontend, Server, Contracts, `engine-go`, Proto, first-party Extensions, Nginx,
-and Bootstrap source/build closure are public. Agent source, private release
-credentials/signing material, development Compose, installer implementation,
-and local evidence remain private.
+## Deployment package
 
-The public Runtime closure contains source, configuration, module metadata,
-generated API bindings, workflow definitions, static resources, and approved
-tests for each declared component. The support page's current Alipay, WeChat,
-and contact QR JPGs are explicitly approved public assets. The reviewed
-Dockerfiles and ignore rules are public so the canonical repository can build
-Server, Frontend, Nginx, and Bootstrap. Dependency directories,
-framework/build output, coverage, reports, screenshots, logs, test-results,
-test plans, caches, certificates, and scratch files are excluded local
-evidence, not deployment inputs.
+Each public release contains two complete, versioned ZIP files. Choose exactly
+one registry for a deployment:
 
-Engine Runtime Images and Engine Packages are public artifacts. First-party
-Engine source is GPL-3.0-only. Included third-party components remain governed
-by their applicable licenses and attribution terms.
+- `lunafox-<version>-dockerhub.zip`
+- `lunafox-<version>-ghcr.zip`
 
-## Release channels
+Each package contains `compose.yaml`, `.env`, `.env.example`, the verified final
+release manifest, a registry-specific Engine inventory, the Loki and Alloy
+configuration, the default fingerprint corpus, and required wordlists. Product
+and Engine images are digest-qualified; PostgreSQL, Redis, Loki, and Alloy are
+also pinned by multi-platform manifest digest in Compose. Registry candidates
+are never mixed and there is no automatic fallback.
 
-Source tags/main and mutable `release-channel` metadata are published
-separately. On a clean work tree, the install command fetches
-`channels/<channel>.env` and its `manifests/<version>.yaml` from the fixed
-`https://raw.githubusercontent.com/yyhuni/lunafox/release-channel/` source,
-validates schema-v3, version, path, and SHA-256, and only then enters the
-Compose lifecycle. A manual fetch or checkout of `release-channel` is not
-required.
+Keep the extracted directory: `.env` is the installation's host-owned
+configuration and relative resource paths resolve from this directory. Set all
+blank required values before starting. `DB_PASSWORD` and `JWT_SECRET` must be
+independent random secrets and must not be committed or printed in support
+logs.
 
-When complete local `channels/` and `manifests/` directories already exist,
-install reuses and revalidates them without network access or overwriting. A
-single directory, incomplete files, download failure, or validation failure is
-fail-closed. An exact release-tag checkout must also match channel `VERSION`.
-If an interrupted operation leaves partial metadata, start from a clean work
-tree and remove both incomplete directories only after confirming that no
-deployment state exists.
+## Start and lifecycle
 
-The default channel is stable. Until a stable alias is governed and published,
-omitting `--channel` explicitly directs the operator to canary and never
-silently selects a prerelease. Channel records remain append-only; corrections
-use a new prerelease tag and never rebind an existing digest, manifest, channel
-record, or public tree.
+Docker with Linux container support and Docker Compose v2 are the host
+prerequisites. From the extracted directory run:
 
-Schema v2, alpha.46, legacy image variables, installer assets, and
-`checksums.txt` are retired. No automatic migration from an old private
-installation is provided.
+```console
+docker compose up -d
+docker compose ps
+```
 
-## Supported hosts
+On Windows, run these commands directly in PowerShell. On macOS, Linux, Docker
+Desktop, or OrbStack, use the Docker endpoint already selected by the Docker
+CLI. LunaFox does not inspect or allowlist the host OS, distribution, Docker
+brand, or context name. Docker reports connection, platform, bind path, and
+published-port errors itself.
 
-The official first-release matrix is Ubuntu Server 22.04 or 24.04, native
-Linux `amd64` or `arm64`, rootful Docker Engine, Docker client/daemon API
-`>=1.45`, and Docker Compose v2 plugin `>=2.24.0`. Docker Desktop, Windows
-containers, rootless Docker, remote daemons, and unlisted distributions are
-experimental only. The scripts warn on an unlisted distribution but still
-enforce actual Docker, network, image-pull, volume, port, and health checks.
+The ordinary lifecycle is:
 
-The resident Server service does not mount the host Docker socket. Any
-privileged deployment lifecycle must run through the independently managed
-host-side boundary; a Server or browser request never becomes a Docker command
-proxy.
+```console
+docker compose stop
+docker compose start
+docker compose restart
+docker compose down
+```
 
-Lifecycle commands use the caller's already authorized default local Docker
-context. They do not run implicit `sudo`, change contexts, or modify systemd,
-daemon, socket, group, or firewall configuration. Install automatically prepares
-the official Loki plugin under the dedicated alias `lunafox-loki`, granting its
-required Docker plugin permissions. Version and architecture policy comes from
-`contracts/loggingplugin/policy.sh`; `.env` records `LOKI_PLUGIN_REF` for subsequent
-start/restart. Unknown architecture, identity or ownership fails closed.
+The internal Agent is a Compose service, so all four commands include it.
+`down` removes containers and the project network while retaining named
+volumes. Do not add `--volumes` unless permanent state deletion is intended and
+has been backed up. No command in this deployment automatically migrates,
+resets, or deletes an older deployment.
 
-Ownership metadata is stored in a separate daemon volume bound to the actual
-plugin ID. It is not deployment data or a completion receipt. Installation may
-update a known plugin only when every container, including stopped and unrelated
-containers, is unreferenced. No force-disable or force-remove is used. Generic
-`loki` instances remain unmanaged. Start/restart only install a missing saved
-version or enable a matching version; stop does not prepare plugins. Both
-uninstall modes remove containers before attempting safe plugin cleanup, retaining
-the plugin and metadata when ownership or references cannot be verified.
+## Initialization
 
-Host port checks require `ss` (Ubuntu `iproute2`) and cover non-Docker listeners.
-Reset permits proven project-owned Docker proxy listeners, but refuses uncertain
-or external ownership before deleting business state. Failed installation retains
-prepared plugins; retry revalidates them. Existing business state still requires
-explicit reset. Private lifecycle event logs live outside business state and omit
-command traces, environment dumps, tokens and private keys. These logs do not
-provide automatic resume. Restoring a plugin does not restore an uninstalled Agent.
+Compose expresses initialization through one-shot services:
 
-## Compose and registries
+1. `agent-preflight` uses the released Agent image to verify Docker API,
+   exact named-volume identities, volume-subpath isolation, and read-only
+   execution mounts through a real sibling container round trip.
+2. `cert-init` creates or validates the certificate and private key in
+   `lunafox_ssl`.
+3. `migrate` applies the embedded database schema after PostgreSQL is healthy.
+4. `bootstrap` waits for both preflight and migration, installs the verified
+   Engine inventory and default resources, then creates or validates the
+   internal Agent credential.
+5. Server starts only after bootstrap succeeds. Agent starts after both
+   bootstrap and Server health succeed; Nginx starts after certificate, Server,
+   and Frontend readiness.
 
-Every product image, bootstrap image, and Engine Runtime Image is selected from
-the release manifest and channel as an immutable digest. Docker Hub
-(`docker.io/yyhuni`) is the default. `--registry ghcr` atomically selects the
-matching `ghcr.io/yyhuni` candidate for every artifact. Per-service overrides,
-mixed registries, automatic fallback, third-party registries, and offline
-`docker image load` archives are not supported.
+The credential is a mode-0600 regular JSON file in `lunafox_agent_state` and is
+never passed through the host environment or Docker container metadata.
+Registration, database binding, and credential publication are serialized.
+Repeated successful `docker compose up -d` reuses the same registered Agent.
+Missing, malformed, permissive, partially published, deleted, or database-
+inconsistent identity state fails with an explicit repair error and never
+silently registers another Agent.
 
-## System upgrade boundary
+Default resources follow the same fail-closed rule. A fresh state imports the
+packaged fingerprint corpus and wordlists once. Later bootstrap runs validate
+the original records, files, hashes, sizes, descriptions, and tags while
+leaving additional user resources untouched. Missing, partially deleted, or
+changed defaults fail with an explicit repair error; bootstrap never fills in
+or overwrites that state. An initialized corpus that was fully cleared is not
+silently reseeded.
 
-The supported upgrade surface is a single-node Compose maintenance window.
-Short periods of Server, Frontend, Nginx, database, logging, or Agent
-unavailability are expected; HA, rolling/zero-downtime upgrades, automatic
-backups, data-retention rollback, and cross-node recovery are outside this MVP.
-The current `disposable-development` migration policy does not make a release
-data-retaining. `migrate down` is a development/test teardown and is never an
-automatic upgrade recovery action.
+The preflight checks the actual Docker socket, Linux execution node,
+named-volume subpaths, and read-only execution mounts before business bootstrap.
+The resident Agent checks the socket, platform, API version, and exact volume
+identities again when it starts. Unsupported capability fails explicitly; there
+is no weaker whole-volume fallback. Server never receives the Docker socket.
 
-The resident Server service does not mount `/var/run/docker.sock`. A separately
-managed host upgrader owns privileged Compose operations through the private
-`.lunafox/upgrade/upgrader.sock` boundary and accepts only an operation ID, a
-fixed action, and an immutable manifest digest. It re-reads the fixed release
-manifest and never accepts browser-supplied image references, paths, commands,
-migration versions, or credentials.
+The Compose-managed Agent has in-container self-update disabled. Upgrade its
+digest by using a newer deployment package and Compose. Existing remote Agent
+installation and self-update behavior are unchanged.
 
-The host upgrader does not replace Agent containers. After host services recover,
-Server sends the existing `update_required` target and waits for each in-scope
-Agent to reconnect, match the target version/digest, report healthy, and become
-claim-ready. A completion receipt records only that host deployment completed;
-the database Upgrade Operation and host journal remain the sources of truth and
-must agree on operation ID and manifest digest before the operation can succeed.
+## Logs
 
-The `lunafox-bootstrap` Dockerfile and entrypoint are public GPL-3.0-only build
-inputs, while the Agent it starts remains closed. The bootstrap service is
-one-shot and has `restart: "no"`. It imports the release Engine Package inventory and default resources, checks
-the Agent Engine mount boundary, registers required Engines, and exits zero
-only after its work succeeds. It runs only during a fresh install or confirmed
-reset. Its source and build context are part of the generated public Runtime
-closure; the Agent it starts remains a private artifact.
+All resident services use Docker's `json-file` driver with `max-size=10m` and
+`max-file=3`. The ordinary Alloy container reads only labelled LunaFox Server
+and internal Agent output through the Docker socket and sends it to the local
+Loki service. Alloy stores read positions in `lunafox_alloy`, so collector
+restart does not replay the entire retained log set.
 
-This is a self-hosted deployment path for infrastructure the operator owns or
-controls. Provider-hosted operation and redistribution of the closed Agent
-artifact remain outside the default grant.
+The collector preserves the existing selectors
+`{component="server",container_name="lunafox-server"}` and
+`{agent_id="<id>",container_name="lunafox-agent"}`. It does not collect its own
+output. No Loki Docker plugin is installed or required. Docker socket access is
+limited to the Compose Agent, its one-shot capability preflight, and the
+collector plus development-only tooling; the resident Server has no Docker
+control path.
 
-## Public source validation
+## Certificates and recovery
 
-The canonical public repository validates the generated Runtime source without
-private credentials on export PRs, including non-publishing Docker builds.
-After the protected generated PR is merged to public `main`, the workflow
-builds and publishes `lunafox-server`, `lunafox-frontend`, `lunafox-nginx`, and
-`lunafox-bootstrap` from the reviewed contexts with SBOM and provenance
-attestations. The private release first builds, tests, and signs the closed
-Agent binary bundle and exports its exact seven-file directory under
-`agent/bin/<release-tag>/`; the public workflow verifies that merged Git tree,
-packages `lunafox-agent`, and publishes its immutable digest. The public
-workflow never checks out private source or
-Agent credentials. It owns final digest promotion, Runtime manifest, channel,
-and GitHub Release; missing or mismatched evidence stops release before the
-final manifest. Recovery and rollback use only a previously verified immutable
-digest.
+`cert-init` creates a self-signed RSA certificate with a DNS or IP SAN for
+`PUBLIC_HOST`. Existing certificate files must be restricted regular files,
+unexpired, match the configured host, and share the private key. Partial or
+invalid state fails rather than being overwritten. This release does not add
+ACME, user certificate import, or automatic renewal.
 
-## Configuration and certificates
+Use `docker compose logs agent-preflight migrate bootstrap cert-init agent` to
+diagnose a failed one-shot or Agent startup. Correct configuration or explicitly
+repair the named volume state, then repeat `docker compose up -d`. There is no receipt
+or hidden host lifecycle database; Compose exit status, dependency conditions,
+container state, and service health are the deployment status.
 
-On first install the host script generates `.env` with the operating-system
-CSPRNG, writes it through a restricted temporary file, and sets mode `0600`.
-Normal start/restart reuses that file. Only `--reset --confirm` may regenerate
-credentials. Secrets are never printed by the lifecycle scripts.
+Administrator password reset remains available through the service command:
 
-Before Nginx starts, the script creates the external `lunafox_ssl` volume and a
-self-signed certificate with a SAN for the configured DNS name or IP address.
-There is no user-certificate override, ACME flow, or automatic renewal. Missing,
-invalid, mismatched, or expired material stops the command and preserves state;
-recovery is confirmed reset followed by a fresh install.
+```console
+docker compose exec server resetadmin
+```
 
-## Lifecycle and recovery
+## Release and security boundary
 
-`install.sh` accepts only an empty LunaFox state. Existing containers, named
-volumes, `.env`, state directory, or receipt stop installation until reset is
-explicitly confirmed. A bootstrap failure remains visible in container logs;
-there is no retry/repair/resume command.
+This is a single-node Compose deployment. It does not provide rolling upgrade,
+automatic backup, preserve-data rollback, or cross-node recovery. The current
+`disposable-development` migration baseline does not promise compatibility with
+existing persisted deployments. Release generation and contract checks use
+isolated fixtures; they do not touch operator volumes.
 
-`uninstall.sh` removes Compose containers, networks, and orchestration resources
-while preserving data, configuration, certificates, and the completion receipt.
-`uninstall.sh --purge --confirm` first invalidates the receipt and then removes
-only project-owned volumes and host state.
+The current Agent authentication credential remains a long-lived
+eight-character hexadecimal bearer. Agent TLS certificate-chain identity,
+replay protection, rotation, and revocation are deferred. The package is for
+self-hosted use on infrastructure the operator owns or controls; the closed
+Agent artifact remains subject to `NOTICE-CLOSED-ARTIFACTS.md`.
 
-The bootstrap-created Agent is a resident project container outside the
-declarative Compose service list because its credential is created only inside
-the bootstrap process. `stop`, `start`, and `restart` manage that existing
-container together with the Compose services, but never recreate, re-register,
-or otherwise repair it. If it is absent, the supported recovery is a confirmed
-reset followed by a fresh install.
-
-Completion is recorded in the separate external `lunafox_receipt` volume. Only
-the short-lived invalidator and finalizer helpers can write it; the verifier is
-read-only, and runtime/bootstrap services never mount it. Explicit
-`start`/`restart`/`status` checks both the receipt and current service/HTTPS
-health. Docker daemon or host restart may recover resident services through
-their restart policy, but does not rerun bootstrap or claim a newly verified
-completion.
-
-## Deferred security and licensing
-
-This release does not add Agent TLS certificate-chain, hostname, or mTLS
-identity verification. The existing credential remains a long-lived
-eight-character hexadecimal bearer without stronger replay, rotation, or
-revocation guarantees.
-
-Deployment files, the exported Runtime source, and first-party Engine source
-are `GPL-3.0-only`. The separate closed Agent artifact notice applies only to
-the closed Agent artifact; it does not govern Engine Runtime Images or Engine
-Packages. Included third-party components remain governed by their applicable
-licenses and attribution terms. The notice grants bounded internal self-hosting
-and backup use only for the closed Agent artifact; source access, modification,
-public redistribution, external registry mirroring, hosted/SaaS operation,
-white-label use, and resale require the stated written exception.
-
-## Agent limit
-
-The official MVP permits three registered Agents per deployment, shared by all administrators. The bootstrap Agent and offline Agents count toward this limit. Deleting an Agent successfully releases its slot immediately. Existing deployments above three retain their Agents and reconnect behavior but cannot register another until fewer than three remain. Registration commands do not reserve slots; concurrent registration is checked by Server. This version has no configurable limit, membership activation, or anti-bypass enforcement against modified open-source Server builds.
+Exported first-party Runtime source, deployment files, and first-party Engine
+source are SPDX `GPL-3.0-only`. Third-party components retain their applicable
+licenses.
