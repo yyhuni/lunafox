@@ -4,7 +4,7 @@
   "exporterVersion": "public-exporter/v1",
   "sourceRepository": "yyhuni/lunafox-private",
   "destinationRepository": "yyhuni/lunafox",
-  "releaseTag": "v0.0.1-alpha.106",
-  "sourceRevisionDigest": "sha256:a94626871ab5ddee9fd363ad4865934ac5879e1f2e25db33a20185837ffb2b87",
+  "releaseTag": "v0.0.1-alpha.107",
+  "sourceRevisionDigest": "sha256:52d2ec722904fc639282638396c5e3f427ed365fcb6c7607bcb6bc02db633110",
   "privateProvenance": "retained in the protected private release evidence; not present in public Git"
 }

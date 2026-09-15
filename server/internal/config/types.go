@@ -109,11 +109,14 @@ type NotificationConfig struct {
 	VulnerabilityThreshold string `mapstructure:"NOTIFICATION_VULNERABILITY_THRESHOLD"`
 }
 
-// UpgradeConfig describes server-owned paths for the independent host
+// UpgradeConfig describes deployment-owned inputs for the Compose-managed
 // upgrader. None of these values are accepted from HTTP requests.
 type UpgradeConfig struct {
 	DeploymentRoot      string `mapstructure:"LUNAFOX_UPGRADE_DEPLOYMENT_ROOT"`
 	ManifestPath        string `mapstructure:"RELEASE_MANIFEST_PATH"`
+	ReleaseChannel      string `mapstructure:"RELEASE_CHANNEL"`
+	MetadataBaseURL     string `mapstructure:"RELEASE_METADATA_BASE_URL"`
+	Registry            string `mapstructure:"RELEASE_REGISTRY"`
 	MigrationPolicyPath string `mapstructure:"MIGRATION_POLICY_PATH"`
 	SocketPath          string `mapstructure:"LUNAFOX_UPGRADE_SOCKET_PATH"`
 }

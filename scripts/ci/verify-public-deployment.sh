@@ -53,6 +53,8 @@ for file in README.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTIFACTS.md \
 	resources/loki/loki-config.yaml resources/alloy/config.alloy \
 	resources/fingerprints/web_fingerprint_v4.json resources/wordlists/manifest.json \
 	docker/bootstrap/Dockerfile docker/bootstrap/bootstrap.sh docker/bootstrap/cert-init.sh docker/bootstrap/config-init.sh \
+	server/cmd/lunafox-upgrader/main.go server/internal/modules/upgrade/upgrader/compose.go \
+	server/internal/modules/upgrade/upgrader/daemon.go server/internal/modules/upgrade/upgrader/journal.go \
 	docker/nginx/Dockerfile docker/nginx/nginx.conf \
 	scripts/ci/audit-public-security-scope.mjs scripts/ci/check-public-channel.mjs \
 	scripts/ci/check-public-release-policy.mjs scripts/ci/generate-compose-deployment.mjs \
@@ -100,6 +102,9 @@ render_compose() {
 		AGENT_IMAGE_REF=docker.io/yyhuni/lunafox-agent@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd \
 		BOOTSTRAP_IMAGE_REF=docker.io/yyhuni/lunafox-bootstrap@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee \
 		RELEASE_VERSION=1.2.3 AGENT_VERSION=1.2.3 \
+		RELEASE_CHANNEL=canary \
+		RELEASE_METADATA_BASE_URL=https://raw.githubusercontent.com/yyhuni/lunafox/release-channel \
+		RELEASE_REGISTRY=docker.io \
 		PUBLIC_HOST="$public_host" PUBLIC_PORT="$public_port" \
 		ENGINE_INVENTORY_HOST_PATH=./engine-inventory.yaml ENGINE_INSTALL_REGISTRY=docker.io \
 		LUNAFOX_SHARED_DATA_VOLUME_BIND=lunafox_data:/opt/lunafox:rw \
@@ -111,7 +116,7 @@ external_default_json="$(render_compose external database.example '' require '' 
 external_custom_json="$(render_compose external 2001:db8::1 6543 verify-full lunafox_remote lunafox_external operator-db-password operator-jwt-secret example.invalid 8443)" || fail "custom external Compose configuration is invalid"
 
 jq -e '
-  (.services | keys | sort) == (["agent","agent-preflight","alloy","bootstrap","cert-init","config-init","frontend","loki","migrate","nginx","postgres","redis","server"] | sort) and
+  (.services | keys | sort) == (["agent","agent-preflight","alloy","bootstrap","cert-init","config-init","frontend","loki","migrate","nginx","postgres","redis","server","upgrader"] | sort) and
   (all(.services[]; .build == null)) and
   (all(.services[]; .logging.driver == "json-file" and .logging.options["max-size"] == "10m" and .logging.options["max-file"] == "3")) and
   (.services.bootstrap.restart == "no") and
@@ -140,6 +145,12 @@ jq -e '
   (.services.nginx.depends_on["cert-init"].condition == "service_completed_successfully") and
   (.services.agent.container_name == "lunafox-agent") and
   (.services.agent.environment.LUNAFOX_AGENT_DISABLE_SELF_UPDATE == "true") and
+  (.services.upgrader.network_mode == "none") and
+  (.services.upgrader.ports == null) and
+  (.services.upgrader.command == ["--root-dir","/deployment","--layout","public","--registry","docker.io"]) and
+  (.services.server.environment.RELEASE_CHANNEL == "canary") and
+  (.services.server.environment.RELEASE_METADATA_BASE_URL == "https://raw.githubusercontent.com/yyhuni/lunafox/release-channel") and
+  (.services.server.environment.RELEASE_REGISTRY == "docker.io") and
   (.services.postgres.environment.POSTGRES_DB == "lunafox") and
   (.services.postgres.environment.POSTGRES_USER == "postgres") and
   (.services.server.environment.DB_NAME == "lunafox") and
@@ -195,7 +206,7 @@ jq -e '
     .environment.DB_SSLMODE == "verify-full"))
 ' <<<"$external_custom_json" >/dev/null || fail "custom external database inputs are not propagated consistently"
 
-jq -e '
+jq -e --arg root "$ROOT_DIR" '
   (.secrets.db_password_input.environment == "DB_PASSWORD") and
   (.secrets.jwt_secret_input.environment == "JWT_SECRET") and
   (.services["config-init"].secrets | any(.source == "db_password_input" and .target == "db-password-input")) and
@@ -208,13 +219,17 @@ jq -e '
   (.services.server.environment.DB_PASSWORD_FILE == "/run/lunafox-config/db-password") and
   (.services.server.environment.JWT_SECRET_FILE == "/run/lunafox-config/jwt-secret") and
   (.services.server.volumes | any(.source == "lunafox_config" and .target == "/run/lunafox-config" and .read_only == true)) and
+  (.services.server.volumes | any(.source == "lunafox_upgrade_state" and .target == "/opt/lunafox/.lunafox/upgrade" and .read_only != true)) and
+  (.services.upgrader.volumes | any(.type == "bind" and .source == $root and .target == "/deployment" and .read_only != true)) and
+  (.services.upgrader.volumes | any(.source == "lunafox_upgrade_state" and .target == "/deployment/.lunafox/upgrade" and .read_only != true)) and
   (.services.bootstrap.volumes | any(.source == "lunafox_config" and .target == "/run/lunafox-config" and .read_only == true)) and
   (.services.migrate.volumes | any(.source == "lunafox_config" and .target == "/run/lunafox-config" and .read_only == true)) and
-  (.volumes.lunafox_config.name == "lunafox_config")
+  (.volumes.lunafox_config.name == "lunafox_config") and
+  (.volumes.lunafox_upgrade_state.name == "lunafox_upgrade_state")
 ' <<<"$compose_json" >/dev/null || fail "Compose persistent secret boundary is invalid"
 
 socket_owners="$(jq -r '.services | to_entries[] | select(any(.value.volumes[]?; .source == "/var/run/docker.sock")) | .key' <<<"$compose_json" | sort)"
-[ "$socket_owners" = $'agent\nagent-preflight\nalloy' ] || fail "only Agent, its one-shot preflight, and Alloy may mount the Docker socket"
+[ "$socket_owners" = $'agent\nagent-preflight\nalloy\nupgrader' ] || fail "only the upgrader and existing Agent execution or log collection services may mount the Docker socket"
 jq -e '
   (.services.agent.volumes | any(.source == "/var/run/docker.sock" and .target == "/var/run/docker.sock")) and
   (.services["agent-preflight"].image == .services.agent.image) and
@@ -226,6 +241,7 @@ jq -e '
   (.services["agent-preflight"].command | tostring | contains("$$AGENT_IMAGE_REF")) and
   (.services["agent-preflight"].command | tostring | contains("compose-$$HOSTNAME")) and
   (.services.alloy.volumes | any(.source == "/var/run/docker.sock" and .target == "/var/run/docker.sock" and .read_only == true)) and
+  (.services.upgrader.volumes | any(.source == "/var/run/docker.sock" and .target == "/var/run/docker.sock" and .read_only != true)) and
   (.services.alloy.volumes | any(.source == "alloy_data" and .target == "/var/lib/alloy/data")) and
   (.services.alloy.command | index("--storage.path=/var/lib/alloy/data") != null)
 ' <<<"$compose_json" >/dev/null || fail "Agent capability preflight or Alloy position storage mount is invalid"
@@ -235,7 +251,7 @@ jq -e '
   | all(test("^docker\\.io/.+@sha256:[a-f0-9]{64}$"))
 ' <<<"$compose_json" >/dev/null || fail "third-party resident images must be digest-qualified"
 
-for key in SERVER_IMAGE_REF FRONTEND_IMAGE_REF NGINX_IMAGE_REF AGENT_IMAGE_REF BOOTSTRAP_IMAGE_REF PUBLIC_HOST PUBLIC_PORT; do
+for key in SERVER_IMAGE_REF FRONTEND_IMAGE_REF NGINX_IMAGE_REF AGENT_IMAGE_REF BOOTSTRAP_IMAGE_REF RELEASE_CHANNEL RELEASE_METADATA_BASE_URL RELEASE_REGISTRY PUBLIC_HOST PUBLIC_PORT; do
 	grep -Fq "\${${key}:?${key} is required}" "$compose" || fail "source Compose must require ${key}"
 done
 if rg -n 'lunafox-loki|LOKI_PLUGIN_REF|logging:[[:space:]]*loki' "$compose" "$ROOT_DIR/.env.example" "$ROOT_DIR/resources/alloy/config.alloy"; then
@@ -254,7 +270,8 @@ done
 grep -Eq '^PUBLIC_HOST=localhost$' "$ROOT_DIR/.env.example" || fail ".env.example must provide the local public host"
 grep -Eq '^PUBLIC_PORT=443$' "$ROOT_DIR/.env.example" || fail ".env.example must provide the HTTPS public port"
 grep -Eq '^DATABASE_MODE=embedded$' "$ROOT_DIR/.env.example" || fail ".env.example must default to embedded database mode"
-grep -Fqx 'COMPOSE_PROFILES=${DATABASE_MODE:-embedded}' "$ROOT_DIR/.env.example" || fail ".env.example must derive the Compose profile from database mode"
+expected_compose_profile="COMPOSE_PROFILES=\${DATABASE_MODE:-embedded}"
+grep -Fqx "$expected_compose_profile" "$ROOT_DIR/.env.example" || fail ".env.example must derive the Compose profile from database mode"
 grep -Eq '^DB_HOST=$' "$ROOT_DIR/.env.example" || fail ".env.example must leave the embedded database host empty"
 grep -Eq '^DB_PORT=5432$' "$ROOT_DIR/.env.example" || fail ".env.example must provide the PostgreSQL port default"
 grep -Eq '^DB_USER=postgres$' "$ROOT_DIR/.env.example" || fail ".env.example must provide the database user default"

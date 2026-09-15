@@ -27,10 +27,10 @@ func (service *Service) reconcileAfterHostEvent(ctx context.Context, operation *
 		return operation, nil
 	}
 
-	// The target is re-read from the fixed Server manifest. A changed manifest
-	// after a restart is a safety failure, never permission to update an Agent
-	// to a different release.
-	manifest, err := service.manifestSource.Load()
+	// The target is re-read from the immutable digest cache. The fixed channel
+	// may advance while an Operation is running and must never redirect its
+	// Agent or final verification target.
+	manifest, err := service.loadTargetManifest(operation.ManifestDigest)
 	if err != nil {
 		return service.recordVerificationDiagnostic(ctx, operation, "release manifest could not be reloaded")
 	}
@@ -39,12 +39,13 @@ func (service *Service) reconcileAfterHostEvent(ctx context.Context, operation *
 		return service.markVerificationRecovery(ctx, operation, "release manifest target no longer matches the Upgrade Operation")
 	}
 
-	if operation.Status == domain.StatusAgentVerifying {
-		if err := service.notifyAgentsOnce(ctx, operation, target); err != nil {
-			// Notification is best effort. Keep the operation alive so a healthy
-			// Agent that reconnects later can still satisfy the deadline.
-			operation.Diagnostic = sanitizeUpgradeDiagnostic(err.Error())
-		}
+	// A restarted Server may first observe the later verifying checkpoint. The
+	// notification remains idempotent, so both verification states must cover
+	// remote Agents whose update_required event was missed during downtime.
+	if err := service.notifyAgentsOnce(ctx, operation, target); err != nil {
+		// Notification is best effort. Keep the operation alive so a healthy
+		// Agent that reconnects later can still satisfy the deadline.
+		operation.Diagnostic = sanitizeUpgradeDiagnostic(err.Error())
 	}
 
 	refreshed, refreshErr := service.refreshAgentExpectations(ctx, target, operation.AgentExpectations)
