@@ -1,19 +1,41 @@
 # SPDX-License-Identifier: GPL-3.0-only
 name: lunafox
 services:
+  config-init:
+    image: ${BOOTSTRAP_IMAGE_REF:?BOOTSTRAP_IMAGE_REF is required}
+    restart: 'no'
+    network_mode: none
+    entrypoint:
+    - /usr/local/bin/lunafox-config-init
+    secrets:
+    - source: db_password_input
+      target: db-password-input
+    - source: jwt_secret_input
+      target: jwt-secret-input
+    volumes:
+    - lunafox_config:/var/lib/lunafox-config
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   postgres:
     image: docker.io/library/postgres@sha256:54451ecb8ab38c24c3ec123f2fd501303a3a1856a5c66e98cecf2460d5e1e9d7
     restart: unless-stopped
+    depends_on:
+      config-init:
+        condition: service_completed_successfully
     environment:
-      POSTGRES_DB: ${DB_NAME:?DB_NAME is required}
-      POSTGRES_USER: ${DB_USER:?DB_USER is required}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: ${DB_NAME:-lunafox}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD_FILE: /run/lunafox-config/db-password
     volumes:
     - postgres_data:/var/lib/postgresql/data
+    - lunafox_config:/run/lunafox-config:ro
     healthcheck:
       test:
       - CMD-SHELL
-      - pg_isready -U ${DB_USER} -d ${DB_NAME}
+      - pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-lunafox}
       interval: 5s
       timeout: 5s
       retries: 20
@@ -68,13 +90,14 @@ services:
       AGENT_IMAGE_REF: ${AGENT_IMAGE_REF:?AGENT_IMAGE_REF is required}
       LUNAFOX_SHARED_DATA_VOLUME_BIND: ${LUNAFOX_SHARED_DATA_VOLUME_BIND:?LUNAFOX_SHARED_DATA_VOLUME_BIND is required}
       ENGINE_INSTALL_REGISTRY: ${ENGINE_INSTALL_REGISTRY:?ENGINE_INSTALL_REGISTRY is required}
-      PUBLIC_URL: ${PUBLIC_URL:?PUBLIC_URL is required}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      PUBLIC_HOST: ${PUBLIC_HOST:?PUBLIC_HOST is required}
+      PUBLIC_PORT: ${PUBLIC_PORT:?PUBLIC_PORT is required}
+      JWT_SECRET_FILE: /run/lunafox-config/jwt-secret
       DB_HOST: ${DB_HOST:-postgres}
       DB_PORT: ${DB_PORT:-5432}
-      DB_USER: ${DB_USER:?DB_USER is required}
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-      DB_NAME: ${DB_NAME:?DB_NAME is required}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD_FILE: /run/lunafox-config/db-password
+      DB_NAME: ${DB_NAME:-lunafox}
       DB_SSLMODE: ${DB_SSLMODE:-disable}
       DB_TIMEZONE: ${DB_TIMEZONE:-UTC}
       DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-25}
@@ -106,6 +129,8 @@ services:
       all_proxy: ${all_proxy:-}
       no_proxy: ${no_proxy:-}
     depends_on:
+      config-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -124,6 +149,7 @@ services:
         max-file: '3'
     volumes:
     - lunafox_data:/opt/lunafox
+    - lunafox_config:/run/lunafox-config:ro
     healthcheck:
       test:
       - CMD
@@ -164,6 +190,8 @@ services:
     image: ${BOOTSTRAP_IMAGE_REF:?BOOTSTRAP_IMAGE_REF is required}
     restart: 'no'
     depends_on:
+      config-init:
+        condition: service_completed_successfully
       agent-preflight:
         condition: service_completed_successfully
       migrate:
@@ -171,13 +199,14 @@ services:
     environment:
       RELEASE_VERSION: ${RELEASE_VERSION:?RELEASE_VERSION is required}
       AGENT_VERSION: ${AGENT_VERSION:?AGENT_VERSION is required}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
-      PUBLIC_URL: ${PUBLIC_URL:?PUBLIC_URL is required}
+      JWT_SECRET_FILE: /run/lunafox-config/jwt-secret
+      PUBLIC_HOST: ${PUBLIC_HOST:?PUBLIC_HOST is required}
+      PUBLIC_PORT: ${PUBLIC_PORT:?PUBLIC_PORT is required}
       DB_HOST: ${DB_HOST:-postgres}
       DB_PORT: ${DB_PORT:-5432}
-      DB_USER: ${DB_USER:?DB_USER is required}
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-      DB_NAME: ${DB_NAME:?DB_NAME is required}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD_FILE: /run/lunafox-config/db-password
+      DB_NAME: ${DB_NAME:-lunafox}
       DB_SSLMODE: ${DB_SSLMODE:-disable}
       DB_TIMEZONE: ${DB_TIMEZONE:-UTC}
       DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-25}
@@ -200,6 +229,7 @@ services:
       LUNAFOX_SHARED_DATA_VOLUME_BIND: lunafox_data:/opt/lunafox:rw
     volumes:
     - lunafox_data:/opt/lunafox
+    - lunafox_config:/run/lunafox-config:ro
     - lunafox_engine_execution:/var/lib/lunafox/engine-execution
     - ./resources/fingerprints/web_fingerprint_v4.json:/bootstrap/fingerprints/web_fingerprint_v4.json:ro
     - ./resources/wordlists:/bootstrap/wordlists:ro
@@ -219,19 +249,23 @@ services:
     - migrate
     - up
     depends_on:
+      config-init:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
     environment:
       DB_HOST: ${DB_HOST:-postgres}
       DB_PORT: ${DB_PORT:-5432}
-      DB_USER: ${DB_USER:?DB_USER is required}
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-      DB_NAME: ${DB_NAME:?DB_NAME is required}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD_FILE: /run/lunafox-config/db-password
+      DB_NAME: ${DB_NAME:-lunafox}
       DB_SSLMODE: ${DB_SSLMODE:-disable}
       DB_TIMEZONE: ${DB_TIMEZONE:-UTC}
       DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-25}
       DB_MAX_IDLE_CONNS: ${DB_MAX_IDLE_CONNS:-5}
       DB_CONN_MAX_LIFETIME: ${DB_CONN_MAX_LIFETIME:-300}
+    volumes:
+    - lunafox_config:/run/lunafox-config:ro
     logging:
       driver: json-file
       options:
@@ -359,6 +393,8 @@ services:
         max-size: 10m
         max-file: '3'
 volumes:
+  lunafox_config:
+    name: lunafox_config
   postgres_data:
     name: lunafox_postgres
   lunafox_data:
@@ -376,3 +412,8 @@ volumes:
 networks:
   default:
     name: lunafox_network
+secrets:
+  db_password_input:
+    environment: DB_PASSWORD
+  jwt_secret_input:
+    environment: JWT_SECRET

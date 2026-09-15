@@ -25,6 +25,15 @@ test('packages are reproducible, registry-complete, and contain editable config'
  for(const artifact of first){
   const content=JSON.parse(execFileSync('python3',['-c',script,path.join(options.output,artifact.name)],{encoding:'utf8'}));
   assert.match(content['.env'],/^DB_PASSWORD=$/m);
+  assert.match(content['.env'],/^JWT_SECRET=$/m);
+  assert.match(content['.env'],/^DB_USER=postgres$/m);
+  assert.match(content['.env'],/^DB_NAME=lunafox$/m);
+  assert.doesNotMatch(content['.env'],/^PUBLIC_URL=/m);
+  assert.match(content['compose.yaml'],/^  config-init:$/m);
+  assert.match(content['compose.yaml'],/environment: DB_PASSWORD/);
+  assert.match(content['compose.yaml'],/environment: JWT_SECRET/);
+  assert.doesNotMatch(content['compose.yaml'],/PUBLIC_URL:/);
+  assert.doesNotMatch(content['compose.yaml'],/POSTGRES_PASSWORD:|\n      DB_PASSWORD:|\n      JWT_SECRET:/);
   assert.doesNotMatch(content['compose.yaml'],/\$\{(?:SERVER_IMAGE_REF|AGENT_IMAGE_REF|ENGINE_INSTALL_REGISTRY)/);
   assert.match(content['compose.yaml'],/--image-ref "\$\$AGENT_IMAGE_REF"/);
   assert.doesNotMatch(content['compose.yaml'],/--image-ref "\$(?:docker\.io|ghcr\.io)\//);
