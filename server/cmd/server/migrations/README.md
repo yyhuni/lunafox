@@ -293,3 +293,13 @@ node scripts/ci/check-migration-baseline-policy.mjs
 node scripts/ci/check-migration-baseline-policy-selftest.mjs
 make verify-release-contract
 ```
+
+## Compose Bootstrap Binding
+
+The disposable `000001` baseline includes `deployment_agent_bootstrap`, a
+singleton binding to the internal Agent instance. Registration and this binding
+commit in one transaction under an advisory lock. Bootstrap publishes restricted
+credentials before commit; interrupted or mismatched database/file state fails
+closed and requires explicit repair. The binding intentionally survives Agent
+row deletion, so restarting Compose never silently recreates a deleted Agent.
+No migration of existing deployment data is performed by this change.

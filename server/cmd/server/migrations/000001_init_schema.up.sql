@@ -1488,3 +1488,10 @@ COMMENT ON COLUMN scan.cancellation_operation_id IS 'Upgrade Operation identity 
 COMMENT ON COLUMN scan_task.cancellation_reason IS 'Stable reason for an explicit task cancellation, including system upgrade maintenance';
 COMMENT ON COLUMN scan_task.cancellation_operation_id IS 'Upgrade Operation identity that committed a maintenance cancellation, when applicable';
 COMMENT ON INDEX idx_scan_task_pending_order IS 'Supports task pull queries over executable scan tasks';
+
+-- Preserve the binding even if an Agent is deleted: a missing identity requires
+-- explicit repair rather than an unnoticed second bootstrap registration.
+CREATE TABLE deployment_agent_bootstrap (
+    singleton BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton),
+    instance_id TEXT NOT NULL CHECK (instance_id <> '')
+);

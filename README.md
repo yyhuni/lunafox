@@ -2,141 +2,78 @@
 
 > **GENERATED / READ-ONLY PROJECTION**
 
-This repository is the anonymous production deployment projection generated
-from the private source repository
+This repository is generated from
 [`yyhuni/lunafox-private`](https://github.com/yyhuni/lunafox-private). It
-contains the Compose closure, host lifecycle scripts, release indexes,
-deployment resources, and the approved generated/read-only source closure for
-Frontend, Server, Contracts, `engine-go`, Proto, first-party Extensions,
-Nginx, and Bootstrap. Agent source, private release/signing material, and
-standalone installer source are not published here.
+contains the reviewed Runtime source closure and the files used to build the
+versioned Docker Compose deployment packages. Changes belong in the private
+source repository and are projected through the protected release workflow.
 
 ## Install
 
-With Docker installed and running on a clean supported host, use a public `main`
-or release-tag work tree and run:
+Install Docker with Linux container support, download one deployment ZIP from
+the matching LunaFox GitHub Release, and extract it into a permanent directory:
 
-```bash
-./install.sh --channel canary --public-host example.example
+- `lunafox-<version>-dockerhub.zip` uses Docker Hub for the complete LunaFox
+  image and Engine closure.
+- `lunafox-<version>-ghcr.zip` uses GHCR for the complete LunaFox image and
+  Engine closure.
+
+Edit `.env` in that directory and set `PUBLIC_HOST`, `PUBLIC_URL`,
+`DB_PASSWORD`, and `JWT_SECRET`, then run:
+
+```console
+docker compose up -d
+docker compose ps
 ```
 
-During install, the lifecycle fetches the selected schema-v3 channel record and
-manifest from the fixed public `release-channel` source, then writes them to
-local `channels/` and `manifests/` only after validation. No manual fetch or
-checkout of another branch is required. When the work tree is an exact release
-tag, that tag must match the channel version. A complete local metadata set is
-reused without network access; partial metadata, network errors, or digest and
-version failures stop installation without fallback. After an interrupted
-attempt, start from a clean work tree, or remove incomplete `channels/` and
-`manifests/` only after confirming that no deployment state exists.
+Windows users run the same commands in native PowerShell. A Bash or PowerShell
+installer, WSL terminal, Docker context name check, and Loki Docker logging
+plugin are not part of this deployment path.
 
-The default channel remains stable. Until a stable alias is governed and
-published, omitting `--channel` gives explicit canary guidance and never
-silently selects a prerelease. Docker Hub is the default image source;
-`--registry ghcr` switches the complete immutable image and Engine Package
-closure, with no mixed-source or automatic fallback.
+Use Docker Compose for the resident lifecycle:
 
-The installer prepares the official Loki Docker plugin as `lunafox-loki`, with
-Docker plugin permissions, and saves the exact selected reference in `.env`.
-It never adopts or removes a generic `loki` plugin. An existing dedicated plugin
-must have a matching management record; version changes require no container
-references, including stopped containers. Lifecycle diagnostics use private
-mode-600 files outside deployment state.
-
-## Lifecycle
-
-```bash
-./start.sh
-./restart.sh
-./start.sh --status
-./stop.sh
-./uninstall.sh
-./uninstall.sh --purge --confirm
+```console
+docker compose stop
+docker compose start
+docker compose restart
+docker compose down
 ```
 
-`install.sh` creates the host-owned `.env` and a self-signed SAN certificate
-atomically, then runs the public-source `lunafox-bootstrap` image once before
-starting resident services. Re-running install, replacing configuration, or
-recovering from a failed bootstrap requires the explicit confirmed reset:
+`down` retains named volumes. Data deletion is a separate, explicit operator
+action. LunaFox never automatically migrates or clears an older script-managed
+deployment; inspect and back up old state before adopting a new package.
 
-```bash
-./install.sh --reset --confirm --channel canary --public-host example.example
-```
-
-The bootstrap-managed Agent is stopped, started, and restarted together with
-the Compose services; normal lifecycle commands never recreate or re-register
-it. Normal uninstall removes Compose containers, the Agent container, and the
-network but preserves data, configuration, certificates, and the completion
-receipt. Both uninstall modes attempt to remove the owned, unreferenced dedicated
-plugin; uncertainty or remaining references cause it to be retained with a warning.
-`--purge` removes only project-owned state after confirmation.
-Start/restart can restore a missing plugin at the saved version, but never replace
-a mismatched plugin or recreate an uninstalled Agent or entire deployment.
-Daemon/host recovery uses resident restart policies; it does not rerun
-bootstrap or manufacture a completion receipt.
-
-See [`docs/public-deployment.md`](docs/public-deployment.md) for the supported
-host matrix, registry contract, certificate limits, and recovery boundaries.
-
-This is a self-hosted deployment projection: operators run it on infrastructure
-they own or control. Provider-hosted operation and redistribution of the closed
-Agent artifact require the separate written authorization described in the
-notice.
+See [`docs/public-deployment.md`](docs/public-deployment.md) for initialization,
+recovery, registry, certificate, and security boundaries.
 
 ## Release identity
 
-Product images use the fixed `yyhuni` namespace and repositories
-`lunafox-server`, `lunafox-frontend`, `lunafox-nginx`, `lunafox-agent`, and
-`lunafox-bootstrap`. Engine Runtime Image/Package repositories follow
-`lunafox-engine-runtime-<name>`. Every release reference is immutable and
-digest-qualified. Public protected `main` builds the reviewed Server, Frontend,
-Nginx, Bootstrap, and Agent Runtime Images with immutable digest, SBOM,
-provenance, and attestation evidence. Private CI builds, tests, and signs the
-closed Agent binary bundle, then places its exact seven-file directory under
-`agent/bin/<release-tag>/` in the generated public tree. The public workflow
-verifies that merged directory, packages Agent, promotes all accepted digests
-to Docker Hub and GHCR, and owns the final release manifest, channel, and
-GitHub Release.
-The private run ends after it requests protected auto-merge for the generated
-export PR; a green private run means `public handoff requested`, not that the
-canonical public Release is complete. Check the public repository Actions run
-and GitHub Release for final status.
+The release workflow resolves Server, Frontend, Nginx, Agent, Bootstrap, and
+Engine references to immutable digests. It builds both deployment packages only
+after the final manifest passes verification, publishes their SHA-256 records,
+and refuses to replace a conflicting asset with the same release name.
 
-## Runtime source boundary
+The private release run ends after requesting protected public export merge. A
+green private run means public handoff was requested; final publication status
+comes from the public repository workflow and GitHub Release.
 
-The exported Runtime source closure includes the TypeScript/React frontend,
-Go Server, Contracts, `engine-go`, Proto, first-party Extensions, Nginx
-configuration, Bootstrap Dockerfile/entrypoint, and their reviewed tests and
-build metadata. It is generated from a frozen private revision and remains
-read-only: the private repository is the sole development authority for the
-closed Agent source and binary handoff, while the public repository owns final
-product publication. Public pull requests do not automatically synchronize
-back.
+## Source and security scope
 
-Public pull-request CI validates this closure without secrets and performs
-non-publishing Docker builds. Only a validated generated export merged through
-protected `main` can publish the four public Runtime Images. Dependency
-directories, framework output, coverage, screenshots, logs, test-results,
-test plans, caches, TLS material, Agent source, and private release inputs
-remain outside the projection.
+The exported Runtime source closure includes Frontend, Server, Contracts,
+`engine-go`, Proto, first-party Extensions, Nginx, Bootstrap, and their reviewed
+tests and build metadata. Agent source and private signing material remain
+outside the public source boundary. The closed Agent artifact terms are in
+[`NOTICE-CLOSED-ARTIFACTS.md`](NOTICE-CLOSED-ARTIFACTS.md).
+
+The current Agent credential is still a long-lived eight-character hexadecimal
+bearer. This release does not add Agent TLS certificate-chain identity, replay
+protection, rotation, or revocation. TLS and credential hardening require a
+separate security change. The deployment is for self-hosted use on
+infrastructure the operator owns or controls.
+
+Exported first-party Runtime source and deployment files are licensed under
+SPDX `GPL-3.0-only`.
 
 Engine Runtime Images and Engine Packages are public artifacts. First-party
 Engine source is GPL-3.0-only. Included third-party components remain governed
 by their applicable licenses and attribution terms.
-
-## Security scope
-
-The current Agent credential remains the existing long-lived eight-character
-hexadecimal bearer. This projection does not claim Agent control-plane TLS
-identity verification, replay protection, rotation, or revocation. TLS and
-credential hardening require a separate security change.
-
-## License
-
-The exported first-party Runtime source, tests, deployment files,
-documentation, and indexes are licensed under SPDX `GPL-3.0-only`. Agent
-source, Agent credentials, private signing/release material, and the resulting
-closed Agent artifact remain outside the public source boundary. The artifact
-terms in [`NOTICE-CLOSED-ARTIFACTS.md`](NOTICE-CLOSED-ARTIFACTS.md) apply to
-the closed Agent artifact only; they do not govern Engine Runtime Images or
-Engine Packages.

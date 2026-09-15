@@ -1,0 +1,58 @@
+// Only explicitly labelled LunaFox services are collected; the collector does
+// not ingest its own logs. Docker metadata preserves existing API selectors.
+discovery.docker "lunafox" {
+	host = "unix:///var/run/docker.sock"
+
+	filter {
+		name   = "label"
+		values = ["com.docker.compose.project=lunafox"]
+	}
+}
+
+discovery.relabel "lunafox" {
+	targets = discovery.docker.lunafox.targets
+
+	rule {
+		source_labels = ["__meta_docker_container_label_lunafox_logs_component"]
+		regex         = "server|agent"
+		action        = "keep"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_label_lunafox_logs_component"]
+		target_label  = "component"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_label_lunafox_logs_container"]
+		target_label  = "container_name"
+	}
+
+	rule {
+		source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+		target_label  = "compose_service"
+	}
+}
+
+loki.source.docker "lunafox" {
+	host       = "unix:///var/run/docker.sock"
+	targets    = discovery.relabel.lunafox.output
+	forward_to = [loki.process.lunafox.receiver]
+}
+
+loki.process "lunafox" {
+	stage.json {
+		expressions = {agent_id = "agent_id"}
+	}
+
+	stage.labels {
+		values = {agent_id = ""}
+	}
+	forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+	endpoint {
+		url = "http://loki:3100/loki/api/v1/push"
+	}
+}
