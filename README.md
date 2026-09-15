@@ -18,13 +18,20 @@ the matching LunaFox GitHub Release, and extract it into a permanent directory:
 - `lunafox-<version>-ghcr.zip` uses GHCR for the complete LunaFox image and
   Engine closure.
 
-Edit `.env` in that directory and set `PUBLIC_HOST`, `PUBLIC_URL`,
-`DB_PASSWORD`, and `JWT_SECRET`, then run:
+Review `PUBLIC_HOST`, `PUBLIC_PORT`, and `DATABASE_MODE` in `.env`, then run with
+Docker Compose 2.24.0 or newer:
 
 ```console
 docker compose up -d
 docker compose ps
 ```
+
+`PUBLIC_URL` is derived internally. `DB_USER=postgres` and `DB_NAME=lunafox`
+are editable defaults. Embedded mode generates empty `DB_PASSWORD` and
+`JWT_SECRET` values once and retains them in the `lunafox_config` volume. For an
+existing remote PostgreSQL database, set `DATABASE_MODE=external`, `DB_HOST`,
+`DB_SSLMODE`, and its real `DB_PASSWORD` before first startup; LunaFox applies
+its schema but does not create the remote database or migrate existing data.
 
 Windows users run the same commands in native PowerShell. A Bash or PowerShell
 installer, WSL terminal, Docker context name check, and Loki Docker logging
@@ -39,7 +46,8 @@ docker compose restart
 docker compose down
 ```
 
-`down` retains named volumes. Data deletion is a separate, explicit operator
+`down` retains named volumes, including the generated configuration secrets.
+Data deletion is a separate, explicit operator
 action. LunaFox never automatically migrates or clears an older script-managed
 deployment; inspect and back up old state before adopting a new package.
 

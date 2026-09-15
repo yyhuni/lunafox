@@ -127,8 +127,10 @@
       "scripts/ci/verify-runtime-image-index.mjs",
       "scripts/ci/verify-public-deployment.sh",
       "scripts/ci/verify-compose-cert-init-selftest.sh",
+      "scripts/ci/verify-compose-config-init-selftest.sh",
       "docker/bootstrap/Dockerfile",
       "docker/bootstrap/bootstrap.sh",
+      "docker/bootstrap/config-init.sh",
       "docker/nginx/Dockerfile",
       "docker/nginx/nginx.conf",
       "server/Dockerfile",
@@ -265,6 +267,7 @@
     "scripts/ci/generate-release-manifest.sh",
     "scripts/ci/verify-public-release.mjs",
     "scripts/ci/verify-compose-cert-init-selftest.sh",
+    "scripts/ci/verify-compose-config-init-selftest.sh",
     "scripts/ci/verify-public-main-merge.mjs",
       "scripts/ci/verify-public-runtime-contexts.mjs",
     "scripts/ci/verify-public-runtime-image-evidence.mjs",
@@ -324,7 +327,8 @@
     "docker/nginx/nginx.conf",
     "docker/bootstrap/Dockerfile",
     "docker/bootstrap/bootstrap.sh",
-    "docker/bootstrap/cert-init.sh"
+    "docker/bootstrap/cert-init.sh",
+    "docker/bootstrap/config-init.sh"
   ],
   "publicRuntimeImages": [
     {
@@ -353,7 +357,7 @@
       "repository": "lunafox-bootstrap",
       "context": ".",
       "dockerfile": "docker/bootstrap/Dockerfile",
-      "requiredPaths": ["docker/bootstrap/Dockerfile", "docker/bootstrap/bootstrap.sh", "docker/bootstrap/cert-init.sh", "server/go.mod", "contracts/go.mod", "engine-go/go.mod", "extensions/workflows/default.scan-workflow.json"]
+      "requiredPaths": ["docker/bootstrap/Dockerfile", "docker/bootstrap/bootstrap.sh", "docker/bootstrap/cert-init.sh", "docker/bootstrap/config-init.sh", "server/go.mod", "contracts/go.mod", "engine-go/go.mod", "extensions/workflows/default.scan-workflow.json"]
     }
   ],
   "denylist": [
@@ -366,7 +370,7 @@
     "^server/bin(?:/|$)",
     "^server/\\.air\\.toml$",
     "^scripts/(?:dev|cli|installer|shared)(?:/|$)",
-    "^scripts/ci/(?!audit-public-security-scope\\.mjs$|check-public-channel\\.mjs$|check-public-export\\.mjs$|export-public-repository\\.mjs$|generate-public-channel\\.mjs$|generate-compose-deployment(?:\\.test)?\\.mjs$|generate-release-manifest\\.sh$|publish-public-export\\.mjs$|public-export-policy\\.json$|public-release-policy\\.json$|check-public-release-policy\\.mjs$|check-migration-baseline-policy\\.mjs$|check-engine-api-major-policy\\.mjs$|verify-compose-cert-init-selftest\\.sh$|verify-public-deployment\\.sh$|verify-public-release\\.mjs$|verify-public-main-merge\\.mjs$|verify-public-runtime-contexts\\.mjs$|verify-public-runtime-image-evidence(?:-selftest)?\\.mjs$|verify-agent-binary-bundle\\.mjs$|verify-public-agent-wrapper(?:-selftest)?\\.mjs$|verify-public-runtime-source\\.sh$|verify-public-engine-release(?:-selftest)?\\.mjs$|publish-engine-runtime-images\\.sh$|aggregate-engine-runtime-image-shards\\.sh$|check-engine-image-tool-inventory\\.mjs$|verify-distribution-registry-v2\\.mjs$|verify-runtime-image-index\\.mjs$).+",
+    "^scripts/ci/(?!audit-public-security-scope\\.mjs$|check-public-channel\\.mjs$|check-public-export\\.mjs$|export-public-repository\\.mjs$|generate-public-channel\\.mjs$|generate-compose-deployment(?:\\.test)?\\.mjs$|generate-release-manifest\\.sh$|publish-public-export\\.mjs$|public-export-policy\\.json$|public-release-policy\\.json$|check-public-release-policy\\.mjs$|check-migration-baseline-policy\\.mjs$|check-engine-api-major-policy\\.mjs$|verify-compose-(?:cert|config)-init-selftest\\.sh$|verify-public-deployment\\.sh$|verify-public-release\\.mjs$|verify-public-main-merge\\.mjs$|verify-public-runtime-contexts\\.mjs$|verify-public-runtime-image-evidence(?:-selftest)?\\.mjs$|verify-agent-binary-bundle\\.mjs$|verify-public-agent-wrapper(?:-selftest)?\\.mjs$|verify-public-runtime-source\\.sh$|verify-public-engine-release(?:-selftest)?\\.mjs$|publish-engine-runtime-images\\.sh$|aggregate-engine-runtime-image-shards\\.sh$|check-engine-image-tool-inventory\\.mjs$|verify-distribution-registry-v2\\.mjs$|verify-runtime-image-index\\.mjs$).+",
     "^(?:openspec|\\.agents|\\.claude|docs/research|docs/plans)(?:/|$)",
     "^(?:release\\.manifest(?:\\.yaml|\\.yaml\\.example)|release\\.manifest\\.final\\.yaml\\.example|checksums\\.txt)$",
     "(?:^|/)(?:lunafox-installer|installer-cache)(?:[-_/]|$)",

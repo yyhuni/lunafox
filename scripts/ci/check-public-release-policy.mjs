@@ -131,6 +131,7 @@ const REQUIRED_PUBLIC_RUNTIME_EXACT = [
   "docker/nginx/nginx.conf",
   "docker/bootstrap/Dockerfile",
   "docker/bootstrap/bootstrap.sh",
+  "docker/bootstrap/config-init.sh",
   "tools/engine-release/go.mod",
   "tools/engine-release/go.sum",
   "tools/engine-oci-publish/go.mod",
