@@ -7,6 +7,12 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=contracts/loggingplugin/policy.sh
+source "$ROOT_DIR/contracts/loggingplugin/policy.sh"
+# shellcheck source=contracts/loggingplugin/manager.sh
+source "$ROOT_DIR/contracts/loggingplugin/manager.sh"
+
+lunafox_plugin_docker() { docker "$@"; }
 COMPOSE_FILE="$ROOT_DIR/compose.yaml"
 ENV_FILE="$ROOT_DIR/.env"
 CHANNEL_DIR="$ROOT_DIR/channels"
@@ -43,6 +49,44 @@ CONFIRM=0
 CHANNEL_SET=0
 REGISTRY_SET=0
 PUBLIC_PORT_SET=0
+DEPLOYMENT_STAGE="argument validation"
+DIAGNOSTIC_LOG=""
+PLUGIN_PREPARED=0
+
+record_diagnostic() {
+	[ -n "$DIAGNOSTIC_LOG" ] || return 0
+	local message="$*" key secret
+	for key in JWT_SECRET DB_PASSWORD REDIS_PASSWORD TOKEN AGENT_AUTHENTICATION_TOKEN; do
+		secret="${!key:-}"
+		[ -z "$secret" ] || message="${message//"$secret"/[REDACTED]}"
+		if [ -f "$ENV_FILE" ]; then
+			secret="$(env_value "$ENV_FILE" "$key")"
+			[ -z "$secret" ] || message="${message//"$secret"/[REDACTED]}"
+		fi
+	done
+	# Deliberately record structured lifecycle events, never shell commands, env,
+	# bootstrap output or certificate material: these can contain credentials.
+	printf '%s stage=%s %s\n' "$(date -u +%FT%TZ)" "$DEPLOYMENT_STAGE" "$message" >>"$DIAGNOSTIC_LOG"
+}
+
+begin_stage() {
+	DEPLOYMENT_STAGE="$1"
+	info "$DEPLOYMENT_STAGE"
+	record_diagnostic started
+}
+
+report_lifecycle_failure() {
+	local code="$1"
+	[ "$code" -ne 0 ] || return 0
+	record_diagnostic "failed exit=$code"
+	printf 'LunaFox failed during %s (exit %s).\n' "$DEPLOYMENT_STAGE" "$code" >&2
+	if [ "$PLUGIN_PREPARED" -eq 1 ]; then
+		printf 'Prepared lunafox-loki and its ownership record were retained.\n' >&2
+	fi
+	printf 'Resolve the reported cause, then retry. Existing business state requires explicit --reset --confirm.\n' >&2
+	[ -z "$DIAGNOSTIC_LOG" ] || printf 'Lifecycle diagnostic log: %s\n' "$DIAGNOSTIC_LOG" >&2
+	return 0
+}
 
 # All temporary paths are registered centrally so an early failure cannot
 # leave certificate material or interpolation secrets on the host.  RETURN
@@ -60,7 +104,7 @@ cleanup_temporary_paths() {
 	done
 	return 0
 }
-trap cleanup_temporary_paths EXIT
+trap 'exit_code=$?; report_lifecycle_failure "$exit_code"; cleanup_temporary_paths' EXIT
 
 register_temp_file() {
 	TEMP_FILES+=("$1")
@@ -86,6 +130,7 @@ atomic_install_metadata_file() {
 }
 
 die() {
+	record_diagnostic "error: $*"
 	printf 'LunaFox deployment error: %s\n' "$*" >&2
 	exit 1
 }
@@ -117,6 +162,10 @@ officially supported. Docker Hub is the default; --registry ghcr switches the
 entire immutable release closure. No automatic registry fallback is performed.
 When channels/ and manifests/ are absent during install, the selected release
 metadata is fetched from the canonical public release-channel automatically.
+Install automatically prepares the official lunafox-loki plugin with its required
+Docker permissions. Generic loki is never adopted. Start/restart use the saved
+plugin version; stop never prepares plugins. Uninstall only removes a verified,
+unreferenced dedicated plugin. No downloader or failed-install resume is provided.
 USAGE
 }
 
@@ -288,6 +337,7 @@ require_docker_access() {
 	if [ -z "$compose_version" ] || ! version_at_least "$compose_version" "$MIN_COMPOSE_VERSION"; then
 		die "Docker Compose plugin must be >= $MIN_COMPOSE_VERSION"
 	fi
+	record_diagnostic "Docker APIs client=$client_api daemon=$daemon_api Compose=$compose_version"
 }
 
 warn_support_matrix() {
@@ -337,9 +387,9 @@ validate_compose_config() {
 }
 
 ensure_loki_plugin() {
-	local enabled
-	enabled="$(docker plugin ls --format '{{.Name}} {{.Enabled}}' | awk '$2 == "true" && $1 ~ /(^|\/)loki(-docker-driver)?(:|$)/ { print $1; exit }')"
-	[ -n "$enabled" ] || die "enabled Loki Docker logging plugin is required; install/enable it explicitly before retrying"
+	lunafox_plugin_prepare "$1" "$LOKI_PLUGIN_REF" || die "dedicated Loki plugin preparation failed; inspect lunafox-loki and its ownership record before retrying"
+	PLUGIN_PREPARED=1
+	record_diagnostic "plugin ready id=$LUNAFOX_PLUGIN_ID reference=$LUNAFOX_PLUGIN_REF"
 }
 
 ensure_volume_capabilities() {
@@ -371,8 +421,6 @@ ensure_volume_capabilities() {
 preflight_mutating() {
 	require_docker_access
 	warn_support_matrix
-	ensure_loki_plugin
-	ensure_volume_capabilities
 }
 
 validate_host() {
@@ -865,6 +913,7 @@ PUBLIC_HOST=${PUBLIC_HOST}
 PUBLIC_URL=${public_url}
 PUBLIC_PORT=${PUBLIC_PORT}
 LOKI_PUSH_URL=${public_url}/loki/api/v1/push
+LOKI_PLUGIN_REF=$LOKI_PLUGIN_REF
 JWT_SECRET=$(random_hex 32)
 DB_HOST=postgres
 DB_PORT=5432
@@ -903,7 +952,7 @@ load_existing_env() {
 
 	local key value expected_url manifest_digest inventory_path inventory_mode
 	local required_keys=(RELEASE_CHANNEL RELEASE_VERSION AGENT_VERSION RELEASE_MANIFEST_PATH RELEASE_MANIFEST_SHA256 ENGINE_INVENTORY_HOST_PATH ENGINE_INSTALL_REGISTRY SERVER_IMAGE_REF FRONTEND_IMAGE_REF NGINX_IMAGE_REF AGENT_IMAGE_REF BOOTSTRAP_IMAGE_REF PUBLIC_HOST PUBLIC_URL PUBLIC_PORT LOKI_PUSH_URL JWT_SECRET DB_HOST DB_PORT DB_USER DB_PASSWORD DB_NAME DB_SSLMODE DB_TIMEZONE DB_MAX_OPEN_CONNS DB_MAX_IDLE_CONNS DB_CONN_MAX_LIFETIME REDIS_HOST REDIS_PORT REDIS_PASSWORD REDIS_DB SERVER_PORT SERVER_GRPC_PORT GIN_MODE LOG_LEVEL LOKI_URL WORDLISTS_BASE_PATH ENGINE_PACKAGE_CACHE_ROOT FINGERPRINT_ARTIFACTS_BASE_PATH LOGIN_VISUALS_BASE_PATH WORKFLOW_DEFINITIONS_ROOT LUNAFOX_SHARED_DATA_VOLUME_BIND)
-	local allowed_keys=("${required_keys[@]}" JWT_ACCESS_EXPIRE JWT_REFRESH_EXPIRE NUCLEI_POC_WORKSPACE_ROOT HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy)
+	local allowed_keys=("${required_keys[@]}" LOKI_PLUGIN_REF JWT_ACCESS_EXPIRE JWT_REFRESH_EXPIRE NUCLEI_POC_WORKSPACE_ROOT HTTP_PROXY HTTPS_PROXY ALL_PROXY NO_PROXY http_proxy https_proxy all_proxy no_proxy)
 	require_env_entries "$ENV_FILE" "${required_keys[@]}"
 	while IFS= read -r key; do
 		case " ${allowed_keys[*]} " in *" $key "*) ;; *) die ".env contains unsupported key: $key" ;; esac
@@ -1297,7 +1346,9 @@ pull_release_closure() {
 }
 
 bootstrap_release() {
+	begin_stage "immutable image preparation"
 	pull_release_closure
+	begin_stage "bootstrap initialization"
 	# The bootstrap container creates the sibling Agent through the Docker API,
 	# so Compose cannot infer its state volume from a service mount. All three
 	# runtime volumes must already be project-owned before bootstrap inspects
@@ -1341,35 +1392,57 @@ verify_receipt_and_health() {
 
 ensure_no_port_conflict() {
 	local port="$1"
-	local published
-	if ! published="$(docker ps --format '{{.Names}} {{.Ports}}')"; then
+	local published id ports owner own_binding=0 listeners
+	if ! published="$(docker ps --format '{{.ID}}|{{.Ports}}|{{.Label "com.docker.compose.project"}}')"; then
 		die "could not inspect existing published ports"
 	fi
-	if awk -v port=":${port}->" '$0 ~ port { found = 1 } END { exit found ? 0 : 1 }' <<<"$published"; then
-		die "host port $port is already published by another container"
+	while IFS='|' read -r id ports owner; do
+		[[ "$ports" == *":${port}->"* ]] || continue
+		if [ "$RESET" -eq 1 ] && [ "$owner" = "$PROJECT_NAME" ]; then
+			own_binding=1
+		else
+			die "host port $port is already published by container $id"
+		fi
+	done <<<"$published"
+	command -v ss >/dev/null 2>&1 || die "ss is required for host port checks; install iproute2"
+	listeners="$(ss -H -ltnp "sport = :$port")" || die "could not inspect host listening sockets"
+	if [ -n "$listeners" ]; then
+		# Reset may release Docker's own proxy, but never an unrelated listener.
+		[ "$own_binding" -eq 1 ] || die "host port $port is already used by a host process"
+		while IFS= read -r listener; do
+			[[ "$listener" == *'"docker-proxy"'* ]] || die "cannot prove port $port listener belongs to the deployment being reset"
+		done <<<"$listeners"
 	fi
 }
 
 install() {
-	preflight_mutating
+	begin_stage "environment and release validation"
 	validate_host "$PUBLIC_HOST"
+	preflight_mutating
 	hydrate_release_channel_metadata
 	require_channel
 	parse_manifest verify
+	LOKI_PLUGIN_REF="$(lunafox_loki_reference "$(docker info --format '{{.Architecture}}')")" || die "unsupported Docker architecture"
+	record_diagnostic "selected channel=$CHANNEL registry=$REGISTRY plugin=$LOKI_PLUGIN_REF"
+	if [ "$RESET" -eq 0 ]; then assert_clean_state; fi
+	ensure_no_port_conflict "$PUBLIC_PORT"
+	ensure_volume_capabilities
 	if [ "$RESET" -eq 1 ]; then
 		reset_state
-	else
-		assert_clean_state
 	fi
+	begin_stage "dedicated Loki plugin preparation"
+	ensure_loki_plugin install
+	begin_stage "runtime configuration and image preparation"
 	parse_manifest
-	ensure_no_port_conflict "$PUBLIC_PORT"
 	ensure_fresh_runtime_volumes
 	run_mount_capability_probe "$AGENT_IMAGE_REF"
 	atomic_write_env
 	validate_compose_config
 	provision_certificate_volume
 	ensure_owned_external_volume "$RECEIPT_VOLUME"
+	begin_stage "bootstrap initialization"
 	bootstrap_release
+	begin_stage "health and completion receipt verification"
 	verify_runtime_health
 	finalize_receipt
 	compose_receipt_helper receipt-verifier \
@@ -1377,14 +1450,18 @@ install() {
 		-e "RECEIPT_MANIFEST_SHA256=$MANIFEST_SHA256" \
 		-e "RECEIPT_REGISTRY=$REGISTRY" >/dev/null || die "new completion receipt could not be verified"
 	info "deployment completed: $(env_value "$ENV_FILE" PUBLIC_URL)"
+	record_diagnostic completed
 }
 
 start_or_restart() {
 	preflight_mutating
 	load_existing_env
+	LOKI_PLUGIN_REF="$(env_value "$ENV_FILE" LOKI_PLUGIN_REF)"
+	[ -n "$LOKI_PLUGIN_REF" ] || die "deployed LOKI_PLUGIN_REF is missing; explicitly reinstall to select a plugin policy"
 	validate_compose_config
 	validate_existing_certificate_volume
 	require_runtime_volumes
+	ensure_loki_plugin start
 	run_mount_capability_probe "$(env_value "$ENV_FILE" AGENT_IMAGE_REF)"
 	if [ "$COMMAND" = restart ]; then
 		compose restart postgres redis loki server frontend nginx
@@ -1435,6 +1512,7 @@ uninstall() {
 		remove_project_resources_without_env
 	fi
 	remove_project_agent
+	lunafox_plugin_remove || warn "dedicated Loki plugin or ownership metadata retained; resolve the reported ownership/reference issue before manual cleanup"
 	if [ "$PURGE" -eq 1 ]; then
 		remove_owned_volumes
 		remove_owned_host_state
@@ -1446,6 +1524,15 @@ uninstall() {
 
 main() {
 	parse_command "$@"
+	DEPLOYMENT_STAGE="$COMMAND environment validation"
+	if [ "$COMMAND" != status ]; then
+		DIAGNOSTIC_LOG="$(
+			umask 077
+			mktemp "${TMPDIR:-/tmp}/lunafox-lifecycle.XXXXXXXX"
+		)" || die "could not create private diagnostic log"
+		chmod 600 "$DIAGNOSTIC_LOG"
+		info "lifecycle diagnostic log: $DIAGNOSTIC_LOG"
+	fi
 	[ -f "$COMPOSE_FILE" ] || die "root compose.yaml is missing"
 	case "$COMMAND" in
 	install) install ;;

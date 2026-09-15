@@ -537,10 +537,10 @@ func TestInstallScriptSupportsTaggedLokiPluginName(t *testing.T) {
 	}
 
 	body := recorder.Body.String()
-	if !strings.Contains(body, `grep -Eq '^loki(:|$)'`) {
+	if !strings.Contains(body, `lunafox-loki | lunafox-loki:latest)`) {
 		t.Fatalf("expected script to detect tagged loki plugin names, body=%s", body)
 	}
-	if !strings.Contains(body, `grafana/loki-docker-driver:3.6.7-`) {
+	if !strings.Contains(body, `LUNAFOX_LOKI_VERSION=3.6.7`) {
 		t.Fatalf("expected script to pin loki plugin to 3.6.7 per arch, body=%s", body)
 	}
 	if strings.Contains(body, `grafana/loki-docker-driver:3.6.6-`) {
@@ -567,10 +567,10 @@ func TestInstallScriptUsesDockerPluginCommandsForLokiDriver(t *testing.T) {
 	}
 
 	body := recorder.Body.String()
-	if !strings.Contains(body, `$DOCKER_CMD plugin ls --format '{{.Name}} {{.Enabled}}'`) {
+	if !strings.Contains(body, `lunafox_plugin_docker plugin ls --format '{{.Name}}'`) {
 		t.Fatalf("expected script to inspect Loki with docker plugin ls, body=%s", body)
 	}
-	if !strings.Contains(body, `$DOCKER_CMD plugin install "$ref" --alias loki --grant-all-permissions`) {
+	if !strings.Contains(body, `lunafox_plugin_docker plugin install --alias lunafox-loki --grant-all-permissions "$target"`) {
 		t.Fatalf("expected script to install Loki with docker plugin install, body=%s", body)
 	}
 	if strings.Contains(body, `$DOCKER_CMD engine `) {

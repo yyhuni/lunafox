@@ -27,6 +27,7 @@ TAG="${ENGINE_IMAGE_TAG:-}"
 REUSE_EXISTING="${ENGINE_REUSE_EXISTING:-false}"
 BUILDER_NAME="${ENGINE_BUILDER_NAME:-lunafox-engine-release}"
 BUILDER_NETWORK="${ENGINE_BUILDER_NETWORK:-}"
+BUILD_ATTEMPTS="${ENGINE_BUILD_ATTEMPTS:-3}"
 REGISTRY_INSPECT_ATTEMPTS="${ENGINE_REGISTRY_INSPECT_ATTEMPTS:-6}"
 REGISTRY_INSPECT_INITIAL_DELAY_SECONDS="${ENGINE_REGISTRY_INSPECT_INITIAL_DELAY_SECONDS:-2}"
 REGISTRY_INSPECT_MAX_DELAY_SECONDS="${ENGINE_REGISTRY_INSPECT_MAX_DELAY_SECONDS:-8}"
@@ -55,6 +56,7 @@ Environment:
   ENGINE_BUILDER_CONFIG       buildkitd.toml applied when creating a fresh builder
   ENGINE_BUILDER_NAME         Buildx builder name (default lunafox-engine-release)
   ENGINE_BUILDER_NETWORK      Optional existing Docker network for a fresh BuildKit builder
+  ENGINE_BUILD_ATTEMPTS       Maximum complete Buildx attempts (default 3; production fixed at 3)
   ENGINE_REGISTRY_NAMESPACE   Dev Registry namespace (default lunafox)
   DOCKERHUB_NAMESPACE         Production namespace override (must be yyhuni)
   GITHUB_REPOSITORY_OWNER     Production GHCR owner hint (must be yyhuni)
@@ -267,6 +269,39 @@ retry_registry_inspect() {
 	done
 }
 
+retry_engine_build() {
+	local engine_id="$1"
+	shift
+	local attempt=1 exit_code base_delay_ms jitter_ms delay_ms delay_seconds
+
+	# Retrying the complete command preserves one builder and one frozen argument
+	# vector, so a transient network failure cannot change release inputs.
+	while :; do
+		if "$@"; then
+			return 0
+		else
+			exit_code=$?
+		fi
+		if [ "$attempt" -ge "$BUILD_ATTEMPTS" ]; then
+			printf 'Engine Runtime Image build failed for %s after %s attempt(s)\n' \
+				"$engine_id" "$attempt" >&2
+			return "$exit_code"
+		fi
+		case "$attempt" in
+		1) base_delay_ms=2000 ;;
+		2) base_delay_ms=4000 ;;
+		*) return "$exit_code" ;;
+		esac
+		jitter_ms=$((RANDOM % 1000))
+		delay_ms=$((base_delay_ms + jitter_ms))
+		printf -v delay_seconds '%d.%03d' "$((delay_ms / 1000))" "$((delay_ms % 1000))"
+		printf 'Engine Runtime Image build failed for %s (attempt %s/%s); retrying in %ss\n' \
+			"$engine_id" "$attempt" "$BUILD_ATTEMPTS" "$delay_seconds" >&2
+		sleep "$delay_seconds"
+		attempt=$((attempt + 1))
+	done
+}
+
 while [ "$#" -gt 0 ]; do
 	case "$1" in
 	-h | --help)
@@ -287,6 +322,10 @@ done
 [ -n "$REGISTRY_TRANSPORT_HOST" ] || fail "ENGINE_REGISTRY_TRANSPORT_HOST is required"
 [ "$REGISTRY_TRANSPORT_INSECURE" = true ] || [ "$REGISTRY_TRANSPORT_INSECURE" = false ] ||
 	fail "ENGINE_REGISTRY_TRANSPORT_INSECURE must be true or false"
+[[ "$BUILD_ATTEMPTS" =~ ^[1-9][0-9]*$ ]] ||
+	fail "ENGINE_BUILD_ATTEMPTS must be a positive integer"
+[ "$BUILD_ATTEMPTS" -le 3 ] ||
+	fail "ENGINE_BUILD_ATTEMPTS must not exceed 3"
 [[ "$REGISTRY_INSPECT_ATTEMPTS" =~ ^[1-9][0-9]*$ ]] ||
 	fail "ENGINE_REGISTRY_INSPECT_ATTEMPTS must be a positive integer"
 [[ "$REGISTRY_INSPECT_INITIAL_DELAY_SECONDS" =~ ^[0-9]+$ ]] ||
@@ -316,6 +355,7 @@ resolve_build_platforms
 BUILD_PLATFORMS_JSON="$(jq -cn --arg platforms "$BUILD_PLATFORMS" '$platforms | split(",")')"
 
 if [ "$MODE" = production ]; then
+	[ "$BUILD_ATTEMPTS" -eq 3 ] || fail "ENGINE_BUILD_ATTEMPTS is fixed to 3 in production"
 	[ "$REGISTRY_TRANSPORT_INSECURE" = false ] || fail "ENGINE_REGISTRY_TRANSPORT_INSECURE is forbidden in production"
 	if [ -n "$DOCKERHUB_NAMESPACE" ] && [ "$DOCKERHUB_NAMESPACE" != "$CANONICAL_NAMESPACE" ]; then
 		fail "DOCKERHUB_NAMESPACE must be $CANONICAL_NAMESPACE in production"
@@ -471,6 +511,17 @@ while IFS=$'\t' read -r engine_id directory dockerfile build_context repository;
 		# Public Engine releases carry their own provenance and SBOM attestations;
 		# development's local Registry remains intentionally metadata-free.
 		build_args+=(--provenance=mode=max --sbom=true)
+		ghcr_location="ghcr.io/$GHCR_OWNER/$repository"
+		build_cache_ref="$ghcr_location:buildcache"
+		# Mutable cache state accelerates builds only. An unreadable or absent
+		# cache never becomes a prerequisite for rebuilding frozen release inputs.
+		if docker buildx imagetools inspect --builder "$BUILDER_NAME" "$build_cache_ref" >/dev/null 2>&1; then
+			build_args+=(--cache-from "type=registry,ref=$build_cache_ref")
+		else
+			printf 'BuildKit cache unavailable for %s at %s; continuing without cache import\n' \
+				"$engine_id" "$build_cache_ref" >&2
+		fi
+		build_args+=(--cache-to "type=registry,ref=$build_cache_ref,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true")
 	else
 		build_args+=(--provenance=false --sbom=false)
 	fi
@@ -491,7 +542,8 @@ while IFS=$'\t' read -r engine_id directory dockerfile build_context repository;
 		# digest. Registry replication and evidence are still re-verified below.
 		index_digest="$existing_index_digest"
 	else
-		docker buildx build --builder "$BUILDER_NAME" "${build_args[@]}" "$build_context_path"
+		retry_engine_build "$engine_id" \
+			docker buildx build --builder "$BUILDER_NAME" "${build_args[@]}" "$build_context_path"
 		if [ "$build_staging_ref" != "$transport_staging_ref" ]; then
 			# Buildx can export a lone platform as a manifest. The package/bootstrap
 			# contract requires an OCI index even for local single-platform images.
@@ -530,7 +582,6 @@ while IFS=$'\t' read -r engine_id directory dockerfile build_context repository;
 		mkdir -p "$engine_evidence_root"
 		cp "$raw_index" "$engine_evidence_root/dockerhub-index.json"
 		docker_ref="$public_image_location@$index_digest"
-		ghcr_location="ghcr.io/$GHCR_OWNER/$repository"
 		ghcr_tag_ref="$ghcr_location:$TAG"
 		# oras copies the already-built index and blobs. It never rebuilds the
 		# engine image for GHCR, so both candidates retain one digest identity.

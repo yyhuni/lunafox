@@ -116,66 +116,14 @@ validate_loki_push_url() {
 	return 0
 }
 
+{{lokiPluginScript}}
+
+lunafox_plugin_docker() { $DOCKER_CMD "$@"; }
+
 ensure_loki_plugin() {
-	local existing_line existing_name existing_enabled arch ref
-
-	existing_line="$($DOCKER_CMD plugin ls --format '{{"{{.Name}}"}} {{"{{.Enabled}}"}}' | awk '$1 ~ /^loki(:|$)/ {print $0; exit}')"
-	if [ -n "$existing_line" ]; then
-		existing_name="${existing_line%% *}"
-		existing_enabled="${existing_line##* }"
-		if [ "$existing_enabled" = "true" ]; then
-			return 0
-		fi
-		echo "Enabling Loki Docker plugin ($existing_name)..."
-		if $DOCKER_CMD plugin enable "$existing_name" >/dev/null 2>&1; then
-			return 0
-		fi
-	fi
-
-	arch="$(detect_docker_arch)"
-	build_loki_plugin_refs "$arch"
-
-	echo "Installing Loki Docker plugin..."
-	for ref in "${LOKI_PLUGIN_REFS[@]}"; do
-		if [ -z "$ref" ]; then
-			continue
-		fi
-		echo "Trying Loki Docker plugin ref: $ref"
-		if $DOCKER_CMD plugin install "$ref" --alias loki --grant-all-permissions; then
-			return 0
-		fi
-	done
-
-	if $DOCKER_CMD plugin ls --format '{{"{{.Name}}"}}' | grep -Eq '^loki(:|$)'; then
-		return 0
-	fi
-
-	echo "Failed to install Loki Docker plugin (${LOKI_PLUGIN_REFS[*]})." >&2
-	return 1
-}
-
-detect_docker_arch() {
-	local raw_arch
-	raw_arch="$($DOCKER_CMD info --format '{{"{{.Architecture}}"}}' 2>/dev/null || true)"
-	case "$raw_arch" in
-	aarch64 | arm64)
-		echo "arm64"
-		;;
-	x86_64 | amd64)
-		echo "amd64"
-		;;
-	*)
-		echo ""
-		;;
-	esac
-}
-
-build_loki_plugin_refs() {
-	local arch="$1"
-	LOKI_PLUGIN_REFS=()
-	if [ -n "$arch" ]; then
-		LOKI_PLUGIN_REFS+=("grafana/loki-docker-driver:3.6.7-${arch}")
-	fi
+	local ref
+	ref="$(lunafox_loki_reference "$($DOCKER_CMD info --format '{{"{{.Architecture}}"}}')")" || return 1
+	lunafox_plugin_prepare install "$ref"
 }
 
 probe_loki_push_url() {
@@ -342,7 +290,7 @@ run_engine_mount_preflight() {
 resolve_logging_args() {
 	LOGGING_ARGS=()
 	LOGGING_ARGS=(
-		--log-driver=loki
+		--log-driver=lunafox-loki
 		--log-opt "loki-url=$LOKI_PUSH_URL"
 		--log-opt "loki-tls-insecure-skip-verify=true"
 		--log-opt "no-file=false"

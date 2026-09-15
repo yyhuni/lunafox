@@ -51,6 +51,7 @@ require_file() {
 for file in README.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTIFACTS.md \
 	docs/public-deployment.md compose.yaml .env.example \
 	resources/loki/loki-config.yaml install.sh start.sh restart.sh stop.sh uninstall.sh \
+	contracts/loggingplugin/policy.sh contracts/loggingplugin/manager.sh \
 	scripts/deploy/lifecycle.sh scripts/deploy/receipt/invalidate.sh \
 	scripts/deploy/receipt/finalize.sh scripts/deploy/receipt/verify.sh \
 	scripts/ci/audit-public-security-scope.mjs scripts/ci/check-public-channel.mjs \
