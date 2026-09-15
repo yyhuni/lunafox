@@ -5,6 +5,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/yyhuni/lunafox/contracts/loggingplugin"
+
 	"github.com/yyhuni/lunafox/server/internal/cache"
 	agentapp "github.com/yyhuni/lunafox/server/internal/modules/agent/application"
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
@@ -39,7 +41,9 @@ type installTemplateData struct {
 	AgentVersion         string
 }
 
-var agentInstallSHTemplate = template.Must(template.New("agent_install.sh").Parse(agentinstall.AgentInstallScript))
+var agentInstallSHTemplate = template.Must(template.New("agent_install.sh").Funcs(template.FuncMap{
+	"lokiPluginScript": loggingplugin.Script,
+}).Parse(agentinstall.AgentInstallScript))
 
 // NewAgentHandler creates a new AgentHandler.
 func NewAgentHandler(

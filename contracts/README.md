@@ -10,6 +10,7 @@ packages.
 
 | Package | Role | Notes |
 |---|---|---|
+| `contracts/loggingplugin` | installer helper | Single Loki plugin version policy and embedded host management script. Callers own Docker access; Server only renders scripts and does not execute plugin operations. |
 | `contracts/enginemanifest` | protocol contract | Strict `engine.v5` definition, Package v2 layout contracts, locale validation, and generic Runtime Image identity validation. Legacy root/runtime manifest DTOs are retired. |
 | `contracts/enginemanifest/repositoryname` | release-tool helper | LunaFox publisher-local stable-ID and OCI repository naming helpers. Generic package validation, installation and planning must not call these helpers. |
 | `contracts/enginemanifest/runtimeimage` | contract helper | Ordered generic Runtime Image candidate parsing: canonical digest refs in publisher-chosen repositories, unique locations, and one shared image digest. Remote descriptor/platform verification remains caller-owned. |

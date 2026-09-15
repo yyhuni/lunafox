@@ -107,7 +107,7 @@ docker run -d --restart unless-stopped --name "$agent_name" \
 	--label com.docker.compose.service=agent \
 	--label org.opencontainers.image.title=lunafox-agent \
 	--hostname "$agent_hostname" \
-	--log-driver=loki \
+	--log-driver=lunafox-loki \
 	--log-opt "loki-url=$LOKI_PUSH_URL" \
 	--log-opt "loki-tls-insecure-skip-verify=true" \
 	--log-opt "no-file=false" \

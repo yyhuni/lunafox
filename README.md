@@ -13,7 +13,8 @@ standalone installer source are not published here.
 
 ## Install
 
-On a clean supported host, use a public `main` or release-tag work tree and run:
+With Docker installed and running on a clean supported host, use a public `main`
+or release-tag work tree and run:
 
 ```bash
 ./install.sh --channel canary --public-host example.example
@@ -34,6 +35,13 @@ published, omitting `--channel` gives explicit canary guidance and never
 silently selects a prerelease. Docker Hub is the default image source;
 `--registry ghcr` switches the complete immutable image and Engine Package
 closure, with no mixed-source or automatic fallback.
+
+The installer prepares the official Loki Docker plugin as `lunafox-loki`, with
+Docker plugin permissions, and saves the exact selected reference in `.env`.
+It never adopts or removes a generic `loki` plugin. An existing dedicated plugin
+must have a matching management record; version changes require no container
+references, including stopped containers. Lifecycle diagnostics use private
+mode-600 files outside deployment state.
 
 ## Lifecycle
 
@@ -59,7 +67,11 @@ The bootstrap-managed Agent is stopped, started, and restarted together with
 the Compose services; normal lifecycle commands never recreate or re-register
 it. Normal uninstall removes Compose containers, the Agent container, and the
 network but preserves data, configuration, certificates, and the completion
-receipt. `--purge` removes only project-owned state after confirmation.
+receipt. Both uninstall modes attempt to remove the owned, unreferenced dedicated
+plugin; uncertainty or remaining references cause it to be retained with a warning.
+`--purge` removes only project-owned state after confirmation.
+Start/restart can restore a missing plugin at the saved version, but never replace
+a mismatched plugin or recreate an uninstalled Agent or entire deployment.
 Daemon/host recovery uses resident restart policies; it does not rerun
 bootstrap or manufacture a completion receipt.
 

@@ -96,7 +96,7 @@ services:
       - "8080"
       - "9090"
     logging:
-      driver: loki
+      driver: lunafox-loki
       options:
         loki-url: ${LOKI_PUSH_URL:?LOKI_PUSH_URL is required}
         loki-tls-insecure-skip-verify: "true"

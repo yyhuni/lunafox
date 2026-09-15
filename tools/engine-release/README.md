@@ -54,9 +54,14 @@ it, so a one-Engine receipt cannot become a partial Package release.
 `scripts/ci/publish-engine-runtime-images.sh` consumes discovery in canonical
 `engineId` order. It normally publishes the complete discovered set, and its
 `ENGINE_RELEASE_ENGINE_ID` publisher input selects exactly one canonical Engine
-when a protected workflow matrix child needs a receipt shard. One Buildx
-invocation per selected Engine publishes one OCI image index. Production always
-builds `linux/amd64` and `linux/arm64`;
+when a protected workflow matrix child needs a receipt shard. The publisher
+freezes one Buildx command per selected Engine. `ENGINE_BUILD_ATTEMPTS` defaults
+to three, is fixed at three in production, and may only be reduced in
+development. Retries reuse the same builder and argument vector; the second and
+third attempts wait 2 and 4 seconds respectively, plus 0-999 ms of jitter.
+Exhausting the retry budget fails the matrix child and leaves the existing
+aggregation and downstream publication gates closed. Production always builds
+`linux/amd64` and `linux/arm64`;
 development defaults to the host Docker daemon platform and accepts an explicit
 supported-platform override for cross-platform verification. The publisher
 resolves the actual index bytes, verifies their digest and exact requested
@@ -65,6 +70,24 @@ that already-built OCI graph to the second Registry; it does not rebuild it.
 Every normal and raw `imagetools inspect` uses the same explicitly configured
 Buildx builder as the build, including development builders configured for an
 HTTP Registry transport.
+
+Before a production build, the publisher derives one mutable cache reference
+from that Engine's canonical repository:
+`ghcr.io/<owner>/<engine-runtime-repository>:buildcache`. A readable cache is
+passed as `cache-from`; a missing or unreadable cache produces a warning and the
+complete frozen build proceeds without the import. Cache export uses BuildKit's
+`ignore-error=true`, so its diagnostics remain visible without making cache
+availability a release gate. Different Engine repositories never share a
+writable cache reference.
+
+The cache is acceleration state only. Its ref or digest is never copied to
+Docker Hub and never enters Runtime Image identity, build receipts, Registry
+evidence, SBOM, provenance, signatures, packages, or manifests. A successful
+image still passes the existing digest, platform, independent cold-pull,
+payload, receipt, attestation, and evidence checks. Checksum authentication also
+remains enabled; the publisher does not set `GOSUMDB=off`. The official-source
+[network reliability research note](../../docs/research/go-module-release-network-reliability-2026-09-15.md)
+is non-normative rationale for these controls.
 
 `validate-build-results` re-discovers the source set and rejects missing,
 extra, reordered, or mismatched records. Package generation can consume only a

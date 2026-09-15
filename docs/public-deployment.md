@@ -68,10 +68,29 @@ host-side boundary; a Server or browser request never becomes a Docker command
 proxy.
 
 Lifecycle commands use the caller's already authorized default local Docker
-context. They do not run implicit `sudo`, change contexts, install plugins, or
-modify systemd, daemon, socket, group, or firewall configuration. An enabled
-Loki Docker logging plugin and named-volume/`volume-subpath` capability are
-required before resource mutation.
+context. They do not run implicit `sudo`, change contexts, or modify systemd,
+daemon, socket, group, or firewall configuration. Install automatically prepares
+the official Loki plugin under the dedicated alias `lunafox-loki`, granting its
+required Docker plugin permissions. Version and architecture policy comes from
+`contracts/loggingplugin/policy.sh`; `.env` records `LOKI_PLUGIN_REF` for subsequent
+start/restart. Unknown architecture, identity or ownership fails closed.
+
+Ownership metadata is stored in a separate daemon volume bound to the actual
+plugin ID. It is not deployment data or a completion receipt. Installation may
+update a known plugin only when every container, including stopped and unrelated
+containers, is unreferenced. No force-disable or force-remove is used. Generic
+`loki` instances remain unmanaged. Start/restart only install a missing saved
+version or enable a matching version; stop does not prepare plugins. Both
+uninstall modes remove containers before attempting safe plugin cleanup, retaining
+the plugin and metadata when ownership or references cannot be verified.
+
+Host port checks require `ss` (Ubuntu `iproute2`) and cover non-Docker listeners.
+Reset permits proven project-owned Docker proxy listeners, but refuses uncertain
+or external ownership before deleting business state. Failed installation retains
+prepared plugins; retry revalidates them. Existing business state still requires
+explicit reset. Private lifecycle event logs live outside business state and omit
+command traces, environment dumps, tokens and private keys. These logs do not
+provide automatic resume. Restoring a plugin does not restore an uninstalled Agent.
 
 ## Compose and registries
 
