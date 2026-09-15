@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # This Dockerfile is part of the public Runtime source closure. The resulting
-# image is a one-shot bootstrap runtime that starts the private Agent artifact.
+# image is a one-shot bootstrap runtime that prepares the Compose-managed Agent identity.
 FROM --platform=$BUILDPLATFORM golang:1.26 AS builder
 
 ARG TARGETOS=linux
@@ -30,19 +30,19 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
     cd server && go build -trimpath -buildvcs=false -o /out/server ./cmd/server
 
-FROM docker:28.5.2-cli
+FROM alpine:3.23.5
 
 RUN apk add --no-cache \
-	bash \
+    bash \
     ca-certificates \
-    curl \
-	jq
+    openssl
 
 WORKDIR /app
 COPY --from=builder /out/server /usr/local/bin/server
 COPY --from=builder /src/extensions/workflows /usr/local/share/lunafox/workflows
 COPY docker/bootstrap/bootstrap.sh /usr/local/bin/lunafox-bootstrap
-RUN chmod 0755 /usr/local/bin/lunafox-bootstrap
+COPY docker/bootstrap/cert-init.sh /usr/local/bin/lunafox-cert-init
+RUN chmod 0755 /usr/local/bin/lunafox-bootstrap /usr/local/bin/lunafox-cert-init
 
 # The image is intentionally one-shot; Compose controls when this command is
 # created and waits for its zero exit status before starting the public edge.

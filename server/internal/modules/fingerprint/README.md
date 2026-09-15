@@ -18,7 +18,9 @@ Agent 与 HTTP 下载同一个 current 文件；执行计划只允许
 语料；回归测试校验该文件的 SHA-256、全量数据库导入、原生导出、导出重解析与幂等
 再导入。`small/` 保存严格解析的聚焦用例。
 
-安装器的固定发布种子位于仓库根 `resources/fingerprints/web_fingerprint_v4.json`。
-它只在 Preclean 后的新安装中、默认字典之后且 Agent 注册之前通过应用层导入；普通
-Server 启动、手动 Compose、Clear 和用户删除都不会读取或恢复该文件。它不使用
+Compose 的固定发布种子位于仓库根
+`resources/fingerprints/web_fingerprint_v4.json`。bootstrap 在 generation 为零且
+库为空时通过应用层导入；后续运行只校验原始种子记录仍完整且内容一致，并保留额外的
+用户记录。缺失、部分删除或内容漂移会明确失败，不会补齐或覆盖；已初始化后 Clear
+为空的库也不会被静默重建。普通 Server 进程本身不会读取种子。该路径不使用
 `testdata/`、语料 manifest 或网络回退。
