@@ -8,13 +8,16 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/yyhuni/lunafox/server/internal/config"
 	"github.com/yyhuni/lunafox/server/internal/database"
 	catalogapp "github.com/yyhuni/lunafox/server/internal/modules/catalog/application"
 	catalogdomain "github.com/yyhuni/lunafox/server/internal/modules/catalog/domain"
 	catalogrepo "github.com/yyhuni/lunafox/server/internal/modules/catalog/repository"
+	"gorm.io/gorm"
 )
 
 type defaultWordlistManifest struct {
@@ -31,12 +34,15 @@ type defaultWordlistManifestEntry struct {
 type defaultWordlistImport struct {
 	entry      defaultWordlistManifestEntry
 	sourcePath string
+	fileSize   int64
+	lineCount  int
+	fileHash   string
 }
 
 // RunWordlistBootstrap copies the immutable default wordlists into shared
-// storage and records them through the Catalog boundary. It deliberately
-// rejects existing entries: bootstrap is fresh-install-only, so silently
-// mixing a previous catalog with a new release resource set is unsafe.
+// storage and records them through the Catalog boundary. A repeated run only
+// accepts the exact previously imported set; it never repairs or overwrites a
+// missing or changed resource because that state may contain user intent.
 func RunWordlistBootstrap(ctx context.Context, databaseConfig *config.DatabaseConfig, basePath, manifestPath, sourceDirectory string) error {
 	if ctx == nil {
 		return errors.New("wordlist bootstrap context is required")
@@ -63,31 +69,123 @@ func RunWordlistBootstrap(ctx context.Context, databaseConfig *config.DatabaseCo
 	}
 	defer func() { _ = sqlDB.Close() }()
 
-	service := catalogapp.NewWordlistCommandService(
-		catalogrepo.NewWordlistRepository(db),
-		basePath,
-		catalogapp.NewLocalWordlistFileStore(),
-	)
+	return bootstrapDefaultWordlists(ctx, db, basePath, imports)
+}
+
+func bootstrapDefaultWordlists(ctx context.Context, db *gorm.DB, basePath string, imports []defaultWordlistImport) error {
+	if ctx == nil {
+		return errors.New("wordlist bootstrap context is required")
+	}
+	if db == nil {
+		return errors.New("wordlist bootstrap database is required")
+	}
+
+	repository := catalogrepo.NewWordlistRepository(db)
+	existing, err := repository.ListAllContext(ctx)
+	if err != nil {
+		return fmt.Errorf("inspect existing wordlist catalog: %w", err)
+	}
+	existingByFileName := make(map[string]catalogdomain.Wordlist, len(existing))
+	for _, wordlist := range existing {
+		existingByFileName[wordlist.FileName] = wordlist
+	}
+
+	matching := 0
 	for _, item := range imports {
-		file, err := os.Open(item.sourcePath)
-		if err != nil {
-			return fmt.Errorf("open default wordlist %s: %w", item.entry.FileName, err)
+		if _, exists := existingByFileName[item.entry.FileName]; exists {
+			matching++
 		}
-		_, createErr := service.CreateWordlist(
-			ctx,
-			item.entry.FileName,
-			item.entry.Description,
-			item.entry.Tags,
-			item.entry.FileName,
-			file,
+	}
+	if matching > 0 {
+		if matching != len(imports) {
+			return errors.New("default wordlist bootstrap state is partial; explicit repair or reset is required")
+		}
+		for _, item := range imports {
+			if err := validatePersistedDefaultWordlist(basePath, item, existingByFileName[item.entry.FileName]); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if len(existing) != 0 {
+		return errors.New("wordlist catalog contains user data without the default bootstrap set; explicit migration or reset is required")
+	}
+	if err := requireUninitializedWordlistStorage(basePath); err != nil {
+		return err
+	}
+
+	createdPaths := make([]string, 0, len(imports))
+	err = db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		service := catalogapp.NewWordlistCommandService(
+			catalogrepo.NewWordlistRepository(tx),
+			basePath,
+			catalogapp.NewLocalWordlistFileStore(),
 		)
-		closeErr := file.Close()
-		if createErr != nil {
-			return fmt.Errorf("import default wordlist %s: %w", item.entry.FileName, createErr)
+		for _, item := range imports {
+			file, err := os.Open(item.sourcePath)
+			if err != nil {
+				return fmt.Errorf("open default wordlist %s: %w", item.entry.FileName, err)
+			}
+			wordlist, createErr := service.CreateWordlist(
+				ctx,
+				item.entry.FileName,
+				item.entry.Description,
+				item.entry.Tags,
+				item.entry.FileName,
+				file,
+			)
+			closeErr := file.Close()
+			if createErr != nil {
+				return fmt.Errorf("import default wordlist %s: %w", item.entry.FileName, createErr)
+			}
+			createdPaths = append(createdPaths, wordlist.FilePath)
+			if closeErr != nil {
+				return fmt.Errorf("close default wordlist %s: %w", item.entry.FileName, closeErr)
+			}
 		}
-		if closeErr != nil {
-			return fmt.Errorf("close default wordlist %s: %w", item.entry.FileName, closeErr)
+		return nil
+	})
+	if err == nil {
+		return nil
+	}
+	var cleanupErrors []error
+	for _, path := range createdPaths {
+		if removeErr := os.Remove(path); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+			cleanupErrors = append(cleanupErrors, fmt.Errorf("remove rolled-back default wordlist %s: %w", filepath.Base(path), removeErr))
 		}
+	}
+	return errors.Join(append([]error{err}, cleanupErrors...)...)
+}
+
+func requireUninitializedWordlistStorage(basePath string) error {
+	_, err := os.Lstat(basePath)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("inspect default wordlist storage: %w", err)
+	}
+	// The directory itself is the durable evidence that a previous import was
+	// attempted. Treat even an empty directory as state instead of reseeding it.
+	return errors.New("default wordlist storage already exists without catalog state; explicit repair or reset is required")
+}
+
+func validatePersistedDefaultWordlist(basePath string, item defaultWordlistImport, wordlist catalogdomain.Wordlist) error {
+	expectedPath := filepath.Join(basePath, item.entry.FileName)
+	if wordlist.Description != item.entry.Description ||
+		!slices.Equal(wordlist.Tags, item.entry.Tags) ||
+		wordlist.FilePath != expectedPath ||
+		wordlist.FileSize != item.fileSize ||
+		wordlist.LineCount != item.lineCount ||
+		wordlist.FileHash != item.fileHash {
+		return fmt.Errorf("default wordlist %s catalog metadata drifted; explicit repair or reset is required", item.entry.FileName)
+	}
+	metadata, err := inspectDefaultWordlistFile(expectedPath)
+	if err != nil {
+		return fmt.Errorf("validate persisted default wordlist %s: %w", item.entry.FileName, err)
+	}
+	if metadata.FileSize != item.fileSize || metadata.LineCount != item.lineCount || metadata.FileHash != item.fileHash {
+		return fmt.Errorf("default wordlist %s file content drifted; explicit repair or reset is required", item.entry.FileName)
 	}
 	return nil
 }
@@ -157,7 +255,37 @@ func readDefaultWordlistImports(manifestPath, sourceDirectory string) ([]default
 			return nil, fmt.Errorf("default wordlist %s must not be empty", fileName)
 		}
 		entry.FileName = fileName
-		imports = append(imports, defaultWordlistImport{entry: entry, sourcePath: sourcePath})
+		entry.Description = catalogdomain.NormalizeWordlistDescription(entry.Description)
+		entry.Tags = catalogdomain.NormalizeWordlistTags(entry.Tags)
+		metadata, err := inspectDefaultWordlistFile(sourcePath)
+		if err != nil {
+			return nil, fmt.Errorf("inspect default wordlist %s metadata: %w", fileName, err)
+		}
+		imports = append(imports, defaultWordlistImport{
+			entry:      entry,
+			sourcePath: sourcePath,
+			fileSize:   metadata.FileSize,
+			lineCount:  metadata.LineCount,
+			fileHash:   metadata.FileHash,
+		})
 	}
 	return imports, nil
+}
+
+func inspectDefaultWordlistFile(path string) (*catalogapp.WordlistFileMetadata, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+		return nil, errors.New("wordlist must be a regular non-symlink file")
+	}
+	metadata, changed, err := catalogapp.NewLocalWordlistFileStore().RefreshMetadata(path, -1, time.Time{})
+	if err != nil {
+		return nil, err
+	}
+	if !changed || metadata == nil {
+		return nil, errors.New("wordlist metadata inspection returned no result")
+	}
+	return metadata, nil
 }
