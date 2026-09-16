@@ -1072,7 +1072,7 @@ function assertPublicWorkflow(workflow, policy) {
     const block = jobBlock(executableWorkflow, name);
     const condition = block.match(/^    if: (.+)$/m)?.[1] ?? "";
     const dependencies = block.match(/^    needs: \[([^\]]+)\]/m)?.[1].split(", ") ?? [];
-    if (!condition.includes("always()") || dependencies.length === 0 ||
+    if (!condition.includes("always()") || condition.includes("needs.*.result") || dependencies.length === 0 ||
         dependencies.some(name => !condition.includes(`needs.${name}.result == 'success'`))) {
       fail("public publication must explicitly accept successful direct dependencies after validation reuse");
     }
