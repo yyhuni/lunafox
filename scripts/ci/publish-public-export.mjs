@@ -379,7 +379,7 @@ function gitObjectExists(repository, object) {
   }
 }
 
-function destinationOwnedPaths(exportDir) {
+function destinationOwnedConfiguration(exportDir) {
   const policyPath = path.join(exportDir, "scripts", "ci", "public-export-policy.json");
   if (!fs.existsSync(policyPath)) fail(`export is missing the public export policy: ${path.relative(exportDir, policyPath)}`);
   let policy;
@@ -394,7 +394,16 @@ function destinationOwnedPaths(exportDir) {
       fail(`invalid destination-owned path in public export policy: ${destinationPath}`);
     }
   }
-  return paths.sort();
+  const groups = policy.destinationOwnedGroups ?? [];
+  for (const group of groups) {
+    if (!group || !Array.isArray(group.paths) || typeof group.sentinel !== "string" || !group.paths.includes(group.sentinel)) {
+      fail("invalid destination-owned group in public export policy");
+    }
+    for (const groupPath of group.paths) {
+      if (!paths.includes(groupPath)) fail(`destination-owned group path is not declared: ${groupPath}`);
+    }
+  }
+  return { paths: paths.sort(), groups };
 }
 
 // Temporary-repository cleanup happens after the immutable remote push. A
@@ -408,7 +417,7 @@ function removeTemporaryRepository(repository, remove = fs.rmSync, warn = (messa
   }
 }
 
-function pushProjection({ exportDir, remoteUrl, branch, baseSha, tag, token, destinationPaths = [], destinationOwnedRoot = "" }) {
+function pushProjection({ exportDir, remoteUrl, branch, baseSha, tag, token, destinationPaths = [], destinationGroups = [], destinationOwnedRoot = "" }) {
   const repository = fs.mkdtempSync(path.join(process.env.RUNNER_TEMP || os.tmpdir(), "lunafox-public-export-git-"));
   const message = `chore(export): generated deployment projection ${tag}`;
   try {
@@ -427,8 +436,23 @@ function pushProjection({ exportDir, remoteUrl, branch, baseSha, tag, token, des
     });
     const fetchedSha = runGit(repository, ["rev-parse", `${baseSha}^{commit}`]);
     if (fetchedSha !== baseSha) fail(`public base commit fetch resolved to ${fetchedSha}, expected ${baseSha}`);
+    const groupedPaths = new Set(destinationGroups.flatMap((group) => group.paths));
+    const bootstrapPaths = new Set();
+    for (const group of destinationGroups) {
+      const sentinelExists = gitObjectExists(repository, `${baseSha}:${group.sentinel}`);
+      if (sentinelExists) {
+        for (const groupPath of group.paths) {
+          if (!gitObjectExists(repository, `${baseSha}:${groupPath}`)) {
+            fail(`public base commit contains a partial destination-owned group: ${group.sentinel}`);
+          }
+        }
+      } else {
+        for (const groupPath of group.paths) bootstrapPaths.add(groupPath);
+      }
+    }
     for (const destinationPath of destinationPaths) {
-      if (gitObjectExists(repository, `${baseSha}:${destinationPath}`)) continue;
+      if (!groupedPaths.has(destinationPath) && gitObjectExists(repository, `${baseSha}:${destinationPath}`)) continue;
+      if (groupedPaths.has(destinationPath) && !bootstrapPaths.has(destinationPath)) continue;
       if (!destinationOwnedRoot) fail(`public base commit is missing destination-owned path: ${destinationPath}`);
       const sourcePath = path.join(destinationOwnedRoot, ...destinationPath.split("/"));
       if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile() || fs.lstatSync(sourcePath).isSymbolicLink()) {
@@ -450,7 +474,7 @@ function pushProjection({ exportDir, remoteUrl, branch, baseSha, tag, token, des
     // Checkout happens after the projection add so it cannot be removed by
     // the fresh index operation above.
     for (const destinationPath of destinationPaths) {
-      if (gitObjectExists(repository, `${baseSha}:${destinationPath}`)) {
+      if (!bootstrapPaths.has(destinationPath) && gitObjectExists(repository, `${baseSha}:${destinationPath}`)) {
         runGit(repository, ["checkout", baseSha, "--", destinationPath]);
       }
     }
@@ -537,7 +561,7 @@ async function publish(options) {
   }
 
   const remoteUrl = options.gitRemote || `https://github.com/${owner}/${repo}.git`;
-  const destinationPaths = destinationOwnedPaths(options.exportDir);
+  const destinationOwned = destinationOwnedConfiguration(options.exportDir);
   const commitSha = pushProjection({
     exportDir: options.exportDir,
     remoteUrl,
@@ -545,7 +569,8 @@ async function publish(options) {
     baseSha,
     tag: options.tag,
     token,
-    destinationPaths,
+    destinationPaths: destinationOwned.paths,
+    destinationGroups: destinationOwned.groups,
     destinationOwnedRoot: options.destinationOwnedRoot,
   });
   const pr = await request(options.apiBase, `/repos/${owner}/${repo}/pulls`, {
@@ -574,7 +599,7 @@ export {
   bundleShaFromPublication,
   classifyExistingPublication,
   findExistingPublication,
-  destinationOwnedPaths,
+  destinationOwnedConfiguration,
   pushProjection,
   manifestShaFromPublication,
   parseArgs,

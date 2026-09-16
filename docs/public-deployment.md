@@ -3,56 +3,63 @@
 > **GENERATED / READ-ONLY** - edit the private source and regenerate this
 > projection through the protected release workflow.
 
-## Deployment package
+## Installation sources
 
-Each public release contains two complete, versioned ZIP files. Choose exactly
-one registry for a deployment:
-
-- `lunafox-<version>-dockerhub.zip`
-- `lunafox-<version>-ghcr.zip`
-
-Each package contains `compose.yaml`, `.env`, `.env.example`, the verified final
-release manifest, a registry-specific Engine inventory, the Loki and Alloy
-configuration, the default fingerprint corpus, and required wordlists. Product
-and Engine images are digest-qualified; PostgreSQL, Redis, Loki, and Alloy are
-also pinned by multi-platform manifest digest in Compose. Registry candidates
-are never mixed and there is no automatic fallback.
+The public `main` branch and each release's single `lunafox-<version>.zip`
+contain equivalent deployment snapshots. Each snapshot includes `compose.yaml`,
+`.env`, `.env.example`, the verified final release manifest, a dual-registry
+Engine inventory, the Loki and Alloy configuration, the default fingerprint
+corpus, and required wordlists. Product and Engine images are digest-qualified;
+PostgreSQL, Redis, Loki, and Alloy are pinned by multi-platform manifest digest.
 
 Keep the extracted directory: `.env` is the installation's host-owned
 configuration and relative resource paths resolve from this directory. Review
 `PUBLIC_HOST` and `PUBLIC_PORT`; the internal HTTPS `PUBLIC_URL` is derived from
 them.
 
-### Prepare from a source checkout
-
-On macOS or Linux, a public source checkout can prepare the same versioned ZIP
-into an ignored `.lunafox-deployment/` directory:
+### Install from the public repository
 
 ```console
-git clone --branch <release-tag> --depth 1 https://github.com/yyhuni/lunafox.git
+git clone https://github.com/yyhuni/lunafox.git
 cd lunafox
-./prepare-deployment.sh
-cd .lunafox-deployment
+docker compose up -d
 ```
 
-The command uses the unique exact release tag at the current Git HEAD. For an
-untagged checkout, select a release explicitly with
-`./prepare-deployment.sh --version <release-tag>`. Docker Hub is the default;
-`--registry ghcr` explicitly selects the GHCR package. A failed request or
-checksum never causes automatic registry fallback.
+### Install from a release
 
-The preparation command downloads `deployment-packages.json` and exactly one
-ZIP from the fixed `yyhuni/lunafox` GitHub Release, verifies the declared
-SHA-256, and only then creates the deployment directory. Repeating the same
-request reuses a complete matching directory and preserves its `.env`;
-different, partial, or unverified existing output is not overwritten.
+Download `lunafox-<version>.zip` and its SHA-256 metadata from the matching
+GitHub Release, verify it when required by local policy, and extract it into a
+permanent directory:
 
-The source-root `compose.yaml` retains required release placeholders such as
-`SERVER_IMAGE_REF` because final image digests exist only after the release
-build. It is a release template, not a production Compose file: copying the
-source `.env.example` does not make it directly deployable. Windows operators
-continue to download and extract the Release ZIP, then use native PowerShell
-for the Compose commands below.
+```console
+unzip lunafox-<version>.zip -d lunafox-<version>
+cd lunafox-<version>
+docker compose up -d
+```
+
+Windows operators extract the same ZIP and run the Compose command in native
+PowerShell.
+
+### Select a Registry
+
+Both installation sources default to Docker Hub in `.env`:
+
+```dotenv
+RELEASE_REGISTRY=docker.io
+```
+
+To use GHCR, change the value before first startup:
+
+```dotenv
+RELEASE_REGISTRY=ghcr.io
+```
+
+Only `docker.io` and `ghcr.io` are accepted. The selected value applies to the
+entire first-party Runtime, Agent, Engine, bootstrap, and upgrader closure.
+LunaFox never falls back to the other Registry and never mixes the two within
+one deployment. After a successful in-place upgrade, the persisted override is
+bound to its original Registry; changing Registry requires a fresh deployment
+or an explicit migration that preserves application data and configuration.
 
 `DATABASE_MODE=embedded` is the default and enables the bundled PostgreSQL
 service. `DB_PORT=5432`, `DB_USER=postgres`, and `DB_NAME=lunafox` are editable
@@ -93,6 +100,11 @@ host prerequisites. From the extracted directory run:
 docker compose up -d
 docker compose ps
 ```
+
+Compose validates the configuration and pulls missing images during
+`docker compose up -d`. `docker compose config --quiet` is an optional
+configuration diagnostic, and `docker compose pull` is an optional prefetch
+step; neither is required for installation.
 
 On Windows, run these commands directly in PowerShell. On macOS, Linux, Docker
 Desktop, or OrbStack, use the Docker endpoint already selected by the Docker
@@ -181,9 +193,9 @@ unchanged.
 
 ## System updates
 
-The release package fixes its `stable` or `canary` channel, public metadata
-source, and Docker Hub or GHCR Registry inside `compose.yaml`. These values are
-release inputs and are not editable installation settings. The Server fetches
+The release package fixes its `stable` or `canary` channel and public metadata
+source inside `compose.yaml`. The selected Registry comes from `.env` before
+first startup and is then preserved by upgrades. The Server fetches
 the current schema-v3 channel record over HTTPS, validates its bounded Manifest
 path and raw SHA-256, then caches the immutable Manifest in
 `lunafox_upgrade_state`. It only offers a candidate whose semantic version is

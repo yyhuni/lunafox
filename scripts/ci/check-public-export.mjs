@@ -189,6 +189,19 @@ function validatePublicExport(options) {
   for (const required of policy.requiredPaths ?? []) {
     if (!manifestPaths.has(required)) fail(`public repository is missing required deployment path: ${required}`);
   }
+  for (const group of compiled.destinationOwnedGroups) {
+    const sentinel = path.join(repoRoot, ...group.sentinel.split("/"));
+    const present = group.paths.filter((groupPath) => fs.existsSync(path.join(repoRoot, ...groupPath.split("/"))));
+    // The private exporter validates the source-only tree before publication;
+    // the destination validates the complete group after projection.
+    if (!fs.existsSync(sentinel) && present.length === 0) continue;
+    if (!fs.existsSync(sentinel) || present.length !== group.paths.length) {
+      fail(`public repository contains a partial destination-owned group: ${group.sentinel}`);
+    }
+    for (const groupPath of group.paths) {
+      if (manifestPaths.has(groupPath)) fail(`destination-owned path must be excluded from the exact manifest: ${groupPath}`);
+    }
+  }
   for (const marker of policy.generatedMarkers ?? []) {
     const text = fs.readFileSync(path.join(repoRoot, marker), "utf8");
     if (!/GENERATED/i.test(text) || !/READ[- ]ONLY/i.test(text)) fail(`generated/read-only marker is missing from ${marker}`);

@@ -469,6 +469,7 @@ type composeOverride struct {
 type composeOverrideService struct {
 	Image       string            `json:"image"`
 	Environment map[string]string `json:"environment,omitempty"`
+	Command     []string          `json:"command,omitempty"`
 }
 
 func (executor *ComposeExecutor) writeComposeOverride(path string, manifest *releasemanifest.Manifest) error {
@@ -493,19 +494,30 @@ func (executor *ComposeExecutor) writeComposeOverride(path string, manifest *rel
 			return err
 		}
 		services["server"] = composeOverrideService{Image: services["server"].Image, Environment: map[string]string{
-			"RELEASE_VERSION": manifest.ReleaseVersion,
-			"AGENT_VERSION":   manifest.ReleaseVersion,
-			"AGENT_IMAGE_REF": agent,
+			"RELEASE_VERSION":         manifest.ReleaseVersion,
+			"AGENT_VERSION":           manifest.ReleaseVersion,
+			"AGENT_IMAGE_REF":         agent,
+			"RELEASE_REGISTRY":        executor.Registry,
+			"ENGINE_INSTALL_REGISTRY": executor.Registry,
 		}}
 		services["agent"] = composeOverrideService{Image: agent, Environment: map[string]string{"AGENT_VERSION": manifest.ReleaseVersion}}
 		services["agent-preflight"] = composeOverrideService{Image: agent, Environment: map[string]string{"AGENT_IMAGE_REF": agent}}
-		for _, name := range []string{"config-init", "migrate", "cert-init", "upgrader"} {
+		for _, name := range []string{"config-init", "migrate", "cert-init"} {
 			services[name] = composeOverrideService{Image: bootstrap}
 		}
 		services["bootstrap"] = composeOverrideService{Image: bootstrap, Environment: map[string]string{
-			"RELEASE_VERSION": manifest.ReleaseVersion,
-			"AGENT_VERSION":   manifest.ReleaseVersion,
+			"RELEASE_VERSION":         manifest.ReleaseVersion,
+			"AGENT_VERSION":           manifest.ReleaseVersion,
+			"ENGINE_INSTALL_REGISTRY": executor.Registry,
 		}}
+		services["upgrader"] = composeOverrideService{
+			Image: bootstrap,
+			Command: []string{
+				"--root-dir", "/deployment",
+				"--layout", "public",
+				"--registry", executor.Registry,
+			},
+		}
 	}
 	override := composeOverride{Services: services}
 	data, err := json.MarshalIndent(override, "", "  ")

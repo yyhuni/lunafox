@@ -10,41 +10,48 @@ source repository and are projected through the protected release workflow.
 
 ## Install
 
-Install Docker with Linux container support. On macOS or Linux, a public source
-checkout can prepare the matching immutable deployment package:
+Install Docker with Linux container support and Docker Compose 2.24.0 or newer.
+The public `main` branch is a complete deployment snapshot, so a source checkout
+starts directly:
 
 ```console
-git clone --branch <release-tag> --depth 1 https://github.com/yyhuni/lunafox.git
+git clone https://github.com/yyhuni/lunafox.git
 cd lunafox
-./prepare-deployment.sh
-cd .lunafox-deployment
-```
-
-For a checkout that is not at a release tag, select the version explicitly:
-
-```console
-./prepare-deployment.sh --version <release-tag>
-```
-
-The command defaults to the Docker Hub package. Use `--registry ghcr` to select
-the complete GHCR closure explicitly. It verifies the package SHA-256 from the
-matching GitHub Release and never falls back between registries. The root
-`compose.yaml` is a release template and is not directly deployable by copying
-`.env.example`; use the prepared directory.
-
-Alternatively, including on Windows, download one deployment ZIP from the
-matching LunaFox GitHub Release and extract it into a permanent directory:
-
-- `lunafox-<version>-dockerhub.zip` uses Docker Hub for the complete LunaFox
-  image and Engine closure.
-- `lunafox-<version>-ghcr.zip` uses GHCR for the complete LunaFox image and
-  Engine closure.
-
-Review `PUBLIC_HOST`, `PUBLIC_PORT`, and `DATABASE_MODE` in the deployment
-directory's `.env`, then run with Docker Compose 2.24.0 or newer:
-
-```console
 docker compose up -d
+```
+
+Every new GitHub Release also contains one equivalent deployment archive:
+
+```console
+unzip lunafox-<version>.zip -d lunafox-<version>
+cd lunafox-<version>
+docker compose up -d
+```
+
+Both paths include `.env`, `.env.example`, `compose.yaml`, the release manifest,
+and the Engine inventory. Review `PUBLIC_HOST`, `PUBLIC_PORT`, and
+`DATABASE_MODE` in `.env` before startup. First-party images default to Docker
+Hub:
+
+```dotenv
+RELEASE_REGISTRY=docker.io
+```
+
+To use GHCR for the complete first-party Runtime and Engine closure, change it
+before first startup:
+
+```dotenv
+RELEASE_REGISTRY=ghcr.io
+```
+
+Only `docker.io` and `ghcr.io` are accepted. LunaFox does not automatically
+fall back or mix registries. Compose validates configuration and pulls missing
+images as part of `docker compose up -d`. These commands are optional
+diagnostics or prefetch steps:
+
+```console
+docker compose config --quiet
+docker compose pull
 docker compose ps
 ```
 
@@ -79,9 +86,10 @@ recovery, registry, certificate, and security boundaries.
 ## Release identity
 
 The release workflow resolves Server, Frontend, Nginx, Agent, Bootstrap, and
-Engine references to immutable digests. It builds both deployment packages only
-after the final manifest passes verification, publishes their SHA-256 records,
-and refuses to replace a conflicting asset with the same release name.
+Engine references to immutable cross-registry digests. It builds the unified
+deployment package only after the final manifest passes verification, publishes
+its SHA-256 record, and refuses to replace a conflicting asset with the same
+release name.
 
 The private release run ends after requesting protected public export merge. A
 green private run means public handoff was requested; final publication status

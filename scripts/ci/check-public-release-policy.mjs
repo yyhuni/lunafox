@@ -156,8 +156,19 @@ const REQUIRED_PUBLIC_UPGRADER_PATHS = [
 ];
 const REQUIRED_PUBLIC_CHECKOUT_DEPLOYMENT_PATHS = [
   ".gitignore",
-  "prepare-deployment.sh",
-  "scripts/ci/prepare-deployment-selftest.sh",
+  "deploy/compose.template.yaml",
+  "deploy/.env.example",
+  "scripts/ci/publish-public-deployment.mjs",
+  "scripts/ci/publish-public-deployment.test.mjs",
+  "scripts/ci/prepare-legacy-public-deployment.mjs",
+  "scripts/ci/prepare-legacy-public-deployment.test.mjs",
+];
+const DESTINATION_DEPLOYMENT_PATHS = [
+  ".env",
+  ".env.example",
+  "compose.yaml",
+  "engine-inventory.yaml",
+  "release.manifest.yaml",
 ];
 
 function fail(message) { throw new Error(message); }
@@ -250,6 +261,22 @@ function assertDestinationAppCredentialPolicy(policy) {
   }
 }
 
+function assertLegacyDeploymentBootstrapPolicy(policy) {
+  const bootstrap = policy.legacyDeploymentBootstrap;
+  if (bootstrap?.releaseTag !== "v0.0.1-alpha.114" ||
+      bootstrap?.packageName !== "lunafox-v0.0.1-alpha.114-dockerhub.zip" ||
+      bootstrap?.sha256 !== "d02fe6f9da2576e3a89b52d38a03b5af6afd91670de26e67fe1f1efcf809c55c" ||
+      JSON.stringify(bootstrap?.paths) !== JSON.stringify(DESTINATION_DEPLOYMENT_PATHS)) {
+    fail("legacy public deployment bootstrap must remain pinned to the verified alpha.114 Docker Hub package");
+  }
+  if (policy.publicMain?.deploymentBranchPattern !== "^deployment/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:-retry-[0-9]+)?$") {
+    fail("public main policy must constrain deployment snapshot branches");
+  }
+  if (policy.publicMain?.workflowBranchPattern !== "^workflow/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:-retry-[0-9]+)?$") {
+    fail("public main policy must constrain validation workflow branches");
+  }
+}
+
 function assertPrivateTrustedRunnerPolicy(policy) {
   const runner = policy.privateReleaseExecution;
   if (runner?.runnerLabelsVariable !== PRIVATE_RELEASE_RUNNER_LABELS_VARIABLE ||
@@ -309,6 +336,7 @@ function assertFixedIdentity(workflow, policy) {
     fail("private Agent binary signer identity drifted");
   }
   assertDestinationAppCredentialPolicy(policy);
+  assertLegacyDeploymentBootstrapPolicy(policy);
   assertPrivateTrustedRunnerPolicy(policy);
 }
 
@@ -641,6 +669,8 @@ function assertPrivateWorkflow(workflow, policy, publisherSource = "", autoMerge
   if (!publisher.includes("public-release-authorization") || !publisher.includes("needs.public-release-authorization.outputs.enabled == 'true'")) fail("public export PR creation must require explicit release authorization");
   if (!autoMerge.includes("public-release-authorization") || !autoMerge.includes("needs.public-release-authorization.outputs.enabled == 'true'")) fail("public auto-merge must require explicit release authorization");
   if (!publisher.includes("environment: release") || !publisher.includes("LUNAFOX_PUBLIC_REPO_APP_TOKEN") || publisher.includes("GITHUB_TOKEN") || publisher.includes("GITHUB_PAT") || /\bPAT\b/.test(publisher)) fail("public exporter publisher must use only the protected destination App token");
+  if (/^\s+GH_TOKEN:\s/m.test(publisher)) fail("public exporter step must not expose GH_TOKEN to the cross-repository publisher process");
+  if (countOccurrences(publisher, 'GH_TOKEN="$LUNAFOX_PUBLIC_REPO_APP_TOKEN" gh api') !== 2) fail("public exporter must scope GH_TOKEN to the two destination API probes only");
   for (const required of ["verifyDestinationInstallation", "contents: \"write\"", "pull_requests: \"write\"", "metadata: \"read\"", "/installation/repositories"]) if (!publisherSource.includes(required)) fail(`public exporter must preflight destination App permissions: ${required}`);
   if (!autoMerge.includes("request-public-auto-merge.mjs")) fail("public export auto-merge gate must request protected GitHub auto-merge without direct merge calls");
   if (!autoMergeSource.includes("enablePullRequestAutoMerge") || autoMergeSource.includes("/merges") || autoMergeSource.includes("merge_method") || autoMergeSource.includes("/branches/main/protection")) fail("public auto-merge script must request GraphQL auto-merge without direct merge calls or branch administration access");
@@ -777,6 +807,12 @@ function assertPublicWorkflow(workflow, policy) {
   if (!agentPublication.includes("github.event_name == 'push'") || !agentPublication.includes("github.ref == 'refs/heads/main'")) {
     fail("public Agent publication must run only for canonical main pushes");
   }
+  for (const [name, block] of [["public Runtime publication", publication], ["public Agent publication", agentPublication]]) {
+    if (!block.includes("startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')") ||
+        !block.includes("contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')")) {
+      fail(`${name} must ignore deployment-only public main pushes`);
+    }
+  }
   if (!publication.includes("squash_subject_pattern") ||
       !publication.includes("chore\\\\(export\\\\):") ||
       !publication.includes("head_subject\" =~ $merge_subject_pattern || \"$head_subject\" =~ $squash_subject_pattern")) {
@@ -888,7 +924,9 @@ function assertPublicWorkflow(workflow, policy) {
   for (const [name, block] of PUBLIC_ENGINE_JOBS.map((name) => [name, jobBlock(workflow, name)])) {
     if (!block.includes("github.repository == 'yyhuni/lunafox'") ||
         !block.includes("github.event_name == 'push'") ||
-        !block.includes("github.ref == 'refs/heads/main'")) {
+        !block.includes("github.ref == 'refs/heads/main'") ||
+        !block.includes("startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')") ||
+        !block.includes("contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')")) {
       fail(`${name} must run only on protected public main pushes`);
     }
     assertGitHubHostedRunner(block, name);
@@ -1004,6 +1042,23 @@ function assertPublicWorkflow(workflow, policy) {
       finalRelease.includes("check-public-channel.mjs --root-dir \"$channel_root\" --require-first-release")) {
     fail("public final release must validate the actual append-only channel without requiring an absent historical first record");
   }
+  for (const required of [
+    "publish-public-deployment.mjs",
+    "--snapshot dist/final/deployment-snapshot",
+    "--timeout-seconds 10800",
+    "steps.deployment.outputs.merge_sha",
+    "lunafox-${RELEASE_TAG}.zip",
+    "DEPLOYMENT_SNAPSHOT_COMMIT",
+    "gh release create",
+    "--verify-tag",
+    "contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')",
+  ]) {
+    if (!finalRelease.includes(required)) fail(`public final release is missing deployment finalization: ${required}`);
+  }
+  if (!finalRelease.includes("[ \"$(jq 'length' dist/final/deployment-packages.json)\" -eq 1 ]") ||
+      finalRelease.includes("-dockerhub.zip") || finalRelease.includes("-ghcr.zip")) {
+    fail("public final release must publish exactly one unified deployment ZIP");
+  }
   if (!finalRelease.includes("final tag cross-registry drift") ||
       !finalRelease.includes("reused_final_tag=true") ||
       !finalRelease.includes("REUSED_FINAL_TAG") ||
@@ -1018,9 +1073,18 @@ function assertExportPolicy(exportPolicy) {
     fail("export policy repository identity drifted");
   }
   const exact = new Set([...(exportPolicy.allowlist?.exact ?? []), ...(exportPolicy.allowlist?.generatedExact ?? [])]);
+  const gitPolicy = exportPolicy.git ?? {};
+  if (gitPolicy.workflowAuthorName !== "LunaFox Workflow Publisher" ||
+      gitPolicy.workflowAuthorEmail !== "workflow-publisher@users.noreply.github.com" ||
+      gitPolicy.workflowCommitMessagePattern !== "^chore\\(workflow\\): update public validation for v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?$" ||
+      gitPolicy.workflowSquashCommitMessagePattern !== "^chore\\(workflow\\): update public validation for v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)? \\(#[0-9]+\\)$" ||
+      gitPolicy.workflowMergeCommitMessagePattern !== "^Merge pull request #[0-9]+ from [A-Za-z0-9_.-]+/workflow/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:-retry-[0-9]+)?$") {
+    fail("public export policy must constrain protected validation workflow maintenance history");
+  }
   const destinationOwnedExact = [...new Set(exportPolicy.destinationOwnedExact ?? [])].sort();
-  if (JSON.stringify(destinationOwnedExact) !== JSON.stringify([".github/workflows/public-validate.yml"])) {
-    fail("public export policy must declare the public validation workflow as destination-owned");
+  const expectedDestinationOwned = [".github/workflows/public-validate.yml", ...DESTINATION_DEPLOYMENT_PATHS].sort();
+  if (JSON.stringify(destinationOwnedExact) !== JSON.stringify(expectedDestinationOwned)) {
+    fail("public export policy must declare the validation workflow and deployment snapshot as destination-owned");
   }
   for (const destinationPath of destinationOwnedExact) {
     if (!exact.has(destinationPath)) fail(`destination-owned path is not allowlisted: ${destinationPath}`);
@@ -1030,6 +1094,14 @@ function assertExportPolicy(exportPolicy) {
   }
   for (const required of REQUIRED_PUBLIC_CHECKOUT_DEPLOYMENT_PATHS) {
     if (!exact.has(required)) fail(`export policy does not allow checkout deployment input: ${required}`);
+  }
+  const groups = exportPolicy.destinationOwnedGroups ?? [];
+  if (groups.length !== 1 || groups[0]?.sentinel !== ".env" ||
+      JSON.stringify(groups[0]?.paths) !== JSON.stringify(DESTINATION_DEPLOYMENT_PATHS)) {
+    fail("public export policy must define one complete .env-sentinel deployment snapshot group");
+  }
+  for (const required of DESTINATION_DEPLOYMENT_PATHS) {
+    if (!exact.has(required)) fail(`export policy does not allow destination deployment path: ${required}`);
   }
   const denyPatterns = (exportPolicy.denylist ?? []).map((pattern) => new RegExp(String(pattern)));
   // Every exact allowlisted path must survive the denylist as well.  Keeping

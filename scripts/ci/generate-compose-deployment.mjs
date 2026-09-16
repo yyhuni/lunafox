@@ -33,15 +33,23 @@ function regularFile(root, relative) {
  return fs.readFileSync(current);
 }
 
-export function generate({ root = defaultRoot, manifest, tag, output }) {
+function writeFiles(directory, files) {
+ for (const [name, bytes] of files) {
+  const target = path.join(directory, name);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, bytes);
+ }
+}
+
+export function generate({ root = defaultRoot, manifest, tag, output, snapshot = '' }) {
  if (!/^v\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?$/.test(tag ?? '')) throw Error('invalid release tag');
  const policy = JSON.parse(regularFile(root, 'scripts/ci/public-release-policy.json'));
  validateManifest(manifest, policy, tag);
  const raw = fs.readFileSync(manifest, 'utf8');
  const runtime = parseRuntimeBlocks(raw);
  const engines = parseEngineBlocks(raw, policy);
- const template = regularFile(root, 'compose.yaml').toString();
- const configuration = regularFile(root, '.env.example');
+ const template = regularFile(root, 'deploy/compose.template.yaml').toString();
+ const configuration = regularFile(root, 'deploy/.env.example');
  const common = new Map([
   ['.env.example', configuration], ['.env', configuration],
   ['LICENSE', regularFile(root, 'LICENSE')],
@@ -62,43 +70,53 @@ export function generate({ root = defaultRoot, manifest, tag, output }) {
   common.set(name, regularFile(root, name));
  }
  const work = fs.mkdtempSync(path.join(os.tmpdir(), 'lunafox-compose-package-'));
- const built = [];
+ const registryExpression = '${RELEASE_REGISTRY:-docker.io}';
+ const selectableRef = (refs) => {
+  const docker = refs.find(ref => ref.registry === 'docker.io');
+  const ghcr = refs.find(ref => ref.registry === 'ghcr.io');
+  if (!docker || !ghcr || docker.digest !== ghcr.digest || docker.namespace !== ghcr.namespace || docker.repository !== ghcr.repository) {
+   throw Error('release references are not equivalent across Docker Hub and GHCR');
+  }
+  return `${registryExpression}/${docker.namespace}/${docker.repository}@${docker.digest}`;
+ };
  try {
-  for (const registry of ['docker.io', 'ghcr.io']) {
-   const selected = new Map(runtime.map(block => [`${block.name.toUpperCase()}_IMAGE_REF`, block.refs.find(ref => ref.registry === registry).raw]));
+   const selected = new Map(runtime.map(block => [`${block.name.toUpperCase()}_IMAGE_REF`, selectableRef(block.refs)]));
    selected.set('RELEASE_VERSION', tag.slice(1));
    selected.set('AGENT_VERSION', tag.slice(1));
    selected.set('RELEASE_CHANNEL', tag.includes('-') ? 'canary' : 'stable');
    selected.set('RELEASE_METADATA_BASE_URL', releaseMetadataBaseURL);
-   selected.set('RELEASE_REGISTRY', registry);
-   selected.set('ENGINE_INSTALL_REGISTRY', registry);
+   selected.set('RELEASE_REGISTRY', registryExpression);
+   selected.set('ENGINE_INSTALL_REGISTRY', registryExpression);
    selected.set('ENGINE_INVENTORY_HOST_PATH', './engine-inventory.yaml');
    selected.set('LUNAFOX_SHARED_DATA_VOLUME_BIND', 'lunafox_data:/opt/lunafox:rw');
    const compose = template.replace(/\$\{([A-Z_]+)(?::[^}]*)?\}/g, (expression, key) => selected.get(key) ?? expression);
-   for (const key of selected.keys()) if (compose.includes('${' + key)) throw Error(`unresolved release input: ${key}`);
+   for (const key of selected.keys()) {
+    if (key !== 'RELEASE_REGISTRY' && compose.includes('${' + key)) throw Error(`unresolved release input: ${key}`);
+   }
    const files = new Map(common);
    files.set('compose.yaml', Buffer.from(compose));
-   files.set('engine-inventory.yaml', Buffer.from('enginePackages:\n' + engines.map(refs => `  - refs:\n      - "${refs.find(ref => ref.registry === registry).raw}"\n`).join('')));
-   const directory = path.join(work, registry);
-   for (const [name, bytes] of files) {
-    const target = path.join(directory, name);
-    fs.mkdirSync(path.dirname(target), { recursive: true });
-    fs.writeFileSync(target, bytes);
-   }
-   const name = `lunafox-${tag}-${registry === 'docker.io' ? 'dockerhub' : 'ghcr'}.zip`;
+   files.set('engine-inventory.yaml', Buffer.from('enginePackages:\n' + engines.map(refs => {
+    selectableRef(refs);
+    return `  - refs:\n      - "${refs.find(ref => ref.registry === 'docker.io').raw}"\n      - "${refs.find(ref => ref.registry === 'ghcr.io').raw}"\n`;
+   }).join('')));
+   const directory = path.join(work, 'unified');
+   writeFiles(directory, files);
+   const name = `lunafox-${tag}.zip`;
    const archive = path.join(work, name);
    execFileSync('python3', ['-c', zipProgram, directory, archive]);
    const bytes = fs.readFileSync(archive);
-   built.push({ name, bytes, sha256: crypto.createHash('sha256').update(bytes).digest('hex') });
-  }
-  // Validate and build both closures before exposing any output to publication.
+   const built = { name, bytes, sha256: crypto.createHash('sha256').update(bytes).digest('hex'), files };
+  // Validate the complete closure before exposing publication output.
   fs.mkdirSync(output, { recursive: true });
-  for (const artifact of built) {
-   const target = path.join(output, artifact.name);
-   if (fs.existsSync(target) && !fs.readFileSync(target).equals(artifact.bytes)) throw Error(`immutable package conflict: ${artifact.name}`);
+  const target = path.join(output, built.name);
+  if (fs.existsSync(target) && !fs.readFileSync(target).equals(built.bytes)) throw Error(`immutable package conflict: ${built.name}`);
+  fs.writeFileSync(target, built.bytes);
+  if (snapshot) {
+   if (fs.existsSync(snapshot) && fs.readdirSync(snapshot).length > 0) throw Error(`snapshot directory must be empty: ${snapshot}`);
+   fs.mkdirSync(snapshot, { recursive: true });
+   writeFiles(snapshot, built.files);
   }
-  for (const artifact of built) fs.writeFileSync(path.join(output, artifact.name), artifact.bytes);
-  return built.map(({ name, sha256 }) => ({ name, sha256 }));
+  return [{ name: built.name, sha256: built.sha256 }];
  } finally { fs.rmSync(work, { recursive: true, force: true }); }
 }
 
@@ -107,7 +125,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   const args = {};
   for (let i = 2; i < process.argv.length; i += 2) {
    const key = process.argv[i];
-   if (!['--root', '--manifest', '--tag', '--output'].includes(key) || !process.argv[i + 1] || args[key.slice(2)]) throw Error(`invalid argument: ${key}`);
+   if (!['--root', '--manifest', '--tag', '--output', '--snapshot'].includes(key) || !process.argv[i + 1] || args[key.slice(2)]) throw Error(`invalid argument: ${key}`);
    args[key.slice(2)] = process.argv[i + 1];
   }
   if (!args.manifest || !args.output) throw Error('--manifest and --output are required');
