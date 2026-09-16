@@ -509,8 +509,8 @@ func TestVulnerabilitySnapshotGetByID(t *testing.T) {
 			}
 
 			router := gin.New()
-			router.GET("/v1/vulnerabilitySnapshots/:vulnerability_snapshot/", func(c *gin.Context) {
-				idStr := c.Param("vulnerability_snapshot")
+			router.GET("/v1/vulnerabilitySnapshots/:vulnerabilitySnapshot/", func(c *gin.Context) {
+				idStr := c.Param("vulnerabilitySnapshot")
 				if idStr == "invalid" {
 					httpdto.BadRequest(c, "Invalid vulnerability snapshot ID")
 					return
@@ -1250,7 +1250,7 @@ func TestIntegrationCompleteFlow(t *testing.T) {
 		}
 
 		router := gin.New()
-		router.GET("/v1/vulnerabilitySnapshots/:vulnerability_snapshot/", func(c *gin.Context) {
+		router.GET("/v1/vulnerabilitySnapshots/:vulnerabilitySnapshot/", func(c *gin.Context) {
 			snapshot, _ := mockSvc.GetByID(1)
 			httpdto.OK(c, toVulnerabilitySnapshotOutput(snapshot))
 		})
@@ -1591,7 +1591,7 @@ func TestIntegrationErrorHandling(t *testing.T) {
 				}
 			})
 
-			router.GET("/v1/vulnerabilitySnapshots/:vulnerability_snapshot/", func(c *gin.Context) {
+			router.GET("/v1/vulnerabilitySnapshots/:vulnerabilitySnapshot/", func(c *gin.Context) {
 				_, err := mockSvc.GetByID(999)
 				if err != nil {
 					if err == service.ErrVulnerabilitySnapshotNotFound {

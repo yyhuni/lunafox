@@ -79,7 +79,7 @@ func (dispatcher *HostUpgradeDispatcher) Dispatch(ctx context.Context, request a
 	if err != nil {
 		return fmt.Errorf("connect to host upgrader: %w", err)
 	}
-	defer connection.Close()
+	defer func() { _ = connection.Close() }()
 	_ = connection.SetDeadline(time.Now().Add(deadline))
 	payload, err := json.Marshal(wireRequest{
 		SchemaVersion:  requestSchema,

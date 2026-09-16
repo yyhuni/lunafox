@@ -453,7 +453,7 @@ func performScheduledScanRequest(handler gin.HandlerFunc, method, target string,
 	req := httptest.NewRequest(method, target, body)
 	req.Header.Set("Content-Type", "application/json")
 	c.Request = req
-	c.Params = gin.Params{{Key: "scheduled_scan", Value: "1"}}
+	c.Params = gin.Params{{Key: "scheduledScan", Value: "1"}}
 	handler(c)
 	return recorder
 }

@@ -418,7 +418,7 @@ func TestSchedulerControllerWaitsAfterCommittedMaterializationThenPreAttemptErro
 		t.Fatalf("controller error evidence = materialized %d logs %+v", repository.materialized, logs.All())
 	}
 	fields := logs.FilterMessage("Scheduled scan controller pass failed").All()[0].ContextMap()
-	if fmt.Sprint(fields["scheduled_scan.materialized_count"]) != "1" || fields["scheduled_scan.attempted"] != false || fields["error_kind"] != "operation_failed" {
+	if fmt.Sprint(fields["scheduled_scan.materialized_count"]) != "1" || fields["scheduled_scan.attempted"] != false || fields["error.kind"] != "operation_failed" {
 		t.Fatalf("controller error fields = %+v", fields)
 	}
 	if _, exposed := fields["error"]; exposed {

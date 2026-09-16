@@ -25,7 +25,7 @@ func Reference(architecture string) (string, error) {
 		}
 	}
 	if version == "" {
-		return "", fmt.Errorf("Loki plugin policy has no version")
+		return "", fmt.Errorf("loki plugin policy has no version")
 	}
 	switch architecture {
 	case "amd64", "x86_64":

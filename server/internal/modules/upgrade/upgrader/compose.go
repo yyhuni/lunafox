@@ -471,10 +471,6 @@ type composeOverrideService struct {
 	Environment map[string]string `json:"environment,omitempty"`
 }
 
-func writeComposeOverride(path string, manifest *releasemanifest.Manifest) error {
-	return NewComposeExecutor(nil).writeComposeOverride(path, manifest)
-}
-
 func (executor *ComposeExecutor) writeComposeOverride(path string, manifest *releasemanifest.Manifest) error {
 	if manifest == nil {
 		return fmt.Errorf("release manifest is required")
@@ -519,10 +515,6 @@ func (executor *ComposeExecutor) writeComposeOverride(path string, manifest *rel
 	return atomicWrite(path, append(data, '\n'), 0o600)
 }
 
-func validateFixedDeploymentFiles(root string) error {
-	return NewComposeExecutor(nil).validateFixedDeploymentFiles(root)
-}
-
 func (executor *ComposeExecutor) validateFixedDeploymentFiles(root string) error {
 	required := []string{defaultManifestName, defaultComposeFile, defaultEnvFile}
 	if executor != nil && executor.PublicLayout {
@@ -536,10 +528,6 @@ func (executor *ComposeExecutor) validateFixedDeploymentFiles(root string) error
 		}
 	}
 	return nil
-}
-
-func imageRefForService(manifest *releasemanifest.Manifest, service string) string {
-	return NewComposeExecutor(nil).imageRefForService(manifest, service)
 }
 
 func (executor *ComposeExecutor) imageRefForService(manifest *releasemanifest.Manifest, service string) string {

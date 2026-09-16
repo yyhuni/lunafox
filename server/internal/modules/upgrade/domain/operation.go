@@ -194,33 +194,6 @@ func ValidateTransition(from, to Status) error {
 	return nil
 }
 
-func statusRank(status Status) int {
-	switch status {
-	case StatusQueued:
-		return 0
-	case StatusStopping:
-		return 1
-	case StatusPreflight:
-		return 2
-	case StatusUpdating:
-		return 3
-	case StatusMigrating:
-		return 4
-	case StatusRestarting:
-		return 5
-	case StatusAgentVerifying:
-		return 6
-	case StatusVerifying:
-		return 7
-	case StatusSucceeded, StatusFailed:
-		return 8
-	case StatusNeedsRecovery, StatusNeedsAttention:
-		return 9
-	default:
-		return -1
-	}
-}
-
 func (operation *Operation) Validate() error {
 	if operation == nil {
 		return fmt.Errorf("upgrade operation is required")

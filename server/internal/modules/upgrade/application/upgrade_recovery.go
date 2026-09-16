@@ -93,7 +93,7 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 		// A validated journal checkpoint may be the first durable observation
 		// after downtime. It can replay a forward phase without manufacturing a
 		// success result; final success still requires Server/Agent evidence.
-		if !(event.FromJournal && statusRank(status) > statusRank(operation.Status) && statusRank(status) <= statusRank(domain.StatusVerifying)) {
+		if !event.FromJournal || statusRank(status) <= statusRank(operation.Status) || statusRank(status) > statusRank(domain.StatusVerifying) {
 			return nil, err
 		}
 		// Continue with the validated journal observation.

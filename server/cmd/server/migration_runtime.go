@@ -27,7 +27,7 @@ func runDatabaseMigrationFromRuntime() int {
 		fmt.Fprintf(os.Stderr, "database migration failed: open database: %v\n", err)
 		return 1
 	}
-	defer sqlDB.Close()
+	defer func() { _ = sqlDB.Close() }()
 	database.MigrationsFS = migrationsFS
 	database.MigrationsPath = "migrations"
 	if err := database.RunMigrations(sqlDB); err != nil {

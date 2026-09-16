@@ -29,11 +29,11 @@ func (r *agentRepository) Create(ctx context.Context, agent *agentdomain.Agent) 
 	}
 	record := domainAgentToModel(agent)
 	var options *sql.TxOptions
-	if r.db.Dialector.Name() == "postgres" {
+	if r.db.Name() == "postgres" {
 		options = &sql.TxOptions{Isolation: sql.LevelReadCommitted}
 	}
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if tx.Dialector.Name() == "postgres" {
+		if tx.Name() == "postgres" {
 			// Count in a separate READ COMMITTED statement after the lock: a waiter
 			// must see the previous registration's commit, even with another token.
 			if err := tx.Exec("SELECT pg_advisory_xact_lock(?)", agentQuotaAdvisoryLock).Error; err != nil {

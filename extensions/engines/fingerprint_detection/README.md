@@ -60,7 +60,7 @@ The sole default-enabled section is `observer_ward`:
 
 | Parameter | Default | Allowed range | Effect |
 | --- | --- | --- | --- |
-| `timeout` | `3600` | `60..604800` seconds | Whole Engine execution timeout |
+| `timeout` | `14400` | `60..604800` seconds | Whole Engine execution timeout |
 | `request-timeout` | `10` | `1..120` seconds | Observer Ward `--timeout` |
 | `threads` | `25` | `1..200` | Observer Ward `--thread` |
 
@@ -115,3 +115,7 @@ The Runtime Image starts the generated Engine API v2 Facade. The root
 development and release conformance assets and is not retained in the final
 image. Shared runtime-image and release rules are in
 [`../container/README.md`](../container/README.md).
+
+## Execution Timeout Defaults
+
+Tool/stage defaults in seconds: `observer_ward.timeout=14400`. These finite budgets allow larger batches to finish under existing rate limits; they are project choices, not measured completion guarantees. `engine.json` is authoritative. Request timeouts and cancellation behavior are unchanged. Existing explicit configuration and saved plans retain their values; new defaults require an updated installed Engine package and newly materialized configuration.

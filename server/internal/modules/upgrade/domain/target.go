@@ -91,7 +91,7 @@ func isSHA256Digest(value string) bool {
 	}
 	for index := len(prefix); index < len(value); index++ {
 		character := value[index]
-		if !((character >= '0' && character <= '9') || (character >= 'a' && character <= 'f')) {
+		if (character < '0' || character > '9') && (character < 'a' || character > 'f') {
 			return false
 		}
 	}

@@ -205,9 +205,9 @@ func TestURLCollectionManifestExposesOnlyConfirmedConfiguration(t *testing.T) {
 		enabled bool
 		params  []expectedParam
 	}{
-		{"waymore", true, []expectedParam{{"timeout", "integer", "3600", intPointer(60), intPointer(604800), nil}}},
+		{"waymore", true, []expectedParam{{"timeout", "integer", "28800", intPointer(60), intPointer(604800), nil}}},
 		{"katana", true, []expectedParam{
-			{"timeout", "integer", "3600", intPointer(60), intPointer(604800), nil},
+			{"timeout", "integer", "28800", intPointer(60), intPointer(604800), nil},
 			{"depth", "integer", "3", intPointer(1), intPointer(10), nil},
 			{"concurrency", "integer", "10", intPointer(1), intPointer(100), nil},
 			{"rate-limit", "integer", "30", intPointer(1), intPointer(500), nil},
@@ -216,13 +216,13 @@ func TestURLCollectionManifestExposesOnlyConfirmedConfiguration(t *testing.T) {
 			{"delay", "integer", "0", intPointer(0), intPointer(30), nil},
 		}},
 		{"uro", true, []expectedParam{
-			{"timeout", "integer", "600", intPointer(60), intPointer(21600), nil},
+			{"timeout", "integer", "3600", intPointer(60), intPointer(21600), nil},
 			{"whitelist", "stringArray", []any{}, nil, nil, nil},
 			{"blacklist", "stringArray", []any{}, nil, nil, nil},
 			{"filters", "stringArray", []any{}, nil, nil, []string{"hasparams", "noparams", "hasext", "noext", "allexts", "keepcontent", "keepslash", "vuln"}},
 		}},
 		{"httpx", true, []expectedParam{
-			{"timeout", "integer", "3600", intPointer(60), intPointer(604800), nil},
+			{"timeout", "integer", "14400", intPointer(60), intPointer(604800), nil},
 			{"threads", "integer", "25", intPointer(1), intPointer(200), nil},
 			{"rate-limit", "integer", "150", intPointer(1), intPointer(1000), nil},
 			{"request-timeout", "integer", "10", intPointer(1), intPointer(120), nil},

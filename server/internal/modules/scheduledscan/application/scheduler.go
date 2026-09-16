@@ -124,7 +124,7 @@ func (controller *SchedulerController) run(ctx context.Context) {
 			controller.logger.Error("Scheduled scan controller pass failed",
 				zap.Int("scheduled_scan.materialized_count", result.Materialized),
 				zap.Bool("scheduled_scan.attempted", result.Attempted),
-				zap.String("error_kind", runtimeErrorKind(result.Err)),
+				zap.String("error.kind", runtimeErrorKind(result.Err)),
 			)
 		}
 		if result.Progressed() && !result.PreAttemptError {

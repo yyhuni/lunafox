@@ -160,7 +160,7 @@ func (scheduler *ServerLocationScheduler) submitAndWait(ctx context.Context) (Se
 	})
 	if err != nil {
 		pkg.Warn("Server location lookup submission rejected",
-			zap.String("failureClass", "submission_rejected"),
+			zap.String("failure.class", "submission_rejected"),
 		)
 		return ServerLocationLookupOutcome{}, false
 	}

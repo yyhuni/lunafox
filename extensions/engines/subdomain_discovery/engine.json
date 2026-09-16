@@ -18,7 +18,7 @@
           {
             "key": "timeout",
             "type": "integer",
-            "default": 3600,
+            "default": 7200,
             "minimum": 1
           },
           {
@@ -35,7 +35,7 @@
           {
             "key": "timeout",
             "type": "integer",
-            "default": 3600,
+            "default": 28800,
             "minimum": 1
           },
           {
@@ -95,7 +95,7 @@
           {
             "key": "timeout",
             "type": "integer",
-            "default": 3600,
+            "default": 14400,
             "minimum": 1
           },
           {

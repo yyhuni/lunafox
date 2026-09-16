@@ -49,5 +49,5 @@ func RegisterScanSnapshotRoutes(
 	protected.GET("/scans/:scan/vulnerabilities/exportFiles/current", vulnerabilitySnapshotHandler.Export)
 
 	protected.GET("/vulnerabilitySnapshots", vulnerabilitySnapshotHandler.ListAcrossScans)
-	protected.GET("/vulnerabilitySnapshots/:vulnerability_snapshot", vulnerabilitySnapshotHandler.GetByID)
+	protected.GET("/vulnerabilitySnapshots/:vulnerabilitySnapshot", vulnerabilitySnapshotHandler.GetByID)
 }

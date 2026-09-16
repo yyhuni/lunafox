@@ -165,7 +165,7 @@ func toScreenshotSnapshotFilterOptionDTOs(options []snapshotdomain.FilterOption)
 }
 
 // GetImage returns screenshot snapshot image binary data
-// GET /v1/scans/:scan/screenshotSnapshots/:screenshot_snapshot/blob
+// GET /v1/scans/:scan/screenshotSnapshots/:screenshotSnapshot/blob
 func (h *ScreenshotSnapshotHandler) GetImage(c *gin.Context) {
 	scanID, err := httpdto.ParseResourceIDSegment(c.Param("scan"))
 	if err != nil {
@@ -173,7 +173,7 @@ func (h *ScreenshotSnapshotHandler) GetImage(c *gin.Context) {
 		return
 	}
 
-	snapshotID, err := httpdto.ParseResourceIDSegment(c.Param("screenshot_snapshot"))
+	snapshotID, err := httpdto.ParseResourceIDSegment(c.Param("screenshotSnapshot"))
 	if err != nil {
 		httpdto.BadRequest(c, "Invalid screenshot snapshot ID")
 		return

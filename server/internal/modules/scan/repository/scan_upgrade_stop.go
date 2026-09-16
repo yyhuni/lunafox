@@ -48,7 +48,7 @@ func (r *ScanRepository) StopAllActiveScansForUpgrade(ctx context.Context, opera
 	if stoppedAt.IsZero() {
 		stoppedAt = time.Now().UTC()
 	}
-	diagnosticsUpdate, err := unavailableEngineExecutionDiagnosticsForSavedPlan(r.db.Dialector.Name())
+	diagnosticsUpdate, err := unavailableEngineExecutionDiagnosticsForSavedPlan(r.db.Name())
 	if err != nil {
 		return nil, err
 	}

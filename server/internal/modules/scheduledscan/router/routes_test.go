@@ -22,15 +22,15 @@ func TestRegisterScheduledScanRoutes(t *testing.T) {
 		{method: "GET", path: "/v1/scheduledScans:summarize"},
 		{method: "POST", path: "/v1/scheduledScans"},
 		{method: "POST", path: "/v1/scheduledScans:batchUpdate"},
-		{method: "GET", path: "/v1/scheduledScans/:scheduled_scan"},
-		{method: "PATCH", path: "/v1/scheduledScans/:scheduled_scan"},
-		{method: "DELETE", path: "/v1/scheduledScans/:scheduled_scan"},
+		{method: "GET", path: "/v1/scheduledScans/:scheduledScan"},
+		{method: "PATCH", path: "/v1/scheduledScans/:scheduledScan"},
+		{method: "DELETE", path: "/v1/scheduledScans/:scheduledScan"},
 	} {
 		if !hasRoute(engine.Routes(), route.method, route.path) {
 			t.Fatalf("missing route %s %s", route.method, route.path)
 		}
 	}
-	if hasRoute(engine.Routes(), "POST", "/v1/scheduledScans/:scheduled_scan") {
+	if hasRoute(engine.Routes(), "POST", "/v1/scheduledScans/:scheduledScan") {
 		t.Fatal("scheduled scan enabled-state changes must use PATCH with updateMask, not POST toggle")
 	}
 }

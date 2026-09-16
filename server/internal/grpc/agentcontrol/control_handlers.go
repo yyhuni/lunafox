@@ -87,7 +87,7 @@ func (s *ControlPlaneService) handleExecutionPlanRequest(
 	}
 	parsedRequestID, parseErr := uuid.Parse(requestID)
 	if parseErr != nil || parsedRequestID.String() != requestID {
-		return status.Error(codes.InvalidArgument, "request_task request_id is required")
+		return status.Error(codes.InvalidArgument, "requestTask requestId is required")
 	}
 	snapshot, rejectionReason := s.sessions.currentExecutionSnapshotIfCurrent(agent.ID, session.SessionID, session.SessionEpoch, session.StreamID)
 	if rejectionReason != "" {
