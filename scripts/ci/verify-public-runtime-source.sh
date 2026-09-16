@@ -153,7 +153,7 @@ fi
 if find "$ROOT_DIR" -type f \( \
 	-name '*.pem' -o -name '*.key' -o -name '*.crt' -o \
 	-name '.env' -o -name '.env.local' -o -name '*.tsbuildinfo' \
-	\) -not -path "$ROOT_DIR/.git/*" -print -quit | grep -q .; then
+	\) -not -path "$ROOT_DIR/.git/*" -not -path "$ROOT_DIR/.env" -print -quit | grep -q .; then
 	fail "private certificate, environment, or generated material is present"
 fi
 

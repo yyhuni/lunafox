@@ -19,6 +19,16 @@
     "bootstrapCommitMessagePattern": "^chore\\(bootstrap\\): initialize public deployment projection$",
     "publicMergeHeadOwner": "yyhuni",
     "publicMergeCommitMessagePattern": "^Merge pull request #[0-9]+ from [A-Za-z0-9_.-]+/export/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:-retry-[0-9]+)?$",
+    "deploymentAuthorName": "LunaFox Deployment Publisher",
+    "deploymentAuthorEmail": "deployment-publisher@users.noreply.github.com",
+    "deploymentCommitMessagePattern": "^chore\\(deploy\\): finalize deployment snapshot v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?$",
+    "deploymentSquashCommitMessagePattern": "^chore\\(deploy\\): finalize deployment snapshot v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)? \\(#[0-9]+\\)$",
+    "deploymentMergeCommitMessagePattern": "^Merge pull request #[0-9]+ from [A-Za-z0-9_.-]+/deployment/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:-retry-[0-9]+)?$",
+    "workflowAuthorName": "LunaFox Workflow Publisher",
+    "workflowAuthorEmail": "workflow-publisher@users.noreply.github.com",
+    "workflowCommitMessagePattern": "^chore\\(workflow\\): update public validation for v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?$",
+    "workflowSquashCommitMessagePattern": "^chore\\(workflow\\): update public validation for v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)? \\(#[0-9]+\\)$",
+    "workflowMergeCommitMessagePattern": "^Merge pull request #[0-9]+ from [A-Za-z0-9_.-]+/workflow/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:-retry-[0-9]+)?$",
     "approvedMaintenanceCommits": [
       {
         "hash": "f95591f97815faf932453751b5d0af6a776fd666",
@@ -93,10 +103,14 @@
       "NOTICE-CLOSED-ARTIFACTS.md",
       "README.md",
       ".gitignore",
-      "prepare-deployment.sh",
       "docs/public-deployment.md",
+      ".env",
       ".env.example",
       "compose.yaml",
+      "engine-inventory.yaml",
+      "release.manifest.yaml",
+      "deploy/.env.example",
+      "deploy/compose.template.yaml",
       "scripts/ci/audit-public-security-scope.mjs",
       "scripts/ci/check-public-channel.mjs",
       "scripts/ci/check-public-export.mjs",
@@ -104,6 +118,10 @@
       "scripts/ci/generate-public-channel.mjs",
       "scripts/ci/generate-compose-deployment.mjs",
       "scripts/ci/generate-compose-deployment.test.mjs",
+      "scripts/ci/prepare-legacy-public-deployment.mjs",
+      "scripts/ci/prepare-legacy-public-deployment.test.mjs",
+      "scripts/ci/publish-public-deployment.mjs",
+      "scripts/ci/publish-public-deployment.test.mjs",
       "scripts/ci/publish-public-export.mjs",
       "scripts/ci/check-public-release-policy.mjs",
       "scripts/ci/check-migration-baseline-policy.mjs",
@@ -130,7 +148,6 @@
       "scripts/ci/verify-public-deployment.sh",
       "scripts/ci/verify-compose-cert-init-selftest.sh",
       "scripts/ci/verify-compose-config-init-selftest.sh",
-      "scripts/ci/prepare-deployment-selftest.sh",
       "docker/bootstrap/Dockerfile",
       "docker/bootstrap/bootstrap.sh",
       "docker/bootstrap/config-init.sh",
@@ -244,18 +261,34 @@
     "firstReleaseRequired": []
   },
   "destinationOwnedExact": [
-    ".github/workflows/public-validate.yml"
+    ".github/workflows/public-validate.yml",
+    ".env",
+    ".env.example",
+    "compose.yaml",
+    "engine-inventory.yaml",
+    "release.manifest.yaml"
+  ],
+  "destinationOwnedGroups": [
+    {
+      "sentinel": ".env",
+      "paths": [
+        ".env",
+        ".env.example",
+        "compose.yaml",
+        "engine-inventory.yaml",
+        "release.manifest.yaml"
+      ]
+    }
   ],
   "requiredPaths": [
     "README.md",
     ".gitignore",
-    "prepare-deployment.sh",
     "CONTRIBUTING.md",
     "LICENSE",
     "NOTICE-CLOSED-ARTIFACTS.md",
     "docs/public-deployment.md",
-    "compose.yaml",
-    ".env.example",
+    "deploy/compose.template.yaml",
+    "deploy/.env.example",
     "resources/loki/loki-config.yaml",
     "resources/alloy/config.alloy",
     "scripts/ci/audit-public-security-scope.mjs",
@@ -265,6 +298,10 @@
     "scripts/ci/generate-public-channel.mjs",
     "scripts/ci/generate-compose-deployment.mjs",
     "scripts/ci/generate-compose-deployment.test.mjs",
+    "scripts/ci/prepare-legacy-public-deployment.mjs",
+    "scripts/ci/prepare-legacy-public-deployment.test.mjs",
+    "scripts/ci/publish-public-deployment.mjs",
+    "scripts/ci/publish-public-deployment.test.mjs",
     "scripts/ci/publish-public-export.mjs",
     "scripts/ci/check-public-release-policy.mjs",
     "scripts/ci/check-migration-baseline-policy.mjs",
@@ -273,7 +310,6 @@
     "scripts/ci/verify-public-release.mjs",
     "scripts/ci/verify-compose-cert-init-selftest.sh",
     "scripts/ci/verify-compose-config-init-selftest.sh",
-    "scripts/ci/prepare-deployment-selftest.sh",
     "scripts/ci/verify-public-main-merge.mjs",
       "scripts/ci/verify-public-runtime-contexts.mjs",
     "scripts/ci/verify-public-runtime-image-evidence.mjs",
@@ -380,11 +416,11 @@
     "^server/bin(?:/|$)",
     "^server/\\.air\\.toml$",
     "^scripts/(?:dev|cli|installer|shared)(?:/|$)",
-    "^scripts/ci/(?!audit-public-security-scope\\.mjs$|check-public-channel\\.mjs$|check-public-export\\.mjs$|export-public-repository\\.mjs$|generate-public-channel\\.mjs$|generate-compose-deployment(?:\\.test)?\\.mjs$|generate-release-manifest\\.sh$|prepare-deployment-selftest\\.sh$|publish-public-export\\.mjs$|public-export-policy\\.json$|public-release-policy\\.json$|check-public-release-policy\\.mjs$|check-migration-baseline-policy\\.mjs$|check-engine-api-major-policy\\.mjs$|verify-compose-(?:cert|config)-init-selftest\\.sh$|verify-public-deployment\\.sh$|verify-public-release\\.mjs$|verify-public-main-merge\\.mjs$|verify-public-runtime-contexts\\.mjs$|verify-public-runtime-image-evidence(?:-selftest)?\\.mjs$|verify-agent-binary-bundle\\.mjs$|verify-public-agent-wrapper(?:-selftest)?\\.mjs$|verify-public-runtime-source\\.sh$|verify-public-engine-release(?:-selftest)?\\.mjs$|publish-engine-runtime-images\\.sh$|aggregate-engine-runtime-image-shards\\.sh$|check-engine-image-tool-inventory\\.mjs$|verify-distribution-registry-v2\\.mjs$|verify-runtime-image-index\\.mjs$).+",
+    "^scripts/ci/(?!audit-public-security-scope\\.mjs$|check-public-channel\\.mjs$|check-public-export\\.mjs$|export-public-repository\\.mjs$|generate-public-channel\\.mjs$|generate-compose-deployment(?:\\.test)?\\.mjs$|generate-release-manifest\\.sh$|prepare-legacy-public-deployment(?:\\.test)?\\.mjs$|publish-public-deployment(?:\\.test)?\\.mjs$|publish-public-export\\.mjs$|public-export-policy\\.json$|public-release-policy\\.json$|check-public-release-policy\\.mjs$|check-migration-baseline-policy\\.mjs$|check-engine-api-major-policy\\.mjs$|verify-compose-(?:cert|config)-init-selftest\\.sh$|verify-public-deployment\\.sh$|verify-public-release\\.mjs$|verify-public-main-merge\\.mjs$|verify-public-runtime-contexts\\.mjs$|verify-public-runtime-image-evidence(?:-selftest)?\\.mjs$|verify-agent-binary-bundle\\.mjs$|verify-public-agent-wrapper(?:-selftest)?\\.mjs$|verify-public-runtime-source\\.sh$|verify-public-engine-release(?:-selftest)?\\.mjs$|publish-engine-runtime-images\\.sh$|aggregate-engine-runtime-image-shards\\.sh$|check-engine-image-tool-inventory\\.mjs$|verify-distribution-registry-v2\\.mjs$|verify-runtime-image-index\\.mjs$).+",
     "^(?:openspec|\\.agents|\\.claude|docs/research|docs/plans)(?:/|$)",
-    "^(?:release\\.manifest(?:\\.yaml|\\.yaml\\.example)|release\\.manifest\\.final\\.yaml\\.example|checksums\\.txt)$",
+    "^(?:release\\.manifest(?:\\.yaml\\.example)|release\\.manifest\\.final\\.yaml\\.example|checksums\\.txt)$",
     "(?:^|/)(?:lunafox-installer|installer-cache)(?:[-_/]|$)",
-    "^(?!\\.env\\.example$)(?:.*/)?\\.env(?:$|\\..*)",
+    "^(?!\\.env$|\\.env\\.example$|deploy/\\.env\\.example$)(?:.*/)?\\.env(?:$|\\..*)",
     "(?:^|/)(?:(?:credentials?|secrets?)(?:[-_.][^/]*)?|[^/]+\\.(?:pem|key|crt))$",
     "^frontend/__tests__/server-log-compose\\.contract\\.test\\.ts$",
     "^frontend/components/__tests__/ui-foundation-control-plane\\.contract\\.test\\.ts$",
@@ -469,6 +505,6 @@
     "README.md",
     "CONTRIBUTING.md",
     "docs/public-deployment.md",
-    ".env.example"
+    "deploy/.env.example"
   ]
 }

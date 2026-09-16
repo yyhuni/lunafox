@@ -63,37 +63,52 @@ func TestLoadInventoryProductionPreservesDeclaredCandidateOrder(t *testing.T) {
 }
 
 func TestLoadSelectedRegistryInventoryAcceptsOnlyTheExplicitCanonicalRegistry(t *testing.T) {
+	dockerRef := "docker.io/yyhuni/lunafox-engine-runtime-port-scan@" + inventoryDigestA
+	ghcrRef := "ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@" + inventoryDigestA
+	validInventory := "enginePackages:\n  - refs:\n      - " + dockerRef + "\n      - " + ghcrRef + "\n"
 	for _, test := range []struct {
 		name     string
 		registry string
-		ref      string
+		payload  string
 		want     string
 	}{
 		{
 			name:     "Docker Hub",
 			registry: "docker.io",
-			ref:      "docker.io/yyhuni/lunafox-engine-runtime-port-scan@" + inventoryDigestA,
+			payload:  validInventory,
 		},
 		{
 			name:     "GHCR",
 			registry: "ghcr.io",
-			ref:      "ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@" + inventoryDigestA,
+			payload:  validInventory,
 		},
 		{
-			name:     "mismatched selected registry",
+			name:     "unsupported selected registry",
 			registry: "docker.io",
-			ref:      "ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@" + inventoryDigestA,
-			want:     "want \"docker.io\"",
+			payload:  "enginePackages:\n  - refs:\n      - " + ghcrRef + "\n      - " + dockerRef + "\n",
+			want:     "must order docker.io then ghcr.io",
 		},
 		{
 			name:     "third-party registry",
 			registry: "registry.example",
-			ref:      "registry.example/yyhuni/lunafox-engine-runtime-port-scan@" + inventoryDigestA,
+			payload:  validInventory,
 			want:     "must be docker.io or ghcr.io",
+		},
+		{
+			name:     "repository drift",
+			registry: "docker.io",
+			payload:  "enginePackages:\n  - refs:\n      - " + dockerRef + "\n      - ghcr.io/yyhuni/lunafox-engine-runtime-other@" + inventoryDigestA + "\n",
+			want:     "preserve repository identity",
+		},
+		{
+			name:     "digest drift",
+			registry: "docker.io",
+			payload:  "enginePackages:\n  - refs:\n      - " + dockerRef + "\n      - ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@" + inventoryDigestB + "\n",
+			want:     "same OCI artifact manifest digest",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			path := writeInventory(t, "enginePackages:\n  - refs:\n      - "+test.ref+"\n")
+			path := writeInventory(t, test.payload)
 			inventory, err := LoadSelectedRegistryInventory(path, test.registry)
 			if test.want != "" {
 				if err == nil || !strings.Contains(err.Error(), test.want) {
@@ -179,7 +194,7 @@ enginePackages: []
 		{name: "candidate digest drift", mode: InventoryModeProduction, payload: "enginePackages:\n  - refs:\n      - " + validRef + "\n      - ghcr.io/yyhuni/lunafox-engine-subdomain-discovery@" + inventoryDigestB + "\n", want: "same OCI artifact manifest digest"},
 		{name: "development candidate count", mode: InventoryModeDevelopment, payload: "enginePackages:\n  - refs:\n      - " + validRef + "\n      - ghcr.io/yyhuni/lunafox-engine-subdomain-discovery@" + inventoryDigestA + "\n", want: "must contain exactly 1 candidate"},
 		{name: "production candidate count", mode: InventoryModeProduction, payload: "enginePackages:\n  - refs: [" + validRef + "]\n", want: "must contain exactly 2 candidates"},
-		{name: "selected Registry candidate count", mode: InventoryModeSelectedRegistry, payload: "enginePackages:\n  - refs:\n      - " + validRef + "\n      - ghcr.io/yyhuni/lunafox-engine-subdomain-discovery@" + inventoryDigestA + "\n", want: "must contain exactly 1 candidate"},
+		{name: "selected Registry candidate count", mode: InventoryModeSelectedRegistry, payload: "enginePackages:\n  - refs:\n      - " + validRef + "\n", want: "must contain exactly 2 candidates"},
 	}
 
 	for _, test := range tests {

@@ -1,0 +1,25 @@
+enginePackages:
+  - refs:
+      - "docker.io/yyhuni/lunafox-engine-runtime-directory-scan@sha256:4a4b61ee9d53f37ce08dd9dec7f5b4c899794225766babc53488e116301cd5a0"
+      - "ghcr.io/yyhuni/lunafox-engine-runtime-directory-scan@sha256:4a4b61ee9d53f37ce08dd9dec7f5b4c899794225766babc53488e116301cd5a0"
+  - refs:
+      - "docker.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:6bf0622ec45dc530a125217aecee1fdef25b952b891b658b301b361507bb3b8d"
+      - "ghcr.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:6bf0622ec45dc530a125217aecee1fdef25b952b891b658b301b361507bb3b8d"
+  - refs:
+      - "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:2fc74a89d0e9e8f6efc646a8a860da34416572bab680d5abd5db8bcb95f62dcc"
+      - "ghcr.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:2fc74a89d0e9e8f6efc646a8a860da34416572bab680d5abd5db8bcb95f62dcc"
+  - refs:
+      - "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:0d815058344c69be2888bd4864fa8589caba4041f286565eca2d1d5172c3fd73"
+      - "ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:0d815058344c69be2888bd4864fa8589caba4041f286565eca2d1d5172c3fd73"
+  - refs:
+      - "docker.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:19577c207d1d64c8e1f8a8241669869e658d4c8a7a1ba7b6b56bcc566abdf58b"
+      - "ghcr.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:19577c207d1d64c8e1f8a8241669869e658d4c8a7a1ba7b6b56bcc566abdf58b"
+  - refs:
+      - "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:6a3bb7bdcc5ff9420fdb088980cd4f2f732d5e541e341c9dcdfe38fac5ffb20e"
+      - "ghcr.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:6a3bb7bdcc5ff9420fdb088980cd4f2f732d5e541e341c9dcdfe38fac5ffb20e"
+  - refs:
+      - "docker.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:d12a46bdd20ae6fc9c62428833fd9c6c2ff18da46872ecc0a5136d37a2b752d9"
+      - "ghcr.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:d12a46bdd20ae6fc9c62428833fd9c6c2ff18da46872ecc0a5136d37a2b752d9"
+  - refs:
+      - "docker.io/yyhuni/lunafox-engine-runtime-website-discovery@sha256:b1e0b2c09103214cd7266d2634e5a14267dd68e19fd4c84d01e5afaf29c3a638"
+      - "ghcr.io/yyhuni/lunafox-engine-runtime-website-discovery@sha256:b1e0b2c09103214cd7266d2634e5a14267dd68e19fd4c84d01e5afaf29c3a638"

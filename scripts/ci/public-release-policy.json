@@ -45,9 +45,23 @@
   "publicMain": {
     "branch": "main",
     "stagingBranchPattern": "^export/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:-retry-[0-9]+)?$",
+    "deploymentBranchPattern": "^deployment/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:-retry-[0-9]+)?$",
+    "workflowBranchPattern": "^workflow/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:-retry-[0-9]+)?$",
     "allowDirectPush": false,
     "allowForcePush": false,
     "requiredReview": true
+  },
+  "legacyDeploymentBootstrap": {
+    "releaseTag": "v0.0.1-alpha.114",
+    "packageName": "lunafox-v0.0.1-alpha.114-dockerhub.zip",
+    "sha256": "d02fe6f9da2576e3a89b52d38a03b5af6afd91670de26e67fe1f1efcf809c55c",
+    "paths": [
+      ".env",
+      ".env.example",
+      "compose.yaml",
+      "engine-inventory.yaml",
+      "release.manifest.yaml"
+    ]
   },
   "channel": {
     "branch": "release-channel",

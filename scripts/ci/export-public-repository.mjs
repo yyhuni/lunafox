@@ -162,7 +162,28 @@ function compilePolicy(policy) {
     if (!exact.has(destinationPath)) fail(`destination-owned path must be allowlisted: ${destinationPath}`);
     if (deny.some((pattern) => pattern.test(destinationPath))) fail(`destination-owned path is denied: ${destinationPath}`);
   }
-  return { policy, exact, prefixes, deny, destinationOwned };
+  const destinationOwnedGroups = policy.destinationOwnedGroups ?? [];
+  if (!Array.isArray(destinationOwnedGroups)) fail("destinationOwnedGroups must be an array");
+  const groupedPaths = new Set();
+  for (const group of destinationOwnedGroups) {
+    if (!group || typeof group !== "object" ||
+      JSON.stringify(Object.keys(group).sort()) !== JSON.stringify(["paths", "sentinel"])) {
+      fail("destination-owned group must declare only paths and sentinel");
+    }
+    if (!Array.isArray(group.paths) || group.paths.length === 0 || typeof group.sentinel !== "string") {
+      fail("destination-owned group paths and sentinel are required");
+    }
+    const uniquePaths = new Set(group.paths);
+    if (uniquePaths.size !== group.paths.length || !uniquePaths.has(group.sentinel)) {
+      fail("destination-owned group must contain its sentinel exactly once");
+    }
+    for (const groupPath of group.paths) {
+      if (!destinationOwned.has(groupPath)) fail(`destination-owned group path is not declared: ${groupPath}`);
+      if (groupedPaths.has(groupPath)) fail(`destination-owned path belongs to multiple groups: ${groupPath}`);
+      groupedPaths.add(groupPath);
+    }
+  }
+  return { policy, exact, prefixes, deny, destinationOwned, destinationOwnedGroups };
 }
 
 function isAllowed(relPath, compiled, { includeGenerated = true } = {}) {
@@ -484,6 +505,16 @@ function validateTree(root, compiled, manifest, policy, { requireGit = false } =
   for (const required of policy.requiredPaths ?? []) {
     if (!paths.has(required)) fail(`public export is missing required path: ${required}`);
   }
+  for (const group of compiled.destinationOwnedGroups) {
+    const sentinelPresent = paths.has(group.sentinel);
+    const present = group.paths.filter((groupPath) => paths.has(groupPath));
+    // A source-only export contains no destination-owned snapshot. Once the
+    // sentinel exists on public main, the complete group is mandatory.
+    if (!sentinelPresent && present.length === 0) continue;
+    if (!sentinelPresent || present.length !== group.paths.length) {
+      fail(`destination-owned group is partial: ${group.sentinel}`);
+    }
+  }
   if (manifest) {
     const expected = JSON.stringify(manifest.files);
     const actual = JSON.stringify(buildFileManifest(root, {
@@ -549,9 +580,39 @@ function historyRecordKind(record, policy) {
     policy.publicMergeCommitMessagePattern ??
       "^Merge pull request #[0-9]+ from [A-Za-z0-9_.-]+/export/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:-retry-[0-9]+)?$",
   );
+  const deploymentGeneratedPattern = new RegExp(
+    policy.deploymentCommitMessagePattern ??
+      "^chore\\(deploy\\): finalize deployment snapshot v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?$",
+  );
+  const deploymentSquashPattern = new RegExp(
+    policy.deploymentSquashCommitMessagePattern ??
+      "^chore\\(deploy\\): finalize deployment snapshot v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)? \\(#[0-9]+\\)$",
+  );
+  const deploymentMergePattern = new RegExp(
+    policy.deploymentMergeCommitMessagePattern ??
+      "^Merge pull request #[0-9]+ from [A-Za-z0-9_.-]+/deployment/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:-retry-[0-9]+)?$",
+  );
+  const workflowGeneratedPattern = new RegExp(
+    policy.workflowCommitMessagePattern ??
+      "^chore\\(workflow\\): update public validation for v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?$",
+  );
+  const workflowSquashPattern = new RegExp(
+    policy.workflowSquashCommitMessagePattern ??
+      "^chore\\(workflow\\): update public validation for v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)? \\(#[0-9]+\\)$",
+  );
+  const workflowMergePattern = new RegExp(
+    policy.workflowMergeCommitMessagePattern ??
+      "^Merge pull request #[0-9]+ from [A-Za-z0-9_.-]+/workflow/v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?(?:-retry-[0-9]+)?$",
+  );
   const generatedTagPattern = /^chore\(export\): generated deployment projection (v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?)$/;
   const squashTagPattern = /^chore\(export\): generated deployment projection (v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?) \(#\d+\)$/;
-  const mergePartsPattern = /^Merge pull request #\d+ from ([A-Za-z0-9_.-]+)\/export\/(v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?)$/;
+  const mergePartsPattern = /^Merge pull request #\d+ from ([A-Za-z0-9_.-]+)\/export\/(v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?)(?:-retry-\d+)?$/;
+  const deploymentGeneratedTagPattern = /^chore\(deploy\): finalize deployment snapshot (v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?)$/;
+  const deploymentSquashTagPattern = /^chore\(deploy\): finalize deployment snapshot (v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?) \(#\d+\)$/;
+  const deploymentMergePartsPattern = /^Merge pull request #\d+ from ([A-Za-z0-9_.-]+)\/deployment\/(v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?)(?:-retry-\d+)?$/;
+  const workflowGeneratedTagPattern = /^chore\(workflow\): update public validation for (v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?)$/;
+  const workflowSquashTagPattern = /^chore\(workflow\): update public validation for (v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?) \(#\d+\)$/;
+  const workflowMergePartsPattern = /^Merge pull request #\d+ from ([A-Za-z0-9_.-]+)\/workflow\/(v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?)(?:-retry-\d+)?$/;
 
   if (bootstrapPattern.test(subject)) {
     if (parentList.length !== 0) {
@@ -580,12 +641,72 @@ function historyRecordKind(record, policy) {
     return { kind: "merge", tag: branchTag.replace(/-retry-\d+$/, "") };
   }
 
+  if (deploymentMergePattern.test(subject)) {
+    if (parentList.length !== 2) fail(`public deployment merge commit must have exactly two parents: ${hash}`);
+    if (!authorName || !authorEmail || !committerName || !committerEmail) {
+      fail(`public deployment merge commit metadata is incomplete: ${hash}`);
+    }
+    const mergeParts = subject.match(deploymentMergePartsPattern);
+    const mergeOwner = mergeParts?.[1] ?? "";
+    if (policy.publicMergeHeadOwner && mergeOwner !== policy.publicMergeHeadOwner) {
+      fail(`public deployment merge commit head owner is not authorized: ${mergeOwner}`);
+    }
+    return { kind: "deployment-merge", tag: mergeParts?.[2] ?? "" };
+  }
+
+  if (workflowMergePattern.test(subject)) {
+    if (parentList.length !== 2) fail(`public workflow merge commit must have exactly two parents: ${hash}`);
+    if (!authorName || !authorEmail || !committerName || !committerEmail) {
+      fail(`public workflow merge commit metadata is incomplete: ${hash}`);
+    }
+    const mergeParts = subject.match(workflowMergePartsPattern);
+    const mergeOwner = mergeParts?.[1] ?? "";
+    if (policy.publicMergeHeadOwner && mergeOwner !== policy.publicMergeHeadOwner) {
+      fail(`public workflow merge commit head owner is not authorized: ${mergeOwner}`);
+    }
+    return { kind: "workflow-merge", tag: mergeParts?.[2] ?? "" };
+  }
+
   if (squashPattern.test(subject)) {
     if (parentList.length !== 1) fail(`public squash commit must have exactly one parent: ${hash}`);
     if (!authorName || !authorEmail || !committerName || !committerEmail) {
       fail(`public squash commit metadata is incomplete: ${hash}`);
     }
     return { kind: "squash", tag: subject.match(squashTagPattern)?.[1] ?? "" };
+  }
+
+  if (deploymentSquashPattern.test(subject)) {
+    if (parentList.length !== 1) fail(`public deployment squash commit must have exactly one parent: ${hash}`);
+    if (!authorName || !authorEmail || !committerName || !committerEmail) {
+      fail(`public deployment squash commit metadata is incomplete: ${hash}`);
+    }
+    return { kind: "deployment-squash", tag: subject.match(deploymentSquashTagPattern)?.[1] ?? "" };
+  }
+
+  if (workflowSquashPattern.test(subject)) {
+    if (parentList.length !== 1) fail(`public workflow squash commit must have exactly one parent: ${hash}`);
+    if (!authorName || !authorEmail || !committerName || !committerEmail) {
+      fail(`public workflow squash commit metadata is incomplete: ${hash}`);
+    }
+    return { kind: "workflow-squash", tag: subject.match(workflowSquashTagPattern)?.[1] ?? "" };
+  }
+
+  if (deploymentGeneratedPattern.test(subject)) {
+    if (parentList.length !== 1) fail(`public generated deployment commit must have exactly one parent: ${hash}`);
+    if (authorName !== policy.deploymentAuthorName || authorEmail !== policy.deploymentAuthorEmail ||
+      committerName !== policy.deploymentAuthorName || committerEmail !== policy.deploymentAuthorEmail) {
+      fail("public generated deployment commit metadata is not the deployment publisher identity");
+    }
+    return { kind: "deployment-generated", tag: subject.match(deploymentGeneratedTagPattern)?.[1] ?? "" };
+  }
+
+  if (workflowGeneratedPattern.test(subject)) {
+    if (parentList.length !== 1) fail(`public generated workflow commit must have exactly one parent: ${hash}`);
+    if (authorName !== policy.workflowAuthorName || authorEmail !== policy.workflowAuthorEmail ||
+      committerName !== policy.workflowAuthorName || committerEmail !== policy.workflowAuthorEmail) {
+      fail("public generated workflow commit metadata is not the workflow publisher identity");
+    }
+    return { kind: "workflow-generated", tag: subject.match(workflowGeneratedTagPattern)?.[1] ?? "" };
   }
 
   if (!generatedPattern.test(subject)) return { kind: "unknown", tag: "" };

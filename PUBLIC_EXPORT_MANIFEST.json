@@ -1,21 +1,19 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:8f380b267da685332a89dbb3ba3697754eef2edca7c2e343e62aa05253f76752",
-  "releaseTag": "v0.0.1-alpha.114",
+  "sourceRevisionDigest": "sha256:5f400ab098c32f63691873a6d3def927e4abcf96fc2d86de423c60353ccc769f",
+  "releaseTag": "v0.0.1-alpha.117",
   "generatedReadOnly": true,
   "excludedPaths": [
+    ".env",
+    ".env.example",
     ".github/workflows/public-validate.yml",
-    "PUBLIC_EXPORT_MANIFEST.json"
+    "PUBLIC_EXPORT_MANIFEST.json",
+    "compose.yaml",
+    "engine-inventory.yaml",
+    "release.manifest.yaml"
   ],
   "files": [
-    {
-      "path": ".env.example",
-      "type": "file",
-      "mode": "0644",
-      "size": 806,
-      "sha256": "c30ee9827944e7f076ea43273e6bbc7adf518a842b634bdcbf1e0acac20854b5"
-    },
     {
       "path": ".gitignore",
       "type": "file",
@@ -49,70 +47,63 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "eb222e93682f09599e4baaa0461542dad4e3281caf94f13b5107145c685e0fdf"
+      "sha256": "25c5039dd6013f91f952f7182f803dfe6620cab1bbca8adfd1ea26801c0b7fe4"
     },
     {
       "path": "README.md",
       "type": "file",
       "mode": "0644",
-      "size": 4622,
-      "sha256": "4365741c5f8838056c1ca9ae037ba87afc241655539b94c7049f61a3507ee1d4"
+      "size": 4510,
+      "sha256": "6ce3352c5259ee5b6fc54a524e3aa95ef14cab242a0c8ab52bef5b4ecb79b434"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.114/agent-bundle.json",
+      "path": "agent/bin/v0.0.1-alpha.117/agent-bundle.json",
       "type": "file",
       "mode": "0644",
       "size": 2229,
-      "sha256": "6e6a6f15dd5699a94f4cfb18ad1c4e290ca6871e961dfc30ee1fc9ba8b878045"
+      "sha256": "44336c0f616ccec8804c43dbfe9770584c2ffd0dad0cdc9eac93a3e484682f50"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.114/agent-bundle.sha256",
+      "path": "agent/bin/v0.0.1-alpha.117/agent-bundle.sha256",
       "type": "file",
       "mode": "0644",
       "size": 402,
       "sha256": "2946b4b80ed17b9ad513b6e9d76def9ad4221fa15e8d475767b1a6fda9cbe25a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.114/agent-bundle.sigstore.json",
+      "path": "agent/bin/v0.0.1-alpha.117/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "f531d3dbae0d62bfeb9e7f7eb7fa6640124df51c7c96f5ab419be46c274efc90"
+      "sha256": "a2116375df003be2077cabc8439a156d8503cb98c27f91d1159578844183cc4e"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.114/lunafox-agent-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.117/lunafox-agent-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 23904517,
       "sha256": "6fdddcaae9958a99cb081d92ad3d8d11f32db16b5ff300d645a4693408d1df38"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.114/lunafox-agent-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.117/lunafox-agent-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 22504270,
       "sha256": "569449dc80b8e7a27954488d656198adc68d47eb6384903ad1f3ea4c4271467d"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.114/lunafox-engine-mount-preflight-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.117/lunafox-engine-mount-preflight-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 20000987,
       "sha256": "2b12a49b754a09e98377c96105c2975a5b48bf6b063eae0b2062ea271e0add2a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.114/lunafox-engine-mount-preflight-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.117/lunafox-engine-mount-preflight-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 18804436,
       "sha256": "143872aa1a600ce25451d9319a31c4971846dc306bd85e2e85721be4d2bac5a4"
-    },
-    {
-      "path": "compose.yaml",
-      "type": "file",
-      "mode": "0644",
-      "size": 15142,
-      "sha256": "44d85de3e60447e4df479c146a0ba6f872f7e2f7c3ce6ad8f97204a09fac234a"
     },
     {
       "path": "contracts/README.md",
@@ -955,6 +946,20 @@
       "sha256": "2159804cdcc7900ac8613be8264e1d30f0735f158ecf0a725e04dd7e3dfe38ea"
     },
     {
+      "path": "deploy/.env.example",
+      "type": "file",
+      "mode": "0644",
+      "size": 924,
+      "sha256": "0471aac6cb250eed512d8cb2d1e8eb8dc0583d9ef042f2ed5f0d340219ffc6f8"
+    },
+    {
+      "path": "deploy/compose.template.yaml",
+      "type": "file",
+      "mode": "0644",
+      "size": 15142,
+      "sha256": "44d85de3e60447e4df479c146a0ba6f872f7e2f7c3ce6ad8f97204a09fac234a"
+    },
+    {
       "path": "docker/agent/Dockerfile",
       "type": "file",
       "mode": "0644",
@@ -1007,8 +1012,8 @@
       "path": "docs/public-deployment.md",
       "type": "file",
       "mode": "0644",
-      "size": 14521,
-      "sha256": "a9c6d9b85bc26fb0c5938c31d66642e7f467afed0faab8b3182137ad8fdb914a"
+      "size": 14400,
+      "sha256": "e914f5791bc59e3c5323364b8dbf07c63fe48779b78c897f0ba6987d56fff5c5"
     },
     {
       "path": "engine-go/README.md",
@@ -16551,13 +16556,6 @@
       "sha256": "9d7cc1bebbad87b17c8de6b30d061ef960f8a452f345b08e3998d8f201b86a12"
     },
     {
-      "path": "prepare-deployment.sh",
-      "type": "file",
-      "mode": "0755",
-      "size": 7466,
-      "sha256": "5f57a03366d147b7d3b4760fdc753ead3b877fa83b899995e60d3681d2deaaef"
-    },
-    {
       "path": "proto/buf.yaml",
       "type": "file",
       "mode": "0644",
@@ -16743,36 +16741,36 @@
       "path": "scripts/ci/check-public-export.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 9802,
-      "sha256": "c84e27850d961f6653c4db97e54a6fd7beca61371d2b4a1c34434d6c7644e019"
+      "size": 10622,
+      "sha256": "139e5ec8e926de237e7a305ac44f3f5a91bb84f66bf5b54e1c46c31c8c7e65e2"
     },
     {
       "path": "scripts/ci/check-public-release-policy.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 71568,
-      "sha256": "b5a5adec042b6dbdc215872bc88728bf628f6874a9948e3b25686ec32f64a033"
+      "size": 76116,
+      "sha256": "63a8db33689872b6a2215853319c253c6fca32bd241e1b8cc73b29732650001b"
     },
     {
       "path": "scripts/ci/export-public-repository.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 34045,
-      "sha256": "9eccbb35dbca23b1b9e9c39ecdc19f896a26bf5f4279bede2b33bf3704bf2e2b"
+      "size": 41312,
+      "sha256": "d7ae1de81a521e69d78b47a1c69908d807ae80cfc4cd09af0fdb54b56c8a5008"
     },
     {
       "path": "scripts/ci/generate-compose-deployment.mjs",
       "type": "file",
       "mode": "0755",
-      "size": 6633,
-      "sha256": "d616eaea9ccbaa7987740b728b1760bb7491249893c23ed78010552f0a104371"
+      "size": 7439,
+      "sha256": "a97bcdf76bb25426ec989e5300f0a0e66bdb78d9a106bf4abc6b6119b6b9fa3d"
     },
     {
       "path": "scripts/ci/generate-compose-deployment.test.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 8627,
-      "sha256": "9d3c8c48e15c1b60046e8f594a403f3b61fe2df4cf20e17b47e0f620ec79ee55"
+      "size": 9849,
+      "sha256": "c19f941eb53ef813cb9b13a762e7215d63a6e247ecc1b63a16cb880e339cb95b"
     },
     {
       "path": "scripts/ci/generate-public-channel.mjs",
@@ -16789,25 +16787,32 @@
       "sha256": "02c350763fe806a7de77444c28960f506fbea9d46dc8dc41126f033080d860c3"
     },
     {
-      "path": "scripts/ci/prepare-deployment-selftest.sh",
+      "path": "scripts/ci/prepare-legacy-public-deployment.mjs",
       "type": "file",
-      "mode": "0755",
-      "size": 6898,
-      "sha256": "1890fa3be7ebec93c1aef54291112005d02acc4dcbd52cc858792b2d86fec732"
+      "mode": "0644",
+      "size": 7377,
+      "sha256": "bb73db281ea2cb509fa241e3e9b48ffcab4ca365f3e79c4872f659e7c6a0ffa8"
+    },
+    {
+      "path": "scripts/ci/prepare-legacy-public-deployment.test.mjs",
+      "type": "file",
+      "mode": "0644",
+      "size": 3968,
+      "sha256": "1086ccc57e83dea73d3f9a6e930069c088c74c9fea5c2ef6b9e3602c64e4ab14"
     },
     {
       "path": "scripts/ci/public-export-policy.json",
       "type": "file",
       "mode": "0644",
-      "size": 20193,
-      "sha256": "f822b1293df7fc570de463e41b07c50ed8368a09d455dcf091c9d7e9d38c0afa"
+      "size": 22265,
+      "sha256": "1e4c547731c9c50aca5b07eb98f73ff5f8a1f32c66e3698fa9e40d94c75bedcf"
     },
     {
       "path": "scripts/ci/public-release-policy.json",
       "type": "file",
       "mode": "0644",
-      "size": 2374,
-      "sha256": "542b212a9268c87585ef5c5b99f5dbd997c4932f6dc8be07fadcea9522401077"
+      "size": 2951,
+      "sha256": "e14541d74139bf695aea8be1a65020f1985bdaf053572ab1e7a9718028f11e1f"
     },
     {
       "path": "scripts/ci/publish-engine-runtime-images.sh",
@@ -16817,11 +16822,25 @@
       "sha256": "a885897545943b90e412486f4ab3e03eac61eeec4b074e60c656eb8ec36c5cb5"
     },
     {
+      "path": "scripts/ci/publish-public-deployment.mjs",
+      "type": "file",
+      "mode": "0644",
+      "size": 15124,
+      "sha256": "422acbda3967a7de56b3f3fed3d5da48bce6aa0b6e35498f156d9529241c0554"
+    },
+    {
+      "path": "scripts/ci/publish-public-deployment.test.mjs",
+      "type": "file",
+      "mode": "0644",
+      "size": 7641,
+      "sha256": "322359d23807bc4eb8c9f1ac5633dec8e809a4018a4ea72d46e9d0e305364f10"
+    },
+    {
       "path": "scripts/ci/publish-public-export.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 27930,
-      "sha256": "d6fb3bf11414a1a82222d9bdf3033592ff2f3c6a4b3b3eca2a3332f232384ce4"
+      "size": 29327,
+      "sha256": "2cc4edb1b2f3f791c892eb00bea060155ddc14b098c9460d2c8b9aaaa386d645"
     },
     {
       "path": "scripts/ci/verify-agent-binary-bundle.mjs",
@@ -16862,8 +16881,8 @@
       "path": "scripts/ci/verify-public-deployment.sh",
       "type": "file",
       "mode": "0755",
-      "size": 22244,
-      "sha256": "4b3a118590e07b147e85d8cef6a9b3cb89f4d49136ae1d001e61953fc7e2a2b2"
+      "size": 23140,
+      "sha256": "4aa4afaeb8e7ddd681719e1705af98d1457cc0d1320de2ceab12866e2ff5724f"
     },
     {
       "path": "scripts/ci/verify-public-engine-release-selftest.mjs",
@@ -16918,8 +16937,8 @@
       "path": "scripts/ci/verify-public-runtime-source.sh",
       "type": "file",
       "mode": "0755",
-      "size": 7090,
-      "sha256": "5806cfbcedcf3e314299c9f40b2604f1c5a4e839c0041c6b8dde0b704f517452"
+      "size": 7118,
+      "sha256": "5ad85cbac7587b69838ca0e4b3f669a20e014c11e9a511a99365a739b72e3a91"
     },
     {
       "path": "scripts/ci/verify-runtime-image-index.mjs",
@@ -18486,15 +18505,15 @@
       "path": "server/internal/engineinstall/inventory.go",
       "type": "file",
       "mode": "0644",
-      "size": 6584,
-      "sha256": "eb0547b3889ce59787e2ee3dc6a783230d1dd5c35fd0596b689daf708b1a2547"
+      "size": 7065,
+      "sha256": "1624ee782705b4fd236b825ce2732cb24da72b2151f6e85cc5f1dcf710c4cb51"
     },
     {
       "path": "server/internal/engineinstall/inventory_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 8458,
-      "sha256": "12ff903cd8ce22076bec1d33d970e1d327c066909905da8773f5ed694d550a81"
+      "size": 8989,
+      "sha256": "c0d3cff801bf165d301e4837b0c187f42e93d536322fe60f318b974dde4dcf0c"
     },
     {
       "path": "server/internal/engineinstall/oci_package_puller.go",
@@ -28041,15 +28060,15 @@
       "path": "server/internal/modules/upgrade/upgrader/compose.go",
       "type": "file",
       "mode": "0644",
-      "size": 25873,
-      "sha256": "088489a9d25b90bca1dca0c13e16015d3883b38478ba9dc419f6da772145beb2"
+      "size": 26304,
+      "sha256": "d3ad32acb48ca0f1cced191f328971c9553fb8d612d5dc01b756ed126d862acb"
     },
     {
       "path": "server/internal/modules/upgrade/upgrader/compose_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 30260,
-      "sha256": "9b826a5972718e7b1c66d22429f307b738e4beefe2946d0cb18f389edb1c4e4f"
+      "size": 31207,
+      "sha256": "83bed6084800c43117bb23450ffa7f023fa030e0f840374fe1eac9102b044ba9"
     },
     {
       "path": "server/internal/modules/upgrade/upgrader/daemon.go",
