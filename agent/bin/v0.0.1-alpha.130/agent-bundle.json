@@ -1,14 +1,14 @@
 {
   "schemaVersion": "lunafox.agent-bundle.v1",
-  "releaseTag": "v0.0.1-alpha.129",
-  "version": "0.0.1-alpha.129",
+  "releaseTag": "v0.0.1-alpha.130",
+  "version": "0.0.1-alpha.130",
   "sourceRepository": "yyhuni/lunafox-private",
   "destinationRepository": "yyhuni/lunafox",
-  "sourceRevision": "0857b98bec2caa4f8f8e5875ef3727a4ead8537c",
-  "sourceRevisionDigest": "sha256:65a986ab70654f2b142ba24fff6577003b10e64f21d0e972f867067647cfd248",
-  "publicExportManifestSha256": "sha256:447cf43b33c04956e45df573d5b078b95fc284f804b4f4357b51d951a7206f08",
-  "publicProvenanceSha256": "sha256:a27830b202cccf4d722c745f7eb86e76fdd0e583af735c24a64fbdea630165ee",
-  "publicTreePath": "agent/bin/v0.0.1-alpha.129",
+  "sourceRevision": "e6fa7bdd8121f72b90ad2a26be3ca6dfe6fc540a",
+  "sourceRevisionDigest": "sha256:b3b23d559f5e094b1a3a1994fc49cb8ff600ecde59c4f2cecbb21e3fade0af35",
+  "publicExportManifestSha256": "sha256:dfcd05d3634ad49843c56f7950f7ebf3c736f0625f330221484010802006f84e",
+  "publicProvenanceSha256": "sha256:a6a845d387667d33cb81d9b988cdb939ca3142e8679af54ca40459b316e13630",
+  "publicTreePath": "agent/bin/v0.0.1-alpha.130",
   "platforms": [
     "linux/amd64",
     "linux/arm64"

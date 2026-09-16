@@ -80,6 +80,15 @@ func NewProductionKeylessVerifier(policy KeylessPolicy) (*KeylessVerifier, error
 	return NewKeylessVerifier(policy, trustedRoot)
 }
 
+// MissingBundleError reports an empty signature referrer listing. Publication
+// clients may poll this after a successful signature upload while a Registry's
+// index converges; installation still fails closed when no bundle is present.
+type MissingBundleError struct{ Reference string }
+
+func (err *MissingBundleError) Error() string {
+	return fmt.Sprintf("no Sigstore signature bundle referrer exists for %q", err.Reference)
+}
+
 // TransportError means a Registry request could not complete. It is distinct
 // from a received-but-invalid signature so candidate fallback cannot mask an
 // integrity failure.
@@ -121,7 +130,7 @@ func (verifier *KeylessVerifier) Verify(ctx context.Context, reference ociartifa
 		return transportError(fmt.Errorf("discover Sigstore signature referrers: %w", err))
 	}
 	if len(referrers) == 0 {
-		return fmt.Errorf("no Sigstore signature bundle referrer exists for %q", reference.String())
+		return &MissingBundleError{Reference: reference.String()}
 	}
 	var firstFailure error
 	for _, signatureManifest := range referrers {

@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -28,7 +29,34 @@ func run(args []string) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	return verifier.VerifyReference(ctx, ref)
+	return verifyPublishedSignature(ctx, func() error { return verifier.VerifyReference(ctx, ref) }, func(ctx context.Context) error {
+		timer := time.NewTimer(2 * time.Second)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-timer.C:
+			return nil
+		}
+	})
+}
+
+// Registry referrer indexes can lag a successful signature upload. Only an
+// empty listing is retryable; malformed, untrusted or mismatched bundles stop.
+func verifyPublishedSignature(ctx context.Context, verify func() error, wait func(context.Context) error) error {
+	for attempt := 0; ; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		err := verify()
+		var missing *ocisignature.MissingBundleError
+		if err == nil || !errors.As(err, &missing) || attempt >= 29 {
+			return err
+		}
+		if err := wait(ctx); err != nil {
+			return err
+		}
+	}
 }
 
 func main() {
