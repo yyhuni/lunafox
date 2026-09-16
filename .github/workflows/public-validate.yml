@@ -446,6 +446,7 @@ jobs:
           git diff-tree --no-commit-id --name-only -r HEAD^ HEAD -- PUBLIC_EXPORT_MANIFEST.json |
             grep -Fxq PUBLIC_EXPORT_MANIFEST.json || exit 0
           echo "publish=true" >> "$GITHUB_OUTPUT"
+          echo "Verified protected source projection: publish=true"
 
   # A generated export PR is the only supported path to public main. This job
   # fails closed for ordinary community pushes because provenance and merge
@@ -453,7 +454,7 @@ jobs:
   # Explicit status predicates prevent skipped validation ancestors from suppressing
   # publication; every direct prerequisite must still complete successfully.
   publish-runtime-images:
-    if: needs.publication-intent.outputs.publish == 'true' && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped')
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped') && needs.publication-intent.result == 'success' && needs.public-validation.result == 'success'
     # Temporary inert markers let the pre-alpha.118 policy checker validate
     # this maintenance PR while the executable condition uses repository history.
     # github.repository == 'yyhuni/lunafox'
@@ -639,7 +640,7 @@ jobs:
   # directory that was merged into the public Git tree. PRs never receive
   # Registry write permission or a private source/binary fallback.
   publish-agent-image:
-    if: needs.publication-intent.outputs.publish == 'true' && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped')
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped') && needs.publication-intent.result == 'success' && needs.public-validation.result == 'success'
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
@@ -820,7 +821,7 @@ jobs:
   # public Runtime component matrix. Discovery is the source-bound membership
   # authority; only its selected matrix children receive Registry credentials.
   public-engine-runtime-discover:
-    if: needs.publication-intent.outputs.publish == 'true' && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped')
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped') && needs.publication-intent.result == 'success' && needs.public-validation.result == 'success'
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
@@ -924,7 +925,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-runtime-build:
-    if: needs.publication-intent.outputs.publish == 'true' && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped')
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped') && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success'
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
@@ -1007,7 +1008,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-runtime-finalize:
-    if: needs.publication-intent.outputs.publish == 'true' && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped')
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped') && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && needs.public-engine-runtime-build.result == 'success'
     name: Finalize Public Engine Runtime Image (${{ matrix.engineId }})
     needs: [publication-intent, public-engine-runtime-discover, public-engine-runtime-build]
     runs-on: ubuntu-24.04
@@ -1056,7 +1057,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-runtime-aggregate:
-    if: needs.publication-intent.outputs.publish == 'true' && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped')
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped') && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && needs.public-engine-runtime-finalize.result == 'success'
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
@@ -1106,7 +1107,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-runtime-sign:
-    if: needs.publication-intent.outputs.publish == 'true' && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped')
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped') && needs.publication-intent.result == 'success' && needs.public-engine-runtime-aggregate.result == 'success'
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
@@ -1209,7 +1210,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-package-build:
-    if: needs.publication-intent.outputs.publish == 'true' && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped')
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped') && needs.publication-intent.result == 'success' && needs.public-engine-runtime-sign.result == 'success'
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
@@ -1268,7 +1269,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-package-publish:
-    if: needs.publication-intent.outputs.publish == 'true' && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped')
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped') && needs.publication-intent.result == 'success' && needs.public-engine-package-build.result == 'success'
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
@@ -1384,7 +1385,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-release-manifest:
-    if: needs.publication-intent.outputs.publish == 'true' && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped')
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && !contains(needs.*.result, 'skipped') && needs.publication-intent.result == 'success' && needs.public-engine-package-publish.result == 'success'
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
