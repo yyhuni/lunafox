@@ -12,6 +12,13 @@ import (
 	"time"
 )
 
+func closeTestDaemon(t *testing.T, daemon *Daemon) {
+	t.Helper()
+	if err := daemon.Close(); err != nil {
+		t.Errorf("close daemon: %v", err)
+	}
+}
+
 func TestDaemonAcceptsFixedRequestAndIdempotentlyReplays(t *testing.T) {
 	store := newTestStore(t)
 	daemon := NewDaemon(store, nil)
@@ -154,7 +161,7 @@ func TestDaemonRejectsRequestsWhenCurrentJournalIsCorrupt(t *testing.T) {
 	if err := daemon.Listen(); err != nil {
 		t.Fatal(err)
 	}
-	defer daemon.Close()
+	defer closeTestDaemon(t, daemon)
 	response := daemon.accept(Request{SchemaVersion: RequestSchema, OperationID: "op-corrupt", Action: ActionStart, ManifestDigest: testManifestDigest})
 	if response.Accepted || response.Error == "" {
 		t.Fatalf("accept response = %#v, want corrupt-journal rejection", response)
@@ -170,7 +177,7 @@ func TestDaemonSecondProcessCannotBindSocket(t *testing.T) {
 	if err := first.Listen(); err != nil {
 		t.Fatal(err)
 	}
-	defer first.Close()
+	defer closeTestDaemon(t, first)
 	second := NewDaemon(store, nil)
 	if err := second.Listen(); !errors.Is(err, ErrAlreadyRunning) {
 		t.Fatalf("second Listen() error = %v, want ErrAlreadyRunning", err)
@@ -233,7 +240,11 @@ func TestDaemonUDSUsesPrivateModeAndStrictWireSchema(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer connection.Close()
+	defer func() {
+		if err := connection.Close(); err != nil {
+			t.Errorf("close connection: %v", err)
+		}
+	}()
 	unknown := map[string]any{"schemaVersion": RequestSchema, "operationId": "op-1", "action": "start", "manifestDigest": testManifestDigest, "command": "rm -rf /"}
 	encoded, _ := json.Marshal(unknown)
 	_, _ = connection.Write(append(encoded, '\n'))
@@ -420,7 +431,7 @@ func TestDaemonExplicitRepairResetsTerminalJournalAndLaunchesExecutor(t *testing
 	if err := daemon.Listen(); err != nil {
 		t.Fatal(err)
 	}
-	defer daemon.Close()
+	defer closeTestDaemon(t, daemon)
 	response := daemon.accept(Request{SchemaVersion: RequestSchema, OperationID: "op-repair", Action: ActionRepair, ManifestDigest: testManifestDigest})
 	if !response.Accepted || !response.Repaired || response.Replayed || response.Journal.Stage != StageRestarting {
 		t.Fatalf("repair response = %#v", response)

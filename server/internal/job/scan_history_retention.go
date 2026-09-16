@@ -64,9 +64,9 @@ func (job *ScanHistoryRetentionJob) runOnce(ctx context.Context) {
 		return
 	}
 	pkg.Info("Scan history partition coverage reconciled",
-		zap.Int("range_start", coverageRange.Start),
-		zap.Int("range_end", coverageRange.End),
-		zap.Int("expected_children", len(snapshotrepo.ScanHistoryParents())),
+		zap.Int("range.start", coverageRange.Start),
+		zap.Int("range.end", coverageRange.End),
+		zap.Int("child.expected_count", len(snapshotrepo.ScanHistoryParents())),
 		zap.String("outcome", "completed"),
 		zap.Duration("duration", time.Since(startedAt)),
 	)
@@ -81,15 +81,15 @@ func (job *ScanHistoryRetentionJob) runOnce(ctx context.Context) {
 		scanCount, scanCountErr := job.lifecycle.RangeScanCount(ctx, outcome.Range)
 		fields := []zap.Field{
 			zap.String("mode", string(job.mode)),
-			zap.Int("range_start", outcome.Range.Start),
-			zap.Int("range_end", outcome.Range.End),
+			zap.Int("range.start", outcome.Range.Start),
+			zap.Int("range.end", outcome.Range.End),
 			zap.String("outcome", outcome.Outcome),
 			zap.Duration("duration", outcome.Duration),
-			zap.Int("expected_children", len(snapshotrepo.ScanHistoryParents())),
-			zap.Strings("child_states", childStates),
-			zap.Int64("scan_count", scanCount),
-			zap.Int64("task_rows_deleted", outcome.TaskRowsDeleted),
-			zap.Int("task_delete_batches", outcome.TaskDeleteBatches),
+			zap.Int("child.expected_count", len(snapshotrepo.ScanHistoryParents())),
+			zap.Strings("child.states", childStates),
+			zap.Int64("scan.count", scanCount),
+			zap.Int64("task.deleted_rows", outcome.TaskRowsDeleted),
+			zap.Int("task.delete_batches", outcome.TaskDeleteBatches),
 		}
 		if childStateErr != nil {
 			fields = append(fields, zap.Error(childStateErr))
@@ -117,18 +117,18 @@ func (job *ScanHistoryRetentionJob) runOnce(ctx context.Context) {
 	} else if blocked != nil {
 		pkg.Info("Scan history retention boundary remains retained",
 			zap.String("mode", string(job.mode)),
-			zap.Int("range_start", blocked.Range.Start),
-			zap.Int("range_end", blocked.Range.End),
-			zap.Duration("oldest_blocked_boundary_age", time.Since(blocked.OldestAt)),
+			zap.Int("range.start", blocked.Range.Start),
+			zap.Int("range.end", blocked.Range.End),
+			zap.Duration("blocked.oldest_boundary_age", time.Since(blocked.OldestAt)),
 		)
 	}
 	pkg.Info("Scan history retention run completed",
 		zap.String("mode", string(job.mode)),
-		zap.Int("eligible_ranges", len(ranges)),
-		zap.Int("range_outcomes", len(outcomes)),
-		zap.Int("max_ranges_per_run", job.runOptions.MaxRangesPerRun),
-		zap.Int("max_task_delete_batches_per_range", job.runOptions.MaxTaskDeleteBatchesPerRange),
-		zap.Duration("max_run_duration", job.runOptions.MaxRunDuration),
+		zap.Int("range.eligible_count", len(ranges)),
+		zap.Int("range.outcome_count", len(outcomes)),
+		zap.Int("run.max_ranges", job.runOptions.MaxRangesPerRun),
+		zap.Int("task.max_delete_batches_per_range", job.runOptions.MaxTaskDeleteBatchesPerRange),
+		zap.Duration("run.max_duration", job.runOptions.MaxRunDuration),
 		zap.Time("cutoff", cutoff),
 	)
 }

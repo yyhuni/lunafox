@@ -125,7 +125,7 @@ func TestOccurrenceRetentionFailureLogsNoSuccessAndDoesNotRetryInRun(t *testing.
 		t.Fatalf("retention logs = %+v", logs.All())
 	}
 	fields := logs.FilterMessage("Scheduled scan occurrence retention failed").All()[0].ContextMap()
-	if fields["error_kind"] != "operation_failed" || fmt.Sprint(fields["scheduled_scan.occurrence.deleted_count"]) != "0" {
+	if fields["error.kind"] != "operation_failed" || fmt.Sprint(fields["scheduled_scan.occurrence.deleted_count"]) != "0" {
 		t.Fatalf("retention failure fields = %+v", fields)
 	}
 	if _, exposed := fields["error"]; exposed {

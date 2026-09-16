@@ -89,15 +89,15 @@ func (handler *EngineCatalogHandler) Install(c *gin.Context) {
 	if err != nil {
 		var conflict *catalogdomain.EngineReplacementConflictError
 		if errors.As(err, &conflict) {
-			pkg.Warn("operator engine installation conflict", zap.String("actor", actor), zap.String("artifact_ref", *request.ArtifactRef), zap.Bool("allow_replacement", *request.AllowReplacement), zap.String("engine_id", conflict.EngineID), zap.String("current_package_digest", conflict.CurrentPackageDigest), zap.String("proposed_package_digest", conflict.ProposedPackageDigest))
+			pkg.Warn("operator engine installation conflict", zap.String("actor", actor), zap.String("artifact.ref", *request.ArtifactRef), zap.Bool("replacement.allowed", *request.AllowReplacement), zap.String("engine.id", conflict.EngineID), zap.String("package.current_digest", conflict.CurrentPackageDigest), zap.String("package.proposed_digest", conflict.ProposedPackageDigest))
 			httpdto.ErrorWithDetails(c, 409, "ALREADY_EXISTS", "Engine replacement requires confirmation", []httpdto.ErrorDetail{{Field: "engineId", Message: conflict.EngineID}, {Field: "currentPackageDigest", Message: conflict.CurrentPackageDigest}, {Field: "proposedPackageDigest", Message: conflict.ProposedPackageDigest}})
 			return
 		}
-		pkg.Warn("operator engine installation failed", zap.String("actor", actor), zap.String("artifact_ref", *request.ArtifactRef), zap.Bool("allow_replacement", *request.AllowReplacement), zap.Error(err))
+		pkg.Warn("operator engine installation failed", zap.String("actor", actor), zap.String("artifact.ref", *request.ArtifactRef), zap.Bool("replacement.allowed", *request.AllowReplacement), zap.Error(err))
 		httpdto.BadRequest(c, "Engine installation failed")
 		return
 	}
-	pkg.Info("operator engine installation succeeded", zap.String("actor", actor), zap.String("artifact_ref", *request.ArtifactRef), zap.Bool("allow_replacement", *request.AllowReplacement), zap.String("engine_id", record.EngineID), zap.String("package_digest", record.PackageDigest))
+	pkg.Info("operator engine installation succeeded", zap.String("actor", actor), zap.String("artifact.ref", *request.ArtifactRef), zap.Bool("replacement.allowed", *request.AllowReplacement), zap.String("engine.id", record.EngineID), zap.String("package.digest", record.PackageDigest))
 	item, err := handler.facade.GetEngineByID(record.EngineID)
 	if err != nil {
 		httpdto.InternalError(c, "Engine installation committed but catalog could not be loaded")

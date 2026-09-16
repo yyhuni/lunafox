@@ -95,7 +95,7 @@ func (job *OccurrenceRetentionJob) RunOnce(ctx context.Context) (int64, error) {
 				zap.Int64("scheduled_scan.occurrence.deleted_count", deleted),
 				zap.Time("scheduled_scan.occurrence.cutoff", cutoff),
 				zap.String("outcome", "failed"),
-				zap.String("error_kind", runtimeErrorKind(err)),
+				zap.String("error.kind", runtimeErrorKind(err)),
 			)
 			return deleted, err
 		}
@@ -108,7 +108,7 @@ func (job *OccurrenceRetentionJob) RunOnce(ctx context.Context) (int64, error) {
 			zap.Int64("scheduled_scan.occurrence.deleted_count", deleted),
 			zap.Time("scheduled_scan.occurrence.cutoff", cutoff),
 			zap.String("outcome", "failed"),
-			zap.String("error_kind", runtimeErrorKind(err)),
+			zap.String("error.kind", runtimeErrorKind(err)),
 		)
 		return deleted, err
 	}

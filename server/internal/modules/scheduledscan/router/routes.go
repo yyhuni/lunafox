@@ -10,7 +10,7 @@ func RegisterScheduledScanRoutes(protected *gin.RouterGroup, scheduledScanHandle
 	protected.GET("/scheduledScans:summarize", scheduledScanHandler.Summarize)
 	protected.POST("/scheduledScans", scheduledScanHandler.Create)
 	protected.POST("/scheduledScans:batchUpdate", scheduledScanHandler.BatchUpdate)
-	protected.GET("/scheduledScans/:scheduled_scan", scheduledScanHandler.GetByID)
-	protected.PATCH("/scheduledScans/:scheduled_scan", scheduledScanHandler.Update)
-	protected.DELETE("/scheduledScans/:scheduled_scan", scheduledScanHandler.Delete)
+	protected.GET("/scheduledScans/:scheduledScan", scheduledScanHandler.GetByID)
+	protected.PATCH("/scheduledScans/:scheduledScan", scheduledScanHandler.Update)
+	protected.DELETE("/scheduledScans/:scheduledScan", scheduledScanHandler.Delete)
 }

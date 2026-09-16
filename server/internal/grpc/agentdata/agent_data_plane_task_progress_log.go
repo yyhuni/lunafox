@@ -77,7 +77,7 @@ func taskProgressLogBatchFromProto(req *agentdatav1.BatchWriteTaskProgressLogsRe
 	}
 	requestID := strings.TrimSpace(req.RequestId)
 	if requestID == "" {
-		return TaskProgressLogBatch{}, status.Error(codes.InvalidArgument, "request_id is required")
+		return TaskProgressLogBatch{}, status.Error(codes.InvalidArgument, "requestId is required")
 	}
 	if len(req.Entries) == 0 {
 		return TaskProgressLogBatch{}, status.Error(codes.InvalidArgument, "entries must not be empty")

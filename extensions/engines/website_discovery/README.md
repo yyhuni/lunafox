@@ -123,3 +123,7 @@ metadata. It does not include individual URLs or response evidence.
 
 The Engine Runtime Image carries `httpx` on its own `PATH`; release tooling
 publishes and executes this immutable image directly.
+
+## Execution Timeout Defaults
+
+Tool/stage defaults in seconds: `httpx.timeout=14400`. These finite budgets allow larger batches to finish under existing rate limits; they are project choices, not measured completion guarantees. `engine.json` is authoritative. Request timeouts and cancellation behavior are unchanged. Existing explicit configuration and saved plans retain their values; new defaults require an updated installed Engine package and newly materialized configuration.

@@ -23,6 +23,37 @@ configuration and relative resource paths resolve from this directory. Review
 `PUBLIC_HOST` and `PUBLIC_PORT`; the internal HTTPS `PUBLIC_URL` is derived from
 them.
 
+### Prepare from a source checkout
+
+On macOS or Linux, a public source checkout can prepare the same versioned ZIP
+into an ignored `.lunafox-deployment/` directory:
+
+```console
+git clone --branch <release-tag> --depth 1 https://github.com/yyhuni/lunafox.git
+cd lunafox
+./prepare-deployment.sh
+cd .lunafox-deployment
+```
+
+The command uses the unique exact release tag at the current Git HEAD. For an
+untagged checkout, select a release explicitly with
+`./prepare-deployment.sh --version <release-tag>`. Docker Hub is the default;
+`--registry ghcr` explicitly selects the GHCR package. A failed request or
+checksum never causes automatic registry fallback.
+
+The preparation command downloads `deployment-packages.json` and exactly one
+ZIP from the fixed `yyhuni/lunafox` GitHub Release, verifies the declared
+SHA-256, and only then creates the deployment directory. Repeating the same
+request reuses a complete matching directory and preserves its `.env`;
+different, partial, or unverified existing output is not overwritten.
+
+The source-root `compose.yaml` retains required release placeholders such as
+`SERVER_IMAGE_REF` because final image digests exist only after the release
+build. It is a release template, not a production Compose file: copying the
+source `.env.example` does not make it directly deployable. Windows operators
+continue to download and extract the Release ZIP, then use native PowerShell
+for the Compose commands below.
+
 `DATABASE_MODE=embedded` is the default and enables the bundled PostgreSQL
 service. `DB_PORT=5432`, `DB_USER=postgres`, and `DB_NAME=lunafox` are editable
 defaults. Leave `DB_HOST` and `DB_SSLMODE` empty in this mode. An empty

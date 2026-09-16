@@ -89,7 +89,7 @@ func (observer *AgentLocationObserver) ObserveReadyConnection(agent *agentdomain
 		observer.pending.Done()
 		pkg.Warn("Agent location lookup submission rejected",
 			zap.Int("agent.id", agent.ID),
-			zap.String("failureClass", "submission_rejected"),
+			zap.String("failure.class", "submission_rejected"),
 		)
 	}
 }
@@ -135,7 +135,7 @@ func (observer *AgentLocationObserver) persistOutcome(waiter agentLocationWaiter
 		if location.ObservedIP != waiter.sourceIP {
 			pkg.Warn("Agent location result source mismatch",
 				zap.Int("agent.id", waiter.agentID),
-				zap.String("failureClass", "source_mismatch"),
+				zap.String("failure.class", "source_mismatch"),
 			)
 			return
 		}
@@ -160,14 +160,14 @@ func (observer *AgentLocationObserver) persistOutcome(waiter agentLocationWaiter
 	if outcome.FailureClass == "" {
 		pkg.Warn("Agent location lookup returned an incomplete terminal outcome",
 			zap.Int("agent.id", waiter.agentID),
-			zap.String("failureClass", "invalid_outcome"),
+			zap.String("failure.class", "invalid_outcome"),
 		)
 		return
 	}
 	if _, err := observer.repository.MarkLocationExpiredIfObservationMatches(observer.context, waiter.agentID, waiter.sourceIP, waiter.generation); err != nil && observer.context.Err() == nil {
 		pkg.Warn("Agent location failure state could not be persisted",
 			zap.Int("agent.id", waiter.agentID),
-			zap.String("failureClass", outcome.FailureClass),
+			zap.String("failure.class", outcome.FailureClass),
 			zap.Error(err),
 		)
 	}

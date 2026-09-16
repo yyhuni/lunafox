@@ -110,7 +110,7 @@ func httpHealthProbe(rawURL string) upgradeapp.HealthProbe {
 		if err != nil {
 			return err
 		}
-		defer response.Body.Close()
+		defer func() { _ = response.Body.Close() }()
 		if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
 			return fmt.Errorf("health probe returned HTTP %d", response.StatusCode)
 		}
