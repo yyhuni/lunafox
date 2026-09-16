@@ -310,7 +310,8 @@ jobs:
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Publish Public Runtime Image (${{ matrix.component }})
     needs: public-validation
     runs-on: ubuntu-22.04
@@ -488,7 +489,8 @@ jobs:
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Package Verified Agent Image
     needs: public-validation
     runs-on: ubuntu-22.04
@@ -661,7 +663,8 @@ jobs:
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Discover Public Engine Runtime Image Matrix
     needs: public-validation
     runs-on: ubuntu-22.04
@@ -750,7 +753,8 @@ jobs:
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Build Public Engine Runtime Image (${{ matrix.engineId }})
     needs: public-engine-runtime-discover
     runs-on: ubuntu-22.04
@@ -836,7 +840,8 @@ jobs:
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Aggregate Public Engine Runtime Image Receipts
     needs: [public-engine-runtime-discover, public-engine-runtime-build]
     runs-on: ubuntu-22.04
@@ -882,7 +887,8 @@ jobs:
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Sign Public Engine Runtime Images
     needs: public-engine-runtime-aggregate
     runs-on: ubuntu-22.04
@@ -972,7 +978,8 @@ jobs:
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Build Public Engine Package v2
     needs: public-engine-runtime-sign
     runs-on: ubuntu-22.04
@@ -1028,7 +1035,8 @@ jobs:
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Publish Public Engine Package v2
     needs: public-engine-package-build
     runs-on: ubuntu-22.04
@@ -1132,7 +1140,8 @@ jobs:
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
-      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Publish Public Engine Release Manifest
     needs: public-engine-package-publish
     runs-on: ubuntu-22.04
@@ -1201,6 +1210,7 @@ jobs:
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
       startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json') &&
       needs.publish-runtime-images.result == 'success' &&
       needs.publish-agent-image.result == 'success' &&
       needs.public-engine-release-manifest.result == 'success'
