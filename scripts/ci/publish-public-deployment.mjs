@@ -2,8 +2,8 @@
 
 /**
  * Publish one generated deployment snapshot through a protected public PR.
- * The source workflow keeps building while this helper explicitly dispatches
- * validation, waits for auto-merge, and verifies the final main commit.
+ * Wait for the exact PR run, approve its controlled deployment head if needed,
+ * then validate the final main commit before publishing release metadata.
  */
 
 import crypto from "node:crypto";
@@ -261,6 +261,36 @@ async function poll(options, operation, label) {
   fail(`${label} did not complete within ${options.timeoutSeconds} seconds`);
 }
 
+export async function waitForPullRequestValidation(options, number, branch, headSha) {
+  const workflow = encodeURIComponent(options.workflow);
+  const deadline = Date.now() + options.timeoutSeconds * 1000;
+  const approved = new Set();
+  while (Date.now() < deadline) {
+    const pr = await request(options, `/repos/${options.repo}/pulls/${number}`);
+    if (pr.head?.sha !== headSha) fail("deployment PR head changed during validation");
+    if (pr.state === "closed" && !pr.merged_at) fail("deployment PR closed without merging");
+    const result = await request(options, `/repos/${options.repo}/actions/workflows/${workflow}/runs?event=pull_request&head_sha=${headSha}&per_page=100`);
+    const run = (result.workflow_runs ?? []).find(item =>
+      item.head_sha === headSha && item.head_branch === branch && item.event === "pull_request" &&
+      item.path === `.github/workflows/${options.workflow}` && item.head_repository?.full_name === options.repo);
+    if (run) {
+      if (run.conclusion === "action_required") {
+        // Approve only the controlled same-repository deployment head. A
+        // workflow_dispatch check cannot replace this PR-associated gate.
+        if (!approved.has(run.id)) {
+          await request(options, `/repos/${options.repo}/actions/runs/${run.id}/approve`, { method: "POST" });
+          approved.add(run.id);
+        }
+      } else if (run.status === "completed") {
+        if (run.conclusion !== "success") fail(`deployment PR validation failed: ${run.conclusion}`);
+        return;
+      }
+    }
+    await options.sleep(options.pollSeconds * 1000);
+  }
+  fail("deployment PR validation did not complete; inspect the PR-associated workflow run");
+}
+
 async function waitForMerge(options, number) {
   return poll(options, async () => {
     const pr = await request(options, `/repos/${options.repo}/pulls/${number}`);
@@ -273,13 +303,28 @@ async function waitForMerge(options, number) {
   }, "deployment PR auto-merge");
 }
 
-async function waitForValidation(options, sha) {
+export async function waitForValidation(options, sha) {
+  let dispatched = false;
   return poll(options, async () => {
-    const checks = await request(options, `/repos/${options.repo}/commits/${sha}/check-runs?per_page=100`);
-    const runs = (checks.check_runs ?? []).filter((run) => run.name === "Public Projection Validation" || String(run.name ?? "").startsWith("Public Projection Validation / "));
-    if (runs.some((run) => run.conclusion === "success")) return { done: true, value: true };
-    const failed = runs.find((run) => run.status === "completed" && run.conclusion && run.conclusion !== "success");
-    if (failed) fail(`deployment validation failed on ${sha}: ${failed.conclusion}`);
+    const result = await request(options, `/repos/${options.repo}/actions/workflows/${encodeURIComponent(options.workflow)}/runs?head_sha=${sha}&per_page=100`);
+    // Check names alone are not authority: another app or workflow can emit
+    // the same name. Bind reuse to this workflow, repository, branch and SHA.
+    const runs = (result.workflow_runs ?? []).filter(run =>
+      run.head_sha === sha && run.head_branch === options.baseBranch &&
+      ["push", "workflow_dispatch"].includes(run.event) &&
+      run.path === `.github/workflows/${options.workflow}` &&
+      run.head_repository?.full_name === options.repo);
+    const run = runs.sort((a, b) => b.id - a.id)[0];
+    if (run?.status === "completed") {
+      if (run.conclusion !== "success") fail(`deployment validation failed on ${sha}: ${run.conclusion}`);
+      return { done: true, value: true };
+    }
+    if (!run && !dispatched) {
+      const main = await request(options, `/repos/${options.repo}/git/ref/heads/${options.baseBranch}`);
+      if (main.object?.sha !== sha) fail("public main moved before deployment validation dispatch");
+      await dispatchValidation(options, options.baseBranch);
+      dispatched = true;
+    }
     return { done: false };
   }, `Public Projection Validation on ${sha}`);
 }
@@ -297,15 +342,14 @@ async function publishDeployment(input) {
   }
   let mergeSha = pr.merge_commit_sha ?? "";
   if (!pr.merged_at) {
-    await dispatchValidation(options, publication.branch);
     await enableAutoMerge(options, Number(pr.number));
+    await waitForPullRequestValidation(options, Number(pr.number), publication.branch, commitSha);
     mergeSha = await waitForMerge(options, Number(pr.number));
   }
   await poll(options, async () => {
     const main = await request(options, `/repos/${options.repo}/git/ref/heads/${options.baseBranch}`);
     return main.object?.sha === mergeSha ? { done: true, value: true } : { done: false };
   }, "deployment merge visibility on public main");
-  await dispatchValidation(options, options.baseBranch);
   await waitForValidation(options, mergeSha);
   return {
     schemaVersion: 1,

@@ -1,0 +1,30 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { selectScope } from './select-public-validation-scope.mjs';
+
+test('complete PR diff prevents source changes hidden behind a snapshot commit', t => {
+  const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'public-scope-'));
+  t.after(() => fs.rmSync(cwd, { recursive: true, force: true }));
+  const git = (...args) => execFileSync('git', args, { cwd, encoding: 'utf8' }).trim();
+  git('init', '-q'); git('config', 'user.name', 'Test'); git('config', 'user.email', 'test@example.org');
+  const commit = (file, text, subject) => { fs.writeFileSync(path.join(cwd, file), text); git('add', '.'); git('commit', '-qm', subject); return git('rev-parse', 'HEAD'); };
+  const base = commit('source.txt', 'original', 'source');
+  const subject = 'chore(deploy): finalize deployment snapshot v1.2.3-alpha.1';
+  let head = commit('compose.yaml', 'first', subject);
+  const event = () => ({ pull_request: { base: { sha: base }, head: { sha: head } } });
+  assert.equal(selectScope({ cwd, event: event(), eventName: 'pull_request' }), 'deployment');
+  assert.equal(selectScope({ cwd }), 'deployment');
+  head = commit('source.txt', 'changed', 'source');
+  assert.equal(selectScope({ cwd }), 'full');
+  head = commit('compose.yaml', 'second', subject);
+  assert.equal(selectScope({ cwd, event: event(), eventName: 'pull_request' }), 'full');
+  assert.equal(selectScope({ cwd, event: {}, eventName: 'pull_request' }), 'full');
+  head = commit('unknown-file', 'unexpected', subject);
+  assert.equal(selectScope({ cwd }), 'full');
+  head = commit('.env', 'PUBLIC_HOST=test', 'unrecognized identity');
+  assert.equal(selectScope({ cwd }), 'full');
+});
