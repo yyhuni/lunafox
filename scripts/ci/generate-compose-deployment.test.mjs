@@ -56,6 +56,8 @@ test('one package is reproducible, registry-selectable, and matches its snapshot
   assert.doesNotMatch(content['.env'],/^PUBLIC_URL=/m);
   assert.match(content['README.md'],/Docker Compose 2\.24\.0/);
   assert.match(content['README.md'],/DATABASE_MODE=external/);
+  assert.match(content['compose.yaml'], /https:\/\/127\.0\.0\.1\/healthChecks\/current/);
+  assert.doesNotMatch(content['compose.yaml'], /https:\/\/localhost\/healthChecks\/current/);
   assert.match(content['compose.yaml'],/^  config-init:$/m);
   assert.match(content['compose.yaml'],/^  upgrader:$/m);
   assert.match(content['compose.yaml'],/environment: DB_PASSWORD/);

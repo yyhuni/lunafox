@@ -258,7 +258,8 @@ ACME, user certificate import, or automatic renewal.
 
 Use `docker compose logs config-init agent-preflight migrate bootstrap cert-init agent upgrader` to
 diagnose a failed one-shot or Agent startup. Correct configuration or explicitly
-repair the named volume state, then repeat `docker compose up -d`. For ordinary
+repair the named volume state, then repeat `docker compose up -d`. Nginx readiness probes use `127.0.0.1` to match its IPv4 listener even on
+hosts where `localhost` resolves to IPv6 first. For ordinary
 initialization, Compose exit status, dependency conditions, container state,
 and service health are the deployment status. Upgrade journal and completion
 receipt files live only in `lunafox_upgrade_state` and are reconciled by the
