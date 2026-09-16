@@ -479,6 +479,7 @@ jobs:
           name: public-runtime-image-evidence-${{ matrix.component }}-${{ github.sha }}
           path: dist/public-runtime-image-evidence-${{ matrix.component }}.json
           if-no-files-found: error
+
   # Only a protected public-main push may package the exact Agent version
   # directory that was merged into the public Git tree. PRs never receive
   # Registry write permission or a private source/binary fallback.
