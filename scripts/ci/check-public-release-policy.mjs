@@ -1070,10 +1070,14 @@ function assertPublicWorkflow(workflow, policy) {
   }
   for (const name of ["publish-runtime-images", "publish-agent-image", ...PUBLIC_ENGINE_JOBS]) {
     const block = jobBlock(executableWorkflow, name);
-    for (const condition of ["!cancelled()", "!contains(needs.*.result, 'failure')", "!contains(needs.*.result, 'cancelled')", "!contains(needs.*.result, 'skipped')"]) {
-      if (!block.includes(condition)) fail("public publication must explicitly accept successful direct dependencies after validation reuse");
+    const condition = block.match(/^    if: (.+)$/m)?.[1] ?? "";
+    const dependencies = block.match(/^    needs: \[([^\]]+)\]/m)?.[1].split(", ") ?? [];
+    if (!condition.includes("always()") || dependencies.length === 0 ||
+        dependencies.some(name => !condition.includes(`needs.${name}.result == 'success'`))) {
+      fail("public publication must explicitly accept successful direct dependencies after validation reuse");
     }
   }
+
   const publicCosignIdentityRegexp = "'^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$'";
   const overescapedPublicCosignIdentityRegexp = "'^https://github\\\\.com/yyhuni/lunafox/\\\\.github/workflows/public-validate\\\\.yml@refs/heads/main$'";
   if (workflow.includes(overescapedPublicCosignIdentityRegexp) || countOccurrences(workflow, publicCosignIdentityRegexp) !== 4) {
