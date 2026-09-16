@@ -10,7 +10,6 @@
  */
 
 import fs from "node:fs";
-import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -730,12 +729,6 @@ function assertPrivateTestWorkflow(workflow) {
 }
 
 function assertPublicWorkflow(workflow, policy) {
-  // Bootstrap the new source policy under the already-verified alpha.124
-  // workflow. Only these exact bytes are allowed, not an older policy family.
-  // Remove after the protected native-workflow maintenance PR lands.
-  if (crypto.createHash("sha256").update(workflow).digest("hex") ===
-      "ef8dcc903a117c26d59870b8e7113e626455ed74677a9587220ad7139bf6d969") return;
-
   if (!workflow.includes(`if: github.repository == '${PUBLIC_REPOSITORY}'`)) {
     fail("public validation workflow must run only in the canonical public repository");
   }
@@ -1066,6 +1059,14 @@ function assertPublicWorkflow(workflow, policy) {
   }
   if (/packages:\s*write|id-token:\s*write|attestations:\s*write|environment:\s*public-engine-release|docker\/login-action|cosign /.test(engineAggregate)) {
     fail("public Engine Runtime aggregate must not receive publishing or signing authority");
+  }
+  for (const lane of [engineSign, packagePublish, finalRelease]) {
+    if (!lane.includes("sigstore/cosign-installer@v4.1.2") ||
+        !lane.includes("cosign-release: v3.1.3") ||
+        !lane.includes('./cmd/verify-signature') ||
+        !lane.includes('"$RUNNER_TEMP/verify-oci-signature" "$ref"')) {
+      fail("public signatures must use pinned Sigstore bundle publication and the anonymous installation verifier");
+    }
   }
   const publicCosignIdentityRegexp = "'^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$'";
   const overescapedPublicCosignIdentityRegexp = "'^https://github\\\\.com/yyhuni/lunafox/\\\\.github/workflows/public-validate\\\\.yml@refs/heads/main$'";

@@ -3,6 +3,8 @@ package ocisignature
 import (
 	"errors"
 	"testing"
+
+	sigstorebundle "github.com/sigstore/sigstore-go/pkg/bundle"
 )
 
 func TestNewKeylessVerifierRejectsInvalidPolicyBeforeNetworkAccess(t *testing.T) {
@@ -26,5 +28,17 @@ func TestTransportErrorIsDistinctFromIntegrityError(t *testing.T) {
 	}
 	if IsTransportError(errors.New("signature invalid")) {
 		t.Fatal("signature integrity error must not be transport classified")
+	}
+}
+
+func TestBundleMediaTypesMatchSigstorePublisher(t *testing.T) {
+	canonical, err := sigstorebundle.MediaTypeString("0.3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for role, actual := range map[string]string{"artifact": BundleArtifactType, "layer": BundleLayerType} {
+		if actual != canonical {
+			t.Errorf("%s media type %q must match Sigstore publisher %q", role, actual, canonical)
+		}
 	}
 }

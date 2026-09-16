@@ -21,9 +21,11 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 )
 
+// Sigstore 0.3 moved the version into the media subtype. Registry referrer
+// filtering must use the publisher's canonical media type, not the 0.1/0.2 form.
 const (
-	BundleArtifactType  = "application/vnd.dev.sigstore.bundle+json;version=0.3"
-	BundleLayerType     = "application/vnd.dev.sigstore.bundle+json;version=0.3"
+	BundleArtifactType  = "application/vnd.dev.sigstore.bundle.v0.3+json"
+	BundleLayerType     = "application/vnd.dev.sigstore.bundle.v0.3+json"
 	GitHubActionsIssuer = "https://token.actions.githubusercontent.com"
 )
 
