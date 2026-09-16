@@ -1,0 +1,91 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+go.work
+
+# Build artifacts
+dist/
+build/
+bin/
+tools/installer/lunafox-installer
+/server/server
+/engines/*-runtime-engine
+
+# Node dependencies
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# Frontend build output
+frontend/output
+output/
+
+# IDE
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+*.log
+.venv/
+
+# Testing
+reports/
+coverage.txt
+*.coverprofile
+.hypothesis/
+
+# Temporary files
+*.tmp
+tmp/
+temp/
+.worktrees/
+/.codex-runtime/
+
+.kiro/
+.claude/*
+!.claude/skills/
+!.claude/skills/**
+.claude/settings.local.json
+!.specify/
+
+# AI Assistant directories
+/codex/
+/.lunafox-deployment/
+.qoder/
+.workbuddy/
+# Track all OpenSpec artifacts
+!openspec/
+!openspec/**
+openspec/.DS_Store
+WARP.md
+.opencode/
+
+# Playwright MCP screenshots
+.playwright-mcp/
+.playwright-cli/
+
+# SSL certificates
+docker/nginx/ssl/*.pem
+docker/nginx/ssl/*.key
+docker/nginx/ssl/*.crt
+
+# old
+old/
+old-python/
