@@ -106,6 +106,10 @@ function walkFiles(root) {
 }
 
 function validateExportTree(exportDir) {
+  const gitDirectory = path.join(exportDir, ".git");
+  if (!fs.existsSync(gitDirectory) || !fs.statSync(gitDirectory).isDirectory()) {
+    fail("export is missing its validated Git history: .git");
+  }
   const checker = path.join(SCRIPT_DIR, "check-public-export.mjs");
   try {
     execFileSync(process.execPath, [checker, "--repo-root", exportDir, "--require-agent-bundle"], { stdio: "pipe" });
@@ -438,7 +442,9 @@ function pushProjection({ exportDir, remoteUrl, branch, baseSha, tag, token, des
 
     // A fresh index makes the commit an exact projection: files absent from
     // the private export cannot survive from the public bootstrap commit.
-    runGit(repository, ["--work-tree", exportDir, "add", "--all", "--", "."]);
+    // The validated export can contain release artifacts ignored by the
+    // destination's source-development rules, including agent/bin/.
+    runGit(repository, ["--work-tree", exportDir, "add", "--force", "--all", "--", "."]);
     // Destination-owned files are intentionally excluded from the private
     // manifest, but must survive the new commit from protected public main.
     // Checkout happens after the projection add so it cannot be removed by
@@ -577,4 +583,5 @@ export {
   rejectFallbackCredentials,
   removeTemporaryRepository,
   verifyDestinationInstallation,
+  validateExportTree,
 };

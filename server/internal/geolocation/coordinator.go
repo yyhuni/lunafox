@@ -623,15 +623,15 @@ type providerAttemptEvent struct {
 
 func logProviderAttemptEvent(event providerAttemptEvent) {
 	fields := []zap.Field{
-		zap.String("providerKey", event.ProviderKey),
-		zap.Time("attemptedAt", event.AttemptedAt.UTC()),
+		zap.String("provider.key", event.ProviderKey),
+		zap.Time("attempt.timestamp", event.AttemptedAt.UTC()),
 		zap.String("outcome", event.Outcome),
 	}
 	if event.FailureClass == "" {
 		pkg.Info("GeoIP provider attempt completed", fields...)
 		return
 	}
-	fields = append(fields, zap.String("failureClass", string(event.FailureClass)))
+	fields = append(fields, zap.String("failure.class", string(event.FailureClass)))
 	pkg.Warn("GeoIP provider attempt failed", fields...)
 }
 

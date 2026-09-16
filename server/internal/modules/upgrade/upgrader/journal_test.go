@@ -89,7 +89,11 @@ func TestFileLockAllowsOnlyOneOwner(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer first.Close()
+	defer func() {
+		if err := first.Close(); err != nil {
+			t.Errorf("close first lock: %v", err)
+		}
+	}()
 	second, err := acquireFileLock(store.LockPath())
 	if !errors.Is(err, ErrAlreadyRunning) {
 		if second != nil {

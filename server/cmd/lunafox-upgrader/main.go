@@ -35,7 +35,9 @@ func main() {
 		os.Exit(2)
 	}
 	if showVersion {
-		fmt.Fprintln(os.Stdout, "lunafox-upgrader dev")
+		if _, err := fmt.Fprintln(os.Stdout, "lunafox-upgrader dev"); err != nil {
+			os.Exit(1)
+		}
 		return
 	}
 	if flags.NArg() != 0 {
@@ -49,12 +51,13 @@ func main() {
 	var store *upgrader.JournalStore
 	var err error
 	var executor *upgrader.ComposeExecutor
-	if layout == "public" {
+	switch layout {
+	case "public":
 		store, err = upgrader.NewPublicJournalStore(rootDir)
 		if err == nil {
 			executor, err = upgrader.NewPublicComposeExecutor(upgrader.NewOSCommandRunner(), registry)
 		}
-	} else if layout == "legacy" {
+	case "legacy":
 		if registry != "" {
 			fmt.Fprintln(os.Stderr, "--registry is supported only with --layout public")
 			os.Exit(2)
@@ -63,7 +66,7 @@ func main() {
 		if err == nil {
 			executor = upgrader.NewComposeExecutor(upgrader.NewOSCommandRunner())
 		}
-	} else {
+	default:
 		fmt.Fprintf(os.Stderr, "unsupported deployment layout %q\n", layout)
 		os.Exit(2)
 	}

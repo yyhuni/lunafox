@@ -28,7 +28,9 @@ validate_single_line_file() {
 		[ "$allow_empty" = yes ] && return 0
 		fail "$label is missing"
 	fi
-	[ ! -L "$path" ] && [ -f "$path" ] || fail "$label must be a regular file"
+	if [ -L "$path" ] || [ ! -f "$path" ]; then
+		fail "$label must be a regular file"
+	fi
 	size="$(wc -c <"$path" | tr -d '[:space:]')"
 	[ "$size" -le 65536 ] || fail "$label exceeds 65536 bytes"
 	if [ "$allow_empty" != yes ] && [ "$size" -eq 0 ]; then
@@ -62,8 +64,9 @@ validate_database_inputs() {
 	while [[ "$port_value" == 0* && ${#port_value} -gt 1 ]]; do
 		port_value="${port_value#0}"
 	done
-	[ "${#port_value}" -le 5 ] && ((10#$port_value >= 1 && 10#$port_value <= 65535)) ||
+	if [ "${#port_value}" -gt 5 ] || ((10#$port_value < 1 || 10#$port_value > 65535)); then
 		fail "DB_PORT must be an integer between 1 and 65535"
+	fi
 
 	case "$DB_SSLMODE" in
 	disable | allow | prefer | require | verify-ca | verify-full) ;;
@@ -148,7 +151,9 @@ persist_mode() {
 	fi
 }
 
-[ -d "$CONFIG_DIR" ] && [ ! -L "$CONFIG_DIR" ] || fail "configuration directory must be a directory"
+if [ ! -d "$CONFIG_DIR" ] || [ -L "$CONFIG_DIR" ]; then
+	fail "configuration directory must be a directory"
+fi
 chmod 0700 "$CONFIG_DIR"
 umask 077
 

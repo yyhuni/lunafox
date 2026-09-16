@@ -3,6 +3,7 @@ package infrastructure
 import (
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -64,7 +65,7 @@ func NewChannelManifestSource(config ChannelManifestSourceConfig) (*ChannelManif
 	if err != nil || !baseURL.IsAbs() || baseURL.Host == "" || baseURL.RawPath != "" || baseURL.RawQuery != "" || baseURL.Fragment != "" || baseURL.User != nil {
 		return nil, fmt.Errorf("release metadata base URL is invalid")
 	}
-	if baseURL.Scheme != "https" && !(baseURL.Scheme == "http" && isLoopbackHost(baseURL.Hostname())) {
+	if baseURL.Scheme != "https" && (baseURL.Scheme != "http" || !isLoopbackHost(baseURL.Hostname())) {
 		return nil, fmt.Errorf("release metadata base URL must use HTTPS")
 	}
 	root := filepath.Clean(strings.TrimSpace(config.DeploymentRoot))
@@ -151,7 +152,7 @@ func (source *ChannelManifestSource) LoadTarget(digest string) (*releasemanifest
 	if err != nil {
 		return nil, domain.WrapManifestInvalid(err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	raw, err := readBounded(file, maxReleaseManifestBytes)
 	if err != nil {
 		return nil, domain.WrapManifestInvalid(err)
@@ -182,7 +183,7 @@ func (source *ChannelManifestSource) fetch(relative string, limit int64) ([]byte
 	if err != nil {
 		return nil, fmt.Errorf("fetch release metadata: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("fetch release metadata: HTTP %d", response.StatusCode)
 	}
@@ -251,7 +252,7 @@ func (source *ChannelManifestSource) persist(digest string, raw []byte) error {
 		if openErr != nil {
 			return openErr
 		}
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 		openedInfo, statErr := file.Stat()
 		if statErr != nil || !openedInfo.Mode().IsRegular() || !os.SameFile(info, openedInfo) {
 			return fmt.Errorf("cached manifest digest path changed during validation")
@@ -272,18 +273,15 @@ func (source *ChannelManifestSource) persist(digest string, raw []byte) error {
 		return err
 	}
 	temporaryPath := temporary.Name()
-	defer os.Remove(temporaryPath)
+	defer func() { _ = os.Remove(temporaryPath) }()
 	if err := temporary.Chmod(0o600); err != nil {
-		temporary.Close()
-		return err
+		return errors.Join(err, temporary.Close())
 	}
 	if _, err := temporary.Write(raw); err != nil {
-		temporary.Close()
-		return err
+		return errors.Join(err, temporary.Close())
 	}
 	if err := temporary.Sync(); err != nil {
-		temporary.Close()
-		return err
+		return errors.Join(err, temporary.Close())
 	}
 	if err := temporary.Close(); err != nil {
 		return err
@@ -295,8 +293,7 @@ func (source *ChannelManifestSource) persist(digest string, raw []byte) error {
 	if err != nil {
 		return err
 	}
-	defer directory.Close()
-	return directory.Sync()
+	return errors.Join(directory.Sync(), directory.Close())
 }
 
 func (source *ChannelManifestSource) cachePath(digest string) (string, error) {

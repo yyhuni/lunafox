@@ -267,7 +267,8 @@ func TestComposeExecutorNormalizesNilContext(t *testing.T) {
 	}
 	delegate := &recordingRunner{}
 	runner := &nonNilContextRunner{delegate: delegate}
-	if err := NewComposeExecutor(runner).Execute(nil, request, store); err != nil {
+	var nilContext context.Context
+	if err := NewComposeExecutor(runner).Execute(nilContext, request, store); err != nil {
 		t.Fatalf("Execute(nil) = %v", err)
 	}
 	if runner.sawNil {

@@ -655,9 +655,14 @@ function writeAtomic(filePath, content, mode = 0o644) {
 
 function createFreshHistory(outputRoot, gitPolicy, tag) {
   runGit(outputRoot, ["init", "--initial-branch=main"], { stdio: "ignore" });
+  // The release workflow archives this repository immediately after export.
+  // Disable detached auto-GC so Git cannot rewrite object files during tar.
+  runGit(outputRoot, ["config", "gc.auto", "0"]);
   runGit(outputRoot, ["config", "user.name", gitPolicy.publicAuthorName]);
   runGit(outputRoot, ["config", "user.email", gitPolicy.publicAuthorEmail]);
-  runGit(outputRoot, ["add", "--all"]);
+  // The validated projection may intentionally contain release artifacts under
+  // paths ignored by source-development rules (for example agent/bin/).
+  runGit(outputRoot, ["add", "--force", "--all"]);
   runGit(outputRoot, ["commit", "--no-verify", "-m", `chore(export): generated deployment projection ${tag}`], { stdio: "ignore" });
   // A projection must not carry source tags, remotes, or branch metadata.
   const remotes = runGit(outputRoot, ["remote"]).trim();

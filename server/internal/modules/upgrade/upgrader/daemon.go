@@ -187,7 +187,7 @@ func validateUnixSocketPath(path string) error {
 
 // Serve runs until ctx is cancelled. It resumes an unfinished journal before
 // accepting new requests, which is what makes Server/browser restarts safe.
-func (daemon *Daemon) Serve(ctx context.Context) error {
+func (daemon *Daemon) Serve(ctx context.Context) (serveErr error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -199,7 +199,9 @@ func (daemon *Daemon) Serve(ctx context.Context) error {
 	daemon.runCtx = runCtx
 	daemon.runCancel = runCancel
 	daemon.mu.Unlock()
-	defer daemon.Close()
+	defer func() {
+		serveErr = errors.Join(serveErr, daemon.Close())
+	}()
 	defer runCancel()
 	if err := daemon.resumeCurrent(runCtx); err != nil && !errors.Is(err, ErrJournalNotFound) {
 		return err
@@ -320,7 +322,9 @@ func (daemon *Daemon) resumeCurrent(ctx context.Context) error {
 }
 
 func (daemon *Daemon) serveConnection(connection net.Conn) {
-	defer connection.Close()
+	defer func() {
+		_ = connection.Close()
+	}()
 	_ = connection.SetReadDeadline(time.Now().Add(requestTimeout))
 	reader := bufio.NewReader(io.LimitReader(connection, MaxRequestBytes+1))
 	data, err := reader.ReadBytes('\n')
@@ -654,7 +658,9 @@ func (client *Client) Send(ctx context.Context, request Request) (Response, erro
 	if err != nil {
 		return Response{}, fmt.Errorf("connect to upgrader socket: %w", err)
 	}
-	defer connection.Close()
+	defer func() {
+		_ = connection.Close()
+	}()
 	if deadline, ok := ctx.Deadline(); ok {
 		_ = connection.SetDeadline(deadline)
 	} else {

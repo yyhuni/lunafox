@@ -12,5 +12,5 @@ func registerPublicRoutes(
 	screenshotSnapshotHandler *snapshothandler.ScreenshotSnapshotHandler,
 ) {
 	api.GET("/screenshots/:screenshot/blob", screenshotHandler.GetImage)
-	api.GET("/scans/:scan/screenshotSnapshots/:screenshot_snapshot/blob", screenshotSnapshotHandler.GetImage)
+	api.GET("/scans/:scan/screenshotSnapshots/:screenshotSnapshot/blob", screenshotSnapshotHandler.GetImage)
 }

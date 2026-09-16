@@ -43,3 +43,7 @@ Runtime Image tools and their exact versions are declared in `Dockerfile`,
 contains direct and transitive Waymore/Uro dependencies, so the runtime image
 contains executable CLIs rather than only their entrypoint scripts. Agent task cleanup removes the seed copy,
 workspace, tool outputs, and unsubmitted staging on every task terminal.
+
+## Execution Timeout Defaults
+
+Tool/stage defaults in seconds: `waymore.timeout=28800`, `katana.timeout=28800`, `uro.timeout=3600`, `httpx.timeout=14400`. These finite budgets allow larger batches to finish under existing rate limits; they are project choices, not measured completion guarantees. `engine.json` is authoritative. Request timeouts and cancellation behavior are unchanged. Existing explicit configuration and saved plans retain their values; new defaults require an updated installed Engine package and newly materialized configuration.

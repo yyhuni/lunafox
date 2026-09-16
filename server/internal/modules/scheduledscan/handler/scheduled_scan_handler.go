@@ -155,7 +155,7 @@ func (handler *ScheduledScanHandler) Delete(c *gin.Context) {
 }
 
 func parseScheduledScanID(c *gin.Context) (int, bool) {
-	id, err := httpdto.ParseResourceIDSegment(c.Param("scheduled_scan"))
+	id, err := httpdto.ParseResourceIDSegment(c.Param("scheduledScan"))
 	if err != nil {
 		httpdto.BadRequest(c, "Invalid scheduled scan ID")
 		return 0, false
