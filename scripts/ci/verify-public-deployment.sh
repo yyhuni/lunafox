@@ -93,18 +93,18 @@ render_compose() {
 	(
 		cd "$ROOT_DIR"
 		env \
-		RELEASE_REGISTRY="$registry" \
-		DATABASE_MODE="$database_mode" \
-		COMPOSE_PROFILES="$database_mode" \
-		DB_HOST="$db_host" \
-		DB_PORT="$db_port" \
-		DB_SSLMODE="$db_sslmode" \
-		DB_NAME="$db_name" \
-		DB_USER="$db_user" \
-		DB_PASSWORD="$db_password" \
-		JWT_SECRET="$jwt_secret" \
-		PUBLIC_HOST="$public_host" PUBLIC_PORT="$public_port" \
-		docker compose --env-file .env -f compose.yaml config --format json
+			RELEASE_REGISTRY="$registry" \
+			DATABASE_MODE="$database_mode" \
+			COMPOSE_PROFILES="$database_mode" \
+			DB_HOST="$db_host" \
+			DB_PORT="$db_port" \
+			DB_SSLMODE="$db_sslmode" \
+			DB_NAME="$db_name" \
+			DB_USER="$db_user" \
+			DB_PASSWORD="$db_password" \
+			JWT_SECRET="$jwt_secret" \
+			PUBLIC_HOST="$public_host" PUBLIC_PORT="$public_port" \
+			docker compose --env-file .env -f compose.yaml config --format json
 	)
 }
 compose_json="$(render_compose docker.io embedded '' '' '' '' '' '' '' localhost 443)" || fail "root Compose configuration with default embedded inputs is invalid"
@@ -149,6 +149,8 @@ jq -e '
   (.services.server.environment.RELEASE_CHANNEL == "canary") and
   (.services.server.environment.RELEASE_METADATA_BASE_URL == "https://raw.githubusercontent.com/yyhuni/lunafox/release-channel") and
   (.services.server.environment.RELEASE_REGISTRY == "docker.io") and
+  (.services.postgres.image == "docker.io/library/postgres@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675") and
+  (.services.postgres.volumes | any(.source == "postgres_data" and .target == "/var/lib/postgresql/data")) and
   (.services.postgres.environment.POSTGRES_DB == "lunafox") and
   (.services.postgres.environment.POSTGRES_USER == "postgres") and
   (.services.server.environment.DB_NAME == "lunafox") and
