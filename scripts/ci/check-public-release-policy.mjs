@@ -664,6 +664,12 @@ function assertPrivateWorkflow(workflow, policy, publisherSource = "", autoMerge
     "verify-agent-binary-bundle.mjs", "cosign verify-blob", "agent-bundle.sigstore.json", "id-token: write",
     "agent/bin/$RELEASE_TAG", "tar --exclude='./.git/hooks'", "public-export.tar.gz", "actions/upload-artifact@v4",
   ]) if (!preparation.includes(required)) fail(`prepare-release-inputs is missing ${required}`);
+  const earlyWorkflowCheck = preparation.indexOf("Verify public workflow before Agent preparation");
+  if (earlyWorkflowCheck < 0 || earlyWorkflowCheck > preparation.indexOf("actions/setup-go@v5") ||
+      !preparation.includes('cmp -s .github/workflows/public-validate.yml "$public_workflow"') ||
+      !preparation.includes("merge the protected workflow maintenance PR before tagging a release")) {
+    fail("public workflow compatibility must fail before expensive Agent preparation");
+  }
   if (/publish-agent-bundle-asset|agent-input-|staging|private-runner-preflight|tests-gate|docker buildx build/.test(preparation)) fail("prepare-release-inputs must not retain staging Asset or duplicate image/preflight work");
   if (!publisher.includes("needs: [prepare-release-inputs, validate-tag, public-release-authorization, private-trusted-runner-boundary]") || !publisher.includes("actions/download-artifact@v4") || !publisher.includes("publish-public-export.mjs")) fail("public export PR must consume the complete prepared tree artifact");
   if (!publisher.includes("public-release-authorization") || !publisher.includes("needs.public-release-authorization.outputs.enabled == 'true'")) fail("public export PR creation must require explicit release authorization");
@@ -726,6 +732,11 @@ function assertPublicWorkflow(workflow, policy) {
     fail("public validation workflow must run only in the canonical public repository");
   }
   const validation = jobBlock(workflow, "validate-export");
+  if (!workflow.includes("github.event_name == 'pull_request' && 'pr' || github.run_id")) {
+    fail("public concurrency must cancel superseded PR runs without cancelling protected-main releases");
+  }
+  const frontendValidation = jobBlock(workflow, "validate-frontend");
+  const scopeValidation = jobBlock(workflow, "validation-scope");
   const goValidation = jobBlock(workflow, "validate-public-go");
   const protoValidation = jobBlock(workflow, "validate-public-proto");
   const contextValidation = jobBlock(workflow, "validate-runtime-contexts");
@@ -733,7 +744,7 @@ function assertPublicWorkflow(workflow, policy) {
   const publicationIntent = jobBlock(workflow, "publication-intent");
   const publication = jobBlock(workflow, "publish-runtime-images");
   const agentPublication = jobBlock(workflow, "publish-agent-image");
-  const validationBlocks = [validation, goValidation, protoValidation, contextValidation, aggregate, publicationIntent];
+  const validationBlocks = [validation, frontendValidation, scopeValidation, goValidation, protoValidation, contextValidation, aggregate, publicationIntent];
   validationBlocks.forEach((block, index) => {
     const label = `public validation job ${index + 1}`;
     assertSecretlessBlock(block, label);
@@ -778,8 +789,23 @@ function assertPublicWorkflow(workflow, policy) {
     "pnpm run check:service-mock-mode",
     "pnpm run check:foundation-ledger",
   ]) {
-    if (!validation.includes(required)) fail(`public validation workflow is missing frontend gate: ${required}`);
+    if (!frontendValidation.includes(required)) fail(`public validation workflow is missing frontend gate: ${required}`);
   }
+  if (!scopeValidation.includes("select-public-validation-scope.mjs") ||
+      !scopeValidation.includes("fetch-depth: 0") ||
+      !scopeValidation.includes('echo "scope=full"') ||
+      !frontendValidation.includes("lane: [types, lint, test-1, test-2, test-3]") ||
+      !frontendValidation.includes('pnpm run test --shard="${LANE#test-}/3"') ||
+      !aggregate.includes("needs.validate-frontend.result") ||
+      !aggregate.includes('needs.validation-scope.result') ||
+      !aggregate.includes('[ "$scope" = deployment ] && [ "$result" = skipped ]') ||
+      workflow.includes("      - export/**")) {
+    fail("public validation must use complete deployment scope, exhaustive frontend shards and an explicit aggregate gate without duplicate export pushes");
+  }
+  for (const block of [frontendValidation, goValidation, protoValidation, contextValidation]) {
+    if (!block.includes("needs.validation-scope.outputs.scope == 'full'")) fail("application checks must consume full validation scope");
+  }
+  if (!goValidation.includes("cache-dependency-path: ${{ matrix.directory }}/go.sum")) fail("public Go cache must use module dependency paths");
   assertRuntimeComponentList(publication, "public Runtime publication");
   if (!/^permissions:\s*\n\s+contents:\s+read\s*$/m.test(workflow)) fail("public validation workflow must grant contents read only");
   for (const required of ["server", "contracts", "engine-go", "extensions", "go test ./...", "proto/scripts/check-generated.sh"]) {
@@ -974,7 +1000,7 @@ function assertPublicWorkflow(workflow, policy) {
   if (!engineBuild.includes("needs: [publication-intent, public-engine-runtime-discover]") ||
       !engineBuild.includes("strategy:") ||
       !engineBuild.includes("fail-fast: true") ||
-      !engineBuild.includes("max-parallel: 3") ||
+      !engineBuild.includes("max-parallel: 4") ||
       !engineBuild.includes("fromJSON(needs.public-engine-runtime-discover.outputs.matrix)") ||
       !engineBuild.includes("ENGINE_RELEASE_ENGINE_ID") ||
       !engineBuild.includes("matrix.engineId") ||
@@ -1082,6 +1108,12 @@ function assertPublicWorkflow(workflow, policy) {
   if (!finalRelease.includes("[ \"$(jq 'length' dist/final/deployment-packages.json)\" -eq 1 ]") ||
       finalRelease.includes("-dockerhub.zip") || finalRelease.includes("-ghcr.zip")) {
     fail("public final release must publish exactly one unified deployment ZIP");
+  }
+  if (!finalRelease.includes('if gh api "/repos/${PUBLIC_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" >"$tag_ref_response" 2>/dev/null; then') ||
+      !finalRelease.includes("tag_ref_status=\"$(jq -r '.status // empty' \"$tag_ref_response\" 2>/dev/null || true)\"") ||
+      !finalRelease.includes('[ "$tag_ref_status" = "404" ]') ||
+      finalRelease.includes("--jq '.object.sha' 2>/dev/null || true")) {
+    fail("public final release must distinguish an absent immutable tag from GitHub API failures");
   }
   if (!finalRelease.includes("final tag cross-registry drift") ||
       !finalRelease.includes("reused_final_tag=true") ||

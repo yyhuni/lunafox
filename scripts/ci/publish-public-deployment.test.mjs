@@ -10,6 +10,8 @@ import {
   publishDeployment,
   snapshotShaFromBody,
   validateSnapshot,
+  waitForPullRequestValidation,
+  waitForValidation,
 } from "./publish-public-deployment.mjs";
 
 const TAG = "v1.2.3-alpha.4";
@@ -54,7 +56,7 @@ test("snapshot contract is deterministic and Registry-selectable", (t) => {
   assert.throws(() => validateSnapshot(root, TAG), /must match/);
 });
 
-test("publication creates one protected PR, dispatches validation, and returns final main SHA", async (t) => {
+test("publication creates one protected PR, reuses validation, and returns final main SHA", async (t) => {
   const snapshotDir = fixture(t);
   const snapshot = validateSnapshot(snapshotDir, TAG);
   const originalFetch = globalThis.fetch;
@@ -75,7 +77,7 @@ test("publication creates one protected PR, dispatches validation, and returns f
     if (parsed.pathname.includes("/git/ref/heads/deployment%2F") && method === "GET") return response({ message: "Not Found" }, 404);
     if (parsed.pathname === "/repos/yyhuni/lunafox/pulls" && method === "GET") return response([]);
     if (parsed.pathname === "/repos/yyhuni/lunafox/git/ref/heads/main" && method === "GET") {
-      const dispatchCount = calls.filter((call) => call.endpoint.includes("/dispatches")).length;
+      const dispatchCount = calls.filter((call) => call.endpoint.includes("/actions/workflows/public-validate.yml/runs")).length;
       return response({ object: { sha: dispatchCount >= 1 ? MERGE_SHA : SOURCE_SHA } });
     }
     if (parsed.pathname === `/repos/yyhuni/lunafox/git/commits/${SOURCE_SHA}` && method === "GET") return response({ tree: { sha: "tree_base" } });
@@ -85,9 +87,11 @@ test("publication creates one protected PR, dispatches validation, and returns f
     if (parsed.pathname === "/repos/yyhuni/lunafox/git/refs" && method === "POST") return response({ ref: body.ref });
     if (parsed.pathname === "/repos/yyhuni/lunafox/pulls" && method === "POST") return response({ number: 71, state: "open", body: body.body });
     if (parsed.pathname.endsWith(`/actions/workflows/public-validate.yml/dispatches`) && method === "POST") return response({}, 204);
+    if (parsed.pathname.endsWith("/actions/workflows/public-validate.yml/runs") && parsed.searchParams.get("event") === "pull_request") return response({ workflow_runs: [{ id: 123, head_sha: COMMIT_SHA, head_branch: `deployment/${TAG}`, event: "pull_request", path: ".github/workflows/public-validate.yml", head_repository: { full_name: "yyhuni/lunafox" }, status: "completed", conclusion: "success" }] });
     if (parsed.pathname === "/repos/yyhuni/lunafox/pulls/71" && method === "GET") {
-      return response({ number: 71, state: "closed", merged_at: "2026-09-16T00:00:00Z", merge_commit_sha: MERGE_SHA });
+      return response({ head: { sha: COMMIT_SHA }, number: 71, state: "closed", merged_at: "2026-09-16T00:00:00Z", merge_commit_sha: MERGE_SHA });
     }
+    if (parsed.pathname.endsWith("/actions/workflows/public-validate.yml/runs")) return response({ workflow_runs: [mainRun()] });
     if (parsed.pathname === `/repos/yyhuni/lunafox/commits/${MERGE_SHA}/check-runs` && method === "GET") {
       return response({ check_runs: [{ name: "Public Projection Validation", status: "completed", conclusion: "success", head_sha: MERGE_SHA }] });
     }
@@ -111,7 +115,7 @@ test("publication creates one protected PR, dispatches validation, and returns f
     assert.equal(result.mergeSha, MERGE_SHA);
     assert.equal(result.snapshotSha256, snapshot.sha256);
     assert.equal(result.pullRequestNumber, 71);
-    assert.equal(calls.filter((call) => call.endpoint.includes("/dispatches")).length, 2);
+    assert.equal(calls.filter((call) => call.endpoint.includes("/dispatches")).length, 0);
     const tree = calls.find((call) => call.endpoint === "/repos/yyhuni/lunafox/git/trees");
     assert.deepEqual(tree.body.tree.map((entry) => entry.path), SNAPSHOT_PATHS);
   } finally {
@@ -132,7 +136,8 @@ test("merged publication is reused only for the same immutable snapshot", async 
     }
     if (parsed.pathname === "/repos/yyhuni/lunafox/git/ref/heads/main" && method === "GET") return response({ object: { sha: MERGE_SHA } });
     if (parsed.pathname.endsWith("/dispatches") && method === "POST") return response({}, 204);
-    if (parsed.pathname === `/repos/yyhuni/lunafox/commits/${MERGE_SHA}/check-runs` && method === "GET") return response({ check_runs: [{ name: "Public Projection Validation", conclusion: "success" }] });
+    if (parsed.pathname.endsWith("/actions/workflows/public-validate.yml/runs")) return response({ workflow_runs: [mainRun()] });
+    if (parsed.pathname === `/repos/yyhuni/lunafox/commits/${MERGE_SHA}/check-runs` && method === "GET") return response({ check_runs: [{ name: "Public Projection Validation", head_sha: MERGE_SHA, status: "completed", conclusion: "success" }] });
     throw new Error(`unexpected request: ${method} ${parsed.pathname}`);
   };
   try {
@@ -142,4 +147,66 @@ test("merged publication is reused only for the same immutable snapshot", async 
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+function mainRun(overrides = {}) {
+  return { id: 124, head_sha: MERGE_SHA, head_branch: "main", event: "push",
+    path: ".github/workflows/public-validate.yml", head_repository: { full_name: "yyhuni/lunafox" },
+    status: "completed", conclusion: "success", ...overrides };
+}
+const OPTIONS = { repo: "yyhuni/lunafox", baseBranch: "main", workflow: "public-validate.yml",
+  apiBase: "https://api.test", token: "test", timeoutSeconds: 60, pollSeconds: 1, sleep: async () => {} };
+
+test("PR approval binds exact identity and approves a controlled run only once", async t => {
+  const original = globalThis.fetch; t.after(() => { globalThis.fetch = original; });
+  let approvals = 0, reads = 0;
+  globalThis.fetch = async (url, init = {}) => {
+    if (url.endsWith("/pulls/71")) return response({ head: { sha: COMMIT_SHA }, state: "open" });
+    if (url.endsWith("/approve")) { approvals++; return response({}, 204); }
+    reads++;
+    return response({ workflow_runs: [mainRun({ id: 123, head_sha: COMMIT_SHA,
+      head_branch: `deployment/${TAG}`, event: "pull_request",
+      conclusion: reads < 3 ? "action_required" : "success" })] });
+  };
+  await waitForPullRequestValidation(OPTIONS, 71, `deployment/${TAG}`, COMMIT_SHA);
+  assert.equal(approvals, 1);
+});
+
+test("PR changed head and failed validation stop publication", async t => {
+  const original = globalThis.fetch; t.after(() => { globalThis.fetch = original; });
+  globalThis.fetch = async () => response({ head: { sha: SOURCE_SHA }, state: "open" });
+  await assert.rejects(waitForPullRequestValidation(OPTIONS, 71, `deployment/${TAG}`, COMMIT_SHA), /head changed/);
+  globalThis.fetch = async url => url.endsWith("/pulls/71")
+    ? response({ head: { sha: COMMIT_SHA }, state: "open" })
+    : response({ workflow_runs: [mainRun({ head_sha: COMMIT_SHA, head_branch: `deployment/${TAG}`, event: "pull_request", conclusion: "failure" })] });
+  await assert.rejects(waitForPullRequestValidation(OPTIONS, 71, `deployment/${TAG}`, COMMIT_SHA), /validation failed/);
+});
+
+test("main validation waits for running push without duplicate dispatch", async t => {
+  const original = globalThis.fetch; t.after(() => { globalThis.fetch = original; });
+  let reads = 0;
+  globalThis.fetch = async (url, init = {}) => {
+    assert.equal(init.method ?? "GET", "GET");
+    return response({ workflow_runs: [mainRun(++reads === 1 ? { status: "in_progress", conclusion: null } : {})] });
+  };
+  await waitForValidation(OPTIONS, MERGE_SHA);
+  assert.equal(reads, 2);
+});
+
+test("main rejects foreign success and dispatches once for missing canonical run", async t => {
+  const original = globalThis.fetch; t.after(() => { globalThis.fetch = original; });
+  let dispatched = 0;
+  globalThis.fetch = async (url, init = {}) => {
+    if (url.endsWith("/dispatches")) { dispatched++; return response({}, 204); }
+    if (url.endsWith("/git/ref/heads/main")) return response({ object: { sha: MERGE_SHA } });
+    return response({ workflow_runs: [mainRun(dispatched ? {} : { head_repository: { full_name: "attacker/fork" } })] });
+  };
+  await waitForValidation(OPTIONS, MERGE_SHA);
+  assert.equal(dispatched, 1);
+});
+
+test("failed main workflow cannot be hidden by an older success", async t => {
+  const original = globalThis.fetch; t.after(() => { globalThis.fetch = original; });
+  globalThis.fetch = async () => response({ workflow_runs: [mainRun(), mainRun({ id: 125, conclusion: "failure" })] });
+  await assert.rejects(waitForValidation(OPTIONS, MERGE_SHA), /validation failed/);
 });
