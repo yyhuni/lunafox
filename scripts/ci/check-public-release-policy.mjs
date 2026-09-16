@@ -901,6 +901,11 @@ function assertPublicWorkflow(workflow, policy) {
   ]) {
     if (!agentPublication.includes(required)) fail(`public Agent publication is missing: ${required}`);
   }
+  if (!agentPublication.includes('--json | tee "$RUNNER_TEMP/agent-bundle-verification.json"') ||
+      !agentPublication.includes('cp "$RUNNER_TEMP/agent-bundle-verification.json" dist/agent-bundle-verification.json') ||
+      agentPublication.includes("--json | tee dist/agent-bundle-verification.json")) {
+    fail("public Agent bundle verification must keep temporary evidence outside the exported workspace");
+  }
   if (!agentPublication.includes('context: ${{ steps.verify.outputs.bundle_dir }}') ||
       agentPublication.includes("stagingIdentity") || agentPublication.includes("agent-input-") ||
       /DOCKERHUB_TOKEN|DOCKERHUB_USERNAME|DOCKERHUB_PASSWORD/.test(agentPublication)) {
