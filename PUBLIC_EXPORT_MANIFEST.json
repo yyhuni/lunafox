@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:65a986ab70654f2b142ba24fff6577003b10e64f21d0e972f867067647cfd248",
-  "releaseTag": "v0.0.1-alpha.129",
+  "sourceRevisionDigest": "sha256:b3b23d559f5e094b1a3a1994fc49cb8ff600ecde59c4f2cecbb21e3fade0af35",
+  "releaseTag": "v0.0.1-alpha.130",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -47,7 +47,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "a27830b202cccf4d722c745f7eb86e76fdd0e583af735c24a64fbdea630165ee"
+      "sha256": "a6a845d387667d33cb81d9b988cdb939ca3142e8679af54ca40459b316e13630"
     },
     {
       "path": "README.md",
@@ -57,49 +57,49 @@
       "sha256": "6ce3352c5259ee5b6fc54a524e3aa95ef14cab242a0c8ab52bef5b4ecb79b434"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.129/agent-bundle.json",
+      "path": "agent/bin/v0.0.1-alpha.130/agent-bundle.json",
       "type": "file",
       "mode": "0644",
       "size": 2229,
-      "sha256": "131972dfb17d73dd6f29802c8cc7188f5c208ee64e4793db7b0e338d343e7df2"
+      "sha256": "c56ec1e2b81dbe8ce18bd96584a1eb50c2accce1b43fa19ded273b7b84b178e8"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.129/agent-bundle.sha256",
+      "path": "agent/bin/v0.0.1-alpha.130/agent-bundle.sha256",
       "type": "file",
       "mode": "0644",
       "size": 402,
       "sha256": "2946b4b80ed17b9ad513b6e9d76def9ad4221fa15e8d475767b1a6fda9cbe25a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.129/agent-bundle.sigstore.json",
+      "path": "agent/bin/v0.0.1-alpha.130/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "289a71318c4c5299f52ddfcf792af42e52b196395927af5538fde22156f7e802"
+      "sha256": "e34362e252dcc1275fbb31b87743ade761aabd473a1dd9e5713ae15953f3aae8"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.129/lunafox-agent-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.130/lunafox-agent-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 23904517,
       "sha256": "6fdddcaae9958a99cb081d92ad3d8d11f32db16b5ff300d645a4693408d1df38"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.129/lunafox-agent-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.130/lunafox-agent-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 22504270,
       "sha256": "569449dc80b8e7a27954488d656198adc68d47eb6384903ad1f3ea4c4271467d"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.129/lunafox-engine-mount-preflight-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.130/lunafox-engine-mount-preflight-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 20000987,
       "sha256": "2b12a49b754a09e98377c96105c2975a5b48bf6b063eae0b2062ea271e0add2a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.129/lunafox-engine-mount-preflight-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.130/lunafox-engine-mount-preflight-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 18804436,
@@ -662,8 +662,8 @@
       "path": "contracts/ocisignature/keyless.go",
       "type": "file",
       "mode": "0644",
-      "size": 9957,
-      "sha256": "6814ef2f7ed5e9edb0f99bbf6678fb33a3718da0b1ed9d3c60dac5c1522ce426"
+      "size": 10353,
+      "sha256": "0004f10036d0d9e0597aa8e4f3ddbe449921b143fc494fb405557aac18370b4e"
     },
     {
       "path": "contracts/ocisignature/keyless_test.go",
@@ -28550,15 +28550,15 @@
       "path": "tools/engine-oci-publish/cmd/verify-signature/main.go",
       "type": "file",
       "mode": "0644",
-      "size": 1020,
-      "sha256": "c1edb50f72206c28f42f0d0b6c0ec7330eaa57af35ed01aa57ed67786e28df6e"
+      "size": 1838,
+      "sha256": "a7104857d4ae5792ed6acccc75786ee03040bc3a75f2e0ed143427d0f6a19adc"
     },
     {
       "path": "tools/engine-oci-publish/cmd/verify-signature/main_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 296,
-      "sha256": "a2c10357f4dbab8ce4de601106f7deb88d38a267dbedbc1d72393ca464f67e42"
+      "size": 1639,
+      "sha256": "d63879de535f80e076433f248b0f41ef7d7f8451338def9610b915aa0b891ad8"
     },
     {
       "path": "tools/engine-oci-publish/go.mod",
