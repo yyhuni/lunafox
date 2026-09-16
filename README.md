@@ -10,16 +10,38 @@ source repository and are projected through the protected release workflow.
 
 ## Install
 
-Install Docker with Linux container support, download one deployment ZIP from
-the matching LunaFox GitHub Release, and extract it into a permanent directory:
+Install Docker with Linux container support. On macOS or Linux, a public source
+checkout can prepare the matching immutable deployment package:
+
+```console
+git clone --branch <release-tag> --depth 1 https://github.com/yyhuni/lunafox.git
+cd lunafox
+./prepare-deployment.sh
+cd .lunafox-deployment
+```
+
+For a checkout that is not at a release tag, select the version explicitly:
+
+```console
+./prepare-deployment.sh --version <release-tag>
+```
+
+The command defaults to the Docker Hub package. Use `--registry ghcr` to select
+the complete GHCR closure explicitly. It verifies the package SHA-256 from the
+matching GitHub Release and never falls back between registries. The root
+`compose.yaml` is a release template and is not directly deployable by copying
+`.env.example`; use the prepared directory.
+
+Alternatively, including on Windows, download one deployment ZIP from the
+matching LunaFox GitHub Release and extract it into a permanent directory:
 
 - `lunafox-<version>-dockerhub.zip` uses Docker Hub for the complete LunaFox
   image and Engine closure.
 - `lunafox-<version>-ghcr.zip` uses GHCR for the complete LunaFox image and
   Engine closure.
 
-Review `PUBLIC_HOST`, `PUBLIC_PORT`, and `DATABASE_MODE` in `.env`, then run with
-Docker Compose 2.24.0 or newer:
+Review `PUBLIC_HOST`, `PUBLIC_PORT`, and `DATABASE_MODE` in the deployment
+directory's `.env`, then run with Docker Compose 2.24.0 or newer:
 
 ```console
 docker compose up -d
@@ -33,9 +55,9 @@ existing remote PostgreSQL database, set `DATABASE_MODE=external`, `DB_HOST`,
 `DB_SSLMODE`, and its real `DB_PASSWORD` before first startup; LunaFox applies
 its schema but does not create the remote database or migrate existing data.
 
-Windows users run the same commands in native PowerShell. A Bash or PowerShell
-installer, WSL terminal, Docker context name check, and Loki Docker logging
-plugin are not part of this deployment path.
+Windows users extract the Release ZIP and run the same Compose commands in
+native PowerShell. A PowerShell downloader, WSL terminal, Docker context name
+check, and Loki Docker logging plugin are not part of this deployment path.
 
 Use Docker Compose for the resident lifecycle:
 

@@ -164,3 +164,7 @@ specific discovery and result-reporting decisions in this engine.
 PureDNS retains its own wildcard filtering for Bruteforce and final Resolve.
 This engine does not run a second wildcard sample, expansion, or threshold
 precheck, and it does not invoke DNSGen.
+
+## Execution Timeout Defaults
+
+Tool/stage defaults in seconds: `recon.timeout=7200`, `bruteforce.timeout=28800`, `resolve.timeout=14400`. These finite budgets allow larger batches to finish under existing rate limits; they are project choices, not measured completion guarantees. `engine.json` is authoritative. Request timeouts and cancellation behavior are unchanged. Existing explicit configuration and saved plans retain their values; new defaults require an updated installed Engine package and newly materialized configuration.
