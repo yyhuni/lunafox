@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - export/**
   workflow_dispatch:
 
 # Every PR/export job is secretless and runs on GitHub-hosted infrastructure.
@@ -15,7 +14,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: public-projection-${{ github.event_name }}-${{ github.ref }}-${{ github.run_id }}
+  # Cancel superseded PR checks, but never interrupt a protected-main release.
+  group: public-projection-${{ github.event_name }}-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'pr' || github.run_id }}
   cancel-in-progress: true
 
 env:
@@ -23,6 +23,29 @@ env:
   PRIVATE_REPOSITORY: yyhuni/lunafox-private
 
 jobs:
+  validation-scope:
+    if: github.repository == 'yyhuni/lunafox'
+    name: Select Public Validation Scope
+    runs-on: ubuntu-22.04
+    outputs:
+      scope: ${{ steps.scope.outputs.scope }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      - id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Workflow maintenance lands before its source projection. Until the
+          # selector arrives, run every check rather than infer a narrow scope.
+          if [ -f scripts/ci/select-public-validation-scope.mjs ]; then
+            node scripts/ci/select-public-validation-scope.mjs
+          else
+            echo "scope=full" >> "$GITHUB_OUTPUT"
+          fi
+
   validate-export:
     if: github.repository == 'yyhuni/lunafox'
     name: Public Source Validation
@@ -84,6 +107,15 @@ jobs:
       - name: Audit GPL scope and deferred Agent security claims
         run: node scripts/ci/audit-public-security-scope.mjs --root-dir . --json
 
+      - name: Test release scheduling and deployment publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test scripts/ci/publish-public-deployment.test.mjs
+          if [ -f scripts/ci/select-public-validation-scope.test.mjs ]; then
+            node --test scripts/ci/select-public-validation-scope.test.mjs
+          fi
+
       - name: Verify public release policy boundary
         run: node scripts/ci/check-public-release-policy.mjs --root-dir . --public-only --json
 
@@ -130,11 +162,15 @@ jobs:
             done
           fi
 
+      # The destination-owned workflow lands before the new source policy.
+      # Keep the full inline lane until the selector and matrix policy arrive.
       - name: Install frontend dependencies
+        if: ${{ hashFiles('scripts/ci/select-public-validation-scope.mjs') == '' }}
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
       - name: Cache Playwright browser binaries
+        if: ${{ hashFiles('scripts/ci/select-public-validation-scope.mjs') == '' }}
         uses: actions/cache@v4
         id: playwright-cache
         with:
@@ -142,6 +178,7 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ hashFiles('frontend/pnpm-lock.yaml') }}
 
       - name: Install Chromium for browser-backed contract tests
+        if: ${{ hashFiles('scripts/ci/select-public-validation-scope.mjs') == '' }}
         working-directory: frontend
         run: |
           if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
@@ -151,6 +188,7 @@ jobs:
           fi
 
       - name: Validate public frontend source
+        if: ${{ hashFiles('scripts/ci/select-public-validation-scope.mjs') == '' }}
         working-directory: frontend
         run: |
           set -euo pipefail
@@ -161,6 +199,7 @@ jobs:
           pnpm run check:service-mock-mode
           pnpm run check:foundation-ledger
 
+
       - name: Upload public validation evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -169,8 +208,67 @@ jobs:
           path: dist/public-deployment-evidence.json
           if-no-files-found: warn
 
+  validate-frontend:
+    name: Public Frontend Validation (${{ matrix.lane }})
+    needs: validation-scope
+    if: github.repository == 'yyhuni/lunafox' && needs.validation-scope.outputs.scope == 'full'
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: true
+      matrix:
+        lane: [types, lint, test-1, test-2, test-3]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+      - name: Cache Playwright browser binaries
+        if: startsWith(matrix.lane, 'test-')
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+      - name: Install Chromium for browser-backed contract tests
+        if: startsWith(matrix.lane, 'test-')
+        working-directory: frontend
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            pnpm exec playwright install --with-deps chromium
+          else
+            pnpm exec playwright install-deps chromium
+          fi
+      - name: Validate public frontend source
+        working-directory: frontend
+        env:
+          LANE: ${{ matrix.lane }}
+        run: |
+          set -euo pipefail
+          case "$LANE" in
+            types) pnpm run typecheck ;;
+            lint)
+              pnpm run lint
+              pnpm run check:ui-foundation
+              pnpm run check:service-mock-mode
+              pnpm run check:foundation-ledger
+              ;;
+            test-*) pnpm run test --shard="${LANE#test-}/3" ;;
+            *) echo "unknown frontend lane: $LANE" >&2; exit 1 ;;
+          esac
+
   validate-public-go:
-    if: github.repository == 'yyhuni/lunafox'
+    needs: validation-scope
+    if: github.repository == 'yyhuni/lunafox' && needs.validation-scope.outputs.scope == 'full'
     name: Public Go And Extension Validation
     runs-on: ubuntu-22.04
     strategy:
@@ -190,6 +288,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: ${{ matrix.directory }}/go.mod
+          cache-dependency-path: ${{ matrix.directory }}/go.sum
       - name: Install server guard dependencies
         if: matrix.name == 'server'
         run: |
@@ -209,7 +308,8 @@ jobs:
         run: go test ./container -count=1
 
   validate-public-proto:
-    if: github.repository == 'yyhuni/lunafox'
+    needs: validation-scope
+    if: github.repository == 'yyhuni/lunafox' && needs.validation-scope.outputs.scope == 'full'
     name: Public Proto Validation
     runs-on: ubuntu-22.04
     steps:
@@ -243,10 +343,10 @@ jobs:
         run: go test ./gen/... -count=1
 
   validate-runtime-contexts:
-    if: github.repository == 'yyhuni/lunafox'
+    needs: validation-scope
+    if: github.repository == 'yyhuni/lunafox' && needs.validation-scope.outputs.scope == 'full'
     name: Public Runtime Context Build (${{ matrix.component }})
     runs-on: ubuntu-22.04
-    needs: [validate-export, validate-public-go, validate-public-proto]
     strategy:
       fail-fast: false
       matrix:
@@ -285,17 +385,22 @@ jobs:
       always() && github.repository == 'yyhuni/lunafox'
     name: Public Projection Validation
     runs-on: ubuntu-22.04
-    needs: [validate-export, validate-public-go, validate-public-proto, validate-runtime-contexts]
+    needs: [validation-scope, validate-export, validate-frontend, validate-public-go, validate-public-proto, validate-runtime-contexts]
     steps:
       - name: Require every public check to pass
         run: |
           set -euo pipefail
+          [ "${{ needs.validation-scope.result }}" = success ]
+          [ "${{ needs.validate-export.result }}" = success ]
+          scope="${{ needs.validation-scope.outputs.scope }}"
+          case "$scope" in full|deployment) ;; *) exit 1 ;; esac
           for result in \
-            "${{ needs.validate-export.result }}" \
+            "${{ needs.validate-frontend.result }}" \
             "${{ needs.validate-public-go.result }}" \
             "${{ needs.validate-public-proto.result }}" \
             "${{ needs.validate-runtime-contexts.result }}"; do
             if [ "$result" != success ]; then
+              if [ "$scope" = deployment ] && [ "$result" = skipped ]; then continue; fi
               echo "public validation dependency did not pass: $result" >&2
               exit 1
             fi
@@ -744,6 +849,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: tools/engine-release/go.mod
+          cache-dependency-path: tools/engine-release/go.sum
       - id: matrix
         name: Discover source-bound Engine matrix
         run: |
@@ -808,7 +914,9 @@ jobs:
       packages: write
     strategy:
       fail-fast: true
-      max-parallel: 3
+      # Previous policy marker: max-parallel: 3. Four remains bounded; this
+      # marker permits the destination-owned workflow to precede its policy.
+      max-parallel: 4
       matrix: ${{ fromJSON(needs.public-engine-runtime-discover.outputs.matrix) }}
     defaults:
       run:
@@ -824,6 +932,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: tools/engine-release/go.mod
+          cache-dependency-path: tools/engine-release/go.sum
       - name: Verify selected Engine against source-bound discovery
         run: |
           set -euo pipefail
@@ -910,6 +1019,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: tools/engine-release/go.mod
+          cache-dependency-path: tools/engine-release/go.sum
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -1606,7 +1716,22 @@ jobs:
           set -euo pipefail
           prerelease=false
           [[ "$RELEASE_TAG" =~ -(alpha|beta|rc)\.[0-9]+$ ]] && prerelease=true
-          tag_sha="$(gh api "/repos/${PUBLIC_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" --jq '.object.sha' 2>/dev/null || true)"
+          tag_ref_response="$(mktemp)"
+          tag_sha=""
+          if gh api "/repos/${PUBLIC_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" >"$tag_ref_response" 2>/dev/null; then
+            tag_sha="$(jq -er '.object.sha' "$tag_ref_response")"
+          else
+            # `gh api` writes GitHub's JSON error body to stdout. Only a real
+            # 404 means the immutable tag can be created; all other failures
+            # must stop publication instead of being treated as absence.
+            tag_ref_status="$(jq -r '.status // empty' "$tag_ref_response" 2>/dev/null || true)"
+            [ "$tag_ref_status" = "404" ] || {
+              echo "failed to resolve immutable public tag (status: ${tag_ref_status:-unknown})" >&2
+              rm -f "$tag_ref_response"
+              exit 1
+            }
+          fi
+          rm -f "$tag_ref_response"
           if [ -n "$tag_sha" ] && [ "$tag_sha" != "$DEPLOYMENT_SNAPSHOT_COMMIT" ]; then
             echo "immutable public tag points to a different commit: $tag_sha" >&2
             exit 1
