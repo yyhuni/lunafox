@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: public-projection-${{ github.ref }}
+  group: public-projection-${{ github.event_name }}-${{ github.ref }}-${{ github.run_id }}
   cancel-in-progress: true
 
 env:
@@ -134,9 +134,21 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
+      - name: Cache Playwright browser binaries
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+
       - name: Install Chromium for browser-backed contract tests
         working-directory: frontend
-        run: pnpm exec playwright install --with-deps chromium
+        run: |
+          if [ "${{ steps.playwright-cache.outputs.cache-hit }}" != "true" ]; then
+            pnpm exec playwright install --with-deps chromium
+          else
+            pnpm exec playwright install-deps chromium
+          fi
 
       - name: Validate public frontend source
         working-directory: frontend
@@ -263,7 +275,9 @@ jobs:
           push: false
           provenance: false
           sbom: false
-          cache-from: type=gha,scope=lunafox-public-context-${{ matrix.component }}
+          cache-from: |
+            type=gha,scope=lunafox-public-context-${{ matrix.component }}
+            type=gha,scope=lunafox-public-${{ matrix.component }}
           cache-to: type=gha,mode=max,scope=lunafox-public-context-${{ matrix.component }}
 
   public-validation:
@@ -295,7 +309,9 @@ jobs:
     if: >-
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/main' &&
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Publish Public Runtime Image (${{ matrix.component }})
     needs: public-validation
     runs-on: ubuntu-22.04
@@ -392,7 +408,9 @@ jobs:
           push: true
           provenance: mode=max
           sbom: true
-          cache-from: type=gha,scope=lunafox-public-${{ matrix.component }}
+          cache-from: |
+            type=gha,scope=lunafox-public-${{ matrix.component }}
+            type=gha,scope=lunafox-public-context-${{ matrix.component }}
           cache-to: type=gha,mode=max,scope=lunafox-public-${{ matrix.component }}
           tags: ${{ steps.preflight.outputs.commit_ref }}
 
@@ -470,7 +488,9 @@ jobs:
     if: >-
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/main' &&
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Package Verified Agent Image
     needs: public-validation
     runs-on: ubuntu-22.04
@@ -539,8 +559,7 @@ jobs:
             --source-revision-digest "$SOURCE_REVISION_DIGEST" \
             --public-export-root "$GITHUB_WORKSPACE" \
             --public-provenance-sha256 "$PUBLIC_PROVENANCE_SHA256" \
-            --json | tee "$RUNNER_TEMP/agent-bundle-verification.json"
-          cp "$RUNNER_TEMP/agent-bundle-verification.json" dist/agent-bundle-verification.json
+            --json | tee dist/agent-bundle-verification.json
           cosign verify-blob \
             --bundle "$BUNDLE_DIR/agent-bundle.sigstore.json" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
@@ -643,7 +662,9 @@ jobs:
     if: >-
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/main' &&
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Discover Public Engine Runtime Image Matrix
     needs: public-validation
     runs-on: ubuntu-22.04
@@ -731,7 +752,9 @@ jobs:
     if: >-
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/main' &&
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Build Public Engine Runtime Image (${{ matrix.engineId }})
     needs: public-engine-runtime-discover
     runs-on: ubuntu-22.04
@@ -816,7 +839,9 @@ jobs:
     if: >-
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/main' &&
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Aggregate Public Engine Runtime Image Receipts
     needs: [public-engine-runtime-discover, public-engine-runtime-build]
     runs-on: ubuntu-22.04
@@ -861,7 +886,9 @@ jobs:
     if: >-
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/main' &&
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Sign Public Engine Runtime Images
     needs: public-engine-runtime-aggregate
     runs-on: ubuntu-22.04
@@ -950,7 +977,9 @@ jobs:
     if: >-
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/main' &&
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Build Public Engine Package v2
     needs: public-engine-runtime-sign
     runs-on: ubuntu-22.04
@@ -1005,7 +1034,9 @@ jobs:
     if: >-
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/main' &&
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Publish Public Engine Package v2
     needs: public-engine-package-build
     runs-on: ubuntu-22.04
@@ -1108,7 +1139,9 @@ jobs:
     if: >-
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/main' &&
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Publish Public Engine Release Manifest
     needs: public-engine-package-publish
     runs-on: ubuntu-22.04
@@ -1176,6 +1209,8 @@ jobs:
       github.repository == 'yyhuni/lunafox' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
+      startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ') &&
+      contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json') &&
       needs.publish-runtime-images.result == 'success' &&
       needs.publish-agent-image.result == 'success' &&
       needs.public-engine-release-manifest.result == 'success'
@@ -1184,8 +1219,10 @@ jobs:
     runs-on: ubuntu-22.04
     environment: public-release
     permissions:
+      actions: write
       contents: write
       packages: write
+      pull-requests: write
       id-token: write
     defaults:
       run:
@@ -1418,8 +1455,10 @@ jobs:
           node --test scripts/ci/generate-compose-deployment.test.mjs
           node scripts/ci/generate-compose-deployment.mjs \
             --manifest dist/final/release.manifest.yaml --tag "$RELEASE_TAG" \
-            --output dist/final/deployment > dist/final/deployment-packages.json
-          [ "$(jq 'length' dist/final/deployment-packages.json)" -eq 2 ]
+            --output dist/final/deployment --snapshot dist/final/deployment-snapshot \
+            > dist/final/deployment-packages.json
+          [ "$(jq 'length' dist/final/deployment-packages.json)" -eq 1 ]
+          [ "$(jq -r '.[0].name' dist/final/deployment-packages.json)" = "lunafox-${RELEASE_TAG}.zip" ]
           jq -r '.[] | [.name,.sha256] | @tsv' dist/final/deployment-packages.json |
             while IFS=$'\t' read -r name expected; do
               file="dist/final/deployment/$name"
@@ -1428,12 +1467,27 @@ jobs:
               [ "$actual" = "$expected" ]
               unzip -t "$file" >/dev/null
             done
+      - id: deployment
+        name: Publish and verify the protected deployment snapshot
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          node scripts/ci/publish-public-deployment.mjs \
+            --snapshot-dir dist/final/deployment-snapshot \
+            --tag "$RELEASE_TAG" --source-sha "$GITHUB_SHA" \
+            --timeout-seconds 10800 --json | tee dist/final/deployment-publication.json
+          merge_sha="$(jq -er '.mergeSha' dist/final/deployment-publication.json)"
+          [[ "$merge_sha" =~ ^[a-f0-9]{40}$ ]] || { echo "deployment merge SHA is invalid" >&2; exit 1; }
+          echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
       - name: Generate the immutable release provenance record
         env:
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
           SOURCE_REVISION_DIGEST: ${{ steps.source.outputs.source_revision_digest }}
           EXPORT_MANIFEST_SHA256: ${{ steps.source.outputs.export_manifest_sha256 }}
           PUBLIC_PROVENANCE_SHA256: ${{ steps.source.outputs.public_provenance_sha256 }}
+          DEPLOYMENT_SNAPSHOT_COMMIT: ${{ steps.deployment.outputs.merge_sha }}
         run: |
           set -euo pipefail
           manifest_digest="sha256:$(sha256sum dist/final/release.manifest.yaml | awk '{print $1}')"
@@ -1445,7 +1499,9 @@ jobs:
             --arg exportManifest "$EXPORT_MANIFEST_SHA256" \
             --arg publicProvenance "$PUBLIC_PROVENANCE_SHA256" \
             --arg releaseTag "$RELEASE_TAG" \
-            '{schemaVersion:1,status:"published",releaseTag:$releaseTag,artifactDigest:$artifactDigest,privateSourceRevision:$privateSourceRevision,workflowIdentity:$workflowIdentity,builderRun:$builderRun,exportManifest:$exportManifest,publicProvenance:$publicProvenance,sbom:true,scanEvidence:{runtimeImages:true,engineHandoff:true,signatures:true}}' \
+            --arg publicSourceCommit "$GITHUB_SHA" \
+            --arg deploymentSnapshotCommit "$DEPLOYMENT_SNAPSHOT_COMMIT" \
+            '{schemaVersion:1,status:"published",releaseTag:$releaseTag,artifactDigest:$artifactDigest,privateSourceRevision:$privateSourceRevision,publicSourceCommit:$publicSourceCommit,deploymentSnapshotCommit:$deploymentSnapshotCommit,workflowIdentity:$workflowIdentity,builderRun:$builderRun,exportManifest:$exportManifest,publicProvenance:$publicProvenance,sbom:true,scanEvidence:{runtimeImages:true,engineHandoff:true,signatures:true}}' \
             > dist/final/public-release-provenance.json
       - name: Generate and publish the release-channel branch
         env:
@@ -1493,18 +1549,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+          DEPLOYMENT_SNAPSHOT_COMMIT: ${{ steps.deployment.outputs.merge_sha }}
         run: |
           set -euo pipefail
           prerelease=false
           [[ "$RELEASE_TAG" =~ -(alpha|beta|rc)\.[0-9]+$ ]] && prerelease=true
+          tag_sha="$(gh api "/repos/${PUBLIC_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" --jq '.object.sha' 2>/dev/null || true)"
+          if [ -n "$tag_sha" ] && [ "$tag_sha" != "$DEPLOYMENT_SNAPSHOT_COMMIT" ]; then
+            echo "immutable public tag points to a different commit: $tag_sha" >&2
+            exit 1
+          fi
+          if [ -z "$tag_sha" ]; then
+            gh api --method POST "/repos/${PUBLIC_REPOSITORY}/git/refs" \
+              -f ref="refs/tags/${RELEASE_TAG}" -f sha="$DEPLOYMENT_SNAPSHOT_COMMIT" >/dev/null
+          fi
           if ! gh release view "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" --target "$GITHUB_SHA" \
-              --title "$RELEASE_TAG" --generate-notes $([ "$prerelease" = true ] && printf '%s' --prerelease)
+            release_args=("$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" --verify-tag --title "$RELEASE_TAG" --generate-notes)
+            [ "$prerelease" = true ] && release_args+=(--prerelease)
+            gh release create "${release_args[@]}"
           else
             gh release edit "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" --draft=false --prerelease="$prerelease"
           fi
           publish_asset() {
-            local file="$1" name="$(basename "$1")" expected actual url tmp
+            local file="$1" name expected actual url tmp asset_json
+            name="$(basename "$file")"
             expected="$(sha256sum "$file" | awk '{print $1}')"
             asset_json="$(gh api "/repos/${PUBLIC_REPOSITORY}/releases/tags/${RELEASE_TAG}" | jq -c --arg name "$name" '.assets[]? | select(.name == $name)' | head -n 1 || true)"
             if [ -n "$asset_json" ]; then
@@ -1523,17 +1591,19 @@ jobs:
           }
           publish_asset dist/final/release.manifest.yaml
           publish_asset dist/final/public-release-provenance.json
-          for file in dist/final/deployment/*.zip; do publish_asset "$file"; done
+          publish_asset "dist/final/deployment/lunafox-${RELEASE_TAG}.zip"
           publish_asset dist/final/deployment-packages.json
       - name: Upload the complete final publication evidence
         uses: actions/upload-artifact@v4
         with:
-          name: public-final-release-${{ github.sha }}
+          name: public-final-release-${{ steps.deployment.outputs.merge_sha }}
           path: |
             dist/final/release.manifest.yaml
             dist/final/public-release-provenance.json
             dist/final/release-verification.json
             dist/final/deployment/*.zip
+            dist/final/deployment-publication.json
+            dist/final/deployment-snapshot/**
             dist/final/deployment-packages.json
             dist/final/runtime-verification/**
             dist/final/runtime-evidence/**
