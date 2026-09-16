@@ -27,6 +27,10 @@ jobs:
     if: github.repository == 'yyhuni/lunafox'
     name: Select Public Validation Scope
     runs-on: ubuntu-22.04
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
     outputs:
       scope: ${{ steps.scope.outputs.scope }}
     steps:
@@ -36,6 +40,8 @@ jobs:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
       - id: scope
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           # Workflow maintenance lands before its source projection. Until the
@@ -111,7 +117,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test scripts/ci/publish-public-deployment.test.mjs
+          node --test scripts/ci/publish-public-deployment.test.mjs scripts/ci/finalize-engine-runtime-platforms.test.mjs
           if [ -f scripts/ci/select-public-validation-scope.test.mjs ]; then
             node --test scripts/ci/select-public-validation-scope.test.mjs
           fi
@@ -216,7 +222,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        lane: [types, lint, test-1, test-2, test-3]
+        lane: [types, lint, test-1, test-2, test-3, test-4, test-5, test-6, test-7, test-8]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -262,7 +268,7 @@ jobs:
               pnpm run check:service-mock-mode
               pnpm run check:foundation-ledger
               ;;
-            test-*) pnpm run test --shard="${LANE#test-}/3" ;;
+            test-*) pnpm run test --shard="${LANE#test-}/8" ;;
             *) echo "unknown frontend lane: $LANE" >&2; exit 1 ;;
           esac
 
@@ -393,14 +399,14 @@ jobs:
           [ "${{ needs.validation-scope.result }}" = success ]
           [ "${{ needs.validate-export.result }}" = success ]
           scope="${{ needs.validation-scope.outputs.scope }}"
-          case "$scope" in full|deployment) ;; *) exit 1 ;; esac
+          case "$scope" in full|deployment|validated-source) ;; *) exit 1 ;; esac
           for result in \
             "${{ needs.validate-frontend.result }}" \
             "${{ needs.validate-public-go.result }}" \
             "${{ needs.validate-public-proto.result }}" \
             "${{ needs.validate-runtime-contexts.result }}"; do
             if [ "$result" != success ]; then
-              if [ "$scope" = deployment ] && [ "$result" = skipped ]; then continue; fi
+              if { [ "$scope" = deployment ] || [ "$scope" = validated-source ]; } && [ "$result" = skipped ]; then continue; fi
               echo "public validation dependency did not pass: $result" >&2
               exit 1
             fi
@@ -510,10 +516,12 @@ jobs:
             echo "public main HEAD is not a generated export merge: $head_subject" >&2
             exit 1
           }
-          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
-          echo "source_revision_digest=$source_revision_digest" >> "$GITHUB_OUTPUT"
-          echo "public_export_manifest_sha256=sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-          echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          {
+            echo "release_tag=$release_tag"
+            echo "source_revision_digest=$source_revision_digest"
+            echo "public_export_manifest_sha256=sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')"
+            echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')"
+          } >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
@@ -536,8 +544,10 @@ jobs:
             docker buildx imagetools inspect "$1" 2>/dev/null | awk '/^Digest:/ {print $2; exit}' || true
           }
           commit_digest="$(resolve_digest "$commit_ref")"
-          echo "commit_digest=$commit_digest" >> "$GITHUB_OUTPUT"
-          echo "commit_ref=$commit_ref" >> "$GITHUB_OUTPUT"
+          {
+            echo "commit_digest=$commit_digest"
+            echo "commit_ref=$commit_ref"
+          } >> "$GITHUB_OUTPUT"
 
       - id: build
         name: Build and publish immutable public Runtime image
@@ -682,10 +692,12 @@ jobs:
             echo "public main HEAD is not the generated export merge: $head_subject" >&2
             exit 1
           }
-          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
-          echo "source_revision_digest=$source_revision_digest" >> "$GITHUB_OUTPUT"
-          echo "public_export_manifest_sha256=sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-          echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          {
+            echo "release_tag=$release_tag"
+            echo "source_revision_digest=$source_revision_digest"
+            echo "public_export_manifest_sha256=sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')"
+            echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')"
+          } >> "$GITHUB_OUTPUT"
       - id: verify
         name: Verify the exact merged Agent tree before creating a Docker context
         env:
@@ -712,9 +724,11 @@ jobs:
             "$BUNDLE_DIR/agent-bundle.json"
           bundle_digest="sha256:$(sha256sum "$BUNDLE_DIR/agent-bundle.json" | awk '{print $1}')"
           tree_manifest_digest="$(jq -er '.publicExportManifestSha256' "$BUNDLE_DIR/agent-bundle.json")"
-          echo "bundle_dir=$BUNDLE_DIR" >> "$GITHUB_OUTPUT"
-          echo "bundle_digest=$bundle_digest" >> "$GITHUB_OUTPUT"
-          echo "tree_manifest_digest=$tree_manifest_digest" >> "$GITHUB_OUTPUT"
+          {
+            echo "bundle_dir=$BUNDLE_DIR"
+            echo "bundle_digest=$bundle_digest"
+            echo "tree_manifest_digest=$tree_manifest_digest"
+          } >> "$GITHUB_OUTPUT"
       - id: build
         name: Build and publish the multi-architecture Agent image
         uses: docker/build-push-action@v6
@@ -819,6 +833,7 @@ jobs:
       contents: read
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
+      platform_matrix: ${{ steps.matrix.outputs.platform_matrix }}
     defaults:
       run:
         shell: bash
@@ -842,10 +857,12 @@ jobs:
           [ "$destination_repository" = "$PUBLIC_REPOSITORY" ] || { echo "unexpected destination repository: $destination_repository" >&2; exit 1; }
           [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "invalid release tag" >&2; exit 1; }
           [[ "$source_revision_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid source revision digest" >&2; exit 1; }
-          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
-          echo "source_revision_digest=$source_revision_digest" >> "$GITHUB_OUTPUT"
-          echo "public_export_manifest_sha256=sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-          echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          {
+            echo "release_tag=$release_tag"
+            echo "source_revision_digest=$source_revision_digest"
+            echo "public_export_manifest_sha256=sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')"
+            echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')"
+          } >> "$GITHUB_OUTPUT"
       - uses: actions/setup-go@v5
         with:
           go-version-file: tools/engine-release/go.mod
@@ -878,6 +895,14 @@ jobs:
           ' dist/public-engine-runtime-discovery/discovery.json \
             | tee dist/public-engine-runtime-discovery/matrix.json
           echo "matrix=$(jq -c . dist/public-engine-runtime-discovery/matrix.json)" >> "$GITHUB_OUTPUT"
+          jq -ce '
+            [.engines[] | .engineId as $engineId |
+              {engineId:$engineId,artifactKey:($engineId | gsub("[^A-Za-z0-9_.-]"; "_")),platform:"linux/amd64",arch:"amd64",runner:"ubuntu-24.04"},
+              {engineId:$engineId,artifactKey:($engineId | gsub("[^A-Za-z0-9_.-]"; "_")),platform:"linux/arm64",arch:"arm64",runner:"ubuntu-24.04-arm"}
+            ] | {include:.}
+          ' dist/public-engine-runtime-discovery/discovery.json \
+            | tee dist/public-engine-runtime-discovery/platform-matrix.json
+          echo "platform_matrix=$(jq -c . dist/public-engine-runtime-discovery/platform-matrix.json)" >> "$GITHUB_OUTPUT"
       - name: Write source-bound Engine release context
         run: |
           set -euo pipefail
@@ -905,19 +930,17 @@ jobs:
     # startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')
     # contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     # needs: public-engine-runtime-discover
-    name: Build Public Engine Runtime Image (${{ matrix.engineId }})
+    name: Build Public Engine Runtime Platform (${{ matrix.engineId }}, ${{ matrix.platform }})
     needs: [publication-intent, public-engine-runtime-discover]
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
     environment: public-engine-release
     permissions:
       contents: read
       packages: write
     strategy:
       fail-fast: true
-      # Previous policy marker: max-parallel: 3. Four remains bounded; this
-      # marker permits the destination-owned workflow to precede its policy.
-      max-parallel: 4
-      matrix: ${{ fromJSON(needs.public-engine-runtime-discover.outputs.matrix) }}
+      max-parallel: 16
+      matrix: ${{ fromJSON(needs.public-engine-runtime-discover.outputs.platform_matrix) }}
     defaults:
       run:
         shell: bash
@@ -950,7 +973,57 @@ jobs:
               ($selected | length) == 1 and
               $artifactKey == ($engineId | gsub("[^A-Za-z0-9_.-]"; "_"))
             ' dist/public-engine-runtime-discovery/discovery.json >/dev/null
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}
+          password: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Build and publish the selected native Engine platform by digest
+        env:
+          ENGINE_RELEASE_ENGINE_ID: ${{ matrix.engineId }}
+          ENGINE_RUNTIME_IMAGE_PLATFORM: ${{ matrix.platform }}
+          ENGINE_IMAGE_TAG: public-${{ github.sha }}
+          ENGINE_PLATFORM_BUILD_OUTPUT: ${{ github.workspace }}/dist/public-engine-runtime-platform/platform-build.json
+          ENGINE_IMAGE_SOURCE: https://github.com/yyhuni/lunafox
+        run: |
+          set -euo pipefail
+          release_tag="$(jq -er '.releaseTag' dist/public-engine-runtime-discovery/release-context.json)"
+          ENGINE_VERSION="${release_tag#v}" \
+            bash scripts/ci/build-engine-runtime-platform.sh
+          test "$(jq -er '.engineId' dist/public-engine-runtime-platform/platform-build.json)" = "${{ matrix.engineId }}"
+          test "$(jq -er '.platform' dist/public-engine-runtime-platform/platform-build.json)" = "${{ matrix.platform }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-engine-runtime-platform-${{ github.sha }}-${{ matrix.artifactKey }}-${{ matrix.arch }}
+          path: dist/public-engine-runtime-platform/**
+          if-no-files-found: error
+
+  public-engine-runtime-finalize:
+    if: needs.publication-intent.outputs.publish == 'true'
+    name: Finalize Public Engine Runtime Image (${{ matrix.engineId }})
+    needs: [publication-intent, public-engine-runtime-discover, public-engine-runtime-build]
+    runs-on: ubuntu-24.04
+    environment: public-engine-release
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      max-parallel: 8
+      matrix: ${{ fromJSON(needs.public-engine-runtime-discover.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: public-engine-runtime-platform-${{ github.sha }}-${{ matrix.artifactKey }}-*
+          path: dist/public-engine-runtime-platforms
+          merge-multiple: false
       - uses: docker/setup-buildx-action@v3
       - uses: oras-project/setup-oras@v1
       - uses: docker/login-action@v3
@@ -963,25 +1036,17 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
-      - name: Build and publish the selected public Engine image once
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/engine-release/go.mod
+          cache-dependency-path: tools/engine-release/go.sum
+      - name: Assemble and verify the exact dual-architecture OCI index
         env:
-          ENGINE_RELEASE_MODE: production
           ENGINE_RELEASE_ENGINE_ID: ${{ matrix.engineId }}
           ENGINE_IMAGE_TAG: public-${{ github.sha }}
-          ENGINE_IMAGE_BUILD_RESULTS: ${{ github.workspace }}/dist/public-engine-runtime-shard/build-results.json
-          ENGINE_RUNTIME_IMAGE_EVIDENCE_ROOT: ${{ github.workspace }}/dist/public-engine-runtime-shard/registry-evidence
-          ENGINE_IMAGE_SOURCE: https://github.com/yyhuni/lunafox
-          ENGINE_REUSE_EXISTING: true
-          DOCKERHUB_NAMESPACE: yyhuni
-          GITHUB_REPOSITORY_OWNER: yyhuni
-          LUNAFOX_CANONICAL_NAMESPACE: yyhuni
-        run: |
-          set -euo pipefail
-          release_tag="$(jq -er '.releaseTag' dist/public-engine-runtime-discovery/release-context.json)"
-          ENGINE_VERSION="${release_tag#v}" \
-            bash scripts/ci/publish-engine-runtime-images.sh
-          test "$(jq -er '.engines | length' dist/public-engine-runtime-shard/build-results.json)" = 1
-          test "$(jq -er '.engines[0].engineId' dist/public-engine-runtime-shard/build-results.json)" = "${{ matrix.engineId }}"
+          ENGINE_PLATFORM_BUILDS_ROOT: ${{ github.workspace }}/dist/public-engine-runtime-platforms
+          ENGINE_RUNTIME_IMAGE_SHARD_ROOT: ${{ github.workspace }}/dist/public-engine-runtime-shard
+        run: bash scripts/ci/finalize-engine-runtime-platforms.sh
       - uses: actions/upload-artifact@v4
         with:
           name: public-engine-runtime-shard-${{ github.sha }}-${{ matrix.artifactKey }}
@@ -996,9 +1061,9 @@ jobs:
     # github.ref == 'refs/heads/main'
     # startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')
     # contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
-    # needs: [public-engine-runtime-discover, public-engine-runtime-build]
+    # needs: [public-engine-runtime-discover, public-engine-runtime-finalize]
     name: Aggregate Public Engine Runtime Image Receipts
-    needs: [publication-intent, public-engine-runtime-discover, public-engine-runtime-build]
+    needs: [publication-intent, public-engine-runtime-discover, public-engine-runtime-finalize]
     runs-on: ubuntu-22.04
     permissions:
       contents: read
@@ -1065,7 +1130,15 @@ jobs:
         with:
           name: public-engine-runtime-build-${{ github.sha }}
           path: dist/public-engine-runtime
-      - uses: sigstore/cosign-installer@v3
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/engine-oci-publish/go.mod
+          cache-dependency-path: |
+            tools/engine-oci-publish/go.sum
+            contracts/go.sum
+      - uses: sigstore/cosign-installer@v4.1.2
+        with:
+          cosign-release: v3.1.3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -1080,6 +1153,7 @@ jobs:
       - name: Keylessly sign and anonymously verify public Engine Runtime Images
         run: |
           set -euo pipefail
+          (cd tools/engine-oci-publish && go build -o "$RUNNER_TEMP/verify-oci-signature" ./cmd/verify-signature)
           context_file=dist/public-engine-runtime/release-context.json
           signer="$(jq -er '.signerIdentity' "$context_file")"
           [[ "$signer" = "https://github.com/yyhuni/lunafox/.github/workflows/public-validate.yml@refs/heads/main" ]] || exit 1
@@ -1098,6 +1172,7 @@ jobs:
               [[ "$ref" = docker.io/* ]] && registry_label=dockerhub
               signature_file="$evidence_root/signatures/${safe_engine_id}-${registry_label}.json"
               cosign sign --yes "$ref"
+              "$RUNNER_TEMP/verify-oci-signature" "$ref"
               DOCKER_CONFIG="$anonymous_config" cosign verify \
                 --certificate-oidc-issuer https://token.actions.githubusercontent.com \
                 --certificate-identity-regexp '^https://github\.com/yyhuni/lunafox/\.github/workflows/public-validate\.yml@refs/heads/main$' \
@@ -1217,7 +1292,15 @@ jobs:
           name: public-engine-package-build-${{ github.sha }}
           path: dist
       - uses: oras-project/setup-oras@v1
-      - uses: sigstore/cosign-installer@v3
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/engine-oci-publish/go.mod
+          cache-dependency-path: |
+            tools/engine-oci-publish/go.sum
+            contracts/go.sum
+      - uses: sigstore/cosign-installer@v4.1.2
+        with:
+          cosign-release: v3.1.3
       - uses: docker/login-action@v3
         with:
           registry: docker.io
@@ -1231,10 +1314,10 @@ jobs:
       - name: Publish, sign, and verify immutable Engine Package v2 artifacts
         run: |
           set -euo pipefail
+          (cd tools/engine-oci-publish && go build -o "$RUNNER_TEMP/verify-oci-signature" ./cmd/verify-signature)
           context_file=dist/public-engine-package-v2/../public-engine-runtime/release-context.json
           [ -f "$context_file" ] || context_file=dist/public-engine-runtime/release-context.json
           release_tag="$(jq -er '.releaseTag' "$context_file")"
-          signer="$(jq -er '.signerIdentity' "$context_file")"
           evidence_root=dist/public-engine-package-evidence
           digest_root=dist/public-engine-package-digests
           mkdir -p "$evidence_root/descriptors" "$evidence_root/manifests" "$evidence_root/signatures" "$evidence_root/records" "$digest_root"
@@ -1261,6 +1344,7 @@ jobs:
               [[ "$ref" = ghcr.io/* ]] && registry_label=ghcr
               signature_file="$evidence_root/signatures/${engine_id//[^A-Za-z0-9_.-]/_}-${registry_label}.json"
               cosign sign --yes "$ref"
+              "$RUNNER_TEMP/verify-oci-signature" "$ref"
               DOCKER_CONFIG="$anonymous_config" cosign verify \
                 --certificate-oidc-issuer https://token.actions.githubusercontent.com \
                 --certificate-identity-regexp '^https://github\.com/yyhuni/lunafox/\.github/workflows/public-validate\.yml@refs/heads/main$' \
@@ -1418,7 +1502,15 @@ jobs:
           name: public-engine-release
           path: dist/final/engine
       - uses: oras-project/setup-oras@v1
-      - uses: sigstore/cosign-installer@v3
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/engine-oci-publish/go.mod
+          cache-dependency-path: |
+            tools/engine-oci-publish/go.sum
+            contracts/go.sum
+      - uses: sigstore/cosign-installer@v4.1.2
+        with:
+          cosign-release: v3.1.3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -1443,10 +1535,12 @@ jobs:
           [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || exit 1
           [[ "$source_revision_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || exit 1
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
-          echo "source_revision_digest=$source_revision_digest" >> "$GITHUB_OUTPUT"
-          echo "export_manifest_sha256=sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-          echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          {
+            echo "release_tag=$release_tag"
+            echo "source_revision_digest=$source_revision_digest"
+            echo "export_manifest_sha256=sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')"
+            echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')"
+          } >> "$GITHUB_OUTPUT"
       - name: Verify every Runtime image evidence record
         env:
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
@@ -1519,7 +1613,6 @@ jobs:
             expected_digest="$(jq -er '.digest' "$evidence")"
             [[ "$expected_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid Runtime digest: $component" >&2; exit 1; }
             ghcr_ref="ghcr.io/yyhuni/lunafox-${component}@${expected_digest}"
-            docker_ref="docker.io/yyhuni/lunafox-${component}@${expected_digest}"
             docker_target="docker.io/yyhuni/lunafox-${component}:${RELEASE_TAG}"
             ghcr_target="ghcr.io/yyhuni/lunafox-${component}:${RELEASE_TAG}"
             docker_existing="$(resolve_digest "$docker_target")"
@@ -1574,6 +1667,7 @@ jobs:
           anonymous_config="$(mktemp -d)"
           trap 'rm -rf "$anonymous_config"' EXIT
           printf '{"auths":{}}\n' > "$anonymous_config/config.json"
+          (cd tools/engine-oci-publish && go build -o "$RUNNER_TEMP/verify-oci-signature" ./cmd/verify-signature)
           mkdir -p dist/final/signatures
           for file in dist/final/runtime-digests/*.env; do
             component="$(awk -F= '$1 == "COMPONENT" {print $2}' "$file")"
@@ -1581,6 +1675,7 @@ jobs:
             for registry in docker.io ghcr.io; do
               ref="${registry}/yyhuni/lunafox-${component}@${digest}"
               cosign sign --yes "$ref"
+              "$RUNNER_TEMP/verify-oci-signature" "$ref"
               DOCKER_CONFIG="$anonymous_config" cosign verify \
                 --certificate-oidc-issuer https://token.actions.githubusercontent.com \
                 --certificate-identity-regexp '^https://github\.com/yyhuni/lunafox/\.github/workflows/public-validate\.yml@refs/heads/main$' \
