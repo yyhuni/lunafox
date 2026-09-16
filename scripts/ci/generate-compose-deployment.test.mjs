@@ -77,6 +77,8 @@ test('one package is reproducible, registry-selectable, and matches its snapshot
    fs.mkdirSync(renderDir, { recursive: true });
    const embedded = renderCompose(renderDir, content['compose.yaml'], content['.env'], 'embedded', {RELEASE_REGISTRY:registry});
    assert.ok(embedded.services.postgres);
+   assert.equal(embedded.services.postgres.image, 'docker.io/library/postgres@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675');
+   assert.ok(embedded.services.postgres.volumes.some(volume => volume.source === 'postgres_data' && volume.target === '/var/lib/postgresql/data'));
    assert.equal(embedded.services.upgrader.network_mode, 'none');
    assert.equal(embedded.services.upgrader.ports, undefined);
    assert.equal(embedded.services.upgrader.command.at(-1),registry);

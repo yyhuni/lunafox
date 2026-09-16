@@ -27,7 +27,9 @@ services:
   postgres:
     profiles:
     - embedded
-    image: docker.io/library/postgres@sha256:54451ecb8ab38c24c3ec123f2fd501303a3a1856a5c66e98cecf2460d5e1e9d7
+    # PostgreSQL 18 changed its data-directory contract. Keep the embedded
+    # database on major 17 while this deployment persists /var/lib/postgresql/data.
+    image: docker.io/library/postgres@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675
     restart: unless-stopped
     depends_on:
       config-init:
