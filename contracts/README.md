@@ -230,3 +230,12 @@ binding boundaries, runtime/engine boundary semantics, proto/JSON payloads, or
 resource-name semantics. The guard checks this README covers every
 Go package under `contracts` and that generated Go files under `contracts/gen`
 carry a generated-code marker.
+
+### OCI signature publication compatibility
+
+Production OCI signatures use Sigstore 0.3 bundles with the canonical
+`application/vnd.dev.sigstore.bundle.v0.3+json` artifact and layer media type.
+The older `+json;version=` spelling must not be used to filter 0.3 referrers:
+Cosign's publisher uses the versioned subtype. Public release checks call the
+same `ocisignature.KeylessVerifier` as installation, in addition to Cosign CLI
+verification, to detect storage-format drift before publishing a release.

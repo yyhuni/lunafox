@@ -56,6 +56,20 @@ test('source squash reuses only the latest exact-head canonical PR validation', 
   };
   const api = async request => structuredClone(values[request]);
   assert.equal(await selectScope({ cwd, eventName: 'push', api, repository: 'yyhuni/lunafox' }), 'validated-source');
+  const original = structuredClone(values);
+  for (const mutate of [
+    v => { v['/pulls/78'].merge_commit_sha = 'f'.repeat(40); },
+    v => { v['/pulls/78'].base.sha = 'f'.repeat(40); },
+    v => { v['/pulls/78'].head.repo.full_name = 'attacker/fork'; },
+    v => { v[`/commits/${reviewed}`].commit.tree.sha = 'f'.repeat(40); },
+    v => { v[`/contents/.github/workflows/public-validate.yml?ref=${reviewed}`].sha = 'f'.repeat(40); },
+    v => { v[runsPath].workflow_runs[0].path = '.github/workflows/other.yml'; },
+    v => { v[runsPath].workflow_runs[0].status = 'in_progress'; },
+    v => { v[runsPath].workflow_runs[0].head_repository.full_name = 'attacker/fork'; },
+  ]) {
+    const altered = structuredClone(original); mutate(altered);
+    assert.equal(await selectScope({ cwd, eventName: 'push', repository: 'yyhuni/lunafox', api: async key => altered[key] }), 'full');
+  }
   values[runsPath].workflow_runs.push({ ...values[runsPath].workflow_runs[0], id: 11, conclusion: 'failure' });
   assert.equal(await selectScope({ cwd, eventName: 'push', api, repository: 'yyhuni/lunafox' }), 'full');
   values['/pulls/78'].head.repo.full_name = 'attacker/fork';

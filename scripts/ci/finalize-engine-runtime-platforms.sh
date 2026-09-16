@@ -66,7 +66,20 @@ done
 # Refuse an existing immutable tag with a different graph, including retries
 # whose platform build returned different provenance bytes.
 docker buildx imagetools create --dry-run "${source_refs[@]}" >"$tmp_dir/proposed-index.json"
-existing_digest="$(oras resolve "$docker_tag" 2>/dev/null || true)"
+resolve_optional_tag() {
+	local tag="$1" output error
+	output="$(mktemp "$tmp_dir/resolve.XXXXXX")"
+	error="$(mktemp "$tmp_dir/resolve-error.XXXXXX")"
+	if oras resolve "$tag" >"$output" 2>"$error"; then
+		cat "$output"
+	elif grep -Eqi 'MANIFEST_UNKNOWN|manifest unknown|not found|404' "$error"; then
+		return 0
+	else
+		cat "$error" >&2
+		return 1
+	fi
+}
+existing_digest="$(resolve_optional_tag "$docker_tag")"
 if [ -n "$existing_digest" ]; then
 	docker buildx imagetools inspect --raw "$docker_tag" >"$tmp_dir/existing-index.json"
 	jq -S . "$tmp_dir/proposed-index.json" >"$tmp_dir/proposed-canonical.json"
@@ -82,7 +95,7 @@ docker buildx imagetools inspect --raw "$docker_tag" >"$docker_raw"
 node "$ROOT_DIR/scripts/ci/verify-runtime-image-index.mjs" --raw-file "$docker_raw" --expected-digest "$index_digest" --expected-platforms linux/amd64,linux/arm64 >/dev/null
 
 docker_ref="docker.io/yyhuni/$repository@$index_digest"
-ghcr_existing="$(oras resolve "$ghcr_tag" 2>/dev/null || true)"
+ghcr_existing="$(resolve_optional_tag "$ghcr_tag")"
 [ -z "$ghcr_existing" ] || [ "$ghcr_existing" = "$index_digest" ] || fail "immutable GHCR index tag already has a different digest"
 oras cp "$docker_ref" "$ghcr_tag"
 ghcr_digest="$(docker buildx imagetools inspect "$ghcr_tag" | awk '/^Digest:/ && digest == "" {digest=$2} END {print digest}')"
@@ -92,11 +105,67 @@ docker buildx imagetools inspect --raw "$ghcr_tag" >"$ghcr_raw"
 node "$ROOT_DIR/scripts/ci/verify-runtime-image-index.mjs" --raw-file "$ghcr_raw" --expected-digest "$index_digest" --expected-platforms linux/amd64,linux/arm64 >/dev/null
 ghcr_ref="ghcr.io/yyhuni/$repository@$index_digest"
 
+normalize_arch() {
+	case "$1" in
+	x86_64) echo amd64 ;;
+	aarch64) echo arm64 ;;
+	*) echo "$1" ;;
+	esac
+}
+
+evict_host_pull_candidates() {
+	local candidate image_id
+	for candidate in "$@"; do
+		[ -n "$candidate" ] || continue
+		image_id="$(docker image inspect --format '{{.Id}}' "$candidate" 2>/dev/null || true)"
+		docker image rm --force "$candidate" >/dev/null 2>&1 || true
+		if [ -n "$image_id" ]; then
+			# Removing the image ID clears sibling repository references and
+			# prevents the second Registry pull from reusing the first pull's
+			# manifest/layer ownership as its evidence.
+			docker image rm --force "$image_id" >/dev/null 2>&1 || true
+		fi
+	done
+	for candidate in "$@"; do
+		[ -n "$candidate" ] || continue
+		if docker image inspect "$candidate" >/dev/null 2>&1; then
+			fail "Runtime Image candidate remained before independent cold pull: $candidate"
+		fi
+	done
+}
+
+verify_host_pull() {
+	local ref="$1" engine_id="$2" label="$3"
+	shift 3
+	local dockerhub_normalized_ref="${ref#docker.io/}"
+	# Docker Engine drops the explicit docker.io/ prefix from RepoDigests for
+	# Docker Hub images. The digest remains immutable; accept that transport
+	# canonicalization while retaining an exact digest comparison.
+	# Pull through the same host Docker daemon Agent uses. A registry index can
+	# be structurally valid while its selected platform is unavailable to that
+	# daemon. Evict both same-digest candidate identities before each pull so
+	# Docker Hub and GHCR independently prove their manifest and blob closure.
+	evict_host_pull_candidates "$ref" "$@"
+	docker pull "$ref" >/dev/null
+	local selected_os selected_arch daemon_os daemon_arch
+	local repo_digests
+	repo_digests="$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$ref")"
+	if ! printf '%s\n' "$repo_digests" | grep -Fqx "$ref" &&
+		! printf '%s\n' "$repo_digests" | grep -Fqx "$dockerhub_normalized_ref"; then
+		fail "$label pull did not retain the requested digest reference for $engine_id: $ref"
+	fi
+	selected_os="$(docker image inspect --format '{{.Os}}' "$ref")"
+	selected_arch="$(normalize_arch "$(docker image inspect --format '{{.Architecture}}' "$ref")")"
+	daemon_os="$(docker info --format '{{.OSType}}')"
+	daemon_arch="$(normalize_arch "$(docker info --format '{{.Architecture}}')")"
+	[ "$selected_os/$selected_arch" = "$daemon_os/$daemon_arch" ] ||
+		fail "$label pull selected $selected_os/$selected_arch for $engine_id, want $daemon_os/$daemon_arch"
+}
+
 # The finalizer's native daemon proves the selected platform and image-local
 # tool closure independently through both Registries.
 for ref in "$docker_ref" "$ghcr_ref"; do
-	docker image rm --force "$docker_ref" "$ghcr_ref" >/dev/null 2>&1 || true
-	docker pull "$ref" >/dev/null
+	verify_host_pull "$ref" "$ENGINE_ID" "finalized Runtime Image" "$docker_ref" "$ghcr_ref"
 	node "$ROOT_DIR/scripts/ci/check-engine-image-tool-inventory.mjs" \
 		--repo-root "$ROOT_DIR" --skip-product-image-source-check --engine-image "$directory=$ref" >/dev/null
 done

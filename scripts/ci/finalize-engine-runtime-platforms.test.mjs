@@ -63,3 +63,52 @@ for (const [name, change] of Object.entries({
     assert.match(f.run(), /exact dual-architecture/);
   });
 }
+
+// Exercise the cold-pull gate with a stateful daemon double: a cached sibling
+// reference must be evicted by image ID before either registry is accepted.
+for (const scenario of ["valid", "wrong-digest", "wrong-platform", "cache-remains"]) {
+  test("finalized native cold pull: " + scenario, t => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "native-cold-pull-"));
+    t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+    const source = fs.readFileSync(script, "utf8");
+    const functions = source.slice(source.indexOf("normalize_arch() {"), source.indexOf("# The finalizer's native daemon"));
+    const harness = `set -euo pipefail
+fail() { echo "$*" >&2; exit 1; }
+${functions}
+cached=1
+pulled=0
+docker() {
+  if [ "$1 $2" = 'image rm' ]; then
+    if [ "\${@: -1}" = 'image-id' ] && [ "$SCENARIO" != cache-remains ]; then cached=0; fi
+    return 0
+  fi
+  if [ "$1" = pull ]; then
+    [ "$cached" = 0 ] || return 90
+    pulled=1; return 0
+  fi
+  if [ "$1" = info ]; then
+    case "$*" in *OSType*) echo linux ;; *) echo x86_64 ;; esac
+    return 0
+  fi
+  if [ "$1 $2" = 'image inspect' ]; then
+    case "$*" in
+      *'{{.Id}}'*) echo image-id ;;
+      *RepoDigests*) if [ "$SCENARIO" = wrong-digest ]; then echo bad; else echo yyhuni/image@sha256:abc; fi ;;
+      *'{{.Os}}'*) echo linux ;;
+      *'{{.Architecture}}'*) if [ "$SCENARIO" = wrong-platform ]; then echo arm64; else echo amd64; fi ;;
+      *) [ "$cached" = 1 ] || [ "$pulled" = 1 ] ;;
+    esac
+    return $?
+  fi
+  return 91
+}
+verify_host_pull docker.io/yyhuni/image@sha256:abc engine test ghcr.io/yyhuni/image@sha256:abc
+`;
+    const result = spawnSync("bash", ["-c", harness], { encoding: "utf8", env: { ...process.env, SCENARIO: scenario } });
+    if (scenario === "valid") assert.equal(result.status, 0, result.stderr);
+    else {
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, scenario === "wrong-digest" ? /requested digest/ : scenario === "wrong-platform" ? /pull selected/ : /remained before independent cold pull/);
+    }
+  });
+}
