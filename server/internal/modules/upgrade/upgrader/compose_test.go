@@ -139,8 +139,25 @@ func TestPublicComposeExecutorUsesFixedLayoutAndPersistsTarget(t *testing.T) {
 	if override.Services["server"].Environment["RELEASE_VERSION"] != manifest.ReleaseVersion {
 		t.Fatalf("persisted Server release version = %q, want %q", override.Services["server"].Environment["RELEASE_VERSION"], manifest.ReleaseVersion)
 	}
-	if _, ok := override.Services["upgrader"]; !ok {
-		t.Fatal("persistent override is missing the upgrader image")
+	for _, service := range []string{"server", "bootstrap"} {
+		if override.Services[service].Environment["ENGINE_INSTALL_REGISTRY"] != "ghcr.io" {
+			t.Fatalf("persisted %s Engine registry = %q, want ghcr.io", service, override.Services[service].Environment["ENGINE_INSTALL_REGISTRY"])
+		}
+	}
+	if override.Services["server"].Environment["RELEASE_REGISTRY"] != "ghcr.io" {
+		t.Fatalf("persisted Server release registry = %q, want ghcr.io", override.Services["server"].Environment["RELEASE_REGISTRY"])
+	}
+	upgrader := override.Services["upgrader"]
+	if !strings.HasPrefix(upgrader.Image, "ghcr.io/") {
+		t.Fatalf("persistent upgrader registry = %q, want ghcr.io", upgrader.Image)
+	}
+	if got := strings.Join(upgrader.Command, " "); got != "--root-dir /deployment --layout public --registry ghcr.io" {
+		t.Fatalf("persisted upgrader command = %q", got)
+	}
+	for name, service := range override.Services {
+		if strings.HasPrefix(service.Image, "docker.io/yyhuni/lunafox-") {
+			t.Fatalf("persistent override mixes Docker Hub image for %s: %s", name, service.Image)
+		}
 	}
 }
 

@@ -49,7 +49,8 @@ require_file() {
 }
 
 for file in README.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTIFACTS.md \
-	.gitignore prepare-deployment.sh docs/public-deployment.md compose.yaml .env.example \
+	.gitignore docs/public-deployment.md .env .env.example compose.yaml engine-inventory.yaml release.manifest.yaml \
+	deploy/compose.template.yaml deploy/.env.example \
 	resources/loki/loki-config.yaml resources/alloy/config.alloy \
 	resources/fingerprints/web_fingerprint_v4.json resources/wordlists/manifest.json \
 	docker/bootstrap/Dockerfile docker/bootstrap/bootstrap.sh docker/bootstrap/cert-init.sh docker/bootstrap/config-init.sh \
@@ -59,19 +60,18 @@ for file in README.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTIFACTS.md \
 	scripts/ci/audit-public-security-scope.mjs scripts/ci/check-public-channel.mjs \
 	scripts/ci/check-public-release-policy.mjs scripts/ci/generate-compose-deployment.mjs \
 	scripts/ci/generate-compose-deployment.test.mjs scripts/ci/verify-public-release.mjs \
-	scripts/ci/prepare-deployment-selftest.sh scripts/ci/verify-compose-cert-init-selftest.sh scripts/ci/verify-compose-config-init-selftest.sh \
+	scripts/ci/verify-compose-cert-init-selftest.sh scripts/ci/verify-compose-config-init-selftest.sh \
 	scripts/ci/verify-public-runtime-source.sh scripts/ci/verify-public-runtime-contexts.mjs; do
 	require_file "$file"
 done
 
-[ -x "$ROOT_DIR/prepare-deployment.sh" ] || fail "source checkout deployment entry must be executable"
-[ -x "$ROOT_DIR/scripts/ci/prepare-deployment-selftest.sh" ] || fail "source checkout deployment self-test must be executable"
-grep -Fqx '/.lunafox-deployment/' "$ROOT_DIR/.gitignore" || fail "prepared deployment directory must be ignored"
+cmp -s "$ROOT_DIR/.env" "$ROOT_DIR/.env.example" || fail ".env and .env.example must start from the same generated configuration"
 
 for required in server server/scripts contracts engine-go proto extensions docker/nginx docker/bootstrap tools/engine-release tools/engine-oci-publish; do
 	[ -d "$ROOT_DIR/$required" ] || fail "public Runtime source closure is missing: $required"
 done
-for forbidden in install.sh start.sh restart.sh stop.sh uninstall.sh scripts/deploy \
+for forbidden in install.sh prepare-deployment.sh start.sh restart.sh stop.sh uninstall.sh scripts/deploy \
+	scripts/ci/prepare-deployment-selftest.sh \
 	tools/installer worker docker/base-tools docker/ci-tools docker/dev-engine-publisher \
 	docker/nginx/ssl scripts/cli scripts/installer scripts/shared checksums.txt; do
 	[ ! -e "$ROOT_DIR/$forbidden" ] || fail "retired, private, or development deployment path is present: $forbidden"
@@ -88,9 +88,12 @@ fi
 
 compose="$ROOT_DIR/compose.yaml"
 render_compose() {
-	local database_mode="$1" db_host="$2" db_port="$3" db_sslmode="$4"
-	local db_user="$5" db_name="$6" db_password="$7" jwt_secret="$8" public_host="$9" public_port="${10}"
-	env \
+	local registry="$1" database_mode="$2" db_host="$3" db_port="$4" db_sslmode="$5"
+	local db_user="$6" db_name="$7" db_password="$8" jwt_secret="$9" public_host="${10}" public_port="${11}"
+	(
+		cd "$ROOT_DIR"
+		env \
+		RELEASE_REGISTRY="$registry" \
 		DATABASE_MODE="$database_mode" \
 		COMPOSE_PROFILES="$database_mode" \
 		DB_HOST="$db_host" \
@@ -100,24 +103,15 @@ render_compose() {
 		DB_USER="$db_user" \
 		DB_PASSWORD="$db_password" \
 		JWT_SECRET="$jwt_secret" \
-		SERVER_IMAGE_REF=docker.io/yyhuni/lunafox-server@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
-		FRONTEND_IMAGE_REF=docker.io/yyhuni/lunafox-frontend@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb \
-		NGINX_IMAGE_REF=docker.io/yyhuni/lunafox-nginx@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc \
-		AGENT_IMAGE_REF=docker.io/yyhuni/lunafox-agent@sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd \
-		BOOTSTRAP_IMAGE_REF=docker.io/yyhuni/lunafox-bootstrap@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee \
-		RELEASE_VERSION=1.2.3 AGENT_VERSION=1.2.3 \
-		RELEASE_CHANNEL=canary \
-		RELEASE_METADATA_BASE_URL=https://raw.githubusercontent.com/yyhuni/lunafox/release-channel \
-		RELEASE_REGISTRY=docker.io \
 		PUBLIC_HOST="$public_host" PUBLIC_PORT="$public_port" \
-		ENGINE_INVENTORY_HOST_PATH=./engine-inventory.yaml ENGINE_INSTALL_REGISTRY=docker.io \
-		LUNAFOX_SHARED_DATA_VOLUME_BIND=lunafox_data:/opt/lunafox:rw \
-		docker compose -f "$compose" config --format json
+		docker compose --env-file .env -f compose.yaml config --format json
+	)
 }
-compose_json="$(render_compose embedded '' '' '' '' '' '' '' localhost 443)" || fail "root Compose configuration with default embedded inputs is invalid"
-custom_compose_json="$(render_compose embedded '' 5432 disable lunafox_app lunafox_custom operator-db-password operator-jwt-secret example.invalid 8443)" || fail "custom embedded Compose configuration is invalid"
-external_default_json="$(render_compose external database.example '' require '' '' operator-db-password '' localhost 443)" || fail "external Compose configuration with database identity defaults is invalid"
-external_custom_json="$(render_compose external 2001:db8::1 6543 verify-full lunafox_remote lunafox_external operator-db-password operator-jwt-secret example.invalid 8443)" || fail "custom external Compose configuration is invalid"
+compose_json="$(render_compose docker.io embedded '' '' '' '' '' '' '' localhost 443)" || fail "root Compose configuration with default embedded inputs is invalid"
+ghcr_compose_json="$(render_compose ghcr.io embedded '' '' '' '' '' '' '' localhost 443)" || fail "root Compose configuration with GHCR inputs is invalid"
+custom_compose_json="$(render_compose docker.io embedded '' 5432 disable lunafox_app lunafox_custom operator-db-password operator-jwt-secret example.invalid 8443)" || fail "custom embedded Compose configuration is invalid"
+external_default_json="$(render_compose docker.io external database.example '' require '' '' operator-db-password '' localhost 443)" || fail "external Compose configuration with database identity defaults is invalid"
+external_custom_json="$(render_compose docker.io external 2001:db8::1 6543 verify-full lunafox_remote lunafox_external operator-db-password operator-jwt-secret example.invalid 8443)" || fail "custom external Compose configuration is invalid"
 
 jq -e '
   (.services | keys | sort) == (["agent","agent-preflight","alloy","bootstrap","cert-init","config-init","frontend","loki","migrate","nginx","postgres","redis","server","upgrader"] | sort) and
@@ -166,6 +160,23 @@ jq -e '
   (.services.server.labels["lunafox.logs.component"] == "server") and
   (.services.agent.labels["lunafox.logs.component"] == "agent")
 ' <<<"$compose_json" >/dev/null || fail "Compose service graph or bounded logging contract is invalid"
+
+assert_registry_closure() {
+	local registry="$1" other_registry="$2" rendered="$3"
+	jq -e --arg registry "$registry" --arg other "$other_registry" '
+	  . as $root |
+	  (.services.server.environment.RELEASE_REGISTRY == $registry) and
+	  (.services.server.environment.ENGINE_INSTALL_REGISTRY == $registry) and
+	  (.services.bootstrap.environment.ENGINE_INSTALL_REGISTRY == $registry) and
+	  (.services.upgrader.command == ["--root-dir","/deployment","--layout","public","--registry",$registry]) and
+	  (["server","frontend","nginx","agent","bootstrap","config-init","migrate","cert-init","upgrader","agent-preflight"] |
+	    all(.[]; $root.services[.].image | startswith($registry + "/yyhuni/lunafox-"))) and
+	  ([.services[].image] | all(contains($other + "/yyhuni/lunafox-") | not))
+	' <<<"$rendered" >/dev/null || fail "Compose mixes first-party registries or does not propagate ${registry}"
+}
+
+assert_registry_closure docker.io ghcr.io "$compose_json"
+assert_registry_closure ghcr.io docker.io "$ghcr_compose_json"
 
 jq -e '
   (.services.postgres.environment.POSTGRES_DB == "lunafox_custom") and
@@ -255,9 +266,16 @@ jq -e '
   | all(test("^docker\\.io/.+@sha256:[a-f0-9]{64}$"))
 ' <<<"$compose_json" >/dev/null || fail "third-party resident images must be digest-qualified"
 
+template="$ROOT_DIR/deploy/compose.template.yaml"
 for key in SERVER_IMAGE_REF FRONTEND_IMAGE_REF NGINX_IMAGE_REF AGENT_IMAGE_REF BOOTSTRAP_IMAGE_REF RELEASE_CHANNEL RELEASE_METADATA_BASE_URL RELEASE_REGISTRY PUBLIC_HOST PUBLIC_PORT; do
-	grep -Fq "\${${key}:?${key} is required}" "$compose" || fail "source Compose must require ${key}"
+	grep -Fq "\${${key}:?${key} is required}" "$template" || fail "deployment template must require ${key}"
 done
+for key in PUBLIC_HOST PUBLIC_PORT; do
+	grep -Fq "\${${key}:?${key} is required}" "$compose" || fail "public root Compose must require ${key}"
+done
+if rg -q '\$\{(?:SERVER|FRONTEND|NGINX|AGENT|BOOTSTRAP)_IMAGE_REF' "$compose"; then
+	fail "public root Compose must contain resolved Runtime image identities"
+fi
 if rg -n 'lunafox-loki|LOKI_PLUGIN_REF|logging:[[:space:]]*loki' "$compose" "$ROOT_DIR/.env.example" "$ROOT_DIR/resources/alloy/config.alloy"; then
 	fail "direct Compose deployment must not require the Loki Docker plugin"
 fi
@@ -272,6 +290,7 @@ for marker in \
 done
 
 grep -Eq '^PUBLIC_HOST=localhost$' "$ROOT_DIR/.env.example" || fail ".env.example must provide the local public host"
+grep -Eq '^RELEASE_REGISTRY=docker\.io$' "$ROOT_DIR/.env.example" || fail ".env.example must default to Docker Hub"
 grep -Eq '^PUBLIC_PORT=443$' "$ROOT_DIR/.env.example" || fail ".env.example must provide the HTTPS public port"
 grep -Eq '^DATABASE_MODE=embedded$' "$ROOT_DIR/.env.example" || fail ".env.example must default to embedded database mode"
 expected_compose_profile="COMPOSE_PROFILES=\${DATABASE_MODE:-embedded}"
@@ -293,7 +312,6 @@ fi
 bash "$ROOT_DIR/scripts/ci/verify-public-runtime-source.sh" --root-dir "$ROOT_DIR"
 node "$ROOT_DIR/scripts/ci/verify-public-runtime-contexts.mjs" --root-dir "$ROOT_DIR"
 node --test "$ROOT_DIR/scripts/ci/generate-compose-deployment.test.mjs"
-bash "$ROOT_DIR/scripts/ci/prepare-deployment-selftest.sh"
 bash "$ROOT_DIR/scripts/ci/verify-compose-cert-init-selftest.sh"
 bash "$ROOT_DIR/scripts/ci/verify-compose-config-init-selftest.sh"
 
@@ -303,10 +321,13 @@ grep -Fq 'docker compose down' "$ROOT_DIR/docs/public-deployment.md" || fail "de
 grep -Fq 'docker compose exec server resetadmin' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must retain administrator reset"
 grep -Fq 'Docker Compose 2.24.0' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must state the minimum Compose version"
 grep -Fq 'DATABASE_MODE=external' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must describe external PostgreSQL mode"
-grep -Fq './prepare-deployment.sh' "$ROOT_DIR/README.md" || fail "public README must document source checkout preparation"
-grep -Fq 'release template' "$ROOT_DIR/README.md" || fail "public README must identify the root Compose release template"
-grep -Fq './prepare-deployment.sh' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must document source checkout preparation"
-grep -Fq 'does not make it directly deployable' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must reject direct use of the source template"
+grep -Fq 'git clone https://github.com/yyhuni/lunafox.git' "$ROOT_DIR/README.md" || fail "public README must document direct main checkout installation"
+grep -Fq 'lunafox-<version>.zip' "$ROOT_DIR/README.md" || fail "public README must document the unified release ZIP"
+grep -Fq 'RELEASE_REGISTRY=docker.io' "$ROOT_DIR/README.md" "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must state the Docker Hub default"
+grep -Fq 'RELEASE_REGISTRY=ghcr.io' "$ROOT_DIR/README.md" "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must explain explicit GHCR selection"
+if rg -n 'prepare-deployment\.sh|-dockerhub\.zip|-ghcr\.zip|--registry (dockerhub|ghcr)' "$ROOT_DIR/README.md" "$ROOT_DIR/docs/public-deployment.md"; then
+	fail "deployment docs contain a retired installation path"
+fi
 
 workflow="$ROOT_DIR/.github/workflows/public-validate.yml"
 for marker in 'Build immutable Docker Compose deployment packages' 'generate-compose-deployment.mjs' 'dist/final/deployment/*.zip' 'deployment-packages.json'; do

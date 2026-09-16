@@ -21,8 +21,8 @@ const (
 	InventoryModeDevelopment InventoryMode = "development"
 	// InventoryModeProduction requires the two release Registry locations.
 	InventoryModeProduction InventoryMode = "production"
-	// InventoryModeSelectedRegistry accepts one explicitly selected canonical
-	// public Registry. It deliberately has no transport fallback candidate.
+	// InventoryModeSelectedRegistry validates both canonical public locations,
+	// then exposes only the explicitly selected Registry to the installer.
 	InventoryModeSelectedRegistry InventoryMode = "selected-registry"
 	// InventoryModeCloudflareAccelerated requires CF, Docker Hub, then GHCR
 	// transport candidates for one verified first-party release artifact.
@@ -100,7 +100,7 @@ func (mode InventoryMode) requiredCandidateCount() (int, error) {
 	case InventoryModeProduction:
 		return 2, nil
 	case InventoryModeSelectedRegistry:
-		return 1, nil
+		return 2, nil
 	case InventoryModeCloudflareAccelerated:
 		return 3, nil
 	default:
@@ -163,12 +163,24 @@ func validateInventoryDocumentForRegistry(document inventoryDocument, mode Inven
 			}
 		}
 		if mode == InventoryModeSelectedRegistry {
-			registry := candidates.References[0].Registry
-			if registry != "docker.io" && registry != "ghcr.io" {
-				return nil, fmt.Errorf("enginePackages[%d].refs selected Registry must be docker.io or ghcr.io", index)
+			if selectedRegistry == "" {
+				return nil, fmt.Errorf("selected Engine Package Registry is required")
 			}
-			if selectedRegistry != "" && registry != selectedRegistry {
-				return nil, fmt.Errorf("enginePackages[%d].refs selected Registry is %q, want %q", index, registry, selectedRegistry)
+			dockerReference := candidates.References[0]
+			ghcrReference := candidates.References[1]
+			if dockerReference.Registry != "docker.io" || ghcrReference.Registry != "ghcr.io" {
+				return nil, fmt.Errorf("enginePackages[%d].refs must order docker.io then ghcr.io", index)
+			}
+			if dockerReference.Repository != ghcrReference.Repository {
+				return nil, fmt.Errorf("enginePackages[%d].refs must preserve repository identity", index)
+			}
+			selectedReference := dockerReference
+			if selectedRegistry == "ghcr.io" {
+				selectedReference = ghcrReference
+			}
+			candidates = ociartifact.ArtifactCandidates{
+				References:             []ociartifact.EnginePackageArtifactReference{selectedReference},
+				ArtifactManifestDigest: selectedReference.ArtifactManifestDigest,
 			}
 		}
 
