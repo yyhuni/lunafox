@@ -328,10 +328,11 @@ services:
     - ${PUBLIC_PORT:?PUBLIC_PORT is required}:443
     volumes:
     - lunafox_ssl:/etc/nginx/ssl:ro
+    # Nginx listens on IPv4; localhost may resolve to an unbound ::1.
     healthcheck:
       test:
       - CMD-SHELL
-      - wget -q --no-check-certificate -O /dev/null https://localhost/healthChecks/current
+      - wget -q --no-check-certificate -O /dev/null https://127.0.0.1/healthChecks/current
       interval: 10s
       timeout: 5s
       retries: 30

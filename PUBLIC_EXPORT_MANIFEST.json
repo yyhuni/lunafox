@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:b3b23d559f5e094b1a3a1994fc49cb8ff600ecde59c4f2cecbb21e3fade0af35",
-  "releaseTag": "v0.0.1-alpha.130",
+  "sourceRevisionDigest": "sha256:bff00bd3a09f2dc862f596791682ebc50d610a2d747eefc96e7060ae5d46d6de",
+  "releaseTag": "v0.0.1-alpha.131",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -47,7 +47,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "a6a845d387667d33cb81d9b988cdb939ca3142e8679af54ca40459b316e13630"
+      "sha256": "5aa47f76d17a473e42828c4d1d56a17d5e2e37f00b32e1b5ab32cbd042a587ce"
     },
     {
       "path": "README.md",
@@ -57,49 +57,49 @@
       "sha256": "6ce3352c5259ee5b6fc54a524e3aa95ef14cab242a0c8ab52bef5b4ecb79b434"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.130/agent-bundle.json",
+      "path": "agent/bin/v0.0.1-alpha.131/agent-bundle.json",
       "type": "file",
       "mode": "0644",
       "size": 2229,
-      "sha256": "c56ec1e2b81dbe8ce18bd96584a1eb50c2accce1b43fa19ded273b7b84b178e8"
+      "sha256": "267c29238d137c0adb5636c447a3478f2172cecc2795c17220a32f1ece54c9f0"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.130/agent-bundle.sha256",
+      "path": "agent/bin/v0.0.1-alpha.131/agent-bundle.sha256",
       "type": "file",
       "mode": "0644",
       "size": 402,
       "sha256": "2946b4b80ed17b9ad513b6e9d76def9ad4221fa15e8d475767b1a6fda9cbe25a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.130/agent-bundle.sigstore.json",
+      "path": "agent/bin/v0.0.1-alpha.131/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "e34362e252dcc1275fbb31b87743ade761aabd473a1dd9e5713ae15953f3aae8"
+      "sha256": "1b5cbebf4080c91fc4be3536f80afd61af9b41088f472eddf07a0f02056e19d7"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.130/lunafox-agent-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.131/lunafox-agent-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 23904517,
       "sha256": "6fdddcaae9958a99cb081d92ad3d8d11f32db16b5ff300d645a4693408d1df38"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.130/lunafox-agent-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.131/lunafox-agent-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 22504270,
       "sha256": "569449dc80b8e7a27954488d656198adc68d47eb6384903ad1f3ea4c4271467d"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.130/lunafox-engine-mount-preflight-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.131/lunafox-engine-mount-preflight-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 20000987,
       "sha256": "2b12a49b754a09e98377c96105c2975a5b48bf6b063eae0b2062ea271e0add2a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.130/lunafox-engine-mount-preflight-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.131/lunafox-engine-mount-preflight-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 18804436,
@@ -956,8 +956,8 @@
       "path": "deploy/compose.template.yaml",
       "type": "file",
       "mode": "0644",
-      "size": 15301,
-      "sha256": "c1921308414aca52225db84c87138bf551e6f46927fee6c19ee9b062f091c79b"
+      "size": 15371,
+      "sha256": "56f1b698898c38e2fb433a3264c79cac9236510775dc3c28b913c6783dd9db2a"
     },
     {
       "path": "docker/agent/Dockerfile",
@@ -1012,8 +1012,8 @@
       "path": "docs/public-deployment.md",
       "type": "file",
       "mode": "0644",
-      "size": 14400,
-      "sha256": "e914f5791bc59e3c5323364b8dbf07c63fe48779b78c897f0ba6987d56fff5c5"
+      "size": 14522,
+      "sha256": "c9878851b1a83d17cdf1ea274d05436ad29b284ffb6f4e0d6f880facf7b876cb"
     },
     {
       "path": "engine-go/README.md",
@@ -16790,8 +16790,8 @@
       "path": "scripts/ci/generate-compose-deployment.test.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 10150,
-      "sha256": "685f949abea50b30e89687cd5d6ea19a19bdee1c88c741188d6a9c0f213b670d"
+      "size": 10334,
+      "sha256": "240161895b2100c92ce727a7ac9cf31fa3d2110b597b721e944208eb4b4e8119"
     },
     {
       "path": "scripts/ci/generate-public-channel.mjs",
