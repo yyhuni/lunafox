@@ -1068,6 +1068,12 @@ function assertPublicWorkflow(workflow, policy) {
       fail("public signatures must use pinned Sigstore bundle publication and the anonymous installation verifier");
     }
   }
+  for (const name of ["publish-runtime-images", "publish-agent-image", ...PUBLIC_ENGINE_JOBS]) {
+    const block = jobBlock(executableWorkflow, name);
+    for (const condition of ["!cancelled()", "!contains(needs.*.result, 'failure')", "!contains(needs.*.result, 'cancelled')", "!contains(needs.*.result, 'skipped')"]) {
+      if (!block.includes(condition)) fail("public publication must explicitly accept successful direct dependencies after validation reuse");
+    }
+  }
   const publicCosignIdentityRegexp = "'^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$'";
   const overescapedPublicCosignIdentityRegexp = "'^https://github\\\\.com/yyhuni/lunafox/\\\\.github/workflows/public-validate\\\\.yml@refs/heads/main$'";
   if (workflow.includes(overescapedPublicCosignIdentityRegexp) || countOccurrences(workflow, publicCosignIdentityRegexp) !== 4) {
