@@ -730,9 +730,10 @@ function assertPublicWorkflow(workflow, policy) {
   const protoValidation = jobBlock(workflow, "validate-public-proto");
   const contextValidation = jobBlock(workflow, "validate-runtime-contexts");
   const aggregate = jobBlock(workflow, "public-validation");
+  const publicationIntent = jobBlock(workflow, "publication-intent");
   const publication = jobBlock(workflow, "publish-runtime-images");
   const agentPublication = jobBlock(workflow, "publish-agent-image");
-  const validationBlocks = [validation, goValidation, protoValidation, contextValidation, aggregate];
+  const validationBlocks = [validation, goValidation, protoValidation, contextValidation, aggregate, publicationIntent];
   validationBlocks.forEach((block, index) => {
     const label = `public validation job ${index + 1}`;
     assertSecretlessBlock(block, label);
@@ -801,16 +802,36 @@ function assertPublicWorkflow(workflow, policy) {
       !aggregate.includes("exit 1")) {
     fail("public workflow must expose an explicit failing aggregate Public Projection Validation check");
   }
-  if (!publication.includes("github.event_name == 'push'") || !publication.includes("github.ref == 'refs/heads/main'")) {
-    fail("public Runtime publication must run only for canonical main pushes");
+  for (const required of [
+    "if: github.repository == 'yyhuni/lunafox'",
+    "name: Resolve Public Release Intent",
+    "fetch-depth: 2",
+    "publish: ${{ steps.intent.outputs.publish }}",
+    'echo "publish=false" >> "$GITHUB_OUTPUT"',
+    '[ "$GITHUB_EVENT_NAME" = push ] || exit 0',
+    '[ "$GITHUB_REF" = refs/heads/main ] || exit 0',
+    "git rev-parse --verify HEAD^",
+    'release_tag="$(jq -er \'.releaseTag\' PUBLIC_PROVENANCE.json)"',
+    "merge_subject_pattern=",
+    "squash_subject_pattern=",
+    '[[ "$head_subject" =~ $merge_subject_pattern || "$head_subject" =~ $squash_subject_pattern ]] || exit 0',
+    "git diff-tree --no-commit-id --name-only -r HEAD^ HEAD -- PUBLIC_EXPORT_MANIFEST.json",
+    "grep -Fxq PUBLIC_EXPORT_MANIFEST.json || exit 0",
+    'echo "publish=true" >> "$GITHUB_OUTPUT"',
+  ]) {
+    if (!publicationIntent.includes(required)) fail(`public publication-intent gate is missing: ${required}`);
   }
-  if (!agentPublication.includes("github.event_name == 'push'") || !agentPublication.includes("github.ref == 'refs/heads/main'")) {
-    fail("public Agent publication must run only for canonical main pushes");
+  const executableWorkflow = workflow
+    .split("\n")
+    .filter((line) => !line.trimStart().startsWith("#"))
+    .join("\n");
+  if (/github\.event\.head_commit\.(?:message|modified)/.test(executableWorkflow)) {
+    fail("public publication intent must not depend on incomplete push payload commit metadata");
   }
   for (const [name, block] of [["public Runtime publication", publication], ["public Agent publication", agentPublication]]) {
-    if (!block.includes("startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')") ||
-        !block.includes("contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')")) {
-      fail(`${name} must ignore deployment-only public main pushes`);
+    if (!block.includes("if: needs.publication-intent.outputs.publish == 'true'") ||
+        !block.includes("needs: [publication-intent, public-validation]")) {
+      fail(`${name} must consume the checked-out publication intent`);
     }
   }
   if (!publication.includes("squash_subject_pattern") ||
@@ -831,7 +852,7 @@ function assertPublicWorkflow(workflow, policy) {
     fail("public Runtime publication must not overwrite mutable tags or recreate an existing digest");
   }
   for (const required of [
-    "needs: public-validation",
+    "needs: [publication-intent, public-validation]",
     "contents: read",
     "packages: write",
     "id-token: write",
@@ -853,7 +874,7 @@ function assertPublicWorkflow(workflow, policy) {
     fail("public Runtime publication must not receive Docker Hub credentials or private build contexts");
   }
   for (const required of [
-    "needs: public-validation",
+    "needs: [publication-intent, public-validation]",
     "contents: read",
     "packages: write",
     "id-token: write",
@@ -922,12 +943,9 @@ function assertPublicWorkflow(workflow, policy) {
     `          path: ${engineDiscoveryArtifactDirectory}`,
   ].join("\n");
   for (const [name, block] of PUBLIC_ENGINE_JOBS.map((name) => [name, jobBlock(workflow, name)])) {
-    if (!block.includes("github.repository == 'yyhuni/lunafox'") ||
-        !block.includes("github.event_name == 'push'") ||
-        !block.includes("github.ref == 'refs/heads/main'") ||
-        !block.includes("startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')") ||
-        !block.includes("contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')")) {
-      fail(`${name} must run only on protected public main pushes`);
+    if (!block.includes("if: needs.publication-intent.outputs.publish == 'true'") ||
+        !/needs:\s*\[[^\]]*publication-intent[^\]]*\]/.test(block)) {
+      fail(`${name} must consume the checked-out publication intent`);
     }
     assertGitHubHostedRunner(block, name);
   }
@@ -936,7 +954,7 @@ function assertPublicWorkflow(workflow, policy) {
       fail(`${name} must not contain private Agent/release authority`);
     }
   }
-  if (!engineDiscovery.includes("needs: public-validation") ||
+  if (!engineDiscovery.includes("needs: [publication-intent, public-validation]") ||
       !engineDiscovery.includes("outputs:") ||
       !engineDiscovery.includes("steps.matrix.outputs.matrix") ||
       !engineDiscovery.includes("-command discover") ||
@@ -948,7 +966,7 @@ function assertPublicWorkflow(workflow, policy) {
       engineDiscovery.includes("environment: public-engine-release")) {
     fail("public Engine Runtime discovery must source-bind and emit the dynamic matrix with its canonical artifact layout and without publication authority");
   }
-  if (!engineBuild.includes("needs: public-engine-runtime-discover") ||
+  if (!engineBuild.includes("needs: [publication-intent, public-engine-runtime-discover]") ||
       !engineBuild.includes("strategy:") ||
       !engineBuild.includes("fail-fast: true") ||
       !engineBuild.includes("max-parallel: 3") ||
@@ -969,7 +987,7 @@ function assertPublicWorkflow(workflow, policy) {
   if (/continue-on-error\s*:/.test(engineBuild) || /fail-fast\s*:\s*false/.test(engineBuild)) {
     fail("public Engine Runtime matrix must fail fast without optional children");
   }
-  if (!engineAggregate.includes("needs: [public-engine-runtime-discover, public-engine-runtime-build]") ||
+  if (!engineAggregate.includes("needs: [publication-intent, public-engine-runtime-discover, public-engine-runtime-build]") ||
       !engineAggregate.includes("aggregate-engine-runtime-image-shards.sh") ||
       !engineAggregate.includes("ENGINE_RUNTIME_IMAGE_DISCOVERY") ||
       !engineAggregate.includes("ENGINE_RUNTIME_IMAGE_SHARDS_ROOT") ||
@@ -990,7 +1008,7 @@ function assertPublicWorkflow(workflow, policy) {
   if (workflow.includes(overescapedPublicCosignIdentityRegexp) || countOccurrences(workflow, publicCosignIdentityRegexp) !== 4) {
     fail("public workflow must pass the exact single-escaped main workflow identity to cosign");
   }
-  if (!engineSign.includes("needs: public-engine-runtime-aggregate") ||
+  if (!engineSign.includes("needs: [publication-intent, public-engine-runtime-aggregate]") ||
       !engineSign.includes("cosign sign --yes") ||
       !engineSign.includes("cosign verify") ||
       !engineSign.includes("public-validate\\.yml@refs/heads/main") ||
@@ -1006,7 +1024,7 @@ function assertPublicWorkflow(workflow, policy) {
       runtimeReceipt.includes("push-to-registry:")) {
     fail("public Engine Runtime release receipt must use its file subject without registry delivery");
   }
-  if (!packageBuild.includes("needs: public-engine-runtime-sign") ||
+  if (!packageBuild.includes("needs: [publication-intent, public-engine-runtime-sign]") ||
       !packageBuild.includes("-command build-packages") ||
       !packageBuild.includes("-build-results") ||
       !packageBuild.includes("-mode production") ||
@@ -1016,7 +1034,7 @@ function assertPublicWorkflow(workflow, policy) {
       packageBuild.includes("check-engine-release-contract.mjs")) {
     fail("public Engine Package build must derive and validate packages with the public Go release tool");
   }
-  if (!packagePublish.includes("needs: public-engine-package-build") ||
+  if (!packagePublish.includes("needs: [publication-intent, public-engine-package-build]") ||
       !packagePublish.includes("oras cp") ||
       !packagePublish.includes("cosign sign --yes") ||
       !packagePublish.includes("cosign verify") ||
@@ -1032,7 +1050,7 @@ function assertPublicWorkflow(workflow, policy) {
   if (!packagePublish.includes(packageEvidenceRecordProjection)) {
     fail("public Engine Package lane must retain registry verification evidence in aggregate records");
   }
-  if (!engineManifest.includes("needs: public-engine-package-publish") ||
+  if (!engineManifest.includes("needs: [publication-intent, public-engine-package-publish]") ||
       !engineManifest.includes("engine-release-manifest.json") ||
       !engineManifest.includes("verify-public-engine-release.mjs") ||
       !engineManifest.includes("name: public-engine-release")) {
@@ -1051,7 +1069,8 @@ function assertPublicWorkflow(workflow, policy) {
     "DEPLOYMENT_SNAPSHOT_COMMIT",
     "gh release create",
     "--verify-tag",
-    "contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')",
+    "needs.publication-intent.outputs.publish == 'true'",
+    "needs: [publication-intent, publish-runtime-images, publish-agent-image, public-engine-release-manifest]",
   ]) {
     if (!finalRelease.includes(required)) fail(`public final release is missing deployment finalization: ${required}`);
   }
