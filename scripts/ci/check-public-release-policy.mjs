@@ -154,6 +154,11 @@ const REQUIRED_PUBLIC_UPGRADER_PATHS = [
   "server/internal/modules/upgrade/upgrader/daemon.go",
   "server/internal/modules/upgrade/upgrader/journal.go",
 ];
+const REQUIRED_PUBLIC_CHECKOUT_DEPLOYMENT_PATHS = [
+  ".gitignore",
+  "prepare-deployment.sh",
+  "scripts/ci/prepare-deployment-selftest.sh",
+];
 
 function fail(message) { throw new Error(message); }
 
@@ -629,7 +634,7 @@ function assertPrivateWorkflow(workflow, policy, publisherSource = "", autoMerge
     "actions/setup-node@v4", "actions/setup-go@v5", "sigstore/cosign-installer@v3",
     "go -C agent test ./... -count=1", "scripts/ci/export-public-repository.mjs", "scripts/ci/build-agent-binaries.sh",
     "verify-agent-binary-bundle.mjs", "cosign verify-blob", "agent-bundle.sigstore.json", "id-token: write",
-    "agent/bin/$RELEASE_TAG", "public-export.tar.gz", "actions/upload-artifact@v4",
+    "agent/bin/$RELEASE_TAG", "tar --exclude='./.git/hooks'", "public-export.tar.gz", "actions/upload-artifact@v4",
   ]) if (!preparation.includes(required)) fail(`prepare-release-inputs is missing ${required}`);
   if (/publish-agent-bundle-asset|agent-input-|staging|private-runner-preflight|tests-gate|docker buildx build/.test(preparation)) fail("prepare-release-inputs must not retain staging Asset or duplicate image/preflight work");
   if (!publisher.includes("needs: [prepare-release-inputs, validate-tag, public-release-authorization, private-trusted-runner-boundary]") || !publisher.includes("actions/download-artifact@v4") || !publisher.includes("publish-public-export.mjs")) fail("public export PR must consume the complete prepared tree artifact");
@@ -1023,6 +1028,9 @@ function assertExportPolicy(exportPolicy) {
   for (const required of ["scripts/ci/check-public-release-policy.mjs", "scripts/ci/verify-public-main-merge.mjs"]) {
     if (!exact.has(required)) fail(`export policy does not allow ${required}`);
   }
+  for (const required of REQUIRED_PUBLIC_CHECKOUT_DEPLOYMENT_PATHS) {
+    if (!exact.has(required)) fail(`export policy does not allow checkout deployment input: ${required}`);
+  }
   const denyPatterns = (exportPolicy.denylist ?? []).map((pattern) => new RegExp(String(pattern)));
   // Every exact allowlisted path must survive the denylist as well.  Keeping
   // this invariant here prevents a newly exported verifier or workflow from
@@ -1092,6 +1100,11 @@ function assertExportPolicy(exportPolicy) {
     }
   }
   const requiredPaths = new Set(exportPolicy.requiredPaths ?? []);
+  for (const required of REQUIRED_PUBLIC_CHECKOUT_DEPLOYMENT_PATHS) {
+    if (!requiredPaths.has(required)) {
+      fail(`export policy is missing required checkout deployment path: ${required}`);
+    }
+  }
   for (const required of REQUIRED_PUBLIC_UPGRADER_PATHS) {
     if (!requiredPaths.has(required)) {
       fail(`export policy is missing required public upgrader path: ${required}`);

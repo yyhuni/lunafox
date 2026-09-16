@@ -49,7 +49,7 @@ require_file() {
 }
 
 for file in README.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTIFACTS.md \
-	docs/public-deployment.md compose.yaml .env.example \
+	.gitignore prepare-deployment.sh docs/public-deployment.md compose.yaml .env.example \
 	resources/loki/loki-config.yaml resources/alloy/config.alloy \
 	resources/fingerprints/web_fingerprint_v4.json resources/wordlists/manifest.json \
 	docker/bootstrap/Dockerfile docker/bootstrap/bootstrap.sh docker/bootstrap/cert-init.sh docker/bootstrap/config-init.sh \
@@ -59,10 +59,14 @@ for file in README.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTIFACTS.md \
 	scripts/ci/audit-public-security-scope.mjs scripts/ci/check-public-channel.mjs \
 	scripts/ci/check-public-release-policy.mjs scripts/ci/generate-compose-deployment.mjs \
 	scripts/ci/generate-compose-deployment.test.mjs scripts/ci/verify-public-release.mjs \
-	scripts/ci/verify-compose-cert-init-selftest.sh scripts/ci/verify-compose-config-init-selftest.sh \
+	scripts/ci/prepare-deployment-selftest.sh scripts/ci/verify-compose-cert-init-selftest.sh scripts/ci/verify-compose-config-init-selftest.sh \
 	scripts/ci/verify-public-runtime-source.sh scripts/ci/verify-public-runtime-contexts.mjs; do
 	require_file "$file"
 done
+
+[ -x "$ROOT_DIR/prepare-deployment.sh" ] || fail "source checkout deployment entry must be executable"
+[ -x "$ROOT_DIR/scripts/ci/prepare-deployment-selftest.sh" ] || fail "source checkout deployment self-test must be executable"
+grep -Fqx '/.lunafox-deployment/' "$ROOT_DIR/.gitignore" || fail "prepared deployment directory must be ignored"
 
 for required in server server/scripts contracts engine-go proto extensions docker/nginx docker/bootstrap tools/engine-release tools/engine-oci-publish; do
 	[ -d "$ROOT_DIR/$required" ] || fail "public Runtime source closure is missing: $required"
@@ -289,6 +293,7 @@ fi
 bash "$ROOT_DIR/scripts/ci/verify-public-runtime-source.sh" --root-dir "$ROOT_DIR"
 node "$ROOT_DIR/scripts/ci/verify-public-runtime-contexts.mjs" --root-dir "$ROOT_DIR"
 node --test "$ROOT_DIR/scripts/ci/generate-compose-deployment.test.mjs"
+bash "$ROOT_DIR/scripts/ci/prepare-deployment-selftest.sh"
 bash "$ROOT_DIR/scripts/ci/verify-compose-cert-init-selftest.sh"
 bash "$ROOT_DIR/scripts/ci/verify-compose-config-init-selftest.sh"
 
@@ -298,6 +303,10 @@ grep -Fq 'docker compose down' "$ROOT_DIR/docs/public-deployment.md" || fail "de
 grep -Fq 'docker compose exec server resetadmin' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must retain administrator reset"
 grep -Fq 'Docker Compose 2.24.0' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must state the minimum Compose version"
 grep -Fq 'DATABASE_MODE=external' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must describe external PostgreSQL mode"
+grep -Fq './prepare-deployment.sh' "$ROOT_DIR/README.md" || fail "public README must document source checkout preparation"
+grep -Fq 'release template' "$ROOT_DIR/README.md" || fail "public README must identify the root Compose release template"
+grep -Fq './prepare-deployment.sh' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must document source checkout preparation"
+grep -Fq 'does not make it directly deployable' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must reject direct use of the source template"
 
 workflow="$ROOT_DIR/.github/workflows/public-validate.yml"
 for marker in 'Build immutable Docker Compose deployment packages' 'generate-compose-deployment.mjs' 'dist/final/deployment/*.zip' 'deployment-packages.json'; do

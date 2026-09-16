@@ -655,6 +655,9 @@ function writeAtomic(filePath, content, mode = 0o644) {
 
 function createFreshHistory(outputRoot, gitPolicy, tag) {
   runGit(outputRoot, ["init", "--initial-branch=main"], { stdio: "ignore" });
+  // The release workflow archives this repository immediately after export.
+  // Disable detached auto-GC so Git cannot rewrite object files during tar.
+  runGit(outputRoot, ["config", "gc.auto", "0"]);
   runGit(outputRoot, ["config", "user.name", gitPolicy.publicAuthorName]);
   runGit(outputRoot, ["config", "user.email", gitPolicy.publicAuthorEmail]);
   runGit(outputRoot, ["add", "--all"]);

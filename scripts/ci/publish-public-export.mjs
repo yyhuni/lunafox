@@ -106,6 +106,10 @@ function walkFiles(root) {
 }
 
 function validateExportTree(exportDir) {
+  const gitDirectory = path.join(exportDir, ".git");
+  if (!fs.existsSync(gitDirectory) || !fs.statSync(gitDirectory).isDirectory()) {
+    fail("export is missing its validated Git history: .git");
+  }
   const checker = path.join(SCRIPT_DIR, "check-public-export.mjs");
   try {
     execFileSync(process.execPath, [checker, "--repo-root", exportDir, "--require-agent-bundle"], { stdio: "pipe" });
@@ -577,4 +581,5 @@ export {
   rejectFallbackCredentials,
   removeTemporaryRepository,
   verifyDestinationInstallation,
+  validateExportTree,
 };
