@@ -116,8 +116,13 @@ func validateOneBuildResult(source EngineSource, result RuntimeImageBuildResult,
 	if result.Repository != source.Repository {
 		return fmt.Errorf("image build result %q repository %q does not match engineId-derived %q", result.EngineID, result.Repository, source.Repository)
 	}
-	if result.BuildCount != 1 {
-		return fmt.Errorf("image build result %q must record exactly one image build, got %d", result.EngineID, result.BuildCount)
+	expectedBuildCount := 1
+	if mode == buildModeProduction && result.BuildCount == 2 {
+		// Native release jobs build each architecture once before assembling the index.
+		expectedBuildCount = 2
+	}
+	if result.BuildCount != expectedBuildCount {
+		return fmt.Errorf("image build result %q must record exactly %d architecture build(s), got %d", result.EngineID, expectedBuildCount, result.BuildCount)
 	}
 	if !sha256DigestPattern.MatchString(result.IndexDigest) {
 		return fmt.Errorf("image build result %q indexDigest must be a canonical sha256 digest", result.EngineID)

@@ -204,7 +204,7 @@ func TestDiscoverEngineSourcesRejectsSourceImageIdentityFields(t *testing.T) {
 	}
 }
 
-func TestValidateBuildResultsRequiresOneBuildAndValidPlatforms(t *testing.T) {
+func TestValidateBuildResultsRequiresModeSpecificBuildCountAndValidPlatforms(t *testing.T) {
 	root := writeEngineSourceTree(t, true)
 	discovery, err := discoverEngineSources(root)
 	if err != nil {
@@ -215,7 +215,7 @@ func TestValidateBuildResultsRequiresOneBuildAndValidPlatforms(t *testing.T) {
 		t.Fatalf("validateBuildResults() error = %v", err)
 	}
 	results.Engines[0].BuildCount = 2
-	if err := validateBuildResults(discovery, results, buildModeDevelopment); err == nil || !strings.Contains(err.Error(), "exactly one image build") {
+	if err := validateBuildResults(discovery, results, buildModeDevelopment); err == nil || !strings.Contains(err.Error(), "exactly 1 architecture build") {
 		t.Fatalf("expected duplicate build rejection, got %v", err)
 	}
 	results = validDevelopmentResults(discovery)
@@ -247,7 +247,7 @@ func TestValidateBuildResultsProductionCopyPreservesDigestAndOrder(t *testing.T)
 		Dockerfile:     discovery.Engines[0].Dockerfile,
 		BuildContext:   ".",
 		Repository:     discovery.Engines[0].Repository,
-		BuildCount:     1,
+		BuildCount:     2,
 		IndexDigest:    releaseTestDigestA,
 		IndexMediaType: ociImageIndexMediaType,
 		Platforms:      []string{"linux/amd64", "linux/arm64"},
