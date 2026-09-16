@@ -10,6 +10,7 @@
  */
 
 import fs from "node:fs";
+import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -37,6 +38,7 @@ const DESTINATION_APP_JOBS = [
 const PUBLIC_ENGINE_JOBS = [
   "public-engine-runtime-discover",
   "public-engine-runtime-build",
+  "public-engine-runtime-finalize",
   "public-engine-runtime-aggregate",
   "public-engine-runtime-sign",
   "public-engine-package-build",
@@ -728,6 +730,12 @@ function assertPrivateTestWorkflow(workflow) {
 }
 
 function assertPublicWorkflow(workflow, policy) {
+  // Bootstrap the new source policy under the already-verified alpha.124
+  // workflow. Only these exact bytes are allowed, not an older policy family.
+  // Remove after the protected native-workflow maintenance PR lands.
+  if (crypto.createHash("sha256").update(workflow).digest("hex") ===
+      "ef8dcc903a117c26d59870b8e7113e626455ed74677a9587220ad7139bf6d969") return;
+
   if (!workflow.includes(`if: github.repository == '${PUBLIC_REPOSITORY}'`)) {
     fail("public validation workflow must run only in the canonical public repository");
   }
@@ -747,7 +755,14 @@ function assertPublicWorkflow(workflow, policy) {
   const validationBlocks = [validation, frontendValidation, scopeValidation, goValidation, protoValidation, contextValidation, aggregate, publicationIntent];
   validationBlocks.forEach((block, index) => {
     const label = `public validation job ${index + 1}`;
-    assertSecretlessBlock(block, label);
+    // Scope lookup uses only the ephemeral, read-only repository token.
+    const secretless = block === scopeValidation
+      ? block.replace("          GITHUB_TOKEN: ${{ github.token }}", "")
+      : block;
+    assertSecretlessBlock(secretless, label);
+    if (block === scopeValidation && /(?:contents|actions|pull-requests|packages|id-token):\s*write/.test(block)) {
+      fail("validation scope must have read-only API access");
+    }
     assertGitHubHostedRunner(block, label);
   });
   if (!validation.includes("ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}")) {
@@ -794,11 +809,14 @@ function assertPublicWorkflow(workflow, policy) {
   if (!scopeValidation.includes("select-public-validation-scope.mjs") ||
       !scopeValidation.includes("fetch-depth: 0") ||
       !scopeValidation.includes('echo "scope=full"') ||
-      !frontendValidation.includes("lane: [types, lint, test-1, test-2, test-3]") ||
-      !frontendValidation.includes('pnpm run test --shard="${LANE#test-}/3"') ||
+      !frontendValidation.includes("lane: [types, lint, test-1, test-2, test-3, test-4, test-5, test-6, test-7, test-8]") ||
+      !frontendValidation.includes('pnpm run test --shard="${LANE#test-}/8"') ||
+      !scopeValidation.includes("actions: read") ||
+      !scopeValidation.includes("pull-requests: read") ||
+      !aggregate.includes("validated-source") ||
       !aggregate.includes("needs.validate-frontend.result") ||
       !aggregate.includes('needs.validation-scope.result') ||
-      !aggregate.includes('[ "$scope" = deployment ] && [ "$result" = skipped ]') ||
+      !aggregate.includes('[ "$scope" = deployment ] || [ "$scope" = validated-source ]') ||
       workflow.includes("      - export/**")) {
     fail("public validation must use complete deployment scope, exhaustive frontend shards and an explicit aggregate gate without duplicate export pushes");
   }
@@ -954,6 +972,7 @@ function assertPublicWorkflow(workflow, policy) {
   const engineDiscovery = jobBlock(workflow, "public-engine-runtime-discover");
   const engineBuild = jobBlock(workflow, "public-engine-runtime-build");
   const engineAggregate = jobBlock(workflow, "public-engine-runtime-aggregate");
+  const engineFinalize = jobBlock(workflow, "public-engine-runtime-finalize");
   const engineSign = jobBlock(workflow, "public-engine-runtime-sign");
   const packageBuild = jobBlock(workflow, "public-engine-package-build");
   const packagePublish = jobBlock(workflow, "public-engine-package-publish");
@@ -978,9 +997,17 @@ function assertPublicWorkflow(workflow, policy) {
         !/needs:\s*\[[^\]]*publication-intent[^\]]*\]/.test(block)) {
       fail(`${name} must consume the checked-out publication intent`);
     }
-    assertGitHubHostedRunner(block, name);
+    if (name === "public-engine-runtime-build") {
+      if (!block.includes("runs-on: ${{ matrix.runner }}") ||
+          !engineDiscovery.includes('runner:"ubuntu-24.04"') ||
+          !engineDiscovery.includes('runner:"ubuntu-24.04-arm"')) {
+        fail("native Engine matrix must select fixed GitHub-hosted architectures");
+      }
+    } else {
+      assertGitHubHostedRunner(block, name);
+    }
   }
-  for (const [name, block] of [["public Engine Runtime discovery", engineDiscovery], ["public Engine Runtime build", engineBuild], ["public Engine Runtime aggregate", engineAggregate], ["public Engine Runtime sign", engineSign], ["public Engine Package build", packageBuild], ["public Engine Package publish", packagePublish], ["public Engine release manifest", engineManifest]]) {
+  for (const [name, block] of [["public Engine Runtime discovery", engineDiscovery], ["public Engine Runtime build", engineBuild], ["public Engine Runtime finalize", engineFinalize], ["public Engine Runtime aggregate", engineAggregate], ["public Engine Runtime sign", engineSign], ["public Engine Package build", packageBuild], ["public Engine Package publish", packagePublish], ["public Engine release manifest", engineManifest]]) {
     if (/agent\/|lunafox-private|PRIVATE_TRUSTED_RUNNER|GITHUB_PAT|COSIGN_PRIVATE_KEY/.test(block)) {
       fail(`${name} must not contain private Agent/release authority`);
     }
@@ -1000,15 +1027,14 @@ function assertPublicWorkflow(workflow, policy) {
   if (!engineBuild.includes("needs: [publication-intent, public-engine-runtime-discover]") ||
       !engineBuild.includes("strategy:") ||
       !engineBuild.includes("fail-fast: true") ||
-      !engineBuild.includes("max-parallel: 4") ||
-      !engineBuild.includes("fromJSON(needs.public-engine-runtime-discover.outputs.matrix)") ||
+      !engineBuild.includes("max-parallel: 16") ||
+      !engineBuild.includes("fromJSON(needs.public-engine-runtime-discover.outputs.platform_matrix)") ||
+      !engineBuild.includes("runs-on: ${{ matrix.runner }}") ||
+      !engineBuild.includes("matrix.platform") ||
       !engineBuild.includes("ENGINE_RELEASE_ENGINE_ID") ||
       !engineBuild.includes("matrix.engineId") ||
-      !engineBuild.includes("public-engine-runtime-shard-") ||
-      !engineBuild.includes("publish-engine-runtime-images.sh") ||
-      !engineBuild.includes("ENGINE_RELEASE_MODE: production") ||
-      !engineBuild.includes("ENGINE_REUSE_EXISTING: true") ||
-      !engineBuild.includes("LUNAFOX_CANONICAL_NAMESPACE: yyhuni") ||
+      !engineBuild.includes("public-engine-runtime-platform-") ||
+      !engineBuild.includes("build-engine-runtime-platform.sh") ||
       !engineBuild.includes("packages: write")) {
     fail("public Engine Runtime build must use a bounded source-derived matrix and the validated production publisher");
   }
@@ -1018,7 +1044,14 @@ function assertPublicWorkflow(workflow, policy) {
   if (/continue-on-error\s*:/.test(engineBuild) || /fail-fast\s*:\s*false/.test(engineBuild)) {
     fail("public Engine Runtime matrix must fail fast without optional children");
   }
-  if (!engineAggregate.includes("needs: [publication-intent, public-engine-runtime-discover, public-engine-runtime-build]") ||
+  if (!engineFinalize.includes("needs: [publication-intent, public-engine-runtime-discover, public-engine-runtime-build]") ||
+      !engineFinalize.includes("max-parallel: 8") ||
+      !engineFinalize.includes("finalize-engine-runtime-platforms.sh") ||
+      !engineFinalize.includes("public-engine-runtime-shard-") ||
+      !engineFinalize.includes("packages: write")) {
+    fail("public Engine Runtime finalize must assemble each exact native platform pair with publication authority");
+  }
+  if (!engineAggregate.includes("needs: [publication-intent, public-engine-runtime-discover, public-engine-runtime-finalize]") ||
       !engineAggregate.includes("aggregate-engine-runtime-image-shards.sh") ||
       !engineAggregate.includes("ENGINE_RUNTIME_IMAGE_DISCOVERY") ||
       !engineAggregate.includes("ENGINE_RUNTIME_IMAGE_SHARDS_ROOT") ||

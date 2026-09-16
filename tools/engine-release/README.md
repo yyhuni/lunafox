@@ -95,7 +95,7 @@ receipt that matches the current validated Dockerfile/build-context/repository
 inputs. It never invents a fallback ref.
 
 The protected public workflow dynamically discovers matrix membership, bounds
-multi-platform publication to three fail-fast children, and runs
+native platform publication to sixteen fail-fast children, and runs
 `scripts/ci/aggregate-engine-runtime-image-shards.sh` before signing. The
 aggregate compares its discovery artifact to the checked-out source, requires
 one valid receipt and matching Registry evidence shard for every discovered
@@ -145,3 +145,24 @@ bash scripts/ci/aggregate-engine-runtime-image-shards-selftest.sh
 make verify-engine-release-contract-selftest
 node scripts/ci/check-engine-release-contract.mjs
 ```
+
+### Native production platforms
+
+The public workflow uses `build-engine-runtime-platform.sh` on Ubuntu 24.04
+AMD64 and ARM64 hosts. Each discovered Engine builds once per architecture,
+publishes by digest and passes image-local inventory checks on that native host.
+Caches are separated by architecture; the previous multi-platform cache is a
+read-only warm-start input. No platform job writes the final public tag.
+
+`finalize-engine-runtime-platforms.sh` requires exactly two receipts bound to
+the same release identity and checked-out discovery. It validates each raw
+platform index, assembles the multi-platform index, copies that graph to GHCR,
+verifies both raw index digests, and produces a receipt with `buildCount: 2`.
+Existing immutable tags must retain their graph. The older single BuildKit
+invocation receipt (`buildCount: 1`) remains readable for existing releases
+and the local publisher; neither count permits a per-Registry rebuild.
+The aggregate, signing, anonymous Registry checks and package gates remain
+mandatory. Missing or duplicated platforms fail before publication.
+
+Focused regression: `node --test scripts/ci/finalize-engine-runtime-platforms.test.mjs`.
+Official build pattern: https://docs.docker.com/build/ci/github-actions/multi-platform/

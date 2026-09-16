@@ -193,7 +193,7 @@ func directoryProductionImageResults(source EngineSource) RuntimeImageBuildResul
 			Dockerfile:     source.Dockerfile,
 			BuildContext:   source.BuildContext,
 			Repository:     source.Repository,
-			BuildCount:     1,
+			BuildCount:     2,
 			IndexDigest:    releaseTestDigestA,
 			IndexMediaType: ociImageIndexMediaType,
 			Platforms:      []string{"linux/amd64", "linux/arm64"},

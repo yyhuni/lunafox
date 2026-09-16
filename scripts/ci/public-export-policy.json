@@ -193,6 +193,9 @@
       "frontend/vercel.json",
       "frontend/vitest.config.ts",
       "frontend/vitest.setup.ts",
+      "scripts/ci/build-engine-runtime-platform.sh",
+      "scripts/ci/finalize-engine-runtime-platforms.sh",
+      "scripts/ci/finalize-engine-runtime-platforms.test.mjs",
       "scripts/ci/select-public-validation-scope.mjs",
       "scripts/ci/select-public-validation-scope.test.mjs"
     ],
@@ -418,7 +421,7 @@
     "^server/bin(?:/|$)",
     "^server/\\.air\\.toml$",
     "^scripts/(?:dev|cli|installer|shared)(?:/|$)",
-    "^scripts/ci/(?!select-public-validation-scope(?:\\.test)?\\.mjs$|audit-public-security-scope\\.mjs$|check-public-channel\\.mjs$|check-public-export\\.mjs$|export-public-repository\\.mjs$|generate-public-channel\\.mjs$|generate-compose-deployment(?:\\.test)?\\.mjs$|generate-release-manifest\\.sh$|prepare-legacy-public-deployment(?:\\.test)?\\.mjs$|publish-public-deployment(?:\\.test)?\\.mjs$|publish-public-export\\.mjs$|public-export-policy\\.json$|public-release-policy\\.json$|check-public-release-policy\\.mjs$|check-migration-baseline-policy\\.mjs$|check-engine-api-major-policy\\.mjs$|verify-compose-(?:cert|config)-init-selftest\\.sh$|verify-public-deployment\\.sh$|verify-public-release\\.mjs$|verify-public-main-merge\\.mjs$|verify-public-runtime-contexts\\.mjs$|verify-public-runtime-image-evidence(?:-selftest)?\\.mjs$|verify-agent-binary-bundle\\.mjs$|verify-public-agent-wrapper(?:-selftest)?\\.mjs$|verify-public-runtime-source\\.sh$|verify-public-engine-release(?:-selftest)?\\.mjs$|publish-engine-runtime-images\\.sh$|aggregate-engine-runtime-image-shards\\.sh$|check-engine-image-tool-inventory\\.mjs$|verify-distribution-registry-v2\\.mjs$|verify-runtime-image-index\\.mjs$).+",
+    "^scripts/ci/(?!finalize-engine-runtime-platforms\\.test\\.mjs$|(?:build-engine-runtime-platform|finalize-engine-runtime-platforms)\\.sh$|select-public-validation-scope(?:\\.test)?\\.mjs$|audit-public-security-scope\\.mjs$|check-public-channel\\.mjs$|check-public-export\\.mjs$|export-public-repository\\.mjs$|generate-public-channel\\.mjs$|generate-compose-deployment(?:\\.test)?\\.mjs$|generate-release-manifest\\.sh$|prepare-legacy-public-deployment(?:\\.test)?\\.mjs$|publish-public-deployment(?:\\.test)?\\.mjs$|publish-public-export\\.mjs$|public-export-policy\\.json$|public-release-policy\\.json$|check-public-release-policy\\.mjs$|check-migration-baseline-policy\\.mjs$|check-engine-api-major-policy\\.mjs$|verify-compose-(?:cert|config)-init-selftest\\.sh$|verify-public-deployment\\.sh$|verify-public-release\\.mjs$|verify-public-main-merge\\.mjs$|verify-public-runtime-contexts\\.mjs$|verify-public-runtime-image-evidence(?:-selftest)?\\.mjs$|verify-agent-binary-bundle\\.mjs$|verify-public-agent-wrapper(?:-selftest)?\\.mjs$|verify-public-runtime-source\\.sh$|verify-public-engine-release(?:-selftest)?\\.mjs$|publish-engine-runtime-images\\.sh$|aggregate-engine-runtime-image-shards\\.sh$|check-engine-image-tool-inventory\\.mjs$|verify-distribution-registry-v2\\.mjs$|verify-runtime-image-index\\.mjs$).+",
     "^(?:openspec|\\.agents|\\.claude|docs/research|docs/plans)(?:/|$)",
     "^(?:release\\.manifest(?:\\.yaml\\.example)|release\\.manifest\\.final\\.yaml\\.example|checksums\\.txt)$",
     "(?:^|/)(?:lunafox-installer|installer-cache)(?:[-_/]|$)",
