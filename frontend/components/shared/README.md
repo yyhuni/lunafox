@@ -18,6 +18,7 @@ This directory owns reusable production UI patterns above raw `components/ui` pr
 | Search input with an inline search icon | `SearchInput` from `@/components/shared/search-input` | Page-local absolute icon + `Input` bundles |
 | Captured HTTP response evidence | `ResponseEvidencePanel` from `@/components/shared/response-evidence` | Duplicated response Tabs and scroll regions in route consumers |
 | Fixed-height metric strip with loading numeric values | shared metrics primitives such as `StatMetricRow` | Wrapping the whole strip in a page-wide handoff when only the value slot is pending |
+| Scoped list/detail or detail-tab content motion | `RouteContentTransition` from `@/components/shared/navigation/route-content-transition` | Full-page slides, shared-element morphs, or route-local reveal wrappers |
 
 ## Overlay Ownership
 

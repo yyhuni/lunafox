@@ -76,12 +76,18 @@ describe("layout contract", () => {
 
   it("uses one feature-local shell structure for loading and resolved scan chrome", () => {
     expect(source).toContain('from "./scan-history-detail-shell-layout"')
+    expect(source).toContain(
+      'from "@/components/shared/navigation/route-content-transition"'
+    )
     expect(source).toContain("ScanHistoryDetailShellLoadingState")
     expect(source).toContain("ScanHistoryDetailShellLayout")
     expect(source).toContain("ScanHistoryDetailShellHeader")
     expect(source).toContain("ScanHistoryDetailShellPrimaryTabs")
     expect(source).toContain("ScanHistoryDetailShellSecondaryTabs")
     expect(source).toContain("ScanHistoryDetailShellContent")
+    expect(source).toContain(
+      '<RouteContentTransition className="flex min-h-0 min-w-0 flex-1 flex-col">'
+    )
     expect(source).not.toContain("DetailPageShellSkeleton")
     expect(shellLayoutSource).toContain("export function ScanHistoryDetailShellLayout")
     expect(shellLayoutSource).toContain("export function ScanHistoryDetailShellLoadingState")

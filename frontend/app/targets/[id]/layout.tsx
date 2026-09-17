@@ -5,6 +5,7 @@ import Link from "next/link";
 import { LayoutOverview, Package, Settings, HelpCircle, semanticIcons } from "@/components/icons";
 import { AppErrorState } from "@/components/shared/feedback/app-error-state";
 import { DetailShellReadyProvider, useDetailShellReadySignal } from "@/components/shared/loading/detail-shell-ready-context";
+import { RouteContentTransition } from "@/components/shared/navigation/route-content-transition";
 import { DirectoriesViewRouteFallback } from "@/components/directories/directories-view-sections";
 import { EndpointsDetailViewRouteFallback } from "@/components/endpoints/endpoints-detail-view-sections";
 import { HiddenReadinessRouteBoundary } from "@/components/shared/loading/hidden-readiness-route-boundary";
@@ -343,7 +344,11 @@ export default function TargetLayout({ children, }: {
         </TargetDetailShellSecondaryTabs>)}
 
       {/* Sub-page content */}
-      <TargetDetailShellContent>{children}</TargetDetailShellContent>
+      <TargetDetailShellContent>
+        <RouteContentTransition className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {children}
+        </RouteContentTransition>
+      </TargetDetailShellContent>
     </TargetDetailShellLayout>);
     return (<HiddenReadinessRouteBoundary key={`target-detail-shell-${id}`} owner="target-detail-shell" layer="workspace" intent="data" transitionMode="replace" skeleton={renderShellLoadingState()} className={TARGET_DETAIL_SHELL_HANDOFF_CLASS} skeletonClassName={TARGET_DETAIL_SHELL_HANDOFF_CLASS} contentClassName={TARGET_DETAIL_SHELL_HANDOFF_CLASS}>
         {({ onReady, deferInitialSkeleton }) => {

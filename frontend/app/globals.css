@@ -714,6 +714,10 @@ html[data-theme-sync] *::after {
   animation: loading-content-reveal var(--motion-duration-reveal) var(--motion-ease-standard) both;
 }
 
+.route-content-transition {
+  animation: route-content-transition var(--motion-duration-reveal) var(--motion-ease-standard) both;
+}
+
 .loading-content-reveal:has([data-boot-handoff-pending="true"]) {
   visibility: hidden;
 }
@@ -829,6 +833,15 @@ html[data-theme-sync] *::after {
   }
 }
 
+@keyframes route-content-transition {
+  from {
+    opacity: 0.68;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes loading-handoff-skeleton-exit {
   from {
     opacity: 1;
@@ -891,6 +904,7 @@ html[data-theme-sync] *::after {
   .loading-handoff__skeleton,
   .loading-handoff__content,
   .loading-content-reveal,
+  .route-content-transition,
   .auth-shader-fallback,
   .app-warmup-loader__pulse,
   [data-workflow-composition-canvas] .react-flow__edge.animated .react-flow__edge-path {

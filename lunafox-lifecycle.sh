@@ -35,6 +35,9 @@ LUNAFOX_MIN_COMPOSE_VERSION=2.24.0
 LUNAFOX_INSTALL_TIMEOUT_SECONDS=900
 LUNAFOX_DAILY_TIMEOUT_SECONDS=300
 LUNAFOX_POLL_SECONDS=5
+# Waiting must stay visible: the heartbeat is independent of the poll cadence so
+# readiness probing never has to slow down to keep the user informed.
+LUNAFOX_HEARTBEAT_SECONDS=15
 LUNAFOX_PROBE_TIMEOUT_SECONDS=20
 
 # The one-shot tasks, healthy core services, and healthcheck-free resident
@@ -54,7 +57,6 @@ SERVER_IMAGE_REF FRONTEND_IMAGE_REF NGINX_IMAGE_REF AGENT_IMAGE_REF BOOTSTRAP_IM
 ENGINE_INSTALL_REGISTRY ENGINE_INVENTORY_HOST_PATH LUNAFOX_SHARED_DATA_VOLUME_BIND \
 COMPOSE_FILE COMPOSE_PROJECT_NAME COMPOSE_ENV_FILES COMPOSE_PATH_SEPARATOR"
 
-ACTION=""
 READY_TIMEOUT=""
 UNINSTALL_PURGE=0
 UNINSTALL_CONFIRM=0
@@ -86,6 +88,46 @@ fail() {
 usage_failure() {
 	printf 'LunaFox: %s\n' "$*" >&2
 	exit 2
+}
+
+# Purpose wording for progress and success lines. Anything unmapped keeps its
+# raw name, so a new service is never hidden behind a vague phrase.
+service_purpose() {
+	case "$1" in
+	config-init | cert-init | agent-preflight | migrate | bootstrap) printf 'first-start tasks' ;;
+	postgres) printf 'the database' ;;
+	redis) printf 'the cache' ;;
+	loki) printf 'the log store' ;;
+	alloy) printf 'the log collector' ;;
+	server) printf 'the Server' ;;
+	frontend) printf 'the web interface' ;;
+	nginx) printf 'the HTTPS endpoint' ;;
+	agent) printf 'the resident Agent' ;;
+	upgrader) printf 'the upgrader' ;;
+	*) printf '%s' "$1" ;;
+	esac
+}
+
+format_duration() {
+	local total="$1"
+	if [ "$total" -ge 60 ]; then
+		printf '%dm %ds' "$((total / 60))" "$((total % 60))"
+	else
+		printf '%ds' "$total"
+	fi
+}
+
+# Prints when the message changes or the heartbeat interval elapses, so a long
+# wait keeps reporting without flooding the terminal every poll.
+LAST_PROGRESS_MESSAGE=""
+LAST_PROGRESS_ELAPSED=0
+progress_heartbeat() {
+	local message="$1" elapsed="$2"
+	if [ "$message" != "$LAST_PROGRESS_MESSAGE" ] || [ "$((elapsed - LAST_PROGRESS_ELAPSED))" -ge "$LUNAFOX_HEARTBEAT_SECONDS" ]; then
+		progress "$message (${elapsed}s elapsed)"
+		LAST_PROGRESS_MESSAGE="$message"
+		LAST_PROGRESS_ELAPSED="$elapsed"
+	fi
 }
 
 # ------------------------------------------------------------- utilities ----
@@ -223,7 +265,8 @@ require_docker_socket() {
 # A disposable named volume proves the daemon supports the named volumes the
 # graph declares without pulling an image or touching deployment state.
 require_named_volume_capability() {
-	local probe="lunafox-preflight-$PPID-$(date +%s)"
+	local probe
+	probe="lunafox-preflight-$PPID-$(date +%s)"
 	docker volume create "$probe" >/dev/null 2>&1 ||
 		fail "the Docker daemon cannot create named volumes; the deployment cannot persist data"
 	docker volume rm "$probe" >/dev/null 2>&1 ||
@@ -245,7 +288,10 @@ env_value() {
 	[ -f "$LUNAFOX_ENV_PATH" ] || return 1
 	while IFS= read -r line || [ -n "$line" ]; do
 		case "$line" in
-		"$key"=*) printf '%s' "${line#"$key"=}" ; return 0 ;;
+		"$key"=*)
+			printf '%s' "${line#"$key"=}"
+			return 0
+			;;
 		esac
 	done <"$LUNAFOX_ENV_PATH"
 	return 1
@@ -390,7 +436,11 @@ lock_holder_summary() {
 elapsed_since() {
 	local then="$1" now
 	now="$(date +%s)"
-	case "$then" in *[!0-9]*) printf 'an unknown time'; return 0 ;; esac
+	case "$then" in *[!0-9]*)
+		printf 'an unknown time'
+		return 0
+		;;
+	esac
 	if [ "$now" -ge "$then" ]; then
 		printf '%s' "$((now - then))"
 	else
@@ -660,7 +710,6 @@ SVC_CORE_STATE=""
 SVC_AUX_STATE=""
 PROBE_FAILURE=""
 PROBE_WAITING=""
-PROBE_TABLE=""
 PROBE_CORE_PENDING=""
 PROBE_AUX_PENDING=""
 PROBE_ONESHOT_PENDING=""
@@ -749,7 +798,6 @@ collect_probe() {
 	PROBE_UNKNOWN_PENDING=""
 
 	table="$(lf_compose ps -a --format '{{.Service}}|{{.State}}|{{.Health}}|{{.ExitCode}}' 2>/dev/null || true)"
-	PROBE_TABLE="$table"
 	if [ -z "$table" ]; then
 		# No row at all means nothing was created here, which the callers report
 		# as not-installed or stopped rather than as a failed start.
@@ -795,13 +843,13 @@ EOF
 
 	if [ -z "$PROBE_FAILURE" ] && [ -z "$PROBE_WAITING" ]; then
 		if [ -n "$PROBE_ONESHOT_PENDING" ]; then
-			PROBE_WAITING="the $PROBE_ONESHOT_PENDING task has not finished"
+			PROBE_WAITING="waiting for first-start tasks to finish ($PROBE_ONESHOT_PENDING)"
 		elif [ -n "$PROBE_CORE_PENDING" ]; then
-			PROBE_WAITING="the $PROBE_CORE_PENDING service is still starting"
+			PROBE_WAITING="waiting for $(service_purpose "$PROBE_CORE_PENDING") to become healthy"
 		elif [ -n "$PROBE_AUX_PENDING" ]; then
-			PROBE_WAITING="the $PROBE_AUX_PENDING service is still starting"
+			PROBE_WAITING="waiting for $(service_purpose "$PROBE_AUX_PENDING") to start"
 		elif [ -n "$PROBE_UNKNOWN_PENDING" ]; then
-			PROBE_WAITING="the $PROBE_UNKNOWN_PENDING service is still starting"
+			PROBE_WAITING="waiting for $(service_purpose "$PROBE_UNKNOWN_PENDING") to become healthy"
 		fi
 	fi
 	return 0
@@ -854,8 +902,14 @@ probe_public_https() {
 	esac
 	code="$(curl -kfLsS --max-time "$LUNAFOX_PROBE_TIMEOUT_SECONDS" -o /dev/null -w '%{http_code}' "$address/" 2>/dev/null || true)"
 	case "$code" in
-	2*) printf 'reachable at %s' "$address" ; return 0 ;;
-	*) printf 'the login page is not reachable at %s' "$address" ; return 1 ;;
+	2*)
+		printf 'reachable at %s' "$address"
+		return 0
+		;;
+	*)
+		printf 'the login page is not reachable at %s' "$address"
+		return 1
+		;;
 	esac
 }
 
@@ -889,12 +943,15 @@ LunaFox:   recheck with: ./status.sh"
 # appears, or the window expires. Nothing is stopped or rolled back on failure.
 wait_for_ready() {
 	local started="$SECONDS" last_signature="" signature agent_note https_note
-	local announced="" elapsed
+	local elapsed
+	READY_ELAPSED=0
+	LAST_PROGRESS_MESSAGE=""
+	LAST_PROGRESS_ELAPSED=0
 	while :; do
+		elapsed=$((SECONDS - started))
 		collect_probe
 		if [ -n "$PROBE_FAILURE" ]; then
 			report_ready_failure "$PROBE_FAILURE" "waiting for the deployment to become ready" "./logs.sh"
-			return 1
 		fi
 		if [ -z "$PROBE_WAITING" ]; then
 			if agent_note="$(probe_agent_ready)"; then
@@ -904,26 +961,24 @@ wait_for_ready() {
 					# twice with an unchanged restart count.
 					signature="$(container_restart_signature)"
 					if [ -n "$last_signature" ] && [ "$signature" = "$last_signature" ]; then
+						READY_ELAPSED="$elapsed"
 						return 0
 					fi
 					last_signature="$signature"
-					progress "all readiness checks passed; confirming that no service is restarting"
+					progress_heartbeat "final check: every service stays up" "$elapsed"
 				else
-					progress "$https_note"
+					progress_heartbeat "$https_note" "$elapsed"
 				fi
 			else
-				progress "waiting for the resident Agent: $agent_note"
+				progress_heartbeat "waiting for the resident Agent: $agent_note" "$elapsed"
 			fi
 		fi
-		elapsed=$((SECONDS - started))
 		if [ "$elapsed" -ge "$READY_TIMEOUT" ]; then
 			report_ready_failure "the deployment did not become ready within $READY_TIMEOUT seconds" \
 				"${PROBE_WAITING:-all readiness conditions}" "./logs.sh"
-			return 1
 		fi
-		if [ -n "$PROBE_WAITING" ] && [ "$PROBE_WAITING" != "$announced" ]; then
-			progress "$PROBE_WAITING (${elapsed}s elapsed)"
-			announced="$PROBE_WAITING"
+		if [ -n "$PROBE_WAITING" ]; then
+			progress_heartbeat "$PROBE_WAITING" "$elapsed"
 		fi
 		sleep "$LUNAFOX_POLL_SECONDS"
 	done
@@ -931,9 +986,23 @@ wait_for_ready() {
 
 # ------------------------------------------------------------- readiness ----
 
+# The checklist reports the dimensions the successful wait actually verified, so
+# the success block is checkable instead of a bare claim. It reuses the same probe
+# state status.sh prints, which keeps both verdicts identical by construction.
 print_success_summary() {
-	local address
+	local address mode database_note
 	address="$(public_address)"
+	mode="$(compose_environment_value DATABASE_MODE || true)"
+	case "$mode" in
+	external) database_note='database ready (external PostgreSQL)' ;;
+	*) database_note='database ready (embedded PostgreSQL)' ;;
+	esac
+	printf 'LunaFox: readiness verified in %s\n' "$(format_duration "$READY_ELAPSED")"
+	printf 'LunaFox:   [ok] first-start tasks completed\n'
+	printf 'LunaFox:   [ok] %s\n' "$database_note"
+	printf 'LunaFox:   [ok] core services healthy\n'
+	printf 'LunaFox:   [ok] resident Agent claim-ready\n'
+	printf 'LunaFox:   [ok] public HTTPS reachable\n'
 	printf 'LunaFox: SUCCESS the LunaFox deployment is ready.\n'
 	printf 'LunaFox:   address: %s\n' "$address"
 	printf 'LunaFox:   sign in: admin / admin (change this password after the first sign-in)\n'
@@ -943,14 +1012,19 @@ print_success_summary() {
 
 # --------------------------------------------------------------- actions ----
 
+# The Compose output stays visible on purpose: the first start may pull images
+# for minutes, and progress during that window can only come from Compose. The
+# phase lines around it attribute that output to the start step so it is never
+# mistaken for the readiness verdict, and a failure still shows Compose's own
+# error verbatim.
 compose_up_once() {
 	local description="$1"
 	shift
 	progress "$description"
 	if ! lf_compose up -d "$@"; then
-		report_ready_failure "docker compose $* failed" "$description" "./logs.sh"
-		return 1
+		report_ready_failure "docker compose up -d${1:+ $*} failed" "$description" "./logs.sh"
 	fi
+	progress "containers are up; waiting until the deployment is actually ready"
 	return 0
 }
 
@@ -996,7 +1070,7 @@ action_install() {
 	enforce_private_env_mode
 	require_renderable_configuration
 	check_public_port
-	compose_up_once "starting the deployment with docker compose up -d" || return 1
+	compose_up_once "starting LunaFox with docker compose up -d (a first start pulls images and initializes the database, so it can take a few minutes)" || return 1
 	wait_for_ready || return 1
 	print_success_summary
 }

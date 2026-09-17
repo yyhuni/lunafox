@@ -7,6 +7,7 @@ import {
 } from "./scan-history-list-sections"
 import { AppErrorState } from "@/components/shared/feedback/app-error-state"
 import { ContentHandoff } from "@/components/shared/loading/content-handoff"
+import { RouteContentTransition } from "@/components/shared/navigation/route-content-transition"
 import { getDataTableSkeletonRowCount } from "@/components/shared/loading/data-table-skeleton"
 import { normalizeError } from "@/lib/errors/normalize-error"
 import { useScanHistoryListViewState } from "./scan-history-list-view-state"
@@ -54,21 +55,23 @@ export function ScanHistoryList({
   }
 
   return (
-    <ContentHandoff
-      owner="scan-history-list-view-content"
-      layer={layer}
-      isLoading={isInitialLoading}
-      skeleton={
-        <ScanHistoryListLoadingState
-          hideToolbar={state.hideToolbar}
-          hidePagination={state.hidePagination}
-          rowCount={loadingRowCount}
-          hideTargetColumn={hideTargetColumn}
-        />
-      }
-    >
-      <ScanHistoryListTable state={state} stableSurfaceRowCount={loadingRowCount} />
-      <ScanHistoryListDialogsSection state={state} />
-    </ContentHandoff>
+    <RouteContentTransition>
+      <ContentHandoff
+        owner="scan-history-list-view-content"
+        layer={layer}
+        isLoading={isInitialLoading}
+        skeleton={
+          <ScanHistoryListLoadingState
+            hideToolbar={state.hideToolbar}
+            hidePagination={state.hidePagination}
+            rowCount={loadingRowCount}
+            hideTargetColumn={hideTargetColumn}
+          />
+        }
+      >
+        <ScanHistoryListTable state={state} stableSurfaceRowCount={loadingRowCount} />
+        <ScanHistoryListDialogsSection state={state} />
+      </ContentHandoff>
+    </RouteContentTransition>
   )
 }
