@@ -85,7 +85,11 @@ type Daemon struct {
 	runCtx    context.Context
 	runCancel context.CancelFunc
 	executing map[string]struct{}
-	wg        sync.WaitGroup
+	// deploymentLock is the host-visible lock shared with the public Bash
+	// lifecycle scripts. It is held for the whole duration of an Upgrade
+	// Operation and kept as a recovery fence while the journal needs recovery.
+	deploymentLock *DeploymentLock
+	wg             sync.WaitGroup
 }
 
 func NewDaemon(store *JournalStore, executor Executor) *Daemon {
@@ -206,6 +210,7 @@ func (daemon *Daemon) Serve(ctx context.Context) (serveErr error) {
 	if err := daemon.resumeCurrent(runCtx); err != nil && !errors.Is(err, ErrJournalNotFound) {
 		return err
 	}
+	daemon.ensureRecoveryFence(runCtx)
 	// Capture the listener while holding the daemon mutex. Close clears the
 	// field during shutdown; the accept loop must keep using this stable local
 	// handle until the listener is closed, otherwise shutdown races with Accept.
@@ -283,6 +288,19 @@ func (daemon *Daemon) Close() error {
 	daemon.wg.Wait()
 	if err := os.Remove(daemon.store.SocketPath()); err != nil && !errors.Is(err, os.ErrNotExist) && firstErr == nil {
 		firstErr = err
+	}
+	// The deployment lock is intentionally not released here when the journal
+	// needs recovery: it is the fence that stops lifecycle scripts from mutating
+	// an unresolved deployment.
+	daemon.mu.Lock()
+	deploymentLock := daemon.deploymentLock
+	daemon.mu.Unlock()
+	if deploymentLock != nil {
+		if journal, loadErr := daemon.store.LoadCurrent(); loadErr == nil && !requiresRecoveryFence(journal.Stage) {
+			if err := deploymentLock.Release(); err != nil && firstErr == nil {
+				firstErr = err
+			}
+		}
 	}
 	if err := lock.Close(); err != nil && firstErr == nil {
 		firstErr = err
@@ -492,13 +510,108 @@ func (daemon *Daemon) launchExecutionLocked(ctx context.Context, request Request
 	daemon.wg.Add(1)
 	go func() {
 		defer daemon.wg.Done()
-		err := daemon.executor.Execute(ctx, request, daemon.store)
-		if err != nil {
+		// The deployment lock is taken before any Compose mutation and released
+		// when the operation reaches a stage that needs no recovery. Waiting here
+		// rather than in accept() keeps a lifecycle command and an Upgrade
+		// Operation mutually exclusive without failing either of them.
+		if err := daemon.holdDeploymentLock(ctx, request.OperationID); err != nil {
+			_ = daemon.failJournal(request, err)
+		} else if err := daemon.executor.Execute(ctx, request, daemon.store); err != nil {
 			_ = daemon.failJournal(request, err)
 		}
+		daemon.finishExecution(request.OperationID)
 		daemon.mu.Lock()
 		delete(daemon.executing, request.OperationID)
 		daemon.mu.Unlock()
+	}()
+}
+
+// holdDeploymentLock acquires the shared deployment lock for one Operation.
+func (daemon *Daemon) holdDeploymentLock(ctx context.Context, operationID string) error {
+	if daemon == nil || daemon.store == nil {
+		return fmt.Errorf("upgrader daemon is not configured")
+	}
+	daemon.mu.Lock()
+	held := daemon.deploymentLock
+	daemon.mu.Unlock()
+	if held != nil && held.OperationID() == operationID {
+		return nil
+	}
+	lock, err := AcquireDeploymentLockContext(ctx, daemon.store.DeploymentRoot(), operationID, 0)
+	if err != nil {
+		return err
+	}
+	daemon.mu.Lock()
+	daemon.deploymentLock = lock
+	daemon.mu.Unlock()
+	return nil
+}
+
+// releaseDeploymentLock drops the shared lock without touching it when another
+// owner has taken it over in the meantime.
+func (daemon *Daemon) releaseDeploymentLock() {
+	daemon.mu.Lock()
+	lock := daemon.deploymentLock
+	daemon.deploymentLock = nil
+	daemon.mu.Unlock()
+	if lock != nil {
+		_ = lock.Release()
+	}
+}
+
+// finishExecution decides whether the shared lock can be released. A journal
+// that needs recovery keeps the lock as a fence so a lifecycle command cannot
+// mutate a deployment whose database outcome is still unknown.
+func (daemon *Daemon) finishExecution(operationID string) {
+	daemon.mu.Lock()
+	lock := daemon.deploymentLock
+	daemon.mu.Unlock()
+	if lock == nil || lock.OperationID() != operationID {
+		return
+	}
+	journal, err := daemon.store.LoadCurrent()
+	if err != nil {
+		// The journal cannot be read, so the outcome is unknown: keep the fence.
+		_ = lock.MarkRecoveryFence()
+		return
+	}
+	if requiresRecoveryFence(journal.Stage) {
+		_ = lock.MarkRecoveryFence()
+		return
+	}
+	daemon.releaseDeploymentLock()
+}
+
+// ensureRecoveryFence takes the shared lock when the persisted journal still
+// needs recovery after a restart. It never blocks serving: a lifecycle command
+// may legitimately hold the lock while the operator inspects the deployment.
+func (daemon *Daemon) ensureRecoveryFence(ctx context.Context) {
+	if daemon == nil || daemon.store == nil {
+		return
+	}
+	journal, err := daemon.store.LoadCurrent()
+	if err != nil || !requiresRecoveryFence(journal.Stage) {
+		return
+	}
+	daemon.wg.Add(1)
+	go func() {
+		defer daemon.wg.Done()
+		lock, err := AcquireDeploymentLockContext(ctx, daemon.store.DeploymentRoot(), journal.OperationID, 0)
+		if err != nil {
+			return
+		}
+		if err := lock.MarkRecoveryFence(); err != nil {
+			_ = lock.Release()
+			return
+		}
+		daemon.mu.Lock()
+		if daemon.deploymentLock == nil {
+			daemon.deploymentLock = lock
+			daemon.mu.Unlock()
+			return
+		}
+		daemon.mu.Unlock()
+		_ = lock.Release()
 	}()
 }
 

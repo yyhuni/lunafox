@@ -9,6 +9,7 @@ import (
 type AgentRepository interface {
 	Create(ctx context.Context, agent *Agent) error
 	GetByID(ctx context.Context, id int) (*Agent, error)
+	GetByInstanceID(ctx context.Context, instanceID string) (*Agent, error)
 	FindByAuthenticationToken(ctx context.Context, authenticationToken string) (*Agent, error)
 	List(ctx context.Context, page, pageSize int, filter, orderBy string) ([]*Agent, int64, error)
 	ListFilterOptions(ctx context.Context, field string) ([]FilterOption, error)

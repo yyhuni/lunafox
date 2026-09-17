@@ -9,6 +9,9 @@ services:
     - /usr/local/bin/lunafox-config-init
     environment:
       DATABASE_MODE: ${DATABASE_MODE:-embedded}
+      # config-init rejects a profile that disagrees with DATABASE_MODE before
+      # any database or application consumer starts.
+      COMPOSE_PROFILES: ${COMPOSE_PROFILES:-}
       DB_HOST: ${DB_HOST:-}
       DB_PORT: ${DB_PORT:-5432}
       DB_SSLMODE: ${DB_SSLMODE:-}
@@ -361,6 +364,9 @@ services:
     container_name: lunafox-agent
     hostname: lunafox-agent
     restart: unless-stopped
+    # The Agent waits up to 30 seconds for Engine Container cleanup during
+    # shutdown; the Compose default of 10 seconds would SIGKILL it early.
+    stop_grace_period: 30s
     depends_on:
       bootstrap:
         condition: service_completed_successfully

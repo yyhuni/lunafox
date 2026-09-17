@@ -41,6 +41,12 @@ func main() {
 		}
 		return
 	}
+	if command.kind == serverCommandAgentReady {
+		if code := runResidentAgentReadinessFromRuntime(); code != 0 {
+			os.Exit(code)
+		}
+		return
+	}
 	if command.kind == serverCommandFingerprintBootstrap {
 		databaseConfig, err := config.LoadDatabaseConfig()
 		if err != nil {
