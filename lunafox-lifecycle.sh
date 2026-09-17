@@ -1103,10 +1103,12 @@ action_status() {
 		return 1
 		;;
 	esac
+	# status is read-only, so it never rewrites .env permissions and never treats
+	# a permissive mode as a readiness failure: the documented direct Compose path
+	# leaves the extracted file at its package mode. Mutating entries enforce 0600
+	# before they change anything.
 	if ! env_mode_is_private; then
-		printf 'LunaFox deployment status: degraded\n'
-		printf 'LunaFox:   .env does not have mode 0600; fix it with: chmod 600 %s\n' "$LUNAFOX_ENV_FILE"
-		return 1
+		printf 'LunaFox:   warning: %s does not have mode 0600; fix it with: chmod 600 %s\n' "$LUNAFOX_ENV_FILE" "$LUNAFOX_ENV_FILE"
 	fi
 	printf 'LunaFox:   address: %s\n' "$(public_address)"
 
