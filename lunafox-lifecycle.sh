@@ -477,8 +477,25 @@ owned_volumes() {
 	docker volume ls --filter "label=com.docker.compose.project=$LUNAFOX_PROJECT_NAME" --format '{{.Name}}' 2>/dev/null || true
 }
 
-declared_volumes() {
-	lf_compose config --volumes 2>/dev/null || true
+# A compose file may deliver a volume under a different name than its key
+# (postgres_data is delivered as lunafox_postgres), so the key list alone does
+# not identify Docker resources. The rendered `volumes:` section pairs each key
+# with the name it is delivered as; Compose stays the single source of truth for
+# both.
+load_declared_volumes() {
+	DECLARED_VOLUME_PAIRS="$(lf_compose config 2>/dev/null | awk -v project="$LUNAFOX_PROJECT_NAME" '
+		/^volumes:$/ { inside = 1; next }
+		/^[a-z]/ { inside = 0 }
+		inside && /^  [A-Za-z0-9._-]+:$/ {
+			if (key != "") print project "_" key, key
+			key = $1
+			sub(/:$/, "", key)
+			next
+		}
+		inside && key != "" && /^    name: / { print $2, key; key = "" }
+	')"
+	DECLARED_VOLUME_NAMES="$(printf '%s\n' "$DECLARED_VOLUME_PAIRS" | awk 'NF { print $1 }')"
+	DECLARED_VOLUME_KEYS="$(printf '%s\n' "$DECLARED_VOLUME_PAIRS" | awk 'NF { print $2 }')"
 }
 
 volume_has_ownership_label() {
@@ -486,11 +503,27 @@ volume_has_ownership_label() {
 	docker volume inspect --format '{{index .Labels "com.docker.compose.project"}}' "$name" 2>/dev/null | grep -Fxq "$LUNAFOX_PROJECT_NAME"
 }
 
-project_network_exists() {
-	local name
-	name="$(lf_compose config 2>/dev/null | sed -n 's/^ *name: *\(lunafox_network\)$/\1/p' | head -n 1)"
-	[ -n "$name" ] || name=lunafox_network
-	docker network inspect --format '{{index .Labels "com.docker.compose.project"}}' "$name" 2>/dev/null | grep -Fxq "$LUNAFOX_PROJECT_NAME"
+# The compose key a delivered volume belongs to, which is how a volume is tied
+# back to the current compose file without trusting its name.
+volume_compose_key() {
+	local name="$1"
+	docker volume inspect --format '{{index .Labels "com.docker.compose.volume"}}' "$name" 2>/dev/null || true
+}
+
+key_is_declared() {
+	local needle="$1" key
+	for key in $DECLARED_VOLUME_KEYS; do
+		[ "$key" = "$needle" ] && return 0
+	done
+	return 1
+}
+
+name_is_collision() {
+	local name="$1" declared
+	for declared in $DECLARED_VOLUME_NAMES; do
+		[ "$declared" = "$name" ] && return 0
+	done
+	return 1
 }
 
 project_containers_running() {
@@ -504,28 +537,33 @@ project_containers_running() {
 # repairable deployment as a conflict.
 classify_deployment() {
 	LUNAFOX_DEPLOYMENT_STATE=fresh
-	local declared owned name present=0 unowned="" persisted_embedded=0
+	local name key present=0 collision="" persisted_embedded=0
 
 	require_env_regular_file "$LUNAFOX_ENV_PATH" ".env" || LUNAFOX_ENV_PRESENT=0
 	[ -f "$LUNAFOX_ENV_PATH" ] && LUNAFOX_ENV_PRESENT=1
 
-	declared="$(declared_volumes)"
-	for name in $declared; do
-		if docker volume inspect "$name" >/dev/null 2>&1; then
-			present=1
-			if ! volume_has_ownership_label "$name"; then
-				unowned="$unowned $name"
-			fi
-			[ "$name" = lunafox_postgres ] && persisted_embedded=1
+	load_declared_volumes
+	for name in $DECLARED_VOLUME_NAMES; do
+		# A volume that exists under a name this deployment would use, but is not
+		# owned by this Compose project, is a collision: adopting or removing it
+		# could destroy another deployment's data.
+		if docker volume inspect "$name" >/dev/null 2>&1 && ! volume_has_ownership_label "$name"; then
+			collision="$collision $name"
 		fi
 	done
-	owned="$(owned_volumes)"
-
-	if [ -n "$unowned" ]; then
+	if [ -n "$collision" ]; then
 		LUNAFOX_DEPLOYMENT_STATE=collision
-		LUNAFOX_DEPLOYMENT_DETAIL="these volumes already exist without LunaFox ownership labels:$unowned"
+		LUNAFOX_DEPLOYMENT_DETAIL="these volumes already exist without LunaFox ownership labels:$collision"
 		return 0
 	fi
+
+	for name in $(owned_volumes); do
+		key="$(volume_compose_key "$name")"
+		key_is_declared "$key" || continue
+		present=1
+		# postgres_data is the compose key of the embedded database volume.
+		[ "$key" = postgres_data ] && persisted_embedded=1
+	done
 
 	if [ "$present" = 0 ]; then
 		LUNAFOX_DEPLOYMENT_STATE=fresh
@@ -1184,17 +1222,22 @@ action_uninstall() {
 	enforce_private_env_mode
 	require_renderable_configuration
 
-	local declared name failed="" removable=""
+	local name key failed="" removable="" skipped=""
 	if [ "$UNINSTALL_PURGE" = 1 ]; then
-		declared="$(declared_volumes)"
-		for name in $declared; do
-			docker volume inspect "$name" >/dev/null 2>&1 || continue
-			if ! volume_has_ownership_label "$name"; then
-				failed="$failed $name(without LunaFox ownership label)"
+		load_declared_volumes
+		for name in $(owned_volumes); do
+			key="$(volume_compose_key "$name")"
+			if ! key_is_declared "$key"; then
+				# Owned by this project but not declared by the current compose file:
+				# never delete a resource this release does not describe.
+				skipped="$skipped $name"
 				continue
 			fi
 			removable="$removable $name"
 		done
+		if [ -n "$skipped" ]; then
+			printf 'LunaFox:   keeping volumes that the current compose.yaml does not declare:%s\n' "$skipped"
+		fi
 		if [ -n "$failed" ]; then
 			fail "these declared volumes cannot be verified as LunaFox-owned, so nothing was removed:$failed"
 		fi
