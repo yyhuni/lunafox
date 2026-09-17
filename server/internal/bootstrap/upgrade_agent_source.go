@@ -136,9 +136,29 @@ func (source *upgradeAgentSource) NotifyUpdateRequired(ctx context.Context, targ
 	return nil
 }
 
-func (source *upgradeAgentSource) expectation(agent *agentdomain.Agent, target upgradeapp.AgentUpgradeTarget, now time.Time) upgradedomain.AgentExpectation {
+// agentObservation is the version-independent part of an Agent expectation.
+// Upgrade verification and the deployment lifecycle probe share it so a running
+// deployment and an Upgrade Operation never disagree about what an Agent is
+// currently able to do. It deliberately carries no DesiredVersion or
+// TargetDigest: those belong to a specific Operation.
+type agentObservation struct {
+	Connected      bool
+	Healthy        bool
+	Paused         bool
+	ClaimReady     bool
+	Diagnostic     string
+	LastObservedAt *time.Time
+}
+
+// observeAgent evaluates the persisted Agent runtime projection. claimReady
+// means the Agent is authenticated, its heartbeat is fresh, and its container
+// runtime can accept work now.
+func observeAgent(agent *agentdomain.Agent, now time.Time, freshness time.Duration) agentObservation {
+	if agent == nil {
+		return agentObservation{Diagnostic: "Agent is not registered"}
+	}
 	lastHeartbeat := cloneTime(agent.LastHeartbeat)
-	connected := strings.EqualFold(strings.TrimSpace(agent.Status), "online") && heartbeatFresh(lastHeartbeat, now, source.freshness)
+	connected := strings.EqualFold(strings.TrimSpace(agent.Status), "online") && heartbeatFresh(lastHeartbeat, now, freshness)
 	healthState := strings.ToLower(strings.TrimSpace(agent.HealthState))
 	healthy := healthState == "healthy"
 	paused := healthState == "paused"
@@ -151,10 +171,26 @@ func (source *upgradeAgentSource) expectation(agent *agentdomain.Agent, target u
 		diagnostic = "Agent is paused"
 	case !healthy:
 		diagnostic = firstNonEmpty(agent.HealthReason, "Agent health is not healthy")
-	case strings.TrimSpace(agent.AgentVersion) != target.Version:
-		diagnostic = "Agent is running a different version"
 	case !claimReady:
 		diagnostic = "Agent runtime is not ready to claim work"
+	}
+	return agentObservation{
+		Connected:      connected,
+		Healthy:        healthy,
+		Paused:         paused,
+		ClaimReady:     claimReady,
+		Diagnostic:     diagnostic,
+		LastObservedAt: lastHeartbeat,
+	}
+}
+
+func (source *upgradeAgentSource) expectation(agent *agentdomain.Agent, target upgradeapp.AgentUpgradeTarget, now time.Time) upgradedomain.AgentExpectation {
+	observation := observeAgent(agent, now, source.freshness)
+	diagnostic := observation.Diagnostic
+	if diagnostic == "" && strings.TrimSpace(agent.AgentVersion) != target.Version {
+		// The version target narrows an otherwise ready Agent; it never makes an
+		// Agent that cannot claim work look ready.
+		diagnostic = "Agent is running a different version"
 	}
 	return upgradedomain.AgentExpectation{
 		AgentID:         agent.ID,
@@ -164,11 +200,11 @@ func (source *upgradeAgentSource) expectation(agent *agentdomain.Agent, target u
 		// The current heartbeat contract has no image digest. Leave this empty
 		// rather than treating a configured target as observed evidence.
 		ObservedDigest: "",
-		Connected:      connected,
-		Healthy:        healthy,
-		Paused:         paused,
-		ClaimReady:     claimReady,
-		LastObservedAt: lastHeartbeat,
+		Connected:      observation.Connected,
+		Healthy:        observation.Healthy,
+		Paused:         observation.Paused,
+		ClaimReady:     observation.ClaimReady,
+		LastObservedAt: observation.LastObservedAt,
 		Diagnostic:     diagnostic,
 	}
 }

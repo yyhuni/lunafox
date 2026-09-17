@@ -19,11 +19,17 @@ mode_of() {
 run_init() {
 	local config_dir="$1" db_input="$2" jwt_input="$3"
 	local database_mode="${4:-embedded}" db_host="${5:-}" db_port="${6:-5432}" db_sslmode="${7:-}"
+	# COMPOSE_PROFILES is normally derived from the database mode. The explicit
+	# sentinels let the failure matrix exercise an empty and a drifted profile.
+	local compose_profiles="${8-__derive__}"
+	[ "$compose_profiles" = __derive__ ] && compose_profiles="$database_mode"
+	[ "$compose_profiles" = __empty__ ] && compose_profiles=""
 	mkdir -p "$config_dir"
 	LUNAFOX_CONFIG_DIR="$config_dir" \
 		DB_PASSWORD_INPUT_FILE="$db_input" \
 		JWT_SECRET_INPUT_FILE="$jwt_input" \
 		DATABASE_MODE="$database_mode" \
+		COMPOSE_PROFILES="$compose_profiles" \
 		DB_HOST="$db_host" \
 		DB_PORT="$db_port" \
 		DB_SSLMODE="$db_sslmode" \
@@ -32,8 +38,9 @@ run_init() {
 
 expect_fresh_failure() {
 	local label="$1" database_mode="$2" db_host="$3" db_port="$4" db_sslmode="$5" db_input="$6" expected="$7"
+	local compose_profiles="${8-__derive__}"
 	local config_dir="$TMP_DIR/failure-$label" output
-	if output="$(run_init "$config_dir" "$db_input" "$EMPTY_JWT" "$database_mode" "$db_host" "$db_port" "$db_sslmode" 2>&1)"; then
+	if output="$(run_init "$config_dir" "$db_input" "$EMPTY_JWT" "$database_mode" "$db_host" "$db_port" "$db_sslmode" "$compose_profiles" 2>&1)"; then
 		fail "$label was accepted"
 	fi
 	case "$output" in
@@ -77,6 +84,10 @@ cmp -s "$CUSTOM_JWT" "$CUSTOM_DIR/jwt-secret" || fail "existing JWT secret was n
 [ "$(cat "$CUSTOM_DIR/database-mode")" = embedded ] || fail "custom embedded initialization did not persist its mode"
 
 expect_fresh_failure invalid-mode invalid '' 5432 '' "$CUSTOM_DB" "DATABASE_MODE must be embedded or external"
+expect_fresh_failure missing-profile embedded '' 5432 '' "$CUSTOM_DB" "COMPOSE_PROFILES must be set" __empty__
+expect_fresh_failure invalid-profile embedded '' 5432 '' "$CUSTOM_DB" "COMPOSE_PROFILES must be embedded or external" "profiles"
+expect_fresh_failure drifted-profile embedded '' 5432 '' "$CUSTOM_DB" "conflicts with DATABASE_MODE" "external"
+expect_fresh_failure drifted-external-profile external database.example 5432 require "$CUSTOM_DB" "conflicts with DATABASE_MODE" "embedded"
 expect_fresh_failure external-host external '' 5432 require "$CUSTOM_DB" "DB_HOST is required"
 expect_fresh_failure external-ssl external database.example 5432 '' "$CUSTOM_DB" "DB_SSLMODE is required"
 expect_fresh_failure unknown-ssl external database.example 5432 trust "$CUSTOM_DB" "DB_SSLMODE must be"

@@ -7,6 +7,16 @@ import { execFileSync } from 'node:child_process';
 import { generate } from './generate-compose-deployment.mjs';
 
 const root = path.resolve(import.meta.dirname, '../..');
+const lifecycleScripts = [
+ ['install.sh', 'deploy/lifecycle/install.sh'],
+ ['start.sh', 'deploy/lifecycle/start.sh'],
+ ['restart.sh', 'deploy/lifecycle/restart.sh'],
+ ['stop.sh', 'deploy/lifecycle/stop.sh'],
+ ['status.sh', 'deploy/lifecycle/status.sh'],
+ ['logs.sh', 'deploy/lifecycle/logs.sh'],
+ ['uninstall.sh', 'deploy/lifecycle/uninstall.sh'],
+ ['lunafox-lifecycle.sh', 'deploy/lifecycle/lunafox-lifecycle.sh'],
+];
 function fixture(t, version = '1.2.3') {
  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'compose-package-test-'));
  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -38,19 +48,28 @@ test('one package is reproducible, registry-selectable, and matches its snapshot
  assert.deepEqual(first,second);
  assert.equal(first.length,1);
  assert.equal(first[0].name,'lunafox-v1.2.3.zip');
- const script=`import zipfile,sys,json\nwith zipfile.ZipFile(sys.argv[1]) as z:\n print(json.dumps({n:z.read(n).decode() for n in ['compose.yaml','.env','.env.example','README.md','engine-inventory.yaml']}))`;
+ const script=`import zipfile,sys,json\nwith zipfile.ZipFile(sys.argv[1]) as z:\n print(json.dumps({n:z.read(n).decode() for n in ['compose.yaml','.env','.env.example','README.md','engine-inventory.yaml','install.sh','start.sh','restart.sh','stop.sh','status.sh','logs.sh','uninstall.sh','lunafox-lifecycle.sh']}))`;
  const artifact=first[0];
  const content=JSON.parse(execFileSync('python3',['-c',script,path.join(options.output,artifact.name)],{encoding:'utf8'}));
  for(const [name,value] of Object.entries(content)) assert.equal(fs.readFileSync(path.join(snapshot,name),'utf8'),value);
   assert.match(content['.env'],/^DB_PASSWORD=$/m);
   assert.match(content['.env'],/^JWT_SECRET=$/m);
-  assert.match(content['.env'],/^DB_USER=postgres$/m);
-  assert.match(content['.env'],/^DB_NAME=lunafox$/m);
   assert.match(content['.env'],/^DATABASE_MODE=embedded$/m);
   assert.match(content['.env'],/^COMPOSE_PROFILES=\$\{DATABASE_MODE:-embedded\}$/m);
-  assert.match(content['.env'],/^DB_HOST=$/m);
-  assert.match(content['.env'],/^DB_PORT=5432$/m);
-  assert.match(content['.env'],/^DB_SSLMODE=$/m);
+  // The external database recipe stays visible but must not be an active
+  // assignment, so an embedded installation never has to edit it.
+  assert.match(content['.env'],/^#DB_HOST=database\.example$/m);
+  assert.match(content['.env'],/^#DB_PORT=5432$/m);
+  assert.match(content['.env'],/^#DB_USER=postgres$/m);
+  assert.match(content['.env'],/^#DB_NAME=lunafox$/m);
+  assert.match(content['.env'],/^#DB_SSLMODE=require$/m);
+  for (const key of ['DB_HOST','DB_PORT','DB_USER','DB_NAME','DB_SSLMODE']) {
+   assert.doesNotMatch(content['.env'], new RegExp(`^${key}=`, 'm'));
+  }
+  assert.deepEqual(
+   content['.env'].split('\n').filter(line => /^[A-Za-z_][A-Za-z0-9_]*=/.test(line)).map(line => line.split('=')[0]).sort(),
+   ['COMPOSE_PROFILES','DATABASE_MODE','DB_PASSWORD','JWT_SECRET','PUBLIC_HOST','PUBLIC_PORT','RELEASE_REGISTRY'],
+  );
   assert.match(content['.env'],/^RELEASE_REGISTRY=docker\.io$/m);
   assert.equal(content['.env.example'], content['.env']);
   assert.doesNotMatch(content['.env'],/^PUBLIC_URL=/m);
@@ -73,6 +92,20 @@ test('one package is reproducible, registry-selectable, and matches its snapshot
   assert.match(content['compose.yaml'],/RELEASE_REGISTRY: \$\{RELEASE_REGISTRY:-docker\.io\}/);
   assert.match(content['engine-inventory.yaml'],/docker\.io\/yyhuni\/lunafox-engine-runtime-port-scan@sha256:/);
   assert.match(content['engine-inventory.yaml'],/ghcr\.io\/yyhuni\/lunafox-engine-runtime-port-scan@sha256:/);
+
+  // The packaged lifecycle scripts are the authored bytes with the executable
+  // bit the documented `./install.sh` entry point requires.
+  const modeScript = `import json,sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as z:\n print(json.dumps({n:(z.getinfo(n).external_attr>>16)&0o7777 for n in z.namelist()}))`;
+  const entryModes = JSON.parse(execFileSync('python3',['-c',modeScript,path.join(options.output,artifact.name)],{encoding:'utf8'}));
+  for (const [name, source] of lifecycleScripts) {
+   assert.equal(entryModes[name], 0o755, `${name} must be delivered as an executable regular file`);
+   assert.equal(content[name], fs.readFileSync(path.join(root, source), 'utf8'), `${name} must match its authored source`);
+   assert.equal(fs.readFileSync(path.join(snapshot, name), 'utf8'), content[name], `${name} snapshot must match the ZIP`);
+   assert.equal(fs.statSync(path.join(snapshot, name)).mode & 0o777, 0o755);
+  }
+  assert.equal(entryModes['compose.yaml'], 0o644);
+  assert.equal(entryModes['.env'], 0o644);
+  assert.equal(entryModes['release.manifest.yaml'], 0o644);
 
   for(const registry of ['docker.io','ghcr.io']){
    const renderDir = path.join(options.dir, registry);

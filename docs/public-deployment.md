@@ -9,15 +9,31 @@ The public `main` branch and each release's single `lunafox-<version>.zip`
 contain equivalent deployment snapshots. Each snapshot includes `compose.yaml`,
 `.env`, `.env.example`, the verified final release manifest, a dual-registry
 Engine inventory, the Loki and Alloy configuration, the default fingerprint
-corpus, and required wordlists. Product and Engine images are digest-qualified;
-PostgreSQL, Redis, Loki, and Alloy are pinned by multi-platform manifest digest.
+corpus, required wordlists, and the Bash lifecycle scripts with their shared
+helper. Product and Engine images are digest-qualified; PostgreSQL, Redis, Loki,
+and Alloy are pinned by multi-platform manifest digest.
 
 Keep the extracted directory: `.env` is the installation's host-owned
 configuration and relative resource paths resolve from this directory. Review
 `PUBLIC_HOST` and `PUBLIC_PORT`; the internal HTTPS `PUBLIC_URL` is derived from
-them.
+them. Once you write `DB_PASSWORD` or `JWT_SECRET`, restrict the file with
+`chmod 600 .env`; the lifecycle scripts enforce the same mode before they change
+anything.
 
 ### Install from the public repository
+
+In a Bash environment, review `.env` and run the lifecycle script. It starts the
+deployment with one `docker compose up -d` and waits until the deployment is
+fully ready:
+
+```console
+git clone https://github.com/yyhuni/lunafox.git
+cd lunafox
+./install.sh
+```
+
+`docker compose up -d` is equally supported and is the native Windows
+PowerShell entry point:
 
 ```console
 git clone https://github.com/yyhuni/lunafox.git
@@ -30,6 +46,14 @@ docker compose up -d
 Download `lunafox-<version>.zip` and its SHA-256 metadata from the matching
 GitHub Release, verify it when required by local policy, and extract it into a
 permanent directory:
+
+```console
+unzip lunafox-<version>.zip -d lunafox-<version>
+cd lunafox-<version>
+./install.sh
+```
+
+The extracted ZIP also supports the direct Compose path:
 
 ```console
 unzip lunafox-<version>.zip -d lunafox-<version>
@@ -121,6 +145,67 @@ docker compose restart
 docker compose down
 ```
 
+### Lifecycle scripts
+
+Every snapshot also ships seven small Bash entry points at the deployment root
+plus the shared helper `lunafox-lifecycle.sh`. They wrap the same Compose
+commands, add the checks Docker cannot express, and never keep a second
+deployment state:
+
+| Script | Equivalent Compose command | Behaviour |
+| --- | --- | --- |
+| `./install.sh` | `docker compose up -d` | First start and safe re-run. Keeps an existing `.env` and every named volume. |
+| `./start.sh` | `docker compose up -d` | Starts an existing deployment. |
+| `./restart.sh` | `docker compose up -d --force-recreate` | Applies the current `.env` and `compose.override.yaml` to every container. |
+| `./stop.sh` | `docker compose stop` | Stops every resident service and keeps all data. |
+| `./status.sh` | `docker compose ps` plus the readiness checks | Read-only summary; exits 0 only for a fully ready deployment. |
+| `./logs.sh` | `docker compose logs --tail 200 --follow` | Read-only log access that forwards service names and Compose options. |
+| `./uninstall.sh` | `docker compose down --remove-orphans` | Removes containers and the project network; keeps volumes and `.env`. |
+
+`install.sh`, `start.sh`, and `restart.sh` report success only after the one-shot
+tasks, core service health, auxiliary service stability, the resident Agent's
+claim-ready state, and the public HTTPS endpoint all pass. `install.sh` allows
+fifteen minutes and the other two allow five; `LUNAFOX_READY_TIMEOUT_SECONDS`
+overrides the window for one invocation. A failure prints `FAILED`, names the
+failing service or check, points at `./logs.sh`, and leaves containers, volumes,
+and configuration untouched.
+
+`install.sh` accepts only `--help`, reads every setting from `.env`, and runs
+`docker compose up -d` exactly once. It never pulls, builds, removes containers,
+or deletes data. `uninstall.sh` keeps all data unless you pass
+`--purge --confirm`, which deletes only the named volumes declared by the
+current `compose.yaml` after verifying their LunaFox ownership.
+
+The scripts need Bash 3.2 or newer and work from any working directory. Windows
+keeps the direct Compose commands in PowerShell.
+
+### Deployment lock and recovery
+
+A lifecycle mutation and an Upgrade Operation never overlap. Both take a
+deployment-level lock in `.lunafox-lifecycle.lock`, and `./status.sh` reports it
+without waiting:
+
+```console
+./status.sh
+LunaFox:   address: https://localhost:443
+LunaFox:   lock: upgrade recovery fence (operation <id>)
+...
+LunaFox deployment status: starting
+```
+
+The lock is never reclaimed automatically, because a slow operation must not
+look like a dead one. Confirm that no lifecycle command and no upgrade is
+running, then remove the directory by hand:
+
+```console
+cat .lunafox-lifecycle.lock/owner
+rm -rf .lunafox-lifecycle.lock
+```
+
+Direct `docker compose` commands cannot take this lock, so they are outside the
+mutual exclusion. The upgrade journal in `lunafox_upgrade_state` remains the
+source of truth for an interrupted upgrade.
+
 The internal Agent and restricted upgrader are Compose services, so all four
 commands include them.
 `down` removes containers and the project network while retaining named
@@ -133,9 +218,10 @@ resets, or deletes an older deployment.
 
 Compose expresses initialization through one-shot services:
 
-1. `config-init` validates the database mode and connection inputs, generates or
-   adopts the permitted secrets, and persists the database mode, database
-   password, and JWT secret as mode-0600 files in `lunafox_config`.
+1. `config-init` validates the database mode, the derived `COMPOSE_PROFILES`
+   value, and the connection inputs, generates or adopts the permitted secrets,
+   and persists the database mode, database password, and JWT secret as
+   mode-0600 files in `lunafox_config`.
 2. `agent-preflight` uses the released Agent image to verify Docker API,
    exact named-volume identities, volume-subpath isolation, and read-only
    execution mounts through a real sibling container round trip.
@@ -194,7 +280,9 @@ unchanged.
 ## System updates
 
 The release package fixes its `stable` or `canary` channel and public metadata
-source inside `compose.yaml`. The selected Registry comes from `.env` before
+source inside `compose.yaml`. There is no host update script: version changes go
+through the Upgrade Operation and the restricted Compose upgrader, and the
+lifecycle scripts neither copy nor bypass that state machine. The selected Registry comes from `.env` before
 first startup and is then preserved by upgrades. The Server fetches
 the current schema-v3 channel record over HTTPS, validates its bounded Manifest
 path and raw SHA-256, then caches the immutable Manifest in
@@ -235,7 +323,9 @@ host cannot expose its local Docker Socket to the upgrader container.
 ## Logs
 
 All resident services use Docker's `json-file` driver with `max-size=10m` and
-`max-file=3`. The ordinary Alloy container reads only labelled LunaFox Server
+`max-file=3`. `./logs.sh` follows every service with the same bounded output;
+pass a service name or a Compose logs option to narrow it, for example
+`./logs.sh server`. The ordinary Alloy container reads only labelled LunaFox Server
 and internal Agent output through the Docker socket and sends it to the local
 Loki service. Alloy stores read positions in `lunafox_alloy`, so collector
 restart does not replay the entire retained log set.
