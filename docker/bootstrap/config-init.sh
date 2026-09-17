@@ -6,6 +6,10 @@ CONFIG_DIR="${LUNAFOX_CONFIG_DIR:-/var/lib/lunafox-config}"
 DB_PASSWORD_INPUT_FILE="${DB_PASSWORD_INPUT_FILE:-/run/secrets/db-password-input}"
 JWT_SECRET_INPUT_FILE="${JWT_SECRET_INPUT_FILE:-/run/secrets/jwt-secret-input}"
 DATABASE_MODE="${DATABASE_MODE:-embedded}"
+# Compose selects the service graph from this value before any container runs.
+# Receiving it here keeps the direct Compose path fail-closed without the
+# lifecycle scripts.
+COMPOSE_PROFILES="${COMPOSE_PROFILES:-}"
 DB_HOST="${DB_HOST:-}"
 DB_PORT="${DB_PORT:-5432}"
 DB_SSLMODE="${DB_SSLMODE:-}"
@@ -54,6 +58,18 @@ validate_database_inputs() {
 	embedded | external) ;;
 	*) fail "DATABASE_MODE must be embedded or external" ;;
 	esac
+
+	# The Compose profile is a second, independently editable copy of the
+	# database mode: it decides which database services the graph contains.
+	# Accepting a drifted profile would start a graph that cannot serve the
+	# selected mode, so reject it here for script and direct Compose entry alike.
+	case "$COMPOSE_PROFILES" in
+	embedded | external) ;;
+	"") fail "COMPOSE_PROFILES must be set to the database mode; set COMPOSE_PROFILES=\${DATABASE_MODE:-embedded} in .env" ;;
+	*) fail "COMPOSE_PROFILES must be embedded or external" ;;
+	esac
+	[ "$COMPOSE_PROFILES" = "$DATABASE_MODE" ] ||
+		fail "COMPOSE_PROFILES ($COMPOSE_PROFILES) conflicts with DATABASE_MODE ($DATABASE_MODE); restore the derived Compose profile before starting"
 
 	if [ "$DATABASE_MODE" = external ] && [[ ! "$DB_HOST" =~ [^[:space:]] ]]; then
 		fail "DB_HOST is required when DATABASE_MODE=external"

@@ -10,14 +10,29 @@ import { validateManifest, parseRuntimeBlocks, parseEngineBlocks } from './verif
 
 const defaultRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const releaseMetadataBaseURL = 'https://raw.githubusercontent.com/yyhuni/lunafox/release-channel';
-const zipProgram = `import pathlib,sys,zipfile
+// The public lifecycle scripts are authored once under deploy/lifecycle and are
+// delivered at the deployment root. The ZIP and the public main projection both
+// read these files, so the two entry points stay byte-identical.
+export const lifecycleScripts = Object.freeze([
+ ['install.sh', 'deploy/lifecycle/install.sh'],
+ ['start.sh', 'deploy/lifecycle/start.sh'],
+ ['restart.sh', 'deploy/lifecycle/restart.sh'],
+ ['stop.sh', 'deploy/lifecycle/stop.sh'],
+ ['status.sh', 'deploy/lifecycle/status.sh'],
+ ['logs.sh', 'deploy/lifecycle/logs.sh'],
+ ['uninstall.sh', 'deploy/lifecycle/uninstall.sh'],
+ ['lunafox-lifecycle.sh', 'deploy/lifecycle/lunafox-lifecycle.sh'],
+]);
+const zipProgram = `import json,pathlib,sys,zipfile
 root=pathlib.Path(sys.argv[1])
+modes=json.loads(sys.argv[3])
 with zipfile.ZipFile(sys.argv[2], 'w', compression=zipfile.ZIP_STORED) as archive:
  for source in sorted(root.rglob('*')):
   if source.is_file():
-   entry=zipfile.ZipInfo(source.relative_to(root).as_posix(), (1980,1,1,0,0,0))
+   relative=source.relative_to(root).as_posix()
+   entry=zipfile.ZipInfo(relative, (1980,1,1,0,0,0))
    entry.create_system=3
-   entry.external_attr=0o100644 << 16
+   entry.external_attr=(0o100000 | modes.get(relative, 0o644)) << 16
    archive.writestr(entry,source.read_bytes())
 `;
 
@@ -33,11 +48,12 @@ function regularFile(root, relative) {
  return fs.readFileSync(current);
 }
 
-function writeFiles(directory, files) {
+function writeFiles(directory, files, modes = new Map()) {
  for (const [name, bytes] of files) {
   const target = path.join(directory, name);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, bytes);
+  fs.chmodSync(target, modes.get(name) ?? 0o644);
  }
 }
 
@@ -94,16 +110,24 @@ export function generate({ root = defaultRoot, manifest, tag, output, snapshot =
     if (key !== 'RELEASE_REGISTRY' && compose.includes('${' + key)) throw Error(`unresolved release input: ${key}`);
    }
    const files = new Map(common);
+   const modes = new Map();
+   for (const [name, source] of lifecycleScripts) {
+    if (files.has(name)) throw Error(`duplicate deployment file: ${name}`);
+    files.set(name, regularFile(root, source));
+    // Git 100755 and ZIP regular-file 0755 are the delivered contract: users run
+    // ./install.sh directly from the extracted package.
+    modes.set(name, 0o755);
+   }
    files.set('compose.yaml', Buffer.from(compose));
    files.set('engine-inventory.yaml', Buffer.from('enginePackages:\n' + engines.map(refs => {
     selectableRef(refs);
     return `  - refs:\n      - "${refs.find(ref => ref.registry === 'docker.io').raw}"\n      - "${refs.find(ref => ref.registry === 'ghcr.io').raw}"\n`;
    }).join('')));
    const directory = path.join(work, 'unified');
-   writeFiles(directory, files);
+   writeFiles(directory, files, modes);
    const name = `lunafox-${tag}.zip`;
    const archive = path.join(work, name);
-   execFileSync('python3', ['-c', zipProgram, directory, archive]);
+   execFileSync('python3', ['-c', zipProgram, directory, archive, JSON.stringify(Object.fromEntries(modes))]);
    const bytes = fs.readFileSync(archive);
    const built = { name, bytes, sha256: crypto.createHash('sha256').update(bytes).digest('hex'), files };
   // Validate the complete closure before exposing publication output.
@@ -114,7 +138,7 @@ export function generate({ root = defaultRoot, manifest, tag, output, snapshot =
   if (snapshot) {
    if (fs.existsSync(snapshot) && fs.readdirSync(snapshot).length > 0) throw Error(`snapshot directory must be empty: ${snapshot}`);
    fs.mkdirSync(snapshot, { recursive: true });
-   writeFiles(snapshot, built.files);
+   writeFiles(snapshot, built.files, modes);
   }
   return [{ name: built.name, sha256: built.sha256 }];
  } finally { fs.rmSync(work, { recursive: true, force: true }); }

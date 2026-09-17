@@ -17,6 +17,16 @@ starts directly:
 ```console
 git clone https://github.com/yyhuni/lunafox.git
 cd lunafox
+./install.sh
+```
+
+`./install.sh` reads `.env`, runs one `docker compose up -d`, and waits until the
+deployment is actually ready. The same checkout works without the scripts, which
+is also the native Windows PowerShell path:
+
+```console
+git clone https://github.com/yyhuni/lunafox.git
+cd lunafox
 docker compose up -d
 ```
 
@@ -25,7 +35,7 @@ Every new GitHub Release also contains one equivalent deployment archive:
 ```console
 unzip lunafox-<version>.zip -d lunafox-<version>
 cd lunafox-<version>
-docker compose up -d
+./install.sh
 ```
 
 Both paths include `.env`, `.env.example`, `compose.yaml`, the release manifest,
@@ -66,7 +76,26 @@ Windows users extract the Release ZIP and run the same Compose commands in
 native PowerShell. A PowerShell downloader, WSL terminal, Docker context name
 check, and Loki Docker logging plugin are not part of this deployment path.
 
-Use Docker Compose for the resident lifecycle:
+Use the lifecycle scripts for everyday operation, or the equivalent Docker
+Compose commands:
+
+| Script | Equivalent command | Behaviour |
+| --- | --- | --- |
+| `./install.sh` | `docker compose up -d` | First start and safe re-run; keeps existing data and `.env`. |
+| `./start.sh` | `docker compose up -d` | Starts an existing deployment. |
+| `./restart.sh` | `docker compose up -d --force-recreate` | Recreates containers with the current configuration. |
+| `./stop.sh` | `docker compose stop` | Stops every resident service; keeps all data. |
+| `./status.sh` | `docker compose ps` plus readiness checks | Read-only summary; exits 0 only when fully ready. |
+| `./logs.sh` | `docker compose logs --tail 200 --follow` | Read-only logs; forwards service names and Compose options. |
+| `./uninstall.sh` | `docker compose down --remove-orphans` | Keeps volumes and `.env` unless `--purge --confirm` is given. |
+
+`install.sh`, `start.sh`, and `restart.sh` print `SUCCESS`, the public HTTPS
+address, and the `admin / admin` first-login hint only after every service, the
+resident Agent, and the public endpoint are ready. Otherwise they print `FAILED`
+with the failing service and leave the deployment in place for inspection. The
+scripts need Bash 3.2 or newer and work from any working directory.
+
+Docker Compose remains a complete lifecycle interface:
 
 ```console
 docker compose stop

@@ -51,6 +51,9 @@ func (repo *agentRepoStub) Create(_ context.Context, agent *agentdomain.Agent) e
 func (repo *agentRepoStub) GetByID(_ context.Context, _ int) (*agentdomain.Agent, error) {
 	return repo.getByID, repo.getErr
 }
+func (repo *agentRepoStub) GetByInstanceID(_ context.Context, _ string) (*agentdomain.Agent, error) {
+	return repo.getByID, repo.getErr
+}
 func (repo *agentRepoStub) FindByAuthenticationToken(_ context.Context, _ string) (*agentdomain.Agent, error) {
 	return nil, nil
 }
