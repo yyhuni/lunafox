@@ -55,6 +55,16 @@ func TestParseServerCommand(t *testing.T) {
 			wantKind: serverCommandMigrationUp,
 		},
 		{
+			name:     "agent readiness uses the bounded database command",
+			args:     []string{"server", "agent-ready"},
+			wantKind: serverCommandAgentReady,
+		},
+		{
+			name:    "agent readiness rejects extra arguments",
+			args:    []string{"server", "agent-ready", "--version", "1.0.0"},
+			wantErr: true,
+		},
+		{
 			name:     "image path executable resetadmin uses bounded reset command",
 			args:     []string{"resetadmin"},
 			wantKind: serverCommandResetAdmin,
