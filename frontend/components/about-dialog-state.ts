@@ -39,7 +39,7 @@ interface UseAboutDialogStateOptions {
 
 export function useAboutDialogState({ enabled = true }: UseAboutDialogStateOptions = {}): AboutDialogState {
   const t = useTranslations("about")
-  const { data: versionData } = useVersion({ enabled: false })
+  const { data: versionData } = useVersion({ enabled })
   const checkUpdate = useCheckForUpdatesAction()
   const createMutation = useCreateUpgradeOperation()
   const retryMutation = useRetryUpgradeOperation()
@@ -59,7 +59,9 @@ export function useAboutDialogState({ enabled = true }: UseAboutDialogStateOptio
     setIsChecking(true)
     setCheckError(null)
     try {
-      setUpdateResult(await checkUpdate())
+      const result = await checkUpdate()
+      setUpdateResult(result)
+      setCheckError(!result.eligible && result.diagnostic?.reason ? result.diagnostic.reason : null)
     } catch (error) {
       setCheckError(getUpgradeErrorMessage(error) || t("checkFailed"))
     } finally {
@@ -101,7 +103,7 @@ export function useAboutDialogState({ enabled = true }: UseAboutDialogStateOptio
     })
   }, [operation.operationId, retryMutation])
 
-  const currentVersion = updateResult?.currentVersion || versionData?.version || "-"
+  const currentVersion = updateResult?.currentVersion || versionData?.version || process.env.NEXT_PUBLIC_IMAGE_TAG?.trim() || "-"
   return {
     t,
     isChecking,

@@ -4,9 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const apiMocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }))
 vi.mock("@/lib/api-client", () => ({ api: apiMocks }))
 
-import { renderHookWithProviders } from "@/test/utils/render-with-providers"
+import { renderHookWithProviders, renderWithProviders } from "@/test/utils/render-with-providers"
+import { AboutDialog } from "@/components/about-dialog"
 import { useAboutDialogState } from "@/components/about-dialog-state"
 import { AboutDialogVersionInfo } from "@/components/about-dialog-sections"
+import { SidebarMenuButton, SidebarProvider } from "@/components/ui/sidebar"
 import type { UpgradeOperation, UpdateCheckResult } from "@/types/version.types"
 
 const digest = `sha256:${"a".repeat(64)}`
@@ -175,6 +177,7 @@ describe("about dialog upgrade behavior", () => {
         checkError={null}
         isChecking={false}
         isCreating={false}
+        canStartUpgrade={false}
         operation={{ data: { ...operation, status: "needs_attention" }, isReconnecting: true }}
         onCheckUpdate={vi.fn()}
         onStartUpgrade={vi.fn()}
@@ -184,5 +187,69 @@ describe("about dialog upgrade behavior", () => {
     expect(screen.getByText("reconnecting")).toBeInTheDocument()
     fireEvent.click(screen.getByRole("button", { name: "retryUpgrade" }))
     expect(retry).toHaveBeenCalledTimes(1)
+  })
+
+  it("loads the installed version when the about entry is opened", async () => {
+    apiMocks.post.mockImplementation((path: string) => {
+      if (path === "/system:checkForUpdates") return Promise.resolve({ data: updateResult })
+      throw new Error(`unexpected POST ${path}`)
+    })
+
+    const { result, rerender } = renderHookWithProviders(
+      ({ enabled }: { enabled: boolean }) => useAboutDialogState({ enabled }),
+      { initialProps: { enabled: false } },
+    )
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(apiMocks.post).not.toHaveBeenCalled()
+    expect(result.current.currentVersion).toBe("-")
+
+    rerender({ enabled: true })
+    await waitFor(() => expect(result.current.currentVersion).toBe(updateResult.currentVersion))
+    expect(apiMocks.post).toHaveBeenCalledWith("/system:checkForUpdates", {})
+  })
+
+  it("does not silently ignore start upgrade when the candidate is ineligible", async () => {
+    const diagnostic = { code: "MIGRATION_UNSUPPORTED", reason: "current policy rejects this migration" }
+    apiMocks.post.mockImplementation((path: string) => {
+      if (path === "/system:checkForUpdates") {
+        return Promise.resolve({ data: { ...updateResult, eligible: false, diagnostic } })
+      }
+      throw new Error(`unexpected POST ${path}`)
+    })
+
+    const { result } = renderHookWithProviders(() => useAboutDialogState())
+    await act(async () => {
+      await result.current.handleCheckUpdate()
+    })
+    expect(result.current.currentVersion).toBe(updateResult.currentVersion)
+    expect(result.current.hasUpdate).toBe(true)
+    expect(result.current.checkError).toBe(diagnostic.reason)
+
+    act(() => result.current.handleStartUpgrade())
+    expect(result.current.confirmOpen).toBe(false)
+  })
+
+  it("opens from the sidebar about trigger and keeps upgrade confirmation stacked above the about dialog", async () => {
+    apiMocks.post.mockImplementation((path: string) => {
+      if (path === "/system:checkForUpdates") return Promise.resolve({ data: updateResult })
+      throw new Error(`unexpected POST ${path}`)
+    })
+
+    renderWithProviders(
+      <SidebarProvider>
+        <AboutDialog>
+          <SidebarMenuButton tooltip="about">about</SidebarMenuButton>
+        </AboutDialog>
+      </SidebarProvider>,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "about" }))
+    expect(await screen.findByText(updateResult.currentVersion)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "checkUpdate" }))
+    expect(await screen.findByRole("button", { name: "startUpgrade" })).toBeEnabled()
+
+    fireEvent.click(screen.getByRole("button", { name: "startUpgrade" }))
+    expect(await screen.findByRole("alertdialog", { name: "confirmUpgradeTitle" })).toBeInTheDocument()
   })
 })
