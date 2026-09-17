@@ -5,7 +5,7 @@
 # The Runtime Image builds and starts only the generated Engine API v2 author
 # facade; no legacy runtime.v1 server entrypoint is included.
 ARG ENGINE_GO_VERSION=1.26
-ARG UBUNTU_BASE=ubuntu:noble-20260113
+ARG UBUNTU_BASE=public.ecr.aws/docker/library/ubuntu:noble-20260113
 ARG ENGINE_IMAGE_VERSION
 ARG ENGINE_IMAGE_SOURCE=https://github.com/yyhuni/lunafox
 ARG OBSERVER_WARD_VERSION=v2026.6.28-lunafox.1
@@ -15,7 +15,7 @@ ARG GOPROXY=https://proxy.golang.org,direct
 # Build Observer Ward for the target architecture from the immutable LunaFox
 # fork tag. The peeled commit check prevents an annotated tag from silently
 # moving.
-FROM --platform=$BUILDPLATFORM rust:1.94-bookworm AS observer-ward-builder
+FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/rust:1.94-bookworm AS observer-ward-builder
 ARG TARGETARCH
 ARG OBSERVER_WARD_VERSION
 ARG OBSERVER_WARD_COMMIT

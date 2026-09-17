@@ -7,7 +7,7 @@
 
 ARG ENGINE_GO_VERSION=1.26
 ARG TOOLS_GO_VERSION=1.24
-ARG UBUNTU_BASE=ubuntu:noble-20260113
+ARG UBUNTU_BASE=public.ecr.aws/docker/library/ubuntu:noble-20260113
 ARG ENGINE_IMAGE_VERSION
 ARG ENGINE_IMAGE_SOURCE=https://github.com/yyhuni/lunafox
 

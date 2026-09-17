@@ -28,7 +28,7 @@ func readContainerAsset(t *testing.T, name string) string {
 func TestDockerfileDefinesIndependentPortRuntimeImage(t *testing.T) {
 	dockerfile := readSibling(t, "Dockerfile")
 	for _, marker := range []string{
-		"FROM --platform=$BUILDPLATFORM alpine:3.23.2 AS naabu-downloader-base",
+		"FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/alpine:3.23.2 AS naabu-downloader-base",
 		"FROM naabu-downloader-base AS naabu-downloader",
 		"FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/golang:${ENGINE_GO_VERSION}-bookworm AS engine-builder",
 		"FROM --platform=$TARGETPLATFORM ${UBUNTU_BASE} AS runtime-base",

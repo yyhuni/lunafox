@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:42bb729721d4f1d47f960dc7ac72836f4846b6a3dea65a7ccf3b730cc7025890",
-  "releaseTag": "v0.0.1-alpha.143",
+  "sourceRevisionDigest": "sha256:4d9acd1b071219ed62a66862a465ebf5a4000d6b747ebf598dc7343b410090fd",
+  "releaseTag": "v0.0.1-alpha.144",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -47,7 +47,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "a888c8a7adb2adc401fee062c2cf64bc9bce45eb02d6a62fc218de45826469b7"
+      "sha256": "64f521feb065d6bd5b2ff71b4c81484e2864cbad3a822c961d87bde8ccde0303"
     },
     {
       "path": "README.md",
@@ -57,49 +57,49 @@
       "sha256": "fd52bf74e3d49fb99a8947828960fd18037b61e79464adff90f3c4e3d2c2df16"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.143/agent-bundle.json",
+      "path": "agent/bin/v0.0.1-alpha.144/agent-bundle.json",
       "type": "file",
       "mode": "0644",
       "size": 2229,
-      "sha256": "cab25aa315d52ff3a6bec0d55d7a9bdab5dd775a20e3a776c6539ec1fcefb289"
+      "sha256": "ae6c8d4204ad6c4628dd1f42d8996e18e0a9ae9a3a18ce88142a404bec85f499"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.143/agent-bundle.sha256",
+      "path": "agent/bin/v0.0.1-alpha.144/agent-bundle.sha256",
       "type": "file",
       "mode": "0644",
       "size": 402,
       "sha256": "2946b4b80ed17b9ad513b6e9d76def9ad4221fa15e8d475767b1a6fda9cbe25a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.143/agent-bundle.sigstore.json",
+      "path": "agent/bin/v0.0.1-alpha.144/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "15c65e2d552603e9c4f154a32f4a5ccb9bbc161c9112b92f8772a4f51a226e22"
+      "sha256": "142090fae8a2757392739a100a71b5a5736d22b9daae57db49d9544faf02eb5e"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.143/lunafox-agent-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.144/lunafox-agent-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 23904517,
       "sha256": "6fdddcaae9958a99cb081d92ad3d8d11f32db16b5ff300d645a4693408d1df38"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.143/lunafox-agent-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.144/lunafox-agent-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 22504270,
       "sha256": "569449dc80b8e7a27954488d656198adc68d47eb6384903ad1f3ea4c4271467d"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.143/lunafox-engine-mount-preflight-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.144/lunafox-engine-mount-preflight-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 20000987,
       "sha256": "2b12a49b754a09e98377c96105c2975a5b48bf6b063eae0b2062ea271e0add2a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.143/lunafox-engine-mount-preflight-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.144/lunafox-engine-mount-preflight-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 18804436,
@@ -1320,8 +1320,8 @@
       "path": "extensions/engines/directory_scan/Dockerfile",
       "type": "file",
       "mode": "0644",
-      "size": 4731,
-      "sha256": "c5f0087819b8b8fe4d627fe7f407536393f264c72ff28ace61bbeb66f85c5411"
+      "size": 4791,
+      "sha256": "67960bb2ae45900c0369a89ecf42b547e68392936e68b9f66d0fe1ea0907fd16"
     },
     {
       "path": "extensions/engines/directory_scan/README.md",
@@ -1565,8 +1565,8 @@
       "path": "extensions/engines/directory_scan/tests/container/container_conformance_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 8539,
-      "sha256": "b2e8d342e107619a29b6b239e14bf7ba677fd1e515c334b5211353343e229284"
+      "size": 8569,
+      "sha256": "a31ed27779556930bb5fac87fd0c59526d367eb458ac0f4e20c475504e8e96ad"
     },
     {
       "path": "extensions/engines/directory_scan/tests/container/image-conformance.json",
@@ -1586,8 +1586,8 @@
       "path": "extensions/engines/fingerprint_detection/Dockerfile",
       "type": "file",
       "mode": "0644",
-      "size": 6192,
-      "sha256": "a0e7f54bf795437698f014429b0fcca3e3069052cdc92043ec054dd025c50019"
+      "size": 6252,
+      "sha256": "065ccdd9a3357330fbb1e43ede20aca7de916e4e6b40415eb07bfd8146876bba"
     },
     {
       "path": "extensions/engines/fingerprint_detection/README.md",
@@ -1740,8 +1740,8 @@
       "path": "extensions/engines/fingerprint_detection/tests/container/container_conformance_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 3958,
-      "sha256": "9cddab60ffda8be8eae51406202a0805957a6c5fadece3680ac77c623e8054dd"
+      "size": 3988,
+      "sha256": "bfb3f905f2557dbf1cfeb34e6ed028b682c4d686d1e38f145100a73e12ae4c9a"
     },
     {
       "path": "extensions/engines/fingerprint_detection/tests/container/fixtures/fingerprinthub_web.json",
@@ -1782,8 +1782,8 @@
       "path": "extensions/engines/nuclei_vulnerability/Dockerfile",
       "type": "file",
       "mode": "0644",
-      "size": 4988,
-      "sha256": "6031191fe863a507a957fd233f3354c61930b41149a3a21ee0f19320419f6e0d"
+      "size": 5048,
+      "sha256": "ef6868f9bb5c992a144dea2213a64b335dc164a2599bbb480fd53ee5bc23051c"
     },
     {
       "path": "extensions/engines/nuclei_vulnerability/README.md",
@@ -1999,8 +1999,8 @@
       "path": "extensions/engines/port_scan/Dockerfile",
       "type": "file",
       "mode": "0644",
-      "size": 4886,
-      "sha256": "b4ac4122eeca8afb20cf5f1da6cb1af137171252130dfb2e382a28c2428e2333"
+      "size": 4946,
+      "sha256": "f8b5c4bb918058875ec9258c3fe4b2c1f32debcb510b2aecb0d6b4fb9d195f11"
     },
     {
       "path": "extensions/engines/port_scan/README.md",
@@ -2244,8 +2244,8 @@
       "path": "extensions/engines/port_scan/tests/container/container_conformance_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 5574,
-      "sha256": "0e06cc161bc20500b02652e772416f6ff16298bf29001b47730d6f1c7c9efa80"
+      "size": 5604,
+      "sha256": "783353ed2f3a96f3eedf582df934c53c2b03d3aa00066147a0a36773d60333c8"
     },
     {
       "path": "extensions/engines/port_scan/tests/container/image-conformance.json",
@@ -2265,8 +2265,8 @@
       "path": "extensions/engines/screenshot/Dockerfile",
       "type": "file",
       "mode": "0644",
-      "size": 8633,
-      "sha256": "1e693e8644dcee9721b284912086e2ce39870e287527da3d55cd248ed73cd38c"
+      "size": 8693,
+      "sha256": "c2b076f05c15bfd34c87a7b9c4ceea08467a08526a364487286ac2b616240185"
     },
     {
       "path": "extensions/engines/screenshot/README.md",
@@ -2461,8 +2461,8 @@
       "path": "extensions/engines/subdomain_discovery/Dockerfile",
       "type": "file",
       "mode": "0644",
-      "size": 6846,
-      "sha256": "fc3967fa3cc516822cdc5922adbabee8ee89943b7f9f43b3885a74f8dc05c457"
+      "size": 6876,
+      "sha256": "aec3ca709daf7c3336493660c6518cdbfb416a443f701c491d7c3fa20fdccbea"
     },
     {
       "path": "extensions/engines/subdomain_discovery/README.md",
@@ -2783,8 +2783,8 @@
       "path": "extensions/engines/url_collection/Dockerfile",
       "type": "file",
       "mode": "0644",
-      "size": 5643,
-      "sha256": "df2f245edd09b2f1e7d1d1732b899d458d87c730863bb02d7310b806d1a4d4f1"
+      "size": 5673,
+      "sha256": "5d857f9d5a837b720a476f115d25d720f4ce246c392c59d7e61007adde145ebb"
     },
     {
       "path": "extensions/engines/url_collection/README.md",
@@ -3042,8 +3042,8 @@
       "path": "extensions/engines/website_discovery/Dockerfile",
       "type": "file",
       "mode": "0644",
-      "size": 4538,
-      "sha256": "96244c8186cff3dc5e69f24a1755d508d4df93cb308370c0bd994110ba0a69e9"
+      "size": 4568,
+      "sha256": "e51cf399c341739b16583df1bb53e036137ab8a5e44d2a836128f8f3c985d94b"
     },
     {
       "path": "extensions/engines/website_discovery/README.md",
