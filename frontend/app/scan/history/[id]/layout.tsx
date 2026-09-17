@@ -4,6 +4,7 @@ import { usePathname, useParams } from "next/navigation";
 import Link from "next/link";
 import { LayoutOverview, Package, semanticIcons } from "@/components/icons";
 import { DetailShellReadyProvider } from "@/components/shared/loading/detail-shell-ready-context";
+import { RouteContentTransition } from "@/components/shared/navigation/route-content-transition";
 import { Tabs, TabsCountBadge, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DirectoriesViewRouteFallback } from "@/components/directories/directories-view-sections";
 import { EndpointsDetailViewRouteFallback } from "@/components/endpoints/endpoints-detail-view-sections";
@@ -245,7 +246,11 @@ export default function ScanHistoryLayout({ children, }: {
         </ScanHistoryDetailShellSecondaryTabs>)}
 
       {/* Sub-page content */}
-      <ScanHistoryDetailShellContent>{children}</ScanHistoryDetailShellContent>
+      <ScanHistoryDetailShellContent>
+        <RouteContentTransition className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {children}
+        </RouteContentTransition>
+      </ScanHistoryDetailShellContent>
     </ScanHistoryDetailShellLayout>);
     return (<HiddenReadinessRouteBoundary key={`scan-history-detail-shell-${id}`} owner="scan-history-detail-shell" layer="workspace" intent="data" transitionMode="replace" skeleton={renderShellLoadingState()} className={SCAN_HISTORY_DETAIL_SHELL_HANDOFF_CLASS} skeletonClassName={SCAN_HISTORY_DETAIL_SHELL_HANDOFF_CLASS} contentClassName={SCAN_HISTORY_DETAIL_SHELL_HANDOFF_CLASS}>
         {({ onReady, deferInitialSkeleton }) => {

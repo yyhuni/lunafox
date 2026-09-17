@@ -7,6 +7,7 @@ import {
 } from "./all-targets-detail-view-sections"
 import { AppErrorState } from "@/components/shared/feedback/app-error-state"
 import { ContentHandoff } from "@/components/shared/loading/content-handoff"
+import { RouteContentTransition } from "@/components/shared/navigation/route-content-transition"
 import { getDataTableSkeletonRowCount } from "@/components/shared/loading/data-table-skeleton"
 import { normalizeError } from "@/lib/errors/normalize-error"
 import { useAllTargetsDetailViewState } from "./all-targets-detail-view-state"
@@ -48,14 +49,16 @@ export function AllTargetsDetailView({
   }
 
   return (
-    <ContentHandoff
-      owner="all-targets-detail-view-content"
-      layer="workspace"
-      isLoading={isInitialLoading}
-      skeleton={<AllTargetsDetailViewLoadingState state={state} rowCount={loadingRowCount} />}
-    >
-      <AllTargetsDetailViewTable state={state} stableSurfaceRowCount={loadingRowCount} />
-      <AllTargetsDetailViewDialogs state={state} />
-    </ContentHandoff>
+    <RouteContentTransition>
+      <ContentHandoff
+        owner="all-targets-detail-view-content"
+        layer="workspace"
+        isLoading={isInitialLoading}
+        skeleton={<AllTargetsDetailViewLoadingState state={state} rowCount={loadingRowCount} />}
+      >
+        <AllTargetsDetailViewTable state={state} stableSurfaceRowCount={loadingRowCount} />
+        <AllTargetsDetailViewDialogs state={state} />
+      </ContentHandoff>
+    </RouteContentTransition>
   )
 }

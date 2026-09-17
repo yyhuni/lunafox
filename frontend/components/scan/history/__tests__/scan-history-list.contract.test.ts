@@ -12,6 +12,8 @@ describe("scan-history-list contract", () => {
 
   it("uses the shared skeleton handoff instead of a hard initial loading branch", () => {
     expect(source).toContain("ContentHandoff")
+    expect(source).toContain('from "@/components/shared/navigation/route-content-transition"')
+    expect(source).toContain("<RouteContentTransition>")
     expect(source).toContain("const isInitialLoading = state.isLoading && !state.scans.length")
     expect(source).toContain("if (!isInitialLoading && state.error)")
     expect(source).toContain('owner="scan-history-list-view-content"')

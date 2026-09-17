@@ -8,6 +8,7 @@ import { useSessionRenewal } from "@/hooks/use-session-renewal"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ContentReveal } from "@/components/shared/loading/content-reveal"
+import { RouteContentTransitionProvider } from "@/components/shared/navigation/route-content-transition"
 import {
   protectedAppShellContentFrameClassName,
   protectedAppShellContentStyle,
@@ -59,9 +60,11 @@ export function ProtectedAuthLayout({
               viewportClassName={protectedAppShellScrollViewportClassName}
             >
               <Suspense fallback={<RouteBootHandoffBlocker />}>
-                <ContentReveal owner="auth-layout-route-content" className="flex min-h-0 flex-1 flex-col">
-                  {children}
-                </ContentReveal>
+                <RouteContentTransitionProvider>
+                  <ContentReveal owner="auth-layout-route-content" className="flex min-h-0 flex-1 flex-col">
+                    {children}
+                  </ContentReveal>
+                </RouteContentTransitionProvider>
               </Suspense>
             </ScrollArea>
           </SidebarInset>

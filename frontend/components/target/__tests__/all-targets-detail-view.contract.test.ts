@@ -13,6 +13,8 @@ describe("all-targets-detail-view contract", () => {
 
   it("uses shared skeleton handoff instead of a hard initial loading branch", () => {
     expect(source).toContain("ContentHandoff")
+    expect(source).toContain('from "@/components/shared/navigation/route-content-transition"')
+    expect(source).toContain("<RouteContentTransition>")
     expect(source).toContain("const isInitialLoading = state.isLoading && !state.data")
     expect(source).toContain("const loadingRowCount = getDataTableSkeletonRowCount(state.pagination.pageSize)")
     expect(source).toContain("if (!isInitialLoading && state.error)")

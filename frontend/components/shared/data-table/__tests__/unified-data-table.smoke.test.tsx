@@ -65,6 +65,28 @@ describe("UnifiedDataTable", () => {
     expect(container.querySelector("tbody td.sticky")).toHaveClass("right-0", "z-10", "bg-inherit")
   })
 
+  it("可激活的数据行提供即时按下反馈", () => {
+    const columns: ColumnDef<Row>[] = [
+      {
+        accessorKey: "name",
+        header: "Name",
+        meta: { title: "Name" },
+      },
+    ]
+
+    const { container } = renderWithProviders(
+      <UnifiedDataTable<Row>
+        data={[{ id: 1, name: "alpha" }]}
+        columns={columns}
+        getRowId={(row) => String(row.id)}
+        ui={{ hideToolbar: true, hidePagination: true }}
+        behavior={{ enableRowSelection: false, onRowClick: vi.fn() }}
+      />
+    )
+
+    expect(container.querySelector("tbody tr")).toHaveClass("active:bg-secondary/80")
+  })
+
   it("行详情激活不会拦截 role=checkbox 的选择控件", () => {
     const onRowClick = vi.fn()
     const columns: ColumnDef<Row>[] = [

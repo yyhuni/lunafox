@@ -87,12 +87,18 @@ describe("layout contract", () => {
 
   it("uses one feature-local shell structure for loading and resolved target chrome", () => {
     expect(source).toContain('from "./target-detail-shell-layout"')
+    expect(source).toContain(
+      'from "@/components/shared/navigation/route-content-transition"'
+    )
     expect(source).toContain("TargetDetailShellLoadingState")
     expect(source).toContain("TargetDetailShellLayout")
     expect(source).toContain("TargetDetailShellHeader")
     expect(source).toContain("TargetDetailShellPrimaryTabs")
     expect(source).toContain("TargetDetailShellSecondaryTabs")
     expect(source).toContain("TargetDetailShellContent")
+    expect(source).toContain(
+      '<RouteContentTransition className="flex min-h-0 min-w-0 flex-1 flex-col">'
+    )
     expect(source).not.toContain("DetailPageShellSkeleton")
     expect(shellLayoutSource).toContain("export function TargetDetailShellLayout")
     expect(shellLayoutSource).toContain("export function TargetDetailShellLoadingState")

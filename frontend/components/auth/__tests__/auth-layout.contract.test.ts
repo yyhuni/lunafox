@@ -72,9 +72,13 @@ describe("auth-layout contract", () => {
 
   it("reveals protected route content through the shared subtle content reveal owner", () => {
     expect(protectedAuthLayoutSource).toContain('import { ContentReveal } from "@/components/shared/loading/content-reveal"')
+    expect(protectedAuthLayoutSource).toContain(
+      'import { RouteContentTransitionProvider } from "@/components/shared/navigation/route-content-transition"'
+    )
     expect(protectedAuthLayoutSource).toMatch(
       /<ContentReveal\s+owner="auth-layout-route-content"/
     )
+    expect(protectedAuthLayoutSource).toContain("<RouteContentTransitionProvider>")
     expect(protectedAuthLayoutSource).toContain('className="flex min-h-0 flex-1 flex-col"')
   })
 

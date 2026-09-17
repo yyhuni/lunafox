@@ -13,6 +13,7 @@ describe("table contract", () => {
     expect(source).not.toContain("uppercase")
     expect(source).toContain("bg-card")
     expect(source).toContain("hover:bg-secondary")
+    expect(source).toContain("active:bg-secondary/80")
     expect(source).toContain("border-border")
     expect(source).toContain('TABLE_HEADER_RHYTHM_CLASS = "h-10 px-2"')
     expect(source).toContain('TABLE_CELL_RHYTHM_CLASS = "p-2"')
