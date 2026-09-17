@@ -10,4 +10,9 @@ describe("about-dialog contract", () => {
     expect(source).toContain("className")
     expect(source).toContain("from \"react\"")
   })
+
+  it("keeps the about dialog open while upgrade confirmation is showing", () => {
+    expect(source).toContain("if (!nextOpen && state.confirmOpen)")
+    expect(source).toContain("state.setConfirmOpen(false)")
+  })
 })

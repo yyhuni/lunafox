@@ -23,11 +23,15 @@ export function AboutDialog({ children }: AboutDialogProps) {
   const state = useAboutDialogState({ enabled: open })
 
   const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen)
-    if (!nextOpen) {
+    // Nested confirmation is still inside this Dialog. Dismissing the about
+    // shell first would also take the upgrade confirm with it.
+    if (!nextOpen && state.confirmOpen) {
       state.setConfirmOpen(false)
       setAcknowledged(false)
+      return
     }
+    setOpen(nextOpen)
+    if (!nextOpen) setAcknowledged(false)
   }
 
   return (
@@ -45,6 +49,7 @@ export function AboutDialog({ children }: AboutDialogProps) {
             checkError={state.checkError}
             isChecking={state.isChecking}
             isCreating={state.isCreating}
+            canStartUpgrade={Boolean(state.candidate && state.hasUpdate && state.updateResult?.eligible)}
             operation={state.operation}
             onCheckUpdate={() => void state.handleCheckUpdate()}
             onStartUpgrade={state.handleStartUpgrade}

@@ -54,6 +54,7 @@ interface AboutDialogVersionInfoProps {
   checkError: string | null
   isChecking: boolean
   isCreating: boolean
+  canStartUpgrade?: boolean
   operation: { data?: UpgradeOperation; isReconnecting?: boolean; operationId?: string | null }
   onCheckUpdate: () => void
   onStartUpgrade: () => void
@@ -68,6 +69,7 @@ export function AboutDialogVersionInfo({
   checkError,
   isChecking,
   isCreating,
+  canStartUpgrade = false,
   operation,
   onCheckUpdate,
   onStartUpgrade,
@@ -106,7 +108,7 @@ export function AboutDialogVersionInfo({
           <IconRefresh className="mr-2 h-4 w-4" />{t("checkUpdate")}
         </Button>
         {candidate && hasUpdate && !operation.data && (
-          <Button size="sm" className="flex-1" onClick={onStartUpgrade} disabled={!candidate || isCreating}>
+          <Button size="sm" className="flex-1" onClick={onStartUpgrade} disabled={!canStartUpgrade || isCreating}>
             <semanticIcons.action.run className="mr-2 h-4 w-4" />{t("startUpgrade")}
           </Button>
         )}

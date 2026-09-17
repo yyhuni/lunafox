@@ -9,4 +9,9 @@ describe("about-dialog-state contract", () => {
     expect(source).toContain("export function useAboutDialogState")
     expect(source).toContain("from \"react\"")
   })
+
+  it("loads the installed version only while the about entry is open", () => {
+    expect(source).toContain("useVersion({ enabled })")
+    expect(source).not.toContain("useVersion({ enabled: false })")
+  })
 })

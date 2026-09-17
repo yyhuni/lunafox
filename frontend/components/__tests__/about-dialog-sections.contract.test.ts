@@ -11,6 +11,11 @@ describe("about-dialog-sections contract", () => {
     expect(source).toContain("from \"@/components/icons\"")
   })
 
+  it("does not keep start upgrade clickable when the candidate is ineligible", () => {
+    expect(source).toContain("canStartUpgrade")
+    expect(source).toContain("disabled={!canStartUpgrade || isCreating}")
+  })
+
   it("adds a support-author shortcut from the about dialog", () => {
     expect(source).toContain("supportAuthor")
     expect(source).toContain("/settings/support/")
