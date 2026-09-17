@@ -63,9 +63,9 @@ for platform in linux/amd64 linux/arm64; do
 	docker buildx imagetools inspect --raw "$source_ref" >"$tmp_dir/platform-${platform#linux/}.json"
 	node "$ROOT_DIR/scripts/ci/verify-runtime-image-index.mjs" --raw-file "$tmp_dir/platform-${platform#linux/}.json" --expected-digest "${source_ref##*@}" --expected-platforms "$platform" >/dev/null
 done
-# Refuse an existing immutable tag with a different graph, including retries
-# whose platform build returned different provenance bytes.
-docker buildx imagetools create --dry-run "${source_refs[@]}" >"$tmp_dir/proposed-index.json"
+# Platform rebuilds attach fresh provenance/SBOM bytes, so a retry of the same
+# protected merge can propose a different graph. The first successful index
+# write for this tag is the immutable source of truth; later retries reuse it.
 resolve_optional_tag() {
 	local tag="$1" output error
 	output="$(mktemp "$tmp_dir/resolve.XXXXXX")"
@@ -79,29 +79,59 @@ resolve_optional_tag() {
 		return 1
 	fi
 }
+retry_transient_registry() {
+	local description="$1"
+	shift
+	local attempt=1 delay=2 output_file error_file
+	output_file="$(mktemp "$tmp_dir/retry-output.XXXXXX")"
+	error_file="$(mktemp "$tmp_dir/retry-error.XXXXXX")"
+	while :; do
+		: >"$output_file"
+		: >"$error_file"
+		if "$@" >"$output_file" 2>"$error_file"; then
+			cat "$output_file"
+			return 0
+		fi
+		if [ "$attempt" -ge 6 ] || ! grep -Eqi 'MANIFEST_UNKNOWN|manifest unknown|not found|404' "$error_file"; then
+			cat "$error_file" >&2
+			return 1
+		fi
+		printf 'Registry %s failed (attempt %s/6); retrying in %ss\n' "$description" "$attempt" "$delay" >&2
+		sleep "$delay"
+		delay=$((delay * 2))
+		[ "$delay" -le 8 ] || delay=8
+		attempt=$((attempt + 1))
+	done
+}
 existing_digest="$(resolve_optional_tag "$docker_tag")"
 if [ -n "$existing_digest" ]; then
-	docker buildx imagetools inspect --raw "$docker_tag" >"$tmp_dir/existing-index.json"
-	jq -S . "$tmp_dir/proposed-index.json" >"$tmp_dir/proposed-canonical.json"
-	jq -S . "$tmp_dir/existing-index.json" >"$tmp_dir/existing-canonical.json"
-	cmp -s "$tmp_dir/proposed-canonical.json" "$tmp_dir/existing-canonical.json" || fail "immutable index tag already has a different graph"
+	retry_transient_registry "inspect $docker_tag" \
+		docker buildx imagetools inspect --raw "$docker_tag" >"$tmp_dir/existing-index.json"
+	node "$ROOT_DIR/scripts/ci/verify-runtime-image-index.mjs" \
+		--raw-file "$tmp_dir/existing-index.json" --expected-digest "$existing_digest" --expected-platforms linux/amd64,linux/arm64 >/dev/null
+	printf 'reusing immutable Engine index %s\n' "$existing_digest" >&2
 else
 	docker buildx imagetools create --tag "$docker_tag" "${source_refs[@]}" >/dev/null
 fi
-index_digest="$(docker buildx imagetools inspect "$docker_tag" | awk '/^Digest:/ && digest == "" {digest=$2} END {print digest}')"
+index_digest="$(retry_transient_registry "inspect digest $docker_tag" \
+	docker buildx imagetools inspect "$docker_tag" | awk '/^Digest:/ && digest == "" {digest=$2} END {print digest}')"
 [[ "$index_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || fail "final index digest is invalid"
+[ -z "$existing_digest" ] || [ "$existing_digest" = "$index_digest" ] || fail "resolved immutable digest drifted during inspect"
 docker_raw="$tmp_dir/dockerhub-index.json"
-docker buildx imagetools inspect --raw "$docker_tag" >"$docker_raw"
+retry_transient_registry "inspect raw $docker_tag" \
+	docker buildx imagetools inspect --raw "$docker_tag" >"$docker_raw"
 node "$ROOT_DIR/scripts/ci/verify-runtime-image-index.mjs" --raw-file "$docker_raw" --expected-digest "$index_digest" --expected-platforms linux/amd64,linux/arm64 >/dev/null
 
 docker_ref="docker.io/yyhuni/$repository@$index_digest"
 ghcr_existing="$(resolve_optional_tag "$ghcr_tag")"
 [ -z "$ghcr_existing" ] || [ "$ghcr_existing" = "$index_digest" ] || fail "immutable GHCR index tag already has a different digest"
-oras cp "$docker_ref" "$ghcr_tag"
-ghcr_digest="$(docker buildx imagetools inspect "$ghcr_tag" | awk '/^Digest:/ && digest == "" {digest=$2} END {print digest}')"
+retry_transient_registry "oras cp $docker_ref" oras cp "$docker_ref" "$ghcr_tag"
+ghcr_digest="$(retry_transient_registry "inspect digest $ghcr_tag" \
+	docker buildx imagetools inspect "$ghcr_tag" | awk '/^Digest:/ && digest == "" {digest=$2} END {print digest}')"
 [ "$ghcr_digest" = "$index_digest" ] || fail "cross-Registry index digest drift"
 ghcr_raw="$tmp_dir/ghcr-index.json"
-docker buildx imagetools inspect --raw "$ghcr_tag" >"$ghcr_raw"
+retry_transient_registry "inspect raw $ghcr_tag" \
+	docker buildx imagetools inspect --raw "$ghcr_tag" >"$ghcr_raw"
 node "$ROOT_DIR/scripts/ci/verify-runtime-image-index.mjs" --raw-file "$ghcr_raw" --expected-digest "$index_digest" --expected-platforms linux/amd64,linux/arm64 >/dev/null
 ghcr_ref="ghcr.io/yyhuni/$repository@$index_digest"
 

@@ -112,3 +112,37 @@ verify_host_pull docker.io/yyhuni/image@sha256:abc engine test ghcr.io/yyhuni/im
     }
   });
 }
+
+test("retry reuses an existing immutable index instead of comparing provenance graphs", () => {
+  const source = fs.readFileSync(script, "utf8");
+  assert.match(source, /immutable source of truth/);
+  assert.match(source, /retry_transient_registry "oras cp \$docker_ref" oras cp "\$docker_ref" "\$ghcr_tag"/);
+  assert.doesNotMatch(source, /already has a different graph/);
+  assert.doesNotMatch(source, /proposed-canonical/);
+});
+
+test("transient registry retry retries not-found then succeeds", () => {
+  const source = fs.readFileSync(script, "utf8");
+  const helper = source.slice(source.indexOf("retry_transient_registry() {"), source.indexOf("existing_digest="));
+  const harness = `set -euo pipefail
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+${helper}
+calls_file="$tmp_dir/calls"
+echo 0 >"$calls_file"
+fake_inspect() {
+  echo $(( $(cat "$calls_file") + 1 )) >"$calls_file"
+  if [ "$(cat "$calls_file")" -lt 2 ]; then
+    echo 'Error response from registry: sha256:abc: not found' >&2
+    return 1
+  fi
+  echo reused-index
+}
+out="$(retry_transient_registry inspect fake_inspect)"
+[ "$out" = reused-index ]
+[ "$(cat "$calls_file")" -eq 2 ]
+`;
+  const result = spawnSync("bash", ["-c", harness], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+});
+
