@@ -3,7 +3,12 @@ import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
-const SNAPSHOT = new Set([".env", ".env.example", "compose.yaml", "engine-inventory.yaml", "release.manifest.yaml"]);
+const SNAPSHOT = new Set([
+  ".env", ".env.example", "compose.yaml", "engine-inventory.yaml", "release.manifest.yaml",
+  // The delivered lifecycle entry points are part of the deployment snapshot: a
+  // change to any of them must run the full public validation.
+  "install.sh", "start.sh", "restart.sh", "stop.sh", "status.sh", "logs.sh", "uninstall.sh", "lunafox-lifecycle.sh",
+]);
 const DEPLOYMENT = /^chore\(deploy\): finalize deployment snapshot v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?(?: \(#\d+\))?$/;
 const EXPORTED_SOURCE = /^chore\(export\): generated deployment projection v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)? \(#(\d+)\)$/;
 const SHA = /^[a-f0-9]{40}$/;

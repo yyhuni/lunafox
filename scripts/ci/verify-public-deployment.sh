@@ -70,11 +70,28 @@ cmp -s "$ROOT_DIR/.env" "$ROOT_DIR/.env.example" || fail ".env and .env.example 
 for required in server server/scripts contracts engine-go proto extensions docker/nginx docker/bootstrap tools/engine-release tools/engine-oci-publish; do
 	[ -d "$ROOT_DIR/$required" ] || fail "public Runtime source closure is missing: $required"
 done
-for forbidden in install.sh prepare-deployment.sh start.sh restart.sh stop.sh uninstall.sh scripts/deploy \
+# The public host execution surface is an explicit allowlist: the seven root
+# lifecycle scripts plus the helper they all share. Every other root entry, and
+# every retired private path, stays rejected.
+for script in install.sh start.sh restart.sh stop.sh status.sh logs.sh uninstall.sh lunafox-lifecycle.sh; do
+	require_file "$script"
+	[ -x "$ROOT_DIR/$script" ] || fail "public lifecycle script must be executable: $script"
+done
+for script in install.sh start.sh restart.sh stop.sh status.sh logs.sh uninstall.sh; do
+	grep -Fq 'lunafox-lifecycle.sh' "$ROOT_DIR/$script" || fail "public lifecycle script must delegate to the shared helper: $script"
+done
+for forbidden in prepare-deployment.sh scripts/deploy \
 	scripts/ci/prepare-deployment-selftest.sh \
 	tools/installer worker docker/base-tools docker/ci-tools docker/dev-engine-publisher \
 	docker/nginx/ssl scripts/cli scripts/installer scripts/shared checksums.txt; do
 	[ ! -e "$ROOT_DIR/$forbidden" ] || fail "retired, private, or development deployment path is present: $forbidden"
+done
+for entry in "$ROOT_DIR"/*.sh; do
+	[ -e "$entry" ] || continue
+	case "$(basename "$entry")" in
+	install.sh | start.sh | restart.sh | stop.sh | status.sh | logs.sh | uninstall.sh | lunafox-lifecycle.sh) ;;
+	*) fail "undeclared root host entry in the public projection: $(basename "$entry")" ;;
+	esac
 done
 if [ -e "$ROOT_DIR/tools" ]; then
 	for tool_path in "$ROOT_DIR/tools"/*; do
@@ -124,6 +141,7 @@ jq -e '
   (.services["config-init"].restart == "no") and
   (.services["config-init"].network_mode == "none") and
   (.services["config-init"].environment.DATABASE_MODE == "embedded") and
+  (.services["config-init"].environment.COMPOSE_PROFILES == "embedded") and
   (.services["config-init"].environment.DB_HOST == "") and
   (.services["config-init"].environment.DB_PORT == "5432") and
   (.services["config-init"].environment.DB_SSLMODE == "") and
@@ -162,6 +180,17 @@ jq -e '
   (.services.agent.labels["lunafox.logs.component"] == "agent")
 ' <<<"$compose_json" >/dev/null || fail "Compose service graph or bounded logging contract is invalid"
 
+# Compose renders durations either as a string ("30s") or as nanoseconds,
+# depending on the CLI version, so the rendered graph only has to declare the
+# value; the floor itself is asserted on the template, which is version-stable.
+jq -e '(.services.agent.stop_grace_period != null) and (.services.agent.stop_grace_period != "")' \
+  <<<"$compose_json" >/dev/null || fail "the resident Agent must declare a stop grace period"
+agent_grace_seconds="$(awk '/^  agent:$/ {inside=1; next} inside && /^  [a-z]/ {inside=0} inside && /^    stop_grace_period:/ {value=$2; gsub(/[^0-9]/, "", value); print value; exit}' "$ROOT_DIR/deploy/compose.template.yaml")"
+case "$agent_grace_seconds" in
+'' | *[!0-9]*) fail "the resident Agent must declare a stop grace period of at least 30 seconds" ;;
+esac
+[ "$agent_grace_seconds" -ge 30 ] || fail "the resident Agent must allow at least 30 seconds for Engine Container cleanup"
+
 assert_registry_closure() {
 	local registry="$1" other_registry="$2" rendered="$3"
 	jq -e --arg registry "$registry" --arg other "$other_registry" '
@@ -197,6 +226,7 @@ jq -e '
 jq -e '
   (.services | has("postgres") | not) and
   (.services["config-init"].environment.DATABASE_MODE == "external") and
+  (.services["config-init"].environment.COMPOSE_PROFILES == "external") and
   (.services["config-init"].environment.DB_HOST == "database.example") and
   (.services["config-init"].environment.DB_PORT == "5432") and
   (.services["config-init"].environment.DB_SSLMODE == "require") and
@@ -296,19 +326,18 @@ grep -Eq '^PUBLIC_PORT=443$' "$ROOT_DIR/.env.example" || fail ".env.example must
 grep -Eq '^DATABASE_MODE=embedded$' "$ROOT_DIR/.env.example" || fail ".env.example must default to embedded database mode"
 expected_compose_profile="COMPOSE_PROFILES=\${DATABASE_MODE:-embedded}"
 grep -Fqx "$expected_compose_profile" "$ROOT_DIR/.env.example" || fail ".env.example must derive the Compose profile from database mode"
-grep -Eq '^DB_HOST=$' "$ROOT_DIR/.env.example" || fail ".env.example must leave the embedded database host empty"
-grep -Eq '^DB_PORT=5432$' "$ROOT_DIR/.env.example" || fail ".env.example must provide the PostgreSQL port default"
-grep -Eq '^DB_USER=postgres$' "$ROOT_DIR/.env.example" || fail ".env.example must provide the database user default"
-grep -Eq '^DB_NAME=lunafox$' "$ROOT_DIR/.env.example" || fail ".env.example must provide the database name default"
-grep -Eq '^DB_SSLMODE=$' "$ROOT_DIR/.env.example" || fail ".env.example must require an explicit external database SSL mode"
+active_keys="$(rg -o '^[A-Za-z_][A-Za-z0-9_]*=' "$ROOT_DIR/.env.example" | tr -d '=' | sort -u | tr '\n' ' ')"
+[ "$active_keys" = "COMPOSE_PROFILES DATABASE_MODE DB_PASSWORD JWT_SECRET PUBLIC_HOST PUBLIC_PORT RELEASE_REGISTRY " ] ||
+	fail ".env.example must only assign the reviewed settings and the two empty secret inputs: $active_keys"
+for key in DB_HOST DB_PORT DB_USER DB_NAME DB_SSLMODE; do
+	grep -Eq "^#${key}=" "$ROOT_DIR/.env.example" || fail ".env.example must keep ${key} in the commented external database example"
+done
 grep -Eq '^DB_PASSWORD=$' "$ROOT_DIR/.env.example" || fail ".env.example must leave DB_PASSWORD empty for automatic generation"
 grep -Eq '^JWT_SECRET=$' "$ROOT_DIR/.env.example" || fail ".env.example must leave JWT_SECRET empty for automatic generation"
 if grep -Eq '^PUBLIC_URL=' "$ROOT_DIR/.env.example"; then
 	fail ".env.example must not expose derived PUBLIC_URL"
 fi
-if ! grep -Eiq 'GENERATED' "$ROOT_DIR/.env.example" || ! grep -Eiq 'READ[- ]ONLY' "$ROOT_DIR/.env.example"; then
-	fail ".env.example lacks complete generated/read-only marker"
-fi
+grep -Fq 'never commit local secret' "$ROOT_DIR/.env.example" || fail ".env.example must warn against committing local secret edits"
 
 bash "$ROOT_DIR/scripts/ci/verify-public-runtime-source.sh" --root-dir "$ROOT_DIR"
 node "$ROOT_DIR/scripts/ci/verify-public-runtime-contexts.mjs" --root-dir "$ROOT_DIR"
