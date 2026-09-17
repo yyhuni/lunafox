@@ -197,7 +197,15 @@
       "scripts/ci/finalize-engine-runtime-platforms.sh",
       "scripts/ci/finalize-engine-runtime-platforms.test.mjs",
       "scripts/ci/select-public-validation-scope.mjs",
-      "scripts/ci/select-public-validation-scope.test.mjs"
+      "scripts/ci/select-public-validation-scope.test.mjs",
+      "install.sh",
+      "start.sh",
+      "restart.sh",
+      "stop.sh",
+      "status.sh",
+      "logs.sh",
+      "uninstall.sh",
+      "lunafox-lifecycle.sh"
     ],
     "prefixes": [
       "resources/loki/",
@@ -252,7 +260,8 @@
       "frontend/services/",
       "frontend/styles/",
       "frontend/test/",
-      "frontend/types/"
+      "frontend/types/",
+      "deploy/lifecycle/"
     ],
     "generatedExact": [
       "PUBLIC_PROVENANCE.json",

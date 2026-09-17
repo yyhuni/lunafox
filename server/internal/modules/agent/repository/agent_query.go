@@ -31,6 +31,25 @@ func (r *agentRepository) GetByID(ctx context.Context, id int) (*agentdomain.Age
 	return modelAgentToDomain(&agent), nil
 }
 
+// GetByInstanceID resolves the stable installation identity that the Compose
+// bootstrap binding stores, so a lifecycle probe can find the resident Agent
+// without a user session or a registration token.
+func (r *agentRepository) GetByInstanceID(ctx context.Context, instanceID string) (*agentdomain.Agent, error) {
+	instanceID = strings.TrimSpace(instanceID)
+	if instanceID == "" {
+		return nil, agentdomain.ErrAgentNotFound
+	}
+	var agent model.Agent
+	err := r.db.WithContext(ctx).Preload("RuntimeStatus").Preload("Location").Where("instance_id = ?", instanceID).First(&agent).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, agentdomain.ErrAgentNotFound
+		}
+		return nil, err
+	}
+	return modelAgentToDomain(&agent), nil
+}
+
 // FindByAuthenticationToken finds an agent by authentication token.
 func (r *agentRepository) FindByAuthenticationToken(ctx context.Context, authenticationToken string) (*agentdomain.Agent, error) {
 	var agent model.Agent

@@ -39,6 +39,13 @@ func RunAdminPasswordReset(ctx context.Context, databaseConfig *config.DatabaseC
 	return bootstrap.RunAdminPasswordReset(ctx, databaseConfig, migrationsFS)
 }
 
+// RunResidentAgentReadiness reports whether the Agent bound to this deployment
+// can accept work. It uses the Server's own database trust boundary, so the
+// public lifecycle scripts never need an administrator credential or a JWT.
+func RunResidentAgentReadiness(ctx context.Context, databaseConfig *config.DatabaseConfig) (bootstrap.ResidentAgentReadiness, error) {
+	return bootstrap.RunResidentAgentReadiness(ctx, databaseConfig)
+}
+
 // RunWordlistResourceIdentityMigration performs the explicit development
 // Catalog/resource hard cut without starting the long-lived Server.
 func RunWordlistResourceIdentityMigration(ctx context.Context, databaseConfig *config.DatabaseConfig) (*wordlistmigration.Report, error) {
