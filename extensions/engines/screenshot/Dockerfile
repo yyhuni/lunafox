@@ -4,7 +4,7 @@
 
 ARG ENGINE_GO_VERSION=1.26
 ARG TOOLS_GO_VERSION=1.26
-ARG UBUNTU_BASE=debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818
+ARG UBUNTU_BASE=public.ecr.aws/docker/library/debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818
 ARG ENGINE_IMAGE_VERSION
 ARG ENGINE_IMAGE_SOURCE=https://github.com/yyhuni/lunafox
 ARG HTTPX_VERSION=v1.10.0
@@ -36,7 +36,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     done; \
     test -x /out/httpx
 
-FROM --platform=$BUILDPLATFORM alpine:3.23.2 AS cwebp-builder
+FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/alpine:3.23.2 AS cwebp-builder
 ARG TARGETARCH
 ARG LIBWEBP_VERSION
 ARG LIBWEBP_AMD64_SHA256

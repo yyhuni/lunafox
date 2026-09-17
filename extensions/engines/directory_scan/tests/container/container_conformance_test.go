@@ -38,7 +38,7 @@ func TestDockerfilePinsOfficialFFUFArchivesForBothArchitectures(t *testing.T) {
 	dockerfile := directorySourceFile(t, "Dockerfile")
 	requireTextMarkers(t, dockerfile,
 		"ARG FFUF_VERSION=v2.2.1",
-		"FROM --platform=$BUILDPLATFORM alpine:3.23.2 AS ffuf-downloader",
+		"FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/alpine:3.23.2 AS ffuf-downloader",
 		"case \"$TARGETARCH\" in",
 		"archive=\"ffuf_2.2.1_linux_amd64.tar.gz\"",
 		"checksum=\"86307885810d3c36ba4a3e9ba5178c2d9027bba0dd7f4ea39e39e7c972b62396\"",

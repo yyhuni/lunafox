@@ -3,14 +3,14 @@
 # lunafox:dockerfile-mode=standard
 # lunafox:generated:begin
 ARG ENGINE_GO_VERSION=1.26
-ARG UBUNTU_BASE=ubuntu:noble-20260113
+ARG UBUNTU_BASE=public.ecr.aws/docker/library/ubuntu:noble-20260113
 ARG ENGINE_IMAGE_VERSION
 ARG ENGINE_IMAGE_SOURCE=https://github.com/yyhuni/lunafox
 ARG GOPROXY=https://proxy.golang.org,direct
 
 # lunafox:engine-owned:build:begin
 ARG FFUF_VERSION=v2.2.1
-FROM --platform=$BUILDPLATFORM alpine:3.23.2 AS ffuf-downloader
+FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/alpine:3.23.2 AS ffuf-downloader
 ARG TARGETARCH
 ARG FFUF_VERSION
 
