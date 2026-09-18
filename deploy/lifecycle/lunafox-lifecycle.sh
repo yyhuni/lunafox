@@ -709,11 +709,25 @@ SVC_ONESHOT_STATE=""
 SVC_CORE_STATE=""
 SVC_AUX_STATE=""
 PROBE_FAILURE=""
+# The service behind PROBE_FAILURE, when the probe identified one. The failure
+# footer uses it to point at that service's logs instead of every service's.
+PROBE_FAILURE_SERVICE=""
 PROBE_WAITING=""
 PROBE_CORE_PENDING=""
 PROBE_AUX_PENDING=""
 PROBE_ONESHOT_PENDING=""
 PROBE_UNKNOWN_PENDING=""
+
+# The first explicit failure wins: a later row must not overwrite the verdict
+# the user will read. The service name is kept beside the message so the failure
+# footer can point at that service's logs.
+record_probe_failure() {
+	local service="$1" message="$2"
+	if [ -z "$PROBE_FAILURE" ]; then
+		PROBE_FAILURE="$message"
+		PROBE_FAILURE_SERVICE="$service"
+	fi
+}
 
 # Translates one docker compose ps row into the readiness dimensions. Explicit
 # failures are separated from "still starting" so the caller can return
@@ -727,12 +741,12 @@ classify_service_row() {
 		case "$state" in
 		exited)
 			if [ "$exit_code" != 0 ]; then
-				[ -n "$PROBE_FAILURE" ] || PROBE_FAILURE="the $service task exited with code ${exit_code:-unknown}"
+				record_probe_failure "$service" "the $service task exited with code ${exit_code:-unknown}"
 			fi
 			return 0
 			;;
 		dead)
-			[ -n "$PROBE_FAILURE" ] || PROBE_FAILURE="the $service task failed"
+			record_probe_failure "$service" "the $service task failed"
 			return 0
 			;;
 		esac
@@ -741,13 +755,13 @@ classify_service_row() {
 	fi
 	if in_list "$service" "$LUNAFOX_CORE_SERVICES"; then
 		if [ "$state" = exited ] || [ "$state" = dead ]; then
-			[ -n "$PROBE_FAILURE" ] || PROBE_FAILURE="the $service service stopped"
+			record_probe_failure "$service" "the $service service stopped"
 			return 0
 		fi
 		case "$health" in
 		healthy) return 0 ;;
 		unhealthy)
-			[ -n "$PROBE_FAILURE" ] || PROBE_FAILURE="the $service service is unhealthy"
+			record_probe_failure "$service" "the $service service is unhealthy"
 			return 0
 			;;
 		esac
@@ -758,7 +772,7 @@ classify_service_row() {
 		case "$state" in
 		running) return 0 ;;
 		exited | dead)
-			[ -n "$PROBE_FAILURE" ] || PROBE_FAILURE="the $service service exited"
+			record_probe_failure "$service" "the $service service exited"
 			return 0
 			;;
 		esac
@@ -769,15 +783,15 @@ classify_service_row() {
 	# reaches a verdict: a clean exit or a running healthy container is ready.
 	case "$state" in
 	exited)
-		[ "$exit_code" = 0 ] || { [ -n "$PROBE_FAILURE" ] || PROBE_FAILURE="the $service service exited with code ${exit_code:-unknown}"; }
+		[ "$exit_code" = 0 ] || record_probe_failure "$service" "the $service service exited with code ${exit_code:-unknown}"
 		;;
 	running)
 		case "$health" in
-		unhealthy) [ -n "$PROBE_FAILURE" ] || PROBE_FAILURE="the $service service is unhealthy" ;;
+		unhealthy) record_probe_failure "$service" "the $service service is unhealthy" ;;
 		starting | '') PROBE_UNKNOWN_PENDING="$service" ;;
 		esac
 		;;
-	dead) [ -n "$PROBE_FAILURE" ] || PROBE_FAILURE="the $service service failed" ;;
+	dead) record_probe_failure "$service" "the $service service failed" ;;
 	*) PROBE_UNKNOWN_PENDING="$service" ;;
 	esac
 	return 0
@@ -791,6 +805,7 @@ collect_probe() {
 	SVC_CORE_STATE=""
 	SVC_AUX_STATE=""
 	PROBE_FAILURE=""
+	PROBE_FAILURE_SERVICE=""
 	PROBE_WAITING=""
 	PROBE_CORE_PENDING=""
 	PROBE_AUX_PENDING=""
@@ -930,13 +945,36 @@ require_ready_timeout() {
 	READY_TIMEOUT="$raw"
 }
 
-report_ready_failure() {
-	local reason="$1" stage="$2" hint="$3"
-	fail "$reason
-LunaFox:   stage: $stage
-LunaFox:   deployment: $LUNAFOX_ROOT (kept as-is; containers, volumes, and configuration were not changed)
-LunaFox:   inspect logs: $hint
-LunaFox:   recheck with: ./status.sh"
+# A repairable deployment keeps the named volumes and the installed engines a
+# failed first-start task could not replace, so only that combination gets one
+# optional, last, data-loss-aware way out. A fresh directory and a failure that
+# named no service stay free of destructive commands.
+purge_hint_applies() {
+	local service="$1"
+	[ -n "$service" ] || return 1
+	[ "${LUNAFOX_DEPLOYMENT_STATE:-}" = repairable ] || return 1
+	in_list "$service" "$LUNAFOX_ONESHOT_SERVICES"
+}
+
+# The failure block is the last thing a user reads, so it is ordered as the
+# verdict, the stage it failed at, the preserved scene, and the next commands.
+# Nothing is stopped or rolled back, and the footer never claims the deployment
+# was not changed: compose up may already have created and started containers.
+report_failure() {
+	local conclusion="$1" stage="$2" service="${3:-}"
+	printf 'LunaFox: FAILED %s\n' "$conclusion" >&2
+	printf 'LunaFox:   stage: %s\n' "$stage" >&2
+	printf 'LunaFox:   deployment: %s (left in place; nothing was rolled back)\n' "$LUNAFOX_ROOT" >&2
+	if [ -n "$service" ]; then
+		printf 'LunaFox:   inspect logs: ./logs.sh %s\n' "$service" >&2
+	else
+		printf 'LunaFox:   inspect logs: ./logs.sh\n' >&2
+	fi
+	printf 'LunaFox:   recheck with: ./status.sh\n' >&2
+	if purge_hint_applies "$service"; then
+		printf 'LunaFox:   if this preserved data can be discarded, the named volumes can be deleted with: ./uninstall.sh --purge --confirm\n' >&2
+	fi
+	exit 1
 }
 
 # Blocks until every readiness condition passes, an unrecoverable condition
@@ -951,7 +989,7 @@ wait_for_ready() {
 		elapsed=$((SECONDS - started))
 		collect_probe
 		if [ -n "$PROBE_FAILURE" ]; then
-			report_ready_failure "$PROBE_FAILURE" "waiting for the deployment to become ready" "./logs.sh"
+			report_failure "$PROBE_FAILURE" "waiting for the deployment to become ready" "$PROBE_FAILURE_SERVICE"
 		fi
 		if [ -z "$PROBE_WAITING" ]; then
 			if agent_note="$(probe_agent_ready)"; then
@@ -974,8 +1012,9 @@ wait_for_ready() {
 			fi
 		fi
 		if [ "$elapsed" -ge "$READY_TIMEOUT" ]; then
-			report_ready_failure "the deployment did not become ready within $READY_TIMEOUT seconds" \
-				"${PROBE_WAITING:-all readiness conditions}" "./logs.sh"
+			# A timeout names no single service, so it keeps the plain logs hint.
+			report_failure "the deployment did not become ready within $READY_TIMEOUT seconds" \
+				"${PROBE_WAITING:-all readiness conditions}" ""
 		fi
 		if [ -n "$PROBE_WAITING" ]; then
 			progress_heartbeat "$PROBE_WAITING" "$elapsed"
@@ -1018,11 +1057,19 @@ print_success_summary() {
 # mistaken for the readiness verdict, and a failure still shows Compose's own
 # error verbatim.
 compose_up_once() {
-	local description="$1"
+	local description="$1" conclusion
 	shift
 	progress "$description"
 	if ! lf_compose up -d "$@"; then
-		report_ready_failure "docker compose up -d${1:+ $*} failed" "$description" "./logs.sh"
+		conclusion="docker compose up -d${1:+ $*} failed"
+		# Compose may have created or started part of the graph before it failed,
+		# so the probe — not the exit status — decides whether a service can be
+		# named. A failure that identified no service keeps the generic wording.
+		collect_probe
+		if [ -n "$PROBE_FAILURE" ]; then
+			conclusion="$PROBE_FAILURE"
+		fi
+		report_failure "$conclusion" "$description" "$PROBE_FAILURE_SERVICE"
 	fi
 	progress "containers are up; waiting until the deployment is actually ready"
 	return 0
@@ -1056,13 +1103,23 @@ action_install() {
 	acquire_lock install
 
 	classify_deployment
+	# This sentence is printed as the start step and reused verbatim as the
+	# failure stage, so it must match the classified state: only a directory with
+	# no LunaFox data yet is a first start, and a reinstall is not an upgrade.
+	local compose_description
 	case "$LUNAFOX_DEPLOYMENT_STATE" in
 	missing_env | mode_conflict | collision)
 		fail "$LUNAFOX_DEPLOYMENT_DETAIL; resolve it manually before retrying, because a first start is the only case that may create $LUNAFOX_ENV_FILE"
 		;;
-	existing) progress "an existing LunaFox deployment was detected; its configuration and volumes are preserved" ;;
-	repairable) progress "an existing LunaFox deployment was detected without containers; they will be recreated" ;;
-	fresh) progress "preparing a first start" ;;
+	fresh)
+		compose_description="starting LunaFox with docker compose up -d (a first start pulls images and initializes the database, so it can take a few minutes)"
+		;;
+	repairable)
+		compose_description="recreating the deployment containers with docker compose up -d (the named volumes and the installed engines are kept, and this is not an upgrade)"
+		;;
+	existing)
+		compose_description="starting the existing deployment with docker compose up -d (its configuration and volumes are preserved)"
+		;;
 	esac
 	if [ ! -e "$LUNAFOX_ENV_PATH" ]; then
 		create_env_from_template "$LUNAFOX_ENV_TEMPLATE_PATH"
@@ -1070,7 +1127,7 @@ action_install() {
 	enforce_private_env_mode
 	require_renderable_configuration
 	check_public_port
-	compose_up_once "starting LunaFox with docker compose up -d (a first start pulls images and initializes the database, so it can take a few minutes)" || return 1
+	compose_up_once "$compose_description" || return 1
 	wait_for_ready || return 1
 	print_success_summary
 }
