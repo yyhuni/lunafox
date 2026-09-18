@@ -4593,6 +4593,7 @@
     },
     "timeline": {
       "title": "升级进度",
+      "stageList": "升级阶段",
       "phaseProgress": "阶段进度",
       "stageCount": "第 {current} / {total} 阶段",
       "pending": "尚未开始",
@@ -4646,6 +4647,7 @@
     "facts": {
       "title": "已确认的升级信息",
       "description": "以下内容来自服务端 Operation，不包含前端推测的百分比或剩余时间。",
+      "currentVersion": "当前版本",
       "targetVersion": "目标版本",
       "manifest": "发布清单",
       "migration": "迁移状态",
@@ -4663,8 +4665,43 @@
       "retry": "重试升级",
       "retrying": "重试中...",
       "recheck": "重新检查",
+      "stop": "停止升级",
+      "stopping": "正在停止...",
+      "confirmStop": "确认停止升级",
+      "keepRunning": "继续升级",
       "enterSystem": "进入系统",
       "leave": "返回系统"
+    },
+    "stop": {
+      "title": "确认停止本次升级？",
+      "description": "升级器会在下一个安全的取消点停止，并返回明确的终态结果。",
+      "warning": "停止不会回滚已经完成的服务或数据库变更。若已跨过迁移阶段，可能需要人工恢复。"
+    },
+    "logs": {
+      "title": "升级日志",
+      "description": "本次操作由服务端确认的里程碑和安全诊断信息。",
+      "empty": "暂未记录已确认的升级里程碑。",
+      "messages": {
+        "requestAccepted": "已受理升级请求",
+        "stoppingWork": "正在停止活动工作",
+        "preflight": "已开始升级前检查",
+        "updatingServices": "正在更新系统服务",
+        "migratingDatabase": "已开始数据库迁移",
+        "restartingServices": "正在重启服务",
+        "verifyingAgents": "正在验证 Agent",
+        "verifyingSystem": "正在验证系统",
+        "completed": "升级验证已完成",
+        "failed": "升级失败",
+        "needsRecovery": "需要人工恢复",
+        "needsAttention": "需要操作员处理",
+        "workStopped": "升级前已停止活动工作",
+        "diagnostic": "升级诊断",
+        "unknown": "升级事件"
+      },
+      "metadata": {
+        "cancelledScans": "已取消扫描",
+        "cancelledTasks": "已取消任务"
+      }
     },
     "summary": {
       "durationUnknown": "耗时不可用",
@@ -4675,6 +4712,7 @@
       "title": "升级成功",
       "description": "系统已完成升级，以下是本次已验证的变更摘要。",
       "versionVerified": "当前服务端已确认运行版本：{version}",
+      "currentVersion": "当前版本",
       "targetVersion": "目标版本",
       "duration": "升级耗时",
       "durationUnknown": "耗时不可用",

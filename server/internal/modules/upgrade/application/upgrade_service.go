@@ -66,10 +66,11 @@ func NewService(config ServiceConfig) (*Service, error) {
 		return nil, ErrUpgradeDependency
 	}
 	currentVersion := strings.TrimSpace(config.CurrentVersion)
-	if currentVersion != "" {
-		if _, err := semver.Parse(currentVersion); err != nil {
-			return nil, fmt.Errorf("current release version is invalid: %w", err)
-		}
+	if currentVersion == "" {
+		return nil, fmt.Errorf("current release version is required")
+	}
+	if _, err := semver.Parse(currentVersion); err != nil {
+		return nil, fmt.Errorf("current release version is invalid: %w", err)
 	}
 	registry := strings.TrimSpace(config.Registry)
 	if registry != "" && registry != "docker.io" && registry != "ghcr.io" {
@@ -359,6 +360,79 @@ func (service *Service) GetOperation(ctx context.Context, userID int, operationI
 	return service.repository.Get(ctx, operationID)
 }
 
+// CurrentVersion returns the release version owned by the running Server
+// binary. It is exposed to the HTTP mapper so an operation can show both the
+// installed and target versions without adding a persistence column.
+func (service *Service) CurrentVersion() string {
+	if service == nil {
+		return ""
+	}
+	return service.currentVersion
+}
+
+// FindActiveOperation resolves the durable active operation independently of
+// browser storage. A missing row is intentionally surfaced as ErrUpgradeNotFound
+// so the HTTP view can distinguish an empty result from a storage failure.
+func (service *Service) FindActiveOperation(ctx context.Context, userID int) (*domain.Operation, error) {
+	if err := service.authorize(ctx, userID); err != nil {
+		return nil, err
+	}
+	operation, err := service.repository.FindActive(ctx)
+	if err != nil {
+		if isUpgradeRecordNotFound(err) {
+			return nil, domain.ErrUpgradeNotFound
+		}
+		return nil, err
+	}
+	if operation == nil {
+		return nil, domain.ErrUpgradeNotFound
+	}
+	if operation.Status.IsTerminal() {
+		// Repository implementations normally filter terminal rows, but keep the
+		// application boundary fail-closed when an older adapter returns one.
+		return nil, domain.ErrUpgradeNotFound
+	}
+	return operation, nil
+}
+
+// StopOperation asks the host boundary to cancel an active execution. The
+// Server keeps the operation active until a host checkpoint confirms the
+// terminal outcome, so a browser cannot unlock the system while Compose is
+// still mutating it. Repeated stops are idempotent for terminal operations.
+func (service *Service) StopOperation(ctx context.Context, userID int, operationID string, confirmed bool) (*domain.Operation, error) {
+	if err := service.authorize(ctx, userID); err != nil {
+		return nil, err
+	}
+	if !confirmed {
+		return nil, domain.ErrUpgradeConfirmationRequired
+	}
+	operationID, err := canonicalUUID(operationID)
+	if err != nil {
+		return nil, domain.ErrUpgradeNotFound
+	}
+	service.mu.Lock()
+	defer service.mu.Unlock()
+	operation, err := service.repository.Get(ctx, operationID)
+	if err != nil {
+		return nil, err
+	}
+	if operation.Status.IsTerminal() {
+		return operation, nil
+	}
+	// Keep a safe, user-visible marker while the host cancellation is in flight.
+	// It is deliberately not a fake lifecycle transition and is replaced by the
+	// host's terminal checkpoint or a watchdog outcome.
+	operation.Diagnostic = "stop requested; waiting for the host upgrader to confirm"
+	operation.UpdatedAt = service.now().UTC()
+	if updateErr := service.repository.Update(ctx, operation); updateErr != nil {
+		return nil, updateErr
+	}
+	if err := service.dispatch(ctx, operation, HostUpgradeActionStop); err != nil {
+		return operation, err
+	}
+	return operation, nil
+}
+
 // RetryOperation explicitly reuses the persisted release target. It resets
 // only retryable terminal states and sends one resume handoff for that same
 // operation; succeeded operations and active operations are never restarted.
@@ -484,8 +558,16 @@ func (service *Service) Get(ctx context.Context, userID int, operationID string)
 	return service.GetOperation(ctx, userID, operationID)
 }
 
+func (service *Service) Active(ctx context.Context, userID int) (*domain.Operation, error) {
+	return service.FindActiveOperation(ctx, userID)
+}
+
 func (service *Service) Retry(ctx context.Context, userID int, operationID string, confirmed bool) (*domain.Operation, error) {
 	return service.RetryOperation(ctx, userID, operationID, confirmed)
+}
+
+func (service *Service) Stop(ctx context.Context, userID int, operationID string, confirmed bool) (*domain.Operation, error) {
+	return service.StopOperation(ctx, userID, operationID, confirmed)
 }
 
 func (service *Service) authorize(ctx context.Context, userID int) error {
@@ -504,6 +586,12 @@ func (service *Service) authorize(ctx context.Context, userID int) error {
 
 func (service *Service) dispatch(ctx context.Context, operation *domain.Operation, action HostUpgradeAction) error {
 	if service.dispatcher == nil || operation == nil {
+		if action == HostUpgradeActionStop {
+			// A missing host process is itself a stop failure. Converge the
+			// operation before returning the transport error so the UI cannot be
+			// trapped behind an active operation forever.
+			service.markStopUnavailable(operation)
+		}
 		return domain.ErrUpgradeHostUnavailable
 	}
 	// The host handoff is intentionally detached from the browser request. A
@@ -513,7 +601,11 @@ func (service *Service) dispatch(ctx context.Context, operation *domain.Operatio
 	if err := service.dispatcher.Dispatch(dispatchCtx, HostUpgradeRequest{
 		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Action: action,
 	}); err != nil {
-		service.markHostUnavailable(operation, err)
+		if action == HostUpgradeActionStop {
+			service.markStopUnavailable(operation)
+		} else {
+			service.markHostUnavailable(operation, err)
+		}
 		return fmt.Errorf("dispatch host upgrader: %w", domain.ErrUpgradeHostUnavailable)
 	}
 	return nil
@@ -545,6 +637,33 @@ func (service *Service) markHostUnavailable(operation *domain.Operation, _ error
 	}
 	operation.StageTimes[status] = operation.UpdatedAt
 	operation.CompletedAt = &operation.UpdatedAt
+	_ = service.repository.Update(context.Background(), operation)
+}
+
+func (service *Service) markStopUnavailable(operation *domain.Operation) {
+	if operation == nil || operation.Status.IsTerminal() {
+		return
+	}
+	status := domain.StatusNeedsAttention
+	if operation.MigrationStatus == domain.MigrationStatusRunning ||
+		operation.MigrationStatus == domain.MigrationStatusSucceeded ||
+		operation.MigrationStatus == domain.MigrationStatusFailed ||
+		operation.MigrationStatus == domain.MigrationStatusUnknown ||
+		operation.Status == domain.StatusMigrating ||
+		operation.Status == domain.StatusRestarting ||
+		operation.Status == domain.StatusAgentVerifying ||
+		operation.Status == domain.StatusVerifying {
+		status = domain.StatusNeedsRecovery
+	}
+	now := service.now().UTC()
+	operation.Status = status
+	operation.Diagnostic = "the host upgrader did not accept the stop request"
+	operation.UpdatedAt = now
+	operation.CompletedAt = &now
+	if operation.StageTimes == nil {
+		operation.StageTimes = map[domain.Status]time.Time{}
+	}
+	operation.StageTimes[status] = now
 	_ = service.repository.Update(context.Background(), operation)
 }
 

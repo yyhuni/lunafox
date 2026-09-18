@@ -36,7 +36,19 @@ type handlerContractService struct {
 	retryOperationID string
 	retryConfirmed   bool
 	retryCalls       int
+	activeOperation  *domain.Operation
+	activeErr        error
+	activeUserID     int
+	activeCalls      int
+	stopOperation    *domain.Operation
+	stopErr          error
+	stopUserID       int
+	stopOperationID  string
+	stopConfirmed    bool
+	stopCalls        int
 }
+
+func (service *handlerContractService) CurrentVersion() string { return "1.0.0" }
 
 func (service *handlerContractService) CheckForUpdates(_ context.Context, userID int) (application.CheckForUpdatesResult, error) {
 	service.checkUserID = userID
@@ -148,6 +160,19 @@ func (service *handlerContractService) GetOperation(_ context.Context, userID in
 	}
 	return nil, domain.ErrUpgradeNotFound
 }
+
+func (service *handlerContractService) FindActiveOperation(_ context.Context, userID int) (*domain.Operation, error) {
+	service.activeUserID = userID
+	service.activeCalls++
+	if service.activeErr != nil {
+		return nil, service.activeErr
+	}
+	if service.activeOperation != nil {
+		return service.activeOperation, nil
+	}
+	return nil, domain.ErrUpgradeNotFound
+}
+
 func (service *handlerContractService) RetryOperation(_ context.Context, userID int, operationID string, confirmed bool) (*domain.Operation, error) {
 	service.retryUserID = userID
 	service.retryOperationID = operationID
@@ -160,6 +185,20 @@ func (service *handlerContractService) RetryOperation(_ context.Context, userID 
 		return service.retryOperation, nil
 	}
 	return nil, domain.ErrUpgradeRetryNotAllowed
+}
+
+func (service *handlerContractService) StopOperation(_ context.Context, userID int, operationID string, confirmed bool) (*domain.Operation, error) {
+	service.stopUserID = userID
+	service.stopOperationID = operationID
+	service.stopConfirmed = confirmed
+	service.stopCalls++
+	if service.stopErr != nil {
+		return nil, service.stopErr
+	}
+	if service.stopOperation != nil {
+		return service.stopOperation, nil
+	}
+	return nil, domain.ErrUpgradeNotFound
 }
 
 func handlerTestOperation() *domain.Operation {
@@ -323,7 +362,7 @@ func TestUpgradeHandlerCheckForUpdatesUsesAuthenticatedIdentityAndStrictEmptyBod
 
 func TestUpgradeHandlerGetAndRetryUseCanonicalOperationIdentity(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	service := &handlerContractService{getOperation: handlerTestOperation(), retryOperation: handlerTestOperation()}
+	service := &handlerContractService{getOperation: handlerTestOperation(), retryOperation: handlerTestOperation(), activeOperation: handlerTestOperation(), stopOperation: handlerTestOperation()}
 	engine := gin.New()
 	manager := auth.NewJWTManager("test-secret-key-32-chars-long!!", time.Minute, time.Hour)
 	engine.Use(middleware.AuthMiddleware(manager, handlerTokenVersionReader{version: 1}))
@@ -364,12 +403,30 @@ func TestUpgradeHandlerGetAndRetryUseCanonicalOperationIdentity(t *testing.T) {
 	if retryRec.Code != http.StatusOK || service.retryCalls != 1 || service.retryUserID != 7 || !service.retryConfirmed || service.retryOperationID != "11111111-1111-4111-8111-111111111111" {
 		t.Fatalf("retry response status=%d calls=%d user=%d id=%q confirmed=%v body=%s", retryRec.Code, service.retryCalls, service.retryUserID, service.retryOperationID, service.retryConfirmed, retryRec.Body.String())
 	}
+
+	activeReq := httptest.NewRequest(http.MethodGet, "/v1/upgradeOperations:active", nil)
+	activeReq.Header.Set("Authorization", "Bearer "+token)
+	activeRec := httptest.NewRecorder()
+	engine.ServeHTTP(activeRec, activeReq)
+	if activeRec.Code != http.StatusOK || service.activeCalls != 1 || service.activeUserID != 7 {
+		t.Fatalf("active response status=%d calls=%d user=%d body=%s", activeRec.Code, service.activeCalls, service.activeUserID, activeRec.Body.String())
+	}
+
+	stopReq := httptest.NewRequest(http.MethodPost, "/v1/upgradeOperations/11111111-1111-4111-8111-111111111111:stop", strings.NewReader(`{"confirmed":true}`))
+	stopReq.Header.Set("Authorization", "Bearer "+token)
+	stopReq.Header.Set("Content-Type", "application/json")
+	stopRec := httptest.NewRecorder()
+	engine.ServeHTTP(stopRec, stopReq)
+	if stopRec.Code != http.StatusOK || service.stopCalls != 1 || service.stopUserID != 7 || !service.stopConfirmed || service.stopOperationID != "11111111-1111-4111-8111-111111111111" {
+		t.Fatalf("stop response status=%d calls=%d user=%d id=%q confirmed=%v body=%s", stopRec.Code, service.stopCalls, service.stopUserID, service.stopOperationID, service.stopConfirmed, stopRec.Body.String())
+	}
 }
 
 func RegisterTestUpgradeHandler(engine *gin.Engine, upgradeHandler *UpgradeHandler) {
 	group := engine.Group("/v1")
 	group.POST("/system:checkForUpdates", upgradeHandler.CheckForUpdates)
 	group.POST("/upgradeOperations", upgradeHandler.CreateOperation)
+	group.GET("/upgradeOperations:active", upgradeHandler.FindActive)
 	group.GET("/upgradeOperations/:upgradeOperation", upgradeHandler.GetOperation)
 	group.POST("/upgradeOperations/*upgradeOperationAction", upgradeHandler.RetryAction)
 }

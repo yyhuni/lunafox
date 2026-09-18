@@ -90,6 +90,108 @@ func TestDaemonRejectsDigestReplayAndArbitraryAction(t *testing.T) {
 	}
 }
 
+func TestDaemonStopWithoutRunningExecutorWritesTerminalAttentionCheckpoint(t *testing.T) {
+	store := newTestStore(t)
+	now := time.Now().UTC()
+	request := Request{SchemaVersion: RequestSchema, OperationID: "op-stop-idle", Action: ActionStop, ManifestDigest: testManifestDigest}
+	if err := store.Save(Journal{SchemaVersion: JournalSchema, OperationID: request.OperationID, ManifestDigest: request.ManifestDigest, Stage: StageQueued, StartedAt: now, UpdatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	daemon := NewDaemon(store, nil)
+	response := daemon.accept(request)
+	if !response.Accepted || response.Journal.Stage != StageNeedsAttention {
+		t.Fatalf("idle stop response = %#v, want accepted needs_attention", response)
+	}
+	current, err := store.LoadCurrent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Stage != StageNeedsAttention || current.Diagnostic != "upgrade stopped by operator" {
+		t.Fatalf("idle stop journal = %#v", current)
+	}
+	// Repeating the same stop is a replay and cannot alter the terminal result.
+	replayed := daemon.accept(request)
+	if !replayed.Accepted || !replayed.Replayed || replayed.Journal.Stage != StageNeedsAttention {
+		t.Fatalf("repeated idle stop response = %#v", replayed)
+	}
+}
+
+func TestDaemonStopRaceDoesNotDowngradeTerminalCheckpoint(t *testing.T) {
+	store := newTestStore(t)
+	now := time.Now().UTC()
+	request := Request{SchemaVersion: RequestSchema, OperationID: "op-stop-race", Action: ActionStop, ManifestDigest: testManifestDigest}
+	terminal := Journal{
+		SchemaVersion: JournalSchema, OperationID: request.OperationID, ManifestDigest: request.ManifestDigest,
+		Stage: StageSucceeded, StartedAt: now, UpdatedAt: now, CompletedAt: &now,
+	}
+	if err := store.Save(terminal); err != nil {
+		t.Fatal(err)
+	}
+	daemon := NewDaemon(store, nil)
+	updated, err := daemon.stopJournal(request, terminal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Stage != StageSucceeded {
+		t.Fatalf("terminal stop race changed stage to %q", updated.Stage)
+	}
+	current, err := store.LoadCurrent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Stage != StageSucceeded {
+		t.Fatalf("terminal stop race persisted stage %q", current.Stage)
+	}
+}
+
+func TestDaemonStopCancelsExecutorAndUsesMigrationRecoveryFence(t *testing.T) {
+	store := newTestStore(t)
+	started := make(chan struct{})
+	finished := make(chan struct{})
+	executor := ExecutorFunc(func(ctx context.Context, _ Request, _ *JournalStore) error {
+		close(started)
+		<-ctx.Done()
+		close(finished)
+		return ctx.Err()
+	})
+	daemon := NewDaemon(store, executor)
+	daemon.SetManifestVerifier(func(string, string) error { return nil })
+	request := Request{SchemaVersion: RequestSchema, OperationID: "op-stop-running", Action: ActionStart, ManifestDigest: testManifestDigest}
+	if response := daemon.accept(request); !response.Accepted {
+		t.Fatalf("start response = %#v", response)
+	}
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("executor did not start")
+	}
+	if _, err := store.Checkpoint(request.OperationID, request.ManifestDigest, StageMigrating, "", nil); err != nil {
+		t.Fatal(err)
+	}
+	stopRequest := request
+	stopRequest.Action = ActionStop
+	stopResponse := daemon.accept(stopRequest)
+	if !stopResponse.Accepted {
+		t.Fatalf("stop response = %#v", stopResponse)
+	}
+	select {
+	case <-finished:
+	case <-time.After(2 * time.Second):
+		t.Fatal("executor did not observe cancellation")
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		current, err := store.LoadCurrent()
+		if err == nil && current.Stage == StageNeedsRecovery {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("cancelled migration journal did not converge: current=%#v err=%v", current, err)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
 func TestDaemonRejectsResumingNonTerminalHistoryAfterNewerTerminalOperation(t *testing.T) {
 	store := newTestStore(t)
 	now := time.Now().UTC()
@@ -312,6 +414,31 @@ func TestDaemonFailurePreservesPostMigrationRecoveryBoundary(t *testing.T) {
 	}
 	if !current.CompletedAt.After(now) {
 		t.Fatalf("completedAt = %v, want after start %v", current.CompletedAt, now)
+	}
+	if current.Diagnostic != "upgrade execution failed" {
+		t.Fatalf("diagnostic = %q, want fixed safe message", current.Diagnostic)
+	}
+}
+
+func TestDaemonFailureDoesNotPersistExecutorOutput(t *testing.T) {
+	store := newTestStore(t)
+	now := time.Now().UTC()
+	if err := store.Save(Journal{
+		SchemaVersion: JournalSchema, OperationID: "op-safe-diagnostic", ManifestDigest: testManifestDigest,
+		Stage: StagePreflight, StartedAt: now, UpdatedAt: now,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	request := Request{SchemaVersion: RequestSchema, OperationID: "op-safe-diagnostic", Action: ActionResume, ManifestDigest: testManifestDigest}
+	if err := NewDaemon(store, nil).failJournal(request, errors.New("docker compose failed at /srv/lunafox/.env TOKEN=secret")); err != nil {
+		t.Fatal(err)
+	}
+	current, err := store.LoadCurrent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Diagnostic != "upgrade execution failed" || strings.Contains(current.Diagnostic, "/srv") || strings.Contains(strings.ToLower(current.Diagnostic), "token") {
+		t.Fatalf("unsafe executor output persisted: %q", current.Diagnostic)
 	}
 }
 

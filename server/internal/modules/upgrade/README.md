@@ -77,3 +77,33 @@ digest, but it cannot mark an Operation `succeeded` while migration, service,
 API, or Agent verification remains incomplete. Migration failure or uncertain
 outcome is `needs_recovery`; an Agent validation timeout is `needs_attention`;
 only pre-migration failures are retryable without a recovery decision.
+
+## Recovery and operator controls
+
+The protected HTTP surface exposes the durable recovery view alongside the
+existing operation resource:
+
+- `GET /v1/upgradeOperations:active` returns the one non-terminal operation;
+  an empty active set is a `404` (`upgrade_not_found`) rather than a synthetic
+  operation. The frontend treats only that response as an empty view and
+  fails closed on other lookup errors.
+- `POST /v1/upgradeOperations/{operation}:stop` accepts only
+  `{ "confirmed": true }`. It sends a bounded `stop` action to the host daemon
+  and remains locked to the upgrade route until a host checkpoint or watchdog
+  records a terminal state. Stop is cancellation, never migration rollback;
+  migration or post-migration evidence is classified as `needs_recovery`.
+
+`RecoveryJob` reads the current host journal and compares the current stage's
+last checkpoint (`stageTimes`) with a bounded watchdog derived from the
+manifest maintenance window. A missing checkpoint is allowed to settle during
+the handoff grace period; a corrupt checkpoint is classified immediately. A
+poll/reconciliation error is emitted through the structured server logger and
+does not terminate the background loop.
+
+Operation responses include the running Server's `currentVersion` and a
+maximum-32-entry `logs` projection. Entries are fixed lifecycle milestones,
+safe diagnostics, and bounded cancellation counts; raw Compose output, paths,
+tokens, and credentials are never persisted or returned. The frontend uses the
+active view as its route-lock authority, renders the bounded timeline/log, and
+offers stop, retry, recheck, and terminal exit actions according to the durable
+state.

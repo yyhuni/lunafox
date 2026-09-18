@@ -40,6 +40,7 @@ const operation: UpgradeOperation = {
   operatorId: 7,
   manifestId: candidate.manifestId,
   manifestDigest: digest,
+  currentVersion: "1.0.0",
   releaseVersion: candidate.releaseVersion,
   compatibilityRange: candidate.compatibilityRange,
   maintenanceWindowMinutes: candidate.maintenanceWindowMinutes,
@@ -50,6 +51,7 @@ const operation: UpgradeOperation = {
   cancelledTaskCount: 3,
   agentSummary: { expected: 0, ready: 0, missing: 0, unhealthy: 0 },
   observedDigests: {},
+  logs: [{ timestamp: "2026-09-13T12:00:00Z", level: "info", stage: "queued", messageKey: "requestAccepted", message: "Upgrade request accepted" }],
   stageTimes: { queued: "2026-09-13T12:00:00Z" },
   createdAt: "2026-09-13T12:00:00Z",
   updatedAt: "2026-09-13T12:00:00Z",
@@ -107,17 +109,36 @@ describe("about dialog upgrade behavior", () => {
 
   it("uses the persisted operation id after a fresh mount", async () => {
     window.localStorage.setItem("lunafox.upgrade.operationId", operation.operationId)
-    apiMocks.get.mockResolvedValue({ data: operation })
+    apiMocks.get.mockImplementation((path: string) => {
+      if (path === "/upgradeOperations:active") {
+        return Promise.reject({
+          isAxiosError: true,
+          response: { status: 404, data: { error: { code: "NOT_FOUND", message: "No active upgrade operation." } } },
+          message: "not found",
+        })
+      }
+      return Promise.resolve({ data: operation })
+    })
 
     const { result } = renderHookWithProviders(() => useAboutDialogState())
     await waitFor(() => expect(result.current.operation.data?.operationId).toBe(operation.operationId))
+    expect(apiMocks.get).toHaveBeenCalledWith("/upgradeOperations:active")
     expect(apiMocks.get).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}`)
     expect(result.current.operation.lastConfirmedStage).toBe("queued")
   })
 
   it("does not poll while the about entry is closed, then restores the persisted operation when opened", async () => {
     window.localStorage.setItem("lunafox.upgrade.operationId", operation.operationId)
-    apiMocks.get.mockResolvedValue({ data: operation })
+    apiMocks.get.mockImplementation((path: string) => {
+      if (path === "/upgradeOperations:active") {
+        return Promise.reject({
+          isAxiosError: true,
+          response: { status: 404, data: { error: { code: "NOT_FOUND", message: "No active upgrade operation." } } },
+          message: "not found",
+        })
+      }
+      return Promise.resolve({ data: operation })
+    })
 
     const { result, rerender } = renderHookWithProviders(
       ({ enabled }: { enabled: boolean }) => useAboutDialogState({ enabled }),
@@ -128,6 +149,7 @@ describe("about dialog upgrade behavior", () => {
 
     rerender({ enabled: true })
     await waitFor(() => expect(result.current.operation.data?.operationId).toBe(operation.operationId))
+    expect(apiMocks.get).toHaveBeenCalledWith("/upgradeOperations:active")
     expect(apiMocks.get).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}`)
   })
 
@@ -236,6 +258,11 @@ describe("about dialog upgrade behavior", () => {
     apiMocks.post.mockImplementation((path: string) => {
       if (path === "/system:checkForUpdates") return Promise.resolve({ data: updateResult })
       throw new Error(`unexpected POST ${path}`)
+    })
+    apiMocks.get.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 404, data: { error: { code: "NOT_FOUND", message: "No active upgrade operation." } } },
+      message: "not found",
     })
 
     renderWithProviders(

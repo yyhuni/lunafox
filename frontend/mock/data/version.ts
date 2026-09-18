@@ -1,4 +1,4 @@
-import type { ReleaseManifestSummary, UpdateCheckResult, UpgradeOperation, VersionInfo } from '@/types/version.types'
+import type { ReleaseManifestSummary, UpdateCheckResult, UpgradeLogEntry, UpgradeOperation, UpgradeOperationStatus, VersionInfo } from '@/types/version.types'
 import { getMockScenario } from "../scenarios"
 
 export const mockVersionInfo: VersionInfo = {
@@ -47,6 +47,25 @@ type PersistedMockUpgradeState = {
 let mockUpgradeOperation: UpgradeOperation | null = null
 let mockUpgradePollCount = 0
 
+function mockLogForStage(status: UpgradeOperationStatus, timestamp: string, message?: string): UpgradeLogEntry {
+  const messages: Record<UpgradeOperationStatus, { messageKey: string; message: string }> = {
+    queued: { messageKey: "requestAccepted", message: "Upgrade request accepted" },
+    stopping: { messageKey: "stoppingWork", message: "Stopping active work" },
+    preflight: { messageKey: "preflight", message: "Preflight checks started" },
+    updating: { messageKey: "updatingServices", message: "Updating system services" },
+    migrating: { messageKey: "migratingDatabase", message: "Database migration started" },
+    restarting: { messageKey: "restartingServices", message: "Restarting services" },
+    agent_verifying: { messageKey: "verifyingAgents", message: "Verifying Agents" },
+    verifying: { messageKey: "verifyingSystem", message: "Verifying system" },
+    succeeded: { messageKey: "completed", message: "Upgrade verification completed" },
+    failed: { messageKey: "failed", message: "Upgrade failed" },
+    needs_recovery: { messageKey: "needsRecovery", message: "Manual recovery is required" },
+    needs_attention: { messageKey: "needsAttention", message: "Operator attention is required" },
+  }
+  const entry = messages[status]
+  return { timestamp, level: status === "failed" || status === "needs_recovery" ? "error" : status === "needs_attention" ? "warn" : "info", stage: status, messageKey: entry.messageKey, message: message ?? entry.message }
+}
+
 function readPersistedUpgradeState(): PersistedMockUpgradeState | null {
   if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return null
   try {
@@ -67,7 +86,13 @@ function hydrateUpgradeState(): void {
   if (mockUpgradeOperation) return
   const persisted = readPersistedUpgradeState()
   if (!persisted) return
-  mockUpgradeOperation = persisted.operation
+  mockUpgradeOperation = {
+    ...persisted.operation,
+    currentVersion: persisted.operation.currentVersion || mockVersionInfo.version,
+    logs: Array.isArray(persisted.operation.logs) && persisted.operation.logs.length > 0
+      ? persisted.operation.logs
+      : [mockLogForStage(persisted.operation.status, persisted.operation.updatedAt || now())],
+  }
   mockUpgradePollCount = persisted.pollCount
 }
 
@@ -119,6 +144,7 @@ export function createMockUpgradeOperation(input: { requestId: string; manifestI
     operatorId: 1,
     manifestId: input.manifestId,
     manifestDigest: input.manifestDigest,
+    currentVersion: mockVersionInfo.version,
     releaseVersion: mockCandidateManifest.releaseVersion,
     compatibilityRange: mockCandidateManifest.compatibilityRange,
     maintenanceWindowMinutes: mockCandidateManifest.maintenanceWindowMinutes,
@@ -129,6 +155,7 @@ export function createMockUpgradeOperation(input: { requestId: string; manifestI
     cancelledTaskCount: 0,
     agentSummary: { expected: 0, ready: 0, missing: 0, unhealthy: 0 },
     observedDigests: {},
+    logs: [mockLogForStage("queued", timestamp)],
     stageTimes: { queued: timestamp },
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -146,6 +173,7 @@ export function getMockUpgradeOperation(): UpgradeOperation | null {
     ...mockUpgradeOperation,
     stageTimes: { ...mockUpgradeOperation.stageTimes },
     observedDigests: { ...mockUpgradeOperation.observedDigests },
+    logs: mockUpgradeOperation.logs.map((entry) => ({ ...entry, metadata: entry.metadata ? { ...entry.metadata } : undefined })),
   }
 }
 
@@ -160,6 +188,7 @@ export function retryMockUpgradeOperation(): UpgradeOperation | null {
     completedAt: null,
     updatedAt: timestamp,
     stageTimes: { ...mockUpgradeOperation.stageTimes, queued: timestamp },
+    logs: [...mockUpgradeOperation.logs, mockLogForStage("queued", timestamp)],
   }
   mockUpgradePollCount = 0
   persistUpgradeState()
@@ -170,6 +199,9 @@ export function retryMockUpgradeOperation(): UpgradeOperation | null {
 export function observeMockUpgradeOperation(): UpgradeOperation | null {
   hydrateUpgradeState()
   if (!mockUpgradeOperation) return null
+  if (["succeeded", "failed", "needs_recovery", "needs_attention"].includes(mockUpgradeOperation.status)) {
+    return getMockUpgradeOperation()
+  }
   mockUpgradePollCount += 1
   const scenario = getMockScenario()
   const transitions = scenario === "edge"
@@ -183,6 +215,7 @@ export function observeMockUpgradeOperation(): UpgradeOperation | null {
     mockUpgradeOperation = {
       ...mockUpgradeOperation,
       status: nextStatus,
+      currentVersion: nextStatus === "succeeded" ? mockUpgradeOperation.releaseVersion : mockUpgradeOperation.currentVersion,
       updatedAt: timestamp,
       completedAt: nextStatus === "succeeded" || nextStatus === "failed" || nextStatus === "needs_attention" ? timestamp : null,
       diagnostic: nextStatus === "failed"
@@ -194,7 +227,30 @@ export function observeMockUpgradeOperation(): UpgradeOperation | null {
         ? { expected: 3, ready: 2, missing: 1, unhealthy: 0 }
         : mockUpgradeOperation.agentSummary,
       stageTimes: { ...mockUpgradeOperation.stageTimes, [nextStatus]: timestamp },
+      logs: [...mockUpgradeOperation.logs, mockLogForStage(nextStatus, timestamp)],
     }
+  }
+  persistUpgradeState()
+  return getMockUpgradeOperation()
+}
+
+export function stopMockUpgradeOperation(): UpgradeOperation | null {
+  hydrateUpgradeState()
+  if (!mockUpgradeOperation || ["succeeded", "failed", "needs_recovery", "needs_attention"].includes(mockUpgradeOperation.status)) return getMockUpgradeOperation()
+  const timestamp = now()
+  const postMigration = mockUpgradeOperation.migrationStatus !== "not_started" || ["migrating", "restarting", "agent_verifying", "verifying"].includes(mockUpgradeOperation.status)
+  const status: UpgradeOperationStatus = postMigration ? "needs_recovery" : "needs_attention"
+  const diagnostic = postMigration
+    ? "Upgrade stopped after the migration boundary; manual recovery is required."
+    : "Upgrade stopped by operator."
+  mockUpgradeOperation = {
+    ...mockUpgradeOperation,
+    status,
+    diagnostic,
+    completedAt: timestamp,
+    updatedAt: timestamp,
+    stageTimes: { ...mockUpgradeOperation.stageTimes, [status]: timestamp },
+    logs: [...mockUpgradeOperation.logs, mockLogForStage(status, timestamp, diagnostic)],
   }
   persistUpgradeState()
   return getMockUpgradeOperation()

@@ -93,6 +93,7 @@ export interface UpgradeOperation {
   manifestId: string
   manifestDigest: string
   releaseVersion: string
+  currentVersion: string
   compatibilityRange: string
   maintenanceWindowMinutes: number
   status: UpgradeOperationStatus
@@ -107,10 +108,22 @@ export interface UpgradeOperation {
   agentSummary: UpgradeAgentSummary
   observedDigests: Record<string, string>
   diagnostic?: string
+  logs: UpgradeLogEntry[]
   stageTimes: Record<string, string>
   createdAt: string
   updatedAt: string
   completedAt?: string | null
+}
+
+export type UpgradeLogLevel = "info" | "warn" | "error"
+
+export interface UpgradeLogEntry {
+  timestamp: string
+  level: UpgradeLogLevel
+  stage: string
+  messageKey: string
+  message: string
+  metadata?: Record<string, string>
 }
 
 export interface CreateUpgradeOperationInput {

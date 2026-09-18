@@ -137,3 +137,92 @@ func TestCheckForUpdatesRejectsMissingManifestWithStableDiagnostic(t *testing.T)
 		t.Fatalf("missing manifest result=%#v err=%v", result, err)
 	}
 }
+
+func TestStopOperationConvergesWhenHostDoesNotAcceptStop(t *testing.T) {
+	dispatcher := &upgradeDispatcherStub{}
+	service, repository := newUpgradeServiceForTest(t, dispatcher)
+	manifest, err := LoadReleaseManifest(fixturePath("release.manifest.yaml"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	operation, _, err := service.CreateOperation(context.Background(), 7, CreateUpgradeOperationInput{
+		RequestID: uuidTestRequestID, ManifestID: manifest.Upgrade.ManifestID, ManifestDigest: manifest.Digest(), Confirmed: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dispatcher.err = errors.New("socket unavailable")
+	updated, stopErr := service.StopOperation(context.Background(), 7, operation.OperationID, true)
+	if !errors.Is(stopErr, domain.ErrUpgradeHostUnavailable) {
+		t.Fatalf("stop error = %v, want host unavailable", stopErr)
+	}
+	if updated == nil || updated.Status != domain.StatusNeedsAttention || updated.CompletedAt == nil {
+		t.Fatalf("stop result = %#v, want needs_attention terminal state", updated)
+	}
+	if repository.byID[operation.OperationID].Status != domain.StatusNeedsAttention {
+		t.Fatalf("persisted stop result = %#v", repository.byID[operation.OperationID])
+	}
+
+	// A repeated stop is a read of the same terminal result and must not dispatch
+	// a second host request.
+	requests := len(dispatcher.requests)
+	replayed, err := service.StopOperation(context.Background(), 7, operation.OperationID, true)
+	if err != nil || replayed.Status != domain.StatusNeedsAttention || len(dispatcher.requests) != requests {
+		t.Fatalf("repeated stop = %#v err=%v requests=%d want=%d", replayed, err, len(dispatcher.requests), requests)
+	}
+}
+
+func TestStopOperationAfterMigrationRequiresRecoveryWhenHostUnavailable(t *testing.T) {
+	dispatcher := &upgradeDispatcherStub{}
+	service, repository := newUpgradeServiceForTest(t, dispatcher)
+	manifest, err := LoadReleaseManifest(fixturePath("release.manifest.yaml"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	operation, _, err := service.CreateOperation(context.Background(), 7, CreateUpgradeOperationInput{
+		RequestID: uuidTestRequestID, ManifestID: manifest.Upgrade.ManifestID, ManifestDigest: manifest.Digest(), Confirmed: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	operation.Status = domain.StatusMigrating
+	operation.MigrationStatus = domain.MigrationStatusRunning
+	if err := repository.Update(context.Background(), operation); err != nil {
+		t.Fatal(err)
+	}
+	dispatcher.err = errors.New("socket unavailable")
+	updated, stopErr := service.StopOperation(context.Background(), 7, operation.OperationID, true)
+	if !errors.Is(stopErr, domain.ErrUpgradeHostUnavailable) || updated.Status != domain.StatusNeedsRecovery {
+		t.Fatalf("post-migration stop = %#v err=%v, want needs_recovery and host error", updated, stopErr)
+	}
+}
+
+func TestFindActiveOperationDoesNotExposeTerminalAdapterResult(t *testing.T) {
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	manifest, err := LoadReleaseManifest(fixturePath("release.manifest.yaml"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	operation := &domain.Operation{
+		OperationID: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", RequestID: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", OperatorID: 7,
+		ManifestID: manifest.Upgrade.ManifestID, ManifestDigest: manifest.Digest(), ReleaseVersion: "1.2.3",
+		CompatibilityRange: "*", Status: domain.StatusSucceeded, MigrationStatus: domain.MigrationStatusNotStarted,
+		MigrationType: "none", CreatedAt: now, UpdatedAt: now,
+	}
+	repository.active = operation
+	repository.byID[operation.OperationID] = operation
+	service.repository = &terminalActiveRepository{upgradeRepositoryStub: repository, operation: operation}
+	if _, err := service.FindActiveOperation(context.Background(), 7); !errors.Is(err, domain.ErrUpgradeNotFound) {
+		t.Fatalf("terminal active result error = %v, want not found", err)
+	}
+}
+
+type terminalActiveRepository struct {
+	*upgradeRepositoryStub
+	operation *domain.Operation
+}
+
+func (repository *terminalActiveRepository) FindActive(context.Context) (*domain.Operation, error) {
+	return repository.operation, nil
+}

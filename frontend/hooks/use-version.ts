@@ -177,8 +177,10 @@ export function upgradeOperationPollDelay(failureCount: number): number {
 
 export function useUpgradeOperation(operationId?: string | null, options: UseUpgradeOperationOptions = {}) {
 	const { enabled = true } = options
+	const autoResolve = operationId === undefined
 	const [storedOperationId, setStoredOperationId] = useState<string | null>(readStoredUpgradeOperationId)
-  const resolvedOperationId = operationId === undefined ? storedOperationId : operationId
+  const requestedOperationId = autoResolve ? storedOperationId : operationId
+  const queryKeyId = requestedOperationId ?? (autoResolve ? "active" : "none")
 
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
@@ -193,12 +195,40 @@ export function useUpgradeOperation(operationId?: string | null, options: UseUpg
     }
   }, [])
 
-  const query = useQuery<UpgradeOperation>({
-    queryKey: ["upgrade", "operation", resolvedOperationId],
-    queryFn: () => VersionService.getUpgradeOperation(resolvedOperationId as string),
-    enabled: enabled && Boolean(resolvedOperationId),
+  const query = useQuery<UpgradeOperation | null>({
+    queryKey: ["upgrade", "operation", queryKeyId],
+    queryFn: async () => {
+      if (autoResolve) {
+        // The active view is the route-lock authority. A browser id is only a
+        // fallback for showing a terminal result after the active view is empty.
+        const active = await VersionService.getActiveUpgradeOperation()
+        if (active) return active
+        if (requestedOperationId) {
+          try {
+            return await VersionService.getUpgradeOperation(requestedOperationId)
+          } catch (error) {
+            const parsed = toUpgradeApiError(error)
+            if (parsed.status !== 404) throw parsed
+          }
+        }
+        return null
+      }
+      if (requestedOperationId) {
+        try {
+          return await VersionService.getUpgradeOperation(requestedOperationId)
+        } catch (error) {
+          throw toUpgradeApiError(error)
+        }
+      }
+      return null
+    },
+    enabled: enabled && (autoResolve || Boolean(requestedOperationId)),
     staleTime: 0,
     refetchInterval: (current) => {
+      // A successful empty active view is a stable "nothing to do" result;
+      // polling it forever creates needless traffic and can keep a route in
+      // an ambiguous resolving state.
+      if (current.state.data === null) return false
       if (isUpgradeOperationTerminal(current.state.data?.status)) return false
       return upgradeOperationPollDelay(current.state.fetchFailureCount)
     },
@@ -207,18 +237,31 @@ export function useUpgradeOperation(operationId?: string | null, options: UseUpg
   })
 
   useEffect(() => {
-    if (query.data?.status === "succeeded") persistPendingSuccessOperationId(query.data.operationId)
-  }, [query.data])
+    const discoveredId = query.data?.operationId
+    if (discoveredId) {
+      if (autoResolve && discoveredId !== storedOperationId) {
+        setStoredOperationId(discoveredId)
+        persistUpgradeOperationId(discoveredId)
+      }
+      if (query.data?.status === "succeeded") persistPendingSuccessOperationId(discoveredId)
+      return
+    }
+    if (autoResolve && query.isSuccess && query.data === null && storedOperationId) {
+      clearStoredUpgradeOperationId(storedOperationId)
+      setStoredOperationId(null)
+    }
+  }, [autoResolve, query.data, query.isSuccess, storedOperationId])
 
   return useMemo(() => ({
     ...query,
-    operationId: resolvedOperationId,
-    isReconnecting: Boolean(resolvedOperationId && query.isError && isUpgradeNetworkError(query.error)),
-    isResolving: Boolean(enabled && resolvedOperationId && query.isPending),
+    data: query.data ?? undefined,
+    operationId: query.data?.operationId ?? requestedOperationId ?? null,
+    isReconnecting: Boolean((requestedOperationId || autoResolve) && query.isError && isUpgradeNetworkError(query.error)),
+    isResolving: Boolean(enabled && (autoResolve || requestedOperationId) && query.isPending),
     isActive: isUpgradeOperationActive(query.data?.status),
     userStage: upgradeUserStageForStatus(query.data?.status),
     lastConfirmedStage: query.data?.status,
-  }), [enabled, query, resolvedOperationId])
+  }), [autoResolve, enabled, query, requestedOperationId])
 }
 
 export function useCreateUpgradeOperation() {
@@ -242,6 +285,29 @@ export function useRetryUpgradeOperation() {
     onSuccess: (operation) => {
       persistUpgradeOperationId(operation.operationId)
       queryClient.setQueryData(["upgrade", "operation", operation.operationId], operation)
+      queryClient.setQueryData(["upgrade", "operation", "active"], operation)
+    },
+    onError: (_error, operationId) => {
+      void queryClient.invalidateQueries({ queryKey: ["upgrade", "operation", operationId] })
+      void queryClient.invalidateQueries({ queryKey: ["upgrade", "operation", "active"] })
+    },
+  })
+}
+
+export function useStopUpgradeOperation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (operationId: string) => VersionService.stopUpgradeOperation(operationId),
+    onSuccess: (operation) => {
+      persistUpgradeOperationId(operation.operationId)
+      queryClient.setQueryData(["upgrade", "operation", operation.operationId], operation)
+      queryClient.setQueryData(["upgrade", "operation", "active"], operation)
+    },
+    onError: (_error, operationId) => {
+      // A host may have accepted cancellation before the response was lost;
+      // refetch both views so the status page cannot keep showing stale work.
+      void queryClient.invalidateQueries({ queryKey: ["upgrade", "operation", operationId] })
+      void queryClient.invalidateQueries({ queryKey: ["upgrade", "operation", "active"] })
     },
   })
 }

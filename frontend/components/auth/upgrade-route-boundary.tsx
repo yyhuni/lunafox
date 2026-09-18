@@ -70,11 +70,12 @@ export function UpgradeRouteBoundary({ children, renderProtectedShell }: Upgrade
     !hydrated ||
     operation.isResolving ||
     operation.isReconnecting ||
+    operation.isError ||
     operation.isActive
   )
   const shouldRedirect = hydrated && !isUpgradeRoute && (
-    operation.isResolving ||
     operation.isReconnecting ||
+    operation.isError ||
     operation.isActive
   )
 

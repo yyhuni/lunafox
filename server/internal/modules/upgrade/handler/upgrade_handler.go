@@ -17,9 +17,12 @@ import (
 
 type upgradeService interface {
 	CheckForUpdates(context.Context, int) (application.CheckForUpdatesResult, error)
+	CurrentVersion() string
 	CreateOperation(context.Context, int, application.CreateUpgradeOperationInput) (*domain.Operation, bool, error)
 	GetOperation(context.Context, int, string) (*domain.Operation, error)
+	FindActiveOperation(context.Context, int) (*domain.Operation, error)
 	RetryOperation(context.Context, int, string, bool) (*domain.Operation, error)
+	StopOperation(context.Context, int, string, bool) (*domain.Operation, error)
 }
 
 // UpgradeHandler is the protected HTTP boundary for system upgrade actions.
@@ -86,10 +89,10 @@ func (handler *UpgradeHandler) CreateOperation(c *gin.Context) {
 	// Replays are successful idempotent reads of the original resource. A new
 	// Operation is the only case that uses 201 Created.
 	if created {
-		httpdto.Created(c, dto.NewUpgradeOperationResponse(operation))
+		httpdto.Created(c, handler.operationResponse(operation))
 		return
 	}
-	httpdto.Success(c, dto.NewUpgradeOperationResponse(operation))
+	httpdto.Success(c, handler.operationResponse(operation))
 }
 
 // GetOperation handles GET /v1/upgradeOperations/:upgradeOperation.
@@ -109,7 +112,24 @@ func (handler *UpgradeHandler) GetOperation(c *gin.Context) {
 		writeUpgradeError(c, err)
 		return
 	}
-	httpdto.Success(c, dto.NewUpgradeOperationResponse(operation))
+	httpdto.Success(c, handler.operationResponse(operation))
+}
+
+// FindActive handles GET /v1/upgradeOperations:active. A 404 means there is
+// no active operation; the frontend service turns that one expected response
+// into a null view while preserving all other errors.
+func (handler *UpgradeHandler) FindActive(c *gin.Context) {
+	userID, ok := currentUserID(c)
+	if !ok {
+		httpdto.Unauthorized(c, "Not authenticated")
+		return
+	}
+	operation, err := handler.service.FindActiveOperation(c.Request.Context(), userID)
+	if err != nil {
+		writeUpgradeError(c, err)
+		return
+	}
+	httpdto.Success(c, handler.operationResponse(operation))
 }
 
 // RetryAction dispatches POST /v1/upgradeOperations/{id}:retry. Gin cannot
@@ -118,7 +138,7 @@ func (handler *UpgradeHandler) GetOperation(c *gin.Context) {
 func (handler *UpgradeHandler) RetryAction(c *gin.Context) {
 	value := strings.TrimPrefix(c.Param("upgradeOperationAction"), "/")
 	operationID, method, found := strings.Cut(value, ":")
-	if !found || method != "retry" || strings.Contains(operationID, ":") {
+	if !found || (method != "retry" && method != "stop") || strings.Contains(operationID, ":") {
 		httpdto.NotFound(c, "Custom method not found")
 		return
 	}
@@ -133,6 +153,19 @@ func (handler *UpgradeHandler) RetryAction(c *gin.Context) {
 		return
 	}
 	var request dto.RetryUpgradeOperationRequest
+	if method == "stop" {
+		var stopRequest dto.StopUpgradeOperationRequest
+		if !httpdto.BindJSON(c, &stopRequest) {
+			return
+		}
+		operation, err := handler.service.StopOperation(c.Request.Context(), userID, operationID, stopRequest.Confirmed)
+		if err != nil {
+			writeUpgradeError(c, err)
+			return
+		}
+		httpdto.Success(c, handler.operationResponse(operation))
+		return
+	}
 	if !httpdto.BindJSON(c, &request) {
 		return
 	}
@@ -141,7 +174,11 @@ func (handler *UpgradeHandler) RetryAction(c *gin.Context) {
 		writeUpgradeError(c, err)
 		return
 	}
-	httpdto.Success(c, dto.NewUpgradeOperationResponse(operation))
+	httpdto.Success(c, handler.operationResponse(operation))
+}
+
+func (handler *UpgradeHandler) operationResponse(operation *domain.Operation) dto.UpgradeOperationResponse {
+	return dto.NewUpgradeOperationResponse(operation, handler.service.CurrentVersion())
 }
 
 func currentUserID(c *gin.Context) (int, bool) {

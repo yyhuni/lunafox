@@ -61,6 +61,9 @@ type Action string
 const (
 	ActionStart  Action = "start"
 	ActionResume Action = "resume"
+	// ActionStop cancels the currently executing operation. It is intentionally
+	// separate from repair so a stop can never reset a terminal journal.
+	ActionStop Action = "stop"
 	// ActionRepair is an explicit operator-authorized retry of a terminal
 	// operation. Resume remains a read/idempotent continuation and must never
 	// reset a terminal journal implicitly.
@@ -284,7 +287,7 @@ func (request Request) Validate() error {
 	if err := validateOperationID(request.OperationID); err != nil {
 		return err
 	}
-	if request.Action != ActionStart && request.Action != ActionResume && request.Action != ActionRepair {
+	if request.Action != ActionStart && request.Action != ActionResume && request.Action != ActionStop && request.Action != ActionRepair {
 		return fmt.Errorf("unsupported upgrader action %q", request.Action)
 	}
 	if err := validateDigest(request.ManifestDigest); err != nil {

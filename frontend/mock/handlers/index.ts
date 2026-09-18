@@ -67,6 +67,7 @@ import {
   createMockUpgradeOperation,
   getMockUpgradeOperation,
   observeMockUpgradeOperation,
+  stopMockUpgradeOperation,
   retryMockUpgradeOperation,
   getMockWebsites,
   getMockLoginVisualSettings,
@@ -462,6 +463,7 @@ function shouldError(path: string) {
     path.startsWith("/scans") ||
     path.startsWith("/vulnerabilities") ||
     path === "/system:checkForUpdates" ||
+    path === "/upgradeOperations:active" ||
     path.startsWith("/upgradeOperations/")
   )
 }
@@ -794,6 +796,18 @@ async function resolveMockApi(request: Request) {
     }
     return json(createMockUpgradeOperation({ requestId: body.requestId, manifestId: body.manifestId, manifestDigest: body.manifestDigest }), { status: 201 })
   }
+  if (method === "GET" && path === "/upgradeOperations:active") {
+    // The active view is the polling surface used after storage recovery;
+    // advance the fixture here so mock upgrades exhibit the same observable
+    // progress as the resource view.
+    const operation = observeMockUpgradeOperation()
+    const activeOperation = operation && !["succeeded", "failed", "needs_recovery", "needs_attention"].includes(operation.status)
+      ? operation
+      : null
+    return activeOperation
+      ? json(activeOperation)
+      : json({ error: { code: "NOT_FOUND", message: "No active upgrade operation." } }, { status: 404 })
+  }
   {
     const operationMatch = path.match(/^\/upgradeOperations\/([^/:]+)$/)
     if (method === "GET" && operationMatch) {
@@ -809,6 +823,15 @@ async function resolveMockApi(request: Request) {
       const operation = getMockUpgradeOperation()
       if (!operation || operation.operationId !== retryMatch[1]) return json({ error: { code: "NOT_FOUND", message: "Upgrade operation not found." } }, { status: 404 })
       return json(retryMockUpgradeOperation())
+    }
+  }
+  {
+    const stopMatch = path.match(/^\/upgradeOperations\/([^/:]+):stop$/)
+    if (method === "POST" && stopMatch) {
+      const body = await request.json() as { confirmed?: unknown }
+      const operation = getMockUpgradeOperation()
+      if (body.confirmed !== true || !operation || operation.operationId !== stopMatch[1]) return json({ error: { code: "NOT_FOUND", message: "Upgrade operation not found." } }, { status: 404 })
+      return json(stopMockUpgradeOperation())
     }
   }
   if (method === "GET" && path === "/users/current/notifications") {

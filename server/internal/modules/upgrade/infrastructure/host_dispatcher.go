@@ -66,7 +66,7 @@ func (dispatcher *HostUpgradeDispatcher) Dispatch(ctx context.Context, request a
 	if request.OperationID == "" || request.ManifestDigest == "" {
 		return fmt.Errorf("host upgrade request identity is required")
 	}
-	if request.Action != application.HostUpgradeActionStart && request.Action != application.HostUpgradeActionResume && request.Action != application.HostUpgradeActionRepair {
+	if request.Action != application.HostUpgradeActionStart && request.Action != application.HostUpgradeActionResume && request.Action != application.HostUpgradeActionStop && request.Action != application.HostUpgradeActionRepair {
 		return fmt.Errorf("unsupported host upgrade action %q", request.Action)
 	}
 	deadline := dispatcher.timeout

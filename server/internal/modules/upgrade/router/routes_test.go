@@ -12,6 +12,8 @@ import (
 
 type routeUpgradeServiceStub struct{}
 
+func (routeUpgradeServiceStub) CurrentVersion() string { return "1.0.0" }
+
 func (routeUpgradeServiceStub) CheckForUpdates(context.Context, int) (application.CheckForUpdatesResult, error) {
 	return application.CheckForUpdatesResult{}, nil
 }
@@ -24,7 +26,15 @@ func (routeUpgradeServiceStub) GetOperation(context.Context, int, string) (*doma
 	return nil, nil
 }
 
+func (routeUpgradeServiceStub) FindActiveOperation(context.Context, int) (*domain.Operation, error) {
+	return nil, nil
+}
+
 func (routeUpgradeServiceStub) RetryOperation(context.Context, int, string, bool) (*domain.Operation, error) {
+	return nil, nil
+}
+
+func (routeUpgradeServiceStub) StopOperation(context.Context, int, string, bool) (*domain.Operation, error) {
 	return nil, nil
 }
 
@@ -41,6 +51,7 @@ func TestRegisterUpgradeRoutesUsesCanonicalBoundaries(t *testing.T) {
 	for _, expected := range []string{
 		"POST /v1/system:checkForUpdates",
 		"POST /v1/upgradeOperations",
+		"GET /v1/upgradeOperations:active",
 		"GET /v1/upgradeOperations/:upgradeOperation",
 		"POST /v1/upgradeOperations/*upgradeOperationAction",
 	} {
