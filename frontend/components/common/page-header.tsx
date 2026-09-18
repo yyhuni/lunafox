@@ -67,7 +67,7 @@ export function PageHeader({
       )}>
         <div className={cn(
           "flex gap-3 items-baseline",
-          hasMiddle ? "min-w-0" : "border-b-2 border-primary",
+          hasMiddle ? "min-w-0 self-start" : "border-b-2 border-primary",
           hasMiddle ? "" : compact ? "pb-1" : "pb-2"
         )}>
           <h1 className={textRole.pageTitleDisplay}>

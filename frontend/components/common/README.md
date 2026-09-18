@@ -4,7 +4,7 @@ Shared components in this directory own reusable production UI patterns that sit
 
 ## Page Header
 
-`PageHeader` owns the shared title, code, action, and description rhythm for route-level pages. Its optional `middle` slot creates the wide-screen three-column command layout used by `/overview/`: title/code, secondary middle context, and commands share the header's bottom edge, while the middle context remains horizontally centered within the command row. Do not offset a page-local heading or action with custom margins to compensate for this layout.
+`PageHeader` owns the shared title, code, action, and description rhythm for route-level pages. Its optional `middle` slot creates the wide-screen three-column command layout used by `/overview/`: the title/code stays anchored at the left-top of the command row, while the secondary middle context and commands share the row's bottom edge and the middle context remains horizontally centered. Do not offset a page-local heading or action with custom margins to compensate for this layout.
 
 ## Page Refresh Status
 

@@ -48,11 +48,11 @@ const sidebarNavigationCommittedActiveSuppressionClassName = cn(
 // This keeps the affordance visible without making fast pointer scans jump.
 const sidebarMenuContentMotionClassName = cn(
   "[&>svg:not(.ml-auto)]:transition-transform [&>svg:not(.ml-auto)]:duration-[var(--motion-duration-fast)] [&>svg:not(.ml-auto)]:ease-[var(--motion-ease-standard)]",
-  "[&>span:not([data-sidebar-navigation-pending])]:transition-transform [&>span:not([data-sidebar-navigation-pending])]:duration-[var(--motion-duration-fast)] [&>span:not([data-sidebar-navigation-pending])]:ease-[var(--motion-ease-standard)]",
-  "hover:[&>svg:not(.ml-auto)]:translate-x-0.5 hover:[&>span:not([data-sidebar-navigation-pending])]:translate-x-0.5",
-  "group-data-[collapsible=icon]:hover:[&>svg:not(.ml-auto)]:translate-x-0 group-data-[collapsible=icon]:hover:[&>span:not([data-sidebar-navigation-pending])]:translate-x-0",
-  "motion-reduce:hover:[&>svg:not(.ml-auto)]:translate-x-0 motion-reduce:hover:[&>span:not([data-sidebar-navigation-pending])]:translate-x-0",
-  "motion-reduce:[&>svg:not(.ml-auto)]:transition-none motion-reduce:[&>span:not([data-sidebar-navigation-pending])]:transition-none"
+  "[&>span:not([data-sidebar-navigation-pending]):not([data-sidebar-static-motion])]:transition-transform [&>span:not([data-sidebar-navigation-pending]):not([data-sidebar-static-motion])]:duration-[var(--motion-duration-fast)] [&>span:not([data-sidebar-navigation-pending]):not([data-sidebar-static-motion])]:ease-[var(--motion-ease-standard)]",
+  "hover:[&>svg:not(.ml-auto)]:translate-x-0.5 hover:[&>span:not([data-sidebar-navigation-pending]):not([data-sidebar-static-motion])]:translate-x-0.5",
+  "group-data-[collapsible=icon]:hover:[&>svg:not(.ml-auto)]:translate-x-0 group-data-[collapsible=icon]:hover:[&>span:not([data-sidebar-navigation-pending]):not([data-sidebar-static-motion])]:translate-x-0",
+  "motion-reduce:hover:[&>svg:not(.ml-auto)]:translate-x-0 motion-reduce:hover:[&>span:not([data-sidebar-navigation-pending]):not([data-sidebar-static-motion])]:translate-x-0",
+  "motion-reduce:[&>svg:not(.ml-auto)]:transition-none motion-reduce:[&>span:not([data-sidebar-navigation-pending]):not([data-sidebar-static-motion])]:transition-none"
 )
 
 type SidebarContextProps = {
