@@ -98,9 +98,34 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 		}
 		// Continue with the validated journal observation.
 	}
-	now := event.UpdatedAt.UTC()
-	if now.IsZero() || now.Before(operation.UpdatedAt) {
-		now = service.now().UTC()
+	eventAt := event.UpdatedAt.UTC()
+	stageAt := operation.StageTimes[status].UTC()
+	migrationChanged := effectiveMigration != "" && effectiveMigration != operation.MigrationStatus
+	candidateDiagnostic := operation.Diagnostic
+	if event.Diagnostic != "" && (operation.Diagnostic == "" || status == domain.StatusNeedsRecovery) {
+		candidateDiagnostic = sanitizeUpgradeDiagnostic(event.Diagnostic)
+	}
+	diagnosticChanged := candidateDiagnostic != operation.Diagnostic
+	observedChanged := false
+	for key, value := range event.ObservedDigests {
+		if operation.ObservedDigests == nil || operation.ObservedDigests[key] != value {
+			observedChanged = true
+			break
+		}
+	}
+	checkpointAdvanced := !eventAt.IsZero() && (stageAt.IsZero() || eventAt.After(stageAt))
+	if status == operation.Status && !checkpointAdvanced && !migrationChanged && !diagnosticChanged && !observedChanged {
+		// The recovery job reads the same durable checkpoint on every tick. A
+		// replay must not turn that read into synthetic stage progress, otherwise
+		// the watchdog could never classify a genuinely stalled operation.
+		// Agent verification may still have new control-plane evidence, so keep
+		// that reconciliation hook active even when the host checkpoint itself is
+		// unchanged.
+		return service.reconcileAfterHostEvent(ctx, operation)
+	}
+	now := service.now().UTC()
+	if checkpointAdvanced {
+		now = eventAt
 	}
 	if !now.After(operation.UpdatedAt) {
 		now = operation.UpdatedAt.Add(time.Nanosecond)
@@ -109,9 +134,7 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 	if effectiveMigration != "" {
 		operation.MigrationStatus = effectiveMigration
 	}
-	if event.Diagnostic != "" && (operation.Diagnostic == "" || status == domain.StatusNeedsRecovery) {
-		operation.Diagnostic = sanitizeUpgradeDiagnostic(event.Diagnostic)
-	}
+	operation.Diagnostic = candidateDiagnostic
 	if len(event.ObservedDigests) > 0 {
 		if operation.ObservedDigests == nil {
 			operation.ObservedDigests = map[string]string{}
@@ -174,7 +197,18 @@ func (service *Service) ReconcileJournalUnavailable(ctx context.Context, diagnos
 	}
 	previous := operation.Status
 	if err := domain.ValidateTransition(previous, status); err != nil {
-		return nil, err
+		// Queued/stopping rows predate the first executable checkpoint, so the
+		// ordinary failed transition is not legal for them. They still need a
+		// terminal, operator-visible outcome rather than a recovery loop that
+		// reports the same transition error forever.
+		if status == domain.StatusFailed {
+			status = domain.StatusNeedsAttention
+			if fallbackErr := domain.ValidateTransition(previous, status); fallbackErr != nil {
+				return nil, fallbackErr
+			}
+		} else {
+			return nil, err
+		}
 	}
 	now := service.now().UTC()
 	operation.Status = status
@@ -186,6 +220,101 @@ func (service *Service) ReconcileJournalUnavailable(ctx context.Context, diagnos
 	}
 	operation.StageTimes[status] = now
 	return service.persistReconciledOperation(ctx, operation, previous)
+}
+
+// ReconcileStalledOperation closes the gap where a host process disappears or
+// keeps returning the same checkpoint forever. It compares the current phase's
+// stage timestamp instead of UpdatedAt because Agent verification legitimately
+// refreshes UpdatedAt while making no lifecycle progress.
+func (service *Service) ReconcileStalledOperation(ctx context.Context, timeout time.Duration) (*domain.Operation, error) {
+	if service == nil || service.repository == nil {
+		return nil, ErrUpgradeDependency
+	}
+	operation, err := service.repository.FindActive(ctx)
+	if err != nil {
+		if isUpgradeRecordNotFound(err) || errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if operation == nil || operation.Status.IsTerminal() || !service.operationStalled(operation, timeout) {
+		return operation, nil
+	}
+	status := domain.StatusNeedsAttention
+	if operationNeedsRecovery(operation) {
+		status = domain.StatusNeedsRecovery
+	}
+	previous := operation.Status
+	now := service.now().UTC()
+	operation.Status = status
+	operation.Diagnostic = sanitizeUpgradeDiagnostic(fmt.Sprintf("upgrade made no progress after the last confirmed %s stage; host or verification requires operator attention", previous))
+	operation.UpdatedAt = now
+	operation.CompletedAt = &now
+	if operation.StageTimes == nil {
+		operation.StageTimes = map[domain.Status]time.Time{}
+	}
+	operation.StageTimes[status] = now
+	return service.persistReconciledOperation(ctx, operation, previous)
+}
+
+// upgradeRecoveryStallTimeout derives a bounded watchdog from the release's
+// maintenance window. The grace period accounts for journal handoff and
+// container health checks; the lower and upper bounds keep malformed/legacy
+// values from either failing a fresh operation immediately or leaving an
+// operation active forever.
+func upgradeRecoveryStallTimeout(operation *domain.Operation) time.Duration {
+	if operation == nil || operation.MaintenanceWindowMinutes <= 0 {
+		return defaultUpgradeRecoveryStallTimeout
+	}
+	minutes := operation.MaintenanceWindowMinutes
+	maximumWindowMinutes := int((maximumUpgradeRecoveryStallTimeout - upgradeRecoveryGracePeriod) / time.Minute)
+	if minutes >= maximumWindowMinutes {
+		return maximumUpgradeRecoveryStallTimeout
+	}
+	timeout := time.Duration(minutes)*time.Minute + upgradeRecoveryGracePeriod
+	if timeout < minimumUpgradeRecoveryStallTimeout {
+		return minimumUpgradeRecoveryStallTimeout
+	}
+	return timeout
+}
+
+func (service *Service) operationStalled(operation *domain.Operation, timeout time.Duration) bool {
+	if operation == nil || operation.Status.IsTerminal() {
+		return false
+	}
+	if timeout <= 0 {
+		timeout = upgradeRecoveryStallTimeout(operation)
+	}
+	progressAt := service.operationProgressAt(operation)
+	if progressAt.IsZero() {
+		progressAt = operation.CreatedAt
+	}
+	now := service.now().UTC()
+	return !progressAt.IsZero() && now.After(progressAt.Add(timeout))
+}
+
+func (service *Service) operationProgressAt(operation *domain.Operation) time.Time {
+	if operation == nil {
+		return time.Time{}
+	}
+	if stageAt, ok := operation.StageTimes[operation.Status]; ok {
+		return stageAt.UTC()
+	}
+	return operation.CreatedAt.UTC()
+}
+
+func operationNeedsRecovery(operation *domain.Operation) bool {
+	if operation == nil {
+		return false
+	}
+	return operation.MigrationStatus == domain.MigrationStatusRunning ||
+		operation.MigrationStatus == domain.MigrationStatusSucceeded ||
+		operation.MigrationStatus == domain.MigrationStatusFailed ||
+		operation.MigrationStatus == domain.MigrationStatusUnknown ||
+		operation.Status == domain.StatusMigrating ||
+		operation.Status == domain.StatusRestarting ||
+		operation.Status == domain.StatusAgentVerifying ||
+		operation.Status == domain.StatusVerifying
 }
 
 // isUpgradeRecordNotFound keeps the application package independent from the

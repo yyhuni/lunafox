@@ -14,6 +14,7 @@ func RegisterUpgradeRoutes(protected *gin.RouterGroup, upgradeHandler *handler.U
 	}
 	protected.POST("/system:checkForUpdates", upgradeHandler.CheckForUpdates)
 	protected.POST("/upgradeOperations", upgradeHandler.CreateOperation)
+	protected.GET("/upgradeOperations:active", upgradeHandler.FindActive)
 	protected.GET("/upgradeOperations/:upgradeOperation", upgradeHandler.GetOperation)
 	protected.POST("/upgradeOperations/*upgradeOperationAction", upgradeHandler.RetryAction)
 }

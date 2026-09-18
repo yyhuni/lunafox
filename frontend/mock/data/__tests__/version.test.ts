@@ -44,6 +44,15 @@ describe("version upgrade mock lifecycle", () => {
     expect(observeMockUpgradeOperation()?.status).toBe("failed")
   })
 
+  it("keeps terminal status stable when the active view is polled again", () => {
+    setMockScenario("edge")
+    createMockUpgradeOperation({ requestId, manifestId: "lunafox-1.2.3", manifestDigest: `sha256:${"a".repeat(64)}` })
+    for (let index = 0; index < 4; index += 1) observeMockUpgradeOperation()
+
+    expect(observeMockUpgradeOperation()?.status).toBe("needs_attention")
+    expect(observeMockUpgradeOperation()?.status).toBe("needs_attention")
+  })
+
   it("restores the operation after the browser mock module is reloaded", async () => {
     setMockScenario("happy")
     const created = createMockUpgradeOperation({ requestId, manifestId: "lunafox-1.2.3", manifestDigest: `sha256:${"a".repeat(64)}` })

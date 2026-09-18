@@ -46,6 +46,9 @@ type HostUpgradeAction string
 const (
 	HostUpgradeActionStart  HostUpgradeAction = "start"
 	HostUpgradeActionResume HostUpgradeAction = "resume"
+	// Stop requests cancellation of the host execution context. It never
+	// implies rollback of a migration or already-applied Compose changes.
+	HostUpgradeActionStop HostUpgradeAction = "stop"
 	// Repair is an explicit operator-confirmed retry of a terminal host
 	// operation. Resume is reserved for non-terminal handoff recovery and must
 	// not reset a terminal journal.

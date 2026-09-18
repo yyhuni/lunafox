@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl"
 
 import {
   getUpgradeErrorMessage,
-  readStoredUpgradeOperationId,
   useCheckForUpdatesAction,
   useCreateUpgradeOperation,
   useRetryUpgradeOperation,
@@ -61,7 +60,10 @@ export function useAboutDialogState({ enabled = true, onUpgradeAccepted }: UseAb
   const checkUpdate = useCheckForUpdatesAction()
   const createMutation = useCreateUpgradeOperation()
   const retryMutation = useRetryUpgradeOperation()
-  const operation = useUpgradeOperation(createMutation.operationId ?? readStoredUpgradeOperationId(), { enabled })
+  // The hook resolves the durable active operation itself. localStorage is
+  // only a reconnect hint, never the authority that decides whether upgrade
+  // controls may start another operation.
+  const operation = useUpgradeOperation(undefined, { enabled })
 
   const [isChecking, setIsChecking] = React.useState(false)
   const [updateResult, setUpdateResult] = React.useState<UpdateCheckResult | null>(null)

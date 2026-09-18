@@ -10,6 +10,7 @@ const hookMocks = vi.hoisted(() => ({
     operationId: "operation-id" as string | null,
     isResolving: false,
     isReconnecting: false,
+    isError: false,
     isActive: true,
   },
 }))
@@ -37,6 +38,7 @@ describe("UpgradeRouteBoundary", () => {
       operationId: "operation-id",
       isResolving: false,
       isReconnecting: false,
+      isError: false,
       isActive: true,
     }
   })
@@ -66,7 +68,7 @@ describe("UpgradeRouteBoundary", () => {
 
     act(() => {
       navigationMocks.pathname = "/overview/"
-      hookMocks.operation = { operationId: null, isResolving: false, isReconnecting: false, isActive: false }
+      hookMocks.operation = { operationId: null, isResolving: false, isReconnecting: false, isError: false, isActive: false }
       rerender(
         <UpgradeRouteBoundary renderProtectedShell={(children) => <div data-testid="shell">{children}</div>}>
           <div data-testid="ordinary-content">ordinary</div>
@@ -74,5 +76,45 @@ describe("UpgradeRouteBoundary", () => {
       )
     })
     expect(screen.getByTestId("shell")).toBeInTheDocument()
+  })
+
+  it("fails closed and redirects when the active-operation query fails", async () => {
+    hookMocks.operation = {
+      operationId: null,
+      isResolving: false,
+      isReconnecting: false,
+      isError: true,
+      isActive: false,
+    }
+
+    render(
+      <UpgradeRouteBoundary renderProtectedShell={(children) => <div data-testid="shell">{children}</div>}>
+        <div data-testid="ordinary-content">ordinary</div>
+      </UpgradeRouteBoundary>,
+    )
+
+    expect(screen.getByTestId("upgrade-route-boundary")).toBeInTheDocument()
+    expect(screen.queryByTestId("ordinary-content")).not.toBeInTheDocument()
+    await waitFor(() => expect(navigationMocks.replace).toHaveBeenCalledWith("/system-upgrade/"))
+  })
+
+  it("waits for the active-operation query before deciding whether to redirect", async () => {
+    hookMocks.operation = {
+      operationId: null,
+      isResolving: true,
+      isReconnecting: false,
+      isError: false,
+      isActive: false,
+    }
+
+    render(
+      <UpgradeRouteBoundary renderProtectedShell={(children) => <div data-testid="shell">{children}</div>}>
+        <div data-testid="ordinary-content">ordinary</div>
+      </UpgradeRouteBoundary>,
+    )
+
+    expect(screen.getByTestId("upgrade-route-boundary")).toBeInTheDocument()
+    await act(async () => {})
+    expect(navigationMocks.replace).not.toHaveBeenCalled()
   })
 })

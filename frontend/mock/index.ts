@@ -320,6 +320,7 @@ export {
   createMockUpgradeOperation,
   getMockUpgradeOperation,
   observeMockUpgradeOperation,
+  stopMockUpgradeOperation,
   retryMockUpgradeOperation,
   resetMockUpgradeOperation,
 } from './data/version'

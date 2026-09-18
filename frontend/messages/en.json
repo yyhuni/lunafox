@@ -4593,6 +4593,7 @@
     },
     "timeline": {
       "title": "Upgrade progress",
+      "stageList": "Upgrade stages",
       "phaseProgress": "Stage progress",
       "stageCount": "Stage {current} of {total}",
       "pending": "Not started",
@@ -4646,6 +4647,7 @@
     "facts": {
       "title": "Confirmed upgrade details",
       "description": "These values come from the server Operation. No client-side percentage or time estimate is inferred.",
+      "currentVersion": "Current version",
       "targetVersion": "Target version",
       "manifest": "Release manifest",
       "migration": "Migration status",
@@ -4663,8 +4665,43 @@
       "retry": "Retry upgrade",
       "retrying": "Retrying...",
       "recheck": "Check again",
+      "stop": "Stop upgrade",
+      "stopping": "Stopping...",
+      "confirmStop": "Stop upgrade",
+      "keepRunning": "Keep upgrading",
       "enterSystem": "Enter system",
       "leave": "Return to system"
+    },
+    "stop": {
+      "title": "Stop this upgrade?",
+      "description": "The upgrader will stop at the next safe cancellation point and then report a terminal result.",
+      "warning": "Stopping does not roll back services or database changes that were already applied. A stop after migration may require manual recovery."
+    },
+    "logs": {
+      "title": "Upgrade log",
+      "description": "Server-confirmed milestones and safe diagnostics for this operation.",
+      "empty": "No confirmed milestone has been recorded yet.",
+      "messages": {
+        "requestAccepted": "Upgrade request accepted",
+        "stoppingWork": "Stopping active work",
+        "preflight": "Preflight checks started",
+        "updatingServices": "Updating system services",
+        "migratingDatabase": "Database migration started",
+        "restartingServices": "Restarting services",
+        "verifyingAgents": "Verifying Agents",
+        "verifyingSystem": "Verifying system",
+        "completed": "Upgrade verification completed",
+        "failed": "Upgrade failed",
+        "needsRecovery": "Manual recovery is required",
+        "needsAttention": "Operator attention is required",
+        "workStopped": "Active work was stopped before upgrade",
+        "diagnostic": "Upgrade diagnostic",
+        "unknown": "Upgrade event"
+      },
+      "metadata": {
+        "cancelledScans": "Cancelled scans",
+        "cancelledTasks": "Cancelled tasks"
+      }
     },
     "summary": {
       "durationUnknown": "Duration unavailable",
@@ -4675,6 +4712,7 @@
       "title": "Upgrade successful",
       "description": "The system upgrade is complete. Here is the verified summary.",
       "versionVerified": "The server confirms the current version is {version}",
+      "currentVersion": "Current version",
       "targetVersion": "Target version",
       "duration": "Upgrade duration",
       "durationUnknown": "Duration unavailable",

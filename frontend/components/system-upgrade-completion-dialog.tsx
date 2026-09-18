@@ -9,7 +9,6 @@ import {
   hasShownUpgradeCompletion,
   markUpgradeCompletionShown,
   readPendingSuccessOperationId,
-  useCheckForUpdates,
   useUpgradeOperation,
 } from "@/hooks/use-version"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -43,7 +42,6 @@ export function SystemUpgradeCompletionDialog() {
   const acknowledgedRef = React.useRef<string | null>(null)
   const shouldObserve = hydrated && !isSystemUpgradePathname(pathname) && Boolean(pendingOperationId)
   const operation = useUpgradeOperation(pendingOperationId, { enabled: shouldObserve })
-  const currentVersion = useCheckForUpdates({ enabled: shouldObserve })
 
   React.useEffect(() => {
     setHydrated(true)
@@ -64,7 +62,7 @@ export function SystemUpgradeCompletionDialog() {
   if (!shouldObserve || !operation.data || operation.data.status !== "succeeded") return null
 
   const completedOperation = operation.data
-  const displayedVersion = currentVersion.data?.currentVersion || completedOperation.releaseVersion
+  const displayedVersion = completedOperation.currentVersion
   const migration = completedOperation.migrationStatus === "not_started"
     ? t("completion.migrationNotRun")
     : completedOperation.migrationStatus
@@ -84,6 +82,10 @@ export function SystemUpgradeCompletionDialog() {
           <AlertDescription>{t("completion.versionVerified", { version: displayedVersion })}</AlertDescription>
         </Alert>
         <dl className="grid gap-3 sm:grid-cols-2">
+          <div className="border-t border-border/70 pt-2">
+            <dt className={textRole.metadataLabel}>{t("completion.currentVersion")}</dt>
+            <dd className={textRole.metadataValueStrong}>{displayedVersion}</dd>
+          </div>
           <div className="border-t border-border/70 pt-2">
             <dt className={textRole.metadataLabel}>{t("completion.targetVersion")}</dt>
             <dd className={textRole.metadataValueStrong}>{completedOperation.releaseVersion}</dd>

@@ -18,6 +18,7 @@ const operation = {
   operatorId: 7,
   manifestId: "release-1.1.0",
   manifestDigest: digest,
+  currentVersion: "1.0.0",
   releaseVersion: "1.1.0",
   compatibilityRange: ">=1.0.0 <2.0.0",
   maintenanceWindowMinutes: 15,
@@ -28,6 +29,7 @@ const operation = {
   cancelledTaskCount: 3,
   agentSummary: { expected: 0, ready: 0, missing: 0, unhealthy: 0 },
   observedDigests: {},
+  logs: [{ timestamp: "2026-09-13T12:00:00Z", level: "info", stage: "queued", messageKey: "requestAccepted", message: "Upgrade request accepted" }],
   stageTimes: { queued: "2026-09-13T12:00:00Z" },
   createdAt: "2026-09-13T12:00:00Z",
   updatedAt: "2026-09-13T12:00:00Z",
@@ -75,5 +77,43 @@ describe("version.service contract", () => {
     await VersionService.retryUpgradeOperation(operation.operationId)
     expect(api.get).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}`)
     expect(api.post).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}:retry`, { confirmed: true })
+  })
+
+  it("maps an empty active-operation view to null and sends an explicit stop", async () => {
+    const notFound = Object.assign(new Error("not found"), {
+      isAxiosError: true,
+      response: { status: 404, data: { error: { code: "NOT_FOUND", message: "No active upgrade operation." } } },
+    })
+    vi.mocked(api.get).mockRejectedValueOnce(notFound)
+    await expect(VersionService.getActiveUpgradeOperation()).resolves.toBeNull()
+    expect(api.get).toHaveBeenCalledWith("/upgradeOperations:active")
+
+    vi.mocked(api.post).mockResolvedValueOnce({ data: operation } as never)
+    await VersionService.stopUpgradeOperation(operation.operationId)
+    expect(api.post).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}:stop`, { confirmed: true })
+  })
+
+  it("rejects oversized or unsafe upgrade log projections at the service boundary", async () => {
+    const oversized = Array.from({ length: 33 }, (_, index) => ({
+      timestamp: `2026-09-13T12:${String(index).padStart(2, "0")}:00Z`,
+      level: "info",
+      stage: "queued",
+      messageKey: "requestAccepted",
+      message: "Upgrade request accepted",
+    }))
+    vi.mocked(api.get).mockResolvedValue({ data: { ...operation, logs: oversized } } as never)
+    await expect(VersionService.getUpgradeOperation(operation.operationId)).rejects.toThrow("upgradeOperation.logs")
+
+    vi.mocked(api.get).mockResolvedValue({ data: {
+      ...operation,
+      logs: [{
+        timestamp: "2026-09-13T12:00:00Z",
+        level: "error",
+        stage: "failed",
+        messageKey: "diagnostic",
+        message: "executor failed at /srv/lunafox/.env TOKEN=secret",
+      }],
+    } } as never)
+    await expect(VersionService.getUpgradeOperation(operation.operationId)).rejects.toThrow("upgradeOperation.logs[0].message")
   })
 })

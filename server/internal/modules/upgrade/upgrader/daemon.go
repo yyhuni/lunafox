@@ -79,12 +79,13 @@ type Daemon struct {
 	listener       net.Listener
 	lock           *fileLock
 
-	mu        sync.Mutex
-	closing   bool
-	running   bool
-	runCtx    context.Context
-	runCancel context.CancelFunc
-	executing map[string]struct{}
+	mu              sync.Mutex
+	closing         bool
+	running         bool
+	runCtx          context.Context
+	runCancel       context.CancelFunc
+	executing       map[string]context.CancelFunc
+	cancelRequested map[string]struct{}
 	// deploymentLock is the host-visible lock shared with the public Bash
 	// lifecycle scripts. It is held for the whole duration of an Upgrade
 	// Operation and kept as a recovery fence while the journal needs recovery.
@@ -94,10 +95,11 @@ type Daemon struct {
 
 func NewDaemon(store *JournalStore, executor Executor) *Daemon {
 	return &Daemon{
-		store:          store,
-		executor:       executor,
-		verifyManifest: VerifyDeploymentManifest,
-		executing:      make(map[string]struct{}),
+		store:           store,
+		executor:        executor,
+		verifyManifest:  VerifyDeploymentManifest,
+		executing:       make(map[string]context.CancelFunc),
+		cancelRequested: make(map[string]struct{}),
 	}
 }
 
@@ -382,6 +384,11 @@ func (daemon *Daemon) accept(request Request) Response {
 		daemon.mu.Unlock()
 		return rejectedResponse(historyErr)
 	}
+	if request.Action == ActionStop {
+		response := daemon.acceptStopLocked(request, current, currentErr, history, historyErr)
+		daemon.mu.Unlock()
+		return response
+	}
 	if historyErr == nil {
 		if history.ManifestDigest != request.ManifestDigest {
 			daemon.mu.Unlock()
@@ -490,6 +497,59 @@ func (daemon *Daemon) accept(request Request) Response {
 	return response
 }
 
+// acceptStopLocked handles the one mutating socket action that does not start
+// execution. The caller holds daemon.mu; cancellation is signalled immediately
+// while the executor remains responsible for writing the durable terminal
+// checkpoint after its current command unwinds.
+func (daemon *Daemon) acceptStopLocked(request Request, current Journal, currentErr error, history Journal, historyErr error) Response {
+	if historyErr == nil && history.ManifestDigest != request.ManifestDigest {
+		return rejectedResponse(ErrReplayDigestMismatch)
+	}
+	journal := history
+	if historyErr != nil {
+		if currentErr != nil || current.OperationID != request.OperationID || current.ManifestDigest != request.ManifestDigest {
+			return rejectedResponse(ErrResumeNotFound)
+		}
+		journal = current
+	} else if currentErr == nil && current.OperationID == request.OperationID && current.UpdatedAt.After(history.UpdatedAt) {
+		journal = current
+	}
+	if currentErr == nil && current.OperationID != request.OperationID && !IsTerminal(journal.Stage) {
+		return rejectedResponse(ErrOperationInProgress)
+	}
+	if IsTerminal(journal.Stage) {
+		return Response{SchemaVersion: RequestSchema, Accepted: true, Replayed: true, Journal: journal}
+	}
+	daemon.cancelRequested[request.OperationID] = struct{}{}
+	if cancel, exists := daemon.executing[request.OperationID]; exists && cancel != nil {
+		cancel()
+		return Response{SchemaVersion: RequestSchema, Accepted: true, Journal: journal}
+	}
+	updated, err := daemon.stopJournal(request, journal)
+	if err != nil {
+		return rejectedResponse(err)
+	}
+	delete(daemon.cancelRequested, request.OperationID)
+	return Response{SchemaVersion: RequestSchema, Accepted: true, Journal: updated}
+}
+
+func (daemon *Daemon) stopJournal(request Request, current Journal) (Journal, error) {
+	if IsTerminal(current.Stage) {
+		// A stop can race with the executor's final checkpoint. Never downgrade a
+		// durable success or an already-classified recovery outcome.
+		return current, nil
+	}
+	stage := StageNeedsAttention
+	if migrationEvidenceForJournal(current) {
+		stage = StageNeedsRecovery
+	}
+	diagnostic := "upgrade stopped by operator"
+	if stage == StageNeedsRecovery {
+		diagnostic = "upgrade stopped after the migration boundary; manual recovery is required"
+	}
+	return daemon.store.Checkpoint(request.OperationID, request.ManifestDigest, stage, diagnostic, nil)
+}
+
 // launchExecutionLocked marks the operation before launching a goroutine. The
 // caller must hold daemon.mu; all disk checkpoint transitions belong to the
 // executor so a future Compose implementation can make each phase explicit.
@@ -506,7 +566,8 @@ func (daemon *Daemon) launchExecutionLocked(ctx context.Context, request Request
 	if _, exists := daemon.executing[request.OperationID]; exists {
 		return
 	}
-	daemon.executing[request.OperationID] = struct{}{}
+	executionCtx, cancel := context.WithCancel(ctx)
+	daemon.executing[request.OperationID] = cancel
 	daemon.wg.Add(1)
 	go func() {
 		defer daemon.wg.Done()
@@ -514,16 +575,50 @@ func (daemon *Daemon) launchExecutionLocked(ctx context.Context, request Request
 		// when the operation reaches a stage that needs no recovery. Waiting here
 		// rather than in accept() keeps a lifecycle command and an Upgrade
 		// Operation mutually exclusive without failing either of them.
-		if err := daemon.holdDeploymentLock(ctx, request.OperationID); err != nil {
-			_ = daemon.failJournal(request, err)
-		} else if err := daemon.executor.Execute(ctx, request, daemon.store); err != nil {
-			_ = daemon.failJournal(request, err)
+		if err := daemon.holdDeploymentLock(executionCtx, request.OperationID); err != nil {
+			if daemon.consumeCancellation(request.OperationID) {
+				_, _ = daemon.stopJournal(request, currentJournalOrEmpty(daemon.store, request))
+			} else if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				// A daemon/server shutdown cancels the execution context but is not
+				// an operator stop. Leave the journal active for resume/recovery.
+			} else {
+				_ = daemon.failJournal(request, err)
+			}
+		} else if err := daemon.executor.Execute(executionCtx, request, daemon.store); err != nil {
+			if daemon.consumeCancellation(request.OperationID) {
+				_, _ = daemon.stopJournal(request, currentJournalOrEmpty(daemon.store, request))
+			} else if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				// Preserve the last durable checkpoint when the host process is
+				// stopping; the recovery supervisor will decide the final outcome.
+			} else {
+				_ = daemon.failJournal(request, err)
+			}
+		} else if daemon.consumeCancellation(request.OperationID) {
+			_, _ = daemon.stopJournal(request, currentJournalOrEmpty(daemon.store, request))
 		}
+		cancel()
 		daemon.finishExecution(request.OperationID)
 		daemon.mu.Lock()
 		delete(daemon.executing, request.OperationID)
+		delete(daemon.cancelRequested, request.OperationID)
 		daemon.mu.Unlock()
 	}()
+}
+
+func (daemon *Daemon) consumeCancellation(operationID string) bool {
+	daemon.mu.Lock()
+	defer daemon.mu.Unlock()
+	_, requested := daemon.cancelRequested[operationID]
+	return requested
+}
+
+func currentJournalOrEmpty(store *JournalStore, request Request) Journal {
+	if store != nil {
+		if journal, err := store.LoadCurrent(); err == nil && journal.OperationID == request.OperationID && journal.ManifestDigest == request.ManifestDigest {
+			return journal
+		}
+	}
+	return Journal{OperationID: request.OperationID, ManifestDigest: request.ManifestDigest, Stage: StageQueued}
 }
 
 // holdDeploymentLock acquires the shared deployment lock for one Operation.
@@ -616,13 +711,11 @@ func (daemon *Daemon) ensureRecoveryFence(ctx context.Context) {
 }
 
 func (daemon *Daemon) failJournal(request Request, cause error) error {
+	_ = cause
+	// Executor errors may contain command output, host paths, or credentials.
+	// Persist only a fixed diagnostic; the durable journal is later projected to
+	// API clients and must remain safe even when an executor is misbehaving.
 	diagnostic := "upgrade execution failed"
-	if cause != nil {
-		// Do not copy arbitrary command output into persistent state.
-		if ValidateDiagnostic(cause.Error()) == nil {
-			diagnostic = cause.Error()
-		}
-	}
 	now := time.Now().UTC()
 	stage := StageFailed
 	repairStage := StageQueued

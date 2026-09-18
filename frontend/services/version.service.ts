@@ -6,7 +6,9 @@ import type {
   DatabaseMigrationInfo,
   ReleaseManifestSummary,
   UpgradeAgentSummary,
-  UpgradeDiagnostic,
+	UpgradeDiagnostic,
+	UpgradeLogEntry,
+  UpgradeLogLevel,
   UpgradeMigrationStatus,
   UpgradeOperation,
   UpgradeOperationStatus,
@@ -15,6 +17,7 @@ import type {
 
 const CHECK_FOR_UPDATES_PATH = "/system:checkForUpdates"
 const UPGRADE_OPERATIONS_PATH = "/upgradeOperations"
+const ACTIVE_UPGRADE_OPERATION_PATH = "/upgradeOperations:active"
 
 const OPERATION_STATUSES = new Set<UpgradeOperationStatus>([
   "queued", "stopping", "preflight", "updating", "migrating", "restarting",
@@ -23,6 +26,13 @@ const OPERATION_STATUSES = new Set<UpgradeOperationStatus>([
 const MIGRATION_STATUSES = new Set<UpgradeMigrationStatus>([
   "not_started", "running", "succeeded", "failed", "unknown",
 ])
+const MAX_UPGRADE_LOG_ENTRIES = 32
+const MAX_UPGRADE_LOG_MESSAGE_LENGTH = 512
+const MAX_UPGRADE_LOG_STAGE_LENGTH = 64
+const MAX_UPGRADE_LOG_MESSAGE_KEY_LENGTH = 64
+const MAX_UPGRADE_LOG_METADATA_ENTRIES = 8
+const MAX_UPGRADE_LOG_METADATA_KEY_LENGTH = 64
+const MAX_UPGRADE_LOG_METADATA_VALUE_LENGTH = 128
 
 export class UpgradeApiError extends Error {
   readonly code: string
@@ -58,17 +68,34 @@ export class VersionService {
     return parseUpgradeOperation(response.data)
   }
 
-  static async getUpgradeOperation(operationId: string): Promise<UpgradeOperation> {
+	static async getUpgradeOperation(operationId: string): Promise<UpgradeOperation> {
     assertCanonicalUUID(operationId, "operationId")
     const response = await api.get<unknown>(`${UPGRADE_OPERATIONS_PATH}/${encodeURIComponent(operationId)}`)
     return parseUpgradeOperation(response.data)
-  }
+	}
 
-  static async retryUpgradeOperation(operationId: string): Promise<UpgradeOperation> {
+	static async getActiveUpgradeOperation(): Promise<UpgradeOperation | null> {
+		try {
+			const response = await api.get<unknown>(ACTIVE_UPGRADE_OPERATION_PATH)
+			return parseUpgradeOperation(response.data)
+		} catch (error) {
+			const parsed = toUpgradeApiError(error)
+			if (parsed.status === 404) return null
+			throw parsed
+		}
+	}
+
+	static async retryUpgradeOperation(operationId: string): Promise<UpgradeOperation> {
     assertCanonicalUUID(operationId, "operationId")
     const response = await api.post<unknown>(`${UPGRADE_OPERATIONS_PATH}/${encodeURIComponent(operationId)}:retry`, { confirmed: true })
     return parseUpgradeOperation(response.data)
-  }
+	}
+
+	static async stopUpgradeOperation(operationId: string): Promise<UpgradeOperation> {
+		assertCanonicalUUID(operationId, "operationId")
+		const response = await api.post<unknown>(`${UPGRADE_OPERATIONS_PATH}/${encodeURIComponent(operationId)}:stop`, { confirmed: true })
+		return parseUpgradeOperation(response.data)
+	}
 }
 
 export function toUpgradeApiError(error: unknown): UpgradeApiError {
@@ -151,10 +178,10 @@ function parseMigration(value: unknown): DatabaseMigrationInfo {
 function parseUpgradeOperation(value: unknown): UpgradeOperation {
   const record = requireObject(value, "upgradeOperation")
   assertKnownFields(record, [
-    "name", "operationId", "requestId", "operatorId", "manifestId", "manifestDigest", "releaseVersion",
-    "compatibilityRange", "maintenanceWindowMinutes", "status", "migrationStatus", "migrationType", "migrationId",
-    "migrationChecksum", "cancelledScanCount", "cancelledTaskCount", "agentDesiredVersion", "agentTargetDigest",
-    "agentSummary", "observedDigests", "diagnostic", "stageTimes", "createdAt", "updatedAt", "completedAt",
+		"name", "operationId", "requestId", "operatorId", "manifestId", "manifestDigest", "releaseVersion",
+		"currentVersion", "compatibilityRange", "maintenanceWindowMinutes", "status", "migrationStatus", "migrationType", "migrationId",
+		"migrationChecksum", "cancelledScanCount", "cancelledTaskCount", "agentDesiredVersion", "agentTargetDigest",
+		"agentSummary", "observedDigests", "diagnostic", "logs", "stageTimes", "createdAt", "updatedAt", "completedAt",
   ], "upgradeOperation")
   const status = requireEnum(record.status, OPERATION_STATUSES, "upgradeOperation.status")
   const migrationStatus = requireEnum(record.migrationStatus, MIGRATION_STATUSES, "upgradeOperation.migrationStatus")
@@ -173,8 +200,9 @@ function parseUpgradeOperation(value: unknown): UpgradeOperation {
     requestId: assertCanonicalUUID(record.requestId, "upgradeOperation.requestId"),
     operatorId: requireSafeInteger(record.operatorId, "upgradeOperation.operatorId", 1),
     manifestId: requireNonEmpty(record.manifestId, "upgradeOperation.manifestId"),
-    manifestDigest: assertSha256Digest(record.manifestDigest, "upgradeOperation.manifestDigest"),
-    releaseVersion: requireNonEmpty(record.releaseVersion, "upgradeOperation.releaseVersion"),
+		manifestDigest: assertSha256Digest(record.manifestDigest, "upgradeOperation.manifestDigest"),
+		releaseVersion: requireNonEmpty(record.releaseVersion, "upgradeOperation.releaseVersion"),
+		currentVersion: requireNonEmpty(record.currentVersion, "upgradeOperation.currentVersion"),
     compatibilityRange: requireNonEmpty(record.compatibilityRange, "upgradeOperation.compatibilityRange"),
     maintenanceWindowMinutes: requireSafeInteger(record.maintenanceWindowMinutes, "upgradeOperation.maintenanceWindowMinutes", 1),
     status,
@@ -186,14 +214,43 @@ function parseUpgradeOperation(value: unknown): UpgradeOperation {
     cancelledTaskCount: requireSafeInteger(record.cancelledTaskCount, "upgradeOperation.cancelledTaskCount"),
     agentDesiredVersion: optionalString(record.agentDesiredVersion, "upgradeOperation.agentDesiredVersion"),
     agentTargetDigest: optionalDigest(record.agentTargetDigest, "upgradeOperation.agentTargetDigest"),
-    agentSummary: parseAgentSummary(record.agentSummary),
-    observedDigests,
-    diagnostic: optionalString(record.diagnostic, "upgradeOperation.diagnostic"),
+		agentSummary: parseAgentSummary(record.agentSummary),
+		observedDigests,
+		diagnostic: optionalString(record.diagnostic, "upgradeOperation.diagnostic"),
+		logs: parseUpgradeLogs(record.logs),
     stageTimes,
     createdAt: requireTimestamp(record.createdAt, "upgradeOperation.createdAt"),
     updatedAt: requireTimestamp(record.updatedAt, "upgradeOperation.updatedAt"),
     completedAt: record.completedAt === undefined || record.completedAt === null ? null : requireTimestamp(record.completedAt, "upgradeOperation.completedAt"),
   }
+}
+
+function parseUpgradeLogs(value: unknown): UpgradeLogEntry[] {
+	if (!Array.isArray(value) || value.length > MAX_UPGRADE_LOG_ENTRIES) throw invalidResponse("upgradeOperation.logs")
+	return value.map((entry, index) => {
+		const record = requireObject(entry, `upgradeOperation.logs[${index}]`)
+		assertKnownFields(record, ["timestamp", "level", "stage", "messageKey", "message", "metadata"], `upgradeOperation.logs[${index}]`)
+		const level = requireEnum(record.level, new Set<UpgradeLogLevel>(["info", "warn", "error"]), `upgradeOperation.logs[${index}].level`)
+		const metadataRecord = record.metadata === undefined || record.metadata === null ? {} : requireObject(record.metadata, `upgradeOperation.logs[${index}].metadata`)
+		if (Object.keys(metadataRecord).length > MAX_UPGRADE_LOG_METADATA_ENTRIES) throw invalidResponse(`upgradeOperation.logs[${index}].metadata`)
+		const metadata: Record<string, string> = {}
+		for (const [key, item] of Object.entries(metadataRecord)) {
+			if (!/^[A-Za-z][A-Za-z0-9_.-]*$/.test(key) || key.length > MAX_UPGRADE_LOG_METADATA_KEY_LENGTH) throw invalidResponse(`upgradeOperation.logs[${index}].metadata.${key}`)
+			const value = requireBoundedString(item, `upgradeOperation.logs[${index}].metadata.${key}`, MAX_UPGRADE_LOG_METADATA_VALUE_LENGTH)
+			metadata[key] = value
+		}
+		const stage = requireBoundedToken(record.stage, `upgradeOperation.logs[${index}].stage`, MAX_UPGRADE_LOG_STAGE_LENGTH)
+		const messageKey = requireBoundedToken(record.messageKey, `upgradeOperation.logs[${index}].messageKey`, MAX_UPGRADE_LOG_MESSAGE_KEY_LENGTH)
+		const message = requireBoundedSafeLogMessage(record.message, `upgradeOperation.logs[${index}].message`)
+		return {
+			timestamp: requireTimestamp(record.timestamp, `upgradeOperation.logs[${index}].timestamp`),
+			level,
+			stage,
+			messageKey,
+			message,
+			metadata,
+		}
+	})
 }
 
 function parseAgentSummary(value: unknown): UpgradeAgentSummary {
@@ -236,6 +293,27 @@ function assertKnownFields(record: Record<string, unknown>, fields: string[], pa
 function requireString(value: unknown, path: string): string {
   if (typeof value !== "string") throw invalidResponse(path)
   return value
+}
+
+function requireBoundedString(value: unknown, path: string, maximumLength: number): string {
+	const result = requireString(value, path)
+	if (!result.trim() || result.length > maximumLength || /[\u0000-\u001f\u007f]/.test(result)) throw invalidResponse(path)
+	return result
+}
+
+function requireBoundedToken(value: unknown, path: string, maximumLength: number): string {
+	const result = requireBoundedString(value, path, maximumLength)
+	if (!/^[A-Za-z0-9_.-]+$/.test(result)) throw invalidResponse(path)
+	return result
+}
+
+function requireBoundedSafeLogMessage(value: unknown, path: string): string {
+	const result = requireBoundedString(value, path, MAX_UPGRADE_LOG_MESSAGE_LENGTH)
+	const lower = result.toLowerCase()
+	if (/[\\/`$]/.test(result) || ["authorization", "bearer ", "jwt", "password", "passwd", "secret", "token", "private key", "docker compose", "command:", "stderr:"].some((marker) => lower.includes(marker))) {
+		throw invalidResponse(path)
+	}
+	return result
 }
 
 function requireNonEmpty(value: unknown, path: string): string {

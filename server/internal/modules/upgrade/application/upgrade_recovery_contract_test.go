@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -76,5 +77,131 @@ func TestReconcileHostEventRejectsDigestMismatchAndUnknownStage(t *testing.T) {
 	}
 	if _, err := service.ReconcileHostEvent(context.Background(), HostUpgradeEvent{OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Stage: "shell_command"}); err == nil {
 		t.Fatal("unknown host stage was accepted")
+	}
+}
+
+func TestReconcileStalledOperationUsesMaintenanceWindowAndPreMigrationAttention(t *testing.T) {
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	now := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return now }
+	operation := &domain.Operation{
+		OperationID:              "77777777-7777-4777-8777-777777777777",
+		RequestID:                "88888888-8888-4888-8888-888888888888",
+		OperatorID:               7,
+		ManifestID:               "release-1.1.0",
+		ManifestDigest:           "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		ReleaseVersion:           "1.1.0",
+		Status:                   domain.StatusPreflight,
+		MigrationStatus:          domain.MigrationStatusNotStarted,
+		MigrationType:            "none",
+		MaintenanceWindowMinutes: 60,
+		CreatedAt:                now.Add(-20 * time.Minute),
+		UpdatedAt:                now.Add(-1 * time.Minute),
+		StageTimes:               map[domain.Status]time.Time{domain.StatusPreflight: now.Add(-20 * time.Minute)},
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+
+	// A long release window is still bounded, but must not be mistaken for a
+	// short global timeout while Compose is legitimately doing work.
+	updated, err := service.ReconcileStalledOperation(context.Background(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != domain.StatusPreflight {
+		t.Fatalf("long-window operation was closed early: %#v", updated)
+	}
+
+	operation.MaintenanceWindowMinutes = 1
+	operation.StageTimes[domain.StatusPreflight] = now.Add(-6 * time.Minute)
+	operation.UpdatedAt = now.Add(-1 * time.Minute)
+	repository.active = operation
+	updated, err = service.ReconcileStalledOperation(context.Background(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != domain.StatusNeedsAttention || updated.CompletedAt == nil {
+		t.Fatalf("pre-migration stall = %#v, want needs_attention terminal state", updated)
+	}
+}
+
+func TestReconcileStalledOperationClassifiesPostMigrationAsRecovery(t *testing.T) {
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	now := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return now }
+	operation := &domain.Operation{
+		OperationID:              "99999999-9999-4999-8999-999999999999",
+		RequestID:                "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+		OperatorID:               7,
+		ManifestID:               "release-1.1.0",
+		ManifestDigest:           "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		ReleaseVersion:           "1.1.0",
+		Status:                   domain.StatusRestarting,
+		MigrationStatus:          domain.MigrationStatusRunning,
+		MigrationType:            "compatible",
+		MaintenanceWindowMinutes: 1,
+		CreatedAt:                now.Add(-6 * time.Minute),
+		UpdatedAt:                now.Add(-1 * time.Minute),
+		StageTimes:               map[domain.Status]time.Time{domain.StatusRestarting: now.Add(-6 * time.Minute)},
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+
+	updated, err := service.ReconcileStalledOperation(context.Background(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != domain.StatusNeedsRecovery || updated.CompletedAt == nil {
+		t.Fatalf("post-migration stall = %#v, want needs_recovery terminal state", updated)
+	}
+}
+
+func TestReconcileHostEventDoesNotRefreshStageForAnIdenticalJournalReplay(t *testing.T) {
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	now := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return now.Add(10 * time.Minute) }
+	operation := &domain.Operation{
+		OperationID: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", RequestID: "dddddddd-dddd-4ddd-8ddd-dddddddddddd", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("a", 64), ReleaseVersion: "1.1.0",
+		CompatibilityRange: "*", Status: domain.StatusUpdating, MigrationStatus: domain.MigrationStatusNotStarted,
+		MigrationType: "none", CreatedAt: now, UpdatedAt: now,
+		StageTimes: map[domain.Status]time.Time{domain.StatusUpdating: now}, ObservedDigests: map[string]string{},
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+	event := HostUpgradeEvent{
+		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest,
+		Stage: string(domain.StatusUpdating), UpdatedAt: now, FromJournal: true,
+	}
+	updated, err := service.ReconcileHostEvent(context.Background(), event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.UpdatedAt != now || updated.StageTimes[domain.StatusUpdating] != now || repository.updates != 0 {
+		t.Fatalf("identical journal replay refreshed progress: updatedAt=%s stageAt=%s updates=%d", updated.UpdatedAt, updated.StageTimes[domain.StatusUpdating], repository.updates)
+	}
+}
+
+func TestReconcileJournalUnavailableClosesQueuedOperationWithAttention(t *testing.T) {
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	now := time.Now().UTC()
+	operation := &domain.Operation{
+		OperationID: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee", RequestID: "ffffffff-ffff-4fff-8fff-ffffffffffff", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("b", 64), ReleaseVersion: "1.1.0",
+		CompatibilityRange: "*", Status: domain.StatusQueued, MigrationStatus: domain.MigrationStatusNotStarted,
+		MigrationType: "none", CreatedAt: now, UpdatedAt: now, StageTimes: map[domain.Status]time.Time{}, ObservedDigests: map[string]string{},
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+	updated, err := service.ReconcileJournalUnavailable(context.Background(), "host journal unavailable")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != domain.StatusNeedsAttention || updated.CompletedAt == nil {
+		t.Fatalf("queued journal failure = %#v, want needs_attention terminal state", updated)
 	}
 }

@@ -11,14 +11,17 @@ import {
   isUpgradeOperationTerminal,
   upgradeUserStageForStatus,
   useRetryUpgradeOperation,
+  useStopUpgradeOperation,
   useUpgradeOperation,
 } from "@/hooks/use-version"
-import { UPGRADE_USER_STAGES, type UpgradeOperation, type UpgradeOperationStatus, type UpgradeUserStage } from "@/types/version.types"
+import { UPGRADE_USER_STAGES, type UpgradeLogEntry, type UpgradeOperation, type UpgradeOperationStatus, type UpgradeUserStage } from "@/types/version.types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertDialog, AlertDialogClose, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { semanticIcons } from "@/components/icons"
 import { getLoadingOwnerAttributes } from "@/components/shared/loading/loading-owner"
 import { textRole } from "@/lib/typography"
@@ -56,6 +59,13 @@ function stageTimestamp(operation: UpgradeOperation, stage: UpgradeUserStage): s
     .filter((value): value is string => Boolean(value))
     .sort()
   return values[0]
+}
+
+function highestObservedStageIndex(operation: UpgradeOperation): number {
+  return UPGRADE_USER_STAGES.reduce((highest, stage, index) => {
+    if (stage === "finished") return highest
+    return stageTimestamp(operation, stage) ? Math.max(highest, index) : highest
+  }, -1)
 }
 
 function progressValue(status: UpgradeOperationStatus | undefined): number {
@@ -105,6 +115,8 @@ function UpgradeStageTimeline({
 }) {
   const currentStage = upgradeUserStageForStatus(operation.status)
   const currentIndex = UPGRADE_USER_STAGES.indexOf(currentStage)
+  const observedIndex = highestObservedStageIndex(operation)
+  const terminal = isUpgradeOperationTerminal(operation.status)
 
   return (
     <section aria-labelledby="upgrade-stage-heading" className="space-y-4">
@@ -125,10 +137,17 @@ function UpgradeStageTimeline({
           })}
         />
       ) : null}
-      <ol className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6" aria-label={t("timeline.title")}>
+      <ol className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6" aria-label={t("timeline.stageList")}>
         {UPGRADE_USER_STAGES.map((stage, index) => {
-          const isCurrent = index === currentIndex
-          const isComplete = index < currentIndex || (stage === "finished" && operation.status === "succeeded")
+          const isCurrent = terminal ? stage === "finished" : index === currentIndex
+          // Terminal states do not imply that every later phase ran. Use the
+          // server's stage evidence so a stopped/failed operation cannot look
+          // like a completed upgrade.
+          const isComplete = operation.status === "succeeded"
+            ? index < currentIndex
+            : terminal
+              ? stage !== "finished" && index <= observedIndex
+              : index < currentIndex
           const StageIcon = isComplete
             ? semanticIcons.status.success
             : isCurrent
@@ -148,7 +167,7 @@ function UpgradeStageTimeline({
               <div className="flex items-start gap-2">
                 <StageIcon className={cn("mt-0.5 size-4 shrink-0", isCurrent ? "text-primary" : isComplete ? "text-success" : "text-muted-foreground")} aria-hidden="true" />
                 <div className="min-w-0">
-                  <p className={cn(textRole.bodyStrong, "truncate")}>{t(`timeline.stages.${stage}`)}</p>
+                  <p className={cn(textRole.bodyStrong, "break-words leading-snug")}>{t(`timeline.stages.${stage}`)}</p>
                   <p className={textRole.compactCaption}>{timestamp ? formatTimestamp(timestamp, locale) : t("timeline.pending")}</p>
                 </div>
               </div>
@@ -162,6 +181,7 @@ function UpgradeStageTimeline({
 
 function OperationFacts({ operation, t }: { operation: UpgradeOperation; t: (key: string, params?: Record<string, number | string>) => string }) {
   const facts = [
+    [t("facts.currentVersion"), operation.currentVersion],
     [t("facts.targetVersion"), operation.releaseVersion],
     [t("facts.manifest"), operation.manifestId],
     [t("facts.migration"), operation.migrationStatus === "not_started" ? t("facts.notStarted") : operation.migrationStatus],
@@ -180,13 +200,114 @@ function OperationFacts({ operation, t }: { operation: UpgradeOperation; t: (key
   )
 }
 
+function logIcon(level: UpgradeLogEntry["level"]) {
+  if (level === "error") return semanticIcons.status.failed
+  if (level === "warn") return semanticIcons.status.warning
+  return semanticIcons.status.unknown
+}
+
+const LOCALIZED_LOG_MESSAGES = new Set([
+  "requestAccepted",
+  "stoppingWork",
+  "preflight",
+  "updatingServices",
+  "migratingDatabase",
+  "restartingServices",
+  "verifyingAgents",
+  "verifyingSystem",
+  "completed",
+  "failed",
+  "needsRecovery",
+  "needsAttention",
+  "workStopped",
+  "diagnostic",
+])
+
+const LOCALIZED_LOG_STAGES = new Set<UpgradeOperationStatus>([
+  "queued", "stopping", "preflight", "updating", "migrating", "restarting",
+  "agent_verifying", "verifying", "succeeded", "failed", "needs_recovery", "needs_attention",
+])
+
+function upgradeLogMessage(entry: UpgradeLogEntry, t: (key: string, params?: Record<string, number | string>) => string): string {
+  if (LOCALIZED_LOG_MESSAGES.has(entry.messageKey)) {
+    return entry.messageKey === "diagnostic" ? entry.message : t(`logs.messages.${entry.messageKey}`)
+  }
+  return t("logs.messages.unknown")
+}
+
+function upgradeLogStage(entry: UpgradeLogEntry, t: (key: string, params?: Record<string, number | string>) => string): string {
+  return LOCALIZED_LOG_STAGES.has(entry.stage as UpgradeOperationStatus) ? t(`status.${entry.stage}`) : entry.stage
+}
+
+function upgradeLogMetadataLabel(key: string, t: (key: string, params?: Record<string, number | string>) => string): string {
+  if (key === "cancelledScans" || key === "cancelledTasks") return t(`logs.metadata.${key}`)
+  return key
+}
+
+function UpgradeLogs({
+  logs,
+  locale,
+  t,
+}: {
+  logs: UpgradeLogEntry[]
+  locale: string
+  t: (key: string, params?: Record<string, number | string>) => string
+}) {
+  const orderedLogs = React.useMemo(() => [...logs].sort((left, right) => Date.parse(left.timestamp) - Date.parse(right.timestamp)), [logs])
+
+  return (
+    <Card variant="compact">
+      <CardHeader>
+        <CardTitle>{t("logs.title")}</CardTitle>
+        <CardDescription>{t("logs.description")}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {orderedLogs.length === 0 ? (
+          <p className={textRole.bodySubtle}>{t("logs.empty")}</p>
+        ) : (
+          <ScrollArea className="max-h-72 border-y border-border/70" type="always" contentClassName="min-w-0">
+            <ol className="divide-y divide-border/70" aria-label={t("logs.title")}>
+              {orderedLogs.map((entry, index) => {
+                const LogIcon = logIcon(entry.level)
+                const metadata = Object.entries(entry.metadata ?? {})
+                return (
+                  <li key={`${entry.timestamp}-${entry.messageKey}-${index}`} data-log-level={entry.level} className="flex min-w-0 gap-3 px-1 py-3">
+                    <LogIcon className="mt-0.5 size-4 text-muted-foreground" aria-hidden="true" />
+                    <time className={cn(textRole.compactCaption, "hidden w-36 shrink-0 sm:block")}>{formatTimestamp(entry.timestamp, locale)}</time>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <p className={textRole.bodyStrong}>{upgradeLogMessage(entry, t)}</p>
+                      <p className={textRole.compactCaption}>{formatTimestamp(entry.timestamp, locale)} · {upgradeLogStage(entry, t)}</p>
+                      {metadata.length > 0 ? (
+                        <dl className="flex flex-wrap gap-x-3 gap-y-1">
+                          {metadata.map(([key, value]) => (
+                            <div key={key} className="flex min-w-0 gap-1">
+                              <dt className={textRole.compactCaption}>{upgradeLogMetadataLabel(key, t)}:</dt>
+                              <dd className={cn(textRole.compactCaption, "break-all")}>{value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      ) : null}
+                    </div>
+                  </li>
+                )
+              })}
+            </ol>
+          </ScrollArea>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export function SystemUpgradeStatus() {
   const t = useTranslations("systemUpgrade")
   const locale = useLocale()
   const router = useRouter()
   const [hydrated, setHydrated] = React.useState(false)
+  const [stopConfirmOpen, setStopConfirmOpen] = React.useState(false)
   const operation = useUpgradeOperation(undefined, { enabled: hydrated })
   const retryMutation = useRetryUpgradeOperation()
+  const stopMutation = useStopUpgradeOperation()
 
   React.useEffect(() => {
     setHydrated(true)
@@ -202,11 +323,18 @@ export function SystemUpgradeStatus() {
     retryMutation.mutate(operation.operationId)
   }, [operation.operationId, retryMutation])
 
+  const stop = React.useCallback(() => {
+    if (!operation.operationId || stopMutation.isPending) return
+    stopMutation.mutate(operation.operationId, {
+      onSuccess: () => setStopConfirmOpen(false),
+    })
+  }, [operation.operationId, stopMutation])
+
   if (!hydrated || operation.isResolving) {
     return <UpgradeLoadingOwner title={t("loading.title")} description={t("loading.description")} />
   }
 
-  if (!operation.operationId) {
+  if (!operation.operationId && !operation.isError) {
     return (
       <main className="flex min-h-svh w-full items-center justify-center bg-background px-4 py-8 sm:px-8" data-testid="system-upgrade-empty">
         <Card className="w-full max-w-lg" variant="compact">
@@ -229,7 +357,6 @@ export function SystemUpgradeStatus() {
           </CardContent>
           <CardFooter className="gap-2">
             <Button onClick={() => void operation.refetch()} loading={operation.isFetching} loadingLabel={t("actions.refreshing")}><semanticIcons.action.refresh aria-hidden="true" />{t("actions.refresh")}</Button>
-            <Button variant="outline" onClick={leaveUpgrade}>{t("actions.leave")}</Button>
           </CardFooter>
         </Card>
       </main>
@@ -242,6 +369,7 @@ export function SystemUpgradeStatus() {
   const isFailure = currentOperation.status === "failed"
   const isRecovery = currentOperation.status === "needs_recovery"
   const isAttention = currentOperation.status === "needs_attention"
+  const retryable = isFailure || isAttention
 
   return (
     <main
@@ -294,6 +422,8 @@ export function SystemUpgradeStatus() {
           <CardContent><OperationFacts operation={currentOperation} t={t} /></CardContent>
         </Card>
 
+        <UpgradeLogs logs={currentOperation.logs} locale={locale} t={t} />
+
         {isSuccess ? (
           <Alert>
             <semanticIcons.status.success aria-hidden="true" />
@@ -308,7 +438,12 @@ export function SystemUpgradeStatus() {
               <semanticIcons.action.refresh aria-hidden="true" />{t("actions.refresh")}
             </Button>
           ) : null}
-          {isFailure ? (
+          {!terminal ? (
+            <Button variant="outline" onClick={() => setStopConfirmOpen(true)} disabled={stopMutation.isPending}>
+              <semanticIcons.action.stop aria-hidden="true" />{t("actions.stop")}
+            </Button>
+          ) : null}
+          {retryable ? (
             <Button onClick={retry} loading={retryMutation.isPending} loadingLabel={t("actions.retrying")}>
               <semanticIcons.action.refresh aria-hidden="true" />{t("actions.retry")}
             </Button>
@@ -325,6 +460,28 @@ export function SystemUpgradeStatus() {
           ) : null}
         </footer>
       </div>
+
+      <AlertDialog open={stopConfirmOpen} onOpenChange={setStopConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("stop.title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("stop.description")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <Alert>
+            <semanticIcons.status.warning aria-hidden="true" />
+            <AlertDescription>{t("stop.warning")}</AlertDescription>
+          </Alert>
+          {stopMutation.isError ? (
+            <p className="text-sm text-destructive">{getUpgradeErrorMessage(stopMutation.error)}</p>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogClose variant="outline" disabled={stopMutation.isPending}>{t("actions.keepRunning")}</AlertDialogClose>
+            <Button variant="destructive" onClick={stop} loading={stopMutation.isPending} loadingLabel={t("actions.stopping")}>
+              <semanticIcons.action.stop aria-hidden="true" />{t("actions.confirmStop")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   )
 }
