@@ -111,13 +111,13 @@ export default function SupportPageContent({
           <p>{t("footer.note")}</p>
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
             <span>{t("footer.nonMonetary")}</span>
-            <a href="https://github.com/yyhuni/xingrin" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">
+            <a href="https://github.com/yyhuni/lunafox" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">
               {t("footer.links.github")}
             </a>
-            <a href="https://github.com/yyhuni/xingrin/issues" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">
+            <a href="https://github.com/yyhuni/lunafox/issues" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">
               {t("footer.links.issues")}
             </a>
-            <a href="https://github.com/yyhuni/xingrin/releases" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">
+            <a href="https://github.com/yyhuni/lunafox/releases" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">
               {t("footer.links.releases")}
             </a>
           </div>
@@ -178,7 +178,7 @@ export default function SupportPageContent({
             <Button
               variant="outline"
               className="gap-2"
-              render={<a href="https://github.com/yyhuni/xingrin" target="_blank" rel="noopener noreferrer" />}
+              render={<a href="https://github.com/yyhuni/lunafox" target="_blank" rel="noopener noreferrer" />}
             >
               <IconBrandGithub className="size-4" />
               {t("hero.secondaryCta")}

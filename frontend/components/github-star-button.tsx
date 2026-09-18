@@ -22,7 +22,7 @@ type GithubRepoSnapshot = {
     watchers: number;
     issues: number;
 };
-const GITHUB_REPO = "yyhuni/xingrin";
+const GITHUB_REPO = "yyhuni/lunafox";
 const GITHUB_REPO_URL = `https://github.com/${GITHUB_REPO}`;
 const GITHUB_REPO_FALLBACK_API = "/api/github/repo";
 const GITHUB_REPO_CACHE_KEY = "github-repo-snapshot";

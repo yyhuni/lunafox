@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:1ec721b44765862fc1783d45f5397835bd3a7c5414b29336c2a18af2fd32f4b5",
-  "releaseTag": "v0.0.1-alpha.145",
+  "sourceRevisionDigest": "sha256:810e20f7050956fbdcd72e5762051cf6e9fc32e06a024867c8ad6f991703ca5e",
+  "releaseTag": "v0.0.1-alpha.146",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -47,7 +47,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "d7b0bcda63af44fe3f6bcf847e9741387e8fc9551781e4af0b00e96589f6c28c"
+      "sha256": "efae6a1f3b577c1a656d7f2ea4293771929052a51d63f3675cd7c19ca8d0bf9e"
     },
     {
       "path": "README.md",
@@ -57,49 +57,49 @@
       "sha256": "fd52bf74e3d49fb99a8947828960fd18037b61e79464adff90f3c4e3d2c2df16"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.145/agent-bundle.json",
+      "path": "agent/bin/v0.0.1-alpha.146/agent-bundle.json",
       "type": "file",
       "mode": "0644",
       "size": 2229,
-      "sha256": "f7d716b6ff5af71d2e8d6f9c311311ea4af6c677e6c8accffe8ac49cee79760b"
+      "sha256": "89f106f67534c20b8c11b8cd237e612461759c4f8ea40eeb2709552cd6ce9687"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.145/agent-bundle.sha256",
+      "path": "agent/bin/v0.0.1-alpha.146/agent-bundle.sha256",
       "type": "file",
       "mode": "0644",
       "size": 402,
       "sha256": "2946b4b80ed17b9ad513b6e9d76def9ad4221fa15e8d475767b1a6fda9cbe25a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.145/agent-bundle.sigstore.json",
+      "path": "agent/bin/v0.0.1-alpha.146/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "b31b1465c51361cd0cd24f572deee1410447c1f3af07b237488f149a3c98fb98"
+      "sha256": "83de9a13b8c3d7901569fd4aa50044d59fab8585431567d44923cbc16920c126"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.145/lunafox-agent-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.146/lunafox-agent-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 23904517,
       "sha256": "6fdddcaae9958a99cb081d92ad3d8d11f32db16b5ff300d645a4693408d1df38"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.145/lunafox-agent-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.146/lunafox-agent-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 22504270,
       "sha256": "569449dc80b8e7a27954488d656198adc68d47eb6384903ad1f3ea4c4271467d"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.145/lunafox-engine-mount-preflight-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.146/lunafox-engine-mount-preflight-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 20000987,
       "sha256": "2b12a49b754a09e98377c96105c2975a5b48bf6b063eae0b2062ea271e0add2a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.145/lunafox-engine-mount-preflight-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.146/lunafox-engine-mount-preflight-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 18804436,
@@ -3449,7 +3449,7 @@
       "type": "file",
       "mode": "0644",
       "size": 2230,
-      "sha256": "3f742b8f713564f444fd1f4d15ba4c918d62d3821b9f1154e77b3727c7a10ad3"
+      "sha256": "845c1a0f1a18b659d01f3ae85e700f98eac107919f4e8793845ad254dd766340"
     },
     {
       "path": "frontend/app/apple-icon.png",
@@ -4464,7 +4464,7 @@
       "type": "file",
       "mode": "0644",
       "size": 6383,
-      "sha256": "dca56e38a220c5bfb3545afd807a35324516969dc68ec8259faeacc6795ea5b1"
+      "sha256": "ece3ed0d77953e7a33b9d73662027519fc1a8b565f87a1951c1514ec008185e7"
     },
     {
       "path": "frontend/components/__tests__/language-switcher.contract.test.ts",
@@ -4611,7 +4611,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9308,
-      "sha256": "88ec0a8555e579e6ff7be54dbe5681b22a3094b98e4f5dca4e9f0c94c5052800"
+      "sha256": "6901377095cd2b682b0763ac7ec575553b3ae8226696060410da11f0768a9580"
     },
     {
       "path": "frontend/components/about-dialog-state.ts",
@@ -5479,7 +5479,7 @@
       "type": "file",
       "mode": "0644",
       "size": 11160,
-      "sha256": "009255b6dade37dc16dde184ccc508ba00a57b2cbfcd2c7bcd0b2f02d3fff6af"
+      "sha256": "567f6cc6ab0e54f0cca11dc7bf7a43794ef90885196998bca6a06c28bff2407b"
     },
     {
       "path": "frontend/components/icons/README.md",
@@ -6248,8 +6248,8 @@
       "path": "frontend/components/overview/__tests__/overview-lazy-sections.contract.test.ts",
       "type": "file",
       "mode": "0644",
-      "size": 18637,
-      "sha256": "18f5029221f9ab1724e2727b0b64f18165fd86a1cbed5deec691b586ee30c066"
+      "size": 18638,
+      "sha256": "42151c7d08179f5d6c16bf756c523730ab9f16305b1f9658524f5dc9edcfd6d4"
     },
     {
       "path": "frontend/components/overview/__tests__/overview-page-header.contract.test.ts",
@@ -6283,8 +6283,8 @@
       "path": "frontend/components/overview/__tests__/overview-section-layouts.contract.test.ts",
       "type": "file",
       "mode": "0644",
-      "size": 6984,
-      "sha256": "2279b36b7e6966dde7300e33bde0743f65e91982db3fdff23c87d53273232404"
+      "size": 7225,
+      "sha256": "ca247408b5dcbc1bf62dd1ae0eb50b0e61ebdc8d1ce216fdb61a9d269ae8b780"
     },
     {
       "path": "frontend/components/overview/__tests__/overview-sections-loader.contract.test.ts",
@@ -6521,8 +6521,8 @@
       "path": "frontend/components/overview/overview-section-layouts.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 13785,
-      "sha256": "8b789c717c217471d87d7d889b9b7f085615b34a0feddc963409355e382f08c5"
+      "size": 13786,
+      "sha256": "c89ac6a217f00ce21e0962b627857caafef9e512c3aa88265d82ccfe44863191"
     },
     {
       "path": "frontend/components/overview/overview-sections-dynamic.ts",
@@ -8811,7 +8811,7 @@
       "type": "file",
       "mode": "0644",
       "size": 14193,
-      "sha256": "1cc52402e3096622355fa22ad1967abcdc96fbf636facd0afee7deab252da618"
+      "sha256": "80e4a5c97feda40509b9469c3f118222c19333d69726ff7b5c6f53ed82cd67f0"
     },
     {
       "path": "frontend/components/settings/support/support-page-layout.tsx",

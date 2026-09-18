@@ -11,7 +11,7 @@ type GithubRepoSnapshot = {
   issues: number
 }
 
-const GITHUB_REPO = "yyhuni/xingrin"
+const GITHUB_REPO = "yyhuni/lunafox"
 const CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=1800"
 
 export async function GET() {

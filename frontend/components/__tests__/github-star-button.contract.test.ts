@@ -61,7 +61,7 @@ describe("github-star-button contract", () => {
   })
 
   it("links to the GitHub repository from browser-fetched repo data with session caching", () => {
-    expect(source).toContain('const GITHUB_REPO = "yyhuni/xingrin"')
+    expect(source).toContain('const GITHUB_REPO = "yyhuni/lunafox"')
     expect(source).toContain('const GITHUB_REPO_URL = `https://github.com/${GITHUB_REPO}`')
     expect(source).toContain("fetchGithubRepoSnapshotFrom(`https://api.github.com/repos/${GITHUB_REPO}`)")
     expect(source).toContain('"use client"')

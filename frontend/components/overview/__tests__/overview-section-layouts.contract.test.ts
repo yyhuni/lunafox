@@ -85,6 +85,7 @@ describe("overview-section-layouts contract", () => {
     expect(source).toContain('export const OVERVIEW_RUNTIME_SCAN_RECENT_ROWS_CLASS = "grid min-w-0 gap-0.5 xl:h-full xl:auto-rows-fr"')
     expect(source).toContain('OVERVIEW_RUNTIME_SCAN_RECENT_HEADER_CLASS = "flex min-w-0 items-center gap-3"')
     expect(source).toContain('OVERVIEW_RUNTIME_SCAN_RECENT_COLUMN_HEADER_CLASS = "flex min-w-0 items-center gap-3 border-b border-border pb-1"')
+    expect(source).toContain('OVERVIEW_RUNTIME_SCAN_RECENT_META_CLASS = "grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(40px,0.35fr)_minmax(119px,1fr)] gap-x-2 sm:grid-cols-[minmax(0,1fr)_minmax(72px,0.6fr)_minmax(0,1fr)] sm:gap-x-4"')
     expect(source).not.toContain('OVERVIEW_RUNTIME_SCAN_RECENT_CLASS = "grid min-w-0 gap-2 border-t')
   })
 })
