@@ -213,6 +213,27 @@ func TestBootstrapDefaultWordlistsRejectsAmbiguousEmptyState(t *testing.T) {
 	}
 }
 
+func TestBootstrapDefaultWordlistsRestrictsExistingInitializedStorage(t *testing.T) {
+	db, basePath, imports := newWordlistBootstrapFixture(t)
+	if err := bootstrapDefaultWordlists(context.Background(), db, basePath, imports); err != nil {
+		t.Fatalf("initial bootstrap: %v", err)
+	}
+	if err := os.Chmod(basePath, 0o755); err != nil {
+		t.Fatalf("make initialized storage permissive: %v", err)
+	}
+
+	if err := bootstrapDefaultWordlists(context.Background(), db, basePath, imports); err != nil {
+		t.Fatalf("repeat bootstrap: %v", err)
+	}
+	info, err := os.Lstat(basePath)
+	if err != nil {
+		t.Fatalf("inspect initialized storage: %v", err)
+	}
+	if got, want := info.Mode().Perm(), os.FileMode(0o700); got != want {
+		t.Fatalf("initialized storage mode = %o, want %o", got, want)
+	}
+}
+
 func TestBootstrapDefaultWordlistsRejectsUserOnlyCatalog(t *testing.T) {
 	db, basePath, imports := newWordlistBootstrapFixture(t)
 	repository := catalogrepo.NewWordlistRepository(db)

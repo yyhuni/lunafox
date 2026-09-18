@@ -3,6 +3,7 @@ package application
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -25,8 +26,34 @@ func NewLocalWordlistFileStore() *LocalWordlistFileStore {
 	return &LocalWordlistFileStore{}
 }
 
+// RestrictWordlistStorageDirectory normalizes an existing wordlist storage
+// directory to the private mode required by Agent shared materialization.
+// Callers must establish the directory before invoking this helper.
+func RestrictWordlistStorageDirectory(basePath string) error {
+	basePath = strings.TrimSpace(basePath)
+	if basePath == "" {
+		return fmt.Errorf("wordlist storage directory is required")
+	}
+	info, err := os.Lstat(basePath)
+	if err != nil {
+		return fmt.Errorf("inspect wordlist storage directory: %w", err)
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("wordlist storage directory must be a real directory")
+	}
+	if err := os.Chmod(basePath, 0o700); err != nil {
+		return fmt.Errorf("restrict wordlist storage directory: %w", err)
+	}
+	return nil
+}
+
 func (store *LocalWordlistFileStore) Save(basePath, filename string, content io.Reader) (*WordlistFileMetadata, error) {
-	if err := os.MkdirAll(basePath, 0o755); err != nil {
+	// Agent rejects permissive ancestors while materializing immutable cache
+	// entries below this directory, so normalize both fresh and reused roots.
+	if err := os.MkdirAll(basePath, 0o700); err != nil {
+		return nil, err
+	}
+	if err := RestrictWordlistStorageDirectory(basePath); err != nil {
 		return nil, err
 	}
 

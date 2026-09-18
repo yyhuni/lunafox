@@ -105,6 +105,12 @@ func bootstrapDefaultWordlists(ctx context.Context, db *gorm.DB, basePath string
 				return err
 			}
 		}
+		// Older public Compose bootstraps created this root as 0755. Once the
+		// complete default set is proven intact, tighten it in place so Agent's
+		// shared materialization check accepts the existing volume.
+		if err := catalogapp.RestrictWordlistStorageDirectory(basePath); err != nil {
+			return fmt.Errorf("restrict persisted default wordlist storage: %w", err)
+		}
 		return nil
 	}
 	if len(existing) != 0 {
