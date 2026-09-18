@@ -33,7 +33,7 @@ const TargetIcon = semanticIcons.concept.target
 
 const ASSET_CHART_MARGIN = { top: 12, right: 0, left: 0, bottom: 0 }
 const ASSET_CHART_X_AXIS_PADDING = { left: 0, right: 16 }
-const ASSET_DISTRIBUTION_Y_AXIS_WIDTH = 64
+const ASSET_DISTRIBUTION_Y_AXIS_WIDTH = 88
 const ASSET_DISTRIBUTION_BASE_COLOR = "var(--foreground)"
 const ASSET_DISTRIBUTION_MIN_OPACITY = 0.32
 const ASSET_DISTRIBUTION_MAX_OPACITY = 0.68
@@ -197,13 +197,13 @@ export function OverviewAssetOverview() {
                   accessibilityLayer
                   data={assetDistributionData}
                   layout="vertical"
-                  margin={{ top: 2, right: 92, left: -14, bottom: 2 }}
+                  margin={{ top: 2, right: 92, left: 0, bottom: 2 }}
                 >
                   <XAxis dataKey="value" type="number" hide />
                   <YAxis
                     axisLine={false}
                     dataKey="label"
-                    tick={{ dx: -36, textAnchor: "start" }}
+                    tick={{ textAnchor: "end" }}
                     tickLine={false}
                     tickMargin={8}
                     type="category"
