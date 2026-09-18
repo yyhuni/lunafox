@@ -154,3 +154,22 @@ func TestLocalWordlistFileStoreSaveRejectsPathLikeFileName(t *testing.T) {
 		t.Fatalf("expected invalid file name, got %v", err)
 	}
 }
+
+func TestLocalWordlistFileStoreSaveRestrictsExistingBaseDirectory(t *testing.T) {
+	store := NewLocalWordlistFileStore()
+	basePath := t.TempDir()
+	if err := os.Chmod(basePath, 0o755); err != nil {
+		t.Fatalf("make existing base directory permissive: %v", err)
+	}
+
+	if _, err := store.Save(basePath, "dictionary.txt", strings.NewReader("one\n")); err != nil {
+		t.Fatalf("save wordlist: %v", err)
+	}
+	info, err := os.Lstat(basePath)
+	if err != nil {
+		t.Fatalf("inspect base directory: %v", err)
+	}
+	if got, want := info.Mode().Perm(), os.FileMode(0o700); got != want {
+		t.Fatalf("base directory mode = %o, want %o", got, want)
+	}
+}

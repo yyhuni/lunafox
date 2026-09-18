@@ -10,6 +10,7 @@ catalog 模块补充规则：
 - **adapter 例外**：当前无 transport-facing 或 cross-module bridge 型 adapter service 例外；`local_wordlist_file_store.go` 属于局部默认实现，不属于模块入口适配层。
 - **端口拆分**：端口按资源职责拆分，wordlist 文件能力采用 port + default implementation（`wordlist_file_ports.go` + `local_wordlist_file_store.go`）。
 - **实现唯一性**：`WordlistFileStore` 的默认实现仅保留在 `application/local_wordlist_file_store.go`，避免在 `infrastructure` 层出现同名重复实现造成歧义。
+- **共享存储权限**：wordlist 根目录是 Agent immutable materialization 的共享祖先，必须是非 symlink 的真实目录并保持精确 `0700`。Catalog 创建/上传时会收紧目录；bootstrap 仅在完整默认目录状态校验成功后修复已有根目录的权限，不会改变 partial 或 ambiguous 状态。
 - **模型命名**：新增输入/输出/中间模型优先资源化命名（如 `*_query_inputs.go`、`*_item_models.go`）。
 - **历史迁移**：`aliases.go`、`errors.go` 已完成首批迁移，继续保持资源化命名不回退。
 - **Subfinder provider registry**：Subfinder API key settings 以 Engine Runtime Image 内的 Subfinder `v2.12.0` 为版本锚点，registry 是 provider key、字段、校验与 runtime YAML 生成的唯一行为源；历史八字段 provider 只允许出现在持久化迁移/status 处理和对应测试中。
