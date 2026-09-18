@@ -54,6 +54,10 @@ WORKDIR /app
 
 COPY --from=builder /out/server /usr/local/bin/server
 COPY --from=builder /src/extensions/workflows /usr/local/share/lunafox/workflows
+# The reviewed migration policy is read from disk at runtime, so the image has to
+# carry it at the Server default MIGRATION_POLICY_PATH the upgrade eligibility
+# check reads. The SQL migrations stay embedded in the binary.
+COPY --from=builder /src/server/cmd/server/migrations/policy.json /usr/local/share/lunafox/migrations/policy.json
 
 # Compose resolves the stable service name; this is the image-local operational
 # command used by `docker compose exec server resetadmin`.

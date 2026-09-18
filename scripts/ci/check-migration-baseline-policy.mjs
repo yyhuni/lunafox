@@ -93,10 +93,48 @@ function validateMigrationFiles(repoRoot) {
   );
 }
 
+// The Server reads the reviewed policy from disk at runtime, so the image has to
+// carry it at the same default path. Checking the definition and the image
+// together keeps a changed default path from silently shipping an image without
+// the policy, which would block every candidate as missing migration metadata.
+const SERVER_DEFAULT_POLICY_PATH = /v\.SetDefault\(\s*"MIGRATION_POLICY_PATH"\s*,\s*"([^"]+)"\s*\)/g;
+
+function validateImageDelivery(repoRoot) {
+  const defaultsPath = path.join(repoRoot, "server/internal/config/defaults.go");
+  let defaults;
+  try {
+    defaults = fs.readFileSync(defaultsPath, "utf8");
+  } catch (error) {
+    fail(`cannot read Server defaults ${defaultsPath}: ${error.message}`);
+  }
+  const declared = [...defaults.matchAll(SERVER_DEFAULT_POLICY_PATH)];
+  if (declared.length !== 1) {
+    fail(`Server defaults must declare exactly one MIGRATION_POLICY_PATH default, found ${declared.length}`);
+  }
+  const policyPath = declared[0][1];
+
+  const dockerfilePath = path.join(repoRoot, "server/Dockerfile");
+  let dockerfile;
+  try {
+    dockerfile = fs.readFileSync(dockerfilePath, "utf8");
+  } catch (error) {
+    fail(`cannot read the Server image definition ${dockerfilePath}: ${error.message}`);
+  }
+  const escapedPath = policyPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const copiesPolicy = new RegExp(
+    `^COPY\\s+--from=\\S+\\s+/src/server/cmd/server/migrations/policy\\.json\\s+${escapedPath}\\s*$`,
+    "m",
+  );
+  if (!copiesPolicy.test(dockerfile)) {
+    fail(`Server image must copy the reviewed migration policy to ${policyPath}`);
+  }
+}
+
 function main() {
   const options = parseArgs(process.argv.slice(2));
   const policy = readPolicy(options.repoRoot);
   validateMigrationFiles(options.repoRoot);
+  validateImageDelivery(options.repoRoot);
 
   if (options.releaseChannel === "stable" && !policy.stableReleaseAllowed) {
     fail("migration baseline freeze required before the first public stable release");
