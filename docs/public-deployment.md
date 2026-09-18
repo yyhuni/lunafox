@@ -166,9 +166,23 @@ deployment state:
 tasks, core service health, auxiliary service stability, the resident Agent's
 claim-ready state, and the public HTTPS endpoint all pass. `install.sh` allows
 fifteen minutes and the other two allow five; `LUNAFOX_READY_TIMEOUT_SECONDS`
-overrides the window for one invocation. A failure prints `FAILED`, names the
-failing service or check, points at `./logs.sh`, and leaves containers, volumes,
-and configuration untouched.
+overrides the window for one invocation.
+
+A failure prints `FAILED`, names the failing service or check, and leaves the
+deployment in place: containers, volumes, and configuration stay as compose up
+created them, and nothing is rolled back. The printed diagnostics keep that
+order — conclusion, stage, preserved scene, next commands — and point at
+`./logs.sh <service>` when a service was identified and `./logs.sh` otherwise.
+
+`install.sh` describes the run it classified instead of always narrating a first
+start: a directory without any LunaFox data is a first start; a directory whose
+volumes exist without containers recreates the containers while keeping its
+named volumes and installed engines, and is not an upgrade; a running
+deployment is started with its configuration and volumes preserved. When such a
+recreated deployment fails a first-start task such as `bootstrap`, the footer
+adds one optional last line after the `logs.sh` and `status.sh` hints: if the
+preserved data can be discarded, `./uninstall.sh --purge --confirm` is the only
+way to delete the named volumes and start over.
 
 `install.sh` accepts only `--help`, reads every setting from `.env`, and runs
 `docker compose up -d` exactly once. It never pulls, builds, removes containers,

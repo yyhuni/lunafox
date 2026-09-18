@@ -205,6 +205,8 @@ jq -e '
 # facts introduced by the current template are asserted on the template itself
 # and on the freshly generated package contract, never on a lagging snapshot.
 template_config_init="$(awk '/^  config-init:$/ {inside=1; next} inside && /^  [a-z]/ {inside=0} inside {print}' "$ROOT_DIR/deploy/compose.template.yaml")"
+# The single-quoted pattern is the literal template text, not a shell expansion.
+# shellcheck disable=SC2016
 printf '%s' "$template_config_init" | grep -Fq 'COMPOSE_PROFILES: ${COMPOSE_PROFILES:-}' ||
 	fail "the deployment template must pass the derived Compose profile to config-init"
 agent_grace_seconds="$(awk '/^  agent:$/ {inside=1; next} inside && /^  [a-z]/ {inside=0} inside && /^    stop_grace_period:/ {value=$2; gsub(/[^0-9]/, "", value); print value; exit}' "$ROOT_DIR/deploy/compose.template.yaml")"
@@ -388,6 +390,13 @@ grep -Fq 'docker compose down' "$ROOT_DIR/docs/public-deployment.md" || fail "de
 grep -Fq 'docker compose exec server resetadmin' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must retain administrator reset"
 grep -Fq 'Docker Compose 2.24.0' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must state the minimum Compose version"
 grep -Fq 'DATABASE_MODE=external' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must describe external PostgreSQL mode"
+# A failed start may already have created containers, so the documentation has to
+# describe the preserved scene instead of claiming nothing changed.
+grep -Fq 'nothing is rolled back' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must state that a failure leaves the deployment in place and rolls nothing back"
+if grep -Eq 'configuration untouched|were not changed' "$ROOT_DIR/docs/public-deployment.md"; then
+	fail "deployment docs must not claim a failed start left the deployment unchanged"
+fi
+grep -Fq './uninstall.sh --purge --confirm' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must document the only command that deletes named volumes"
 grep -Fq 'git clone https://github.com/yyhuni/lunafox.git' "$ROOT_DIR/README.md" || fail "public README must document direct main checkout installation"
 grep -Fq 'lunafox-<version>.zip' "$ROOT_DIR/README.md" || fail "public README must document the unified release ZIP"
 grep -Fq 'RELEASE_REGISTRY=docker.io' "$ROOT_DIR/README.md" "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must state the Docker Hub default"
