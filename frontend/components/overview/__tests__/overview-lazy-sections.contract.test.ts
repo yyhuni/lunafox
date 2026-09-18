@@ -183,7 +183,7 @@ describe("overview-lazy-sections contract", () => {
     expect(layoutSource).not.toContain("OVERVIEW_RUNTIME_SCAN_TOTAL_CLASS")
     expect(layoutSource).toContain("OVERVIEW_RUNTIME_SCAN_RECENT_CLASS")
     expect(layoutSource).toContain("OVERVIEW_RUNTIME_SCAN_RECENT_META_CLASS")
-    expect(layoutSource).toContain("grid-cols-[minmax(0,1fr)_minmax(72px,0.65fr)_minmax(0,0.85fr)]")
+    expect(layoutSource).toContain("grid-cols-[minmax(0,1fr)_minmax(40px,0.35fr)_minmax(119px,1fr)]")
     expect(layoutSource).not.toContain("border-t border-border pt-3")
     expect(layoutSource).toContain("flex h-full min-h-0 min-w-0 flex-col gap-1")
     expect(layoutSource).toContain("border-b border-border pb-1")
