@@ -563,6 +563,10 @@ jobs:
           push: true
           provenance: mode=max
           sbom: true
+          # The frontend image inlines the release tag into the UI; the other
+          # components do not declare that build argument.
+          build-args: |
+            ${{ matrix.component == 'frontend' && format('IMAGE_TAG={0}', steps.source.outputs.release_tag) || '' }}
           cache-from: |
             type=gha,scope=lunafox-public-${{ matrix.component }}
             type=gha,scope=lunafox-public-context-${{ matrix.component }}
