@@ -20,7 +20,13 @@ interface AboutDialogProps {
 export function AboutDialog({ children }: AboutDialogProps) {
   const [open, setOpen] = useState(false)
   const [acknowledged, setAcknowledged] = useState(false)
-  const state = useAboutDialogState({ enabled: open })
+  const state = useAboutDialogState({
+    enabled: open,
+    onUpgradeAccepted: () => {
+      setOpen(false)
+      setAcknowledged(false)
+    },
+  })
 
   const handleOpenChange = (nextOpen: boolean) => {
     // Nested confirmation is still inside this Dialog. Dismissing the about
@@ -49,11 +55,13 @@ export function AboutDialog({ children }: AboutDialogProps) {
             checkError={state.checkError}
             isChecking={state.isChecking}
             isCreating={state.isCreating}
+            isRetrying={state.isRetrying}
             canStartUpgrade={Boolean(state.candidate && state.hasUpdate && state.updateResult?.eligible)}
             operation={state.operation}
             onCheckUpdate={() => void state.handleCheckUpdate()}
             onStartUpgrade={state.handleStartUpgrade}
             onRetry={state.handleRetry}
+            onViewStatus={state.handleViewStatus}
           />
           <Separator />
           <AboutDialogLinks t={state.t} />

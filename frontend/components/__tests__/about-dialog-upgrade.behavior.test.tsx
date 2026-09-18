@@ -168,6 +168,7 @@ describe("about dialog upgrade behavior", () => {
 
   it("exposes a reconnecting state without treating it as a terminal failure", () => {
     const retry = vi.fn()
+    const viewStatus = vi.fn()
     render(
       <AboutDialogVersionInfo
         t={(key) => key}
@@ -182,11 +183,13 @@ describe("about dialog upgrade behavior", () => {
         onCheckUpdate={vi.fn()}
         onStartUpgrade={vi.fn()}
         onRetry={retry}
+        onViewStatus={viewStatus}
       />,
     )
     expect(screen.getByText("reconnecting")).toBeInTheDocument()
-    fireEvent.click(screen.getByRole("button", { name: "retryUpgrade" }))
-    expect(retry).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole("button", { name: "viewUpgradeStatus" }))
+    expect(viewStatus).toHaveBeenCalledTimes(1)
+    expect(retry).not.toHaveBeenCalled()
   })
 
   it("loads the installed version when the about entry is opened", async () => {

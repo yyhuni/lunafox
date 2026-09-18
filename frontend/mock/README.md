@@ -57,6 +57,16 @@ For list-heavy pages, the standard is not “add more rows until it feels enough
 
 The current project coverage matrix lives in [docs/plans/2026-05-27-mock-coverage-matrix.md](/Users/yangyang/Desktop/lunafox-frontend-refactor/docs/plans/2026-05-27-mock-coverage-matrix.md).
 
+Upgrade lifecycle fixtures are also scenario-backed: `happy` advances a
+server Operation through stopping, updating, restarting, verification, and
+success; `stress` ends in a failed verification; `edge` ends in
+`needs_attention`; and `error` makes the status resource reconnectable. The
+browser UI must consume these responses through the normal version service,
+not branch on the selected mock scenario. The mock Operation and its polling
+cursor are persisted in browser storage so a full-page refresh exercises the
+same recovery path as a live server; `resetMockUpgradeOperation()` clears that
+fixture state for tests.
+
 ## Exceptions
 
 Temporary files that still retain inline service mock ownership must be listed in `frontend/mock/service-mock-exceptions.json` with:

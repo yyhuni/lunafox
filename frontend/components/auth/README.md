@@ -16,6 +16,12 @@
 - `ProtectedAuthLayout` MUST NOT observe sidebar pending state to hide, replace, or overlay the committed content region. Any first-screen skeleton belongs to the destination page or workspace through its own query/loading state or `ContentHandoff`; a destination that is already ready may commit content directly.
 - If transport-level `401` handling runs while the browser is already on a public auth route such as `/login/`, it must redirect to the canonical `/login/` path without wrapping the current login URL into a new `returnTo`. Recursive `/login/?returnTo=/login?...` redirects are invalid.
 
+## Upgrade Route Gate
+
+- After the Server accepts an upgrade and returns an `operationId`, `UpgradeRouteBoundary` is the protected-shell owner for route locking. It keeps ordinary route content out of the tree and redirects to `/system-upgrade/` while the Operation is non-terminal.
+- `/system-upgrade/` is a standalone authenticated status surface, so the sidebar and header are not mounted while the upgrade page is active. Refresh and short network outages continue to use the persisted Operation ID and do not invent a failure state.
+- Terminal Operations (`succeeded`, `failed`, `needs_recovery`, and `needs_attention`) release the ordinary shell. The completion dialog is mounted only after leaving the status route and acknowledges a successful Operation once per Operation ID.
+
 ## Login Boot Handoff
 
 - `/login/` must keep the server-rendered `lunafox-boot-layer` as the only visible first-screen loading owner until the login surface can show a stable first visual frame.

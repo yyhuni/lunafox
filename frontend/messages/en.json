@@ -4522,6 +4522,8 @@
     "cancelledWork": "Cancelled {scans} scans and {tasks} tasks",
     "reconnecting": "Server is restarting. Reconnecting to the saved operation...",
     "retryUpgrade": "Retry Upgrade",
+    "retryingUpgrade": "Retrying...",
+    "viewUpgradeStatus": "View upgrade status",
     "confirmUpgradeTitle": "Confirm System Upgrade",
     "confirmUpgradeDescription": "Start the upgrade to {version}? The main application may be unavailable during maintenance.",
     "migrationRisk": "Database migration rules are enforced by the Server.",
@@ -4553,5 +4555,139 @@
     "feedback": "Feedback",
     "docs": "Documentation",
     "supportAuthor": "Support Author"
+  },
+  "systemUpgrade": {
+    "title": "System upgrade",
+    "description": "Normal business actions are paused during the upgrade. This page reports the stages confirmed by the server.",
+    "boundary": {
+      "resolvingTitle": "Confirming upgrade status",
+      "resolvingDescription": "Recovering the upgrade state from the server. Normal pages are temporarily unavailable.",
+      "lockedTitle": "System upgrade in progress",
+      "lockedDescription": "Only the upgrade status page remains available until the operation completes or needs attention."
+    },
+    "loading": {
+      "title": "Loading upgrade status",
+      "description": "Reading the server-backed upgrade Operation. Please wait."
+    },
+  "empty": {
+    "title": "No pending upgrade",
+    "description": "This browser does not have a recoverable upgrade Operation."
+  },
+  "status": {
+    "queued": "Queued",
+    "stopping": "Stopping work",
+    "preflight": "Preflight checks",
+    "updating": "Updating services",
+    "migrating": "Migrating database",
+    "restarting": "Restarting services",
+    "agent_verifying": "Verifying Agents",
+    "verifying": "Verifying system",
+    "succeeded": "Succeeded",
+    "failed": "Failed",
+    "needs_recovery": "Needs recovery",
+    "needs_attention": "Needs attention"
+  },
+  "reconnecting": {
+      "title": "Reconnecting",
+      "description": "The Server may be restarting or the network may be temporarily unavailable. The last confirmed stage is preserved while polling resumes."
+    },
+    "timeline": {
+      "title": "Upgrade progress",
+      "phaseProgress": "Stage progress",
+      "stageCount": "Stage {current} of {total}",
+      "pending": "Not started",
+      "stages": {
+        "preparing": "Prepare upgrade",
+        "stopping": "Stop active work",
+        "updating": "Update services",
+        "restarting": "Restart and recover",
+        "verifying": "Verify system",
+        "finished": "Complete or needs attention"
+      },
+      "statusDescription": {
+        "queued": "The upgrade request was accepted and is waiting to run.",
+        "stopping": "Active scans and tasks are being stopped safely.",
+        "preflight": "Preflight checks are running.",
+        "updating": "System services are being updated.",
+        "migrating": "The database migration is running.",
+        "restarting": "Services are restarting and the page will recover automatically.",
+        "agent_verifying": "Agents are being checked for recovery.",
+        "verifying": "System components are being verified.",
+        "succeeded": "All services and verification checks are complete.",
+        "failed": "The upgrade did not complete. Choose retry or leave the system on the previous version.",
+        "needs_recovery": "The upgrade needs manual recovery.",
+        "needs_attention": "An Agent or verification result needs attention."
+      }
+    },
+    "statusDescription": {
+      "succeeded": "The upgrade is complete. Confirm to enter the system.",
+      "failed": "The upgrade did not complete. You can safely retry or return to the previous version.",
+      "needs_recovery": "The system needs manual recovery. Review the diagnostic before proceeding.",
+      "needs_attention": "An Agent or verification item needs review before proceeding."
+    },
+    "outcomes": {
+      "succeeded": {
+        "title": "Upgrade complete",
+        "description": "Target version {version} was verified. This operation took {duration}."
+      },
+      "failed": {
+        "title": "Upgrade failed",
+        "description": "The server did not confirm completion. Read the diagnostic before retrying."
+      },
+      "needs_recovery": {
+        "title": "Recovery required",
+        "description": "This state is not an ordinary retry. Follow the diagnostic and recovery procedure."
+      },
+      "needs_attention": {
+        "title": "Attention required",
+        "description": "Review the Agent or verification results before proceeding."
+      }
+    },
+    "facts": {
+      "title": "Confirmed upgrade details",
+      "description": "These values come from the server Operation. No client-side percentage or time estimate is inferred.",
+      "targetVersion": "Target version",
+      "manifest": "Release manifest",
+      "migration": "Migration status",
+      "notStarted": "Not run",
+      "cancelledWork": "Cancelled work",
+      "cancelledWorkValue": "{scans} scans, {tasks} tasks",
+      "agents": "Agent verification",
+      "agentsValue": "Ready {ready}/{expected}, missing {missing}, unhealthy {unhealthy}",
+      "lastUpdated": "Last updated",
+      "operationId": "Operation ID"
+    },
+    "actions": {
+      "refresh": "Check again",
+      "refreshing": "Checking...",
+      "retry": "Retry upgrade",
+      "retrying": "Retrying...",
+      "recheck": "Check again",
+      "enterSystem": "Enter system",
+      "leave": "Return to system"
+    },
+    "summary": {
+      "durationUnknown": "Duration unavailable",
+      "durationSeconds": "{seconds} seconds",
+      "durationMinutes": "{minutes} minutes"
+    },
+    "completion": {
+      "title": "Upgrade successful",
+      "description": "The system upgrade is complete. Here is the verified summary.",
+      "versionVerified": "The server confirms the current version is {version}",
+      "targetVersion": "Target version",
+      "duration": "Upgrade duration",
+      "durationUnknown": "Duration unavailable",
+      "durationSeconds": "{seconds} seconds",
+      "durationMinutes": "{minutes} minutes",
+      "migration": "Database migration",
+      "migrationNotRun": "Not run",
+      "cancelledWork": "Cancelled work",
+      "cancelledWorkValue": "{scans} scans, {tasks} tasks",
+      "agents": "Agent verification",
+      "agentsValue": "Ready {ready}/{expected}, missing {missing}, unhealthy {unhealthy}",
+      "noReleaseNotes": "The release manifest does not provide a verifiable feature list, so this summary only shows version, component, and task facts.",
+      "continue": "Continue to system"
+    }
   }
 }
