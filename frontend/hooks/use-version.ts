@@ -2,14 +2,28 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { VersionService, isUpgradeNetworkError, toUpgradeApiError } from "@/services/version.service"
-import type { CreateUpgradeOperationInput, UpgradeOperation, UpdateCheckResult, VersionInfo } from "@/types/version.types"
+import type {
+  CreateUpgradeOperationInput,
+  UpgradeOperation,
+  UpgradeOperationStatus,
+  UpgradeUserStage,
+  UpdateCheckResult,
+  VersionInfo,
+} from "@/types/version.types"
 
 export const UPGRADE_OPERATION_STORAGE_KEY = "lunafox.upgrade.operationId"
+export const UPGRADE_PENDING_SUCCESS_STORAGE_KEY = "lunafox.upgrade.pendingSuccessOperationId"
+export const UPGRADE_OPERATION_CHANGED_EVENT = "lunafox:upgrade-operation-changed"
+const UPGRADE_COMPLETION_ACK_PREFIX = "lunafox.upgrade.completionAcknowledged."
 const ACTIVE_POLL_BASE_MS = 1_500
 const ACTIVE_POLL_MAX_MS = 15_000
 
 interface UseVersionOptions {
 	enabled?: boolean
+}
+
+interface UseCheckForUpdatesOptions {
+  enabled?: boolean
 }
 
 interface UseUpgradeOperationOptions {
@@ -28,11 +42,11 @@ export function useVersion({ enabled = true }: UseVersionOptions = {}) {
   })
 }
 
-export function useCheckForUpdates() {
+export function useCheckForUpdates({ enabled = false }: UseCheckForUpdatesOptions = {}) {
   return useQuery<UpdateCheckResult>({
     queryKey: ["upgrade", "checkForUpdates"],
     queryFn: VersionService.checkForUpdates,
-    enabled: false,
+    enabled,
     staleTime: 0,
   })
 }
@@ -59,13 +73,101 @@ export function persistUpgradeOperationId(operationId: string): void {
   if (typeof window === "undefined") return
   try {
     window.localStorage.setItem(UPGRADE_OPERATION_STORAGE_KEY, operationId)
+    window.dispatchEvent(new Event(UPGRADE_OPERATION_CHANGED_EVENT))
   } catch {
     // The server operation remains durable when browser storage is unavailable.
   }
 }
 
+export function clearStoredUpgradeOperationId(operationId?: string): void {
+  if (typeof window === "undefined") return
+  try {
+    if (!operationId || window.localStorage.getItem(UPGRADE_OPERATION_STORAGE_KEY) === operationId) {
+      window.localStorage.removeItem(UPGRADE_OPERATION_STORAGE_KEY)
+      window.dispatchEvent(new Event(UPGRADE_OPERATION_CHANGED_EVENT))
+    }
+  } catch {
+    // The server operation remains durable when browser storage is unavailable.
+  }
+}
+
+export function persistPendingSuccessOperationId(operationId: string): void {
+  if (typeof window === "undefined") return
+  try {
+    window.localStorage.setItem(UPGRADE_PENDING_SUCCESS_STORAGE_KEY, operationId)
+  } catch {
+    // The success notice is best-effort; the durable Operation remains authoritative.
+  }
+}
+
+export function readPendingSuccessOperationId(): string | null {
+  if (typeof window === "undefined") return null
+  try {
+    return window.localStorage.getItem(UPGRADE_PENDING_SUCCESS_STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function clearPendingSuccessOperationId(operationId?: string): void {
+  if (typeof window === "undefined") return
+  try {
+    if (!operationId || window.localStorage.getItem(UPGRADE_PENDING_SUCCESS_STORAGE_KEY) === operationId) {
+      window.localStorage.removeItem(UPGRADE_PENDING_SUCCESS_STORAGE_KEY)
+    }
+  } catch {
+    // Storage failures must not change the server-backed upgrade result.
+  }
+}
+
+export function hasShownUpgradeCompletion(operationId: string): boolean {
+  if (typeof window === "undefined") return false
+  try {
+    return window.localStorage.getItem(`${UPGRADE_COMPLETION_ACK_PREFIX}${operationId}`) === "1"
+  } catch {
+    return false
+  }
+}
+
+export function markUpgradeCompletionShown(operationId: string): void {
+  if (typeof window === "undefined") return
+  try {
+    window.localStorage.setItem(`${UPGRADE_COMPLETION_ACK_PREFIX}${operationId}`, "1")
+  } catch {
+    // Completion acknowledgement is a UX convenience, not the operation source of truth.
+  }
+}
+
 export function isUpgradeOperationTerminal(status: UpgradeOperation["status"] | undefined): boolean {
   return status === "succeeded" || status === "failed" || status === "needs_recovery" || status === "needs_attention"
+}
+
+export function isUpgradeOperationActive(status: UpgradeOperation["status"] | undefined): boolean {
+  return Boolean(status) && !isUpgradeOperationTerminal(status)
+}
+
+export function upgradeUserStageForStatus(status: UpgradeOperationStatus | undefined): UpgradeUserStage {
+  switch (status) {
+    case "stopping":
+      return "stopping"
+    case "updating":
+    case "migrating":
+      return "updating"
+    case "restarting":
+      return "restarting"
+    case "agent_verifying":
+    case "verifying":
+      return "verifying"
+    case "succeeded":
+    case "failed":
+    case "needs_recovery":
+    case "needs_attention":
+      return "finished"
+    case "queued":
+    case "preflight":
+    default:
+      return "preparing"
+  }
 }
 
 export function upgradeOperationPollDelay(failureCount: number): number {
@@ -82,8 +184,13 @@ export function useUpgradeOperation(operationId?: string | null, options: UseUpg
     const onStorage = (event: StorageEvent) => {
       if (event.key === UPGRADE_OPERATION_STORAGE_KEY) setStoredOperationId(event.newValue)
     }
+    const onOperationChanged = () => setStoredOperationId(readStoredUpgradeOperationId())
     window.addEventListener("storage", onStorage)
-    return () => window.removeEventListener("storage", onStorage)
+    window.addEventListener(UPGRADE_OPERATION_CHANGED_EVENT, onOperationChanged)
+    return () => {
+      window.removeEventListener("storage", onStorage)
+      window.removeEventListener(UPGRADE_OPERATION_CHANGED_EVENT, onOperationChanged)
+    }
   }, [])
 
   const query = useQuery<UpgradeOperation>({
@@ -99,12 +206,19 @@ export function useUpgradeOperation(operationId?: string | null, options: UseUpg
     retry: (failureCount, error) => isUpgradeNetworkError(error) && failureCount < 3,
   })
 
+  useEffect(() => {
+    if (query.data?.status === "succeeded") persistPendingSuccessOperationId(query.data.operationId)
+  }, [query.data])
+
   return useMemo(() => ({
     ...query,
     operationId: resolvedOperationId,
     isReconnecting: Boolean(resolvedOperationId && query.isError && isUpgradeNetworkError(query.error)),
+    isResolving: Boolean(enabled && resolvedOperationId && query.isPending),
+    isActive: isUpgradeOperationActive(query.data?.status),
+    userStage: upgradeUserStageForStatus(query.data?.status),
     lastConfirmedStage: query.data?.status,
-  }), [query, resolvedOperationId])
+  }), [enabled, query, resolvedOperationId])
 }
 
 export function useCreateUpgradeOperation() {

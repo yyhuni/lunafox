@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:eb8978b7073fe88ee7dcdde5485c806ea7be90ab408e53fab5ee4d0cc2ddf1a5",
-  "releaseTag": "v0.0.1-alpha.150",
+  "sourceRevisionDigest": "sha256:a263637af452915d1d501246377d24e6ad8b62c0b5190ceaa82a542caafaf195",
+  "releaseTag": "v0.0.1-alpha.151",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -47,7 +47,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "f5fb92fad552551bee6ac3217c303447aa3282b9590175495b621cd3b58d66f8"
+      "sha256": "7839dab3895664077c41bb686ba2b3357a69994f7e0f7ee26794df1fde851671"
     },
     {
       "path": "README.md",
@@ -57,49 +57,49 @@
       "sha256": "fd52bf74e3d49fb99a8947828960fd18037b61e79464adff90f3c4e3d2c2df16"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.150/agent-bundle.json",
+      "path": "agent/bin/v0.0.1-alpha.151/agent-bundle.json",
       "type": "file",
       "mode": "0644",
       "size": 2229,
-      "sha256": "f86707112ecc8e17c796ab65573e8a92ffe1839241a547e99ac8f21cf583c98f"
+      "sha256": "f4428959ae318cb49fde95768c5aeb27213190539594f82785414c07e7589df3"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.150/agent-bundle.sha256",
+      "path": "agent/bin/v0.0.1-alpha.151/agent-bundle.sha256",
       "type": "file",
       "mode": "0644",
       "size": 402,
       "sha256": "2946b4b80ed17b9ad513b6e9d76def9ad4221fa15e8d475767b1a6fda9cbe25a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.150/agent-bundle.sigstore.json",
+      "path": "agent/bin/v0.0.1-alpha.151/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
-      "size": 9293,
-      "sha256": "fc28708d01ae22045659c4e4a3bde1f6b021b74c93409faa037cc23885c79beb"
+      "size": 9313,
+      "sha256": "b7b1f7856a77b1ea546ab54633e629732d603526e032f41e2869a204463d030f"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.150/lunafox-agent-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.151/lunafox-agent-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 23904517,
       "sha256": "6fdddcaae9958a99cb081d92ad3d8d11f32db16b5ff300d645a4693408d1df38"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.150/lunafox-agent-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.151/lunafox-agent-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 22504270,
       "sha256": "569449dc80b8e7a27954488d656198adc68d47eb6384903ad1f3ea4c4271467d"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.150/lunafox-engine-mount-preflight-linux-amd64",
+      "path": "agent/bin/v0.0.1-alpha.151/lunafox-engine-mount-preflight-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 20000987,
       "sha256": "2b12a49b754a09e98377c96105c2975a5b48bf6b063eae0b2062ea271e0add2a"
     },
     {
-      "path": "agent/bin/v0.0.1-alpha.150/lunafox-engine-mount-preflight-linux-arm64",
+      "path": "agent/bin/v0.0.1-alpha.151/lunafox-engine-mount-preflight-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 18804436,
@@ -4026,6 +4026,13 @@
       "sha256": "594d29565304d8660672ee1a877322a4bcfda50a5b4c970a69426326473bea46"
     },
     {
+      "path": "frontend/app/system-upgrade/page.tsx",
+      "type": "file",
+      "mode": "0644",
+      "size": 155,
+      "sha256": "35df753a6d916278234b76ca6a583544517f7e22bfc4c925049029f14b54510e"
+    },
+    {
       "path": "frontend/app/targets/[id]/__tests__/layout.contract.test.ts",
       "type": "file",
       "mode": "0644",
@@ -4379,8 +4386,8 @@
       "path": "frontend/components/__tests__/about-dialog-upgrade.behavior.test.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 10846,
-      "sha256": "bcb5d51e2f98969377594c9f5aad39f8b38598fc32054ae15afbbf83fb05875e"
+      "size": 10962,
+      "sha256": "46d08a5204f0cf6c8822419205dc58cb3fd1054b9f6e6d3e671ccff70ec9a8da"
     },
     {
       "path": "frontend/components/__tests__/about-dialog.contract.test.ts",
@@ -4586,6 +4593,27 @@
       "sha256": "c9016e67f0b459a477eb1e27ca6bed2dbbbc82072cae15b6ad9b99bf45a8adc5"
     },
     {
+      "path": "frontend/components/__tests__/system-upgrade-completion-dialog.test.tsx",
+      "type": "file",
+      "mode": "0644",
+      "size": 2433,
+      "sha256": "cca4772e432135aa34d8566123672c76366cf9d2dea53f4f870db9f3c388a2a6"
+    },
+    {
+      "path": "frontend/components/__tests__/system-upgrade-messages.contract.test.ts",
+      "type": "file",
+      "mode": "0644",
+      "size": 626,
+      "sha256": "be5403f28492a05885c9be67fb2abd6cd62e5c0e9366312368607a8ebbd097d8"
+    },
+    {
+      "path": "frontend/components/__tests__/system-upgrade-status.test.tsx",
+      "type": "file",
+      "mode": "0644",
+      "size": 3957,
+      "sha256": "6ae3d2834c3fee568a247a4fc73e5bdf1a77be72199fd5bc10222d4ab734b632"
+    },
+    {
       "path": "frontend/components/__tests__/table-row-rhythm-migration.contract.test.ts",
       "type": "file",
       "mode": "0644",
@@ -4610,22 +4638,22 @@
       "path": "frontend/components/about-dialog-sections.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 9308,
-      "sha256": "6901377095cd2b682b0763ac7ec575553b3ae8226696060410da11f0768a9580"
+      "size": 9625,
+      "sha256": "854d7f76c61f250bb1f99b732ccf26777b4ade5e5df0cbdea01d0ea0465929cf"
     },
     {
       "path": "frontend/components/about-dialog-state.ts",
       "type": "file",
       "mode": "0644",
-      "size": 4676,
-      "sha256": "cbbacd9e01106bbadf384a2f377070a0248a5516ea34d284587c457ba3a3ac51"
+      "size": 5804,
+      "sha256": "2aa26fbed3c1a2ae1bfce4cd44a94da72f8dc68f31bfa3644006a9c0c91500dc"
     },
     {
       "path": "frontend/components/about-dialog.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 2669,
-      "sha256": "5276ce907966d152268db62b5dcb972cf654e6ddf81f99c5b235618a8c3714bf"
+      "size": 2856,
+      "sha256": "333da09187cca2d9b7961e79d34ee6be60d7b4731170e7078f5a859955310975"
     },
     {
       "path": "frontend/components/animate-ui/components/backgrounds/__tests__/gravity-stars.contract.test.ts",
@@ -4652,8 +4680,8 @@
       "path": "frontend/components/auth/README.md",
       "type": "file",
       "mode": "0644",
-      "size": 9896,
-      "sha256": "4ea1161dc01770fed01b06c694b14d959c1b61b495b1c8368b2767e83287dc5e"
+      "size": 10682,
+      "sha256": "d076f4297a18ad7716b58ec801fbfd275b8301bc2a8af3cc85ed4e71c84d606b"
     },
     {
       "path": "frontend/components/auth/__tests__/auth-guard.contract.test.ts",
@@ -4733,6 +4761,13 @@
       "sha256": "23abdd68a6e70ae4270051cc393a6f6ca4074a618b6b488b2501a69642915c79"
     },
     {
+      "path": "frontend/components/auth/__tests__/upgrade-route-boundary.test.tsx",
+      "type": "file",
+      "mode": "0644",
+      "size": 2765,
+      "sha256": "dd358bd176e6355a1d99515246b05bc508aa2e813039b2d624e89d61139d134a"
+    },
+    {
       "path": "frontend/components/auth/__tests__/visual-split-login.contract.test.ts",
       "type": "file",
       "mode": "0644",
@@ -4799,8 +4834,8 @@
       "path": "frontend/components/auth/protected-auth-layout.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 3278,
-      "sha256": "379c84645b0735cbac0e5b7e88165af530ed2617f13ec5b170754e377ca26999"
+      "size": 3843,
+      "sha256": "674a33e7dd4233a24a5f889b980d6c49a66060499f3a31112b91b23c59b2a9d7"
     },
     {
       "path": "frontend/components/auth/terminal-login-sections.tsx",
@@ -4822,6 +4857,13 @@
       "mode": "0644",
       "size": 9367,
       "sha256": "5720eeb8b070818829ca0fae28d33cbbaf12d015d24d7b306a13922727bc4e67"
+    },
+    {
+      "path": "frontend/components/auth/upgrade-route-boundary.tsx",
+      "type": "file",
+      "mode": "0644",
+      "size": 3642,
+      "sha256": "c0d2670968e147fe345d9df8fb07d34999aa8b3047584b5fc38cf78d3391fe77"
     },
     {
       "path": "frontend/components/auth/visual-split-login.tsx",
@@ -10354,6 +10396,20 @@
       "sha256": "f51575b3cc9b399da36fcd247e043d52771547c6f0d9878fae52b7fc9b3448ac"
     },
     {
+      "path": "frontend/components/system-upgrade-completion-dialog.tsx",
+      "type": "file",
+      "mode": "0644",
+      "size": 5710,
+      "sha256": "190178d8342eec4291d8ae6e6ada8a46b8cd684dde65e2beec8c1a348ed76b40"
+    },
+    {
+      "path": "frontend/components/system-upgrade-status.tsx",
+      "type": "file",
+      "mode": "0644",
+      "size": 15635,
+      "sha256": "84fa12e172e2d15010219e1468d9a17f69718d1755260a431f9e8e54dc95099d"
+    },
+    {
       "path": "frontend/components/target/README.md",
       "type": "file",
       "mode": "0644",
@@ -12643,6 +12699,13 @@
       "sha256": "aa45c9ecd725d28e7a0dc7594173c5d734112c14339dfdef22fd7324ff043741"
     },
     {
+      "path": "frontend/hooks/__tests__/use-version.upgrade.test.ts",
+      "type": "file",
+      "mode": "0644",
+      "size": 2883,
+      "sha256": "98abc18fbeb1b4200305d7f4bb0ec49a1dd5fc6f85718f70aa08c974b3d0e066"
+    },
+    {
       "path": "frontend/hooks/__tests__/use-vertical-resize.contract.test.ts",
       "type": "file",
       "mode": "0644",
@@ -13444,8 +13507,8 @@
       "path": "frontend/hooks/use-version.ts",
       "type": "file",
       "mode": "0644",
-      "size": 5319,
-      "sha256": "50da2d4aeddfef6ee66d3031aa390ac4f34608cce489e224639f7d57c93cf3f5"
+      "size": 9182,
+      "sha256": "b6d7e24be5da433a2beeaba81792321e9db26f4462fdf290cef5e8237e98817b"
     },
     {
       "path": "frontend/hooks/use-vertical-resize.ts",
@@ -14438,15 +14501,15 @@
       "path": "frontend/messages/en.json",
       "type": "file",
       "mode": "0644",
-      "size": 184357,
-      "sha256": "7bbadb9647e4849c16ba0e6eb0e631ec784196c1d22be9dadd50bab75cbc0f45"
+      "size": 190430,
+      "sha256": "9cae2219d4d15e36122721e1e1e89f7a8226b0b3905f3f2aa897fe7c0a9d0004"
     },
     {
       "path": "frontend/messages/zh.json",
       "type": "file",
       "mode": "0644",
-      "size": 178283,
-      "sha256": "fc82f5ebbe5abb131051ad1855cc21949b165aed02b0e2b2bb2d4127f888fe86"
+      "size": 184065,
+      "sha256": "370d20bfe9fb21777167724e5c953f6854aac14901a606819691da988d3e7207"
     },
     {
       "path": "frontend/middleware.ts",
@@ -14459,8 +14522,8 @@
       "path": "frontend/mock/README.md",
       "type": "file",
       "mode": "0644",
-      "size": 5200,
-      "sha256": "d3a4f27b50ebf17788aa860139a3669f124110e01a352142333afa6156d4ed5b"
+      "size": 5822,
+      "sha256": "afa7c42f3696240c9e3e88877dde61857e0d24caf46601f1642d2aee3668258e"
     },
     {
       "path": "frontend/mock/__tests__/agent-operational-boundaries.network.test.ts",
@@ -14792,6 +14855,13 @@
       "sha256": "99ec1379ad9c09684f9cf95b3e8facb7a66a793d91b5996f6ee5a9ab1f273d94"
     },
     {
+      "path": "frontend/mock/data/__tests__/version.test.ts",
+      "type": "file",
+      "mode": "0644",
+      "size": 3604,
+      "sha256": "17bf0a9a7b1e2602bdf66cdc44fc58d30427dfa30e674039eb4bfc4c4063af09"
+    },
+    {
       "path": "frontend/mock/data/__tests__/vulnerabilities.contract.test.ts",
       "type": "file",
       "mode": "0644",
@@ -15033,8 +15103,8 @@
       "path": "frontend/mock/data/version.ts",
       "type": "file",
       "mode": "0644",
-      "size": 3771,
-      "sha256": "77565f02e0b00e59bf9ea32fce7a8dfd3667e0642babeee01307cec8d9a54cec"
+      "size": 8233,
+      "sha256": "50b73e761252404514b85bafffaec065953dd161db838df0410a160a7d616dc2"
     },
     {
       "path": "frontend/mock/data/vulnerabilities.ts",
@@ -15061,15 +15131,15 @@
       "path": "frontend/mock/handlers/index.ts",
       "type": "file",
       "mode": "0644",
-      "size": 105879,
-      "sha256": "9969a1d89f64910bc380cf1c290a9e872a4041ee922198678ac951cad4e2ad11"
+      "size": 105980,
+      "sha256": "81f3a92c44865677192a077d7e562d0865d3e06a668b02dedda98ccc05deab72"
     },
     {
       "path": "frontend/mock/index.ts",
       "type": "file",
       "mode": "0644",
-      "size": 7480,
-      "sha256": "da6e63e33d1c5b7b4374a5ed5a52c8e46067580b86e7b9c4fbf4b447fdbac72f"
+      "size": 7511,
+      "sha256": "aa4459d4bab779660aad0ec7ad7677e03c816fbcc612a1c23f3210932d451afb"
     },
     {
       "path": "frontend/mock/scenarios/index.ts",
@@ -15488,8 +15558,8 @@
       "path": "frontend/scripts/loading-route-contracts.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 29774,
-      "sha256": "38ac83b058f92ffee0ea0677b45e0797eb7d94e9bbcf40f214c672771d9bac74"
+      "size": 30324,
+      "sha256": "286b0e39ffe220cecfe0108f5da26af6f0d1c8fb6b7f7d0bfa4f65efe54d14fc"
     },
     {
       "path": "frontend/scripts/normalize-browser-diagnostics.mjs",
@@ -16587,8 +16657,8 @@
       "path": "frontend/types/version.types.ts",
       "type": "file",
       "mode": "0644",
-      "size": 2388,
-      "sha256": "c7ff3dd6f1fadf73da7ed16d11fc6f0072e63a8a3e3ba82b9786dcb711d4425e"
+      "size": 2671,
+      "sha256": "4edf1437e5dff06b56c47878c3925f384c0124e3e68f33be36e2322de0a3e35f"
     },
     {
       "path": "frontend/types/vulnerability.types.ts",

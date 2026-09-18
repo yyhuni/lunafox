@@ -4,7 +4,6 @@ import {
   IconBrandGithub,
   IconBook,
   IconCheck,
-  IconExternalLink,
   IconFileText,
   IconHeart,
   IconMessageReport,
@@ -54,11 +53,13 @@ interface AboutDialogVersionInfoProps {
   checkError: string | null
   isChecking: boolean
   isCreating: boolean
+  isRetrying?: boolean
   canStartUpgrade?: boolean
-  operation: { data?: UpgradeOperation; isReconnecting?: boolean; operationId?: string | null }
+  operation: { data?: UpgradeOperation; isActive?: boolean; isReconnecting?: boolean; operationId?: string | null }
   onCheckUpdate: () => void
   onStartUpgrade: () => void
   onRetry: () => void
+  onViewStatus?: () => void
 }
 
 export function AboutDialogVersionInfo({
@@ -69,14 +70,17 @@ export function AboutDialogVersionInfo({
   checkError,
   isChecking,
   isCreating,
+  isRetrying = false,
   canStartUpgrade = false,
   operation,
   onCheckUpdate,
   onStartUpgrade,
   onRetry,
+  onViewStatus = () => undefined,
 }: AboutDialogVersionInfoProps) {
   const operationStatus = operation.data?.status
-  const isTerminalFailure = operationStatus === "failed" || operationStatus === "needs_recovery" || operationStatus === "needs_attention"
+  const isTerminalFailure = operationStatus === "failed"
+  const needsAttention = operationStatus === "needs_recovery" || operationStatus === "needs_attention"
   return (
     <div className="space-y-3 rounded-lg border px-4 py-3">
       <div className="flex items-center justify-between gap-4">
@@ -107,14 +111,14 @@ export function AboutDialogVersionInfo({
         <Button variant="outline" size="sm" className="flex-1" onClick={onCheckUpdate} disabled={isChecking || isCreating} loading={isChecking} loadingLabel={t("checking")}>
           <IconRefresh className="mr-2 h-4 w-4" />{t("checkUpdate")}
         </Button>
-        {candidate && hasUpdate && !operation.data && (
+        {candidate && hasUpdate && !operation.isActive && (
           <Button size="sm" className="flex-1" onClick={onStartUpgrade} disabled={!canStartUpgrade || isCreating}>
             <semanticIcons.action.run className="mr-2 h-4 w-4" />{t("startUpgrade")}
           </Button>
         )}
       </div>
 
-      {candidate && hasUpdate && !operation.data && (
+      {candidate && hasUpdate && !operation.isActive && (
         <Alert>
           <semanticIcons.status.warning className="h-4 w-4" />
           <AlertDescription>{candidate.databaseMigration.hasDatabaseMigration ? t("migrationRiskHint") : t("upgradeRiskHint")}</AlertDescription>
@@ -131,7 +135,8 @@ export function AboutDialogVersionInfo({
           <p className="text-xs text-muted-foreground">{t("operationId")}: <code className="font-mono">{operation.data.operationId}</code></p>
           <p className="text-xs text-muted-foreground">{t("cancelledWork", { scans: operation.data.cancelledScanCount, tasks: operation.data.cancelledTaskCount })}</p>
           {operation.data.diagnostic && <p className="text-sm text-destructive">{operation.data.diagnostic}</p>}
-          {isTerminalFailure && <Button variant="outline" size="sm" onClick={onRetry} disabled={isCreating}>{t("retryUpgrade")}</Button>}
+          {isTerminalFailure && <Button variant="outline" size="sm" onClick={onRetry} disabled={isRetrying} loading={isRetrying} loadingLabel={t("retryingUpgrade")}>{t("retryUpgrade")}</Button>}
+          {needsAttention && <Button variant="outline" size="sm" onClick={onViewStatus}>{t("viewUpgradeStatus")}</Button>}
         </div>
       )}
     </div>

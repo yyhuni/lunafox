@@ -319,6 +319,7 @@ export {
   getMockUpdateCheckResult,
   createMockUpgradeOperation,
   getMockUpgradeOperation,
+  observeMockUpgradeOperation,
   retryMockUpgradeOperation,
   resetMockUpgradeOperation,
 } from './data/version'

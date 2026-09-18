@@ -17,6 +17,23 @@ export type UpgradeOperationStatus =
   | "needs_recovery"
   | "needs_attention"
 
+export type UpgradeUserStage =
+  | "preparing"
+  | "stopping"
+  | "updating"
+  | "restarting"
+  | "verifying"
+  | "finished"
+
+export const UPGRADE_USER_STAGES: readonly UpgradeUserStage[] = [
+  "preparing",
+  "stopping",
+  "updating",
+  "restarting",
+  "verifying",
+  "finished",
+]
+
 export type UpgradeMigrationStatus =
   | "not_started"
   | "running"

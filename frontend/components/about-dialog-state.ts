@@ -1,4 +1,5 @@
 import React from "react"
+import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
 
 import {
@@ -10,6 +11,7 @@ import {
   useUpgradeOperation,
   useVersion,
 } from "@/hooks/use-version"
+import { replaceWithRouteProgress } from "@/components/route-progress"
 import type { ReleaseManifestSummary, UpdateCheckResult } from "@/types/version.types"
 
 type TranslationFn = (key: string, params?: Record<string, string | number | Date>) => string
@@ -31,14 +33,30 @@ export type AboutDialogState = {
   handleStartUpgrade: () => void
   handleConfirmUpgrade: (acknowledged: boolean) => void
   handleRetry: () => void
+  handleViewStatus: () => void
 }
 
 interface UseAboutDialogStateOptions {
   enabled?: boolean
+  onUpgradeAccepted?: () => void
 }
 
-export function useAboutDialogState({ enabled = true }: UseAboutDialogStateOptions = {}): AboutDialogState {
+type AppRouter = ReturnType<typeof useRouter>
+
+// The state hook is also exercised in isolation by contract tests without an
+// App Router provider. Production callers always run under Next's router; the
+// fallback keeps those pure hook consumers from failing before an action runs.
+function useOptionalAppRouter(): AppRouter | null {
+  try {
+    return useRouter()
+  } catch {
+    return null
+  }
+}
+
+export function useAboutDialogState({ enabled = true, onUpgradeAccepted }: UseAboutDialogStateOptions = {}): AboutDialogState {
   const t = useTranslations("about")
+  const router = useOptionalAppRouter()
   const { data: versionData } = useVersion({ enabled })
   const checkUpdate = useCheckForUpdatesAction()
   const createMutation = useCreateUpgradeOperation()
@@ -71,9 +89,9 @@ export function useAboutDialogState({ enabled = true }: UseAboutDialogStateOptio
 
   const handleStartUpgrade = React.useCallback(() => {
     const candidate = updateResult?.candidate
-    if (!candidate || !updateResult.hasUpdate || !updateResult.eligible || createMutation.isPending || operation.data) return
+    if (!candidate || !updateResult.hasUpdate || !updateResult.eligible || createMutation.isPending || operation.isActive) return
     setConfirmOpen(true)
-  }, [createMutation.isPending, operation.data, updateResult])
+  }, [createMutation.isPending, operation.isActive, updateResult])
 
   const handleConfirmUpgrade = React.useCallback((acknowledged: boolean) => {
     const candidate = updateResult?.candidate
@@ -86,7 +104,11 @@ export function useAboutDialogState({ enabled = true }: UseAboutDialogStateOptio
         manifestDigest: candidate.manifestDigest,
         confirmed: true,
       }, {
-        onSuccess: () => setConfirmOpen(false),
+        onSuccess: () => {
+          setConfirmOpen(false)
+          onUpgradeAccepted?.()
+          if (router) replaceWithRouteProgress(router, "/system-upgrade/")
+        },
         onError: (error) => setCheckError(getUpgradeErrorMessage(error)),
         onSettled: () => { createInFlightRef.current = false },
       })
@@ -94,14 +116,22 @@ export function useAboutDialogState({ enabled = true }: UseAboutDialogStateOptio
       createInFlightRef.current = false
       setCheckError(getUpgradeErrorMessage(error))
     }
-  }, [createMutation, updateResult])
+  }, [createMutation, onUpgradeAccepted, router, updateResult])
 
   const handleRetry = React.useCallback(() => {
     if (!operation.operationId || retryMutation.isPending) return
     retryMutation.mutate(operation.operationId, {
+      onSuccess: () => {
+        onUpgradeAccepted?.()
+        if (router) replaceWithRouteProgress(router, "/system-upgrade/")
+      },
       onError: (error) => setCheckError(getUpgradeErrorMessage(error)),
     })
-  }, [operation.operationId, retryMutation])
+  }, [onUpgradeAccepted, operation.operationId, retryMutation, router])
+
+  const handleViewStatus = React.useCallback(() => {
+    if (router) replaceWithRouteProgress(router, "/system-upgrade/")
+  }, [router])
 
   const currentVersion = updateResult?.currentVersion || versionData?.version || process.env.NEXT_PUBLIC_IMAGE_TAG?.trim() || "-"
   return {
@@ -121,5 +151,6 @@ export function useAboutDialogState({ enabled = true }: UseAboutDialogStateOptio
     handleStartUpgrade,
     handleConfirmUpgrade,
     handleRetry,
+    handleViewStatus,
   }
 }

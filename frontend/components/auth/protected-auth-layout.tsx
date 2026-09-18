@@ -9,6 +9,8 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ContentReveal } from "@/components/shared/loading/content-reveal"
 import { RouteContentTransitionProvider } from "@/components/shared/navigation/route-content-transition"
+import { UpgradeRouteBoundary } from "@/components/auth/upgrade-route-boundary"
+import { SystemUpgradeCompletionDialog } from "@/components/system-upgrade-completion-dialog"
 import {
   protectedAppShellContentFrameClassName,
   protectedAppShellContentStyle,
@@ -43,33 +45,42 @@ export function ProtectedAuthLayout({
   // Route ContentReveal and workspace ContentHandoff own entry motion; the
   // shell stays static so hard reloads do not replay two page-level reveals.
   return (
-    <SidebarProvider
-      className="flex h-svh min-h-0 w-full"
-      style={protectedAppShellStyle}
+    <UpgradeRouteBoundary
+      renderProtectedShell={(content) => (
+        <React.Fragment>
+          <SidebarProvider
+            className="flex h-svh min-h-0 w-full"
+            style={protectedAppShellStyle}
+          >
+            <AppSidebar />
+            <div className="bg-background flex flex-1 min-h-0">
+              <div className="flex flex-1 flex-col min-h-0">
+                <UnifiedHeader />
+                <SidebarInset className="flex flex-1 flex-col min-h-0">
+                  <ScrollArea
+                    className={protectedAppShellScrollAreaClassName}
+                    contentClassName={protectedAppShellContentFrameClassName}
+                    contentStyle={protectedAppShellContentStyle}
+                    type="always"
+                    viewportClassName={protectedAppShellScrollViewportClassName}
+                  >
+                    <Suspense fallback={<RouteBootHandoffBlocker />}>
+                      <RouteContentTransitionProvider>
+                        <ContentReveal owner="auth-layout-route-content" className="flex min-h-0 flex-1 flex-col">
+                          {content}
+                        </ContentReveal>
+                      </RouteContentTransitionProvider>
+                    </Suspense>
+                  </ScrollArea>
+                </SidebarInset>
+              </div>
+            </div>
+          </SidebarProvider>
+          <SystemUpgradeCompletionDialog />
+        </React.Fragment>
+      )}
     >
-      <AppSidebar />
-      <div className="bg-background flex flex-1 min-h-0">
-        <div className="flex flex-1 flex-col min-h-0">
-          <UnifiedHeader />
-          <SidebarInset className="flex flex-1 flex-col min-h-0">
-            <ScrollArea
-              className={protectedAppShellScrollAreaClassName}
-              contentClassName={protectedAppShellContentFrameClassName}
-              contentStyle={protectedAppShellContentStyle}
-              type="always"
-              viewportClassName={protectedAppShellScrollViewportClassName}
-            >
-              <Suspense fallback={<RouteBootHandoffBlocker />}>
-                <RouteContentTransitionProvider>
-                  <ContentReveal owner="auth-layout-route-content" className="flex min-h-0 flex-1 flex-col">
-                    {children}
-                  </ContentReveal>
-                </RouteContentTransitionProvider>
-              </Suspense>
-            </ScrollArea>
-          </SidebarInset>
-        </div>
-      </div>
-    </SidebarProvider>
+      {children}
+    </UpgradeRouteBoundary>
   )
 }

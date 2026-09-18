@@ -4522,6 +4522,8 @@
     "cancelledWork": "已取消 {scans} 个扫描和 {tasks} 个任务",
     "reconnecting": "Server 正在重启，正在通过已保存的操作重新连接...",
     "retryUpgrade": "重试升级",
+    "retryingUpgrade": "重试中...",
+    "viewUpgradeStatus": "查看升级状态",
     "confirmUpgradeTitle": "确认系统升级",
     "confirmUpgradeDescription": "确定升级到 {version} 吗？维护期间主应用可能暂时不可用。",
     "migrationRisk": "数据库迁移资格由 Server 门禁强制校验。",
@@ -4553,5 +4555,139 @@
     "feedback": "问题反馈",
     "docs": "使用文档",
     "supportAuthor": "支持作者"
+  },
+  "systemUpgrade": {
+    "title": "系统升级",
+    "description": "升级期间系统会暂时停止普通业务操作。此页面会持续显示服务端确认的阶段。",
+    "boundary": {
+      "resolvingTitle": "正在确认升级状态",
+      "resolvingDescription": "正在从服务端恢复升级状态，普通页面暂时不可用。",
+      "lockedTitle": "系统正在升级",
+      "lockedDescription": "升级完成或需要处理之前，系统只保留升级状态页。"
+    },
+    "loading": {
+      "title": "正在加载升级状态",
+      "description": "正在读取服务端的升级 Operation，请稍候。"
+    },
+  "empty": {
+    "title": "没有待处理的升级",
+    "description": "当前浏览器没有找到可恢复的升级 Operation。"
+  },
+  "status": {
+    "queued": "排队中",
+    "stopping": "停止活动工作",
+    "preflight": "升级前检查",
+    "updating": "更新服务",
+    "migrating": "数据库迁移",
+    "restarting": "重启服务",
+    "agent_verifying": "验证 Agent",
+    "verifying": "验证系统",
+    "succeeded": "已完成",
+    "failed": "失败",
+    "needs_recovery": "需要恢复",
+    "needs_attention": "需要关注"
+  },
+  "reconnecting": {
+      "title": "正在重新连接",
+      "description": "Server 可能正在重启或网络暂时中断。页面会保留最后确认的阶段，并自动继续检查。"
+    },
+    "timeline": {
+      "title": "升级进度",
+      "phaseProgress": "阶段进度",
+      "stageCount": "第 {current} / {total} 阶段",
+      "pending": "尚未开始",
+      "stages": {
+        "preparing": "准备升级",
+        "stopping": "停止活动工作",
+        "updating": "更新服务",
+        "restarting": "重启并恢复",
+        "verifying": "验证系统",
+        "finished": "完成或需要处理"
+      },
+      "statusDescription": {
+        "queued": "升级请求已受理，正在等待执行。",
+        "stopping": "正在安全停止活动扫描和任务。",
+        "preflight": "正在执行升级前检查。",
+        "updating": "正在更新系统服务。",
+        "migrating": "正在执行数据库迁移。",
+        "restarting": "服务正在重启，页面会自动恢复。",
+        "agent_verifying": "正在验证 Agent 是否恢复。",
+        "verifying": "正在验证系统组件。",
+        "succeeded": "所有服务和验证项均已完成。",
+        "failed": "升级未完成，需要选择重试或退出。",
+        "needs_recovery": "升级需要人工恢复处理。",
+        "needs_attention": "升级需要关注 Agent 或验证结果。"
+      }
+    },
+    "statusDescription": {
+      "succeeded": "升级已完成，系统正在等待你确认后进入。",
+      "failed": "升级没有完成，当前仍可选择安全重试或返回旧版本。",
+      "needs_recovery": "系统检测到需要人工恢复的状态，请先处理诊断信息。",
+      "needs_attention": "系统检测到需要关注的 Agent 或验证项，请先检查结果。"
+    },
+    "outcomes": {
+      "succeeded": {
+        "title": "升级已完成",
+        "description": "已验证目标版本 {version}，本次操作耗时 {duration}。"
+      },
+      "failed": {
+        "title": "升级失败",
+        "description": "服务端没有确认升级完成。重试前请先阅读诊断信息。"
+      },
+      "needs_recovery": {
+        "title": "需要恢复处理",
+        "description": "此状态不能直接当作普通失败重试，请按诊断信息完成恢复。"
+      },
+      "needs_attention": {
+        "title": "需要关注",
+        "description": "请检查 Agent 或验证结果，确认系统恢复正常。"
+      }
+    },
+    "facts": {
+      "title": "已确认的升级信息",
+      "description": "以下内容来自服务端 Operation，不包含前端推测的百分比或剩余时间。",
+      "targetVersion": "目标版本",
+      "manifest": "发布清单",
+      "migration": "迁移状态",
+      "notStarted": "未执行",
+      "cancelledWork": "已取消的工作",
+      "cancelledWorkValue": "扫描 {scans} 个，任务 {tasks} 个",
+      "agents": "Agent 验证",
+      "agentsValue": "就绪 {ready}/{expected}，缺失 {missing}，异常 {unhealthy}",
+      "lastUpdated": "最近更新",
+      "operationId": "操作 ID"
+    },
+    "actions": {
+      "refresh": "重新检查",
+      "refreshing": "检查中...",
+      "retry": "重试升级",
+      "retrying": "重试中...",
+      "recheck": "重新检查",
+      "enterSystem": "进入系统",
+      "leave": "返回系统"
+    },
+    "summary": {
+      "durationUnknown": "耗时不可用",
+      "durationSeconds": "{seconds} 秒",
+      "durationMinutes": "{minutes} 分钟"
+    },
+    "completion": {
+      "title": "升级成功",
+      "description": "系统已完成升级，以下是本次已验证的变更摘要。",
+      "versionVerified": "当前服务端已确认运行版本：{version}",
+      "targetVersion": "目标版本",
+      "duration": "升级耗时",
+      "durationUnknown": "耗时不可用",
+      "durationSeconds": "{seconds} 秒",
+      "durationMinutes": "{minutes} 分钟",
+      "migration": "数据库迁移",
+      "migrationNotRun": "未执行",
+      "cancelledWork": "已取消的工作",
+      "cancelledWorkValue": "扫描 {scans} 个，任务 {tasks} 个",
+      "agents": "Agent 验证",
+      "agentsValue": "就绪 {ready}/{expected}，缺失 {missing}，异常 {unhealthy}",
+      "noReleaseNotes": "当前发布清单没有提供可验证的功能列表，因此这里只展示版本、组件和任务摘要。",
+      "continue": "继续使用系统"
+    }
   }
 }

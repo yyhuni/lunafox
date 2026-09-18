@@ -64,9 +64,9 @@ import {
   getMockWordlists,
   isMockWordlistEditable,
   getMockUpdateCheckResult,
-  getMockVersionInfo,
   createMockUpgradeOperation,
   getMockUpgradeOperation,
+  observeMockUpgradeOperation,
   retryMockUpgradeOperation,
   getMockWebsites,
   getMockLoginVisualSettings,
@@ -460,7 +460,9 @@ function shouldError(path: string) {
     path.startsWith("/organizations") ||
     path.startsWith("/targets") ||
     path.startsWith("/scans") ||
-    path.startsWith("/vulnerabilities")
+    path.startsWith("/vulnerabilities") ||
+    path === "/system:checkForUpdates" ||
+    path.startsWith("/upgradeOperations/")
   )
 }
 
@@ -795,7 +797,7 @@ async function resolveMockApi(request: Request) {
   {
     const operationMatch = path.match(/^\/upgradeOperations\/([^/:]+)$/)
     if (method === "GET" && operationMatch) {
-      const operation = getMockUpgradeOperation()
+      const operation = observeMockUpgradeOperation()
       return operation && operation.operationId === operationMatch[1]
         ? json(operation)
         : json({ error: { code: "NOT_FOUND", message: "Upgrade operation not found." } }, { status: 404 })
