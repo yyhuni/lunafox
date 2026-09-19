@@ -162,7 +162,7 @@ deployment state:
 | `./stop.sh` | `docker compose stop` | Stops every resident service and keeps all data. |
 | `./status.sh` | `docker compose ps` plus the readiness checks | Read-only summary; exits 0 only for a fully ready deployment. |
 | `./logs.sh` | `docker compose logs --tail 200 --follow` | Read-only log access that forwards service names and Compose options. |
-| `./uninstall.sh` | `docker compose down --remove-orphans` | Removes containers and the project network; keeps volumes and `.env`. |
+| `./uninstall.sh` | `docker compose down --remove-orphans` | Removes containers and the project network; by default keeps volumes, `.env`, and `compose.override.yaml`. |
 
 `install.sh`, `start.sh`, and `restart.sh` report success only after the one-shot
 tasks, core service health, auxiliary service stability, the resident Agent's
@@ -188,9 +188,12 @@ way to delete the named volumes and start over.
 
 `install.sh` accepts only `--help`, reads every setting from `.env`, and runs
 `docker compose up -d` exactly once. It never pulls, builds, removes containers,
-or deletes data. `uninstall.sh` keeps all data unless you pass
-`--purge --confirm`, which deletes only the named volumes declared by the
-current `compose.yaml` after verifying their LunaFox ownership.
+or deletes data. Default `uninstall.sh` is reversible: it keeps named volumes,
+`.env`, the release directory, and the regular `compose.override.yaml` written
+by a completed Upgrade Operation. `./uninstall.sh --purge --confirm` verifies
+and deletes the named volumes declared by the current `compose.yaml`, then
+removes that version override for a clean reinstall from the same directory. It
+still preserves `.env` and the release directory.
 
 The scripts need Bash 3.2 or newer and work from any working directory. Windows
 keeps the direct Compose commands in PowerShell.

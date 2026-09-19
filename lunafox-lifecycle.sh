@@ -344,6 +344,26 @@ validate_override_file() {
 	LUNAFOX_OVERRIDE_USED=1
 }
 
+# Compose still needs the confirmed overlay for `down`; only a completed purge
+# may clear it, so a failed final removal must not be reported as a clean reset.
+reset_persisted_override() {
+	if [ -z "$LUNAFOX_OVERRIDE_USED" ]; then
+		if [ -e "$LUNAFOX_OVERRIDE_PATH" ] || [ -L "$LUNAFOX_OVERRIDE_PATH" ]; then
+			fail "the deployment containers, network, and LunaFox volumes were removed, but $LUNAFOX_OVERRIDE_FILE appeared after validation; remove it manually after confirming that no lifecycle command or upgrade is running"
+		fi
+		return 0
+	fi
+	if [ -L "$LUNAFOX_OVERRIDE_PATH" ]; then
+		fail "the deployment containers, network, and LunaFox volumes were removed, but $LUNAFOX_OVERRIDE_FILE changed into a symbolic link after validation; remove it manually after confirming that no lifecycle command or upgrade is running"
+	fi
+	[ -e "$LUNAFOX_OVERRIDE_PATH" ] || return 0
+	[ -f "$LUNAFOX_OVERRIDE_PATH" ] ||
+		fail "the deployment containers, network, and LunaFox volumes were removed, but $LUNAFOX_OVERRIDE_FILE changed after validation; remove it manually after confirming that no lifecycle command or upgrade is running"
+	if ! rm -f "$LUNAFOX_OVERRIDE_PATH"; then
+		fail "the deployment containers, network, and LunaFox volumes were removed, but could not remove the persisted version override $LUNAFOX_OVERRIDE_FILE; remove it manually after fixing the host filesystem condition"
+	fi
+}
+
 # ------------------------------------------------------------------ lock ----
 
 # The lock is a directory, so mkdir is the atomic primitive and works identically
@@ -1390,12 +1410,17 @@ action_uninstall() {
 			fi
 			docker volume rm "$name" >/dev/null 2>&1 || fail "could not remove the LunaFox volume $name; it was preserved"
 		done
-		printf 'LunaFox: SUCCESS the deployment and its LunaFox volumes were removed.\n'
+		reset_persisted_override
+		if [ -n "$LUNAFOX_OVERRIDE_USED" ]; then
+			printf 'LunaFox: SUCCESS the deployment, its LunaFox volumes, and %s were removed.\n' "$LUNAFOX_OVERRIDE_FILE"
+		else
+			printf 'LunaFox: SUCCESS the deployment and its LunaFox volumes were removed.\n'
+		fi
 		printf 'LunaFox:   %s and the release directory were preserved.\n' "$LUNAFOX_ENV_FILE"
 		return 0
 	fi
 	printf 'LunaFox: SUCCESS the deployment containers and network were removed.\n'
-	printf 'LunaFox:   preserved: named volumes, %s, certificates, upgrade state, and this release directory.\n' "$LUNAFOX_ENV_FILE"
+	printf 'LunaFox:   preserved: named volumes, %s, certificates, upgrade state, %s, and this release directory.\n' "$LUNAFOX_ENV_FILE" "$LUNAFOX_OVERRIDE_FILE"
 	printf 'LunaFox:   restore the deployment with: ./install.sh\n'
 	printf 'LunaFox:   delete the preserved data with: ./uninstall.sh --purge --confirm\n'
 }
