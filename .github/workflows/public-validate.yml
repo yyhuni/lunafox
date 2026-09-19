@@ -1548,6 +1548,15 @@ jobs:
             echo "export_manifest_sha256=sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')"
             echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')"
           } >> "$GITHUB_OUTPUT"
+      - name: Validate release notes for final publication
+        env:
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist/final
+          node scripts/ci/validate-public-release-notes.mjs \
+            --root-dir "$GITHUB_WORKSPACE" --tag "$RELEASE_TAG" --json \
+            | tee dist/final/release-notes-validation.json
       - name: Verify every Runtime image evidence record
         env:
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
@@ -1816,6 +1825,8 @@ jobs:
           DEPLOYMENT_SNAPSHOT_COMMIT: ${{ steps.deployment.outputs.merge_sha }}
         run: |
           set -euo pipefail
+          NOTES_FILE="release-notes/${RELEASE_TAG}.md"
+          test -f "$NOTES_FILE"
           prerelease=false
           [[ "$RELEASE_TAG" =~ -(alpha|beta|rc)\.[0-9]+$ ]] && prerelease=true
           tag_ref_response="$(mktemp)"
@@ -1843,11 +1854,11 @@ jobs:
               -f ref="refs/tags/${RELEASE_TAG}" -f sha="$DEPLOYMENT_SNAPSHOT_COMMIT" >/dev/null
           fi
           if ! gh release view "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" >/dev/null 2>&1; then
-            release_args=("$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" --verify-tag --title "$RELEASE_TAG" --generate-notes)
+            release_args=("$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" --verify-tag --title "$RELEASE_TAG" --notes-file "$NOTES_FILE")
             [ "$prerelease" = true ] && release_args+=(--prerelease)
             gh release create "${release_args[@]}"
           else
-            gh release edit "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" --draft=false --prerelease="$prerelease"
+            gh release edit "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" --draft=false --prerelease="$prerelease" --notes-file "$NOTES_FILE"
           fi
           publish_asset() {
             local file="$1" name expected actual url tmp asset_json
@@ -1880,6 +1891,7 @@ jobs:
             dist/final/release.manifest.yaml
             dist/final/public-release-provenance.json
             dist/final/release-verification.json
+            dist/final/release-notes-validation.json
             dist/final/deployment/*.zip
             dist/final/deployment-publication.json
             dist/final/deployment-snapshot/**
