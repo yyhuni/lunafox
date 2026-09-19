@@ -2,6 +2,8 @@
 
 > **GENERATED / READ-ONLY PROJECTION**
 
+[简体中文](README.zh-CN.md)
+
 This repository is generated from
 [`yyhuni/lunafox-private`](https://github.com/yyhuni/lunafox-private). It
 contains the reviewed Runtime source closure and the files used to build the

@@ -70,7 +70,9 @@ export const OVERVIEW_RUNTIME_SCAN_STATUS_ITEM_CLASS = "flex min-w-0 flex-col it
 // Match the map's row height on desktop while preserving the compact stacked viewport.
 export const OVERVIEW_RUNTIME_SCAN_RECENT_LIST_CLASS = "h-[197px] min-w-0 shrink-0 xl:flex-1"
 export const OVERVIEW_RUNTIME_SCAN_RECENT_CLASS = "flex h-full min-h-0 min-w-0 flex-col gap-1"
-export const OVERVIEW_RUNTIME_SCAN_RECENT_ROWS_CLASS = "grid min-w-0 gap-0.5 xl:h-full xl:auto-rows-fr"
+// Pack rows at the start of the remaining slot. Stretching with auto-rows-fr
+// vertically centers a short list inside the map-matched viewport.
+export const OVERVIEW_RUNTIME_SCAN_RECENT_ROWS_CLASS = "grid min-w-0 content-start gap-0.5"
 export const OVERVIEW_RUNTIME_SCAN_RECENT_ROW_CLASS = "grid min-w-0"
 export const OVERVIEW_RUNTIME_SCAN_RECENT_HEADER_CLASS = "flex min-w-0 items-center gap-3"
 export const OVERVIEW_RUNTIME_SCAN_RECENT_COLUMN_HEADER_CLASS = "flex min-w-0 items-center gap-3 border-b border-border pb-1"

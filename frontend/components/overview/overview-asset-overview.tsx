@@ -20,6 +20,10 @@ import {
   OverviewSectionPanel,
 } from "@/components/overview/overview-section-layouts"
 import { formatAssetTrendAxisTick, formatOverviewDateTick, formatOverviewSignedChange } from "@/components/overview/overview-axis-format"
+import {
+  ASSET_DISTRIBUTION_AXIS_TICK_MARGIN,
+  resolveAssetDistributionAxisWidth,
+} from "@/components/overview/overview-distribution-axis"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import type { AssetDistributionChartSeries } from "@/lib/chart-config"
 import { getTrendToneTextClass } from "@/lib/status-config"
@@ -33,7 +37,6 @@ const TargetIcon = semanticIcons.concept.target
 
 const ASSET_CHART_MARGIN = { top: 12, right: 0, left: 0, bottom: 0 }
 const ASSET_CHART_X_AXIS_PADDING = { left: 0, right: 16 }
-const ASSET_DISTRIBUTION_Y_AXIS_WIDTH = 88
 const ASSET_DISTRIBUTION_BASE_COLOR = "var(--foreground)"
 const ASSET_DISTRIBUTION_MIN_OPACITY = 0.32
 const ASSET_DISTRIBUTION_MAX_OPACITY = 0.68
@@ -135,6 +138,9 @@ export function OverviewAssetOverview() {
     date: item.date,
     totalAssets: item.totalAssets,
   }))
+  const assetDistributionAxisWidth = resolveAssetDistributionAxisWidth(
+    assetDistributionData.map((item) => item.label),
+  )
   useEffect(() => {
     if (!historyData.length || prefersReducedMotion !== false) {
       setIsTrendAnimationActive(false)
@@ -205,9 +211,9 @@ export function OverviewAssetOverview() {
                     dataKey="label"
                     tick={{ textAnchor: "end" }}
                     tickLine={false}
-                    tickMargin={8}
+                    tickMargin={ASSET_DISTRIBUTION_AXIS_TICK_MARGIN}
                     type="category"
-                    width={ASSET_DISTRIBUTION_Y_AXIS_WIDTH}
+                    width={assetDistributionAxisWidth}
                   />
                   <ChartTooltip
                     cursor={false}

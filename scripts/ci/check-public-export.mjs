@@ -17,6 +17,8 @@ import {
   scanExportTree,
   validateFreshGitHistory,
 } from "./export-public-repository.mjs";
+import { validateReleaseNotes } from "./validate-public-release-notes.mjs";
+import { validatePublicDocumentation } from "./validate-public-documentation.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_REPO_ROOT = path.resolve(SCRIPT_DIR, "../..");
@@ -167,6 +169,8 @@ function validatePublicExport(options) {
   const compiled = compilePolicy(policy);
   const manifest = readJson(options.manifest, "public export manifest");
   validateManifest(manifest, policy);
+  const documentation = validatePublicDocumentation({ rootDir: repoRoot });
+  const releaseNotes = validateReleaseNotes({ rootDir: repoRoot, tag: manifest.releaseTag });
   if (options.requireAgentBundle) validateVersionedAgentBundle(manifest);
 
   const actualManifest = buildFileManifest(repoRoot, {
@@ -178,6 +182,9 @@ function validatePublicExport(options) {
   }
 
   const manifestPaths = new Set(manifest.files.map((file) => file.path));
+  if (!manifestPaths.has(releaseNotes.notesPath)) {
+    fail(`public export manifest is missing release notes: ${releaseNotes.notesPath}`);
+  }
   const destinationOwned = new Set(policy.destinationOwnedExact ?? []);
   for (const relPath of walk(repoRoot)) {
     if (!isAllowed(relPath, compiled)) fail(`public repository contains a non-allowlisted path: ${relPath}`);
@@ -220,6 +227,7 @@ function validatePublicExport(options) {
     releaseTag: manifest.releaseTag,
     sourceRevisionDigest: manifest.sourceRevisionDigest,
     fileCount: manifest.files.length,
+    documentation,
   };
   if (options.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   else process.stdout.write(`public export verified: ${result.fileCount} files (${result.releaseTag})\n`);

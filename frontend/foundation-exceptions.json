@@ -596,17 +596,6 @@
       "recoveryPath": "Move boot loader motion into a shared critical-CSS boot primitive or replace it with a foundation-approved static entry treatment."
     },
     {
-      "id": "motion-sidebar-menu-content-hover-translation",
-      "status": "keep",
-      "scope": "components/ui/sidebar.tsx",
-      "pattern": "sidebarMenuContentMotionClassName",
-      "class": "bounded-hover-motion",
-      "owner": "frontend-foundation",
-      "reason": "The shared sidebar gives expanded navigation items a 2px content-only hover translation so pointer movement has immediate spatial feedback without shifting row geometry; the shared 160ms token, collapsed-mode override, and reduced-motion override bound the interaction.",
-      "reviewTrigger": "When sidebar navigation density, hover affordance, or motion tokens change.",
-      "recoveryPath": "Keep the translation inside the shared sidebar primitive, or remove the exception when the navigation interaction model returns to fully static hover feedback."
-    },
-    {
       "id": "excluded-prototype-and-demo-boundary",
       "status": "excluded",
       "scope": "**/{prototype,prototypes,demo}/**",

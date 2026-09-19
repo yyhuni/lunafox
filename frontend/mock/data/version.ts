@@ -66,6 +66,34 @@ function mockLogForStage(status: UpgradeOperationStatus, timestamp: string, mess
   return { timestamp, level: status === "failed" || status === "needs_recovery" ? "error" : status === "needs_attention" ? "warn" : "info", stage: status, messageKey: entry.messageKey, message: message ?? entry.message }
 }
 
+function mockProgressLogsForStage(status: UpgradeOperationStatus, timestamp: string): UpgradeLogEntry[] {
+  const events: Partial<Record<UpgradeOperationStatus, Array<Pick<UpgradeLogEntry, "messageKey" | "message">>>> = {
+    updating: [
+      { messageKey: "pullImagesStarted", message: "Pulling release images" },
+      { messageKey: "servicesUpdateStarted", message: "Updating core services" },
+      { messageKey: "servicesUpdated", message: "Core service update submitted" },
+    ],
+    migrating: [
+      { messageKey: "migrationStarted", message: "Database migration started" },
+      { messageKey: "migrationCompleted", message: "Database migration completed" },
+    ],
+    restarting: [
+      { messageKey: "healthCheckStarted", message: "Waiting for services to become healthy" },
+    ],
+    verifying: [
+      { messageKey: "agentVerificationStarted", message: "Verifying Agent readiness" },
+      { messageKey: "digestVerificationStarted", message: "Verifying service digests" },
+    ],
+  }
+  return (events[status] ?? []).map((event) => ({
+    timestamp,
+    level: "info",
+    stage: status,
+    messageKey: event.messageKey,
+    message: event.message,
+  }))
+}
+
 function readPersistedUpgradeState(): PersistedMockUpgradeState | null {
   if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return null
   try {
@@ -227,7 +255,7 @@ export function observeMockUpgradeOperation(): UpgradeOperation | null {
         ? { expected: 3, ready: 2, missing: 1, unhealthy: 0 }
         : mockUpgradeOperation.agentSummary,
       stageTimes: { ...mockUpgradeOperation.stageTimes, [nextStatus]: timestamp },
-      logs: [...mockUpgradeOperation.logs, mockLogForStage(nextStatus, timestamp)],
+      logs: [...mockUpgradeOperation.logs, mockLogForStage(nextStatus, timestamp), ...mockProgressLogsForStage(nextStatus, timestamp)],
     }
   }
   persistUpgradeState()

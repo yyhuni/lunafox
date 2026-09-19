@@ -2705,7 +2705,7 @@
     },
     "agents": {
       "quota": {
-        "reached": "Agent 数量已达上限，请删除已有 Agent 后重试"
+        "reached": "配额已用完（{used}/{limit}），删除一个 Agent 后可继续添加。"
       },
       "title": "Agent 节点",
       "install": {
@@ -4678,9 +4678,11 @@
       "warning": "停止不会回滚已经完成的服务或数据库变更。若已跨过迁移阶段，可能需要人工恢复。"
     },
     "logs": {
-      "title": "升级日志",
-      "description": "本次操作由服务端确认的里程碑和安全诊断信息。",
-      "empty": "暂未记录已确认的升级里程碑。",
+      "title": "升级事件",
+      "description": "本次操作由服务端确认的里程碑、安全进度事件和诊断信息。",
+      "empty": "暂未记录已确认的升级事件。",
+      "copy": "复制升级事件",
+      "copied": "已复制升级事件",
       "messages": {
         "requestAccepted": "已受理升级请求",
         "stoppingWork": "正在停止活动工作",

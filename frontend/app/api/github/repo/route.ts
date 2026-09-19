@@ -1,18 +1,12 @@
 import { NextResponse } from "next/server"
+import {
+  GITHUB_REPO_API_URL,
+  GITHUB_REPO_OPEN_ISSUES_API_URL,
+  parseGithubRepoResponse,
+} from "@/lib/github-repo-snapshot"
 
-type GithubRepoSnapshot = {
-  name: string
-  fullName: string
-  htmlUrl: string
-  description: string | null
-  stars: number
-  forks: number
-  watchers: number
-  issues: number
-}
-
-const GITHUB_REPO = "yyhuni/lunafox"
 const CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=1800"
+const GITHUB_REVALIDATE_SECONDS = 300
 
 export async function GET() {
   try {
@@ -25,56 +19,30 @@ export async function GET() {
       headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`
     }
 
-    const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}`, {
-      headers,
-      next: { revalidate: 300 },
-    })
+    const [repoResponse, openIssuesResponse] = await Promise.all([
+      fetch(GITHUB_REPO_API_URL, { headers, next: { revalidate: GITHUB_REVALIDATE_SECONDS } }),
+      fetch(GITHUB_REPO_OPEN_ISSUES_API_URL, { headers, next: { revalidate: GITHUB_REVALIDATE_SECONDS } }),
+    ])
 
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: "Failed to fetch GitHub repository" },
-        { status: response.status, headers: { "Cache-Control": "no-store" } }
-      )
+    if (!repoResponse.ok) {
+      return githubFetchFailed(repoResponse.status)
     }
 
-    return NextResponse.json(parseGithubRepoSnapshot(await response.json()), {
+    if (!openIssuesResponse.ok) {
+      return githubFetchFailed(openIssuesResponse.status)
+    }
+
+    return NextResponse.json(parseGithubRepoResponse(await repoResponse.json(), await openIssuesResponse.json()), {
       headers: { "Cache-Control": CACHE_CONTROL },
     })
   } catch {
-    return NextResponse.json(
-      { error: "Failed to fetch GitHub repository" },
-      { status: 502, headers: { "Cache-Control": "no-store" } }
-    )
+    return githubFetchFailed(502)
   }
 }
 
-function parseGithubRepoSnapshot(data: unknown): GithubRepoSnapshot {
-  if (!data || typeof data !== "object") {
-    throw new Error("Invalid GitHub repository response")
-  }
-
-  const repo = data as Record<string, unknown>
-
-  if (
-    typeof repo.name !== "string" ||
-    typeof repo.full_name !== "string" ||
-    typeof repo.html_url !== "string" ||
-    typeof repo.stargazers_count !== "number" ||
-    typeof repo.forks_count !== "number" ||
-    typeof repo.subscribers_count !== "number" ||
-    typeof repo.open_issues_count !== "number"
-  ) {
-    throw new Error("Invalid GitHub repository response")
-  }
-
-  return {
-    name: repo.name,
-    fullName: repo.full_name,
-    htmlUrl: repo.html_url,
-    description: typeof repo.description === "string" && repo.description.trim().length > 0 ? repo.description : null,
-    stars: repo.stargazers_count,
-    forks: repo.forks_count,
-    watchers: repo.subscribers_count,
-    issues: repo.open_issues_count,
-  }
+function githubFetchFailed(status: number) {
+  return NextResponse.json(
+    { error: "Failed to fetch GitHub repository" },
+    { status, headers: { "Cache-Control": "no-store" } }
+  )
 }
