@@ -92,10 +92,11 @@ jobs:
         if: ${{ hashFiles('scripts/ci/validate-public-documentation.mjs') != '' }}
         run: |
           set -euo pipefail
-          mkdir -p dist
+          # Runtime source closure rejects generated output inside the checkout.
+          # Keep this validation evidence in the runner workspace instead.
           node scripts/ci/validate-public-documentation.mjs \
             --root-dir "$GITHUB_WORKSPACE" --json \
-            | tee dist/public-documentation-validation.json
+            | tee "$RUNNER_TEMP/public-documentation-validation.json"
 
       - name: Verify Agent bundle schema from the generated Git tree
         shell: bash
