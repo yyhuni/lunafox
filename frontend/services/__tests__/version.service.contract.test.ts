@@ -115,5 +115,36 @@ describe("version.service contract", () => {
       }],
     } } as never)
     await expect(VersionService.getUpgradeOperation(operation.operationId)).rejects.toThrow("upgradeOperation.logs[0].message")
+
+    vi.mocked(api.get).mockResolvedValue({ data: {
+      ...operation,
+      logs: [{
+        timestamp: "2026-09-13T12:00:00Z",
+        level: "info",
+        stage: "updating",
+        messageKey: "pullImagesStarted",
+        message: "Pulling release images",
+        metadata: { secret: "not-allowed" },
+      }],
+    } } as never)
+    await expect(VersionService.getUpgradeOperation(operation.operationId)).rejects.toThrow("upgradeOperation.logs[0].metadata.secret")
+  })
+
+  it("accepts bounded progress entries from the existing logs projection", async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: {
+      ...operation,
+      logs: [{
+        timestamp: "2026-09-13T12:02:00Z",
+        level: "info",
+        stage: "updating",
+        messageKey: "pullImagesStarted",
+        message: "Pulling release images",
+        metadata: { scope: "release" },
+      }],
+    } } as never)
+
+    await expect(VersionService.getUpgradeOperation(operation.operationId)).resolves.toMatchObject({
+      logs: [{ messageKey: "pullImagesStarted", message: "Pulling release images", metadata: { scope: "release" } }],
+    })
   })
 })

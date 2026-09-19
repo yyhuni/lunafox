@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -608,6 +609,113 @@ func TestJournalStoreEventSinkPanicDoesNotBreakPersistence(t *testing.T) {
 	}
 	if got, err := store.LoadCurrent(); err != nil || got.OperationID != journal.OperationID {
 		t.Fatalf("journal after panicking event sink = %#v, %v", got, err)
+	}
+}
+
+func TestJournalStoreAppendsBoundedProgressWithoutAdvancingStageTimestamp(t *testing.T) {
+	store := newTestStore(t)
+	base := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
+	if err := store.Save(Journal{
+		SchemaVersion: JournalSchema, OperationID: "op-progress", ManifestDigest: testManifestDigest,
+		Stage: StageUpdating, StartedAt: base, UpdatedAt: base, StageUpdatedAt: base,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < MaxProgressEvents+2; index++ {
+		event := ProgressEvent{
+			Timestamp: base.Add(time.Duration(index+1) * time.Minute), Stage: StageUpdating,
+			MessageKey: fmt.Sprintf("checkpoint-%d", index), Message: "Progress checkpoint reached", Metadata: map[string]string{},
+		}
+		if _, err := store.AppendProgress("op-progress", testManifestDigest, event); err != nil {
+			t.Fatalf("AppendProgress(%d): %v", index, err)
+		}
+	}
+	current, err := store.LoadCurrent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Stage != StageUpdating || !current.StageUpdatedAt.Equal(base) {
+		t.Fatalf("progress advanced lifecycle evidence: %#v", current)
+	}
+	if len(current.ProgressEvents) != MaxProgressEvents || current.ProgressEvents[0].MessageKey != "checkpoint-2" {
+		t.Fatalf("bounded progress window = %#v", current.ProgressEvents)
+	}
+	if !current.UpdatedAt.Equal(base.Add(time.Duration(MaxProgressEvents+2) * time.Minute)) {
+		t.Fatalf("updatedAt = %s", current.UpdatedAt)
+	}
+	duplicate := current.ProgressEvents[len(current.ProgressEvents)-1]
+	if _, err := store.AppendProgress("op-progress", testManifestDigest, duplicate); err != nil {
+		t.Fatalf("duplicate AppendProgress: %v", err)
+	}
+	afterDuplicate, err := store.LoadCurrent()
+	if err != nil || len(afterDuplicate.ProgressEvents) != len(current.ProgressEvents) || !afterDuplicate.UpdatedAt.Equal(current.UpdatedAt) {
+		t.Fatalf("duplicate changed journal: %#v, %v", afterDuplicate, err)
+	}
+	older := ProgressEvent{Timestamp: base.Add(30 * time.Second), Stage: StageUpdating, MessageKey: "delayed", Message: "Delayed progress observation", Metadata: map[string]string{}}
+	if _, err := store.AppendProgress("op-progress", testManifestDigest, older); err != nil {
+		t.Fatalf("delayed AppendProgress: %v", err)
+	}
+	afterDelayed, err := store.LoadCurrent()
+	if err != nil || !afterDelayed.UpdatedAt.Equal(current.UpdatedAt) || len(afterDelayed.ProgressEvents) != len(current.ProgressEvents) {
+		t.Fatalf("retained-window replay changed journal: %#v, %v", afterDelayed, err)
+	}
+}
+
+func TestJournalStoreRejectsUnsafeProgressEventsAndKeepsJournal(t *testing.T) {
+	store := newTestStore(t)
+	now := time.Now().UTC()
+	if err := store.Save(Journal{SchemaVersion: JournalSchema, OperationID: "op-unsafe-progress", ManifestDigest: testManifestDigest, Stage: StageUpdating, StartedAt: now, UpdatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	unsafe := []ProgressEvent{
+		{Timestamp: now.Add(time.Second), Stage: StageUpdating, MessageKey: "unsafe", Message: "first line\nsecond line", Metadata: map[string]string{}},
+		{Timestamp: now.Add(time.Second), Stage: StageUpdating, MessageKey: "unsafe", Message: "docker compose stderr", Metadata: map[string]string{}},
+		{Timestamp: now.Add(time.Second), Stage: StageUpdating, MessageKey: "unsafe", Message: "Reading /deployment/.env", Metadata: map[string]string{}},
+		{Timestamp: now.Add(time.Second), Stage: StageUpdating, MessageKey: "unsafe", Message: "\x1b[31munsafe", Metadata: map[string]string{}},
+		{Timestamp: now.Add(time.Second), Stage: StageUpdating, MessageKey: "unsafe", Message: "Safe text", Metadata: map[string]string{"secret": "value"}},
+	}
+	for _, event := range unsafe {
+		if _, err := store.AppendProgress("op-unsafe-progress", testManifestDigest, event); err == nil {
+			t.Fatalf("unsafe event accepted: %#v", event)
+		}
+	}
+	if _, err := store.AppendProgress("op-unsafe-progress", testManifestDigest, ProgressEvent{
+		Timestamp: now.Add(-time.Second), Stage: StageUpdating, MessageKey: "tooEarly", Message: "Progress checkpoint reached", Metadata: map[string]string{},
+	}); err == nil {
+		t.Fatal("progress event before journal start was accepted")
+	}
+	current, err := store.LoadCurrent()
+	if err != nil || len(current.ProgressEvents) != 0 {
+		t.Fatalf("unsafe event changed journal: %#v, %v", current, err)
+	}
+}
+
+func TestJournalStoreProgressEventSinkIsBestEffort(t *testing.T) {
+	store := newTestStore(t)
+	now := time.Now().UTC()
+	if err := store.Save(Journal{SchemaVersion: JournalSchema, OperationID: "op-progress-sink", ManifestDigest: testManifestDigest, Stage: StageUpdating, StartedAt: now, UpdatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	called := make(chan JournalEvent, 1)
+	store.SetEventSink(EventSinkFunc(func(_ context.Context, event JournalEvent) error {
+		called <- event
+		return errors.New("server unavailable")
+	}))
+	event := ProgressEvent{Timestamp: now.Add(time.Second), Stage: StageUpdating, MessageKey: "pullImagesStarted", Message: "Pulling release images", Metadata: map[string]string{}}
+	if _, err := store.AppendProgress("op-progress-sink", testManifestDigest, event); err != nil {
+		t.Fatalf("AppendProgress: %v", err)
+	}
+	select {
+	case received := <-called:
+		if len(received.ProgressEvents) != 1 || received.ProgressEvents[0].MessageKey != event.MessageKey {
+			t.Fatalf("sink event = %#v", received)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("progress event was not delivered")
+	}
+	current, err := store.LoadCurrent()
+	if err != nil || len(current.ProgressEvents) != 1 {
+		t.Fatalf("sink error blocked journal: %#v, %v", current, err)
 	}
 }
 

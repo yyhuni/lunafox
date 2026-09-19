@@ -235,8 +235,10 @@ function parseUpgradeLogs(value: unknown): UpgradeLogEntry[] {
 		if (Object.keys(metadataRecord).length > MAX_UPGRADE_LOG_METADATA_ENTRIES) throw invalidResponse(`upgradeOperation.logs[${index}].metadata`)
 		const metadata: Record<string, string> = {}
 		for (const [key, item] of Object.entries(metadataRecord)) {
-			if (!/^[A-Za-z][A-Za-z0-9_.-]*$/.test(key) || key.length > MAX_UPGRADE_LOG_METADATA_KEY_LENGTH) throw invalidResponse(`upgradeOperation.logs[${index}].metadata.${key}`)
-			const value = requireBoundedString(item, `upgradeOperation.logs[${index}].metadata.${key}`, MAX_UPGRADE_LOG_METADATA_VALUE_LENGTH)
+			const metadataPath = `upgradeOperation.logs[${index}].metadata.${key}`
+			const safeKey = requireBoundedToken(key, metadataPath, MAX_UPGRADE_LOG_METADATA_KEY_LENGTH)
+			if (hasUnsafeLogMarker(safeKey)) throw invalidResponse(metadataPath)
+			const value = requireBoundedSafeLogText(item, metadataPath, MAX_UPGRADE_LOG_METADATA_VALUE_LENGTH)
 			metadata[key] = value
 		}
 		const stage = requireBoundedToken(record.stage, `upgradeOperation.logs[${index}].stage`, MAX_UPGRADE_LOG_STAGE_LENGTH)
@@ -308,12 +310,20 @@ function requireBoundedToken(value: unknown, path: string, maximumLength: number
 }
 
 function requireBoundedSafeLogMessage(value: unknown, path: string): string {
-	const result = requireBoundedString(value, path, MAX_UPGRADE_LOG_MESSAGE_LENGTH)
-	const lower = result.toLowerCase()
-	if (/[\\/`$]/.test(result) || ["authorization", "bearer ", "jwt", "password", "passwd", "secret", "token", "private key", "docker compose", "command:", "stderr:"].some((marker) => lower.includes(marker))) {
+	return requireBoundedSafeLogText(value, path, MAX_UPGRADE_LOG_MESSAGE_LENGTH)
+}
+
+function requireBoundedSafeLogText(value: unknown, path: string, maximumLength: number): string {
+	const result = requireBoundedString(value, path, maximumLength)
+	if (/[\\/`$]/.test(result) || hasUnsafeLogMarker(result)) {
 		throw invalidResponse(path)
 	}
 	return result
+}
+
+function hasUnsafeLogMarker(value: string): boolean {
+	const lower = value.toLowerCase()
+	return ["authorization", "bearer ", "jwt", "password", "passwd", "secret", "token", "private key", "docker compose", "command:", "stderr:"].some((marker) => lower.includes(marker))
 }
 
 function requireNonEmpty(value: unknown, path: string): string {

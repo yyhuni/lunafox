@@ -48,8 +48,8 @@ require_file() {
 	[ -f "$ROOT_DIR/$1" ] || fail "missing required public file: $1"
 }
 
-for file in README.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTIFACTS.md \
-	.gitignore docs/public-deployment.md .env .env.example compose.yaml engine-inventory.yaml release.manifest.yaml \
+for file in README.md README.zh-CN.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTIFACTS.md \
+	.gitignore docs/public-deployment.md docs/public-deployment.zh-CN.md .env .env.example compose.yaml engine-inventory.yaml release.manifest.yaml \
 	deploy/compose.template.yaml deploy/.env.example \
 	resources/loki/loki-config.yaml resources/alloy/config.alloy \
 	resources/fingerprints/web_fingerprint_v4.json resources/wordlists/manifest.json \

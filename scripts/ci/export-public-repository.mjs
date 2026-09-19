@@ -13,6 +13,8 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { expectedNotesPath, validateReleaseNotes } from "./validate-public-release-notes.mjs";
+
 const EXPORTER_VERSION = "public-exporter/v1";
 const PUBLIC_MANIFEST_PATH = "PUBLIC_EXPORT_MANIFEST.json";
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -431,6 +433,9 @@ function copyOverlayFiles(overlayRoot, outputRoot, compiled) {
   if (!fs.existsSync(overlayRoot) || !fs.statSync(overlayRoot).isDirectory()) fail(`overlay directory is missing: ${overlayRoot}`);
   const copied = new Set();
   for (const entry of walkFilesystem(overlayRoot)) {
+    if (entry.path === "release-notes" || entry.path.startsWith("release-notes/")) {
+      fail(`overlay cannot provide or replace source-owned release notes: ${entry.path}`);
+    }
     if (compiled.destinationOwned.has(entry.path)) fail(`overlay cannot overwrite destination-owned path: ${entry.path}`);
     if (!isAllowed(entry.path, compiled)) fail(`overlay path is outside the generated allowlist: ${entry.path}`);
     if (isDenied(entry.path, compiled)) fail(`overlay path is denied: ${entry.path}`);
@@ -809,6 +814,10 @@ function exportProjection(options) {
   try {
     const copiedSource = copyFrozenFiles(sourceRoot, revision, entries, outputRoot, compiled);
     const copiedOverlay = copyOverlayFiles(options.overlayDir, outputRoot, compiled);
+    const releaseNotes = validateReleaseNotes({ rootDir: outputRoot, tag: options.tag });
+    if (!copiedSource.has(expectedNotesPath(options.tag))) {
+      fail(`release notes must come from the frozen source revision: ${releaseNotes.notesPath}`);
+    }
     if (options.tag === policy.sourceRefs?.firstPublicTag) {
       for (const required of policy.allowlist?.firstReleaseRequired ?? []) {
         if (!copiedSource.has(required) && !copiedOverlay.has(required)) fail(`first release is missing generated path: ${required}`);
@@ -834,6 +843,7 @@ function exportProjection(options) {
       sourceRevision: revision,
       sourceRevisionDigest: provenance.sourceRevisionDigest,
       exportManifestSha256: sha256(manifestText),
+      releaseNotes,
       exportedFiles: manifest.files,
       secretScan: { passed: true, reviewedExceptions: policy.secretScan?.reviewedExceptions ?? [] },
     };
