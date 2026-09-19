@@ -42,7 +42,7 @@ describe("page-header contract", () => {
     expect(source).toContain("const hasMiddle = Boolean(middle)")
     expect(source).toContain("items-end gap-2 xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]")
     expect(source).toContain("xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]")
-    expect(source).toContain('hasMiddle ? "min-w-0 self-start" : "border-b-2 border-primary"')
+    expect(source).toContain('hasMiddle ? "min-w-0 self-end" : "border-b-2 border-primary"')
     expect(source).toContain("hidden min-w-0 self-end items-center justify-self-center xl:flex")
     expect(source).toContain("col-start-2 self-end justify-self-end xl:col-start-3")
   })

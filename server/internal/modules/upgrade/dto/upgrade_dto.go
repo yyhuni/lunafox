@@ -209,7 +209,7 @@ func upgradeLogs(operation *domain.Operation) []UpgradeLogEntry {
 		}
 		return entries[i].at.Before(entries[j].at)
 	})
-	logs := make([]UpgradeLogEntry, 0, len(entries)+3)
+	logs := make([]UpgradeLogEntry, 0, len(entries)+len(operation.ProgressEvents)+3)
 	hasCurrentStage := false
 	for _, entry := range entries {
 		key, message := upgradeStageLog(entry.stage)
@@ -219,6 +219,22 @@ func upgradeLogs(operation *domain.Operation) []UpgradeLogEntry {
 		logs = append(logs, UpgradeLogEntry{
 			Timestamp: entry.at, Level: upgradeLogLevel(entry.stage), Stage: string(entry.stage),
 			MessageKey: key, Message: message, Metadata: map[string]string{},
+		})
+	}
+	// Progress events are already bounded and validated at the domain/repository
+	// boundary. Validate once more here so legacy or manually repaired rows can
+	// never turn the API projection into a raw-output transport.
+	for _, event := range operation.ProgressEvents {
+		if err := event.Validate(); err != nil {
+			continue
+		}
+		metadata := make(map[string]string, len(event.Metadata))
+		for key, value := range event.Metadata {
+			metadata[key] = value
+		}
+		logs = append(logs, UpgradeLogEntry{
+			Timestamp: event.Timestamp.UTC(), Level: "info", Stage: string(event.Stage),
+			MessageKey: event.MessageKey, Message: event.Message, Metadata: metadata,
 		})
 	}
 	// Older rows may have a status written before stageTimes was introduced (or

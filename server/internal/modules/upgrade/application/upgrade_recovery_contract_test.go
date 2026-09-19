@@ -185,6 +185,60 @@ func TestReconcileHostEventDoesNotRefreshStageForAnIdenticalJournalReplay(t *tes
 	}
 }
 
+func TestReconcileHostProgressRefreshesActivityWithoutAdvancingStageOrWatchdog(t *testing.T) {
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	base := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return base.Add(5 * time.Minute) }
+	operation := &domain.Operation{
+		OperationID: "abababab-abab-4bab-8bab-abababababab", RequestID: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("a", 64), ReleaseVersion: "1.1.0",
+		CompatibilityRange: "*", Status: domain.StatusUpdating, MigrationStatus: domain.MigrationStatusNotStarted,
+		MigrationType: "none", MaintenanceWindowMinutes: 1, CreatedAt: base, UpdatedAt: base,
+		StageTimes: map[domain.Status]time.Time{domain.StatusUpdating: base}, ObservedDigests: map[string]string{},
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+	event := HostUpgradeEvent{
+		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Stage: string(domain.StatusUpdating),
+		UpdatedAt: base.Add(4 * time.Minute), StageUpdatedAt: base, FromJournal: true,
+		ProgressEvents: []domain.ProgressEvent{{
+			Timestamp: base.Add(4 * time.Minute), Stage: domain.StatusUpdating, MessageKey: "pullImagesStarted",
+			Message: "Pulling release images", Metadata: map[string]string{},
+		}},
+	}
+
+	updated, err := service.ReconcileHostEvent(context.Background(), event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != domain.StatusUpdating || !updated.StageTimes[domain.StatusUpdating].Equal(base) {
+		t.Fatalf("progress advanced stage evidence: %#v", updated)
+	}
+	if !updated.UpdatedAt.Equal(base.Add(5*time.Minute)) || len(updated.ProgressEvents) != 1 {
+		t.Fatalf("progress did not refresh observable activity: %#v", updated)
+	}
+	if repository.updates != 1 {
+		t.Fatalf("progress update count = %d, want 1", repository.updates)
+	}
+
+	if _, err := service.ReconcileHostEvent(context.Background(), event); err != nil {
+		t.Fatal(err)
+	}
+	if repository.updates != 1 {
+		t.Fatalf("progress replay persisted duplicate evidence: updates=%d", repository.updates)
+	}
+
+	service.now = func() time.Time { return base.Add(6 * time.Minute) }
+	stalled, err := service.ReconcileStalledOperation(context.Background(), time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stalled.Status != domain.StatusNeedsAttention {
+		t.Fatalf("progress heartbeat fed stalled watchdog: %#v", stalled)
+	}
+}
+
 func TestReconcileJournalUnavailableClosesQueuedOperationWithAttention(t *testing.T) {
 	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
 	now := time.Now().UTC()

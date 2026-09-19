@@ -53,6 +53,10 @@
 - 宽屏 overview 使用方案 C 的一行连续摘要：标题/刷新保持独立行，摘要依次放置节点拥有量、Server 集群结论、健康节点和执行容量；不要恢复统计卡、容量卡或快捷入口卡组成的多轨 grid。Agent 拥有量图标保持中性，不能在集群为“需关注”时显示绿色成功标记。
 - 搜索区、筛选区、卡片标题区在 flex/grid 容器内要优先补齐 `min-w-0`。
 - 正式页面和 loading state 要使用同一套断点策略，避免加载前后布局跳变过大。
+- 已知满额的 toolbar 提示是紧邻 `添加 Agent` 左侧的一个 16px 提示 glyph（`AgentQuotaHint`）：沿用扫描历史保留策略说明的 `Info` 圆环图标语言，但以 warning tone 着色；说明文本放在该 glyph 的 tooltip 里，不再回落为按钮下方的常驻文本行。glyph 必须与前一个动作同处于 `AGENT_TOOLBAR_ACTION_ROW_CLASS` 行内，且占位由 `AGENT_QUOTA_HINT_SLOT_CLASS` 统一拥有；摘要未知或仍有容量时不得伪造该槽位。
+- 该 glyph 仍是可从键盘到达的提示入口：`AGENT_QUOTA_STATUS_ID` 由它持有，消息同时作为它的 accessible name 和节点内 `sr-only` 文本，后者是禁用 add 入口解析 `aria-describedby` 描述文本的来源（`aria-label` 只参与命名，不参与描述）。因此禁用态原因不能只靠 hover 才能获得；不要把消息改成仅存在于 tooltip 浮层中的文本。
+- tooltip 文案服务于紧邻的禁用动作，只保留配额用量与删除恢复动作，不复述页面上下文、不写“请重试”这类可由相邻按钮表达的步骤。
+- 已知满额的 toolbar glyph 槽位必须由 loading visual 用同尺寸占位保留，摘要未知或仍有容量时不得伪造；`AgentToolbarLoadingState` 只接收该槽位是否存在的布尔信号，不再接收提示文本。
 - overview 状态桶的 loading 文本必须保留与真实态一致的“本地化标签 + 数值”宽度；只占位标签会在 `390px` 窄屏少换一行，使 skeleton 与真实 summary 相差一行高度。
 - 顶部 overview 的真实态和 loading 态必须由 `AgentOverviewSection` 同一个 owner 派生；`AgentOverviewLoadingState` 只能包装 `<AgentOverviewSection loading />`，不要在 `agent-list.tsx` 外维护第二套状态摘要或执行容量结构。
 - overview 标题行、状态/容量摘要和 toolbar 外壳必须从 `agent-layout-contract.ts` 共享；不要在 `agent-list.tsx` 和独立 page skeleton 文件里各自手写同一组 flex/grid class。
@@ -103,4 +107,5 @@
 ## Deployment quota
 
 - Agent 用量由集群摘要的 `totalNodes/agentLimit` 表达，含默认及离线节点，存量超额也如实显示。服务端固定3，前端不得自造默认上限或从筛选列表计数。
-- 达到上限时工具栏、空态、扩容入口均禁用；摘要未知时不启用添加。保留已有摘要失败提示与安装观察结果，删除成功依赖既有摘要失效刷新恢复入口。
+- 已知达到或超过上限时，工具栏的添加操作行下方持续显示 `totalNodes/agentLimit` 和删除恢复指引；主操作、空态和扩容入口都关联同一条可访问状态。不要用 tooltip、错误弹窗或令牌生成流程替代该说明。
+- 达到上限时工具栏、空态、扩容入口均禁用；摘要未知时不启用添加，也不伪造满额用量。令牌不保留配额，已知满额不能打开安装流程；删除成功依赖既有摘要失效刷新恢复入口，服务端注册拒绝继续是最终保护。

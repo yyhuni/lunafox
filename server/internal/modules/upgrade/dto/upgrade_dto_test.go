@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -71,5 +72,69 @@ func TestUpgradeOperationResponseProjectsCurrentVersion(t *testing.T) {
 	response := NewUpgradeOperationResponse(operation, "1.0.0")
 	if response.CurrentVersion != "1.0.0" {
 		t.Fatalf("currentVersion = %q, want 1.0.0", response.CurrentVersion)
+	}
+}
+
+func TestUpgradeLogsProjectsBoundedProgressEventsAndRedactsUnsafeDiagnostic(t *testing.T) {
+	base := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
+	operation := &domain.Operation{
+		OperationID: "11111111-1111-4111-8111-111111111111",
+		Status:      domain.StatusUpdating,
+		StageTimes:  map[domain.Status]time.Time{domain.StatusQueued: base, domain.StatusUpdating: base.Add(time.Minute)},
+		ProgressEvents: []domain.ProgressEvent{
+			{Timestamp: base.Add(2 * time.Minute), Stage: domain.StatusUpdating, MessageKey: "pullImagesStarted", Message: "Pulling release images", Metadata: map[string]string{"scope": "release"}},
+			{Timestamp: base.Add(3 * time.Minute), Stage: domain.StatusUpdating, MessageKey: "servicesUpdateStarted", Message: "Updating core services", Metadata: map[string]string{}},
+		},
+		CreatedAt: base, UpdatedAt: base.Add(3 * time.Minute),
+		Diagnostic: "compose failed at /deployment/.env with TOKEN=secret",
+	}
+
+	logs := upgradeLogs(operation)
+	if len(logs) < 4 || len(logs) > domain.MaxProgressEvents {
+		t.Fatalf("log count = %d, want progress entries plus bounded lifecycle evidence", len(logs))
+	}
+	seen := map[string]bool{}
+	var pullEntry UpgradeLogEntry
+	for index, entry := range logs {
+		if index > 0 && entry.Timestamp.Before(logs[index-1].Timestamp) {
+			t.Fatalf("logs are not ordered: %#v", logs)
+		}
+		seen[entry.MessageKey] = true
+		if entry.MessageKey == "pullImagesStarted" {
+			pullEntry = entry
+		}
+		if strings.Contains(entry.Message, "/deployment") || strings.Contains(strings.ToLower(entry.Message), "token") {
+			t.Fatalf("unsafe log text leaked: %#v", entry)
+		}
+	}
+	if !seen["pullImagesStarted"] || !seen["servicesUpdateStarted"] || !seen["diagnostic"] {
+		t.Fatalf("progress or diagnostic entries missing: %#v", logs)
+	}
+	if pullEntry.Metadata["scope"] != "release" {
+		t.Fatalf("progress metadata = %#v, want scope", pullEntry.Metadata)
+	}
+}
+
+func TestUpgradeLogsRetainsNewestBoundedProgressWindow(t *testing.T) {
+	base := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
+	events := make([]domain.ProgressEvent, 0, domain.MaxProgressEvents)
+	for index := 0; index < domain.MaxProgressEvents; index++ {
+		events = append(events, domain.ProgressEvent{
+			Timestamp: base.Add(time.Duration(index+1) * time.Minute), Stage: domain.StatusUpdating,
+			MessageKey: "heartbeat-" + strconv.Itoa(index+1), Message: "Progress checkpoint reached",
+			Metadata: map[string]string{},
+		})
+	}
+	operation := &domain.Operation{
+		OperationID: "11111111-1111-4111-8111-111111111111", Status: domain.StatusUpdating,
+		StageTimes: map[domain.Status]time.Time{domain.StatusQueued: base, domain.StatusUpdating: base}, ProgressEvents: events,
+		CreatedAt: base, UpdatedAt: base.Add(time.Duration(domain.MaxProgressEvents+1) * time.Minute),
+	}
+	logs := upgradeLogs(operation)
+	if len(logs) != domain.MaxProgressEvents {
+		t.Fatalf("log count = %d, want %d", len(logs), domain.MaxProgressEvents)
+	}
+	if logs[len(logs)-1].MessageKey != "heartbeat-32" {
+		t.Fatalf("newest log = %#v, want heartbeat-32", logs[len(logs)-1])
 	}
 }
