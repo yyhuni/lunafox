@@ -86,6 +86,17 @@ jobs:
       - name: Verify exact exported file manifest and versioned Agent bundle
         run: node scripts/ci/check-public-export.mjs --require-agent-bundle --json
 
+      - name: Verify bilingual public documentation
+        # The destination-owned workflow is merged before the next source
+        # projection; skip this source-owned check until that projection lands.
+        if: ${{ hashFiles('scripts/ci/validate-public-documentation.mjs') != '' }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          node scripts/ci/validate-public-documentation.mjs \
+            --root-dir "$GITHUB_WORKSPACE" --json \
+            | tee dist/public-documentation-validation.json
+
       - name: Verify Agent bundle schema from the generated Git tree
         shell: bash
         run: |
@@ -1557,6 +1568,12 @@ jobs:
           node scripts/ci/validate-public-release-notes.mjs \
             --root-dir "$GITHUB_WORKSPACE" --tag "$RELEASE_TAG" --json \
             | tee dist/final/release-notes-validation.json
+      - name: Validate bilingual public documentation for final publication
+        run: |
+          set -euo pipefail
+          node scripts/ci/validate-public-documentation.mjs \
+            --root-dir "$GITHUB_WORKSPACE" --json \
+            | tee dist/final/documentation-validation.json
       - name: Verify every Runtime image evidence record
         env:
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
@@ -1892,6 +1909,7 @@ jobs:
             dist/final/public-release-provenance.json
             dist/final/release-verification.json
             dist/final/release-notes-validation.json
+            dist/final/documentation-validation.json
             dist/final/deployment/*.zip
             dist/final/deployment-publication.json
             dist/final/deployment-snapshot/**
