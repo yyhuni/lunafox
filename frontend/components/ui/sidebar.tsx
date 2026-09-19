@@ -44,17 +44,6 @@ const sidebarNavigationCommittedActiveSuppressionClassName = cn(
   "group-has-data-[sidebar-navigation-pending=true]/sidebar-navigation:data-[active=true]:after:hidden!",
   "group-has-data-[sidebar-navigation-pending=true]/sidebar-navigation:data-[active=true]:[&>svg:not(.ml-auto)]:text-sidebar-foreground/55!"
 )
-// Only the menu content moves on hover; the row itself keeps its geometry stable.
-// This keeps the affordance visible without making fast pointer scans jump.
-const sidebarMenuContentMotionClassName = cn(
-  "[&>svg:not(.ml-auto)]:transition-transform [&>svg:not(.ml-auto)]:duration-[var(--motion-duration-fast)] [&>svg:not(.ml-auto)]:ease-[var(--motion-ease-standard)]",
-  "[&>span:not([data-sidebar-navigation-pending]):not([data-sidebar-static-motion])]:transition-transform [&>span:not([data-sidebar-navigation-pending]):not([data-sidebar-static-motion])]:duration-[var(--motion-duration-fast)] [&>span:not([data-sidebar-navigation-pending]):not([data-sidebar-static-motion])]:ease-[var(--motion-ease-standard)]",
-  "hover:[&>svg:not(.ml-auto)]:translate-x-0.5 hover:[&>span:not([data-sidebar-navigation-pending]):not([data-sidebar-static-motion])]:translate-x-0.5",
-  "group-data-[collapsible=icon]:hover:[&>svg:not(.ml-auto)]:translate-x-0 group-data-[collapsible=icon]:hover:[&>span:not([data-sidebar-navigation-pending]):not([data-sidebar-static-motion])]:translate-x-0",
-  "motion-reduce:hover:[&>svg:not(.ml-auto)]:translate-x-0 motion-reduce:hover:[&>span:not([data-sidebar-navigation-pending]):not([data-sidebar-static-motion])]:translate-x-0",
-  "motion-reduce:[&>svg:not(.ml-auto)]:transition-none motion-reduce:[&>span:not([data-sidebar-navigation-pending]):not([data-sidebar-static-motion])]:transition-none"
-)
-
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
   open: boolean
@@ -579,7 +568,6 @@ const sidebarMenuButtonVariants = cva(
   cn(
     // Keep the active marker centered on the disclosure-chevron axis without changing layout.
     "peer/menu-button ring-sidebar-ring relative flex h-auto min-h-8 w-full items-center gap-2 overflow-hidden rounded-lg bg-transparent px-2.5 py-1.5 text-left outline-hidden focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 [&>span]:truncate [&>span]:leading-[18px] [&>svg]:size-4 [&>svg]:shrink-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:[&>svg:not(.ml-auto)]:text-sidebar-accent-foreground has-data-[sidebar-navigation-pending=true]:bg-sidebar-accent/70 has-data-[sidebar-navigation-pending=true]:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-semibold data-[active=true]:after:absolute data-[active=true]:after:right-4 data-[active=true]:after:translate-x-px data-[active=true]:after:top-1/2 data-[active=true]:after:z-20 data-[active=true]:after:block data-[active=true]:after:size-1.5 data-[active=true]:after:-translate-y-1/2 data-[active=true]:after:rounded-full data-[active=true]:after:bg-sidebar-primary data-[active=true]:after:content-[''] data-[active=true]:[&>svg:not(.ml-auto)]:text-sidebar-primary has-[>svg.ml-auto]:data-[active=true]:after:hidden data-[sidebar-has-badge=true]:data-[active=true]:after:hidden data-[panel-open]:[&>svg.ml-auto]:rotate-90 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! group-data-[collapsible=icon]:after:hidden group-data-[collapsible=icon]:data-[active=true]:after:hidden",
-    sidebarMenuContentMotionClassName,
     sidebarNavigationCommittedActiveSuppressionClassName,
     textRole.navLabel,
     "text-sidebar-foreground/65 [&>svg:not(.ml-auto)]:text-sidebar-foreground/55"
@@ -808,7 +796,6 @@ function SidebarMenuSubButton({
       data-active={isActive}
       className={cn(
         "ring-sidebar-ring relative flex min-h-8 min-w-0 items-center gap-2 rounded-lg bg-transparent py-1.5 pr-6 pl-3.5 outline-hidden focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span]:truncate [&>span]:leading-[18px] [&>svg]:size-4 [&>svg]:shrink-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground has-data-[sidebar-navigation-pending=true]:bg-sidebar-accent/70 has-data-[sidebar-navigation-pending=true]:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-medium data-[active=true]:after:absolute data-[active=true]:after:right-2 data-[active=true]:after:top-1/2 data-[active=true]:after:size-1.5 data-[active=true]:after:-translate-y-1/2 data-[active=true]:after:rounded-full data-[active=true]:after:bg-sidebar-primary data-[active=true]:after:content-['']",
-        sidebarMenuContentMotionClassName,
         sidebarNavigationCommittedActiveSuppressionClassName,
         size === "sm" ? textRole.helperText : textRole.navLabel,
         "text-sidebar-foreground/65",

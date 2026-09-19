@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS upgrade_operation (
     agent_verification_deadline TIMESTAMPTZ,
     observed_digests JSONB NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(observed_digests) = 'object'),
     stage_times JSONB NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(stage_times) = 'object'),
+    progress_events JSONB NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(progress_events) = 'array'),
     diagnostic TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

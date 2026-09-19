@@ -97,11 +97,13 @@ export function AboutDialogVersionInfo({
               {hasUpdate ? <Badge variant="info" className="gap-1"><IconArrowUp className="h-3 w-3" />{t("updateAvailable")}</Badge> : <Badge variant="success" className="gap-1"><IconCheck className="h-3 w-3" />{t("upToDate")}</Badge>}
             </div>
           </div>
-          <div className="space-y-1 text-xs text-muted-foreground">
-            <p>{t("manifestDigest")}: <code className="break-all font-mono">{candidate.manifestDigest}</code></p>
-            <p>{t("maintenanceWindow", { minutes: candidate.maintenanceWindowMinutes })}</p>
-            <p>{candidate.databaseMigration.hasDatabaseMigration ? t("migrationSummary", { type: candidate.databaseMigration.migrationType }) : t("noMigration")}</p>
-          </div>
+          {hasUpdate ? (
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <p>{t("manifestDigest")}: <code className="break-all font-mono">{candidate.manifestDigest}</code></p>
+              <p>{t("maintenanceWindow", { minutes: candidate.maintenanceWindowMinutes })}</p>
+              <p>{candidate.databaseMigration.hasDatabaseMigration ? t("migrationSummary", { type: candidate.databaseMigration.migrationType }) : t("noMigration")}</p>
+            </div>
+          ) : null}
         </div>
       )}
 

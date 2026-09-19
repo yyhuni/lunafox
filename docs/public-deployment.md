@@ -3,6 +3,8 @@
 > **GENERATED / READ-ONLY** - edit the private source and regenerate this
 > projection through the protected release workflow.
 
+[简体中文](public-deployment.zh-CN.md)
+
 ## Installation sources
 
 The public `main` branch and each release's single `lunafox-<version>.zip`

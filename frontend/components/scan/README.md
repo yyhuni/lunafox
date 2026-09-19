@@ -4,7 +4,7 @@ This module owns scan launch, scheduled scan creation, scan progress, and scan h
 
 `ScanStatusBadge` owns the canonical scan-status glyph, tone, and running-state
 rotation used by scan history and overview. Running icons use the shared
-`scan-running-loader` smooth SVG ring (one turn per second), scaled to
+`scan-running-loader` smooth SVG ring (one turn per 1.6 seconds), scaled to
 its existing icon slot, with reduced-motion support. The rounded foreground arc
 uses currentColor directly, matching the running-status text without color mixing
 or opacity reduction; the full track uses muted-foreground at 35% opacity.

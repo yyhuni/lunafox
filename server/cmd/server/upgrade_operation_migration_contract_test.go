@@ -28,6 +28,7 @@ func TestUpgradeOperationBaselineMigrationContract(t *testing.T) {
 		"migration_checksum VARCHAR(71) NOT NULL DEFAULT '' CHECK",
 		"observed_digests JSONB NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(observed_digests) = 'object')",
 		"stage_times JSONB NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(stage_times) = 'object')",
+		"progress_events JSONB NOT NULL DEFAULT '[]'::jsonb CHECK (jsonb_typeof(progress_events) = 'array')",
 		"CREATE UNIQUE INDEX IF NOT EXISTS idx_upgrade_operation_one_active",
 	} {
 		if !strings.Contains(upSQL, required) {

@@ -50,7 +50,7 @@ describe("UpgradeRouteBoundary", () => {
       </UpgradeRouteBoundary>,
     )
 
-    expect(screen.getByTestId("upgrade-route-boundary")).toBeInTheDocument()
+    expect(await screen.findByTestId("upgrade-route-boundary")).toBeInTheDocument()
     expect(screen.queryByTestId("ordinary-content")).not.toBeInTheDocument()
     await waitFor(() => expect(navigationMocks.replace).toHaveBeenCalledWith("/system-upgrade/"))
   })
@@ -93,12 +93,12 @@ describe("UpgradeRouteBoundary", () => {
       </UpgradeRouteBoundary>,
     )
 
-    expect(screen.getByTestId("upgrade-route-boundary")).toBeInTheDocument()
+    expect(await screen.findByTestId("upgrade-route-boundary")).toBeInTheDocument()
     expect(screen.queryByTestId("ordinary-content")).not.toBeInTheDocument()
     await waitFor(() => expect(navigationMocks.replace).toHaveBeenCalledWith("/system-upgrade/"))
   })
 
-  it("waits for the active-operation query before deciding whether to redirect", async () => {
+  it("does not show an upgrade blocker while an entry without an operation hint is checking the server", async () => {
     hookMocks.operation = {
       operationId: null,
       isResolving: true,
@@ -113,8 +113,65 @@ describe("UpgradeRouteBoundary", () => {
       </UpgradeRouteBoundary>,
     )
 
-    expect(screen.getByTestId("upgrade-route-boundary")).toBeInTheDocument()
+    expect(screen.queryByTestId("upgrade-route-boundary")).not.toBeInTheDocument()
+    expect(screen.getByTestId("shell")).toBeInTheDocument()
+    expect(screen.getByTestId("ordinary-content")).toBeInTheDocument()
+    expect(navigationMocks.replace).not.toHaveBeenCalled()
+  })
+
+  it("takes the lock when the background lookup discovers an active operation", async () => {
+    hookMocks.operation = {
+      operationId: null,
+      isResolving: true,
+      isReconnecting: false,
+      isError: false,
+      isActive: false,
+    }
+
+    const { rerender } = render(
+      <UpgradeRouteBoundary renderProtectedShell={(children) => <div data-testid="shell">{children}</div>}>
+        <div data-testid="ordinary-content">ordinary</div>
+      </UpgradeRouteBoundary>,
+    )
+    expect(screen.getByTestId("shell")).toBeInTheDocument()
+
+    act(() => {
+      hookMocks.operation = {
+        operationId: "discovered-operation",
+        isResolving: false,
+        isReconnecting: false,
+        isError: false,
+        isActive: true,
+      }
+      rerender(
+        <UpgradeRouteBoundary renderProtectedShell={(children) => <div data-testid="shell">{children}</div>}>
+          <div data-testid="ordinary-content">ordinary</div>
+        </UpgradeRouteBoundary>,
+      )
+    })
+
+    expect(await screen.findByTestId("upgrade-route-boundary")).toBeInTheDocument()
+    expect(screen.queryByTestId("ordinary-content")).not.toBeInTheDocument()
+    await waitFor(() => expect(navigationMocks.replace).toHaveBeenCalledWith("/system-upgrade/"))
+  })
+
+  it("keeps the boot handoff owner until hydration before releasing an ordinary entry", async () => {
+    hookMocks.operation = {
+      operationId: null,
+      isResolving: true,
+      isReconnecting: false,
+      isError: false,
+      isActive: false,
+    }
+
+    render(
+      <UpgradeRouteBoundary renderProtectedShell={(children) => <div data-testid="shell">{children}</div>}>
+        <div data-testid="ordinary-content">ordinary</div>
+      </UpgradeRouteBoundary>,
+    )
+
     await act(async () => {})
+    expect(screen.getByTestId("shell")).toBeInTheDocument()
     expect(navigationMocks.replace).not.toHaveBeenCalled()
   })
 })

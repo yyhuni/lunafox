@@ -13,6 +13,7 @@ type AgentExpansionSlotProps = {
   description: string
   actionLabel: string
   disabled?: boolean
+  ariaDescribedBy?: string
   onOpenInstall: () => void
 }
 
@@ -22,6 +23,7 @@ export function AgentExpansionSlot({
   actionLabel,
   onOpenInstall,
   disabled,
+  ariaDescribedBy,
 }: AgentExpansionSlotProps) {
   return (
     <Button
@@ -35,6 +37,7 @@ export function AgentExpansionSlot({
         "group w-full flex-col gap-4 rounded-lg border-dashed bg-muted/10 px-6 py-8 text-center shadow-none hover:border-primary/40 hover:bg-primary/[0.03]"
       )}
       aria-label={title}
+      aria-describedby={ariaDescribedBy}
     >
       <span className="relative flex size-14 items-center justify-center rounded-full border border-dashed border-border bg-background text-muted-foreground transition-[color,border-color,background-color] group-hover:border-primary/40 group-hover:bg-primary/5 group-hover:text-primary">
         <AgentIcon className="size-6" aria-hidden="true" />

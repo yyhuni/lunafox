@@ -104,6 +104,7 @@ type Operation struct {
 	AgentExpectations         []AgentExpectation
 	AgentVerificationDeadline *time.Time
 	ObservedDigests           map[string]string
+	ProgressEvents            []ProgressEvent
 	Diagnostic                string
 	StageTimes                map[Status]time.Time
 	CreatedAt                 time.Time
@@ -218,6 +219,9 @@ func (operation *Operation) Validate() error {
 	}
 	if operation.AgentVerificationDeadline != nil && operation.AgentVerificationDeadline.Before(operation.CreatedAt) {
 		return fmt.Errorf("agent verification deadline cannot precede operation creation")
+	}
+	if err := ValidateProgressEvents(operation.ProgressEvents); err != nil {
+		return fmt.Errorf("invalid upgrade progress events: %w", err)
 	}
 	return nil
 }

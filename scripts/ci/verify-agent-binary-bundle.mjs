@@ -4,7 +4,6 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { buildFileManifest } from "./export-public-repository.mjs";
 
 const PUBLIC_REPOSITORY = "yyhuni/lunafox";
 const PRIVATE_REPOSITORY = "yyhuni/lunafox-private";
@@ -99,10 +98,18 @@ function deriveBaseExportManifestSha256(publicExportRoot, tag, sourceRevisionDig
   if (!fs.existsSync(publicExportRoot) || !fs.statSync(publicExportRoot).isDirectory()) fail(`public export root is missing: ${publicExportRoot}`);
   const destinationOwned = readDestinationOwnedPaths(publicExportRoot);
   const excludedPaths = ["PUBLIC_EXPORT_MANIFEST.json", ...destinationOwned].sort();
-  const manifest = buildFileManifest(publicExportRoot, { sourceRevisionDigest, releaseTag: tag }, { excludePaths: excludedPaths });
+  const manifestPath = path.join(publicExportRoot, "PUBLIC_EXPORT_MANIFEST.json");
+  const manifest = readJson(manifestPath, "public export manifest");
+  if (manifest.schemaVersion !== 1 || manifest.generatedReadOnly !== true ||
+      manifest.releaseTag !== tag || manifest.sourceRevisionDigest !== sourceRevisionDigest ||
+      !Array.isArray(manifest.files)) {
+    fail("public export manifest identity is incomplete or mismatched");
+  }
   const prefix = `agent/bin/${tag}/`;
-  manifest.files = manifest.files.filter((file) => !file.path.startsWith(prefix));
-  const serialized = `${JSON.stringify({ ...manifest, excludedPaths }, null, 2)}\n`;
+  const filteredFiles = manifest.files.filter((file) =>
+    !excludedPaths.includes(file.path) && !file.path.startsWith(prefix)
+  );
+  const serialized = `${JSON.stringify({ ...manifest, excludedPaths, files: filteredFiles }, null, 2)}\n`;
   return `sha256:${crypto.createHash("sha256").update(serialized).digest("hex")}`;
 }
 

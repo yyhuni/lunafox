@@ -15,7 +15,6 @@ const allowedClasses = [
   "skeleton-geometry",
   "radix-dynamic-var",
   "runtime-calculated-geometry",
-  "bounded-hover-motion",
   "brand-provider-color",
   "non-loading-domain-status-indicator",
   "visual-lab-excluded",

@@ -14,4 +14,10 @@
 
 `TERMINAL_LOG_BODY_CLASS`、`TERMINAL_LOG_VIEWPORT_CLASS` 和 `TERMINAL_LOG_FOOTER_CLASS` 是终端正文几何的唯一共享事实源。业务模块可以拥有页面或 drawer 外壳，但不要复制等宽字号、正文 padding、滚动、焦点或 jump chrome。
 
+升级状态页的 progress events 也使用 `RawLogViewer`，但调用方只传入
+Server `logs` 投影生成的已消毒、单行文本。它不是系统日志查询入口：不得
+在升级页请求 Loki、系统日志 API，或把 Docker Compose stdout/stderr、路径和
+凭据拼进正文。时间线继续由 Operation `stageTimes` 驱动；没有事件时保持业务
+空态，不制造百分比、ETA 或假心跳。
+
 共享边界由 `__tests__/raw-log-viewer.contract.test.ts`、`__tests__/raw-log-viewer.test.tsx`、`__tests__/structured-log-viewer.test.tsx` 和 `__tests__/terminal-log-surface.contract.test.ts` 保护。
