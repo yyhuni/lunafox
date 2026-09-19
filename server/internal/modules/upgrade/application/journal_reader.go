@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -81,6 +82,9 @@ func (reader *FileJournalEventReader) ReadCurrent(ctx context.Context) (HostUpgr
 		if history.UpdatedAt.After(current.UpdatedAt) {
 			return HostUpgradeEvent{}, fmt.Errorf("journal history is newer than current checkpoint")
 		}
+		if history.UpdatedAt.Equal(current.UpdatedAt) && !reflect.DeepEqual(history, current) {
+			return HostUpgradeEvent{}, fmt.Errorf("journal history conflicts with current checkpoint")
+		}
 	} else if !errors.Is(historyErr, os.ErrNotExist) {
 		return HostUpgradeEvent{}, historyErr
 	}
@@ -91,6 +95,8 @@ func (reader *FileJournalEventReader) ReadCurrent(ctx context.Context) (HostUpgr
 		Diagnostic:      current.Diagnostic,
 		Migration:       current.MigrationStatus,
 		UpdatedAt:       current.UpdatedAt,
+		StageUpdatedAt:  current.StageUpdatedAt,
+		ProgressEvents:  cloneHostProgressEvents(current.ProgressEvents),
 		ObservedDigests: map[string]string{},
 		FromJournal:     true,
 	}
@@ -111,19 +117,29 @@ func (reader *FileJournalEventReader) ReadCurrent(ctx context.Context) (HostUpgr
 }
 
 type hostJournal struct {
-	SchemaVersion     int        `json:"schemaVersion"`
-	OperationID       string     `json:"operationId"`
-	ManifestDigest    string     `json:"manifestDigest"`
-	Stage             string     `json:"stage"`
-	RepairStage       string     `json:"repairStage,omitempty"`
-	MigrationID       string     `json:"migrationId,omitempty"`
-	MigrationChecksum string     `json:"migrationChecksum,omitempty"`
-	MigrationStatus   string     `json:"migrationStatus,omitempty"`
-	StartedAt         time.Time  `json:"startedAt"`
-	UpdatedAt         time.Time  `json:"updatedAt"`
-	CompletedAt       *time.Time `json:"completedAt,omitempty"`
-	ExitCode          *int       `json:"exitCode,omitempty"`
-	Diagnostic        string     `json:"diagnostic,omitempty"`
+	SchemaVersion     int                 `json:"schemaVersion"`
+	OperationID       string              `json:"operationId"`
+	ManifestDigest    string              `json:"manifestDigest"`
+	Stage             string              `json:"stage"`
+	RepairStage       string              `json:"repairStage,omitempty"`
+	MigrationID       string              `json:"migrationId,omitempty"`
+	MigrationChecksum string              `json:"migrationChecksum,omitempty"`
+	MigrationStatus   string              `json:"migrationStatus,omitempty"`
+	StartedAt         time.Time           `json:"startedAt"`
+	UpdatedAt         time.Time           `json:"updatedAt"`
+	StageUpdatedAt    time.Time           `json:"stageUpdatedAt,omitempty"`
+	CompletedAt       *time.Time          `json:"completedAt,omitempty"`
+	ExitCode          *int                `json:"exitCode,omitempty"`
+	Diagnostic        string              `json:"diagnostic,omitempty"`
+	ProgressEvents    []hostProgressEvent `json:"progressEvents,omitempty"`
+}
+
+type hostProgressEvent struct {
+	Timestamp  time.Time         `json:"timestamp"`
+	Stage      string            `json:"stage"`
+	MessageKey string            `json:"messageKey"`
+	Message    string            `json:"message"`
+	Metadata   map[string]string `json:"metadata,omitempty"`
 }
 
 type hostReceipt struct {
@@ -159,6 +175,9 @@ func readHostJournal(path string) (hostJournal, error) {
 	if journal.StartedAt.IsZero() || journal.UpdatedAt.IsZero() || journal.UpdatedAt.Before(journal.StartedAt) {
 		return hostJournal{}, fmt.Errorf("upgrade journal timestamps are invalid")
 	}
+	if !journal.StageUpdatedAt.IsZero() && (journal.StageUpdatedAt.Before(journal.StartedAt) || journal.StageUpdatedAt.After(journal.UpdatedAt)) {
+		return hostJournal{}, fmt.Errorf("upgrade journal stageUpdatedAt is invalid")
+	}
 	if journal.CompletedAt != nil && journal.CompletedAt.Before(journal.StartedAt) {
 		return hostJournal{}, fmt.Errorf("upgrade journal completedAt is invalid")
 	}
@@ -170,6 +189,29 @@ func readHostJournal(path string) (hostJournal, error) {
 	}
 	if journal.Diagnostic != "" && (strings.ContainsAny(journal.Diagnostic, "\r\n") || len([]rune(journal.Diagnostic)) > 512) {
 		return hostJournal{}, fmt.Errorf("upgrade journal diagnostic is invalid")
+	}
+	if len(journal.ProgressEvents) > 32 {
+		return hostJournal{}, fmt.Errorf("upgrade journal progress events exceed 32 entries")
+	}
+	var previous time.Time
+	for index, progress := range journal.ProgressEvents {
+		if !validHostStage(progress.Stage) {
+			return hostJournal{}, fmt.Errorf("upgrade journal progress event %d stage is invalid", index)
+		}
+		if progress.Timestamp.IsZero() || progress.Timestamp.Before(journal.StartedAt) || progress.Timestamp.After(journal.UpdatedAt) {
+			return hostJournal{}, fmt.Errorf("upgrade journal progress event %d timestamp is invalid", index)
+		}
+		if !previous.IsZero() && progress.Timestamp.Before(previous) {
+			return hostJournal{}, fmt.Errorf("upgrade journal progress events are not ordered")
+		}
+		converted := domain.ProgressEvent{
+			Timestamp: progress.Timestamp, Stage: domain.Status(progress.Stage), MessageKey: progress.MessageKey,
+			Message: progress.Message, Metadata: progress.Metadata,
+		}
+		if err := converted.Validate(); err != nil {
+			return hostJournal{}, fmt.Errorf("upgrade journal progress event %d is invalid: %w", index, err)
+		}
+		previous = progress.Timestamp
 	}
 	return journal, nil
 }
@@ -192,7 +234,7 @@ func readHostReceipt(path string) (hostReceipt, error) {
 	if !isSHA256Digest(receipt.ManifestDigest) || receipt.CompletedAt.IsZero() {
 		return hostReceipt{}, fmt.Errorf("upgrade receipt identity or timestamp is invalid")
 	}
-	allowed := map[string]bool{"server": true, "frontend": true, "nginx": true}
+	allowed := map[string]bool{"server": true, "frontend": true, "nginx": true, "agent": true}
 	if len(receipt.Services) == 0 {
 		return hostReceipt{}, fmt.Errorf("upgrade receipt services are required")
 	}
@@ -291,4 +333,22 @@ func validHostStage(value string) bool {
 	default:
 		return false
 	}
+}
+
+func cloneHostProgressEvents(events []hostProgressEvent) []domain.ProgressEvent {
+	if len(events) == 0 {
+		return []domain.ProgressEvent{}
+	}
+	result := make([]domain.ProgressEvent, len(events))
+	for index, event := range events {
+		metadata := map[string]string{}
+		for key, value := range event.Metadata {
+			metadata[key] = value
+		}
+		result[index] = domain.ProgressEvent{
+			Timestamp: event.Timestamp, Stage: domain.Status(event.Stage), MessageKey: event.MessageKey,
+			Message: event.Message, Metadata: metadata,
+		}
+	}
+	return result
 }

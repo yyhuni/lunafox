@@ -281,7 +281,7 @@ function OverviewScanQueueSkeleton() {
                 </div>
                 <Skeleton className="size-8 shrink-0 rounded-none" />
               </div>
-              <ScrollArea className="min-h-0 flex-1" contentClassName="min-w-0 xl:h-full">
+              <ScrollArea className="min-h-0 flex-1" contentClassName="min-w-0">
                 <div className={OVERVIEW_RUNTIME_SCAN_RECENT_ROWS_CLASS}>
                   {Array.from({ length: 6 }).map((_, index) => (
                     <div key={index} className={OVERVIEW_RUNTIME_SCAN_RECENT_ROW_CLASS}>

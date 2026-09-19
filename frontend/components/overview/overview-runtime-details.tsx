@@ -321,7 +321,7 @@ function RecentScanDetails({
     <div className={OVERVIEW_RUNTIME_SCAN_RECENT_LIST_CLASS}>
       <div className={OVERVIEW_RUNTIME_SCAN_RECENT_CLASS}>
         <RecentScanColumnHeader />
-        <ScrollArea className="min-h-0 flex-1" contentClassName="min-w-0 xl:h-full">
+        <ScrollArea className="min-h-0 flex-1" contentClassName="min-w-0">
           <div className={OVERVIEW_RUNTIME_SCAN_RECENT_ROWS_CLASS}>
             {recentScans.scans.map((scan) => <RecentScanRow key={scan.id} scan={scan} />)}
           </div>
