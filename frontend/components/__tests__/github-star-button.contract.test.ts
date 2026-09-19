@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 
 const source = readFileSync(path.resolve(process.cwd(), "components/github-star-button.tsx"), "utf8")
+const snapshotSource = readFileSync(path.resolve(process.cwd(), "lib/github-repo-snapshot.ts"), "utf8")
 
 describe("github-star-button contract", () => {
   it("preserves current source markers", () => {
@@ -61,19 +62,17 @@ describe("github-star-button contract", () => {
   })
 
   it("links to the GitHub repository from browser-fetched repo data with session caching", () => {
-    expect(source).toContain('const GITHUB_REPO = "yyhuni/lunafox"')
-    expect(source).toContain('const GITHUB_REPO_URL = `https://github.com/${GITHUB_REPO}`')
-    expect(source).toContain("fetchGithubRepoSnapshotFrom(`https://api.github.com/repos/${GITHUB_REPO}`)")
+    expect(snapshotSource).toContain('export const GITHUB_REPO = "yyhuni/lunafox"')
+    expect(snapshotSource).toContain("export const GITHUB_REPO_URL = `https://github.com/${GITHUB_REPO}`")
+    expect(snapshotSource).toContain("GITHUB_REPO_API_URL")
+    expect(snapshotSource).toContain("GITHUB_REPO_OPEN_ISSUES_API_URL")
+    expect(source).toContain('from "@/lib/github-repo-snapshot"')
+    expect(source).toContain("GITHUB_REPO_API_URL")
+    expect(source).toContain("GITHUB_REPO_OPEN_ISSUES_API_URL")
+    expect(source).toContain("parseGithubRepoResponse(repo, openIssues)")
+    expect(source).toContain("parseGithubRepoSnapshot(await fetchGithubJson(url))")
     expect(source).toContain('"use client"')
     expect(source).toContain("useEffect")
-    expect(source).toContain("parseGithubRepoSnapshot")
-    expect(source).toContain("full_name")
-    expect(source).toContain("html_url")
-    expect(source).toContain("description")
-    expect(source).toContain("stargazers_count")
-    expect(source).toContain("forks_count")
-    expect(source).toContain("subscribers_count")
-    expect(source).toContain("open_issues_count")
     expect(source).toContain("GITHUB_REPO_CACHE_KEY")
     expect(source).toContain("repo?.name")
     expect(source).toContain('GITHUB_REPO.split("/").at(-1)')
@@ -83,6 +82,18 @@ describe("github-star-button contract", () => {
     expect(source).toContain('readSessionValue(GITHUB_REPO_CACHE_KEY)')
     expect(source).toContain('writeSessionValue(GITHUB_REPO_CACHE_KEY')
     expect(source).not.toContain("GITHUB_STARS_CACHE_KEY")
+  })
+
+  it("collects the Issues metric from the issues-only search API", () => {
+    expect(snapshotSource).toContain("full_name")
+    expect(snapshotSource).toContain("html_url")
+    expect(snapshotSource).toContain("description")
+    expect(snapshotSource).toContain("stargazers_count")
+    expect(snapshotSource).toContain("forks_count")
+    expect(snapshotSource).toContain("subscribers_count")
+    expect(snapshotSource).toContain("total_count")
+    expect(snapshotSource).toContain("type:issue")
+    expect(snapshotSource).not.toContain("repo.open_issues_count")
   })
 
   it("unlocks Login Visual when the repository link is activated without changing GitHub navigation", () => {

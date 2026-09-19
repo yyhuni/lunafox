@@ -44,6 +44,22 @@ describe("version upgrade mock lifecycle", () => {
     expect(observeMockUpgradeOperation()?.status).toBe("failed")
   })
 
+  it("adds bounded safe sub-step events while a long upgrade stage is active", () => {
+    setMockScenario("happy")
+    createMockUpgradeOperation({ requestId, manifestId: "lunafox-1.2.3", manifestDigest: `sha256:${"a".repeat(64)}` })
+    observeMockUpgradeOperation()
+    observeMockUpgradeOperation()
+    const updating = observeMockUpgradeOperation()
+
+    expect(updating?.status).toBe("updating")
+    expect(updating?.logs.map((entry) => entry.messageKey)).toEqual(expect.arrayContaining([
+      "pullImagesStarted",
+      "servicesUpdateStarted",
+      "servicesUpdated",
+    ]))
+    expect(updating?.logs.some((entry) => /docker compose|\/|secret|token/i.test(entry.message))).toBe(false)
+  })
+
   it("keeps terminal status stable when the active view is polled again", () => {
     setMockScenario("edge")
     createMockUpgradeOperation({ requestId, manifestId: "lunafox-1.2.3", manifestDigest: `sha256:${"a".repeat(64)}` })

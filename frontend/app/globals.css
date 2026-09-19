@@ -703,7 +703,7 @@ html[data-theme-sync] *::after {
 }
 
 .scan-running-loader {
-  animation: loading-spinner-rotate 1s linear infinite;
+  animation: loading-spinner-rotate 1.6s linear infinite;
 }
 
 .loading-spinner {

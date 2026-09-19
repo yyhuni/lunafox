@@ -164,6 +164,14 @@ const REQUIRED_PUBLIC_CHECKOUT_DEPLOYMENT_PATHS = [
   "scripts/ci/prepare-legacy-public-deployment.mjs",
   "scripts/ci/prepare-legacy-public-deployment.test.mjs",
 ];
+const REQUIRED_PUBLIC_DOCUMENTATION_PATHS = [
+  "README.md",
+  "README.zh-CN.md",
+  "docs/public-deployment.md",
+  "docs/public-deployment.zh-CN.md",
+  "scripts/ci/validate-public-documentation.mjs",
+  "scripts/ci/validate-public-documentation.test.mjs",
+];
 const DESTINATION_DEPLOYMENT_PATHS = [
   ".env",
   ".env.example",
@@ -461,6 +469,7 @@ function assertPrivateWorkflowLegacy(workflow, policy, publisherSource = "", aut
   }
   if (!preflight.includes("export-public-repository.mjs") ||
       !preflight.includes("check-public-export.mjs") ||
+      !preflight.includes("validate-public-documentation.mjs") ||
       !preflight.includes("verify-public-deployment.sh") ||
       !preflight.includes("audit-public-security-scope.mjs")) {
     fail("public-export-preflight must run exporter, exact export, deployment, and scope gates");
@@ -661,6 +670,8 @@ function assertPrivateWorkflow(workflow, policy, publisherSource = "", autoMerge
   for (const required of [
     "needs: [validate-tag, public-release-authorization, private-trusted-runner-boundary]",
     "actions/setup-node@v4", "actions/setup-go@v5", "sigstore/cosign-installer@v3",
+    "validate-public-release-notes.mjs", "release-notes-validation.json", "final-release-notes-validation.json",
+    "validate-public-documentation.mjs", "documentation-validation.json", "final-documentation-validation.json",
     "go -C agent test ./... -count=1", "scripts/ci/export-public-repository.mjs", "scripts/ci/build-agent-binaries.sh",
     "verify-agent-binary-bundle.mjs", "cosign verify-blob", "agent-bundle.sigstore.json", "id-token: write",
     "agent/bin/$RELEASE_TAG", "tar --exclude='./.git/hooks'", "public-export.tar.gz", "actions/upload-artifact@v4",
@@ -769,7 +780,7 @@ function assertPublicWorkflow(workflow, policy) {
   if (/PRIVATE_TRUSTED_RUNNER|\bself-hosted\b/i.test(workflow)) {
     fail("public workflow must not contain private trusted-runner configuration");
   }
-  if (!validation.includes("check-public-export.mjs") || !validation.includes("verify-public-deployment.sh") ||
+  if (!validation.includes("check-public-export.mjs") || !validation.includes("validate-public-documentation.mjs") || !validation.includes("verify-public-deployment.sh") ||
       !validation.includes("audit-public-security-scope.mjs") || !validation.includes("verify-public-release.mjs") ||
       !validation.includes("verify-public-runtime-source.sh") || !validation.includes("verify-public-runtime-contexts.mjs")) {
     fail("public validation workflow is missing the secretless boundary gates");
@@ -782,6 +793,10 @@ function assertPublicWorkflow(workflow, policy) {
   if (!validation.includes("Install public deployment guard dependencies") ||
       !validation.includes("sudo apt-get install -y --no-install-recommends ripgrep")) {
     fail("public source validation must install ripgrep before running deployment guards");
+  }
+  if (!validation.includes('tee "$RUNNER_TEMP/public-documentation-validation.json"') ||
+      validation.includes("tee dist/public-documentation-validation.json")) {
+    fail("public documentation validation must keep evidence outside the exported workspace");
   }
   for (const required of [
     "pnpm/action-setup@v4",
@@ -1135,6 +1150,14 @@ function assertPublicWorkflow(workflow, policy) {
       finalRelease.includes("check-public-channel.mjs --root-dir \"$channel_root\" --require-first-release")) {
     fail("public final release must validate the actual append-only channel without requiring an absent historical first record");
   }
+  if (!finalRelease.includes("validate-public-release-notes.mjs") ||
+      !finalRelease.includes("validate-public-documentation.mjs") ||
+      !finalRelease.includes('NOTES_FILE="release-notes/${RELEASE_TAG}.md"') ||
+      !finalRelease.includes('release_args=("$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" --verify-tag --title "$RELEASE_TAG" --notes-file "$NOTES_FILE")') ||
+      !finalRelease.includes('gh release edit "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" --draft=false --prerelease="$prerelease" --notes-file "$NOTES_FILE"') ||
+      finalRelease.includes("--generate-notes")) {
+    fail("public final release must validate and publish the exact Tag release notes without generated fallbacks");
+  }
   for (const required of [
     "publish-public-deployment.mjs",
     "--snapshot dist/final/deployment-snapshot",
@@ -1191,6 +1214,19 @@ function assertExportPolicy(exportPolicy) {
   }
   for (const required of ["scripts/ci/check-public-release-policy.mjs", "scripts/ci/verify-public-main-merge.mjs"]) {
     if (!exact.has(required)) fail(`export policy does not allow ${required}`);
+  }
+  for (const required of [
+    "release-notes/README.md",
+    "scripts/ci/validate-public-release-notes.mjs",
+    "scripts/ci/validate-public-release-notes.test.mjs",
+  ]) {
+    if (!exact.has(required)) fail(`export policy does not allow release notes input: ${required}`);
+  }
+  for (const required of REQUIRED_PUBLIC_DOCUMENTATION_PATHS) {
+    if (!exact.has(required)) fail(`export policy does not allow bilingual public documentation: ${required}`);
+  }
+  if (!(exportPolicy.allowlist?.prefixes ?? []).includes("release-notes/")) {
+    fail("export policy must allow the release-notes/ prefix");
   }
   for (const required of REQUIRED_PUBLIC_CHECKOUT_DEPLOYMENT_PATHS) {
     if (!exact.has(required)) fail(`export policy does not allow checkout deployment input: ${required}`);
@@ -1272,6 +1308,16 @@ function assertExportPolicy(exportPolicy) {
     }
   }
   const requiredPaths = new Set(exportPolicy.requiredPaths ?? []);
+  for (const required of REQUIRED_PUBLIC_DOCUMENTATION_PATHS.slice(0, 4)) {
+    if (!requiredPaths.has(required)) fail(`export policy must require bilingual public documentation: ${required}`);
+  }
+  const generatedMarkers = new Set(exportPolicy.generatedMarkers ?? []);
+  for (const required of REQUIRED_PUBLIC_DOCUMENTATION_PATHS.slice(0, 4)) {
+    if (!generatedMarkers.has(required)) fail(`export policy must mark generated public documentation: ${required}`);
+  }
+  if (!requiredPaths.has("release-notes/README.md")) {
+    fail("export policy must require release-notes/README.md");
+  }
   for (const required of REQUIRED_PUBLIC_CHECKOUT_DEPLOYMENT_PATHS) {
     if (!requiredPaths.has(required)) {
       fail(`export policy is missing required checkout deployment path: ${required}`);

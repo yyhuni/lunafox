@@ -21,9 +21,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { semanticIcons } from "@/components/icons"
 import { getLoadingOwnerAttributes } from "@/components/shared/loading/loading-owner"
+import { RawLogViewer } from "@/components/shared/visualization/raw-log-viewer"
+import { TerminalLogCopyAllButton } from "@/components/shared/visualization/terminal-log-copy-all-button"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 
@@ -200,60 +201,35 @@ function OperationFacts({ operation, t }: { operation: UpgradeOperation; t: (key
   )
 }
 
-function logIcon(level: UpgradeLogEntry["level"]) {
-  if (level === "error") return semanticIcons.status.failed
-  if (level === "warn") return semanticIcons.status.warning
-  return semanticIcons.status.unknown
+function upgradeEventTimestamp(value: string): string {
+  return new Date(value).toISOString().replace("T", " ").replace(/\.\d{3}Z$/, "")
 }
 
-const LOCALIZED_LOG_MESSAGES = new Set([
-  "requestAccepted",
-  "stoppingWork",
-  "preflight",
-  "updatingServices",
-  "migratingDatabase",
-  "restartingServices",
-  "verifyingAgents",
-  "verifyingSystem",
-  "completed",
-  "failed",
-  "needsRecovery",
-  "needsAttention",
-  "workStopped",
-  "diagnostic",
-])
-
-const LOCALIZED_LOG_STAGES = new Set<UpgradeOperationStatus>([
-  "queued", "stopping", "preflight", "updating", "migrating", "restarting",
-  "agent_verifying", "verifying", "succeeded", "failed", "needs_recovery", "needs_attention",
-])
-
-function upgradeLogMessage(entry: UpgradeLogEntry, t: (key: string, params?: Record<string, number | string>) => string): string {
-  if (LOCALIZED_LOG_MESSAGES.has(entry.messageKey)) {
-    return entry.messageKey === "diagnostic" ? entry.message : t(`logs.messages.${entry.messageKey}`)
-  }
-  return t("logs.messages.unknown")
+function upgradeEventLevel(level: UpgradeLogEntry["level"]): "INFO" | "WARN" | "ERROR" {
+  if (level === "error") return "ERROR"
+  if (level === "warn") return "WARN"
+  return "INFO"
 }
 
-function upgradeLogStage(entry: UpgradeLogEntry, t: (key: string, params?: Record<string, number | string>) => string): string {
-  return LOCALIZED_LOG_STAGES.has(entry.stage as UpgradeOperationStatus) ? t(`status.${entry.stage}`) : entry.stage
-}
-
-function upgradeLogMetadataLabel(key: string, t: (key: string, params?: Record<string, number | string>) => string): string {
-  if (key === "cancelledScans" || key === "cancelledTasks") return t(`logs.metadata.${key}`)
-  return key
+function upgradeEventLine(entry: UpgradeLogEntry): string {
+  const metadata = Object.entries(entry.metadata ?? {})
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${key}=${value}`)
+    .join(" ")
+  return `[${upgradeEventTimestamp(entry.timestamp)}] [${upgradeEventLevel(entry.level)}] ${entry.message}${metadata ? ` ${metadata}` : ""}`
 }
 
 function UpgradeLogs({
   logs,
-  locale,
   t,
 }: {
   logs: UpgradeLogEntry[]
-  locale: string
   t: (key: string, params?: Record<string, number | string>) => string
 }) {
-  const orderedLogs = React.useMemo(() => [...logs].sort((left, right) => Date.parse(left.timestamp) - Date.parse(right.timestamp)), [logs])
+  const content = React.useMemo(() => [...logs]
+    .sort((left, right) => Date.parse(left.timestamp) - Date.parse(right.timestamp) || left.messageKey.localeCompare(right.messageKey))
+    .map(upgradeEventLine)
+    .join("\n"), [logs])
 
   return (
     <Card variant="compact">
@@ -262,37 +238,22 @@ function UpgradeLogs({
         <CardDescription>{t("logs.description")}</CardDescription>
       </CardHeader>
       <CardContent>
-        {orderedLogs.length === 0 ? (
+        {!content ? (
           <p className={textRole.bodySubtle}>{t("logs.empty")}</p>
         ) : (
-          <ScrollArea className="max-h-72 border-y border-border/70" type="always" contentClassName="min-w-0">
-            <ol className="divide-y divide-border/70" aria-label={t("logs.title")}>
-              {orderedLogs.map((entry, index) => {
-                const LogIcon = logIcon(entry.level)
-                const metadata = Object.entries(entry.metadata ?? {})
-                return (
-                  <li key={`${entry.timestamp}-${entry.messageKey}-${index}`} data-log-level={entry.level} className="flex min-w-0 gap-3 px-1 py-3">
-                    <LogIcon className="mt-0.5 size-4 text-muted-foreground" aria-hidden="true" />
-                    <time className={cn(textRole.compactCaption, "hidden w-36 shrink-0 sm:block")}>{formatTimestamp(entry.timestamp, locale)}</time>
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <p className={textRole.bodyStrong}>{upgradeLogMessage(entry, t)}</p>
-                      <p className={textRole.compactCaption}>{formatTimestamp(entry.timestamp, locale)} · {upgradeLogStage(entry, t)}</p>
-                      {metadata.length > 0 ? (
-                        <dl className="flex flex-wrap gap-x-3 gap-y-1">
-                          {metadata.map(([key, value]) => (
-                            <div key={key} className="flex min-w-0 gap-1">
-                              <dt className={textRole.compactCaption}>{upgradeLogMetadataLabel(key, t)}:</dt>
-                              <dd className={cn(textRole.compactCaption, "break-all")}>{value}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      ) : null}
-                    </div>
-                  </li>
-                )
-              })}
-            </ol>
-          </ScrollArea>
+          <div className="h-72 overflow-hidden border border-border/70" aria-label={t("logs.title")}>
+            <RawLogViewer
+              content={content}
+              topRightAction={(
+                <TerminalLogCopyAllButton
+                  value={content}
+                  copyLabel={t("logs.copy")}
+                  copiedLabel={t("logs.copied")}
+                  toastId="system-upgrade-event-copy"
+                />
+              )}
+            />
+          </div>
         )}
       </CardContent>
     </Card>
@@ -422,7 +383,7 @@ export function SystemUpgradeStatus() {
           <CardContent><OperationFacts operation={currentOperation} t={t} /></CardContent>
         </Card>
 
-        <UpgradeLogs logs={currentOperation.logs} locale={locale} t={t} />
+        <UpgradeLogs logs={currentOperation.logs} t={t} />
 
         {isSuccess ? (
           <Alert>

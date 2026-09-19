@@ -50,7 +50,7 @@ function SidebarUserSummary({ userName, userSubline, avatarSrc, avatarAlt, avata
     avatarClassName?: string;
 }) {
     return (<>
-      <Avatar data-sidebar-static-motion className={cn("relative z-10 h-8 w-8 rounded-lg", avatarClassName)}>
+      <Avatar className={cn("relative z-10 h-8 w-8 rounded-lg", avatarClassName)}>
         {avatarSrc ? <AvatarImage src={avatarSrc} alt={avatarAlt}/> : null}
         <AvatarFallback className="rounded-lg">{avatarFallback}</AvatarFallback>
       </Avatar>

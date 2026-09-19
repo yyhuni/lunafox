@@ -42,7 +42,7 @@ describe("dropdown-menu owners contract", () => {
     expect(source).toContain("group-hover/sidebar-user:text-sidebar-accent-foreground")
     expect(source).toContain("group-data-[popup-open]/sidebar-user:text-sidebar-accent-foreground")
     expect(source).toContain("data-[popup-open]:text-sidebar-accent-foreground")
-    expect(source).toContain("data-sidebar-static-motion")
+    expect(source).not.toContain("data-sidebar-static-motion")
     expect(source).not.toContain("group-hover/sidebar-user:text-foreground")
     expect(source).not.toContain("group-data-[popup-open]/sidebar-user:text-foreground")
     expect(source).not.toContain("data-[popup-open]:text-foreground")

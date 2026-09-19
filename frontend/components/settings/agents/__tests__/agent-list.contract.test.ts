@@ -33,7 +33,10 @@ describe("agent-list contract", () => {
     expect(source).not.toContain("text-amber-500")
     expect(source).not.toContain("text-destructive")
     expect(source).not.toContain("bg-destructive/80")
-    expect(source).not.toContain("sr-only")
+    // The only visually hidden text in this module is the user-facing quota
+    // message that the disabled add entries resolve their description from.
+    expect(source.match(/sr-only/g)).toHaveLength(1)
+    expect(source).toContain('<span className="sr-only">{message}</span>')
   })
 
   it("registers every authoritative summary bucket label in both locales", () => {
@@ -49,6 +52,12 @@ describe("agent-list contract", () => {
       offline: "离线",
       unknown: "未知",
     })
+    expect(enMessages.settings.agents.quota.reached).toBe(
+      "Quota is full ({used}/{limit}). Delete an Agent to continue.",
+    )
+    expect(zhMessages.settings.agents.quota.reached).toBe(
+      "配额已用完（{used}/{limit}），删除一个 Agent 后可继续添加。",
+    )
   })
 
   it("renders the permanent scheme C summary from one overview owner", () => {
@@ -110,8 +119,14 @@ describe("agent-list contract", () => {
     expect(toolbarSource).toContain("AGENT_TOOLBAR_CONTROLS_CLASS")
     expect(toolbarSource).toContain("AGENT_TOOLBAR_FILTERS_CLASS")
     expect(toolbarSource).toContain("AGENT_TOOLBAR_ACTIONS_CLASS")
+    expect(toolbarSource).toContain("AGENT_TOOLBAR_ACTION_ROW_CLASS")
     expect(toolbarSource).toContain("<Dialog open={installOpen}")
     expect(toolbarSource).toContain("<ArchitectureDialog")
+    expect(toolbarSource).toContain("<AgentQuotaHint message={quotaStatusMessage}/>")
+    expect(toolbarSource.indexOf("<AgentQuotaHint")).toBeLessThan(toolbarSource.indexOf("<Dialog open={installOpen}"))
+    expect(toolbarSource).toContain("quotaStatusMessage")
+    expect(toolbarSource).not.toContain("textRole.helperText")
+    expect(toolbarSource).toContain("aria-describedby={quotaStatusDescriptionId}")
     expect(toolbarSource).toContain('size="sm"')
     expect(toolbarSource).not.toContain('size="action-card"')
     expect(source).toContain("hasSelectedValues={statusFilters.length > 0}")
@@ -120,6 +135,20 @@ describe("agent-list contract", () => {
     expect(source).toContain("type AgentStatusFilterValue = AgentStatusDistributionStatus")
     expect(source).not.toContain("viewMode")
     expect(source).not.toContain("<Select ")
+  })
+
+  it("discloses the known-full quota from one hint glyph beside the add action", () => {
+    expect(source).toContain('from "@/components/ui/tooltip"')
+    expect(source).toContain("function AgentQuotaHint")
+    expect(source).toContain("id={AGENT_QUOTA_STATUS_ID}")
+    expect(source).toContain('role="img"')
+    expect(source).toContain("tabIndex={0}")
+    expect(source).toContain("aria-label={message}")
+    expect(source).toContain("getStatusToneTextClass(\"warning\")")
+    expect(source).toContain("AGENT_QUOTA_HINT_SLOT_CLASS")
+    expect(source).toContain("<Info aria-hidden=\"true\" className={AGENT_QUOTA_HINT_SLOT_CLASS}/>")
+    expect(source).toContain("<TooltipContent")
+    expect(source).not.toContain("@base-ui/")
   })
 
   it("keeps the global summary authoritative and the paginated collection row-owned", () => {
@@ -139,6 +168,11 @@ describe("agent-list contract", () => {
     expect(source).toContain("refetchFilterOptions: refetchAgentFilterOptions")
     expect(source).toContain("refetchStatusOptions()")
     expect(source).toContain("refetchHealthStateOptions()")
+    expect(source).toContain("const quotaStatus =")
+    expect(source).toContain('const quotaStatusMessage = quotaStatus ? t("quota.reached", quotaStatus) : undefined')
+    expect(source).toContain("totalNodes >= clusterSummary.data.agentLimit")
+    expect(source).toContain("const addDisabled = !clusterSummary.data || quotaStatus !== null")
+    expect(source).not.toContain("quotaReached")
   })
 
   it("removes prototype controls and their URL behavior from production", () => {
@@ -162,10 +196,16 @@ describe("agent-list contract", () => {
     expect(overviewSource).toContain('getLoadingStructureSlotAttributes(AGENT_LIST_OVERVIEW_REGION_SLOT)')
     expect(overviewLoadingSource).toContain("return <AgentOverviewSection loading />")
     expect(listLoadingSource).toContain("AGENT_TOOLBAR_ACTIONS_CLASS")
+    expect(listLoadingSource).toContain("AGENT_TOOLBAR_ACTION_ROW_CLASS")
+    expect(listLoadingSource).toContain("showQuotaHint")
+    expect(listLoadingSource).toContain("AGENT_QUOTA_HINT_SLOT_CLASS")
+    expect(listLoadingSource).not.toContain("textRole")
+    expect(source).toContain("skeleton={<AgentToolbarLoadingState showQuotaHint={Boolean(quotaStatusMessage)} />}")
     expect(listLoadingSource).toContain("AGENT_EXPANSION_SLOT_MIN_HEIGHT_CLASS")
     expect(listLoadingSource).toMatch(/<ActionSkeleton\s+size="action-card"/)
     const toolbarActionsLoadingSource = listLoadingSource.slice(listLoadingSource.lastIndexOf("AGENT_TOOLBAR_ACTIONS_CLASS"))
     expect(toolbarActionsLoadingSource.match(/<ActionSkeleton size="sm"/g)).toHaveLength(2)
+    expect(toolbarActionsLoadingSource).toContain('<ActionSkeleton size="chip-icon" className={AGENT_QUOTA_HINT_SLOT_CLASS} />')
     expect(listLoadingSource).toContain('getLoadingStructureSlotAttributes(AGENT_LIST_TOOLBAR_REGION_SLOT)')
   })
 

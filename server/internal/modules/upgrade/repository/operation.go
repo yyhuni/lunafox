@@ -156,7 +156,7 @@ func (repository *UpgradeOperationRepository) Update(ctx context.Context, operat
 		"agent_expected_count": record.AgentExpectedCount, "agent_ready_count": record.AgentReadyCount,
 		"agent_missing_count": record.AgentMissingCount, "agent_unhealthy_count": record.AgentUnhealthyCount,
 		"agent_expectations": record.AgentExpectations, "agent_verification_deadline": record.AgentVerificationDeadline,
-		"observed_digests": record.ObservedDigests, "stage_times": record.StageTimes,
+		"observed_digests": record.ObservedDigests, "stage_times": record.StageTimes, "progress_events": record.ProgressEvents,
 		"diagnostic": record.Diagnostic, "updated_at": record.UpdatedAt, "completed_at": record.CompletedAt,
 	})
 	if result.Error != nil {
@@ -199,7 +199,7 @@ func (repository *UpgradeOperationRepository) UpdateTransition(ctx context.Conte
 			"agent_missing_count": record.AgentMissingCount, "agent_unhealthy_count": record.AgentUnhealthyCount,
 			"agent_expectations": record.AgentExpectations, "agent_verification_deadline": record.AgentVerificationDeadline,
 			"observed_digests": record.ObservedDigests,
-			"stage_times":      record.StageTimes, "diagnostic": record.Diagnostic,
+			"stage_times":      record.StageTimes, "progress_events": record.ProgressEvents, "diagnostic": record.Diagnostic,
 			"updated_at": record.UpdatedAt, "completed_at": record.CompletedAt,
 		})
 	if result.Error != nil {
@@ -257,7 +257,7 @@ func (repository *UpgradeOperationRepository) ResetForRetry(ctx context.Context,
 				"agent_missing_count": record.AgentMissingCount, "agent_unhealthy_count": record.AgentUnhealthyCount,
 				"agent_expectations": record.AgentExpectations, "agent_verification_deadline": record.AgentVerificationDeadline,
 				"observed_digests": record.ObservedDigests,
-				"stage_times":      record.StageTimes, "diagnostic": record.Diagnostic,
+				"stage_times":      record.StageTimes, "progress_events": record.ProgressEvents, "diagnostic": record.Diagnostic,
 				"updated_at": record.UpdatedAt, "completed_at": record.CompletedAt,
 			})
 		if result.Error != nil {
@@ -329,6 +329,10 @@ func toModel(operation *domain.Operation) (*model.Operation, error) {
 	if err != nil {
 		return nil, err
 	}
+	progressEvents, err := json.Marshal(nonNilProgressEvents(operation.ProgressEvents))
+	if err != nil {
+		return nil, err
+	}
 	agentExpectations, err := json.Marshal(nonNilAgentExpectations(operation.AgentExpectations))
 	if err != nil {
 		return nil, err
@@ -344,7 +348,7 @@ func toModel(operation *domain.Operation) (*model.Operation, error) {
 		AgentExpectedCount: operation.AgentSummary.Expected, AgentReadyCount: operation.AgentSummary.Ready,
 		AgentMissingCount: operation.AgentSummary.Missing, AgentUnhealthyCount: operation.AgentSummary.Unhealthy,
 		AgentExpectations: agentExpectations, AgentVerificationDeadline: operation.AgentVerificationDeadline,
-		ObservedDigests: observed, StageTimes: stageTimes, Diagnostic: operation.Diagnostic,
+		ObservedDigests: observed, StageTimes: stageTimes, ProgressEvents: progressEvents, Diagnostic: operation.Diagnostic,
 		CreatedAt: operation.CreatedAt.UTC(), UpdatedAt: operation.UpdatedAt.UTC(), CompletedAt: operation.CompletedAt,
 	}, nil
 }
@@ -360,6 +364,14 @@ func fromModel(record *model.Operation) *domain.Operation {
 	for key, value := range stageTimesRaw {
 		stageTimes[domain.Status(key)] = value.UTC()
 	}
+	progressEvents := []domain.ProgressEvent{}
+	_ = json.Unmarshal(record.ProgressEvents, &progressEvents)
+	if err := domain.ValidateProgressEvents(progressEvents); err != nil {
+		// A legacy/corrupt row must not become a browser-visible raw-output
+		// channel. The DTO applies a second boundary, while repository reads fail
+		// closed for the progress projection itself.
+		progressEvents = []domain.ProgressEvent{}
+	}
 	return &domain.Operation{OperationID: record.ID, RequestID: record.RequestID, OperatorID: record.OperatorID,
 		ManifestID: record.ManifestID, ManifestDigest: record.ManifestDigest, ReleaseVersion: record.ReleaseVersion,
 		CompatibilityRange: record.CompatibilityRange, MaintenanceWindowMinutes: record.MaintenanceWindowMinutes,
@@ -368,7 +380,7 @@ func fromModel(record *model.Operation) *domain.Operation {
 		CancelledTaskCount: record.CancelledTaskCount, AgentDesiredVersion: record.AgentDesiredVersion, AgentTargetDigest: record.AgentTargetDigest,
 		AgentSummary:      domain.AgentSummary{Expected: record.AgentExpectedCount, Ready: record.AgentReadyCount, Missing: record.AgentMissingCount, Unhealthy: record.AgentUnhealthyCount},
 		AgentExpectations: agentExpectations, AgentVerificationDeadline: record.AgentVerificationDeadline,
-		ObservedDigests: observed, Diagnostic: record.Diagnostic, StageTimes: stageTimes,
+		ObservedDigests: observed, ProgressEvents: progressEvents, Diagnostic: record.Diagnostic, StageTimes: stageTimes,
 		CreatedAt: record.CreatedAt.UTC(), UpdatedAt: record.UpdatedAt.UTC(), CompletedAt: record.CompletedAt,
 	}
 }
@@ -411,6 +423,13 @@ func nonNilStageTimes(value map[domain.Status]time.Time) map[string]time.Time {
 		result[string(key)] = timestamp.UTC()
 	}
 	return result
+}
+
+func nonNilProgressEvents(value []domain.ProgressEvent) []domain.ProgressEvent {
+	if value == nil {
+		return []domain.ProgressEvent{}
+	}
+	return domain.CloneProgressEvents(value)
 }
 
 var _ domain.Repository = (*UpgradeOperationRepository)(nil)

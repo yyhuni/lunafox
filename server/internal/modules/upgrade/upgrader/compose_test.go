@@ -228,6 +228,26 @@ func TestComposeExecutorRunsFixedLifecycleAndWritesReceipt(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(store.Directory(), HistoryDirectory, request.OperationID+OverrideFileSuffix)); err != nil {
 		t.Fatalf("compose override missing: %v", err)
 	}
+	keys := make([]string, 0, len(current.ProgressEvents))
+	for _, event := range current.ProgressEvents {
+		keys = append(keys, event.MessageKey)
+		if strings.ContainsAny(event.Message, "/\\\n\r") || strings.Contains(strings.ToLower(event.Message), "compose") {
+			t.Fatalf("unsafe progress event = %#v", event)
+		}
+	}
+	wantKeys := []string{
+		ProgressPreflightStarted,
+		ProgressPullImagesStarted,
+		ProgressServicesUpdateStarted,
+		ProgressServicesUpdated,
+		ProgressHealthCheckStarted,
+		ProgressAgentVerificationStarted,
+		ProgressDigestVerificationStarted,
+		ProgressHostExecutionCompleted,
+	}
+	if strings.Join(keys, ",") != strings.Join(wantKeys, ",") {
+		t.Fatalf("progress keys = %#v, want %#v", keys, wantKeys)
+	}
 }
 
 func TestComposeReceiptDoesNotAdvanceJournalToSucceeded(t *testing.T) {
