@@ -116,7 +116,7 @@ docker compose down
 | `./stop.sh` | `docker compose stop` | 停止所有常驻服务并保留全部数据。 |
 | `./status.sh` | `docker compose ps` plus the readiness checks | 只读摘要；只有完全就绪时才返回 0。 |
 | `./logs.sh` | `docker compose logs --tail 200 --follow` | 只读日志访问，并转发服务名称和 Compose 选项。 |
-| `./uninstall.sh` | `docker compose down --remove-orphans` | 移除容器和项目网络；保留 volumes 和 `.env`。 |
+| `./uninstall.sh` | `docker compose down --remove-orphans` | 移除容器和项目网络；默认保留 volumes、`.env` 和 `compose.override.yaml`。 |
 
 只有在 one-shot tasks、核心服务健康状态、辅助服务稳定性、常驻 Agent 的 claim-ready state 和公共 HTTPS endpoint 全部通过后，`install.sh`、`start.sh` 和 `restart.sh` 才报告成功。`install.sh` 允许十五分钟，另外两个允许五分钟；`LUNAFOX_READY_TIMEOUT_SECONDS` 可以为单次调用覆盖此窗口。
 
@@ -124,7 +124,7 @@ docker compose down
 
 `install.sh` 会描述它识别到的运行类型，而不是始终叙述为首次启动：没有任何 LunaFox 数据的目录属于首次启动；只有 volumes 而没有容器的目录会在保留命名 volumes 和已安装 Engine 的情况下重建容器，不属于升级；运行中的部署会在保留配置和 volumes 的情况下启动。当这种重建部署在 `bootstrap` 等首次启动任务上失败时，footer 会在 `logs.sh` 和 `status.sh` 提示之后增加一行可选信息：如果可以丢弃保留数据，只有 `./uninstall.sh --purge --confirm` 能删除命名 volumes 并重新开始。
 
-`install.sh` 只接受 `--help`，从 `.env` 读取全部设置，并且恰好运行一次 `docker compose up -d`。它不会拉取、构建、删除容器或删除数据。除非传入 `--purge --confirm`，否则 `uninstall.sh` 会保留所有数据；传入后只会在验证 volumes 属于 LunaFox 后删除当前 `compose.yaml` 声明的命名 volumes。
+`install.sh` 只接受 `--help`，从 `.env` 读取全部设置，并且恰好运行一次 `docker compose up -d`。它不会拉取、构建、删除容器或删除数据。默认的 `uninstall.sh` 是可恢复的：它保留命名 volumes、`.env`、发布目录，以及已完成 Upgrade Operation 写入的常规 `compose.override.yaml`。`./uninstall.sh --purge --confirm` 会先验证并删除当前 `compose.yaml` 声明的 LunaFox 命名 volumes，再移除该版本覆盖层，以便在同一目录中进行干净重装；`.env` 和发布目录仍会保留。
 
 脚本需要 Bash 3.2 或更高版本，并可从任意工作目录运行。Windows 继续在 PowerShell 中使用直接 Compose 命令。
 

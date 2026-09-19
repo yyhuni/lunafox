@@ -24,12 +24,14 @@ Usage: ./uninstall.sh [--help] [--purge --confirm]
 
 Remove this deployment's containers, orphan containers of this Compose project,
 and the project network. Named volumes, .env, certificates, upgrade state, and
-this release directory are preserved, so ./install.sh or ./start.sh can restore
-the deployment.
+compose.override.yaml are preserved together with this release directory, so
+./install.sh or ./start.sh can restore the deployment.
 
   --purge --confirm   additionally delete the LunaFox named volumes declared by
-                      the current compose.yaml after verifying their ownership.
-                      Data in those volumes cannot be recovered.
+                      the current compose.yaml after verifying their ownership,
+                      then reset a persisted compose.override.yaml. Data in
+                      those volumes cannot be recovered; .env and this release
+                      directory are still preserved.
 
 --purge without --confirm fails before anything is removed.
 USAGE
@@ -53,7 +55,7 @@ for argument in "$@"; do
 done
 
 if [ "$PURGE" = 1 ] && [ "$CONFIRM" != 1 ]; then
-	printf 'LunaFox: FAILED --purge permanently deletes the LunaFox volumes; re-run with ./uninstall.sh --purge --confirm\n' >&2
+	printf 'LunaFox: FAILED --purge permanently deletes the LunaFox volumes and resets the persisted version override; re-run with ./uninstall.sh --purge --confirm\n' >&2
 	exit 2
 fi
 
