@@ -7,23 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { readSessionValue, removeSessionValue, writeSessionValue } from "@/lib/browser-storage";
+import { GITHUB_REPO, GITHUB_REPO_API_URL, GITHUB_REPO_OPEN_ISSUES_API_URL, GITHUB_REPO_URL, parseGithubRepoResponse, parseGithubRepoSnapshot, type GithubRepoSnapshot } from "@/lib/github-repo-snapshot";
 import { unlockLoginVisual } from "@/lib/login-visual-unlock";
 import { useUnlockLoginVisualDiscoverability } from "@/hooks/use-login-visual";
 import { textRole } from "@/lib/typography";
 import { shellOverlaySideOffsets } from "@/lib/ui/overlay-styles";
 import { cn } from "@/lib/utils";
-type GithubRepoSnapshot = {
-    name: string;
-    fullName: string;
-    htmlUrl: string;
-    description: string | null;
-    stars: number;
-    forks: number;
-    watchers: number;
-    issues: number;
-};
-const GITHUB_REPO = "yyhuni/lunafox";
-const GITHUB_REPO_URL = `https://github.com/${GITHUB_REPO}`;
 const GITHUB_REPO_FALLBACK_API = "/api/github/repo";
 const GITHUB_REPO_CACHE_KEY = "github-repo-snapshot";
 const GITHUB_REPO_CACHE_TIME_KEY = "github-repo-snapshot-time";
@@ -116,7 +105,7 @@ export function GithubStarButton() {
         </PopoverTrigger>
       <PopoverContent align="end" sideOffset={shellOverlaySideOffsets.header} className="w-80 p-0 sm:w-96">
         <div className="space-y-4 p-4">
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3">
             <span className="radius-round flex size-12 shrink-0 items-center justify-center border bg-background">
               <LunaFoxMark className="size-7" decorative/>
             </span>
@@ -180,57 +169,32 @@ function resolveGithubStarMilestone(stars: number) {
 }
 async function fetchGithubRepoSnapshot(): Promise<GithubRepoSnapshot> {
     try {
-        return await fetchGithubRepoSnapshotFrom(`https://api.github.com/repos/${GITHUB_REPO}`);
+        return await fetchGithubRepoSnapshotFromGithub();
     }
     catch {
         return fetchGithubRepoSnapshotFrom(GITHUB_REPO_FALLBACK_API);
     }
 }
+async function fetchGithubRepoSnapshotFromGithub(): Promise<GithubRepoSnapshot> {
+    const [repo, openIssues] = await Promise.all([
+        fetchGithubJson(GITHUB_REPO_API_URL),
+        fetchGithubJson(GITHUB_REPO_OPEN_ISSUES_API_URL),
+    ]);
+    return parseGithubRepoResponse(repo, openIssues);
+}
 async function fetchGithubRepoSnapshotFrom(url: string): Promise<GithubRepoSnapshot> {
+    return parseGithubRepoSnapshot(await fetchGithubJson(url));
+}
+async function fetchGithubJson(url: string): Promise<unknown> {
     const response = await fetch(url);
     if (!response.ok) {
         throw new Error("Failed to fetch GitHub repository");
     }
-    return parseGithubRepoSnapshot(await response.json());
+    return response.json();
 }
 function writeGithubRepoCache(snapshot: GithubRepoSnapshot) {
     writeSessionValue(GITHUB_REPO_CACHE_KEY, JSON.stringify(snapshot));
     writeSessionValue(GITHUB_REPO_CACHE_TIME_KEY, Date.now().toString());
-}
-function parseGithubRepoSnapshot(data: unknown): GithubRepoSnapshot {
-    if (!data || typeof data !== "object") {
-        throw new Error("Invalid GitHub repository response");
-    }
-    const repo = data as Record<string, unknown>;
-    if (typeof repo.name === "string" &&
-        typeof repo.fullName === "string" &&
-        typeof repo.htmlUrl === "string" &&
-        (typeof repo.description === "string" || repo.description === null) &&
-        typeof repo.stars === "number" &&
-        typeof repo.forks === "number" &&
-        typeof repo.watchers === "number" &&
-        typeof repo.issues === "number") {
-        return repo as GithubRepoSnapshot;
-    }
-    if (typeof repo.name !== "string" ||
-        typeof repo.full_name !== "string" ||
-        typeof repo.html_url !== "string" ||
-        typeof repo.stargazers_count !== "number" ||
-        typeof repo.forks_count !== "number" ||
-        typeof repo.subscribers_count !== "number" ||
-        typeof repo.open_issues_count !== "number") {
-        throw new Error("Invalid GitHub repository response");
-    }
-    return {
-        name: repo.name,
-        fullName: repo.full_name,
-        htmlUrl: repo.html_url,
-        description: typeof repo.description === "string" && repo.description.trim().length > 0 ? repo.description : null,
-        stars: repo.stargazers_count,
-        forks: repo.forks_count,
-        watchers: repo.subscribers_count,
-        issues: repo.open_issues_count,
-    };
 }
 function GithubMetric({ icon, label, value, }: {
     icon: React.ReactNode;

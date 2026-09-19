@@ -214,6 +214,30 @@ describe("about dialog upgrade behavior", () => {
     expect(retry).not.toHaveBeenCalled()
   })
 
+  it("does not show upgrade-only details when the candidate is already installed", () => {
+    render(
+      <AboutDialogVersionInfo
+        t={(key) => key}
+        currentVersion={candidate.releaseVersion}
+        candidate={candidate}
+        hasUpdate={false}
+        checkError={null}
+        isChecking={false}
+        isCreating={false}
+        canStartUpgrade={false}
+        operation={{}}
+        onCheckUpdate={vi.fn()}
+        onStartUpgrade={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText("upToDate")).toBeInTheDocument()
+    expect(screen.queryByText("manifestDigest")).not.toBeInTheDocument()
+    expect(screen.queryByText("maintenanceWindow")).not.toBeInTheDocument()
+    expect(screen.queryByText("noMigration")).not.toBeInTheDocument()
+  })
+
   it("loads the installed version when the about entry is opened", async () => {
     apiMocks.post.mockImplementation((path: string) => {
       if (path === "/system:checkForUpdates") return Promise.resolve({ data: updateResult })

@@ -8,7 +8,9 @@ import {
   AGENT_EXPANSION_SLOT_MIN_HEIGHT_CLASS,
   AGENT_OVERVIEW_HEADER_CLASS,
   AGENT_OVERVIEW_TITLE_GROUP_CLASS,
+  AGENT_QUOTA_HINT_SLOT_CLASS,
   AGENT_TOOLBAR_ACTIONS_CLASS,
+  AGENT_TOOLBAR_ACTION_ROW_CLASS,
   AGENT_TOOLBAR_CONTROLS_CLASS,
   AGENT_TOOLBAR_FILTERS_CLASS,
   AGENT_TOOLBAR_ROOT_CLASS,
@@ -47,11 +49,16 @@ describe("agent-layout-contract", () => {
     expect(AGENT_TOOLBAR_ROOT_CLASS).toContain("@5xl/main:items-start")
     expect(AGENT_TOOLBAR_CONTROLS_CLASS).toContain("@4xl/main:flex-row")
     expect(AGENT_TOOLBAR_FILTERS_CLASS).toContain("flex-wrap")
-    expect(AGENT_TOOLBAR_ACTIONS_CLASS).toContain("flex-wrap")
-    expect(AGENT_TOOLBAR_ACTIONS_CLASS).toContain("@5xl/main:justify-end")
+    expect(AGENT_TOOLBAR_ACTIONS_CLASS).toContain("flex-col")
+    expect(AGENT_TOOLBAR_ACTIONS_CLASS).toContain("min-w-0")
+    expect(AGENT_TOOLBAR_ACTION_ROW_CLASS).toContain("flex-wrap")
   })
 
   it("owns the single-node expansion cell height beside the card-grid contract", () => {
     expect(AGENT_EXPANSION_SLOT_MIN_HEIGHT_CLASS).toBe("min-h-[252px]")
+  })
+
+  it("reserves one glyph slot for the known-full toolbar hint", () => {
+    expect(AGENT_QUOTA_HINT_SLOT_CLASS).toBe("size-4")
   })
 })

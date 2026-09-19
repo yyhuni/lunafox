@@ -35,7 +35,6 @@ that ledger to approve only the counted baseline in `--mode verify`.
 | Direct icon imports and component boundary drift | `check=component` / `check=ui-boundary` | `excluded`; no production boundary findings. |
 | Icon-only a11y gaps and focus drift | `check=a11y` | No remaining production violations in inventory or verify mode. |
 | Layout-shifting hover motion, transition-all, and missing reduced-motion ownership | `check=motion` | `narrow` |
-| Bounded sidebar content hover motion | `class=bounded-hover-motion` | `keep` |
 | Loading-state drift and route-progress engine ownership | `check=loading` | No unclassified loading snippets; retained non-loading motion is recorded below. |
 
 ## Verify Behavior

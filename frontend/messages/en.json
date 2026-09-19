@@ -2705,7 +2705,7 @@
     },
     "agents": {
       "quota": {
-        "reached": "Agent limit reached. Delete an existing Agent before retrying."
+        "reached": "Quota is full ({used}/{limit}). Delete an Agent to continue."
       },
       "title": "Distributed",
       "install": {
@@ -4678,9 +4678,11 @@
       "warning": "Stopping does not roll back services or database changes that were already applied. A stop after migration may require manual recovery."
     },
     "logs": {
-      "title": "Upgrade log",
-      "description": "Server-confirmed milestones and safe diagnostics for this operation.",
-      "empty": "No confirmed milestone has been recorded yet.",
+      "title": "Upgrade events",
+      "description": "Server-confirmed milestones, safe progress events, and diagnostics for this operation.",
+      "empty": "No confirmed upgrade event has been recorded yet.",
+      "copy": "Copy upgrade events",
+      "copied": "Upgrade events copied",
       "messages": {
         "requestAccepted": "Upgrade request accepted",
         "stoppingWork": "Stopping active work",

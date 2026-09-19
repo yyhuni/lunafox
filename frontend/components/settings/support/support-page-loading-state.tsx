@@ -54,16 +54,22 @@ function SupportLoadingActionShell({
   icon: React.ReactElement<{ className?: string }>
   variant?: "default" | "outline"
 }) {
+  // The shell paints nothing itself: the icon and label only stay in the layout to hold
+  // the resolved button's size while the overlay skeleton stays the single visible layer.
+  // So the variant's chrome must be cleared for both themes, because `outline` adds a dark
+  // surface and dark border around that skeleton. The overlay needs `!absolute`, since
+  // `loading-skeleton` declares `position: relative`, and auto sizing across `-inset-px`
+  // so it fills the button's border box instead of the primitive's placeholder size.
   return (
     <Button
       aria-hidden="true"
       disabled
       variant={variant}
-      className="relative border-transparent bg-transparent text-transparent shadow-none disabled:opacity-100"
+      className="relative border-transparent bg-transparent text-transparent shadow-none disabled:opacity-100 dark:border-transparent dark:bg-transparent"
     >
       {React.cloneElement(icon, { className: cn(icon.props.className, "invisible") })}
       <span className="invisible">{children}</span>
-      <ActionSkeleton className="pointer-events-none absolute inset-0 h-full w-full" />
+      <ActionSkeleton className="pointer-events-none !absolute -inset-px w-auto h-auto" />
     </Button>
   )
 }

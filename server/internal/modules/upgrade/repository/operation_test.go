@@ -52,6 +52,10 @@ func newTestOperation() *domain.Operation {
 		StageTimes: map[domain.Status]time.Time{
 			domain.StatusQueued: now,
 		},
+		ProgressEvents: []domain.ProgressEvent{{
+			Timestamp: now, Stage: domain.StatusQueued, MessageKey: "preflightStarted",
+			Message: "Preflight checks are running", Metadata: map[string]string{"scope": "release"},
+		}},
 		AgentSummary:        domain.AgentSummary{Expected: 3, Ready: 1, Missing: 1, Unhealthy: 1},
 		CancelledScanCount:  2,
 		CancelledTaskCount:  5,
@@ -89,6 +93,9 @@ func TestUpgradeOperationRepositoryRoundTripsAuditFields(t *testing.T) {
 	}
 	if loaded.ObservedDigests["server"] != want.ObservedDigests["server"] || !loaded.StageTimes[domain.StatusQueued].Equal(want.StageTimes[domain.StatusQueued]) {
 		t.Fatalf("loaded JSON evidence = %#v/%#v, want %#v/%#v", loaded.ObservedDigests, loaded.StageTimes, want.ObservedDigests, want.StageTimes)
+	}
+	if len(loaded.ProgressEvents) != 1 || loaded.ProgressEvents[0].MessageKey != "preflightStarted" || loaded.ProgressEvents[0].Metadata["scope"] != "release" {
+		t.Fatalf("loaded progress events = %#v", loaded.ProgressEvents)
 	}
 }
 

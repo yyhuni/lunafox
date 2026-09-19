@@ -117,7 +117,7 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 	current, err := store.LoadCurrent()
 	if errors.Is(err, ErrJournalNotFound) {
 		now := nowUTC()
-		current = Journal{SchemaVersion: JournalSchema, OperationID: request.OperationID, ManifestDigest: request.ManifestDigest, Stage: StageQueued, StartedAt: now, UpdatedAt: now}
+		current = Journal{SchemaVersion: JournalSchema, OperationID: request.OperationID, ManifestDigest: request.ManifestDigest, Stage: StageQueued, StartedAt: now, UpdatedAt: now, StageUpdatedAt: now}
 	} else if err != nil {
 		return err
 	}
@@ -226,6 +226,7 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 		}
 		fallthrough
 	case StagePreflight:
+		tryAppendCatalogProgress(store, request, StagePreflight, ProgressPreflightStarted)
 		if _, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), "config", "--quiet"), store.DeploymentRoot()); err != nil {
 			return executor.failCheckpoint(store, request, StageFailed, "compose preflight failed")
 		}
@@ -234,17 +235,21 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 		}
 		fallthrough
 	case StageUpdating:
+		tryAppendCatalogProgress(store, request, StageUpdating, ProgressPullImagesStarted)
 		if _, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), append([]string{"pull"}, executor.pullServices()...)...), store.DeploymentRoot()); err != nil {
 			return executor.failCheckpoint(store, request, StageFailed, "compose image pull failed")
 		}
+		tryAppendCatalogProgress(store, request, StageUpdating, ProgressServicesUpdateStarted)
 		if _, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), executor.coreUpdateArgs()...), store.DeploymentRoot()); err != nil {
 			return executor.failCheckpoint(store, request, StageFailed, "compose service update failed")
 		}
+		tryAppendCatalogProgress(store, request, StageUpdating, ProgressServicesUpdated)
 		if migration.HasDatabaseMigration {
 			if _, err := store.Checkpoint(request.OperationID, request.ManifestDigest, StageMigrating, "", nil); err != nil {
 				return err
 			}
 			migrationStarted = true
+			tryAppendCatalogProgress(store, request, StageMigrating, ProgressMigrationStarted)
 			if _, err := store.SetMigration(request.OperationID, request.ManifestDigest, migration.MigrationID, migration.Checksum, MigrationStatusRunning); err != nil {
 				return err
 			}
@@ -264,6 +269,7 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 			if _, err := store.SetMigration(request.OperationID, request.ManifestDigest, migration.MigrationID, migration.Checksum, MigrationStatusSucceeded); err != nil {
 				return err
 			}
+			tryAppendCatalogProgress(store, request, StageMigrating, ProgressMigrationCompleted)
 		}
 		if _, err := store.Checkpoint(request.OperationID, request.ManifestDigest, StageRestarting, "", nil); err != nil {
 			return err
@@ -284,6 +290,7 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 		}
 	}
 
+	tryAppendCatalogProgress(store, request, stage, ProgressHealthCheckStarted)
 	healthResult, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), append([]string{"ps", "--format", "json"}, services...)...), store.DeploymentRoot())
 	if err != nil || !healthyComposeOutput(healthResult.Stdout, services) {
 		if migrationStarted {
@@ -294,12 +301,20 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 	// The host can establish that Compose is ready, but only the Server can
 	// verify Agent reconnect/update_required readiness. Emit that boundary
 	// explicitly before the final verification checkpoint.
-	if _, err := store.Checkpoint(request.OperationID, request.ManifestDigest, StageAgentVerifying, "", nil); err != nil {
-		return err
+	if stage == StageRestarting {
+		if _, err := store.Checkpoint(request.OperationID, request.ManifestDigest, StageAgentVerifying, "", nil); err != nil {
+			return err
+		}
+		stage = StageAgentVerifying
 	}
-	if _, err := store.Checkpoint(request.OperationID, request.ManifestDigest, StageVerifying, "", nil); err != nil {
-		return err
+	tryAppendCatalogProgress(store, request, stage, ProgressAgentVerificationStarted)
+	if stage == StageAgentVerifying {
+		if _, err := store.Checkpoint(request.OperationID, request.ManifestDigest, StageVerifying, "", nil); err != nil {
+			return err
+		}
+		stage = StageVerifying
 	}
+	tryAppendCatalogProgress(store, request, stage, ProgressDigestVerificationStarted)
 	observed := make(map[string]string, len(services))
 	for _, service := range services {
 		// Image inspection belongs to the Docker CLI, not the Compose
@@ -323,6 +338,7 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 		observed[service] = digest
 	}
 	if executor.PublicLayout {
+		tryAppendCatalogProgress(store, request, StageVerifying, ProgressOverrideInstallation)
 		if err := executor.writeComposeOverride(filepath.Join(store.DeploymentRoot(), publicPersistentOverrideFile), manifest); err != nil {
 			return executor.failCheckpoint(store, request, failureStageFor(migrationStarted), "persistent Compose override installation failed")
 		}
@@ -331,6 +347,7 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 	if err := store.SaveReceipt(receipt); err != nil {
 		return err
 	}
+	tryAppendCatalogProgress(store, request, StageVerifying, ProgressHostExecutionCompleted)
 	if migrationNeedsRecovery {
 		// A repair may collect fresh service/digest evidence, but an unknown or
 		// failed migration result remains a recovery fence and cannot become
@@ -340,6 +357,20 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 	// StageVerifying remains the journal state. The receipt proves only that
 	// host deployment completed; Server and Agent evidence decide succeeded.
 	return nil
+}
+
+// tryAppendCatalogProgress is deliberately best effort. A missing or
+// temporarily unwritable observation journal must not change Compose's
+// execution or terminal safety decision.
+func tryAppendCatalogProgress(store *JournalStore, request Request, stage Stage, messageKey string) {
+	if store == nil {
+		return
+	}
+	event, err := CatalogProgressEvent(stage, messageKey, nowUTC())
+	if err != nil {
+		return
+	}
+	_, _ = store.AppendProgress(request.OperationID, request.ManifestDigest, event)
 }
 
 func validateHostMigration(manifest *releasemanifest.Manifest) error {

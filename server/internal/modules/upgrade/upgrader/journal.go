@@ -247,10 +247,12 @@ func journalEventFor(journal Journal) JournalEvent {
 		ManifestDigest:    journal.ManifestDigest,
 		Stage:             journal.Stage,
 		UpdatedAt:         journal.UpdatedAt,
+		StageUpdatedAt:    journal.StageUpdatedAt,
 		Diagnostic:        journal.Diagnostic,
 		MigrationID:       journal.MigrationID,
 		MigrationChecksum: journal.MigrationChecksum,
 		MigrationStatus:   journal.MigrationStatus,
+		ProgressEvents:    cloneProgressEvents(journal.ProgressEvents),
 	}
 }
 
@@ -268,7 +270,7 @@ func (store *JournalStore) Checkpoint(operationID, manifestDigest string, stage 
 	current, err := store.LoadCurrent()
 	if errors.Is(err, ErrJournalNotFound) {
 		now := time.Now().UTC()
-		current = Journal{SchemaVersion: JournalSchema, OperationID: operationID, ManifestDigest: manifestDigest, Stage: StageQueued, StartedAt: now, UpdatedAt: now}
+		current = Journal{SchemaVersion: JournalSchema, OperationID: operationID, ManifestDigest: manifestDigest, Stage: StageQueued, StartedAt: now, UpdatedAt: now, StageUpdatedAt: now}
 	} else if err != nil {
 		store.writeMu.Unlock()
 		return Journal{}, err
@@ -289,6 +291,7 @@ func (store *JournalStore) Checkpoint(operationID, manifestDigest string, stage 
 	now := time.Now().UTC()
 	current.Stage = stage
 	current.UpdatedAt = now
+	current.StageUpdatedAt = now
 	current.Diagnostic = diagnostic
 	current.ExitCode = exitCode
 	if IsTerminal(stage) {
@@ -305,6 +308,75 @@ func (store *JournalStore) Checkpoint(operationID, manifestDigest string, stage 
 	store.publish(journalEventFor(current))
 	store.writeMu.Unlock()
 	return current, nil
+}
+
+// AppendProgress persists one fixed, safe sub-step observation without
+// changing the lifecycle stage. It is intentionally idempotent so recovery
+// can replay the same host journal after a Server restart.
+func (store *JournalStore) AppendProgress(operationID, manifestDigest string, event ProgressEvent) (Journal, error) {
+	if store == nil {
+		return Journal{}, fmt.Errorf("journal store is nil")
+	}
+	if err := validateOperationID(operationID); err != nil {
+		return Journal{}, err
+	}
+	if err := validateDigest(manifestDigest); err != nil {
+		return Journal{}, err
+	}
+	if event.Timestamp.IsZero() {
+		event.Timestamp = time.Now().UTC()
+	}
+	if err := event.Validate(); err != nil {
+		return Journal{}, err
+	}
+	store.writeMu.Lock()
+	defer store.writeMu.Unlock()
+	current, err := store.LoadCurrent()
+	if err != nil {
+		return Journal{}, err
+	}
+	if current.OperationID != operationID || current.ManifestDigest != manifestDigest {
+		return Journal{}, ErrReplayDigestMismatch
+	}
+	if current.Stage != event.Stage {
+		return Journal{}, fmt.Errorf("progress event stage %q does not match current stage %q", event.Stage, current.Stage)
+	}
+	if event.Timestamp.Before(current.StartedAt) {
+		return Journal{}, fmt.Errorf("progress event timestamp precedes journal start")
+	}
+	merged, changed, err := mergeProgressEvents(current.ProgressEvents, []ProgressEvent{event})
+	if err != nil {
+		return Journal{}, err
+	}
+	if !changed {
+		return current, nil
+	}
+	if current.StageUpdatedAt.IsZero() {
+		// Old journals predate the separate stage timestamp. Freeze the last
+		// known checkpoint before allowing a heartbeat to move UpdatedAt.
+		current.StageUpdatedAt = current.UpdatedAt
+	}
+	current.ProgressEvents = merged
+	// A delayed event is still useful evidence, but it must never move the
+	// journal's observable activity clock backwards. The stage timestamp stays
+	// frozen so a heartbeat cannot manufacture lifecycle progress.
+	if eventAt := event.Timestamp.UTC(); eventAt.After(current.UpdatedAt) {
+		current.UpdatedAt = eventAt
+	}
+	if current.UpdatedAt.Before(current.StageUpdatedAt) {
+		current.UpdatedAt = current.StageUpdatedAt
+	}
+	if err := store.saveLocked(current); err != nil {
+		return Journal{}, err
+	}
+	store.publish(journalEventFor(current))
+	return current, nil
+}
+
+// AppendProgressEvent is a descriptive alias for callers outside the host
+// executor; both names share the same validation and idempotency boundary.
+func (store *JournalStore) AppendProgressEvent(operationID, manifestDigest string, event ProgressEvent) (Journal, error) {
+	return store.AppendProgress(operationID, manifestDigest, event)
 }
 
 // SetMigration records the reviewed migration identity and its durable state
@@ -490,6 +562,7 @@ func (store *JournalStore) ResetForRepair(operationID, manifestDigest string) (J
 	base.Stage = nextStage
 	base.RepairStage = ""
 	base.UpdatedAt = now
+	base.StageUpdatedAt = now
 	base.CompletedAt = nil
 	base.ExitCode = nil
 	base.Diagnostic = ""
@@ -591,9 +664,11 @@ func (store *JournalStore) SaveReceipt(receipt Receipt) error {
 		Receipt:        cloneReceipt(&receipt),
 	}
 	event.Stage = current.Stage
+	event.StageUpdatedAt = current.StageUpdatedAt
 	event.MigrationID = current.MigrationID
 	event.MigrationChecksum = current.MigrationChecksum
 	event.MigrationStatus = current.MigrationStatus
+	event.ProgressEvents = cloneProgressEvents(current.ProgressEvents)
 	store.publish(event)
 	store.writeMu.Unlock()
 	return nil
@@ -735,6 +810,7 @@ func journalsSnapshotEqual(left, right Journal) bool {
 		left.MigrationID != right.MigrationID ||
 		left.MigrationChecksum != right.MigrationChecksum ||
 		left.MigrationStatus != right.MigrationStatus ||
+		!left.StageUpdatedAt.Equal(right.StageUpdatedAt) ||
 		left.ExitCode == nil != (right.ExitCode == nil) ||
 		left.Diagnostic != right.Diagnostic ||
 		!left.StartedAt.Equal(right.StartedAt) ||
@@ -747,7 +823,18 @@ func journalsSnapshotEqual(left, right Journal) bool {
 	if left.CompletedAt == nil != (right.CompletedAt == nil) {
 		return false
 	}
-	return left.CompletedAt == nil || left.CompletedAt.Equal(*right.CompletedAt)
+	if left.CompletedAt != nil && !left.CompletedAt.Equal(*right.CompletedAt) {
+		return false
+	}
+	if len(left.ProgressEvents) != len(right.ProgressEvents) {
+		return false
+	}
+	for index := range left.ProgressEvents {
+		if progressEventIdentity(left.ProgressEvents[index]) != progressEventIdentity(right.ProgressEvents[index]) {
+			return false
+		}
+	}
+	return true
 }
 
 // VerifyReceiptBinding is a compact form for callers that only need the

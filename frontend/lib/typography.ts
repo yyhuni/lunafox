@@ -6,7 +6,7 @@
  */
 export const textRole = {
   pageTitle: "text-xl font-semibold text-foreground leading-none tracking-tight",
-  pageTitleDisplay: "[font-family:var(--font-display)] text-xl font-semibold text-foreground leading-none tracking-tight",
+  pageTitleDisplay: "[font-family:var(--font-display)] text-2xl font-semibold text-foreground leading-none tracking-tight",
   pageDescription: "text-xs font-normal text-muted-foreground leading-4 tracking-normal",
   panelTitle: "text-base font-semibold text-foreground leading-5 tracking-normal",
   sectionTitle: "text-[13px] font-semibold text-foreground leading-[18px] tracking-normal",

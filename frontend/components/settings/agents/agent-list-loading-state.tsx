@@ -8,7 +8,9 @@ import {
   AGENT_CARD_GRID_CLASS,
   AGENT_EXPANSION_SLOT_MIN_HEIGHT_CLASS,
   AGENT_LIST_TOOLBAR_REGION_SLOT,
+  AGENT_QUOTA_HINT_SLOT_CLASS,
   AGENT_TOOLBAR_ACTIONS_CLASS,
+  AGENT_TOOLBAR_ACTION_ROW_CLASS,
   AGENT_TOOLBAR_CONTROLS_CLASS,
   AGENT_TOOLBAR_FILTERS_CLASS,
   AGENT_TOOLBAR_ROOT_CLASS,
@@ -16,7 +18,7 @@ import {
 } from "./agent-layout-contract"
 import { AgentResultsRegion } from "./agent-results-region"
 
-export function AgentToolbarLoadingState() {
+export function AgentToolbarLoadingState({ showQuotaHint }: { showQuotaHint?: boolean }) {
   return (
     <div
       {...getLoadingStructureSlotAttributes(AGENT_LIST_TOOLBAR_REGION_SLOT)}
@@ -36,8 +38,14 @@ export function AgentToolbarLoadingState() {
         </div>
       </div>
       <div className={AGENT_TOOLBAR_ACTIONS_CLASS}>
-        <ActionSkeleton size="sm" widthClassName="w-24" />
-        <ActionSkeleton size="sm" widthClassName="w-28" />
+        <div className={AGENT_TOOLBAR_ACTION_ROW_CLASS}>
+          {/* A known full quota shows its hint glyph beside the add action, so the same glyph slot must stay reserved during handoff. */}
+          {showQuotaHint ? (
+            <ActionSkeleton size="chip-icon" className={AGENT_QUOTA_HINT_SLOT_CLASS} />
+          ) : null}
+          <ActionSkeleton size="sm" widthClassName="w-24" />
+          <ActionSkeleton size="sm" widthClassName="w-28" />
+        </div>
       </div>
     </div>
   )
