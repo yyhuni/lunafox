@@ -93,15 +93,19 @@ type Journal struct {
 	// RepairStage records the first safe stage for an explicit repair. A
 	// migration or post-migration failure resumes at verification instead of
 	// rerunning an operation whose database outcome may already be committed.
-	RepairStage       Stage      `json:"repairStage,omitempty"`
-	MigrationID       string     `json:"migrationId,omitempty"`
-	MigrationChecksum string     `json:"migrationChecksum,omitempty"`
-	MigrationStatus   string     `json:"migrationStatus,omitempty"`
-	StartedAt         time.Time  `json:"startedAt"`
-	UpdatedAt         time.Time  `json:"updatedAt"`
-	CompletedAt       *time.Time `json:"completedAt,omitempty"`
-	ExitCode          *int       `json:"exitCode,omitempty"`
-	Diagnostic        string     `json:"diagnostic,omitempty"`
+	RepairStage       Stage     `json:"repairStage,omitempty"`
+	MigrationID       string    `json:"migrationId,omitempty"`
+	MigrationChecksum string    `json:"migrationChecksum,omitempty"`
+	MigrationStatus   string    `json:"migrationStatus,omitempty"`
+	StartedAt         time.Time `json:"startedAt"`
+	UpdatedAt         time.Time `json:"updatedAt"`
+	// StageUpdatedAt is independent from UpdatedAt: progress heartbeats may
+	// refresh the latter without manufacturing a new lifecycle checkpoint.
+	StageUpdatedAt time.Time       `json:"stageUpdatedAt,omitempty"`
+	CompletedAt    *time.Time      `json:"completedAt,omitempty"`
+	ExitCode       *int            `json:"exitCode,omitempty"`
+	Diagnostic     string          `json:"diagnostic,omitempty"`
+	ProgressEvents []ProgressEvent `json:"progressEvents,omitempty"`
 }
 
 // Receipt is a host-only deployment proof. It records that the Compose
@@ -206,15 +210,17 @@ func (response Response) Validate() error {
 // only validated operation identity, stage and bounded diagnostics. Receipt is
 // a deployment proof and never implies overall Operation success.
 type JournalEvent struct {
-	OperationID       string    `json:"operationId"`
-	ManifestDigest    string    `json:"manifestDigest"`
-	Stage             Stage     `json:"stage"`
-	UpdatedAt         time.Time `json:"updatedAt"`
-	Diagnostic        string    `json:"diagnostic,omitempty"`
-	MigrationID       string    `json:"migrationId,omitempty"`
-	MigrationChecksum string    `json:"migrationChecksum,omitempty"`
-	MigrationStatus   string    `json:"migrationStatus,omitempty"`
-	Receipt           *Receipt  `json:"receipt,omitempty"`
+	OperationID       string          `json:"operationId"`
+	ManifestDigest    string          `json:"manifestDigest"`
+	Stage             Stage           `json:"stage"`
+	UpdatedAt         time.Time       `json:"updatedAt"`
+	StageUpdatedAt    time.Time       `json:"stageUpdatedAt,omitempty"`
+	Diagnostic        string          `json:"diagnostic,omitempty"`
+	MigrationID       string          `json:"migrationId,omitempty"`
+	MigrationChecksum string          `json:"migrationChecksum,omitempty"`
+	MigrationStatus   string          `json:"migrationStatus,omitempty"`
+	ProgressEvents    []ProgressEvent `json:"progressEvents,omitempty"`
+	Receipt           *Receipt        `json:"receipt,omitempty"`
 }
 
 func (event JournalEvent) Validate() error {
@@ -232,6 +238,17 @@ func (event JournalEvent) Validate() error {
 		}
 	} else if event.UpdatedAt.IsZero() {
 		return fmt.Errorf("journal event updatedAt is required")
+	}
+	if !event.StageUpdatedAt.IsZero() && event.StageUpdatedAt.After(event.UpdatedAt) {
+		return fmt.Errorf("journal event stageUpdatedAt is newer than updatedAt")
+	}
+	if err := validateProgressEvents(event.ProgressEvents); err != nil {
+		return err
+	}
+	for _, progress := range event.ProgressEvents {
+		if progress.Timestamp.After(event.UpdatedAt) {
+			return fmt.Errorf("journal event progress timestamp is newer than updatedAt")
+		}
 	}
 	if err := ValidateDiagnostic(event.Diagnostic); err != nil {
 		return err
@@ -338,6 +355,19 @@ func (journal Journal) Validate() error {
 	}
 	if journal.UpdatedAt.Before(journal.StartedAt) {
 		return fmt.Errorf("journal updatedAt precedes startedAt")
+	}
+	if !journal.StageUpdatedAt.IsZero() {
+		if journal.StageUpdatedAt.Before(journal.StartedAt) || journal.StageUpdatedAt.After(journal.UpdatedAt) {
+			return fmt.Errorf("journal stageUpdatedAt is outside journal timestamps")
+		}
+	}
+	if err := validateProgressEvents(journal.ProgressEvents); err != nil {
+		return err
+	}
+	for _, progress := range journal.ProgressEvents {
+		if progress.Timestamp.Before(journal.StartedAt) || progress.Timestamp.After(journal.UpdatedAt) {
+			return fmt.Errorf("journal progress timestamp is outside journal timestamps")
+		}
 	}
 	if journal.CompletedAt != nil && journal.CompletedAt.Before(journal.StartedAt) {
 		return fmt.Errorf("journal completedAt precedes startedAt")

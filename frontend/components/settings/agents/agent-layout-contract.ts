@@ -35,7 +35,14 @@ export const AGENT_TOOLBAR_FILTERS_CLASS =
   "flex min-w-0 flex-wrap items-center gap-3"
 
 export const AGENT_TOOLBAR_ACTIONS_CLASS =
-  "flex flex-wrap items-center gap-2 @5xl/main:justify-end"
+  "flex min-w-0 w-full flex-col items-start gap-1.5 @5xl/main:w-auto"
+
+export const AGENT_TOOLBAR_ACTION_ROW_CLASS =
+  "flex flex-wrap items-center gap-2"
+
+// The known-full hint glyph and its toolbar loading placeholder must occupy the
+// same slot, otherwise the action row shifts when the section handoff resolves.
+export const AGENT_QUOTA_HINT_SLOT_CLASS = "size-4"
 
 export const AGENT_LIST_OVERVIEW_REGION_SLOT = "agent-list-overview-region"
 

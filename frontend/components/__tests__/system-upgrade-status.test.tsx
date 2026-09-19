@@ -101,4 +101,35 @@ describe("system upgrade status", () => {
     expect(stages.querySelector('[data-stage="restarting"]')).toHaveAttribute("data-stage-state", "pending")
     expect(stages.querySelector('[data-stage="finished"]')).toHaveAttribute("data-stage-state", "current")
   })
+
+  it("renders safe long-stage events through the shared followable text stream", async () => {
+    const operation = makeOperation("updating")
+    operation.logs = [
+      ...operation.logs,
+      {
+        timestamp: "2026-09-13T12:02:00Z",
+        level: "info",
+        stage: "updating",
+        messageKey: "pullImagesStarted",
+        message: "Pulling release images",
+      },
+      {
+        timestamp: "2026-09-13T12:03:00Z",
+        level: "info",
+        stage: "updating",
+        messageKey: "servicesUpdateStarted",
+        message: "Updating core services",
+      },
+    ]
+    window.localStorage.setItem("lunafox.upgrade.operationId", operation.operationId)
+    apiMocks.get.mockResolvedValue({ data: operation })
+
+    const { container } = renderWithProviders(<SystemUpgradeStatus />)
+
+    expect(await screen.findByTestId("system-upgrade-status")).toBeInTheDocument()
+    const viewer = container.querySelector('[data-slot="raw-log-viewer"]')
+    expect(viewer).toHaveTextContent("Pulling release images")
+    expect(viewer).toHaveTextContent("Updating core services")
+    expect(screen.getByRole("button", { name: "logs.copy" })).toBeEnabled()
+  })
 })

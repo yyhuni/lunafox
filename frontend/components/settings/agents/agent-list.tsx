@@ -2,9 +2,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { IconCloud, semanticIcons, } from "@/components/icons";
+import { IconCloud, Info, semanticIcons, } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ContentHandoff } from "@/components/shared/loading/content-handoff";
 import { getLoadingStructureSlotAttributes } from "@/components/shared/loading/loading-owner";
 import { DataTableFacetedFilter, DataTableFacetedFilterGroup, type DataTableFacetedFilterOption } from "@/components/shared/data-table";
@@ -25,6 +26,7 @@ import {
     type AgentStatusDistributionStatus,
 } from "@/lib/agent-status-distribution";
 import { textRole } from "@/lib/typography";
+import { getStatusToneTextClass } from "@/lib/status-config";
 import { cn } from "@/lib/utils";
 import type { Agent, RegistrationTokenResponse } from "@/types/agent.types";
 import { AgentCardCompact } from "./agent-card-compact";
@@ -35,7 +37,17 @@ import { AgentOverviewLoadingState } from "./agent-overview-loading-state";
 import { ArchitectureDialog } from "./architecture-dialog";
 import { AgentResultsRegion } from "./agent-results-region";
 import { COMPACT_SECTION_STACK_CLASS } from "@/components/shared/layout/page-shell-density";
-import { AGENT_CARD_GRID_CLASS, AGENT_LIST_TOOLBAR_REGION_SLOT, AGENT_TOOLBAR_ACTIONS_CLASS, AGENT_TOOLBAR_CONTROLS_CLASS, AGENT_TOOLBAR_FILTERS_CLASS, AGENT_TOOLBAR_ROOT_CLASS, AGENT_TOOLBAR_SEARCH_MAX_WIDTH_CLASS, } from "./agent-layout-contract";
+import {
+    AGENT_CARD_GRID_CLASS,
+    AGENT_LIST_TOOLBAR_REGION_SLOT,
+    AGENT_QUOTA_HINT_SLOT_CLASS,
+    AGENT_TOOLBAR_ACTIONS_CLASS,
+    AGENT_TOOLBAR_ACTION_ROW_CLASS,
+    AGENT_TOOLBAR_CONTROLS_CLASS,
+    AGENT_TOOLBAR_FILTERS_CLASS,
+    AGENT_TOOLBAR_ROOT_CLASS,
+    AGENT_TOOLBAR_SEARCH_MAX_WIDTH_CLASS,
+} from "./agent-layout-contract";
 const AgentConfigDialog = dynamic(() => import("./agent-dialog").then((mod) => ({
     default: mod.AgentConfigDialog,
 })), { ssr: false, loading: () => null });
@@ -48,6 +60,7 @@ const AgentLogDrawer = dynamic(() => import("./agent-log-drawer").then((mod) => 
 type AgentStatusFilterValue = AgentStatusDistributionStatus;
 const AGENT_LIST_PAGE_SIZE = 100;
 const AGENT_SEARCH_DEBOUNCE_MS = 300;
+const AGENT_QUOTA_STATUS_ID = "agent-quota-status";
 const AGENT_DEFAULT_SORTING: BusinessListSorting = { field: "createdAt", direction: "desc" };
 const AGENT_FILTER_FIELDS: BusinessListFilterCompilerConfig = {
     search: [
@@ -89,8 +102,30 @@ function countOptions(options: Array<{ value: string; count?: number }> | undefi
     return (options ?? []).reduce((total, option) => values.includes(option.value) ? total + (option.count ?? 0) : total, 0);
 }
 
-function EmptyState({ onOpenInstall, disabled }: {
+/**
+ * Known-full quota explanation shown beside the disabled add action. The glyph
+ * keeps the message as its accessible name for keyboard users, and the visually
+ * hidden copy inside the same node is what the disabled add entries resolve
+ * their `aria-describedby` description from, because a described-by target is
+ * read from its content rather than from its `aria-label`.
+ */
+function AgentQuotaHint({ message }: { message: string }) {
+    return (<TooltipProvider delay={100}>
+      <Tooltip>
+        <TooltipTrigger render={(<span id={AGENT_QUOTA_STATUS_ID} role="img" tabIndex={0} aria-label={message} className={cn("inline-flex shrink-0 cursor-help", getStatusToneTextClass("warning"))}/>)}>
+          <span className="sr-only">{message}</span>
+          <Info aria-hidden="true" className={AGENT_QUOTA_HINT_SLOT_CLASS}/>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" sideOffset={8} align="center" className="max-w-sm whitespace-normal text-left">
+          {message}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>);
+}
+
+function EmptyState({ onOpenInstall, disabled, ariaDescribedBy }: {
     disabled: boolean;
+    ariaDescribedBy?: string;
     onOpenInstall: () => void;
 }) {
     const t = useTranslations("settings.agents");
@@ -100,7 +135,7 @@ function EmptyState({ onOpenInstall, disabled }: {
       </div>
       <h3 className={cn("mb-2", textRole.panelTitle)}>{t("empty.title")}</h3>
       <p className={cn("max-w-md mb-6", textRole.bodySubtle)}>{t("empty.desc")}</p>
-      <Button disabled={disabled} onClick={onOpenInstall}>{t("empty.cta")}</Button>
+      <Button disabled={disabled} onClick={onOpenInstall} aria-describedby={ariaDescribedBy}>{t("empty.cta")}</Button>
     </div>);
 }
 export function AgentList() {
@@ -132,8 +167,12 @@ export function AgentList() {
     const compiledFilter = combineFilterClauses(searchFilter, statusFilter);
     const compiledOrderBy = compileBusinessListOrderBy(query.sorting, AGENT_SORTABLE_FIELDS) ?? "createdAt desc";
     const clusterSummary = useAgentClusterSummary({ refetchInterval: 15000 });
-    const quotaReached = clusterSummary.data !== undefined && clusterSummary.data.totalNodes >= clusterSummary.data.agentLimit;
-    const addDisabled = !clusterSummary.data || quotaReached;
+    const quotaStatus = clusterSummary.data !== undefined && clusterSummary.data.totalNodes >= clusterSummary.data.agentLimit
+        ? { used: clusterSummary.data.totalNodes, limit: clusterSummary.data.agentLimit }
+        : null;
+    const quotaStatusMessage = quotaStatus ? t("quota.reached", quotaStatus) : undefined;
+    const addDisabled = !clusterSummary.data || quotaStatus !== null;
+    const quotaStatusDescriptionId = quotaStatus ? AGENT_QUOTA_STATUS_ID : undefined;
     const { data, isSuccess, refetch } = useAgents({
         pageSize,
         pageToken: query.pageToken,
@@ -289,7 +328,7 @@ export function AgentList() {
           />
         </ContentHandoff>
 
-        <ContentHandoff owner="agent-list-toolbar" layer="section" isLoading={isInitialSectionLoading} skeleton={<AgentToolbarLoadingState />}>
+        <ContentHandoff owner="agent-list-toolbar" layer="section" isLoading={isInitialSectionLoading} skeleton={<AgentToolbarLoadingState showQuotaHint={Boolean(quotaStatusMessage)} />}>
           <div {...getLoadingStructureSlotAttributes(AGENT_LIST_TOOLBAR_REGION_SLOT)} className={AGENT_TOOLBAR_ROOT_CLASS}>
             <div className={AGENT_TOOLBAR_CONTROLS_CLASS}>
               <div className={cn("w-full", AGENT_TOOLBAR_SEARCH_MAX_WIDTH_CLASS)}>
@@ -310,31 +349,33 @@ export function AgentList() {
             </div>
 
             <div className={AGENT_TOOLBAR_ACTIONS_CLASS}>
-              <Dialog open={installOpen} onOpenChange={setInstallOpen}>
-                <DialogTrigger render={<Button type="button" variant="surface" size="sm" disabled={addDisabled} />}>
-                  <AgentIcon className="size-4" />
-                  {t("install.openDialog")}
-                </DialogTrigger>
-                {shouldMountInstallDialog ? <AgentInstallDialog open={installOpen} token={token} connection={installConnection} isGenerating={createToken.isPending} onGenerate={handleGenerateToken}/> : null}
-              </Dialog>
-              <ArchitectureDialog
-                trigger={(
-                  <Button type="button" variant="surface" size="sm">
-                    <IconCloud className="size-4" />
-                    {t("overview.architectureTitle")}
-                  </Button>
-                )}
-              />
+              <div className={AGENT_TOOLBAR_ACTION_ROW_CLASS}>
+                {quotaStatusMessage ? <AgentQuotaHint message={quotaStatusMessage}/> : null}
+                <Dialog open={installOpen} onOpenChange={setInstallOpen}>
+                  <DialogTrigger render={<Button type="button" variant="surface" size="sm" disabled={addDisabled} aria-describedby={quotaStatusDescriptionId} />}>
+                    <AgentIcon className="size-4" />
+                    {t("install.openDialog")}
+                  </DialogTrigger>
+                  {shouldMountInstallDialog ? <AgentInstallDialog open={installOpen} token={token} connection={installConnection} isGenerating={createToken.isPending} onGenerate={handleGenerateToken}/> : null}
+                </Dialog>
+                <ArchitectureDialog
+                  trigger={(
+                    <Button type="button" variant="surface" size="sm">
+                      <IconCloud className="size-4" />
+                      {t("overview.architectureTitle")}
+                    </Button>
+                  )}
+                />
+              </div>
             </div>
 
           </div>
         </ContentHandoff>
-        {quotaReached ? <p role="status" className={textRole.helperText}>{t("quota.reached")}</p> : null}
       </div>
 
       <ContentHandoff owner="agent-list-results" layer="section" isLoading={isInitialSectionLoading} skeleton={<AgentCardsLoadingState />} mountContentWhileLoading>
         <AgentResultsRegion>
-          {!hasVisibleAgents && isUnfilteredFirstPage ? (<EmptyState disabled={addDisabled} onOpenInstall={() => setInstallOpen(true)}/>) : !hasVisibleAgents ? (<Card variant="compact" className="border-dashed px-4 py-10 text-center">
+          {!hasVisibleAgents && isUnfilteredFirstPage ? (<EmptyState disabled={addDisabled} ariaDescribedBy={quotaStatusDescriptionId} onOpenInstall={() => setInstallOpen(true)}/>) : !hasVisibleAgents ? (<Card variant="compact" className="border-dashed px-4 py-10 text-center">
               <h3 className={textRole.panelTitle}>{t("overview.emptyTitle")}</h3>
               <p className={cn("mt-2", textRole.bodySubtle)}>{t("overview.emptyDesc")}</p>
               <Button variant="outline" className="mt-4 self-center" onClick={handleResetFilters}>
@@ -347,6 +388,7 @@ export function AgentList() {
                 description={t("expansion.desc")}
                 actionLabel={t("expansion.action")}
                 disabled={addDisabled}
+                ariaDescribedBy={quotaStatusDescriptionId}
                 onOpenInstall={() => setInstallOpen(true)}
               />) : null}
             </div>)}

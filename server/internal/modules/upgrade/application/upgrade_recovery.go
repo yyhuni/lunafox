@@ -23,6 +23,11 @@ type HostUpgradeEvent struct {
 	Migration       string
 	ObservedDigests map[string]string
 	UpdatedAt       time.Time
+	// StageUpdatedAt is the last lifecycle checkpoint. UpdatedAt may be newer
+	// because a progress heartbeat was appended, but that must not feed the
+	// stalled-stage watchdog or create a synthetic StageTimes entry.
+	StageUpdatedAt time.Time
+	ProgressEvents []domain.ProgressEvent
 	// FromJournal marks an observation read from the deployment-scoped,
 	// schema-validated checkpoint. A journal may legitimately skip transient
 	// stages while the Server was down; live/untrusted adapters must leave this
@@ -46,6 +51,9 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 	}
 	if operation.ManifestDigest != event.ManifestDigest {
 		return nil, domain.ErrReleaseManifestTargetMismatch
+	}
+	if err := domain.ValidateProgressEvents(event.ProgressEvents); err != nil {
+		return nil, fmt.Errorf("invalid host progress events: %w", err)
 	}
 	status, migrationStatus, err := mapHostStage(event.Stage, event.Migration)
 	if err != nil {
@@ -84,6 +92,10 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 	if !operation.Status.IsTerminal() && statusRank(status) < statusRank(operation.Status) {
 		status = operation.Status
 	}
+	mergedProgress, progressChanged, err := domain.MergeProgressEvents(operation.ProgressEvents, event.ProgressEvents)
+	if err != nil {
+		return nil, fmt.Errorf("merge host progress events: %w", err)
+	}
 	if err := domain.ValidateTransition(operation.Status, status); err != nil {
 		// A delayed checkpoint that is not a safety escalation is harmless. Do not
 		// turn an idempotent host retry into an API-visible failure.
@@ -99,6 +111,12 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 		// Continue with the validated journal observation.
 	}
 	eventAt := event.UpdatedAt.UTC()
+	eventStageAt := event.StageUpdatedAt.UTC()
+	if eventStageAt.IsZero() {
+		// Old journals have no separate stage timestamp. Their UpdatedAt is the
+		// best available checkpoint evidence and remains backward compatible.
+		eventStageAt = eventAt
+	}
 	stageAt := operation.StageTimes[status].UTC()
 	migrationChanged := effectiveMigration != "" && effectiveMigration != operation.MigrationStatus
 	candidateDiagnostic := operation.Diagnostic
@@ -113,8 +131,8 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 			break
 		}
 	}
-	checkpointAdvanced := !eventAt.IsZero() && (stageAt.IsZero() || eventAt.After(stageAt))
-	if status == operation.Status && !checkpointAdvanced && !migrationChanged && !diagnosticChanged && !observedChanged {
+	checkpointAdvanced := !eventStageAt.IsZero() && (stageAt.IsZero() || eventStageAt.After(stageAt))
+	if status == operation.Status && !checkpointAdvanced && !migrationChanged && !diagnosticChanged && !observedChanged && !progressChanged {
 		// The recovery job reads the same durable checkpoint on every tick. A
 		// replay must not turn that read into synthetic stage progress, otherwise
 		// the watchdog could never classify a genuinely stalled operation.
@@ -124,8 +142,11 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 		return service.reconcileAfterHostEvent(ctx, operation)
 	}
 	now := service.now().UTC()
-	if checkpointAdvanced {
+	if !eventAt.IsZero() && eventAt.After(now) {
 		now = eventAt
+	}
+	if checkpointAdvanced && !eventStageAt.IsZero() && eventStageAt.After(now) {
+		now = eventStageAt
 	}
 	if !now.After(operation.UpdatedAt) {
 		now = operation.UpdatedAt.Add(time.Nanosecond)
@@ -143,12 +164,21 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 			operation.ObservedDigests[key] = value
 		}
 	}
+	operation.ProgressEvents = mergedProgress
 	operation.UpdatedAt = now
-	if operation.StageTimes == nil {
-		operation.StageTimes = map[domain.Status]time.Time{}
+	if checkpointAdvanced || status != previousStatus {
+		if operation.StageTimes == nil {
+			operation.StageTimes = map[domain.Status]time.Time{}
+		}
+		checkpointAt := eventStageAt
+		if checkpointAt.IsZero() {
+			checkpointAt = now
+		}
+		if previous, ok := operation.StageTimes[status]; !ok || checkpointAt.After(previous) {
+			operation.StageTimes[status] = checkpointAt
+		}
 	}
-	operation.StageTimes[status] = now
-	if status.IsTerminal() {
+	if status.IsTerminal() && (checkpointAdvanced || status != previousStatus) {
 		operation.CompletedAt = &now
 	}
 	updated, err := service.persistReconciledOperation(ctx, operation, previousStatus)

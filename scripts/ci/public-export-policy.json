@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "policyVersion": "2026-09-09",
+  "policyVersion": "2026-09-19",
   "sourceRepository": "yyhuni/lunafox-private",
   "destinationRepository": "yyhuni/lunafox",
   "sourceRefs": {
@@ -102,8 +102,11 @@
       "LICENSE",
       "NOTICE-CLOSED-ARTIFACTS.md",
       "README.md",
+      "README.zh-CN.md",
+      "release-notes/README.md",
       ".gitignore",
       "docs/public-deployment.md",
+      "docs/public-deployment.zh-CN.md",
       ".env",
       ".env.example",
       "compose.yaml",
@@ -124,6 +127,10 @@
       "scripts/ci/publish-public-deployment.test.mjs",
       "scripts/ci/publish-public-export.mjs",
       "scripts/ci/check-public-release-policy.mjs",
+      "scripts/ci/validate-public-release-notes.mjs",
+      "scripts/ci/validate-public-release-notes.test.mjs",
+      "scripts/ci/validate-public-documentation.mjs",
+      "scripts/ci/validate-public-documentation.test.mjs",
       "scripts/ci/check-migration-baseline-policy.mjs",
       "scripts/ci/check-engine-api-major-policy.mjs",
       "scripts/ci/generate-release-manifest.sh",
@@ -261,7 +268,8 @@
       "frontend/styles/",
       "frontend/test/",
       "frontend/types/",
-      "deploy/lifecycle/"
+      "deploy/lifecycle/",
+      "release-notes/"
     ],
     "generatedExact": [
       "PUBLIC_PROVENANCE.json",
@@ -296,11 +304,14 @@
   ],
   "requiredPaths": [
     "README.md",
+    "README.zh-CN.md",
     ".gitignore",
     "CONTRIBUTING.md",
     "LICENSE",
     "NOTICE-CLOSED-ARTIFACTS.md",
     "docs/public-deployment.md",
+    "docs/public-deployment.zh-CN.md",
+    "release-notes/README.md",
     "deploy/compose.template.yaml",
     "deploy/.env.example",
     "resources/loki/loki-config.yaml",
@@ -318,6 +329,10 @@
     "scripts/ci/publish-public-deployment.test.mjs",
     "scripts/ci/publish-public-export.mjs",
     "scripts/ci/check-public-release-policy.mjs",
+    "scripts/ci/validate-public-release-notes.mjs",
+    "scripts/ci/validate-public-release-notes.test.mjs",
+    "scripts/ci/validate-public-documentation.mjs",
+    "scripts/ci/validate-public-documentation.test.mjs",
     "scripts/ci/check-migration-baseline-policy.mjs",
     "scripts/ci/check-engine-api-major-policy.mjs",
     "scripts/ci/generate-release-manifest.sh",
@@ -430,7 +445,7 @@
     "^server/bin(?:/|$)",
     "^server/\\.air\\.toml$",
     "^scripts/(?:dev|cli|installer|shared)(?:/|$)",
-    "^scripts/ci/(?!finalize-engine-runtime-platforms\\.test\\.mjs$|(?:build-engine-runtime-platform|finalize-engine-runtime-platforms)\\.sh$|select-public-validation-scope(?:\\.test)?\\.mjs$|audit-public-security-scope\\.mjs$|check-public-channel\\.mjs$|check-public-export\\.mjs$|export-public-repository\\.mjs$|generate-public-channel\\.mjs$|generate-compose-deployment(?:\\.test)?\\.mjs$|generate-release-manifest\\.sh$|prepare-legacy-public-deployment(?:\\.test)?\\.mjs$|publish-public-deployment(?:\\.test)?\\.mjs$|publish-public-export\\.mjs$|public-export-policy\\.json$|public-release-policy\\.json$|check-public-release-policy\\.mjs$|check-migration-baseline-policy\\.mjs$|check-engine-api-major-policy\\.mjs$|verify-compose-(?:cert|config)-init-selftest\\.sh$|verify-public-deployment\\.sh$|verify-public-release\\.mjs$|verify-public-main-merge\\.mjs$|verify-public-runtime-contexts\\.mjs$|verify-public-runtime-image-evidence(?:-selftest)?\\.mjs$|verify-agent-binary-bundle\\.mjs$|verify-public-agent-wrapper(?:-selftest)?\\.mjs$|verify-public-runtime-source\\.sh$|verify-public-engine-release(?:-selftest)?\\.mjs$|publish-engine-runtime-images\\.sh$|aggregate-engine-runtime-image-shards\\.sh$|check-engine-image-tool-inventory\\.mjs$|verify-distribution-registry-v2\\.mjs$|verify-runtime-image-index\\.mjs$).+",
+    "^scripts/ci/(?!finalize-engine-runtime-platforms\\.test\\.mjs$|(?:build-engine-runtime-platform|finalize-engine-runtime-platforms)\\.sh$|select-public-validation-scope(?:\\.test)?\\.mjs$|audit-public-security-scope\\.mjs$|check-public-channel\\.mjs$|check-public-export\\.mjs$|export-public-repository\\.mjs$|generate-public-channel\\.mjs$|generate-compose-deployment(?:\\.test)?\\.mjs$|generate-release-manifest\\.sh$|prepare-legacy-public-deployment(?:\\.test)?\\.mjs$|publish-public-deployment(?:\\.test)?\\.mjs$|validate-public-release-notes(?:\\.test)?\\.mjs$|validate-public-documentation(?:\\.test)?\\.mjs$|publish-public-export\\.mjs$|public-export-policy\\.json$|public-release-policy\\.json$|check-public-release-policy\\.mjs$|check-migration-baseline-policy\\.mjs$|check-engine-api-major-policy\\.mjs$|verify-compose-(?:cert|config)-init-selftest\\.sh$|verify-public-deployment\\.sh$|verify-public-release\\.mjs$|verify-public-main-merge\\.mjs$|verify-public-runtime-contexts\\.mjs$|verify-public-runtime-image-evidence(?:-selftest)?\\.mjs$|verify-agent-binary-bundle\\.mjs$|verify-public-agent-wrapper(?:-selftest)?\\.mjs$|verify-public-runtime-source\\.sh$|verify-public-engine-release(?:-selftest)?\\.mjs$|publish-engine-runtime-images\\.sh$|aggregate-engine-runtime-image-shards\\.sh$|check-engine-image-tool-inventory\\.mjs$|verify-distribution-registry-v2\\.mjs$|verify-runtime-image-index\\.mjs$).+",
     "^(?:openspec|\\.agents|\\.claude|docs/research|docs/plans)(?:/|$)",
     "^(?:release\\.manifest(?:\\.yaml\\.example)|release\\.manifest\\.final\\.yaml\\.example|checksums\\.txt)$",
     "(?:^|/)(?:lunafox-installer|installer-cache)(?:[-_/]|$)",
@@ -517,8 +532,10 @@
   },
   "generatedMarkers": [
     "README.md",
+    "README.zh-CN.md",
     "CONTRIBUTING.md",
     "docs/public-deployment.md",
+    "docs/public-deployment.zh-CN.md",
     "deploy/.env.example"
   ]
 }

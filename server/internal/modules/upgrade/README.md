@@ -102,8 +102,18 @@ does not terminate the background loop.
 
 Operation responses include the running Server's `currentVersion` and a
 maximum-32-entry `logs` projection. Entries are fixed lifecycle milestones,
-safe diagnostics, and bounded cancellation counts; raw Compose output, paths,
-tokens, and credentials are never persisted or returned. The frontend uses the
-active view as its route-lock authority, renders the bounded timeline/log, and
-offers stop, retry, recheck, and terminal exit actions according to the durable
-state.
+safe diagnostics, bounded cancellation counts, and host-generated progress
+events. Progress events are single-line catalog messages with bounded metadata;
+they are an observation stream for the current stage, not a lifecycle source
+of truth. Raw Compose stdout/stderr, paths, commands, image references,
+environment values, tokens, and credentials are never persisted or returned.
+The frontend uses the active view as its route-lock authority, renders the
+bounded timeline and shared `RawLogViewer` progress stream, and offers stop,
+retry, recheck, and terminal exit actions according to the durable state.
+
+The progress stream is deliberately separate from Server/Loki system logs.
+During service update or restart the Server and its log API may be unavailable,
+so the host journal remains the durable handoff source. Event append and
+delivery are best effort and must never block Compose execution or change the
+upgrade terminal result. Host command output remains available through the
+operator's host-side `logs.sh` workflow when deeper diagnosis is required.

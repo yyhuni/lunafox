@@ -49,6 +49,17 @@ function UpgradeRouteOwner({ resolving = false }: { resolving?: boolean }) {
   )
 }
 
+function UpgradeRouteHandoffBlocker() {
+  return (
+    <div
+      data-boot-handoff-pending="true"
+      data-testid="upgrade-route-handoff-blocker"
+      hidden
+      aria-hidden="true"
+    />
+  )
+}
+
 interface UpgradeRouteBoundaryProps {
   children: React.ReactNode
   renderProtectedShell: (children: React.ReactNode) => React.ReactNode
@@ -58,6 +69,11 @@ interface UpgradeRouteBoundaryProps {
  * Keeps ordinary authenticated routes out of the tree while an accepted
  * upgrade is non-terminal. The server Operation, rather than a browser event,
  * decides when the boundary can release the application again.
+ *
+ * An entry without a persisted operation still performs the server-side active
+ * lookup, but that optional lookup must not make a normal route look like an
+ * upgrade while a slow network is resolving. Once the server returns an active
+ * Operation, the same boundary immediately takes ownership and redirects.
  */
 export function UpgradeRouteBoundary({ children, renderProtectedShell }: UpgradeRouteBoundaryProps) {
   const pathname = usePathname()
@@ -66,9 +82,9 @@ export function UpgradeRouteBoundary({ children, renderProtectedShell }: Upgrade
   const [hydrated, setHydrated] = React.useState(false)
   const operation = useUpgradeOperation(undefined, { enabled: hydrated && !isUpgradeRoute })
   const redirectStartedRef = React.useRef(false)
+  const hasOperationHint = Boolean(operation.operationId)
   const shouldLock = !isUpgradeRoute && (
-    !hydrated ||
-    operation.isResolving ||
+    (hasOperationHint && operation.isResolving) ||
     operation.isReconnecting ||
     operation.isError ||
     operation.isActive
@@ -95,6 +111,10 @@ export function UpgradeRouteBoundary({ children, renderProtectedShell }: Upgrade
   }, [shouldLock])
 
   if (isUpgradeRoute) return <>{children}</>
+  // Keep the server-rendered boot layer as the only visible owner until the
+  // client can read browser storage. This avoids a hydration-time upgrade card
+  // for ordinary entries while still preserving the persisted-operation gate.
+  if (!hydrated) return <UpgradeRouteHandoffBlocker />
   if (shouldLock) return <UpgradeRouteOwner resolving={!hydrated || operation.isResolving} />
   return <>{renderProtectedShell(children)}</>
 }
