@@ -14,7 +14,7 @@ func wordlistModelToDomain(wordlist *model.Wordlist) *catalogdomain.Wordlist {
 		ID:          wordlist.ID,
 		FileName:    wordlist.FileName,
 		Description: wordlist.Description,
-		Tags:        append([]string(nil), wordlist.Tags...),
+		Tags:        cloneWordlistTags(wordlist.Tags),
 		FilePath:    wordlist.FilePath,
 		FileSize:    wordlist.FileSize,
 		LineCount:   wordlist.LineCount,
@@ -32,7 +32,7 @@ func wordlistDomainToModel(wordlist *catalogdomain.Wordlist) *model.Wordlist {
 		ID:          wordlist.ID,
 		FileName:    wordlist.FileName,
 		Description: wordlist.Description,
-		Tags:        append([]string(nil), wordlist.Tags...),
+		Tags:        cloneWordlistTags(wordlist.Tags),
 		FilePath:    wordlist.FilePath,
 		FileSize:    wordlist.FileSize,
 		LineCount:   wordlist.LineCount,
@@ -40,6 +40,14 @@ func wordlistDomainToModel(wordlist *catalogdomain.Wordlist) *model.Wordlist {
 		CreatedAt:   timeutil.ToUTC(wordlist.CreatedAt),
 		UpdatedAt:   timeutil.ToUTC(wordlist.UpdatedAt),
 	}
+}
+
+// Preserve an empty tag collection as [] so the JSONB NOT NULL column never receives SQL NULL.
+func cloneWordlistTags(tags []string) []string {
+	if len(tags) == 0 {
+		return []string{}
+	}
+	return append([]string(nil), tags...)
 }
 
 func wordlistModelListToDomain(wordlists []model.Wordlist) []catalogdomain.Wordlist {

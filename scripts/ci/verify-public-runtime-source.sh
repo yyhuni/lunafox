@@ -165,7 +165,9 @@ if find "$ROOT_DIR" -type d \( \
 fi
 
 grep -Fq 'SPDX-License-Identifier: GPL-3.0-only' "$ROOT_DIR/LICENSE" || fail "LICENSE must declare GPL-3.0-only"
-for document in README.md CONTRIBUTING.md docs/public-deployment.md NOTICE-CLOSED-ARTIFACTS.md; do
+# The root README stays install-first; detailed Agent boundary terms live in
+# the contributor, deployment, and artifact notice documents.
+for document in CONTRIBUTING.md docs/public-deployment.md NOTICE-CLOSED-ARTIFACTS.md; do
 	grep -Eiq 'Agent.{0,80}(private|closed|not|不|私有)' "$ROOT_DIR/$document" ||
 		fail "$document must describe the private Agent boundary"
 done

@@ -1228,6 +1228,9 @@ function assertExportPolicy(exportPolicy) {
   if (!(exportPolicy.allowlist?.prefixes ?? []).includes("release-notes/")) {
     fail("export policy must allow the release-notes/ prefix");
   }
+  if (!(exportPolicy.denylist ?? []).some((pattern) => String(pattern) === "^release-note-evidence(?:/|$)")) {
+    fail("export policy must keep private release-note evidence outside the public projection");
+  }
   for (const required of REQUIRED_PUBLIC_CHECKOUT_DEPLOYMENT_PATHS) {
     if (!exact.has(required)) fail(`export policy does not allow checkout deployment input: ${required}`);
   }
