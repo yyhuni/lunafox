@@ -339,7 +339,7 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
   // Enable virtual scrolling only for large datasets (>100 rows)
   const enableVirtualScrolling = !isLoading && rows.length > 100
 
-  const rowVirtualizer = useVirtualizer({
+  const rowVirtualizer = useVirtualizer<HTMLDivElement, HTMLTableRowElement>({
     count: rows.length,
     getScrollElement: () => tableContainerRef.current,
     estimateSize: () => rowRhythm.estimatedHeight,
@@ -683,14 +683,17 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
                   // Virtual scrolling mode for large datasets
                   virtualRows.map((virtualRow) => {
                     const row = rows[virtualRow.index]
+                    // Absolute rows must retain their natural content height. A fixed
+                    // rhythm height hides multiline cells from measurement and overlaps rows.
                     return (
                       <TableRow
                         key={row.id}
+                        ref={rowVirtualizer.measureElement}
+                        data-index={virtualRow.index}
                         data-state={row.getIsSelected() && "selected"}
                         tabIndex={onRowClick ? 0 : undefined}
                         aria-label={getRowActionLabel?.(row.original)}
                         className={cn(
-                          rowRhythm.rowClassName,
                           "group",
                           onRowClick && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
                         )}
@@ -703,6 +706,7 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
                           top: 0,
                           left: 0,
                           width: '100%',
+                          minHeight: rowRhythm.rhythmHeight,
                           transform: `translateY(${virtualRow.start}px)`,
                         }}
                       >

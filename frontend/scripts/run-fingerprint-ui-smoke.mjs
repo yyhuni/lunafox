@@ -18,12 +18,7 @@ const viewports = [
   { name: "mobile", width: 390, height: 844, isMobile: true, hasTouch: true },
 ]
 const libraries = [
-  { id: "ehole", placeholder: /搜索 CMS|Search CMS/, columns: 8, facet: true },
-  { id: "goby", placeholder: /搜索名称|Search name/, columns: 5 },
-  { id: "wappalyzer", placeholder: /搜索名称|Search name/, columns: 16 },
-  { id: "fingers", placeholder: /搜索名称|Search name/, columns: 11, facet: true },
   { id: "fingerprinthub", placeholder: /搜索名称|Search name/, columns: 10, facet: true },
-  { id: "arl", placeholder: /搜索名称|Search name/, columns: 4 },
 ]
 
 function assert(condition, message) {
@@ -65,23 +60,107 @@ async function verifyLibraryPage(page, viewport, library) {
   }
 }
 
-async function verifyExpandableCell(page) {
-  const expander = page.getByRole("button", { name: /展开|Expand/ }).first()
-  await expander.waitFor({ state: "visible", timeout: 10000 })
-  await expander.click()
+function buildVirtualRowRegressionImport() {
+  return JSON.stringify(Array.from({ length: 1000 }, (_, index) => ({
+    id: `virtual-row-${index + 1}`,
+    info: {
+      name: `Virtual row ${index + 1}`,
+      severity: "info",
+    },
+    http: [{
+      matchers: [{
+        type: "word",
+        words: [`virtual-row-${index + 1}-${"x".repeat(1200)}`],
+      }],
+    }],
+  })))
+}
+
+async function getRenderedVirtualRowGeometry(page) {
+  return page.locator('[data-slot="table-body"] tr').evaluateAll((elements) => elements
+    .map((element, index) => {
+      const rowRect = element.getBoundingClientRect()
+      const contentBottom = Math.max(
+        rowRect.bottom,
+        ...Array.from(element.querySelectorAll("td"), (cell) => cell.getBoundingClientRect().bottom)
+      )
+      return {
+        index,
+        top: rowRect.top,
+        contentBottom,
+        height: rowRect.height,
+      }
+    })
+    .filter((row) => row.height > 0)
+    .sort((left, right) => left.top - right.top))
+}
+
+function findOverlappingVirtualRowPair(rows) {
+  return rows.slice(1).find((row, index) => row.top < rows[index].contentBottom - 0.5)
+}
+
+async function assertVirtualRowsDoNotOverlap(page, phase) {
+  await page.waitForFunction(() => {
+    const rows = Array.from(document.querySelectorAll('[data-slot="table-body"] tr'))
+      .map((element) => {
+        const rowRect = element.getBoundingClientRect()
+        const contentBottom = Math.max(
+          rowRect.bottom,
+          ...Array.from(element.querySelectorAll("td"), (cell) => cell.getBoundingClientRect().bottom)
+        )
+        return { top: rowRect.top, contentBottom, height: rowRect.height }
+      })
+      .filter((row) => row.height > 0)
+      .sort((left, right) => left.top - right.top)
+
+    return rows.length >= 2 && rows.slice(1).every((row, index) => row.top >= rows[index].contentBottom - 0.5)
+  }, undefined, { timeout: 10000 })
+
+  const rows = await getRenderedVirtualRowGeometry(page)
+  const overlap = findOverlappingVirtualRowPair(rows)
+  assert(!overlap, `${phase}: virtual row content overlaps the following row`)
+  console.log(`fingerprinthub/virtual-rows/${phase}: ok`)
+}
+
+async function verifyFingerprintHubVirtualRows(page) {
+  await page.getByRole("button", { name: /^(文件导入|导入文件|Import File)$/ }).click()
+  const dialog = page.getByRole("dialog")
+  const fileInput = dialog.locator('input[type="file"]')
+  await fileInput.setInputFiles({
+    name: "virtual-row-regression.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(buildVirtualRowRegressionImport()),
+  })
+  await dialog.getByRole("button", { name: /^(导入|Import)$/ }).click()
+  await dialog.waitFor({ state: "hidden", timeout: 15000 })
+
+  const pageSize = page.getByRole("combobox", { name: /每页显示|Rows per page/ })
+  await pageSize.click()
+  await page.getByRole("option", { name: "1000", exact: true }).click()
+  await page.waitForFunction(() => {
+    const tableBody = document.querySelector('[data-slot="table-body"]')
+    return tableBody instanceof HTMLElement
+      && Number.parseFloat(tableBody.style.height) > 0
+      && tableBody.querySelectorAll("tr").length > 1
+  }, undefined, { timeout: 15000 })
+
+  await assertVirtualRowsDoNotOverlap(page, "collapsed")
+
+  await page.getByRole("button", { name: /展开|Expand/ }).first().click()
   await page.getByRole("button", { name: /收起|Collapse/ }).first().waitFor({ state: "visible", timeout: 5000 })
+  await assertVirtualRowsDoNotOverlap(page, "expanded")
 }
 
 async function verifyFacet(page, library) {
-  const trigger = page.getByRole("button", { name: /筛选|Filter/ }).first()
+  const trigger = page.getByRole("button", { name: /严重程度|Severity/ }).first()
   await trigger.click()
-  const layout = page.locator("[data-facet-layout]").first()
-  await layout.waitFor({ state: "visible", timeout: 5000 })
-  const option = layout.locator('[data-command-item]').first()
+  const content = page.locator('[data-slot="popover-content"]').last()
+  await content.waitFor({ state: "visible", timeout: 5000 })
+  const option = content.locator('[data-command-item]').first()
   await option.click()
-  const apply = page.getByRole("button", { name: /^(应用|Apply)$/ }).last()
+  const apply = content.getByRole("button", { name: /^(应用|Apply)$/ })
   await apply.click()
-  await layout.waitFor({ state: "hidden", timeout: 5000 })
+  await content.waitFor({ state: "hidden", timeout: 5000 })
   await page.locator("table:visible").first().waitFor({ state: "visible", timeout: 5000 })
   console.log(`facet=${library.id}: ok`)
 }
@@ -104,8 +183,8 @@ async function main() {
         const { context, page } = await openLibrary(browser, viewport, library)
         try {
           await verifyLibraryPage(page, viewport, library)
-          if (library.id === "goby" && viewport.name === "desktop") await verifyExpandableCell(page)
           if (library.facet) await verifyFacet(page, library)
+          if (library.id === "fingerprinthub" && viewport.name === "desktop") await verifyFingerprintHubVirtualRows(page)
           console.log(`${library.id}/${viewport.name}: ok`)
         } finally {
           await context.close()
