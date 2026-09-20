@@ -40,6 +40,8 @@ type SyncTask struct {
 	Diagnostics        datatypes.JSON `gorm:"column:diagnostics;type:jsonb;not null"`
 	CleanupStatus      string         `gorm:"column:cleanup_status;size:32;not null;default:pending"`
 	WorkspaceKey       string         `gorm:"column:workspace_key;size:128;not null;default:''"`
+	LeaseOwner         *string        `gorm:"column:lease_owner;size:128"`
+	LeaseExpiresAt     *time.Time     `gorm:"column:lease_expires_at"`
 	CreatedAt          time.Time      `gorm:"column:created_at;not null"`
 	StartedAt          *time.Time     `gorm:"column:started_at"`
 	CompletedAt        *time.Time     `gorm:"column:completed_at"`

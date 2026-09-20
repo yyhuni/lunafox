@@ -15,6 +15,7 @@ import {
   getNucleiPocFilterOptions,
   getNucleiPocSource,
   getNucleiPocSyncTask,
+  cancelNucleiPocSyncTask,
   getNucleiPocErrorReason,
   listNucleiPocs,
   parsePocTemplateId,
@@ -93,6 +94,18 @@ describe("nuclei-poc.service", () => {
       sourceType: "gitee",
       repoUrl: "https://gitee.com/example/nuclei-templates.git",
     })
+  })
+
+  it("cancels a task through the canonical custom method", async () => {
+    apiClientMock.post.mockResolvedValueOnce({ data: { name: taskName, state: "CANCELLING" } })
+
+    await expect(cancelNucleiPocSyncTask(taskName)).resolves.toEqual({ name: taskName, state: "CANCELLING" })
+    expect(apiClientMock.post).toHaveBeenCalledWith("/nucleiPocSyncTasks/00000000-0000-4000-8000-000000000001:cancel")
+  })
+
+  it("rejects a non-canonical task name before sending cancellation", async () => {
+    await expect(cancelNucleiPocSyncTask(`${taskName} `)).rejects.toThrow()
+    expect(apiClientMock.post).not.toHaveBeenCalled()
   })
 
   it("uses the full-catalog activation custom method with only the explicit target", async () => {

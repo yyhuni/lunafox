@@ -38,6 +38,7 @@ import {
   getMockNotificationLocale,
   getMockNotifications,
   createMockNucleiPocSync,
+  cancelMockNucleiPocSyncTask,
   getMockNucleiPoc,
   getMockNucleiPocFilterOptions,
   getMockNucleiPocs,
@@ -2289,6 +2290,15 @@ async function resolveMockApi(request: Request) {
   }
   {
     const nucleiPocTaskMatch = path.match(/^\/nucleiPocSyncTasks\/([^/]+)$/)
+    const nucleiPocCancelMatch = path.match(/^\/nucleiPocSyncTasks\/([^/]+):cancel$/)
+    if (method === "POST" && nucleiPocCancelMatch) {
+      try {
+        return json(cancelMockNucleiPocSyncTask(`nucleiPocSyncTasks/${nucleiPocCancelMatch[1]}`))
+      } catch (error) {
+        const typed = error as { status?: number; code?: string; message?: string }
+        return json({ error: { code: typed.status ?? 404, status: typed.code ?? "NOT_FOUND", message: typed.message ?? "Nuclei POC sync task not found." } }, { status: typed.status ?? 404 })
+      }
+    }
     if (method === "GET" && nucleiPocTaskMatch) {
       const task = getMockNucleiPocSyncTask(`nucleiPocSyncTasks/${nucleiPocTaskMatch[1]}`)
       return task

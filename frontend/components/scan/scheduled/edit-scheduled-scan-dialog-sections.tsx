@@ -104,7 +104,7 @@ interface EditScheduledScanDialogFooterProps {
 }
 export function EditScheduledScanDialogFooter({ t, isPending, }: EditScheduledScanDialogFooterProps) {
     return (<div className="flex justify-end gap-2">
-      <Button type="submit" disabled={isPending} loading={isPending} loadingLabel={t("buttons.saveChanges")}>
+      <Button type="submit" size="sm" disabled={isPending} loading={isPending} loadingLabel={t("buttons.saveChanges")}>
         {t("buttons.saveChanges")}
       </Button>
     </div>);

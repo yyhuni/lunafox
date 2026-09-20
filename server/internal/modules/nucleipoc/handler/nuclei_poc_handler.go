@@ -19,6 +19,7 @@ type nucleiPocService interface {
 	CurrentSource(context.Context) (*domain.Source, error)
 	CreateSync(context.Context, app.CreateSyncInput) (*domain.SyncTask, error)
 	GetSyncTask(context.Context, uuid.UUID) (*domain.SyncTask, error)
+	CancelSync(context.Context, uuid.UUID) (*domain.SyncTask, error)
 	List(context.Context, app.POCListQuery) (*app.POCListResult, error)
 	ListFilterOptions(context.Context, string) ([]domain.FilterOption, error)
 	Get(context.Context, string) (*domain.POC, error)
@@ -74,6 +75,29 @@ func (handler *NucleiPOCHandler) GetSyncTask(c *gin.Context) {
 		return
 	}
 	task, err := handler.service.GetSyncTask(c.Request.Context(), id)
+	if err != nil {
+		handler.writeError(c, err)
+		return
+	}
+	httpdto.Success(c, taskResponse(task))
+}
+
+// CancelSyncTask serves POST /v1/nucleiPocSyncTasks/{task}:cancel. Gin's
+// router treats a colon inside a parameter segment as part of the parameter
+// grammar, so the route is registered on the task segment and this boundary
+// validates the required literal action suffix explicitly.
+func (handler *NucleiPOCHandler) CancelSyncTask(c *gin.Context) {
+	taskSegment := c.Param("task")
+	if !strings.HasSuffix(taskSegment, ":cancel") {
+		httpdto.ErrorWithStatus(c, http.StatusBadRequest, "INVALID_ARGUMENT", "INVALID_ARGUMENT", "task action must be :cancel")
+		return
+	}
+	id, ok := parseCanonicalUUID(strings.TrimSuffix(taskSegment, ":cancel"))
+	if !ok {
+		httpdto.ErrorWithStatus(c, http.StatusBadRequest, "INVALID_ARGUMENT", "INVALID_ARGUMENT", "task must be a canonical UUID")
+		return
+	}
+	task, err := handler.service.CancelSync(c.Request.Context(), id)
 	if err != nil {
 		handler.writeError(c, err)
 		return

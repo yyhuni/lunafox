@@ -13,7 +13,6 @@ import {
   WordlistEditMetadata,
   WordlistEditMeta,
   WordlistEditEditor,
-  WordlistEditUnsavedNotice,
   WordlistEditFooter,
 } from "@/components/tools/wordlist-edit-dialog-sections"
 import type { Wordlist } from "@/types/wordlist.types"
@@ -89,8 +88,6 @@ export function WordlistEditDialog({
                     onChange={handleEditorChange}
                     readOnly={isSaving}
                   />
-
-                  {hasChanges && <WordlistEditUnsavedNotice t={t} />}
                 </>
               ) : (
                 <div className="rounded-md border bg-muted/30 px-4 py-3 text-muted-foreground">

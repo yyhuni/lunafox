@@ -50,6 +50,12 @@ export async function getNucleiPocSyncTask(taskName: string): Promise<NucleiPocS
   return response.data
 }
 
+export async function cancelNucleiPocSyncTask(taskName: string): Promise<NucleiPocSyncTask> {
+  const taskId = parseTaskId(taskName)
+  const response = await apiClient.post<NucleiPocSyncTask>(`${TASK_PATH}/${encodeURIComponent(taskId)}:cancel`)
+  return response.data
+}
+
 export async function listNucleiPocs(
   query: NucleiPocListQuery = {},
 ): Promise<NucleiPocListResponse> {

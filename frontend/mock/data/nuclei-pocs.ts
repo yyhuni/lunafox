@@ -255,6 +255,17 @@ export function getMockNucleiPocSyncTask(name: string): NucleiPocSyncTask | null
   return cloneTask(record.task)
 }
 
+export function cancelMockNucleiPocSyncTask(name: string): NucleiPocSyncTask {
+  const record = tasks.get(name)
+  if (!record || record.mode === "expired") {
+    throw requestError(404, "NOT_FOUND", "Nuclei POC sync task not found.")
+  }
+  if (!isTerminal(record.task.state) && record.task.state !== "CANCELLING") {
+    record.task = { ...record.task, state: "CANCELLING", phase: "CANCELLING", updatedAt: MOCK_TIME }
+  }
+  return cloneTask(record.task)
+}
+
 export function getMockNucleiPocs(query: NucleiPocListQuery): NucleiPocListResponse {
 	const pageSize = query.pageSize ?? 50
 	if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 1000) throw requestError(400, "INVALID_ARGUMENT", "Invalid pageSize")
@@ -374,6 +385,19 @@ export function resetMockNucleiPocs() {
 }
 
 function advanceTask(record: MockTaskRecord) {
+  if (record.task.state === "CANCELLING") {
+    record.task = {
+      ...record.task,
+      state: "CANCELLED",
+      phase: "CANCELLED",
+      failureCode: "SYNC_CANCELLED",
+      failureSummary: "The sync was cancelled and no new catalog was committed.",
+      completedAt: MOCK_TIME,
+      cleanupStatus: "clean",
+    }
+    if (activeTaskName === record.task.name) activeTaskName = null
+    return
+  }
   const nextState = record.mode === "failure"
     ? failureState(record.polls)
     : successState(record.polls)
@@ -437,7 +461,7 @@ function countersForState(state: NucleiPocSyncState) {
 }
 
 function isTerminal(state: NucleiPocSyncState) {
-  return state === "SUCCEEDED" || state === "FAILED"
+  return state === "SUCCEEDED" || state === "FAILED" || state === "CANCELLED"
 }
 
 function cloneDetail(item: NucleiPocDetail): NucleiPocDetail {

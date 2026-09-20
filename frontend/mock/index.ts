@@ -265,6 +265,7 @@ export {
 // Nuclei POC source sync
 export {
   createMockNucleiPocSync,
+  cancelMockNucleiPocSyncTask,
   getMockNucleiPoc,
   getMockNucleiPocFilterOptions,
   getMockNucleiPocs,

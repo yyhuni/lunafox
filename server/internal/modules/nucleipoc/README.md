@@ -11,7 +11,9 @@
 - `isEnabled` 是独立的持久化运行时覆盖：匹配的 `templateId` 在连续同步时继承，上一份目录中不存在的模板（包括删除后重新出现的模板）默认关闭。当前开发基线通过重建 schema 切换默认值，不对既有数据库做回填。
 - `POST /v1/nucleiPocs:setActivation` 在现有认证全局边界内对完整已提交目录设置显式 `enabled` 目标，并返回事务内实际变化的 `affectedCount`；分页、搜索和筛选不会缩小范围。空目录和重复目标都是成功的零变更，非终态同步会先返回 `SYNC_ALREADY_RUNNING` 且不写入任何 POC。
 - 同步任务创建、最终 promotion、单条启停和全目录启停共享短暂的 catalog mutation 边界：进程 mutex 加 PostgreSQL transaction-scoped advisory lock；clone、遍历、解析和候选 staging 不在锁内。全目录启停的列表/详情缓存由前端刷新，source metadata 保持不变，网络结果未知时不会自动重试。
-- 同步通过持久化异步任务运行，失败、过期、残留清理和幂等请求均由本模块处理；失败不得改变上一份已提交目录。
+- 同步通过持久化异步任务运行，失败、过期、取消、残留清理和幂等请求均由本模块处理；失败或取消不得改变上一份已提交目录。
+- 任务状态为 `VALIDATING_SOURCE`、`CLONING`、`SCANNING_FILES`、`VALIDATING_TEMPLATES`、`COMMITTING`、`CLEANING`、`CANCELLING`、`SUCCEEDED`、`FAILED` 或 `CANCELLED`。`POST /v1/nucleiPocSyncTasks/{task}:cancel` 只记录取消意图并返回当前任务；runner 停止受控 Git/解析进程、删除候选并尝试清理工作区后，才把 `CANCELLING` 收敛为 `CANCELLED`，此时才释放全局单活槽位。重复取消和已终态任务请求均为幂等观察，不会改写成功/失败结果。
+- 取消期间关闭前端进度弹窗只改变展示，不停止后台任务；取消完成后弹窗提供显式新建同步入口。跨进程取消通过持久化 `CANCELLING` 状态轮询传播；每个已领取任务都有 runner owner lease 并在运行期间续租，启动恢复只收敛已失效或长期未领取的任务，绝不提前终结另一实例仍在清理的任务。无法确认删除的工作区标记为 `residual`。
 - 源校验只负责匿名 HTTPS URL 形状，不执行 DNS、公网 IP、直连或重定向预检；`custom` 源的实际出口由 Git 和部署代理决定，因此可使用 Fake-IP 或内网目标。
 - Git 按域名连接并继承 `HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY`、`NO_PROXY` 及其大小写变体；仍不支持私有凭据、SSH、HTTP、`git://`、本地路径或自动同步。
 - Docker Compose 的开发和生产 `server` 服务都会传入这些代理变量；代理地址必须从 Docker VM 可达（例如 `host.docker.internal`），无代理环境保持为空。

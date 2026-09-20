@@ -11,7 +11,7 @@ describe("use-nuclei-pocs contract", () => {
     expect(source).not.toContain("open || !taskName")
     expect(source).toContain("return 1000")
     expect(source).toContain('status === 404 || status === 410')
-    expect(source).toContain('TERMINAL_TASK_STATES = new Set(["SUCCEEDED", "FAILED"])')
+    expect(source).toContain('TERMINAL_TASK_STATES = new Set(["SUCCEEDED", "FAILED", "CANCELLED"])')
   })
 
   it("invalidates source, list, tag options, and detail projections only after success", () => {
@@ -21,7 +21,8 @@ describe("use-nuclei-pocs contract", () => {
     expect(source).toContain('nucleiPocKeys.filterOptions("tags")')
     expect(source).toContain("nucleiPocKeys.details()")
     expect(source).toContain("UpdateNucleiPocRequest")
-    expect(source).not.toContain("cancelNucleiPoc")
+    expect(source).toContain("useCancelNucleiPocSyncTask")
+    expect(source).toContain("cancelNucleiPocSyncTask")
   })
 
   it("exposes the complete-catalog tag options as a dedicated query", () => {

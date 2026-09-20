@@ -11,6 +11,7 @@ var (
 	ErrSourceNotFound        = errors.New("nuclei poc source not found")
 	ErrPOCNotFound           = errors.New("nuclei poc not found")
 	ErrSyncTaskNotFound      = errors.New("nuclei poc sync task not found")
+	ErrSyncTaskLeaseLost     = errors.New("nuclei poc sync task lease lost")
 	ErrRequestReplayConflict = errors.New("nuclei poc request replay conflicts")
 	ErrRequestExpired        = errors.New("nuclei poc request expired")
 	ErrActiveSyncConflict    = errors.New("nuclei poc sync already active")

@@ -137,6 +137,7 @@ export function LinkTargetDialogFooter({
     <div className="flex justify-end gap-2">
       <Button
         type="submit"
+        size="sm"
         disabled={isPending || !isFormValid}
         loading={isPending}
         loadingLabel={t("creating")}

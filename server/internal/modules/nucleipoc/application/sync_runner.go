@@ -19,18 +19,45 @@ import (
 )
 
 type SyncRunner struct {
-	store     Store
-	resolver  SourceResolver
-	workspace Workspace
-	git       GitRunner
-	queue     chan uuid.UUID
-	startOnce sync.Once
-	done      chan struct{}
-	ctx       context.Context
+	store              Store
+	resolver           SourceResolver
+	workspace          Workspace
+	git                GitRunner
+	queue              chan uuid.UUID
+	startOnce          sync.Once
+	done               chan struct{}
+	ctx                context.Context
+	runsMu             sync.Mutex
+	runs               map[uuid.UUID]*syncRun
+	leaseOwner         string
+	leaseDuration      time.Duration
+	leaseRenewInterval time.Duration
 }
 
+type syncRun struct {
+	cancel    context.CancelFunc
+	requested bool
+}
+
+const (
+	syncCancellationPollInterval = 500 * time.Millisecond
+	syncTaskLeaseDuration        = 30 * time.Second
+	syncTaskLeaseRenewInterval   = 5 * time.Second
+)
+
 func NewSyncRunner(store Store, resolver SourceResolver, workspace Workspace, git GitRunner) *SyncRunner {
-	return &SyncRunner{store: store, resolver: resolver, workspace: workspace, git: git, queue: make(chan uuid.UUID, 8), done: make(chan struct{})}
+	return &SyncRunner{
+		store:              store,
+		resolver:           resolver,
+		workspace:          workspace,
+		git:                git,
+		queue:              make(chan uuid.UUID, 8),
+		done:               make(chan struct{}),
+		runs:               make(map[uuid.UUID]*syncRun),
+		leaseOwner:         "nuclei-poc-sync-" + uuid.NewString(),
+		leaseDuration:      syncTaskLeaseDuration,
+		leaseRenewInterval: syncTaskLeaseRenewInterval,
+	}
 }
 
 func (runner *SyncRunner) Start(ctx context.Context) {
@@ -66,6 +93,136 @@ func (runner *SyncRunner) Enqueue(taskID uuid.UUID) {
 	}
 }
 
+// Cancel requests the in-process run to stop. The durable CANCELLING state is
+// written by the application service before this fast path is invoked; a
+// runner in another Server process will observe that state through polling.
+func (runner *SyncRunner) Cancel(taskID uuid.UUID) {
+	if runner == nil || taskID == uuid.Nil {
+		return
+	}
+	runner.runsMu.Lock()
+	run := runner.runs[taskID]
+	if run != nil {
+		run.requested = true
+	}
+	runner.runsMu.Unlock()
+	if run != nil && run.cancel != nil {
+		run.cancel()
+	}
+}
+
+// stopRun ends local execution without asserting that an operator requested a
+// cancellation. Lease loss and a terminal result written by recovery must stop
+// the process tree, but must not overwrite the durable terminal winner.
+func (runner *SyncRunner) stopRun(taskID uuid.UUID) {
+	if runner == nil || taskID == uuid.Nil {
+		return
+	}
+	runner.runsMu.Lock()
+	run := runner.runs[taskID]
+	runner.runsMu.Unlock()
+	if run != nil && run.cancel != nil {
+		run.cancel()
+	}
+}
+
+func (runner *SyncRunner) registerRun(taskID uuid.UUID, run *syncRun) bool {
+	runner.runsMu.Lock()
+	defer runner.runsMu.Unlock()
+	if _, exists := runner.runs[taskID]; exists {
+		return false
+	}
+	runner.runs[taskID] = run
+	return true
+}
+
+func (runner *SyncRunner) unregisterRun(taskID uuid.UUID, run *syncRun) {
+	runner.runsMu.Lock()
+	defer runner.runsMu.Unlock()
+	if current, ok := runner.runs[taskID]; ok && current == run {
+		delete(runner.runs, taskID)
+	}
+}
+
+func (runner *SyncRunner) runCancellationRequested(taskID uuid.UUID) bool {
+	runner.runsMu.Lock()
+	run := runner.runs[taskID]
+	requested := run != nil && run.requested
+	runner.runsMu.Unlock()
+	if requested {
+		return true
+	}
+	return runner.cancellationPersisted(taskID)
+}
+
+func (runner *SyncRunner) cancellationPersisted(taskID uuid.UUID) bool {
+	checkCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	task, err := runner.store.GetSyncTask(checkCtx, taskID)
+	return err == nil && task != nil && (task.State == domain.SyncTaskCancelling || task.State == domain.SyncTaskCancelled)
+}
+
+// watchCancellation bridges requests served by a different Server process to
+// the local context. There is at most one active sync, so a bounded poll keeps
+// the cross-process path simple without introducing a second queue/transport.
+func (runner *SyncRunner) watchCancellation(ctx context.Context, taskID uuid.UUID) <-chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		ticker := time.NewTicker(syncCancellationPollInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				checkCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+				task, err := runner.store.GetSyncTask(checkCtx, taskID)
+				cancel()
+				if err != nil || task == nil {
+					continue
+				}
+				if task.State == domain.SyncTaskCancelling {
+					runner.Cancel(taskID)
+					return
+				}
+				if task.State.Terminal() {
+					runner.stopRun(taskID)
+					return
+				}
+			}
+		}
+	}()
+	return done
+}
+
+// watchLease keeps recovery from treating a live runner as interrupted. If the
+// durable lease cannot be renewed, the process must stop before another Server
+// is allowed to recover the task after expiry.
+func (runner *SyncRunner) watchLease(ctx context.Context, taskID uuid.UUID) <-chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		ticker := time.NewTicker(runner.leaseRenewInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				renewCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+				err := runner.store.RenewTaskLease(renewCtx, taskID, runner.leaseOwner, time.Now().UTC(), runner.leaseDuration)
+				cancel()
+				if err != nil {
+					runner.stopRun(taskID)
+					return
+				}
+			}
+		}
+	}()
+	return done
+}
+
 func (runner *SyncRunner) loop(ctx context.Context) {
 	defer close(runner.done)
 	for {
@@ -90,21 +247,48 @@ func (runner *SyncRunner) RunOnce(parent context.Context, taskID uuid.UUID) erro
 	deadline := defaultSyncDeadline
 	ctx, cancel := context.WithTimeout(parent, deadline)
 	defer cancel()
+	run := &syncRun{cancel: cancel}
+	if !runner.registerRun(taskID, run) {
+		return nil
+	}
+	defer runner.unregisterRun(taskID, run)
 	task, err := runner.store.GetSyncTask(ctx, taskID)
 	if err != nil {
+		if runner.runCancellationRequested(taskID) {
+			return runner.cancelled(taskID, domain.Diagnostics{}, string(domain.CleanupClean))
+		}
 		return err
+	}
+	if task == nil {
+		return fmt.Errorf("sync task %s was not returned by the store", taskID)
 	}
 	if task.State.Terminal() {
 		return nil
 	}
+	if task.State == domain.SyncTaskCancelling {
+		return runner.cancelled(taskID, task.Diagnostics, cancellationCleanupStatus(task))
+	}
 	started := time.Now().UTC()
-	claimed, err := runner.store.ClaimTask(ctx, taskID, domain.SyncTaskValidatingSource, started)
+	claimed, err := runner.store.ClaimTask(ctx, taskID, domain.SyncTaskValidatingSource, started, runner.leaseOwner, runner.leaseDuration)
 	if err != nil {
+		if runner.runCancellationRequested(taskID) {
+			return runner.cancelled(taskID, task.Diagnostics, cancellationCleanupStatus(task))
+		}
 		return err
 	}
 	if !claimed {
+		if runner.runCancellationRequested(taskID) {
+			return runner.cancelled(taskID, task.Diagnostics, cancellationCleanupStatus(task))
+		}
 		return nil
 	}
+	cancellationWatchDone := runner.watchCancellation(ctx, taskID)
+	leaseWatchDone := runner.watchLease(ctx, taskID)
+	defer func() {
+		cancel()
+		<-cancellationWatchDone
+		<-leaseWatchDone
+	}()
 	normalizedURL, err := runner.resolver.Validate(ctx, task.SourceType, task.RepoURL)
 	if err != nil {
 		return runner.fail(ctx, taskID, failureCodeWithContext(ctx, err), safeFailureSummaryFor(err), domain.Diagnostics{}, "")
@@ -199,6 +383,9 @@ func (runner *SyncRunner) RunOnce(parent context.Context, taskID uuid.UUID) erro
 }
 
 func (runner *SyncRunner) fail(ctx context.Context, taskID uuid.UUID, code, summary string, diagnostics domain.Diagnostics, cleanupStatus string) error {
+	if runner.runCancellationRequested(taskID) {
+		return runner.cancelled(taskID, diagnostics, cleanupStatus)
+	}
 	if cleanupStatus == "" {
 		cleanupStatus = string(domain.CleanupClean)
 	}
@@ -212,7 +399,33 @@ func (runner *SyncRunner) fail(ctx context.Context, taskID uuid.UUID, code, summ
 	if err := runner.store.MarkTaskTerminal(terminalCtx, taskID, domain.SyncTaskFailed, code, summary, diagnostics, cleanupStatus, completed); err != nil {
 		return err
 	}
+	// MarkTaskTerminal intentionally leaves a concurrent cancellation request
+	// untouched. Re-read the durable state so that request still reaches its
+	// cleanup-aware terminal transition instead of stranding the singleton.
+	if runner.cancellationPersisted(taskID) {
+		return runner.cancelled(taskID, diagnostics, cleanupStatus)
+	}
 	return fmt.Errorf("%w: %s", ErrSyncFailure, code)
+}
+
+func (runner *SyncRunner) cancelled(taskID uuid.UUID, diagnostics domain.Diagnostics, cleanupStatus string) error {
+	if cleanupStatus == "" {
+		cleanupStatus = string(domain.CleanupClean)
+	}
+	terminalCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	_ = runner.store.DeleteCandidatesForTask(terminalCtx, taskID)
+	if err := runner.store.MarkTaskCancelled(terminalCtx, taskID, diagnostics, cleanupStatus, time.Now().UTC()); err != nil {
+		return err
+	}
+	return fmt.Errorf("%w: SYNC_CANCELLED", ErrSyncFailure)
+}
+
+func cancellationCleanupStatus(task *domain.SyncTask) string {
+	if task != nil && strings.TrimSpace(task.WorkspaceKey) != "" {
+		return string(domain.CleanupResidual)
+	}
+	return string(domain.CleanupClean)
 }
 
 func scanAndValidateRepository(ctx context.Context, root string, task *domain.SyncTask) (int64, int64, int64, []domain.CandidatePOC, domain.Diagnostics, error) {

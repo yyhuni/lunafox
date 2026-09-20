@@ -194,7 +194,7 @@ interface AddTargetDialogFooterProps {
 export function AddTargetDialogFooter({ tDialog, isPending, isFormValid }: AddTargetDialogFooterProps) {
   return (
     <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-      <Button type="submit" disabled={isPending || !isFormValid} loading={isPending} loadingLabel={tDialog("creating")}>
+      <Button type="submit" size="sm" disabled={isPending || !isFormValid} loading={isPending} loadingLabel={tDialog("creating")}>
         <Plus />
         {tDialog("addTarget")}
       </Button>

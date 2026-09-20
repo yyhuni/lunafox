@@ -25,6 +25,8 @@ func CanonicalTerminalFailure(code string) (canonicalCode, summary string) {
 		return "EMPTY_CANDIDATE", "The repository did not contain a valid Nuclei template."
 	case "DEADLINE_EXCEEDED":
 		return "DEADLINE_EXCEEDED", "The sync task exceeded its deadline."
+	case "SYNC_CANCELLED":
+		return "SYNC_CANCELLED", "The sync task was cancelled before commit."
 	case "PROCESS_INTERRUPTED":
 		return "PROCESS_INTERRUPTED", "The sync task was interrupted and was not committed."
 	case "SYNC_FAILED", "CANDIDATE_STAGE_FAILED", "PATH_ESCAPE", "SYMLINK_REJECTED", "SUBMODULE_REJECTED", "GIT_QUOTA_EXCEEDED", "GIT_COMMIT_LOOKUP_FAILED", "WORKSPACE_UNAVAILABLE":

@@ -28,6 +28,16 @@ type NucleiPOCRepository struct {
 	terminalNotificationSink NucleiPOCSyncTerminalNotificationSink
 }
 
+func terminalSyncTaskStates() []string {
+	return []string{string(domain.SyncTaskSucceeded), string(domain.SyncTaskFailed), string(domain.SyncTaskCancelled)}
+}
+
+func runningSyncTaskStates() []string {
+	return append(terminalSyncTaskStates(), string(domain.SyncTaskCancelling))
+}
+
+const syncTaskUnclaimedRecoveryGrace = 30 * time.Second
+
 // ListEnabledForExecution reads the current catalog overlay at task start.
 // It intentionally does not expose disabled rows or a caller-selected digest.
 func (repository *NucleiPOCRepository) ListEnabledForExecution(ctx context.Context) ([]domain.POC, error) {
@@ -127,7 +137,7 @@ func (repository *NucleiPOCRepository) CreateOrReplaySyncTask(ctx context.Contex
 			return err
 		}
 		var active model.SyncTask
-		if err := tx.Where("state NOT IN ?", []string{string(domain.SyncTaskSucceeded), string(domain.SyncTaskFailed)}).First(&active).Error; err == nil {
+		if err := tx.Where("state NOT IN ?", terminalSyncTaskStates()).First(&active).Error; err == nil {
 			return &domain.ActiveSyncConflictError{TaskID: active.ID}
 		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
@@ -164,7 +174,7 @@ func (repository *NucleiPOCRepository) CreateOrReplaySyncTask(ctx context.Contex
 		// its canonical task name instead of an unhelpful empty conflict.
 		var active model.SyncTask
 		if lookupErr := repository.db.WithContext(ctx).
-			Where("state NOT IN ?", []string{string(domain.SyncTaskSucceeded), string(domain.SyncTaskFailed)}).
+			Where("state NOT IN ?", terminalSyncTaskStates()).
 			Order("created_at ASC").First(&active).Error; lookupErr == nil {
 			return nil, &domain.ActiveSyncConflictError{TaskID: active.ID}
 		}
@@ -184,14 +194,110 @@ func (repository *NucleiPOCRepository) GetSyncTask(ctx context.Context, id uuid.
 	return syncTaskModelToDomain(&task), nil
 }
 
-func (repository *NucleiPOCRepository) ClaimTask(ctx context.Context, id uuid.UUID, phase domain.SyncTaskState, startedAt time.Time) (bool, error) {
+// RequestSyncTaskCancellation records the operator intent before asking the
+// runner to stop. Keeping this transition durable lets another Server process
+// observe the request even when the HTTP request and runner do not share memory.
+func (repository *NucleiPOCRepository) RequestSyncTaskCancellation(ctx context.Context, id uuid.UUID, requestedAt time.Time) (*domain.SyncTask, error) {
+	if id == uuid.Nil {
+		return nil, domain.ErrSyncTaskNotFound
+	}
+	var result *domain.SyncTask
+	err := repository.withCatalogMutation(ctx, func(tx *gorm.DB) error {
+		var task model.SyncTask
+		if err := tx.Where("id = ?", id).First(&task).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return domain.ErrSyncTaskNotFound
+			}
+			return err
+		}
+		state := domain.SyncTaskState(task.State)
+		if !state.Valid() {
+			return domain.ErrInvalidPOC
+		}
+		if !state.Terminal() && state != domain.SyncTaskCancelling {
+			updates := map[string]any{
+				"state":      string(domain.SyncTaskCancelling),
+				"phase":      string(domain.SyncTaskCancelling),
+				"updated_at": requestedAt.UTC(),
+			}
+			update := tx.Model(&model.SyncTask{}).Where("id = ? AND state NOT IN ?", id, terminalSyncTaskStates()).Updates(updates)
+			if update.Error != nil {
+				return update.Error
+			}
+			if update.RowsAffected != 1 {
+				// A promotion/failure may have won the same catalog boundary. Read
+				// the winner and return it as the idempotent observation.
+				if err := tx.Where("id = ?", id).First(&task).Error; err != nil {
+					return err
+				}
+			} else {
+				task.State = string(domain.SyncTaskCancelling)
+				task.Phase = string(domain.SyncTaskCancelling)
+				task.UpdatedAt = requestedAt.UTC()
+			}
+		} else if state == domain.SyncTaskCancelling && task.Phase != string(domain.SyncTaskCancelling) {
+			// Repair rows written by an older runner that persisted state before phase.
+			if err := tx.Model(&model.SyncTask{}).Where("id = ? AND state = ?", id, string(domain.SyncTaskCancelling)).Updates(map[string]any{
+				"phase":      string(domain.SyncTaskCancelling),
+				"updated_at": requestedAt.UTC(),
+			}).Error; err != nil {
+				return err
+			}
+			task.Phase = string(domain.SyncTaskCancelling)
+			task.UpdatedAt = requestedAt.UTC()
+		}
+		result = syncTaskModelToDomain(&task)
+		return nil
+	})
+	return result, err
+}
+
+func (repository *NucleiPOCRepository) ClaimTask(ctx context.Context, id uuid.UUID, phase domain.SyncTaskState, startedAt time.Time, leaseOwner string, leaseDuration time.Duration) (bool, error) {
 	if phase != domain.SyncTaskValidatingSource && phase != domain.SyncTaskCloning {
 		return false, fmt.Errorf("invalid initial task phase")
 	}
+	leaseOwner = strings.TrimSpace(leaseOwner)
+	if id == uuid.Nil || leaseOwner == "" || startedAt.IsZero() || leaseDuration <= 0 {
+		return false, domain.ErrInvalidPOC
+	}
+	startedAt = startedAt.UTC()
+	leaseExpiresAt := startedAt.Add(leaseDuration)
 	result := repository.db.WithContext(ctx).Model(&model.SyncTask{}).Where(
 		"id = ? AND state = ? AND started_at IS NULL", id, string(domain.SyncTaskValidatingSource),
-	).Updates(map[string]any{"state": string(phase), "phase": string(phase), "started_at": startedAt.UTC(), "updated_at": startedAt.UTC()})
+	).Updates(map[string]any{
+		"state":            string(phase),
+		"phase":            string(phase),
+		"started_at":       startedAt,
+		"lease_owner":      leaseOwner,
+		"lease_expires_at": leaseExpiresAt,
+		"updated_at":       startedAt,
+	})
 	return result.RowsAffected == 1, result.Error
+}
+
+// RenewTaskLease lets a still-running owner prevent recovery. It never
+// revives an expired lease, so a paused or partitioned runner cannot reclaim a
+// task after another Server has recovered its durable terminal result.
+func (repository *NucleiPOCRepository) RenewTaskLease(ctx context.Context, id uuid.UUID, leaseOwner string, renewedAt time.Time, leaseDuration time.Duration) error {
+	leaseOwner = strings.TrimSpace(leaseOwner)
+	if id == uuid.Nil || leaseOwner == "" || renewedAt.IsZero() || leaseDuration <= 0 {
+		return domain.ErrInvalidPOC
+	}
+	renewedAt = renewedAt.UTC()
+	result := repository.db.WithContext(ctx).Model(&model.SyncTask{}).Where(
+		"id = ? AND lease_owner = ? AND lease_expires_at > ? AND state NOT IN ?",
+		id, leaseOwner, renewedAt, terminalSyncTaskStates(),
+	).Updates(map[string]any{
+		"lease_expires_at": renewedAt.Add(leaseDuration),
+		"updated_at":       renewedAt,
+	})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		return domain.ErrSyncTaskLeaseLost
+	}
+	return nil
 }
 
 func (repository *NucleiPOCRepository) SetTaskWorkspaceKey(ctx context.Context, id uuid.UUID, key string) error {
@@ -199,7 +305,14 @@ func (repository *NucleiPOCRepository) SetTaskWorkspaceKey(ctx context.Context, 
 	if key == "" || len(key) > 128 || strings.ContainsAny(key, `/\\`) {
 		return domain.ErrInvalidPOC
 	}
-	return repository.db.WithContext(ctx).Model(&model.SyncTask{}).Where("id = ? AND state NOT IN ?", id, []string{string(domain.SyncTaskSucceeded), string(domain.SyncTaskFailed)}).Update("workspace_key", key).Error
+	result := repository.db.WithContext(ctx).Model(&model.SyncTask{}).Where("id = ? AND state NOT IN ?", id, runningSyncTaskStates()).Update("workspace_key", key)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected != 1 {
+		return domain.ErrSyncTaskNotFound
+	}
+	return nil
 }
 
 func (repository *NucleiPOCRepository) UpdateTaskProgress(ctx context.Context, id uuid.UUID, phase domain.SyncTaskState, counters domain.SyncCounters) error {
@@ -219,7 +332,7 @@ func (repository *NucleiPOCRepository) UpdateTaskProgress(ctx context.Context, i
 	if counters.BytesRead != nil {
 		updates["bytes_read"] = *counters.BytesRead
 	}
-	result := repository.db.WithContext(ctx).Model(&model.SyncTask{}).Where("id = ? AND state NOT IN ?", id, []string{string(domain.SyncTaskSucceeded), string(domain.SyncTaskFailed)}).Updates(updates)
+	result := repository.db.WithContext(ctx).Model(&model.SyncTask{}).Where("id = ? AND state NOT IN ?", id, runningSyncTaskStates()).Updates(updates)
 	if result.Error != nil {
 		return result.Error
 	}
@@ -235,7 +348,7 @@ func (repository *NucleiPOCRepository) UpdateTaskProgress(ctx context.Context, i
 func (repository *NucleiPOCRepository) ActiveWorkspaceKeys(ctx context.Context) ([]string, error) {
 	var keys []string
 	err := repository.db.WithContext(ctx).Model(&model.SyncTask{}).
-		Where("state NOT IN ? AND workspace_key <> ''", []string{string(domain.SyncTaskSucceeded), string(domain.SyncTaskFailed)}).
+		Where("state NOT IN ? AND workspace_key <> ''", terminalSyncTaskStates()).
 		Pluck("workspace_key", &keys).Error
 	return keys, err
 }
@@ -292,7 +405,7 @@ func (repository *NucleiPOCRepository) PromoteCandidates(ctx context.Context, pr
 			count = task.CommittedPOCCount
 			return nil
 		}
-		if task.State == string(domain.SyncTaskFailed) {
+		if task.State == string(domain.SyncTaskFailed) || task.State == string(domain.SyncTaskCancelled) || task.State == string(domain.SyncTaskCancelling) {
 			return fmt.Errorf("sync task is already terminal")
 		}
 		if promotion.Source.ID == uuid.Nil {
@@ -392,12 +505,14 @@ func (repository *NucleiPOCRepository) PromoteCandidates(ctx context.Context, pr
 		// Freeze the task result in the same transaction as source promotion and
 		// POC replacement. This prevents a successful catalog from being paired
 		// with a task that still looks running after a process crash.
-		taskResult := tx.Model(&model.SyncTask{}).Where("id = ? AND state NOT IN ?", promotion.TaskID, []string{string(domain.SyncTaskSucceeded), string(domain.SyncTaskFailed)}).Updates(map[string]any{
+		taskResult := tx.Model(&model.SyncTask{}).Where("id = ? AND state NOT IN ?", promotion.TaskID, terminalSyncTaskStates()).Updates(map[string]any{
 			"state":               string(domain.SyncTaskSucceeded),
 			"phase":               string(domain.SyncTaskSucceeded),
 			"commit_sha":          promotion.CommitSHA,
 			"committed_poc_count": len(candidates),
 			"cleanup_status":      cleanupStatus,
+			"lease_owner":         nil,
+			"lease_expires_at":    nil,
 			"completed_at":        now,
 			"updated_at":          now,
 		})
@@ -437,8 +552,8 @@ func (repository *NucleiPOCRepository) MarkTaskTerminal(ctx context.Context, id 
 	}
 	safeCode := safeFailureCode(failureCode)
 	safeSummary := safeFailureSummaryForCode(safeCode, failureSummary)
-	updates := map[string]any{"state": string(state), "phase": string(state), "failure_code": safeCode, "failure_summary": safeSummary, "diagnostics": datatypes.JSON(encoded), "cleanup_status": cleanupStatus, "completed_at": completedAt.UTC(), "updated_at": completedAt.UTC()}
-	return repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	updates := map[string]any{"state": string(state), "phase": string(state), "failure_code": safeCode, "failure_summary": safeSummary, "diagnostics": datatypes.JSON(encoded), "cleanup_status": cleanupStatus, "lease_owner": nil, "lease_expires_at": nil, "completed_at": completedAt.UTC(), "updated_at": completedAt.UTC()}
+	return repository.withCatalogMutation(ctx, func(tx *gorm.DB) error {
 		var task model.SyncTask
 		if err := tx.Where("id = ?", id).First(&task).Error; err != nil {
 			return err
@@ -453,10 +568,13 @@ func (repository *NucleiPOCRepository) MarkTaskTerminal(ctx context.Context, id 
 			}
 			return repository.terminalNotificationSink.WriteNucleiPOCSyncFailed(tx, id, occurredAt.UTC())
 		}
+		if task.State == string(domain.SyncTaskCancelling) || task.State == string(domain.SyncTaskCancelled) {
+			return nil
+		}
 		if task.State == string(domain.SyncTaskSucceeded) {
 			return fmt.Errorf("sync task is already terminal")
 		}
-		result := tx.Model(&model.SyncTask{}).Where("id = ? AND state NOT IN ?", id, []string{string(domain.SyncTaskSucceeded), string(domain.SyncTaskFailed)}).Updates(updates)
+		result := tx.Model(&model.SyncTask{}).Where("id = ? AND state NOT IN ?", id, runningSyncTaskStates()).Updates(updates)
 		if result.Error != nil {
 			return result.Error
 		}
@@ -475,6 +593,53 @@ func (repository *NucleiPOCRepository) MarkTaskTerminal(ctx context.Context, id 
 			}
 		}
 		return nil
+	})
+}
+
+// MarkTaskCancelled finalizes a cancellation only after the runner has stopped
+// its process tree and attempted workspace cleanup. A stale runner cannot
+// rewrite a success or failure that won the commit boundary.
+func (repository *NucleiPOCRepository) MarkTaskCancelled(ctx context.Context, id uuid.UUID, diagnostics domain.Diagnostics, cleanupStatus string, completedAt time.Time) error {
+	if cleanupStatus != string(domain.CleanupClean) && cleanupStatus != string(domain.CleanupResidual) {
+		return fmt.Errorf("%w: invalid cleanup status", domain.ErrInvalidPOC)
+	}
+	encoded, err := json.Marshal(diagnostics.Safe())
+	if err != nil {
+		return err
+	}
+	return repository.withCatalogMutation(ctx, func(tx *gorm.DB) error {
+		var task model.SyncTask
+		if err := tx.Where("id = ?", id).First(&task).Error; err != nil {
+			return err
+		}
+		if task.State == string(domain.SyncTaskCancelled) || task.State == string(domain.SyncTaskSucceeded) || task.State == string(domain.SyncTaskFailed) {
+			return nil
+		}
+		if task.State != string(domain.SyncTaskCancelling) {
+			return fmt.Errorf("sync task cancellation was not requested")
+		}
+		result := tx.Model(&model.SyncTask{}).Where("id = ? AND state = ?", id, string(domain.SyncTaskCancelling)).Updates(map[string]any{
+			"state":            string(domain.SyncTaskCancelled),
+			"phase":            string(domain.SyncTaskCancelled),
+			"failure_code":     "SYNC_CANCELLED",
+			"failure_summary":  "The sync task was cancelled before commit.",
+			"diagnostics":      datatypes.JSON(encoded),
+			"cleanup_status":   cleanupStatus,
+			"lease_owner":      nil,
+			"lease_expires_at": nil,
+			"completed_at":     completedAt.UTC(),
+			"updated_at":       completedAt.UTC(),
+		})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return nil
+		}
+		if err := tx.Where("task_id = ?", id).Delete(&model.CandidateImport{}).Error; err != nil {
+			return err
+		}
+		return tx.Model(&model.RequestTombstone{}).Where("request_id = ?", task.RequestID).Updates(map[string]any{"terminal_at": completedAt.UTC()}).Error
 	})
 }
 
@@ -610,7 +775,7 @@ func (repository *NucleiPOCRepository) SetPOCActivation(ctx context.Context, ena
 	var affected int64
 	err = repository.withCatalogMutation(ctx, func(tx *gorm.DB) error {
 		var active model.SyncTask
-		if err := tx.Where("state NOT IN ?", []string{string(domain.SyncTaskSucceeded), string(domain.SyncTaskFailed)}).
+		if err := tx.Where("state NOT IN ?", terminalSyncTaskStates()).
 			Order("created_at ASC").First(&active).Error; err == nil {
 			return &domain.ActiveSyncConflictError{TaskID: active.ID}
 		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -680,7 +845,7 @@ func (repository *NucleiPOCRepository) DeleteExpiredTasks(ctx context.Context, c
 		limit = 500
 	}
 	var ids []uuid.UUID
-	if err := repository.db.WithContext(ctx).Model(&model.SyncTask{}).Where("state IN ? AND completed_at IS NOT NULL AND completed_at < ?", []string{string(domain.SyncTaskSucceeded), string(domain.SyncTaskFailed)}, cutoff).Order("completed_at ASC").Limit(limit).Pluck("id", &ids).Error; err != nil {
+	if err := repository.db.WithContext(ctx).Model(&model.SyncTask{}).Where("state IN ? AND completed_at IS NOT NULL AND completed_at < ?", terminalSyncTaskStates(), cutoff).Order("completed_at ASC").Limit(limit).Pluck("id", &ids).Error; err != nil {
 		return 0, err
 	}
 	if len(ids) == 0 {
@@ -723,19 +888,46 @@ func (repository *NucleiPOCRepository) DeleteExpiredTombstones(ctx context.Conte
 }
 
 func (repository *NucleiPOCRepository) RecoverInterruptedTasks(ctx context.Context, completedAt time.Time) (int64, error) {
+	if completedAt.IsZero() {
+		return 0, domain.ErrInvalidPOC
+	}
+	completedAt = completedAt.UTC()
+	unclaimedBefore := completedAt.Add(-syncTaskUnclaimedRecoveryGrace)
 	var recovered int64
-	err := repository.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := repository.withCatalogMutation(ctx, func(tx *gorm.DB) error {
 		var tasks []model.SyncTask
-		if err := tx.Where("state NOT IN ?", []string{string(domain.SyncTaskSucceeded), string(domain.SyncTaskFailed)}).Find(&tasks).Error; err != nil {
+		if err := tx.Where("state NOT IN ?", terminalSyncTaskStates()).
+			Where("(lease_expires_at IS NOT NULL AND lease_expires_at <= ?) OR (lease_expires_at IS NULL AND updated_at <= ?)", completedAt, unclaimedBefore).
+			Find(&tasks).Error; err != nil {
 			return err
 		}
 		for _, task := range tasks {
-			result := tx.Model(&model.SyncTask{}).Where("id = ? AND state NOT IN ?", task.ID, []string{string(domain.SyncTaskSucceeded), string(domain.SyncTaskFailed)}).Updates(map[string]any{
-				"state": string(domain.SyncTaskFailed), "phase": string(domain.SyncTaskFailed),
-				"failure_code": "PROCESS_INTERRUPTED", "failure_summary": "The sync task was interrupted and was not committed.",
-				"diagnostics":    datatypes.JSON([]byte(`{"samples":[],"total":0,"truncated":false}`)),
-				"cleanup_status": string(domain.CleanupPending), "completed_at": completedAt.UTC(), "updated_at": completedAt.UTC(),
-			})
+			state := domain.SyncTaskFailed
+			failureCode := "PROCESS_INTERRUPTED"
+			failureSummary := "The sync task was interrupted and was not committed."
+			cancelled := task.State == string(domain.SyncTaskCancelling)
+			cleanupStatus := string(domain.CleanupPending)
+			if cancelled {
+				state = domain.SyncTaskCancelled
+				failureCode = "SYNC_CANCELLED"
+				failureSummary = "The sync task was cancelled before commit."
+				// A workspace key means startup cannot prove the process tree and
+				// directory were removed before the crash; retain that uncertainty.
+				if task.WorkspaceKey == "" {
+					cleanupStatus = string(domain.CleanupClean)
+				} else {
+					cleanupStatus = string(domain.CleanupResidual)
+				}
+			}
+			result := tx.Model(&model.SyncTask{}).Where("id = ? AND state NOT IN ?", task.ID, terminalSyncTaskStates()).
+				Where("(lease_expires_at IS NOT NULL AND lease_expires_at <= ?) OR (lease_expires_at IS NULL AND updated_at <= ?)", completedAt, unclaimedBefore).
+				Updates(map[string]any{
+					"state": string(state), "phase": string(state),
+					"failure_code": failureCode, "failure_summary": failureSummary,
+					"diagnostics":    datatypes.JSON([]byte(`{"samples":[],"total":0,"truncated":false}`)),
+					"cleanup_status": cleanupStatus, "lease_owner": nil, "lease_expires_at": nil,
+					"completed_at": completedAt, "updated_at": completedAt,
+				})
 			if result.Error != nil {
 				return result.Error
 			}
@@ -747,7 +939,7 @@ func (repository *NucleiPOCRepository) RecoverInterruptedTasks(ctx context.Conte
 				if err := tx.Where("task_id = ?", task.ID).Delete(&model.CandidateImport{}).Error; err != nil {
 					return err
 				}
-				if repository.terminalNotificationSink != nil {
+				if repository.terminalNotificationSink != nil && !cancelled {
 					// Startup recovery is a real FAILED transition, so it uses the
 					// same transaction-owned handoff as runner-owned failures.
 					if err := repository.terminalNotificationSink.WriteNucleiPOCSyncFailed(tx, task.ID, completedAt.UTC()); err != nil {

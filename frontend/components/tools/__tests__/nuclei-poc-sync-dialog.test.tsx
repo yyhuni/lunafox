@@ -6,6 +6,7 @@ import {
   NucleiPocBatchActivationControls,
   NucleiPocSyncDialog,
   NucleiPocSyncSourceStatus,
+  selectNucleiPocSyncTask,
 } from "../nuclei-poc-catalog-page"
 import type { NucleiPocSyncTask } from "@/types/nuclei-poc.types"
 
@@ -105,7 +106,28 @@ const failedTask: NucleiPocSyncTask = {
   failureCode: "TEMPLATE_INVALID",
 }
 
+const cancellingTask: NucleiPocSyncTask = {
+  ...runningTask,
+  state: "CANCELLING",
+  phase: "CANCELLING",
+}
+
+const cancelledTask: NucleiPocSyncTask = {
+  ...completedTask,
+  state: "CANCELLED",
+  phase: "CANCELLED",
+  failureCode: "SYNC_CANCELLED",
+  failureSummary: "The sync task was cancelled before commit.",
+  committedPocCount: undefined,
+  cleanupStatus: "clean",
+}
+
 describe("NucleiPocSyncDialog", () => {
+  it("prefers the polled terminal snapshot over stale cancellation mutation data", () => {
+    expect(selectNucleiPocSyncTask(cancelledTask, cancellingTask, runningTask)).toBe(cancelledTask)
+    expect(selectNucleiPocSyncTask(undefined, cancellingTask, runningTask)).toBe(cancellingTask)
+  })
+
   it("shows the committed source outside the POC table", () => {
     render(<NucleiPocSyncSourceStatus source={{ sourceType: "git", repoUrl: "https://github.com/projectdiscovery/nuclei-templates.git", commitSha: "a1b2c3d4e5f6", syncedAt: "2026-08-18T08:00:00.000Z" }} loading={false} error={false} locale="zh-CN" />)
     const status = screen.getByRole("status", { name: "sync.currentSource" })
@@ -179,6 +201,38 @@ describe("NucleiPocSyncDialog", () => {
     const status = screen.getByRole("status")
     expect(status).toHaveTextContent("sync.createError")
     expect(status).not.toHaveTextContent(rawError.message)
+  })
+
+  it("confirms cancellation, keeps closing presentation-only, and shows cancelling state", () => {
+    const onCancel = vi.fn()
+    const onOpenChange = vi.fn()
+    render(<NucleiPocSyncDialog open onOpenChange={onOpenChange} sourceKind="git" sourceUrl="https://github.com/projectdiscovery/nuclei-templates.git" onSourceKindChange={() => undefined} onSourceUrlChange={() => undefined} submitted={false} isSubmitting={false} task={runningTask} taskError={null} taskExpired={false} onSubmit={() => undefined} onStartNew={() => undefined} onCancel={onCancel} />)
+    fireEvent.click(screen.getByRole("button", { name: "sync.cancel" }))
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("sync.cancelDescription")
+    fireEvent.click(screen.getByRole("button", { name: "sync.confirmCancel" }))
+    expect(onCancel).toHaveBeenCalledTimes(1)
+    expect(onOpenChange).not.toHaveBeenCalled()
+
+    const { rerender } = render(<NucleiPocSyncDialog open onOpenChange={onOpenChange} sourceKind="git" sourceUrl="https://github.com/projectdiscovery/nuclei-templates.git" onSourceKindChange={() => undefined} onSourceUrlChange={() => undefined} submitted={false} isSubmitting={false} task={cancellingTask} taskError={null} taskExpired={false} onSubmit={() => undefined} onStartNew={() => undefined} onCancel={onCancel} isCancelling />)
+    rerender(<NucleiPocSyncDialog open onOpenChange={onOpenChange} sourceKind="git" sourceUrl="https://github.com/projectdiscovery/nuclei-templates.git" onSourceKindChange={() => undefined} onSourceUrlChange={() => undefined} submitted={false} isSubmitting={false} task={cancellingTask} taskError={null} taskExpired={false} onSubmit={() => undefined} onStartNew={() => undefined} onCancel={onCancel} isCancelling />)
+    expect(screen.getAllByRole("status").at(-1)).toHaveTextContent("sync.cancellingSummary")
+  })
+
+  it("renders a cancelled terminal task with the explicit new-sync action", () => {
+    const onStartNew = vi.fn()
+    render(<NucleiPocSyncDialog open onOpenChange={() => undefined} sourceKind="git" sourceUrl="https://github.com/projectdiscovery/nuclei-templates.git" onSourceKindChange={() => undefined} onSourceUrlChange={() => undefined} submitted={false} isSubmitting={false} task={cancelledTask} taskError={null} taskExpired={false} onSubmit={() => undefined} onStartNew={onStartNew} />)
+    expect(screen.getByRole("status")).toHaveTextContent("sync.cancelledSummary")
+    fireEvent.click(screen.getByRole("button", { name: "sync.newSync" }))
+    expect(onStartNew).toHaveBeenCalledTimes(1)
+  })
+
+  it("allows retrying cancellation after a cancel request error", () => {
+    const onCancel = vi.fn()
+    render(<NucleiPocSyncDialog open onOpenChange={() => undefined} sourceKind="git" sourceUrl="https://github.com/projectdiscovery/nuclei-templates.git" onSourceKindChange={() => undefined} onSourceUrlChange={() => undefined} submitted={false} isSubmitting={false} task={runningTask} taskError={new Error("transport") } errorKind="cancel" taskExpired={false} onSubmit={() => undefined} onStartNew={() => undefined} onCancel={onCancel} />)
+    expect(screen.getByRole("status")).toHaveTextContent("sync.cancelError")
+    fireEvent.click(screen.getByRole("button", { name: "sync.cancel" }))
+    fireEvent.click(screen.getByRole("button", { name: "sync.confirmCancel" }))
+    expect(onCancel).toHaveBeenCalledTimes(1)
   })
 })
 

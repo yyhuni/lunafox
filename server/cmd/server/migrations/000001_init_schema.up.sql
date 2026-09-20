@@ -268,8 +268,8 @@ CREATE TABLE IF NOT EXISTS nuclei_poc_sync_task (
     source_type VARCHAR(16) NOT NULL CHECK (source_type IN ('git', 'gitee', 'custom')),
     repo_url TEXT NOT NULL CHECK (btrim(repo_url) <> ''),
     source_id UUID NOT NULL REFERENCES nuclei_poc_source(id) ON DELETE RESTRICT,
-    state VARCHAR(32) NOT NULL CHECK (state IN ('VALIDATING_SOURCE', 'CLONING', 'SCANNING_FILES', 'VALIDATING_TEMPLATES', 'COMMITTING', 'CLEANING', 'SUCCEEDED', 'FAILED')),
-    phase VARCHAR(32) NOT NULL CHECK (phase IN ('VALIDATING_SOURCE', 'CLONING', 'SCANNING_FILES', 'VALIDATING_TEMPLATES', 'COMMITTING', 'CLEANING', 'SUCCEEDED', 'FAILED')),
+    state VARCHAR(32) NOT NULL CHECK (state IN ('VALIDATING_SOURCE', 'CLONING', 'SCANNING_FILES', 'VALIDATING_TEMPLATES', 'COMMITTING', 'CLEANING', 'CANCELLING', 'SUCCEEDED', 'FAILED', 'CANCELLED')),
+    phase VARCHAR(32) NOT NULL CHECK (phase IN ('VALIDATING_SOURCE', 'CLONING', 'SCANNING_FILES', 'VALIDATING_TEMPLATES', 'COMMITTING', 'CLEANING', 'CANCELLING', 'SUCCEEDED', 'FAILED', 'CANCELLED')),
     files_seen BIGINT CHECK (files_seen IS NULL OR files_seen >= 0),
     yaml_files_seen BIGINT CHECK (yaml_files_seen IS NULL OR yaml_files_seen >= 0),
     templates_validated BIGINT CHECK (templates_validated IS NULL OR templates_validated >= 0),
@@ -281,6 +281,8 @@ CREATE TABLE IF NOT EXISTS nuclei_poc_sync_task (
     diagnostics JSONB NOT NULL DEFAULT '{}'::jsonb,
     cleanup_status VARCHAR(32) NOT NULL DEFAULT 'pending' CHECK (cleanup_status IN ('pending', 'clean', 'residual')),
     workspace_key VARCHAR(128) NOT NULL DEFAULT '',
+    lease_owner VARCHAR(128),
+    lease_expires_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
@@ -290,9 +292,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_nuclei_poc_sync_task_request_fingerprint
     ON nuclei_poc_sync_task(request_id, request_fingerprint);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_nuclei_poc_sync_task_active_singleton
     ON nuclei_poc_sync_task((TRUE))
-    WHERE state NOT IN ('SUCCEEDED', 'FAILED');
+    WHERE state NOT IN ('SUCCEEDED', 'FAILED', 'CANCELLED');
 CREATE INDEX IF NOT EXISTS idx_nuclei_poc_sync_task_retention
     ON nuclei_poc_sync_task(state, completed_at, id);
+CREATE INDEX IF NOT EXISTS idx_nuclei_poc_sync_task_lease_recovery
+    ON nuclei_poc_sync_task(lease_expires_at, id)
+    WHERE state NOT IN ('SUCCEEDED', 'FAILED', 'CANCELLED');
 
 CREATE TABLE IF NOT EXISTS nuclei_poc_candidate_import (
     id UUID PRIMARY KEY,
