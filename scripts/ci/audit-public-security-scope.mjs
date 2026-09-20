@@ -104,9 +104,10 @@ function audit(root, sourceRoot, base) {
   if (!/first-party public Runtime and Engine source/i.test(license)) {
     fail("license must include first-party public Runtime and Engine source");
   }
+  // The root README is an install/lifecycle quick reference. Detailed security
+  // and licensing disclosures remain in the deployment guide and notice.
   const policyDocuments = [
     { path: noticePath, text: fs.readFileSync(noticePath, "utf8") },
-    { path: readmePath, text: fs.readFileSync(readmePath, "utf8") },
     { path: docsPath, text: fs.readFileSync(docsPath, "utf8") },
   ];
   for (const document of policyDocuments) {

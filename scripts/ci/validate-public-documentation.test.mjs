@@ -8,8 +8,9 @@ import test from "node:test";
 
 import { validatePublicDocumentation } from "./validate-public-documentation.mjs";
 
-const ENGLISH = `# Public\n\n[Chinese](README.zh-CN.md)\n\n## Install\n\n\`\`\`console\ngit clone https://github.com/yyhuni/lunafox.git\n\`\`\`\n\nUse \`PUBLIC_HOST\`.\n`;
-const CHINESE = `# 公开部署\n\n[English](README.md)\n\n## 安装\n\n\`\`\`console\ngit clone https://github.com/yyhuni/lunafox.git\n\`\`\`\n\n使用 \`PUBLIC_HOST\`。\n`;
+const GENERATED_MARKER = "> **GENERATED / READ-ONLY**\n\n";
+const ENGLISH = `# Public\n\n${GENERATED_MARKER}[Chinese](README.zh-CN.md)\n\n## Install\n\n\`\`\`console\ngit clone https://github.com/yyhuni/lunafox.git\n\`\`\`\n\nUse \`PUBLIC_HOST\`.\n`;
+const CHINESE = `# 公开部署\n\n${GENERATED_MARKER}[English](README.md)\n\n## 安装\n\n\`\`\`console\ngit clone https://github.com/yyhuni/lunafox.git\n\`\`\`\n\n使用 \`PUBLIC_HOST\`。\n`;
 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "lunafox-public-docs-"));
@@ -54,6 +55,25 @@ test("rejects missing and empty paired documents", () => {
     assert.throws(() => validatePublicDocumentation({ rootDir: emptyRoot }), /docs\/public-deployment\.zh-CN\.md must not be empty/);
   } finally {
     fs.rmSync(emptyRoot, { recursive: true, force: true });
+  }
+});
+
+test("rejects a missing generated/read-only projection marker", () => {
+  const cases = [
+    ["README.md", ENGLISH.replace(GENERATED_MARKER, "")],
+    ["README.zh-CN.md", CHINESE.replace(GENERATED_MARKER, "")],
+    ["docs/public-deployment.md", ENGLISH.replace(GENERATED_MARKER, "").replaceAll("README.zh-CN.md", "public-deployment.zh-CN.md").replaceAll("README.md", "public-deployment.md")],
+    ["docs/public-deployment.zh-CN.md", CHINESE.replace(GENERATED_MARKER, "").replaceAll("README.md", "public-deployment.md").replaceAll("README.zh-CN.md", "public-deployment.zh-CN.md")],
+  ];
+  for (const [relativePath, content] of cases) {
+    const root = fixture();
+    try {
+      writePair(root);
+      fs.writeFileSync(path.join(root, relativePath), content);
+      assert.throws(() => validatePublicDocumentation({ rootDir: root }), /must include a GENERATED \/ READ-ONLY marker/);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   }
 });
 

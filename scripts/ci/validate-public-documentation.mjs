@@ -2,8 +2,8 @@
 
 /**
  * Validate the source-owned English/Simplified Chinese user-document pairs.
- * The check is intentionally structural; translation quality remains a human
- * review responsibility.
+ * The check validates document structure and the generated/read-only marker;
+ * translation quality remains a human review responsibility.
  */
 
 import crypto from "node:crypto";
@@ -14,6 +14,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT_DIR = path.resolve(SCRIPT_DIR, "../..");
 const MAX_DOCUMENT_BYTES = 512 * 1024;
+const GENERATED_MARKER = /GENERATED/i;
+const READ_ONLY_MARKER = /READ[- ]ONLY/i;
 const DOCUMENT_PAIRS = Object.freeze([
   { english: "README.md", chinese: "README.zh-CN.md" },
   { english: "docs/public-deployment.md", chinese: "docs/public-deployment.zh-CN.md" },
@@ -172,9 +174,18 @@ function hasLanguagePeerLink(document, pair) {
   return extractLinks(document.text, pair, document.path).includes("<language-peer>");
 }
 
+function hasGeneratedReadOnlyMarker(document) {
+  return GENERATED_MARKER.test(document.text) && READ_ONLY_MARKER.test(document.text);
+}
+
 function validatePair(root, pair) {
   const english = readDocument(root, pair.english);
   const chinese = readDocument(root, pair.chinese);
+  for (const document of [english, chinese]) {
+    if (!hasGeneratedReadOnlyMarker(document)) {
+      fail("missing-generated-marker", `${document.path} must include a GENERATED / READ-ONLY marker`);
+    }
+  }
   if (!/[\u3400-\u9fff]/u.test(chinese.text)) {
     fail("missing-chinese-text", `${pair.chinese} must contain Simplified Chinese text`);
   }
@@ -226,6 +237,7 @@ export {
   MAX_DOCUMENT_BYTES,
   extractCodeBlocks,
   extractHeadingLevels,
+  hasGeneratedReadOnlyMarker,
   extractInlineTokens,
   extractLinks,
   validatePublicDocumentation,
