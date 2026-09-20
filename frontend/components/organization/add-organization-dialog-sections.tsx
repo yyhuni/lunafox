@@ -235,6 +235,7 @@ export function AddOrganizationFooter({
     <div className="flex justify-end gap-2">
       <Button
         type="submit"
+        size="sm"
         disabled={isSubmitting || !isFormValid}
         loading={isSubmitting}
         loadingLabel={createPending ? t("creating") : t("creatingTargets")}

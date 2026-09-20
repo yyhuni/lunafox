@@ -105,6 +105,10 @@ calculate total pages or add numbered or last navigation.
   task progress, and lets the mounted catalog page own one-second polling while
   the task is non-terminal. Dialog visibility controls presentation only;
   closing the dialog never cancels the server task or stops page monitoring.
+  The progress view offers an explicit destructive cancel command for active
+  tasks; the UI shows `CANCELLING` until the server returns terminal
+  `CANCELLED`, then exposes the existing explicit new-sync action. A failed
+  cancel request remains retryable and never changes the committed catalog.
 - A `SYNC_ALREADY_RUNNING` conflict with canonical `ErrorInfo.metadata.task` is
   adopted as the active task. Malformed conflict metadata remains a localized
   recoverable error and is never used as a request path.

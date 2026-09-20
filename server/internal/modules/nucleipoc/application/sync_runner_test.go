@@ -83,24 +83,64 @@ type syncRunnerStoreStub struct {
 	task             domain.SyncTask
 	stagedCandidates []domain.CandidatePOC
 	promotion        *CandidatePromotion
+	beforeGet        func()
+	beforeClaim      func()
+	claimedOwner     string
+	claimedLease     time.Duration
+	renewed          chan struct{}
+	renewErr         error
 }
 
-func (store *syncRunnerStoreStub) GetSyncTask(_ context.Context, id uuid.UUID) (*domain.SyncTask, error) {
+func (store *syncRunnerStoreStub) GetSyncTask(ctx context.Context, id uuid.UUID) (*domain.SyncTask, error) {
 	if id != store.task.ID {
 		return nil, fmt.Errorf("unexpected task ID %s", id)
+	}
+	if store.beforeGet != nil {
+		beforeGet := store.beforeGet
+		store.beforeGet = nil
+		beforeGet()
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 	task := store.task
 	return &task, nil
 }
 
-func (store *syncRunnerStoreStub) ClaimTask(_ context.Context, id uuid.UUID, phase domain.SyncTaskState, startedAt time.Time) (bool, error) {
+func (store *syncRunnerStoreStub) ClaimTask(ctx context.Context, id uuid.UUID, phase domain.SyncTaskState, startedAt time.Time, leaseOwner string, leaseDuration time.Duration) (bool, error) {
 	if id != store.task.ID || phase != domain.SyncTaskValidatingSource {
 		return false, fmt.Errorf("unexpected task claim")
+	}
+	if leaseOwner == "" || leaseDuration <= 0 {
+		return false, fmt.Errorf("invalid task lease")
+	}
+	if store.beforeClaim != nil {
+		beforeClaim := store.beforeClaim
+		store.beforeClaim = nil
+		beforeClaim()
+	}
+	if err := ctx.Err(); err != nil {
+		return false, err
 	}
 	store.task.State = phase
 	store.task.Phase = phase
 	store.task.StartedAt = &startedAt
+	store.claimedOwner = leaseOwner
+	store.claimedLease = leaseDuration
 	return true, nil
+}
+
+func (store *syncRunnerStoreStub) RenewTaskLease(_ context.Context, id uuid.UUID, leaseOwner string, _ time.Time, leaseDuration time.Duration) error {
+	if id != store.task.ID || leaseOwner != store.claimedOwner || leaseDuration != store.claimedLease {
+		return domain.ErrSyncTaskLeaseLost
+	}
+	if store.renewed != nil {
+		select {
+		case store.renewed <- struct{}{}:
+		default:
+		}
+	}
+	return store.renewErr
 }
 
 func (store *syncRunnerStoreStub) SetTaskWorkspaceKey(_ context.Context, id uuid.UUID, key string) error {
@@ -161,6 +201,18 @@ func (store *syncRunnerStoreStub) MarkTaskTerminal(_ context.Context, _ uuid.UUI
 	return nil
 }
 
+func (store *syncRunnerStoreStub) MarkTaskCancelled(_ context.Context, _ uuid.UUID, diagnostics domain.Diagnostics, cleanupStatus string, completedAt time.Time) error {
+	store.task.State = domain.SyncTaskCancelled
+	store.task.Phase = domain.SyncTaskCancelled
+	store.task.FailureCode = "SYNC_CANCELLED"
+	store.task.FailureSummary = "The sync task was cancelled before commit."
+	store.task.Diagnostics = diagnostics
+	store.task.CleanupStatus = domain.CleanupStatus(cleanupStatus)
+	store.task.CompletedAt = &completedAt
+	store.stagedCandidates = nil
+	return nil
+}
+
 type syncRunnerSourceResolverStub struct{}
 
 func (syncRunnerSourceResolverStub) Validate(_ context.Context, _ domain.SourceType, repoURL string) (string, error) {
@@ -180,4 +232,181 @@ func (stub syncRunnerGitStub) Clone(_ context.Context, _ string, destination str
 		}
 	}
 	return strings.Repeat("a", 40), nil
+}
+
+type blockingSyncRunnerGitStub struct {
+	started chan struct{}
+}
+
+func (stub blockingSyncRunnerGitStub) Clone(ctx context.Context, _ string, _ string) (string, error) {
+	close(stub.started)
+	<-ctx.Done()
+	return "", ctx.Err()
+}
+
+func TestSyncRunnerCancellationStopsCloneAndFinalizesCancelled(t *testing.T) {
+	taskID := uuid.New()
+	store := &syncRunnerStoreStub{task: domain.SyncTask{
+		ID:         taskID,
+		SourceID:   uuid.New(),
+		SourceType: domain.SourceTypeGit,
+		RepoURL:    "https://example.com/templates.git",
+		State:      domain.SyncTaskValidatingSource,
+		Phase:      domain.SyncTaskValidatingSource,
+	}}
+	workspace, err := NewLocalWorkspace(filepath.Join(t.TempDir(), "workspaces"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	git := blockingSyncRunnerGitStub{started: make(chan struct{})}
+	runner := NewSyncRunner(store, syncRunnerSourceResolverStub{}, workspace, git)
+	done := make(chan error, 1)
+	go func() { done <- runner.RunOnce(context.Background(), taskID) }()
+	select {
+	case <-git.started:
+	case <-time.After(time.Second):
+		t.Fatal("runner did not reach clone")
+	}
+	runner.Cancel(taskID)
+	select {
+	case err := <-done:
+		if err == nil || !strings.Contains(err.Error(), "SYNC_CANCELLED") {
+			t.Fatalf("RunOnce error=%v, want SYNC_CANCELLED", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("runner did not stop after cancellation")
+	}
+	if store.task.State != domain.SyncTaskCancelled || store.task.Phase != domain.SyncTaskCancelled {
+		t.Fatalf("task=%s/%s, want CANCELLED terminal state and phase", store.task.State, store.task.Phase)
+	}
+	if store.task.FailureCode != "SYNC_CANCELLED" || len(store.stagedCandidates) != 0 {
+		t.Fatalf("task failure=%q candidates=%d, want cancellation cleanup", store.task.FailureCode, len(store.stagedCandidates))
+	}
+}
+
+func TestSyncRunnerRenewsClaimedLeaseWhileCloneRuns(t *testing.T) {
+	taskID := uuid.New()
+	store := &syncRunnerStoreStub{
+		task: domain.SyncTask{
+			ID:         taskID,
+			SourceID:   uuid.New(),
+			SourceType: domain.SourceTypeGit,
+			RepoURL:    "https://example.com/templates.git",
+			State:      domain.SyncTaskValidatingSource,
+			Phase:      domain.SyncTaskValidatingSource,
+		},
+		renewed: make(chan struct{}, 1),
+	}
+	workspace, err := NewLocalWorkspace(filepath.Join(t.TempDir(), "workspaces"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	git := blockingSyncRunnerGitStub{started: make(chan struct{})}
+	runner := NewSyncRunner(store, syncRunnerSourceResolverStub{}, workspace, git)
+	runner.leaseDuration = 50 * time.Millisecond
+	runner.leaseRenewInterval = time.Millisecond
+	done := make(chan error, 1)
+	go func() { done <- runner.RunOnce(context.Background(), taskID) }()
+	select {
+	case <-git.started:
+	case <-time.After(time.Second):
+		t.Fatal("runner did not reach clone")
+	}
+	select {
+	case <-store.renewed:
+	case <-time.After(time.Second):
+		t.Fatal("runner did not renew its claimed lease")
+	}
+	if store.claimedOwner != runner.leaseOwner || store.claimedLease != runner.leaseDuration {
+		t.Fatalf("claim lease = owner %q duration %s, want runner lease", store.claimedOwner, store.claimedLease)
+	}
+	runner.Cancel(taskID)
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("runner did not stop after cancellation")
+	}
+}
+
+func TestSyncRunnerCancellationBeforeClaimFinalizesWithoutWorkspace(t *testing.T) {
+	taskID := uuid.New()
+	store := &syncRunnerStoreStub{task: domain.SyncTask{
+		ID:         taskID,
+		SourceID:   uuid.New(),
+		SourceType: domain.SourceTypeGit,
+		RepoURL:    "https://example.com/templates.git",
+		State:      domain.SyncTaskCancelling,
+		Phase:      domain.SyncTaskCancelling,
+	}}
+	workspace, err := NewLocalWorkspace(filepath.Join(t.TempDir(), "workspaces"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner := NewSyncRunner(store, syncRunnerSourceResolverStub{}, workspace, syncRunnerGitStub{})
+	if err := runner.RunOnce(context.Background(), taskID); err == nil || !strings.Contains(err.Error(), "SYNC_CANCELLED") {
+		t.Fatalf("RunOnce error=%v, want SYNC_CANCELLED", err)
+	}
+	if store.task.State != domain.SyncTaskCancelled || store.task.CleanupStatus != domain.CleanupClean {
+		t.Fatalf("task=%#v, want clean cancelled task", store.task)
+	}
+}
+
+func TestSyncRunnerCancellationAfterRegistrationBeforeTaskReadFinalizes(t *testing.T) {
+	taskID := uuid.New()
+	store := &syncRunnerStoreStub{task: domain.SyncTask{
+		ID:         taskID,
+		SourceID:   uuid.New(),
+		SourceType: domain.SourceTypeGit,
+		RepoURL:    "https://example.com/templates.git",
+		State:      domain.SyncTaskValidatingSource,
+		Phase:      domain.SyncTaskValidatingSource,
+	}}
+	workspace, err := NewLocalWorkspace(filepath.Join(t.TempDir(), "workspaces"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner := NewSyncRunner(store, syncRunnerSourceResolverStub{}, workspace, syncRunnerGitStub{})
+	store.beforeGet = func() {
+		store.task.State = domain.SyncTaskCancelling
+		store.task.Phase = domain.SyncTaskCancelling
+		runner.Cancel(taskID)
+	}
+
+	err = runner.RunOnce(context.Background(), taskID)
+	if err == nil || !strings.Contains(err.Error(), "SYNC_CANCELLED") {
+		t.Fatalf("RunOnce error=%v, want SYNC_CANCELLED", err)
+	}
+	if store.task.State != domain.SyncTaskCancelled || store.task.CleanupStatus != domain.CleanupClean {
+		t.Fatalf("task=%#v, want clean cancelled task", store.task)
+	}
+}
+
+func TestSyncRunnerCancellationBeforeClaimFinalizesAfterClaimContextIsCancelled(t *testing.T) {
+	taskID := uuid.New()
+	store := &syncRunnerStoreStub{task: domain.SyncTask{
+		ID:         taskID,
+		SourceID:   uuid.New(),
+		SourceType: domain.SourceTypeGit,
+		RepoURL:    "https://example.com/templates.git",
+		State:      domain.SyncTaskValidatingSource,
+		Phase:      domain.SyncTaskValidatingSource,
+	}}
+	workspace, err := NewLocalWorkspace(filepath.Join(t.TempDir(), "workspaces"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	runner := NewSyncRunner(store, syncRunnerSourceResolverStub{}, workspace, syncRunnerGitStub{})
+	store.beforeClaim = func() {
+		store.task.State = domain.SyncTaskCancelling
+		store.task.Phase = domain.SyncTaskCancelling
+		runner.Cancel(taskID)
+	}
+
+	err = runner.RunOnce(context.Background(), taskID)
+	if err == nil || !strings.Contains(err.Error(), "SYNC_CANCELLED") {
+		t.Fatalf("RunOnce error=%v, want SYNC_CANCELLED", err)
+	}
+	if store.task.State != domain.SyncTaskCancelled || store.task.CleanupStatus != domain.CleanupClean {
+		t.Fatalf("task=%#v, want clean cancelled task", store.task)
+	}
 }

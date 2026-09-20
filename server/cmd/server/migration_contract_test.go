@@ -1155,6 +1155,42 @@ func TestInitialSchemaDefaultsNucleiPOCEnablementToDisabled(t *testing.T) {
 	}
 }
 
+func TestInitialSchemaDefinesNucleiSyncCancellationLifecycleAndSingleton(t *testing.T) {
+	up := readInitialSchema(t)
+	definition := regexp.MustCompile(`(?s)CREATE TABLE IF NOT EXISTS nuclei_poc_sync_task \((.*?)\);`).FindStringSubmatch(up)
+	if len(definition) != 2 {
+		t.Fatal("initial schema must define nuclei_poc_sync_task exactly once")
+	}
+	for _, state := range []string{"'CANCELLING'", "'CANCELLED'", "'SUCCEEDED'", "'FAILED'"} {
+		if !strings.Contains(definition[1], state) {
+			t.Fatalf("nuclei sync task state check must contain %s", state)
+		}
+	}
+	if !strings.Contains(up, "idx_nuclei_poc_sync_task_active_singleton") {
+		t.Fatal("nuclei sync task baseline must enforce a global active singleton")
+	}
+	activeIndex := regexp.MustCompile(`(?s)CREATE UNIQUE INDEX IF NOT EXISTS idx_nuclei_poc_sync_task_active_singleton.*?WHERE state NOT IN \((.*?)\);`).FindStringSubmatch(up)
+	if len(activeIndex) != 2 {
+		t.Fatal("nuclei sync active singleton must define a terminal-state predicate")
+	}
+	if strings.Contains(activeIndex[1], "'CANCELLING'") {
+		t.Fatal("CANCELLING must retain the active singleton until cleanup completes")
+	}
+	for _, terminal := range []string{"'SUCCEEDED'", "'FAILED'", "'CANCELLED'"} {
+		if !strings.Contains(activeIndex[1], terminal) {
+			t.Fatalf("active singleton predicate must exclude terminal state %s", terminal)
+		}
+	}
+	for _, column := range []string{"lease_owner VARCHAR(128)", "lease_expires_at TIMESTAMPTZ"} {
+		if !strings.Contains(definition[1], column) {
+			t.Fatalf("nuclei sync task must persist %s for cross-process recovery", column)
+		}
+	}
+	if !strings.Contains(up, "idx_nuclei_poc_sync_task_lease_recovery") {
+		t.Fatal("nuclei sync task baseline must index stale lease recovery")
+	}
+}
+
 func notificationKindSQLList(kinds []notificationdomain.Kind) string {
 	quoted := make([]string, 0, len(kinds))
 	for _, kind := range kinds {

@@ -79,11 +79,14 @@ detail/profile alias.
 ## Nuclei POC Source Sync
 
 `use-nuclei-pocs.ts` owns Nuclei source/catalog query keys, the dedicated
-complete-catalog tag filter-options query, the sync mutation, one-second task
-polling, and cache invalidation. Task polling is enabled while
+complete-catalog tag filter-options query, the sync and cancel mutations,
+one-second task polling, and cache invalidation. Task polling is enabled while
 the catalog page is mounted and owns a canonical non-terminal task; dialog
 visibility controls presentation only. Closing the dialog never sends
-cancellation, and reopening resumes the same task query. A successful task
+cancellation, and reopening resumes the same task query. A cancel mutation
+updates the task cache immediately to `CANCELLING`; polling stops when the
+server returns terminal `CANCELLED`, while cancel errors remain exposed to the
+dialog so the command can be retried. A successful task
 invalidates the current source, catalog lists, tag options, and detail
 projections exactly once. The hook exposes typed conflict parsing helpers so the page can adopt the
 canonical task from `SYNC_ALREADY_RUNNING` without matching raw messages. The

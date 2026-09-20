@@ -13,6 +13,7 @@ const serviceMocks = vi.hoisted(() => ({
   getNucleiPocHttpStatus: vi.fn(),
   getNucleiPocSource: vi.fn(),
   getNucleiPocSyncTask: vi.fn(),
+  cancelNucleiPocSyncTask: vi.fn(),
   listNucleiPocs: vi.fn(),
   syncNucleiPocSource: vi.fn(),
   updateNucleiPoc: vi.fn(),
@@ -20,7 +21,7 @@ const serviceMocks = vi.hoisted(() => ({
 
 vi.mock("@/services/nuclei-poc.service", () => serviceMocks)
 
-import { nucleiPocKeys, useNucleiPocSyncTask } from "@/hooks/use-nuclei-pocs"
+import { nucleiPocKeys, useCancelNucleiPocSyncTask, useNucleiPocSyncTask } from "@/hooks/use-nuclei-pocs"
 
 const taskName = "nucleiPocSyncTasks/00000000-0000-4000-8000-000000000001" as const
 
@@ -93,5 +94,33 @@ describe("useNucleiPocSyncTask", () => {
       nucleiPocKeys.filterOptions("tags"),
       nucleiPocKeys.details(),
     ])
+  })
+
+  it("stops polling when cancellation reaches the terminal state", async () => {
+    serviceMocks.getNucleiPocSyncTask.mockResolvedValue(task({
+      state: "CANCELLED",
+      phase: "CANCELLED",
+      completedAt: "2026-08-19T00:01:00.000Z",
+      cleanupStatus: "clean",
+      failureCode: "SYNC_CANCELLED",
+    }))
+
+    const { result } = renderHookWithProviders(() => useNucleiPocSyncTask(taskName))
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000)
+    })
+    expect(serviceMocks.getNucleiPocSyncTask).toHaveBeenCalledTimes(1)
+  })
+
+  it("exposes a cancellation mutation that updates the task cache", async () => {
+    const cancelled = task({ state: "CANCELLING", phase: "CANCELLING" })
+    serviceMocks.cancelNucleiPocSyncTask.mockResolvedValue(cancelled)
+    const { queryClient, result } = renderHookWithProviders(() => useCancelNucleiPocSyncTask())
+    await act(async () => {
+      await result.current.mutateAsync(taskName)
+    })
+    expect(serviceMocks.cancelNucleiPocSyncTask).toHaveBeenCalledWith(taskName, expect.anything())
+    expect(queryClient.getQueryData(nucleiPocKeys.task(taskName))).toEqual(cancelled)
   })
 })

@@ -24,6 +24,10 @@
 - Header: compact `px-4 py-3`, bottom border, and the shared `EdgePanelHeader` `form` variant. It retains the shared `min-h-8` title row and follows the quick-scan hierarchy with a `size-10` semantic icon container, `textRole.sectionTitle` title, `textRole.helperText` description, and one close action.
 - Body: scrolls independently with compact `px-4 py-3` and a `gap-3` form rhythm.
 - Footer: fixed at the bottom with `border-t px-4 py-3`.
+- Footer actions in right-side form drawers SHOULD explicitly use
+  `Button size="sm"` so the action row matches the compact edge-panel tier;
+  centered Dialog form actions and other standard-density callers keep their
+  own size contract.
 - Close: uses `SheetClose` with a shared `Button size="icon-sm"` and translated close label.
 
 ## Embedded Panel

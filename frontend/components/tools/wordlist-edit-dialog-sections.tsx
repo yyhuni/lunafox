@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { AlertTriangle, FileText, Save } from "@/components/icons"
-import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -175,20 +175,25 @@ export function WordlistEditFooter({
   const hasAnyChanges = hasChanges || hasMetadataChanges
   const canSave = (canEditContent && hasChanges) || hasMetadataChanges
 
+  if (!canEditContent && !hasAnyChanges) {
+    return null
+  }
+
   return (
-    <DialogFooter className={cn("border-t gap-2 px-4 py-3", className)}>
-      {canEditContent || hasAnyChanges ? (
-        <Button
-          type="button"
-          onClick={onSaveDialog}
-          disabled={isSavingAny || !canSave}
-          loading={isSavingAny}
-          loadingLabel={t("saving")}
-        >
-          <Save className="h-4 w-4" />
-          {t("save")}
-        </Button>
-      ) : null}
-    </DialogFooter>
+    <div className={cn("flex shrink-0 flex-col gap-2 border-t bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between", className)}>
+      <div className="flex min-h-8 items-center">
+        {hasAnyChanges ? <WordlistEditUnsavedNotice t={t} /> : null}
+      </div>
+      <Button
+        type="button"
+        onClick={onSaveDialog}
+        disabled={isSavingAny || !canSave}
+        loading={isSavingAny}
+        loadingLabel={t("saving")}
+      >
+        <Save className="h-4 w-4" />
+        {t("save")}
+      </Button>
+    </div>
   )
 }

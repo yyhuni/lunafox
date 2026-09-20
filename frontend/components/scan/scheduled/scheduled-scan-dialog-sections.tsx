@@ -205,10 +205,10 @@ interface ScheduledScanFooterProps {
 }
 export function ScheduledScanFooter({ t, currentStep, totalSteps, isPending, onPrev, onNext, onSubmit, }: ScheduledScanFooterProps) {
     return (<div className="border-t flex justify-between px-4 py-3">
-      {currentStep > 1 ? (<Button variant="outline" onClick={onPrev}>
+      {currentStep > 1 ? (<Button variant="outline" size="sm" onClick={onPrev}>
           <IconChevronLeft className="h-4 mr-1 w-4"/>{t("buttons.previous")}
         </Button>) : <div />}
-      {currentStep < totalSteps ? (<Button onClick={onNext}>{t("buttons.next")}<IconChevronRight className="h-4 ml-1 w-4"/></Button>) : (<Button onClick={onSubmit} disabled={isPending} loading={isPending} loadingLabel={t("buttons.createTask")}>
+      {currentStep < totalSteps ? (<Button size="sm" onClick={onNext}>{t("buttons.next")}<IconChevronRight className="h-4 ml-1 w-4"/></Button>) : (<Button size="sm" onClick={onSubmit} disabled={isPending} loading={isPending} loadingLabel={t("buttons.createTask")}>
           {t("buttons.createTask")}
         </Button>)}
     </div>);

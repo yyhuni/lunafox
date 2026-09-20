@@ -28,7 +28,6 @@ import {
   WordlistEditFooter,
   WordlistEditMeta,
   WordlistEditMetadata,
-  WordlistEditUnsavedNotice,
 } from "./wordlist-edit-dialog-sections"
 import { useWordlistEditDialogState } from "./wordlist-edit-dialog-state"
 import { formatWordlistFileSize, formatWordlistUpdatedAt } from "./wordlist-formatters"
@@ -180,7 +179,6 @@ export function WordlistDetailDrawer({
                         onChange={editState.handleEditorChange}
                         readOnly={editState.isSaving}
                       />
-                      {editState.hasChanges ? <WordlistEditUnsavedNotice t={tEdit} /> : null}
                     </>
                   ) : (
                     <div className="rounded-md border bg-muted/30 px-4 py-3 text-muted-foreground">

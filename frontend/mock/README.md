@@ -28,6 +28,11 @@
   single field parameter and returns the complete mock catalog projection with
   lowercase canonical values, per-POC deduplication, catalog-wide counts, and
   deterministic ordering. The empty scenario returns `{ results: [] }`.
+- Nuclei POC sync cancellation is intercepted at
+  `POST /nucleiPocSyncTasks/{uuid}:cancel`. The mock returns `CANCELLING`, the
+  next task poll converges to terminal `CANCELLED`, releases the mock active
+  slot, and leaves the committed source/catalog unchanged. Repeated cancel
+  requests are idempotent observations of the same task.
 
 ## Coverage Rules
 

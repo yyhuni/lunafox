@@ -221,6 +221,10 @@ step. This reserves navigation action positions across desktop and narrow
 layouts; do not remove the slot merely because the current step renders less
 feedback.
 
+Scheduled-scan creation uses the same compact `Button size="sm"` tier for
+previous, next, and create-task actions in its edge-panel footer. Keep all
+actions in that footer on one density tier.
+
 ## Drawer Motion Contract
 
 Scan launch and scheduled scan creation are right-side workbench layouts. They use the shared edge-panel transition; their workbench classes own content width, padding, and overflow rather than a separate animation.

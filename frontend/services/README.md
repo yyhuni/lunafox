@@ -126,6 +126,13 @@ HTTP request. The service must not fall back to the retired `/nuclei/repos` or
 local preview transport. List responses intentionally omit YAML; detail
 requests are the only YAML payload.
 
+The task custom method `POST /nucleiPocSyncTasks/{uuid}:cancel` is the only
+cancellation transport. It accepts a canonical task resource name, sends no
+request body, and returns the current task resource (`CANCELLING`,
+`CANCELLED`, or an already terminal success/failure result). It must reject
+malformed task names before issuing HTTP and must not fall back to a legacy
+stop or pause endpoint.
+
 The same service owns `GET /nucleiPocs/filterOptions` for the tag facet. It
 sends exactly one `field=tags` query parameter and strictly parses
 `results[{value,label,count}]`; unsupported fields or malformed option data

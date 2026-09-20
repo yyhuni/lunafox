@@ -7,8 +7,10 @@ export type NucleiPocSyncState =
   | "VALIDATING_TEMPLATES"
   | "COMMITTING"
   | "CLEANING"
+  | "CANCELLING"
   | "SUCCEEDED"
   | "FAILED"
+  | "CANCELLED"
 
 export interface NucleiPocSource {
   name: "nucleiPocSources/current"

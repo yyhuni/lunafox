@@ -181,7 +181,7 @@ export function EngineInstallationPage({ embedded = false }: { embedded?: boolea
                     void submitInstall(false)
                   },
                 }}
-                footer={<Button type="submit" disabled={install.isPending || !artifactRef}>{t("install")}</Button>}
+                footer={<Button type="submit" size="sm" disabled={install.isPending || !artifactRef}>{t("install")}</Button>}
               >
                 <label className="grid gap-2" htmlFor="engine-artifact-ref">
                   <span className={textRole.metadataLabel}>{t("artifactRef")}</span>

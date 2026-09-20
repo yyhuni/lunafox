@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest"
 
 import {
   createMockNucleiPocSync,
+  cancelMockNucleiPocSyncTask,
   getMockNucleiPocFilterOptions,
   getMockNucleiPocs,
   getMockNucleiPocSyncTask,
@@ -41,6 +42,14 @@ describe("nuclei POC network mock", () => {
     const high = getMockNucleiPocs({ filter: 'severity=="high"' })
     expect(high.results.every((item) => item.severity === "high")).toBe(true)
     expect(() => getMockNucleiPocs({ filter: 'cve=="CVE-2024-3400"' })).toThrow()
+  })
+
+  it("moves a mock task through CANCELLING to CANCELLED and releases the slot", () => {
+    const created = createMockNucleiPocSync(baseRequest)
+    expect(cancelMockNucleiPocSyncTask(created.task!.name).state).toBe("CANCELLING")
+    expect(getMockNucleiPocSyncTask(created.task!.name)?.state).toBe("CANCELLED")
+    expect(createMockNucleiPocSync({ ...baseRequest, requestId: "00000000-0000-4000-8000-000000000105" }).task).toBeTruthy()
+    expect(cancelMockNucleiPocSyncTask(created.task!.name).state).toBe("CANCELLED")
   })
 
   it("aggregates complete-catalog tag filter options with stable counts and ordering", () => {

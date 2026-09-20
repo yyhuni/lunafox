@@ -16,6 +16,7 @@ func TestCanonicalTerminalFailureUsesOnlyApprovedRedactedPairs(t *testing.T) {
 		{code: "DUPLICATE_TEMPLATE_ID", wantCode: "DUPLICATE_TEMPLATE_ID", wantSummary: "The repository contains duplicate template identities."},
 		{code: "EMPTY_CANDIDATE", wantCode: "EMPTY_CANDIDATE", wantSummary: "The repository did not contain a valid Nuclei template."},
 		{code: "DEADLINE_EXCEEDED", wantCode: "DEADLINE_EXCEEDED", wantSummary: "The sync task exceeded its deadline."},
+		{code: "SYNC_CANCELLED", wantCode: "SYNC_CANCELLED", wantSummary: "The sync task was cancelled before commit."},
 		{code: "PROCESS_INTERRUPTED", wantCode: "PROCESS_INTERRUPTED", wantSummary: "The sync task was interrupted and was not committed."},
 		{code: "WORKSPACE_UNAVAILABLE", wantCode: "WORKSPACE_UNAVAILABLE", wantSummary: genericNucleiPOCSyncFailureSummary},
 		{code: "PATH_ESCAPE", wantCode: "PATH_ESCAPE", wantSummary: genericNucleiPOCSyncFailureSummary},

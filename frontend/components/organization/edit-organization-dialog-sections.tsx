@@ -133,6 +133,7 @@ export function EditOrganizationFooter({
         <Button
           type="button"
           variant="ghost"
+          size="sm"
           onClick={onReset}
           disabled={isUpdating}
         >
@@ -142,6 +143,7 @@ export function EditOrganizationFooter({
 
       <Button
         type="submit"
+        size="sm"
         disabled={isUpdating || !isFormValid || !hasChanges}
         loading={isUpdating}
         loadingLabel={t("updating")}

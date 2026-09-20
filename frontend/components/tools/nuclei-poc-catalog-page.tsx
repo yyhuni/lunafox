@@ -55,7 +55,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
-import { getNucleiPocQueryActiveSyncTaskName, getNucleiPocQueryErrorReason, getNucleiPocQueryErrorStatus, isNucleiPocSyncTaskTerminal, useNucleiPocDetail, useNucleiPocFilterOptions, useNucleiPocs, useNucleiPocSource, useNucleiPocSyncTask, useSetNucleiPocActivation, useSyncNucleiPocSource, useUpdateNucleiPocEnabled } from "@/hooks/use-nuclei-pocs"
+import { getNucleiPocQueryActiveSyncTaskName, getNucleiPocQueryErrorReason, getNucleiPocQueryErrorStatus, isNucleiPocSyncTaskTerminal, useCancelNucleiPocSyncTask, useNucleiPocDetail, useNucleiPocFilterOptions, useNucleiPocs, useNucleiPocSource, useNucleiPocSyncTask, useSetNucleiPocActivation, useSyncNucleiPocSource, useUpdateNucleiPocEnabled } from "@/hooks/use-nuclei-pocs"
 import type { NucleiPocListItem, NucleiPocSourceType, NucleiPocSyncState, NucleiPocSyncTask } from "@/types/nuclei-poc.types"
 import { formatDateByLocale } from "@/lib/date-utils"
 import { getSeverityVariant, SEVERITY_LEVELS } from "@/lib/severity-config"
@@ -78,6 +78,20 @@ const PAGE_SIZE = 10
 const NUCLEI_POC_CATALOG_LOADING_ROW_COUNT = getDataTableSkeletonRowCount(PAGE_SIZE)
 const EMPTY_NUCLEI_POC_ITEMS: NucleiPocListItem[] = []
 const SEARCH_DEBOUNCE_MS = 300
+
+/**
+ * A task query is the authoritative observation after the cancel response.
+ * Mutation data is only a fallback until that query has produced its next
+ * snapshot; otherwise a stale CANCELLING response can mask terminal
+ * CANCELLED state and hide the explicit new-sync action.
+ */
+export function selectNucleiPocSyncTask(
+  taskQueryTask: NucleiPocSyncTask | null | undefined,
+  cancelTask: NucleiPocSyncTask | null | undefined,
+  createTask: NucleiPocSyncTask | null | undefined,
+) {
+  return taskQueryTask ?? cancelTask ?? createTask ?? null
+}
 
 const SYNC_PHASES: NucleiPocSyncState[] = [
   "VALIDATING_SOURCE",
@@ -162,14 +176,16 @@ function NucleiPocCatalogWorkspace() {
   const tagOptionsQuery = useNucleiPocFilterOptions("tags")
   const sourceQuery = useNucleiPocSource()
   const syncMutation = useSyncNucleiPocSource()
+  const cancelMutation = useCancelNucleiPocSyncTask()
   const enabledMutation = useUpdateNucleiPocEnabled()
 	const activationMutation = useSetNucleiPocActivation()
 	const updateEnabled = enabledMutation.mutate
 	const isUpdatingEnabled = enabledMutation.isPending
 	const enabledVariables = enabledMutation.variables
-  const taskQuery = useNucleiPocSyncTask(activeTaskName)
-  const activeTask = taskQuery.data ?? syncMutation.data ?? null
-  const syncIsRunning = Boolean(activeTask && !isNucleiPocSyncTaskTerminal(activeTask) && !taskQuery.isExpired)
+	const taskQuery = useNucleiPocSyncTask(activeTaskName)
+  const activeTask = selectNucleiPocSyncTask(taskQuery.data, cancelMutation.data, syncMutation.data)
+	const syncIsRunning = Boolean(activeTask && !isNucleiPocSyncTaskTerminal(activeTask) && !taskQuery.isExpired)
+	const syncIsCancelling = Boolean(cancelMutation.isPending || activeTask?.state === "CANCELLING")
 	const batchActivationDisabled = syncIsRunning || syncMutation.isPending || activationMutation.isPending
 	const [activationTarget, setActivationTarget] = React.useState<boolean | null>(null)
 
@@ -253,12 +269,20 @@ function NucleiPocCatalogWorkspace() {
     }
   }
 
-  const startNewSync = () => {
+	const startNewSync = () => {
     setSelectedRows([])
     setActiveTaskName(null)
     setSyncSubmitted(false)
     syncMutation.reset()
-  }
+	    cancelMutation.reset()
+	}
+
+	const cancelSync = () => {
+		if (!activeTaskName || cancelMutation.isPending || isNucleiPocSyncTaskTerminal(activeTask)) return
+		cancelMutation.mutate(activeTaskName, {
+			onSuccess: (task) => setActiveTaskName(task.name),
+		})
+	}
 
   const confirmActivation = () => {
     if (activationTarget === null || activationMutation.isPending) return
@@ -540,11 +564,13 @@ function NucleiPocCatalogWorkspace() {
         isSubmitting={syncMutation.isPending}
         task={activeTask}
         taskPending={Boolean(activeTaskName) && taskQuery.isPending}
-        taskError={taskQuery.error ?? syncMutation.error ?? null}
-        errorKind={taskQuery.error ? "task" : syncMutation.error ? "create" : null}
-        taskExpired={taskQuery.isExpired}
-        onSubmit={submitSync}
-        onStartNew={startNewSync}
+	        taskError={taskQuery.error ?? cancelMutation.error ?? syncMutation.error ?? null}
+	        errorKind={taskQuery.error ? "task" : cancelMutation.error ? "cancel" : syncMutation.error ? "create" : null}
+	        taskExpired={taskQuery.isExpired}
+	        onSubmit={submitSync}
+	        onStartNew={startNewSync}
+	        onCancel={cancelSync}
+	        isCancelling={syncIsCancelling}
         />
       </div>
     </ContentHandoff>
@@ -838,6 +864,8 @@ export function NucleiPocSyncDialog({
   taskExpired,
   onSubmit,
   onStartNew,
+  onCancel = () => undefined,
+  isCancelling = false,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -850,13 +878,16 @@ export function NucleiPocSyncDialog({
   task: NucleiPocSyncTask | null
   taskPending?: boolean
   taskError: unknown
-  errorKind?: "create" | "task" | null
+  errorKind?: "create" | "task" | "cancel" | null
   taskExpired: boolean
   onSubmit: () => void
   onStartNew: () => void
+  onCancel?: () => void
+  isCancelling?: boolean
 }) {
   const t = useTranslations("pages.nucleiCatalog")
-  const tCommon = useTranslations("common.actions")
+	const tCommon = useTranslations("common.actions")
+  const [cancelConfirmOpen, setCancelConfirmOpen] = React.useState(false)
   const lastObservedPhase = React.useRef<{ taskName: string; phase: NucleiPocSyncState } | null>(null)
   React.useEffect(() => {
     if (task && !isNucleiPocSyncTaskTerminal(task) && SYNC_PHASES.includes(task.phase)) {
@@ -866,8 +897,14 @@ export function NucleiPocSyncDialog({
   const failedPhase = task?.state === "FAILED" && lastObservedPhase.current?.taskName === task.name
     ? lastObservedPhase.current.phase
     : null
+  const timelinePhase = task && lastObservedPhase.current?.taskName === task.name
+    ? lastObservedPhase.current.phase
+    : task && (task.state === "CANCELLING" || task.state === "CANCELLED")
+      ? "VALIDATING_SOURCE"
+      : task?.phase ?? null
   const showProgress = taskPending || Boolean(task) || Boolean(taskError)
-  const isTerminal = task?.state === "SUCCEEDED" || task?.state === "FAILED"
+	const isTerminal = isNucleiPocSyncTaskTerminal(task)
+	const canCancel = Boolean(task && !isTerminal && task.state !== "CANCELLING" && !taskExpired && (!taskError || errorKind === "cancel"))
   const hasRecoverableError = Boolean(taskError) && !task
   const isGiteeSource = sourceKind === "gitee"
   const sourceValid = isGiteeSource ? isNucleiPocGiteeSyncSourceUrl(sourceUrl) : isNucleiPocGitRepositoryUrl(sourceUrl)
@@ -879,7 +916,10 @@ export function NucleiPocSyncDialog({
     { value: "gitee", label: t("sync.sourceGitee"), description: t("sync.sourceGiteeDescription") },
     { value: "custom", label: t("sync.sourceCustom"), description: t("sync.sourceCustomDescription") },
   ] as const
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className={`${compactFormDialogContentClassName} max-h-[min(90vh,720px)] overflow-y-auto sm:max-w-lg`}><DialogHeader><DialogTitle>{showProgress ? t("sync.progressTitle") : t("sync.title")}</DialogTitle><DialogDescription>{showProgress ? t("sync.progressDescription") : t("sync.sourceDescription")}</DialogDescription></DialogHeader>{showProgress ? <SyncTaskProgress task={task} failedPhase={failedPhase} error={taskError} errorKind={errorKind} expired={taskExpired} /> : <form noValidate className="grid gap-3" onSubmit={(event) => { event.preventDefault(); onSubmit() }}><div className="grid gap-2"><Label id="nuclei-poc-sync-source-kind-label">{t("sync.sourceLabel")}</Label><RadioGroup value={sourceKind} onValueChange={onSourceKindChange} aria-labelledby="nuclei-poc-sync-source-kind-label" disabled={isSubmitting} className="gap-2">{sourceOptions.map((option) => { const optionId = `nuclei-poc-sync-source-${option.value}`; const selected = sourceKind === option.value; return <label key={option.value} htmlFor={optionId} className={cn("radius-control flex min-w-0 cursor-pointer items-start gap-3 border px-3 py-2.5 transition-colors", selected ? "border-primary/60 bg-primary/10" : "border-border", isSubmitting && "cursor-not-allowed opacity-60")}><RadioGroupItem id={optionId} value={option.value} disabled={isSubmitting} className="mt-0.5" /><span className="min-w-0"><span className={textRole.bodyStrong}>{option.label}</span><span className={cn("mt-0.5 block", textRole.helperText)}>{option.description}</span></span></label> })}</RadioGroup></div><div className="grid gap-2"><Label htmlFor="nuclei-poc-sync-source-url">{sourceUrlLabel}</Label><Input id="nuclei-poc-sync-source-url" type="url" value={sourceUrl} onChange={(event) => onSourceUrlChange(event.target.value)} placeholder={sourceUrlPlaceholder} autoComplete="url" inputMode="url" maxLength={512} disabled={isSubmitting} aria-invalid={hasSourceError} aria-describedby={hasSourceError ? "nuclei-poc-sync-source-url-error" : undefined} required />{hasSourceError ? <FieldError id="nuclei-poc-sync-source-url-error">{isGiteeSource ? t("sync.invalidGiteeUrl") : t("sync.invalidUrl")}</FieldError> : null}</div><DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>{tCommon("cancel")}</Button><Button type="submit" loading={isSubmitting} loadingLabel={t("sync.submitting")}>{t("sync.submit")}</Button></DialogFooter></form>}{showProgress ? <DialogFooter>{isTerminal || taskExpired || hasRecoverableError ? <Button type="button" variant="outline" onClick={onStartNew}>{t("sync.newSync")}</Button> : null}<Button type="button" onClick={() => onOpenChange(false)}>{tCommon("close")}</Button></DialogFooter> : null}</DialogContent></Dialog>
+	return <>
+		<Dialog open={open} onOpenChange={onOpenChange}><DialogContent className={`${compactFormDialogContentClassName} max-h-[min(90vh,720px)] overflow-y-auto sm:max-w-lg`}><DialogHeader><DialogTitle>{showProgress ? t("sync.progressTitle") : t("sync.title")}</DialogTitle><DialogDescription>{showProgress ? t("sync.progressDescription") : t("sync.sourceDescription")}</DialogDescription></DialogHeader>{showProgress ? <SyncTaskProgress task={task} timelinePhase={timelinePhase} failedPhase={failedPhase} error={taskError} errorKind={errorKind} expired={taskExpired} /> : <form noValidate className="grid gap-3" onSubmit={(event) => { event.preventDefault(); onSubmit() }}><div className="grid gap-2"><Label id="nuclei-poc-sync-source-kind-label">{t("sync.sourceLabel")}</Label><RadioGroup value={sourceKind} onValueChange={onSourceKindChange} aria-labelledby="nuclei-poc-sync-source-kind-label" disabled={isSubmitting} className="gap-2">{sourceOptions.map((option) => { const optionId = `nuclei-poc-sync-source-${option.value}`; const selected = sourceKind === option.value; return <label key={option.value} htmlFor={optionId} className={cn("radius-control flex min-w-0 cursor-pointer items-start gap-3 border px-3 py-2.5 transition-colors", selected ? "border-primary/60 bg-primary/10" : "border-border", isSubmitting && "cursor-not-allowed opacity-60")}><RadioGroupItem id={optionId} value={option.value} disabled={isSubmitting} className="mt-0.5" /><span className="min-w-0"><span className={textRole.bodyStrong}>{option.label}</span><span className={cn("mt-0.5 block", textRole.helperText)}>{option.description}</span></span></label> })}</RadioGroup></div><div className="grid gap-2"><Label htmlFor="nuclei-poc-sync-source-url">{sourceUrlLabel}</Label><Input id="nuclei-poc-sync-source-url" type="url" value={sourceUrl} onChange={(event) => onSourceUrlChange(event.target.value)} placeholder={sourceUrlPlaceholder} autoComplete="url" inputMode="url" maxLength={512} disabled={isSubmitting} aria-invalid={hasSourceError} aria-describedby={hasSourceError ? "nuclei-poc-sync-source-url-error" : undefined} required />{hasSourceError ? <FieldError id="nuclei-poc-sync-source-url-error">{isGiteeSource ? t("sync.invalidGiteeUrl") : t("sync.invalidUrl")}</FieldError> : null}</div><DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>{tCommon("cancel")}</Button><Button type="submit" loading={isSubmitting} loadingLabel={t("sync.submitting")}>{t("sync.submit")}</Button></DialogFooter></form>}{showProgress ? <DialogFooter>{canCancel ? <Button type="button" variant="destructive" onClick={() => setCancelConfirmOpen(true)} disabled={isCancelling}><Ban className="size-4" aria-hidden="true" />{t("sync.cancel")}</Button> : null}{isTerminal || taskExpired || hasRecoverableError ? <Button type="button" variant="outline" onClick={onStartNew}>{t("sync.newSync")}</Button> : null}<Button type="button" onClick={() => onOpenChange(false)}>{tCommon("close")}</Button></DialogFooter> : null}</DialogContent></Dialog>
+		<AlertDialog open={cancelConfirmOpen} onOpenChange={(nextOpen) => { if (!isCancelling) setCancelConfirmOpen(nextOpen) }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{t("sync.cancelTitle")}</AlertDialogTitle><AlertDialogDescription>{t("sync.cancelDescription")}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogClose variant="outline" disabled={isCancelling}>{tCommon("cancel")}</AlertDialogClose><Button type="button" variant="destructive" onClick={() => { setCancelConfirmOpen(false); onCancel?.() }} loading={isCancelling} loadingLabel={t("sync.cancelling")}>{t("sync.confirmCancel")}</Button></AlertDialogFooter></AlertDialogContent></AlertDialog>
+	</>
 }
 
 const SYNC_FAILURE_CODES = new Set([
@@ -887,13 +927,13 @@ const SYNC_FAILURE_CODES = new Set([
   "YAML_QUOTA_EXCEEDED", "YAML_SIZE_EXCEEDED", "WORKSPACE_QUOTA_EXCEEDED", "TEMPLATE_INVALID",
   "DUPLICATE_TEMPLATE_ID", "EMPTY_CANDIDATE", "DEADLINE_EXCEEDED", "PROCESS_INTERRUPTED",
   "SYNC_FAILED", "CANDIDATE_STAGE_FAILED", "PATH_ESCAPE", "SYMLINK_REJECTED", "SUBMODULE_REJECTED",
-  "GIT_QUOTA_EXCEEDED", "GIT_COMMIT_LOOKUP_FAILED", "WORKSPACE_UNAVAILABLE",
+  "GIT_QUOTA_EXCEEDED", "GIT_COMMIT_LOOKUP_FAILED", "WORKSPACE_UNAVAILABLE", "SYNC_CANCELLED",
 ])
 
-function SyncTaskProgress({ task, failedPhase, error, errorKind, expired }: { task: NucleiPocSyncTask | null; failedPhase: NucleiPocSyncState | null; error: unknown; errorKind?: "create" | "task" | null; expired: boolean }) {
+function SyncTaskProgress({ task, timelinePhase, failedPhase, error, errorKind, expired }: { task: NucleiPocSyncTask | null; timelinePhase: NucleiPocSyncState | null; failedPhase: NucleiPocSyncState | null; error: unknown; errorKind?: "create" | "task" | "cancel" | null; expired: boolean }) {
   const t = useTranslations("pages.nucleiCatalog")
-  const taskStatus = task?.state === "SUCCEEDED" ? "success" : task?.state === "FAILED" || expired || error ? "error" : "running"
-  const statusLabel = task?.state === "SUCCEEDED" ? t("sync.completed") : task?.state === "FAILED" ? t("sync.failed") : expired ? t("sync.expired") : error ? t("sync.error") : t("sync.running")
+	const taskStatus = task?.state === "SUCCEEDED" ? "success" : task?.state === "CANCELLED" ? "cancelled" : task?.state === "FAILED" || expired || error ? "error" : "running"
+	const statusLabel = task?.state === "SUCCEEDED" ? t("sync.completed") : task?.state === "CANCELLED" ? t("sync.cancelled") : task?.state === "CANCELLING" ? t("sync.cancelling") : task?.state === "FAILED" ? t("sync.failed") : expired ? t("sync.expired") : error ? t("sync.error") : t("sync.running")
   const phaseLabel = taskStatus === "running" && task
     ? (SYNC_PHASES.includes(task.phase) ? t(`sync.phases.${task.phase}`) : t("sync.waiting"))
     : statusLabel
@@ -901,30 +941,36 @@ function SyncTaskProgress({ task, failedPhase, error, errorKind, expired }: { ta
     ? t("sync.expiredSummary")
     : error
       ? getSyncErrorMessage(error, errorKind, t)
-      : task?.state === "SUCCEEDED"
-        ? t("sync.successSummary", { count: task.committedPocCount ?? 0, skipped: task.diagnostics.total, commit: task.commitSha?.slice(0, 12) ?? "-" })
-        : task?.state === "FAILED"
+		: task?.state === "SUCCEEDED"
+			? t("sync.successSummary", { count: task.committedPocCount ?? 0, skipped: task.diagnostics.total, commit: task.commitSha?.slice(0, 12) ?? "-" })
+			: task?.state === "CANCELLED"
+				? t("sync.cancelledSummary")
+			: task?.state === "CANCELLING"
+				? t("sync.cancellingSummary")
+		: task?.state === "FAILED"
           ? getSyncFailureMessage(task, t)
           : task
             ? t("sync.runningSummary", { phase: phaseLabel })
             : t("sync.waiting")
-  return <div className="grid gap-4" role="status" aria-live="polite"><div className="flex items-start justify-between gap-3 border-b border-border pb-3"><div className="flex min-w-0 items-center gap-2"><SyncStatusIcon status={taskStatus} /><span className={textRole.bodyStrong}>{statusLabel}</span></div><Badge variant={taskStatus === "error" ? "destructive" : taskStatus === "success" ? "secondary" : "outline"}>{phaseLabel}</Badge></div><p className={cn("break-words", textRole.body, taskStatus === "error" && "text-error")}>{statusMessage}</p>{task?.state === "FAILED" ? <p className={textRole.bodySubtle}>{t("sync.failedSummary")}</p> : null}{task && (task.state !== "FAILED" || failedPhase) ? <SyncPhaseTimeline task={task} failedPhase={failedPhase} t={t} /> : null}{task ? <div className="grid grid-cols-2 gap-3 border-y border-border/70 py-3 sm:grid-cols-4">{(["filesSeen", "yamlFilesSeen", "templatesValidated", "bytesRead"] as const).map((key) => <SyncCounter key={key} label={t(`sync.counters.${key}`)} value={task.counters[key]} />)}</div> : null}{task && task.diagnostics.total > 0 ? <SyncDiagnostics diagnostics={task.diagnostics} t={t} /> : null}</div>
+	return <div className="grid gap-4" role="status" aria-live="polite"><div className="flex items-start justify-between gap-3 border-b border-border pb-3"><div className="flex min-w-0 items-center gap-2"><SyncStatusIcon status={taskStatus} /><span className={textRole.bodyStrong}>{statusLabel}</span></div><Badge variant={taskStatus === "error" ? "destructive" : taskStatus === "success" ? "secondary" : "outline"}>{phaseLabel}</Badge></div><p className={cn("break-words", textRole.body, taskStatus === "error" && "text-error")}>{statusMessage}</p>{task?.state === "FAILED" ? <p className={textRole.bodySubtle}>{t("sync.failedSummary")}</p> : null}{task && (task.state !== "FAILED" || failedPhase) ? <SyncPhaseTimeline task={task} timelinePhase={timelinePhase} failedPhase={failedPhase} t={t} /> : null}{task ? <div className="grid grid-cols-2 gap-3 border-y border-border/70 py-3 sm:grid-cols-4">{(["filesSeen", "yamlFilesSeen", "templatesValidated", "bytesRead"] as const).map((key) => <SyncCounter key={key} label={t(`sync.counters.${key}`)} value={task.counters[key]} />)}</div> : null}{task && task.diagnostics.total > 0 ? <SyncDiagnostics diagnostics={task.diagnostics} t={t} /> : null}</div>
 }
 
-function SyncStatusIcon({ status }: { status: "running" | "success" | "error" }) {
-  if (status === "success") return <CheckCircle2 aria-hidden="true" className={cn("size-5", getStatusToneTextClass("success"))} />
-  if (status === "error") return <AlertTriangle aria-hidden="true" className={cn("size-5", getStatusToneTextClass("error"))} />
+function SyncStatusIcon({ status }: { status: "running" | "success" | "error" | "cancelled" }) {
+	if (status === "success") return <CheckCircle2 aria-hidden="true" className={cn("size-5", getStatusToneTextClass("success"))} />
+	if (status === "cancelled") return <Ban aria-hidden="true" className={cn("size-5", getStatusToneTextClass("muted"))} />
+	if (status === "error") return <AlertTriangle aria-hidden="true" className={cn("size-5", getStatusToneTextClass("error"))} />
   return <RefreshSpinner aria-hidden="true" className={cn("size-5", getStatusToneTextClass("info"))} />
 }
 
-function SyncPhaseTimeline({ task, failedPhase, t }: { task: NucleiPocSyncTask; failedPhase: NucleiPocSyncState | null; t: ReturnType<typeof useTranslations> }) {
-  const currentIndex = SYNC_PHASES.indexOf(task.state === "FAILED" && failedPhase ? failedPhase : task.phase)
+function SyncPhaseTimeline({ task, timelinePhase, failedPhase, t }: { task: NucleiPocSyncTask; timelinePhase: NucleiPocSyncState | null; failedPhase: NucleiPocSyncState | null; t: ReturnType<typeof useTranslations> }) {
+  const currentIndex = SYNC_PHASES.indexOf(task.state === "FAILED" && failedPhase ? failedPhase : timelinePhase ?? task.phase)
   return <ol className="grid gap-2" aria-label={t("sync.phaseTimeline")}>{SYNC_PHASES.map((phase, index) => { const state = getSyncPhaseState(task, index, currentIndex); const Icon = state === "complete" ? CheckCircle2 : state === "failed" ? AlertTriangle : state === "active" ? RefreshCw : Circle; return <li key={phase} className="relative flex min-w-0 items-center gap-2" aria-current={state === "active" || state === "failed" ? "step" : undefined}><span className="flex size-5 shrink-0 items-center justify-center">{state === "active" ? <RefreshSpinner aria-hidden="true" className={cn("size-4", getStatusToneTextClass("info"))} /> : <Icon aria-hidden="true" className={cn("size-4", state === "complete" && getStatusToneTextClass("success"), state === "failed" && getStatusToneTextClass("error"), state === "pending" && getStatusToneTextClass("muted"))} />}</span><span className={cn(textRole.helperText, state === "active" && textRole.bodyStrong, state === "failed" && "text-error")}>{t(`sync.phases.${phase}`)}</span></li> })}</ol>
 }
 
 function getSyncPhaseState(task: NucleiPocSyncTask, index: number, currentIndex: number): "complete" | "active" | "failed" | "pending" {
   if (task.state === "SUCCEEDED") return "complete"
   if (task.state === "FAILED") return index < currentIndex ? "complete" : index === currentIndex ? "failed" : "pending"
+	if (task.state === "CANCELLED") return index <= currentIndex ? "complete" : "pending"
   if (index < currentIndex) return "complete"
   return index === currentIndex ? "active" : "pending"
 }
@@ -934,8 +980,9 @@ function getSyncFailureMessage(task: NucleiPocSyncTask, t: ReturnType<typeof use
   return t(`sync.failureCodes.${code}`)
 }
 
-function getSyncErrorMessage(error: unknown, errorKind: "create" | "task" | null | undefined, t: ReturnType<typeof useTranslations>) {
+function getSyncErrorMessage(error: unknown, errorKind: "create" | "task" | "cancel" | null | undefined, t: ReturnType<typeof useTranslations>) {
   if (errorKind === "task") return t("sync.taskReadError")
+	if (errorKind === "cancel") return t("sync.cancelError")
   const reason = getNucleiPocQueryErrorReason(error)
   if (reason === "SYNC_ALREADY_RUNNING") return t("sync.activeTaskUnavailable")
   if (reason === "SYNC_REQUEST_CONFLICT") return t("sync.requestConflict")

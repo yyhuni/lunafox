@@ -68,15 +68,20 @@ type Store interface {
 	GetCurrentSource(context.Context) (*domain.Source, error)
 	CreateOrReplaySyncTask(context.Context, CreateSyncInput, string, time.Time) (*domain.SyncTask, error)
 	GetSyncTask(context.Context, uuid.UUID) (*domain.SyncTask, error)
-	// ClaimTask atomically transfers the initial task to the runner. A false
-	// result means another process already claimed or terminalized the task.
-	ClaimTask(context.Context, uuid.UUID, domain.SyncTaskState, time.Time) (bool, error)
+	RequestSyncTaskCancellation(context.Context, uuid.UUID, time.Time) (*domain.SyncTask, error)
+	// ClaimTask atomically transfers the initial task to one runner lease. A
+	// false result means another process already claimed or terminalized it.
+	ClaimTask(context.Context, uuid.UUID, domain.SyncTaskState, time.Time, string, time.Duration) (bool, error)
+	// RenewTaskLease keeps a claimed task recoverable only after its owner has
+	// actually stopped reporting. A lost lease must stop the local runner.
+	RenewTaskLease(context.Context, uuid.UUID, string, time.Time, time.Duration) error
 	SetTaskWorkspaceKey(context.Context, uuid.UUID, string) error
 	UpdateTaskProgress(context.Context, uuid.UUID, domain.SyncTaskState, domain.SyncCounters) error
 	StageCandidate(context.Context, domain.CandidatePOC) error
 	DeleteCandidatesForTask(context.Context, uuid.UUID) error
 	PromoteCandidates(context.Context, CandidatePromotion) (int64, error)
 	MarkTaskTerminal(context.Context, uuid.UUID, domain.SyncTaskState, string, string, domain.Diagnostics, string, time.Time) error
+	MarkTaskCancelled(context.Context, uuid.UUID, domain.Diagnostics, string, time.Time) error
 	ListPOCs(context.Context, POCListQuery) (*POCListResult, error)
 	ListFilterOptions(context.Context, string) ([]domain.FilterOption, error)
 	GetPOC(context.Context, string) (*domain.POC, error)

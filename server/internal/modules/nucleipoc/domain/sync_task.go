@@ -15,15 +15,17 @@ const (
 	SyncTaskValidatingTemplates SyncTaskState = "VALIDATING_TEMPLATES"
 	SyncTaskCommitting          SyncTaskState = "COMMITTING"
 	SyncTaskCleaning            SyncTaskState = "CLEANING"
+	SyncTaskCancelling          SyncTaskState = "CANCELLING"
 	SyncTaskSucceeded           SyncTaskState = "SUCCEEDED"
 	SyncTaskFailed              SyncTaskState = "FAILED"
+	SyncTaskCancelled           SyncTaskState = "CANCELLED"
 )
 
 func (state SyncTaskState) Valid() bool {
 	switch state {
 	case SyncTaskValidatingSource, SyncTaskCloning, SyncTaskScanningFiles,
 		SyncTaskValidatingTemplates, SyncTaskCommitting, SyncTaskCleaning,
-		SyncTaskSucceeded, SyncTaskFailed:
+		SyncTaskCancelling, SyncTaskSucceeded, SyncTaskFailed, SyncTaskCancelled:
 		return true
 	default:
 		return false
@@ -31,7 +33,7 @@ func (state SyncTaskState) Valid() bool {
 }
 
 func (state SyncTaskState) Terminal() bool {
-	return state == SyncTaskSucceeded || state == SyncTaskFailed
+	return state == SyncTaskSucceeded || state == SyncTaskFailed || state == SyncTaskCancelled
 }
 
 type SyncCounters struct {

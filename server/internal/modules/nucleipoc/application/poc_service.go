@@ -79,6 +79,32 @@ func (service *POCService) GetSyncTask(ctx context.Context, id uuid.UUID) (*doma
 	return task, nil
 }
 
+// CancelSync records cancellation before signalling the local runner. The
+// persisted transition is authoritative, so a request routed to another
+// Server process remains visible to the runner that owns the task.
+func (service *POCService) CancelSync(ctx context.Context, id uuid.UUID) (*domain.SyncTask, error) {
+	if err := requireContext(ctx); err != nil {
+		return nil, err
+	}
+	if id == uuid.Nil {
+		return nil, fmt.Errorf("%w: task id is required", ErrInvalidArgument)
+	}
+	task, err := service.store.RequestSyncTaskCancellation(ctx, id, nowUTC())
+	if err != nil {
+		if errors.Is(err, domain.ErrSyncTaskNotFound) {
+			return nil, ErrTaskNotFound
+		}
+		return nil, err
+	}
+	if task == nil {
+		return nil, fmt.Errorf("cancellation returned no task")
+	}
+	if task.State == domain.SyncTaskCancelling && service.runner != nil {
+		service.runner.Cancel(id)
+	}
+	return task, nil
+}
+
 func (service *POCService) List(ctx context.Context, query POCListQuery) (*POCListResult, error) {
 	if err := requireContext(ctx); err != nil {
 		return nil, err

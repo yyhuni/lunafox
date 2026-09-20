@@ -10,6 +10,7 @@ import {
 import { useResourceMutation } from "@/hooks/_shared/create-resource-mutation"
 
 import {
+  cancelNucleiPocSyncTask,
   getNucleiPoc,
   getNucleiPocActiveSyncTaskName,
   getNucleiPocErrorBody,
@@ -92,18 +93,30 @@ export function useNucleiPocDetail(name: string | null, enabled = true) {
 }
 
 export function useSyncNucleiPocSource() {
-	const queryClient = useQueryClient()
-	return useResourceMutation<NucleiPocSyncTask, SyncNucleiPocSourceRequest>({
-		mutationFn: syncNucleiPocSource,
-		retry: false,
-		skipDefaultErrorHandler: true,
-		onSuccess: ({ data: task }) => {
-			queryClient.setQueryData(nucleiPocKeys.task(task.name), task)
-		},
-	})
+  const queryClient = useQueryClient()
+  return useResourceMutation<NucleiPocSyncTask, SyncNucleiPocSourceRequest>({
+    mutationFn: syncNucleiPocSource,
+    retry: false,
+    skipDefaultErrorHandler: true,
+    onSuccess: ({ data: task }) => {
+      queryClient.setQueryData(nucleiPocKeys.task(task.name), task)
+    },
+  })
 }
 
-const TERMINAL_TASK_STATES = new Set(["SUCCEEDED", "FAILED"])
+export function useCancelNucleiPocSyncTask() {
+  const queryClient = useQueryClient()
+  return useResourceMutation<NucleiPocSyncTask, string>({
+    mutationFn: cancelNucleiPocSyncTask,
+    retry: false,
+    skipDefaultErrorHandler: true,
+    onSuccess: ({ data: task }) => {
+      queryClient.setQueryData(nucleiPocKeys.task(task.name), task)
+    },
+  })
+}
+
+const TERMINAL_TASK_STATES = new Set(["SUCCEEDED", "FAILED", "CANCELLED"])
 
 export function isNucleiPocSyncTaskTerminal(task: NucleiPocSyncTask | null | undefined) {
   return Boolean(task && TERMINAL_TASK_STATES.has(task.state))
@@ -114,15 +127,15 @@ export function useNucleiPocSyncTask(taskName: string | null) {
   const lastInvalidated = React.useRef<string | null>(null)
   const query = useQuery<NucleiPocSyncTask>({
     queryKey: nucleiPocKeys.task(taskName),
-		queryFn: () => getNucleiPocSyncTask(taskName!),
+    queryFn: () => getNucleiPocSyncTask(taskName!),
     enabled: Boolean(taskName),
-		retry: false,
-		refetchInterval: (current) => {
+    retry: false,
+    refetchInterval: (current) => {
       if (!taskName) return false
-			const task = current.state.data
-			const status = getNucleiPocHttpStatus(current.state.error)
-			if (status === 404 || status === 410 || isNucleiPocSyncTaskTerminal(task)) return false
-			return 1000
+      const task = current.state.data
+      const status = getNucleiPocHttpStatus(current.state.error)
+      if (status === 404 || status === 410 || isNucleiPocSyncTaskTerminal(task)) return false
+      return 1000
     },
   })
 
@@ -149,20 +162,20 @@ export function useNucleiPocSyncTask(taskName: string | null) {
 }
 
 export function useUpdateNucleiPocEnabled() {
-	const queryClient = useQueryClient()
-	return useResourceMutation<NucleiPocListItem, UpdateNucleiPocRequest, { snapshots: Array<[readonly unknown[], unknown]> }>({
-		mutationFn: updateNucleiPoc,
-		retry: false,
-		loadingToast: {
-			key: "toast.nucleiPoc.update.loading",
-			id: (variables) => `nuclei-poc-enabled-${variables.name}`,
-		},
-		invalidate: [
-			{ queryKey: nucleiPocKeys.lists() },
-			({ variables }) => ({ queryKey: nucleiPocKeys.detail(variables.name) }),
-		],
-		onMutate: async (variables) => {
-			await queryClient.cancelQueries({ queryKey: nucleiPocKeys.all })
+  const queryClient = useQueryClient()
+  return useResourceMutation<NucleiPocListItem, UpdateNucleiPocRequest, { snapshots: Array<[readonly unknown[], unknown]> }>({
+    mutationFn: updateNucleiPoc,
+    retry: false,
+    loadingToast: {
+      key: "toast.nucleiPoc.update.loading",
+      id: (variables) => `nuclei-poc-enabled-${variables.name}`,
+    },
+    invalidate: [
+      { queryKey: nucleiPocKeys.lists() },
+      ({ variables }) => ({ queryKey: nucleiPocKeys.detail(variables.name) }),
+    ],
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: nucleiPocKeys.all })
       const snapshots: Array<[readonly unknown[], unknown]> = []
       queryClient.getQueriesData<NucleiPocListResponse>({ queryKey: nucleiPocKeys.lists() }).forEach(([key, data]) => {
         if (!data) return
@@ -180,15 +193,15 @@ export function useUpdateNucleiPocEnabled() {
       }
       return { snapshots }
     },
-		onError: ({ context, toast }) => {
-		context?.snapshots.forEach(([key, value]) => queryClient.setQueryData(key, value))
-		toast.error("toast.nucleiPoc.update.error")
-		},
-		onSuccess: ({ data, variables, toast }) => {
-			queryClient.setQueryData<NucleiPocDetail | undefined>(nucleiPocKeys.detail(variables.name), (current) => current ? { ...current, ...data } : current)
-			toast.success("toast.nucleiPoc.update.success")
-		},
-	})
+    onError: ({ context, toast }) => {
+      context?.snapshots.forEach(([key, value]) => queryClient.setQueryData(key, value))
+      toast.error("toast.nucleiPoc.update.error")
+    },
+    onSuccess: ({ data, variables, toast }) => {
+      queryClient.setQueryData<NucleiPocDetail | undefined>(nucleiPocKeys.detail(variables.name), (current) => current ? { ...current, ...data } : current)
+      toast.success("toast.nucleiPoc.update.success")
+    },
+  })
 }
 
 export function useSetNucleiPocActivation() {

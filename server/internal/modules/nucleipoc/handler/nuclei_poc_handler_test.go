@@ -24,6 +24,9 @@ type handlerServiceStub struct {
 	filterOptions      []domain.FilterOption
 	filterOptionsErr   error
 	filterOptionsField string
+	cancelTask         *domain.SyncTask
+	cancelErr          error
+	cancelCalls        int
 }
 
 func (stub *handlerServiceStub) CurrentSource(context.Context) (*domain.Source, error) {
@@ -40,6 +43,16 @@ func (stub *handlerServiceStub) CreateSync(context.Context, app.CreateSyncInput)
 	}, nil
 }
 func (stub *handlerServiceStub) GetSyncTask(context.Context, uuid.UUID) (*domain.SyncTask, error) {
+	return nil, domain.ErrSyncTaskNotFound
+}
+func (stub *handlerServiceStub) CancelSync(context.Context, uuid.UUID) (*domain.SyncTask, error) {
+	stub.cancelCalls++
+	if stub.cancelErr != nil {
+		return nil, stub.cancelErr
+	}
+	if stub.cancelTask != nil {
+		return stub.cancelTask, nil
+	}
 	return nil, domain.ErrSyncTaskNotFound
 }
 func (stub *handlerServiceStub) List(context.Context, app.POCListQuery) (*app.POCListResult, error) {
@@ -144,6 +157,26 @@ func TestSyncRejectsNonCanonicalUUIDBeforeServiceCall(t *testing.T) {
 	handler.Sync(context)
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("nil UUID status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestCancelSyncTaskRequiresActionSuffixAndReturnsCurrentTask(t *testing.T) {
+	taskID := uuid.MustParse("00000000-0000-4000-8000-000000000010")
+	stub := &handlerServiceStub{cancelTask: &domain.SyncTask{ID: taskID, RequestID: uuid.New(), SourceType: domain.SourceTypeGit, State: domain.SyncTaskCancelling, Phase: domain.SyncTaskCancelling, Diagnostics: domain.Diagnostics{Samples: []domain.DiagnosticSample{}}}}
+	handler := NewNucleiPOCHandler(stub)
+
+	context, recorder := newHandlerContext(http.MethodPost, "/v1/nucleiPocSyncTasks/"+taskID.String()+":cancel", "")
+	context.Params = gin.Params{{Key: "task", Value: taskID.String() + ":cancel"}}
+	handler.CancelSyncTask(context)
+	if recorder.Code != http.StatusOK || stub.cancelCalls != 1 || !bytes.Contains(recorder.Body.Bytes(), []byte(`"state":"CANCELLING"`)) {
+		t.Fatalf("status=%d calls=%d body=%s", recorder.Code, stub.cancelCalls, recorder.Body.String())
+	}
+
+	context, recorder = newHandlerContext(http.MethodPost, "/v1/nucleiPocSyncTasks/"+taskID.String(), "")
+	context.Params = gin.Params{{Key: "task", Value: taskID.String()}}
+	handler.CancelSyncTask(context)
+	if recorder.Code != http.StatusBadRequest || stub.cancelCalls != 1 {
+		t.Fatalf("missing action status=%d calls=%d body=%s", recorder.Code, stub.cancelCalls, recorder.Body.String())
 	}
 }
 

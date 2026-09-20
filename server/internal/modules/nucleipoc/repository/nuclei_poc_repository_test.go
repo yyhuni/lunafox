@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -532,6 +533,22 @@ func TestMarkTaskTerminalOnlyFreezesFailure(t *testing.T) {
 	}
 }
 
+func TestMarkTaskTerminalDoesNotOverrideCancellationRequest(t *testing.T) {
+	repository, db := newRepositoryTest(t)
+	ctx := context.Background()
+	taskID, _ := createTestTask(t, db, uuid.New())
+	if _, err := repository.RequestSyncTaskCancellation(ctx, taskID, time.Now().UTC()); err != nil {
+		t.Fatalf("RequestSyncTaskCancellation: %v", err)
+	}
+	if err := repository.MarkTaskTerminal(ctx, taskID, domain.SyncTaskFailed, "TEMPLATE_INVALID", "ignored", domain.Diagnostics{}, string(domain.CleanupClean), time.Now().UTC()); err != nil {
+		t.Fatalf("MarkTaskTerminal: %v", err)
+	}
+	task, err := repository.GetSyncTask(ctx, taskID)
+	if err != nil || task.State != domain.SyncTaskCancelling || task.Phase != domain.SyncTaskCancelling {
+		t.Fatalf("task=%#v err=%v, want persisted CANCELLING request", task, err)
+	}
+}
+
 func TestPromotionAndFailureWriteTaskScopedNucleiOutboxOccurrences(t *testing.T) {
 	repository, db := newRepositoryTest(t)
 	ctx := context.Background()
@@ -705,7 +722,14 @@ func TestRecoverInterruptedTaskWritesFailureOccurrenceAtomically(t *testing.T) {
 	ctx := context.Background()
 	sourceID := uuid.New()
 	taskID, _ := createTestTask(t, db, sourceID)
-	if _, err := repository.RecoverInterruptedTasks(ctx, time.Now().UTC()); err != nil {
+	recoveredAt := time.Now().UTC()
+	if err := db.Model(&model.SyncTask{}).Where("id = ?", taskID).Updates(map[string]any{
+		"lease_owner":      "interrupted-runner",
+		"lease_expires_at": recoveredAt.Add(-time.Second),
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.RecoverInterruptedTasks(ctx, recoveredAt); err != nil {
 		t.Fatalf("RecoverInterruptedTasks: %v", err)
 	}
 	task, err := repository.GetSyncTask(ctx, taskID)
@@ -715,6 +739,281 @@ func TestRecoverInterruptedTaskWritesFailureOccurrenceAtomically(t *testing.T) {
 	var outbox notificationmodel.Outbox
 	if err := db.Where("event_id = ?", "nuclei-poc-sync:"+taskID.String()+":failed").First(&outbox).Error; err != nil {
 		t.Fatalf("load recovered failure occurrence: %v", err)
+	}
+}
+
+func TestRequestSyncTaskCancellationUpdatesStateAndPhaseIdempotently(t *testing.T) {
+	repository, db := newRepositoryTest(t)
+	ctx := context.Background()
+	sourceID := uuid.New()
+	taskID, requestID := createTestTask(t, db, sourceID)
+	requestedAt := time.Date(2026, 9, 20, 1, 2, 3, 0, time.UTC)
+
+	task, err := repository.RequestSyncTaskCancellation(ctx, taskID, requestedAt)
+	if err != nil {
+		t.Fatalf("RequestSyncTaskCancellation: %v", err)
+	}
+	if task == nil || task.State != domain.SyncTaskCancelling || task.Phase != domain.SyncTaskCancelling {
+		t.Fatalf("cancelled task = %#v, want CANCELLING state and phase", task)
+	}
+	if task.RequestID != requestID {
+		t.Fatalf("request id = %s, want %s", task.RequestID, requestID)
+	}
+
+	// A repeated request observes the same transition and repairs a legacy row
+	// whose phase was not written with its CANCELLING state.
+	if err := db.Model(&model.SyncTask{}).Where("id = ?", taskID).Update("phase", string(domain.SyncTaskCommitting)).Error; err != nil {
+		t.Fatal(err)
+	}
+	repeated, err := repository.RequestSyncTaskCancellation(ctx, taskID, requestedAt.Add(time.Second))
+	if err != nil {
+		t.Fatalf("repeated RequestSyncTaskCancellation: %v", err)
+	}
+	if repeated == nil || repeated.State != domain.SyncTaskCancelling || repeated.Phase != domain.SyncTaskCancelling {
+		t.Fatalf("repeated task = %#v, want repaired CANCELLING state and phase", repeated)
+	}
+}
+
+func TestMarkTaskCancelledDeletesCandidatesAndReleasesActiveSlot(t *testing.T) {
+	repository, db := newRepositoryTest(t)
+	ctx := context.Background()
+	sourceID := uuid.New()
+	taskID, _ := createTestTask(t, db, sourceID)
+	if err := repository.StageCandidate(ctx, testCandidate(taskID, sourceID, "cancelled-template", "Cancelled")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.RequestSyncTaskCancellation(ctx, taskID, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	leaseExpiresAt := time.Now().UTC().Add(time.Minute)
+	if err := db.Model(&model.SyncTask{}).Where("id = ?", taskID).Updates(map[string]any{
+		"lease_owner":      "running-cancellation",
+		"lease_expires_at": leaseExpiresAt,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.MarkTaskCancelled(ctx, taskID, domain.Diagnostics{}, string(domain.CleanupClean), time.Now().UTC()); err != nil {
+		t.Fatalf("MarkTaskCancelled: %v", err)
+	}
+	task, err := repository.GetSyncTask(ctx, taskID)
+	if err != nil || task.State != domain.SyncTaskCancelled || task.Phase != domain.SyncTaskCancelled || task.FailureCode != "SYNC_CANCELLED" {
+		t.Fatalf("task=%#v err=%v, want cancelled terminal facts", task, err)
+	}
+	var candidateCount int64
+	if err := db.Model(&model.CandidateImport{}).Where("task_id = ?", taskID).Count(&candidateCount).Error; err != nil {
+		t.Fatal(err)
+	}
+	if candidateCount != 0 {
+		t.Fatalf("candidate count=%d, want 0", candidateCount)
+	}
+	var persisted model.SyncTask
+	if err := db.Where("id = ?", taskID).First(&persisted).Error; err != nil || persisted.LeaseOwner != nil || persisted.LeaseExpiresAt != nil {
+		t.Fatalf("cancelled task lease = %#v err=%v, want cleared", persisted, err)
+	}
+	// The repository's active-state predicate must allow the next request once
+	// cancellation has reached its terminal state.
+	next, err := repository.CreateOrReplaySyncTask(ctx, app.CreateSyncInput{RequestID: uuid.New(), SourceType: domain.SourceTypeGit, RepoURL: "https://example.com/next.git"}, "git\x00https://example.com/next.git", time.Now().UTC())
+	if err != nil || next == nil || next.State != domain.SyncTaskValidatingSource {
+		t.Fatalf("next task=%#v err=%v, want a new active task", next, err)
+	}
+}
+
+func TestRecoverInterruptedCancellationPreservesCatalogAndMarksResidualWorkspace(t *testing.T) {
+	repository, db := newRepositoryTest(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	oldSourceID := uuid.New()
+	if err := db.Create(&model.Source{ID: oldSourceID, SourceType: "git", RepoURL: "https://old.example/templates.git", IsActive: true, CommitSHA: strings.Repeat("a", 40), SyncedAt: &now, CreatedAt: now, UpdatedAt: now}).Error; err != nil {
+		t.Fatal(err)
+	}
+	old := testCandidate(uuid.New(), oldSourceID, "preserved-template", "Preserved")
+	if err := db.Create(&model.POC{ID: uuid.New(), SourceID: oldSourceID, TemplateID: old.TemplateID, DisplayName: old.DisplayName, Severity: old.Severity, Tags: []byte(`[]`), CVE: []byte(`[]`), CWE: []byte(`[]`), References: []byte(`[]`), RelativePath: old.RelativePath, ContentSHA256: old.ContentSHA256, Content: old.Content, CreatedAt: now, UpdatedAt: now}).Error; err != nil {
+		t.Fatal(err)
+	}
+	newSourceID := uuid.New()
+	taskID, requestID := createTestTask(t, db, newSourceID)
+	if err := db.Model(&model.SyncTask{}).Where("id = ?", taskID).Updates(map[string]any{
+		"state": string(domain.SyncTaskCancelling), "phase": string(domain.SyncTaskCancelling), "workspace_key": "sync-residual",
+		"lease_owner": "interrupted-cancellation", "lease_expires_at": now.Add(-time.Second),
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.StageCandidate(ctx, testCandidate(taskID, newSourceID, "must-delete", "Must delete")); err != nil {
+		t.Fatal(err)
+	}
+	completedAt := now.Add(time.Minute)
+	if recovered, err := repository.RecoverInterruptedTasks(ctx, completedAt); err != nil || recovered != 1 {
+		t.Fatalf("RecoverInterruptedTasks recovered=%d err=%v, want 1", recovered, err)
+	}
+	task, err := repository.GetSyncTask(ctx, taskID)
+	if err != nil || task.State != domain.SyncTaskCancelled || task.CleanupStatus != domain.CleanupResidual {
+		t.Fatalf("recovered task=%#v err=%v, want cancelled residual task", task, err)
+	}
+	var candidateCount int64
+	if err := db.Model(&model.CandidateImport{}).Where("task_id = ?", taskID).Count(&candidateCount).Error; err != nil || candidateCount != 0 {
+		t.Fatalf("candidate count=%d err=%v, want 0", candidateCount, err)
+	}
+	current, err := repository.GetCurrentSource(ctx)
+	if err != nil || current.ID != oldSourceID || current.CommitSHA != strings.Repeat("a", 40) {
+		t.Fatalf("current source=%#v err=%v, want preserved source", current, err)
+	}
+	var tombstone model.RequestTombstone
+	if err := db.Where("request_id = ?", requestID).First(&tombstone).Error; err != nil || tombstone.TerminalAt == nil {
+		t.Fatalf("tombstone=%#v err=%v, want terminal timestamp", tombstone, err)
+	}
+}
+
+func TestRecoverInterruptedTasksLeavesLiveCancellingLeaseActive(t *testing.T) {
+	repository, db := newRepositoryTest(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	sourceID := uuid.New()
+	taskID, _ := createTestTask(t, db, sourceID)
+	if _, err := repository.RequestSyncTaskCancellation(ctx, taskID, now); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Model(&model.SyncTask{}).Where("id = ?", taskID).Updates(map[string]any{
+		"lease_owner":      "runner-a",
+		"lease_expires_at": now.Add(time.Minute),
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.StageCandidate(ctx, testCandidate(taskID, sourceID, "live-cancelling", "Live cancelling")); err != nil {
+		t.Fatal(err)
+	}
+
+	if recovered, err := repository.RecoverInterruptedTasks(ctx, now.Add(time.Second)); err != nil || recovered != 0 {
+		t.Fatalf("RecoverInterruptedTasks recovered=%d err=%v, want live lease untouched", recovered, err)
+	}
+	task, err := repository.GetSyncTask(ctx, taskID)
+	if err != nil || task.State != domain.SyncTaskCancelling {
+		t.Fatalf("task=%#v err=%v, want live CANCELLING task", task, err)
+	}
+	var candidateCount int64
+	if result := db.Model(&model.CandidateImport{}).Where("task_id = ?", taskID).Count(&candidateCount); result.Error != nil || candidateCount != 1 {
+		t.Fatalf("candidate count=%d err=%v, want live candidate retained", candidateCount, result.Error)
+	}
+	if _, err := repository.CreateOrReplaySyncTask(ctx, app.CreateSyncInput{RequestID: uuid.New(), SourceType: domain.SourceTypeGit, RepoURL: "https://example.com/next.git"}, "git\x00https://example.com/next.git", now); !errors.Is(err, domain.ErrActiveSyncConflict) {
+		t.Fatalf("new task error=%v, want active conflict while runner A cleans up", err)
+	}
+}
+
+type blockingRepositoryGitRunner struct {
+	started chan struct{}
+}
+
+func (runner blockingRepositoryGitRunner) Clone(ctx context.Context, _ string, _ string) (string, error) {
+	close(runner.started)
+	<-ctx.Done()
+	return "", ctx.Err()
+}
+
+type repositorySourceResolver struct{}
+
+func (repositorySourceResolver) Validate(_ context.Context, _ domain.SourceType, repositoryURL string) (string, error) {
+	return repositoryURL, nil
+}
+
+func TestSecondServerRecoveryDoesNotReleaseLiveCancellingRunner(t *testing.T) {
+	repository, _ := newRepositoryTest(t)
+	ctx := context.Background()
+	task, err := repository.CreateOrReplaySyncTask(ctx, app.CreateSyncInput{
+		RequestID:  uuid.New(),
+		SourceType: domain.SourceTypeGit,
+		RepoURL:    "https://example.com/templates.git",
+	}, "git\x00https://example.com/templates.git", time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	workspace, err := app.NewLocalWorkspace(filepath.Join(t.TempDir(), "workspaces"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	git := blockingRepositoryGitRunner{started: make(chan struct{})}
+	runner := app.NewSyncRunner(repository, repositorySourceResolver{}, workspace, git)
+	done := make(chan error, 1)
+	go func() { done <- runner.RunOnce(ctx, task.ID) }()
+	select {
+	case <-git.started:
+	case <-time.After(time.Second):
+		t.Fatal("first Server runner did not reach clone")
+	}
+
+	requestedAt := time.Now().UTC()
+	if _, err := repository.RequestSyncTaskCancellation(ctx, task.ID, requestedAt); err != nil {
+		t.Fatal(err)
+	}
+	if recovered, err := repository.RecoverInterruptedTasks(ctx, requestedAt.Add(time.Second)); err != nil || recovered != 0 {
+		t.Fatalf("second Server recovery recovered=%d err=%v, want live runner lease retained", recovered, err)
+	}
+	persisted, err := repository.GetSyncTask(ctx, task.ID)
+	if err != nil || persisted.State != domain.SyncTaskCancelling {
+		t.Fatalf("task=%#v err=%v, want CANCELLING while first Server cleans up", persisted, err)
+	}
+	if _, err := repository.CreateOrReplaySyncTask(ctx, app.CreateSyncInput{
+		RequestID:  uuid.New(),
+		SourceType: domain.SourceTypeGit,
+		RepoURL:    "https://example.com/replacement.git",
+	}, "git\x00https://example.com/replacement.git", requestedAt); !errors.Is(err, domain.ErrActiveSyncConflict) {
+		t.Fatalf("replacement sync error=%v, want active conflict until cleanup completes", err)
+	}
+	select {
+	case err := <-done:
+		if err == nil || !strings.Contains(err.Error(), "SYNC_CANCELLED") {
+			t.Fatalf("first Server runner error=%v, want SYNC_CANCELLED", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("first Server runner did not complete cancellation")
+	}
+}
+
+func TestNucleiSyncTaskLeaseRenewalRequiresCurrentOwner(t *testing.T) {
+	repository, db := newRepositoryTest(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	sourceID := uuid.New()
+	taskID, _ := createTestTask(t, db, sourceID)
+	if err := db.Model(&model.SyncTask{}).Where("id = ?", taskID).Updates(map[string]any{
+		"lease_owner":      "runner-a",
+		"lease_expires_at": now.Add(time.Minute),
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.RenewTaskLease(ctx, taskID, "runner-a", now, time.Minute); err != nil {
+		t.Fatalf("RenewTaskLease: %v", err)
+	}
+	if err := repository.RenewTaskLease(ctx, taskID, "runner-b", now, time.Minute); !errors.Is(err, domain.ErrSyncTaskLeaseLost) {
+		t.Fatalf("wrong owner renewal error=%v, want lost lease", err)
+	}
+	if err := db.Model(&model.SyncTask{}).Where("id = ?", taskID).Update("lease_expires_at", now.Add(-time.Second)).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.RenewTaskLease(ctx, taskID, "runner-a", now, time.Minute); !errors.Is(err, domain.ErrSyncTaskLeaseLost) {
+		t.Fatalf("expired renewal error=%v, want lost lease", err)
+	}
+}
+
+func TestPromotionCannotRewriteTaskAfterCancellationRequest(t *testing.T) {
+	repository, db := newRepositoryTest(t)
+	ctx := context.Background()
+	sourceID := uuid.New()
+	taskID, _ := createTestTask(t, db, sourceID)
+	if err := repository.StageCandidate(ctx, testCandidate(taskID, sourceID, "cancel-wins", "Cancel wins")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.RequestSyncTaskCancellation(ctx, taskID, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.PromoteCandidates(ctx, app.CandidatePromotion{TaskID: taskID, Source: domain.Source{ID: sourceID, SourceType: domain.SourceTypeGit, RepoURL: "https://example.com/templates.git"}, CommitSHA: strings.Repeat("b", 40), SyncedAt: time.Now().UTC(), CleanupStatus: string(domain.CleanupClean)}); err == nil {
+		t.Fatal("promotion succeeded after cancellation won")
+	}
+	var pocCount int64
+	if err := db.Model(&model.POC{}).Count(&pocCount).Error; err != nil || pocCount != 0 {
+		t.Fatalf("poc count=%d err=%v, want unchanged empty catalog", pocCount, err)
+	}
+	task, err := repository.GetSyncTask(ctx, taskID)
+	if err != nil || task.State != domain.SyncTaskCancelling {
+		t.Fatalf("task=%#v err=%v, want CANCELLING", task, err)
 	}
 }
 
