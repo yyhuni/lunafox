@@ -29,6 +29,7 @@ function planFor(dockerfile, baseImageIdentities) {
       contextPath: "runtime",
       dockerfile,
       dockerignore: "runtime/.dockerignore",
+      namedContexts: { contracts: { path: "contracts" } },
       buildArgs: {},
       platforms: ["linux/amd64", "linux/arm64"],
       baseImageIdentities,
@@ -38,6 +39,7 @@ function planFor(dockerfile, baseImageIdentities) {
 }
 
 try {
+  write("contracts/module.go", "package contracts\n");
   write("runtime/.dockerignore", "ignored\n");
   write("runtime/app", "v1\n");
   write("runtime/ignored", "ignored\n");

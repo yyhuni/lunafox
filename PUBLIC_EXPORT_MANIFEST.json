@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:2463a39adf121340f596476ea688ca125da7fc9febd6114cd1057b016acbe2d2",
-  "releaseTag": "v0.0.1-alpha.169",
+  "sourceRevisionDigest": "sha256:311781ef39bc6616fb28b2a6f7011e0ea8df86f34beca31fa820c311cf328592",
+  "releaseTag": "v0.0.1-alpha.170",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -55,7 +55,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "eade7f4d8526c5f43546de695ea0744c92448c0147c9df082f028a4218fa1ab8"
+      "sha256": "5c43d183e3c28c92778c9bd7324bb0da1f36c37389451662440ea8051b4f8fd5"
     },
     {
       "path": "README.md",
@@ -76,7 +76,7 @@
       "type": "file",
       "mode": "0644",
       "size": 2332,
-      "sha256": "5ecabd40ea573f79b7567934a8088dc20008b3d6d7bad60e78feb6128a4aef99"
+      "sha256": "e00692d5a543ae44e77b8a7c0a53ba8999fe4ff67b2e9b95b97a82c7b5a20e1a"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/agent-bundle.sha256",
@@ -90,7 +90,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "cb26aa312f7ba4c85856ed434668b16a54bb34bf9aaca4c88d461086c536926d"
+      "sha256": "51f641e00cb58b2fe8b88c82bd021708eddc9c924d513b7adcf403c52ef69a51"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/lunafox-agent-linux-amd64",
@@ -17054,6 +17054,13 @@
       "sha256": "8c93035997bf1858527d82d219bdc8779822c9e3f1ecff0d2459be9b1f25920e"
     },
     {
+      "path": "release-notes/v0.0.1-alpha.170.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 3130,
+      "sha256": "ccdc83c6f2790a3d1574598412116455c3183f8ad5d36a7e25e47266d26f5b1c"
+    },
+    {
       "path": "resources/alloy/config.alloy",
       "type": "file",
       "mode": "0644",
@@ -17316,15 +17323,15 @@
       "path": "scripts/ci/render-release-component-build-contexts-selftest.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 3075,
-      "sha256": "d06f3cd143ee9fa5c9033e281ec38b5940209144bc91aa169e620df877113da8"
+      "size": 3189,
+      "sha256": "5655cd5fae891c53a7d588f9509345d6473932558347fbf7091964bf884322ae"
     },
     {
       "path": "scripts/ci/render-release-component-build-contexts.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 9307,
-      "sha256": "4b98b11ddc76c761eea2561fe7eddbdc1c758107d11d0fd5b5d8679701133696"
+      "size": 9661,
+      "sha256": "39308d475d044cfb185e6327a07557bc9c0e19ed3d13289f7d9ee787583b5559"
     },
     {
       "path": "scripts/ci/resolve-engine-release-disposition-selftest.mjs",

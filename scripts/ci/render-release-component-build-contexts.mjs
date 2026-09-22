@@ -98,7 +98,12 @@ function componentSpecFromInputs(componentID, fingerprint) {
       contextPath: inputs.contextPath,
       dockerfile: inputs.dockerfile,
       dockerignore: inputs.dockerignore,
-      namedContexts: inputs.namedContexts,
+      // Fingerprints store the normalized contextPath. Planning input still
+      // uses path, so replaying the stored object directly leaves path empty.
+      namedContexts: Object.fromEntries(Object.entries(inputs.namedContexts).map(([name, context]) => [
+        name,
+        { path: context.contextPath, ...(context.dockerignore ? { dockerignore: context.dockerignore } : {}) },
+      ])),
       buildArgs: inputs.buildArgs,
       platforms: inputs.platforms,
       baseImageIdentities,
