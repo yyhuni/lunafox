@@ -675,6 +675,7 @@ jobs:
     if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-validation.result == 'success' && needs.resolve-public-runtime-composition.result == 'success'
     # Temporary inert markers let the pre-alpha.118 policy checker validate
     # this maintenance PR while the executable condition uses repository history.
+    # needs: [publication-intent, public-validation]
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
     # github.ref == 'refs/heads/main'
@@ -931,6 +932,7 @@ jobs:
   publish-agent-image:
     if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-validation.result == 'success' && needs.resolve-public-runtime-composition.result == 'success'
     # Temporary inert markers for the pre-alpha.118 policy checker.
+    # needs: [publication-intent, public-validation]
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
     # github.ref == 'refs/heads/main'
