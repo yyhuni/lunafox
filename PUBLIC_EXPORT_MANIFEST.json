@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:25c5c29befda6fc532089c23cf760aee885a55ff12bbec81bb2e4151d9a23140",
-  "releaseTag": "v0.0.1-alpha.167",
+  "sourceRevisionDigest": "sha256:3ac0b12937acf2f81ac997638fb4a06f470a34901f38e0da59bcba4004c8e3b3",
+  "releaseTag": "v0.0.1-alpha.168",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -15,6 +15,13 @@
     "runtime-composition.json"
   ],
   "files": [
+    {
+      "path": ".dockerignore",
+      "type": "file",
+      "mode": "0644",
+      "size": 233,
+      "sha256": "ea9e955a0905d7f179c578f6c99aa3547da9c835d86ba69255c15e8f6014c39e"
+    },
     {
       "path": ".gitignore",
       "type": "file",
@@ -48,7 +55,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "8d9a91ecfb9e28759c4ef15170e62a8c763eadfad80c9a7302cb33af7152e624"
+      "sha256": "58e63628c78111ab4720891b373c7f6c206acb27af606374b1fcb9c4a01d33f7"
     },
     {
       "path": "README.md",
@@ -69,7 +76,7 @@
       "type": "file",
       "mode": "0644",
       "size": 2332,
-      "sha256": "9f23f5b1c4d555e02999d103cf91a2240e36993d2c229c669a6976f5e786635b"
+      "sha256": "a1e072ffed14aa316eb19687fdb8d52885ffd5dc06ac0d2d53c188c367f75219"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/agent-bundle.sha256",
@@ -82,8 +89,8 @@
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
-      "size": 9293,
-      "sha256": "d6a4dd0bdd15038f921d735c589681638c5236316b99a8a29230469d05a6c1d8"
+      "size": 9313,
+      "sha256": "14984583d1eb5108efe03eecd9525df469117c0b34492719656ddb2ddfd7d7f6"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/lunafox-agent-linux-amd64",
@@ -17033,6 +17040,13 @@
       "sha256": "63e243ae0f4d6b24d123deda4a6a74cb414818fbcf95f425853f2fce4ffed660"
     },
     {
+      "path": "release-notes/v0.0.1-alpha.168.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 2784,
+      "sha256": "29461ab15660fd2327391f7b366d03ea19c4704efe80adc27011f39691391898"
+    },
+    {
       "path": "resources/alloy/config.alloy",
       "type": "file",
       "mode": "0644",
@@ -17253,8 +17267,8 @@
       "path": "scripts/ci/public-export-policy.json",
       "type": "file",
       "mode": "0644",
-      "size": 26920,
-      "sha256": "b928c84fe35c8d50d5856adcac2d70a973ff179c6faccc2488d16994445fd683"
+      "size": 26964,
+      "sha256": "8cdeac4689e5a6c713615458669cc9ebee17a22d63ee56b782d0d586a805f0a5"
     },
     {
       "path": "scripts/ci/public-release-policy.json",
