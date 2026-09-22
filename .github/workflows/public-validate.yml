@@ -630,7 +630,21 @@ jobs:
           for ref in $refs; do
             case "$ref" in
               *@sha256:*) identity="${ref##*@}" ;;
-              *) identity="$(docker buildx imagetools inspect "$ref" 2>/dev/null | awk '/^Digest:/ {print $2; exit}' || true)" ;;
+              *)
+                identity=""
+                # Registry reads can fail closed after a single reset. Retry the
+                # inspect before treating the digest as unavailable.
+                for attempt in 1 2 3 4 5 6; do
+                  identity="$(docker buildx imagetools inspect "$ref" 2>/dev/null | awk '/^Digest:/ {print $2; exit}' || true)"
+                  if [[ "$identity" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+                    break
+                  fi
+                  echo "base image identity unavailable on attempt ${attempt}: $ref" >&2
+                  if [ "$attempt" -lt 6 ]; then
+                    sleep $((attempt < 3 ? attempt * 2 : 8))
+                  fi
+                done
+                ;;
             esac
             if [[ "$identity" =~ ^sha256:[a-f0-9]{64}$ ]]; then
               tmp="$(mktemp)"
@@ -638,6 +652,7 @@ jobs:
               mv "$tmp" dist/public-composition/base-images.json
             else
               echo "base image identity unavailable; component reuse will fail closed: $ref" >&2
+              exit 1
             fi
           done
       - id: plan
