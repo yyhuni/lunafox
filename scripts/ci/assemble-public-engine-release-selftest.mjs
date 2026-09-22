@@ -337,6 +337,11 @@ try {
   fs.mkdirSync(emptyOutput);
   const precreated = assemble({ plan: mixedPlan, releaseContext: contextPath, previousBundle: bundlePath, previousComposition: previousCompositionPath, previousManifest: previousManifestPath, outputDir: emptyOutput, ...currentInputs() });
   assert.equal(precreated.engineCount, 2);
+  const transcriptOutput = path.join(root, "transcript-precreated-output");
+  fs.mkdirSync(transcriptOutput);
+  fs.writeFileSync(path.join(transcriptOutput, "assembly-verification.json"), "");
+  const withTranscript = assemble({ plan: mixedPlan, releaseContext: contextPath, previousBundle: bundlePath, previousComposition: previousCompositionPath, previousManifest: previousManifestPath, outputDir: transcriptOutput, ...currentInputs() });
+  assert.equal(withTranscript.engineCount, 2);
   const dirtyOutput = path.join(root, "dirty-precreated-output");
   fs.mkdirSync(dirtyOutput);
   fs.writeFileSync(path.join(dirtyOutput, "stale.json"), "{}\n");

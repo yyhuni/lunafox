@@ -326,13 +326,17 @@ function writePackageDigests(entries, outputDir) {
 }
 
 function assemble(options) {
-  // The public workflow creates this directory first so `tee` can write the
-  // assembly transcript next to the manifest. An empty directory is still a
-  // fresh output. Any existing entry would mix a previous attempt into the
-  // manifest, so that remains a hard failure.
+  // The public workflow creates this directory and `tee` opens
+  // assembly-verification.json before this process starts. That transcript is
+  // not an input. Any other existing entry would mix a previous attempt into
+  // the manifest, so that remains a hard failure.
   if (fs.existsSync(options.outputDir)) {
     const stat = fs.statSync(options.outputDir);
-    assert(stat.isDirectory() && fs.readdirSync(options.outputDir).length === 0, `--output-dir must not already exist: ${options.outputDir}`);
+    const entries = stat.isDirectory() ? fs.readdirSync(options.outputDir) : ["."];
+    const transcript = entries.length === 1 && entries[0] === "assembly-verification.json"
+      ? fs.statSync(path.join(options.outputDir, "assembly-verification.json"))
+      : null;
+    assert(stat.isDirectory() && (entries.length === 0 || transcript?.isFile()), `--output-dir must not already exist: ${options.outputDir}`);
   }
   const plan = validateCompositionPlan(readJson(options.plan, "Engine composition plan"));
   const context = validateContext(readJson(options.releaseContext, "Engine release context"), plan);
