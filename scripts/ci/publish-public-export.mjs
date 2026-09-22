@@ -122,8 +122,18 @@ function validateExportTree(exportDir) {
   return JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 }
 
-function agentBundleSha256(exportDir, tag) {
-  const bundleDir = path.join(exportDir, "agent", "bin", tag);
+function agentBundleSha256(exportDir) {
+  // Publication records the content-addressed bundle. The export checker
+  // accepts only agent/bin/sha256-<fingerprint>/, so a tag-named directory
+  // cannot satisfy this digest.
+  const binDir = path.join(exportDir, "agent", "bin");
+  const artifactIds = fs.existsSync(binDir)
+    ? fs.readdirSync(binDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && /^sha256-[a-f0-9]{64}$/.test(entry.name))
+      .map((entry) => entry.name)
+    : [];
+  if (artifactIds.length !== 1) fail("export must contain exactly one immutable Agent artifact directory");
+  const bundleDir = path.join(binDir, artifactIds[0]);
   const hash = crypto.createHash("sha256");
   for (const name of AGENT_BUNDLE_FILES) {
     const file = path.join(bundleDir, name);
@@ -506,7 +516,7 @@ async function publish(options) {
   const files = walkFiles(options.exportDir);
   const manifestSha256 = crypto.createHash("sha256").update(fs.readFileSync(path.join(options.exportDir, "PUBLIC_EXPORT_MANIFEST.json"))).digest("hex");
   if (!/^[a-f0-9]{64}$/.test(manifestSha256)) fail("export manifest digest could not be computed");
-  const bundleSha256 = options.noValidate ? "" : agentBundleSha256(options.exportDir, options.tag);
+  const bundleSha256 = options.noValidate ? "" : agentBundleSha256(options.exportDir);
   const initialBranch = branchName(options.tag, options.attempt);
   const planBase = { repository: options.repo, baseBranch: options.baseBranch, branch: initialBranch, tag: options.tag, fileCount: files.length, manifestSha256, ...(bundleSha256 ? { agentBundleSha256: bundleSha256 } : {}) };
   if (options.dryRun) {

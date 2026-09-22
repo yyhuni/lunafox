@@ -121,6 +121,49 @@ func TestRunCommandRejectsSelectedEngineForPackageCommands(t *testing.T) {
 	}
 }
 
+func TestSelectEngineDiscoverySetRequiresCanonicalBoundedPackageSelection(t *testing.T) {
+	root := t.TempDir()
+	writeEngineSource(t, root, "port_scan", "engine.lunafox.port_scan", true)
+	writeEngineSource(t, root, "website_discovery", "engine.lunafox.website_discovery", true)
+	discovery, err := discoverEngineSources(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	selected, err := selectEngineDiscoverySet(discovery, "engine.lunafox.port_scan")
+	if err != nil {
+		t.Fatalf("selectEngineDiscoverySet() error = %v", err)
+	}
+	if got, want := []string{selected.Engines[0].EngineID}, []string{"engine.lunafox.port_scan"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("selected Engine set = %#v, want %#v", got, want)
+	}
+
+	for _, selection := range []string{
+		" engine.lunafox.port_scan",
+		"engine.lunafox.website_discovery,engine.lunafox.port_scan",
+		"engine.lunafox.port_scan,engine.lunafox.port_scan",
+		"engine.lunafox.unknown",
+	} {
+		t.Run(selection, func(t *testing.T) {
+			if _, err := selectEngineDiscoverySet(discovery, selection); err == nil || !strings.Contains(err.Error(), "-engine-ids") {
+				t.Fatalf("selectEngineDiscoverySet(%q) error = %v, want canonical selection rejection", selection, err)
+			}
+		})
+	}
+}
+
+func TestRunCommandUsesEngineIDsOnlyForBoundedPackageCommands(t *testing.T) {
+	root := writeEngineSourceTree(t, true)
+	for _, command := range []string{"discover", "validate-build-results", "validate-package-build-results"} {
+		t.Run(command, func(t *testing.T) {
+			err := runCommandWithEngineIDs(command, root, "", "engine.lunafox.subdomain_discovery", "", "", "", "", "", "", "", &strings.Builder{})
+			if err == nil || !strings.Contains(err.Error(), "-engine-ids") {
+				t.Fatalf("runCommandWithEngineIDs(%s) error = %v, want unsupported selection rejection", command, err)
+			}
+		})
+	}
+}
+
 func TestDiscoverEngineSourcesDoesNotReadLegacyRuntimeOrSourcePackageImageIdentity(t *testing.T) {
 	root := writeEngineSourceTree(t, true)
 	engineDir := filepath.Join(root, "subdomain_discovery")

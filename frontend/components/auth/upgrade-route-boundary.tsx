@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl"
 import { replaceWithRouteProgress } from "@/components/route-progress"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { semanticIcons } from "@/components/icons"
-import { useUpgradeOperation } from "@/hooks/use-version"
+import { isFrontendOnlyUpgrade, useUpgradeOperation } from "@/hooks/use-version"
 import { textRole } from "@/lib/typography"
 import { getLoadingOwnerAttributes } from "@/components/shared/loading/loading-owner"
 
@@ -83,16 +83,24 @@ export function UpgradeRouteBoundary({ children, renderProtectedShell }: Upgrade
   const operation = useUpgradeOperation(undefined, { enabled: hydrated && !isUpgradeRoute })
   const redirectStartedRef = React.useRef(false)
   const hasOperationHint = Boolean(operation.operationId)
+  const frontendOnly = isFrontendOnlyUpgrade(operation.data)
+  // Until FULL facts arrive, retain the existing fail-closed gate for a
+  // potentially disruptive operation. A host-confirmed frontend-only scope
+  // is the sole active state that may leave ordinary routes mounted.
   const shouldLock = !isUpgradeRoute && (
-    (hasOperationHint && operation.isResolving) ||
-    operation.isReconnecting ||
-    operation.isError ||
-    operation.isActive
+    !frontendOnly && (
+      (hasOperationHint && operation.isResolving) ||
+      operation.isReconnecting ||
+      operation.isError ||
+      operation.isActive
+    )
   )
   const shouldRedirect = hydrated && !isUpgradeRoute && (
-    operation.isReconnecting ||
-    operation.isError ||
-    operation.isActive
+    !frontendOnly && (
+      operation.isReconnecting ||
+      operation.isError ||
+      operation.isActive
+    )
   )
 
   React.useEffect(() => {

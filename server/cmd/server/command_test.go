@@ -24,6 +24,11 @@ func TestParseServerCommand(t *testing.T) {
 			wantKind: serverCommandEngineBootstrap,
 		},
 		{
+			name:     "engine inventory is an argument-free read command",
+			args:     []string{"server", "engine-inventory"},
+			wantKind: serverCommandEngineInventory,
+		},
+		{
 			name:           "fingerprint bootstrap accepts one absolute staged corpus path",
 			args:           []string{"server", "fingerprint-bootstrap", "/tmp/lunafox/fingerprint-bootstrap/web_fingerprint_v4.json"},
 			wantKind:       serverCommandFingerprintBootstrap,

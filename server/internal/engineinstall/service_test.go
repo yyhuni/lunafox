@@ -180,8 +180,43 @@ func TestEnginePackageInstallerVerifiesGHCRBeforeCloudflarePackageDownload(t *te
 	if len(signatureVerifier.references) != 1 || signatureVerifier.references[0].String() != wantSignature {
 		t.Fatalf("signature references = %#v, want %q", signatureVerifier.references, wantSignature)
 	}
+	wantTransport := "docker.lunafox.cc.cd/yyhuni/lunafox-engine-port-scan@" + serviceArtifactDigestA
+	if len(signatureVerifier.transportReferences) != 1 || signatureVerifier.transportReferences[0].String() != wantTransport {
+		t.Fatalf("signature transport references = %#v, want %q", signatureVerifier.transportReferences, wantTransport)
+	}
 	if len(puller.attemptedRefs) != 0 || len(runtimeVerifier.calls) != 0 {
 		t.Fatalf("failed GHCR verification must stop before downloads: pulls=%#v runtime=%#v", puller.attemptedRefs, runtimeVerifier.calls)
+	}
+}
+
+func TestEnginePackageInstallerCloudflareAccelerationRejectsLegacySignatureVerifier(t *testing.T) {
+	refs := []string{
+		"docker.lunafox.cc.cd/yyhuni/lunafox-engine-port-scan@" + serviceArtifactDigestA,
+		"docker.io/yyhuni/lunafox-engine-port-scan@" + serviceArtifactDigestA,
+		"ghcr.io/yyhuni/lunafox-engine-port-scan@" + serviceArtifactDigestA,
+	}
+	candidates, err := ociartifact.ParseArtifactCandidates(refs)
+	if err != nil {
+		t.Fatalf("parse accelerated candidates: %v", err)
+	}
+	puller := &servicePackagePullerStub{}
+	cache, _ := newServicePackageCache(t)
+	installer, err := NewEnginePackageInstaller(
+		puller,
+		cache,
+		&serviceRuntimeImageVerifierStub{},
+		&legacyDigestReferenceSignatureVerifier{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = installer.Install(context.Background(), candidates)
+	if err == nil || !strings.Contains(err.Error(), "transport-aware GHCR signature verifier") {
+		t.Fatalf("Install() error = %v, want fail-closed verifier capability error", err)
+	}
+	if len(puller.attemptedRefs) != 0 {
+		t.Fatalf("legacy verifier must be rejected before package download: pulls=%#v", puller.attemptedRefs)
 	}
 }
 

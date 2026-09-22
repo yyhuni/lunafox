@@ -8,6 +8,8 @@ import {
   IconHeart,
   IconMessageReport,
   IconRefresh,
+  ChevronRight,
+  ExternalLink,
   semanticIcons,
 } from "@/components/icons"
 import { LunaFoxMark } from "@/components/brand/lunafox-mark"
@@ -24,10 +26,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
+import { isFrontendOnlyUpgrade } from "@/hooks/use-version"
 import { textRole } from "@/lib/typography"
-import type { ReleaseManifestSummary, UpgradeOperation } from "@/types/version.types"
+import { cn } from "@/lib/utils"
+import type { ReleaseManifestSummary, UpgradeOperationFull } from "@/types/version.types"
 
 type TranslationFn = (key: string, params?: Record<string, string | number | Date>) => string
 
@@ -47,6 +52,7 @@ export function AboutDialogBranding({ t }: { t: TranslationFn }) {
 
 interface AboutDialogVersionInfoProps {
   t: TranslationFn
+  githubRepo?: string
   currentVersion: string
   candidate?: ReleaseManifestSummary
   hasUpdate?: boolean
@@ -55,7 +61,7 @@ interface AboutDialogVersionInfoProps {
   isCreating: boolean
   isRetrying?: boolean
   canStartUpgrade?: boolean
-  operation: { data?: UpgradeOperation; isActive?: boolean; isReconnecting?: boolean; operationId?: string | null }
+  operation: { data?: UpgradeOperationFull; isActive?: boolean; isReconnecting?: boolean; operationId?: string | null }
   onCheckUpdate: () => void
   onStartUpgrade: () => void
   onRetry: () => void
@@ -64,6 +70,7 @@ interface AboutDialogVersionInfoProps {
 
 export function AboutDialogVersionInfo({
   t,
+  githubRepo = "https://github.com/yyhuni/lunafox",
   currentVersion,
   candidate,
   hasUpdate,
@@ -81,6 +88,9 @@ export function AboutDialogVersionInfo({
   const operationStatus = operation.data?.status
   const isTerminalFailure = operationStatus === "failed"
   const needsAttention = operationStatus === "needs_recovery" || operationStatus === "needs_attention"
+  const releaseTag = candidate && (candidate.releaseVersion.startsWith("v") ? candidate.releaseVersion : `v${candidate.releaseVersion}`)
+  const releaseHref = candidate && `${githubRepo.replace(/\/+$/, "")}/releases/tag/${encodeURIComponent(releaseTag ?? "")}`
+  const frontendOnly = isFrontendOnlyUpgrade(operation.data)
   return (
     <div className="space-y-3 rounded-lg border px-4 py-3">
       <div className="flex items-center justify-between gap-4">
@@ -102,6 +112,31 @@ export function AboutDialogVersionInfo({
               <p>{t("manifestDigest")}: <code className="break-all font-mono">{candidate.manifestDigest}</code></p>
               <p>{t("maintenanceWindow", { minutes: candidate.maintenanceWindowMinutes })}</p>
               <p>{candidate.databaseMigration.hasDatabaseMigration ? t("migrationSummary", { type: candidate.databaseMigration.migrationType }) : t("noMigration")}</p>
+              <Collapsible defaultOpen className="space-y-2 border-t border-border/60 pt-2">
+                <CollapsibleTrigger
+                  render={(
+                    <Button type="button" variant="ghost" size="sm" layout="between" className="group text-left hover:text-foreground dark:hover:text-foreground" />
+                  )}
+                >
+                  <span className={cn("min-w-0", textRole.bodyStrong)}>{t("releaseNotes")}</span>
+                  <ChevronRight className="size-4 shrink-0 transition-transform duration-200 motion-reduce:transition-none group-data-[panel-open]:rotate-90" aria-hidden="true" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-2">
+                  {candidate.releaseNotes ? (
+                    <div data-testid="release-notes-body" className={cn("max-h-64 overflow-y-auto rounded-md border border-border/60 bg-muted/30 p-3", textRole.bodySubtle, "whitespace-pre-wrap break-words")}>{candidate.releaseNotes.body}</div>
+                  ) : (
+                    <p data-testid="release-notes-unavailable" className={textRole.helperText}>{t("releaseNotesUnavailable")}</p>
+                  )}
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    render={<a href={releaseHref} target="_blank" rel="noopener noreferrer" />}
+                  >
+                    <ExternalLink className="size-3.5" aria-hidden="true" />{t("viewRelease")}
+                  </Button>
+                </CollapsibleContent>
+              </Collapsible>
             </div>
           ) : null}
         </div>
@@ -135,7 +170,13 @@ export function AboutDialogVersionInfo({
           </div>
           {operation.isReconnecting && <p className="text-sm text-muted-foreground">{t("reconnecting")}</p>}
           <p className="text-xs text-muted-foreground">{t("operationId")}: <code className="font-mono">{operation.data.operationId}</code></p>
-          <p className="text-xs text-muted-foreground">{t("cancelledWork", { scans: operation.data.cancelledScanCount, tasks: operation.data.cancelledTaskCount })}</p>
+          {frontendOnly ? (
+            <p className="text-xs text-muted-foreground">{t("frontendOnlyScope")}</p>
+          ) : operation.data.workDisposition === "cancelled" ? (
+            <p className="text-xs text-muted-foreground">{t("cancelledWork", { scans: operation.data.cancelledScanCount, tasks: operation.data.cancelledTaskCount })}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">{t(`workDisposition.${operation.data.workDisposition}`)}</p>
+          )}
           {operation.data.diagnostic && <p className="text-sm text-destructive">{operation.data.diagnostic}</p>}
           {isTerminalFailure && <Button variant="outline" size="sm" onClick={onRetry} disabled={isRetrying} loading={isRetrying} loadingLabel={t("retryingUpgrade")}>{t("retryUpgrade")}</Button>}
           {needsAttention && <Button variant="outline" size="sm" onClick={onViewStatus}>{t("viewUpgradeStatus")}</Button>}
@@ -178,7 +219,7 @@ export function AboutDialogUpgradeConfirmation({
           <div className="rounded-md border p-3 text-muted-foreground">
             <p>{t("maintenanceWindow", { minutes: candidate.maintenanceWindowMinutes })}</p>
             <p>{candidate.databaseMigration.hasDatabaseMigration ? t("migrationRisk") : t("noMigration")}</p>
-            <p>{t("tasksWillBeCancelled")}</p>
+            <p>{t("scopeConfirmedByServer")}</p>
             <p>{t("noBackupRollback")}</p>
           </div>
           <label className="flex items-start gap-2">

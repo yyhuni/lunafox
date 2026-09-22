@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/yyhuni/lunafox/contracts/releasemanifest"
 	"github.com/yyhuni/lunafox/server/internal/modules/upgrade/domain"
 )
 
@@ -70,6 +72,34 @@ func TestManifestLoaderRejectsMutableReferencesAndIdentityDrift(t *testing.T) {
 	}
 	if _, err := LoadReleaseManifest(path, ""); !errors.Is(err, domain.ErrReleaseManifestIdentityMismatch) {
 		t.Fatalf("expected identity mismatch, got %v", err)
+	}
+}
+
+func TestManifestLoaderAcceptsOnlyPinnedLegacyAlpha114(t *testing.T) {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller() failed")
+	}
+	path := filepath.Join(filepath.Dir(filename), "..", "..", "..", "..", "..", "scripts", "ci", "fixtures", "legacy-alpha114-release.manifest.yaml")
+	manifest, err := LoadReleaseManifest(path, releasemanifest.LegacyAlpha114ManifestDigest)
+	if err != nil {
+		t.Fatalf("LoadReleaseManifest() error = %v", err)
+	}
+	if manifest.ReleaseVersion != releasemanifest.LegacyAlpha114ReleaseVersion || manifest.Digest() != releasemanifest.LegacyAlpha114ManifestDigest {
+		t.Fatalf("legacy manifest identity = %s %s", manifest.ReleaseVersion, manifest.Digest())
+	}
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tamperedPath := filepath.Join(t.TempDir(), "release.manifest.yaml")
+	tampered := strings.Replace(string(raw), "maintenanceWindowMinutes: 15", "maintenanceWindowMinutes: 16", 1)
+	if err := os.WriteFile(tamperedPath, []byte(tampered), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadReleaseManifest(tamperedPath, ""); !errors.Is(err, domain.ErrReleaseManifestInvalid) {
+		t.Fatalf("tampered legacy manifest error = %v", err)
 	}
 }
 

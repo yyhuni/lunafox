@@ -48,6 +48,10 @@ require_file() {
 	[ -f "$ROOT_DIR/$1" ] || fail "missing required public file: $1"
 }
 
+require_regular_file() {
+	[ -f "$ROOT_DIR/$1" ] && [ ! -L "$ROOT_DIR/$1" ] || fail "required public file must be a regular file: $1"
+}
+
 for file in README.md README.zh-CN.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTIFACTS.md \
 	.gitignore docs/public-deployment.md docs/public-deployment.zh-CN.md .env .env.example compose.yaml engine-inventory.yaml release.manifest.yaml \
 	deploy/compose.template.yaml deploy/.env.example \
@@ -60,10 +64,60 @@ for file in README.md README.zh-CN.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTI
 	scripts/ci/audit-public-security-scope.mjs scripts/ci/check-public-channel.mjs \
 	scripts/ci/check-public-release-policy.mjs scripts/ci/generate-compose-deployment.mjs \
 	scripts/ci/generate-compose-deployment.test.mjs scripts/ci/verify-public-release.mjs \
+	scripts/ci/resolve-release-component-composition.mjs scripts/ci/verify-release-component-composition.mjs \
 	scripts/ci/verify-compose-cert-init-selftest.sh scripts/ci/verify-compose-config-init-selftest.sh \
 	scripts/ci/verify-public-runtime-source.sh scripts/ci/verify-public-runtime-contexts.mjs; do
 	require_file "$file"
 done
+require_regular_file release.manifest.yaml
+
+LEGACY_V1_BOOTSTRAP=0
+if [ -e "$ROOT_DIR/runtime-composition.json" ] || [ -L "$ROOT_DIR/runtime-composition.json" ]; then
+	require_regular_file runtime-composition.json
+else
+	# alpha.114 predates composition evidence. Its raw manifest identity is fixed
+	# by policy, so this branch remains v1/full-only rather than granting scope.
+	if node --input-type=module - "$ROOT_DIR" <<'NODE'; then
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+
+try {
+  const root = process.argv[2];
+  const policy = JSON.parse(fs.readFileSync(path.join(root, "scripts/ci/public-release-policy.json"), "utf8"));
+  const bootstrap = policy.legacyDeploymentBootstrap;
+  const expectedKeys = ["manifestSha256", "packageName", "paths", "releaseTag", "sha256"];
+  if (!bootstrap || typeof bootstrap !== "object" || Array.isArray(bootstrap) ||
+      JSON.stringify(Object.keys(bootstrap).sort()) !== JSON.stringify(expectedKeys) ||
+      !/^v\d+\.\d+\.\d+-alpha\.\d+$/.test(bootstrap.releaseTag) ||
+      bootstrap.packageName !== `lunafox-${bootstrap.releaseTag}-dockerhub.zip` ||
+      !/^[a-f0-9]{64}$/.test(bootstrap.sha256) ||
+      !/^[a-f0-9]{64}$/.test(bootstrap.manifestSha256) ||
+      !Array.isArray(bootstrap.paths) || bootstrap.paths.includes("runtime-composition.json")) {
+    process.exit(1);
+  }
+
+  const manifestPath = path.join(root, "release.manifest.yaml");
+  const manifestInfo = fs.lstatSync(manifestPath);
+  if (!manifestInfo.isFile() || manifestInfo.isSymbolicLink()) process.exit(1);
+  const manifest = fs.readFileSync(manifestPath);
+  const text = manifest.toString("utf8");
+  const releaseVersion = text.match(/^releaseVersion:[ \t]*["']?([^"'#\s]+)["']?[ \t]*(?:#.*)?$/m)?.[1] ?? "";
+  const releaseTag = releaseVersion.startsWith("v") ? releaseVersion : `v${releaseVersion}`;
+  if (releaseTag !== bootstrap.releaseTag ||
+      crypto.createHash("sha256").update(manifest).digest("hex") !== bootstrap.manifestSha256 ||
+      /(?:^|\r?\n)[ \t]*runtimeComposition[ \t]*:/.test(text)) {
+    process.exit(1);
+  }
+} catch {
+  process.exit(1);
+}
+NODE
+		LEGACY_V1_BOOTSTRAP=1
+	else
+		fail "missing required public file: runtime-composition.json (only the policy-pinned legacy v1 bootstrap may omit it)"
+	fi
+fi
 
 cmp -s "$ROOT_DIR/.env" "$ROOT_DIR/.env.example" || fail ".env and .env.example must start from the same generated configuration"
 
@@ -129,6 +183,15 @@ ghcr_compose_json="$(render_compose ghcr.io embedded '' '' '' '' '' '' '' localh
 custom_compose_json="$(render_compose docker.io embedded '' 5432 disable lunafox_app lunafox_custom operator-db-password operator-jwt-secret example.invalid 8443)" || fail "custom embedded Compose configuration is invalid"
 external_default_json="$(render_compose docker.io external database.example '' require '' '' operator-db-password '' localhost 443)" || fail "external Compose configuration with database identity defaults is invalid"
 external_custom_json="$(render_compose docker.io external 2001:db8::1 6543 verify-full lunafox_remote lunafox_external operator-db-password operator-jwt-secret example.invalid 8443)" || fail "custom external Compose configuration is invalid"
+
+if [ "$LEGACY_V1_BOOTSTRAP" -eq 0 ]; then
+	if ! node "$ROOT_DIR/scripts/ci/verify-release-component-composition.mjs" \
+		--composition "$ROOT_DIR/runtime-composition.json" \
+		--manifest "$ROOT_DIR/release.manifest.yaml" \
+		--policy "$ROOT_DIR/scripts/ci/public-release-policy.json"; then
+		fail "runtime composition asset does not match the release manifest"
+	fi
+fi
 
 jq -e '
   (.services | keys | sort) == (["agent","agent-preflight","alloy","bootstrap","cert-init","config-init","frontend","loki","migrate","nginx","postgres","redis","server","upgrader"] | sort) and
@@ -390,6 +453,15 @@ grep -Fq 'docker compose down' "$ROOT_DIR/docs/public-deployment.md" || fail "de
 grep -Fq 'docker compose exec server resetadmin' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must retain administrator reset"
 grep -Fq 'Docker Compose 2.24.0' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must state the minimum Compose version"
 grep -Fq 'DATABASE_MODE=external' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must describe external PostgreSQL mode"
+grep -Fq '## Configuration changes after first start' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must document post-start configuration changes"
+grep -Fq 'online database-mode migration is unsupported' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must state that online database-mode migration is unsupported"
+grep -Fq 'online credential rotation is unsupported' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must state that online credential rotation is unsupported"
+grep -Fq 'lunafox_config' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must identify the persisted configuration volume"
+grep -Fq 'lunafox_postgres' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must identify the embedded database volume"
+grep -Fq '## 首次启动后的配置变更' "$ROOT_DIR/docs/public-deployment.zh-CN.md" || fail "Chinese deployment docs must document post-start configuration changes"
+grep -Fq '不支持在线数据库模式迁移' "$ROOT_DIR/docs/public-deployment.zh-CN.md" || fail "Chinese deployment docs must state that online database-mode migration is unsupported"
+grep -Fq '不支持在线凭据轮换' "$ROOT_DIR/docs/public-deployment.zh-CN.md" || fail "Chinese deployment docs must state that online credential rotation is unsupported"
+grep -Fq 'docs/public-deployment.md#configuration-changes-after-first-start' "$ROOT_DIR/README.md" "$ROOT_DIR/README.zh-CN.md" || fail "README files must link to post-start configuration guidance"
 # A failed start may already have created containers, so the documentation has to
 # describe the preserved scene instead of claiming nothing changed.
 grep -Fq 'nothing is rolled back' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must state that a failure leaves the deployment in place and rolls nothing back"

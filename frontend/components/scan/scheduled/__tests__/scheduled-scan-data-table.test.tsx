@@ -36,6 +36,7 @@ const scheduledScan: ScheduledScan = {
   targetName: null,
   scanMode: "organization",
   inputSource: "scanSnapshot",
+  timeZone: "UTC",
   cronExpression: "0 2 * * *",
   isEnabled: true,
   nextRunTime: "2026-08-16T02:00:00Z",

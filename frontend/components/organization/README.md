@@ -7,6 +7,14 @@
   Keep the divider on the disclosure's owning `FormItem` rather than adding a
   second border inside the expanded target editor.
 
+## Link Target Drawer
+
+- The organization-scoped target import uses `TargetValidator.parseLines` for
+  both its visible count and submitted target array. It shares
+  `MAX_TARGET_BATCH_SIZE` with global target creation, so more than 5,000
+  non-empty targets are blocked locally and are never split into multiple
+  requests.
+
 ## Shared Selection Workspace
 
 - `organization-selection-workspace.tsx` owns the reusable organization

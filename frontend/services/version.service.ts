@@ -2,16 +2,21 @@ import axios, { type AxiosError } from "axios"
 
 import { api } from '@/lib/api-client'
 import type {
-  CreateUpgradeOperationInput,
-  DatabaseMigrationInfo,
-  ReleaseManifestSummary,
+	CreateUpgradeOperationInput,
+	DatabaseMigrationInfo,
+	ReleaseManifestSummary,
+	ReleaseNotes,
   UpgradeAgentSummary,
 	UpgradeDiagnostic,
+	UpgradeExecutionMode,
 	UpgradeLogEntry,
   UpgradeLogLevel,
   UpgradeMigrationStatus,
   UpgradeOperation,
+	UpgradeOperationFull,
   UpgradeOperationStatus,
+	UpgradePlanSummary,
+	UpgradeWorkDisposition,
   UpdateCheckResult,
 } from "@/types/version.types"
 
@@ -26,6 +31,29 @@ const OPERATION_STATUSES = new Set<UpgradeOperationStatus>([
 const MIGRATION_STATUSES = new Set<UpgradeMigrationStatus>([
   "not_started", "running", "succeeded", "failed", "unknown",
 ])
+const EXECUTION_MODES = new Set<UpgradeExecutionMode>(["full", "frontend_only"])
+const WORK_DISPOSITIONS = new Set<UpgradeWorkDisposition>([
+  "not_required", "cancelled", "cancellation_failed", "legacy_unknown",
+])
+const FULL_UPGRADE_VIEW = "FULL"
+const MAX_PLAN_SERVICES = 9
+const MAX_PLAN_SERVICE_NAME_LENGTH = 32
+const PLAN_SERVICES = new Set([
+  "server", "frontend", "nginx", "agent", "bootstrap", "engine", "engine_runtime", "engine_package", "migration",
+])
+const FULL_PLAN_SERVICES = [
+  "agent", "bootstrap", "engine", "engine_package", "engine_runtime", "frontend", "migration", "nginx", "server",
+] as const
+const BASIC_UPGRADE_OPERATION_FIELDS = [
+  "name", "operationId", "requestId", "operatorId", "manifestId", "manifestDigest", "releaseVersion",
+  "currentVersion", "compatibilityRange", "maintenanceWindowMinutes", "status", "migrationStatus", "migrationType", "migrationId",
+  "migrationChecksum", "cancelledScanCount", "cancelledTaskCount", "agentDesiredVersion", "agentTargetDigest",
+  "agentSummary", "observedDigests", "diagnostic", "logs", "stageTimes", "createdAt", "updatedAt", "completedAt",
+] as const
+const FULL_UPGRADE_OPERATION_FIELDS = [
+  ...BASIC_UPGRADE_OPERATION_FIELDS,
+  "executionMode", "workDisposition", "planSummary", "confirmedDeploymentVersion",
+] as const
 const MAX_UPGRADE_LOG_ENTRIES = 32
 const MAX_UPGRADE_LOG_MESSAGE_LENGTH = 512
 const MAX_UPGRADE_LOG_STAGE_LENGTH = 64
@@ -33,6 +61,7 @@ const MAX_UPGRADE_LOG_MESSAGE_KEY_LENGTH = 64
 const MAX_UPGRADE_LOG_METADATA_ENTRIES = 8
 const MAX_UPGRADE_LOG_METADATA_KEY_LENGTH = 64
 const MAX_UPGRADE_LOG_METADATA_VALUE_LENGTH = 128
+const MAX_RELEASE_NOTES_BYTES = 64 * 1024
 
 export class UpgradeApiError extends Error {
   readonly code: string
@@ -74,10 +103,31 @@ export class VersionService {
     return parseUpgradeOperation(response.data)
 	}
 
+	static async getUpgradeOperationFull(operationId: string): Promise<UpgradeOperationFull> {
+		assertCanonicalUUID(operationId, "operationId")
+		const response = await api.get<unknown>(`${UPGRADE_OPERATIONS_PATH}/${encodeURIComponent(operationId)}`, {
+			params: { view: FULL_UPGRADE_VIEW },
+		})
+		return parseUpgradeOperationFull(response.data)
+	}
+
 	static async getActiveUpgradeOperation(): Promise<UpgradeOperation | null> {
 		try {
 			const response = await api.get<unknown>(ACTIVE_UPGRADE_OPERATION_PATH)
 			return parseUpgradeOperation(response.data)
+		} catch (error) {
+			const parsed = toUpgradeApiError(error)
+			if (parsed.status === 404) return null
+			throw parsed
+		}
+	}
+
+	static async getActiveUpgradeOperationFull(): Promise<UpgradeOperationFull | null> {
+		try {
+			const response = await api.get<unknown>(ACTIVE_UPGRADE_OPERATION_PATH, {
+				params: { view: FULL_UPGRADE_VIEW },
+			})
+			return parseUpgradeOperationFull(response.data)
 		} catch (error) {
 			const parsed = toUpgradeApiError(error)
 			if (parsed.status === 404) return null
@@ -120,10 +170,10 @@ export function isUpgradeNetworkError(error: unknown): boolean {
   return error instanceof TypeError || (error instanceof Error && /network|fetch|timeout|connection/i.test(error.message))
 }
 
-function parseUpdateCheckResult(value: unknown): UpdateCheckResult {
+async function parseUpdateCheckResult(value: unknown): Promise<UpdateCheckResult> {
   const record = requireObject(value, "checkForUpdates")
   assertKnownFields(record, ["currentVersion", "hasUpdate", "candidate", "eligible", "diagnostic"], "checkForUpdates")
-  const candidate = record.candidate === undefined || record.candidate === null ? undefined : parseManifestSummary(record.candidate)
+  const candidate = record.candidate === undefined || record.candidate === null ? undefined : await parseManifestSummary(record.candidate)
   const diagnostic = record.diagnostic === undefined || record.diagnostic === null ? undefined : parseDiagnostic(record.diagnostic)
   return {
     currentVersion: requireNonEmpty(record.currentVersion, "checkForUpdates.currentVersion"),
@@ -134,11 +184,11 @@ function parseUpdateCheckResult(value: unknown): UpdateCheckResult {
   }
 }
 
-function parseManifestSummary(value: unknown): ReleaseManifestSummary {
+async function parseManifestSummary(value: unknown): Promise<ReleaseManifestSummary> {
   const record = requireObject(value, "candidate")
   assertKnownFields(record, [
     "name", "manifestId", "manifestDigest", "releaseVersion", "deploymentMode", "compatibilityRange",
-    "maintenanceWindowMinutes", "requiresAdminConfirmation", "databaseMigration", "runtimeImageDigests", "engineDigests",
+    "maintenanceWindowMinutes", "requiresAdminConfirmation", "databaseMigration", "runtimeImageDigests", "engineDigests", "releaseNotes",
   ], "candidate")
   const migration = parseMigration(record.databaseMigration)
   const images = requireObject(record.runtimeImageDigests, "candidate.runtimeImageDigests")
@@ -146,11 +196,14 @@ function parseManifestSummary(value: unknown): ReleaseManifestSummary {
   for (const [name, digest] of Object.entries(images)) runtimeImageDigests[name] = assertSha256Digest(digest, `candidate.runtimeImageDigests.${name}`)
   if (!Array.isArray(record.engineDigests)) throw invalidResponse("candidate.engineDigests")
   const engineDigests = record.engineDigests.map((digest, index) => assertSha256Digest(digest, `candidate.engineDigests[${index}]`))
+  const releaseVersion = requireNonEmpty(record.releaseVersion, "candidate.releaseVersion")
+  const releaseNotes = record.releaseNotes === undefined ? undefined : await parseReleaseNotes(record.releaseNotes)
+  if (!releaseNotes && releaseVersion !== "0.0.0-dev") throw invalidResponse("candidate.releaseNotes")
   return {
     name: requireNonEmpty(record.name, "candidate.name"),
     manifestId: requireNonEmpty(record.manifestId, "candidate.manifestId"),
     manifestDigest: assertSha256Digest(record.manifestDigest, "candidate.manifestDigest"),
-    releaseVersion: requireNonEmpty(record.releaseVersion, "candidate.releaseVersion"),
+    releaseVersion,
     deploymentMode: requireNonEmpty(record.deploymentMode, "candidate.deploymentMode"),
     compatibilityRange: requireNonEmpty(record.compatibilityRange, "candidate.compatibilityRange"),
     maintenanceWindowMinutes: requireSafeInteger(record.maintenanceWindowMinutes, "candidate.maintenanceWindowMinutes", 1),
@@ -158,7 +211,49 @@ function parseManifestSummary(value: unknown): ReleaseManifestSummary {
     databaseMigration: migration,
     runtimeImageDigests,
     engineDigests,
+    ...(releaseNotes ? { releaseNotes } : {}),
   }
+}
+
+async function parseReleaseNotes(value: unknown): Promise<ReleaseNotes> {
+  const record = requireObject(value, "candidate.releaseNotes")
+  assertKnownFields(record, ["body", "sha256"], "candidate.releaseNotes")
+  const body = requireString(record.body, "candidate.releaseNotes.body")
+  const bytes = new TextEncoder().encode(body)
+  if (!body.trim() || bytes.length > MAX_RELEASE_NOTES_BYTES || !body.endsWith("\n")) {
+    throw invalidResponse("candidate.releaseNotes.body")
+  }
+  if (body.includes("\r") || body.includes("\u0000") || body.includes("\uFFFD")) {
+    throw invalidResponse("candidate.releaseNotes.body")
+  }
+  const lines = body.split("\n")
+  const sections = new Set<string>()
+  for (const [index, line] of lines.entries()) {
+    const heading = line.match(/^##[ \t]+(English|简体中文)[ \t]*$/u)
+    if (!heading) continue
+    const name = heading[1]
+    if (sections.has(name)) throw invalidResponse("candidate.releaseNotes.body")
+    let end = lines.length - 1
+    for (let next = index + 1; next < lines.length; next += 1) {
+      if (/^##[ \t]+[^\n]+$/u.test(lines[next])) {
+        end = next
+        break
+      }
+    }
+    if (!lines.slice(index + 1, end).join("\n").trim()) throw invalidResponse("candidate.releaseNotes.body")
+    sections.add(name)
+  }
+  if (sections.size !== 2) throw invalidResponse("candidate.releaseNotes.body")
+  const sha256 = assertSha256Digest(record.sha256, "candidate.releaseNotes.sha256")
+  const actual = `sha256:${await sha256Hex(body)}`
+  if (actual !== sha256) throw invalidResponse("candidate.releaseNotes.sha256")
+  return { body, sha256 }
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  if (!globalThis.crypto?.subtle) throw invalidResponse("candidate.releaseNotes.sha256")
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")
 }
 
 function parseMigration(value: unknown): DatabaseMigrationInfo {
@@ -177,12 +272,50 @@ function parseMigration(value: unknown): DatabaseMigrationInfo {
 
 function parseUpgradeOperation(value: unknown): UpgradeOperation {
   const record = requireObject(value, "upgradeOperation")
-  assertKnownFields(record, [
-		"name", "operationId", "requestId", "operatorId", "manifestId", "manifestDigest", "releaseVersion",
-		"currentVersion", "compatibilityRange", "maintenanceWindowMinutes", "status", "migrationStatus", "migrationType", "migrationId",
-		"migrationChecksum", "cancelledScanCount", "cancelledTaskCount", "agentDesiredVersion", "agentTargetDigest",
-		"agentSummary", "observedDigests", "diagnostic", "logs", "stageTimes", "createdAt", "updatedAt", "completedAt",
-  ], "upgradeOperation")
+  assertKnownFields(record, BASIC_UPGRADE_OPERATION_FIELDS, "upgradeOperation")
+  return parseUpgradeOperationFields(record)
+}
+
+function parseUpgradeOperationFull(value: unknown): UpgradeOperationFull {
+  const record = requireObject(value, "upgradeOperation")
+  assertKnownFields(record, FULL_UPGRADE_OPERATION_FIELDS, "upgradeOperation")
+  const operation = parseUpgradeOperationFields(record)
+	const executionMode = requireEnum(record.executionMode, EXECUTION_MODES, "upgradeOperation.executionMode")
+	const workDisposition = requireEnum(record.workDisposition, WORK_DISPOSITIONS, "upgradeOperation.workDisposition")
+	const isLegacyFull = executionMode === "full" && workDisposition === "legacy_unknown"
+	if (executionMode === "full" && workDisposition === "not_required") {
+		throw invalidResponse("upgradeOperation.workDisposition")
+	}
+	const planSummary = parseUpgradePlanSummary(record.planSummary, isLegacyFull)
+
+  if (executionMode === "frontend_only") {
+    if (workDisposition !== "not_required") throw invalidResponse("upgradeOperation.workDisposition")
+    if (planSummary.touchedServices.length !== 1 || planSummary.touchedServices[0] !== "frontend") {
+      throw invalidResponse("upgradeOperation.planSummary.touchedServices")
+    }
+    for (const stage of ["stopping", "migrating", "agent_verifying"]) {
+      if (operation.status === stage || operation.stageTimes[stage] !== undefined) {
+        throw invalidResponse(`upgradeOperation.${operation.status === stage ? "status" : `stageTimes.${stage}`}`)
+		}
+		}
+	} else {
+		const completePlan = planSummary.touchedServices.length === FULL_PLAN_SERVICES.length
+		  && planSummary.touchedServices.every((service, index) => service === FULL_PLAN_SERVICES[index])
+		if ((!isLegacyFull && !completePlan) || (planSummary.touchedServices.length !== 0 && !completePlan)) {
+			throw invalidResponse("upgradeOperation.planSummary.touchedServices")
+		}
+	}
+
+  return {
+    ...operation,
+    executionMode,
+    workDisposition,
+    planSummary,
+		confirmedDeploymentVersion: requireBoundedString(record.confirmedDeploymentVersion, "upgradeOperation.confirmedDeploymentVersion", 64, executionMode === "full"),
+  }
+}
+
+function parseUpgradeOperationFields(record: Record<string, unknown>): UpgradeOperation {
   const status = requireEnum(record.status, OPERATION_STATUSES, "upgradeOperation.status")
   const migrationStatus = requireEnum(record.migrationStatus, MIGRATION_STATUSES, "upgradeOperation.migrationStatus")
   const observed = requireObject(record.observedDigests, "upgradeOperation.observedDigests")
@@ -223,6 +356,23 @@ function parseUpgradeOperation(value: unknown): UpgradeOperation {
     updatedAt: requireTimestamp(record.updatedAt, "upgradeOperation.updatedAt"),
     completedAt: record.completedAt === undefined || record.completedAt === null ? null : requireTimestamp(record.completedAt, "upgradeOperation.completedAt"),
   }
+}
+
+function parseUpgradePlanSummary(value: unknown, allowEmpty: boolean): UpgradePlanSummary {
+  const record = requireObject(value, "upgradeOperation.planSummary")
+  assertKnownFields(record, ["touchedServices"], "upgradeOperation.planSummary")
+  if (!Array.isArray(record.touchedServices) || record.touchedServices.length > MAX_PLAN_SERVICES || (!allowEmpty && record.touchedServices.length === 0)) {
+    throw invalidResponse("upgradeOperation.planSummary.touchedServices")
+  }
+  let previous = ""
+  const touchedServices = record.touchedServices.map((service, index) => {
+    const path = `upgradeOperation.planSummary.touchedServices[${index}]`
+    const parsed = requireBoundedToken(service, path, MAX_PLAN_SERVICE_NAME_LENGTH)
+    if (!PLAN_SERVICES.has(parsed) || (previous && parsed <= previous)) throw invalidResponse(path)
+    previous = parsed
+    return parsed
+  })
+  return { touchedServices }
 }
 
 function parseUpgradeLogs(value: unknown): UpgradeLogEntry[] {
@@ -287,7 +437,7 @@ function requireObject(value: unknown, path: string): Record<string, unknown> {
   return record
 }
 
-function assertKnownFields(record: Record<string, unknown>, fields: string[], path: string): void {
+function assertKnownFields(record: Record<string, unknown>, fields: readonly string[], path: string): void {
   const allowed = new Set(fields)
   for (const field of Object.keys(record)) if (!allowed.has(field)) throw invalidResponse(`${path}.${field}`)
 }
@@ -297,9 +447,9 @@ function requireString(value: unknown, path: string): string {
   return value
 }
 
-function requireBoundedString(value: unknown, path: string, maximumLength: number): string {
+function requireBoundedString(value: unknown, path: string, maximumLength: number, allowEmpty = false): string {
 	const result = requireString(value, path)
-	if (!result.trim() || result.length > maximumLength || /[\u0000-\u001f\u007f]/.test(result)) throw invalidResponse(path)
+	if ((!allowEmpty && !result.trim()) || (allowEmpty && result !== "" && !result.trim()) || result.length > maximumLength || /[\u0000-\u001f\u007f]/.test(result)) throw invalidResponse(path)
 	return result
 }
 

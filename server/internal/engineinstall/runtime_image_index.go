@@ -134,7 +134,11 @@ func (verifier *RuntimeImageIndexVerifier) Verify(ctx context.Context, _ string,
 		if err != nil {
 			return VerifiedRuntimeImageIndex{}, fmt.Errorf("map Runtime Image Cloudflare acceleration: %w", err)
 		}
-		if err := verifier.options.SignatureVerifier.VerifyReference(ctx, acceleration.SignatureReference); err != nil {
+		transportVerifier, ok := verifier.options.SignatureVerifier.(ocisignature.DigestReferenceSignatureTransportVerifier)
+		if !ok {
+			return VerifiedRuntimeImageIndex{}, fmt.Errorf("Cloudflare Runtime Image acceleration requires a transport-aware GHCR signature verifier")
+		}
+		if err := transportVerifier.VerifyReferenceWithTransport(ctx, acceleration.SignatureReference, acceleration.DownloadReferences[0]); err != nil {
 			return VerifiedRuntimeImageIndex{}, fmt.Errorf("verify Runtime Image GHCR signature %q: %w", acceleration.SignatureReference.String(), err)
 		}
 		candidates, err = runtimeimage.ParseCandidates(acceleration.DownloadReferenceStrings())

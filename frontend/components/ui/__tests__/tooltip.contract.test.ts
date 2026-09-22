@@ -4,6 +4,17 @@ import path from "node:path"
 
 const source = readFileSync(path.resolve(process.cwd(), "components/ui/tooltip.tsx"), "utf8")
 const overlaySource = readFileSync(path.resolve(process.cwd(), "lib/ui/overlay-styles.ts"), "utf8")
+const productionTooltipOwners = [
+  "components/ui/sidebar.tsx",
+  "components/overview/world-map.tsx",
+  "components/scan/engine-config-form.tsx",
+  "components/scan/history/scan-history-columns.tsx",
+  "components/scan/history/scan-history-retention-summary.tsx",
+  "components/settings/agents/agent-list.tsx",
+  "app/tools/fingerprints/layout.tsx",
+  "components/shared/data-table/row-actions.tsx",
+  "components/shared/data-table/selected-row-action-bar.tsx",
+] as const
 
 describe("tooltip contract", () => {
   it("preserves current source markers", () => {
@@ -43,6 +54,27 @@ describe("tooltip contract", () => {
     expect(source).not.toContain("asChild")
     expect(source).not.toContain("delayDuration")
     expect(source).not.toContain("render={asChild ? child : render}")
+  })
+
+  it("owns the shared 400 / 0 / 400 timing policy and rejects caller timing props", () => {
+    expect(source).toContain("const TOOLTIP_OPEN_DELAY_MS = 400")
+    expect(source).toContain("const TOOLTIP_CLOSE_DELAY_MS = 0")
+    expect(source).toContain("const TOOLTIP_ADJACENT_SWITCH_TIMEOUT_MS = 400")
+    expect(source).toContain("type TooltipProviderProps = Omit<")
+    expect(source).toContain("type TooltipTriggerProps = Omit<")
+    expect(source).toContain('"delay" | "closeDelay" | "timeout"')
+    expect(source).toContain("delay={TOOLTIP_OPEN_DELAY_MS}")
+    expect(source).toContain("closeDelay={TOOLTIP_CLOSE_DELAY_MS}")
+    expect(source).toContain("timeout={TOOLTIP_ADJACENT_SWITCH_TIMEOUT_MS}")
+  })
+
+  it("keeps production Tooltip callers on the shared timing policy", () => {
+    const localTimingProp = /<Tooltip(?:Provider|Trigger)\b[^>]*\b(?:delay|closeDelay|timeout)\s*=/u
+
+    for (const owner of productionTooltipOwners) {
+      const ownerSource = readFileSync(path.resolve(process.cwd(), owner), "utf8")
+      expect(ownerSource).not.toMatch(localTimingProp)
+    }
   })
 
   it("uses Base UI transform origin variables in shared tooltip styles", () => {

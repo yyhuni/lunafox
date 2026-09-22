@@ -34,6 +34,24 @@ cd lunafox-<version>
 docker compose up -d
 ```
 
+## 登录与初始凭据
+
+全新部署就绪后，打开配置的 LunaFox 地址，使用默认管理员账号登录：
+
+| 用户名 | 密码 |
+| --- | --- |
+| `admin` | `admin` |
+
+首次登录后，请前往账号设置及时修改密码。
+
+如果忘记管理员密码，请在部署目录中运行：
+
+```console
+docker compose exec server resetadmin
+```
+
+该命令只显示一次新密码，并使管理员现有会话失效。
+
 ## Env 文件配置
 
 首次启动前，请检查 `.env` 中的 `PUBLIC_HOST`、`PUBLIC_PORT`、`DATABASE_MODE` 和
@@ -43,6 +61,10 @@ docker compose up -d
 RELEASE_REGISTRY=docker.io
 # RELEASE_REGISTRY=ghcr.io
 ```
+
+首次成功启动后，`DATABASE_MODE`、`DB_PASSWORD` 和 `JWT_SECRET` 会持久化到
+`lunafox_config`。之后在 `.env` 中将它们改成不同的非空值不会迁移或轮换正在运行的部署，而是快速失败；空的凭据输入会复用持久化值。
+恢复和新建部署步骤请参阅[配置变更说明](docs/public-deployment.md#configuration-changes-after-first-start)。
 
 ## 日常操作命令
 

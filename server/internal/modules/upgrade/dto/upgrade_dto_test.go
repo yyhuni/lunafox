@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 	"testing"
@@ -72,6 +73,45 @@ func TestUpgradeOperationResponseProjectsCurrentVersion(t *testing.T) {
 	response := NewUpgradeOperationResponse(operation, "1.0.0")
 	if response.CurrentVersion != "1.0.0" {
 		t.Fatalf("currentVersion = %q, want 1.0.0", response.CurrentVersion)
+	}
+}
+
+func TestFullUpgradeOperationResponseAddsScopeWithoutChangingBasicShape(t *testing.T) {
+	now := time.Now().UTC()
+	operation := &domain.Operation{
+		OperationID: "11111111-1111-4111-8111-111111111111", RequestID: "22222222-2222-4222-8222-222222222222", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		ReleaseVersion: "1.1.0", CompatibilityRange: "*", Status: domain.StatusQueued,
+		MigrationStatus: domain.MigrationStatusNotStarted, MigrationType: "none", CreatedAt: now, UpdatedAt: now,
+		StageTimes: map[domain.Status]time.Time{domain.StatusQueued: now}, ObservedDigests: map[string]string{},
+		ExecutionMode: domain.ExecutionModeFrontendOnly, WorkDisposition: domain.WorkDispositionNotRequired,
+		PlanSummary:                domain.PlanSummary{TouchedServices: []string{"frontend"}},
+		PlanDigest:                 "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		BaselineDeploymentDigest:   "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+		ConfirmedDeploymentVersion: "1.0.0",
+	}
+	basicBytes, err := json.Marshal(NewUpgradeOperationResponse(operation, "1.0.0"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var basic map[string]json.RawMessage
+	if err := json.Unmarshal(basicBytes, &basic); err != nil {
+		t.Fatal(err)
+	}
+	if _, found := basic["executionMode"]; found {
+		t.Fatal("BASIC response unexpectedly contains executionMode")
+	}
+	full := NewFullUpgradeOperationResponse(operation, "1.0.0")
+	if full.ExecutionMode != "frontend_only" || full.WorkDisposition != "not_required" || len(full.PlanSummary.TouchedServices) != 1 || full.PlanSummary.TouchedServices[0] != "frontend" || full.ConfirmedDeploymentVersion != "1.0.0" {
+		t.Fatalf("FULL scope projection = %#v", full)
+	}
+	operation.Status = domain.StatusSucceeded
+	completed := NewFullUpgradeOperationResponse(operation, "1.0.0")
+	if completed.ConfirmedDeploymentVersion != operation.ReleaseVersion {
+		t.Fatalf("completed frontend-only version = %q, want target %q", completed.ConfirmedDeploymentVersion, operation.ReleaseVersion)
+	}
+	if operation.ConfirmedDeploymentVersion != "1.0.0" {
+		t.Fatalf("FULL projection rewrote persisted baseline = %q", operation.ConfirmedDeploymentVersion)
 	}
 }
 

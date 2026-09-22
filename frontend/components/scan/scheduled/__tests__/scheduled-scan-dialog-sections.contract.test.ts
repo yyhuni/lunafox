@@ -81,12 +81,12 @@ describe("scheduled-scan-dialog-sections contract", () => {
     expect(source).not.toContain("export function ScheduledScanTargetSelectionStep")
   })
 
-  it("keeps the fourth drawer step UTC-only", () => {
-    expect(source).not.toContain("ScheduledScanTimeZoneField")
-    expect(source).not.toContain("time-zone")
-    expect(source).toContain("getNextExecutions(cronExpression)")
+  it("keeps the fourth drawer step on the selected IANA time zone", () => {
+    expect(source).toContain("ScheduledScanTimeZoneField")
+    expect(source).toContain("scheduled-scan-time-zone")
+    expect(source).toContain("getNextExecutions(cronExpression, timeZone)")
     expect(createDialogSource).toContain("const totalSteps = 4")
-    expect(createDialogSource).not.toContain("timeZone={timeZone}")
+    expect(createDialogSource).toContain("timeZone={timeZone}")
     expect(createDialogSource).toMatch(/currentStep === 4[\s\S]*ScheduledScanScheduleStep/)
   })
 

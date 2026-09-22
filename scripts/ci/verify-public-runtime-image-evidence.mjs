@@ -19,6 +19,7 @@ const PRIVATE_REPOSITORY = "yyhuni/lunafox-private";
 const PUBLIC_WORKFLOW_IDENTITY = "https://github.com/yyhuni/lunafox/.github/workflows/public-validate.yml@refs/heads/main";
 const PRIVATE_AGENT_SIGNER_IDENTITY = "https://github.com/yyhuni/lunafox-private/.github/workflows/release.yml@refs/tags/*";
 const DIGEST_RE = /^sha256:[a-f0-9]{64}$/;
+const AGENT_ARTIFACT_ID_RE = /^sha256-[a-f0-9]{64}$/;
 const COMMIT_RE = /^[0-9a-f]{40}$/;
 const RELEASE_TAG_RE = /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 const PLATFORM_SET = ["linux/amd64", "linux/arm64"];
@@ -171,15 +172,22 @@ function verifyRecord(record, expected) {
     if (record.binaryStagingIdentity !== undefined || record.binaryAsset !== undefined) {
       fail(`${component} evidence must not retain staging Asset provenance`);
     }
-    for (const field of ["binaryBundleDigest", "binarySourceRevisionDigest", "binaryExportManifestSha256", "binaryProvenanceSha256", "binaryTreeBaseManifestSha256"]) {
+    for (const field of ["binaryArtifactId", "binaryInputFingerprint", "binaryBundleDigest", "binarySourceRevisionDigest", "binaryExportManifestSha256", "binaryProvenanceSha256", "binaryTreeBaseManifestSha256"]) {
+      if (field === "binaryArtifactId") {
+        if (!AGENT_ARTIFACT_ID_RE.test(String(record[field] ?? ""))) fail(`${component}.${field} must be an immutable artifact identity`);
+        continue;
+      }
       assertDigest(record[field], `${component}.${field}`);
+    }
+    if (record.binaryInputFingerprint !== `sha256:${record.binaryArtifactId.slice("sha256-".length)}`) {
+      fail(`${component} binary input fingerprint does not derive the immutable artifact identity`);
     }
     if (record.binarySourceRevisionDigest !== record.sourceRevisionDigest ||
         record.binaryExportManifestSha256 !== record.publicExportManifestSha256 ||
         record.binaryProvenanceSha256 !== record.publicProvenanceSha256) {
       fail(`${component} binary provenance is not bound to the public export`);
     }
-    if (record.binaryTreePath !== `agent/bin/${record.releaseTag}`) fail(`${component} binary tree path is not bound to the release tag`);
+    if (record.binaryTreePath !== `agent/bin/${record.binaryArtifactId}`) fail(`${component} binary tree path is not bound to the immutable artifact identity`);
     if (record.binarySignerIssuer !== "https://token.actions.githubusercontent.com" ||
         record.binarySignerIdentity !== PRIVATE_AGENT_SIGNER_IDENTITY) {
       fail(`${component} binary signer identity is invalid`);

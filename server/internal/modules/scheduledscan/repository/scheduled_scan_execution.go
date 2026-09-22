@@ -67,11 +67,11 @@ func (repo *ScheduledScanRepository) MaterializeDue(ctx context.Context, schedul
 			return nil
 		}
 
-		scheduledFor, err := repo.calculator.LatestAtOrBefore(schedule.CronExpression, *schedule.NextRunTime, evaluationAt)
+		scheduledFor, err := repo.calculator.LatestAtOrBefore(schedule.CronExpression, schedule.TimeZone, *schedule.NextRunTime, evaluationAt)
 		if err != nil {
 			return err
 		}
-		nextRunTime, err := repo.calculator.AdvanceAfter(schedule.CronExpression, evaluationAt)
+		nextRunTime, err := repo.calculator.AdvanceAfter(schedule.CronExpression, schedule.TimeZone, evaluationAt)
 		if err != nil {
 			return err
 		}

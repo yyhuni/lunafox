@@ -34,6 +34,27 @@ From a checkout or extracted archive, run:
 docker compose up -d
 ```
 
+## Login and initial credentials
+
+After a fresh deployment is ready, open the configured LunaFox URL and sign in
+with the default administrator account:
+
+| Username | Password |
+| --- | --- |
+| `admin` | `admin` |
+
+Change the password from the account settings after the first login.
+
+If the administrator password is forgotten, run this command from the deployment
+directory:
+
+```console
+docker compose exec server resetadmin
+```
+
+The command prints a new password once and invalidates existing administrator
+sessions.
+
 ## Env file
 
 Before the first start, review `PUBLIC_HOST`, `PUBLIC_PORT`, `DATABASE_MODE`, and
@@ -44,6 +65,13 @@ GHCR explicitly when needed:
 RELEASE_REGISTRY=docker.io
 # RELEASE_REGISTRY=ghcr.io
 ```
+
+After the first successful start, `DATABASE_MODE`, `DB_PASSWORD`, and
+`JWT_SECRET` are persisted in `lunafox_config`. Changing them to a different
+non-empty value in `.env` does not migrate or rotate a running deployment and
+fails fast; empty credential inputs reuse the persisted values. See the
+[configuration-change guidance](docs/public-deployment.md#configuration-changes-after-first-start)
+for recovery and new-deployment steps.
 
 ## Daily operations
 

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest"
 import {
   getConfigConflictMessage,
   getNextCronExecutions,
+  formatScheduledScanInstant,
   isCronExpressionValid,
+  isIanaTimeZoneValid,
   validateScheduledScanStep,
   type ScheduledScanValidationInput,
 } from "@/lib/scheduled-scan-helpers"
@@ -17,6 +19,7 @@ const baseInput: ScheduledScanValidationInput = {
   scanWorkflow: "subdomain_discovery",
   configuration: "scan: true",
   isYamlValid: true,
+  timeZone: "UTC",
   cronExpression: "0 2 * * *",
 }
 
@@ -39,11 +42,30 @@ describe("scheduled scan helpers", () => {
     expect(isCronExpressionValid("")).toBe(false)
   })
 
-  it("calculates previews in UTC", () => {
+  it("calculates wall-clock previews in the selected IANA time zone", () => {
     expect(
-      getNextCronExecutions("0 9 * * *", new Date("2026-01-01T00:00:00Z"), 1)
+      getNextCronExecutions("0 19 * * *", "Asia/Shanghai", new Date("2026-01-01T00:00:00Z"), 1)
         .map((date) => date.toISOString())
-    ).toEqual(["2026-01-01T09:00:00.000Z"])
+    ).toEqual(["2026-01-01T11:00:00.000Z"])
+  })
+
+  it("accepts IANA names and rejects local or fixed-offset values", () => {
+    expect(isIanaTimeZoneValid("UTC")).toBe(true)
+    expect(isIanaTimeZoneValid("Asia/Shanghai")).toBe(true)
+    expect(isIanaTimeZoneValid("Local")).toBe(false)
+    expect(isIanaTimeZoneValid("UTC+8")).toBe(false)
+    expect(isIanaTimeZoneValid("+08:00")).toBe(false)
+    expect(isIanaTimeZoneValid("Not/AZone")).toBe(false)
+  })
+
+  it("formats trigger instants in the viewer time zone", () => {
+    const formatted = formatScheduledScanInstant(
+      "2026-01-01T11:00:00Z",
+      "en-US",
+      "America/Los_Angeles"
+    )
+
+    expect(formatted).toContain("03:00")
   })
 
   it("validates preset flow steps", () => {
@@ -53,6 +75,9 @@ describe("scheduled scan helpers", () => {
     expect(
       validateScheduledScanStep(withOverrides({ hasPreset: true, currentStep: 4, cronExpression: "0 2 * *" }))
     ).toBe("form.cronRequired")
+    expect(
+      validateScheduledScanStep(withOverrides({ hasPreset: true, currentStep: 4, timeZone: "" }))
+    ).toBe("form.timeZoneRequired")
     expect(
       validateScheduledScanStep(withOverrides({ hasPreset: true, currentStep: 2, scanWorkflow: null }))
     ).toBe("form.scanWorkflowRequired")
@@ -77,6 +102,9 @@ describe("scheduled scan helpers", () => {
     expect(
       validateScheduledScanStep(withOverrides({ currentStep: 4, cronExpression: "0 2 * *" }))
     ).toBe("form.cronRequired")
+    expect(
+      validateScheduledScanStep(withOverrides({ currentStep: 4, timeZone: "UTC+8" }))
+    ).toBe("form.timeZoneInvalid")
     expect(
       validateScheduledScanStep(withOverrides({ currentStep: 2, scanWorkflow: null }))
     ).toBe("form.scanWorkflowRequired")

@@ -37,12 +37,19 @@ type PackageBuildResults struct {
 }
 
 func buildPackages(discovery Discovery, results RuntimeImageBuildResults, version, outputRoot string) ([]PackageBuildArtifact, error) {
+	return buildPackagesWithVersionMap(discovery, results, version, nil, outputRoot)
+}
+
+// buildPackagesWithVersionMap keeps the development single-version API while
+// allowing the protected release lane to bind each archive to its own
+// content-addressed Runtime/Package input identity.
+func buildPackagesWithVersionMap(discovery Discovery, results RuntimeImageBuildResults, version string, versions map[string]string, outputRoot string) ([]PackageBuildArtifact, error) {
 	rawVersion := version
 	version = strings.TrimSpace(version)
-	if version == "" || rawVersion != version {
+	if versions == nil && (version == "" || rawVersion != version) {
 		return nil, fmt.Errorf("engine package version is required and must be canonical")
 	}
-	if !versioning.IsValidSemVer(version) {
+	if versions == nil && !versioning.IsValidSemVer(version) {
 		return nil, fmt.Errorf("%s", versioning.SemVerFieldMessage("engine package version"))
 	}
 	outputRoot = strings.TrimSpace(outputRoot)
@@ -51,6 +58,20 @@ func buildPackages(discovery Discovery, results RuntimeImageBuildResults, versio
 	}
 	if err := validateBuildResults(discovery, results, results.Mode); err != nil {
 		return nil, fmt.Errorf("validate image build results before package generation: %w", err)
+	}
+	if versions != nil {
+		if len(versions) != len(discovery.Engines) {
+			return nil, fmt.Errorf("package version map count %d does not match selected Engine discovery count %d", len(versions), len(discovery.Engines))
+		}
+		for _, source := range discovery.Engines {
+			packageVersion, ok := versions[source.EngineID]
+			if !ok {
+				return nil, fmt.Errorf("package version map is missing selected Engine %q", source.EngineID)
+			}
+			if packageVersion == "" || packageVersion != strings.TrimSpace(packageVersion) || !versioning.IsValidSemVer(packageVersion) {
+				return nil, fmt.Errorf("package version for %q must be one canonical semantic version", source.EngineID)
+			}
+		}
 	}
 	if err := os.MkdirAll(outputRoot, 0o755); err != nil {
 		return nil, fmt.Errorf("create engine package output root: %w", err)
@@ -62,7 +83,11 @@ func buildPackages(discovery Discovery, results RuntimeImageBuildResults, versio
 	artifacts := make([]PackageBuildArtifact, 0, len(discovery.Engines))
 	for _, source := range discovery.Engines {
 		result := byID[source.EngineID]
-		artifact, err := buildOnePackage(discovery.EngineRoot, source, result, version, outputRoot)
+		packageVersion := version
+		if versions != nil {
+			packageVersion = versions[source.EngineID]
+		}
+		artifact, err := buildOnePackage(discovery.EngineRoot, source, result, packageVersion, outputRoot)
 		if err != nil {
 			return nil, err
 		}

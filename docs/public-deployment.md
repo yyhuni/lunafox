@@ -147,6 +147,28 @@ docker compose restart
 docker compose down
 ```
 
+## Administrator login and password recovery
+
+After a fresh `docker compose up -d` deployment reports ready, open `PUBLIC_URL`
+and sign in with the default administrator account:
+
+| Username | Password |
+| --- | --- |
+| `admin` | `admin` |
+
+Change the password from the account settings after the first login.
+
+If the administrator password is forgotten, run this command from the deployment
+directory:
+
+```console
+docker compose exec server resetadmin
+```
+
+The command resets only the existing `admin` account, prints a new password once,
+and invalidates the administrator's existing sessions. It does not create the
+account when it is missing.
+
 ### Lifecycle scripts
 
 Every snapshot also ships seven small Bash entry points at the deployment root
@@ -264,6 +286,10 @@ configuration volume without a mode record adopts embedded mode by default.
 Adopting external mode from such a volume requires an explicit `DB_PASSWORD`
 that matches the persisted value.
 
+See [Configuration changes after first start](#configuration-changes-after-first-start)
+for the recovery path and the supported way to adopt a different deployment
+configuration.
+
 For embedded mode, back up `lunafox_config` with `lunafox_postgres`. For external
 mode, back up `lunafox_config` together with the external database using its
 operator-approved procedure. Deleting only the configuration volume loses the
@@ -296,6 +322,59 @@ upgrader updates its fixed `agent` service from the release Manifest. Existing
 remote Agent installation and `update_required` self-update behavior are
 unchanged.
 
+## Configuration changes after first start
+
+The first successful `config-init` run establishes the configuration boundary.
+It persists `DATABASE_MODE`, `DB_PASSWORD`, and `JWT_SECRET` in
+`lunafox_config`; `COMPOSE_PROFILES` must continue to derive from
+`DATABASE_MODE`. Later non-empty inputs are checked against that persisted
+state.
+
+This release does not support any of the following as an in-place operation:
+
+- Online database-mode migration is unsupported: changing `DATABASE_MODE`
+  between `embedded` and `external` by editing `.env` is not an in-place
+  operation.
+- Online credential rotation is unsupported: rotating the live database
+  password or `JWT_SECRET` by editing `.env` is not an in-place operation.
+- Automatically copying data between `lunafox_postgres` and an external
+  PostgreSQL server.
+- Deleting or replacing `lunafox_config` to force a new selection.
+
+In short, online database-mode migration is unsupported and online credential
+rotation is unsupported in this release.
+
+If an existing deployment is blocked after an accidental edit:
+
+1. Restore the original `DATABASE_MODE` and `COMPOSE_PROFILES` in `.env`.
+2. Restore the original non-empty `DB_PASSWORD` and `JWT_SECRET`, or remove
+   those new values so empty inputs reuse the persisted files.
+3. Keep `lunafox_config` and, for embedded mode, `lunafox_postgres`. For
+   external mode, keep the external database and its operator-managed backup.
+   Do not run `docker compose down --volumes`.
+4. Run `docker compose up -d`; if initialization still fails, inspect
+   `docker compose logs config-init` before changing any persisted state.
+
+To adopt a different mode or credentials, use a separate deployment:
+
+1. Keep the old deployment available and take verified backups of
+   `lunafox_config` plus `lunafox_postgres` for embedded mode, or the external
+   database for external mode.
+2. Create a new deployment directory and set the final `.env`,
+   `DATABASE_MODE`, `COMPOSE_PROFILES`, connection values, and secrets before
+   its first `docker compose up -d`.
+3. If data must be retained, use the operator's tested PostgreSQL
+   backup/restore or export/import procedure. Verify schema, application data,
+   connection access, and health before switching traffic. LunaFox does not
+   copy data, change remote roles, or provide an automatic rollback.
+4. Keep the old deployment as the rollback target until the new deployment
+   has been accepted.
+
+Credential rotation still requires coordination outside this Compose workflow.
+A PostgreSQL password change must be synchronized with the database role and
+the new deployment's `DB_PASSWORD`; changing `JWT_SECRET` can invalidate
+existing sessions. Do not edit files inside `lunafox_config` directly.
+
 ## System updates
 
 The release package fixes its `stable` or `canary` channel and public metadata
@@ -304,31 +383,61 @@ through the Upgrade Operation and the restricted Compose upgrader, and the
 lifecycle scripts neither copy nor bypass that state machine. The selected Registry comes from `.env` before
 first startup and is then preserved by upgrades. The Server fetches
 the current schema-v3 channel record over HTTPS, validates its bounded Manifest
-path and raw SHA-256, then caches the immutable Manifest in
-`lunafox_upgrade_state`. It only offers a candidate whose semantic version is
-newer than the running release.
+path and raw SHA-256, then caches the immutable Manifest by digest in
+`lunafox_upgrade_state`. It also downloads the manifest-bound composition from
+the version-isolated `manifests/<release-tag>/runtime-composition.json` path and
+stores the validated bytes under
+`.lunafox/upgrade/compositions/<composition-core-digest>.json`. The running
+Server binary remains the input to `upgrade.compatibilityRange`; the host's
+confirmed deployment inventory is the baseline for candidate availability and
+component comparison, so a confirmed frontend-only release is not offered
+again.
 
 An administrator can check, confirm, and start an eligible update through the
-existing frontend update control. Server sends only the Operation ID, fixed
-action, and Manifest digest through the shared Unix Socket. The Compose-managed
-upgrader continues if the browser closes or Server is recreated. It has no
-network port and uses a fixed project, file set, command argv, service allowlist,
-and `--no-deps` recreation. Server never receives the Docker Socket.
+existing frontend update control. Before Server pauses scheduling or cancels
+work, a v2-capable host returns a read-only scope plan bound to the candidate
+manifest, composition, confirmed baseline, and live container digests. Only an
+exact `{frontend}` difference with confirmed dynamic frontend upstream
+capability yields `frontend_only`; it pulls and recreates `frontend` with no
+dependencies or build. The plan is revalidated after the deployment lock; a
+stale plan fails before side effects and never widens itself to `full`. Server
+sends only the Operation ID, fixed action, and Manifest digest through the shared
+Unix Socket. The Compose-managed upgrader continues if the browser closes or
+Server is recreated. It has no network port and uses a fixed project, file set,
+command argv, service allowlist, and `--no-deps` recreation. Server never
+receives the Docker Socket.
 
 The upgrader's read-write Docker Socket grants control of the local Docker
 daemon. The service also mounts the extracted package directory so it can read
-`compose.yaml` and `.env` and atomically install `compose.override.yaml` after
-service, migration, Agent, health, and digest verification. Keep that override
-with the extracted directory: ordinary `docker compose up -d`, `start`, and
-`restart` automatically retain the confirmed image and version target without
-rewriting database, public address, or secret settings.
+`compose.yaml` and `.env`. A full operation atomically installs
+`compose.override.yaml` after service, migration, Agent, health, and digest
+verification. A `frontend_only` operation stages a patch that changes only the
+frontend image; the persistent override is promoted only after the Server sends
+`confirm`. Keep that override with the extracted directory: ordinary
+`docker compose up -d`, `start`, and `restart` automatically retain the
+confirmed image and version target without rewriting database, public address,
+or secret settings.
+
+The host replaces its confirmed deployment state only after complete
+verification. For `frontend_only`, it records the new component inventory only
+after the frontend digest, health, and public Nginx response converge; a failed
+or partial run never becomes a guessed baseline.
 
 The completion receipt proves only that the bounded Compose deployment work
 finished. Server reconciles it with the database Operation, journal, migration,
 service, API, and Agent evidence before reporting success. A migration failure
 or uncertain outcome requires recovery; an Agent timeout requires attention.
-The current `disposable-development` policy still provides no preserve-data
-rollback or automatic backup.
+The current `release-candidate` policy uses a frozen `000001` migration
+baseline and still provides no preserve-data rollback or automatic backup.
+Production recovery is limited to a verified backup restore or an approved
+forward fix; migration `down` files are test teardown only.
+
+A host that explicitly supports only `schema-v1` follows the established `full`
+path. A missing composition cache also permits only `full` planning; malformed
+or tampered composition, invalid v2 capability or plan data, and stale scoped
+plans fail closed before scheduler, cancellation, or Compose side effects. A
+candidate that declares a migration or changes any non-frontend component stays
+on the `full` path.
 
 Automatic update supports compatible image-only releases. A release that
 changes the Compose structure, named volumes, initialization resources, or the
@@ -378,23 +487,19 @@ When upgrading from a package that stored credentials only in `.env`, keep the
 existing non-empty `DB_PASSWORD` and `JWT_SECRET` for the first start of the new
 package. `config-init` copies them into `lunafox_config`. After that migration,
 empty inputs reuse the persisted files. A conflicting value fails explicitly;
-online password and JWT rotation are outside this deployment workflow. Moving
-an existing installation between embedded and external PostgreSQL requires a
-separate, operator-managed data migration and new configuration state.
-
-Administrator password reset remains available through the service command:
-
-```console
-docker compose exec server resetadmin
-```
+online credential rotation is unsupported in this release. Moving an existing
+installation between embedded and external PostgreSQL is not an in-place
+operation; see [Configuration changes after first start](#configuration-changes-after-first-start)
+for the separate deployment and operator-managed data migration path.
 
 ## Release and security boundary
 
-This is a single-node Compose deployment. It does not provide rolling upgrade,
-automatic backup, preserve-data rollback, or cross-node recovery. The current
-`disposable-development` migration baseline does not promise compatibility with
-existing persisted deployments. Release generation and contract checks use
-isolated fixtures; they do not touch operator volumes.
+This is a single-node Compose release-candidate deployment. It does not
+provide rolling upgrade, automatic backup, preserve-data rollback, or
+cross-node recovery. The published `000001` migration baseline is immutable
+and does not promise compatibility with existing persisted deployments. Release
+generation and contract checks use isolated fixtures; they do not touch
+operator volumes.
 
 The current Agent authentication credential remains a long-lived
 eight-character hexadecimal bearer. Agent TLS certificate-chain identity,

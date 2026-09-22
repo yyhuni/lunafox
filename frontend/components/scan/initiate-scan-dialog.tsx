@@ -90,6 +90,8 @@ export function InitiateScanDrawer({
     canProceedToReview,
     canStart,
     configValidationRef,
+    formValuesCacheRef,
+    workflowProfileDraft,
     setCurrentStep,
     setSelectedAgentID,
     setInputSource,
@@ -245,6 +247,8 @@ export function InitiateScanDrawer({
                     onResetConfig={handleResetWorkflowConfig}
                     onYamlValidationChange={handleYamlValidationChange}
                     configValidationRef={configValidationRef}
+                    formValuesCacheRef={formValuesCacheRef}
+                    workflowProfileDraft={workflowProfileDraft}
                   />
                 )}
               </section>

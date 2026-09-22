@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"math"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -57,8 +59,19 @@ func TestInitialSchemaBootstrapsEmptyPostgres(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read migration version: %v", err)
 	}
-	if version != 1 || dirty {
-		t.Fatalf("migration version = %d dirty=%t, want version 1 clean", version, dirty)
+	wantVersion := latestEmbeddedMigrationVersion(t)
+	if version != wantVersion || dirty {
+		t.Fatalf("migration version = %d dirty=%t, want version %d clean", version, dirty, wantVersion)
+	}
+	if err := serverdatabase.RunMigrations(db); err != nil {
+		t.Fatalf("rerun migrations at the current version: %v", err)
+	}
+	repeatedVersion, repeatedDirty, err := serverdatabase.GetMigrationVersion(db)
+	if err != nil {
+		t.Fatalf("read migration version after idempotent rerun: %v", err)
+	}
+	if repeatedVersion != wantVersion || repeatedDirty {
+		t.Fatalf("migration version after rerun = %d dirty=%t, want version %d clean", repeatedVersion, repeatedDirty, wantVersion)
 	}
 
 	for _, table := range []string{"registration_token", "agent", "agent_runtime_status", "agent_location", "server_location_snapshot"} {
@@ -83,6 +96,7 @@ func TestInitialSchemaBootstrapsEmptyPostgres(t *testing.T) {
 	verifyBlacklistPostgresContract(t, ctx, db)
 	verifyScanTriggerProvenancePostgresContract(t, ctx, db)
 	verifyScanInputSourcePostgresContract(t, ctx, db)
+	verifyScheduledScanTimeZonePostgresContract(t, ctx, db)
 	verifyAuthUserTokenVersionPostgresContract(t, ctx, db)
 	verifyTargetCleanupPostgresContract(t, ctx, db)
 
@@ -105,6 +119,33 @@ func TestInitialSchemaBootstrapsEmptyPostgres(t *testing.T) {
 	if count := countPublicTables(t, ctx, db, true); count != 0 {
 		t.Fatalf("second down migration left %d application tables", count)
 	}
+}
+
+func latestEmbeddedMigrationVersion(t *testing.T) uint {
+	t.Helper()
+	entries, err := os.ReadDir("migrations")
+	if err != nil {
+		t.Fatalf("read embedded migrations: %v", err)
+	}
+	pattern := regexp.MustCompile(`^(\d{6})_[a-z0-9][a-z0-9_-]*\.up\.sql$`)
+	var latest uint
+	for _, entry := range entries {
+		match := pattern.FindStringSubmatch(entry.Name())
+		if len(match) != 2 {
+			continue
+		}
+		value, err := strconv.ParseUint(match[1], 10, 32)
+		if err != nil {
+			t.Fatalf("parse migration version %s: %v", match[1], err)
+		}
+		if uint(value) > latest {
+			latest = uint(value)
+		}
+	}
+	if latest == 0 {
+		t.Fatal("no embedded up migration found")
+	}
+	return latest
 }
 
 func verifyScanTriggerProvenancePostgresContract(t *testing.T, ctx context.Context, db *sql.DB) {
@@ -151,8 +192,8 @@ func verifyScanTriggerProvenancePostgresContract(t *testing.T, ctx context.Conte
 
 	var scheduleID int
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO scheduled_scan (name, scan_workflow_id, input_source, target_id, is_enabled)
-		VALUES ('scan-trigger-provenance-schedule', 'scan-trigger-provenance-scheduled', 'scan_snapshot', $1, FALSE)
+		INSERT INTO scheduled_scan (name, scan_workflow_id, input_source, target_id, time_zone, is_enabled)
+		VALUES ('scan-trigger-provenance-schedule', 'scan-trigger-provenance-scheduled', 'scan_snapshot', $1, 'UTC', FALSE)
 		RETURNING id
 	`, targetID).Scan(&scheduleID); err != nil {
 		t.Fatalf("seed Schedule for provenance deletion rehearsal: %v", err)
@@ -203,14 +244,14 @@ func verifyScanInputSourcePostgresContract(t *testing.T, ctx context.Context, db
 	if _, err := db.ExecContext(ctx, `INSERT INTO scan (target_id, scan_workflow_id, trigger_type, status) VALUES ($1, 'input-source-contract', 'manual', 'pending')`, targetID); err == nil {
 		t.Fatal("scan baseline accepted a missing input_source")
 	}
-	if _, err := db.ExecContext(ctx, `INSERT INTO scheduled_scan (name, scan_workflow_id, target_id, is_enabled) VALUES ('input-source-contract', 'input-source-contract', $1, FALSE)`, targetID); err == nil {
+	if _, err := db.ExecContext(ctx, `INSERT INTO scheduled_scan (name, scan_workflow_id, target_id, time_zone, is_enabled) VALUES ('input-source-contract', 'input-source-contract', $1, 'UTC', FALSE)`, targetID); err == nil {
 		t.Fatal("scheduled_scan baseline accepted a missing input_source")
 	}
 	for _, source := range []string{"", "unknown"} {
 		if _, err := db.ExecContext(ctx, `INSERT INTO scan (target_id, scan_workflow_id, input_source, trigger_type, status) VALUES ($1, 'input-source-contract', $2, 'manual', 'pending')`, targetID, source); err == nil {
 			t.Fatalf("scan baseline accepted invalid input_source %q", source)
 		}
-		if _, err := db.ExecContext(ctx, `INSERT INTO scheduled_scan (name, scan_workflow_id, input_source, target_id, is_enabled) VALUES ('input-source-contract-' || $2, 'input-source-contract', $2, $1, FALSE)`, targetID, source); err == nil {
+		if _, err := db.ExecContext(ctx, `INSERT INTO scheduled_scan (name, scan_workflow_id, input_source, target_id, time_zone, is_enabled) VALUES ('input-source-contract-' || $2, 'input-source-contract', $2, $1, 'UTC', FALSE)`, targetID, source); err == nil {
 			t.Fatalf("scheduled_scan baseline accepted invalid input_source %q", source)
 		}
 	}
@@ -218,9 +259,36 @@ func verifyScanInputSourcePostgresContract(t *testing.T, ctx context.Context, db
 		if _, err := db.ExecContext(ctx, `INSERT INTO scan (target_id, scan_workflow_id, input_source, trigger_type, status) VALUES ($1, 'input-source-contract-' || $2, $2, 'manual', 'pending')`, targetID, source); err != nil {
 			t.Fatalf("scan baseline rejected valid input_source %q: %v", source, err)
 		}
-		if _, err := db.ExecContext(ctx, `INSERT INTO scheduled_scan (name, scan_workflow_id, input_source, target_id, is_enabled) VALUES ('input-source-contract-' || $2, 'input-source-contract-' || $2, $2, $1, FALSE)`, targetID, source); err != nil {
+		if _, err := db.ExecContext(ctx, `INSERT INTO scheduled_scan (name, scan_workflow_id, input_source, target_id, time_zone, is_enabled) VALUES ('input-source-contract-' || $2, 'input-source-contract-' || $2, $2, $1, 'UTC', FALSE)`, targetID, source); err != nil {
 			t.Fatalf("scheduled_scan baseline rejected valid input_source %q: %v", source, err)
 		}
+	}
+}
+
+func verifyScheduledScanTimeZonePostgresContract(t *testing.T, ctx context.Context, db *sql.DB) {
+	t.Helper()
+	var nullable string
+	var defaultValue sql.NullString
+	if err := db.QueryRowContext(ctx, `
+		SELECT is_nullable, column_default
+		FROM information_schema.columns
+		WHERE table_schema = 'public' AND table_name = 'scheduled_scan' AND column_name = 'time_zone'
+	`).Scan(&nullable, &defaultValue); err != nil {
+		t.Fatalf("read scheduled_scan.time_zone metadata: %v", err)
+	}
+	if nullable != "NO" || defaultValue.Valid {
+		t.Fatalf("scheduled_scan.time_zone metadata = nullable=%q default=%q, want NOT NULL without default", nullable, defaultValue.String)
+	}
+
+	var targetID int
+	if err := db.QueryRowContext(ctx, `INSERT INTO target (name, type) VALUES ('scheduled-scan-time-zone-contract.example', 'domain') RETURNING id`).Scan(&targetID); err != nil {
+		t.Fatalf("seed time-zone contract Target: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO scheduled_scan (name, scan_workflow_id, input_source, target_id, is_enabled) VALUES ('time-zone-missing', 'time-zone-contract', 'scan_snapshot', $1, FALSE)`, targetID); err == nil {
+		t.Fatal("scheduled_scan accepted a missing time_zone")
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO scheduled_scan (name, scan_workflow_id, input_source, target_id, time_zone, is_enabled) VALUES ('time-zone-utc', 'time-zone-contract', 'scan_snapshot', $1, 'UTC', FALSE)`, targetID); err != nil {
+		t.Fatalf("scheduled_scan rejected explicit UTC time_zone: %v", err)
 	}
 }
 

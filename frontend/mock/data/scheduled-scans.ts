@@ -12,8 +12,8 @@ function createMockScheduledConfiguration() {
 
 const mockScheduledScanClock = new Date()
 
-function getMockNextRunTime(cronExpression: string): string | null {
-  return getNextCronExecutions(cronExpression, mockScheduledScanClock, 1)[0]?.toISOString() ?? null
+function getMockNextRunTime(cronExpression: string, timeZone: string): string | null {
+  return getNextCronExecutions(cronExpression, timeZone, mockScheduledScanClock, 1)[0]?.toISOString() ?? null
 }
 
 const initialMockScheduledScans: ScheduledScan[] = [
@@ -29,9 +29,10 @@ const initialMockScheduledScans: ScheduledScan[] = [
     targetId: null,
     targetName: null,
     scanMode: 'organization',
+    timeZone: 'UTC',
     cronExpression: '0 2 * * *',
     isEnabled: true,
-    nextRunTime: getMockNextRunTime('0 2 * * *'),
+    nextRunTime: getMockNextRunTime('0 2 * * *', 'UTC'),
     lastRunTime: '2024-12-29T02:00:00Z',
     runCount: 45,
     successfulHandoffCount: 43,
@@ -51,9 +52,10 @@ const initialMockScheduledScans: ScheduledScan[] = [
     targetId: null,
     targetName: null,
     scanMode: 'organization',
+    timeZone: 'UTC',
     cronExpression: '0 3 * * 0',
     isEnabled: true,
-    nextRunTime: getMockNextRunTime('0 3 * * 0'),
+    nextRunTime: getMockNextRunTime('0 3 * * 0', 'UTC'),
     lastRunTime: '2024-12-29T03:00:00Z',
     runCount: 12,
     successfulHandoffCount: 12,
@@ -73,9 +75,10 @@ const initialMockScheduledScans: ScheduledScan[] = [
     targetId: 12,
     targetName: 'api.acme.com',
     scanMode: 'target',
+    timeZone: 'UTC',
     cronExpression: '0 * * * *',
     isEnabled: true,
-    nextRunTime: getMockNextRunTime('0 * * * *'),
+    nextRunTime: getMockNextRunTime('0 * * * *', 'UTC'),
     lastRunTime: '2024-12-29T11:00:00Z',
     runCount: 720,
     successfulHandoffCount: 718,
@@ -95,6 +98,7 @@ const initialMockScheduledScans: ScheduledScan[] = [
     targetId: null,
     targetName: null,
     scanMode: 'organization',
+    timeZone: 'UTC',
     cronExpression: '0 0 1 * *',
     isEnabled: false,
     nextRunTime: null,
@@ -117,9 +121,10 @@ const initialMockScheduledScans: ScheduledScan[] = [
     targetId: 8,
     targetName: 'retailmax.com',
     scanMode: 'target',
+    timeZone: 'UTC',
     cronExpression: '0 4 * * *',
     isEnabled: true,
-    nextRunTime: getMockNextRunTime('0 4 * * *'),
+    nextRunTime: getMockNextRunTime('0 4 * * *', 'UTC'),
     lastRunTime: '2024-12-29T04:00:00Z',
     runCount: 30,
     successfulHandoffCount: 29,

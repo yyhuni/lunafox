@@ -10,10 +10,10 @@ describe("scheduled-scan-dialog-state contract", () => {
     expect(source).toContain("from \"react\"")
   })
 
-  it("keeps create form and previews UTC-only", () => {
-    expect(source).not.toContain("getBrowserTimeZone")
-    expect(source).not.toContain("timeZone: timeZone.trim()")
+  it("prefills the browser IANA zone and uses it for create previews", () => {
+    expect(source).toContain("getBrowserTimeZone")
+    expect(source).toContain("timeZone: timeZone.trim()")
     expect(source).toContain("getNextCronExecutions(cron")
-    expect(source).toContain('timeZone: "UTC"')
+    expect(source).toContain("getNextCronExecutions(cron, zone")
   })
 })

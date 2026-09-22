@@ -104,6 +104,24 @@ docker compose restart
 docker compose down
 ```
 
+## 管理员登录与密码找回
+
+全新部署执行 `docker compose up -d` 并报告就绪后，打开 `PUBLIC_URL`，使用默认管理员账号登录：
+
+| 用户名 | 密码 |
+| --- | --- |
+| `admin` | `admin` |
+
+首次登录后，请前往账号设置及时修改密码。
+
+如果忘记管理员密码，请在部署目录中运行：
+
+```console
+docker compose exec server resetadmin
+```
+
+该命令只重置现有的 `admin` 账号，只显示一次新密码，并使管理员现有会话失效。账号不存在时不会创建账号。
+
 ### 生命周期脚本
 
 每个快照还会在部署根目录提供七个小型 Bash 入口，以及共享 helper `lunafox-lifecycle.sh`。它们封装相同的 Compose 命令，补充 Docker 无法表达的检查，并且不会维护第二套部署状态：
@@ -164,6 +182,8 @@ Compose 通过 one-shot services 表达初始化：
 
 重复启动会复用 `lunafox_config` 中的文件。首次初始化成功后，改变 `DATABASE_MODE` 会在任何数据库 consumer 启动前失败。之后提供的非空 `DB_PASSWORD` 或 `JWT_SECRET` 如果与持久化值不同也会失败；Compose 不会轮换在线 credential。没有 mode record 的旧 configuration volume 默认采用 embedded mode。从此类 volume 采用 external mode 时，需要提供与持久化值匹配的明确 `DB_PASSWORD`。
 
+恢复路径以及采用其他部署配置的支持方式，请参阅[首次启动后的配置变更](#configuration-changes-after-first-start)。
+
 对于 embedded mode，请将 `lunafox_config` 与 `lunafox_postgres` 一起备份。对于 external mode，请按照 operator 批准的流程，将 `lunafox_config` 与外部数据库一起备份。只删除 configuration volume 会丢失连接所选数据库所需的 password。
 
 credential 是 `lunafox_agent_state` 中 mode-0600 的普通 JSON 文件，绝不会通过主机环境或 Docker container metadata 传递。Registration、database binding 和 credential publication 是串行的。重复成功执行 `docker compose up -d` 会复用同一个已注册 Agent。缺失、格式错误、权限过宽、发布不完整、被删除或与数据库不一致的 identity state 都会返回明确的修复错误，绝不会静默注册另一个 Agent。
@@ -174,17 +194,48 @@ preflight 会在业务 bootstrap 之前检查实际 Docker socket、Linux execut
 
 Compose 管理的 Agent 禁用了容器内 self-update。受限 upgrader 会根据 release Manifest 更新固定的 `agent` service。现有远程 Agent 安装和 `update_required` self-update 行为不变。
 
+## 首次启动后的配置变更
+
+首次成功运行 `config-init` 后，配置边界就会建立。它会将 `DATABASE_MODE`、`DB_PASSWORD` 和 `JWT_SECRET` 持久化到 `lunafox_config`；`COMPOSE_PROFILES` 必须继续由 `DATABASE_MODE` 派生。之后提供的非空输入都会与持久化状态进行校验。
+
+本版本不支持以下任何一种原地操作：
+
+- 不支持在线数据库模式迁移：通过修改 `.env` 在 `embedded` 和 `external` 之间切换 `DATABASE_MODE`，不属于原地操作。
+- 不支持在线凭据轮换：通过修改 `.env` 轮换在线数据库密码或 `JWT_SECRET`，不属于原地操作。
+- 在 `lunafox_postgres` 与外部 PostgreSQL 服务器之间自动复制数据。
+- 删除或替换 `lunafox_config`，以强制选择新配置。
+
+简而言之，本版本不支持在线数据库模式迁移，也不支持在线凭据轮换。
+
+如果已有部署因误改配置而被阻塞：
+
+1. 在 `.env` 中恢复原来的 `DATABASE_MODE` 和 `COMPOSE_PROFILES`。
+2. 恢复原来的非空 `DB_PASSWORD` 和 `JWT_SECRET`，或者删除新填入的值，使空输入复用持久化文件。
+3. 保留 `lunafox_config`；embedded mode 还要保留 `lunafox_postgres`。external mode 则要保留外部数据库及其由运维管理的备份。不要执行 `docker compose down --volumes`。
+4. 运行 `docker compose up -d`；如果初始化仍然失败，在修改任何持久化状态前先检查 `docker compose logs config-init`。
+
+如需采用其他模式或凭据，请使用独立的新部署：
+
+1. 保留旧部署，并对 embedded mode 的 `lunafox_config` 和 `lunafox_postgres`，或 external mode 的外部数据库，分别执行已验证的备份。
+2. 创建新的部署目录，在第一次 `docker compose up -d` 前写入最终的 `.env`、`DATABASE_MODE`、`COMPOSE_PROFILES`、连接参数和 secrets。
+3. 如果必须保留数据，请使用运维方已验证的 PostgreSQL backup/restore 或 export/import 流程。在切换流量前验证 schema、应用数据、连接访问和 health。LunaFox 不会复制数据、修改远程 role，也不提供自动 rollback。
+4. 新部署验收完成前，保留旧部署作为 rollback 目标。
+
+凭据轮换仍需在此 Compose workflow 之外协调完成。PostgreSQL 密码变更必须与数据库 role 和新部署的 `DB_PASSWORD` 同步；变更 `JWT_SECRET` 可能使现有 session 失效。不要直接编辑 `lunafox_config` 中的文件。
+
 ## 系统更新
 
-发布包会在 `compose.yaml` 中固定其 `stable` 或 `canary` channel 和 public metadata source。没有主机 update script：版本变化通过 Upgrade Operation 和受限 Compose upgrader 完成，生命周期脚本既不复制也不绕过该状态机。所选 Registry 来自首次启动前的 `.env`，之后由升级保留。Server 通过 HTTPS 获取当前 schema-v3 channel record，校验其受限的 Manifest path 和原始 SHA-256，然后将不可变 Manifest 缓存到 `lunafox_upgrade_state`。只有语义版本高于当前 release 的 candidate 才会提供。
+发布包会在 `compose.yaml` 中固定其 `stable` 或 `canary` channel 和 public metadata source。没有主机 update script：版本变化通过 Upgrade Operation 和受限 Compose upgrader 完成，生命周期脚本既不复制也不绕过该状态机。所选 Registry 来自首次启动前的 `.env`，之后由升级保留。Server 通过 HTTPS 获取当前 schema-v3 channel record，校验其受限的 Manifest path 和原始 SHA-256，然后按 digest 将不可变 Manifest 缓存到 `lunafox_upgrade_state`。同时，它会从按版本隔离的 `manifests/<release-tag>/runtime-composition.json` 路径下载 manifest 绑定的 composition，并将已验证字节保存到 `.lunafox/upgrade/compositions/<composition-core-digest>.json`。运行中的 Server binary 仍是 `upgrade.compatibilityRange` 的输入；host 的 confirmed deployment inventory 才是 candidate 可用性和组件比较的 baseline，因此已确认的 frontend-only release 不会再次被提供。
 
-管理员可以通过现有 frontend update control 检查、确认并启动符合条件的更新。Server 只通过共享 Unix Socket 发送 Operation ID、固定 action 和 Manifest digest。即使浏览器关闭或 Server 被重建，Compose 管理的 upgrader 仍会继续。它没有 network port，并使用固定的 project、file set、command argv、service allowlist 和 `--no-deps` recreation。Server 永远不会收到 Docker Socket。
+管理员可以通过现有 frontend update control 检查、确认并启动符合条件的更新。在 Server 暂停调度或取消 work 之前，支持 v2 的 host 会返回一个只读 scope plan，将 candidate manifest、composition、confirmed baseline 和 live container digest 绑定在一起。只有确认过 dynamic frontend upstream 能力、且差异严格为 `{frontend}` 时，才会产生 `frontend_only`；它只在无 dependencies、无 build 的情况下 pull 和 recreate `frontend`。deployment lock 获取后会重新验证该 plan；stale plan 会在副作用前失败，绝不会自行扩大为 `full`。Server 只通过共享 Unix Socket 发送 Operation ID、固定 action 和 Manifest digest。即使浏览器关闭或 Server 被重建，Compose 管理的 upgrader 仍会继续。它没有 network port，并使用固定的 project、file set、command argv、service allowlist 和 `--no-deps` recreation。Server 永远不会收到 Docker Socket。
 
-upgrader 的可写 Docker Socket 赋予它控制本地 Docker daemon 的能力。该服务还挂载解压后的 package directory，以便读取 `compose.yaml` 和 `.env`，并在完成 service、migration、Agent、health 和 digest 校验后原子安装 `compose.override.yaml`。请将该 override 与解压目录一起保留：普通的 `docker compose up -d`、`start` 和 `restart` 会自动保留已确认的 image 和 version target，不会重写 database、public address 或 secret 设置。
+upgrader 的可写 Docker Socket 赋予它控制本地 Docker daemon 的能力。该服务还挂载解压后的 package directory，以便读取 `compose.yaml` 和 `.env`。full operation 会在完成 service、migration、Agent、health 和 digest 校验后原子安装 `compose.override.yaml`；`frontend_only` operation 只暂存修改 frontend image 的 patch，只有 Server 发送 `confirm` 后才晋级持久化 override。请将该 override 与解压目录一起保留：普通的 `docker compose up -d`、`start` 和 `restart` 会自动保留已确认的 image 和 version target，不会重写 database、public address 或 secret 设置。
 
-完成 receipt 只证明受限的 Compose 部署工作结束。Server 会将它与 database Operation、journal、migration、service、API 和 Agent evidence 对账后才报告成功。migration 失败或结果不确定时需要恢复；Agent 超时需要人工处理。当前的 `disposable-development` policy 仍不提供保留数据的 rollback 或自动备份。
+host 只有在完整验证后才会替换 confirmed deployment state。对于 `frontend_only`，只有 frontend digest、health 和 public Nginx response 收敛后才会记录新的 component inventory；失败或部分执行绝不会被猜测为新的 baseline。
 
-自动更新支持兼容的 image-only releases。改变 Compose 结构、named volumes、initialization resources 或 upgrader protocol 的 release 必须声明不兼容；请下载新的 deployment ZIP，保留文档说明的状态，检查其 README，并从新的解压目录运行 Compose。运行中的 release 必须满足 Manifest 的 `upgrade.compatibilityRange`；否则更新仍可见，但不能创建自动 Upgrade Operation。如果主机无法向 upgrader container 暴露本地 Docker Socket，这也是手工 fallback。
+完成 receipt 只证明受限的 Compose 部署工作结束。Server 会将它与 database Operation、journal、migration、service、API 和 Agent evidence 对账后才报告成功。migration 失败或结果不确定时需要恢复；Agent 超时需要人工处理。当前 `release-candidate` policy 使用冻结的 `000001` migration baseline，仍不提供保留数据的 rollback 或自动备份。生产恢复只能使用已验证的备份恢复或批准的前向修复；`down` migration 仅用于测试 teardown。
+
+自动更新支持兼容的 image-only releases。明确只支持 `schema-v1` 的 host 沿用既有 `full` 路径；缺少 composition cache 也只允许 `full` planning。损坏或篡改的 composition、无效的 v2 capability/plan 数据以及 stale scoped plan 会在 scheduler、cancellation 或 Compose 副作用前 fail closed，不会静默降级。声明 migration 或修改任何非 frontend 组件的 candidate 同样保持 `full` 路径。改变 Compose 结构、named volumes、initialization resources 或 upgrader protocol 的 release 必须声明不兼容；请下载新的 deployment ZIP，保留文档说明的状态，检查其 README，并从新的解压目录运行 Compose。运行中的 release 必须满足 Manifest 的 `upgrade.compatibilityRange`；否则更新仍可见，但不能创建自动 Upgrade Operation。如果主机无法向 upgrader container 暴露本地 Docker Socket，这也是手工 fallback。
 
 ## 日志
 
@@ -198,17 +249,11 @@ collector 保留现有 selectors `{component="server",container_name="lunafox-se
 
 使用 `docker compose logs config-init agent-preflight migrate bootstrap cert-init agent upgrader` 诊断失败的 one-shot 或 Agent 启动。修正配置或明确修复命名 volume 状态，然后再次执行 `docker compose up -d`。Nginx readiness probe 使用 `127.0.0.1` 以匹配其 IPv4 listener，即使在 `localhost` 优先解析为 IPv6 的主机上也是如此。对于普通初始化，Compose exit status、dependency conditions、container state 和 service health 就是部署状态。Upgrade journal 和完成 receipt 文件只存在于 `lunafox_upgrade_state`，并由 Upgrade Operation API 对账。
 
-从只把 credential 存在 `.env` 的包升级时，新包首次启动仍需保留已有的非空 `DB_PASSWORD` 和 `JWT_SECRET`。`config-init` 会将它们复制到 `lunafox_config`。完成迁移后，空输入会复用持久化文件。冲突值会明确失败；在线 password 和 JWT rotation 不属于此部署 workflow。在 embedded 和 external PostgreSQL 之间迁移现有安装，需要单独的运维数据迁移和新的配置状态。
-
-管理员密码仍可通过 service command 重置：
-
-```console
-docker compose exec server resetadmin
-```
+从只把 credential 存在 `.env` 的包升级时，新包首次启动仍需保留已有的非空 `DB_PASSWORD` 和 `JWT_SECRET`。`config-init` 会将它们复制到 `lunafox_config`。完成迁移后，空输入会复用持久化文件。冲突值会明确失败；本版本不支持在线凭据轮换。在 embedded 和 external PostgreSQL 之间迁移现有安装不属于原地操作；请参阅[首次启动后的配置变更](#configuration-changes-after-first-start)，了解独立部署和运维数据迁移路径。
 
 ## 发布与安全边界
 
-这是单节点 Compose 部署，不提供滚动升级、自动备份、保留数据 rollback 或跨节点恢复。当前的 `disposable-development` migration baseline 不承诺与已有持久化部署兼容。Release 生成和契约检查使用隔离 fixture，不会触碰操作者的 volumes。
+这是单节点 Compose release-candidate 部署，不提供滚动升级、自动备份、保留数据 rollback 或跨节点恢复。已发布的 `000001` migration baseline 不可变，也不承诺与已有持久化部署兼容。Release 生成和契约检查使用隔离 fixture，不会触碰操作者的 volumes。
 
 当前 Agent authentication credential 仍是长期有效的八字符十六进制 bearer。Agent TLS certificate-chain identity、replay protection、rotation 和 revocation 仍延期。TLS 和 credential hardening 需要单独的安全变更。本 package 用于由操作者拥有或控制的基础设施上的 self-hosted 场景；封闭 Agent artifact 仍受 `NOTICE-CLOSED-ARTIFACTS.md` 约束。
 

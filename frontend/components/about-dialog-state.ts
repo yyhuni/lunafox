@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl"
 
 import {
   getUpgradeErrorMessage,
+  isFrontendOnlyUpgrade,
   useCheckForUpdatesAction,
   useCreateUpgradeOperation,
   useRetryUpgradeOperation,
@@ -17,6 +18,7 @@ type TranslationFn = (key: string, params?: Record<string, string | number | Dat
 
 export type AboutDialogState = {
   t: TranslationFn
+  githubRepo: string
   isChecking: boolean
   updateResult: UpdateCheckResult | null
   checkError: string | null
@@ -109,7 +111,6 @@ export function useAboutDialogState({ enabled = true, onUpgradeAccepted }: UseAb
         onSuccess: () => {
           setConfirmOpen(false)
           onUpgradeAccepted?.()
-          if (router) replaceWithRouteProgress(router, "/system-upgrade/")
         },
         onError: (error) => setCheckError(getUpgradeErrorMessage(error)),
         onSettled: () => { createInFlightRef.current = false },
@@ -118,18 +119,18 @@ export function useAboutDialogState({ enabled = true, onUpgradeAccepted }: UseAb
       createInFlightRef.current = false
       setCheckError(getUpgradeErrorMessage(error))
     }
-  }, [createMutation, onUpgradeAccepted, router, updateResult])
+  }, [createMutation, onUpgradeAccepted, updateResult])
 
   const handleRetry = React.useCallback(() => {
     if (!operation.operationId || retryMutation.isPending) return
     retryMutation.mutate(operation.operationId, {
       onSuccess: () => {
         onUpgradeAccepted?.()
-        if (router) replaceWithRouteProgress(router, "/system-upgrade/")
+        if (router && !isFrontendOnlyUpgrade(operation.data)) replaceWithRouteProgress(router, "/system-upgrade/")
       },
       onError: (error) => setCheckError(getUpgradeErrorMessage(error)),
     })
-  }, [onUpgradeAccepted, operation.operationId, retryMutation, router])
+  }, [onUpgradeAccepted, operation.data, operation.operationId, retryMutation, router])
 
   const handleViewStatus = React.useCallback(() => {
     if (router) replaceWithRouteProgress(router, "/system-upgrade/")
@@ -138,6 +139,7 @@ export function useAboutDialogState({ enabled = true, onUpgradeAccepted }: UseAb
   const currentVersion = updateResult?.currentVersion || versionData?.version || process.env.NEXT_PUBLIC_IMAGE_TAG?.trim() || "-"
   return {
     t,
+    githubRepo: versionData?.githubRepo || "https://github.com/yyhuni/lunafox",
     isChecking,
     updateResult,
     checkError: checkError || (operation.isError && !operation.isReconnecting ? getUpgradeErrorMessage(operation.error) : null),

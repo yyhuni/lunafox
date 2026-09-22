@@ -52,6 +52,7 @@ export function AddTargetDialog({
     handleSubmit,
     targetCount,
     invalidTargets,
+    isTargetBatchOverLimit,
     isFormValid,
     lineNumbersRef,
     textareaRef,
@@ -110,6 +111,7 @@ export function AddTargetDialog({
         formTargets={formData.targets}
         targetCount={targetCount}
         invalidTargets={invalidTargets}
+        isTargetBatchOverLimit={isTargetBatchOverLimit}
         lineNumbersRef={lineNumbersRef}
         textareaRef={textareaRef}
         onInputChange={(value) => handleInputChange("targets", value)}

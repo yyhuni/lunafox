@@ -7,8 +7,9 @@ const source = readFileSync(path.resolve(process.cwd(), "components/shared/data-
 describe("row-actions contract", () => {
   it("keeps shared tooltip ownership and dense action layout in the helper layer", () => {
     expect(source).toContain("export function DenseRowActionOwner")
-    expect(source).toContain("TooltipProvider delay={300}")
-    expect(source).not.toContain("TooltipProvider delayDuration={300}")
+    expect(source).toContain("<TooltipProvider>")
+    expect(source).not.toContain("TooltipProvider delay=")
+    expect(source).not.toContain("TooltipProvider delayDuration=")
     expect(source).toContain('data-row-click-exempt="true"')
     expect(source).toContain("justify-end gap-1")
   })

@@ -97,7 +97,7 @@ func seedScheduledScanOverviewModel(t *testing.T, repo *ScheduledScanRepository,
 	t.Helper()
 	if err := repo.db.Create(&scheduledScanModel{
 		ID: id, Name: "schedule", ScanWorkflowID: "default", Configuration: []byte(`{}`), TargetID: &targetID,
-		CronExpression: "0 * * * *", IsEnabled: enabled, NextRunTime: nextRunTime,
+		TimeZone: "UTC", CronExpression: "0 * * * *", IsEnabled: enabled, NextRunTime: nextRunTime,
 	}).Error; err != nil {
 		t.Fatalf("seed schedule %d: %v", id, err)
 	}

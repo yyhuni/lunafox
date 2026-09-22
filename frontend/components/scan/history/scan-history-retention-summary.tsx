@@ -53,7 +53,7 @@ export function ScanHistoryRetentionSummary() {
     : t("retention.inactiveCleanupDescription", { duration })
 
   return (
-    <TooltipProvider delay={100}>
+    <TooltipProvider>
       <Tooltip>
         <TooltipTrigger
           render={

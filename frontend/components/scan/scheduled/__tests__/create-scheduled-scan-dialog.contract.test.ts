@@ -53,4 +53,9 @@ describe("create-scheduled-scan-dialog contract", () => {
     expect(source).toContain('className="space-y-3 border-t pt-3"')
     expect(source).not.toContain('className="space-y-5 border-t pt-6"')
   })
+
+  it("passes create-session drafts through the shared configuration step", () => {
+    expect(source).toContain("formValuesCacheRef={formValuesCacheRef}")
+    expect(source).toContain("workflowProfileDraft={workflowProfileDraft}")
+  })
 })

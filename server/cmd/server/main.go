@@ -47,6 +47,12 @@ func main() {
 		}
 		return
 	}
+	if command.kind == serverCommandEngineInventory {
+		if code := runEngineInventoryFromRuntime(); code != 0 {
+			os.Exit(code)
+		}
+		return
+	}
 	if command.kind == serverCommandFingerprintBootstrap {
 		databaseConfig, err := config.LoadDatabaseConfig()
 		if err != nil {

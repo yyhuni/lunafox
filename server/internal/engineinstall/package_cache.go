@@ -64,6 +64,37 @@ func (installer CacheInstaller) LoadOrRebuildPackage(expectedDigest ociartifact.
 	return installer.loadOrRebuildPackageLocked(parsedDigest, cacheKey)
 }
 
+// LoadExactPackage verifies an already-published archive and its expanded
+// derivative without creating, deleting, or repairing any cache path. It is
+// used by read-only control-plane observations where a cache repair would
+// otherwise turn an identity check into a deployment mutation.
+func (installer CacheInstaller) LoadExactPackage(expectedDigest ociartifact.PackageDigest) (CachedEnginePackage, error) {
+	parsedDigest, cacheKey, err := installer.validatePackageCacheRequest(expectedDigest)
+	if err != nil {
+		return CachedEnginePackage{}, err
+	}
+	archivePath, expandedPath := installer.packageCachePaths(cacheKey)
+	if err := verifyPackageArchive(archivePath, parsedDigest, installer.MaxArchiveBytes); err != nil {
+		return CachedEnginePackage{}, err
+	}
+	entries, err := readPackageArchive(archivePath, installer.MaxArchiveBytes)
+	if err != nil {
+		return CachedEnginePackage{}, err
+	}
+	layout, err := loadReadOnlyExpandedPackage(expandedPath, installer.MaxArchiveBytes)
+	if err != nil {
+		return CachedEnginePackage{}, fmt.Errorf("load exact expanded engine package v2 cache: %w", err)
+	}
+	matches, err := expandedPackageMatchesArchive(expandedPath, entries)
+	if err != nil {
+		return CachedEnginePackage{}, fmt.Errorf("compare exact expanded engine package v2 cache: %w", err)
+	}
+	if !matches {
+		return CachedEnginePackage{}, fmt.Errorf("expanded engine package v2 cache does not match archive")
+	}
+	return CachedEnginePackage{PackageDigest: parsedDigest, RootPath: expandedPath, Layout: layout}, nil
+}
+
 // StageAndPromotePackage consumes one package-layer attempt. It verifies the
 // exact descriptor size and packageDigest while streaming to private staging,
 // validates the closed package layout, and runs all package-dependent remote

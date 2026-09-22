@@ -114,7 +114,7 @@ if output="$(run_init "$GENERATED_DIR" "$EMPTY_DB" "$EMPTY_JWT" external databas
 	fail "database mode switch was accepted"
 fi
 case "$output" in
-*"DATABASE_MODE conflicts with the persisted value"*) ;;
+*"DATABASE_MODE conflicts with the persisted value"*"online database-mode migration is unsupported"*"configuration-changes-after-first-start"*) ;;
 *) fail "database mode conflict did not produce an actionable error" ;;
 esac
 [ "$(cat "$GENERATED_DIR/database-mode")" = embedded ] || fail "database mode conflict changed the persisted mode"
@@ -146,13 +146,26 @@ if output="$(run_init "$CUSTOM_DIR" "$TMP_DIR/conflicting-db" "$CUSTOM_JWT" 2>&1
 	fail "conflicting database password was accepted"
 fi
 case "$output" in
-*"input conflicts with the persisted value"*) ;;
+*"input conflicts with the persisted value"*"online credential rotation is unsupported"*"configuration-changes-after-first-start"*) ;;
 *) fail "conflicting database password did not produce an actionable error" ;;
 esac
 case "$output" in
 *'operator database'* | *'different-database-password'*) fail "failure output exposed a secret" ;;
 esac
 cmp -s "$CUSTOM_DB" "$CUSTOM_DIR/db-password" || fail "conflict changed the persisted database password"
+
+printf '%s' 'different-jwt-secret' >"$TMP_DIR/conflicting-jwt"
+if output="$(run_init "$CUSTOM_DIR" "$CUSTOM_DB" "$TMP_DIR/conflicting-jwt" 2>&1)"; then
+	fail "conflicting JWT secret was accepted"
+fi
+case "$output" in
+*"input conflicts with the persisted value"*"online credential rotation is unsupported"*"configuration-changes-after-first-start"*) ;;
+*) fail "conflicting JWT secret did not produce an actionable error" ;;
+esac
+case "$output" in
+*'different-jwt-secret'*) fail "failure output exposed a JWT secret" ;;
+esac
+cmp -s "$CUSTOM_JWT" "$CUSTOM_DIR/jwt-secret" || fail "conflict changed the persisted JWT secret"
 
 chmod 0644 "$CUSTOM_DIR/jwt-secret"
 if run_init "$CUSTOM_DIR" "$CUSTOM_DB" "$CUSTOM_JWT" >/dev/null 2>&1; then

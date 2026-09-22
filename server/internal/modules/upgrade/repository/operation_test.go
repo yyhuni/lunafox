@@ -99,6 +99,39 @@ func TestUpgradeOperationRepositoryRoundTripsAuditFields(t *testing.T) {
 	}
 }
 
+func TestUpgradeOperationRepositoryRoundTripsFrontendScopeFacts(t *testing.T) {
+	repository := newUpgradeOperationRepositoryForTest(t)
+	operation := newTestOperation()
+	operation.ExecutionMode = domain.ExecutionModeFrontendOnly
+	operation.WorkDisposition = domain.WorkDispositionNotRequired
+	operation.PlanSummary = domain.PlanSummary{TouchedServices: []string{"frontend"}}
+	operation.PlanDigest = "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+	operation.BaselineDeploymentDigest = "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+	operation.ConfirmedDeploymentVersion = "1.2.2"
+	operation.MigrationType = "none"
+	operation.MigrationStatus = domain.MigrationStatusNotStarted
+	operation.CancelledScanCount = 0
+	operation.CancelledTaskCount = 0
+	operation.AgentDesiredVersion = ""
+	operation.AgentTargetDigest = ""
+	operation.AgentSummary = domain.AgentSummary{}
+	operation.AgentExpectations = nil
+	operation.AgentVerificationDeadline = nil
+	if _, created, err := repository.CreateOrGet(context.Background(), operation); err != nil || !created {
+		t.Fatalf("CreateOrGet() created=%t err=%v", created, err)
+	}
+	loaded, err := repository.Get(context.Background(), operation.OperationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.ExecutionMode != domain.ExecutionModeFrontendOnly || loaded.WorkDisposition != domain.WorkDispositionNotRequired || len(loaded.PlanSummary.TouchedServices) != 1 || loaded.PlanSummary.TouchedServices[0] != "frontend" {
+		t.Fatalf("loaded frontend scope facts = %#v", loaded)
+	}
+	if loaded.PlanDigest != operation.PlanDigest || loaded.BaselineDeploymentDigest != operation.BaselineDeploymentDigest || loaded.ConfirmedDeploymentVersion != "1.2.2" {
+		t.Fatalf("loaded plan audit facts = %#v", loaded)
+	}
+}
+
 func TestUpgradeOperationRepositoryBindsRequestAndActiveOperation(t *testing.T) {
 	repository := newUpgradeOperationRepositoryForTest(t)
 	original := newTestOperation()

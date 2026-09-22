@@ -18,7 +18,7 @@ func TestParseMigrationPolicyStrictly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseMigrationPolicy() error = %v", err)
 	}
-	if policy.Phase != "disposable-development" || policy.SchemaVersion != 1 || policy.DataRetainingDeploymentAllowed {
+	if policy.Phase != "release-candidate" || policy.SchemaVersion != 1 || policy.DataRetainingDeploymentAllowed || policy.BaselineMutable || policy.RollbackPolicy == "" || policy.ChecksumAlgorithm == "" || policy.BaselineChecksum == "" || policy.MigrationManifest == "" {
 		t.Fatalf("unexpected policy %#v", policy)
 	}
 
@@ -27,7 +27,7 @@ func TestParseMigrationPolicyStrictly(t *testing.T) {
 		body string
 	}{
 		{name: "unknown field", body: strings.Replace(string(raw), `"phase":`, `"unknown": true, "phase":`, 1)},
-		{name: "missing required field", body: strings.Replace(string(raw), `  "phase": "disposable-development",`, "", 1)},
+		{name: "missing required field", body: strings.Replace(string(raw), `  "phase": "release-candidate",`, "", 1)},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			_, err := ParseMigrationPolicy([]byte(test.body))

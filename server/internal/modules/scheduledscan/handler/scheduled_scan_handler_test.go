@@ -63,7 +63,9 @@ func newScheduledScanServiceForHandlerTest(store *scheduledScanHandlerStore) *sc
 
 func (store *scheduledScanHandlerStore) Create(_ context.Context, scan *scheduledapp.ScheduledScanCreate) (*scheduledapp.ScheduledScan, error) {
 	store.created = scan
-	return scheduledScanRecord(1, scan.Name, scan.IsEnabled, scan.InputSource), nil
+	record := scheduledScanRecord(1, scan.Name, scan.IsEnabled, scan.InputSource)
+	record.TimeZone = scan.TimeZone
+	return record, nil
 }
 
 func (store *scheduledScanHandlerStore) Update(_ context.Context, id int, scan *scheduledapp.ScheduledScanUpdate) (*scheduledapp.ScheduledScan, error) {
@@ -80,7 +82,11 @@ func (store *scheduledScanHandlerStore) Update(_ context.Context, id int, scan *
 	if scan.InputSource != nil {
 		inputSource = *scan.InputSource
 	}
-	return scheduledScanRecord(id, name, enabled, inputSource), nil
+	record := scheduledScanRecord(id, name, enabled, inputSource)
+	if scan.TimeZone != nil {
+		record.TimeZone = *scan.TimeZone
+	}
+	return record, nil
 }
 
 func (store *scheduledScanHandlerStore) BatchUpdateStatus(_ context.Context, updates []scheduledapp.ScheduledScanStatusUpdate) (int, error) {
@@ -185,7 +191,7 @@ func TestScheduledScanCreateReturnsResourceDirectly(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	store := &scheduledScanHandlerStore{}
 	handler := NewScheduledScanHandler(newScheduledScanServiceForHandlerTest(store))
-	body := `{"displayName":"daily","scanWorkflow":"scanWorkflows/default","inputSource":"targetInventory","configuration":{"steps":{"subdomain_discovery":{"enabled":true,"engineConfig":{"recon":{"enabled":true,"timeout":3600}}}}},"target":"targets/7","cronExpression":"0 2 * * *"}`
+	body := `{"displayName":"daily","scanWorkflow":"scanWorkflows/default","inputSource":"targetInventory","configuration":{"steps":{"subdomain_discovery":{"enabled":true,"engineConfig":{"recon":{"enabled":true,"timeout":3600}}}}},"target":"targets/7","timeZone":"Asia/Shanghai","cronExpression":"0 2 * * *"}`
 	recorder := performScheduledScanRequest(handler.Create, http.MethodPost, "/v1/scheduledScans", bytes.NewBufferString(body))
 
 	if recorder.Code != http.StatusCreated {
@@ -201,27 +207,30 @@ func TestScheduledScanCreateReturnsResourceDirectly(t *testing.T) {
 	if decoded["inputSource"] != "targetInventory" || store.created == nil || store.created.InputSource != scanapp.InputSourceTargetInventory {
 		t.Fatalf("expected persisted targetInventory source, got response=%+v input=%+v", decoded, store.created)
 	}
+	if decoded["timeZone"] != "Asia/Shanghai" || store.created.TimeZone != "Asia/Shanghai" {
+		t.Fatalf("expected persisted selected timeZone, got response=%+v input=%+v", decoded, store.created)
+	}
 	if _, ok := decoded["message"]; ok {
 		t.Fatalf("mutation response must not include message envelope: %+v", decoded)
 	}
 }
 
-func TestScheduledScanCreateRejectsRetiredTimeZone(t *testing.T) {
+func TestScheduledScanCreateRequiresTimeZone(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	store := &scheduledScanHandlerStore{}
 	handler := NewScheduledScanHandler(newScheduledScanServiceForHandlerTest(store))
-	body := `{"displayName":"daily","scanWorkflow":"scanWorkflows/default","inputSource":"scanSnapshot","configuration":{"steps":{"subdomain_discovery":{"enabled":true,"engineConfig":{"recon":{"enabled":true,"timeout":3600}}}}},"target":"targets/7","timeZone":"UTC","cronExpression":"0 2 * * *"}`
+	body := `{"displayName":"daily","scanWorkflow":"scanWorkflows/default","inputSource":"scanSnapshot","configuration":{"steps":{"subdomain_discovery":{"enabled":true,"engineConfig":{"recon":{"enabled":true,"timeout":3600}}}}},"target":"targets/7","cronExpression":"0 2 * * *"}`
 	recorder := performScheduledScanRequest(handler.Create, http.MethodPost, "/v1/scheduledScans", bytes.NewBufferString(body))
 
 	if recorder.Code != http.StatusBadRequest || store.created != nil {
-		t.Fatalf("retired timeZone response = %d body=%s store=%+v", recorder.Code, recorder.Body.String(), store.created)
+		t.Fatalf("missing timeZone response = %d body=%s store=%+v", recorder.Code, recorder.Body.String(), store.created)
 	}
 }
 
 func TestScheduledScanCreateMapsMissingStepEnablementToWorkflowDiagnostic(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := NewScheduledScanHandler(newScheduledScanServiceForHandlerTest(&scheduledScanHandlerStore{}))
-	body := `{"displayName":"daily","scanWorkflow":"scanWorkflows/default","inputSource":"scanSnapshot","configuration":{"steps":{"subdomain_discovery":{"engineConfig":{}}}},"target":"targets/7","cronExpression":"0 2 * * *"}`
+	body := `{"displayName":"daily","scanWorkflow":"scanWorkflows/default","inputSource":"scanSnapshot","configuration":{"steps":{"subdomain_discovery":{"engineConfig":{}}}},"target":"targets/7","timeZone":"UTC","cronExpression":"0 2 * * *"}`
 	recorder := performScheduledScanRequest(handler.Create, http.MethodPost, "/v1/scheduledScans", bytes.NewBufferString(body))
 
 	assertWorkflowConfigurationDiagnostic(t, recorder, `configuration.steps["subdomain_discovery"].enabled`)
@@ -230,7 +239,7 @@ func TestScheduledScanCreateMapsMissingStepEnablementToWorkflowDiagnostic(t *tes
 func TestScheduledScanCreateMissingConfigurationUsesWorkflowDiagnostic(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	handler := NewScheduledScanHandler(newScheduledScanServiceForHandlerTest(&scheduledScanHandlerStore{}))
-	body := `{"displayName":"daily","scanWorkflow":"scanWorkflows/default","inputSource":"scanSnapshot","target":"targets/7","cronExpression":"0 2 * * *"}`
+	body := `{"displayName":"daily","scanWorkflow":"scanWorkflows/default","inputSource":"scanSnapshot","target":"targets/7","timeZone":"UTC","cronExpression":"0 2 * * *"}`
 	recorder := performScheduledScanRequest(handler.Create, http.MethodPost, "/v1/scheduledScans", bytes.NewBufferString(body))
 
 	assertWorkflowConfigurationDiagnostic(t, recorder, "configuration.steps")
@@ -278,6 +287,28 @@ func TestScheduledScanPatchIsEnabledUsesStandardUpdate(t *testing.T) {
 	}
 	if _, ok := decoded["message"]; ok {
 		t.Fatalf("update response must not include message envelope: %+v", decoded)
+	}
+}
+
+func TestScheduledScanPatchTimeZoneRequiresAndUsesUpdateMask(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	store := &scheduledScanHandlerStore{}
+	handler := NewScheduledScanHandler(newScheduledScanServiceForHandlerTest(store))
+	body := `{"name":"scheduledScans/1","timeZone":"Asia/Shanghai","updateMask":"timeZone"}`
+	recorder := performScheduledScanRequest(handler.Update, http.MethodPatch, "/v1/scheduledScans/1", bytes.NewBufferString(body))
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if store.updated == nil || store.updated.TimeZone == nil || *store.updated.TimeZone != "Asia/Shanghai" {
+		t.Fatalf("expected timeZone update through updateMask, got %+v", store.updated)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &decoded); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if decoded["timeZone"] != "Asia/Shanghai" {
+		t.Fatalf("expected updated timeZone, got %+v", decoded)
 	}
 }
 
@@ -382,7 +413,7 @@ func TestScheduledScanCreateAndConfigurationUpdateMapConfigResourceFailures(t *t
 	}{
 		{
 			name: "create", method: http.MethodPost, path: "/v1/scheduledScans",
-			body: `{"displayName":"daily","scanWorkflow":"scanWorkflows/default","inputSource":"scanSnapshot","configuration":{"steps":{"subdomain_discovery":{"enabled":true,"engineConfig":{"recon":{"enabled":true,"timeout":3600}}}}},"target":"targets/7","cronExpression":"0 2 * * *"}`,
+			body: `{"displayName":"daily","scanWorkflow":"scanWorkflows/default","inputSource":"scanSnapshot","configuration":{"steps":{"subdomain_discovery":{"enabled":true,"engineConfig":{"recon":{"enabled":true,"timeout":3600}}}}},"target":"targets/7","timeZone":"UTC","cronExpression":"0 2 * * *"}`,
 			call: func(handler *ScheduledScanHandler) gin.HandlerFunc { return handler.Create },
 		},
 		{
@@ -501,9 +532,9 @@ func scheduledScanRecord(id int, displayName string, enabled bool, inputSource s
 		ScanWorkflowID: "default",
 		Configuration:  map[string]any{"steps": map[string]any{}},
 		InputSource:    inputSource,
-		CronExpression: "0 2 * * *",
-		IsEnabled:      enabled,
-		CreatedAt:      time.Date(2026, 5, 20, 0, 0, 0, 0, time.UTC),
-		UpdatedAt:      time.Date(2026, 5, 20, 0, 0, 0, 0, time.UTC),
+		TimeZone:       "UTC", CronExpression: "0 2 * * *",
+		IsEnabled: enabled,
+		CreatedAt: time.Date(2026, 5, 20, 0, 0, 0, 0, time.UTC),
+		UpdatedAt: time.Date(2026, 5, 20, 0, 0, 0, 0, time.UTC),
 	}
 }

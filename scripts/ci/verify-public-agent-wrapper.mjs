@@ -39,13 +39,16 @@ function validate(options) {
   if (!fs.existsSync(dockerfilePath)) fail("public Agent wrapper Dockerfile is missing");
   const text = fs.readFileSync(dockerfilePath, "utf8");
   if (!/^FROM\s+debian:[^\s]+/m.test(text)) fail("public Agent wrapper must use a pinned Debian runtime base");
-  if (!/^COPY\s+\.\s+\/agent-assets\//m.test(text)) fail("public Agent wrapper must copy only the prepared binary context");
+  if (!/^ARG\s+AGENT_ARTIFACT_ID\s*$/m.test(text)) fail("public Agent wrapper must require the immutable Agent artifact identity");
+  if (/^COPY\s+\.\s+/m.test(text)) fail("public Agent wrapper must not copy bundle metadata or an unbounded context");
   if (/agent\/(?:cmd|internal|go\.mod)|go\.mod|go\.sum|private|secret|credential/i.test(text)) {
     fail("public Agent wrapper must not reference Agent source or credentials");
   }
-  for (const member of MEMBERS) if (!text.includes(member)) fail(`public Agent wrapper does not validate ${member}`);
+  for (const member of MEMBERS) {
+    if (!text.includes(`agent/bin/${"${AGENT_ARTIFACT_ID}"}/${member}`)) fail(`public Agent wrapper does not copy ${member} from the immutable bundle`);
+  }
   if (!text.includes("TARGETARCH") || !text.includes("linux-${suffix}")) fail("public Agent wrapper must select binaries by TARGETARCH");
-  return { schemaVersion: 1, passed: true, dockerfile: "docker/agent/Dockerfile", binaryContextOnly: true, members: [...MEMBERS] };
+  return { schemaVersion: 1, passed: true, dockerfile: "docker/agent/Dockerfile", immutableBundleOnly: true, members: [...MEMBERS] };
 }
 
 function main() {

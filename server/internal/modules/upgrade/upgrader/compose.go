@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yyhuni/lunafox/contracts/ociartifact"
 	"github.com/yyhuni/lunafox/contracts/releasemanifest"
 )
 
@@ -81,6 +82,15 @@ type ComposeExecutor struct {
 	DockerBinary string
 	PublicLayout bool
 	Registry     string
+	// PublicFrontendProbe is host-owned and runs only after the candidate
+	// frontend container has passed digest and health checks. A missing probe
+	// fails closed for frontend-only execution.
+	PublicFrontendProbe PublicFrontendProbe
+	// These knobs are kept on the host executor so tests can use a zero delay;
+	// production defaults retain a bounded resolver-convergence window.
+	FrontendEdgeProbeAttempts int
+	FrontendEdgeProbeDelay    time.Duration
+	FrontendEdgeProbeSleep    func(context.Context, time.Duration) error
 }
 
 func NewComposeExecutor(runner CommandRunner) *ComposeExecutor {
@@ -95,7 +105,16 @@ func NewPublicComposeExecutor(runner CommandRunner, registry string) (*ComposeEx
 	if registry != "docker.io" && registry != "ghcr.io" {
 		return nil, fmt.Errorf("unsupported upgrade registry %q", registry)
 	}
-	return &ComposeExecutor{Runner: runner, DockerBinary: defaultDockerBinary, PublicLayout: true, Registry: registry}, nil
+	executor := &ComposeExecutor{
+		Runner:                    runner,
+		DockerBinary:              defaultDockerBinary,
+		PublicLayout:              true,
+		Registry:                  registry,
+		FrontendEdgeProbeAttempts: frontendEdgeProbeAttempts,
+		FrontendEdgeProbeDelay:    frontendEdgeProbeDelay,
+	}
+	executor.PublicFrontendProbe = NewDockerFrontendEdgeProbe(runner, executor.DockerBinary)
+	return executor, nil
 }
 
 func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, store *JournalStore) error {
@@ -117,7 +136,13 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 	current, err := store.LoadCurrent()
 	if errors.Is(err, ErrJournalNotFound) {
 		now := nowUTC()
-		current = Journal{SchemaVersion: JournalSchema, OperationID: request.OperationID, ManifestDigest: request.ManifestDigest, Stage: StageQueued, StartedAt: now, UpdatedAt: now, StageUpdatedAt: now}
+		current = journalForRequest(request, now)
+		// Keep the request schema/scope durable before the first checkpoint. This
+		// matters for direct executor callers and crash recovery: Checkpoint's
+		// legacy empty-journal bootstrap cannot infer v2 scope evidence.
+		if err := store.Save(current); err != nil {
+			return err
+		}
 	} else if err != nil {
 		return err
 	}
@@ -127,17 +152,39 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 	if IsTerminal(current.Stage) {
 		return nil
 	}
+	if request.SchemaVersion == ScopedRequestSchema && request.ExecutionMode == ExecutionModeFrontendOnly && (request.Action == ActionStart || request.Action == ActionResume) {
+		if err := validateJournalRequestScope(current, request); err != nil {
+			return err
+		}
+		pending, err := store.frontendOnlyConfirmationPending(current)
+		if err != nil {
+			return err
+		}
+		if pending {
+			// The daemon normally short-circuits this state before dispatch. Keep
+			// the executor guard so a direct recovery caller cannot re-probe a
+			// verified candidate while the Server still owns confirmation.
+			return nil
+		}
+	}
 	stage := current.Stage
 	manifestPath, err := store.ManifestPath(request.ManifestDigest)
 	if err != nil {
 		return executor.failCheckpoint(store, request, failureStageFor(migrationEvidenceForJournal(current)), "manifest path resolution failed")
 	}
-	manifest, err := releasemanifest.Load(manifestPath)
+	manifest, err := loadManifestWithLegacyCompatibility(manifestPath)
 	if err != nil {
 		return executor.failCheckpoint(store, request, failureStageFor(migrationEvidenceForJournal(current)), "manifest validation failed")
 	}
 	if manifest.Digest() != request.ManifestDigest {
 		return executor.failCheckpoint(store, request, failureStageFor(migrationEvidenceForJournal(current)), "manifest digest mismatch")
+	}
+	// A v2 frontend-only request has already passed the host scope planner and
+	// lock-time revalidation in the daemon. Dispatch before any full-release
+	// migration, Agent, or multi-service Compose logic so the sealed scope is
+	// also enforced inside the executor itself.
+	if request.SchemaVersion == ScopedRequestSchema && request.ExecutionMode == ExecutionModeFrontendOnly {
+		return executor.executeFrontendOnly(ctx, request, store, current, manifest)
 	}
 	migration := manifest.Upgrade.DatabaseMigration
 	// Bind migration identity to the same immutable manifest used for image
@@ -343,7 +390,7 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 			return executor.failCheckpoint(store, request, failureStageFor(migrationStarted), "persistent Compose override installation failed")
 		}
 	}
-	receipt := Receipt{SchemaVersion: JournalSchema, OperationID: request.OperationID, ManifestDigest: request.ManifestDigest, CompletedAt: nowUTC(), Services: services, ObservedImages: observed}
+	receipt := receiptForRequest(request, nowUTC(), services, observed)
 	if err := store.SaveReceipt(receipt); err != nil {
 		return err
 	}
@@ -357,6 +404,244 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 	// StageVerifying remains the journal state. The receipt proves only that
 	// host deployment completed; Server and Agent evidence decide succeeded.
 	return nil
+}
+
+// executeFrontendOnly is the deliberately narrow public-layout execution
+// path. Its command surface is fixed to frontend pull, frontend recreate,
+// frontend health, and running-container inspection. Persistent override
+// promotion is deferred to the Server-confirm action so an unsuccessful
+// scoped handoff leaves the previously confirmed deployment untouched.
+func (executor *ComposeExecutor) executeFrontendOnly(ctx context.Context, request Request, store *JournalStore, current Journal, manifest *releasemanifest.Manifest) error {
+	if !executor.PublicLayout {
+		return executor.failCheckpoint(store, request, StageFailed, "frontend-only execution requires the public deployment layout")
+	}
+	if manifest == nil {
+		return executor.failCheckpoint(store, request, StageFailed, "release manifest is required")
+	}
+	if manifest.Upgrade.DatabaseMigration.HasDatabaseMigration {
+		return executor.failCheckpoint(store, request, StageFailed, "frontend-only execution cannot include a database migration")
+	}
+	if err := validateHostMigration(manifest); err != nil {
+		return executor.failCheckpoint(store, request, StageFailed, "unsupported database migration")
+	}
+	if err := executor.validateFixedDeploymentFiles(store.DeploymentRoot()); err != nil {
+		return executor.failCheckpoint(store, request, StageFailed, "deployment files are not available")
+	}
+	if current.SchemaVersion != ScopedJournalSchema || current.ExecutionMode != ExecutionModeFrontendOnly {
+		return executor.failCheckpoint(store, request, StageFailed, "frontend-only journal scope is invalid")
+	}
+	if err := validateJournalRequestScope(current, request); err != nil {
+		return executor.failCheckpoint(store, request, StageFailed, "frontend-only journal scope does not match request")
+	}
+
+	stage := current.Stage
+	var operationOverridePath string
+	var plan FrontendComposePlan
+	preparePlan := func() error {
+		if operationOverridePath != "" {
+			return nil
+		}
+		var err error
+		operationOverridePath, err = executor.StageFrontendOnlyComposeOverride(store, request.OperationID, manifest)
+		if err != nil {
+			return err
+		}
+		plan, err = executor.BuildFrontendOnlyComposePlan(store.DeploymentRoot(), operationOverridePath)
+		return err
+	}
+	fail := func(diagnostic string) error {
+		return executor.failCheckpoint(store, request, StageFailed, diagnostic)
+	}
+
+	switch stage {
+	case StageStopping:
+		// A stopping checkpoint proves the full-upgrade coordinator already
+		// crossed its cancellation boundary. Continuing as frontend-only would
+		// silently change the operation's work-disposition after side effects.
+		return fail("frontend-only execution cannot resume from stopping stage")
+	case StageQueued:
+		if _, err := store.Checkpoint(request.OperationID, request.ManifestDigest, StagePreflight, "", nil); err != nil {
+			return err
+		}
+		stage = StagePreflight
+		fallthrough
+	case StagePreflight:
+		tryAppendCatalogProgress(store, request, StagePreflight, ProgressPreflightStarted)
+		if err := preparePlan(); err != nil {
+			return fail("frontend Compose staging failed")
+		}
+		if _, err := store.Checkpoint(request.OperationID, request.ManifestDigest, StageUpdating, "", nil); err != nil {
+			return err
+		}
+		stage = StageUpdating
+		fallthrough
+	case StageUpdating:
+		if err := preparePlan(); err != nil {
+			return fail("frontend Compose staging failed")
+		}
+		tryAppendCatalogProgress(store, request, StageUpdating, ProgressPullImagesStarted)
+		if _, err := executor.Runner.Run(ctx, executor.binary(), plan.PullArgs, store.DeploymentRoot()); err != nil {
+			return fail("frontend image pull failed")
+		}
+		tryAppendCatalogProgress(store, request, StageUpdating, ProgressServicesUpdateStarted)
+		if _, err := executor.Runner.Run(ctx, executor.binary(), plan.UpdateArgs, store.DeploymentRoot()); err != nil {
+			return fail("frontend service update failed")
+		}
+		tryAppendCatalogProgress(store, request, StageUpdating, ProgressServicesUpdated)
+		if _, err := store.Checkpoint(request.OperationID, request.ManifestDigest, StageRestarting, "", nil); err != nil {
+			return err
+		}
+		stage = StageRestarting
+	case StageRestarting, StageVerifying:
+		if err := preparePlan(); err != nil {
+			return fail("frontend Compose staging failed")
+		}
+	default:
+		return fail("unsupported frontend-only execution stage")
+	}
+
+	tryAppendCatalogProgress(store, request, stage, ProgressHealthCheckStarted)
+	healthResult, err := executor.Runner.Run(ctx, executor.binary(), plan.HealthArgs, store.DeploymentRoot())
+	if err != nil || !healthyComposeOutput(healthResult.Stdout, []string{FrontendOnlyService}) {
+		return fail("frontend service is unhealthy")
+	}
+	if stage == StageRestarting {
+		if _, err := store.Checkpoint(request.OperationID, request.ManifestDigest, StageVerifying, "", nil); err != nil {
+			return err
+		}
+		stage = StageVerifying
+	}
+	tryAppendCatalogProgress(store, request, stage, ProgressDigestVerificationStarted)
+	frontendContainerID, observed, err := executor.observeFrontendContainer(ctx, plan, store.DeploymentRoot())
+	if err != nil {
+		return fail("frontend container digest verification failed")
+	}
+	want, err := manifest.RuntimeImageDigest(FrontendOnlyService)
+	if err != nil || observed != want {
+		return fail("frontend container digest differs")
+	}
+	edgeConfig, err := loadPublicEdgeConfig(store.DeploymentRoot())
+	if err != nil {
+		return fail("public frontend configuration is invalid")
+	}
+	if _, err := executor.verifyPublicFrontend(ctx, store.DeploymentRoot(), frontendContainerID, edgeConfig, request.OperationID); err != nil {
+		return fail("public frontend edge did not converge")
+	}
+	receipt := receiptForRequest(request, nowUTC(), []string{FrontendOnlyService}, map[string]string{FrontendOnlyService: observed})
+	if err := store.SaveReceipt(receipt); err != nil {
+		return err
+	}
+	tryAppendCatalogProgress(store, request, StageVerifying, ProgressHostExecutionCompleted)
+	return nil
+}
+
+func (executor *ComposeExecutor) observeFrontendContainer(ctx context.Context, plan FrontendComposePlan, root string) (string, string, error) {
+	result, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), plan.BaseArgs...), "ps", "-q", FrontendOnlyService), root)
+	if err != nil {
+		return "", "", err
+	}
+	containerID := strings.TrimSpace(result.Stdout)
+	if !containerIDPattern.MatchString(containerID) {
+		return "", "", fmt.Errorf("frontend container identity is invalid")
+	}
+	inspect, err := executor.Runner.Run(ctx, executor.binary(), []string{"inspect", "--format", "{{json .Config.Image}}", containerID}, root)
+	if err != nil {
+		return "", "", err
+	}
+	imageRef := strings.Trim(strings.TrimSpace(inspect.Stdout), "\"\n\r")
+	ref, err := parseImmutableImageReference(imageRef)
+	if err != nil {
+		return "", "", err
+	}
+	return containerID, ref, nil
+}
+
+func (executor *ComposeExecutor) verifyPublicFrontend(ctx context.Context, root, frontendContainerID string, config publicEdgeConfig, operationID string) (PublicFrontendObservation, error) {
+	if executor == nil || executor.PublicFrontendProbe == nil {
+		return PublicFrontendObservation{}, fmt.Errorf("public frontend probe is not configured")
+	}
+	attempts := executor.FrontendEdgeProbeAttempts
+	if attempts <= 0 {
+		attempts = frontendEdgeProbeAttempts
+	}
+	delay := executor.FrontendEdgeProbeDelay
+	if delay < 0 {
+		delay = frontendEdgeProbeDelay
+	}
+	sleep := executor.FrontendEdgeProbeSleep
+	if sleep == nil {
+		sleep = sleepWithContext
+	}
+	var lastErr error
+	for attempt := 0; attempt < attempts; attempt++ {
+		observation, err := executor.PublicFrontendProbe.Probe(ctx, root, frontendContainerID, config.Host, operationID)
+		if err == nil {
+			if validationErr := observation.Validate(); validationErr == nil {
+				return observation, nil
+			} else {
+				err = validationErr
+			}
+		}
+		lastErr = err
+		if ctx != nil && ctx.Err() != nil {
+			return PublicFrontendObservation{}, ctx.Err()
+		}
+		if attempt+1 < attempts {
+			if err := sleep(ctx, delay); err != nil {
+				return PublicFrontendObservation{}, err
+			}
+		}
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("public frontend probe did not return an observation")
+	}
+	return PublicFrontendObservation{}, fmt.Errorf("public frontend edge did not converge after %d attempts: %w", attempts, lastErr)
+}
+
+func sleepWithContext(ctx context.Context, delay time.Duration) error {
+	if delay <= 0 {
+		return nil
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func parseImmutableImageReference(raw string) (string, error) {
+	ref := strings.TrimSpace(raw)
+	parsed, err := ociartifact.ParseDigestReference(ref)
+	if err != nil {
+		return "", err
+	}
+	return parsed.Digest, nil
+}
+
+func receiptForRequest(request Request, completedAt time.Time, services []string, observed map[string]string) Receipt {
+	receipt := Receipt{
+		SchemaVersion:  JournalSchema,
+		OperationID:    request.OperationID,
+		ManifestDigest: request.ManifestDigest,
+		CompletedAt:    completedAt,
+		Services:       append([]string(nil), services...),
+		ObservedImages: cloneStringMap(observed),
+	}
+	if request.SchemaVersion == ScopedRequestSchema {
+		receipt.SchemaVersion = ScopedJournalSchema
+		receipt.ExecutionMode = request.ExecutionMode
+		receipt.PlanDigest = request.PlanDigest
+		receipt.BaselineStateDigest = request.BaselineStateDigest
+		receipt.TouchedServices = append([]string(nil), request.TouchedServices...)
+		receipt.ConfirmedDeploymentVersion = request.ConfirmedDeploymentVersion
+	}
+	return receipt
 }
 
 // tryAppendCatalogProgress is deliberately best effort. A missing or

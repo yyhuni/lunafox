@@ -50,4 +50,11 @@ describe("edit-scheduled-scan-dialog contract", () => {
     expect(basicTabSource).not.toContain("<ScanInputSourceSelector")
     expect(basicTabSource).not.toContain("<ScanAgentSelector")
   })
+
+  it("waits for persisted-Schedule Profile bootstrap only in the configuration editor", () => {
+    expect(source).toContain("isWorkflowProfileLoading={isWorkflowProfileLoading}")
+    expect(source).toContain("formValuesCacheRef={formValuesCacheRef}")
+    expect(source).toContain("workflowProfileDraft={workflowProfileDraft}")
+    expect(source).not.toContain("isPending || isWorkflowProfileLoading")
+  })
 })

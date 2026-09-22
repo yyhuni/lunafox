@@ -3,10 +3,9 @@
 Scheduled scans persist the canonical `scanWorkflow` resource reference, the
 schedule's complete configuration, a required `inputSource` (`scanSnapshot` or
 `targetInventory`), an optional canonical `agent: agents/{id}` selection, and
-one strict five-field Cron expression interpreted in UTC. They
-do not persist a workflow revision, release digest, topology,
-Profile, Package, execution plan, creator identity, or Server-local time-zone
-fallback.
+one strict five-field Cron expression plus its required IANA `timeZone`. They
+do not persist a workflow revision, release digest, topology, Profile, Package,
+execution plan, creator identity, or Server-local time-zone fallback.
 
 `inputSource` is independent of `scanMode: target|organization`, Workflow, and
 Agent assignment. Create requires it explicitly. Update validates and writes a
@@ -16,17 +15,22 @@ path infers `scanSnapshot` for missing data.
 
 ## Time Rule And Cursor Contract
 
-`ScheduleCalculator` is the only application boundary that interprets Cron in
-`time.UTC`. It accepts exactly minute, hour, day-of-month, month, and
-day-of-week fields. Seconds, descriptors such as `@daily` or `@every`, and
-embedded `TZ`/`CRON_TZ` are rejected.
+`ScheduleCalculator` is the only application boundary that interprets the
+persisted Cron in its saved IANA `timeZone`, using embedded `time/tzdata`.
+It accepts exactly minute, hour, day-of-month, month, and day-of-week fields.
+Seconds, descriptors such as `@daily` or `@every`, and embedded `TZ`/`CRON_TZ`
+are rejected. Create requires an explicit loadable IANA name; missing, blank,
+`Local`, fixed-offset, and unknown values are invalid and never fall back to
+UTC or the Server location.
 
 `nextRunTime` is a persisted UTC cursor, not a read-time calculation. Enabled
-Create and enabled `cronExpression` Update calculate the first match
-strictly after one transaction reference time. Non-time Updates leave the
-cursor unchanged. Disabled schedules always persist a null cursor; re-enable
-starts from a new strictly future match and never catches up the disabled
-interval.
+Create and an enabled Update that changes the `cronExpression` or `timeZone`
+value calculate the first match strictly after one transaction reference time.
+Non-time Updates, same-value rule submissions, and reads leave the cursor
+unchanged. Disabled schedules always persist a null cursor; re-enable starts
+from a new strictly future match and never catches up the disabled interval. A
+nonexistent spring-forward local match is skipped; when a fall-back local
+minute repeats, only its earlier UTC instant is emitted.
 
 The configuration uses the same strict Workflow Step envelope as normal Scan
 creation: every selected Step must declare boolean `enabled`; enabled Steps

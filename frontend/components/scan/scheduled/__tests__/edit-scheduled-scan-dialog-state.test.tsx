@@ -16,6 +16,16 @@ const stateMocks = vi.hoisted(() => ({
   },
 }))
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (error: unknown) => void
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
+    resolve = promiseResolve
+    reject = promiseReject
+  })
+  return { promise, resolve, reject }
+}
+
 vi.mock("@/hooks/use-scheduled-scans", () => ({
   useUpdateScheduledScan: () => ({ mutate: stateMocks.updateScheduledScan, isPending: false }),
 }))
@@ -53,6 +63,7 @@ const scheduledScan: ScheduledScan = {
   targetName: null,
   scanMode: "organization",
   inputSource: "scanSnapshot",
+  timeZone: "Asia/Shanghai",
   cronExpression: "0 2 * * *",
   isEnabled: true,
   nextRunTime: "2026-08-16T02:00:00Z",
@@ -105,6 +116,98 @@ describe("useEditScheduledScanDialogState", () => {
 
     expect(result.current.isConfigEdited).toBe(false)
     expect(result.current.inputSource).toBe("scanSnapshot")
+    expect(result.current.timeZone).toBe("Asia/Shanghai")
+  })
+
+  it("在保存前按正在编辑的 Cron 和时区更新预览", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-01-01T12:00:00Z"))
+    const { result } = renderState()
+
+    expect(result.current.timeZone).toBe("Asia/Shanghai")
+
+    act(() => result.current.setCronExpression("0 19 * * *"))
+    const shanghaiPreview = result.current.getNextExecutions(
+      result.current.cronExpression,
+      result.current.timeZone,
+      1
+    )
+
+    act(() => result.current.setTimeZone("UTC"))
+    const utcPreview = result.current.getNextExecutions(
+      result.current.cronExpression,
+      result.current.timeZone,
+      1
+    )
+
+    expect(shanghaiPreview).not.toEqual(utcPreview)
+    expect(result.current.getCronDescription(result.current.cronExpression)).not.toBe("form.invalidExpression")
+    vi.useRealTimers()
+  })
+
+  it("编辑已持久化的禁用 Step 时只从 Profile 补齐 UI 草稿，不覆盖 canonical 配置", async () => {
+    stateMocks.loadWorkflowProfile.mockResolvedValue({
+      name: "scanWorkflows/default/profile",
+      scanWorkflow: "scanWorkflows/default",
+      configuration: {
+        steps: {
+          discovery: { enabled: true, engineConfig: { options: { timeout: 60 } } },
+        },
+      },
+    })
+    const disabledSchedule: ScheduledScan = {
+      ...scheduledScan,
+      configuration: { steps: { discovery: { enabled: false } } },
+    }
+    const { result } = renderHook(() => useEditScheduledScanDialogState({
+      open: true,
+      scheduledScan: disabledSchedule,
+      onOpenChange: vi.fn(),
+      t: (key) => key,
+    }))
+
+    await waitFor(() => expect(result.current.workflowProfileDraft?.scanWorkflow).toBe("scanWorkflows/default"))
+
+    expect(result.current.configuration).toContain("enabled: false")
+    expect(result.current.configuration).not.toContain("engineConfig")
+    expect(result.current.isWorkflowProfileLoading).toBe(false)
+  })
+
+  it("Profile bootstrap loading does not block a basic-field-only scheduled scan update", async () => {
+    const profile = createDeferred<{
+      name: string
+      scanWorkflow: string
+      configuration: { steps: Record<string, unknown> }
+    }>()
+    stateMocks.loadWorkflowProfile.mockReturnValue(profile.promise)
+    const { result } = renderState()
+
+    await waitFor(() => expect(result.current.isWorkflowProfileLoading).toBe(true))
+    await waitFor(() => expect(result.current.scanWorkflow).toBe("scanWorkflows/default"))
+
+    act(() => result.current.setDisplayName("Updated while Profile loads"))
+    act(() => result.current.handleSubmit())
+
+    expect(stateMocks.updateScheduledScan).toHaveBeenCalledWith(
+      {
+        id: scheduledScan.id,
+        data: expect.objectContaining({ displayName: "Updated while Profile loads" }),
+      },
+      expect.any(Object)
+    )
+
+    await act(async () => {
+      profile.resolve({
+        name: "scanWorkflows/default/profile",
+        scanWorkflow: "scanWorkflows/default",
+        configuration: {
+          steps: {
+            discovery: { enabled: true, engineConfig: { options: { timeout: 60 } } },
+          },
+        },
+      })
+      await profile.promise
+    })
   })
 
   it("编辑时保留已持久化来源，并且只在变化时提交它", async () => {

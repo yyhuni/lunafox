@@ -37,6 +37,7 @@ interface BulkLineValidationInputProps {
   name: string
   label: string
   labelClassName?: string
+  labelAccessory?: React.ReactNode
   required?: boolean
   placeholder: string
   value: string
@@ -67,6 +68,7 @@ export function BulkLineValidationInput({
   name,
   label,
   labelClassName,
+  labelAccessory,
   required,
   placeholder,
   value,
@@ -100,12 +102,22 @@ export function BulkLineValidationInput({
       label: issue.badgeLabel,
     })) ?? []
   ), [validationResult])
+  const hasBlockingDetails = (validationResult?.lineIssues.length ?? 0) > 0
+
+  const labelElement = (
+    <Label htmlFor={id} className={labelClassName}>
+      {label} {required && <span className="text-destructive">*</span>}
+    </Label>
+  )
 
   return (
     <div className={cn("gap-3", fillHeight ? "flex h-full min-h-0 flex-col" : "grid")}>
-      <Label htmlFor={id} className={labelClassName}>
-        {label} {required && <span className="text-destructive">*</span>}
-      </Label>
+      {labelAccessory ? (
+        <div className="flex items-center gap-1">
+          {labelElement}
+          {labelAccessory}
+        </div>
+      ) : labelElement}
       <LineNumberedTextarea
         lineCount={effectiveLineCount}
         lineNumbersRef={lineNumbersRef}
@@ -161,22 +173,24 @@ export function BulkLineValidationInput({
                 </div>
               )}
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-auto gap-1 px-1 py-0 hover:bg-transparent dark:hover:bg-transparent",
-                getStatusToneTextClass("info"),
-                textRole.helperText
-              )}
-              onClick={() => setDetailsOpen((open) => !open)}
-            >
-              {detailsOpen ? collapseDetails : expandDetails}
-              <ChevronUp className={cn("h-3.5 w-3.5 transition-transform", !detailsOpen && "rotate-180")} />
-            </Button>
+            {hasBlockingDetails && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "h-auto gap-1 px-1 py-0 hover:bg-transparent dark:hover:bg-transparent",
+                  getStatusToneTextClass("info"),
+                  textRole.helperText
+                )}
+                onClick={() => setDetailsOpen((open) => !open)}
+              >
+                {detailsOpen ? collapseDetails : expandDetails}
+                <ChevronUp className={cn("h-3.5 w-3.5 transition-transform", !detailsOpen && "rotate-180")} />
+              </Button>
+            )}
           </div>
-          {detailsOpen && (
+          {hasBlockingDetails && detailsOpen && (
             <ul className="grid gap-2 px-4 py-3">
               {validationResult.lineIssues.map((issue) => (
                 <li key={issue.id} className={cn("flex items-start gap-2", textRole.helperText)}>
