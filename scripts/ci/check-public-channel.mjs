@@ -119,6 +119,11 @@ function validate(root, requireFirst, allowEmpty = false) {
   for (const manifestRelative of files.filter((file) => /^manifests\/v\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?\.yaml$/.test(file))) {
     const version = path.basename(manifestRelative, ".yaml");
     const manifestPath = path.join(root, ...manifestRelative.split("/"));
+    const manifestText = fs.readFileSync(manifestPath, "utf8");
+    // Older channel records predate runtime composition and have no binding.
+    // They stay as published; only a manifest that declares the binding needs
+    // the matching composition file.
+    if (!/^runtimeComposition:[ \t]*$/m.test(manifestText)) continue;
     const compositionRelative = `manifests/${version}/${RUNTIME_COMPOSITION_ASSET}`;
     if (!files.includes(compositionRelative)) fail(`${manifestRelative} points to missing ${compositionRelative}`);
     const binding = parseRuntimeCompositionBinding(fs.readFileSync(manifestPath, "utf8"), manifestRelative);
