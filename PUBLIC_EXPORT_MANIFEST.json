@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:0fad09105a873fe7b0feac439e4556abc56128af6e0336fccbf18c1521d24d08",
-  "releaseTag": "v0.0.1-alpha.171",
+  "sourceRevisionDigest": "sha256:02030eba776a9835d3ab044bbbf6b588c672bfcf28887bfcf0897f0901e6d122",
+  "releaseTag": "v0.0.1-alpha.172",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -55,7 +55,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "1bcc33f0ed5d88bc42845fee1b897de43d7aeb749ce9c684528054d8fbb1fc04"
+      "sha256": "7db85515735435bac031c5c862d579c8e82ce39a77662e218997f78a0033acb0"
     },
     {
       "path": "README.md",
@@ -76,7 +76,7 @@
       "type": "file",
       "mode": "0644",
       "size": 2332,
-      "sha256": "89fa9d68217f6411bf1f35bb353c845cc8d172621edd74183ca889902e347e16"
+      "sha256": "efc485de5849628209f2b7aad7fdee3a1e05dbd6ec5490c35c6c21a165f749c9"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/agent-bundle.sha256",
@@ -89,8 +89,8 @@
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
-      "size": 9313,
-      "sha256": "9132d2190adcd812ba101d41c50f135db4f96fc441a638ee79110552c950dbac"
+      "size": 9321,
+      "sha256": "8302f229cd05206cbfc31ca9accd056780c815cba4adf03f820ba9b95001bbf4"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/lunafox-agent-linux-amd64",
@@ -17068,6 +17068,13 @@
       "sha256": "6d3dff314e8460b66dfc5604f07cfa75d57435fd13d945e4b4a8aed7be0ded52"
     },
     {
+      "path": "release-notes/v0.0.1-alpha.172.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 3436,
+      "sha256": "46a6af5c4424459e1ce1bd81f07ffc60fe0fe94f7bceaae2df699eb94065fa94"
+    },
+    {
       "path": "resources/alloy/config.alloy",
       "type": "file",
       "mode": "0644",
@@ -17288,8 +17295,8 @@
       "path": "scripts/ci/public-export-policy.json",
       "type": "file",
       "mode": "0644",
-      "size": 26964,
-      "sha256": "8cdeac4689e5a6c713615458669cc9ebee17a22d63ee56b782d0d586a805f0a5"
+      "size": 27336,
+      "sha256": "557d2186c3e4e5233c0b3faab44e2fb2429aa7de8d87d5d4b5f3740ac3b10a63"
     },
     {
       "path": "scripts/ci/public-release-policy.json",
