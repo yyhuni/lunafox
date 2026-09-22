@@ -83,7 +83,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: Verify exact exported file manifest and versioned Agent bundle
+      - name: Verify exact exported file manifest and immutable Agent bundle
         run: node scripts/ci/check-public-export.mjs --require-agent-bundle --json
 
       - name: Verify bilingual public documentation
@@ -102,13 +102,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          release_tag="$(jq -er '.releaseTag' PUBLIC_PROVENANCE.json)"
-          source_revision_digest="$(jq -er '.sourceRevisionDigest' PUBLIC_PROVENANCE.json)"
-          public_provenance_sha256="sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')"
-          node scripts/ci/verify-agent-binary-bundle.mjs \
-            --bundle-dir "agent/bin/$release_tag" --public-export-root "$GITHUB_WORKSPACE" \
-            --tag "$release_tag" --source-revision-digest "$source_revision_digest" \
-            --public-provenance-sha256 "$public_provenance_sha256" --json
+          agent_directory="$(find agent/bin -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -u)"
+          [ "$(find agent/bin -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -u | wc -l)" -eq 1 ]
+          if [[ "$agent_directory" =~ ^sha256-[a-f0-9]{64}$ ]]; then
+            input_fingerprint="sha256:${agent_directory#sha256-}"
+            node scripts/ci/verify-agent-binary-bundle.mjs \
+              --bundle-dir "agent/bin/$agent_directory" --artifact-id "$agent_directory" \
+              --input-fingerprint "$input_fingerprint" --json
+          else
+            # Workflow maintenance is validated before its next source projection,
+            # so the checked-out public tree can still carry the prior tag directory.
+            release_tag="$(jq -er '.releaseTag' PUBLIC_PROVENANCE.json)"
+            [ "$agent_directory" = "$release_tag" ] || {
+              echo "Agent bundle directory does not match the immutable or current release identity" >&2
+              exit 1
+            }
+            source_revision_digest="$(jq -er '.sourceRevisionDigest' PUBLIC_PROVENANCE.json)"
+            public_provenance_sha256="sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')"
+            node scripts/ci/verify-agent-binary-bundle.mjs \
+              --bundle-dir "agent/bin/$release_tag" --public-export-root "$GITHUB_WORKSPACE" \
+              --tag "$release_tag" --source-revision-digest "$source_revision_digest" \
+              --public-provenance-sha256 "$public_provenance_sha256" --json
+          fi
 
       - name: Verify public Runtime source closure
         run: bash scripts/ci/verify-public-runtime-source.sh --json
@@ -130,6 +145,7 @@ jobs:
         run: |
           set -euo pipefail
           node --test scripts/ci/publish-public-deployment.test.mjs scripts/ci/finalize-engine-runtime-platforms.test.mjs
+          node scripts/ci/component-evidence-bundle-selftest.mjs
           if [ -f scripts/ci/select-public-validation-scope.test.mjs ]; then
             node --test scripts/ci/select-public-validation-scope.test.mjs
           fi
@@ -460,15 +476,206 @@ jobs:
           echo "publish=true" >> "$GITHUB_OUTPUT"
           echo "Verified protected source projection: publish=true"
 
+  # Resolve the complete deployable input identity before any Registry
+  # publication. Reuse is granted only from a prior release's canonical
+  # composition and immutable evidence. No prior asset means a full built
+  # plan; a discovered asset that fails verification fails the release closed
+  # rather than silently weakening the evidence boundary.
+  resolve-public-runtime-composition:
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-validation.result == 'success'
+    name: Resolve Public Runtime Composition
+    needs: [publication-intent, public-validation]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    outputs:
+      plan_digest: ${{ steps.plan.outputs.plan_digest }}
+      previous_release: ${{ steps.previous.outputs.previous_release }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/engine-release/go.mod
+          cache-dependency-path: tools/engine-release/go.sum
+      - uses: docker/setup-buildx-action@v3
+      - id: source
+        name: Bind composition to the protected public merge
+        run: |
+          set -euo pipefail
+          release_tag="$(jq -er '.releaseTag' PUBLIC_PROVENANCE.json)"
+          source_revision_digest="$(jq -er '.sourceRevisionDigest' PUBLIC_PROVENANCE.json)"
+          [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]
+          [[ "$source_revision_digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+          echo "source_revision_digest=$source_revision_digest" >> "$GITHUB_OUTPUT"
+          echo "public_merge_commit=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+      - id: previous
+        name: Retrieve the previous verified composition asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist/public-composition
+          previous_release_record="$(
+            gh api --paginate --slurp "/repos/${PUBLIC_REPOSITORY}/releases?per_page=100" |
+              jq -c --arg current "$RELEASE_TAG" '
+                (add // [])
+                | map(select(.draft == false and .tag_name != $current))
+                | map(select(
+                    any(.assets[]?; .name == "runtime-composition.json") and
+                    any(.assets[]?; .name == "release.manifest.yaml") and
+                    any(.assets[]?; .name == "component-evidence.json") and
+                    any(.assets[]?; .name == "public-release-provenance.json")
+                  ))
+                | sort_by(.published_at // .created_at)
+                | reverse
+                | .[0] // null
+              '
+          )"
+          if [ "$previous_release_record" != null ]; then
+            previous_release_tag="$(jq -er '.tag_name' <<<"$previous_release_record")"
+            download_verified_asset() {
+              local asset_name="$1" output_file="$2" asset_json expected actual url
+              asset_json="$(jq -ce --arg name "$asset_name" '
+                [.assets[]? | select(.name == $name)] |
+                if length == 1 then .[0] else error("release asset must exist exactly once") end
+              ' <<<"$previous_release_record")"
+              url="$(jq -er '.url' <<<"$asset_json")"
+              expected="$(jq -er '.digest' <<<"$asset_json")"
+              [[ "$expected" =~ ^sha256:[a-f0-9]{64}$ ]] || {
+                echo "previous release asset has no immutable GitHub digest: $asset_name" >&2
+                exit 1
+              }
+              curl --fail --silent --show-error --location \
+                -H "Accept: application/octet-stream" \
+                -H "Authorization: Bearer ${GH_TOKEN}" \
+                "$url" -o "$output_file"
+              actual="sha256:$(sha256sum "$output_file" | awk '{print $1}')"
+              [ "$actual" = "$expected" ] || {
+                echo "previous release asset bytes do not match the GitHub Release digest: $asset_name" >&2
+                exit 1
+              }
+            }
+            download_verified_asset runtime-composition.json dist/public-composition/previous.json
+            download_verified_asset release.manifest.yaml dist/public-composition/previous.manifest.yaml
+            download_verified_asset component-evidence.json dist/public-composition/previous.component-evidence.json
+            download_verified_asset public-release-provenance.json dist/public-composition/previous.public-release-provenance.json
+            node scripts/ci/verify-public-release.mjs \
+              --manifest dist/public-composition/previous.manifest.yaml \
+              --tag "$previous_release_tag" --json \
+              > dist/public-composition/previous-release-verification.json
+            node scripts/ci/verify-public-release-evidence.mjs \
+              --manifest dist/public-composition/previous.manifest.yaml \
+              --composition dist/public-composition/previous.json \
+              --bundle dist/public-composition/previous.component-evidence.json \
+              --provenance dist/public-composition/previous.public-release-provenance.json \
+              --tag "$previous_release_tag" --json \
+              > dist/public-composition/previous-release-evidence-verification.json
+            node scripts/ci/verify-release-component-composition.mjs \
+              --composition dist/public-composition/previous.json \
+              --manifest dist/public-composition/previous.manifest.yaml --json \
+              > dist/public-composition/previous-composition-verification.json
+            node scripts/ci/verify-component-evidence-bundle.mjs \
+              --bundle dist/public-composition/previous.component-evidence.json \
+              --composition dist/public-composition/previous.json \
+              --manifest dist/public-composition/previous.manifest.yaml --json \
+              > dist/public-composition/previous-component-evidence-verification.json
+            previous_release="$(jq -er '.releaseTag' dist/public-composition/previous.json)"
+            [ "$previous_release" = "$previous_release_tag" ] || {
+              echo "previous composition release tag does not match its GitHub Release" >&2
+              exit 1
+            }
+          else
+            rm -f dist/public-composition/previous.json dist/public-composition/previous.manifest.yaml dist/public-composition/previous.component-evidence.json dist/public-composition/previous.public-release-provenance.json dist/public-composition/previous-release-verification.json dist/public-composition/previous-release-evidence-verification.json dist/public-composition/previous-composition-verification.json dist/public-composition/previous-component-evidence-verification.json
+            previous_release=""
+          fi
+          echo "previous_release=$previous_release" >> "$GITHUB_OUTPUT"
+      - name: Discover the complete Engine inventory
+        run: |
+          set -euo pipefail
+          mkdir -p dist/public-composition
+          (cd tools/engine-release && go run . \
+            -command discover \
+            -engine-root "$GITHUB_WORKSPACE/extensions/engines" \
+            -output "$GITHUB_WORKSPACE/dist/public-composition/engine-discovery.json")
+      - name: Resolve base image identities for the complete input closure
+        run: |
+          set -euo pipefail
+          mkdir -p dist/public-composition
+          printf '{}\n' > dist/public-composition/base-images.json
+          initial_args=(
+            --mode plan
+            --root-dir "$GITHUB_WORKSPACE"
+            --release-tag "${{ steps.source.outputs.release_tag }}"
+            --source-revision-digest "${{ steps.source.outputs.source_revision_digest }}"
+            --public-merge-commit "${{ steps.source.outputs.public_merge_commit }}"
+            --engine-discovery dist/public-composition/engine-discovery.json
+            --output dist/public-composition/initial-plan.json
+          )
+          if [ -f dist/public-composition/previous.json ]; then
+            initial_args+=(--previous dist/public-composition/previous.json)
+          fi
+          node scripts/ci/resolve-public-runtime-composition.mjs "${initial_args[@]}" >/dev/null
+          refs="$(jq -r '.components[].inputFingerprint.inputs.baseImages[].ref' dist/public-composition/initial-plan.json | sort -u)"
+          for ref in $refs; do
+            case "$ref" in
+              *@sha256:*) identity="${ref##*@}" ;;
+              *) identity="$(docker buildx imagetools inspect "$ref" 2>/dev/null | awk '/^Digest:/ {print $2; exit}' || true)" ;;
+            esac
+            if [[ "$identity" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+              tmp="$(mktemp)"
+              jq --arg ref "$ref" --arg identity "$identity" '. + {($ref):$identity}' dist/public-composition/base-images.json >"$tmp"
+              mv "$tmp" dist/public-composition/base-images.json
+            else
+              echo "base image identity unavailable; component reuse will fail closed: $ref" >&2
+            fi
+          done
+      - id: plan
+        name: Generate the immutable build/reuse plan
+        run: |
+          set -euo pipefail
+          args=(
+            --mode plan
+            --root-dir "$GITHUB_WORKSPACE"
+            --release-tag "${{ steps.source.outputs.release_tag }}"
+            --source-revision-digest "${{ steps.source.outputs.source_revision_digest }}"
+            --public-merge-commit "${{ steps.source.outputs.public_merge_commit }}"
+            --engine-discovery dist/public-composition/engine-discovery.json
+            --base-images dist/public-composition/base-images.json
+            --output dist/public-composition/runtime-composition-plan.json
+          )
+          if [ -f dist/public-composition/previous.json ]; then
+            args+=(--previous dist/public-composition/previous.json)
+          fi
+          node scripts/ci/resolve-public-runtime-composition.mjs "${args[@]}" --json \
+            | tee dist/public-composition/runtime-composition-plan-result.json
+          plan_digest="$(jq -er '.planDigest' dist/public-composition/runtime-composition-plan.json)"
+          echo "plan_digest=$plan_digest" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-runtime-composition-plan-${{ github.sha }}
+          path: dist/public-composition/**
+          if-no-files-found: error
+
   # A generated export PR is the only supported path to public main. This job
   # fails closed for ordinary community pushes because provenance and merge
   # history must identify the private source projection and release tag.
   # Explicit status predicates prevent skipped validation ancestors from suppressing
   # publication; every direct prerequisite must still complete successfully.
   publish-runtime-images:
-    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-validation.result == 'success'
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-validation.result == 'success' && needs.resolve-public-runtime-composition.result == 'success'
     # Temporary inert markers let the pre-alpha.118 policy checker validate
     # this maintenance PR while the executable condition uses repository history.
+    # needs: [publication-intent, public-validation]
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
     # github.ref == 'refs/heads/main'
@@ -476,7 +683,7 @@ jobs:
     # contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     # needs: public-validation
     name: Publish Public Runtime Image (${{ matrix.component }})
-    needs: [publication-intent, public-validation]
+    needs: [publication-intent, public-validation, resolve-public-runtime-composition]
     runs-on: ubuntu-22.04
     permissions:
       contents: read
@@ -507,6 +714,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-runtime-composition-plan-${{ github.sha }}
+          path: dist/public-composition
 
       - id: source
         name: Verify generated public provenance
@@ -538,6 +749,28 @@ jobs:
             echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')"
           } >> "$GITHUB_OUTPUT"
 
+      - id: composition
+        name: Select the planned Runtime disposition
+        env:
+          COMPONENT_ID: runtime.${{ matrix.component }}
+        run: |
+          set -euo pipefail
+          plan="dist/public-composition/runtime-composition-plan.json"
+          disposition="$(jq -er --arg id "$COMPONENT_ID" '.components[] | select(.id == $id) | .disposition' "$plan")"
+          echo "disposition=$disposition" >> "$GITHUB_OUTPUT"
+          if [ "$disposition" = reused ]; then
+            artifact_ref="$(jq -er --arg id "$COMPONENT_ID" '.components[] | select(.id == $id) | .artifact.ref' "$plan")"
+            artifact_digest="$(jq -er --arg id "$COMPONENT_ID" '.components[] | select(.id == $id) | .artifact.digest' "$plan")"
+            source_release_tag="$(jq -er --arg id "$COMPONENT_ID" '.components[] | select(.id == $id) | .sourceRelease.tag' "$plan")"
+            source_composition_digest="$(jq -er --arg id "$COMPONENT_ID" '.components[] | select(.id == $id) | (.sourceRelease.compositionDigest // empty)' "$plan" || true)"
+            [[ "$artifact_ref" = *@$artifact_digest ]]
+            [[ "$source_release_tag" != "${{ steps.source.outputs.release_tag }}" ]]
+            echo "artifact_ref=$artifact_ref" >> "$GITHUB_OUTPUT"
+            echo "artifact_digest=$artifact_digest" >> "$GITHUB_OUTPUT"
+            echo "source_release_tag=$source_release_tag" >> "$GITHUB_OUTPUT"
+            echo "source_composition_digest=$source_composition_digest" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
 
@@ -553,6 +786,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [ "${{ steps.composition.outputs.disposition }}" = reused ]; then
+            echo "commit_digest=${{ steps.composition.outputs.artifact_digest }}" >> "$GITHUB_OUTPUT"
+            echo "commit_ref=${{ steps.composition.outputs.artifact_ref }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           image="ghcr.io/yyhuni/${{ matrix.repository }}"
           commit_ref="${image}:public-${GITHUB_SHA}"
           resolve_digest() {
@@ -564,9 +802,29 @@ jobs:
             echo "commit_ref=$commit_ref"
           } >> "$GITHUB_OUTPUT"
 
+      - id: base-contexts
+        name: Pin Runtime BuildKit base-image contexts to the composition plan
+        if: steps.composition.outputs.disposition == 'built' && steps.preflight.outputs.commit_digest == ''
+        env:
+          COMPONENT_ID: runtime.${{ matrix.component }}
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/runtime-base-image-contexts"
+          node scripts/ci/render-release-component-build-contexts.mjs \
+            --root-dir "$GITHUB_WORKSPACE" \
+            --plan dist/public-composition/runtime-composition-plan.json \
+            --component-id "$COMPONENT_ID" \
+            --base-images dist/public-composition/base-images.json \
+            --output "$output"
+          {
+            echo 'build_contexts<<EOF'
+            cat "$output"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
       - id: build
         name: Build and publish immutable public Runtime image
-        if: steps.preflight.outputs.commit_digest == ''
+        if: steps.composition.outputs.disposition == 'built' && steps.preflight.outputs.commit_digest == ''
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
@@ -575,10 +833,7 @@ jobs:
           push: true
           provenance: mode=max
           sbom: true
-          # The frontend image inlines the release tag into the UI; the other
-          # components do not declare that build argument.
-          build-args: |
-            ${{ matrix.component == 'frontend' && format('IMAGE_TAG={0}', steps.source.outputs.release_tag) || '' }}
+          build-contexts: ${{ steps.base-contexts.outputs.build_contexts }}
           cache-from: |
             type=gha,scope=lunafox-public-${{ matrix.component }}
             type=gha,scope=lunafox-public-context-${{ matrix.component }}
@@ -590,14 +845,18 @@ jobs:
         env:
           BUILT_DIGEST: ${{ steps.build.outputs.digest }}
           EXISTING_DIGEST: ${{ steps.preflight.outputs.commit_digest }}
+          REUSED_DIGEST: ${{ steps.composition.outputs.artifact_digest }}
         shell: bash
         run: |
           set -euo pipefail
-          image_digest="${BUILT_DIGEST:-$EXISTING_DIGEST}"
+          image_digest="$BUILT_DIGEST"
+          [ -n "$image_digest" ] || image_digest="$EXISTING_DIGEST"
+          [ -n "$image_digest" ] || image_digest="$REUSED_DIGEST"
           [[ "$image_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "public Runtime build did not return an immutable digest" >&2; exit 1; }
           echo "image_digest=$image_digest" >> "$GITHUB_OUTPUT"
 
       - name: Ensure GHCR package is public
+        if: steps.composition.outputs.disposition == 'built'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -606,13 +865,15 @@ jobs:
           [ "$visibility" = public ] || { echo "GHCR package must be public, got: $visibility" >&2; exit 1; }
 
       - name: Attest public Runtime image provenance
+        if: steps.composition.outputs.disposition == 'built'
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ghcr.io/yyhuni/${{ matrix.repository }}
           subject-digest: ${{ steps.digest.outputs.image_digest }}
           push-to-registry: true
 
-      - name: Write public Runtime image evidence
+      - name: Write current-release Runtime image evidence
+        if: steps.composition.outputs.disposition == 'built'
         env:
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
           SOURCE_REVISION_DIGEST: ${{ steps.source.outputs.source_revision_digest }}
@@ -646,6 +907,19 @@ jobs:
             '{schemaVersion:1,status:"published",component:$component,sourceRepository:$sourceRepository,destinationRepository:$destinationRepository,sourceRevisionDigest:$sourceRevisionDigest,publicMergeCommit:$publicMergeCommit,releaseTag:$releaseTag,workflowRun:$workflowRun,workflowIdentity:$workflowIdentity,image:$image,dockerHubImage:("docker.io/yyhuni/" + $repository + "@" + $digest),digest:$digest,publicExportManifestSha256:$publicExportManifestSha256,publicProvenanceSha256:$publicProvenanceSha256,dockerfileSha256:$dockerfileSha256,platforms:["linux/amd64","linux/arm64"],sbom:true,provenance:true,attestation:true,attestationSubject:$image,attestationPredicateType:"https://slsa.dev/provenance/v1"} + (if $component == "frontend" then {lockfileSha256:$lockfileSha256} else {} end)' \
             > "dist/public-runtime-image-evidence-${{ matrix.component }}.json"
 
+      - name: Write immutable Runtime promotion receipt
+        if: steps.composition.outputs.disposition == 'reused'
+        env:
+          COMPONENT_ID: runtime.${{ matrix.component }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          jq -e --arg id "$COMPONENT_ID" '
+            .components[] | select(.id == $id and .disposition == "reused") |
+            {schemaVersion:1,kind:"lunafox.component-promotion-receipt.v1",component:$id,artifact,evidence,sourceRelease,copiedWithoutRebuild:true}
+          ' dist/public-composition/runtime-composition-plan.json \
+            > "dist/public-runtime-image-evidence-${{ matrix.component }}.json"
+
       - uses: actions/upload-artifact@v4
         with:
           name: public-runtime-image-evidence-${{ matrix.component }}-${{ github.sha }}
@@ -656,8 +930,9 @@ jobs:
   # directory that was merged into the public Git tree. PRs never receive
   # Registry write permission or a private source/binary fallback.
   publish-agent-image:
-    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-validation.result == 'success'
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-validation.result == 'success' && needs.resolve-public-runtime-composition.result == 'success'
     # Temporary inert markers for the pre-alpha.118 policy checker.
+    # needs: [publication-intent, public-validation]
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
     # github.ref == 'refs/heads/main'
@@ -665,7 +940,7 @@ jobs:
     # contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     # needs: public-validation
     name: Package Verified Agent Image
-    needs: [publication-intent, public-validation]
+    needs: [publication-intent, public-validation, resolve-public-runtime-composition]
     runs-on: ubuntu-22.04
     permissions:
       contents: read
@@ -680,6 +955,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-runtime-composition-plan-${{ github.sha }}
+          path: dist/public-composition
       - uses: docker/setup-qemu-action@v3
         with:
           platforms: arm64
@@ -717,6 +996,25 @@ jobs:
             echo "public_export_manifest_sha256=sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')"
             echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')"
           } >> "$GITHUB_OUTPUT"
+      - id: composition
+        name: Select the planned Agent disposition
+        run: |
+          set -euo pipefail
+          plan="dist/public-composition/runtime-composition-plan.json"
+          disposition="$(jq -er '.components[] | select(.id == "runtime.agent") | .disposition' "$plan")"
+          echo "disposition=$disposition" >> "$GITHUB_OUTPUT"
+          if [ "$disposition" = reused ]; then
+            artifact_ref="$(jq -er '.components[] | select(.id == "runtime.agent") | .artifact.ref' "$plan")"
+            artifact_digest="$(jq -er '.components[] | select(.id == "runtime.agent") | .artifact.digest' "$plan")"
+            source_release_tag="$(jq -er '.components[] | select(.id == "runtime.agent") | .sourceRelease.tag' "$plan")"
+            [[ "$artifact_ref" = *@"$artifact_digest" ]]
+            [[ "$source_release_tag" != "${{ steps.source.outputs.release_tag }}" ]]
+            {
+              echo "artifact_ref=$artifact_ref"
+              echo "artifact_digest=$artifact_digest"
+              echo "source_release_tag=$source_release_tag"
+            } >> "$GITHUB_OUTPUT"
+          fi
       - id: verify
         name: Verify the exact merged Agent tree before creating a Docker context
         env:
@@ -724,44 +1022,76 @@ jobs:
           SOURCE_REVISION_DIGEST: ${{ steps.source.outputs.source_revision_digest }}
           PUBLIC_EXPORT_MANIFEST_SHA256: ${{ steps.source.outputs.public_export_manifest_sha256 }}
           PUBLIC_PROVENANCE_SHA256: ${{ steps.source.outputs.public_provenance_sha256 }}
-          BUNDLE_DIR: ${{ github.workspace }}/agent/bin/${{ steps.source.outputs.release_tag }}
+          BUNDLE_ROOT: ${{ github.workspace }}/agent/bin
         run: |
           set -euo pipefail
           mkdir -p dist
+          artifact_id="$(find "$BUNDLE_ROOT" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -u)"
+          [ "$(find "$BUNDLE_ROOT" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -u | wc -l)" -eq 1 ] || {
+            echo "merged public tree must contain exactly one immutable Agent artifact directory" >&2
+            exit 1
+          }
+          [[ "$artifact_id" =~ ^sha256-[a-f0-9]{64}$ ]] || { echo "invalid Agent artifact identity" >&2; exit 1; }
+          input_fingerprint="sha256:${artifact_id#sha256-}"
+          BUNDLE_DIR="$BUNDLE_ROOT/$artifact_id"
+          bundle_source_release_tag="${{ steps.composition.outputs.source_release_tag }}"
+          [ -n "$bundle_source_release_tag" ] || bundle_source_release_tag="$RELEASE_TAG"
           test -d "$BUNDLE_DIR" || { echo "merged public tree is missing exact Agent directory: $BUNDLE_DIR" >&2; exit 1; }
           node scripts/ci/verify-agent-binary-bundle.mjs \
-            --bundle-dir "$BUNDLE_DIR" --tag "$RELEASE_TAG" \
-            --source-revision-digest "$SOURCE_REVISION_DIGEST" \
-            --public-export-root "$GITHUB_WORKSPACE" \
-            --public-provenance-sha256 "$PUBLIC_PROVENANCE_SHA256" \
+            --bundle-dir "$BUNDLE_DIR" --artifact-id "$artifact_id" \
+            --input-fingerprint "$input_fingerprint" --source-release-tag "$bundle_source_release_tag" \
             --json | tee "$RUNNER_TEMP/agent-bundle-verification.json"
           cp "$RUNNER_TEMP/agent-bundle-verification.json" dist/agent-bundle-verification.json
           cosign verify-blob \
             --bundle "$BUNDLE_DIR/agent-bundle.sigstore.json" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-identity-regexp "^https://github\\.com/yyhuni/lunafox-private/\\.github/workflows/release\\.yml@refs/tags/${RELEASE_TAG}$" \
+            --certificate-identity-regexp "^https://github\\.com/yyhuni/lunafox-private/\\.github/workflows/release\\.yml@refs/tags/${bundle_source_release_tag}$" \
             "$BUNDLE_DIR/agent-bundle.json"
           bundle_digest="sha256:$(sha256sum "$BUNDLE_DIR/agent-bundle.json" | awk '{print $1}')"
-          tree_manifest_digest="$(jq -er '.publicExportManifestSha256' "$BUNDLE_DIR/agent-bundle.json")"
+          tree_manifest_digest="sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')"
           {
             echo "bundle_dir=$BUNDLE_DIR"
+            echo "artifact_id=$artifact_id"
+            echo "input_fingerprint=$input_fingerprint"
             echo "bundle_digest=$bundle_digest"
             echo "tree_manifest_digest=$tree_manifest_digest"
           } >> "$GITHUB_OUTPUT"
+      - id: base-contexts
+        name: Pin Agent BuildKit base-image contexts to the composition plan
+        if: steps.composition.outputs.disposition == 'built'
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/agent-base-image-contexts"
+          node scripts/ci/render-release-component-build-contexts.mjs \
+            --root-dir "$GITHUB_WORKSPACE" \
+            --plan dist/public-composition/runtime-composition-plan.json \
+            --component-id runtime.agent \
+            --base-images dist/public-composition/base-images.json \
+            --output "$output"
+          {
+            echo 'build_contexts<<EOF'
+            cat "$output"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
       - id: build
         name: Build and publish the multi-architecture Agent image
+        if: steps.composition.outputs.disposition == 'built'
         uses: docker/build-push-action@v6
         with:
-          context: ${{ steps.verify.outputs.bundle_dir }}
+          context: .
           file: docker/agent/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           provenance: mode=max
           sbom: true
+          build-contexts: ${{ steps.base-contexts.outputs.build_contexts }}
+          build-args: |
+            AGENT_ARTIFACT_ID=${{ steps.verify.outputs.artifact_id }}
           cache-from: type=gha,scope=lunafox-public-agent
           cache-to: type=gha,mode=max,scope=lunafox-public-agent
           tags: ghcr.io/yyhuni/lunafox-agent:public-${{ github.sha }}
       - name: Ensure Agent GHCR package is public
+        if: steps.composition.outputs.disposition == 'built'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -772,11 +1102,15 @@ jobs:
         name: Preserve the immutable Agent image digest
         env:
           BUILT_DIGEST: ${{ steps.build.outputs.digest }}
+          REUSED_DIGEST: ${{ steps.composition.outputs.artifact_digest }}
         run: |
           set -euo pipefail
-          [[ "$BUILT_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "Agent build did not return an immutable digest" >&2; exit 1; }
-          echo "image_digest=$BUILT_DIGEST" >> "$GITHUB_OUTPUT"
+          image_digest="$BUILT_DIGEST"
+          [ -n "$image_digest" ] || image_digest="$REUSED_DIGEST"
+          [[ "$image_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "Agent build did not return an immutable digest" >&2; exit 1; }
+          echo "image_digest=$image_digest" >> "$GITHUB_OUTPUT"
       - name: Keylessly sign and verify the public Agent image
+        if: steps.composition.outputs.disposition == 'built'
         env:
           IMAGE_DIGEST: ${{ steps.digest.outputs.image_digest }}
         run: |
@@ -788,12 +1122,14 @@ jobs:
             --certificate-identity-regexp '^https://github\.com/yyhuni/lunafox/\.github/workflows/public-validate\.yml@refs/heads/main$' \
             "$image" >/dev/null
       - name: Attest the public Agent image
+        if: steps.composition.outputs.disposition == 'built'
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ghcr.io/yyhuni/lunafox-agent
           subject-digest: ${{ steps.digest.outputs.image_digest }}
           push-to-registry: true
-      - name: Write verified Agent image evidence
+      - name: Write current-release Agent image evidence
+        if: steps.composition.outputs.disposition == 'built'
         env:
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
           SOURCE_REVISION_DIGEST: ${{ steps.source.outputs.source_revision_digest }}
@@ -802,6 +1138,8 @@ jobs:
           IMAGE_DIGEST: ${{ steps.digest.outputs.image_digest }}
           BUNDLE_DIGEST: ${{ steps.verify.outputs.bundle_digest }}
           BUNDLE_DIR: ${{ steps.verify.outputs.bundle_dir }}
+          AGENT_ARTIFACT_ID: ${{ steps.verify.outputs.artifact_id }}
+          AGENT_INPUT_FINGERPRINT: ${{ steps.verify.outputs.input_fingerprint }}
         run: |
           set -euo pipefail
           mkdir -p dist
@@ -823,7 +1161,19 @@ jobs:
             --arg treeManifestDigest "${{ steps.verify.outputs.tree_manifest_digest }}" \
             --arg dockerfileSha256 "$dockerfile_sha256" \
             --arg binarySignerIdentity "$binary_signer_identity" \
-            '{schemaVersion:1,status:"published",component:"agent",sourceRepository:$sourceRepository,destinationRepository:$destinationRepository,sourceRevisionDigest:$sourceRevisionDigest,publicMergeCommit:$publicMergeCommit,releaseTag:$releaseTag,workflowRun:$workflowRun,workflowIdentity:$workflowIdentity,image:$image,dockerHubImage:("docker.io/yyhuni/lunafox-agent@" + $digest),digest:$digest,publicExportManifestSha256:$publicExportManifestSha256,publicProvenanceSha256:$publicProvenanceSha256,dockerfileSha256:$dockerfileSha256,platforms:["linux/amd64","linux/arm64"],sbom:true,provenance:true,attestation:true,attestationSubject:$image,attestationPredicateType:"https://slsa.dev/provenance/v1",binaryBundleDigest:$bundleDigest,binarySourceRevisionDigest:$sourceRevisionDigest,binaryExportManifestSha256:$publicExportManifestSha256,binaryProvenanceSha256:$publicProvenanceSha256,binaryTreePath:("agent/bin/" + $releaseTag),binaryTreeBaseManifestSha256:$treeManifestDigest,binarySignerIssuer:"https://token.actions.githubusercontent.com",binarySignerIdentity:$binarySignerIdentity,binaryMembers:["lunafox-agent-linux-amd64","lunafox-agent-linux-arm64","lunafox-engine-mount-preflight-linux-amd64","lunafox-engine-mount-preflight-linux-arm64"]}' \
+            --arg artifactId "$AGENT_ARTIFACT_ID" \
+            --arg inputFingerprint "$AGENT_INPUT_FINGERPRINT" \
+            '{schemaVersion:1,status:"published",component:"agent",sourceRepository:$sourceRepository,destinationRepository:$destinationRepository,sourceRevisionDigest:$sourceRevisionDigest,publicMergeCommit:$publicMergeCommit,releaseTag:$releaseTag,workflowRun:$workflowRun,workflowIdentity:$workflowIdentity,image:$image,dockerHubImage:("docker.io/yyhuni/lunafox-agent@" + $digest),digest:$digest,publicExportManifestSha256:$publicExportManifestSha256,publicProvenanceSha256:$publicProvenanceSha256,dockerfileSha256:$dockerfileSha256,platforms:["linux/amd64","linux/arm64"],sbom:true,provenance:true,attestation:true,attestationSubject:$image,attestationPredicateType:"https://slsa.dev/provenance/v1",binaryArtifactId:$artifactId,binaryInputFingerprint:$inputFingerprint,binaryBundleDigest:$bundleDigest,binarySourceRevisionDigest:$sourceRevisionDigest,binaryExportManifestSha256:$publicExportManifestSha256,binaryProvenanceSha256:$publicProvenanceSha256,binaryTreePath:("agent/bin/" + $artifactId),binaryTreeBaseManifestSha256:$treeManifestDigest,binarySignerIssuer:"https://token.actions.githubusercontent.com",binarySignerIdentity:$binarySignerIdentity,binaryMembers:["lunafox-agent-linux-amd64","lunafox-agent-linux-arm64","lunafox-engine-mount-preflight-linux-amd64","lunafox-engine-mount-preflight-linux-arm64"]}' \
+            > dist/public-runtime-image-evidence-agent.json
+      - name: Write immutable Agent promotion receipt
+        if: steps.composition.outputs.disposition == 'reused'
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          jq -e '
+            .components[] | select(.id == "runtime.agent" and .disposition == "reused") |
+            {schemaVersion:1,kind:"lunafox.component-promotion-receipt.v1",component:.id,artifact,evidence,sourceRelease,copiedWithoutRebuild:true}
+          ' dist/public-composition/runtime-composition-plan.json \
             > dist/public-runtime-image-evidence-agent.json
       - uses: actions/upload-artifact@v4
         with:
@@ -837,7 +1187,7 @@ jobs:
   # public Runtime component matrix. Discovery is the source-bound membership
   # authority; only its selected matrix children receive Registry credentials.
   public-engine-runtime-discover:
-    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-validation.result == 'success'
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-validation.result == 'success' && needs.resolve-public-runtime-composition.result == 'success'
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
@@ -846,13 +1196,15 @@ jobs:
     # contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     # needs: public-validation
     name: Discover Public Engine Runtime Image Matrix
-    needs: [publication-intent, public-validation]
+    needs: [publication-intent, public-validation, resolve-public-runtime-composition]
     runs-on: ubuntu-22.04
     permissions:
       contents: read
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       platform_matrix: ${{ steps.matrix.outputs.platform_matrix }}
+      built_count: ${{ steps.matrix.outputs.built_count }}
+      selection: ${{ steps.matrix.outputs.selection }}
     defaults:
       run:
         shell: bash
@@ -860,6 +1212,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-runtime-composition-plan-${{ github.sha }}
+          path: dist/public-composition
       - id: source
         name: Bind Engine release to generated public merge
         run: |
@@ -886,6 +1242,9 @@ jobs:
         with:
           go-version-file: tools/engine-release/go.mod
           cache-dependency-path: tools/engine-release/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
       - id: matrix
         name: Discover source-bound Engine matrix
         run: |
@@ -895,31 +1254,26 @@ jobs:
             -command discover \
             -engine-root "$GITHUB_WORKSPACE/extensions/engines" \
             -output "$GITHUB_WORKSPACE/dist/public-engine-runtime-discovery/discovery.json")
+          node scripts/ci/resolve-engine-release-disposition.mjs \
+            --plan dist/public-composition/runtime-composition-plan.json \
+            --discovery dist/public-engine-runtime-discovery/discovery.json \
+            --output dist/public-engine-runtime-discovery/selection.json \
+            --json | tee dist/public-engine-runtime-discovery/selection-summary.json
           jq -ce '
-            .engines as $engines |
-            if ($engines | type != "array" or length == 0) then
-              error("discovery contains no Engines")
-            else
-              ($engines | map(
-                .engineId as $engineId |
-                if ($engineId | test("^engine\\.lunafox\\.[a-z][a-z0-9_]*$")) then . else error("non-canonical Engine ID") end |
-                {engineId:$engineId,artifactKey:($engineId | gsub("[^A-Za-z0-9_.-]"; "_"))}
-              )) as $entries |
-              if (($entries | map(.artifactKey) | unique | length) != ($entries | length)) then
-                error("Engine artifact keys must be unique")
-              else
-                {include:$entries}
-              end
-            end
-          ' dist/public-engine-runtime-discovery/discovery.json \
+            [.engines[] | select(.disposition == "built") | .engineId as $engineId | {engineId:$engineId,artifactKey:($engineId | gsub("[^A-Za-z0-9_.-]"; "_"))}] as $entries |
+            if (($entries | map(.artifactKey) | unique | length) != ($entries | length)) then error("Engine artifact keys must be unique") else {include:$entries} end
+          ' dist/public-engine-runtime-discovery/selection.json \
             | tee dist/public-engine-runtime-discovery/matrix.json
           echo "matrix=$(jq -c . dist/public-engine-runtime-discovery/matrix.json)" >> "$GITHUB_OUTPUT"
+          built_count="$(jq -er '.builtEngineIds | length' dist/public-engine-runtime-discovery/selection.json)"
+          echo "built_count=$built_count" >> "$GITHUB_OUTPUT"
+          echo "selection=$(jq -c . dist/public-engine-runtime-discovery/selection.json)" >> "$GITHUB_OUTPUT"
           jq -ce '
-            [.engines[] | .engineId as $engineId |
+            [.engines[] | select(.disposition == "built") | .engineId as $engineId |
               {engineId:$engineId,artifactKey:($engineId | gsub("[^A-Za-z0-9_.-]"; "_")),platform:"linux/amd64",arch:"amd64",runner:"ubuntu-24.04"},
               {engineId:$engineId,artifactKey:($engineId | gsub("[^A-Za-z0-9_.-]"; "_")),platform:"linux/arm64",arch:"arm64",runner:"ubuntu-24.04-arm"}
             ] | {include:.}
-          ' dist/public-engine-runtime-discovery/discovery.json \
+          ' dist/public-engine-runtime-discovery/selection.json \
             | tee dist/public-engine-runtime-discovery/platform-matrix.json
           echo "platform_matrix=$(jq -c . dist/public-engine-runtime-discovery/platform-matrix.json)" >> "$GITHUB_OUTPUT"
       - name: Write source-bound Engine release context
@@ -941,7 +1295,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-runtime-build:
-    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success'
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && fromJSON(needs.public-engine-runtime-discover.outputs.built_count) > 0
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
@@ -971,6 +1325,10 @@ jobs:
         with:
           name: public-engine-runtime-discovery-${{ github.sha }}
           path: dist/public-engine-runtime-discovery
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-runtime-composition-plan-${{ github.sha }}
+          path: dist/public-composition
       - uses: actions/setup-go@v5
         with:
           go-version-file: tools/engine-release/go.mod
@@ -992,6 +1350,9 @@ jobs:
               ($selected | length) == 1 and
               $artifactKey == ($engineId | gsub("[^A-Za-z0-9_.-]"; "_"))
             ' dist/public-engine-runtime-discovery/discovery.json >/dev/null
+          jq -e \
+            --arg engineId "${{ matrix.engineId }}" 'any(.components[]; .id == ($engineId + ".runtime") and .disposition == "built")' \
+            dist/public-composition/runtime-composition-plan.json >/dev/null
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -1003,6 +1364,20 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
+      - id: base-contexts
+        name: Pin Engine BuildKit base-image contexts to the composition plan
+        env:
+          COMPONENT_ID: ${{ matrix.engineId }}.runtime
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/engine-base-image-contexts"
+          node scripts/ci/render-release-component-build-contexts.mjs \
+            --root-dir "$GITHUB_WORKSPACE" \
+            --plan dist/public-composition/runtime-composition-plan.json \
+            --component-id "$COMPONENT_ID" \
+            --base-images dist/public-composition/base-images.json \
+            --output "$output"
+          echo "path=$output" >> "$GITHUB_OUTPUT"
       - name: Build and publish the selected native Engine platform by digest
         env:
           ENGINE_RELEASE_ENGINE_ID: ${{ matrix.engineId }}
@@ -1010,10 +1385,10 @@ jobs:
           ENGINE_IMAGE_TAG: public-${{ github.sha }}
           ENGINE_PLATFORM_BUILD_OUTPUT: ${{ github.workspace }}/dist/public-engine-runtime-platform/platform-build.json
           ENGINE_IMAGE_SOURCE: https://github.com/yyhuni/lunafox
+          ENGINE_BASE_IMAGE_CONTEXTS_FILE: ${{ steps.base-contexts.outputs.path }}
         run: |
           set -euo pipefail
-          release_tag="$(jq -er '.releaseTag' dist/public-engine-runtime-discovery/release-context.json)"
-          ENGINE_VERSION="${release_tag#v}" \
+          ENGINE_VERSION=immutable \
             bash scripts/ci/build-engine-runtime-platform.sh
           test "$(jq -er '.engineId' dist/public-engine-runtime-platform/platform-build.json)" = "${{ matrix.engineId }}"
           test "$(jq -er '.platform' dist/public-engine-runtime-platform/platform-build.json)" = "${{ matrix.platform }}"
@@ -1024,7 +1399,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-runtime-finalize:
-    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && needs.public-engine-runtime-build.result == 'success'
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && fromJSON(needs.public-engine-runtime-discover.outputs.built_count) > 0 && needs.public-engine-runtime-build.result == 'success'
     name: Finalize Public Engine Runtime Image (${{ matrix.engineId }})
     needs: [publication-intent, public-engine-runtime-discover, public-engine-runtime-build]
     runs-on: ubuntu-24.04
@@ -1040,9 +1415,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
+          name: public-engine-runtime-discovery-${{ github.sha }}
+          path: dist/public-engine-runtime-discovery
+      - uses: actions/download-artifact@v4
+        with:
           pattern: public-engine-runtime-platform-${{ github.sha }}-${{ matrix.artifactKey }}-*
           path: dist/public-engine-runtime-platforms
           merge-multiple: false
+      - name: Verify finalized Engine remains selected as built
+        run: |
+          set -euo pipefail
+          jq -e --arg engineId "${{ matrix.engineId }}" 'any(.engines[]; .engineId == $engineId and .disposition == "built")' dist/public-engine-runtime-discovery/selection.json >/dev/null
       - uses: docker/setup-buildx-action@v3
       - uses: oras-project/setup-oras@v1
       - uses: docker/login-action@v3
@@ -1073,7 +1456,13 @@ jobs:
           if-no-files-found: error
 
   public-engine-runtime-aggregate:
-    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && needs.public-engine-runtime-finalize.result == 'success'
+    if: >-
+      needs.publication-intent.outputs.publish == 'true' &&
+      always() && !cancelled() &&
+      needs.publication-intent.result == 'success' &&
+      needs.public-engine-runtime-discover.result == 'success' &&
+      (needs.public-engine-runtime-finalize.result == 'success' ||
+       (fromJSON(needs.public-engine-runtime-discover.outputs.built_count) == 0 && needs.public-engine-runtime-finalize.result == 'skipped'))
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
@@ -1096,6 +1485,7 @@ jobs:
           name: public-engine-runtime-discovery-${{ github.sha }}
           path: dist/public-engine-runtime-discovery
       - uses: actions/download-artifact@v4
+        if: fromJSON(needs.public-engine-runtime-discover.outputs.built_count) > 0
         with:
           pattern: public-engine-runtime-shard-${{ github.sha }}-*
           path: dist/public-engine-runtime-shards
@@ -1108,14 +1498,27 @@ jobs:
         with:
           node-version: "20"
       - name: Verify shard coverage and restore the complete Runtime Image receipt
+        if: fromJSON(needs.public-engine-runtime-discover.outputs.built_count) > 0
         env:
           ENGINE_RELEASE_MODE: production
           ENGINE_ROOT: ${{ github.workspace }}/extensions/engines
           ENGINE_RUNTIME_IMAGE_DISCOVERY: ${{ github.workspace }}/dist/public-engine-runtime-discovery/discovery.json
           ENGINE_RUNTIME_IMAGE_RELEASE_CONTEXT: ${{ github.workspace }}/dist/public-engine-runtime-discovery/release-context.json
           ENGINE_RUNTIME_IMAGE_SHARDS_ROOT: ${{ github.workspace }}/dist/public-engine-runtime-shards
+          ENGINE_RUNTIME_IMAGE_SELECTION: ${{ github.workspace }}/dist/public-engine-runtime-discovery/selection.json
           ENGINE_RUNTIME_IMAGE_AGGREGATE_OUTPUT_ROOT: ${{ github.workspace }}/dist/public-engine-runtime
         run: bash scripts/ci/aggregate-engine-runtime-image-shards.sh
+      - name: Record explicit reused-only Engine disposition
+        if: fromJSON(needs.public-engine-runtime-discover.outputs.built_count) == 0
+        run: |
+          set -euo pipefail
+          mkdir -p dist/public-engine-runtime
+          cp dist/public-engine-runtime-discovery/release-context.json dist/public-engine-runtime/release-context.json
+          jq -n \
+            --slurpfile selection dist/public-engine-runtime-discovery/selection.json \
+            --arg releaseTag "$(jq -er '.releaseTag' dist/public-engine-runtime-discovery/release-context.json)" \
+            '{schemaVersion:1,kind:"lunafox.engine-release-build-disposition.v1",releaseTag:$releaseTag,currentBuildEvidence:false,builtEngineIds:$selection[0].builtEngineIds,reusedEngineIds:$selection[0].reusedEngineIds}' \
+            > dist/public-engine-runtime/mode.json
       - uses: actions/upload-artifact@v4
         with:
           name: public-engine-runtime-build-${{ github.sha }}
@@ -1123,7 +1526,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-runtime-sign:
-    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-aggregate.result == 'success'
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && needs.public-engine-runtime-aggregate.result == 'success' && fromJSON(needs.public-engine-runtime-discover.outputs.built_count) > 0
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
@@ -1132,7 +1535,7 @@ jobs:
     # contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     # needs: public-engine-runtime-aggregate
     name: Sign Public Engine Runtime Images
-    needs: [publication-intent, public-engine-runtime-aggregate]
+    needs: [publication-intent, public-engine-runtime-discover, public-engine-runtime-aggregate]
     runs-on: ubuntu-22.04
     environment: public-engine-release
     permissions:
@@ -1226,7 +1629,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-package-build:
-    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-sign.result == 'success'
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && needs.public-engine-runtime-sign.result == 'success' && fromJSON(needs.public-engine-runtime-discover.outputs.built_count) > 0
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
@@ -1235,7 +1638,7 @@ jobs:
     # contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     # needs: public-engine-runtime-sign
     name: Build Public Engine Package v2
-    needs: [publication-intent, public-engine-runtime-sign]
+    needs: [publication-intent, public-engine-runtime-discover, public-engine-runtime-sign]
     runs-on: ubuntu-22.04
     permissions:
       contents: read
@@ -1255,25 +1658,50 @@ jobs:
         with:
           name: public-engine-runtime-evidence-${{ github.sha }}
           path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-engine-runtime-discovery-${{ github.sha }}
+          path: dist/public-engine-runtime-discovery
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-runtime-composition-plan-${{ github.sha }}
+          path: dist/public-composition
       - name: Generate packages only from the verified public Runtime receipt
         run: |
           set -euo pipefail
           test "$(jq -r '.passed' dist/public-engine-runtime-evidence/evidence.json)" = true
-          release_tag="$(jq -er '.releaseTag' dist/public-engine-runtime/release-context.json)"
+          built_engine_ids="$(jq -er '.builtEngineIds | join(",")' dist/public-engine-runtime-discovery/selection.json)"
+          engine_selection_args=()
+          if [ -n "$built_engine_ids" ]; then
+            engine_selection_args+=(--engine-ids "$built_engine_ids")
+          fi
           mkdir -p dist/public-engine-package-v2
+          jq -e '
+            {
+              schemaVersion: "lunafox.engine-package-version-map.v1",
+              planDigest: .planDigest,
+              versions: [.engines[] | select(.disposition == "built") | {engineId, packageVersion}]
+            }
+            | .versions |= sort_by(.engineId)
+          ' dist/public-engine-runtime-discovery/selection.json \
+            > dist/public-engine-package-v2/package-version-map.json
+          test "$(jq -er '.planDigest' dist/public-engine-package-v2/package-version-map.json)" = "$(jq -er '.planDigest' dist/public-composition/runtime-composition-plan.json)"
           (cd tools/engine-release && go run . \
             -command build-packages \
             -engine-root "$GITHUB_WORKSPACE/extensions/engines" \
+            "${engine_selection_args[@]}" \
             -build-results "$GITHUB_WORKSPACE/dist/public-engine-runtime/build-results.json" \
-            -engine-version "${release_tag#v}" \
+            -package-version-map "$GITHUB_WORKSPACE/dist/public-engine-package-v2/package-version-map.json" \
             -out-root "$GITHUB_WORKSPACE/dist/public-engine-package-v2" \
             -mode production \
             -output "$GITHUB_WORKSPACE/dist/public-engine-package-v2/build-results.json")
           (cd tools/engine-release && go run . \
             -command validate-package-artifacts \
             -engine-root "$GITHUB_WORKSPACE/extensions/engines" \
+            "${engine_selection_args[@]}" \
             -build-results "$GITHUB_WORKSPACE/dist/public-engine-runtime/build-results.json" \
             -package-build-results "$GITHUB_WORKSPACE/dist/public-engine-package-v2/build-results.json" \
+            -package-version-map "$GITHUB_WORKSPACE/dist/public-engine-package-v2/package-version-map.json" \
             -out-root "$GITHUB_WORKSPACE/dist/public-engine-package-v2" \
             -mode production)
       - uses: actions/upload-artifact@v4
@@ -1285,7 +1713,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-package-publish:
-    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-package-build.result == 'success'
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && needs.public-engine-package-build.result == 'success' && fromJSON(needs.public-engine-runtime-discover.outputs.built_count) > 0
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
@@ -1294,7 +1722,7 @@ jobs:
     # contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     # needs: public-engine-package-build
     name: Publish Public Engine Package v2
-    needs: [publication-intent, public-engine-package-build]
+    needs: [publication-intent, public-engine-runtime-discover, public-engine-package-build]
     runs-on: ubuntu-22.04
     environment: public-engine-release
     permissions:
@@ -1336,7 +1764,6 @@ jobs:
           (cd tools/engine-oci-publish && go build -o "$RUNNER_TEMP/verify-oci-signature" ./cmd/verify-signature)
           context_file=dist/public-engine-package-v2/../public-engine-runtime/release-context.json
           [ -f "$context_file" ] || context_file=dist/public-engine-runtime/release-context.json
-          release_tag="$(jq -er '.releaseTag' "$context_file")"
           evidence_root=dist/public-engine-package-evidence
           digest_root=dist/public-engine-package-digests
           mkdir -p "$evidence_root/descriptors" "$evidence_root/manifests" "$evidence_root/signatures" "$evidence_root/records" "$digest_root"
@@ -1351,12 +1778,16 @@ jobs:
           for archive in "${archives[@]}"; do
             engine_id="$($publisher --archive "$archive" --print-engine-id)"
             package_digest="$(jq -er --arg engineId "$engine_id" '.packages[] | select(.engineId == $engineId) | .packageDigest' dist/public-engine-package-v2/build-results.json)"
-            docker_ref="$($publisher --archive "$archive" --repository-prefix "docker.io/yyhuni" --tag "package-v2-${release_tag}")"
+            # The mutable tag is an acceleration/publishing handle only. Bind
+            # it to archive bytes so a product release tag cannot perturb an
+            # unchanged Engine Package identity.
+            package_tag="package-v2-${package_digest#sha256:}"
+            docker_ref="$($publisher --archive "$archive" --repository-prefix "docker.io/yyhuni" --tag "$package_tag")"
             artifact_digest="${docker_ref##*@}"
             [[ "$artifact_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || exit 1
             docker_location="${docker_ref%@*}"
             ghcr_location="ghcr.io/yyhuni/${docker_location##*/}"
-            oras cp "$docker_ref" "$ghcr_location:package-v2-${release_tag}"
+            oras cp "$docker_ref" "$ghcr_location:$package_tag"
             ghcr_ref="$ghcr_location@$artifact_digest"
             for ref in "$docker_ref" "$ghcr_ref"; do
               registry_label=dockerhub
@@ -1401,16 +1832,24 @@ jobs:
           if-no-files-found: error
 
   public-engine-release-manifest:
-    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-package-publish.result == 'success'
+    if: >-
+      needs.publication-intent.outputs.publish == 'true' &&
+      always() && !cancelled() &&
+      needs.publication-intent.result == 'success' &&
+      needs.resolve-public-runtime-composition.result == 'success' &&
+      needs.public-engine-runtime-discover.result == 'success' &&
+      needs.public-engine-runtime-aggregate.result == 'success' &&
+      (needs.public-engine-package-publish.result == 'success' ||
+       fromJSON(needs.public-engine-runtime-discover.outputs.built_count) == 0)
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
     # github.ref == 'refs/heads/main'
     # startsWith(github.event.head_commit.message, 'chore(export): generated deployment projection ')
     # contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
-    # needs: public-engine-package-publish
+    # needs: public-engine-runtime-aggregate, public-engine-package-publish
     name: Publish Public Engine Release Manifest
-    needs: [publication-intent, public-engine-package-publish]
+    needs: [publication-intent, public-engine-runtime-discover, public-engine-runtime-aggregate, public-engine-package-publish, resolve-public-runtime-composition]
     runs-on: ubuntu-22.04
     permissions:
       contents: read
@@ -1423,44 +1862,62 @@ jobs:
           path: dist/public-engine-runtime
       - uses: actions/download-artifact@v4
         with:
+          name: public-runtime-composition-plan-${{ github.sha }}
+          path: dist/public-composition
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-engine-runtime-discovery-${{ github.sha }}
+          path: dist/public-engine-runtime-discovery
+      - uses: actions/download-artifact@v4
+        if: fromJSON(needs.public-engine-runtime-discover.outputs.built_count) > 0
+        with:
           name: public-engine-runtime-evidence-${{ github.sha }}
           path: dist
       - uses: actions/download-artifact@v4
+        if: fromJSON(needs.public-engine-runtime-discover.outputs.built_count) > 0
         with:
           name: public-engine-package-evidence-${{ github.sha }}
           path: dist
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/engine-release/go.mod
+          cache-dependency-path: tools/engine-release/go.sum
       - name: Generate and verify the independent Engine manifest
         run: |
           set -euo pipefail
           context_file=dist/public-engine-runtime/release-context.json
-          release_tag="$(jq -er '.releaseTag' "$context_file")"
           mkdir -p dist/public-engine-release
-          jq -n \
-            --slurpfile context "$context_file" \
-            --slurpfile runtime dist/public-engine-runtime/build-results.json \
-            --slurpfile packages dist/public-engine-package-v2/build-results.json \
-            --slurpfile packageEvidence dist/public-engine-package-evidence/evidence.json \
-            '{schemaVersion:"lunafox.engine-release-manifest.v1",repository:"yyhuni/lunafox",releaseTag:$context[0].releaseTag,publicMergeCommit:$context[0].publicMergeCommit,sourceRevisionDigest:$context[0].sourceRevisionDigest,publicExportManifestSha256:$context[0].publicExportManifestSha256,publicProvenanceSha256:$context[0].publicProvenanceSha256,signerIdentity:$context[0].signerIdentity,engines:[$runtime[0].engines[] as $runtimeItem | ($packages[0].packages[] | select(.engineId == $runtimeItem.engineId)) as $packageItem | ($packageEvidence[0].packages[] | select(.engineId == $runtimeItem.engineId)) as $evidence | {engineId:$runtimeItem.engineId,runtimeImageDigest:$runtimeItem.indexDigest,runtimeImageRefs:$runtimeItem.refs,platforms:$runtimeItem.platforms,packageDigest:$packageItem.packageDigest,packageRuntimeImageDigest:$packageItem.runtimeImageDigest,packageArtifactManifestDigest:$evidence.artifactManifestDigest,packageRefs:($evidence.candidates | map(.ref))}] | sort_by(.engineId)}' \
-            > dist/public-engine-release/engine-release-manifest.json
-          node scripts/ci/verify-public-engine-release.mjs \
-            --manifest dist/public-engine-release/engine-release-manifest.json \
-            --runtime-build-results dist/public-engine-runtime/build-results.json \
-            --package-build-results dist/public-engine-package-v2/build-results.json \
-            --package-digests-dir dist/public-engine-package-digests \
-            --runtime-evidence dist/public-engine-runtime-evidence/evidence.json \
-            --package-evidence dist/public-engine-package-evidence/evidence.json \
-            --tag "$release_tag" \
-            --public-merge-commit "$(jq -er '.publicMergeCommit' "$context_file")" \
-            --source-revision-digest "$(jq -er '.sourceRevisionDigest' "$context_file")" \
-            --export-manifest-sha256 "$(jq -er '.publicExportManifestSha256' "$context_file")" \
-            --public-provenance-sha256 "$(jq -er '.publicProvenanceSha256' "$context_file")" \
-            --workflow-identity "$(jq -er '.signerIdentity' "$context_file")" --json
-          cp dist/public-engine-release/engine-release-manifest.json dist/public-engine-release/manifest.json
-          cp dist/public-engine-runtime/build-results.json dist/public-engine-release/runtime-build-results.json
-          cp dist/public-engine-package-v2/build-results.json dist/public-engine-release/package-build-results.json
-          cp dist/public-engine-runtime-evidence/evidence.json dist/public-engine-release/runtime-evidence.json
-          cp dist/public-engine-package-evidence/evidence.json dist/public-engine-release/package-evidence.json
-          cp -R dist/public-engine-package-digests dist/public-engine-release/
+          args=(
+            --plan dist/public-composition/runtime-composition-plan.json
+            --release-context "$context_file"
+            --output-dir dist/public-engine-release
+          )
+          if [ -f dist/public-composition/previous.component-evidence.json ]; then
+            [ -f dist/public-composition/previous.json ] || { echo "previous composition is required with prior evidence" >&2; exit 1; }
+            args+=(
+              --previous-bundle dist/public-composition/previous.component-evidence.json
+              --previous-composition dist/public-composition/previous.json
+            )
+            [ -f dist/public-composition/previous.manifest.yaml ] || {
+              echo "previous manifest is required with prior Engine evidence" >&2
+              exit 1
+            }
+            args+=(--previous-manifest dist/public-composition/previous.manifest.yaml)
+          fi
+          if [ "$(jq -er '.builtEngineIds | length' dist/public-engine-runtime-discovery/selection.json)" -gt 0 ]; then
+            args+=(
+              --runtime-build-results dist/public-engine-runtime/build-results.json
+              --package-build-results dist/public-engine-package-v2/build-results.json
+              --package-digests-dir dist/public-engine-package-digests
+              --runtime-evidence dist/public-engine-runtime-evidence/evidence.json
+              --package-evidence dist/public-engine-package-evidence/evidence.json
+            )
+          fi
+          node scripts/ci/assemble-public-engine-release.mjs "${args[@]}" --json \
+            | tee dist/public-engine-release/assembly-verification.json
       - uses: actions/upload-artifact@v4
         with:
           name: public-engine-release
@@ -1474,13 +1931,14 @@ jobs:
     if: >-
       always() &&
       needs.publication-intent.outputs.publish == 'true' &&
+      needs.resolve-public-runtime-composition.result == 'success' &&
       needs.publish-runtime-images.result == 'success' &&
       needs.publish-agent-image.result == 'success' &&
       needs.public-engine-release-manifest.result == 'success'
     # Temporary inert marker for the pre-alpha.118 policy checker.
     # contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Publish Final Runtime Release
-    needs: [publication-intent, publish-runtime-images, publish-agent-image, public-engine-release-manifest]
+    needs: [publication-intent, resolve-public-runtime-composition, publish-runtime-images, publish-agent-image, public-engine-release-manifest]
     runs-on: ubuntu-22.04
     environment: public-release
     permissions:
@@ -1496,6 +1954,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
+      - uses: actions/download-artifact@v4
+        with:
+          name: public-runtime-composition-plan-${{ github.sha }}
+          path: dist/final/composition-plan
       - uses: actions/download-artifact@v4
         with:
           name: public-runtime-image-evidence-server-${{ github.sha }}
@@ -1584,10 +2046,32 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist/final/runtime-verification dist/final/runtime-evidence
+          plan="dist/final/composition-plan/runtime-composition-plan.json"
+          test -f "$plan"
           for component in server frontend nginx agent bootstrap; do
             evidence_file="$(find "dist/final/runtime/$component" -type f -name "public-runtime-image-evidence-${component}.json" -print -quit)"
             [ -n "$evidence_file" ] || { echo "missing Runtime evidence: $component" >&2; exit 1; }
             cp "$evidence_file" "dist/final/runtime-evidence/public-runtime-image-evidence-${component}.json"
+            component_id="runtime.$component"
+            disposition="$(jq -er --arg id "$component_id" '.components[] | select(.id == $id) | .disposition' "$plan")"
+            if [ "$disposition" = reused ]; then
+              jq -e --arg id "$component_id" --slurpfile plan "$plan" '
+                ($plan[0].components[] | select(.id == $id and .disposition == "reused")) as $planned |
+                select(
+                  (keys | sort) == ["artifact", "component", "copiedWithoutRebuild", "evidence", "kind", "schemaVersion", "sourceRelease"] and
+                  .schemaVersion == 1 and
+                  .kind == "lunafox.component-promotion-receipt.v1" and
+                  .component == $id and
+                  .copiedWithoutRebuild == true and
+                  .artifact == $planned.artifact and
+                  .evidence == $planned.evidence and
+                  .sourceRelease == $planned.sourceRelease
+                ) |
+                {schemaVersion: 1, passed: true, component: $id, disposition: "reused", artifact: $planned.artifact, sourceRelease: $planned.sourceRelease}
+              ' "$evidence_file" > "dist/final/runtime-verification/${component}.json"
+              continue
+            fi
+            [ "$disposition" = built ] || { echo "invalid Runtime composition disposition: $component" >&2; exit 1; }
             case "$component" in
               server) dockerfile=server/Dockerfile; lockfile= ;;
               frontend) dockerfile=frontend/Dockerfile; lockfile=frontend/pnpm-lock.yaml ;;
@@ -1608,6 +2092,39 @@ jobs:
             node scripts/ci/verify-public-runtime-image-evidence.mjs "${args[@]}" \
               > "dist/final/runtime-verification/${component}.json"
           done
+      - id: composition
+        name: Finalize the canonical runtime composition core
+        env:
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+          SOURCE_REVISION_DIGEST: ${{ steps.source.outputs.source_revision_digest }}
+        run: |
+          set -euo pipefail
+          plan="dist/final/composition-plan/runtime-composition-plan.json"
+          test -f "$plan"
+          composition_args=(
+            --mode final
+            --release-tag "$RELEASE_TAG"
+            --source-revision-digest "$SOURCE_REVISION_DIGEST"
+            --public-merge-commit "$GITHUB_SHA"
+            --plan "$plan"
+            --runtime-evidence-dir dist/final/runtime-evidence
+            --output dist/final/runtime-composition.core.json
+          )
+          if [ -f dist/final/engine/runtime-evidence.json ] || [ -f dist/final/engine/package-evidence.json ]; then
+            [ -f dist/final/engine/runtime-evidence.json ] && [ -f dist/final/engine/package-evidence.json ] || { echo "Engine Runtime/Package evidence must be paired" >&2; exit 1; }
+            composition_args+=(
+              --engine-runtime-evidence dist/final/engine/runtime-evidence.json
+              --engine-package-evidence dist/final/engine/package-evidence.json
+            )
+          fi
+          node scripts/ci/resolve-public-runtime-composition.mjs "${composition_args[@]}" \
+            --json | tee dist/final/runtime-composition-finalization.json
+          composition_digest="$(jq -er '.compositionDigest' dist/final/runtime-composition.core.json)"
+          [[ "$composition_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || {
+            echo "invalid runtime composition canonical digest" >&2
+            exit 1
+          }
+          echo "composition_digest=$composition_digest" >> "$GITHUB_OUTPUT"
       - name: Verify the independent Engine handoff
         env:
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
@@ -1616,18 +2133,27 @@ jobs:
           PUBLIC_PROVENANCE_SHA256: ${{ steps.source.outputs.public_provenance_sha256 }}
         run: |
           set -euo pipefail
-          node scripts/ci/verify-public-engine-release.mjs \
-            --manifest dist/final/engine/manifest.json \
-            --runtime-build-results dist/final/engine/runtime-build-results.json \
-            --package-build-results dist/final/engine/package-build-results.json \
-            --package-digests-dir dist/final/engine/public-engine-package-digests \
-            --runtime-evidence dist/final/engine/runtime-evidence.json \
-            --package-evidence dist/final/engine/package-evidence.json \
-            --tag "$RELEASE_TAG" --public-merge-commit "$GITHUB_SHA" \
-            --source-revision-digest "$SOURCE_REVISION_DIGEST" \
-            --export-manifest-sha256 "$EXPORT_MANIFEST_SHA256" \
-            --public-provenance-sha256 "$PUBLIC_PROVENANCE_SHA256" \
-            --workflow-identity "https://github.com/yyhuni/lunafox/.github/workflows/public-validate.yml@refs/heads/main" \
+          engine_args=(
+            --complete-manifest dist/final/engine/manifest.json
+            --tag "$RELEASE_TAG" --public-merge-commit "$GITHUB_SHA"
+            --source-revision-digest "$SOURCE_REVISION_DIGEST"
+            --export-manifest-sha256 "$EXPORT_MANIFEST_SHA256"
+            --public-provenance-sha256 "$PUBLIC_PROVENANCE_SHA256"
+            --workflow-identity "https://github.com/yyhuni/lunafox/.github/workflows/public-validate.yml@refs/heads/main"
+            --composition-plan dist/final/composition-plan/runtime-composition-plan.json
+            --composition dist/final/runtime-composition.core.json
+          )
+          if [ -f dist/final/engine/runtime-build-results.json ]; then
+            engine_args+=(
+              --manifest dist/final/engine/current-build-manifest.json
+              --runtime-build-results dist/final/engine/runtime-build-results.json
+              --package-build-results dist/final/engine/package-build-results.json
+              --package-digests-dir dist/final/engine/public-engine-package-digests
+              --runtime-evidence dist/final/engine/runtime-evidence.json
+              --package-evidence dist/final/engine/package-evidence.json
+            )
+          fi
+          node scripts/ci/verify-public-engine-release.mjs "${engine_args[@]}" \
             --json | tee dist/final/engine-verification.json
       - name: Promote every Runtime digest to both final registries
         env:
@@ -1642,11 +2168,24 @@ jobs:
           anonymous_config="$(mktemp -d)"
           trap 'rm -rf "$anonymous_config"' EXIT
           printf '{"auths":{}}\n' > "$anonymous_config/config.json"
+          plan="dist/final/composition-plan/runtime-composition-plan.json"
+          test -f "$plan"
           for component in "${components[@]}"; do
             evidence="dist/final/runtime-evidence/public-runtime-image-evidence-${component}.json"
-            expected_digest="$(jq -er '.digest' "$evidence")"
+            component_id="runtime.$component"
+            disposition="$(jq -er --arg id "$component_id" '.components[] | select(.id == $id) | .disposition' "$plan")"
+            expected_digest="$(jq -er '.digest // empty' "$evidence")"
+            expected_ref="$(jq -er '.image // empty' "$evidence")"
+            if [ "$disposition" = reused ]; then
+              expected_digest="$(jq -er --arg id "$component_id" '.components[] | select(.id == $id and .disposition == "reused") | .artifact.digest' "$plan")"
+              expected_ref="$(jq -er --arg id "$component_id" '.components[] | select(.id == $id and .disposition == "reused") | .artifact.ref' "$plan")"
+            elif [ "$disposition" != built ]; then
+              echo "invalid Runtime composition disposition: $component" >&2
+              exit 1
+            fi
             [[ "$expected_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo "invalid Runtime digest: $component" >&2; exit 1; }
             ghcr_ref="ghcr.io/yyhuni/lunafox-${component}@${expected_digest}"
+            [ "$expected_ref" = "$ghcr_ref" ] || { echo "Runtime evidence artifact does not match the planned immutable reference: $component" >&2; exit 1; }
             docker_target="docker.io/yyhuni/lunafox-${component}:${RELEASE_TAG}"
             ghcr_target="ghcr.io/yyhuni/lunafox-${component}:${RELEASE_TAG}"
             docker_existing="$(resolve_digest "$docker_target")"
@@ -1657,7 +2196,7 @@ jobs:
             fi
             existing_digest="${ghcr_existing:-$docker_existing}"
             digest="$expected_digest"
-            source_ref="$ghcr_ref"
+            source_ref="$expected_ref"
             reused_final_tag=false
             if [ -n "$existing_digest" ] && [ "$existing_digest" != "$expected_digest" ]; then
               existing_target="$ghcr_target"
@@ -1703,12 +2242,21 @@ jobs:
           printf '{"auths":{}}\n' > "$anonymous_config/config.json"
           (cd tools/engine-oci-publish && go build -o "$RUNNER_TEMP/verify-oci-signature" ./cmd/verify-signature)
           mkdir -p dist/final/signatures
+          plan="dist/final/composition-plan/runtime-composition-plan.json"
+          test -f "$plan"
           for file in dist/final/runtime-digests/*.env; do
             component="$(awk -F= '$1 == "COMPONENT" {print $2}' "$file")"
             digest="$(awk -F= '$1 == "DIGEST" {print $2}' "$file")"
+            disposition="$(jq -er --arg id "runtime.$component" '.components[] | select(.id == $id) | .disposition' "$plan")"
+            [ "$disposition" = built ] || [ "$disposition" = reused ] || {
+              echo "invalid Runtime composition disposition: $component" >&2
+              exit 1
+            }
             for registry in docker.io ghcr.io; do
               ref="${registry}/yyhuni/lunafox-${component}@${digest}"
-              cosign sign --yes "$ref"
+              if [ "$disposition" = built ]; then
+                cosign sign --yes "$ref"
+              fi
               "$RUNNER_TEMP/verify-oci-signature" "$ref"
               DOCKER_CONFIG="$anonymous_config" cosign verify \
                 --certificate-oidc-issuer https://token.actions.githubusercontent.com \
@@ -1720,6 +2268,7 @@ jobs:
       - name: Generate and verify the complete release manifest
         env:
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+          RUNTIME_COMPOSITION_SHA256: ${{ steps.composition.outputs.composition_digest }}
         run: |
           set -euo pipefail
           mkdir -p dist/final
@@ -1738,6 +2287,41 @@ jobs:
           node scripts/ci/verify-public-release.mjs \
             --manifest dist/final/release.manifest.yaml --tag "$RELEASE_TAG" --json \
             > dist/final/release-verification.json
+          manifest_digest="sha256:$(sha256sum dist/final/release.manifest.yaml | awk '{print $1}')"
+          node scripts/ci/resolve-public-runtime-composition.mjs \
+            --mode bind \
+            --plan dist/final/runtime-composition.core.json \
+            --manifest-digest "$manifest_digest" \
+            --output dist/final/runtime-composition.json \
+            --json | tee dist/final/runtime-composition-binding.json
+          node scripts/ci/verify-release-component-composition.mjs \
+            --composition dist/final/runtime-composition.json \
+            --manifest dist/final/release.manifest.yaml --json \
+            > dist/final/runtime-composition-verification.json
+      - name: Assemble and verify durable component evidence
+        run: |
+          set -euo pipefail
+          args=(
+            --composition dist/final/runtime-composition.json
+            --runtime-evidence-dir dist/final/runtime-evidence
+            --output dist/final/component-evidence.json
+          )
+          if [ -f dist/final/engine/runtime-evidence.json ]; then
+            args+=(--engine-runtime-evidence dist/final/engine/runtime-evidence.json)
+          fi
+          if [ -f dist/final/engine/package-evidence.json ]; then
+            args+=(--engine-package-evidence dist/final/engine/package-evidence.json)
+          fi
+          if [ -f dist/final/composition-plan/previous.component-evidence.json ]; then
+            args+=(--previous-bundle dist/final/composition-plan/previous.component-evidence.json)
+          fi
+          node scripts/ci/build-component-evidence-bundle.mjs "${args[@]}" --json \
+            | tee dist/final/component-evidence-build.json
+          node scripts/ci/verify-component-evidence-bundle.mjs \
+            --bundle dist/final/component-evidence.json \
+            --composition dist/final/runtime-composition.json \
+            --manifest dist/final/release.manifest.yaml --json \
+            | tee dist/final/component-evidence-verification.json
       - name: Build immutable Docker Compose deployment packages
         env:
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
@@ -1746,6 +2330,7 @@ jobs:
           node --test scripts/ci/generate-compose-deployment.test.mjs
           node scripts/ci/generate-compose-deployment.mjs \
             --manifest dist/final/release.manifest.yaml --tag "$RELEASE_TAG" \
+            --runtime-composition dist/final/runtime-composition.json \
             --output dist/final/deployment --snapshot dist/final/deployment-snapshot \
             > dist/final/deployment-packages.json
           [ "$(jq 'length' dist/final/deployment-packages.json)" -eq 1 ]
@@ -1782,8 +2367,14 @@ jobs:
         run: |
           set -euo pipefail
           manifest_digest="sha256:$(sha256sum dist/final/release.manifest.yaml | awk '{print $1}')"
+          runtime_composition_digest="$(jq -er '.compositionDigest' dist/final/runtime-composition.json)"
+          runtime_composition_asset_sha256="sha256:$(sha256sum dist/final/runtime-composition.json | awk '{print $1}')"
+          component_evidence_asset_sha256="sha256:$(sha256sum dist/final/component-evidence.json | awk '{print $1}')"
           jq -n \
             --arg artifactDigest "$manifest_digest" \
+            --arg runtimeCompositionDigest "$runtime_composition_digest" \
+            --arg runtimeCompositionAssetSha256 "$runtime_composition_asset_sha256" \
+            --arg componentEvidenceAssetSha256 "$component_evidence_asset_sha256" \
             --arg privateSourceRevision "$SOURCE_REVISION_DIGEST" \
             --arg workflowIdentity "https://github.com/yyhuni/lunafox/.github/workflows/public-validate.yml@refs/heads/main" \
             --arg builderRun "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
@@ -1792,8 +2383,20 @@ jobs:
             --arg releaseTag "$RELEASE_TAG" \
             --arg publicSourceCommit "$GITHUB_SHA" \
             --arg deploymentSnapshotCommit "$DEPLOYMENT_SNAPSHOT_COMMIT" \
-            '{schemaVersion:1,status:"published",releaseTag:$releaseTag,artifactDigest:$artifactDigest,privateSourceRevision:$privateSourceRevision,publicSourceCommit:$publicSourceCommit,deploymentSnapshotCommit:$deploymentSnapshotCommit,workflowIdentity:$workflowIdentity,builderRun:$builderRun,exportManifest:$exportManifest,publicProvenance:$publicProvenance,sbom:true,scanEvidence:{runtimeImages:true,engineHandoff:true,signatures:true}}' \
+            '{schemaVersion:1,status:"published",releaseTag:$releaseTag,artifactDigest:$artifactDigest,runtimeComposition:{asset:"runtime-composition.json",digest:$runtimeCompositionDigest,assetSha256:$runtimeCompositionAssetSha256},componentEvidence:{asset:"component-evidence.json",assetSha256:$componentEvidenceAssetSha256},privateSourceRevision:$privateSourceRevision,publicSourceCommit:$publicSourceCommit,deploymentSnapshotCommit:$deploymentSnapshotCommit,workflowIdentity:$workflowIdentity,builderRun:$builderRun,exportManifest:$exportManifest,publicProvenance:$publicProvenance,sbom:true,scanEvidence:{runtimeImages:true,engineHandoff:true,signatures:true}}' \
             > dist/final/public-release-provenance.json
+      - name: Verify the complete release evidence closure
+        env:
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          node scripts/ci/verify-public-release-evidence.mjs \
+            --manifest dist/final/release.manifest.yaml \
+            --composition dist/final/runtime-composition.json \
+            --bundle dist/final/component-evidence.json \
+            --provenance dist/final/public-release-provenance.json \
+            --tag "$RELEASE_TAG" --json \
+            | tee dist/final/public-release-evidence-verification.json
       - name: Generate and publish the release-channel branch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1821,6 +2424,7 @@ jobs:
           if [ -d "$channel_worktree/manifests" ]; then cp -a "$channel_worktree/manifests/." "$channel_root/manifests/"; fi
           node scripts/ci/generate-public-channel.mjs \
             --tag "$RELEASE_TAG" --channel "$channel" --manifest dist/final/release.manifest.yaml \
+            --runtime-composition dist/final/runtime-composition.json \
             --output-dir "$channel_root" --publication-complete
           # The first successful publication can follow the frozen source
           # first tag, so do not manufacture a historical channel record.
@@ -1879,11 +2483,14 @@ jobs:
             gh release edit "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" --draft=false --prerelease="$prerelease" --notes-file "$NOTES_FILE"
           fi
           publish_asset() {
-            local file="$1" name expected actual url tmp asset_json
+            local file="$1" name expected actual url tmp asset_json asset_list asset_count
             name="$(basename "$file")"
             expected="$(sha256sum "$file" | awk '{print $1}')"
-            asset_json="$(gh api "/repos/${PUBLIC_REPOSITORY}/releases/tags/${RELEASE_TAG}" | jq -c --arg name "$name" '.assets[]? | select(.name == $name)' | head -n 1 || true)"
-            if [ -n "$asset_json" ]; then
+            asset_list="$(gh api "/repos/${PUBLIC_REPOSITORY}/releases/tags/${RELEASE_TAG}" | jq -c --arg name "$name" '[.assets[]? | select(.name == $name)]')"
+            asset_count="$(jq -er 'length' <<<"$asset_list")"
+            [ "$asset_count" -le 1 ] || { echo "final Release contains duplicate assets: $name" >&2; exit 1; }
+            if [ "$asset_count" -eq 1 ]; then
+              asset_json="$(jq -ce '.[0]' <<<"$asset_list")"
               actual="$(jq -r '.digest // empty' <<<"$asset_json")"
               if [ "$actual" != "sha256:$expected" ]; then
                 url="$(jq -er '.url' <<<"$asset_json")"
@@ -1896,8 +2503,23 @@ jobs:
               return
             fi
             gh release upload "$RELEASE_TAG" --repo "$PUBLIC_REPOSITORY" "$file"
+            asset_list="$(gh api "/repos/${PUBLIC_REPOSITORY}/releases/tags/${RELEASE_TAG}" | jq -c --arg name "$name" '[.assets[]? | select(.name == $name)]')"
+            asset_count="$(jq -er 'length' <<<"$asset_list")"
+            [ "$asset_count" -eq 1 ] || { echo "final Release upload did not produce exactly one asset: $name" >&2; exit 1; }
+            asset_json="$(jq -ce '.[0]' <<<"$asset_list")"
+            actual="$(jq -r '.digest // empty' <<<"$asset_json")"
+            if [ "$actual" != "sha256:$expected" ]; then
+              url="$(jq -er '.url' <<<"$asset_json")"
+              tmp="$(mktemp)"
+              curl --fail --location --silent --show-error -H 'Accept: application/octet-stream' -H "Authorization: Bearer ${GH_TOKEN}" "$url" -o "$tmp"
+              actual="sha256:$(sha256sum "$tmp" | awk '{print $1}')"
+              rm -f "$tmp"
+            fi
+            [ "$actual" = "sha256:$expected" ] || { echo "final Release upload digest conflict: $name" >&2; exit 1; }
           }
           publish_asset dist/final/release.manifest.yaml
+          publish_asset dist/final/runtime-composition.json
+          publish_asset dist/final/component-evidence.json
           publish_asset dist/final/public-release-provenance.json
           publish_asset "dist/final/deployment/lunafox-${RELEASE_TAG}.zip"
           publish_asset dist/final/deployment-packages.json
@@ -1907,6 +2529,15 @@ jobs:
           name: public-final-release-${{ steps.deployment.outputs.merge_sha }}
           path: |
             dist/final/release.manifest.yaml
+            dist/final/runtime-composition.json
+            dist/final/runtime-composition.core.json
+            dist/final/runtime-composition-finalization.json
+            dist/final/runtime-composition-binding.json
+            dist/final/runtime-composition-verification.json
+            dist/final/component-evidence.json
+            dist/final/component-evidence-build.json
+            dist/final/component-evidence-verification.json
+            dist/final/composition-plan/**
             dist/final/public-release-provenance.json
             dist/final/release-verification.json
             dist/final/release-notes-validation.json
