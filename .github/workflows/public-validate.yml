@@ -1693,7 +1693,7 @@ jobs:
           if [ -n "$built_engine_ids" ]; then
             engine_selection_args+=(--engine-ids "$built_engine_ids")
           fi
-          mkdir -p dist/public-engine-package-v2
+          mkdir -p dist/public-engine-package-v2 dist/public-engine-package-version-map
           jq -e '
             {
               schemaVersion: "lunafox.engine-package-version-map.v1",
@@ -1702,14 +1702,14 @@ jobs:
             }
             | .versions |= sort_by(.engineId)
           ' dist/public-engine-runtime-discovery/selection.json \
-            > dist/public-engine-package-v2/package-version-map.json
-          test "$(jq -er '.planDigest' dist/public-engine-package-v2/package-version-map.json)" = "$(jq -er '.planDigest' dist/public-composition/runtime-composition-plan.json)"
+            > dist/public-engine-package-version-map/package-version-map.json
+          test "$(jq -er '.planDigest' dist/public-engine-package-version-map/package-version-map.json)" = "$(jq -er '.planDigest' dist/public-composition/runtime-composition-plan.json)"
           (cd tools/engine-release && go run . \
             -command build-packages \
             -engine-root "$GITHUB_WORKSPACE/extensions/engines" \
             "${engine_selection_args[@]}" \
             -build-results "$GITHUB_WORKSPACE/dist/public-engine-runtime/build-results.json" \
-            -package-version-map "$GITHUB_WORKSPACE/dist/public-engine-package-v2/package-version-map.json" \
+            -package-version-map "$GITHUB_WORKSPACE/dist/public-engine-package-version-map/package-version-map.json" \
             -out-root "$GITHUB_WORKSPACE/dist/public-engine-package-v2" \
             -mode production \
             -output "$GITHUB_WORKSPACE/dist/public-engine-package-v2/build-results.json")
@@ -1719,7 +1719,7 @@ jobs:
             "${engine_selection_args[@]}" \
             -build-results "$GITHUB_WORKSPACE/dist/public-engine-runtime/build-results.json" \
             -package-build-results "$GITHUB_WORKSPACE/dist/public-engine-package-v2/build-results.json" \
-            -package-version-map "$GITHUB_WORKSPACE/dist/public-engine-package-v2/package-version-map.json" \
+            -package-version-map "$GITHUB_WORKSPACE/dist/public-engine-package-version-map/package-version-map.json" \
             -out-root "$GITHUB_WORKSPACE/dist/public-engine-package-v2" \
             -mode production)
       - uses: actions/upload-artifact@v4
