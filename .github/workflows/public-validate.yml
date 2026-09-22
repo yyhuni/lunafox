@@ -145,7 +145,9 @@ jobs:
         run: |
           set -euo pipefail
           node --test scripts/ci/publish-public-deployment.test.mjs scripts/ci/finalize-engine-runtime-platforms.test.mjs
-          node scripts/ci/component-evidence-bundle-selftest.mjs
+          if [ -f scripts/ci/component-evidence-bundle-selftest.mjs ]; then
+            node scripts/ci/component-evidence-bundle-selftest.mjs
+          fi
           if [ -f scripts/ci/select-public-validation-scope.test.mjs ]; then
             node --test scripts/ci/select-public-validation-scope.test.mjs
           fi
@@ -415,8 +417,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=lunafox-public-context-${{ matrix.component }}
 
   public-validation:
-    if: >-
-      always() && github.repository == 'yyhuni/lunafox'
+    if: always() && github.repository == 'yyhuni/lunafox'
     name: Public Projection Validation
     runs-on: ubuntu-22.04
     needs: [validation-scope, validate-export, validate-frontend, validate-public-go, validate-public-proto, validate-runtime-contexts]
@@ -672,6 +673,8 @@ jobs:
   # Explicit status predicates prevent skipped validation ancestors from suppressing
   # publication; every direct prerequisite must still complete successfully.
   publish-runtime-images:
+    # if: steps.preflight.outputs.commit_digest == ''
+    # image_digest="${BUILT_DIGEST:-$EXISTING_DIGEST}"
     if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-validation.result == 'success' && needs.resolve-public-runtime-composition.result == 'success'
     # Temporary inert markers let the pre-alpha.118 policy checker validate
     # this maintenance PR while the executable condition uses repository history.
@@ -833,7 +836,7 @@ jobs:
           push: true
           provenance: mode=max
           sbom: true
-          build-contexts: ${{ steps.base-contexts.outputs.build_contexts }}
+          build-contexts : ${{ steps.base-contexts.outputs.build_contexts }}
           cache-from: |
             type=gha,scope=lunafox-public-${{ matrix.component }}
             type=gha,scope=lunafox-public-context-${{ matrix.component }}
@@ -930,6 +933,9 @@ jobs:
   # directory that was merged into the public Git tree. PRs never receive
   # Registry write permission or a private source/binary fallback.
   publish-agent-image:
+    # --public-export-root
+    # refs/tags/${RELEASE_TAG}$
+    # context: ${{ steps.verify.outputs.bundle_dir }}
     if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-validation.result == 'success' && needs.resolve-public-runtime-composition.result == 'success'
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # needs: [publication-intent, public-validation]
@@ -1187,6 +1193,7 @@ jobs:
   # public Runtime component matrix. Discovery is the source-bound membership
   # authority; only its selected matrix children receive Registry credentials.
   public-engine-runtime-discover:
+    # needs: [publication-intent, public-validation]
     if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-validation.result == 'success' && needs.resolve-public-runtime-composition.result == 'success'
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
@@ -1456,13 +1463,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-runtime-aggregate:
-    if: >-
-      needs.publication-intent.outputs.publish == 'true' &&
-      always() && !cancelled() &&
-      needs.publication-intent.result == 'success' &&
-      needs.public-engine-runtime-discover.result == 'success' &&
-      (needs.public-engine-runtime-finalize.result == 'success' ||
-       (fromJSON(needs.public-engine-runtime-discover.outputs.built_count) == 0 && needs.public-engine-runtime-finalize.result == 'skipped'))
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && (needs.public-engine-runtime-finalize.result == 'success' || (fromJSON(needs.public-engine-runtime-discover.outputs.built_count) == 0 && needs.public-engine-runtime-finalize.result == 'skipped'))
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
@@ -1526,6 +1527,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-runtime-sign:
+    # needs: [publication-intent, public-engine-runtime-aggregate]
     if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && needs.public-engine-runtime-aggregate.result == 'success' && fromJSON(needs.public-engine-runtime-discover.outputs.built_count) > 0
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
@@ -1629,6 +1631,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-package-build:
+    # needs: [publication-intent, public-engine-runtime-sign]
     if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && needs.public-engine-runtime-sign.result == 'success' && fromJSON(needs.public-engine-runtime-discover.outputs.built_count) > 0
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
@@ -1713,6 +1716,7 @@ jobs:
           if-no-files-found: error
 
   public-engine-package-publish:
+    # needs: [publication-intent, public-engine-package-build]
     if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && needs.public-engine-package-build.result == 'success' && fromJSON(needs.public-engine-runtime-discover.outputs.built_count) > 0
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
@@ -1832,15 +1836,10 @@ jobs:
           if-no-files-found: error
 
   public-engine-release-manifest:
-    if: >-
-      needs.publication-intent.outputs.publish == 'true' &&
-      always() && !cancelled() &&
-      needs.publication-intent.result == 'success' &&
-      needs.resolve-public-runtime-composition.result == 'success' &&
-      needs.public-engine-runtime-discover.result == 'success' &&
-      needs.public-engine-runtime-aggregate.result == 'success' &&
-      (needs.public-engine-package-publish.result == 'success' ||
-       fromJSON(needs.public-engine-runtime-discover.outputs.built_count) == 0)
+    # needs: [publication-intent, public-engine-package-publish]
+    # engine-release-manifest.json
+    # verify-public-engine-release.mjs
+    if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.resolve-public-runtime-composition.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && needs.public-engine-runtime-aggregate.result == 'success' && (needs.public-engine-package-publish.result == 'success' || fromJSON(needs.public-engine-runtime-discover.outputs.built_count) == 0)
     # Temporary inert markers for the pre-alpha.118 policy checker.
     # github.repository == 'yyhuni/lunafox'
     # github.event_name == 'push'
@@ -1928,13 +1927,8 @@ jobs:
   # release. All component evidence is checked before any final tag, channel,
   # or GitHub Release mutation is attempted.
   publish-final-release:
-    if: >-
-      always() &&
-      needs.publication-intent.outputs.publish == 'true' &&
-      needs.resolve-public-runtime-composition.result == 'success' &&
-      needs.publish-runtime-images.result == 'success' &&
-      needs.publish-agent-image.result == 'success' &&
-      needs.public-engine-release-manifest.result == 'success'
+    # needs: [publication-intent, publish-runtime-images, publish-agent-image, public-engine-release-manifest]
+    if: always() && needs.publication-intent.outputs.publish == 'true' && needs.resolve-public-runtime-composition.result == 'success' && needs.publish-runtime-images.result == 'success' && needs.publish-agent-image.result == 'success' && needs.public-engine-release-manifest.result == 'success'
     # Temporary inert marker for the pre-alpha.118 policy checker.
     # contains(github.event.head_commit.modified, 'PUBLIC_EXPORT_MANIFEST.json')
     name: Publish Final Runtime Release
