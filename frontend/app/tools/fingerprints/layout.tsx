@@ -10,7 +10,7 @@ import { COMPACT_PAGE_SHELL_CLASS } from "@/components/shared/layout/page-shell-
 
 function FingerprintDescriptionHelp({ label, description }: { label: string; description: string }) {
   return (
-    <TooltipProvider delay={100}>
+    <TooltipProvider>
       <Tooltip>
         <TooltipTrigger
           render={(

@@ -43,6 +43,8 @@ export interface AllTargetsTranslations {
         initiateScan: string;
         clickToCopy: string;
         copied: string;
+        targetConcept: string;
+        organizationConcept: string;
     };
     targetTypes: Record<TargetType, string>;
 }
@@ -134,7 +136,7 @@ export const createAllTargetsColumns = ({ formatDate, navigate, handleDelete, ha
             firstSortDirection: "asc",
             serverSortPerformance: "covered by idx_target_name_id_active for active targets",
         },
-        header: ({ column }) => (<DataTableColumnHeader column={column} title={t.columns.target}/>),
+        header: ({ column }) => (<DataTableColumnHeader column={column} title={t.columns.target} tooltip={t.tooltips.targetConcept}/>),
         cell: ({ row }) => (<TargetNameCell name={row.getValue("name") as string} targetId={row.original.id} targetType={row.original.type} t={t}/>),
     },
     {
@@ -143,7 +145,7 @@ export const createAllTargetsColumns = ({ formatDate, navigate, handleDelete, ha
         minSize: allTargetsTableColumnLayout.organizations.minSize,
         maxSize: allTargetsTableColumnLayout.organizations.maxSize,
         meta: { title: t.columns.organization },
-        header: ({ column }) => (<DataTableColumnHeader column={column} title={t.columns.organization}/>),
+        header: ({ column }) => (<DataTableColumnHeader column={column} title={t.columns.organization} tooltip={t.tooltips.organizationConcept}/>),
         cell: ({ row }) => {
             const organizations = row.getValue("organizations") as Array<{
                 id: number;

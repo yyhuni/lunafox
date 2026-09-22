@@ -12,6 +12,14 @@ describe("add-target-dialog-sections contract", () => {
     expect(source).toContain("blockingIssueCount")
   })
 
+  it("explains target and organization concepts at their entry points", () => {
+    expect(source).toContain("InlineHelpTooltip")
+    expect(source).toContain('tTooltips("targetConcept")')
+    expect(source).toContain('tTooltips("organizationConcept")')
+    expect(source).toContain('ariaLabel={t("targetList")}')
+    expect(source).toContain('ariaLabel={t("linkOrganization")}')
+  })
+
   it("adapts target creation to the shared multi-select organization workspace", () => {
     expect(source).toContain("OrganizationSelectionWorkspace")
     expect(source).toContain('import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"')

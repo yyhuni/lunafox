@@ -85,12 +85,6 @@ type ScanHistorySummaryBadge = {
 // wrap complete Badge items so scan context is never hidden by the column edge.
 const SCAN_HISTORY_SUMMARY_BADGE_LIST_CLASS = "flex min-w-0 flex-wrap items-center gap-1";
 const SCAN_HISTORY_ENGINE_BADGE_LIST_CLASS = "flex min-w-0 flex-wrap items-center gap-1";
-const SCAN_HISTORY_ENGINE_TOOLTIP_DELAY_MS = 400;
-const SCAN_HISTORY_ENGINE_TOOLTIP_CLOSE_DELAY_MS = 100;
-const SCAN_HISTORY_STATUS_TOOLTIP_DELAY_MS = 300;
-const SCAN_HISTORY_STATUS_TOOLTIP_CLOSE_DELAY_MS = 100;
-const SCAN_HISTORY_TRIGGER_TOOLTIP_DELAY_MS = 300;
-const SCAN_HISTORY_TRIGGER_TOOLTIP_CLOSE_DELAY_MS = 100;
 
 // The selection cell and target cell each contribute to the leading gutter; use
 // the target cell's padding so the provenance cue stays attached to row identity.
@@ -106,7 +100,7 @@ function ScanTriggerSourceCell({
     const TriggerIcon = semanticIcons.triggerSource[triggerType];
     const accessibleLabel = `${columnLabel}: ${label}`;
 
-    return (<TooltipProvider delay={SCAN_HISTORY_TRIGGER_TOOLTIP_DELAY_MS} closeDelay={SCAN_HISTORY_TRIGGER_TOOLTIP_CLOSE_DELAY_MS}>
+    return (<TooltipProvider>
       <Tooltip>
         <TooltipTrigger
           closeOnClick={false}
@@ -279,7 +273,7 @@ export const createScanHistoryColumns = ({ formatDate, handleDelete, handleStop,
               -
             </Badge>);
                 }
-                return (<TooltipProvider delay={SCAN_HISTORY_ENGINE_TOOLTIP_DELAY_MS} closeDelay={SCAN_HISTORY_ENGINE_TOOLTIP_CLOSE_DELAY_MS}>
+                return (<TooltipProvider>
                   <div data-scan-engine-badges className={SCAN_HISTORY_ENGINE_BADGE_LIST_CLASS} title={executedEngineNames.join(", ")}>
               {executedEngineNames.map((name, index) => {
                 const description = executedEngineDescriptions[index];
@@ -335,7 +329,7 @@ export const createScanHistoryColumns = ({ formatDate, handleDelete, handleStop,
                 const isClickable = Boolean(handleStatusClick) && statusClickable;
                 if (isClickable) {
                     const runtimeDetailLabel = statusActionLabel ?? t.actions.runtimeDetail;
-                    return (<TooltipProvider delay={SCAN_HISTORY_STATUS_TOOLTIP_DELAY_MS} closeDelay={SCAN_HISTORY_STATUS_TOOLTIP_CLOSE_DELAY_MS}>
+                    return (<TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger closeOnClick={false} render={<button type="button" onClick={(event) => {
                             event.stopPropagation();

@@ -8,7 +8,7 @@ import {
   getCursorPageTransition,
   type BusinessListFilterCompilerConfig,
 } from "@/components/shared/data-table/business-list-query"
-import { TargetValidator } from "@/lib/target-validator"
+import { MAX_TARGET_BATCH_SIZE, TargetValidator } from "@/lib/target-validator"
 import type { BatchCreateTargetsRequest } from "@/types/target.types"
 
 const ORGANIZATION_PICKER_FILTER_FIELDS: BusinessListFilterCompilerConfig = {
@@ -53,7 +53,6 @@ export function useAddTargetDialogState({
   const [orgPageSize, setOrgPageSizeState] = React.useState(10)
   const [orgPageTokens, setOrgPageTokens] = React.useState<Record<number, string | undefined>>({ 1: undefined })
 
-  const [invalidTargets, setInvalidTargets] = React.useState<InvalidTarget[]>([])
   const batchCreateTargets = useBatchCreateTargets()
 
   const resetOrgPaging = React.useCallback(() => {
@@ -153,43 +152,35 @@ export function useAddTargetDialogState({
       ...prev,
       [field]: value,
     }))
+  }, [])
 
-    if (field === "targets") {
-      const lines = TargetValidator.parseLines(value)
-
-      if (lines.length === 0) {
-        setInvalidTargets([])
-        return
-      }
-
-      const results = TargetValidator.validateTargetBatch(lines)
-      const invalid = results
-        .filter((r) => !r.isValid)
-        .map((r) => ({
-          index: r.index,
-          lineNumber: r.lineNumber,
-          originalTarget: r.originalTarget,
-          error: r.error || t("invalidFormat"),
-          type: r.type,
-        }))
-      setInvalidTargets(invalid)
-    }
-  }, [t])
-
-  const targetCount = React.useMemo(() =>
-    formData.targets
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0).length,
+  const parsedTargets = React.useMemo(
+    () => TargetValidator.parseLines(formData.targets),
     [formData.targets]
   )
+  const invalidTargets = React.useMemo<InvalidTarget[]>(() => {
+    if (parsedTargets.length === 0) {
+      return []
+    }
+
+    return TargetValidator.validateTargetBatch(parsedTargets)
+      .filter((result) => !result.isValid)
+      .map((result) => ({
+        index: result.index,
+        lineNumber: result.lineNumber,
+        originalTarget: result.originalTarget,
+        error: result.error || t("invalidFormat"),
+        type: result.type,
+      }))
+  }, [parsedTargets, t])
+  const targetCount = parsedTargets.length
+  const isTargetBatchOverLimit = targetCount > MAX_TARGET_BATCH_SIZE
 
   const resetForm = React.useCallback(() => {
     setFormData({
       targets: "",
       organizationIds: [],
     })
-    setInvalidTargets([])
     setOrgSearchQuery("")
     setOrgPageState(1)
     setOrgPageSize(10)
@@ -199,16 +190,11 @@ export function useAddTargetDialogState({
   const handleSubmit = React.useCallback((event: React.FormEvent) => {
     event.preventDefault()
 
-    if (!formData.targets.trim()) return
-    if (invalidTargets.length > 0) return
+    const submittedTargets = TargetValidator.parseLines(formData.targets)
+    if (submittedTargets.length === 0 || submittedTargets.length > MAX_TARGET_BATCH_SIZE) return
+    if (TargetValidator.validateTargetBatch(submittedTargets).some((result) => !result.isValid)) return
 
-    const targetList = formData.targets
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-      .map((name) => ({ name }))
-
-    if (targetList.length === 0) return
+    const targetList = submittedTargets.map(({ target: name }) => ({ name }))
 
     const payload: BatchCreateTargetsRequest = {
       targets: targetList,
@@ -225,7 +211,7 @@ export function useAddTargetDialogState({
         onAdd?.()
       },
     })
-  }, [batchCreateTargets, formData.organizationIds, formData.targets, invalidTargets.length, onAdd, resetForm, setOpen])
+  }, [batchCreateTargets, formData.organizationIds, formData.targets, onAdd, resetForm, setOpen])
 
   const handleOpenChange = React.useCallback((newOpen: boolean) => {
     if (batchCreateTargets.isPending) return
@@ -235,7 +221,7 @@ export function useAddTargetDialogState({
     }
   }, [batchCreateTargets.isPending, resetForm, setOpen])
 
-  const isFormValid = formData.targets.trim().length > 0 && invalidTargets.length === 0
+  const isFormValid = targetCount > 0 && invalidTargets.length === 0 && !isTargetBatchOverLimit
 
   const handleTextareaScroll = React.useCallback((event: React.UIEvent<HTMLTextAreaElement>) => {
     if (lineNumbersRef.current) {
@@ -275,6 +261,7 @@ export function useAddTargetDialogState({
     handleSubmit,
     targetCount,
     invalidTargets,
+    isTargetBatchOverLimit,
     isFormValid,
     lineNumbersRef,
     textareaRef,

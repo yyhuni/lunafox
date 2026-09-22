@@ -49,6 +49,7 @@ export function AboutDialog({ children }: AboutDialogProps) {
           <AboutDialogBranding t={state.t} />
           <AboutDialogVersionInfo
             t={state.t}
+            githubRepo={state.githubRepo}
             currentVersion={state.currentVersion}
             candidate={state.candidate}
             hasUpdate={state.hasUpdate}

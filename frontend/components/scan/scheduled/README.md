@@ -80,7 +80,7 @@ shared header.
 The four creation steps deliberately split by product ownership: step 1 owns
 scheduled-scan-specific scope; step 2 reuses `InitiateScanWorkflowSelection`
 and `ScanAgentSelector`; step 3 reuses `InitiateScanConfigStep`; step 4 owns
-Cron inputs and UTC execution preview. Do not restore a
+Cron and IANA time-zone inputs plus the execution preview. Do not restore a
 scheduled-scan-local workflow card list or reduced configuration editor.
 Workflow selection still initializes only from its parent-scoped Profile, while
 scan-options validation runs before leaving step 3 through the shared editor's
@@ -88,15 +88,22 @@ scan-options validation runs before leaving step 3 through the shared editor's
 
 ## Schedule Rule And Execution Projection
 
-- Create and Edit submit only the five-field Cron expression. The Server and
-  preview interpret it in UTC; the UI does not expose or persist a configurable
-  time zone.
+- Create prefills the browser's IANA time zone, shows it as an editable field,
+  and submits the value left in the form. Edit loads the saved schedule zone;
+  it never substitutes the viewer's current zone. Missing or invalid browser
+  zone data must surface validation instead of falling back to UTC or `Local`.
+- Create and Edit submit the exact five-field Cron expression together with
+  the selected IANA `timeZone`. The Server and preview interpret the Cron as
+  wall-clock time in that saved zone; neither client rewrites its hour or
+  minute into UTC.
 - `cronExpression` accepts exactly five fields in minute, hour, day-of-month,
   month, and day-of-week order. Do not accept seconds, `@daily`, `@every`,
   embedded `TZ`/`CRON_TZ`, or silently normalize another Cron dialect.
-- Cron validation and upcoming-time preview must use UTC.
-  The preview is explanatory only; the Server's persisted `nextRunTime` remains
-  authoritative.
+- Rule text and the upcoming-time preview use the form's selected IANA zone.
+  The list keeps the raw Cron and labels the wall-clock rule with that zone.
+  `nextRunTime` and `lastRunTime` remain UTC instants on the wire but format in
+  the viewer's local zone. The preview is explanatory only; the Server's
+  persisted `nextRunTime` remains authoritative.
 - Disabled schedules project `nextRunTime: null` and render the existing empty
   value. The UI must not calculate or invent a replacement cursor.
 - `runCount` means committed occurrence trigger-attempt count. The required
@@ -149,6 +156,12 @@ state. The existing four-step workbench remains the complete create flow.
 - The dialog loads the selected workflow's parent-scoped Profile and submits the
   complete displayed Step configuration. It must not merge presets or multiple
   workflow configurations.
+- When editing a persisted Schedule with a canonical disabled Step, the edit
+  dialog separately bootstraps that Workflow Profile for the shared editor's
+  UI-only draft recovery. It keeps the persisted disabled branch unchanged and
+  does not block a basic-field-only update while this bootstrap is pending. A
+  failed or malformed Profile blocks only configuration editing that needs the
+  missing draft; it never supplies catalog/default fallback values.
 - Step 3 uses the same configuration-surface validate-and-reveal operation as
   ordinary Scan submission before moving to step 4. The drawer stays on step 3
   when any enabled Step's enabled configSection has an empty resource field, marks all such fields, switches

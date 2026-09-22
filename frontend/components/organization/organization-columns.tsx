@@ -43,6 +43,7 @@ export interface OrganizationTranslations {
   tooltips: {
     organizationDetails: string
     initiateScan: string
+    organizationConcept: string
   }
 }
 
@@ -146,7 +147,7 @@ export const createOrganizationColumns = ({
       serverSortPerformance: "covered by idx_org_name_id_active for active organizations",
     },
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t.columns.organization} />
+      <DataTableColumnHeader column={column} title={t.columns.organization} tooltip={t.tooltips.organizationConcept} />
     ),
     cell: ({ row }) => {
       const organizationName = row.getValue("name") as string

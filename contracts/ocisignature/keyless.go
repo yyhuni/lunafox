@@ -47,6 +47,13 @@ type KeylessVerifier struct {
 	trustedRoot root.TrustedMaterial
 }
 
+// DigestReferenceSignatureTransportVerifier verifies an immutable identity
+// reference while obtaining OCI signature content through a separate
+// transport reference. The two references must share repository and digest.
+type DigestReferenceSignatureTransportVerifier interface {
+	VerifyReferenceWithTransport(context.Context, ociartifact.DigestReference, ociartifact.DigestReference) error
+}
+
 func NewKeylessVerifier(policy KeylessPolicy, trustedRoot root.TrustedMaterial) (*KeylessVerifier, error) {
 	policy.Repository = strings.TrimSpace(policy.Repository)
 	policy.Workflow = strings.TrimSpace(policy.Workflow)
@@ -122,6 +129,15 @@ func (verifier *KeylessVerifier) Verify(ctx context.Context, reference ociartifa
 	if err != nil {
 		return fmt.Errorf("create signature OCI repository client: %w", err)
 	}
+	return verifier.verifyWithRepository(ctx, reference, descriptor, repository)
+}
+
+func (verifier *KeylessVerifier) verifyWithRepository(
+	ctx context.Context,
+	identityReference ociartifact.DigestReference,
+	descriptor ocispec.Descriptor,
+	repository *remote.Repository,
+) error {
 	var referrers []ocispec.Descriptor
 	if err := repository.Referrers(ctx, descriptor, BundleArtifactType, func(found []ocispec.Descriptor) error {
 		referrers = append(referrers, found...)
@@ -130,7 +146,7 @@ func (verifier *KeylessVerifier) Verify(ctx context.Context, reference ociartifa
 		return transportError(fmt.Errorf("discover Sigstore signature referrers: %w", err))
 	}
 	if len(referrers) == 0 {
-		return &MissingBundleError{Reference: reference.String()}
+		return &MissingBundleError{Reference: identityReference.String()}
 	}
 	var firstFailure error
 	for _, signatureManifest := range referrers {
@@ -150,21 +166,86 @@ func (verifier *KeylessVerifier) Verify(ctx context.Context, reference ociartifa
 // this method before switching transport so a reachable proxy cannot bypass
 // GHCR's signed release identity.
 func (verifier *KeylessVerifier) VerifyReference(ctx context.Context, reference ociartifact.DigestReference) error {
+	return verifier.verifyReferenceWithTransport(ctx, reference, reference, false)
+}
+
+// VerifyReferenceWithTransport verifies the identity reference while resolving
+// and fetching all OCI signature material from the transport reference. It is
+// intentionally separate from VerifyReference so an accelerated caller cannot
+// accidentally verify through one Registry and download through another with
+// a different repository or digest.
+func (verifier *KeylessVerifier) VerifyReferenceWithTransport(
+	ctx context.Context,
+	identityReference ociartifact.DigestReference,
+	transportReference ociartifact.DigestReference,
+) error {
+	if err := validateSignatureReferencePair(identityReference, transportReference); err != nil {
+		return err
+	}
+	return verifier.verifyReferenceWithTransport(ctx, identityReference, transportReference, true)
+}
+
+func (verifier *KeylessVerifier) verifyReferenceWithTransport(
+	ctx context.Context,
+	identityReference ociartifact.DigestReference,
+	transportReference ociartifact.DigestReference,
+	forceReferrersAPI bool,
+) error {
 	if verifier == nil || verifier.trustedRoot == nil {
 		return fmt.Errorf("sigstore verifier is required")
 	}
-	repository, err := remote.NewRepository(reference.Registry + "/" + reference.Repository)
+	repository, err := newSignatureRepository(transportReference, forceReferrersAPI)
 	if err != nil {
 		return fmt.Errorf("create signature OCI repository client: %w", err)
 	}
-	descriptor, err := repository.Resolve(ctx, reference.Digest)
+	descriptor, err := repository.Resolve(ctx, transportReference.Digest)
 	if err != nil {
-		return transportError(fmt.Errorf("resolve signed OCI reference %q: %w", reference.String(), err))
+		return transportError(fmt.Errorf("resolve signed OCI reference %q: %w", identityReference.String(), err))
 	}
-	if descriptor.Digest.String() != reference.Digest {
-		return fmt.Errorf("signed OCI descriptor digest mismatch: got %q, want %q", descriptor.Digest, reference.Digest)
+	if descriptor.Digest.String() != identityReference.Digest {
+		return fmt.Errorf("signed OCI descriptor digest mismatch: got %q, want %q", descriptor.Digest, identityReference.Digest)
 	}
-	return verifier.Verify(ctx, reference, descriptor)
+	return verifier.verifyWithRepository(ctx, identityReference, descriptor, repository)
+}
+
+func newSignatureRepository(reference ociartifact.DigestReference, forceReferrersAPI bool) (*remote.Repository, error) {
+	repository, err := remote.NewRepository(reference.Registry + "/" + reference.Repository)
+	if err != nil {
+		return nil, err
+	}
+	if forceReferrersAPI {
+		if err := repository.SetReferrersCapability(true); err != nil {
+			return nil, err
+		}
+	}
+	return repository, nil
+}
+
+func validateSignatureReferencePair(identityReference, transportReference ociartifact.DigestReference) error {
+	if _, err := canonicalSignatureReference(identityReference); err != nil {
+		return fmt.Errorf("signature identity reference is invalid: %w", err)
+	}
+	if _, err := canonicalSignatureReference(transportReference); err != nil {
+		return fmt.Errorf("signature transport reference is invalid: %w", err)
+	}
+	if identityReference.Repository != transportReference.Repository {
+		return fmt.Errorf("signature identity and transport references must use the same repository: %q != %q", identityReference.Repository, transportReference.Repository)
+	}
+	if identityReference.Digest != transportReference.Digest {
+		return fmt.Errorf("signature identity and transport references must use the same digest: %q != %q", identityReference.Digest, transportReference.Digest)
+	}
+	return nil
+}
+
+func canonicalSignatureReference(reference ociartifact.DigestReference) (ociartifact.DigestReference, error) {
+	parsed, err := ociartifact.ParseDigestReference(reference.String())
+	if err != nil {
+		return ociartifact.DigestReference{}, err
+	}
+	if parsed != reference {
+		return ociartifact.DigestReference{}, fmt.Errorf("reference is not canonical")
+	}
+	return parsed, nil
 }
 
 func (verifier *KeylessVerifier) verifyBundleReferrer(ctx context.Context, repository *remote.Repository, subject, signatureManifest ocispec.Descriptor) error {

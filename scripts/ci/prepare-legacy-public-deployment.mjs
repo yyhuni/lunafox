@@ -44,13 +44,15 @@ function readPolicy(root) {
   const policy = JSON.parse(fs.readFileSync(policyPath, "utf8"));
   const bootstrap = policy.legacyDeploymentBootstrap;
   if (!bootstrap || typeof bootstrap !== "object" ||
-      JSON.stringify(Object.keys(bootstrap).sort()) !== JSON.stringify(["packageName", "paths", "releaseTag", "sha256"])) {
+      JSON.stringify(Object.keys(bootstrap).sort()) !== JSON.stringify(["manifestSha256", "packageName", "paths", "releaseTag", "sha256"])) {
     fail("public release policy is missing the exact legacy deployment bootstrap");
   }
   if (!/^v\d+\.\d+\.\d+-alpha\.\d+$/.test(bootstrap.releaseTag) ||
       bootstrap.packageName !== `lunafox-${bootstrap.releaseTag}-dockerhub.zip` ||
       !/^[a-f0-9]{64}$/.test(bootstrap.sha256) ||
-      !Array.isArray(bootstrap.paths) || bootstrap.paths.length === 0 || !bootstrap.paths.includes(".env")) {
+      !/^[a-f0-9]{64}$/.test(bootstrap.manifestSha256) ||
+      !Array.isArray(bootstrap.paths) || bootstrap.paths.length === 0 || !bootstrap.paths.includes(".env") ||
+      bootstrap.paths.includes("runtime-composition.json")) {
     fail("legacy deployment bootstrap policy is invalid");
   }
   return bootstrap;
@@ -91,6 +93,9 @@ function prepareLegacyDeployment({ root = ROOT, package: packagePath, output, ge
     const manifestText = manifestBytes.toString("utf8");
     const version = manifestText.match(/^releaseVersion:\s*["']?([^"'\s]+)["']?/m)?.[1];
     if (`v${version}` !== bootstrap.releaseTag) fail("legacy package manifest version does not match policy");
+    const manifestSHA256 = crypto.createHash("sha256").update(manifestBytes).digest("hex");
+    if (manifestSHA256 !== bootstrap.manifestSha256) fail("legacy package manifest digest does not match policy");
+    if (/^runtimeComposition:[ \t]*$/m.test(manifestText)) fail("legacy package manifest must remain a v1 manifest without composition evidence");
     const manifestPath = path.join(work, "release.manifest.yaml");
     fs.writeFileSync(manifestPath, manifestBytes);
     const snapshot = path.join(work, "snapshot");
@@ -100,10 +105,14 @@ function prepareLegacyDeployment({ root = ROOT, package: packagePath, output, ge
       tag: bootstrap.releaseTag,
       output: path.join(work, "packages"),
       snapshot,
+      legacyBootstrap: { releaseTag: bootstrap.releaseTag, manifestSha256: bootstrap.manifestSha256 },
     });
 
     const generatedManifest = fs.readFileSync(path.join(snapshot, "release.manifest.yaml"));
     if (!generatedManifest.equals(manifestBytes)) fail("unified bootstrap changed the pinned legacy manifest");
+    if (fs.existsSync(path.join(snapshot, "runtime-composition.json"))) {
+      fail("legacy bootstrap must not manufacture runtime composition evidence");
+    }
     const env = fs.readFileSync(path.join(snapshot, ".env"));
     const envExample = fs.readFileSync(path.join(snapshot, ".env.example"));
     if (!env.equals(envExample)) fail("unified bootstrap .env and .env.example differ");
@@ -124,7 +133,7 @@ function prepareLegacyDeployment({ root = ROOT, package: packagePath, output, ge
       fs.copyFileSync(source, target);
       fs.chmodSync(target, 0o644);
     }
-    return { schemaVersion: 1, releaseTag: bootstrap.releaseTag, packageName: bootstrap.packageName, sha256: digest, paths: bootstrap.paths, output };
+    return { schemaVersion: 1, releaseTag: bootstrap.releaseTag, packageName: bootstrap.packageName, sha256: digest, manifestSha256: manifestSHA256, paths: bootstrap.paths, output };
   } finally {
     fs.rmSync(work, { recursive: true, force: true });
   }

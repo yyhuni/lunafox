@@ -41,6 +41,14 @@ export type UpgradeMigrationStatus =
   | "failed"
   | "unknown"
 
+export type UpgradeExecutionMode = "full" | "frontend_only"
+
+export type UpgradeWorkDisposition =
+  | "not_required"
+  | "cancelled"
+  | "cancellation_failed"
+  | "legacy_unknown"
+
 export interface UpgradeDiagnostic {
   code: string
   stage?: string
@@ -56,6 +64,11 @@ export interface DatabaseMigrationInfo {
   policyVersion: number
 }
 
+export interface ReleaseNotes {
+  body: string
+  sha256: string
+}
+
 export interface ReleaseManifestSummary {
   name: string
   manifestId: string
@@ -68,6 +81,7 @@ export interface ReleaseManifestSummary {
   databaseMigration: DatabaseMigrationInfo
   runtimeImageDigests: Record<string, string>
   engineDigests: string[]
+  releaseNotes?: ReleaseNotes
 }
 
 export interface UpdateCheckResult {
@@ -113,6 +127,23 @@ export interface UpgradeOperation {
   createdAt: string
   updatedAt: string
   completedAt?: string | null
+}
+
+/**
+ * The BASIC Operation projection deliberately remains separate from this
+ * representation so cached clients can keep decoding the old field set.
+ * Upgrade pages must request and consume this FULL projection before making
+ * scope-dependent presentation or route-lock decisions.
+ */
+export interface UpgradeOperationFull extends UpgradeOperation {
+  executionMode: UpgradeExecutionMode
+  workDisposition: UpgradeWorkDisposition
+  planSummary: UpgradePlanSummary
+  confirmedDeploymentVersion: string
+}
+
+export interface UpgradePlanSummary {
+  touchedServices: string[]
 }
 
 export type UpgradeLogLevel = "info" | "warn" | "error"

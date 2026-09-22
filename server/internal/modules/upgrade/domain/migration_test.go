@@ -7,12 +7,12 @@ import (
 	"github.com/yyhuni/lunafox/contracts/releasemanifest"
 )
 
-func disposablePolicy() MigrationPolicy {
-	return MigrationPolicy{SchemaVersion: 1, Phase: "disposable-development", PreserveDataUpgrade: false, DataRetainingDeploymentAllowed: false}
+func releaseCandidatePolicy() MigrationPolicy {
+	return MigrationPolicy{SchemaVersion: 1, Phase: "release-candidate", PreserveDataUpgrade: false, DataRetainingDeploymentAllowed: false}
 }
 
-func TestEvaluateMigrationAllowsNoMigrationInDisposablePhase(t *testing.T) {
-	result, err := EvaluateMigration(testManifest(), disposablePolicy())
+func TestEvaluateMigrationAllowsNoMigrationInReleaseCandidatePhase(t *testing.T) {
+	result, err := EvaluateMigration(testManifest(), releaseCandidatePolicy())
 	if err != nil || !result.Supported {
 		t.Fatalf("expected no-migration release to be supported, result=%#v err=%v", result, err)
 	}
@@ -24,7 +24,7 @@ func TestEvaluateMigrationRejectsUnsupportedAndDataRetainingTypes(t *testing.T) 
 		kind string
 		want error
 	}{
-		{name: "compatible in disposable phase", kind: "compatible", want: ErrMigrationPolicyDisallowsDataRetain},
+		{name: "compatible in release-candidate phase", kind: "compatible", want: ErrMigrationPolicyDisallowsDataRetain},
 		{name: "preserve-data", kind: "preserve-data", want: ErrMigrationPolicyDisallowsDataRetain},
 		{name: "destructive", kind: "destructive", want: ErrMigrationUnsupported},
 		{name: "unknown", kind: "unknown", want: ErrMigrationUnsupported},
@@ -39,7 +39,7 @@ func TestEvaluateMigrationRejectsUnsupportedAndDataRetainingTypes(t *testing.T) 
 				Checksum:             "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 				PolicyVersion:        1,
 			}
-			_, err := EvaluateMigration(manifest, disposablePolicy())
+			_, err := EvaluateMigration(manifest, releaseCandidatePolicy())
 			if !errors.Is(err, test.want) {
 				t.Fatalf("expected %v, got %v (code=%q)", test.want, err, CodeOf(err))
 			}
@@ -60,7 +60,7 @@ func TestEvaluateMigrationAllowsCompatibleOnlyWhenPolicyExplicitlyRetainsData(t 
 		Checksum:             "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 		PolicyVersion:        1,
 	}
-	policy := disposablePolicy()
+	policy := releaseCandidatePolicy()
 	policy.PreserveDataUpgrade = true
 	policy.DataRetainingDeploymentAllowed = true
 	result, err := EvaluateMigration(manifest, policy)
@@ -72,16 +72,16 @@ func TestEvaluateMigrationAllowsCompatibleOnlyWhenPolicyExplicitlyRetainsData(t 
 func TestEvaluateMigrationRejectsMissingMetadataAndPolicyVersion(t *testing.T) {
 	manifest := testManifest()
 	manifest.Upgrade.DatabaseMigration = releasemanifest.DatabaseMigration{HasDatabaseMigration: true, MigrationType: "compatible", PolicyVersion: 0}
-	if _, err := EvaluateMigration(manifest, disposablePolicy()); !errors.Is(err, ErrMigrationMetadataMissing) {
+	if _, err := EvaluateMigration(manifest, releaseCandidatePolicy()); !errors.Is(err, ErrMigrationMetadataMissing) {
 		t.Fatalf("expected missing metadata error, got %v", err)
 	}
 	manifest.Upgrade.DatabaseMigration.PolicyVersion = 2
-	if _, err := EvaluateMigration(manifest, disposablePolicy()); !errors.Is(err, ErrMigrationPolicyVersionMismatch) {
+	if _, err := EvaluateMigration(manifest, releaseCandidatePolicy()); !errors.Is(err, ErrMigrationPolicyVersionMismatch) {
 		t.Fatalf("expected policy version mismatch, got %v", err)
 	}
 	manifest.Upgrade.DatabaseMigration.PolicyVersion = 1
 	manifest.Upgrade.DeploymentMode = "kubernetes"
-	if _, err := EvaluateMigration(manifest, disposablePolicy()); !errors.Is(err, ErrDeploymentModeUnsupported) {
+	if _, err := EvaluateMigration(manifest, releaseCandidatePolicy()); !errors.Is(err, ErrDeploymentModeUnsupported) {
 		t.Fatalf("expected deployment mode rejection, got %v", err)
 	}
 }

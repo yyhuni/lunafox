@@ -18,8 +18,9 @@
 
 ## Upgrade Route Gate
 
-- After the Server accepts an upgrade and returns an `operationId`, `UpgradeRouteBoundary` is the protected-shell owner for route locking. It keeps ordinary route content out of the tree and redirects to `/system-upgrade/` while the Operation is non-terminal.
-- A normal entry without a persisted `operationId` still checks the server active-operation view, but the unresolved lookup is a background recovery check and MUST NOT render an upgrade-specific blocker by itself. If the server returns a non-terminal Operation, the boundary takes ownership immediately and applies the same lock/redirect path.
+- For a non-terminal `full` upgrade, `UpgradeRouteBoundary` owns protected-shell route locking. It keeps ordinary route content out of the tree and redirects to `/system-upgrade/`.
+- A host-confirmed non-terminal `frontend_only` Operation does not lock ordinary authenticated routes or redirect solely because the frontend container is being replaced. Until the FULL operation projection establishes that scope, the boundary retains the full-upgrade fail-closed behavior.
+- A normal entry without a persisted `operationId` still checks the server active-operation view, but the unresolved lookup is a background recovery check and MUST NOT render an upgrade-specific blocker by itself. If it discovers a non-terminal full or unclassified Operation, the boundary takes ownership immediately and applies the lock/redirect path.
 - `/system-upgrade/` is a standalone authenticated status surface, so the sidebar and header are not mounted while the upgrade page is active. Refresh and short network outages continue to use the persisted Operation ID and do not invent a failure state.
 - Terminal Operations (`succeeded`, `failed`, `needs_recovery`, and `needs_attention`) release the ordinary shell. The completion dialog is mounted only after leaving the status route and acknowledges a successful Operation once per Operation ID.
 

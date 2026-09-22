@@ -2,7 +2,11 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { EngineConfigForm } from "@/components/scan/engine-config-form"
+import {
+  EngineConfigForm,
+  initFormValuesFromWorkflow,
+  serializeFormValuesToConfig,
+} from "@/components/scan/engine-config-form"
 import {
   configResourceFieldKey,
   type ConfigResourceFieldError,
@@ -13,6 +17,7 @@ import type {
   EngineConfigFormValues,
   ScanWorkflowWithEngines,
 } from "@/types/engine-config.types"
+import type { WorkflowProfileDraft } from "@/lib/workflow-config"
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key,
@@ -91,6 +96,64 @@ describe("EngineConfigForm resources", () => {
         }),
       }),
     }))
+  })
+})
+
+describe("EngineConfigForm disabled-Step recovery", () => {
+  const canonicalDisabledConfiguration = {
+    steps: {
+      discovery: { enabled: false },
+    },
+  }
+
+  it("uses the same-dialog draft before Profile recovery and still serializes only the disabled branch", () => {
+    const values = initFormValuesFromWorkflow(
+      workflow,
+      canonicalDisabledConfiguration,
+      disabledSessionValues("session.txt"),
+      workflowProfileDraft("profile.txt"),
+    )
+
+    expect(values.discovery.enabled).toBe(false)
+    expect(values.discovery.sections.recon.params.wordlist).toBe("session.txt")
+    expect(serializeFormValuesToConfig(values)).toEqual({
+      steps: {
+        discovery: { enabled: false },
+      },
+    })
+  })
+
+  it("uses a complete strictly shaped Profile draft only when a disabled Step has no session draft", () => {
+    const values = initFormValuesFromWorkflow(
+      workflow,
+      canonicalDisabledConfiguration,
+      {},
+      workflowProfileDraft("profile.txt"),
+    )
+
+    expect(values.discovery.enabled).toBe(false)
+    expect(values.discovery.sections.recon.params.wordlist).toBe("profile.txt")
+  })
+
+  it("rejects an unavailable or mismatched Profile instead of synthesizing a disabled-Step draft", () => {
+    expect(() => initFormValuesFromWorkflow(workflow, canonicalDisabledConfiguration)).toThrow(
+      "validated Workflow Profile draft is required",
+    )
+    expect(() => initFormValuesFromWorkflow(
+      workflow,
+      canonicalDisabledConfiguration,
+      {},
+      workflowProfileDraft("profile.txt", "scanWorkflows/other"),
+    )).toThrow("Profile parent does not match the selected Workflow")
+  })
+
+  it("does not repair an incomplete enabled Step from a session draft or Profile", () => {
+    expect(() => initFormValuesFromWorkflow(
+      workflow,
+      { steps: { discovery: { enabled: true } } },
+      disabledSessionValues("session.txt"),
+      workflowProfileDraft("profile.txt"),
+    )).toThrow("enabled Step requires a complete object")
   })
 })
 
@@ -187,6 +250,42 @@ function formValues(): EngineConfigFormValues {
         recon: {
           enabled: true,
           params: { wordlist: "stale.txt", exclude: "exclude.txt", "auto-calibration": true },
+        },
+      },
+    },
+  }
+}
+
+function disabledSessionValues(wordlist: string): EngineConfigFormValues {
+  return {
+    discovery: {
+      enabled: false,
+      sections: {
+        recon: {
+          enabled: true,
+          params: { wordlist, exclude: "exclude.txt", "auto-calibration": true },
+        },
+      },
+    },
+  }
+}
+
+function workflowProfileDraft(
+  wordlist: string,
+  scanWorkflow = "scanWorkflows/default",
+): WorkflowProfileDraft {
+  return {
+    scanWorkflow,
+    steps: {
+      discovery: {
+        enabled: true,
+        engineConfig: {
+          recon: {
+            enabled: true,
+            wordlist,
+            exclude: "exclude.txt",
+            "auto-calibration": true,
+          },
         },
       },
     },

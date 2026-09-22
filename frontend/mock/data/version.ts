@@ -1,9 +1,9 @@
-import type { ReleaseManifestSummary, UpdateCheckResult, UpgradeLogEntry, UpgradeOperation, UpgradeOperationStatus, VersionInfo } from '@/types/version.types'
+import type { ReleaseManifestSummary, UpdateCheckResult, UpgradeLogEntry, UpgradeOperation, UpgradeOperationFull, UpgradeOperationStatus, VersionInfo } from '@/types/version.types'
 import { getMockScenario } from "../scenarios"
 
 export const mockVersionInfo: VersionInfo = {
   version: 'mock-2026.04.26',
-  githubRepo: 'https://github.com/lunafox/lunafox',
+  githubRepo: 'https://github.com/yyhuni/lunafox',
 }
 
 export const mockCandidateManifest: ReleaseManifestSummary = {
@@ -28,6 +28,10 @@ export const mockCandidateManifest: ReleaseManifestSummary = {
     bootstrap: 'sha256:' + 'b'.repeat(64),
   },
   engineDigests: ['sha256:' + 'c'.repeat(64)],
+  releaseNotes: {
+    body: '## English\n\n- Mock release notes.\n\n## \u7b80\u4f53\u4e2d\u6587\n\n- \u6a21\u62df\u53d1\u5e03\u8bf4\u660e\u3002\n',
+    sha256: 'sha256:1864812958918b8b1ff0ecc9542a5117c90eaad03c0cbf08105f5e9d664680f0',
+  },
 }
 
 export const mockUpdateCheckResult: UpdateCheckResult = {
@@ -205,6 +209,18 @@ export function getMockUpgradeOperation(): UpgradeOperation | null {
   }
 }
 
+export function getMockUpgradeOperationFull(): UpgradeOperationFull | null {
+  const operation = getMockUpgradeOperation()
+  if (!operation) return null
+  return {
+    ...operation,
+    executionMode: "full",
+    workDisposition: "cancelled",
+    planSummary: { touchedServices: ["agent", "bootstrap", "engine", "engine_package", "engine_runtime", "frontend", "migration", "nginx", "server"] },
+    confirmedDeploymentVersion: operation.status === "succeeded" ? operation.releaseVersion : operation.currentVersion,
+  }
+}
+
 export function retryMockUpgradeOperation(): UpgradeOperation | null {
   hydrateUpgradeState()
   if (!mockUpgradeOperation) return null
@@ -309,6 +325,7 @@ export function getMockUpdateCheckResult(): UpdateCheckResult {
           databaseMigration: { ...mockUpdateCheckResult.candidate.databaseMigration },
           runtimeImageDigests: { ...mockUpdateCheckResult.candidate.runtimeImageDigests },
           engineDigests: [...mockUpdateCheckResult.candidate.engineDigests],
+          releaseNotes: mockUpdateCheckResult.candidate.releaseNotes ? { ...mockUpdateCheckResult.candidate.releaseNotes } : undefined,
         }
       : undefined,
     }),

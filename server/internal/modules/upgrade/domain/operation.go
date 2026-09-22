@@ -83,33 +83,42 @@ func (expectation AgentExpectation) Ready() bool {
 // Operation contains only bounded, non-secret operational evidence. Free-form
 // command output and credentials must never be copied into Diagnostic fields.
 type Operation struct {
-	OperationID               string
-	RequestID                 string
-	OperatorID                int
-	ManifestID                string
-	ManifestDigest            string
-	ReleaseVersion            string
-	CompatibilityRange        string
-	MaintenanceWindowMinutes  int
-	Status                    Status
-	MigrationStatus           MigrationStatus
-	MigrationType             string
-	MigrationID               string
-	MigrationChecksum         string
-	CancelledScanCount        int
-	CancelledTaskCount        int
-	AgentDesiredVersion       string
-	AgentTargetDigest         string
-	AgentSummary              AgentSummary
-	AgentExpectations         []AgentExpectation
-	AgentVerificationDeadline *time.Time
-	ObservedDigests           map[string]string
-	ProgressEvents            []ProgressEvent
-	Diagnostic                string
-	StageTimes                map[Status]time.Time
-	CreatedAt                 time.Time
-	UpdatedAt                 time.Time
-	CompletedAt               *time.Time
+	OperationID              string
+	RequestID                string
+	OperatorID               int
+	ManifestID               string
+	ManifestDigest           string
+	ReleaseVersion           string
+	CompatibilityRange       string
+	MaintenanceWindowMinutes int
+	Status                   Status
+	MigrationStatus          MigrationStatus
+	MigrationType            string
+	MigrationID              string
+	MigrationChecksum        string
+	// ExecutionMode and WorkDisposition are set from a host-approved scope
+	// plan. Empty values occur only on pre-v2 rows and are interpreted through
+	// EffectiveExecutionMode/EffectiveWorkDisposition as full/legacy_unknown.
+	ExecutionMode              ExecutionMode
+	WorkDisposition            WorkDisposition
+	PlanSummary                PlanSummary
+	PlanDigest                 string
+	BaselineDeploymentDigest   string
+	ConfirmedDeploymentVersion string
+	CancelledScanCount         int
+	CancelledTaskCount         int
+	AgentDesiredVersion        string
+	AgentTargetDigest          string
+	AgentSummary               AgentSummary
+	AgentExpectations          []AgentExpectation
+	AgentVerificationDeadline  *time.Time
+	ObservedDigests            map[string]string
+	ProgressEvents             []ProgressEvent
+	Diagnostic                 string
+	StageTimes                 map[Status]time.Time
+	CreatedAt                  time.Time
+	UpdatedAt                  time.Time
+	CompletedAt                *time.Time
 }
 
 func (status Status) IsTerminal() bool {
@@ -211,6 +220,34 @@ func (operation *Operation) Validate() error {
 	if !operation.Status.Valid() {
 		return fmt.Errorf("unsupported upgrade status %q", operation.Status)
 	}
+	if operation.ExecutionMode != "" && !operation.ExecutionMode.Valid() {
+		return fmt.Errorf("unsupported execution mode %q", operation.ExecutionMode)
+	}
+	if operation.WorkDisposition != "" && !operation.WorkDisposition.Valid() {
+		return fmt.Errorf("unsupported work disposition %q", operation.WorkDisposition)
+	}
+	if operation.ExecutionMode != "" {
+		if err := ValidateScopePlan(operation.ExecutionMode, operation.PlanSummary, operation.PlanDigest, operation.BaselineDeploymentDigest, operation.ConfirmedDeploymentVersion); err != nil {
+			return err
+		}
+		if operation.ExecutionMode == ExecutionModeFrontendOnly {
+			if operation.WorkDisposition != WorkDispositionNotRequired {
+				return fmt.Errorf("frontend-only operation must not require cancellation")
+			}
+			if operation.MigrationType != "none" || operation.MigrationStatus != MigrationStatusNotStarted {
+				return fmt.Errorf("frontend-only operation cannot include a migration")
+			}
+			if len(operation.AgentExpectations) != 0 || operation.AgentSummary != (AgentSummary{}) || operation.AgentVerificationDeadline != nil {
+				return fmt.Errorf("frontend-only operation cannot include Agent lifecycle evidence")
+			}
+		}
+	}
+	if operation.WorkDisposition == WorkDispositionNotRequired && operation.EffectiveExecutionMode() != ExecutionModeFrontendOnly {
+		return fmt.Errorf("not_required work disposition is reserved for frontend-only operations")
+	}
+	if operation.WorkDisposition == WorkDispositionCancelled && (operation.CancelledScanCount < 0 || operation.CancelledTaskCount < 0) {
+		return fmt.Errorf("cancelled work counts cannot be negative")
+	}
 	if operation.MigrationStatus == "" {
 		return fmt.Errorf("migration status is required")
 	}
@@ -224,6 +261,25 @@ func (operation *Operation) Validate() error {
 		return fmt.Errorf("invalid upgrade progress events: %w", err)
 	}
 	return nil
+}
+
+func validSHA256Digest(value string) bool {
+	if len(value) != len("sha256:")+64 || !strings.HasPrefix(value, "sha256:") {
+		return false
+	}
+	for _, character := range value[len("sha256:"):] {
+		if (character < '0' || character > '9') && (character < 'a' || character > 'f') {
+			return false
+		}
+	}
+	return true
+}
+
+func validDeploymentVersion(value string) bool {
+	if value != strings.TrimSpace(value) || value == "" || len(value) > 64 {
+		return false
+	}
+	return !strings.ContainsAny(value, "\x00\r\n")
 }
 
 // Repository is the durable Server-side source of truth for user-visible

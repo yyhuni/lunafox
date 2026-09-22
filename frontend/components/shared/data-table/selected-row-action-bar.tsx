@@ -145,7 +145,7 @@ export function SelectedRowActionBar({
       )}
     >
       <div
-        className="radius-pill border border-border bg-popover/95 text-popover-foreground flex items-center gap-3 px-4 py-2 shadow-lg"
+        className="radius-pill border border-border bg-popover/95 text-popover-foreground flex items-center gap-2 px-3 py-1 shadow-lg max-sm:gap-1 max-sm:px-2"
         role="toolbar"
         aria-label={ariaLabel}
       >
@@ -155,7 +155,7 @@ export function SelectedRowActionBar({
           </span>
         </div>
         <ActionBarSeparator />
-        <TooltipProvider delay={300}>
+        <TooltipProvider>
           {visibleActions.map((action, index) => {
             const previousAction = visibleActions[index - 1]
             const showGroupSeparator = index > 0 && action.group !== previousAction?.group

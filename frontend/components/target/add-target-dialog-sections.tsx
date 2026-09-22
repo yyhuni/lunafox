@@ -1,6 +1,8 @@
 import Link from "next/link"
 import React from "react"
+import { useTranslations } from "next-intl"
 import { ChevronRight, Plus } from "@/components/icons"
+import { InlineHelpTooltip } from "@/components/common/inline-help-tooltip"
 import { BulkLineValidationInput, type BulkLineValidationIssue } from "@/components/common/bulk-line-validation-input"
 import {
   countLineNumberedTextareaLines,
@@ -9,6 +11,7 @@ import {
 import { OrganizationSelectionWorkspace } from "@/components/organization/organization-selection-workspace"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { MAX_TARGET_BATCH_SIZE } from "@/lib/target-validator"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 import type { CursorPaginationNavigation } from "@/types/data-table.types"
@@ -30,6 +33,7 @@ interface AddTargetInputSectionProps {
   formTargets: string
   targetCount: number
   invalidTargets: InvalidTargetInfo[]
+  isTargetBatchOverLimit?: boolean
   lineNumbersRef: React.RefObject<HTMLDivElement | null>
   textareaRef: React.RefObject<HTMLTextAreaElement | null>
   onInputChange: (value: string) => void
@@ -42,12 +46,14 @@ export function AddTargetInputSection({
   formTargets,
   targetCount,
   invalidTargets,
+  isTargetBatchOverLimit = false,
   lineNumbersRef,
   textareaRef,
   onInputChange,
   onScroll,
   isPending,
 }: AddTargetInputSectionProps) {
+  const tTooltips = useTranslations("tooltips")
   const lineIssues = React.useMemo<BulkLineValidationIssue[]>(() => invalidTargets.map((target) => ({
     id: `invalid-${target.index}`,
     lineNumber: target.lineNumber,
@@ -63,7 +69,7 @@ export function AddTargetInputSection({
   const validationResult = formTargets.trim().length > 0
     ? {
       validCount: targetCount,
-      blockingIssueCount: invalidTargets.length,
+      blockingIssueCount: invalidTargets.length + (isTargetBatchOverLimit ? 1 : 0),
       advisoryIssueCount: 0,
       lineIssues,
     }
@@ -75,6 +81,11 @@ export function AddTargetInputSection({
         id="targets"
         name="targets"
         label={t("targetList")}
+        labelAccessory={(
+          <InlineHelpTooltip ariaLabel={t("targetList")}>
+            {tTooltips("targetConcept")}
+          </InlineHelpTooltip>
+        )}
         required
         placeholder={t("targetPlaceholder")}
         value={formTargets}
@@ -89,7 +100,9 @@ export function AddTargetInputSection({
         example={t("targetExample")}
         emptySummary={t("emptySummary")}
         validSummary={t("validSummary", { count: targetCount })}
-        blockingSummary={t("blockingSummary", { count: invalidTargets.length })}
+        blockingSummary={isTargetBatchOverLimit
+          ? t("batchLimitSummary", { count: targetCount, max: MAX_TARGET_BATCH_SIZE })
+          : t("blockingSummary", { count: invalidTargets.length })}
         collapseDetails={t("collapseDetails")}
         expandDetails={t("expandDetails")}
         validationResult={validationResult}
@@ -135,25 +148,32 @@ export function AddTargetOrganizationPicker({
   onClearOrganizations,
   isPending,
 }: AddTargetOrganizationPickerProps) {
+  const tTooltips = useTranslations("tooltips")
+
   return (
     <Collapsible defaultOpen={false} className="border-t border-border/60 pt-3">
-      <CollapsibleTrigger
-        render={(
-          <Button
-            type="button"
-            variant="ghost"
-            className="group h-auto min-w-0 justify-start px-0 py-0 text-left hover:bg-transparent hover:text-foreground dark:hover:bg-transparent dark:hover:text-foreground"
-            disabled={isPending}
-          />
-        )}
-      >
-        <span className="flex min-w-0 items-center gap-2">
-          <span className={cn(textRole.bodyStrong, "min-w-0 text-muted-foreground transition-colors group-hover:text-foreground")}>
-            {t("linkOrganization")}
+      <div className="flex min-w-0 items-center gap-1">
+        <CollapsibleTrigger
+          render={(
+            <Button
+              type="button"
+              variant="ghost"
+              className="group h-auto min-w-0 justify-start px-0 py-0 text-left hover:bg-transparent hover:text-foreground dark:hover:bg-transparent dark:hover:text-foreground"
+              disabled={isPending}
+            />
+          )}
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <span className={cn(textRole.bodyStrong, "min-w-0 text-muted-foreground transition-colors group-hover:text-foreground")}>
+              {t("linkOrganization")}
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-[color,transform] duration-200 motion-reduce:transition-none group-hover:text-foreground group-data-[panel-open]:rotate-90" />
           </span>
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-[color,transform] duration-200 motion-reduce:transition-none group-hover:text-foreground group-data-[panel-open]:rotate-90" />
-        </span>
-      </CollapsibleTrigger>
+        </CollapsibleTrigger>
+        <InlineHelpTooltip ariaLabel={t("linkOrganization")}>
+          {tTooltips("organizationConcept")}
+        </InlineHelpTooltip>
+      </div>
       <CollapsibleContent className="pt-3">
         <OrganizationSelectionWorkspace
           id="add-target-organization-workspace"

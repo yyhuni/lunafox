@@ -68,6 +68,25 @@ func TestAcquireDeploymentLockEnforcesSingleOwner(t *testing.T) {
 	}
 }
 
+func TestStaleUpgradeLockReleaseDoesNotRemoveLifecycleOwner(t *testing.T) {
+	root := t.TempDir()
+	lock, err := AcquireDeploymentLock(root, "operation-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	metadataPath := filepath.Join(root, DeploymentLockDirectory, DeploymentLockMetadataFile)
+	if err := os.WriteFile(metadataPath, []byte("schema=1\nowner=lifecycle\ncommand=install\noperation_id=\ncreated_at=1700000000\nrecovery_fence=false\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := lock.Release(); err != nil {
+		t.Fatal(err)
+	}
+	metadata, exists, err := ReadDeploymentLock(root)
+	if err != nil || !exists || metadata.Owner != "lifecycle" {
+		t.Fatalf("stale release removed lifecycle lock: metadata=%#v exists=%v err=%v", metadata, exists, err)
+	}
+}
+
 func TestDeploymentLockRejectsLifecycleOwnerAndInvalidMetadata(t *testing.T) {
 	root := t.TempDir()
 	directory := filepath.Join(root, DeploymentLockDirectory)

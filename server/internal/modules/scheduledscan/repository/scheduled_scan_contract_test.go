@@ -23,6 +23,7 @@ func TestScheduledScanReadPreservesPersistedConfigurationWithoutEnablementInfere
 		ScanWorkflowID:         "default",
 		Configuration:          datatypes.JSON([]byte(`{"steps":{"discover":{"enabled":false},"ports":{"enabled":true,"engineConfig":{"scan":{"enabled":true,"timeout":60}}}}}`)),
 		InputSource:            "scan_snapshot",
+		TimeZone:               "UTC",
 		IsEnabled:              true,
 		SuccessfulHandoffCount: 3,
 		FailedHandoffCount:     2,
@@ -35,6 +36,9 @@ func TestScheduledScanReadPreservesPersistedConfigurationWithoutEnablementInfere
 	}
 	if record.SuccessfulHandoffCount != 3 || record.FailedHandoffCount != 2 {
 		t.Fatalf("scheduled scan read changed persisted handoff totals: %+v", record)
+	}
+	if record.TimeZone != "UTC" {
+		t.Fatalf("scheduled scan read lost persisted timeZone: %+v", record)
 	}
 	if record.IsEnabled {
 		// Management enablement is returned as its own persisted field; it must

@@ -1,14 +1,17 @@
 {
   "schemaVersion": 1,
-  "phase": "disposable-development",
+  "phase": "release-candidate",
   "baselineMigration": "000001",
-  "baselineMutable": true,
+  "baselineMutable": false,
   "preserveDataUpgrade": false,
-  "developmentRollback": "git-history-and-empty-state-fresh-install",
+  "rollbackPolicy": "backup-restore-or-forward-fix",
   "stableReleaseAllowed": false,
   "dataRetainingDeploymentAllowed": false,
   "freezeTriggers": [
     "first-public-stable-release",
     "first-data-retaining-non-disposable-deployment"
-  ]
+  ],
+  "checksumAlgorithm": "sha256-canonical-pair-v1",
+  "baselineChecksum": "sha256:7c4aaf55edfc0f403bb47e2cccd491c6876e4f611cb0d0dfc585defb508b3721",
+  "migrationManifest": "manifest.json"
 }

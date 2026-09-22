@@ -93,6 +93,8 @@ export function useAllTargetsDetailViewState({
         initiateScan: tTooltips("initiateScan"),
         clickToCopy: tTooltips("clickToCopy"),
         copied: tTooltips("copied"),
+        targetConcept: tTooltips("targetConcept"),
+        organizationConcept: tTooltips("organizationConcept"),
       },
       targetTypes: {
         domain: tTarget("types.domain"),

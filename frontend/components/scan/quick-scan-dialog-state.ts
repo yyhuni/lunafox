@@ -6,6 +6,7 @@ import {
   hasNoEnabledWorkflowSteps,
   serializeCanonicalWorkflowConfiguration,
   serializeWorkflowProfileDraft,
+  type WorkflowProfileDraft,
 } from "@/lib/workflow-config"
 import { hasApiErrorReason } from "@/lib/api-error-info"
 import { useLoadScanWorkflowProfile, useScanWorkflows } from "@/hooks/use-scan-workflows"
@@ -13,6 +14,7 @@ import { useQuickScan } from "@/hooks/use-scans"
 import { useEngineCatalogDetails } from "@/hooks/use-engine-catalog"
 import { buildWorkflowWithEngineCatalog } from "@/lib/engine-catalog"
 import type { Locale } from "@/i18n/config"
+import type { EngineConfigFormValues } from "@/types/engine-config.types"
 import type { ScanInputSource } from "@/types/scan.types"
 
 type UseQuickScanDialogStateProps = {
@@ -40,6 +42,9 @@ export function useQuickScanDialogState({ t, locale = "en" }: UseQuickScanDialog
   const [pendingWorkflowNames, setPendingWorkflowNames] = React.useState<string[] | null>(null)
   const [isWorkflowConfigLoading, setIsWorkflowConfigLoading] = React.useState(false)
   const [requiresProfileReview, setRequiresProfileReview] = React.useState(false)
+  const formValuesCacheRef = React.useRef<EngineConfigFormValues>({})
+  const [workflowProfileDraft, setWorkflowProfileDraft] = React.useState<WorkflowProfileDraft | null>(null)
+  const [pendingWorkflowProfileDraft, setPendingWorkflowProfileDraft] = React.useState<WorkflowProfileDraft | null>(null)
   const workflowSelectionRequestRef = React.useRef(0)
 
   const { data: workflows, isLoading: isLoadingWorkflows, isError: isWorkflowsError } = useScanWorkflows()
@@ -90,6 +95,7 @@ export function useQuickScanDialogState({ t, locale = "en" }: UseQuickScanDialog
 
   const resetForm = React.useCallback(() => {
     workflowSelectionRequestRef.current += 1
+    formValuesCacheRef.current = {}
     setTargetInput("")
     setSelectedWorkflowNames([])
     setSelectedAgentID(null)
@@ -102,6 +108,8 @@ export function useQuickScanDialogState({ t, locale = "en" }: UseQuickScanDialog
     setShowOverwriteConfirm(false)
     setIsWorkflowConfigLoading(false)
     setRequiresProfileReview(false)
+    setWorkflowProfileDraft(null)
+    setPendingWorkflowProfileDraft(null)
     setStep(1)
   }, [])
 
@@ -124,12 +132,18 @@ export function useQuickScanDialogState({ t, locale = "en" }: UseQuickScanDialog
     const workflow = workflows?.find((item) => item.name === workflowName)
     if (!workflow) throw new Error("Selected Workflow is unavailable")
     const draft = adaptWorkflowProfile(profile, workflow)
-    return serializeWorkflowProfileDraft(draft)
+    return { configuration: serializeWorkflowProfileDraft(draft), draft }
   }, [loadScanWorkflowProfile, workflows])
 
-  const applyWorkflowSelection = React.useCallback((workflowNames: string[], nextConfig: string) => {
+  const applyWorkflowSelection = React.useCallback((
+    workflowNames: string[],
+    nextConfig: string,
+    nextWorkflowProfileDraft: WorkflowProfileDraft | null,
+  ) => {
+    formValuesCacheRef.current = {}
     setSelectedWorkflowNames(workflowNames)
     setConfiguration(nextConfig)
+    setWorkflowProfileDraft(nextWorkflowProfileDraft)
     setIsConfigEdited(false)
     setIsYamlValid(true)
     setIsWorkflowConfigLoading(false)
@@ -139,8 +153,10 @@ export function useQuickScanDialogState({ t, locale = "en" }: UseQuickScanDialog
   const handleResetWorkflowConfig = React.useCallback(async () => {
     const workflowName = selectedWorkflowNames[0]
     if (!workflowName) return
-    const nextConfig = await loadProfileConfiguration(workflowName)
+    const { configuration: nextConfig, draft } = await loadProfileConfiguration(workflowName)
+    formValuesCacheRef.current = {}
     setConfiguration(nextConfig)
+    setWorkflowProfileDraft(draft)
     setIsConfigEdited(false)
     setIsYamlValid(true)
     setRequiresProfileReview(false)
@@ -152,6 +168,8 @@ export function useQuickScanDialogState({ t, locale = "en" }: UseQuickScanDialog
     workflowSelectionRequestRef.current = requestId
 
     if (!isConfigEdited) {
+      formValuesCacheRef.current = {}
+      setWorkflowProfileDraft(null)
       setSelectedWorkflowNames(nextWorkflowNames)
       setIsYamlValid(true)
       setIsWorkflowConfigLoading(nextWorkflowNames.length > 0)
@@ -164,8 +182,13 @@ export function useQuickScanDialogState({ t, locale = "en" }: UseQuickScanDialog
     }
 
     let nextConfig = ""
+    let nextWorkflowProfileDraft: WorkflowProfileDraft | null = null
     try {
-      nextConfig = nextWorkflowNames.length > 0 ? await loadProfileConfiguration(nextWorkflowNames[0]) : ""
+      if (nextWorkflowNames.length > 0) {
+        const loadedProfile = await loadProfileConfiguration(nextWorkflowNames[0])
+        nextConfig = loadedProfile.configuration
+        nextWorkflowProfileDraft = loadedProfile.draft
+      }
     } catch {
       if (workflowSelectionRequestRef.current === requestId) {
         setIsWorkflowConfigLoading(false)
@@ -181,11 +204,12 @@ export function useQuickScanDialogState({ t, locale = "en" }: UseQuickScanDialog
     if (isConfigEdited && configuration !== nextConfig) {
       setPendingWorkflowNames(nextWorkflowNames)
       setPendingConfigChange(nextConfig)
+      setPendingWorkflowProfileDraft(nextWorkflowProfileDraft)
       setShowOverwriteConfirm(true)
       setIsWorkflowConfigLoading(false)
       return
     }
-    applyWorkflowSelection(nextWorkflowNames, nextConfig)
+    applyWorkflowSelection(nextWorkflowNames, nextConfig, nextWorkflowProfileDraft)
   }, [applyWorkflowSelection, configuration, isConfigEdited, loadProfileConfiguration])
 
   React.useEffect(() => {
@@ -206,22 +230,31 @@ export function useQuickScanDialogState({ t, locale = "en" }: UseQuickScanDialog
   const handleOverwriteConfirm = React.useCallback(() => {
     if (pendingConfigChange !== null) {
       const nextWorkflowNames = pendingWorkflowNames ?? selectedWorkflowNames
-      applyWorkflowSelection(nextWorkflowNames, pendingConfigChange)
+      applyWorkflowSelection(nextWorkflowNames, pendingConfigChange, pendingWorkflowProfileDraft)
     }
     setShowOverwriteConfirm(false)
     setPendingConfigChange(null)
     setPendingWorkflowNames(null)
-  }, [applyWorkflowSelection, pendingConfigChange, pendingWorkflowNames, selectedWorkflowNames])
+    setPendingWorkflowProfileDraft(null)
+  }, [applyWorkflowSelection, pendingConfigChange, pendingWorkflowNames, pendingWorkflowProfileDraft, selectedWorkflowNames])
 
   const handleOverwriteCancel = React.useCallback(() => {
     setShowOverwriteConfirm(false)
     setPendingConfigChange(null)
     setPendingWorkflowNames(null)
+    setPendingWorkflowProfileDraft(null)
   }, [])
 
   const handleYamlValidationChange = React.useCallback((isValid: boolean) => {
     setIsYamlValid(isValid)
   }, [])
+
+  React.useEffect(() => {
+    if (open) return
+    formValuesCacheRef.current = {}
+    setWorkflowProfileDraft(null)
+    setPendingWorkflowProfileDraft(null)
+  }, [open])
 
   const canProceedToStep2 = validInputs.length > 0 && !hasErrors
   const canProceedToStep3 = selectedWorkflowNames.length > 0 && !isWorkflowConfigLoading && Boolean(selectedWorkflowWithEngines) && !engineCatalog.isLoading && !engineCatalog.isError
@@ -313,7 +346,6 @@ export function useQuickScanDialogState({ t, locale = "en" }: UseQuickScanDialog
     t,
     validInputs,
     loadScanWorkflowProfile,
-    locale,
   ])
 
   return {
@@ -350,6 +382,8 @@ export function useQuickScanDialogState({ t, locale = "en" }: UseQuickScanDialog
     hasConfig,
     hasNoEnabledSteps,
     requiresProfileReview,
+    formValuesCacheRef,
+    workflowProfileDraft,
     handleConfigSync,
     handleManualConfigChange,
     handleResetWorkflowConfig,

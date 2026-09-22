@@ -46,6 +46,10 @@ func decodePackageBuildResults(payload []byte, source string) (PackageBuildResul
 }
 
 func validatePackageBuildResultsShape(results PackageBuildResults, expectedMode string) error {
+	return validatePackageBuildResultsShapeWithVersions(results, expectedMode, nil)
+}
+
+func validatePackageBuildResultsShapeWithVersions(results PackageBuildResults, expectedMode string, versions map[string]string) error {
 	if results.SchemaVersion != packageBuildResultsSchemaVersion {
 		return fmt.Errorf("unsupported package build results schemaVersion %q", results.SchemaVersion)
 	}
@@ -59,7 +63,6 @@ func validatePackageBuildResultsShape(results PackageBuildResults, expectedMode 
 		return fmt.Errorf("package build results packages cannot be empty")
 	}
 	lastEngineID := ""
-	buildVersion := ""
 	seen := make(map[string]struct{}, len(results.Packages))
 	for index, artifact := range results.Packages {
 		if artifact.EngineID == "" || artifact.EngineID != strings.TrimSpace(artifact.EngineID) {
@@ -77,10 +80,24 @@ func validatePackageBuildResultsShape(results PackageBuildResults, expectedMode 
 		if artifact.EngineVersion == "" || artifact.EngineVersion != strings.TrimSpace(artifact.EngineVersion) || !versioning.IsValidSemVer(artifact.EngineVersion) {
 			return fmt.Errorf("package build result %q engineVersion must be one canonical semantic version", artifact.EngineID)
 		}
-		if buildVersion == "" {
-			buildVersion = artifact.EngineVersion
-		} else if artifact.EngineVersion != buildVersion {
-			return fmt.Errorf("package build results must use one Engine Package version, got %q and %q", buildVersion, artifact.EngineVersion)
+		if versions == nil {
+			// Development and legacy callers intentionally retain one release
+			// version for the complete package set. Protected composition
+			// publication passes a per-Engine map below.
+			if len(seen) > 1 {
+				first := results.Packages[0].EngineVersion
+				if artifact.EngineVersion != first {
+					return fmt.Errorf("package build results must use one Engine Package version, got %q and %q", first, artifact.EngineVersion)
+				}
+			}
+		} else {
+			expected, ok := versions[artifact.EngineID]
+			if !ok {
+				return fmt.Errorf("package version map is missing package result %q", artifact.EngineID)
+			}
+			if artifact.EngineVersion != expected {
+				return fmt.Errorf("package build result %q engineVersion %q does not match package version map %q", artifact.EngineID, artifact.EngineVersion, expected)
+			}
 		}
 
 		if err := validatePackageArchivePath(artifact.ArchivePath); err != nil {
@@ -99,6 +116,9 @@ func validatePackageBuildResultsShape(results PackageBuildResults, expectedMode 
 		if string(candidates.RuntimeImageDigest) != artifact.RuntimeImageDigest {
 			return fmt.Errorf("package build result %q Runtime Image refs digest %q does not match runtimeImageDigest %q", artifact.EngineID, candidates.RuntimeImageDigest, artifact.RuntimeImageDigest)
 		}
+	}
+	if versions != nil && len(versions) != len(seen) {
+		return fmt.Errorf("package version map count %d does not match package result count %d", len(versions), len(seen))
 	}
 	return nil
 }
@@ -124,10 +144,22 @@ func validatePackageArtifacts(
 	packageResultsPath string,
 	expectedMode string,
 ) error {
+	return validatePackageArtifactsWithVersionMap(discovery, imageResults, packageResults, packagesRoot, packageResultsPath, expectedMode, nil)
+}
+
+func validatePackageArtifactsWithVersionMap(
+	discovery Discovery,
+	imageResults RuntimeImageBuildResults,
+	packageResults PackageBuildResults,
+	packagesRoot string,
+	packageResultsPath string,
+	expectedMode string,
+	versions map[string]string,
+) error {
 	if err := validateBuildResults(discovery, imageResults, expectedMode); err != nil {
 		return err
 	}
-	if err := validatePackageBuildResultsShape(packageResults, expectedMode); err != nil {
+	if err := validatePackageBuildResultsShapeWithVersions(packageResults, expectedMode, versions); err != nil {
 		return err
 	}
 	if packageResults.Mode != imageResults.Mode {
@@ -229,10 +261,14 @@ func validatePackageArtifacts(
 }
 
 func validatePackageReleaseEvolution(previous, current PackageBuildResults) error {
-	if err := validatePackageBuildResultsShape(previous, ""); err != nil {
+	return validatePackageReleaseEvolutionWithVersions(previous, current, nil)
+}
+
+func validatePackageReleaseEvolutionWithVersions(previous, current PackageBuildResults, versions map[string]string) error {
+	if err := validatePackageBuildResultsShapeWithVersions(previous, "", versions); err != nil {
 		return fmt.Errorf("previous package build results: %w", err)
 	}
-	if err := validatePackageBuildResultsShape(current, ""); err != nil {
+	if err := validatePackageBuildResultsShapeWithVersions(current, "", versions); err != nil {
 		return fmt.Errorf("current package build results: %w", err)
 	}
 	previousByEngine := make(map[string]PackageBuildArtifact, len(previous.Packages))

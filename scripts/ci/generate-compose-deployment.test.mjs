@@ -5,6 +5,17 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { generate } from './generate-compose-deployment.mjs';
+import { compositionCorePayload, FINGERPRINT_SCHEMA_VERSION, sha256Digest } from './resolve-release-component-composition.mjs';
+
+function fingerprint(componentId) {
+ const inputs = {
+  schemaVersion: FINGERPRINT_SCHEMA_VERSION, componentId, kind: componentId.split('.')[0], contextPath: '.',
+  dockerfile: `${componentId.replaceAll('.', '/')}/Dockerfile`, dockerignore: '',
+  files: [], namedContexts: {}, buildArgs: {}, platforms: ['linux/amd64', 'linux/arm64'],
+  baseImages: [], baseImagesResolved: true, builderPolicy: {}, generatedInputs: [],
+ };
+ return { version: FINGERPRINT_SCHEMA_VERSION, algorithm: 'sha256-canonical-json-v1', digest: sha256Digest(inputs), baseImagesResolved: true, inputs };
+}
 
 const root = path.resolve(import.meta.dirname, '../..');
 const lifecycleScripts = [
@@ -21,9 +32,30 @@ function fixture(t, version = '1.2.3') {
  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'compose-package-test-'));
  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
  const manifest = path.join(dir, 'release.yaml');
+ const runtimeComposition = path.join(dir, 'runtime-composition.json');
+ const composition = {
+  schemaVersion: 1,
+  kind: 'lunafox.runtime-composition',
+  releaseTag: `v${version}`,
+  components: [{
+   id: 'runtime.frontend', kind: 'runtime', name: 'frontend',
+   inputFingerprint: fingerprint('runtime.frontend'),
+   artifact: { ref: `ghcr.io/yyhuni/lunafox-frontend@sha256:${'a'.repeat(64)}`, digest: `sha256:${'a'.repeat(64)}` },
+   disposition: 'built', sourceRelease: { tag: `v${version}` },
+   evidence: { image: 'image.json', provenance: 'provenance.json', sbom: 'sbom.json', signature: 'signature.json' },
+  }],
+  capabilities: { dynamicFrontendUpstream: true },
+ };
+ composition.compositionDigest = sha256Digest(compositionCorePayload(composition));
  const runtime = ['server','frontend','nginx','agent','bootstrap'].map(name => `  - name: ${name}\n    refs:\n      - docker.io/yyhuni/lunafox-${name}@sha256:${'a'.repeat(64)}\n      - ghcr.io/yyhuni/lunafox-${name}@sha256:${'a'.repeat(64)}\n`).join('');
- fs.writeFileSync(manifest, `releaseVersion: "${version}"\nruntimeImages:\n${runtime}enginePackages:\n  - refs:\n      - docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:${'b'.repeat(64)}\n      - ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:${'b'.repeat(64)}\n`);
- return { root, manifest, tag:`v${version}`, output:path.join(dir,'output'), dir };
+ const releaseNotes = '## English\n\n- Test release notes.\n\n## 简体中文\n\n- 测试发布说明。\n';
+ const releaseNotesDigest = '4406112ce062dd05feacce5f519b8cb7250fd01c7237c43e0f7335da912e8188';
+ fs.writeFileSync(manifest, `releaseVersion: "${version}"\nreleaseNotes:\n  digest: "sha256:${releaseNotesDigest}"\n  body: |\n${releaseNotes.trimEnd().split('\n').map(line => `    ${line}`).join('\n')}\nruntimeImages:\n${runtime}enginePackages:\n  - refs:\n      - docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:${'b'.repeat(64)}\n      - ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:${'b'.repeat(64)}\nruntimeComposition:\n  schemaVersion: 1\n  asset: "runtime-composition.json"\n  sha256: "${composition.compositionDigest}"\n`);
+ composition.manifestBinding = {
+  manifestDigest: sha256Digest(fs.readFileSync(manifest)),
+ };
+ fs.writeFileSync(runtimeComposition, `${JSON.stringify(composition, null, 2)}\n`);
+ return { root, manifest, runtimeComposition, tag:`v${version}`, output:path.join(dir,'output'), dir };
 }
 
 function renderCompose(dir, compose, configuration, databaseMode, overrides = {}) {
@@ -48,7 +80,7 @@ test('one package is reproducible, registry-selectable, and matches its snapshot
  assert.deepEqual(first,second);
  assert.equal(first.length,1);
  assert.equal(first[0].name,'lunafox-v1.2.3.zip');
- const script=`import zipfile,sys,json\nwith zipfile.ZipFile(sys.argv[1]) as z:\n print(json.dumps({n:z.read(n).decode() for n in ['compose.yaml','.env','.env.example','README.md','engine-inventory.yaml','install.sh','start.sh','restart.sh','stop.sh','status.sh','logs.sh','uninstall.sh','lunafox-lifecycle.sh']}))`;
+ const script=`import zipfile,sys,json\nwith zipfile.ZipFile(sys.argv[1]) as z:\n print(json.dumps({n:z.read(n).decode() for n in ['compose.yaml','.env','.env.example','README.md','engine-inventory.yaml','runtime-composition.json','install.sh','start.sh','restart.sh','stop.sh','status.sh','logs.sh','uninstall.sh','lunafox-lifecycle.sh']}))`;
  const artifact=first[0];
  const content=JSON.parse(execFileSync('python3',['-c',script,path.join(options.output,artifact.name)],{encoding:'utf8'}));
  for(const [name,value] of Object.entries(content)) assert.equal(fs.readFileSync(path.join(snapshot,name),'utf8'),value);
@@ -106,6 +138,7 @@ test('one package is reproducible, registry-selectable, and matches its snapshot
   assert.equal(entryModes['compose.yaml'], 0o644);
   assert.equal(entryModes['.env'], 0o644);
   assert.equal(entryModes['release.manifest.yaml'], 0o644);
+  assert.equal(entryModes['runtime-composition.json'], 0o644);
 
   for(const registry of ['docker.io','ghcr.io']){
    const renderDir = path.join(options.dir, registry);
@@ -187,3 +220,11 @@ for(const failure of ['missing-image','bad-digest','development','missing-manife
   assert.equal(fs.existsSync(options.output),false);
  });
 }
+
+test('rejects a composition asset whose digest is not bound by the manifest', t => {
+ const options = fixture(t);
+ const manifest = fs.readFileSync(options.manifest, 'utf8');
+ fs.writeFileSync(options.manifest, manifest.replace(/sha256: "sha256:[a-f0-9]{64}"/, `sha256: "sha256:${'d'.repeat(64)}"`));
+ assert.throws(() => generate(options), /runtime composition canonical digest does not match manifest/);
+ assert.equal(fs.existsSync(options.output), false);
+});

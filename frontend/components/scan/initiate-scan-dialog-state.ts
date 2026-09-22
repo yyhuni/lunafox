@@ -5,6 +5,7 @@ import {
   hasNoEnabledWorkflowSteps,
   serializeCanonicalWorkflowConfiguration,
   serializeWorkflowProfileDraft,
+  type WorkflowProfileDraft,
 } from "@/lib/workflow-config"
 import { hasApiErrorReason } from "@/lib/api-error-info"
 import { getInitiateScanValidationIssue } from "@/lib/initiate-scan-helpers"
@@ -14,6 +15,7 @@ import { useEngineCatalogDetails } from "@/hooks/use-engine-catalog"
 import { buildWorkflowWithEngineCatalog } from "@/lib/engine-catalog"
 import type { Locale } from "@/i18n/config"
 import type { ScanConfigValidationHandle } from "@/components/scan/scan-config-view-toggle"
+import type { EngineConfigFormValues } from "@/types/engine-config.types"
 import type { ScanInputSource } from "@/types/scan.types"
 
 type UseInitiateScanDialogStateProps = {
@@ -57,6 +59,9 @@ export function useInitiateScanDialogState({
   const [isWorkflowConfigLoading, setIsWorkflowConfigLoading] = useState(false)
   const [requiresProfileReview, setRequiresProfileReview] = useState(false)
   const configValidationRef = useRef<ScanConfigValidationHandle | null>(null)
+  const formValuesCacheRef = useRef<EngineConfigFormValues>({})
+  const [workflowProfileDraft, setWorkflowProfileDraft] = useState<WorkflowProfileDraft | null>(null)
+  const [pendingWorkflowProfileDraft, setPendingWorkflowProfileDraft] = useState<WorkflowProfileDraft | null>(null)
   // Workflow details load after selection; stale responses must not replace a newer user choice.
   const workflowSelectionRequestRef = useRef(0)
 
@@ -97,12 +102,18 @@ export function useInitiateScanDialogState({
     const workflow = workflows?.find((item) => item.name === workflowName)
     if (!workflow) throw new Error("Selected Workflow is unavailable")
     const draft = adaptWorkflowProfile(profile, workflow)
-    return serializeWorkflowProfileDraft(draft)
+    return { configuration: serializeWorkflowProfileDraft(draft), draft }
   }, [loadScanWorkflowProfile, workflows])
 
-  const applyWorkflowSelection = useCallback((workflowNames: string[], nextConfig: string) => {
+  const applyWorkflowSelection = useCallback((
+    workflowNames: string[],
+    nextConfig: string,
+    nextWorkflowProfileDraft: WorkflowProfileDraft | null,
+  ) => {
+    formValuesCacheRef.current = {}
     setSelectedWorkflowNames(workflowNames)
     setConfiguration(nextConfig)
+    setWorkflowProfileDraft(nextWorkflowProfileDraft)
     setIsConfigEdited(false)
     setIsYamlValid(true)
     setIsWorkflowConfigLoading(false)
@@ -112,8 +123,10 @@ export function useInitiateScanDialogState({
   const handleResetWorkflowConfig = useCallback(async () => {
     const workflowName = selectedWorkflowNames[0]
     if (!workflowName) return
-    const nextConfig = await loadProfileConfiguration(workflowName)
+    const { configuration: nextConfig, draft } = await loadProfileConfiguration(workflowName)
+    formValuesCacheRef.current = {}
     setConfiguration(nextConfig)
+    setWorkflowProfileDraft(draft)
     setIsConfigEdited(false)
     setIsYamlValid(true)
     setRequiresProfileReview(false)
@@ -125,6 +138,8 @@ export function useInitiateScanDialogState({
     workflowSelectionRequestRef.current = requestId
 
     if (!isConfigEdited) {
+      formValuesCacheRef.current = {}
+      setWorkflowProfileDraft(null)
       setSelectedWorkflowNames(nextWorkflowNames)
       setIsYamlValid(true)
       setIsWorkflowConfigLoading(nextWorkflowNames.length > 0)
@@ -137,8 +152,13 @@ export function useInitiateScanDialogState({
     }
 
     let nextConfig = ""
+    let nextWorkflowProfileDraft: WorkflowProfileDraft | null = null
     try {
-      nextConfig = nextWorkflowNames.length > 0 ? await loadProfileConfiguration(nextWorkflowNames[0]) : ""
+      if (nextWorkflowNames.length > 0) {
+        const loadedProfile = await loadProfileConfiguration(nextWorkflowNames[0])
+        nextConfig = loadedProfile.configuration
+        nextWorkflowProfileDraft = loadedProfile.draft
+      }
     } catch {
       if (workflowSelectionRequestRef.current === requestId) {
         setIsWorkflowConfigLoading(false)
@@ -154,11 +174,12 @@ export function useInitiateScanDialogState({
     if (isConfigEdited && configuration !== nextConfig) {
       setPendingWorkflowNames(nextWorkflowNames)
       setPendingConfigChange(nextConfig)
+      setPendingWorkflowProfileDraft(nextWorkflowProfileDraft)
       setShowOverwriteConfirm(true)
       setIsWorkflowConfigLoading(false)
       return
     }
-    applyWorkflowSelection(nextWorkflowNames, nextConfig)
+    applyWorkflowSelection(nextWorkflowNames, nextConfig, nextWorkflowProfileDraft)
   }, [applyWorkflowSelection, configuration, isConfigEdited, loadProfileConfiguration])
 
   useEffect(() => {
@@ -179,17 +200,19 @@ export function useInitiateScanDialogState({
   const handleOverwriteConfirm = useCallback(() => {
     if (pendingConfigChange !== null) {
       const nextWorkflowNames = pendingWorkflowNames ?? selectedWorkflowNames
-      applyWorkflowSelection(nextWorkflowNames, pendingConfigChange)
+      applyWorkflowSelection(nextWorkflowNames, pendingConfigChange, pendingWorkflowProfileDraft)
     }
     setShowOverwriteConfirm(false)
     setPendingConfigChange(null)
     setPendingWorkflowNames(null)
-  }, [applyWorkflowSelection, pendingConfigChange, pendingWorkflowNames, selectedWorkflowNames])
+    setPendingWorkflowProfileDraft(null)
+  }, [applyWorkflowSelection, pendingConfigChange, pendingWorkflowNames, pendingWorkflowProfileDraft, selectedWorkflowNames])
 
   const handleOverwriteCancel = useCallback(() => {
     setShowOverwriteConfirm(false)
     setPendingConfigChange(null)
     setPendingWorkflowNames(null)
+    setPendingWorkflowProfileDraft(null)
   }, [])
 
   const handleYamlValidationChange = useCallback((isValid: boolean) => {
@@ -198,6 +221,7 @@ export function useInitiateScanDialogState({
 
   const resetDialogState = useCallback(() => {
     workflowSelectionRequestRef.current += 1
+    formValuesCacheRef.current = {}
     setSelectedWorkflowNames([])
     setSelectedAgentID(null)
     setInputSource("scanSnapshot")
@@ -210,7 +234,16 @@ export function useInitiateScanDialogState({
     setPendingWorkflowNames(null)
     setIsWorkflowConfigLoading(false)
     setRequiresProfileReview(false)
+    setWorkflowProfileDraft(null)
+    setPendingWorkflowProfileDraft(null)
   }, [])
+
+  useEffect(() => {
+    if (open) return
+    formValuesCacheRef.current = {}
+    setWorkflowProfileDraft(null)
+    setPendingWorkflowProfileDraft(null)
+  }, [open])
 
   const handleInitiate = useCallback(async () => {
     const issue = getInitiateScanValidationIssue({
@@ -310,7 +343,6 @@ export function useInitiateScanDialogState({
     tToast,
     targetId,
     loadScanWorkflowProfile,
-    locale,
   ])
 
   const handleOpenChange = useCallback((newOpen: boolean) => {
@@ -361,6 +393,8 @@ export function useInitiateScanDialogState({
     canProceedToReview,
     canStart,
     configValidationRef,
+    formValuesCacheRef,
+    workflowProfileDraft,
     setCurrentStep,
     handleConfigSync,
     handleManualConfigChange,

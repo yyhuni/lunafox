@@ -136,6 +136,8 @@
   },
   "tooltips": {
     "targetDetails": "Target Details",
+    "targetConcept": "A target is the root entity for scanning and asset discovery. Add a root domain (for example, example.com), a single IP address, or a CIDR range. Subdomains, websites, and other assets belong to the domain; use a scan strategy such as subdomain discovery to enumerate them, or add them in bulk from the target's Assets page.",
+    "organizationConcept": "An organization groups multiple targets by company, business line, or department.",
     "viewProgress": "Click to view progress details",
     "targetSummary": "Target Summary",
     "organizationDetails": "Organization Details",
@@ -984,7 +986,7 @@
       "passwordLabel": "Password*",
       "passwordPlaceholder": "Enter your password",
       "submit": "Sign in",
-      "accessHelp": "Need access? Contact your administrator."
+      "accessHelp": "First sign-in: use admin / admin, then change your password."
     },
     "terminal": {
       "title": "LunaFox ASM Platform",
@@ -1111,6 +1113,7 @@
       "emptySummary": "No targets entered yet",
       "validSummary": "{count} items passed validation",
       "blockingSummary": "{count} errors block submission",
+      "batchLimitSummary": "You entered {count} targets. A batch can contain at most {max} targets.",
       "invalidIssue": "Line {line}: \"{target}\" - {error}",
       "invalidBadge": "Invalid target",
       "collapseDetails": "Collapse details",
@@ -1191,6 +1194,7 @@
       "emptySummary": "No content entered yet",
       "validSummary": "{count} items passed validation",
       "blockingSummary": "{count} errors block submission",
+      "batchLimitSummary": "You entered {count} targets. A batch can contain at most {max} targets.",
       "collapseDetails": "Collapse details",
       "expandDetails": "Expand details",
       "invalidIssue": "Line {line}: \"{target}\" - {error}",
@@ -1384,6 +1388,7 @@
       "everyDay": "Every day at {time}",
       "everyWeek": "Every {day} at {time}",
       "everyMonth": "Every month on day {day} at {time}",
+      "inTimeZone": "{rule} ({timeZone})",
       "weekdays": [
         "Sunday",
         "Monday",
@@ -1844,6 +1849,13 @@
         "targetScanHint": "Target Scan: Scans a fixed target list, newly added targets will not be scanned",
         "selectOrganization": "Select Organization",
         "selectTarget": "Select Scan Target",
+        "timeZone": "Time Zone",
+        "timeZonePlaceholder": "Select an IANA time zone",
+        "timeZoneSearchPlaceholder": "Search time zones...",
+        "timeZoneEmpty": "No matching time zone",
+        "timeZoneDesc": "Cron rules are evaluated in this IANA time zone.",
+        "timeZoneRequired": "Please select a time zone",
+        "timeZoneInvalid": "Please select a valid IANA time zone",
         "cronExpression": "Cron Expression",
         "cronPlaceholder": "min hour day month week (e.g., 0 2 * * *)",
         "cronFormat": "Format: min(0-59) hour(0-23) day(1-31) month(1-12) week(0-6, 0=Sunday)",
@@ -1854,6 +1866,7 @@
         "nextExecutionTime": "Next execution time:",
         "upcoming": "(upcoming)",
         "invalidExpression": "Invalid expression",
+        "scheduleRule": "{rule} in {timeZone}",
         "scanScope": "Scan Scope",
         "organizationMode": "Organization Scan",
         "organizationModeHint": "In organization scan mode, all targets under this organization will be dynamically fetched at execution",
@@ -2297,7 +2310,7 @@
       "toast": {
         "exportSuccess": "Export successful",
         "exportFailed": "Export failed",
-        "deleteSuccess": "Delete successful",
+        "deleteSuccess": "{count, plural, one {Deleted 1 fingerprint} other {Deleted # fingerprints}}",
         "deleteFailed": "Delete failed"
       },
       "form": {
@@ -3016,8 +3029,8 @@
         "batchError": "Batch stop failed"
       },
       "delete": {
-        "success": "Delete successful",
-        "bulkSuccess": "Delete successful"
+        "success": "Deleted scan record \"{name}\"",
+        "bulkSuccess": "{count, plural, one {Deleted 1 scan record} other {Deleted # scan records}}"
       },
       "initiate": {
         "success": "Scan started",
@@ -3039,8 +3052,8 @@
         "oversized": "This wordlist is larger than 5 MiB. Download it, edit locally, then re-upload a replacement."
       },
       "delete": {
-        "success": "Delete successful",
-        "bulkSuccess": "Delete successful",
+        "success": "Scheduled scan deleted",
+        "bulkSuccess": "{count, plural, one {Deleted 1 scheduled scan} other {Deleted # scheduled scans}}",
         "error": "Delete failed"
       },
     "toggle": {
@@ -3058,15 +3071,16 @@
       "create": {
         "success": "Create successful",
         "bulkSuccess": "Create successful",
-        "error": "Create failed"
+        "error": "Create failed",
+        "errorWithReason": "Create failed: {reason}"
       },
       "update": {
         "success": "Update successful",
         "error": "Update failed"
       },
       "delete": {
-        "success": "Delete successful",
-        "bulkSuccess": "Delete successful",
+        "success": "Deleted target \"{name}\"",
+        "bulkSuccess": "{count, plural, one {Deleted 1 target} other {Deleted # targets}}",
         "error": "Delete failed"
       },
       "link": {
@@ -3089,8 +3103,8 @@
         "error": "Update failed"
       },
       "delete": {
-        "success": "Delete successful",
-        "bulkSuccess": "Delete successful",
+        "success": "Deleted organization \"{name}\"",
+        "bulkSuccess": "{count, plural, one {Deleted 1 organization} other {Deleted # organizations}}",
         "error": "Delete failed"
       }
     },
@@ -3102,8 +3116,8 @@
           "error": "Create failed"
         },
         "delete": {
-          "success": "Delete successful",
-          "bulkSuccess": "Delete successful",
+          "success": "Subdomain deleted",
+          "bulkSuccess": "{count, plural, one {Deleted 1 subdomain} other {Deleted # subdomains}}",
           "error": "Delete failed"
         }
       },
@@ -3114,8 +3128,8 @@
           "error": "Create failed"
         },
         "delete": {
-          "success": "Delete successful",
-          "bulkSuccess": "Delete successful",
+          "success": "Website deleted",
+          "bulkSuccess": "{count, plural, one {Deleted 1 website} other {Deleted # websites}}",
           "error": "Delete failed"
         }
       },
@@ -3126,8 +3140,8 @@
           "error": "Create failed"
         },
         "delete": {
-          "success": "Delete successful",
-          "bulkSuccess": "Delete successful",
+          "success": "Endpoint deleted",
+          "bulkSuccess": "{count, plural, one {Deleted 1 endpoint} other {Deleted # endpoints}}",
           "error": "Delete failed"
         }
       },
@@ -3138,9 +3152,21 @@
           "error": "Create failed"
         },
         "delete": {
-          "success": "Delete successful",
-          "bulkSuccess": "Delete successful",
+          "success": "Directory deleted",
+          "bulkSuccess": "{count, plural, one {Deleted 1 directory} other {Deleted # directories}}",
           "error": "Delete failed"
+        }
+      },
+      "ipAddress": {
+        "delete": {
+          "bulkSuccess": "{count, plural, one {Deleted 1 IP address} other {Deleted # IP addresses}}",
+          "error": "Failed to delete IP addresses"
+        }
+      },
+      "screenshot": {
+        "delete": {
+          "bulkSuccess": "{count, plural, one {Deleted 1 screenshot} other {Deleted # screenshots}}",
+          "error": "Failed to delete screenshots"
         }
       }
     },
@@ -3184,7 +3210,7 @@
         "error": "Update failed"
       },
       "delete": {
-        "success": "Delete successful",
+        "success": "Wordlist deleted",
         "error": "Delete failed"
       }
     },
@@ -3229,7 +3255,7 @@
         "error": "Update failed"
       },
       "delete": {
-        "success": "Delete successful",
+        "success": "Tool deleted",
         "error": "Delete failed"
       }
     },
@@ -3243,7 +3269,7 @@
         "error": "Update failed"
       },
       "delete": {
-        "success": "Delete successful",
+        "success": "Workflow deleted",
         "error": "Delete failed"
       }
     },
@@ -3257,8 +3283,8 @@
         "error": "Update failed"
       },
       "delete": {
-        "success": "Delete successful",
-        "bulkSuccess": "Delete successful",
+        "success": "Command deleted",
+        "bulkSuccess": "{count, plural, one {Deleted 1 command} other {Deleted # commands}}",
         "error": "Delete failed"
       }
     },
@@ -4263,7 +4289,7 @@
         "usernamePlaceholder": "admin@example.com",
         "password": "Password",
         "login": "Sign in",
-        "accessHelp": "Need access? Contact an administrator."
+        "accessHelp": "First sign-in: use admin / admin, then change your password."
       },
       "blacklist": {
         "title": "Global Blacklist",
@@ -4521,15 +4547,23 @@
     "checkFailed": "Failed to check update, please try again later",
     "candidateVersion": "Candidate Version",
     "manifestDigest": "Manifest Digest",
+    "releaseNotes": "Release notes",
+    "releaseNotesUnavailable": "Release notes are not available for this development candidate.",
     "maintenanceWindow": "Expected maintenance window: {minutes} minutes",
     "migrationSummary": "Database migration: {type}",
     "migrationRiskHint": "This release includes a database migration and requires administrator confirmation.",
-    "upgradeRiskHint": "The system will enter a maintenance window and cancel active work.",
+    "upgradeRiskHint": "The Server will confirm the required upgrade scope before execution.",
     "noMigration": "No database migration",
     "startUpgrade": "Start Upgrade",
     "upgradeStatus": "Upgrade Status",
     "operationId": "Operation ID",
     "cancelledWork": "Cancelled {scans} scans and {tasks} tasks",
+    "frontendOnlyScope": "Only the web interface is being updated. Active work was not paused or cancelled.",
+    "workDisposition": {
+      "not_required": "Work cancellation was not required.",
+      "cancellation_failed": "Work cancellation did not complete.",
+      "legacy_unknown": "Cancellation status is unavailable for this legacy operation."
+    },
     "reconnecting": "Server is restarting. Reconnecting to the saved operation...",
     "retryUpgrade": "Retry Upgrade",
     "retryingUpgrade": "Retrying...",
@@ -4537,7 +4571,7 @@
     "confirmUpgradeTitle": "Confirm System Upgrade",
     "confirmUpgradeDescription": "Start the upgrade to {version}? The main application may be unavailable during maintenance.",
     "migrationRisk": "Database migration rules are enforced by the Server.",
-    "tasksWillBeCancelled": "Active scans and tasks will be cancelled and will not resume automatically.",
+    "scopeConfirmedByServer": "The Server will confirm whether active work must be paused before execution.",
     "noBackupRollback": "MVP does not provide automatic database backup or rollback.",
     "confirmAcknowledgement": "I understand the maintenance and recovery limitations.",
     "cancel": "Cancel",
@@ -4569,6 +4603,11 @@
   "systemUpgrade": {
     "title": "System upgrade",
     "description": "Normal business actions are paused during the upgrade. This page reports the stages confirmed by the server.",
+    "frontendOnly": {
+      "title": "Frontend update in progress",
+      "description": "Only the web interface is being replaced. Normal application routes remain available.",
+      "activeWork": "Active scans and tasks were not paused or cancelled for this update."
+    },
     "boundary": {
       "resolvingTitle": "Confirming upgrade status",
       "resolvingDescription": "Recovering the upgrade state from the server. Normal pages are temporarily unavailable.",
@@ -4658,12 +4697,22 @@
       "title": "Confirmed upgrade details",
       "description": "These values come from the server Operation. No client-side percentage or time estimate is inferred.",
       "currentVersion": "Current version",
+      "confirmedDeploymentVersion": "Confirmed deployment version",
       "targetVersion": "Target version",
       "manifest": "Release manifest",
+      "scope": "Update scope",
+      "scopeFrontendOnly": "Frontend only",
+      "scopeFull": "Full system",
       "migration": "Migration status",
       "notStarted": "Not run",
       "cancelledWork": "Cancelled work",
       "cancelledWorkValue": "{scans} scans, {tasks} tasks",
+      "workDispositionLabel": "Work cancellation",
+      "workDisposition": {
+        "not_required": "Work cancellation was not required",
+        "cancellation_failed": "Work cancellation did not complete",
+        "legacy_unknown": "Cancellation status is unavailable for this legacy operation"
+      },
       "agents": "Agent verification",
       "agentsValue": "Ready {ready}/{expected}, missing {missing}, unhealthy {unhealthy}",
       "lastUpdated": "Last updated",
@@ -4685,7 +4734,9 @@
     "stop": {
       "title": "Stop this upgrade?",
       "description": "The upgrader will stop at the next safe cancellation point and then report a terminal result.",
-      "warning": "Stopping does not roll back services or database changes that were already applied. A stop after migration may require manual recovery."
+      "warning": "Stopping does not roll back services or database changes that were already applied. A stop after migration may require manual recovery.",
+      "frontendOnlyDescription": "The frontend replacement will stop at its next safe point and then report a terminal result.",
+      "frontendOnlyWarning": "Stopping does not roll back a frontend image that was already verified and promoted."
     },
     "logs": {
       "title": "Upgrade events",
@@ -4727,6 +4778,9 @@
       "currentVersion": "Current version",
       "targetVersion": "Target version",
       "duration": "Upgrade duration",
+      "scope": "Update scope",
+      "scopeFrontendOnly": "Frontend only",
+      "scopeFull": "Full system",
       "durationUnknown": "Duration unavailable",
       "durationSeconds": "{seconds} seconds",
       "durationMinutes": "{minutes} minutes",
@@ -4734,6 +4788,12 @@
       "migrationNotRun": "Not run",
       "cancelledWork": "Cancelled work",
       "cancelledWorkValue": "{scans} scans, {tasks} tasks",
+      "workDispositionLabel": "Work cancellation",
+      "workDisposition": {
+        "not_required": "Work cancellation was not required",
+        "cancellation_failed": "Work cancellation did not complete",
+        "legacy_unknown": "Cancellation status is unavailable for this legacy operation"
+      },
       "agents": "Agent verification",
       "agentsValue": "Ready {ready}/{expected}, missing {missing}, unhealthy {unhealthy}",
       "noReleaseNotes": "The release manifest does not provide a verifiable feature list, so this summary only shows version, component, and task facts.",

@@ -13,19 +13,37 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/blang/semver"
 )
 
 const (
-	JournalDirectory   = ".lunafox/upgrade"
-	CurrentStateFile   = "current.json"
-	HistoryDirectory   = "operations"
-	ReceiptDirectory   = "receipts"
-	ManifestDirectory  = "manifests"
-	LockFile           = "lock"
-	SocketFile         = "upgrader.sock"
-	OverrideFileSuffix = ".compose.json"
-	JournalSchema      = 1
-	RequestSchema      = 1
+	JournalDirectory     = ".lunafox/upgrade"
+	CurrentStateFile     = "current.json"
+	HistoryDirectory     = "operations"
+	ReceiptDirectory     = "receipts"
+	ManifestDirectory    = "manifests"
+	CompositionDirectory = "compositions"
+	PlanDirectory        = "plans"
+	LockFile             = "lock"
+	SocketFile           = "upgrader.sock"
+	OverrideFileSuffix   = ".compose.json"
+	// JournalSchema and RequestSchema intentionally retain their legacy v1
+	// values. Existing deployments may resume these records indefinitely, so a
+	// new binary must not reinterpret an omitted scope as frontend-only.
+	JournalSchema = 1
+	// ScopedJournalSchema and ScopedRequestSchema retain the wire schema-v2
+	// value. Their names describe the scope evidence introduced at that version
+	// without weakening compatibility for persisted records or host messages.
+	ScopedJournalSchema = 2
+	RequestSchema       = 1
+	ScopedRequestSchema = 2
+	// RequestSchemaV3 adds a read-only candidate-inventory availability probe.
+	// It intentionally does not add a new executable or journal schema, so v2
+	// plan-bound execution remains stable for existing Server/host rollouts.
+	RequestSchemaV3      = 3
+	ScopePlanSchema      = 1
+	ConfirmedStateSchema = 1
 
 	MaxDiagnosticBytes = 4096
 	MaxRequestBytes    = 16 * 1024
@@ -68,6 +86,23 @@ const (
 	// operation. Resume remains a read/idempotent continuation and must never
 	// reset a terminal journal implicitly.
 	ActionRepair Action = "repair"
+	// ActionCapabilities is an explicit v2 negotiation request. It has no
+	// operation identity because it performs no deployment work.
+	ActionCapabilities Action = "capabilities"
+	// ActionPlan asks the host to create a read-only, persisted scope plan.
+	// The returned plan digest is later required by v2 start and confirmation.
+	ActionPlan Action = "plan"
+	// ActionConfirm atomically advances host-owned confirmed deployment state
+	// only after the Server has completed its non-host verification gates.
+	ActionConfirm Action = "confirm"
+	// ActionDeploymentState returns the last fully confirmed deployment without
+	// requiring an operation identity. It is a read-only v2 projection used by
+	// update availability checks; schema-v1 deliberately has no equivalent.
+	ActionDeploymentState Action = "state"
+	// ActionCandidateAvailability is a schema-v3 read-only comparison between
+	// one cached candidate and the host-owned confirmed deployment. It never
+	// persists a scope plan or creates executable work.
+	ActionCandidateAvailability Action = "availability"
 )
 
 var (
@@ -83,6 +118,17 @@ type Request struct {
 	OperationID    string `json:"operationId"`
 	Action         Action `json:"action"`
 	ManifestDigest string `json:"manifestDigest"`
+	// The following fields are required only by a v2 plan-bound start, resume,
+	// repair, or confirmation. A v1 request must leave all of them empty.
+	ExecutionMode              ExecutionMode `json:"executionMode,omitempty"`
+	PlanDigest                 string        `json:"planDigest,omitempty"`
+	BaselineStateDigest        string        `json:"baselineStateDigest,omitempty"`
+	TouchedServices            []string      `json:"touchedServices,omitempty"`
+	ConfirmedDeploymentVersion string        `json:"confirmedDeploymentVersion,omitempty"`
+	// RequireFull is accepted only by the v2 read-only planning request. It is
+	// a Server-owned safety ceiling for migration/compatibility gates; it can
+	// only remove the fast path and is never persisted as execution evidence.
+	RequireFull bool `json:"requireFull,omitempty"`
 }
 
 type Journal struct {
@@ -90,6 +136,14 @@ type Journal struct {
 	OperationID    string `json:"operationId"`
 	ManifestDigest string `json:"manifestDigest"`
 	Stage          Stage  `json:"stage"`
+	// Scope evidence is written only by v2 operations. Keeping it beside the
+	// lifecycle checkpoint lets a restart reconstruct the same sealed scope
+	// rather than accidentally widening a previously non-disruptive operation.
+	ExecutionMode              ExecutionMode `json:"executionMode,omitempty"`
+	PlanDigest                 string        `json:"planDigest,omitempty"`
+	BaselineStateDigest        string        `json:"baselineStateDigest,omitempty"`
+	TouchedServices            []string      `json:"touchedServices,omitempty"`
+	ConfirmedDeploymentVersion string        `json:"confirmedDeploymentVersion,omitempty"`
 	// RepairStage records the first safe stage for an explicit repair. A
 	// migration or post-migration failure resumes at verification instead of
 	// rerunning an operation whose database outcome may already be committed.
@@ -112,16 +166,21 @@ type Journal struct {
 // command completed, but it deliberately carries no Operation success state;
 // Server/Agent/migration verification remains authoritative elsewhere.
 type Receipt struct {
-	SchemaVersion  int               `json:"schemaVersion"`
-	OperationID    string            `json:"operationId"`
-	ManifestDigest string            `json:"manifestDigest"`
-	CompletedAt    time.Time         `json:"completedAt"`
-	Services       []string          `json:"services"`
-	ObservedImages map[string]string `json:"observedImages"`
+	SchemaVersion              int               `json:"schemaVersion"`
+	OperationID                string            `json:"operationId"`
+	ManifestDigest             string            `json:"manifestDigest"`
+	CompletedAt                time.Time         `json:"completedAt"`
+	Services                   []string          `json:"services"`
+	ObservedImages             map[string]string `json:"observedImages"`
+	ExecutionMode              ExecutionMode     `json:"executionMode,omitempty"`
+	PlanDigest                 string            `json:"planDigest,omitempty"`
+	BaselineStateDigest        string            `json:"baselineStateDigest,omitempty"`
+	TouchedServices            []string          `json:"touchedServices,omitempty"`
+	ConfirmedDeploymentVersion string            `json:"confirmedDeploymentVersion,omitempty"`
 }
 
 func (receipt Receipt) Validate() error {
-	if receipt.SchemaVersion != JournalSchema {
+	if !validJournalSchema(receipt.SchemaVersion) {
 		return fmt.Errorf("unsupported receipt schema version %d", receipt.SchemaVersion)
 	}
 	if err := validateOperationID(receipt.OperationID); err != nil {
@@ -159,6 +218,15 @@ func (receipt Receipt) Validate() error {
 			return fmt.Errorf("receipt is missing observed image %q", service)
 		}
 	}
+	if receipt.SchemaVersion == JournalSchema {
+		return validateEmptyScopeEvidence(receipt.ExecutionMode, receipt.PlanDigest, receipt.BaselineStateDigest, receipt.TouchedServices, receipt.ConfirmedDeploymentVersion)
+	}
+	if err := validateScopeEvidence(receipt.ExecutionMode, receipt.PlanDigest, receipt.BaselineStateDigest, receipt.TouchedServices, receipt.ConfirmedDeploymentVersion); err != nil {
+		return fmt.Errorf("receipt scope evidence: %w", err)
+	}
+	if receipt.ExecutionMode == ExecutionModeFrontendOnly && !sameStringSlice(receipt.Services, receipt.TouchedServices) {
+		return fmt.Errorf("frontend-only receipt services must match its touched services")
+	}
 	return nil
 }
 
@@ -172,12 +240,16 @@ func validComposeService(service string) bool {
 }
 
 type Response struct {
-	SchemaVersion int     `json:"schemaVersion"`
-	Accepted      bool    `json:"accepted"`
-	Replayed      bool    `json:"replayed"`
-	Repaired      bool    `json:"repaired,omitempty"`
-	Journal       Journal `json:"journal"`
-	Error         string  `json:"error,omitempty"`
+	SchemaVersion            int                       `json:"schemaVersion"`
+	Accepted                 bool                      `json:"accepted"`
+	Replayed                 bool                      `json:"replayed"`
+	Repaired                 bool                      `json:"repaired,omitempty"`
+	Journal                  Journal                   `json:"journal"`
+	Capabilities             *HostCapabilities         `json:"capabilities,omitempty"`
+	ScopePlan                *ScopePlan                `json:"scopePlan,omitempty"`
+	ConfirmedDeploymentState *ConfirmedDeploymentState `json:"confirmedDeploymentState,omitempty"`
+	CandidateAvailability    *CandidateAvailability    `json:"candidateAvailability,omitempty"`
+	Error                    string                    `json:"error,omitempty"`
 }
 
 // Validate checks the response envelope before a caller acts on it.  The
@@ -185,25 +257,206 @@ type Response struct {
 // malformed or mismatched journal here could make the Server believe a
 // different operation was handed off.
 func (response Response) Validate() error {
-	if response.SchemaVersion != RequestSchema {
+	if !validRequestSchema(response.SchemaVersion) {
 		return fmt.Errorf("unsupported upgrader response schema version %d", response.SchemaVersion)
 	}
-	if response.Accepted {
-		if response.Error != "" {
-			return fmt.Errorf("accepted upgrader response contains an error")
+	if !response.Accepted {
+		if response.Replayed || response.Repaired {
+			return fmt.Errorf("rejected upgrader response cannot be replayed or repaired")
 		}
-		if err := response.Journal.Validate(); err != nil {
-			return fmt.Errorf("invalid upgrader response journal: %w", err)
+		if strings.TrimSpace(response.Error) == "" {
+			return fmt.Errorf("rejected upgrader response must include an error")
+		}
+		if response.Capabilities != nil || response.ScopePlan != nil || response.ConfirmedDeploymentState != nil || response.CandidateAvailability != nil {
+			return fmt.Errorf("rejected upgrader response cannot contain result data")
 		}
 		return nil
 	}
-	if response.Replayed || response.Repaired {
-		return fmt.Errorf("rejected upgrader response cannot be replayed or repaired")
+	if response.Error != "" {
+		return fmt.Errorf("accepted upgrader response contains an error")
 	}
-	if strings.TrimSpace(response.Error) == "" {
-		return fmt.Errorf("rejected upgrader response must include an error")
+	if response.Capabilities != nil {
+		if response.ScopePlan != nil || response.ConfirmedDeploymentState != nil || response.CandidateAvailability != nil || response.Replayed || response.Repaired || !isZeroJournal(response.Journal) {
+			return fmt.Errorf("capability response shape is invalid")
+		}
+		return response.Capabilities.Validate()
+	}
+	if response.ScopePlan != nil {
+		if response.ConfirmedDeploymentState != nil || response.CandidateAvailability != nil || response.Replayed || response.Repaired || !isZeroJournal(response.Journal) {
+			return fmt.Errorf("scope-plan response shape is invalid")
+		}
+		return response.ScopePlan.Validate()
+	}
+	if response.CandidateAvailability != nil {
+		if response.ConfirmedDeploymentState != nil || response.Replayed || response.Repaired || !isZeroJournal(response.Journal) {
+			return fmt.Errorf("candidate availability response shape is invalid")
+		}
+		return response.CandidateAvailability.Validate()
+	}
+	if response.ConfirmedDeploymentState != nil {
+		if response.Replayed || response.Repaired {
+			return fmt.Errorf("deployment state response cannot be replayed or repaired")
+		}
+		if !isZeroJournal(response.Journal) {
+			if err := response.Journal.Validate(); err != nil {
+				return fmt.Errorf("invalid deployment state response journal: %w", err)
+			}
+		}
+		return response.ConfirmedDeploymentState.Validate()
+	}
+	if err := response.Journal.Validate(); err != nil {
+		return fmt.Errorf("invalid upgrader response journal: %w", err)
 	}
 	return nil
+}
+
+// ValidateFor verifies the action-specific response shape before a caller uses
+// it. Generic envelope validation alone cannot prove that a scope-plan reply
+// belongs to the operation that requested it or that a v2 start kept its exact
+// persisted execution scope.
+func (response Response) ValidateFor(request Request) error {
+	if err := request.Validate(); err != nil {
+		return fmt.Errorf("invalid upgrader request binding: %w", err)
+	}
+	if err := response.Validate(); err != nil {
+		return err
+	}
+	if response.SchemaVersion != request.SchemaVersion {
+		return fmt.Errorf("upgrader response schema does not match request schema")
+	}
+	if !response.Accepted {
+		return nil
+	}
+	if request.SchemaVersion == RequestSchema {
+		if response.Capabilities != nil || response.ScopePlan != nil || response.ConfirmedDeploymentState != nil || response.CandidateAvailability != nil {
+			return fmt.Errorf("schema-v1 response contains v2 result data")
+		}
+		return validateResponseJournalBinding(response.Journal, request)
+	}
+	if request.SchemaVersion == ScopedRequestSchema && response.Capabilities != nil &&
+		(response.Capabilities.CandidateInventoryAvailability || containsSchema(response.Capabilities.SchemaVersions, RequestSchemaV3)) {
+		return fmt.Errorf("schema-v2 capability response contains schema-v3 data")
+	}
+	switch request.Action {
+	case ActionCapabilities:
+		if response.Capabilities == nil {
+			return fmt.Errorf("capability response is required")
+		}
+		return nil
+	case ActionPlan:
+		if response.ScopePlan == nil {
+			return fmt.Errorf("scope-plan response is required")
+		}
+		if response.ScopePlan.OperationID != request.OperationID || response.ScopePlan.ManifestDigest != request.ManifestDigest {
+			return ErrReplayDigestMismatch
+		}
+		return nil
+	case ActionConfirm:
+		if response.ConfirmedDeploymentState == nil {
+			return fmt.Errorf("deployment confirmation response is required")
+		}
+		if isZeroJournal(response.Journal) {
+			return fmt.Errorf("deployment confirmation journal is required")
+		}
+		if err := validateResponseJournalBinding(response.Journal, request); err != nil {
+			return err
+		}
+		state := response.ConfirmedDeploymentState
+		if state.OperationID != request.OperationID || state.ManifestDigest != request.ManifestDigest {
+			return ErrReplayDigestMismatch
+		}
+		return nil
+	case ActionDeploymentState:
+		if response.ConfirmedDeploymentState == nil {
+			return fmt.Errorf("confirmed deployment state response is required")
+		}
+		if !isZeroJournal(response.Journal) {
+			return fmt.Errorf("state response must not contain an operation journal")
+		}
+		return nil
+	case ActionCandidateAvailability:
+		if response.CandidateAvailability == nil {
+			return fmt.Errorf("candidate availability response is required")
+		}
+		if response.CandidateAvailability.ManifestDigest != request.ManifestDigest {
+			return ErrReplayDigestMismatch
+		}
+		return nil
+	case ActionStart, ActionResume, ActionStop, ActionRepair:
+		return validateResponseJournalBinding(response.Journal, request)
+	default:
+		return fmt.Errorf("unsupported upgrader action %q", request.Action)
+	}
+}
+
+func validateResponseJournalBinding(journal Journal, request Request) error {
+	if journal.OperationID != request.OperationID || journal.ManifestDigest != request.ManifestDigest {
+		return ErrReplayDigestMismatch
+	}
+	if request.SchemaVersion == ScopedRequestSchema && !sameScopeEvidence(journal.ExecutionMode, journal.PlanDigest, journal.BaselineStateDigest, journal.TouchedServices, journal.ConfirmedDeploymentVersion, request.ExecutionMode, request.PlanDigest, request.BaselineStateDigest, request.TouchedServices, request.ConfirmedDeploymentVersion) {
+		return fmt.Errorf("upgrader response journal scope does not match request")
+	}
+	return nil
+}
+
+func isZeroJournal(journal Journal) bool {
+	return journal.SchemaVersion == 0 && journal.OperationID == "" && journal.ManifestDigest == "" && journal.Stage == ""
+}
+
+func validRequestSchema(schemaVersion int) bool {
+	return schemaVersion == RequestSchema || schemaVersion == ScopedRequestSchema || schemaVersion == RequestSchemaV3
+}
+
+func validJournalSchema(schemaVersion int) bool {
+	return schemaVersion == JournalSchema || schemaVersion == ScopedJournalSchema
+}
+
+func validateEmptyScopeEvidence(mode ExecutionMode, planDigest, baselineStateDigest string, touchedServices []string, confirmedDeploymentVersion string) error {
+	if mode != "" || planDigest != "" || baselineStateDigest != "" || len(touchedServices) != 0 || confirmedDeploymentVersion != "" {
+		return fmt.Errorf("schema-v1 record cannot contain scope evidence")
+	}
+	return nil
+}
+
+func validateScopeEvidence(mode ExecutionMode, planDigest, baselineStateDigest string, touchedServices []string, confirmedDeploymentVersion string) error {
+	if !mode.Valid() {
+		return fmt.Errorf("execution mode is required")
+	}
+	if err := validateDigest(planDigest); err != nil {
+		return fmt.Errorf("plan digest: %w", err)
+	}
+	if err := validateTouchedServices(mode, touchedServices); err != nil {
+		return err
+	}
+	if mode == ExecutionModeFrontendOnly {
+		if err := validateDigest(baselineStateDigest); err != nil {
+			return fmt.Errorf("baseline state digest: %w", err)
+		}
+		if confirmedDeploymentVersion == "" || confirmedDeploymentVersion != strings.TrimSpace(confirmedDeploymentVersion) {
+			return fmt.Errorf("confirmed deployment version is required")
+		}
+		return nil
+	}
+	if baselineStateDigest != "" || confirmedDeploymentVersion != "" {
+		return fmt.Errorf("full scope cannot contain selective baseline evidence")
+	}
+	return nil
+}
+
+func sameScopeEvidence(leftMode ExecutionMode, leftPlan, leftBaseline string, leftServices []string, leftVersion string, rightMode ExecutionMode, rightPlan, rightBaseline string, rightServices []string, rightVersion string) bool {
+	return leftMode == rightMode && leftPlan == rightPlan && leftBaseline == rightBaseline && leftVersion == rightVersion && sameStringSlice(leftServices, rightServices)
+}
+
+func sameStringSlice(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
 }
 
 // JournalEvent is the host-to-control-plane observation boundary. It carries
@@ -298,23 +551,138 @@ func (function EventSinkFunc) Publish(ctx context.Context, event JournalEvent) e
 }
 
 func (request Request) Validate() error {
-	if request.SchemaVersion != RequestSchema {
+	if !validRequestSchema(request.SchemaVersion) {
 		return fmt.Errorf("unsupported upgrader request schema version %d", request.SchemaVersion)
 	}
-	if err := validateOperationID(request.OperationID); err != nil {
+	if request.SchemaVersion == RequestSchema {
+		if err := validateOperationID(request.OperationID); err != nil {
+			return err
+		}
+		if request.Action != ActionStart && request.Action != ActionResume && request.Action != ActionStop && request.Action != ActionRepair {
+			return fmt.Errorf("unsupported upgrader action %q", request.Action)
+		}
+		if err := validateDigest(request.ManifestDigest); err != nil {
+			return err
+		}
+		if request.RequireFull {
+			return fmt.Errorf("schema-v1 request cannot require full scope planning")
+		}
+		return validateEmptyScopeEvidence(request.ExecutionMode, request.PlanDigest, request.BaselineStateDigest, request.TouchedServices, request.ConfirmedDeploymentVersion)
+	}
+	if request.SchemaVersion == RequestSchemaV3 {
+		switch request.Action {
+		case ActionCapabilities:
+			if request.OperationID != "" || request.ManifestDigest != "" || request.RequireFull {
+				return fmt.Errorf("schema-v3 capability request cannot contain operation or planning fields")
+			}
+			return validateEmptyScopeEvidence(request.ExecutionMode, request.PlanDigest, request.BaselineStateDigest, request.TouchedServices, request.ConfirmedDeploymentVersion)
+		case ActionCandidateAvailability:
+			if request.OperationID != "" {
+				return fmt.Errorf("candidate availability request cannot contain an operation identity")
+			}
+			if err := validateDigest(request.ManifestDigest); err != nil {
+				return err
+			}
+			if request.RequireFull {
+				return fmt.Errorf("candidate availability request cannot require full scope planning")
+			}
+			return validateEmptyScopeEvidence(request.ExecutionMode, request.PlanDigest, request.BaselineStateDigest, request.TouchedServices, request.ConfirmedDeploymentVersion)
+		default:
+			return fmt.Errorf("unsupported schema-v3 upgrader action %q", request.Action)
+		}
+	}
+	switch request.Action {
+	case ActionCapabilities:
+		if request.OperationID != "" || request.ManifestDigest != "" {
+			return fmt.Errorf("capability request cannot contain operation identity")
+		}
+		if request.RequireFull {
+			return fmt.Errorf("capability request cannot require full scope planning")
+		}
+		return validateEmptyScopeEvidence(request.ExecutionMode, request.PlanDigest, request.BaselineStateDigest, request.TouchedServices, request.ConfirmedDeploymentVersion)
+	case ActionPlan:
+		if err := validateOperationID(request.OperationID); err != nil {
+			return err
+		}
+		if err := validateDigest(request.ManifestDigest); err != nil {
+			return err
+		}
+		return validateEmptyScopeEvidence(request.ExecutionMode, request.PlanDigest, request.BaselineStateDigest, request.TouchedServices, request.ConfirmedDeploymentVersion)
+	case ActionStart, ActionResume, ActionStop, ActionRepair, ActionConfirm:
+		if err := validateOperationID(request.OperationID); err != nil {
+			return err
+		}
+		if err := validateDigest(request.ManifestDigest); err != nil {
+			return err
+		}
+		if request.RequireFull {
+			return fmt.Errorf("execution request cannot require full scope planning")
+		}
+		return validateScopeEvidence(request.ExecutionMode, request.PlanDigest, request.BaselineStateDigest, request.TouchedServices, request.ConfirmedDeploymentVersion)
+	case ActionDeploymentState:
+		if request.OperationID != "" || request.ManifestDigest != "" {
+			return fmt.Errorf("deployment state request cannot contain operation identity")
+		}
+		if request.RequireFull {
+			return fmt.Errorf("deployment state request cannot require full scope planning")
+		}
+		return validateEmptyScopeEvidence(request.ExecutionMode, request.PlanDigest, request.BaselineStateDigest, request.TouchedServices, request.ConfirmedDeploymentVersion)
+	default:
+		return fmt.Errorf("unsupported schema-v2 upgrader action %q", request.Action)
+	}
+}
+
+// CandidateAvailabilityDecision is the host's bounded answer to a read-only
+// candidate inventory comparison. A fallback deliberately carries no baseline
+// evidence, so the Server can preserve its legacy semantic-version behavior.
+type CandidateAvailabilityDecision string
+
+const (
+	CandidateAvailabilityAvailable      CandidateAvailabilityDecision = "available"
+	CandidateAvailabilityAlreadyApplied CandidateAvailabilityDecision = "already_applied"
+	CandidateAvailabilityNotNewer       CandidateAvailabilityDecision = "not_newer"
+	CandidateAvailabilityFallback       CandidateAvailabilityDecision = "fallback"
+	CandidateAvailabilityConflict       CandidateAvailabilityDecision = "conflict"
+)
+
+// CandidateAvailability is the narrow v3 availability response. It does not
+// disclose the deployment inventory, but definitive answers prove that the
+// host compared against one validated confirmed state.
+type CandidateAvailability struct {
+	ManifestDigest             string                        `json:"manifestDigest"`
+	Decision                   CandidateAvailabilityDecision `json:"decision"`
+	BaselineStateDigest        string                        `json:"baselineStateDigest,omitempty"`
+	ConfirmedDeploymentVersion string                        `json:"confirmedDeploymentVersion,omitempty"`
+}
+
+func (availability CandidateAvailability) Validate() error {
+	if err := validateDigest(availability.ManifestDigest); err != nil {
 		return err
 	}
-	if request.Action != ActionStart && request.Action != ActionResume && request.Action != ActionStop && request.Action != ActionRepair {
-		return fmt.Errorf("unsupported upgrader action %q", request.Action)
+	switch availability.Decision {
+	case CandidateAvailabilityFallback:
+		if availability.BaselineStateDigest != "" || availability.ConfirmedDeploymentVersion != "" {
+			return fmt.Errorf("fallback candidate availability cannot contain confirmed deployment evidence")
+		}
+		return nil
+	case CandidateAvailabilityAvailable, CandidateAvailabilityAlreadyApplied, CandidateAvailabilityNotNewer, CandidateAvailabilityConflict:
+		if err := validateDigest(availability.BaselineStateDigest); err != nil {
+			return fmt.Errorf("candidate availability baseline state digest: %w", err)
+		}
+		if availability.ConfirmedDeploymentVersion == "" || availability.ConfirmedDeploymentVersion != strings.TrimSpace(availability.ConfirmedDeploymentVersion) {
+			return fmt.Errorf("candidate availability confirmed deployment version is required")
+		}
+		if _, err := semver.Parse(availability.ConfirmedDeploymentVersion); err != nil {
+			return fmt.Errorf("candidate availability confirmed deployment version is invalid: %w", err)
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported candidate availability decision %q", availability.Decision)
 	}
-	if err := validateDigest(request.ManifestDigest); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (journal Journal) Validate() error {
-	if journal.SchemaVersion != JournalSchema {
+	if !validJournalSchema(journal.SchemaVersion) {
 		return fmt.Errorf("unsupported journal schema version %d", journal.SchemaVersion)
 	}
 	if err := validateOperationID(journal.OperationID); err != nil {
@@ -322,6 +690,13 @@ func (journal Journal) Validate() error {
 	}
 	if err := validateDigest(journal.ManifestDigest); err != nil {
 		return err
+	}
+	if journal.SchemaVersion == JournalSchema {
+		if err := validateEmptyScopeEvidence(journal.ExecutionMode, journal.PlanDigest, journal.BaselineStateDigest, journal.TouchedServices, journal.ConfirmedDeploymentVersion); err != nil {
+			return err
+		}
+	} else if err := validateScopeEvidence(journal.ExecutionMode, journal.PlanDigest, journal.BaselineStateDigest, journal.TouchedServices, journal.ConfirmedDeploymentVersion); err != nil {
+		return fmt.Errorf("journal scope evidence: %w", err)
 	}
 	if !validStage(journal.Stage) {
 		return fmt.Errorf("unsupported journal stage %q", journal.Stage)

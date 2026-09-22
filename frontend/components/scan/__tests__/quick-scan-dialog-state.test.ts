@@ -37,8 +37,25 @@ describe("useQuickScanDialogState", () => {
     await waitFor(() => {
       expect(result.current.selectedWorkflowNames).toEqual(["full"])
       expect(result.current.configuration).toContain("step")
+      expect(result.current.workflowProfileDraft?.scanWorkflow).toBe("full")
     })
     expect(hookMocks.loadWorkflowProfile).toHaveBeenCalledWith("full")
+  })
+
+  it("快速扫描将禁用 Step 草稿保留到关闭对话框时才清理", async () => {
+    const { result } = renderHook(() => useQuickScanDialogState({ t: (key) => key }))
+    act(() => result.current.handleClose(true))
+
+    await waitFor(() => expect(result.current.workflowProfileDraft).not.toBeNull())
+    const formValuesCacheRef = result.current.formValuesCacheRef
+    formValuesCacheRef.current = { step: { enabled: false, sections: {} } }
+
+    act(() => result.current.handleClose(true))
+    expect(result.current.formValuesCacheRef.current).toEqual({ step: { enabled: false, sections: {} } })
+
+    act(() => result.current.handleClose(false))
+    expect(result.current.formValuesCacheRef.current).toEqual({})
+    expect(result.current.workflowProfileDraft).toBeNull()
   })
 
   it("新建快速扫描默认使用扫描快照，且允许显式切换来源", () => {

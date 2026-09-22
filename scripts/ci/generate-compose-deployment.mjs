@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { validateManifest, parseRuntimeBlocks, parseEngineBlocks } from './verify-public-release.mjs';
+import { validateComposition } from './resolve-release-component-composition.mjs';
 
 const defaultRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const releaseMetadataBaseURL = 'https://raw.githubusercontent.com/yyhuni/lunafox/release-channel';
@@ -48,6 +49,58 @@ function regularFile(root, relative) {
  return fs.readFileSync(current);
 }
 
+function regularExternalFile(filePath, label) {
+ if (!filePath || !fs.existsSync(filePath)) throw Error(`${label} is missing: ${filePath || '(missing)'}`);
+ const info = fs.lstatSync(filePath);
+ if (!info.isFile() || info.isSymbolicLink()) throw Error(`${label} must be a regular file: ${filePath}`);
+ const bytes = fs.readFileSync(filePath);
+ if (!bytes.length) throw Error(`${label} is empty: ${filePath}`);
+ return bytes;
+}
+
+function legacyBootstrapPolicy(policy) {
+ const bootstrap = policy?.legacyDeploymentBootstrap;
+ const keys = bootstrap && typeof bootstrap === 'object' ? Object.keys(bootstrap).sort() : [];
+ if (JSON.stringify(keys) !== JSON.stringify(['manifestSha256', 'packageName', 'paths', 'releaseTag', 'sha256'])) {
+  throw Error('legacy bootstrap policy is malformed');
+ }
+ if (!/^v\d+\.\d+\.\d+-alpha\.\d+$/.test(bootstrap.releaseTag) ||
+     !/^[a-f0-9]{64}$/.test(bootstrap.sha256) ||
+     !/^[a-f0-9]{64}$/.test(bootstrap.manifestSha256) ||
+     !Array.isArray(bootstrap.paths) || bootstrap.paths.includes('runtime-composition.json')) {
+  throw Error('legacy bootstrap policy is invalid');
+ }
+ return bootstrap;
+}
+
+function validateLegacyBootstrapManifest(manifest, tag, policy, legacyBootstrap) {
+ const bootstrap = legacyBootstrapPolicy(policy);
+ const optionKeys = legacyBootstrap && typeof legacyBootstrap === 'object' ? Object.keys(legacyBootstrap).sort() : [];
+ if (JSON.stringify(optionKeys) !== JSON.stringify(['manifestSha256', 'releaseTag']) ||
+     legacyBootstrap.releaseTag !== bootstrap.releaseTag ||
+     legacyBootstrap.manifestSha256 !== bootstrap.manifestSha256 ||
+     tag !== bootstrap.releaseTag) {
+  throw Error('legacy bootstrap request does not match the policy-pinned release');
+ }
+ const bytes = regularExternalFile(manifest, 'legacy bootstrap release manifest');
+ const raw = bytes.toString('utf8');
+ const sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
+ if (sha256 !== bootstrap.manifestSha256) throw Error('legacy bootstrap manifest digest does not match policy');
+ if (/^runtimeComposition:[ \t]*$/m.test(raw)) throw Error('legacy bootstrap manifest must remain a v1 manifest without composition evidence');
+ const releaseVersion = raw.match(/^releaseVersion:\s*["']?([^"'\s]+)["']?/m)?.[1] ?? '';
+ if (`v${releaseVersion}` !== tag) throw Error('legacy bootstrap manifest version does not match policy');
+ const runtime = parseRuntimeBlocks(raw);
+ const engines = parseEngineBlocks(raw, policy);
+ const identities = new Set();
+ for (const ref of [...runtime.flatMap((entry) => entry.refs), ...engines.flat()]) {
+  if (ref.namespace !== policy.canonicalNamespace || identities.has(ref.raw)) {
+   throw Error('legacy bootstrap manifest has an invalid immutable artifact inventory');
+  }
+  identities.add(ref.raw);
+ }
+ return { raw, runtime, engines };
+}
+
 function writeFiles(directory, files, modes = new Map()) {
  for (const [name, bytes] of files) {
   const target = path.join(directory, name);
@@ -57,13 +110,42 @@ function writeFiles(directory, files, modes = new Map()) {
  }
 }
 
-export function generate({ root = defaultRoot, manifest, tag, output, snapshot = '' }) {
+export function generate({ root = defaultRoot, manifest, tag, output, snapshot = '', runtimeComposition = '', legacyBootstrap = null }) {
  if (!/^v\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?$/.test(tag ?? '')) throw Error('invalid release tag');
  const policy = JSON.parse(regularFile(root, 'scripts/ci/public-release-policy.json'));
- validateManifest(manifest, policy, tag);
- const raw = fs.readFileSync(manifest, 'utf8');
- const runtime = parseRuntimeBlocks(raw);
- const engines = parseEngineBlocks(raw, policy);
+ let raw;
+ let runtime;
+ let engines;
+ let compositionBytes = null;
+ if (legacyBootstrap) {
+  // The exact alpha.114 bootstrap predates composition evidence. This private
+  // call path is intentionally non-CLI and can only materialize its v1/full
+  // deployment group; it never grants a selective-upgrade capability.
+  if (runtimeComposition) throw Error('legacy bootstrap must not supply a runtime composition asset');
+  ({ raw, runtime, engines } = validateLegacyBootstrapManifest(manifest, tag, policy, legacyBootstrap));
+ } else {
+  const manifestResult = validateManifest(manifest, policy, tag);
+  raw = fs.readFileSync(manifest, 'utf8');
+  const compositionPath = runtimeComposition || path.join(path.dirname(manifest), 'runtime-composition.json');
+  compositionBytes = regularExternalFile(compositionPath, 'runtime composition asset');
+  let composition;
+  try { composition = JSON.parse(compositionBytes.toString('utf8')); }
+  catch (error) { throw Error(`runtime composition asset is not valid JSON: ${error.message}`); }
+  let normalizedComposition;
+  try { normalizedComposition = validateComposition(composition, { requireManifestBinding: true }); }
+  catch (error) { throw Error(`runtime composition asset is invalid: ${error.message}`); }
+  if (normalizedComposition.compositionDigest !== manifestResult.runtimeComposition.sha256) {
+   throw Error(`runtime composition canonical digest does not match manifest: expected ${manifestResult.runtimeComposition.sha256}, got ${normalizedComposition.compositionDigest}`);
+  }
+  if (normalizedComposition.manifestBinding.manifestDigest !== `sha256:${manifestResult.sha256}`) {
+   throw Error('runtime composition manifest binding does not match the release manifest bytes');
+  }
+  if (normalizedComposition.releaseTag.replace(/^v/, '') !== tag.replace(/^v/, '')) {
+   throw Error('runtime composition release tag does not match the requested deployment tag');
+  }
+  runtime = parseRuntimeBlocks(raw);
+  engines = parseEngineBlocks(raw, policy);
+ }
  const template = regularFile(root, 'deploy/compose.template.yaml').toString();
  const configuration = regularFile(root, 'deploy/.env.example');
  const common = new Map([
@@ -77,6 +159,7 @@ export function generate({ root = defaultRoot, manifest, tag, output, snapshot =
   ['resources/fingerprints/web_fingerprint_v4.json', regularFile(root, 'resources/fingerprints/web_fingerprint_v4.json')],
   ['resources/wordlists/manifest.json', regularFile(root, 'resources/wordlists/manifest.json')],
  ]);
+ if (compositionBytes) common.set('runtime-composition.json', compositionBytes);
  const wordlists = JSON.parse(common.get('resources/wordlists/manifest.json'));
  if (!Array.isArray(wordlists.wordlists) || wordlists.wordlists.length === 0) throw Error('missing wordlist inventory');
  for (const entry of wordlists.wordlists) {
@@ -144,13 +227,17 @@ export function generate({ root = defaultRoot, manifest, tag, output, snapshot =
  } finally { fs.rmSync(work, { recursive: true, force: true }); }
 }
 
+export { validateLegacyBootstrapManifest };
+
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
  try {
   const args = {};
   for (let i = 2; i < process.argv.length; i += 2) {
    const key = process.argv[i];
-   if (!['--root', '--manifest', '--tag', '--output', '--snapshot'].includes(key) || !process.argv[i + 1] || args[key.slice(2)]) throw Error(`invalid argument: ${key}`);
-   args[key.slice(2)] = process.argv[i + 1];
+   if (!['--root', '--manifest', '--tag', '--output', '--snapshot', '--runtime-composition'].includes(key) || !process.argv[i + 1] || args[key.slice(2)]) throw Error(`invalid argument: ${key}`);
+   const value = process.argv[i + 1];
+   if (key === '--runtime-composition') args.runtimeComposition = value;
+   else args[key.slice(2)] = value;
   }
   if (!args.manifest || !args.output) throw Error('--manifest and --output are required');
   process.stdout.write(JSON.stringify(generate(args), null, 2) + '\n');

@@ -8,6 +8,7 @@ import {
 	targetName,
 } from '@/lib/resource-name'
 import { parseWorkflowConfigurationStrict } from '@/lib/workflow-config'
+import { isIanaTimeZoneValid } from '@/lib/scheduled-scan-helpers'
 import type {
   GetScheduledScansResponse,
 	ScheduledScan,
@@ -22,10 +23,11 @@ import type {
 } from '@/types/scheduled-scan.types'
 import { isScanInputSource, type ScanInputSource } from '@/types/scan.types'
 
-type ScheduledScanAipDto = Omit<ScheduledScan, "successfulHandoffCount" | "failedHandoffCount" | "inputSource"> & {
+type ScheduledScanAipDto = Omit<ScheduledScan, "successfulHandoffCount" | "failedHandoffCount" | "inputSource" | "timeZone"> & {
   successfulHandoffCount?: unknown
   failedHandoffCount?: unknown
   inputSource?: unknown
+  timeZone?: unknown
 }
 
 type GetScheduledScansAipResponse = Omit<GetScheduledScansResponse, "scheduledScans"> & {
@@ -47,6 +49,16 @@ function parseInputSource(value: unknown, context: string): ScanInputSource {
     throw new Error(`${context} has an invalid inputSource`)
   }
   return value
+}
+
+function parseTimeZone(value: unknown, context: string): string {
+  if (value === undefined) {
+    throw new Error(`${context} is missing timeZone`)
+  }
+  if (typeof value !== 'string' || !value.trim() || !isIanaTimeZoneValid(value)) {
+    throw new Error(`${context} has an invalid timeZone`)
+  }
+  return value.trim()
 }
 
 function overviewResponseError(field: string): Error {
@@ -191,6 +203,7 @@ function normalizeScheduledScan(scan: ScheduledScanAipDto): ScheduledScan {
   return {
     ...scan,
     inputSource: parseInputSource(scan.inputSource, 'Scheduled scan response'),
+    timeZone: parseTimeZone(scan.timeZone, 'Scheduled scan response'),
     successfulHandoffCount: parseNonNegativeInteger(scan.successfulHandoffCount, "successfulHandoffCount"),
     failedHandoffCount: parseNonNegativeInteger(scan.failedHandoffCount, "failedHandoffCount"),
     name: scan.displayName,
@@ -210,6 +223,7 @@ function toCreateScheduledScanPayload(data: CreateScheduledScanRequest) {
     ...(data.organizationId ? { organization: organizationName(data.organizationId) } : {}),
     ...(data.targetId ? { target: targetName(data.targetId) } : {}),
     ...(Number.isFinite(data.agentId) ? { agent: agentName(data.agentId as number) } : {}),
+    timeZone: parseTimeZone(data.timeZone, 'Scheduled scan request'),
     cronExpression: data.cronExpression,
     ...(data.isEnabled !== undefined ? { isEnabled: data.isEnabled } : {}),
   }
@@ -248,6 +262,10 @@ function toUpdateScheduledScanPayload(id: number, data: UpdateScheduledScanReque
   if (data.agentId !== undefined) {
     payload.agent = data.agentId === null ? '' : agentName(data.agentId)
     updateMask.push('agent')
+  }
+  if (data.timeZone !== undefined) {
+    payload.timeZone = parseTimeZone(data.timeZone, 'Scheduled scan request')
+    updateMask.push('timeZone')
   }
   if (data.cronExpression !== undefined) {
     payload.cronExpression = data.cronExpression

@@ -36,6 +36,7 @@ type ScheduledScan struct {
 	TargetID               *int
 	TargetName             *string
 	AgentID                *int
+	TimeZone               string
 	CronExpression         string
 	IsEnabled              bool
 	NextRunTime            *time.Time
@@ -55,6 +56,7 @@ type ScheduledScanCreate struct {
 	OrganizationID *int
 	TargetID       *int
 	AgentID        *int
+	TimeZone       string
 	CronExpression string
 	IsEnabled      bool
 }
@@ -68,6 +70,7 @@ type ScheduledScanUpdate struct {
 	TargetID       *int
 	AgentID        *int
 	AgentSet       bool
+	TimeZone       *string
 	CronExpression *string
 	IsEnabled      *bool
 }
@@ -96,6 +99,7 @@ type CreateScheduledScanInput struct {
 	OrganizationID *int
 	TargetID       *int
 	Agent          string
+	TimeZone       string
 	CronExpression string
 	IsEnabled      *bool
 }
@@ -110,6 +114,7 @@ type UpdateScheduledScanInput struct {
 	OrganizationID *int
 	TargetID       *int
 	Agent          *string
+	TimeZone       *string
 	CronExpression *string
 	IsEnabled      *bool
 }
@@ -211,10 +216,11 @@ func (service *ScheduledScanService) Create(ctx context.Context, input *CreateSc
 		return nil, err
 	}
 	cron := strings.TrimSpace(input.CronExpression)
+	timeZone := strings.TrimSpace(input.TimeZone)
 	if service.calculator == nil {
 		return nil, fmt.Errorf("%w: schedule calculator is not configured", ErrScheduledScanInvalidArgument)
 	}
-	if err := service.calculator.Validate(cron); err != nil {
+	if err := service.calculator.Validate(cron, timeZone); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrScheduledScanInvalidArgument, err)
 	}
 	enabled := true
@@ -229,6 +235,7 @@ func (service *ScheduledScanService) Create(ctx context.Context, input *CreateSc
 		TargetID:       targetID,
 		AgentID:        agentID,
 		OrganizationID: organizationID,
+		TimeZone:       timeZone,
 		CronExpression: cron,
 		IsEnabled:      enabled,
 	})
@@ -289,15 +296,24 @@ func (service *ScheduledScanService) Update(ctx context.Context, id int, input *
 		}
 		cron = &trimmed
 	}
-	if cron != nil {
+	var timeZone *string
+	if input.TimeZone != nil {
+		trimmed := strings.TrimSpace(*input.TimeZone)
+		timeZone = &trimmed
+	}
+	if cron != nil || timeZone != nil {
 		validationCron := "0 0 * * *"
 		if cron != nil {
 			validationCron = *cron
 		}
+		validationTimeZone := "UTC"
+		if timeZone != nil {
+			validationTimeZone = *timeZone
+		}
 		if service.calculator == nil {
 			return nil, fmt.Errorf("%w: schedule calculator is not configured", ErrScheduledScanInvalidArgument)
 		}
-		if err := service.calculator.Validate(validationCron); err != nil {
+		if err := service.calculator.Validate(validationCron, validationTimeZone); err != nil {
 			return nil, fmt.Errorf("%w: %v", ErrScheduledScanInvalidArgument, err)
 		}
 	}
@@ -322,6 +338,7 @@ func (service *ScheduledScanService) Update(ctx context.Context, id int, input *
 		AgentID:        agentID,
 		AgentSet:       agentSet,
 		OrganizationID: organizationID,
+		TimeZone:       timeZone,
 		CronExpression: cron,
 		IsEnabled:      input.IsEnabled,
 	})

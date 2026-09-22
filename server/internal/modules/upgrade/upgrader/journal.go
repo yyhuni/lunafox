@@ -88,8 +88,15 @@ func newJournalStore(deploymentRoot string, manifestCache bool) (*JournalStore, 
 	if err := ensurePrivateDirectory(receipts); err != nil {
 		return nil, err
 	}
+	plans := filepath.Join(root, PlanDirectory)
+	if err := ensurePrivateDirectory(plans); err != nil {
+		return nil, err
+	}
 	if manifestCache {
 		if err := ensurePrivateDirectory(filepath.Join(root, ManifestDirectory)); err != nil {
+			return nil, err
+		}
+		if err := ensurePrivateDirectory(filepath.Join(root, CompositionDirectory)); err != nil {
 			return nil, err
 		}
 	}
@@ -138,6 +145,23 @@ func (store *JournalStore) ManifestPath(digest string) (string, error) {
 		return "", err
 	}
 	return filepath.Join(store.root, ManifestDirectory, strings.TrimPrefix(digest, "sha256:")+".yaml"), nil
+}
+
+// RuntimeCompositionPath resolves the digest-addressed release composition
+// asset shared by the Server and host. The digest is the composition core
+// identity, not a caller-provided path; public stores keep the file inside the
+// same private upgrade volume as manifests and journals.
+func (store *JournalStore) RuntimeCompositionPath(digest string) (string, error) {
+	if store == nil {
+		return "", fmt.Errorf("journal store is nil")
+	}
+	if !store.manifestCache {
+		return "", fmt.Errorf("runtime composition cache is unavailable")
+	}
+	if err := validateDigest(digest); err != nil {
+		return "", err
+	}
+	return filepath.Join(store.root, CompositionDirectory, strings.TrimPrefix(digest, "sha256:")+".json"), nil
 }
 
 // SetEventSink installs a best-effort observation callback. The callback is
@@ -639,6 +663,10 @@ func (store *JournalStore) SaveReceipt(receipt Receipt) error {
 		store.writeMu.Unlock()
 		return err
 	}
+	if err := validateReceiptScopeBinding(current, receipt); err != nil {
+		store.writeMu.Unlock()
+		return err
+	}
 	if err := validateReceiptTime(receipt, current, time.Now().UTC()); err != nil {
 		store.writeMu.Unlock()
 		return err
@@ -768,6 +796,9 @@ func (store *JournalStore) reconcileReceiptLocked(operationID, manifestDigest st
 	if err := validateJournalPair(current, history, operationID, manifestDigest); err != nil {
 		return Journal{}, Receipt{}, err
 	}
+	if err := validateReceiptScopeBinding(current, receipt); err != nil {
+		return Journal{}, Receipt{}, err
+	}
 	if err := validateReceiptTime(receipt, current, time.Now().UTC()); err != nil {
 		return Journal{}, Receipt{}, err
 	}
@@ -783,6 +814,20 @@ func validateJournalPair(current, history Journal, operationID, manifestDigest s
 		return ErrReceiptMismatch
 	}
 	if history.UpdatedAt.Equal(current.UpdatedAt) && !journalsSnapshotEqual(current, history) {
+		return ErrReceiptMismatch
+	}
+	return nil
+}
+
+// validateReceiptScopeBinding keeps a receipt from being replayed across a
+// legacy/full and a v2/scoped operation that happen to share identities. The
+// receipt is host evidence, so it must carry the same schema and sealed scope
+// as the journal that created it.
+func validateReceiptScopeBinding(journal Journal, receipt Receipt) error {
+	if journal.SchemaVersion != receipt.SchemaVersion {
+		return ErrReceiptMismatch
+	}
+	if journal.SchemaVersion == ScopedJournalSchema && !sameScopeEvidence(journal.ExecutionMode, journal.PlanDigest, journal.BaselineStateDigest, journal.TouchedServices, journal.ConfirmedDeploymentVersion, receipt.ExecutionMode, receipt.PlanDigest, receipt.BaselineStateDigest, receipt.TouchedServices, receipt.ConfirmedDeploymentVersion) {
 		return ErrReceiptMismatch
 	}
 	return nil
@@ -806,6 +851,11 @@ func journalsSnapshotEqual(left, right Journal) bool {
 		left.OperationID != right.OperationID ||
 		left.ManifestDigest != right.ManifestDigest ||
 		left.Stage != right.Stage ||
+		left.ExecutionMode != right.ExecutionMode ||
+		left.PlanDigest != right.PlanDigest ||
+		left.BaselineStateDigest != right.BaselineStateDigest ||
+		left.ConfirmedDeploymentVersion != right.ConfirmedDeploymentVersion ||
+		!sameStringSlice(left.TouchedServices, right.TouchedServices) ||
 		left.RepairStage != right.RepairStage ||
 		left.MigrationID != right.MigrationID ||
 		left.MigrationChecksum != right.MigrationChecksum ||
@@ -844,12 +894,49 @@ func (store *JournalStore) VerifyReceiptBinding(operationID, manifestDigest stri
 	return err
 }
 
+// frontendOnlyConfirmationPending distinguishes a crash during host verification
+// from a restart after its durable receipt. StageVerifying alone is insufficient:
+// it is checkpointed before the frontend digest and public-edge probes finish.
+func (store *JournalStore) frontendOnlyConfirmationPending(journal Journal) (bool, error) {
+	if journal.SchemaVersion != ScopedJournalSchema || journal.ExecutionMode != ExecutionModeFrontendOnly || journal.Stage != StageVerifying {
+		return false, nil
+	}
+	reconciled, _, err := store.ReconcileReceipt(journal.OperationID, journal.ManifestDigest)
+	if err != nil {
+		if errors.Is(err, ErrJournalNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	if reconciled.Stage == StageSucceeded {
+		// Confirm may race a duplicate resume after the initial journal read. The
+		// operation is already terminal and no recovery work remains.
+		return false, nil
+	}
+	if reconciled.SchemaVersion != journal.SchemaVersion || reconciled.Stage != journal.Stage || !sameScopeEvidence(
+		reconciled.ExecutionMode,
+		reconciled.PlanDigest,
+		reconciled.BaselineStateDigest,
+		reconciled.TouchedServices,
+		reconciled.ConfirmedDeploymentVersion,
+		journal.ExecutionMode,
+		journal.PlanDigest,
+		journal.BaselineStateDigest,
+		journal.TouchedServices,
+		journal.ConfirmedDeploymentVersion,
+	) {
+		return false, ErrReceiptMismatch
+	}
+	return true, nil
+}
+
 func cloneReceipt(receipt *Receipt) *Receipt {
 	if receipt == nil {
 		return nil
 	}
 	copy := *receipt
 	copy.Services = append([]string(nil), receipt.Services...)
+	copy.TouchedServices = append([]string(nil), receipt.TouchedServices...)
 	copy.ObservedImages = make(map[string]string, len(receipt.ObservedImages))
 	for service, digest := range receipt.ObservedImages {
 		copy.ObservedImages[service] = digest
@@ -904,11 +991,16 @@ func (store *JournalStore) validatePrivateLayout() error {
 	if store == nil || store.root == "" {
 		return fmt.Errorf("journal store is not configured")
 	}
-	for _, path := range []string{
+	paths := []string{
 		store.root,
 		filepath.Join(store.root, HistoryDirectory),
 		filepath.Join(store.root, ReceiptDirectory),
-	} {
+		filepath.Join(store.root, PlanDirectory),
+	}
+	if store.manifestCache {
+		paths = append(paths, filepath.Join(store.root, ManifestDirectory), filepath.Join(store.root, CompositionDirectory))
+	}
+	for _, path := range paths {
 		if err := validatePrivateDirectoryMode(path); err != nil {
 			return err
 		}

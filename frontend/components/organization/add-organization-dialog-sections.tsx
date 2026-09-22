@@ -2,7 +2,9 @@
 
 import React from "react"
 import type { Control, FieldValues, Path } from "react-hook-form"
+import { useTranslations } from "next-intl"
 import { ChevronRight, semanticIcons } from "@/components/icons"
+import { InlineHelpTooltip } from "@/components/common/inline-help-tooltip"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -36,15 +38,22 @@ export function AddOrganizationNameField<TFieldValues extends FieldValues>({
   isSubmitting,
   name,
 }: AddOrganizationNameFieldProps<TFieldValues>) {
+  const tTooltips = useTranslations("tooltips")
+
   return (
     <FormField
       control={formControl}
       name={name}
       render={({ field }) => (
         <FormItem>
-          <FormLabel>
-            {t("orgName")} <span className="text-destructive">*</span>
-          </FormLabel>
+          <div className="flex items-center gap-1">
+            <FormLabel>
+              {t("orgName")} <span className="text-destructive">*</span>
+            </FormLabel>
+            <InlineHelpTooltip ariaLabel={t("orgName")}>
+              {tTooltips("organizationConcept")}
+            </InlineHelpTooltip>
+          </div>
           <FormControl>
             <Input
               placeholder={t("orgNamePlaceholder")}
@@ -133,6 +142,7 @@ export function AddOrganizationTargetsField<TFieldValues extends FieldValues>({
   name,
 }: AddOrganizationTargetsFieldProps<TFieldValues>) {
   const targetsPanelId = React.useId()
+  const tTooltips = useTranslations("tooltips")
 
   return (
     <FormField
@@ -189,6 +199,11 @@ export function AddOrganizationTargetsField<TFieldValues extends FieldValues>({
                     id="organization-targets"
                     name={field.name}
                     label={t("targetList")}
+                    labelAccessory={(
+                      <InlineHelpTooltip ariaLabel={t("targetList")}>
+                        {tTooltips("targetConcept")}
+                      </InlineHelpTooltip>
+                    )}
                     placeholder={t("targetsPlaceholder")}
                     value={fieldValue}
                     lineCount={Math.max(countLineNumberedTextareaLines(fieldValue), 8)}

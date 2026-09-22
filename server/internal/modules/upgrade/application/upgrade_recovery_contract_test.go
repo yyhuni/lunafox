@@ -80,6 +80,354 @@ func TestReconcileHostEventRejectsDigestMismatchAndUnknownStage(t *testing.T) {
 	}
 }
 
+func TestReconcileJournalStaleFrontendOnlyPlanClosesQueuedOperation(t *testing.T) {
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	now := time.Date(2026, 9, 21, 9, 0, 0, 0, time.UTC)
+	planDigest := "sha256:" + strings.Repeat("a", 64)
+	baselineDigest := "sha256:" + strings.Repeat("b", 64)
+	operation := &domain.Operation{
+		OperationID: "56565656-5656-4565-8565-565656565656", RequestID: "67676767-6767-4676-8676-676767676767", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("c", 64), ReleaseVersion: "1.1.0",
+		CompatibilityRange: "*", Status: domain.StatusQueued, MigrationStatus: domain.MigrationStatusNotStarted, MigrationType: "none",
+		ExecutionMode: domain.ExecutionModeFrontendOnly, WorkDisposition: domain.WorkDispositionNotRequired,
+		PlanSummary: domain.PlanSummary{TouchedServices: []string{"frontend"}}, PlanDigest: planDigest,
+		BaselineDeploymentDigest: baselineDigest, ConfirmedDeploymentVersion: "1.0.0",
+		CreatedAt: now, UpdatedAt: now, StageTimes: map[domain.Status]time.Time{domain.StatusQueued: now}, ObservedDigests: map[string]string{},
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+
+	updated, err := service.ReconcileHostEvent(context.Background(), HostUpgradeEvent{
+		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Stage: string(domain.StatusFailed),
+		ExecutionMode: operation.ExecutionMode, PlanDigest: planDigest, BaselineStateDigest: baselineDigest,
+		TouchedServices: []string{"frontend"}, ConfirmedDeploymentVersion: "1.0.0",
+		UpdatedAt: now.Add(time.Minute), StageUpdatedAt: now.Add(time.Minute), FromJournal: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != domain.StatusFailed || updated.CompletedAt == nil {
+		t.Fatalf("stale frontend-only recovery result = %#v", updated)
+	}
+	if _, err := repository.FindActive(context.Background()); err == nil {
+		t.Fatal("stale frontend-only result remained active")
+	}
+}
+
+func TestReconcileJournalRejectsFrontendOnlyMigrationStage(t *testing.T) {
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	now := time.Date(2026, 9, 21, 10, 0, 0, 0, time.UTC)
+	planDigest := "sha256:" + strings.Repeat("a", 64)
+	baselineDigest := "sha256:" + strings.Repeat("b", 64)
+	operation := &domain.Operation{
+		OperationID: "78787878-7878-4787-8787-787878787878", RequestID: "79797979-7979-4797-8797-797979797979", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("c", 64), ReleaseVersion: "1.1.0",
+		CompatibilityRange: "*", Status: domain.StatusUpdating, MigrationStatus: domain.MigrationStatusNotStarted, MigrationType: "none",
+		ExecutionMode: domain.ExecutionModeFrontendOnly, WorkDisposition: domain.WorkDispositionNotRequired,
+		PlanSummary: domain.PlanSummary{TouchedServices: []string{"frontend"}}, PlanDigest: planDigest,
+		BaselineDeploymentDigest: baselineDigest, ConfirmedDeploymentVersion: "1.0.0",
+		CreatedAt: now, UpdatedAt: now, StageTimes: map[domain.Status]time.Time{domain.StatusUpdating: now}, ObservedDigests: map[string]string{},
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+
+	_, err := service.ReconcileHostEvent(context.Background(), HostUpgradeEvent{
+		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Stage: string(domain.StatusMigrating),
+		ExecutionMode: operation.ExecutionMode, PlanDigest: planDigest, BaselineStateDigest: baselineDigest,
+		TouchedServices: []string{"frontend"}, ConfirmedDeploymentVersion: "1.0.0", FromJournal: true,
+		UpdatedAt: now.Add(time.Minute), StageUpdatedAt: now.Add(time.Minute),
+	})
+	if err == nil || !strings.Contains(err.Error(), "frontend-only host journal stage") {
+		t.Fatalf("frontend-only migrating journal stage error = %v", err)
+	}
+	if operation.Status != domain.StatusUpdating || repository.updates != 0 {
+		t.Fatalf("frontend-only operation changed after rejected migration stage: status=%s updates=%d", operation.Status, repository.updates)
+	}
+}
+
+func TestReconcileJournalRejectsFrontendOnlyMigrationEvidence(t *testing.T) {
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	now := time.Date(2026, 9, 21, 10, 0, 0, 0, time.UTC)
+	planDigest := "sha256:" + strings.Repeat("a", 64)
+	baselineDigest := "sha256:" + strings.Repeat("b", 64)
+	operation := &domain.Operation{
+		OperationID: "82828282-8282-4828-8828-828282828282", RequestID: "83838383-8383-4838-8838-838383838383", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("c", 64), ReleaseVersion: "1.1.0",
+		CompatibilityRange: "*", Status: domain.StatusUpdating, MigrationStatus: domain.MigrationStatusNotStarted, MigrationType: "none",
+		ExecutionMode: domain.ExecutionModeFrontendOnly, WorkDisposition: domain.WorkDispositionNotRequired,
+		PlanSummary: domain.PlanSummary{TouchedServices: []string{"frontend"}}, PlanDigest: planDigest,
+		BaselineDeploymentDigest: baselineDigest, ConfirmedDeploymentVersion: "1.0.0",
+		CreatedAt: now, UpdatedAt: now, StageTimes: map[domain.Status]time.Time{domain.StatusUpdating: now}, ObservedDigests: map[string]string{},
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+
+	_, err := service.ReconcileHostEvent(context.Background(), HostUpgradeEvent{
+		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Stage: string(domain.StatusFailed),
+		Migration: string(domain.MigrationStatusFailed), ExecutionMode: operation.ExecutionMode,
+		PlanDigest: planDigest, BaselineStateDigest: baselineDigest, TouchedServices: []string{"frontend"},
+		ConfirmedDeploymentVersion: "1.0.0", FromJournal: true, UpdatedAt: now.Add(time.Minute), StageUpdatedAt: now.Add(time.Minute),
+	})
+	if err == nil || !strings.Contains(err.Error(), "frontend-only host journal migration status") {
+		t.Fatalf("frontend-only migration evidence error = %v", err)
+	}
+	if operation.Status != domain.StatusUpdating || operation.MigrationStatus != domain.MigrationStatusNotStarted || repository.updates != 0 {
+		t.Fatalf("frontend-only operation changed after rejected migration evidence: status=%s migration=%s updates=%d", operation.Status, operation.MigrationStatus, repository.updates)
+	}
+}
+
+func TestReconcileJournalRejectsFrontendOnlyProgressAtMigrationStage(t *testing.T) {
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	now := time.Date(2026, 9, 21, 10, 0, 0, 0, time.UTC)
+	planDigest := "sha256:" + strings.Repeat("a", 64)
+	baselineDigest := "sha256:" + strings.Repeat("b", 64)
+	operation := &domain.Operation{
+		OperationID: "84848484-8484-4848-8848-848484848484", RequestID: "85858585-8585-4858-8858-858585858585", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("c", 64), ReleaseVersion: "1.1.0",
+		CompatibilityRange: "*", Status: domain.StatusUpdating, MigrationStatus: domain.MigrationStatusNotStarted, MigrationType: "none",
+		ExecutionMode: domain.ExecutionModeFrontendOnly, WorkDisposition: domain.WorkDispositionNotRequired,
+		PlanSummary: domain.PlanSummary{TouchedServices: []string{"frontend"}}, PlanDigest: planDigest,
+		BaselineDeploymentDigest: baselineDigest, ConfirmedDeploymentVersion: "1.0.0",
+		CreatedAt: now, UpdatedAt: now, StageTimes: map[domain.Status]time.Time{domain.StatusUpdating: now}, ObservedDigests: map[string]string{},
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+
+	_, err := service.ReconcileHostEvent(context.Background(), HostUpgradeEvent{
+		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Stage: string(domain.StatusUpdating),
+		ExecutionMode: operation.ExecutionMode, PlanDigest: planDigest, BaselineStateDigest: baselineDigest,
+		TouchedServices: []string{"frontend"}, ConfirmedDeploymentVersion: "1.0.0", FromJournal: true,
+		UpdatedAt: now.Add(time.Minute), StageUpdatedAt: now,
+		ProgressEvents: []domain.ProgressEvent{{
+			Timestamp: now.Add(time.Minute), Stage: domain.StatusMigrating, MessageKey: "migrationStarted",
+			Message: "Running database migration", Metadata: map[string]string{},
+		}},
+	})
+	if err == nil || !strings.Contains(err.Error(), "frontend-only host journal progress stage") {
+		t.Fatalf("frontend-only migration progress error = %v", err)
+	}
+	if operation.Status != domain.StatusUpdating || len(operation.ProgressEvents) != 0 || repository.updates != 0 {
+		t.Fatalf("frontend-only operation changed after rejected migration progress: status=%s progress=%#v updates=%d", operation.Status, operation.ProgressEvents, repository.updates)
+	}
+}
+
+func TestReconcileJournalRejectsFrontendOnlyAgentVerificationStage(t *testing.T) {
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	now := time.Date(2026, 9, 21, 10, 0, 0, 0, time.UTC)
+	planDigest := "sha256:" + strings.Repeat("d", 64)
+	baselineDigest := "sha256:" + strings.Repeat("e", 64)
+	operation := &domain.Operation{
+		OperationID: "80808080-8080-4808-8808-808080808080", RequestID: "81818181-8181-4818-8818-818181818181", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("f", 64), ReleaseVersion: "1.1.0",
+		CompatibilityRange: "*", Status: domain.StatusRestarting, MigrationStatus: domain.MigrationStatusNotStarted, MigrationType: "none",
+		ExecutionMode: domain.ExecutionModeFrontendOnly, WorkDisposition: domain.WorkDispositionNotRequired,
+		PlanSummary: domain.PlanSummary{TouchedServices: []string{"frontend"}}, PlanDigest: planDigest,
+		BaselineDeploymentDigest: baselineDigest, ConfirmedDeploymentVersion: "1.0.0",
+		CreatedAt: now, UpdatedAt: now, StageTimes: map[domain.Status]time.Time{domain.StatusRestarting: now}, ObservedDigests: map[string]string{},
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+
+	_, err := service.ReconcileHostEvent(context.Background(), HostUpgradeEvent{
+		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Stage: string(domain.StatusAgentVerifying),
+		ExecutionMode: operation.ExecutionMode, PlanDigest: planDigest, BaselineStateDigest: baselineDigest,
+		TouchedServices: []string{"frontend"}, ConfirmedDeploymentVersion: "1.0.0", FromJournal: true,
+		UpdatedAt: now.Add(time.Minute), StageUpdatedAt: now.Add(time.Minute),
+	})
+	if err == nil || !strings.Contains(err.Error(), "frontend-only host journal stage") {
+		t.Fatalf("frontend-only agent verification journal stage error = %v", err)
+	}
+	if operation.Status != domain.StatusRestarting || repository.updates != 0 {
+		t.Fatalf("frontend-only operation changed after rejected Agent verification stage: status=%s updates=%d", operation.Status, repository.updates)
+	}
+}
+
+func TestReconcileJournalRejectsPersistedFrontendOnlyForbiddenStages(t *testing.T) {
+	tests := []struct {
+		name       string
+		persisted  domain.Status
+		checkpoint domain.Status
+	}{
+		{name: "stopping", persisted: domain.StatusStopping, checkpoint: domain.StatusPreflight},
+		{name: "migrating", persisted: domain.StatusMigrating, checkpoint: domain.StatusRestarting},
+		{name: "agent verifying", persisted: domain.StatusAgentVerifying, checkpoint: domain.StatusVerifying},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+			now := time.Date(2026, 9, 21, 11, 0, 0, 0, time.UTC)
+			planDigest := "sha256:" + strings.Repeat("a", 64)
+			baselineDigest := "sha256:" + strings.Repeat("b", 64)
+			operation := &domain.Operation{
+				OperationID: "90909090-9090-4090-8090-909090909090", RequestID: "91919191-9191-4191-8191-919191919191", OperatorID: 7,
+				ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("c", 64), ReleaseVersion: "1.1.0",
+				CompatibilityRange: "*", Status: test.persisted, MigrationStatus: domain.MigrationStatusNotStarted, MigrationType: "none",
+				ExecutionMode: domain.ExecutionModeFrontendOnly, WorkDisposition: domain.WorkDispositionNotRequired,
+				PlanSummary: domain.PlanSummary{TouchedServices: []string{"frontend"}}, PlanDigest: planDigest,
+				BaselineDeploymentDigest: baselineDigest, ConfirmedDeploymentVersion: "1.0.0",
+				CreatedAt: now, UpdatedAt: now, StageTimes: map[domain.Status]time.Time{test.persisted: now}, ObservedDigests: map[string]string{},
+			}
+			repository.byID[operation.OperationID] = operation
+			repository.byRequest[operation.RequestID] = operation
+			repository.active = operation
+
+			_, err := service.ReconcileHostEvent(context.Background(), HostUpgradeEvent{
+				OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Stage: string(test.checkpoint),
+				ExecutionMode: operation.ExecutionMode, PlanDigest: planDigest, BaselineStateDigest: baselineDigest,
+				TouchedServices: []string{"frontend"}, ConfirmedDeploymentVersion: "1.0.0", FromJournal: true,
+				UpdatedAt: now.Add(time.Minute), StageUpdatedAt: now.Add(time.Minute),
+			})
+			if err == nil || !strings.Contains(err.Error(), "frontend-only persisted operation stage") {
+				t.Fatalf("persisted frontend-only stage %q error = %v", test.persisted, err)
+			}
+			if operation.Status != test.persisted || repository.updates != 0 {
+				t.Fatalf("persisted frontend-only stage changed after rejection: status=%s updates=%d", operation.Status, repository.updates)
+			}
+		})
+	}
+}
+
+func TestRecoveryJobRejectsCustomJournalObservedDigestOutsideFrontendScope(t *testing.T) {
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	now := time.Date(2026, 9, 21, 11, 0, 0, 0, time.UTC)
+	planDigest := "sha256:" + strings.Repeat("a", 64)
+	baselineDigest := "sha256:" + strings.Repeat("b", 64)
+	operation := &domain.Operation{
+		OperationID: "92929292-9292-4292-8292-929292929292", RequestID: "93939393-9393-4393-8393-939393939393", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("c", 64), ReleaseVersion: "1.1.0",
+		CompatibilityRange: "*", Status: domain.StatusUpdating, MigrationStatus: domain.MigrationStatusNotStarted, MigrationType: "none",
+		ExecutionMode: domain.ExecutionModeFrontendOnly, WorkDisposition: domain.WorkDispositionNotRequired,
+		PlanSummary: domain.PlanSummary{TouchedServices: []string{"frontend"}}, PlanDigest: planDigest,
+		BaselineDeploymentDigest: baselineDigest, ConfirmedDeploymentVersion: "1.0.0",
+		CreatedAt: now, UpdatedAt: now, StageTimes: map[domain.Status]time.Time{domain.StatusUpdating: now}, ObservedDigests: map[string]string{},
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+
+	job, err := NewRecoveryJob(service, recoveryJournalReaderStub{event: HostUpgradeEvent{
+		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Stage: string(domain.StatusUpdating),
+		ExecutionMode: operation.ExecutionMode, PlanDigest: planDigest, BaselineStateDigest: baselineDigest,
+		TouchedServices: []string{"frontend"}, ConfirmedDeploymentVersion: "1.0.0",
+		ObservedDigests: map[string]string{"server": "sha256:" + strings.Repeat("d", 64)},
+		UpdatedAt:       now.Add(time.Minute), StageUpdatedAt: now.Add(time.Minute),
+	}}, time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := job.RunOnce(context.Background()); err == nil || !strings.Contains(err.Error(), "host journal observed digest service") {
+		t.Fatalf("custom journal observed digest error = %v", err)
+	}
+	if operation.Status != domain.StatusUpdating || len(operation.ObservedDigests) != 0 || repository.updates != 0 {
+		t.Fatalf("custom journal changed frontend-only operation: status=%s digests=%#v updates=%d", operation.Status, operation.ObservedDigests, repository.updates)
+	}
+}
+
+func TestReconcileJournalRejectsCorruptPersistedFrontendOnlyOperationBeforeNoop(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*domain.Operation)
+	}{
+		{
+			name: "migration evidence",
+			mutate: func(operation *domain.Operation) {
+				operation.MigrationStatus = domain.MigrationStatusRunning
+			},
+		},
+		{
+			name: "Agent evidence",
+			mutate: func(operation *domain.Operation) {
+				operation.AgentExpectations = []domain.AgentExpectation{{AgentID: 42}}
+			},
+		},
+	}
+	for index, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+			now := time.Date(2026, 9, 21, 12, index, 0, 0, time.UTC)
+			planDigest := "sha256:" + strings.Repeat("a", 64)
+			baselineDigest := "sha256:" + strings.Repeat("b", 64)
+			operation := &domain.Operation{
+				OperationID: "94949494-9494-4494-8494-949494949494", RequestID: "95959595-9595-4595-8595-959595959595", OperatorID: 7,
+				ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("c", 64), ReleaseVersion: "1.1.0",
+				CompatibilityRange: "*", Status: domain.StatusUpdating, MigrationStatus: domain.MigrationStatusNotStarted, MigrationType: "none",
+				ExecutionMode: domain.ExecutionModeFrontendOnly, WorkDisposition: domain.WorkDispositionNotRequired,
+				PlanSummary: domain.PlanSummary{TouchedServices: []string{"frontend"}}, PlanDigest: planDigest,
+				BaselineDeploymentDigest: baselineDigest, ConfirmedDeploymentVersion: "1.0.0",
+				CreatedAt: now, UpdatedAt: now, StageTimes: map[domain.Status]time.Time{domain.StatusUpdating: now}, ObservedDigests: map[string]string{},
+			}
+			test.mutate(operation)
+			repository.byID[operation.OperationID] = operation
+			repository.byRequest[operation.RequestID] = operation
+			repository.active = operation
+
+			_, err := service.ReconcileHostEvent(context.Background(), HostUpgradeEvent{
+				OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Stage: string(domain.StatusUpdating),
+				ExecutionMode: operation.ExecutionMode, PlanDigest: planDigest, BaselineStateDigest: baselineDigest,
+				TouchedServices: []string{"frontend"}, ConfirmedDeploymentVersion: "1.0.0",
+				UpdatedAt: now, StageUpdatedAt: now, FromJournal: true,
+			})
+			if err == nil || !strings.Contains(err.Error(), "persisted frontend-only operation is invalid") {
+				t.Fatalf("corrupt persisted operation error = %v", err)
+			}
+			if repository.updates != 0 || operation.Status != domain.StatusUpdating {
+				t.Fatalf("corrupt persisted operation changed during no-op replay: status=%s updates=%d", operation.Status, repository.updates)
+			}
+		})
+	}
+}
+
+func TestReconcileHostEventRejectsNonJournalFrontendOnlyDigestOutsideScope(t *testing.T) {
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	now := time.Date(2026, 9, 21, 13, 0, 0, 0, time.UTC)
+	planDigest := "sha256:" + strings.Repeat("a", 64)
+	baselineDigest := "sha256:" + strings.Repeat("b", 64)
+	operation := &domain.Operation{
+		OperationID: "96969696-9696-4696-8696-969696969696", RequestID: "97979797-9797-4797-8797-979797979797", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("c", 64), ReleaseVersion: "1.1.0",
+		CompatibilityRange: "*", Status: domain.StatusUpdating, MigrationStatus: domain.MigrationStatusNotStarted, MigrationType: "none",
+		ExecutionMode: domain.ExecutionModeFrontendOnly, WorkDisposition: domain.WorkDispositionNotRequired,
+		PlanSummary: domain.PlanSummary{TouchedServices: []string{"frontend"}}, PlanDigest: planDigest,
+		BaselineDeploymentDigest: baselineDigest, ConfirmedDeploymentVersion: "1.0.0",
+		CreatedAt: now, UpdatedAt: now, StageTimes: map[domain.Status]time.Time{domain.StatusUpdating: now}, ObservedDigests: map[string]string{},
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+
+	_, err := service.ReconcileHostEvent(context.Background(), HostUpgradeEvent{
+		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Stage: string(domain.StatusUpdating),
+		ObservedDigests: map[string]string{"server": "sha256:" + strings.Repeat("d", 64)},
+	})
+	if err == nil || !strings.Contains(err.Error(), "host observed digest service") {
+		t.Fatalf("non-journal out-of-scope digest error = %v", err)
+	}
+	if repository.updates != 0 || len(operation.ObservedDigests) != 0 {
+		t.Fatalf("non-journal out-of-scope digest changed operation: digests=%#v updates=%d", operation.ObservedDigests, repository.updates)
+	}
+}
+
+func TestValidateJournalObservedDigestsRejectsMalformedDigest(t *testing.T) {
+	operation := &domain.Operation{ExecutionMode: domain.ExecutionModeFrontendOnly}
+	if err := validateJournalObservedDigests(operation, map[string]string{"frontend": " sha256:" + strings.Repeat("a", 64)}); err == nil || !strings.Contains(err.Error(), "host journal observed digest") {
+		t.Fatalf("malformed journal observed digest error = %v", err)
+	}
+}
+
+type recoveryJournalReaderStub struct {
+	event HostUpgradeEvent
+	err   error
+}
+
+func (stub recoveryJournalReaderStub) ReadCurrent(context.Context) (HostUpgradeEvent, error) {
+	return stub.event, stub.err
+}
+
 func TestReconcileStalledOperationUsesMaintenanceWindowAndPreMigrationAttention(t *testing.T) {
 	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
 	now := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)

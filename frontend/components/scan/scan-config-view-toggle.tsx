@@ -25,7 +25,10 @@ import {
   initFormValuesFromWorkflow,
   serializeFormValuesToConfig,
 } from "./engine-config-form"
-import { parseWorkflowConfigurationDraftStrict } from "@/lib/workflow-config"
+import {
+  parseWorkflowConfigurationDraftStrict,
+  type WorkflowProfileDraft,
+} from "@/lib/workflow-config"
 import type {
   EngineConfigFormValues,
   ScanWorkflowWithEngines,
@@ -41,6 +44,8 @@ interface ScanConfigViewToggleProps {
   onReset?: () => void
   onValidationChange?: (isValid: boolean) => void
   selectedScanWorkflows?: Array<{ name: string; configuration?: unknown }>
+  formValuesCacheRef?: React.MutableRefObject<EngineConfigFormValues>
+  workflowProfileDraft?: WorkflowProfileDraft | null
   disabled?: boolean
   isConfigEdited?: boolean
   className?: string
@@ -61,6 +66,8 @@ export const ScanConfigViewToggle = React.forwardRef<
   onReset,
   onValidationChange,
   selectedScanWorkflows = [],
+  formValuesCacheRef,
+  workflowProfileDraft = null,
   disabled = false,
   isConfigEdited = false,
   className,
@@ -75,17 +82,39 @@ export const ScanConfigViewToggle = React.forwardRef<
   const [pendingFocusFieldId, setPendingFocusFieldId] = useState<string | null>(null)
 
   const [formValues, setFormValues] = useState<EngineConfigFormValues>(() =>
-    safelyInitFormValues(workflow, configuration)
+    safelyInitFormValues(workflow, configuration, formValuesCacheRef?.current, workflowProfileDraft)
   )
   const formValuesRef = React.useRef(formValues)
   formValuesRef.current = formValues
+
+  const cacheFormValues = useCallback((values: EngineConfigFormValues) => {
+    formValuesRef.current = values
+    if (formValuesCacheRef) {
+      formValuesCacheRef.current = values
+    }
+  }, [formValuesCacheRef])
+
+  const replaceFormValues = useCallback((values: EngineConfigFormValues) => {
+    cacheFormValues(values)
+    setFormValues(values)
+  }, [cacheFormValues])
+
+  const getCachedFormValues = useCallback(
+    () => formValuesCacheRef?.current ?? formValuesRef.current,
+    [formValuesCacheRef]
+  )
 
   const lastSerializedRef = React.useRef<string>("")
 
   useEffect(() => {
     try {
-      const fresh = initFormValuesFromWorkflow(workflow, configuration, formValuesRef.current)
-      setFormValues(fresh)
+      const fresh = initFormValuesFromWorkflow(
+        workflow,
+        configuration,
+        getCachedFormValues(),
+        workflowProfileDraft,
+      )
+      replaceFormValues(fresh)
       onValidationChange?.(true)
     } catch {
       // A Profile/YAML that is not complete must not be repaired from catalog defaults.
@@ -93,7 +122,7 @@ export const ScanConfigViewToggle = React.forwardRef<
       onValidationChange?.(false)
     }
     lastSerializedRef.current = ""
-  }, [configuration, onValidationChange, workflow])
+  }, [configuration, getCachedFormValues, onValidationChange, replaceFormValues, workflow, workflowProfileDraft])
 
   const serializeFormToYaml = useCallback(
     (values: EngineConfigFormValues): string => {
@@ -119,14 +148,14 @@ export const ScanConfigViewToggle = React.forwardRef<
 
     // React may invoke state updaters during render, so parent sync must stay outside them.
     lastSerializedRef.current = yamlStr
-    setFormValues(reconciled)
+    replaceFormValues(reconciled)
     const applySyncedConfig = onSync ?? onChange
     applySyncedConfig(yamlStr)
-  }, [onChange, onSync, serializeFormToYaml, workflow, wordlistCatalog.status, wordlistCatalog.wordlists])
+  }, [onChange, onSync, replaceFormValues, serializeFormToYaml, workflow, wordlistCatalog.status, wordlistCatalog.wordlists])
 
   const handleFormChange = useCallback(
     (values: EngineConfigFormValues) => {
-      setFormValues(values)
+      replaceFormValues(values)
       setFieldErrors((current) => {
         if (current.size === 0) return current
         const remainingRequired = new Set(
@@ -143,7 +172,7 @@ export const ScanConfigViewToggle = React.forwardRef<
         onChange(yamlStr)
       }
     },
-    [onChange, serializeFormToYaml, workflow]
+    [onChange, replaceFormValues, serializeFormToYaml, workflow]
   )
 
   const handleExpandedStepChange = useCallback((stepId: string, open: boolean) => {
@@ -174,6 +203,7 @@ export const ScanConfigViewToggle = React.forwardRef<
 
   const handleViewModeChange = useCallback(
     (checked: boolean) => {
+      cacheFormValues(formValues)
       if (checked) {
         const yamlStr = serializeFormToYaml(formValues)
         if (yamlStr !== lastSerializedRef.current) {
@@ -188,7 +218,7 @@ export const ScanConfigViewToggle = React.forwardRef<
       }
       setViewMode(checked ? "yaml" : "form")
     },
-    [configuration, formValues, onChange, onSync, serializeFormToYaml]
+    [cacheFormValues, configuration, formValues, onChange, onSync, serializeFormToYaml]
   )
 
   useEffect(() => {
@@ -197,14 +227,19 @@ export const ScanConfigViewToggle = React.forwardRef<
 
     try {
       const parsed = parseWorkflowConfigurationDraftStrict(configuration)
-      const rebuilt = initFormValuesFromWorkflow(workflow, parsed, formValuesRef.current)
-      setFormValues(rebuilt)
+      const rebuilt = initFormValuesFromWorkflow(
+        workflow,
+        parsed,
+        getCachedFormValues(),
+        workflowProfileDraft,
+      )
+      replaceFormValues(rebuilt)
       lastSerializedRef.current = configuration
       onValidationChange?.(true)
     } catch {
       onValidationChange?.(false)
     }
-  }, [configuration, onValidationChange, viewMode, workflow])
+  }, [configuration, getCachedFormValues, onValidationChange, replaceFormValues, viewMode, workflow, workflowProfileDraft])
 
   const isFormMode = viewMode === "form"
 
@@ -217,13 +252,18 @@ export const ScanConfigViewToggle = React.forwardRef<
       try {
         // The YAML editor owns text syntax only. Re-run the same Profile/schema
         // adapter here so YAML cannot bypass exact Step and Engine validation.
-        initFormValuesFromWorkflow(workflow, configuration, formValuesRef.current)
+        initFormValuesFromWorkflow(
+          workflow,
+          configuration,
+          getCachedFormValues(),
+          workflowProfileDraft,
+        )
         onValidationChange?.(true)
       } catch {
         onValidationChange?.(false)
       }
     },
-    [configuration, onValidationChange, workflow]
+    [configuration, getCachedFormValues, onValidationChange, workflow, workflowProfileDraft]
   )
 
   React.useImperativeHandle(ref, () => ({
@@ -234,8 +274,10 @@ export const ScanConfigViewToggle = React.forwardRef<
         currentValues = initFormValuesFromWorkflow(
           workflow,
           parsed,
-          formValuesRef.current
+          getCachedFormValues(),
+          workflowProfileDraft,
         )
+        replaceFormValues(currentValues)
         onValidationChange?.(true)
       } catch {
         onValidationChange?.(false)
@@ -250,14 +292,13 @@ export const ScanConfigViewToggle = React.forwardRef<
 
       const nextErrors = new Map(errors.map((error) => [error.key, error]))
       const firstError = errors[0]
-      setFormValues(currentValues)
       setFieldErrors(nextErrors)
       setExpandedStepIds((current) => new Set(current).add(firstError.stepId))
       setViewMode("form")
       setPendingFocusFieldId(firstError.fieldId)
       return false
     },
-  }), [configuration, onValidationChange, workflow])
+  }), [configuration, getCachedFormValues, onValidationChange, replaceFormValues, workflow, workflowProfileDraft])
 
   useEffect(() => {
     if (!pendingFocusFieldId || viewMode !== "form") return
@@ -352,9 +393,11 @@ export const ScanConfigViewToggle = React.forwardRef<
 function safelyInitFormValues(
   workflow: ScanWorkflowWithEngines,
   configuration: string,
+  previousValues?: EngineConfigFormValues,
+  workflowProfileDraft?: WorkflowProfileDraft | null,
 ): EngineConfigFormValues {
   try {
-    return initFormValuesFromWorkflow(workflow, configuration)
+    return initFormValuesFromWorkflow(workflow, configuration, previousValues, workflowProfileDraft)
   } catch {
     return {}
   }

@@ -14,6 +14,7 @@ import { buildWorkflowWithEngineCatalog } from "@/lib/engine-catalog"
 import {
   getNextCronExecutions,
   isCronExpressionValid,
+  isIanaTimeZoneValid,
 } from "@/lib/scheduled-scan-helpers"
 import type { WebSite, WebsiteFilterOptionField } from "@/types/website.types"
 import { extractExactWebsiteHostFilter, extractWebsiteURLScopeFilter, matchesExactWebsiteHost, matchesWebsiteURLScope, removeLeadingWebsiteScopeFilter } from "@/lib/website-scope"
@@ -67,6 +68,7 @@ import {
   getMockUpdateCheckResult,
   createMockUpgradeOperation,
   getMockUpgradeOperation,
+  getMockUpgradeOperationFull,
   observeMockUpgradeOperation,
   stopMockUpgradeOperation,
   retryMockUpgradeOperation,
@@ -806,7 +808,7 @@ async function resolveMockApi(request: Request) {
       ? operation
       : null
     return activeOperation
-      ? json(activeOperation)
+      ? json(url.searchParams.get("view") === "FULL" ? getMockUpgradeOperationFull() : activeOperation)
       : json({ error: { code: "NOT_FOUND", message: "No active upgrade operation." } }, { status: 404 })
   }
   {
@@ -814,7 +816,7 @@ async function resolveMockApi(request: Request) {
     if (method === "GET" && operationMatch) {
       const operation = observeMockUpgradeOperation()
       return operation && operation.operationId === operationMatch[1]
-        ? json(operation)
+        ? json(url.searchParams.get("view") === "FULL" ? getMockUpgradeOperationFull() : operation)
         : json({ error: { code: "NOT_FOUND", message: "Upgrade operation not found." } }, { status: 404 })
     }
   }
@@ -1765,7 +1767,7 @@ async function resolveMockApi(request: Request) {
 
   if (method === "GET" && path === "/scheduledScans:summarize") {
     if (url.searchParams.has("timeZone")) {
-      return json({ error: { code: "INVALID_ARGUMENT", message: "timeZone query parameter is no longer supported; schedules use UTC" } }, { status: 400 })
+      return json({ error: { code: "INVALID_ARGUMENT", message: "timeZone query parameter is not supported; overview uses UTC" } }, { status: 400 })
     }
     return json(getMockScheduledScanOverviewSummary())
   }
@@ -1812,7 +1814,7 @@ async function resolveMockApi(request: Request) {
       const isEnabled = requests[index]!.isEnabled!
       schedule.isEnabled = isEnabled
       schedule.nextRunTime = isEnabled
-        ? getNextCronExecutions(schedule.cronExpression, now, 1)[0]?.toISOString() ?? null
+        ? getNextCronExecutions(schedule.cronExpression, schedule.timeZone, now, 1)[0]?.toISOString() ?? null
         : null
       schedule.updatedAt = now.toISOString()
     }
@@ -1825,21 +1827,25 @@ async function resolveMockApi(request: Request) {
       scanWorkflow?: string
       target?: string
       organization?: string
+      timeZone?: unknown
       cronExpression?: string
       isEnabled?: boolean
       configuration?: ScheduledScan["configuration"]
       inputSource?: unknown
-    }
-    if ("timeZone" in (body as Record<string, unknown>)) {
-      return json({ error: { code: "INVALID_ARGUMENT", message: "timeZone is no longer supported; schedules use UTC" } }, { status: 400 })
     }
     const now = new Date().toISOString()
     const workflow = body.scanWorkflow ? getMockScanWorkflowByName(body.scanWorkflow) : undefined
     if (!workflow || body.configuration === undefined || !isScanInputSource(body.inputSource)) {
       return json({ error: "scanWorkflow, complete configuration, and inputSource are required" }, { status: 400 })
     }
-    if (!body.cronExpression || !isCronExpressionValid(body.cronExpression)) {
-      return json({ error: "five-field cronExpression must be valid" }, { status: 400 })
+    if (
+      typeof body.cronExpression !== "string"
+      || !body.cronExpression.trim()
+      || !isCronExpressionValid(body.cronExpression)
+      || typeof body.timeZone !== "string"
+      || !isIanaTimeZoneValid(body.timeZone)
+    ) {
+      return json({ error: "timeZone and five-field cronExpression must be valid" }, { status: 400 })
     }
     let configuration: ScheduledScan["configuration"]
     try {
@@ -1851,8 +1857,9 @@ async function resolveMockApi(request: Request) {
     const organizationId = parseIdFromResourceName(body.organization, "organizations") ?? null
     const id = Math.max(0, ...mockScheduledScans.map((item) => item.id)) + 1
     const isEnabled = body.isEnabled ?? true
+    const timeZone = (body.timeZone as string).trim()
     const nextRunTime = isEnabled
-      ? getNextCronExecutions(body.cronExpression, new Date(), 1)[0]?.toISOString() ?? null
+      ? getNextCronExecutions(body.cronExpression, timeZone, new Date(), 1)[0]?.toISOString() ?? null
       : null
     const scheduledScan: ScheduledScan = {
       id,
@@ -1868,6 +1875,7 @@ async function resolveMockApi(request: Request) {
       targetId,
       targetName: targetId ? `Target ${targetId}` : null,
       scanMode: targetId ? "target" as const : "organization" as const,
+      timeZone,
       cronExpression: body.cronExpression,
       isEnabled,
       nextRunTime,
@@ -1891,9 +1899,10 @@ async function resolveMockApi(request: Request) {
       const scheduledScanId = Number.parseInt(scheduledScanMatch[1], 10)
       const scheduledScan = getMockScheduledScanById(scheduledScanId)
       if (!scheduledScan) return json({ error: "Scheduled scan not found" }, { status: 404 })
-      const body = (await request.json()) as Partial<typeof scheduledScan>
-      if ("timeZone" in (body as Record<string, unknown>)) {
-        return json({ error: { code: "INVALID_ARGUMENT", message: "timeZone is no longer supported; schedules use UTC" } }, { status: 400 })
+      const body = (await request.json()) as Partial<typeof scheduledScan> & { updateMask?: unknown }
+      const updateMask = typeof body.updateMask === "string" ? body.updateMask.split(',') : []
+      if (body.timeZone !== undefined && !updateMask.includes('timeZone')) {
+        return json({ error: "timeZone must be included in updateMask" }, { status: 400 })
       }
       if (body.configuration !== undefined && body.scanWorkflow === undefined) {
         return json({ error: "scanWorkflow is required when configuration is updated" }, { status: 400 })
@@ -1911,20 +1920,30 @@ async function resolveMockApi(request: Request) {
           return json({ error: error instanceof Error ? error.message : "invalid workflow configuration" }, { status: 400 })
         }
       }
-      const cronExpression = body.cronExpression ?? scheduledScan.cronExpression
-      if (!isCronExpressionValid(cronExpression)) {
-        return json({ error: "five-field cronExpression must be valid" }, { status: 400 })
+    const cronExpression = body.cronExpression === undefined
+      ? scheduledScan.cronExpression
+      : typeof body.cronExpression === "string"
+        ? body.cronExpression.trim()
+        : ""
+    const timeZone = body.timeZone === undefined
+      ? scheduledScan.timeZone
+      : typeof body.timeZone === "string"
+        ? body.timeZone.trim()
+        : ""
+      if (!isCronExpressionValid(cronExpression) || !isIanaTimeZoneValid(timeZone)) {
+        return json({ error: "timeZone and five-field cronExpression must be valid" }, { status: 400 })
       }
       const isEnabled = body.isEnabled ?? scheduledScan.isEnabled
-      const timeRuleChanged = body.cronExpression !== undefined
+      const timeRuleChanged = cronExpression !== scheduledScan.cronExpression || timeZone !== scheduledScan.timeZone
       const nextRunTime = !isEnabled
         ? null
         : timeRuleChanged || body.isEnabled === true
-          ? getNextCronExecutions(cronExpression, new Date(), 1)[0]?.toISOString() ?? null
+          ? getNextCronExecutions(cronExpression, timeZone, new Date(), 1)[0]?.toISOString() ?? null
           : scheduledScan.nextRunTime
       Object.assign(scheduledScan, {
         ...body,
         ...(body.configuration !== undefined ? { configuration } : {}),
+        timeZone,
         cronExpression,
         isEnabled,
         nextRunTime,

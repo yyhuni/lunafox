@@ -17,10 +17,13 @@ type MigrationPolicy struct {
 	BaselineMigration              string
 	BaselineMutable                bool
 	PreserveDataUpgrade            bool
-	DevelopmentRollback            string
+	RollbackPolicy                 string
 	StableReleaseAllowed           bool
 	DataRetainingDeploymentAllowed bool
 	FreezeTriggers                 []string
+	ChecksumAlgorithm              string
+	BaselineChecksum               string
+	MigrationManifest              string
 }
 
 type MigrationEligibility struct {
@@ -34,9 +37,9 @@ type MigrationEligibility struct {
 }
 
 // EvaluateMigration applies the migration policy before an Upgrade Operation
-// is created. A no-migration release is valid in the disposable development
-// phase; data-retaining and destructive changes require a separately approved
-// phase transition.
+// is created. A no-migration release is valid in the release-candidate phase;
+// data-retaining and destructive changes require a separately approved phase
+// transition.
 func EvaluateMigration(manifest *releasemanifest.Manifest, policy MigrationPolicy) (MigrationEligibility, error) {
 	if manifest == nil {
 		return MigrationEligibility{}, newPolicyError(ErrorCodeReleaseManifestInvalid, ErrReleaseManifestInvalid, "migration", "manifest", "manifest is required")
@@ -78,7 +81,7 @@ func EvaluateMigration(manifest *releasemanifest.Manifest, policy MigrationPolic
 	switch migration.MigrationType {
 	case "compatible":
 		if !policy.PreserveDataUpgrade || !policy.DataRetainingDeploymentAllowed {
-			return result, newPolicyError(ErrorCodeMigrationPolicyDisallowsDataRetain, ErrMigrationPolicyDisallowsDataRetain, "migration", "upgrade.databaseMigration.migrationType", "compatible data-retaining migrations require an approved phase-transition change; current policy is disposable-development")
+			return result, newPolicyError(ErrorCodeMigrationPolicyDisallowsDataRetain, ErrMigrationPolicyDisallowsDataRetain, "migration", "upgrade.databaseMigration.migrationType", "compatible data-retaining migrations require an approved phase-transition change; current policy is release-candidate")
 		}
 		result.Supported = true
 	case "preserve-data":

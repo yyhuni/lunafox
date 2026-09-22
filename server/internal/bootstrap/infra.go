@@ -140,8 +140,10 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 		}
 	}
 	operatorRuntimeVerifier, err := engineinstall.NewRuntimeImageIndexVerifier(engineinstall.RuntimeImageIndexVerifierOptions{
-		MaxIndexBytes: engineInstallMaxIndexBytes, PerCandidateTimeout: engineInstallCandidateTimeout,
-		SignatureVerifier: operatorSignatureVerifier,
+		MaxIndexBytes:          engineInstallMaxIndexBytes,
+		PerCandidateTimeout:    engineInstallCandidateTimeout,
+		CloudflareAcceleration: cfg.EngineInstall.CFAcceleration,
+		SignatureVerifier:      operatorSignatureVerifier,
 	})
 	if err != nil {
 		pkg.Fatal("Operator Runtime Image verifier configuration is invalid", zap.Error(err))

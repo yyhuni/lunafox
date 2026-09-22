@@ -22,7 +22,7 @@ export function DenseRowActionOwner({
   className,
 }: React.PropsWithChildren<{ className?: string }>) {
   return (
-    <TooltipProvider delay={300}>
+    <TooltipProvider>
       <div
         data-row-click-exempt="true"
         className={cn("flex items-center justify-end gap-1", className)}

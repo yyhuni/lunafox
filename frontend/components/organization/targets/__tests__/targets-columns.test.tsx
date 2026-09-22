@@ -41,6 +41,7 @@ describe("organization target row actions", () => {
           unlinkTarget: "解除关联",
           clickToCopy: "点击复制",
           copied: "已复制",
+          targetConcept: "目标说明",
         },
         types: {
           domain: "域名",

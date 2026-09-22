@@ -9,6 +9,7 @@ VERSION="${ENGINE_VERSION:-}"
 OUTPUT="${ENGINE_PLATFORM_BUILD_OUTPUT:-$ROOT_DIR/dist/engine-runtime-platform/platform-build.json}"
 IMAGE_SOURCE="${ENGINE_IMAGE_SOURCE:-https://github.com/${GITHUB_REPOSITORY:-yyhuni/lunafox}}"
 TAG_IDENTITY="${ENGINE_IMAGE_TAG:-}"
+BASE_CONTEXTS_FILE="${ENGINE_BASE_IMAGE_CONTEXTS_FILE:-}"
 
 fail() {
 	echo "build Engine Runtime platform: $*" >&2
@@ -22,6 +23,28 @@ normalize_arch() { case "$1" in x86_64) echo amd64 ;; aarch64 | arm64) echo arm6
 case "$PLATFORM" in linux/amd64 | linux/arm64) ;; *) fail "ENGINE_RUNTIME_IMAGE_PLATFORM must be linux/amd64 or linux/arm64" ;; esac
 [ "linux/$(normalize_arch "$(uname -m)")" = "$PLATFORM" ] || fail "runner architecture does not match $PLATFORM"
 for command in docker go jq; do command -v "$command" >/dev/null 2>&1 || fail "$command is required"; done
+
+base_context_args=()
+if [[ "$TAG_IDENTITY" == public-* ]]; then
+	[ -n "$BASE_CONTEXTS_FILE" ] || fail "ENGINE_BASE_IMAGE_CONTEXTS_FILE is required for public builds"
+	[ -f "$BASE_CONTEXTS_FILE" ] || fail "ENGINE_BASE_IMAGE_CONTEXTS_FILE must point to a regular file"
+	[ ! -L "$BASE_CONTEXTS_FILE" ] || fail "ENGINE_BASE_IMAGE_CONTEXTS_FILE must not be a symlink"
+fi
+if [ -n "$BASE_CONTEXTS_FILE" ]; then
+	declare -A seen_base_contexts=()
+	while IFS= read -r context_entry || [ -n "$context_entry" ]; do
+		if [[ ! "$context_entry" =~ ^([A-Za-z0-9._/:-]+)=docker-image://([A-Za-z0-9._/:-]+)@(sha256:[a-f0-9]{64})$ ]]; then
+			fail "ENGINE_BASE_IMAGE_CONTEXTS_FILE contains an invalid BuildKit context entry"
+		fi
+		context_name="${BASH_REMATCH[1]}"
+		context_reference="${BASH_REMATCH[2]}"
+		context_digest="${BASH_REMATCH[3]}"
+		[ "$context_name" = "$context_reference" ] || fail "BuildKit context name must match its image reference"
+		[ -z "${seen_base_contexts[$context_name]+x}" ] || fail "ENGINE_BASE_IMAGE_CONTEXTS_FILE contains duplicate context $context_name"
+		seen_base_contexts["$context_name"]="$context_digest"
+		base_context_args+=(--build-context "$context_entry")
+	done <"$BASE_CONTEXTS_FILE"
+fi
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -53,6 +76,9 @@ args=(
 	--cache-from "type=registry,ref=ghcr.io/yyhuni/$repository:buildcache"
 	--cache-to "type=registry,ref=ghcr.io/yyhuni/$repository:buildcache-$arch,mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true"
 )
+if ((${#base_context_args[@]} > 0)); then
+	args+=("${base_context_args[@]}")
+fi
 attempt=1
 until docker buildx build "${args[@]}" "$ENGINE_ROOT/$build_context"; do
 	[ "$attempt" -lt 3 ] || fail "build failed after $attempt attempts"

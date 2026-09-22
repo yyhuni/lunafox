@@ -15,6 +15,11 @@ describe("link-target-dialog-state contract", () => {
     expect(source).toContain("lineNumber: result.lineNumber")
   })
 
+  it("uses the shared parsed target limit before submitting", () => {
+    expect(source).toContain("MAX_TARGET_BATCH_SIZE")
+    expect(source).toContain("submittedTargets.length > MAX_TARGET_BATCH_SIZE")
+  })
+
   it("creates linked targets with organizationIds array payload", () => {
     expect(source).toContain("organizationIds: [organizationId]")
     expect(source).not.toContain("targets: targetList,\n        organizationId,")

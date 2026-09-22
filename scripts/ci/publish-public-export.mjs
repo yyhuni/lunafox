@@ -122,8 +122,18 @@ function validateExportTree(exportDir) {
   return JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 }
 
-function agentBundleSha256(exportDir, tag) {
-  const bundleDir = path.join(exportDir, "agent", "bin", tag);
+function agentBundleSha256(exportDir) {
+  // Publication records the content-addressed bundle. The export checker
+  // accepts only agent/bin/sha256-<fingerprint>/, so a tag-named directory
+  // cannot satisfy this digest.
+  const binDir = path.join(exportDir, "agent", "bin");
+  const artifactIds = fs.existsSync(binDir)
+    ? fs.readdirSync(binDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && /^sha256-[a-f0-9]{64}$/.test(entry.name))
+      .map((entry) => entry.name)
+    : [];
+  if (artifactIds.length !== 1) fail("export must contain exactly one immutable Agent artifact directory");
+  const bundleDir = path.join(binDir, artifactIds[0]);
   const hash = crypto.createHash("sha256");
   for (const name of AGENT_BUNDLE_FILES) {
     const file = path.join(bundleDir, name);
@@ -403,7 +413,11 @@ function destinationOwnedConfiguration(exportDir) {
       if (!paths.includes(groupPath)) fail(`destination-owned group path is not declared: ${groupPath}`);
     }
   }
-  return { paths: paths.sort(), groups };
+  const optionalUntilPresent = [...new Set(policy.destinationOwnedOptionalUntilPresent ?? [])];
+  for (const destinationPath of optionalUntilPresent) {
+    if (!paths.includes(destinationPath)) fail(`optional destination-owned path is not declared: ${destinationPath}`);
+  }
+  return { paths: paths.sort(), groups, optionalUntilPresent };
 }
 
 // Temporary-repository cleanup happens after the immutable remote push. A
@@ -417,7 +431,7 @@ function removeTemporaryRepository(repository, remove = fs.rmSync, warn = (messa
   }
 }
 
-function pushProjection({ exportDir, remoteUrl, branch, baseSha, tag, token, destinationPaths = [], destinationGroups = [], destinationOwnedRoot = "" }) {
+function pushProjection({ exportDir, remoteUrl, branch, baseSha, tag, token, destinationPaths = [], destinationGroups = [], destinationOptionalUntilPresent = [], destinationOwnedRoot = "" }) {
   const repository = fs.mkdtempSync(path.join(process.env.RUNNER_TEMP || os.tmpdir(), "lunafox-public-export-git-"));
   const message = `chore(export): generated deployment projection ${tag}`;
   try {
@@ -437,6 +451,7 @@ function pushProjection({ exportDir, remoteUrl, branch, baseSha, tag, token, des
     const fetchedSha = runGit(repository, ["rev-parse", `${baseSha}^{commit}`]);
     if (fetchedSha !== baseSha) fail(`public base commit fetch resolved to ${fetchedSha}, expected ${baseSha}`);
     const groupedPaths = new Set(destinationGroups.flatMap((group) => group.paths));
+    const optionalUntilPresent = new Set(destinationOptionalUntilPresent);
     const bootstrapPaths = new Set();
     for (const group of destinationGroups) {
       const sentinelExists = gitObjectExists(repository, `${baseSha}:${group.sentinel}`);
@@ -453,6 +468,7 @@ function pushProjection({ exportDir, remoteUrl, branch, baseSha, tag, token, des
     for (const destinationPath of destinationPaths) {
       if (!groupedPaths.has(destinationPath) && gitObjectExists(repository, `${baseSha}:${destinationPath}`)) continue;
       if (groupedPaths.has(destinationPath) && !bootstrapPaths.has(destinationPath)) continue;
+      if (optionalUntilPresent.has(destinationPath) && !gitObjectExists(repository, `${baseSha}:${destinationPath}`)) continue;
       if (!destinationOwnedRoot) fail(`public base commit is missing destination-owned path: ${destinationPath}`);
       const sourcePath = path.join(destinationOwnedRoot, ...destinationPath.split("/"));
       if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile() || fs.lstatSync(sourcePath).isSymbolicLink()) {
@@ -506,7 +522,7 @@ async function publish(options) {
   const files = walkFiles(options.exportDir);
   const manifestSha256 = crypto.createHash("sha256").update(fs.readFileSync(path.join(options.exportDir, "PUBLIC_EXPORT_MANIFEST.json"))).digest("hex");
   if (!/^[a-f0-9]{64}$/.test(manifestSha256)) fail("export manifest digest could not be computed");
-  const bundleSha256 = options.noValidate ? "" : agentBundleSha256(options.exportDir, options.tag);
+  const bundleSha256 = options.noValidate ? "" : agentBundleSha256(options.exportDir);
   const initialBranch = branchName(options.tag, options.attempt);
   const planBase = { repository: options.repo, baseBranch: options.baseBranch, branch: initialBranch, tag: options.tag, fileCount: files.length, manifestSha256, ...(bundleSha256 ? { agentBundleSha256: bundleSha256 } : {}) };
   if (options.dryRun) {
@@ -571,6 +587,7 @@ async function publish(options) {
     token,
     destinationPaths: destinationOwned.paths,
     destinationGroups: destinationOwned.groups,
+    destinationOptionalUntilPresent: destinationOwned.optionalUntilPresent,
     destinationOwnedRoot: options.destinationOwnedRoot,
   });
   const pr = await request(options.apiBase, `/repos/${owner}/${repo}/pulls`, {

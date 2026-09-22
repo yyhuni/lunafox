@@ -39,3 +39,42 @@ func TestUpgradeOperationBaselineMigrationContract(t *testing.T) {
 		t.Fatal("initial schema down migration must drop upgrade_operation")
 	}
 }
+
+func TestUpgradeOperationScopeMigrationContract(t *testing.T) {
+	up, err := os.ReadFile("migrations/000002_upgrade_operation_scope.up.sql")
+	if err != nil {
+		t.Fatalf("read scope migration: %v", err)
+	}
+	down, err := os.ReadFile("migrations/000002_upgrade_operation_scope.down.sql")
+	if err != nil {
+		t.Fatalf("read scope migration down: %v", err)
+	}
+	upSQL := string(up)
+	for _, required := range []string{
+		"ADD COLUMN IF NOT EXISTS execution_mode VARCHAR(32)",
+		"ADD COLUMN IF NOT EXISTS work_disposition VARCHAR(32)",
+		"ADD COLUMN IF NOT EXISTS plan_summary JSONB",
+		"ADD COLUMN IF NOT EXISTS plan_digest VARCHAR(71)",
+		"ADD COLUMN IF NOT EXISTS baseline_deployment_digest VARCHAR(71)",
+		"ADD COLUMN IF NOT EXISTS confirmed_deployment_version VARCHAR(64)",
+		"upgrade_operation_not_required_scope",
+		"upgrade_operation_frontend_only_scope",
+		"upgrade_operation_full_scope_evidence",
+		"'{\"touchedServices\":[\"frontend\"]}'::jsonb",
+	} {
+		if !strings.Contains(upSQL, required) {
+			t.Fatalf("scope migration missing Upgrade Operation contract %q", required)
+		}
+	}
+	if !strings.HasPrefix(string(down), "-- DESTRUCTIVE TEST TEARDOWN ONLY.") {
+		t.Fatal("scope migration down must be limited to destructive test teardown")
+	}
+	for _, required := range []string{
+		"DROP CONSTRAINT IF EXISTS upgrade_operation_full_scope_evidence",
+		"DROP COLUMN IF EXISTS execution_mode",
+	} {
+		if !strings.Contains(string(down), required) {
+			t.Fatalf("scope migration down missing %q", required)
+		}
+	}
+}

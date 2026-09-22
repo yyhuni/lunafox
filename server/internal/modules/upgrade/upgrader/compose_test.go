@@ -6,11 +6,13 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/yyhuni/lunafox/contracts/releasemanifest"
+	"go.yaml.in/yaml/v3"
 )
 
 type recordingRunner struct {
@@ -24,6 +26,45 @@ type recordedCommand struct {
 	binary string
 	args   []string
 	dir    string
+}
+
+type frontendOnlyRunner struct {
+	commands []recordedCommand
+}
+
+type frontendEdgeProbeStub struct {
+	observations []PublicFrontendObservation
+	errors       []error
+	calls        int
+}
+
+func (probe *frontendEdgeProbeStub) Probe(_ context.Context, _, _, _, _ string) (PublicFrontendObservation, error) {
+	probe.calls++
+	index := probe.calls - 1
+	if index < len(probe.errors) && probe.errors[index] != nil {
+		return PublicFrontendObservation{}, probe.errors[index]
+	}
+	if index >= len(probe.observations) {
+		return PublicFrontendObservation{}, errors.New("public edge has not converged")
+	}
+	return probe.observations[index], nil
+}
+
+func (runner *frontendOnlyRunner) Run(_ context.Context, binary string, args []string, dir string) (RunResult, error) {
+	runner.commands = append(runner.commands, recordedCommand{binary: binary, args: append([]string(nil), args...), dir: dir})
+	joined := strings.Join(args, " ")
+	switch {
+	case strings.Contains(joined, "ps --format json frontend"):
+		return RunResult{Stdout: `[{"Service":"frontend","State":"running","Health":"healthy"}]`}, nil
+	case strings.Contains(joined, "ps -q frontend"):
+		return RunResult{Stdout: "abcdef0123456789\n"}, nil
+	case strings.HasPrefix(joined, "exec ") && strings.Contains(joined, " node -e "):
+		return RunResult{Stdout: `{"statusCode":200,"contentType":"text/html","observedAt":"2026-09-21T00:00:00Z"}`}, nil
+	case strings.Contains(joined, "inspect --format"):
+		return RunResult{Stdout: `"ghcr.io/yyhuni/lunafox-frontend@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"`}, nil
+	default:
+		return RunResult{}, nil
+	}
 }
 
 func (runner *recordingRunner) Run(_ context.Context, binary string, args []string, dir string) (RunResult, error) {
@@ -167,6 +208,227 @@ func TestNewPublicComposeExecutorRejectsUnknownRegistry(t *testing.T) {
 	}
 }
 
+func TestBuildFrontendOnlyComposePlanSealsFrontendAndKeepsConfirmedOverride(t *testing.T) {
+	root := newShortRoot(t)
+	executor, err := NewPublicComposeExecutor(&recordingRunner{}, "ghcr.io")
+	if err != nil {
+		t.Fatal(err)
+	}
+	operationPath := filepath.Join(root, ".lunafox", "upgrade", "operations", "frontend.compose.yaml")
+	plan, err := executor.BuildFrontendOnlyComposePlan(root, operationPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := plan.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(plan.PullArgs, " "); !strings.HasSuffix(got, "pull frontend") {
+		t.Fatalf("pull argv = %q, want frontend-only pull", got)
+	}
+	if got := strings.Join(plan.UpdateArgs, " "); !strings.HasSuffix(got, "--wait-timeout 300 frontend") {
+		t.Fatalf("update argv = %q, want sealed frontend update", got)
+	}
+	if got := strings.Join(plan.HealthArgs, " "); !strings.HasSuffix(got, "ps --format json frontend") {
+		t.Fatalf("health argv = %q, want frontend-only health", got)
+	}
+	for _, args := range [][]string{plan.PullArgs, plan.UpdateArgs, plan.HealthArgs} {
+		joined := strings.Join(args, " ")
+		for _, forbidden := range []string{" server", " nginx", " agent", " bootstrap", " migrate"} {
+			if strings.Contains(joined, forbidden) {
+				t.Fatalf("frontend plan contains forbidden service %q: %s", forbidden, joined)
+			}
+		}
+	}
+	if !containsArg(plan.BaseArgs, filepath.Join(root, publicPersistentOverrideFile)) {
+		t.Fatalf("base argv omits confirmed override: %#v", plan.BaseArgs)
+	}
+	if !containsArg(plan.BaseArgs, operationPath) {
+		t.Fatalf("base argv omits staged operation patch: %#v", plan.BaseArgs)
+	}
+}
+
+func TestStageFrontendOnlyComposeOverrideChangesOnlyFrontendImage(t *testing.T) {
+	root := newShortRoot(t)
+	confirmedOverride := `services:
+  server:
+    image: ghcr.io/yyhuni/lunafox-server@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    environment:
+      RELEASE_VERSION: 1.2.3
+  frontend:
+    image: ghcr.io/yyhuni/lunafox-frontend@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    restart: unless-stopped
+`
+	for relative, content := range map[string]string{
+		publicComposeFile:            "services: {}\n",
+		publicEnvFile:                "PUBLIC_PORT=443\n",
+		publicPersistentOverrideFile: confirmedOverride,
+	} {
+		if err := os.WriteFile(filepath.Join(root, relative), []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	store, err := NewPublicJournalStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifestBytes := releaseManifestFixtureBytes(t)
+	manifestPath := filepath.Join(root, "candidate.yaml")
+	if err := os.WriteFile(manifestPath, manifestBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := loadManifestForTest(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(mustManifestPath(t, store, manifest.Digest()), manifestBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	executor, err := NewPublicComposeExecutor(&recordingRunner{}, "ghcr.io")
+	if err != nil {
+		t.Fatal(err)
+	}
+	operationID := "frontend-only-stage"
+	patchPath, err := executor.StageFrontendOnlyComposeOverride(store, operationID, manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	patchBytes, err := os.ReadFile(patchPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var patch map[string]any
+	if err := yaml.Unmarshal(patchBytes, &patch); err != nil {
+		t.Fatal(err)
+	}
+	services, ok := patch["services"].(map[string]any)
+	if !ok || len(services) != 1 {
+		t.Fatalf("staged patch services = %#v, want only frontend", patch["services"])
+	}
+	frontend, ok := services[FrontendOnlyService].(map[string]any)
+	if !ok || len(frontend) != 1 {
+		t.Fatalf("staged frontend patch = %#v, want only image", services[FrontendOnlyService])
+	}
+	if _, ok := frontend["image"].(string); !ok {
+		t.Fatalf("staged frontend image = %#v", frontend["image"])
+	}
+	confirmed, err := os.ReadFile(filepath.Join(root, publicPersistentOverrideFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(confirmed) != confirmedOverride {
+		t.Fatalf("persistent override changed unexpectedly: %s", confirmed)
+	}
+}
+
+func TestStageFrontendOnlyComposeOverrideRejectsMutableBaseline(t *testing.T) {
+	root := newShortRoot(t)
+	for relative, content := range map[string]string{
+		publicComposeFile:            "services: {}\n",
+		publicEnvFile:                "PUBLIC_PORT=443\n",
+		publicPersistentOverrideFile: "services:\n  frontend:\n    image: ghcr.io/yyhuni/lunafox-frontend:latest\n",
+	} {
+		if err := os.WriteFile(filepath.Join(root, relative), []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	store, err := NewPublicJournalStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(root, "candidate.yaml")
+	manifestBytes := releaseManifestFixtureBytes(t)
+	if err := os.WriteFile(manifestPath, manifestBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := loadManifestForTest(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	executor, err := NewPublicComposeExecutor(&recordingRunner{}, "ghcr.io")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := executor.StageFrontendOnlyComposeOverride(store, "mutable-baseline", manifest); err == nil {
+		t.Fatal("mutable confirmed frontend image was accepted")
+	}
+}
+
+func TestPromoteFrontendOnlyComposeOverridePreservesUntouchedServices(t *testing.T) {
+	root := newShortRoot(t)
+	confirmedOverride := `services:
+  server:
+    image: ghcr.io/yyhuni/lunafox-server@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    environment:
+      RELEASE_VERSION: 1.2.3
+  frontend:
+    image: ghcr.io/yyhuni/lunafox-frontend@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    restart: unless-stopped
+`
+	for relative, content := range map[string]string{
+		publicComposeFile:            "services: {}\n",
+		publicEnvFile:                "PUBLIC_PORT=443\n",
+		publicPersistentOverrideFile: confirmedOverride,
+	} {
+		if err := os.WriteFile(filepath.Join(root, relative), []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	store, err := NewPublicJournalStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifestBytes := releaseManifestFixtureBytes(t)
+	manifestPath := filepath.Join(root, "candidate.yaml")
+	if err := os.WriteFile(manifestPath, manifestBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := loadManifestForTest(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	executor, err := NewPublicComposeExecutor(&recordingRunner{}, "ghcr.io")
+	if err != nil {
+		t.Fatal(err)
+	}
+	operationID := "frontend-only-promote"
+	if _, err := executor.StageFrontendOnlyComposeOverride(store, operationID, manifest); err != nil {
+		t.Fatal(err)
+	}
+	if err := executor.PromoteFrontendOnlyComposeOverride(store, operationID, manifest); err != nil {
+		t.Fatal(err)
+	}
+	promoted, err := readConfirmedComposeOverride(filepath.Join(root, publicPersistentOverrideFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	services := promoted["services"].(map[string]any)
+	server := services["server"].(map[string]any)
+	if server["image"] != "ghcr.io/yyhuni/lunafox-server@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" {
+		t.Fatalf("server image changed during frontend promotion: %#v", server["image"])
+	}
+	serverEnvironment := server["environment"].(map[string]any)
+	if serverEnvironment["RELEASE_VERSION"] != "1.2.3" {
+		t.Fatalf("server environment changed during frontend promotion: %#v", serverEnvironment)
+	}
+	frontend := services[FrontendOnlyService].(map[string]any)
+	wantFrontend, err := executor.selectedImageRef(manifest, FrontendOnlyService)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if frontend["image"] != wantFrontend || frontend["restart"] != "unless-stopped" {
+		t.Fatalf("frontend promotion did not preserve service fields: %#v", frontend)
+	}
+}
+
+func mustManifestPath(t *testing.T, store *JournalStore, digest string) string {
+	t.Helper()
+	path, err := store.ManifestPath(digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
 func TestOSCommandRunnerUsesStructuredArguments(t *testing.T) {
 	runner := NewOSCommandRunner()
 	result, err := runner.Run(context.Background(), "printf", []string{"%s", "argv-is-data"}, t.TempDir())
@@ -247,6 +509,368 @@ func TestComposeExecutorRunsFixedLifecycleAndWritesReceipt(t *testing.T) {
 	}
 	if strings.Join(keys, ",") != strings.Join(wantKeys, ",") {
 		t.Fatalf("progress keys = %#v, want %#v", keys, wantKeys)
+	}
+}
+
+func TestComposeExecutorRunsFullPathForPinnedLegacyAlpha114(t *testing.T) {
+	root := newComposeRoot(t)
+	manifestPath := filepath.Join(root, defaultManifestName)
+	legacyBytes, err := os.ReadFile(legacyAlpha114ManifestFixturePath(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(manifestPath, legacyBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := releasemanifest.LoadLegacyAlpha114(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store, err := NewJournalStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := Request{SchemaVersion: RequestSchema, OperationID: "legacy-alpha114-full", Action: ActionStart, ManifestDigest: manifest.Digest()}
+	now := time.Now().UTC()
+	if err := store.Save(Journal{SchemaVersion: JournalSchema, OperationID: request.OperationID, ManifestDigest: request.ManifestDigest, Stage: StageQueued, StartedAt: now, UpdatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	runner := &recordingRunner{responses: make(map[string]RunResult)}
+	for _, service := range []string{"server", "frontend", "nginx"} {
+		refs, refsErr := manifest.RuntimeImageRefs(service)
+		if refsErr != nil {
+			t.Fatal(refsErr)
+		}
+		runner.responses[refs[0]] = RunResult{Stdout: refs[0]}
+	}
+	if err := NewComposeExecutor(runner).Execute(context.Background(), request, store); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	current, err := store.LoadCurrent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Stage != StageVerifying {
+		t.Fatalf("legacy full path stage = %q, want %q", current.Stage, StageVerifying)
+	}
+}
+
+func TestComposeExecutorFrontendOnlyUsesSealedCommandsAndV2Receipt(t *testing.T) {
+	root := newShortRoot(t)
+	for relative, content := range map[string]string{
+		publicComposeFile:            "services: {}\n",
+		publicEnvFile:                "PUBLIC_HOST=localhost\nPUBLIC_PORT=443\nPUBLIC_URL=https://localhost\n",
+		publicPersistentOverrideFile: "services:\n  frontend:\n    image: ghcr.io/yyhuni/lunafox-frontend@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+	} {
+		if err := os.WriteFile(filepath.Join(root, relative), []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	store, err := NewPublicJournalStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(root, "candidate.yaml")
+	manifestBytes := releaseManifestFixtureBytes(t)
+	if err := os.WriteFile(manifestPath, manifestBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := loadManifestForTest(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(mustManifestPath(t, store, manifest.Digest()), manifestBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	runner := &frontendOnlyRunner{}
+	executor, err := NewPublicComposeExecutor(runner, "ghcr.io")
+	if err != nil {
+		t.Fatal(err)
+	}
+	executor.PublicFrontendProbe = &frontendEdgeProbeStub{observations: []PublicFrontendObservation{{StatusCode: 200, ContentType: "text/html", ObservedAt: time.Now().UTC()}}}
+	executor.FrontendEdgeProbeAttempts = 1
+	request := Request{
+		SchemaVersion:              ScopedRequestSchema,
+		OperationID:                "frontend-only-execute",
+		Action:                     ActionStart,
+		ManifestDigest:             manifest.Digest(),
+		ExecutionMode:              ExecutionModeFrontendOnly,
+		PlanDigest:                 "sha256:" + strings.Repeat("1", 64),
+		BaselineStateDigest:        "sha256:" + strings.Repeat("2", 64),
+		TouchedServices:            []string{FrontendOnlyService},
+		ConfirmedDeploymentVersion: "1.2.2",
+	}
+	now := time.Now().UTC()
+	if err := store.Save(Journal{
+		SchemaVersion:              ScopedJournalSchema,
+		OperationID:                request.OperationID,
+		ManifestDigest:             request.ManifestDigest,
+		Stage:                      StageQueued,
+		ExecutionMode:              request.ExecutionMode,
+		PlanDigest:                 request.PlanDigest,
+		BaselineStateDigest:        request.BaselineStateDigest,
+		TouchedServices:            request.TouchedServices,
+		ConfirmedDeploymentVersion: request.ConfirmedDeploymentVersion,
+		StartedAt:                  now,
+		UpdatedAt:                  now,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := executor.Execute(context.Background(), request, store); err != nil {
+		t.Fatal(err)
+	}
+	if len(runner.commands) != 5 {
+		t.Fatalf("frontend-only command count = %d, want pull/up/ps/ps -q/inspect", len(runner.commands))
+	}
+	joined := make([]string, 0, len(runner.commands))
+	for _, command := range runner.commands {
+		joined = append(joined, strings.Join(command.args, " "))
+	}
+	trace := strings.Join(joined, "\n")
+	for _, forbidden := range []string{"pull server", "pull nginx", "pull agent", "migrate", "upgrader", "agent"} {
+		if strings.Contains(trace, forbidden) {
+			t.Fatalf("frontend-only trace contains forbidden operation %q:\n%s", forbidden, trace)
+		}
+	}
+	if !strings.Contains(trace, "pull frontend") || !strings.Contains(trace, "--wait-timeout 300 frontend") || !strings.Contains(trace, "ps --format json frontend") || !strings.Contains(trace, "ps -q frontend") || !strings.Contains(trace, "inspect --format") {
+		t.Fatalf("frontend-only trace is incomplete:\n%s", trace)
+	}
+	receipt, err := store.LoadReceipt(request.OperationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receipt.SchemaVersion != ScopedJournalSchema || receipt.ExecutionMode != ExecutionModeFrontendOnly || !sameStringSlice(receipt.Services, []string{FrontendOnlyService}) {
+		t.Fatalf("frontend-only receipt = %#v", receipt)
+	}
+	current, err := store.LoadCurrent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Stage != StageVerifying {
+		t.Fatalf("frontend-only stage = %q, want verifying until confirm", current.Stage)
+	}
+	confirmed, err := os.ReadFile(filepath.Join(root, publicPersistentOverrideFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(confirmed), "sha256:"+strings.Repeat("a", 64)) {
+		t.Fatal("frontend-only execution promoted the persistent override before confirm")
+	}
+	if _, err := os.Stat(filepath.Join(store.Directory(), HistoryDirectory, request.OperationID+OverrideFileSuffix)); err != nil {
+		t.Fatalf("staged frontend override is missing: %v", err)
+	}
+	commandCount := len(runner.commands)
+	resume := request
+	resume.Action = ActionResume
+	if err := executor.Execute(context.Background(), resume, store); err != nil {
+		t.Fatalf("resume verified frontend-only handoff: %v", err)
+	}
+	if len(runner.commands) != commandCount {
+		t.Fatalf("resume reran verified frontend-only commands: %#v", runner.commands[commandCount:])
+	}
+}
+
+func TestComposeExecutorFrontendOnlyRejectsStoppingStage(t *testing.T) {
+	root := newShortRoot(t)
+	for relative, content := range map[string]string{
+		publicComposeFile:            "services: {}\n",
+		publicEnvFile:                "PUBLIC_HOST=localhost\nPUBLIC_PORT=443\nPUBLIC_URL=https://localhost\n",
+		publicPersistentOverrideFile: "services:\n  frontend:\n    image: ghcr.io/yyhuni/lunafox-frontend@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+	} {
+		if err := os.WriteFile(filepath.Join(root, relative), []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	store, err := NewPublicJournalStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifestBytes := releaseManifestFixtureBytes(t)
+	manifestPath := filepath.Join(root, "candidate.yaml")
+	if err := os.WriteFile(manifestPath, manifestBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := loadManifestForTest(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(mustManifestPath(t, store, manifest.Digest()), manifestBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	runner := &frontendOnlyRunner{}
+	executor, err := NewPublicComposeExecutor(runner, "ghcr.io")
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := Request{
+		SchemaVersion:              ScopedRequestSchema,
+		OperationID:                "frontend-only-stopping",
+		Action:                     ActionStart,
+		ManifestDigest:             manifest.Digest(),
+		ExecutionMode:              ExecutionModeFrontendOnly,
+		PlanDigest:                 "sha256:" + strings.Repeat("1", 64),
+		BaselineStateDigest:        "sha256:" + strings.Repeat("2", 64),
+		TouchedServices:            []string{FrontendOnlyService},
+		ConfirmedDeploymentVersion: "1.2.2",
+	}
+	now := time.Now().UTC()
+	if err := store.Save(Journal{
+		SchemaVersion:              ScopedJournalSchema,
+		OperationID:                request.OperationID,
+		ManifestDigest:             request.ManifestDigest,
+		Stage:                      StageStopping,
+		ExecutionMode:              request.ExecutionMode,
+		PlanDigest:                 request.PlanDigest,
+		BaselineStateDigest:        request.BaselineStateDigest,
+		TouchedServices:            request.TouchedServices,
+		ConfirmedDeploymentVersion: request.ConfirmedDeploymentVersion,
+		StartedAt:                  now,
+		UpdatedAt:                  now,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := executor.Execute(context.Background(), request, store); err != nil {
+		t.Fatal(err)
+	}
+	current, err := store.LoadCurrent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Stage != StageFailed || !strings.Contains(current.Diagnostic, "stopping stage") {
+		t.Fatalf("stopping frontend-only journal = %#v, want fail-closed diagnostic", current)
+	}
+	for _, command := range runner.commands {
+		joined := strings.Join(command.args, " ")
+		if strings.Contains(joined, "pull frontend") || strings.Contains(joined, "up -d") {
+			t.Fatalf("stopping frontend-only stage executed Compose mutation: %q", joined)
+		}
+	}
+}
+
+func TestDockerFrontendEdgeProbeUsesCandidateNetworkAndFixedNginxRequest(t *testing.T) {
+	runner := &frontendOnlyRunner{}
+	probe := NewDockerFrontendEdgeProbe(runner, "docker")
+	observation, err := probe.Probe(context.Background(), "/deployment", "abcdef0123456789", "example.test", "frontend-edge-probe")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if observation.StatusCode != 200 || observation.ContentType != "text/html" {
+		t.Fatalf("edge observation = %#v", observation)
+	}
+	if len(runner.commands) != 1 {
+		t.Fatalf("probe command count = %d, want 1", len(runner.commands))
+	}
+	command := runner.commands[0]
+	if command.binary != "docker" || command.dir != "/deployment" {
+		t.Fatalf("probe command = %#v", command)
+	}
+	joined := strings.Join(command.args, " ")
+	for _, required := range []string{"exec abcdef0123456789 node -e", "frontend-edge-probe", "example.test", "nginx"} {
+		if !strings.Contains(joined, required) {
+			t.Fatalf("probe command missing %q: %s", required, joined)
+		}
+	}
+	if strings.Contains(joined, "sh -c") {
+		t.Fatalf("probe command invokes a shell: %s", joined)
+	}
+}
+
+func TestComposeExecutorFrontendOnlyFailsClosedWhenPublicEdgeDoesNotConverge(t *testing.T) {
+	root := newShortRoot(t)
+	confirmed := "services:\n  frontend:\n    image: ghcr.io/yyhuni/lunafox-frontend@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+	for relative, content := range map[string]string{
+		publicComposeFile:            "services: {}\n",
+		publicEnvFile:                "PUBLIC_HOST=localhost\nPUBLIC_PORT=443\nPUBLIC_URL=https://localhost\n",
+		publicPersistentOverrideFile: confirmed,
+	} {
+		if err := os.WriteFile(filepath.Join(root, relative), []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	store, err := NewPublicJournalStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifestBytes := releaseManifestFixtureBytes(t)
+	manifestPath := filepath.Join(root, "candidate.yaml")
+	if err := os.WriteFile(manifestPath, manifestBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := loadManifestForTest(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(mustManifestPath(t, store, manifest.Digest()), manifestBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	request := Request{
+		SchemaVersion:              ScopedRequestSchema,
+		OperationID:                "frontend-only-edge-failure",
+		Action:                     ActionStart,
+		ManifestDigest:             manifest.Digest(),
+		ExecutionMode:              ExecutionModeFrontendOnly,
+		PlanDigest:                 "sha256:" + strings.Repeat("1", 64),
+		BaselineStateDigest:        "sha256:" + strings.Repeat("2", 64),
+		TouchedServices:            []string{FrontendOnlyService},
+		ConfirmedDeploymentVersion: "1.2.2",
+	}
+	now := time.Now().UTC()
+	if err := store.Save(Journal{
+		SchemaVersion:              ScopedJournalSchema,
+		OperationID:                request.OperationID,
+		ManifestDigest:             request.ManifestDigest,
+		Stage:                      StageQueued,
+		ExecutionMode:              request.ExecutionMode,
+		PlanDigest:                 request.PlanDigest,
+		BaselineStateDigest:        request.BaselineStateDigest,
+		TouchedServices:            request.TouchedServices,
+		ConfirmedDeploymentVersion: request.ConfirmedDeploymentVersion,
+		StartedAt:                  now,
+		UpdatedAt:                  now,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	runner := &frontendOnlyRunner{}
+	executor, err := NewPublicComposeExecutor(runner, "ghcr.io")
+	if err != nil {
+		t.Fatal(err)
+	}
+	probe := &frontendEdgeProbeStub{errors: []error{errors.New("resolver still points at the old frontend"), errors.New("edge unavailable")}}
+	executor.PublicFrontendProbe = probe
+	executor.FrontendEdgeProbeAttempts = 2
+	executor.FrontendEdgeProbeDelay = 0
+	if err := executor.Execute(context.Background(), request, store); err != nil {
+		t.Fatal(err)
+	}
+	if probe.calls != 2 {
+		t.Fatalf("edge probe attempts = %d, want 2", probe.calls)
+	}
+	current, err := store.LoadCurrent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Stage != StageFailed {
+		t.Fatalf("stage after edge failure = %q, want failed", current.Stage)
+	}
+	if _, err := store.LoadReceipt(request.OperationID); !errors.Is(err, ErrJournalNotFound) {
+		t.Fatalf("receipt after edge failure = %v, want absent", err)
+	}
+	contents, err := os.ReadFile(filepath.Join(root, publicPersistentOverrideFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(contents) != confirmed {
+		t.Fatalf("persistent override changed after edge failure: %s", contents)
+	}
+}
+
+func TestLoadPublicEdgeConfigRejectsNonCanonicalPublicURL(t *testing.T) {
+	root := newShortRoot(t)
+	if err := os.WriteFile(filepath.Join(root, publicEnvFile), []byte("PUBLIC_HOST=example.test\nPUBLIC_PORT=8443\nPUBLIC_URL=http://example.test:8443\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadPublicEdgeConfig(root); err == nil {
+		t.Fatal("non-HTTPS public URL was accepted")
 	}
 }
 
@@ -717,6 +1341,15 @@ func releaseManifestFixtureBytes(t *testing.T) []byte {
 		t.Fatal(err)
 	}
 	return raw
+}
+
+func legacyAlpha114ManifestFixturePath(t *testing.T) string {
+	t.Helper()
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller() failed")
+	}
+	return filepath.Join(filepath.Dir(filename), "..", "..", "..", "..", "..", "scripts", "ci", "fixtures", "legacy-alpha114-release.manifest.yaml")
 }
 
 func writeMigrationManifestFixture(t *testing.T, root string) *releasemanifest.Manifest {

@@ -82,6 +82,8 @@ describe("all-targets-columns copy toast", () => {
           initiateScan: "发起扫描",
           clickToCopy: "点击复制",
           copied: "已复制",
+          targetConcept: "目标说明",
+          organizationConcept: "组织说明",
         },
         targetTypes: {
           domain: "域名",

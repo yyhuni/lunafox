@@ -364,7 +364,7 @@ func seedScheduledScanPostgresFixture(
 		Name: name, ScanWorkflowID: "default", Configuration: map[string]any{"version": version},
 		InputSource:    scandomain.InputSourceScanSnapshot,
 		OrganizationID: &organizationID, AgentID: intPointer(42),
-		CronExpression: "* * * * *", IsEnabled: true,
+		TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("create Schedule fixture: %v", err)

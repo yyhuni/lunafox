@@ -16,13 +16,18 @@ import (
 // It intentionally carries no command output, paths, credentials, or image
 // refs. The operation and manifest digest are the replay fence.
 type HostUpgradeEvent struct {
-	OperationID     string
-	ManifestDigest  string
-	Stage           string
-	Diagnostic      string
-	Migration       string
-	ObservedDigests map[string]string
-	UpdatedAt       time.Time
+	OperationID                string
+	ManifestDigest             string
+	Stage                      string
+	Diagnostic                 string
+	Migration                  string
+	ObservedDigests            map[string]string
+	ExecutionMode              domain.ExecutionMode
+	PlanDigest                 string
+	BaselineStateDigest        string
+	TouchedServices            []string
+	ConfirmedDeploymentVersion string
+	UpdatedAt                  time.Time
 	// StageUpdatedAt is the last lifecycle checkpoint. UpdatedAt may be newer
 	// because a progress heartbeat was appended, but that must not feed the
 	// stalled-stage watchdog or create a synthetic StageTimes entry.
@@ -52,11 +57,43 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 	if operation.ManifestDigest != event.ManifestDigest {
 		return nil, domain.ErrReleaseManifestTargetMismatch
 	}
+	if err := validatePersistedFrontendOnlyOperation(operation); err != nil {
+		return nil, err
+	}
+	// Non-journal adapters do not pass through the file reader's receipt
+	// boundary. Keep their scoped evidence vocabulary just as narrow so a
+	// replacement adapter cannot persist full-upgrade digests into a
+	// frontend-only operation.
+	if !event.FromJournal && operation.EffectiveExecutionMode() == domain.ExecutionModeFrontendOnly {
+		if err := validateFrontendOnlyObservedDigests(event.ObservedDigests, "host observed digest"); err != nil {
+			return nil, err
+		}
+	}
+	if event.FromJournal {
+		if err := validateHostEventScope(operation, event); err != nil {
+			return nil, err
+		}
+		if err := validateFrontendOnlyJournalOperationStage(operation); err != nil {
+			return nil, err
+		}
+		if err := validateJournalObservedDigests(operation, event.ObservedDigests); err != nil {
+			return nil, err
+		}
+	}
 	if err := domain.ValidateProgressEvents(event.ProgressEvents); err != nil {
 		return nil, fmt.Errorf("invalid host progress events: %w", err)
 	}
+	if err := validateFrontendOnlyJournalProgress(operation, event.FromJournal, event.ProgressEvents); err != nil {
+		return nil, err
+	}
+	if err := validateFrontendOnlyJournalMigration(operation, event.FromJournal, event.Migration); err != nil {
+		return nil, err
+	}
 	status, migrationStatus, err := mapHostStage(event.Stage, event.Migration)
 	if err != nil {
+		return nil, err
+	}
+	if err := validateFrontendOnlyJournalStage(operation, event.FromJournal, status); err != nil {
 		return nil, err
 	}
 	previousStatus := operation.Status
@@ -96,7 +133,7 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 	if err != nil {
 		return nil, fmt.Errorf("merge host progress events: %w", err)
 	}
-	if err := domain.ValidateTransition(operation.Status, status); err != nil {
+	if err := domain.ValidateExecutionTransition(operation.EffectiveExecutionMode(), operation.Status, status); err != nil {
 		// A delayed checkpoint that is not a safety escalation is harmless. Do not
 		// turn an idempotent host retry into an API-visible failure.
 		if statusRank(status) < statusRank(operation.Status) {
@@ -188,6 +225,198 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 	return service.reconcileAfterHostEvent(ctx, updated)
 }
 
+// validateFrontendOnlyJournalMigration runs before stage mapping so malformed
+// migration evidence cannot turn a scoped operation into needs_recovery or
+// violate its no-migration persistence invariant.
+func validateFrontendOnlyJournalMigration(operation *domain.Operation, fromJournal bool, migration string) error {
+	if !fromJournal || operation == nil || operation.EffectiveExecutionMode() != domain.ExecutionModeFrontendOnly {
+		return nil
+	}
+	migration = strings.TrimSpace(migration)
+	if migration == "" || migration == string(domain.MigrationStatusNotStarted) {
+		return nil
+	}
+	return fmt.Errorf("frontend-only host journal migration status %q is not allowed", migration)
+}
+
+// validateFrontendOnlyJournalProgress prevents a malformed checkpoint from
+// persisting full-upgrade lifecycle claims into the scoped operation log.
+func validateFrontendOnlyJournalProgress(operation *domain.Operation, fromJournal bool, events []domain.ProgressEvent) error {
+	if !fromJournal || operation == nil || operation.EffectiveExecutionMode() != domain.ExecutionModeFrontendOnly {
+		return nil
+	}
+	for _, event := range events {
+		if !frontendOnlyJournalStageAllowed(event.Stage) {
+			return fmt.Errorf("frontend-only host journal progress stage %q is not allowed", event.Stage)
+		}
+	}
+	return nil
+}
+
+// validateFrontendOnlyJournalOperationStage prevents the forward-replay
+// exception from repairing a corrupted full-upgrade phase into a valid scoped
+// phase. A frontend-only operation can never have owned these phases.
+func validateFrontendOnlyJournalOperationStage(operation *domain.Operation) error {
+	if operation == nil || operation.EffectiveExecutionMode() != domain.ExecutionModeFrontendOnly {
+		return nil
+	}
+	if !frontendOnlyJournalStageForbidden(operation.Status) {
+		return nil
+	}
+	return fmt.Errorf("frontend-only persisted operation stage %q cannot be replayed from journal", operation.Status)
+}
+
+// validatePersistedFrontendOnlyOperation closes the gap between repository
+// reads and update-time domain validation. Repositories deliberately preserve
+// legacy rows and therefore do not validate every projection on read; a
+// scoped row must nevertheless be rejected before even an idempotent journal
+// replay can expose or reconcile its forbidden full-upgrade evidence.
+func validatePersistedFrontendOnlyOperation(operation *domain.Operation) error {
+	if operation == nil || operation.ExecutionMode != domain.ExecutionModeFrontendOnly {
+		return nil
+	}
+	if err := operation.Validate(); err != nil {
+		return fmt.Errorf("persisted frontend-only operation is invalid: %w", err)
+	}
+	if err := validateFrontendOnlyJournalOperationStage(operation); err != nil {
+		return err
+	}
+	if err := validateFrontendOnlyObservedDigests(operation.ObservedDigests, "persisted frontend-only operation observed digest"); err != nil {
+		return err
+	}
+	for stage := range operation.StageTimes {
+		if !stage.Valid() || frontendOnlyJournalStageForbidden(stage) {
+			return fmt.Errorf("persisted frontend-only operation stage history %q is not allowed", stage)
+		}
+	}
+	for _, progress := range operation.ProgressEvents {
+		if !frontendOnlyOperationStageAllowed(progress.Stage) {
+			return fmt.Errorf("persisted frontend-only operation progress stage %q is not allowed", progress.Stage)
+		}
+	}
+	return nil
+}
+
+// validateFrontendOnlyJournalStage keeps the journal replay exception narrow.
+// Frontend-only execution never owns the stop, migration, or Agent-verification
+// phases; accepting one of those checkpoints here would let a malformed durable
+// observation bypass ValidateExecutionTransition and strand the operation in a
+// lifecycle state that the scoped host executor cannot produce.
+func validateFrontendOnlyJournalStage(operation *domain.Operation, fromJournal bool, status domain.Status) error {
+	if !fromJournal || operation == nil || operation.EffectiveExecutionMode() != domain.ExecutionModeFrontendOnly {
+		return nil
+	}
+	if !frontendOnlyJournalStageForbidden(status) {
+		return nil
+	}
+	return fmt.Errorf("frontend-only host journal stage %q is not allowed", status)
+}
+
+func frontendOnlyJournalStageForbidden(status domain.Status) bool {
+	switch status {
+	case domain.StatusStopping, domain.StatusMigrating, domain.StatusAgentVerifying:
+		return true
+	default:
+		return false
+	}
+}
+
+func frontendOnlyJournalStageAllowed(status domain.Status) bool {
+	if frontendOnlyJournalStageForbidden(status) {
+		return false
+	}
+	switch status {
+	case domain.StatusQueued, domain.StatusPreflight, domain.StatusUpdating,
+		domain.StatusRestarting, domain.StatusVerifying, domain.StatusFailed,
+		domain.StatusNeedsRecovery, domain.StatusNeedsAttention:
+		return true
+	default:
+		return false
+	}
+}
+
+func frontendOnlyOperationStageAllowed(status domain.Status) bool {
+	return status.Valid() && !frontendOnlyJournalStageForbidden(status)
+}
+
+// validateJournalObservedDigests repeats the receipt service boundary at the
+// recovery application boundary. JournalEventReader is an interface, so a
+// replacement reader must not gain a wider evidence vocabulary than the file
+// reader's schema-validated receipt.
+func validateJournalObservedDigests(operation *domain.Operation, observed map[string]string) error {
+	if operation == nil {
+		return ErrUpgradeDependency
+	}
+	if operation.EffectiveExecutionMode() == domain.ExecutionModeFrontendOnly {
+		return validateFrontendOnlyObservedDigests(observed, "host journal observed digest")
+	}
+	for service, digest := range observed {
+		if !journalObservedDigestServiceAllowed(operation, service) {
+			return fmt.Errorf("host journal observed digest service %q is not allowed", service)
+		}
+		if !upgradeObservedDigestPattern.MatchString(digest) {
+			return fmt.Errorf("host journal observed digest for %q is invalid", service)
+		}
+	}
+	return nil
+}
+
+func validateFrontendOnlyObservedDigests(observed map[string]string, label string) error {
+	for service, digest := range observed {
+		if service != "frontend" {
+			return fmt.Errorf("%s service %q is not allowed", label, service)
+		}
+		if !upgradeObservedDigestPattern.MatchString(digest) {
+			return fmt.Errorf("%s for %q is invalid", label, service)
+		}
+	}
+	return nil
+}
+
+func journalObservedDigestServiceAllowed(operation *domain.Operation, service string) bool {
+	if operation != nil && operation.EffectiveExecutionMode() == domain.ExecutionModeFrontendOnly {
+		return service == "frontend"
+	}
+	switch service {
+	case "server", "frontend", "nginx", "agent":
+		return true
+	default:
+		return false
+	}
+}
+
+func validateHostEventScope(operation *domain.Operation, event HostUpgradeEvent) error {
+	if operation == nil {
+		return ErrUpgradeDependency
+	}
+	if operation.ExecutionMode == "" {
+		if event.ExecutionMode != "" || event.PlanDigest != "" || event.BaselineStateDigest != "" || len(event.TouchedServices) != 0 || event.ConfirmedDeploymentVersion != "" {
+			return fmt.Errorf("schema-v1 operation cannot accept scoped host journal")
+		}
+		return nil
+	}
+	summary := domain.PlanSummary{TouchedServices: append([]string(nil), event.TouchedServices...)}
+	if err := domain.ValidateScopePlan(event.ExecutionMode, summary, event.PlanDigest, event.BaselineStateDigest, event.ConfirmedDeploymentVersion); err != nil {
+		return fmt.Errorf("host journal scope is invalid: %w", err)
+	}
+	if event.ExecutionMode != operation.ExecutionMode || event.PlanDigest != operation.PlanDigest || event.BaselineStateDigest != operation.BaselineDeploymentDigest || event.ConfirmedDeploymentVersion != operation.ConfirmedDeploymentVersion || !sameScopeServices(event.TouchedServices, operation.PlanSummary.TouchedServices) {
+		return fmt.Errorf("host journal scope does not match persisted operation")
+	}
+	return nil
+}
+
+func sameScopeServices(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
+}
+
 // Recover is a short alias used by startup reconciliation callers.
 func (service *Service) Recover(ctx context.Context, event HostUpgradeEvent) (*domain.Operation, error) {
 	return service.ReconcileHostEvent(ctx, event)
@@ -226,14 +455,14 @@ func (service *Service) ReconcileJournalUnavailable(ctx context.Context, diagnos
 		status = domain.StatusNeedsRecovery
 	}
 	previous := operation.Status
-	if err := domain.ValidateTransition(previous, status); err != nil {
+	if err := domain.ValidateExecutionTransition(operation.EffectiveExecutionMode(), previous, status); err != nil {
 		// Queued/stopping rows predate the first executable checkpoint, so the
 		// ordinary failed transition is not legal for them. They still need a
 		// terminal, operator-visible outcome rather than a recovery loop that
 		// reports the same transition error forever.
 		if status == domain.StatusFailed {
 			status = domain.StatusNeedsAttention
-			if fallbackErr := domain.ValidateTransition(previous, status); fallbackErr != nil {
+			if fallbackErr := domain.ValidateExecutionTransition(operation.EffectiveExecutionMode(), previous, status); fallbackErr != nil {
 				return nil, fallbackErr
 			}
 		} else {
@@ -335,6 +564,9 @@ func (service *Service) operationProgressAt(operation *domain.Operation) time.Ti
 
 func operationNeedsRecovery(operation *domain.Operation) bool {
 	if operation == nil {
+		return false
+	}
+	if operation.EffectiveExecutionMode() == domain.ExecutionModeFrontendOnly {
 		return false
 	}
 	return operation.MigrationStatus == domain.MigrationStatusRunning ||

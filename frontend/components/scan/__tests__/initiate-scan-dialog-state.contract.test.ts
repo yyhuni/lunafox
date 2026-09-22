@@ -12,10 +12,11 @@ describe("initiate-scan-dialog-state contract", () => {
 
   it("resets configuration from the selected workflow's current singleton Profile", () => {
     expect(source).toContain("const handleResetWorkflowConfig = useCallback")
-    expect(source).toContain("const nextConfig = await loadProfileConfiguration(workflowName)")
+    expect(source).toContain("const { configuration: nextConfig, draft } = await loadProfileConfiguration(workflowName)")
     expect(source).toContain("const profile = await loadScanWorkflowProfile(workflowName)")
     expect(source).toContain("const draft = adaptWorkflowProfile(profile, workflow)")
     expect(source).toContain("serializeWorkflowProfileDraft(draft)")
+    expect(source).toContain("setWorkflowProfileDraft(draft)")
     expect(source).toContain("setIsConfigEdited(false)")
     expect(source).toContain("handleResetWorkflowConfig")
   })
@@ -30,5 +31,11 @@ describe("initiate-scan-dialog-state contract", () => {
     expect(source).toContain("const handleConfigSync = useCallback")
     expect(source).toContain("handleConfigSync")
     expect(source).toMatch(/const handleConfigSync = useCallback\(\(value: string\) => \{\s*setConfiguration\(value\)\s*\}, \[\]\)/)
+  })
+
+  it("owns a dialog-scoped form cache and clears it with the selected workflow session", () => {
+    expect(source).toContain("const formValuesCacheRef = useRef<EngineConfigFormValues>({})")
+    expect(source).toContain("formValuesCacheRef.current = {}")
+    expect(source).toContain("workflowProfileDraft")
   })
 })
