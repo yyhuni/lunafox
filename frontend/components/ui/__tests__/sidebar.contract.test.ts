@@ -5,6 +5,13 @@ import path from "node:path"
 const source = readFileSync(path.resolve(process.cwd(), "components/ui/sidebar.tsx"), "utf8")
 
 describe("sidebar contract", () => {
+  it("inherits the shared Tooltip timing policy without a sidebar exception", () => {
+    expect(source).toContain("<TooltipProvider>")
+    expect(source).not.toContain("<TooltipProvider delay=")
+    expect(source).not.toContain("<TooltipProvider closeDelay=")
+    expect(source).not.toContain("<TooltipProvider timeout=")
+  })
+
   it("keeps sidebar polymorphic composition project-owned instead of using Radix Slot", () => {
     expect(source).toContain('from "@/components/ui/polymorphic"')
     expect(source).not.toContain("@radix-ui/react-slot")

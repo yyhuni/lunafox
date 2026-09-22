@@ -29,6 +29,10 @@ describe("SelectedRowActionBar contract", () => {
     const source = readFileSync(componentPath, "utf8")
 
     expect(source).toContain('import { Button } from "@/components/ui/button"')
+    expect(source).toContain("<TooltipProvider>")
+    expect(source).not.toContain("<TooltipProvider delay=")
+    expect(source).not.toContain("<TooltipProvider closeDelay=")
+    expect(source).not.toContain("<TooltipProvider timeout=")
     expect(source).toContain('role="toolbar"')
     expect(source).toContain("aria-label={ariaLabel}")
     expect(source).toContain("countLabel")

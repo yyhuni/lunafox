@@ -8,13 +8,15 @@ import { useRouter } from "next/navigation"
 import {
   clearStoredUpgradeOperationId,
   getUpgradeErrorMessage,
+  isFrontendOnlyUpgrade,
   isUpgradeOperationTerminal,
   upgradeUserStageForStatus,
+  upgradeUserStagesForExecutionMode,
   useRetryUpgradeOperation,
   useStopUpgradeOperation,
   useUpgradeOperation,
 } from "@/hooks/use-version"
-import { UPGRADE_USER_STAGES, type UpgradeLogEntry, type UpgradeOperation, type UpgradeOperationStatus, type UpgradeUserStage } from "@/types/version.types"
+import { type UpgradeLogEntry, type UpgradeOperationFull, type UpgradeOperationStatus, type UpgradeUserStage } from "@/types/version.types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertDialog, AlertDialogClose, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
@@ -45,7 +47,7 @@ function formatTimestamp(value: string | undefined, locale: string): string {
   }).format(new Date(value))
 }
 
-function formatDuration(operation: UpgradeOperation, t: (key: string, params?: Record<string, number | string>) => string): string {
+function formatDuration(operation: UpgradeOperationFull, t: (key: string, params?: Record<string, number | string>) => string): string {
   const start = Date.parse(operation.createdAt)
   const end = Date.parse(operation.completedAt ?? operation.updatedAt)
   if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return t("summary.durationUnknown")
@@ -54,7 +56,7 @@ function formatDuration(operation: UpgradeOperation, t: (key: string, params?: R
   return t("summary.durationMinutes", { minutes: Math.max(1, Math.round(seconds / 60)) })
 }
 
-function stageTimestamp(operation: UpgradeOperation, stage: UpgradeUserStage): string | undefined {
+function stageTimestamp(operation: UpgradeOperationFull, stage: UpgradeUserStage): string | undefined {
   const values = STAGE_TIME_KEYS[stage]
     .map((key) => operation.stageTimes[key])
     .filter((value): value is string => Boolean(value))
@@ -62,20 +64,20 @@ function stageTimestamp(operation: UpgradeOperation, stage: UpgradeUserStage): s
   return values[0]
 }
 
-function highestObservedStageIndex(operation: UpgradeOperation): number {
-  return UPGRADE_USER_STAGES.reduce((highest, stage, index) => {
+function highestObservedStageIndex(operation: UpgradeOperationFull, stages: readonly UpgradeUserStage[]): number {
+  return stages.reduce((highest, stage, index) => {
     if (stage === "finished") return highest
     return stageTimestamp(operation, stage) ? Math.max(highest, index) : highest
   }, -1)
 }
 
-function progressValue(status: UpgradeOperationStatus | undefined): number {
+function progressValue(status: UpgradeOperationStatus | undefined, stages: readonly UpgradeUserStage[]): number {
   if (!status) return 0
   const stage = upgradeUserStageForStatus(status)
-  const index = UPGRADE_USER_STAGES.indexOf(stage)
+  const index = stages.indexOf(stage)
   if (index < 0) return 0
   if (stage === "finished") return 100
-  return Math.max(8, Math.round((index / (UPGRADE_USER_STAGES.length - 1)) * 100))
+  return Math.max(8, Math.round((index / (stages.length - 1)) * 100))
 }
 
 function statusVariant(status: UpgradeOperationStatus | undefined): "default" | "info" | "success" | "warning" | "error" {
@@ -110,13 +112,14 @@ function UpgradeStageTimeline({
   t,
   locale,
 }: {
-  operation: UpgradeOperation
+  operation: UpgradeOperationFull
   t: (key: string, params?: Record<string, number | string>) => string
   locale: string
 }) {
+  const stages = upgradeUserStagesForExecutionMode(operation.executionMode)
   const currentStage = upgradeUserStageForStatus(operation.status)
-  const currentIndex = UPGRADE_USER_STAGES.indexOf(currentStage)
-  const observedIndex = highestObservedStageIndex(operation)
+  const currentIndex = stages.indexOf(currentStage)
+  const observedIndex = highestObservedStageIndex(operation, stages)
   const terminal = isUpgradeOperationTerminal(operation.status)
 
   return (
@@ -130,16 +133,16 @@ function UpgradeStageTimeline({
       </div>
       {operation.status === "succeeded" || !isUpgradeOperationTerminal(operation.status) ? (
         <Progress
-          value={progressValue(operation.status)}
+          value={progressValue(operation.status, stages)}
           aria-label={t("timeline.phaseProgress")}
           aria-valuetext={t("timeline.stageCount", {
-            current: Math.min(UPGRADE_USER_STAGES.indexOf(currentStage) + 1, UPGRADE_USER_STAGES.length),
-            total: UPGRADE_USER_STAGES.length,
+            current: Math.min(stages.indexOf(currentStage) + 1, stages.length),
+            total: stages.length,
           })}
         />
       ) : null}
       <ol className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6" aria-label={t("timeline.stageList")}>
-        {UPGRADE_USER_STAGES.map((stage, index) => {
+        {stages.map((stage, index) => {
           const isCurrent = terminal ? stage === "finished" : index === currentIndex
           // Terminal states do not imply that every later phase ran. Use the
           // server's stage evidence so a stopped/failed operation cannot look
@@ -180,15 +183,24 @@ function UpgradeStageTimeline({
   )
 }
 
-function OperationFacts({ operation, t }: { operation: UpgradeOperation; t: (key: string, params?: Record<string, number | string>) => string }) {
-  const facts = [
+function OperationFacts({ operation, t }: { operation: UpgradeOperationFull; t: (key: string, params?: Record<string, number | string>) => string }) {
+  const frontendOnly = isFrontendOnlyUpgrade(operation)
+  const facts: Array<[string, string]> = [
     [t("facts.currentVersion"), operation.currentVersion],
+    [t("facts.confirmedDeploymentVersion"), operation.confirmedDeploymentVersion],
     [t("facts.targetVersion"), operation.releaseVersion],
     [t("facts.manifest"), operation.manifestId],
-    [t("facts.migration"), operation.migrationStatus === "not_started" ? t("facts.notStarted") : operation.migrationStatus],
-    [t("facts.cancelledWork"), t("facts.cancelledWorkValue", { scans: operation.cancelledScanCount, tasks: operation.cancelledTaskCount })],
-    [t("facts.agents"), t("facts.agentsValue", { ready: operation.agentSummary.ready, expected: operation.agentSummary.expected, missing: operation.agentSummary.missing, unhealthy: operation.agentSummary.unhealthy })],
+    [t("facts.scope"), t(frontendOnly ? "facts.scopeFrontendOnly" : "facts.scopeFull")],
   ]
+  if (!frontendOnly) {
+    facts.push([t("facts.migration"), operation.migrationStatus === "not_started" ? t("facts.notStarted") : operation.migrationStatus])
+    if (operation.workDisposition === "cancelled") {
+      facts.push([t("facts.cancelledWork"), t("facts.cancelledWorkValue", { scans: operation.cancelledScanCount, tasks: operation.cancelledTaskCount })])
+    } else {
+      facts.push([t("facts.workDispositionLabel"), t(`facts.workDisposition.${operation.workDisposition}`)])
+    }
+    facts.push([t("facts.agents"), t("facts.agentsValue", { ready: operation.agentSummary.ready, expected: operation.agentSummary.expected, missing: operation.agentSummary.missing, unhealthy: operation.agentSummary.unhealthy })])
+  }
   return (
     <dl className="grid gap-3 sm:grid-cols-2">
       {facts.map(([label, value]) => (
@@ -331,6 +343,7 @@ export function SystemUpgradeStatus() {
   const isRecovery = currentOperation.status === "needs_recovery"
   const isAttention = currentOperation.status === "needs_attention"
   const retryable = isFailure || isAttention
+  const frontendOnly = isFrontendOnlyUpgrade(currentOperation)
 
   return (
     <main
@@ -343,7 +356,7 @@ export function SystemUpgradeStatus() {
           <div className="min-w-0">
             <p className={textRole.monoLabel}>UPGRADE</p>
             <h1 className={cn(textRole.pageTitleDisplay, "mt-2 text-2xl")}>{t("title")}</h1>
-            <p className={cn(textRole.pageDescription, "mt-2 max-w-2xl")}>{t(terminal ? `statusDescription.${currentOperation.status}` : "description")}</p>
+            <p className={cn(textRole.pageDescription, "mt-2 max-w-2xl")}>{t(frontendOnly ? "frontendOnly.description" : terminal ? `statusDescription.${currentOperation.status}` : "description")}</p>
           </div>
           <Badge variant={statusVariant(currentOperation.status)} data-testid="system-upgrade-status-badge">
             {t(`status.${currentOperation.status}`)}
@@ -355,6 +368,14 @@ export function SystemUpgradeStatus() {
             <semanticIcons.status.unknown aria-hidden="true" />
             <AlertTitle>{t("reconnecting.title")}</AlertTitle>
             <AlertDescription>{t("reconnecting.description")}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {frontendOnly ? (
+          <Alert data-testid="system-upgrade-frontend-only-scope">
+            <semanticIcons.status.unknown aria-hidden="true" />
+            <AlertTitle>{t("frontendOnly.title")}</AlertTitle>
+            <AlertDescription>{t("frontendOnly.activeWork")}</AlertDescription>
           </Alert>
         ) : null}
 
@@ -426,11 +447,11 @@ export function SystemUpgradeStatus() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("stop.title")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("stop.description")}</AlertDialogDescription>
+          <AlertDialogDescription>{t(frontendOnly ? "stop.frontendOnlyDescription" : "stop.description")}</AlertDialogDescription>
           </AlertDialogHeader>
           <Alert>
             <semanticIcons.status.warning aria-hidden="true" />
-            <AlertDescription>{t("stop.warning")}</AlertDescription>
+            <AlertDescription>{t(frontendOnly ? "stop.frontendOnlyWarning" : "stop.warning")}</AlertDescription>
           </Alert>
           {stopMutation.isError ? (
             <p className="text-sm text-destructive">{getUpgradeErrorMessage(stopMutation.error)}</p>

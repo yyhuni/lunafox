@@ -12,6 +12,7 @@ describe("bulk-line-validation-input contract", () => {
     expect(source).toContain("lineHighlights")
     expect(source).toContain("blockingIssueCount")
     expect(source).toContain("advisoryIssueCount")
+    expect(source).toContain("labelAccessory?: React.ReactNode")
     expect(source).toContain("labelClassName?: string")
     expect(source).toContain("fillHeight?: boolean")
     expect(source).toContain("showEmptySummary?: boolean")

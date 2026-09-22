@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { TargetValidator } from "@/lib/target-validator"
+import { MAX_TARGET_BATCH_SIZE, TargetValidator } from "@/lib/target-validator"
 import { useBatchCreateTargets } from "@/hooks/use-targets"
 import type { BatchCreateResponse } from "@/types/api-response.types"
 
@@ -27,10 +27,7 @@ export function useLinkTargetDialogState({
     targets: z.string()
       .min(1, { message: t("validation.required") })
       .refine(
-        (value) => {
-          const lines = value.split("\n").map((item) => item.trim()).filter((item) => item.length > 0)
-          return lines.length > 0
-        },
+        (value) => TargetValidator.parseLines(value).length > 0,
         { message: t("validation.required") }
       ),
   }), [t])
@@ -81,23 +78,14 @@ export function useLinkTargetDialogState({
       invalid,
     }
   }, [targetsText, t])
+  const isTargetBatchOverLimit = targetValidation.count > MAX_TARGET_BATCH_SIZE
 
   const onSubmit = (values: FormValues) => {
-    if (targetValidation.invalid.length > 0) {
-      return
-    }
+    const submittedTargets = TargetValidator.parseLines(values.targets)
+    if (submittedTargets.length === 0 || submittedTargets.length > MAX_TARGET_BATCH_SIZE) return
+    if (TargetValidator.validateTargetBatch(submittedTargets).some((result) => !result.isValid)) return
 
-    const targetList = values.targets
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-      .map((name) => ({
-        name,
-      }))
-
-    if (targetList.length === 0) {
-      return
-    }
+    const targetList = submittedTargets.map(({ target: name }) => ({ name }))
 
     batchCreateTargets.mutate(
       {
@@ -141,7 +129,7 @@ export function useLinkTargetDialogState({
     }
   }
 
-  const isFormValid = form.formState.isValid && targetValidation.invalid.length === 0
+  const isFormValid = form.formState.isValid && targetValidation.invalid.length === 0 && !isTargetBatchOverLimit
 
   const handleTextareaScroll = (event: React.UIEvent<HTMLTextAreaElement>) => {
     if (lineNumbersRef.current) {
@@ -156,6 +144,7 @@ export function useLinkTargetDialogState({
     lineNumbersRef,
     textareaRef,
     targetValidation,
+    isTargetBatchOverLimit,
     isFormValid,
     handleTextareaScroll,
     batchCreateTargets,

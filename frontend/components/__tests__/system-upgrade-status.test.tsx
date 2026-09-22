@@ -12,11 +12,16 @@ vi.mock("next/navigation", () => ({
 
 import { renderWithProviders } from "@/test/utils/render-with-providers"
 import { SystemUpgradeStatus } from "@/components/system-upgrade-status"
-import type { UpgradeOperation } from "@/types/version.types"
+import type { UpgradeOperationFull } from "@/types/version.types"
 
 const digest = `sha256:${"a".repeat(64)}`
+const FULL_ONLY_OPERATION_FIELDS = new Set(["executionMode", "workDisposition", "planSummary", "confirmedDeploymentVersion"])
 
-function makeOperation(status: UpgradeOperation["status"]): UpgradeOperation {
+function toBasicOperation(operation: UpgradeOperationFull): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(operation).filter(([key]) => !FULL_ONLY_OPERATION_FIELDS.has(key)))
+}
+
+function makeOperation(status: UpgradeOperationFull["status"]): UpgradeOperationFull {
   return {
     name: "upgradeOperations/11111111-1111-4111-8111-111111111111",
     operationId: "11111111-1111-4111-8111-111111111111",
@@ -41,6 +46,10 @@ function makeOperation(status: UpgradeOperation["status"]): UpgradeOperation {
     createdAt: "2026-09-13T12:00:00Z",
     updatedAt: "2026-09-13T12:05:00Z",
     completedAt: status === "succeeded" || status === "failed" ? "2026-09-13T12:05:00Z" : null,
+    executionMode: "full",
+    workDisposition: "cancelled",
+    planSummary: { touchedServices: ["agent", "bootstrap", "engine", "engine_package", "engine_runtime", "frontend", "migration", "nginx", "server"] },
+    confirmedDeploymentVersion: status === "succeeded" ? "1.1.0" : "1.0.0",
   }
 }
 
@@ -72,7 +81,7 @@ describe("system upgrade status", () => {
     const retried = makeOperation("queued")
     window.localStorage.setItem("lunafox.upgrade.operationId", failed.operationId)
     apiMocks.get.mockResolvedValue({ data: failed })
-    apiMocks.post.mockResolvedValue({ data: retried })
+    apiMocks.post.mockResolvedValue({ data: toBasicOperation(retried) })
 
     renderWithProviders(<SystemUpgradeStatus />)
     await screen.findByTestId("system-upgrade-status")
@@ -131,5 +140,34 @@ describe("system upgrade status", () => {
     expect(viewer).toHaveTextContent("Pulling release images")
     expect(viewer).toHaveTextContent("Updating core services")
     expect(screen.getByRole("button", { name: "logs.copy" })).toBeEnabled()
+  })
+
+  it("renders a frontend-only timeline without stopping, migration, cancellation, or Agent claims", async () => {
+    const operation = {
+      ...makeOperation("restarting"),
+      executionMode: "frontend_only" as const,
+      workDisposition: "not_required" as const,
+      planSummary: { touchedServices: ["frontend"] },
+      stageTimes: {
+        queued: "2026-09-13T12:00:00Z",
+        preflight: "2026-09-13T12:01:00Z",
+        updating: "2026-09-13T12:02:00Z",
+        restarting: "2026-09-13T12:03:00Z",
+      },
+    }
+    window.localStorage.setItem("lunafox.upgrade.operationId", operation.operationId)
+    apiMocks.get.mockResolvedValue({ data: operation })
+
+    renderWithProviders(<SystemUpgradeStatus />)
+
+    expect(await screen.findByTestId("system-upgrade-status")).toBeInTheDocument()
+    expect(screen.getByTestId("system-upgrade-frontend-only-scope")).toBeInTheDocument()
+    const stages = screen.getByLabelText("timeline.stageList")
+    expect(stages.querySelector('[data-stage="stopping"]')).toBeNull()
+    expect(stages.querySelector('[data-stage="preparing"]')).toBeInTheDocument()
+    expect(stages.querySelector('[data-stage="restarting"]')).toHaveAttribute("data-stage-state", "current")
+    expect(screen.queryByText("facts.migration")).not.toBeInTheDocument()
+    expect(screen.queryByText("facts.cancelledWork")).not.toBeInTheDocument()
+    expect(screen.queryByText("facts.agents")).not.toBeInTheDocument()
   })
 })

@@ -20,6 +20,7 @@ const scan = (overrides: Partial<ScheduledScan>): ScheduledScan => ({
   targetName: overrides.targetName ?? null,
   scanMode: overrides.scanMode ?? "organization",
   inputSource: overrides.inputSource ?? "scanSnapshot",
+  timeZone: overrides.timeZone ?? "UTC",
   cronExpression: overrides.cronExpression ?? "0 2 * * *",
   isEnabled: overrides.isEnabled ?? true,
   nextRunTime: overrides.nextRunTime ?? null,

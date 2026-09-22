@@ -40,3 +40,37 @@ func (loader *CacheInstallerExactPackageLoader) LoadExactPackage(
 		Layout:        cached.Layout,
 	}, nil
 }
+
+// ReadOnlyCacheInstallerExactPackageLoader exposes the same exact package
+// validation for diagnostics and host observations without allowing a corrupt
+// derivative cache to be rebuilt as a side effect of a read.
+type ReadOnlyCacheInstallerExactPackageLoader struct {
+	cache engineinstall.CacheInstaller
+}
+
+var _ ExactPackageCacheLoader = (*ReadOnlyCacheInstallerExactPackageLoader)(nil)
+
+func NewReadOnlyCacheInstallerExactPackageLoader(
+	cache engineinstall.CacheInstaller,
+) (*ReadOnlyCacheInstallerExactPackageLoader, error) {
+	if strings.TrimSpace(cache.Root) == "" || cache.MaxArchiveBytes <= 0 {
+		return nil, fmt.Errorf("Engine Package v2 cache root and size limit are required")
+	}
+	return &ReadOnlyCacheInstallerExactPackageLoader{cache: cache}, nil
+}
+
+func (loader *ReadOnlyCacheInstallerExactPackageLoader) LoadExactPackage(
+	expectedDigest ociartifact.PackageDigest,
+) (ExactPackageCacheEntry, error) {
+	if loader == nil {
+		return ExactPackageCacheEntry{}, fmt.Errorf("read-only Engine Package v2 cache loader is required")
+	}
+	cached, err := loader.cache.LoadExactPackage(expectedDigest)
+	if err != nil {
+		return ExactPackageCacheEntry{}, err
+	}
+	return ExactPackageCacheEntry{
+		PackageDigest: cached.PackageDigest,
+		Layout:        cached.Layout,
+	}, nil
+}

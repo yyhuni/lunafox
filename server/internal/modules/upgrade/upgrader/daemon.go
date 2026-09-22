@@ -60,7 +60,7 @@ func VerifyDeploymentManifest(manifestPath, expectedDigest string) error {
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
 		return fmt.Errorf("deployment manifest must be a regular file")
 	}
-	manifest, err := releasemanifest.Load(manifestPath)
+	manifest, err := loadManifestWithLegacyCompatibility(manifestPath)
 	if err != nil {
 		return fmt.Errorf("validate deployment manifest: %w", err)
 	}
@@ -76,6 +76,7 @@ type Daemon struct {
 	store          *JournalStore
 	executor       Executor
 	verifyManifest ManifestVerifier
+	scopePlanner   ScopePlanner
 	listener       net.Listener
 	lock           *fileLock
 
@@ -94,13 +95,42 @@ type Daemon struct {
 }
 
 func NewDaemon(store *JournalStore, executor Executor) *Daemon {
+	var observer RuntimeObserver
+	var candidate CandidateDeploymentSource
+	// Digest-addressed composition evidence exists only in the public release
+	// layout. Legacy/development stores still advertise the protocol envelope,
+	// but their planner must deliberately produce a full plan from the fixed
+	// manifest rather than failing a v2 negotiation on a missing cache.
+	candidate = NewManifestCandidateDeploymentSource(store)
+	if store != nil && store.manifestCache {
+		candidate = NewCompositionCandidateDeploymentSource(store)
+	}
+	if composeExecutor, ok := executor.(*ComposeExecutor); ok {
+		observer = NewDockerRuntimeObserver(composeExecutor)
+		if dockerObserver, ok := observer.(*DockerRuntimeObserver); ok && store != nil {
+			dockerObserver.SetDeploymentRoot(store.DeploymentRoot())
+		}
+	}
 	return &Daemon{
 		store:           store,
 		executor:        executor,
 		verifyManifest:  VerifyDeploymentManifest,
+		scopePlanner:    NewHostScopePlanner(store, candidate, observer),
 		executing:       make(map[string]context.CancelFunc),
 		cancelRequested: make(map[string]struct{}),
 	}
+}
+
+// SetScopePlanner replaces host-side scope planning for production wiring and
+// hermetic tests. A nil planner deliberately disables v2 planning rather than
+// letting the daemon manufacture a scope from a request or release manifest.
+func (daemon *Daemon) SetScopePlanner(planner ScopePlanner) {
+	if daemon == nil {
+		return
+	}
+	daemon.mu.Lock()
+	daemon.scopePlanner = planner
+	daemon.mu.Unlock()
 }
 
 // SetManifestVerifier exists for hermetic tests and for distributions that
@@ -209,10 +239,17 @@ func (daemon *Daemon) Serve(ctx context.Context) (serveErr error) {
 		serveErr = errors.Join(serveErr, daemon.Close())
 	}()
 	defer runCancel()
+	// A pending v2 confirmation keeps the deployment lock as a fence. Establish
+	// that fence before resuming the journal or accepting a socket request; an
+	// asynchronous acquisition would leave a window in which confirm could
+	// promote a staged override while a lifecycle command mutates the same
+	// deployment.
+	if err := daemon.ensureRecoveryFence(runCtx); err != nil && !errors.Is(err, ErrJournalNotFound) {
+		return err
+	}
 	if err := daemon.resumeCurrent(runCtx); err != nil && !errors.Is(err, ErrJournalNotFound) {
 		return err
 	}
-	daemon.ensureRecoveryFence(runCtx)
 	// Capture the listener while holding the daemon mutex. Close clears the
 	// field during shutdown; the accept loop must keep using this stable local
 	// handle until the listener is closed, otherwise shutdown races with Accept.
@@ -298,7 +335,7 @@ func (daemon *Daemon) Close() error {
 	deploymentLock := daemon.deploymentLock
 	daemon.mu.Unlock()
 	if deploymentLock != nil {
-		if journal, loadErr := daemon.store.LoadCurrent(); loadErr == nil && !requiresRecoveryFence(journal.Stage) {
+		if journal, loadErr := daemon.store.LoadCurrent(); loadErr == nil && !requiresDeploymentFence(journal) {
 			if err := deploymentLock.Release(); err != nil && firstErr == nil {
 				firstErr = err
 			}
@@ -324,11 +361,33 @@ func (daemon *Daemon) resumeCurrent(ctx context.Context) error {
 	if IsTerminal(journal.Stage) || daemon.executor == nil {
 		return nil
 	}
+	// A frontend-only receipt proves the host handoff already completed. Its
+	// baseline intentionally still names the previous frontend digest until
+	// confirm promotes the staged override, so replaying/revalidating here would
+	// turn a completed handoff into a false stale-plan failure after a restart.
+	pending, err := daemon.store.frontendOnlyConfirmationPending(journal)
+	if err != nil {
+		return err
+	}
+	if pending {
+		return nil
+	}
 	request := Request{
 		SchemaVersion:  RequestSchema,
 		OperationID:    journal.OperationID,
 		Action:         ActionResume,
 		ManifestDigest: journal.ManifestDigest,
+	}
+	if journal.SchemaVersion == ScopedJournalSchema {
+		request.SchemaVersion = ScopedRequestSchema
+		request.ExecutionMode = journal.ExecutionMode
+		request.PlanDigest = journal.PlanDigest
+		request.BaselineStateDigest = journal.BaselineStateDigest
+		request.TouchedServices = append([]string(nil), journal.TouchedServices...)
+		request.ConfirmedDeploymentVersion = journal.ConfirmedDeploymentVersion
+		if _, err := daemon.validatePlanBoundRequest(request); err != nil {
+			return daemon.failJournal(request, err)
+		}
 	}
 	if daemon.verifyManifest != nil {
 		if err := daemon.verifyRequestManifest(request.ManifestDigest); err != nil {
@@ -367,9 +426,27 @@ func (daemon *Daemon) serveConnection(connection net.Conn) {
 
 func (daemon *Daemon) accept(request Request) Response {
 	if err := request.Validate(); err != nil {
-		return rejectedResponse(err)
+		return rejectedResponseFor(responseSchemaFor(request), err)
+	}
+	switch request.Action {
+	case ActionCapabilities:
+		return daemon.acceptCapabilities(request)
+	case ActionPlan:
+		return daemon.acceptScopePlan(request)
+	case ActionConfirm:
+		return daemon.acceptConfirmation(request)
+	case ActionDeploymentState:
+		return daemon.acceptDeploymentState(request)
+	case ActionCandidateAvailability:
+		return daemon.acceptCandidateAvailability(request)
 	}
 	daemon.mu.Lock()
+	if request.SchemaVersion == ScopedRequestSchema {
+		if _, err := daemon.validatePlanBoundRequest(request); err != nil {
+			daemon.mu.Unlock()
+			return rejectedResponseFor(request.SchemaVersion, err)
+		}
+	}
 
 	current, currentErr := daemon.store.LoadCurrent()
 	if currentErr != nil && !errors.Is(currentErr, ErrJournalNotFound) {
@@ -377,12 +454,12 @@ func (daemon *Daemon) accept(request Request) Response {
 		// Refuse new work until the operator repairs the journal, otherwise a
 		// fresh request could overwrite the only durable recovery evidence.
 		daemon.mu.Unlock()
-		return rejectedResponse(currentErr)
+		return rejectedResponseFor(request.SchemaVersion, currentErr)
 	}
 	history, historyErr := daemon.store.LoadOperation(request.OperationID)
 	if historyErr != nil && !errors.Is(historyErr, ErrJournalNotFound) {
 		daemon.mu.Unlock()
-		return rejectedResponse(historyErr)
+		return rejectedResponseFor(request.SchemaVersion, historyErr)
 	}
 	if request.Action == ActionStop {
 		response := daemon.acceptStopLocked(request, current, currentErr, history, historyErr)
@@ -392,7 +469,11 @@ func (daemon *Daemon) accept(request Request) Response {
 	if historyErr == nil {
 		if history.ManifestDigest != request.ManifestDigest {
 			daemon.mu.Unlock()
-			return rejectedResponse(ErrReplayDigestMismatch)
+			return rejectedResponseFor(request.SchemaVersion, ErrReplayDigestMismatch)
+		}
+		if err := validateJournalRequestScope(history, request); err != nil {
+			daemon.mu.Unlock()
+			return rejectedResponseFor(request.SchemaVersion, err)
 		}
 		// Save writes current before the per-operation copy. If a process was
 		// interrupted between those writes, current is the newer complete
@@ -407,78 +488,312 @@ func (daemon *Daemon) accept(request Request) Response {
 		// stale operation's identity.
 		if currentErr == nil && current.OperationID != request.OperationID && !IsTerminal(history.Stage) {
 			daemon.mu.Unlock()
-			return rejectedResponse(ErrOperationInProgress)
+			return rejectedResponseFor(request.SchemaVersion, ErrOperationInProgress)
+		}
+		pendingConfirmation, pendingErr := daemon.store.frontendOnlyConfirmationPending(history)
+		if pendingErr != nil {
+			daemon.mu.Unlock()
+			return rejectedResponseFor(request.SchemaVersion, pendingErr)
 		}
 		if IsTerminal(history.Stage) {
 			if request.Action == ActionRepair {
 				if _, exists := daemon.executing[request.OperationID]; exists {
 					daemon.mu.Unlock()
-					return rejectedResponse(ErrRepairNotAllowed)
+					return rejectedResponseFor(request.SchemaVersion, ErrRepairNotAllowed)
 				}
 				if daemon.verifyManifest != nil {
 					if err := daemon.verifyRequestManifest(request.ManifestDigest); err != nil {
 						daemon.mu.Unlock()
-						return rejectedResponse(ErrManifestMismatch)
+						return rejectedResponseFor(request.SchemaVersion, ErrManifestMismatch)
 					}
 				}
 				repaired, err := daemon.store.ResetForRepair(request.OperationID, request.ManifestDigest)
 				if err != nil {
 					daemon.mu.Unlock()
-					return rejectedResponse(err)
+					return rejectedResponseFor(request.SchemaVersion, err)
 				}
 				daemon.launchExecutionLocked(context.Background(), request)
 				daemon.mu.Unlock()
-				return Response{SchemaVersion: RequestSchema, Accepted: true, Repaired: true, Journal: repaired}
+				return executionResponse(request, repaired, false, true)
 			}
 			if request.Action == ActionResume {
 				daemon.mu.Unlock()
-				return rejectedResponse(ErrRepairRequired)
+				return rejectedResponseFor(request.SchemaVersion, ErrRepairRequired)
 			}
 			daemon.mu.Unlock()
-			return Response{SchemaVersion: RequestSchema, Accepted: true, Replayed: true, Journal: history}
+			return executionResponse(request, history, true, false)
+		}
+		if pendingConfirmation {
+			// Host verification and receipt persistence already completed. Keep a
+			// duplicate start/resume idempotent while the Server performs confirm;
+			// launching here would revalidate against the pre-promotion baseline.
+			daemon.mu.Unlock()
+			return executionResponse(request, history, true, false)
 		}
 		if request.Action == ActionRepair {
 			daemon.mu.Unlock()
-			return rejectedResponse(ErrRepairNotAllowed)
+			return rejectedResponseFor(request.SchemaVersion, ErrRepairNotAllowed)
 		}
 		if request.Action != ActionResume && request.Action != ActionStart {
 			daemon.mu.Unlock()
-			return rejectedResponse(ErrResumeNotFound)
+			return rejectedResponseFor(request.SchemaVersion, ErrResumeNotFound)
 		}
 		if _, exists := daemon.executing[request.OperationID]; exists {
 			daemon.mu.Unlock()
-			return Response{SchemaVersion: RequestSchema, Accepted: true, Replayed: true, Journal: history}
+			return executionResponse(request, history, true, false)
 		}
 		if daemon.verifyManifest != nil {
 			if err := daemon.verifyRequestManifest(request.ManifestDigest); err != nil {
 				daemon.mu.Unlock()
-				return rejectedResponse(ErrManifestMismatch)
+				return rejectedResponseFor(request.SchemaVersion, ErrManifestMismatch)
 			}
 		}
 		daemon.launchExecutionLocked(context.Background(), request)
 		daemon.mu.Unlock()
-		journal := history
-		return Response{SchemaVersion: RequestSchema, Accepted: true, Replayed: true, Journal: journal}
+		return executionResponse(request, history, true, false)
 	}
 	if currentErr == nil && !IsTerminal(current.Stage) {
 		daemon.mu.Unlock()
-		return rejectedResponse(ErrOperationInProgress)
+		return rejectedResponseFor(request.SchemaVersion, ErrOperationInProgress)
 	}
 	if request.Action == ActionResume {
 		daemon.mu.Unlock()
-		return rejectedResponse(ErrResumeNotFound)
+		return rejectedResponseFor(request.SchemaVersion, ErrResumeNotFound)
 	}
 	if request.Action == ActionRepair {
 		daemon.mu.Unlock()
-		return rejectedResponse(ErrRepairNotAllowed)
+		return rejectedResponseFor(request.SchemaVersion, ErrRepairNotAllowed)
 	}
 	if daemon.verifyManifest != nil {
 		if err := daemon.verifyRequestManifest(request.ManifestDigest); err != nil {
 			daemon.mu.Unlock()
-			return rejectedResponse(ErrManifestMismatch)
+			return rejectedResponseFor(request.SchemaVersion, ErrManifestMismatch)
 		}
 	}
-	now := time.Now().UTC()
+	journal := journalForRequest(request, time.Now().UTC())
+	if err := daemon.store.Save(journal); err != nil {
+		daemon.mu.Unlock()
+		return rejectedResponseFor(request.SchemaVersion, err)
+	}
+	daemon.launchExecutionLocked(context.Background(), request)
+	daemon.mu.Unlock()
+	return executionResponse(request, journal, false, false)
+}
+
+func (daemon *Daemon) acceptCapabilities(request Request) Response {
+	daemon.mu.Lock()
+	planner := daemon.scopePlanner
+	daemon.mu.Unlock()
+	capabilities := HostCapabilities{SchemaVersions: []int{RequestSchema}}
+	if planner != nil {
+		capabilities = planner.Capabilities()
+	}
+	// ScopePlanner implementations own the slice returned from Capabilities.
+	// Clone before filtering v3 so negotiation cannot mutate custom planner state.
+	capabilities = cloneHostCapabilities(capabilities)
+	if _, supported := planner.(CandidateAvailabilityPlanner); !supported {
+		// A custom planner may implement only the v2 planning contract. Never
+		// advertise a v3 action that this daemon cannot actually dispatch.
+		capabilities.CandidateInventoryAvailability = false
+		filteredSchemas := capabilities.SchemaVersions[:0]
+		for _, schema := range capabilities.SchemaVersions {
+			if schema != RequestSchemaV3 {
+				filteredSchemas = append(filteredSchemas, schema)
+			}
+		}
+		capabilities.SchemaVersions = filteredSchemas
+	}
+	capabilities = projectHostCapabilitiesForSchema(capabilities, request.SchemaVersion)
+	if err := capabilities.Validate(); err != nil {
+		return rejectedResponseFor(request.SchemaVersion, err)
+	}
+	return Response{SchemaVersion: request.SchemaVersion, Accepted: true, Capabilities: &capabilities}
+}
+
+// acceptDeploymentState is a read-only v2 projection. It intentionally has no
+// operation binding: availability checks need the last confirmed inventory even
+// when the running Server binary predates the deployment that established it.
+func (daemon *Daemon) acceptDeploymentState(request Request) Response {
+	state, err := daemon.store.LoadConfirmedDeploymentState()
+	if err != nil {
+		return rejectedResponseFor(request.SchemaVersion, err)
+	}
+	return Response{
+		SchemaVersion:            request.SchemaVersion,
+		Accepted:                 true,
+		ConfirmedDeploymentState: &state,
+	}
+}
+
+// acceptCandidateAvailability is a schema-v3 read-only comparison. It must not
+// allocate an operation, persist a scope plan, or acquire the deployment lock:
+// the result only controls whether the Server presents a candidate at all.
+func (daemon *Daemon) acceptCandidateAvailability(request Request) Response {
+	daemon.mu.Lock()
+	planner := daemon.scopePlanner
+	daemon.mu.Unlock()
+	availabilityPlanner, ok := planner.(CandidateAvailabilityPlanner)
+	if !ok || availabilityPlanner == nil {
+		return rejectedResponseFor(request.SchemaVersion, fmt.Errorf("host candidate availability is not supported"))
+	}
+	availability, err := availabilityPlanner.CandidateAvailability(context.Background(), request.ManifestDigest)
+	if err != nil {
+		return rejectedResponseFor(request.SchemaVersion, err)
+	}
+	return Response{
+		SchemaVersion:         request.SchemaVersion,
+		Accepted:              true,
+		CandidateAvailability: &availability,
+	}
+}
+
+func (daemon *Daemon) acceptScopePlan(request Request) Response {
+	daemon.mu.Lock()
+	planner := daemon.scopePlanner
+	daemon.mu.Unlock()
+	if planner == nil {
+		return rejectedResponseFor(request.SchemaVersion, fmt.Errorf("host scope planning is not supported"))
+	}
+	plan, err := planner.Plan(context.Background(), request.OperationID, request.ManifestDigest, request.RequireFull)
+	if err != nil {
+		return rejectedResponseFor(request.SchemaVersion, err)
+	}
+	if err := daemon.store.SaveScopePlan(plan); err != nil {
+		return rejectedResponseFor(request.SchemaVersion, err)
+	}
+	// Return the persisted plan rather than a freshly generated equivalent plan.
+	// GeneratedAt is not part of the digest, while the on-disk copy is the exact
+	// evidence the subsequent plan-bound start must match.
+	persisted, err := daemon.store.LoadScopePlan(request.OperationID)
+	if err != nil {
+		return rejectedResponseFor(request.SchemaVersion, err)
+	}
+	return Response{SchemaVersion: request.SchemaVersion, Accepted: true, ScopePlan: &persisted}
+}
+
+func (daemon *Daemon) acceptConfirmation(request Request) Response {
+	daemon.mu.Lock()
+	releaseLockAfterConfirmation := false
+	defer func() {
+		daemon.mu.Unlock()
+		if releaseLockAfterConfirmation {
+			daemon.releaseDeploymentLock()
+		}
+	}()
+	if _, running := daemon.executing[request.OperationID]; running {
+		return rejectedResponseFor(request.SchemaVersion, ErrOperationInProgress)
+	}
+	plan, err := daemon.validatePlanBoundRequest(request)
+	if err != nil {
+		return rejectedResponseFor(request.SchemaVersion, err)
+	}
+	journal, receipt, err := daemon.store.ReconcileReceipt(request.OperationID, request.ManifestDigest)
+	if err != nil {
+		return rejectedResponseFor(request.SchemaVersion, err)
+	}
+	if err := validateJournalRequestScope(journal, request); err != nil {
+		return rejectedResponseFor(request.SchemaVersion, err)
+	}
+	if journal.Stage != StageVerifying && journal.Stage != StageSucceeded {
+		return rejectedResponseFor(request.SchemaVersion, fmt.Errorf("host execution has not reached verification"))
+	}
+	if err := validateReceiptAgainstScopePlan(receipt, plan); err != nil {
+		return rejectedResponseFor(request.SchemaVersion, err)
+	}
+
+	state, stateErr := daemon.store.LoadConfirmedDeploymentState()
+	// A confirmation that changes host state must be serialized with lifecycle
+	// scripts. A terminal replay with the exact already-confirmed identity is
+	// read/idempotent and does not need to reacquire a lock that was released
+	// after the original confirmation.
+	if journal.Stage != StageSucceeded || stateErr != nil || !sameConfirmationIdentity(state, plan) {
+		if err := daemon.requireDeploymentLockLocked(request.OperationID); err != nil {
+			return rejectedResponseFor(request.SchemaVersion, err)
+		}
+	}
+	if stateErr == nil && sameConfirmationIdentity(state, plan) {
+		if journal.Stage != StageSucceeded {
+			journal, err = daemon.store.Checkpoint(request.OperationID, request.ManifestDigest, StageSucceeded, "", nil)
+			if err != nil {
+				return rejectedResponseFor(request.SchemaVersion, err)
+			}
+		}
+		releaseLockAfterConfirmation = true
+		return Response{SchemaVersion: request.SchemaVersion, Accepted: true, Journal: journal, ConfirmedDeploymentState: &state}
+	}
+	if stateErr != nil && !errors.Is(stateErr, ErrConfirmedStateNotFound) {
+		return rejectedResponseFor(request.SchemaVersion, stateErr)
+	}
+	var liveObservation *RuntimeObservation
+	if plan.ExecutionMode == ExecutionModeFull {
+		verifier, ok := daemon.scopePlanner.(FullDeploymentConfirmation)
+		if !ok {
+			return rejectedResponseFor(request.SchemaVersion, fmt.Errorf("full confirmation requires live deployment observation"))
+		}
+		observation, observeErr := verifier.ObserveFullDeployment(context.Background(), plan)
+		if observeErr != nil {
+			return rejectedResponseFor(request.SchemaVersion, observeErr)
+		}
+		liveObservation = &observation
+	}
+	if plan.ExecutionMode == ExecutionModeFrontendOnly {
+		promoter, ok := daemon.executor.(interface {
+			PromoteFrontendOnlyComposeOverride(*JournalStore, string, *releasemanifest.Manifest) error
+		})
+		if !ok {
+			return rejectedResponseFor(request.SchemaVersion, fmt.Errorf("frontend-only confirmation requires a scoped Compose executor"))
+		}
+		manifestPath, pathErr := daemon.store.ManifestPath(request.ManifestDigest)
+		if pathErr != nil {
+			return rejectedResponseFor(request.SchemaVersion, pathErr)
+		}
+		manifest, loadErr := loadManifestWithLegacyCompatibility(manifestPath)
+		if loadErr != nil || manifest.Digest() != request.ManifestDigest {
+			return rejectedResponseFor(request.SchemaVersion, ErrManifestMismatch)
+		}
+		if promoteErr := promoter.PromoteFrontendOnlyComposeOverride(daemon.store, request.OperationID, manifest); promoteErr != nil {
+			return rejectedResponseFor(request.SchemaVersion, promoteErr)
+		}
+	}
+	if liveObservation != nil {
+		state, err = confirmedDeploymentStateFromPlan(plan, time.Now().UTC(), *liveObservation)
+	} else {
+		state, err = confirmedDeploymentStateFromPlan(plan, time.Now().UTC())
+	}
+	if err != nil {
+		return rejectedResponseFor(request.SchemaVersion, err)
+	}
+	if err := daemon.store.SaveConfirmedDeploymentState(state); err != nil {
+		return rejectedResponseFor(request.SchemaVersion, err)
+	}
+	if journal.Stage != StageSucceeded {
+		journal, err = daemon.store.Checkpoint(request.OperationID, request.ManifestDigest, StageSucceeded, "", nil)
+		if err != nil {
+			return rejectedResponseFor(request.SchemaVersion, err)
+		}
+	}
+	releaseLockAfterConfirmation = true
+	return Response{SchemaVersion: request.SchemaVersion, Accepted: true, Journal: journal, ConfirmedDeploymentState: &state}
+}
+
+func (daemon *Daemon) validatePlanBoundRequest(request Request) (ScopePlan, error) {
+	if daemon == nil || daemon.store == nil {
+		return ScopePlan{}, fmt.Errorf("upgrader daemon is not configured")
+	}
+	if request.SchemaVersion != ScopedRequestSchema {
+		return ScopePlan{}, nil
+	}
+	plan, err := daemon.store.LoadScopePlan(request.OperationID)
+	if err != nil {
+		return ScopePlan{}, err
+	}
+	if plan.ManifestDigest != request.ManifestDigest || !sameScopeEvidence(plan.ExecutionMode, plan.PlanDigest, plan.BaselineStateDigest, plan.TouchedServices, plan.ConfirmedDeploymentVersion, request.ExecutionMode, request.PlanDigest, request.BaselineStateDigest, request.TouchedServices, request.ConfirmedDeploymentVersion) {
+		return ScopePlan{}, ErrScopePlanStale
+	}
+	return plan, nil
+}
+
+func journalForRequest(request Request, now time.Time) Journal {
 	journal := Journal{
 		SchemaVersion:  JournalSchema,
 		OperationID:    request.OperationID,
@@ -486,15 +801,78 @@ func (daemon *Daemon) accept(request Request) Response {
 		Stage:          StageQueued,
 		StartedAt:      now,
 		UpdatedAt:      now,
+		StageUpdatedAt: now,
 	}
-	if err := daemon.store.Save(journal); err != nil {
-		daemon.mu.Unlock()
-		return rejectedResponse(err)
+	if request.SchemaVersion == ScopedRequestSchema {
+		journal.SchemaVersion = ScopedJournalSchema
+		journal.ExecutionMode = request.ExecutionMode
+		journal.PlanDigest = request.PlanDigest
+		journal.BaselineStateDigest = request.BaselineStateDigest
+		journal.TouchedServices = append([]string(nil), request.TouchedServices...)
+		journal.ConfirmedDeploymentVersion = request.ConfirmedDeploymentVersion
 	}
-	response := Response{SchemaVersion: RequestSchema, Accepted: true, Journal: journal}
-	daemon.launchExecutionLocked(context.Background(), request)
-	daemon.mu.Unlock()
-	return response
+	return journal
+}
+
+func validateJournalRequestScope(journal Journal, request Request) error {
+	if request.SchemaVersion == RequestSchema {
+		if journal.SchemaVersion != JournalSchema {
+			return ErrScopePlanStale
+		}
+		return nil
+	}
+	if journal.SchemaVersion != ScopedJournalSchema || !sameScopeEvidence(journal.ExecutionMode, journal.PlanDigest, journal.BaselineStateDigest, journal.TouchedServices, journal.ConfirmedDeploymentVersion, request.ExecutionMode, request.PlanDigest, request.BaselineStateDigest, request.TouchedServices, request.ConfirmedDeploymentVersion) {
+		return ErrScopePlanStale
+	}
+	return nil
+}
+
+func validateReceiptAgainstScopePlan(receipt Receipt, plan ScopePlan) error {
+	if receipt.SchemaVersion != ScopedJournalSchema || !sameScopeEvidence(receipt.ExecutionMode, receipt.PlanDigest, receipt.BaselineStateDigest, receipt.TouchedServices, receipt.ConfirmedDeploymentVersion, plan.ExecutionMode, plan.PlanDigest, plan.BaselineStateDigest, plan.TouchedServices, plan.ConfirmedDeploymentVersion) {
+		return ErrReceiptMismatch
+	}
+	if plan.ExecutionMode == ExecutionModeFrontendOnly && !sameStringSlice(receipt.Services, []string{FrontendOnlyService}) {
+		return ErrReceiptMismatch
+	}
+	for service, digest := range receipt.ObservedImages {
+		if digest != plan.Candidate.componentDigest("runtime."+service) {
+			return ErrReceiptMismatch
+		}
+	}
+	return nil
+}
+
+func sameConfirmationIdentity(state ConfirmedDeploymentState, plan ScopePlan) bool {
+	if state.OperationID != plan.OperationID || state.ManifestDigest != plan.ManifestDigest || state.CompositionDigest != plan.Candidate.CompositionDigest || state.ReleaseVersion != plan.Candidate.ReleaseVersion || state.Capabilities != plan.Candidate.Capabilities {
+		return false
+	}
+	if plan.ObservedNginxConfigDigest != "" && state.NginxConfigDigest != plan.ObservedNginxConfigDigest {
+		return false
+	}
+	return sameDeploymentComponents(state.Components, plan.Candidate.Components)
+}
+
+func sameDeploymentComponents(left, right []DeploymentComponent) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
+}
+
+func responseSchemaFor(request Request) int {
+	if validRequestSchema(request.SchemaVersion) {
+		return request.SchemaVersion
+	}
+	return RequestSchema
+}
+
+func executionResponse(request Request, journal Journal, replayed, repaired bool) Response {
+	return Response{SchemaVersion: request.SchemaVersion, Accepted: true, Replayed: replayed, Repaired: repaired, Journal: journal}
 }
 
 // acceptStopLocked handles the one mutating socket action that does not start
@@ -503,34 +881,37 @@ func (daemon *Daemon) accept(request Request) Response {
 // checkpoint after its current command unwinds.
 func (daemon *Daemon) acceptStopLocked(request Request, current Journal, currentErr error, history Journal, historyErr error) Response {
 	if historyErr == nil && history.ManifestDigest != request.ManifestDigest {
-		return rejectedResponse(ErrReplayDigestMismatch)
+		return rejectedResponseFor(request.SchemaVersion, ErrReplayDigestMismatch)
 	}
 	journal := history
 	if historyErr != nil {
 		if currentErr != nil || current.OperationID != request.OperationID || current.ManifestDigest != request.ManifestDigest {
-			return rejectedResponse(ErrResumeNotFound)
+			return rejectedResponseFor(request.SchemaVersion, ErrResumeNotFound)
 		}
 		journal = current
 	} else if currentErr == nil && current.OperationID == request.OperationID && current.UpdatedAt.After(history.UpdatedAt) {
 		journal = current
 	}
+	if err := validateJournalRequestScope(journal, request); err != nil {
+		return rejectedResponseFor(request.SchemaVersion, err)
+	}
 	if currentErr == nil && current.OperationID != request.OperationID && !IsTerminal(journal.Stage) {
-		return rejectedResponse(ErrOperationInProgress)
+		return rejectedResponseFor(request.SchemaVersion, ErrOperationInProgress)
 	}
 	if IsTerminal(journal.Stage) {
-		return Response{SchemaVersion: RequestSchema, Accepted: true, Replayed: true, Journal: journal}
+		return executionResponse(request, journal, true, false)
 	}
 	daemon.cancelRequested[request.OperationID] = struct{}{}
 	if cancel, exists := daemon.executing[request.OperationID]; exists && cancel != nil {
 		cancel()
-		return Response{SchemaVersion: RequestSchema, Accepted: true, Journal: journal}
+		return executionResponse(request, journal, false, false)
 	}
 	updated, err := daemon.stopJournal(request, journal)
 	if err != nil {
-		return rejectedResponse(err)
+		return rejectedResponseFor(request.SchemaVersion, err)
 	}
 	delete(daemon.cancelRequested, request.OperationID)
-	return Response{SchemaVersion: RequestSchema, Accepted: true, Journal: updated}
+	return executionResponse(request, updated, false, false)
 }
 
 func (daemon *Daemon) stopJournal(request Request, current Journal) (Journal, error) {
@@ -584,6 +965,11 @@ func (daemon *Daemon) launchExecutionLocked(ctx context.Context, request Request
 			} else {
 				_ = daemon.failJournal(request, err)
 			}
+		} else if err := daemon.revalidateScopeAfterLock(executionCtx, request); err != nil {
+			// A no-interruption plan is not permission to broaden scope after
+			// the Server skipped cancellation. Record a bounded recheck result
+			// and stop before any Compose command is constructed or executed.
+			_ = daemon.failScopePlanForRecheck(request)
 		} else if err := daemon.executor.Execute(executionCtx, request, daemon.store); err != nil {
 			if daemon.consumeCancellation(request.OperationID) {
 				_, _ = daemon.stopJournal(request, currentJournalOrEmpty(daemon.store, request))
@@ -603,6 +989,47 @@ func (daemon *Daemon) launchExecutionLocked(ctx context.Context, request Request
 		delete(daemon.cancelRequested, request.OperationID)
 		daemon.mu.Unlock()
 	}()
+}
+
+func (daemon *Daemon) revalidateScopeAfterLock(ctx context.Context, request Request) error {
+	if request.SchemaVersion != ScopedRequestSchema || request.ExecutionMode != ExecutionModeFrontendOnly {
+		return nil
+	}
+	plan, err := daemon.validatePlanBoundRequest(request)
+	if err != nil {
+		return fmt.Errorf("%w: persisted scope plan changed", ErrScopePlanStale)
+	}
+	daemon.mu.Lock()
+	planner := daemon.scopePlanner
+	daemon.mu.Unlock()
+	if planner == nil {
+		return fmt.Errorf("%w: host scope planner is unavailable", ErrScopePlanStale)
+	}
+	if err := planner.Revalidate(ctx, plan); err != nil {
+		if errors.Is(err, ErrScopePlanStale) {
+			return err
+		}
+		return fmt.Errorf("%w: host scope revalidation failed", ErrScopePlanStale)
+	}
+	return nil
+}
+
+func (daemon *Daemon) failScopePlanForRecheck(request Request) error {
+	if daemon == nil || daemon.store == nil {
+		return fmt.Errorf("upgrader daemon is not configured")
+	}
+	current, err := daemon.store.LoadCurrent()
+	if err != nil {
+		return err
+	}
+	if current.OperationID != request.OperationID || current.ManifestDigest != request.ManifestDigest {
+		return ErrReplayDigestMismatch
+	}
+	if IsTerminal(current.Stage) {
+		return nil
+	}
+	_, err = daemon.store.Checkpoint(request.OperationID, request.ManifestDigest, StageFailed, "frontend-only scope plan requires recheck", nil)
+	return err
 }
 
 func (daemon *Daemon) consumeCancellation(operationID string) bool {
@@ -670,44 +1097,103 @@ func (daemon *Daemon) finishExecution(operationID string) {
 		_ = lock.MarkRecoveryFence()
 		return
 	}
-	if requiresRecoveryFence(journal.Stage) {
+	if requiresDeploymentFence(journal) {
 		_ = lock.MarkRecoveryFence()
 		return
 	}
 	daemon.releaseDeploymentLock()
 }
 
-// ensureRecoveryFence takes the shared lock when the persisted journal still
-// needs recovery after a restart. It never blocks serving: a lifecycle command
-// may legitimately hold the lock while the operator inspects the deployment.
-func (daemon *Daemon) ensureRecoveryFence(ctx context.Context) {
+// requiresDeploymentFence keeps the shared lifecycle lock while a v2 host
+// receipt is waiting for Server confirmation. A staged frontend override is
+// not safe to promote after another lifecycle command has changed the
+// deployment, so StageVerifying remains fenced until ActionConfirm succeeds.
+func requiresDeploymentFence(journal Journal) bool {
+	if requiresRecoveryFence(journal.Stage) {
+		return true
+	}
+	return journal.SchemaVersion == ScopedJournalSchema && journal.Stage == StageVerifying
+}
+
+// ensureRecoveryFence synchronously takes the shared lock when the persisted
+// journal still needs recovery after a restart. Serve must finish this step
+// before it accepts requests, otherwise confirmation could race a lifecycle
+// command that currently owns the deployment lock.
+func (daemon *Daemon) ensureRecoveryFence(ctx context.Context) error {
 	if daemon == nil || daemon.store == nil {
-		return
+		return nil
 	}
 	journal, err := daemon.store.LoadCurrent()
-	if err != nil || !requiresRecoveryFence(journal.Stage) {
-		return
+	if err != nil {
+		return err
 	}
-	daemon.wg.Add(1)
-	go func() {
-		defer daemon.wg.Done()
-		lock, err := AcquireDeploymentLockContext(ctx, daemon.store.DeploymentRoot(), journal.OperationID, 0)
-		if err != nil {
-			return
+	if !requiresDeploymentFence(journal) {
+		return nil
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	// Reuse a lock already acquired by a resumed executor for this operation.
+	// The lock is represented by a directory rather than a kernel handle, so
+	// releasing a second same-operation wrapper would accidentally remove the
+	// shared fence from underneath the first wrapper.
+	daemon.mu.Lock()
+	held := daemon.deploymentLock
+	daemon.mu.Unlock()
+	if held != nil {
+		if held.OperationID() != journal.OperationID {
+			return ErrDeploymentLockHeld
 		}
-		if err := lock.MarkRecoveryFence(); err != nil {
-			_ = lock.Release()
-			return
+		if err := held.MarkRecoveryFence(); err != nil {
+			return err
 		}
-		daemon.mu.Lock()
-		if daemon.deploymentLock == nil {
-			daemon.deploymentLock = lock
-			daemon.mu.Unlock()
-			return
-		}
-		daemon.mu.Unlock()
+		return nil
+	}
+
+	lock, err := AcquireDeploymentLockContext(ctx, daemon.store.DeploymentRoot(), journal.OperationID, 100*time.Millisecond)
+	if err != nil {
+		return err
+	}
+	if err := lock.MarkRecoveryFence(); err != nil {
 		_ = lock.Release()
-	}()
+		return err
+	}
+	daemon.mu.Lock()
+	if daemon.deploymentLock == nil {
+		daemon.deploymentLock = lock
+		daemon.mu.Unlock()
+		return nil
+	}
+	if daemon.deploymentLock.OperationID() == journal.OperationID {
+		// Keep the existing wrapper and leave the shared directory in place.
+		daemon.mu.Unlock()
+		return nil
+	}
+	daemon.mu.Unlock()
+	// Do not remove a lock that may now belong to another operation.
+	return ErrDeploymentLockHeld
+}
+
+// requireDeploymentLockLocked proves both in-memory and host-visible
+// ownership before confirmation mutates the persistent deployment baseline.
+// The caller must hold daemon.mu.
+func (daemon *Daemon) requireDeploymentLockLocked(operationID string) error {
+	if daemon == nil || daemon.store == nil {
+		return ErrDeploymentLockNotOwned
+	}
+	lock := daemon.deploymentLock
+	if lock == nil || lock.OperationID() != operationID {
+		return ErrDeploymentLockNotOwned
+	}
+	metadata, exists, err := ReadDeploymentLock(daemon.store.DeploymentRoot())
+	if err != nil {
+		return err
+	}
+	if !exists || metadata.Owner != deploymentLockOwnerUpgrade || metadata.OperationID != operationID {
+		return ErrDeploymentLockNotOwned
+	}
+	return nil
 }
 
 func (daemon *Daemon) failJournal(request Request, cause error) error {
@@ -764,18 +1250,20 @@ func (daemon *Daemon) failJournal(request Request, cause error) error {
 		// for operator recovery instead of replacing it with a synthesized error.
 		return err
 	}
-	journal := Journal{
-		SchemaVersion:  JournalSchema,
-		OperationID:    request.OperationID,
-		ManifestDigest: request.ManifestDigest,
-		Stage:          stage,
-		StartedAt:      startedAt,
-		UpdatedAt:      now,
-		CompletedAt:    &now,
-		RepairStage:    repairStage,
-		Diagnostic:     diagnostic,
-	}
+	journal := journalForRequest(request, startedAt)
+	journal.Stage = stage
+	journal.UpdatedAt = now
+	journal.StageUpdatedAt = now
+	journal.CompletedAt = &now
+	journal.RepairStage = repairStage
+	journal.Diagnostic = diagnostic
 	if haveCurrent {
+		journal.SchemaVersion = currentJournal.SchemaVersion
+		journal.ExecutionMode = currentJournal.ExecutionMode
+		journal.PlanDigest = currentJournal.PlanDigest
+		journal.BaselineStateDigest = currentJournal.BaselineStateDigest
+		journal.TouchedServices = append([]string(nil), currentJournal.TouchedServices...)
+		journal.ConfirmedDeploymentVersion = currentJournal.ConfirmedDeploymentVersion
 		// Preserve migration evidence when an I/O or receipt error escapes the
 		// executor. Replacing the checkpoint must not erase the identity/status
 		// needed to distinguish a recoverable pre-migration failure from an
@@ -794,6 +1282,13 @@ func (daemon *Daemon) writeResponse(connection net.Conn, response Response) {
 }
 
 func rejectedResponse(err error) Response {
+	return rejectedResponseFor(RequestSchema, err)
+}
+
+func rejectedResponseFor(schemaVersion int, err error) Response {
+	if !validRequestSchema(schemaVersion) {
+		schemaVersion = RequestSchema
+	}
 	message := "upgrader request rejected"
 	if err != nil {
 		// Errors exposed over the socket are stable, bounded diagnostics. Avoid
@@ -811,11 +1306,13 @@ func rejectedResponse(err error) Response {
 			message = ErrRepairRequired.Error()
 		case errors.Is(err, ErrRepairNotAllowed):
 			message = ErrRepairNotAllowed.Error()
+		case errors.Is(err, ErrDeploymentLockNotOwned):
+			message = ErrDeploymentLockNotOwned.Error()
 		default:
 			message = err.Error()
 		}
 	}
-	return Response{SchemaVersion: RequestSchema, Error: message}
+	return Response{SchemaVersion: schemaVersion, Error: message}
 }
 
 func removeStaleSocket(path string) error {
@@ -887,10 +1384,10 @@ func (client *Client) Send(ctx context.Context, request Request) (Response, erro
 	if err := decodeStrictFromReader(bufio.NewReader(io.LimitReader(connection, MaxRequestBytes+1)), &response); err != nil {
 		return Response{}, fmt.Errorf("decode upgrader response: %w", err)
 	}
-	if err := response.Validate(); err != nil {
+	if err := response.ValidateFor(request); err != nil {
 		return Response{}, fmt.Errorf("validate upgrader response: %w", err)
 	}
-	if response.Accepted && (response.Journal.OperationID != request.OperationID || response.Journal.ManifestDigest != request.ManifestDigest) {
+	if response.Accepted && !isZeroJournal(response.Journal) && (response.Journal.OperationID != request.OperationID || response.Journal.ManifestDigest != request.ManifestDigest) {
 		return Response{}, ErrReplayDigestMismatch
 	}
 	if response.Error != "" {

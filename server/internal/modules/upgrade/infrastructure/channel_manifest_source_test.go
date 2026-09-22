@@ -2,14 +2,20 @@ package infrastructure
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/yyhuni/lunafox/contracts/ociartifact"
+	"github.com/yyhuni/lunafox/contracts/releasemanifest"
 )
 
 func TestChannelManifestSourceFetchesValidCandidateAndCachesDigest(t *testing.T) {
@@ -31,6 +37,63 @@ func TestChannelManifestSourceFetchesValidCandidateAndCachesDigest(t *testing.T)
 	}
 	if string(cached) != string(manifestBytes) {
 		t.Fatal("cached manifest bytes differ from the validated response")
+	}
+	compositionPath := filepath.Join(source.compositionCache, strings.TrimPrefix(manifest.RuntimeComposition.SHA256, "sha256:")+".json")
+	compositionInfo, err := os.Stat(compositionPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if compositionInfo.Mode().Perm() != 0o600 {
+		t.Fatalf("composition cache mode = %o, want 600", compositionInfo.Mode().Perm())
+	}
+}
+
+func TestChannelManifestSourceAcceptsPinnedLegacyAlpha114WithoutCompositionFetch(t *testing.T) {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller() failed")
+	}
+	manifestPath := filepath.Join(filepath.Dir(filename), "..", "..", "..", "..", "..", "scripts", "ci", "fixtures", "legacy-alpha114-release.manifest.yaml")
+	manifestBytes, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var compositionRequested bool
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/channels/canary.env":
+			_, _ = fmt.Fprintf(writer, "SCHEMA_VERSION=3\nVERSION=v%s\nRELEASE_MANIFEST=manifests/v%s.yaml\nRELEASE_MANIFEST_SHA256=%s\n", releasemanifest.LegacyAlpha114ReleaseVersion, releasemanifest.LegacyAlpha114ReleaseVersion, strings.TrimPrefix(releasemanifest.LegacyAlpha114ManifestDigest, "sha256:"))
+		case "/manifests/v0.0.1-alpha.114.yaml":
+			_, _ = writer.Write(manifestBytes)
+		default:
+			if strings.HasSuffix(request.URL.Path, "/runtime-composition.json") {
+				compositionRequested = true
+			}
+			http.NotFound(writer, request)
+		}
+	}))
+	t.Cleanup(server.Close)
+	source := newChannelSourceForTest(t, server.URL)
+	manifest, err := source.Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if manifest.ReleaseVersion != releasemanifest.LegacyAlpha114ReleaseVersion || manifest.Digest() != releasemanifest.LegacyAlpha114ManifestDigest {
+		t.Fatalf("legacy manifest identity = %s %s", manifest.ReleaseVersion, manifest.Digest())
+	}
+	if compositionRequested {
+		t.Fatal("legacy channel load fetched a composition asset")
+	}
+	cachedPath := filepath.Join(source.cacheDir, strings.TrimPrefix(manifest.Digest(), "sha256:")+".yaml")
+	if _, err := os.Stat(cachedPath); err != nil {
+		t.Fatalf("legacy manifest was not cached: %v", err)
+	}
+	entries, err := os.ReadDir(source.compositionCache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("legacy load unexpectedly cached composition evidence: %v", entries)
 	}
 }
 
@@ -194,6 +257,13 @@ func newReleaseMetadataServer(t *testing.T, current func() ([]byte, []byte)) *ht
 			_, _ = writer.Write(record)
 		case "/manifests/v1.2.3.yaml", "/manifests/v1.2.4.yaml":
 			_, _ = writer.Write(manifest)
+		case "/manifests/v1.2.3/runtime-composition.json", "/manifests/v1.2.4/runtime-composition.json":
+			composition, err := runtimeCompositionBytes(t, manifest)
+			if err != nil {
+				http.Error(writer, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			_, _ = writer.Write(composition)
 		default:
 			http.NotFound(writer, request)
 		}
@@ -208,7 +278,131 @@ func releaseManifestBytes(t *testing.T, version string) []byte {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return []byte(strings.ReplaceAll(string(raw), "1.2.3", version))
+	// The fixture carries a placeholder composition digest. Replace it with a
+	// digest calculated from the deterministic asset served by the test server.
+	material := []byte(strings.ReplaceAll(string(raw), "1.2.3", version))
+	manifest, err := releasemanifest.Parse(material)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, compositionDigest, err := compositionCoreForManifest(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return []byte(strings.Replace(string(material), "sha256:"+strings.Repeat("b", 64), compositionDigest, 1))
+}
+
+func runtimeCompositionBytes(t *testing.T, manifestBytes []byte) ([]byte, error) {
+	manifest, err := releasemanifest.Parse(manifestBytes)
+	if err != nil {
+		return nil, err
+	}
+	core, compositionDigest, err := compositionCoreForManifest(manifest)
+	if err != nil {
+		return nil, err
+	}
+	if manifest.RuntimeComposition.SHA256 != compositionDigest {
+		return nil, fmt.Errorf("fixture manifest composition digest %s does not match generated %s", manifest.RuntimeComposition.SHA256, compositionDigest)
+	}
+	composition := map[string]any{
+		"schemaVersion":     core["schemaVersion"],
+		"kind":              core["kind"],
+		"releaseTag":        core["releaseTag"],
+		"components":        core["components"],
+		"capabilities":      core["capabilities"],
+		"compositionDigest": compositionDigest,
+		"manifestBinding":   map[string]any{"manifestDigest": manifest.Digest()},
+	}
+	return json.MarshalIndent(composition, "", "  ")
+}
+
+func compositionCoreForManifest(manifest *releasemanifest.Manifest) (map[string]any, string, error) {
+	if manifest == nil {
+		return nil, "", fmt.Errorf("fixture manifest is nil")
+	}
+	digest := func(letter string) string { return "sha256:" + strings.Repeat(letter, 64) }
+	components := make([]map[string]any, 0, 7)
+	for _, name := range []string{"server", "frontend", "nginx", "agent", "bootstrap"} {
+		componentDigest, err := manifest.RuntimeImageDigest(name)
+		if err != nil {
+			return nil, "", err
+		}
+		components = append(components, compositionComponent("runtime."+name, "runtime", name, componentDigest, manifest.ReleaseVersion))
+	}
+	if len(manifest.EnginePackages) == 0 {
+		return nil, "", fmt.Errorf("fixture has no engine package")
+	}
+	packageRef, err := ociartifact.ParseDigestReference(manifest.EnginePackages[0].Refs[0])
+	if err != nil {
+		return nil, "", err
+	}
+	components = append(components,
+		compositionComponent("engine.port-scan.package", "engine", "package", packageRef.Digest, manifest.ReleaseVersion),
+		compositionComponent("engine.port-scan.runtime", "engine", "runtime", digest("d"), manifest.ReleaseVersion),
+	)
+	sort.Slice(components, func(left, right int) bool { return components[left]["id"].(string) < components[right]["id"].(string) })
+	core := map[string]any{
+		"schemaVersion": 1,
+		"kind":          "lunafox.runtime-composition",
+		"releaseTag":    "v" + manifest.ReleaseVersion,
+		"components":    components,
+		"capabilities":  map[string]any{"dynamicFrontendUpstream": true},
+	}
+	coreBytes, err := json.Marshal(core)
+	if err != nil {
+		return nil, "", err
+	}
+	coreSum := sha256.Sum256(coreBytes)
+	compositionDigest := "sha256:" + fmt.Sprintf("%x", coreSum[:])
+	return core, compositionDigest, nil
+}
+
+func compositionComponent(id, kind, name, componentDigest, releaseVersion string) map[string]any {
+	inputs := map[string]any{
+		"schemaVersion":      2,
+		"componentId":        id,
+		"kind":               kind,
+		"contextPath":        ".",
+		"dockerfile":         id + "/Dockerfile",
+		"dockerignore":       "",
+		"files":              []any{},
+		"namedContexts":      map[string]any{},
+		"buildArgs":          map[string]any{},
+		"platforms":          []any{"linux/amd64", "linux/arm64"},
+		"baseImages":         []any{},
+		"baseImagesResolved": true,
+		"builderPolicy":      map[string]any{},
+		"generatedInputs":    []any{},
+	}
+	inputBytes, err := json.Marshal(inputs)
+	if err != nil {
+		panic(fmt.Sprintf("marshal composition fixture inputs: %v", err))
+	}
+	inputDigest := sha256.Sum256(inputBytes)
+	return map[string]any{
+		"id":   id,
+		"kind": kind,
+		"name": name,
+		"inputFingerprint": map[string]any{
+			"version":            2,
+			"algorithm":          "sha256-canonical-json-v1",
+			"digest":             "sha256:" + fmt.Sprintf("%x", inputDigest[:]),
+			"baseImagesResolved": true,
+			"inputs":             inputs,
+		},
+		"artifact": map[string]any{
+			"ref":    "ghcr.io/yyhuni/lunafox-" + name + "@" + componentDigest,
+			"digest": componentDigest,
+		},
+		"disposition":   "built",
+		"sourceRelease": map[string]any{"tag": "v" + releaseVersion},
+		"evidence": map[string]any{
+			"image":      "image.json",
+			"provenance": "provenance.json",
+			"sbom":       "sbom.json",
+			"signature":  "signature.json",
+		},
+	}
 }
 
 func channelRecordBytes(version string, manifest []byte) []byte {

@@ -321,6 +321,7 @@ func TestUpgradeHandlerCheckForUpdatesUsesAuthenticatedIdentityAndStrictEmptyBod
 			MigrationPolicyVersion:    1,
 			RuntimeImageDigests:       map[string]string{"server": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
 			EngineDigests:             []string{"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+			ReleaseNotes:              &application.ReleaseNotesSummary{Body: "## English\n\n- Test release notes.\n\n## 简体中文\n\n- 测试发布说明。\n", Digest: "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"},
 		},
 	}}
 	engine := gin.New()
@@ -345,6 +346,14 @@ func TestUpgradeHandlerCheckForUpdatesUsesAuthenticatedIdentityAndStrictEmptyBod
 	}
 	if response["candidate"] == nil || response["currentVersion"] != "1.0.0" || response["hasUpdate"] != true || response["eligible"] != true {
 		t.Fatalf("unexpected check response: %s", rec.Body.String())
+	}
+	candidate, ok := response["candidate"].(map[string]any)
+	if !ok {
+		t.Fatalf("candidate is not an object: %s", rec.Body.String())
+	}
+	releaseNotes, ok := candidate["releaseNotes"].(map[string]any)
+	if !ok || releaseNotes["body"] != "## English\n\n- Test release notes.\n\n## 简体中文\n\n- 测试发布说明。\n" || releaseNotes["sha256"] != "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" {
+		t.Fatalf("unexpected release notes projection: %s", rec.Body.String())
 	}
 	if _, snakeCase := response["current_version"]; snakeCase {
 		t.Fatal("check response exposed snake_case field")

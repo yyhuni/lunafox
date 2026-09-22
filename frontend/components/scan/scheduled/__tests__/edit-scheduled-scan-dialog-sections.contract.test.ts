@@ -11,9 +11,10 @@ describe("edit-scheduled-scan-dialog-sections contract", () => {
     expect(source).toContain("from \"react\"")
   })
 
-  it("keeps the edit schedule section free of a zone selector", () => {
-    expect(source).not.toContain("ScheduledScanTimeZoneField")
-    expect(source).not.toContain("time-zone")
+  it("keeps the edit schedule section on the saved zone with a live preview", () => {
+    expect(source).toContain("ScheduledScanTimeZoneField")
+    expect(source).toContain("edit-scheduled-scan-time-zone")
+    expect(source).toContain("getNextExecutions(cronExpression, timeZone)")
   })
 
   it("does not keep a scheduled-scan-local workflow picker", () => {

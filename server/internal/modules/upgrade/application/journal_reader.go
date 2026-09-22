@@ -18,11 +18,12 @@ import (
 )
 
 const (
-	hostJournalSchema      = 1
-	hostJournalCurrentFile = "current.json"
-	hostJournalHistoryDir  = "operations"
-	hostJournalReceiptDir  = "receipts"
-	hostJournalDirectory   = ".lunafox/upgrade"
+	hostJournalSchema       = 1
+	hostScopedJournalSchema = 2
+	hostJournalCurrentFile  = "current.json"
+	hostJournalHistoryDir   = "operations"
+	hostJournalReceiptDir   = "receipts"
+	hostJournalDirectory    = ".lunafox/upgrade"
 )
 
 // JournalEventReader is the server-side recovery boundary for the independent
@@ -89,16 +90,21 @@ func (reader *FileJournalEventReader) ReadCurrent(ctx context.Context) (HostUpgr
 		return HostUpgradeEvent{}, historyErr
 	}
 	event := HostUpgradeEvent{
-		OperationID:     current.OperationID,
-		ManifestDigest:  current.ManifestDigest,
-		Stage:           string(current.Stage),
-		Diagnostic:      current.Diagnostic,
-		Migration:       current.MigrationStatus,
-		UpdatedAt:       current.UpdatedAt,
-		StageUpdatedAt:  current.StageUpdatedAt,
-		ProgressEvents:  cloneHostProgressEvents(current.ProgressEvents),
-		ObservedDigests: map[string]string{},
-		FromJournal:     true,
+		OperationID:                current.OperationID,
+		ManifestDigest:             current.ManifestDigest,
+		Stage:                      string(current.Stage),
+		Diagnostic:                 current.Diagnostic,
+		Migration:                  current.MigrationStatus,
+		ExecutionMode:              current.ExecutionMode,
+		PlanDigest:                 current.PlanDigest,
+		BaselineStateDigest:        current.BaselineStateDigest,
+		TouchedServices:            append([]string(nil), current.TouchedServices...),
+		ConfirmedDeploymentVersion: current.ConfirmedDeploymentVersion,
+		UpdatedAt:                  current.UpdatedAt,
+		StageUpdatedAt:             current.StageUpdatedAt,
+		ProgressEvents:             cloneHostProgressEvents(current.ProgressEvents),
+		ObservedDigests:            map[string]string{},
+		FromJournal:                true,
 	}
 	// Receipt is deliberately only supplemental evidence. It can provide the
 	// Compose observed digests, but never changes the host stage by itself.
@@ -106,6 +112,9 @@ func (reader *FileJournalEventReader) ReadCurrent(ctx context.Context) (HostUpgr
 	if receipt, receiptErr := readHostReceipt(receiptPath); receiptErr == nil {
 		if receipt.OperationID != current.OperationID || receipt.ManifestDigest != current.ManifestDigest {
 			return HostUpgradeEvent{}, fmt.Errorf("journal receipt identity mismatch")
+		}
+		if !sameJournalScope(current, receipt.ExecutionMode, receipt.PlanDigest, receipt.BaselineStateDigest, receipt.TouchedServices, receipt.ConfirmedDeploymentVersion) {
+			return HostUpgradeEvent{}, fmt.Errorf("journal receipt scope mismatch")
 		}
 		for service, digest := range receipt.ObservedImages {
 			event.ObservedDigests[service] = digest
@@ -117,21 +126,26 @@ func (reader *FileJournalEventReader) ReadCurrent(ctx context.Context) (HostUpgr
 }
 
 type hostJournal struct {
-	SchemaVersion     int                 `json:"schemaVersion"`
-	OperationID       string              `json:"operationId"`
-	ManifestDigest    string              `json:"manifestDigest"`
-	Stage             string              `json:"stage"`
-	RepairStage       string              `json:"repairStage,omitempty"`
-	MigrationID       string              `json:"migrationId,omitempty"`
-	MigrationChecksum string              `json:"migrationChecksum,omitempty"`
-	MigrationStatus   string              `json:"migrationStatus,omitempty"`
-	StartedAt         time.Time           `json:"startedAt"`
-	UpdatedAt         time.Time           `json:"updatedAt"`
-	StageUpdatedAt    time.Time           `json:"stageUpdatedAt,omitempty"`
-	CompletedAt       *time.Time          `json:"completedAt,omitempty"`
-	ExitCode          *int                `json:"exitCode,omitempty"`
-	Diagnostic        string              `json:"diagnostic,omitempty"`
-	ProgressEvents    []hostProgressEvent `json:"progressEvents,omitempty"`
+	SchemaVersion              int                  `json:"schemaVersion"`
+	OperationID                string               `json:"operationId"`
+	ManifestDigest             string               `json:"manifestDigest"`
+	Stage                      string               `json:"stage"`
+	ExecutionMode              domain.ExecutionMode `json:"executionMode,omitempty"`
+	PlanDigest                 string               `json:"planDigest,omitempty"`
+	BaselineStateDigest        string               `json:"baselineStateDigest,omitempty"`
+	TouchedServices            []string             `json:"touchedServices,omitempty"`
+	ConfirmedDeploymentVersion string               `json:"confirmedDeploymentVersion,omitempty"`
+	RepairStage                string               `json:"repairStage,omitempty"`
+	MigrationID                string               `json:"migrationId,omitempty"`
+	MigrationChecksum          string               `json:"migrationChecksum,omitempty"`
+	MigrationStatus            string               `json:"migrationStatus,omitempty"`
+	StartedAt                  time.Time            `json:"startedAt"`
+	UpdatedAt                  time.Time            `json:"updatedAt"`
+	StageUpdatedAt             time.Time            `json:"stageUpdatedAt,omitempty"`
+	CompletedAt                *time.Time           `json:"completedAt,omitempty"`
+	ExitCode                   *int                 `json:"exitCode,omitempty"`
+	Diagnostic                 string               `json:"diagnostic,omitempty"`
+	ProgressEvents             []hostProgressEvent  `json:"progressEvents,omitempty"`
 }
 
 type hostProgressEvent struct {
@@ -143,12 +157,17 @@ type hostProgressEvent struct {
 }
 
 type hostReceipt struct {
-	SchemaVersion  int               `json:"schemaVersion"`
-	OperationID    string            `json:"operationId"`
-	ManifestDigest string            `json:"manifestDigest"`
-	CompletedAt    time.Time         `json:"completedAt"`
-	Services       []string          `json:"services"`
-	ObservedImages map[string]string `json:"observedImages"`
+	SchemaVersion              int                  `json:"schemaVersion"`
+	OperationID                string               `json:"operationId"`
+	ManifestDigest             string               `json:"manifestDigest"`
+	CompletedAt                time.Time            `json:"completedAt"`
+	Services                   []string             `json:"services"`
+	ObservedImages             map[string]string    `json:"observedImages"`
+	ExecutionMode              domain.ExecutionMode `json:"executionMode,omitempty"`
+	PlanDigest                 string               `json:"planDigest,omitempty"`
+	BaselineStateDigest        string               `json:"baselineStateDigest,omitempty"`
+	TouchedServices            []string             `json:"touchedServices,omitempty"`
+	ConfirmedDeploymentVersion string               `json:"confirmedDeploymentVersion,omitempty"`
 }
 
 func readHostJournal(path string) (hostJournal, error) {
@@ -160,8 +179,11 @@ func readHostJournal(path string) (hostJournal, error) {
 	if err := decodeStrictJSON(data, &journal); err != nil {
 		return hostJournal{}, fmt.Errorf("invalid upgrade journal: %w", err)
 	}
-	if journal.SchemaVersion != hostJournalSchema {
+	if journal.SchemaVersion != hostJournalSchema && journal.SchemaVersion != hostScopedJournalSchema {
 		return hostJournal{}, fmt.Errorf("unsupported upgrade journal schema version %d", journal.SchemaVersion)
+	}
+	if err := validateHostScope(journal.SchemaVersion, journal.ExecutionMode, journal.PlanDigest, journal.BaselineStateDigest, journal.TouchedServices, journal.ConfirmedDeploymentVersion); err != nil {
+		return hostJournal{}, fmt.Errorf("upgrade journal scope is invalid: %w", err)
 	}
 	if _, err := uuid.Parse(journal.OperationID); err != nil || uuid.MustParse(journal.OperationID).String() != journal.OperationID {
 		return hostJournal{}, fmt.Errorf("upgrade journal operationId is invalid")
@@ -225,8 +247,11 @@ func readHostReceipt(path string) (hostReceipt, error) {
 	if err := decodeStrictJSON(data, &receipt); err != nil {
 		return hostReceipt{}, fmt.Errorf("invalid upgrade receipt: %w", err)
 	}
-	if receipt.SchemaVersion != hostJournalSchema {
+	if receipt.SchemaVersion != hostJournalSchema && receipt.SchemaVersion != hostScopedJournalSchema {
 		return hostReceipt{}, fmt.Errorf("unsupported upgrade receipt schema version %d", receipt.SchemaVersion)
+	}
+	if err := validateHostScope(receipt.SchemaVersion, receipt.ExecutionMode, receipt.PlanDigest, receipt.BaselineStateDigest, receipt.TouchedServices, receipt.ConfirmedDeploymentVersion); err != nil {
+		return hostReceipt{}, fmt.Errorf("upgrade receipt scope is invalid: %w", err)
 	}
 	if _, err := uuid.Parse(receipt.OperationID); err != nil || uuid.MustParse(receipt.OperationID).String() != receipt.OperationID {
 		return hostReceipt{}, fmt.Errorf("upgrade receipt operationId is invalid")
@@ -255,7 +280,44 @@ func readHostReceipt(path string) (hostReceipt, error) {
 			return hostReceipt{}, fmt.Errorf("upgrade receipt is missing observed image")
 		}
 	}
+	if receipt.SchemaVersion == hostScopedJournalSchema && receipt.ExecutionMode == domain.ExecutionModeFrontendOnly {
+		if len(receipt.Services) != 1 || receipt.Services[0] != "frontend" || !sameStringSlice(receipt.Services, receipt.TouchedServices) {
+			return hostReceipt{}, fmt.Errorf("frontend-only upgrade receipt must be bound to frontend")
+		}
+	}
 	return receipt, nil
+}
+
+func validateHostScope(schemaVersion int, mode domain.ExecutionMode, planDigest, baselineStateDigest string, touchedServices []string, confirmedDeploymentVersion string) error {
+	if schemaVersion == hostJournalSchema {
+		if mode != "" || planDigest != "" || baselineStateDigest != "" || len(touchedServices) != 0 || confirmedDeploymentVersion != "" {
+			return fmt.Errorf("schema-v1 record cannot contain scope evidence")
+		}
+		return nil
+	}
+	if schemaVersion != hostScopedJournalSchema {
+		return fmt.Errorf("unsupported scope schema version %d", schemaVersion)
+	}
+	return domain.ValidateScopePlan(mode, domain.PlanSummary{TouchedServices: touchedServices}, planDigest, baselineStateDigest, confirmedDeploymentVersion)
+}
+
+func sameJournalScope(journal hostJournal, mode domain.ExecutionMode, planDigest, baselineStateDigest string, touchedServices []string, confirmedDeploymentVersion string) bool {
+	if journal.SchemaVersion != hostScopedJournalSchema {
+		return mode == "" && planDigest == "" && baselineStateDigest == "" && len(touchedServices) == 0 && confirmedDeploymentVersion == ""
+	}
+	return mode == journal.ExecutionMode && planDigest == journal.PlanDigest && baselineStateDigest == journal.BaselineStateDigest && sameStringSlice(touchedServices, journal.TouchedServices) && confirmedDeploymentVersion == journal.ConfirmedDeploymentVersion
+}
+
+func sameStringSlice(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
 }
 
 func readPrivateJSON(path string) ([]byte, error) {

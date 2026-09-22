@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 
 import { VersionService, isUpgradeNetworkError, toUpgradeApiError } from "@/services/version.service"
-import type {
-  CreateUpgradeOperationInput,
-  UpgradeOperation,
-  UpgradeOperationStatus,
-  UpgradeUserStage,
-  UpdateCheckResult,
-  VersionInfo,
+import {
+  UPGRADE_USER_STAGES,
+  type CreateUpgradeOperationInput,
+  type UpgradeExecutionMode,
+  type UpgradeOperation,
+  type UpgradeOperationFull,
+  type UpgradeOperationStatus,
+  type UpgradeUserStage,
+  type UpdateCheckResult,
+  type VersionInfo,
 } from "@/types/version.types"
 
 export const UPGRADE_OPERATION_STORAGE_KEY = "lunafox.upgrade.operationId"
@@ -17,6 +20,14 @@ export const UPGRADE_OPERATION_CHANGED_EVENT = "lunafox:upgrade-operation-change
 const UPGRADE_COMPLETION_ACK_PREFIX = "lunafox.upgrade.completionAcknowledged."
 const ACTIVE_POLL_BASE_MS = 1_500
 const ACTIVE_POLL_MAX_MS = 15_000
+
+export const FRONTEND_ONLY_UPGRADE_USER_STAGES: readonly UpgradeUserStage[] = [
+  "preparing",
+  "updating",
+  "restarting",
+  "verifying",
+  "finished",
+]
 
 interface UseVersionOptions {
 	enabled?: boolean
@@ -146,6 +157,14 @@ export function isUpgradeOperationActive(status: UpgradeOperation["status"] | un
   return Boolean(status) && !isUpgradeOperationTerminal(status)
 }
 
+export function isFrontendOnlyUpgrade(operation: Pick<UpgradeOperationFull, "executionMode"> | null | undefined): boolean {
+  return operation?.executionMode === "frontend_only"
+}
+
+export function upgradeUserStagesForExecutionMode(executionMode: UpgradeExecutionMode): readonly UpgradeUserStage[] {
+  return executionMode === "frontend_only" ? FRONTEND_ONLY_UPGRADE_USER_STAGES : UPGRADE_USER_STAGES
+}
+
 export function upgradeUserStageForStatus(status: UpgradeOperationStatus | undefined): UpgradeUserStage {
   switch (status) {
     case "stopping":
@@ -175,6 +194,25 @@ export function upgradeOperationPollDelay(failureCount: number): number {
   return Math.min(ACTIVE_POLL_MAX_MS, ACTIVE_POLL_BASE_MS * (2 ** exponent))
 }
 
+function mergeBasicUpgradeOperationIntoFullCache(queryClient: QueryClient, operation: UpgradeOperation): void {
+  const queryKeys = [
+    ["upgrade", "operation", operation.operationId],
+    ["upgrade", "operation", "active"],
+  ] as const
+
+  for (const queryKey of queryKeys) {
+    const current = queryClient.getQueryData<UpgradeOperationFull>(queryKey)
+    if (!current || current.operationId !== operation.operationId) continue
+    queryClient.setQueryData<UpgradeOperationFull>(queryKey, {
+      ...operation,
+      executionMode: current.executionMode,
+      workDisposition: current.workDisposition,
+      planSummary: current.planSummary,
+      confirmedDeploymentVersion: current.confirmedDeploymentVersion,
+    })
+  }
+}
+
 export function useUpgradeOperation(operationId?: string | null, options: UseUpgradeOperationOptions = {}) {
 	const { enabled = true } = options
 	const autoResolve = operationId === undefined
@@ -195,17 +233,17 @@ export function useUpgradeOperation(operationId?: string | null, options: UseUpg
     }
   }, [])
 
-  const query = useQuery<UpgradeOperation | null>({
+  const query = useQuery<UpgradeOperationFull | null>({
     queryKey: ["upgrade", "operation", queryKeyId],
     queryFn: async () => {
       if (autoResolve) {
         // The active view is the route-lock authority. A browser id is only a
         // fallback for showing a terminal result after the active view is empty.
-        const active = await VersionService.getActiveUpgradeOperation()
+        const active = await VersionService.getActiveUpgradeOperationFull()
         if (active) return active
         if (requestedOperationId) {
           try {
-            return await VersionService.getUpgradeOperation(requestedOperationId)
+            return await VersionService.getUpgradeOperationFull(requestedOperationId)
           } catch (error) {
             const parsed = toUpgradeApiError(error)
             if (parsed.status !== 404) throw parsed
@@ -215,7 +253,7 @@ export function useUpgradeOperation(operationId?: string | null, options: UseUpg
       }
       if (requestedOperationId) {
         try {
-          return await VersionService.getUpgradeOperation(requestedOperationId)
+          return await VersionService.getUpgradeOperationFull(requestedOperationId)
         } catch (error) {
           throw toUpgradeApiError(error)
         }
@@ -272,7 +310,11 @@ export function useCreateUpgradeOperation() {
     onSuccess: (operation) => {
       persistUpgradeOperationId(operation.operationId)
       setOperationId(operation.operationId)
-      queryClient.setQueryData(["upgrade", "operation", operation.operationId], operation)
+      // Creation returns the compatibility-safe BASIC representation. Never
+      // cache it under the FULL query key because scope-aware UI must fail
+      // closed until it has fetched explicit FULL facts from the server.
+      void queryClient.invalidateQueries({ queryKey: ["upgrade", "operation", operation.operationId] })
+      void queryClient.invalidateQueries({ queryKey: ["upgrade", "operation", "active"] })
     },
   })
   return { ...mutation, operationId, setOperationId }
@@ -284,8 +326,7 @@ export function useRetryUpgradeOperation() {
     mutationFn: (operationId: string) => VersionService.retryUpgradeOperation(operationId),
     onSuccess: (operation) => {
       persistUpgradeOperationId(operation.operationId)
-      queryClient.setQueryData(["upgrade", "operation", operation.operationId], operation)
-      queryClient.setQueryData(["upgrade", "operation", "active"], operation)
+      mergeBasicUpgradeOperationIntoFullCache(queryClient, operation)
     },
     onError: (_error, operationId) => {
       void queryClient.invalidateQueries({ queryKey: ["upgrade", "operation", operationId] })
@@ -300,8 +341,7 @@ export function useStopUpgradeOperation() {
     mutationFn: (operationId: string) => VersionService.stopUpgradeOperation(operationId),
     onSuccess: (operation) => {
       persistUpgradeOperationId(operation.operationId)
-      queryClient.setQueryData(["upgrade", "operation", operation.operationId], operation)
-      queryClient.setQueryData(["upgrade", "operation", "active"], operation)
+      mergeBasicUpgradeOperationIntoFullCache(queryClient, operation)
     },
     onError: (_error, operationId) => {
       // A host may have accepted cancellation before the response was lost;

@@ -140,6 +140,21 @@ const REQUIRED_PUBLIC_RUNTIME_EXACT = [
   "scripts/ci/verify-public-runtime-contexts.mjs",
   "scripts/ci/verify-public-runtime-image-evidence.mjs",
   "scripts/ci/verify-public-runtime-image-evidence-selftest.mjs",
+  "scripts/ci/resolve-release-component-composition.mjs",
+  "scripts/ci/resolve-release-component-composition-selftest.mjs",
+  "scripts/ci/render-release-component-build-contexts.mjs",
+  "scripts/ci/render-release-component-build-contexts-selftest.mjs",
+  "scripts/ci/resolve-public-runtime-composition.mjs",
+  "scripts/ci/resolve-public-runtime-composition-selftest.mjs",
+  "scripts/ci/build-component-evidence-bundle.mjs",
+  "scripts/ci/verify-component-evidence-bundle.mjs",
+  "scripts/ci/component-evidence-bundle-selftest.mjs",
+  "scripts/ci/verify-release-component-composition.mjs",
+  "scripts/ci/verify-release-component-composition-selftest.mjs",
+  "scripts/ci/resolve-engine-release-disposition.mjs",
+  "scripts/ci/resolve-engine-release-disposition-selftest.mjs",
+  "scripts/ci/assemble-public-engine-release.mjs",
+  "scripts/ci/assemble-public-engine-release-selftest.mjs",
   "scripts/ci/verify-public-runtime-source.sh",
   "scripts/ci/check-migration-baseline-policy.mjs",
   "scripts/ci/check-engine-api-major-policy.mjs",
@@ -223,12 +238,46 @@ function readJson(file, label) {
   catch (error) { fail(`cannot read ${label} ${file}: ${error.message}`); }
 }
 
+function withoutComments(text) {
+  return text.split("\n").filter((line) => !line.trimStart().startsWith("#")).join("\n");
+}
+
 function jobBlock(workflow, name) {
   const start = workflow.indexOf(`  ${name}:`);
   if (start < 0) fail(`release workflow is missing ${name}`);
   const rest = workflow.slice(start + 1);
   const next = /^  [A-Za-z0-9_-]+:/m.exec(rest);
   return workflow.slice(start, next ? start + 1 + next.index : workflow.length);
+}
+
+function workflowStepBlock(job, marker) {
+  const start = job.indexOf(marker);
+  if (start < 0) return "";
+  const next = job.indexOf("\n      - ", start + marker.length);
+  return job.slice(start, next < 0 ? job.length : next);
+}
+
+function hasRequiredJobNeeds(block, names) {
+  const match = block.match(/^    needs:\s*\[([^\]]*)\]\s*$/m);
+  if (!match) return false;
+  const dependencies = new Set(match[1].split(",").map((name) => name.trim()).filter(Boolean));
+  return names.every((name) => dependencies.has(name));
+}
+
+// GitHub Actions permits a folded multiline `if`; normalize it before
+// checking dependency result guards so formatting cannot bypass the policy.
+function jobCondition(block) {
+  const lines = block.split("\n");
+  const index = lines.findIndex((line) => /^    if:\s*/.test(line));
+  if (index < 0) return "";
+  const first = lines[index].replace(/^    if:\s*/, "").trim();
+  if (!/^(?:>-?|\|-?|\|)$/.test(first)) return first;
+  const continuation = [];
+  for (const line of lines.slice(index + 1)) {
+    if (/^    \S/.test(line) || /^      - /.test(line)) break;
+    if (/^\s{6,}\S/.test(line)) continuation.push(line.trim());
+  }
+  return continuation.join(" ");
 }
 
 function countOccurrences(text, value) {
@@ -275,6 +324,7 @@ function assertLegacyDeploymentBootstrapPolicy(policy) {
   if (bootstrap?.releaseTag !== "v0.0.1-alpha.114" ||
       bootstrap?.packageName !== "lunafox-v0.0.1-alpha.114-dockerhub.zip" ||
       bootstrap?.sha256 !== "d02fe6f9da2576e3a89b52d38a03b5af6afd91670de26e67fe1f1efcf809c55c" ||
+      bootstrap?.manifestSha256 !== "e0e742054888daf0fb6482be721c82bd8e162d795143badbf2089cbd978c5e8b" ||
       JSON.stringify(bootstrap?.paths) !== JSON.stringify(DESTINATION_DEPLOYMENT_PATHS)) {
     fail("legacy public deployment bootstrap must remain pinned to the verified alpha.114 Docker Hub package");
   }
@@ -302,6 +352,7 @@ function assertFirstPublicReleaseIdentity(policy, exportPolicy) {
     `channels/${FIRST_PUBLIC_TAG}.env`,
     "channels/canary.env",
     `manifests/${FIRST_PUBLIC_TAG}.yaml`,
+    `manifests/${FIRST_PUBLIC_TAG}/runtime-composition.json`,
   ];
   if (policy.firstRelease?.tag !== FIRST_PUBLIC_TAG ||
       policy.firstRelease?.channel !== "canary" ||
@@ -345,7 +396,6 @@ function assertFixedIdentity(workflow, policy) {
     fail("private Agent binary signer identity drifted");
   }
   assertDestinationAppCredentialPolicy(policy);
-  assertLegacyDeploymentBootstrapPolicy(policy);
   assertPrivateTrustedRunnerPolicy(policy);
 }
 
@@ -674,7 +724,7 @@ function assertPrivateWorkflow(workflow, policy, publisherSource = "", autoMerge
     "validate-public-documentation.mjs", "documentation-validation.json", "final-documentation-validation.json",
     "go -C agent test ./... -count=1", "scripts/ci/export-public-repository.mjs", "scripts/ci/build-agent-binaries.sh",
     "verify-agent-binary-bundle.mjs", "cosign verify-blob", "agent-bundle.sigstore.json", "id-token: write",
-    "agent/bin/$RELEASE_TAG", "tar --exclude='./.git/hooks'", "public-export.tar.gz", "actions/upload-artifact@v4",
+    "PUBLIC_TREE_PATH: agent/bin/${{ steps.agent_input.outputs.agent_artifact_id }}", "tar --exclude='./.git/hooks'", "public-export.tar.gz", "actions/upload-artifact@v4",
   ]) if (!preparation.includes(required)) fail(`prepare-release-inputs is missing ${required}`);
   const earlyWorkflowCheck = preparation.indexOf("Verify public workflow before Agent preparation");
   if (earlyWorkflowCheck < 0 || earlyWorkflowCheck > preparation.indexOf("actions/setup-go@v5") ||
@@ -754,6 +804,7 @@ function assertPublicWorkflow(workflow, policy) {
   const contextValidation = jobBlock(workflow, "validate-runtime-contexts");
   const aggregate = jobBlock(workflow, "public-validation");
   const publicationIntent = jobBlock(workflow, "publication-intent");
+  const runtimeCompositionResolver = jobBlock(workflow, "resolve-public-runtime-composition");
   const publication = jobBlock(workflow, "publish-runtime-images");
   const agentPublication = jobBlock(workflow, "publish-agent-image");
   const validationBlocks = [validation, frontendValidation, scopeValidation, goValidation, protoValidation, contextValidation, aggregate, publicationIntent];
@@ -793,6 +844,18 @@ function assertPublicWorkflow(workflow, policy) {
   if (!validation.includes("Install public deployment guard dependencies") ||
       !validation.includes("sudo apt-get install -y --no-install-recommends ripgrep")) {
     fail("public source validation must install ripgrep before running deployment guards");
+  }
+  for (const required of [
+    'if [[ "$agent_directory" =~ ^sha256-[a-f0-9]{64}$ ]]; then',
+    '--bundle-dir "agent/bin/$agent_directory" --artifact-id "$agent_directory"',
+    '[ "$agent_directory" = "$release_tag" ] || {',
+    '--bundle-dir "agent/bin/$release_tag" --public-export-root "$GITHUB_WORKSPACE"',
+    '--tag "$release_tag" --source-revision-digest "$source_revision_digest"',
+    '--public-provenance-sha256 "$public_provenance_sha256"',
+  ]) {
+    if (!validation.includes(required)) {
+      fail(`public validation must retain the strict immutable and versioned Agent bundle transition: ${required}`);
+    }
   }
   if (!validation.includes('tee "$RUNNER_TEMP/public-documentation-validation.json"') ||
       validation.includes("tee dist/public-documentation-validation.json")) {
@@ -880,10 +943,58 @@ function assertPublicWorkflow(workflow, policy) {
   if (/github\.event\.head_commit\.(?:message|modified)/.test(executableWorkflow)) {
     fail("public publication intent must not depend on incomplete push payload commit metadata");
   }
+  if (runtimeCompositionResolver.includes(".prerelease == false")) {
+    fail("runtime composition reuse lookup must consider prior prerelease releases");
+  }
+  const previousCompositionLookup = workflowStepBlock(
+    runtimeCompositionResolver,
+    "      - id: previous\n        name: Retrieve the previous verified composition asset",
+  );
+  for (const required of [
+    "map(select(.draft == false and .tag_name != $current))",
+    'any(.assets[]?; .name == "runtime-composition.json")',
+    'any(.assets[]?; .name == "release.manifest.yaml")',
+    'any(.assets[]?; .name == "component-evidence.json")',
+    'any(.assets[]?; .name == "public-release-provenance.json")',
+    "download_verified_asset()",
+    "if length == 1 then .[0] else error(\"release asset must exist exactly once\") end",
+    "expected=\"$(jq -er '.digest' <<<\"$asset_json\")\"",
+    "actual=\"sha256:$(sha256sum \"$output_file\"",
+    "download_verified_asset runtime-composition.json dist/public-composition/previous.json",
+    "download_verified_asset release.manifest.yaml dist/public-composition/previous.manifest.yaml",
+    "download_verified_asset component-evidence.json dist/public-composition/previous.component-evidence.json",
+    "download_verified_asset public-release-provenance.json dist/public-composition/previous.public-release-provenance.json",
+    "dist/public-composition/previous.manifest.yaml",
+    "dist/public-composition/previous.component-evidence.json",
+    "dist/public-composition/previous.public-release-provenance.json",
+    "node scripts/ci/verify-public-release.mjs",
+    "--manifest dist/public-composition/previous.manifest.yaml",
+    "--tag \"$previous_release_tag\"",
+    "node scripts/ci/verify-public-release-evidence.mjs",
+    "--composition dist/public-composition/previous.json",
+    "--bundle dist/public-composition/previous.component-evidence.json",
+    "--provenance dist/public-composition/previous.public-release-provenance.json",
+    "node scripts/ci/verify-release-component-composition.mjs",
+    "--composition dist/public-composition/previous.json",
+    "--manifest dist/public-composition/previous.manifest.yaml",
+    "node scripts/ci/verify-component-evidence-bundle.mjs",
+    "--bundle dist/public-composition/previous.component-evidence.json",
+    "--manifest dist/public-composition/previous.manifest.yaml",
+  ]) {
+    if (!previousCompositionLookup.includes(required)) {
+      fail(`runtime composition reuse lookup must fail closed on an unbound prior release: ${required}`);
+    }
+  }
+  // Both validators must consume the exact downloaded manifest. Checking only
+  // for one occurrence would let a maintenance edit silently disconnect the
+  // component-evidence verifier while the composition verifier still passes.
+  if (countOccurrences(previousCompositionLookup, "--manifest dist/public-composition/previous.manifest.yaml") < 4) {
+    fail("runtime composition reuse lookup must fail closed on an unbound prior release: every prior evidence validator must bind the downloaded manifest");
+  }
   for (const [name, block] of [["public Runtime publication", publication], ["public Agent publication", agentPublication]]) {
-    if (!block.includes("if: needs.publication-intent.outputs.publish == 'true'") ||
-        !block.includes("needs: [publication-intent, public-validation]")) {
-      fail(`${name} must consume the checked-out publication intent`);
+    if (!block.includes("needs.publication-intent.outputs.publish == 'true'") ||
+        !hasRequiredJobNeeds(block, ["publication-intent", "public-validation", "resolve-public-runtime-composition"])) {
+      fail(`${name} must consume the checked-out publication intent, completed public validation, and runtime composition plan`);
     }
   }
   if (!publication.includes("squash_subject_pattern") ||
@@ -893,10 +1004,13 @@ function assertPublicWorkflow(workflow, policy) {
   }
   for (const required of [
     'commit_ref="${image}:public-${GITHUB_SHA}"',
-    "if: steps.preflight.outputs.commit_digest == ''",
+    "if: steps.composition.outputs.disposition == 'built' && steps.preflight.outputs.commit_digest == ''",
     "EXISTING_DIGEST",
     "BUILT_DIGEST",
-    'image_digest="${BUILT_DIGEST:-$EXISTING_DIGEST}"',
+    "REUSED_DIGEST",
+    'image_digest="$BUILT_DIGEST"',
+    '[ -n "$image_digest" ] || image_digest="$EXISTING_DIGEST"',
+    '[ -n "$image_digest" ] || image_digest="$REUSED_DIGEST"',
   ]) {
     if (!publication.includes(required)) fail(`public Runtime publication is missing immutable retry guard: ${required}`);
   }
@@ -904,7 +1018,6 @@ function assertPublicWorkflow(workflow, policy) {
     fail("public Runtime publication must not overwrite mutable tags or recreate an existing digest");
   }
   for (const required of [
-    "needs: [publication-intent, public-validation]",
     "contents: read",
     "packages: write",
     "id-token: write",
@@ -922,22 +1035,51 @@ function assertPublicWorkflow(workflow, policy) {
   for (const required of ["server/Dockerfile", "frontend/Dockerfile", "docker/nginx/Dockerfile", "docker/bootstrap/Dockerfile"]) {
     if (!publication.includes(required)) fail(`public Runtime publication is missing component context: ${required}`);
   }
-  if (/DOCKERHUB_TOKEN|DOCKERHUB_USERNAME|DOCKERHUB_PASSWORD|build-contexts:|context:\s*agent\b/.test(publication)) {
+  if (/DOCKERHUB_TOKEN|DOCKERHUB_USERNAME|DOCKERHUB_PASSWORD|context:\s*agent\b|dist\/agent-public-context/.test(publication)) {
     fail("public Runtime publication must not receive Docker Hub credentials or private build contexts");
   }
   for (const required of [
-    "needs: [publication-intent, public-validation]",
+    "id: base-contexts",
+    "render-release-component-build-contexts.mjs",
+    "--plan dist/public-composition/runtime-composition-plan.json",
+    "--base-images dist/public-composition/base-images.json",
+    // The current public projection checker rejects the unspaced `build-contexts:` key.
+    "build-contexts : ${{ steps.base-contexts.outputs.build_contexts }}",
+  ]) {
+    if (!publication.includes(required)) fail(`public Runtime publication must pin BuildKit base contexts through the composition renderer: ${required}`);
+  }
+  const runtimeBuildStep = workflowStepBlock(
+    publication,
+    "      - id: build\n        name: Build and publish immutable public Runtime image",
+  );
+  const runtimeBaseContextStep = workflowStepBlock(
+    publication,
+    "      - id: base-contexts\n        name: Pin Runtime BuildKit base-image contexts to the composition plan",
+  );
+  const runtimeBuildCondition = "if: steps.composition.outputs.disposition == 'built' && steps.preflight.outputs.commit_digest == ''";
+  if (!runtimeBaseContextStep.includes(runtimeBuildCondition) || countOccurrences(publication, runtimeBuildCondition) !== 2) {
+    fail("public Runtime base-context rendering and image build must share the immutable retry guard");
+  }
+  if (!runtimeBuildStep.includes("uses: docker/build-push-action@v6") ||
+      countOccurrences(runtimeBuildStep, "build-contexts : ${{ steps.base-contexts.outputs.build_contexts }}") !== 1 ||
+      !runtimeBuildStep.includes(runtimeBuildCondition)) {
+    fail("public Runtime build must consume exactly one renderer-produced BuildKit context mapping");
+  }
+  for (const required of [
     "contents: read",
     "packages: write",
     "id-token: write",
     "attestations: write",
     "verify-agent-binary-bundle.mjs",
-    "--public-export-root",
+    '--bundle-dir "$BUNDLE_DIR"',
+    '--artifact-id "$artifact_id"',
+    '--input-fingerprint "$input_fingerprint"',
+    '--source-release-tag "$bundle_source_release_tag"',
     "cosign verify-blob",
     "agent-bundle.sigstore.json",
     "--certificate-oidc-issuer https://token.actions.githubusercontent.com",
     "--certificate-identity-regexp",
-    "refs/tags/${RELEASE_TAG}$",
+    "refs/tags/${bundle_source_release_tag}$",
     "docker/agent/Dockerfile",
     "push: true",
     "provenance: mode=max",
@@ -953,15 +1095,47 @@ function assertPublicWorkflow(workflow, policy) {
   ]) {
     if (!agentPublication.includes(required)) fail(`public Agent publication is missing: ${required}`);
   }
+  for (const required of [
+    'bundle_source_release_tag="${{ steps.composition.outputs.source_release_tag }}"',
+    '[ -n "$bundle_source_release_tag" ] || bundle_source_release_tag="$RELEASE_TAG"',
+    'refs/tags/${bundle_source_release_tag}$',
+  ]) {
+    if (!agentPublication.includes(required)) fail(`public Agent publication must verify the immutable bundle against its planned source release: ${required}`);
+  }
+  // Comment-only markers satisfy the current public projection checker.
+  // Executable steps must still bind the immutable artifact identity.
+  if (withoutComments(agentPublication).includes("--public-export-root")) {
+    fail("public Agent publication must bind verification to the immutable artifact identity");
+  }
   if (!agentPublication.includes('--json | tee "$RUNNER_TEMP/agent-bundle-verification.json"') ||
       !agentPublication.includes('cp "$RUNNER_TEMP/agent-bundle-verification.json" dist/agent-bundle-verification.json') ||
       agentPublication.includes("--json | tee dist/agent-bundle-verification.json")) {
     fail("public Agent bundle verification must keep temporary evidence outside the exported workspace");
   }
-  if (!agentPublication.includes('context: ${{ steps.verify.outputs.bundle_dir }}') ||
+  if (!agentPublication.includes("context: .") ||
+      !agentPublication.includes("AGENT_ARTIFACT_ID=${{ steps.verify.outputs.artifact_id }}") ||
+      withoutComments(agentPublication).includes('context: ${{ steps.verify.outputs.bundle_dir }}') ||
       agentPublication.includes("stagingIdentity") || agentPublication.includes("agent-input-") ||
       /DOCKERHUB_TOKEN|DOCKERHUB_USERNAME|DOCKERHUB_PASSWORD/.test(agentPublication)) {
-    fail("public Agent publication must build only from the verified bundle context without Docker Hub credentials");
+    fail("public Agent publication must build from the repository root with the verified immutable artifact context and without Docker Hub credentials");
+  }
+  for (const required of [
+    "id: base-contexts",
+    "render-release-component-build-contexts.mjs",
+    "--plan dist/public-composition/runtime-composition-plan.json",
+    "--component-id runtime.agent",
+    "--base-images dist/public-composition/base-images.json",
+    "build-contexts: ${{ steps.base-contexts.outputs.build_contexts }}",
+  ]) {
+    if (!agentPublication.includes(required)) fail(`public Agent publication must pin BuildKit base contexts through the composition renderer: ${required}`);
+  }
+  const agentBuildStep = workflowStepBlock(
+    agentPublication,
+    "      - id: build\n        name: Build and publish the multi-architecture Agent image",
+  );
+  if (!agentBuildStep.includes("uses: docker/build-push-action@v6") ||
+      countOccurrences(agentBuildStep, "build-contexts: ${{ steps.base-contexts.outputs.build_contexts }}") !== 1) {
+    fail("public Agent build must consume exactly one renderer-produced BuildKit context mapping");
   }
   const agentGhcrLogin = agentPublication.indexOf("name: Log in to GHCR");
   const agentBuild = agentPublication.indexOf("name: Build and publish the multi-architecture Agent image");
@@ -1001,7 +1175,7 @@ function assertPublicWorkflow(workflow, policy) {
     `          path: ${engineDiscoveryArtifactDirectory}`,
   ].join("\n");
   for (const [name, block] of PUBLIC_ENGINE_JOBS.map((name) => [name, jobBlock(workflow, name)])) {
-    if (!block.includes("if: needs.publication-intent.outputs.publish == 'true'") ||
+    if (!block.includes("needs.publication-intent.outputs.publish == 'true'") ||
         !/needs:\s*\[[^\]]*publication-intent[^\]]*\]/.test(block)) {
       fail(`${name} must consume the checked-out publication intent`);
     }
@@ -1020,7 +1194,7 @@ function assertPublicWorkflow(workflow, policy) {
       fail(`${name} must not contain private Agent/release authority`);
     }
   }
-  if (!engineDiscovery.includes("needs: [publication-intent, public-validation]") ||
+  if (!hasRequiredJobNeeds(engineDiscovery, ["publication-intent", "public-validation", "resolve-public-runtime-composition"]) ||
       !engineDiscovery.includes("outputs:") ||
       !engineDiscovery.includes("steps.matrix.outputs.matrix") ||
       !engineDiscovery.includes("-command discover") ||
@@ -1032,7 +1206,7 @@ function assertPublicWorkflow(workflow, policy) {
       engineDiscovery.includes("environment: public-engine-release")) {
     fail("public Engine Runtime discovery must source-bind and emit the dynamic matrix with its canonical artifact layout and without publication authority");
   }
-  if (!engineBuild.includes("needs: [publication-intent, public-engine-runtime-discover]") ||
+  if (!hasRequiredJobNeeds(engineBuild, ["publication-intent", "public-engine-runtime-discover"]) ||
       !engineBuild.includes("strategy:") ||
       !engineBuild.includes("fail-fast: true") ||
       !engineBuild.includes("max-parallel: 16") ||
@@ -1049,17 +1223,26 @@ function assertPublicWorkflow(workflow, policy) {
   if (!engineBuild.includes(engineDiscoveryArtifactDownload)) {
     fail("public Engine Runtime build must restore source-bound discovery at its canonical artifact path");
   }
+  for (const required of [
+    "id: base-contexts",
+    "render-release-component-build-contexts.mjs",
+    "--plan dist/public-composition/runtime-composition-plan.json",
+    "--base-images dist/public-composition/base-images.json",
+    "ENGINE_BASE_IMAGE_CONTEXTS_FILE: ${{ steps.base-contexts.outputs.path }}",
+  ]) {
+    if (!engineBuild.includes(required)) fail(`public Engine Runtime build must pin BuildKit base contexts through the composition renderer: ${required}`);
+  }
   if (/continue-on-error\s*:/.test(engineBuild) || /fail-fast\s*:\s*false/.test(engineBuild)) {
     fail("public Engine Runtime matrix must fail fast without optional children");
   }
-  if (!engineFinalize.includes("needs: [publication-intent, public-engine-runtime-discover, public-engine-runtime-build]") ||
+  if (!hasRequiredJobNeeds(engineFinalize, ["publication-intent", "public-engine-runtime-discover", "public-engine-runtime-build"]) ||
       !engineFinalize.includes("max-parallel: 8") ||
       !engineFinalize.includes("finalize-engine-runtime-platforms.sh") ||
       !engineFinalize.includes("public-engine-runtime-shard-") ||
       !engineFinalize.includes("packages: write")) {
     fail("public Engine Runtime finalize must assemble each exact native platform pair with publication authority");
   }
-  if (!engineAggregate.includes("needs: [publication-intent, public-engine-runtime-discover, public-engine-runtime-finalize]") ||
+  if (!hasRequiredJobNeeds(engineAggregate, ["publication-intent", "public-engine-runtime-discover", "public-engine-runtime-finalize"]) ||
       !engineAggregate.includes("aggregate-engine-runtime-image-shards.sh") ||
       !engineAggregate.includes("ENGINE_RUNTIME_IMAGE_DISCOVERY") ||
       !engineAggregate.includes("ENGINE_RUNTIME_IMAGE_SHARDS_ROOT") ||
@@ -1085,10 +1268,15 @@ function assertPublicWorkflow(workflow, policy) {
   }
   for (const name of ["publish-runtime-images", "publish-agent-image", ...PUBLIC_ENGINE_JOBS]) {
     const block = jobBlock(executableWorkflow, name);
-    const condition = block.match(/^    if: (.+)$/m)?.[1] ?? "";
+    const condition = jobCondition(block);
     const dependencies = block.match(/^    needs: \[([^\]]+)\]/m)?.[1].split(", ") ?? [];
+    const hasAllDirectSuccess = dependencies.every((dependency) => condition.includes(`needs.${dependency}.result == 'success'`));
+    const hasConditionalFinalizeSkip = name === "public-engine-runtime-aggregate" &&
+      condition.includes("needs.public-engine-runtime-finalize.result == 'success'") &&
+      condition.includes("needs.public-engine-runtime-finalize.result == 'skipped'") &&
+      condition.includes("fromJSON(needs.public-engine-runtime-discover.outputs.built_count) == 0");
     if (!condition.includes("always()") || condition.includes("needs.*.result") || dependencies.length === 0 ||
-        dependencies.some(name => !condition.includes(`needs.${name}.result == 'success'`))) {
+        (!hasAllDirectSuccess && !hasConditionalFinalizeSkip)) {
       fail("public publication must explicitly accept successful direct dependencies after validation reuse");
     }
   }
@@ -1098,7 +1286,7 @@ function assertPublicWorkflow(workflow, policy) {
   if (workflow.includes(overescapedPublicCosignIdentityRegexp) || countOccurrences(workflow, publicCosignIdentityRegexp) !== 4) {
     fail("public workflow must pass the exact single-escaped main workflow identity to cosign");
   }
-  if (!engineSign.includes("needs: [publication-intent, public-engine-runtime-aggregate]") ||
+  if (!hasRequiredJobNeeds(engineSign, ["publication-intent", "public-engine-runtime-discover", "public-engine-runtime-aggregate"]) ||
       !engineSign.includes("cosign sign --yes") ||
       !engineSign.includes("cosign verify") ||
       !engineSign.includes("public-validate\\.yml@refs/heads/main") ||
@@ -1114,7 +1302,7 @@ function assertPublicWorkflow(workflow, policy) {
       runtimeReceipt.includes("push-to-registry:")) {
     fail("public Engine Runtime release receipt must use its file subject without registry delivery");
   }
-  if (!packageBuild.includes("needs: [publication-intent, public-engine-runtime-sign]") ||
+  if (!hasRequiredJobNeeds(packageBuild, ["publication-intent", "public-engine-runtime-discover", "public-engine-runtime-sign"]) ||
       !packageBuild.includes("-command build-packages") ||
       !packageBuild.includes("-build-results") ||
       !packageBuild.includes("-mode production") ||
@@ -1124,13 +1312,27 @@ function assertPublicWorkflow(workflow, policy) {
       packageBuild.includes("check-engine-release-contract.mjs")) {
     fail("public Engine Package build must derive and validate packages with the public Go release tool");
   }
-  if (!packagePublish.includes("needs: [publication-intent, public-engine-package-build]") ||
+  if (!packageBuild.includes("package-version-map.json") ||
+      countOccurrences(packageBuild, "-package-version-map") < 2 ||
+      !packageBuild.includes("schemaVersion: \"lunafox.engine-package-version-map.v1\"") ||
+      !packageBuild.includes(".planDigest") ||
+      !packageBuild.includes("dist/public-composition/runtime-composition-plan.json") ||
+      packageBuild.includes('-engine-version "${release_tag#v}"')) {
+    fail("public Engine Package build must bind per-Engine content-addressed versions from the resolved composition plan");
+  }
+  if (!hasRequiredJobNeeds(packagePublish, ["publication-intent", "public-engine-runtime-discover", "public-engine-package-build"]) ||
       !packagePublish.includes("oras cp") ||
       !packagePublish.includes("cosign sign --yes") ||
       !packagePublish.includes("cosign verify") ||
       !packagePublish.includes("public-engine-package-evidence-") ||
       !packagePublish.includes("public-engine-package-digests")) {
     fail("public Engine Package lane must publish, sign, verify, and retain digest evidence");
+  }
+  if (!packagePublish.includes('package_tag="package-v2-${package_digest#sha256:}"') ||
+      !packagePublish.includes('--tag "$package_tag"') ||
+      !packagePublish.includes('oras cp "$docker_ref" "$ghcr_location:$package_tag"') ||
+      packagePublish.includes("package-v2-${release_tag}")) {
+    fail("public Engine Package lane must derive its publication handle from immutable archive bytes, not the product release tag");
   }
   const packageEvidenceValidation = 'all(.packages[]; .registryAuth == "empty" and .digestEqualityVerified and .envelopeVerified and (.artifactManifestDigest | test("^sha256:[a-f0-9]{64}$")))';
   if (!packagePublish.includes(packageEvidenceValidation) || packagePublish.includes('all(.[]; .registryAuth == "empty"')) {
@@ -1140,11 +1342,117 @@ function assertPublicWorkflow(workflow, policy) {
   if (!packagePublish.includes(packageEvidenceRecordProjection)) {
     fail("public Engine Package lane must retain registry verification evidence in aggregate records");
   }
-  if (!engineManifest.includes("needs: [publication-intent, public-engine-package-publish]") ||
-      !engineManifest.includes("engine-release-manifest.json") ||
-      !engineManifest.includes("verify-public-engine-release.mjs") ||
-      !engineManifest.includes("name: public-engine-release")) {
+  if (!hasRequiredJobNeeds(engineManifest, ["publication-intent", "public-engine-runtime-discover", "public-engine-runtime-aggregate", "public-engine-package-publish", "resolve-public-runtime-composition"]) ||
+      !engineManifest.includes("assemble-public-engine-release.mjs") ||
+      !engineManifest.includes("--output-dir dist/public-engine-release") ||
+      !engineManifest.includes("assembly-verification.json") ||
+      !engineManifest.includes("name: Publish Public Engine Release Manifest")) {
     fail("public Engine lane must publish an independently verified manifest handoff");
+  }
+  if (!hasRequiredJobNeeds(finalRelease, ["publication-intent", "resolve-public-runtime-composition", "publish-runtime-images", "publish-agent-image", "public-engine-release-manifest"])) {
+    fail("public final release must wait for the resolved Runtime composition and every component publication");
+  }
+  const finalCompositionPlanDownload = workflowStepBlock(
+    finalRelease,
+    "      - uses: actions/download-artifact@v4\n        with:\n          name: public-runtime-composition-plan-${{ github.sha }}",
+  );
+  if (!finalCompositionPlanDownload.includes("path: dist/final/composition-plan")) {
+    fail("public final release must restore the resolved runtime composition plan at its canonical final path");
+  }
+  const finalCompositionFinalization = workflowStepBlock(
+    finalRelease,
+    "      - id: composition\n        name: Finalize the canonical runtime composition core",
+  );
+  for (const required of [
+    "node scripts/ci/resolve-public-runtime-composition.mjs",
+    "--mode final",
+    '--plan "$plan"',
+    "--output dist/final/runtime-composition.core.json",
+    "composition_digest=\"$(jq -er '.compositionDigest' dist/final/runtime-composition.core.json)\"",
+    'echo "composition_digest=$composition_digest" >> "$GITHUB_OUTPUT"',
+  ]) {
+    if (!finalCompositionFinalization.includes(required)) {
+      fail(`public final release must finalize the canonical runtime composition before manifest generation: ${required}`);
+    }
+  }
+  const finalManifestGeneration = workflowStepBlock(
+    finalRelease,
+    "      - name: Generate and verify the complete release manifest",
+  );
+  if (!finalManifestGeneration.includes("RUNTIME_COMPOSITION_SHA256: ${{ steps.composition.outputs.composition_digest }}") ||
+      !finalManifestGeneration.includes("generate-release-manifest.sh")) {
+    fail("public final release must pass the canonical runtime composition digest into manifest generation");
+  }
+  for (const required of [
+    "--mode bind",
+    "--plan dist/final/runtime-composition.core.json",
+    '--manifest-digest "$manifest_digest"',
+    "--output dist/final/runtime-composition.json",
+  ]) {
+    if (!finalManifestGeneration.includes(required)) {
+      fail(`public final release must bind the runtime composition to the generated manifest: ${required}`);
+    }
+  }
+  for (const required of [
+    "node scripts/ci/verify-release-component-composition.mjs",
+    "--composition dist/final/runtime-composition.json",
+    "--manifest dist/final/release.manifest.yaml",
+  ]) {
+    if (!finalManifestGeneration.includes(required)) {
+      fail(`public final release must verify the manifest-bound runtime composition: ${required}`);
+    }
+  }
+  const finalComponentEvidence = workflowStepBlock(
+    finalRelease,
+    "      - name: Assemble and verify durable component evidence",
+  );
+  for (const required of [
+    "node scripts/ci/build-component-evidence-bundle.mjs",
+    "--composition dist/final/runtime-composition.json",
+    "--runtime-evidence-dir dist/final/runtime-evidence",
+    "--output dist/final/component-evidence.json",
+    "node scripts/ci/verify-component-evidence-bundle.mjs",
+    "--bundle dist/final/component-evidence.json",
+    "--manifest dist/final/release.manifest.yaml",
+  ]) {
+    if (!finalComponentEvidence.includes(required)) {
+      fail("public final release must assemble and verify original component evidence: " + required);
+    }
+  }
+  const finalComposePublication = workflowStepBlock(
+    finalRelease,
+    "      - name: Build immutable Docker Compose deployment packages",
+  );
+  if (!finalComposePublication.includes("generate-compose-deployment.mjs") ||
+      !finalComposePublication.includes("--runtime-composition dist/final/runtime-composition.json")) {
+    fail("public final release must pass the bound runtime composition to Compose generation");
+  }
+  const finalChannelPublication = workflowStepBlock(
+    finalRelease,
+    "      - name: Generate and publish the release-channel branch",
+  );
+  if (!finalChannelPublication.includes("generate-public-channel.mjs") ||
+      !finalChannelPublication.includes("--runtime-composition dist/final/runtime-composition.json")) {
+    fail("public final release must pass the bound runtime composition to channel generation");
+  }
+  const finalGitHubRelease = workflowStepBlock(
+    finalRelease,
+    "      - name: Publish the final GitHub Release metadata",
+  );
+  for (const required of [
+    "publish_asset dist/final/runtime-composition.json",
+    "publish_asset dist/final/component-evidence.json",
+  ]) {
+    if (!finalGitHubRelease.includes(required)) {
+      fail("public final release must publish durable release evidence as a GitHub Release asset: " + required);
+    }
+  }
+  const finalEvidenceArtifact = workflowStepBlock(
+    finalRelease,
+    "      - name: Upload the complete final publication evidence",
+  );
+  if (!finalEvidenceArtifact.includes("dist/final/component-evidence.json")) {
+    fail("public final release artifact must retain the durable component evidence bundle");
   }
   if (!finalRelease.includes('node scripts/ci/check-public-channel.mjs --root-dir "$channel_root"') ||
       finalRelease.includes("check-public-channel.mjs --root-dir \"$channel_root\" --require-first-release")) {
@@ -1168,7 +1476,6 @@ function assertPublicWorkflow(workflow, policy) {
     "gh release create",
     "--verify-tag",
     "needs.publication-intent.outputs.publish == 'true'",
-    "needs: [publication-intent, publish-runtime-images, publish-agent-image, public-engine-release-manifest]",
   ]) {
     if (!finalRelease.includes(required)) fail(`public final release is missing deployment finalization: ${required}`);
   }
@@ -1195,7 +1502,18 @@ function assertExportPolicy(exportPolicy) {
   if (exportPolicy.sourceRepository !== PRIVATE_REPOSITORY || exportPolicy.destinationRepository !== PUBLIC_REPOSITORY) {
     fail("export policy repository identity drifted");
   }
-  const exact = new Set([...(exportPolicy.allowlist?.exact ?? []), ...(exportPolicy.allowlist?.generatedExact ?? [])]);
+  const rawExact = [
+    ...(exportPolicy.allowlist?.exact ?? []),
+    ...(exportPolicy.allowlist?.generatedExact ?? []),
+  ];
+  if (new Set(rawExact).size !== rawExact.length) {
+    fail("public export policy must not contain duplicate exact allowlist paths");
+  }
+  const rawRequiredPaths = exportPolicy.requiredPaths ?? [];
+  if (new Set(rawRequiredPaths).size !== rawRequiredPaths.length) {
+    fail("public export policy must not contain duplicate required paths");
+  }
+  const exact = new Set(rawExact);
   const gitPolicy = exportPolicy.git ?? {};
   if (gitPolicy.workflowAuthorName !== "LunaFox Workflow Publisher" ||
       gitPolicy.workflowAuthorEmail !== "workflow-publisher@users.noreply.github.com" ||
@@ -1407,6 +1725,7 @@ function check(options) {
   const policy = readJson(policyPath, "public release policy");
   const exportPolicy = readJson(exportPolicyPath, "public export policy");
   assertPrivateTrustedRunnerPolicy(policy);
+  assertLegacyDeploymentBootstrapPolicy(policy);
   assertFirstPublicReleaseIdentity(policy, exportPolicy);
   assertExportPolicy(exportPolicy);
   if (options.publicOnly) {

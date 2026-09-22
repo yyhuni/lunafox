@@ -27,6 +27,16 @@ Tag；正文面向最终用户，不是内部部署记录或导出提交摘要�
 `release-note-evidence/<tag>.json` 仅保存来源覆盖、身份和摘要绑定，且不会进入公共投影。
 它不保存审计输入正文、推理、对话、prompt、凭据或任何外部服务来源信息。
 
+## Manifest 与更新检查
+
+生产 `release.manifest.yaml` 会把同一 Tag 的正文和正文 SHA-256 绑定在
+`releaseNotes.body` 与 `releaseNotes.digest` 中；生成器可用
+`--release-notes-file` 指定输入，否则读取 `release-notes/v<releaseVersion>.md`。
+生产版本缺少 notes、正文不符合上述双语格式或摘要不匹配时必须失败。Server 的更新检查
+会投影为 `candidate.releaseNotes.body` 和 `candidate.releaseNotes.sha256`，因此离线实例也
+能展示与公开 Release 相同的内容，前端不会额外请求 GitHub。仅 `0.0.0-dev` 开发 manifest
+允许省略该对象，About 会明确显示暂无更新说明。
+
 ## 发布前流程
 
 语义审计由发布执行者在本地完成。执行者可以是 Codex Agent，也可以是拥有维护者权限的

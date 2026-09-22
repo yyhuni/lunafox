@@ -23,9 +23,10 @@ import (
 )
 
 const (
-	maxChannelRecordBytes   = 16 * 1024
-	maxReleaseManifestBytes = 4 * 1024 * 1024
-	manifestFetchTimeout    = 15 * time.Second
+	maxChannelRecordBytes      = 16 * 1024
+	maxReleaseManifestBytes    = 4 * 1024 * 1024
+	maxRuntimeCompositionBytes = 8 * 1024 * 1024
+	manifestFetchTimeout       = 15 * time.Second
 )
 
 var (
@@ -42,11 +43,12 @@ type channelRecord struct {
 // ChannelManifestSource loads the candidate selected by one deployment-owned
 // release channel. Browser input cannot choose the source, path, or Registry.
 type ChannelManifestSource struct {
-	baseURL  *url.URL
-	channel  string
-	cacheDir string
-	client   *http.Client
-	mu       sync.Mutex
+	baseURL          *url.URL
+	channel          string
+	cacheDir         string
+	compositionCache string
+	client           *http.Client
+	mu               sync.Mutex
 }
 
 type ChannelManifestSourceConfig struct {
@@ -73,7 +75,8 @@ func NewChannelManifestSource(config ChannelManifestSourceConfig) (*ChannelManif
 		return nil, fmt.Errorf("upgrade deployment root must be absolute")
 	}
 	cacheDir := filepath.Join(root, upgrader.JournalDirectory, upgrader.ManifestDirectory)
-	if err := ensureManifestCacheDirectory(root, cacheDir); err != nil {
+	compositionCache := filepath.Join(root, upgrader.JournalDirectory, upgrader.CompositionDirectory)
+	if err := ensureManifestCacheDirectory(root, cacheDir, compositionCache); err != nil {
 		return nil, err
 	}
 	client := &http.Client{}
@@ -90,7 +93,7 @@ func NewChannelManifestSource(config ChannelManifestSourceConfig) (*ChannelManif
 		}
 		return nil
 	}
-	return &ChannelManifestSource{baseURL: baseURL, channel: channel, cacheDir: cacheDir, client: client}, nil
+	return &ChannelManifestSource{baseURL: baseURL, channel: channel, cacheDir: cacheDir, compositionCache: compositionCache, client: client}, nil
 }
 
 // Load fetches and validates the current channel alias. A failed refresh never
@@ -120,14 +123,44 @@ func (source *ChannelManifestSource) Load() (*releasemanifest.Manifest, error) {
 		return nil, domain.NewManifestDigestMismatch("sha256:"+record.manifestSHA, "sha256:"+actualSHA)
 	}
 	manifest, err := releasemanifest.Parse(manifestBytes)
+	legacyAlpha114 := false
 	if err != nil {
-		return nil, domain.WrapManifestInvalid(err)
+		// alpha.114 is the one policy-pinned public bootstrap manifest that
+		// predates composition assets. Keep the ordinary channel parser strict,
+		// and invoke the explicit legacy parser only for that fixed identity.
+		manifest, err = releasemanifest.ParseLegacyAlpha114(manifestBytes)
+		if err != nil {
+			return nil, domain.WrapManifestInvalid(err)
+		}
+		legacyAlpha114 = true
 	}
 	if "v"+manifest.ReleaseVersion != record.version {
 		return nil, domain.NewManifestIdentityMismatch("lunafox-"+strings.TrimPrefix(record.version, "v"), manifest.Upgrade.ManifestID)
 	}
 	if _, err := domain.TargetFromManifest(manifest); err != nil {
 		return nil, err
+	}
+	if legacyAlpha114 {
+		if err := source.persist(manifest.Digest(), manifestBytes); err != nil {
+			return nil, domain.WrapManifestInvalid(err)
+		}
+		return manifest, nil
+	}
+	// Release assets are version-isolated: a channel record points at
+	// manifests/<tag>.yaml while its composition lives at
+	// manifests/<tag>/runtime-composition.json. The asset basename is already
+	// strict-validated by releasemanifest.Parse; the version directory comes
+	// from the canonical channel record rather than from a client-provided path.
+	compositionPath := path.Join("manifests", record.version, manifest.RuntimeComposition.Asset)
+	compositionBytes, err := source.fetch(compositionPath, maxRuntimeCompositionBytes)
+	if err != nil {
+		return nil, domain.WrapManifestInvalid(fmt.Errorf("fetch runtime composition: %w", err))
+	}
+	if err := upgrader.ValidateRuntimeCompositionAsset(compositionBytes, manifest, manifest.Digest(), manifest.RuntimeComposition.SHA256); err != nil {
+		return nil, domain.WrapManifestInvalid(err)
+	}
+	if err := source.persistComposition(manifest.RuntimeComposition.SHA256, compositionBytes); err != nil {
+		return nil, domain.WrapManifestInvalid(fmt.Errorf("cache runtime composition: %w", err))
 	}
 	if err := source.persist(manifest.Digest(), manifestBytes); err != nil {
 		return nil, domain.WrapManifestInvalid(err)
@@ -159,7 +192,12 @@ func (source *ChannelManifestSource) LoadTarget(digest string) (*releasemanifest
 	}
 	manifest, err := releasemanifest.Parse(raw)
 	if err != nil {
-		return nil, domain.WrapManifestInvalid(err)
+		// Keep retries for the policy-pinned legacy bootstrap compatible with the
+		// same explicit exception used by the channel refresh path.
+		manifest, err = releasemanifest.ParseLegacyAlpha114(raw)
+		if err != nil {
+			return nil, domain.WrapManifestInvalid(err)
+		}
 	}
 	if manifest.Digest() != digest {
 		return nil, domain.NewManifestDigestMismatch(digest, manifest.Digest())
@@ -296,6 +334,67 @@ func (source *ChannelManifestSource) persist(digest string, raw []byte) error {
 	return errors.Join(directory.Sync(), directory.Close())
 }
 
+func (source *ChannelManifestSource) persistComposition(digest string, raw []byte) error {
+	if source == nil || source.compositionCache == "" {
+		return fmt.Errorf("runtime composition cache is not configured")
+	}
+	if !strings.HasPrefix(digest, "sha256:") || !channelDigestPattern.MatchString(strings.TrimPrefix(digest, "sha256:")) {
+		return fmt.Errorf("runtime composition digest is invalid")
+	}
+	target := filepath.Join(source.compositionCache, strings.TrimPrefix(digest, "sha256:")+".json")
+	info, statErr := os.Lstat(target)
+	if statErr == nil {
+		if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
+			return fmt.Errorf("cached composition digest path must be a regular 0600 file")
+		}
+		file, openErr := os.Open(target)
+		if openErr != nil {
+			return openErr
+		}
+		defer func() { _ = file.Close() }()
+		openedInfo, statErr := file.Stat()
+		if statErr != nil || !openedInfo.Mode().IsRegular() || openedInfo.Mode().Perm() != 0o600 || !os.SameFile(info, openedInfo) {
+			return fmt.Errorf("cached composition digest path changed during validation")
+		}
+		existing, readErr := readBounded(file, maxRuntimeCompositionBytes)
+		if readErr != nil {
+			return readErr
+		}
+		if !bytes.Equal(existing, raw) {
+			return fmt.Errorf("cached composition digest path contains different bytes")
+		}
+		return nil
+	} else if !os.IsNotExist(statErr) {
+		return statErr
+	}
+	temporary, err := os.CreateTemp(source.compositionCache, ".composition-*.tmp")
+	if err != nil {
+		return err
+	}
+	temporaryPath := temporary.Name()
+	defer func() { _ = os.Remove(temporaryPath) }()
+	if err := temporary.Chmod(0o600); err != nil {
+		return errors.Join(err, temporary.Close())
+	}
+	if _, err := temporary.Write(raw); err != nil {
+		return errors.Join(err, temporary.Close())
+	}
+	if err := temporary.Sync(); err != nil {
+		return errors.Join(err, temporary.Close())
+	}
+	if err := temporary.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(temporaryPath, target); err != nil {
+		return err
+	}
+	directory, err := os.Open(source.compositionCache)
+	if err != nil {
+		return err
+	}
+	return errors.Join(directory.Sync(), directory.Close())
+}
+
 func (source *ChannelManifestSource) cachePath(digest string) (string, error) {
 	if !strings.HasPrefix(digest, "sha256:") || !channelDigestPattern.MatchString(strings.TrimPrefix(digest, "sha256:")) {
 		return "", fmt.Errorf("release manifest digest is invalid")
@@ -303,7 +402,7 @@ func (source *ChannelManifestSource) cachePath(digest string) (string, error) {
 	return filepath.Join(source.cacheDir, strings.TrimPrefix(digest, "sha256:")+".yaml"), nil
 }
 
-func ensureManifestCacheDirectory(root, cacheDir string) error {
+func ensureManifestCacheDirectory(root, cacheDir, compositionCache string) error {
 	info, err := os.Lstat(root)
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return fmt.Errorf("upgrade deployment root must be a regular directory")
@@ -324,6 +423,30 @@ func ensureManifestCacheDirectory(root, cacheDir string) error {
 	}
 	if filepath.Clean(current) != filepath.Clean(cacheDir) {
 		return fmt.Errorf("upgrade manifest cache path is invalid")
+	}
+	if err := ensurePrivateCacheDirectory(root, compositionCache, []string{".lunafox", "upgrade", upgrader.CompositionDirectory}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ensurePrivateCacheDirectory(root, cacheDir string, parts []string) error {
+	current := root
+	for _, part := range parts {
+		current = filepath.Join(current, part)
+		if err := os.Mkdir(current, 0o700); err != nil && !os.IsExist(err) {
+			return err
+		}
+		entry, err := os.Lstat(current)
+		if err != nil || !entry.IsDir() || entry.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("upgrade cache must use regular directories")
+		}
+		if err := os.Chmod(current, 0o700); err != nil {
+			return err
+		}
+	}
+	if filepath.Clean(current) != filepath.Clean(cacheDir) {
+		return fmt.Errorf("upgrade cache path is invalid")
 	}
 	return nil
 }

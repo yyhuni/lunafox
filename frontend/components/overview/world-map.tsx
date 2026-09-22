@@ -208,7 +208,7 @@ export default function WorldMap({
       className={cn(WORLD_MAP_SURFACE_CLASS, "isolate select-none", className)}
       data-slot="world-map"
     >
-      <TooltipProvider delay={120}>
+      <TooltipProvider>
         <ComposableMap
           className="absolute inset-0 h-full w-full cursor-grab touch-none active:cursor-grabbing"
           height={WORLD_MAP_HEIGHT}

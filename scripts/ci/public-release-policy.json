@@ -55,6 +55,7 @@
     "releaseTag": "v0.0.1-alpha.114",
     "packageName": "lunafox-v0.0.1-alpha.114-dockerhub.zip",
     "sha256": "d02fe6f9da2576e3a89b52d38a03b5af6afd91670de26e67fe1f1efcf809c55c",
+    "manifestSha256": "e0e742054888daf0fb6482be721c82bd8e162d795143badbf2089cbd978c5e8b",
     "paths": [
       ".env",
       ".env.example",
@@ -67,9 +68,10 @@
     "branch": "release-channel",
     "schemaVersion": 3,
     "firstFiles": [
-      "channels/v0.0.1-alpha.57.env",
-      "channels/canary.env",
-      "manifests/v0.0.1-alpha.57.yaml"
+    "channels/v0.0.1-alpha.57.env",
+    "channels/canary.env",
+    "manifests/v0.0.1-alpha.57.yaml",
+    "manifests/v0.0.1-alpha.57/runtime-composition.json"
     ],
     "versionRecordAppendOnly": true
   },

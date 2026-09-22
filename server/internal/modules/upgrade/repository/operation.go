@@ -151,7 +151,11 @@ func (repository *UpgradeOperationRepository) Update(ctx context.Context, operat
 	}
 	result := repository.db.WithContext(ctx).Model(&model.Operation{}).Where("id = ? AND updated_at <= ?", record.ID, record.UpdatedAt).Updates(map[string]any{
 		"status": record.Status, "migration_status": record.MigrationStatus,
-		"cancelled_scan_count": record.CancelledScanCount, "cancelled_task_count": record.CancelledTaskCount,
+		"execution_mode": record.ExecutionMode, "work_disposition": record.WorkDisposition,
+		"plan_summary": record.PlanSummary, "plan_digest": record.PlanDigest,
+		"baseline_deployment_digest":   record.BaselineDeploymentDigest,
+		"confirmed_deployment_version": record.ConfirmedDeploymentVersion,
+		"cancelled_scan_count":         record.CancelledScanCount, "cancelled_task_count": record.CancelledTaskCount,
 		"agent_desired_version": record.AgentDesiredVersion, "agent_target_digest": record.AgentTargetDigest,
 		"agent_expected_count": record.AgentExpectedCount, "agent_ready_count": record.AgentReadyCount,
 		"agent_missing_count": record.AgentMissingCount, "agent_unhealthy_count": record.AgentUnhealthyCount,
@@ -182,7 +186,7 @@ func (repository *UpgradeOperationRepository) UpdateTransition(ctx context.Conte
 	if !expected.Valid() {
 		return fmt.Errorf("expected upgrade status %q is invalid", expected)
 	}
-	if err := domain.ValidateTransition(expected, operation.Status); err != nil {
+	if err := domain.ValidateExecutionTransition(operation.EffectiveExecutionMode(), expected, operation.Status); err != nil {
 		return err
 	}
 	record, err := toModel(operation)
@@ -193,7 +197,11 @@ func (repository *UpgradeOperationRepository) UpdateTransition(ctx context.Conte
 		Where("id = ? AND status = ? AND manifest_digest = ?", record.ID, string(expected), record.ManifestDigest).
 		Updates(map[string]any{
 			"status": record.Status, "migration_status": record.MigrationStatus,
-			"cancelled_scan_count": record.CancelledScanCount, "cancelled_task_count": record.CancelledTaskCount,
+			"execution_mode": record.ExecutionMode, "work_disposition": record.WorkDisposition,
+			"plan_summary": record.PlanSummary, "plan_digest": record.PlanDigest,
+			"baseline_deployment_digest":   record.BaselineDeploymentDigest,
+			"confirmed_deployment_version": record.ConfirmedDeploymentVersion,
+			"cancelled_scan_count":         record.CancelledScanCount, "cancelled_task_count": record.CancelledTaskCount,
 			"agent_desired_version": record.AgentDesiredVersion, "agent_target_digest": record.AgentTargetDigest,
 			"agent_expected_count": record.AgentExpectedCount, "agent_ready_count": record.AgentReadyCount,
 			"agent_missing_count": record.AgentMissingCount, "agent_unhealthy_count": record.AgentUnhealthyCount,
@@ -251,7 +259,11 @@ func (repository *UpgradeOperationRepository) ResetForRetry(ctx context.Context,
 			Where("id = ? AND status = ? AND manifest_digest = ?", record.ID, string(expected), record.ManifestDigest).
 			Updates(map[string]any{
 				"status": record.Status, "migration_status": record.MigrationStatus,
-				"cancelled_scan_count": record.CancelledScanCount, "cancelled_task_count": record.CancelledTaskCount,
+				"execution_mode": record.ExecutionMode, "work_disposition": record.WorkDisposition,
+				"plan_summary": record.PlanSummary, "plan_digest": record.PlanDigest,
+				"baseline_deployment_digest":   record.BaselineDeploymentDigest,
+				"confirmed_deployment_version": record.ConfirmedDeploymentVersion,
+				"cancelled_scan_count":         record.CancelledScanCount, "cancelled_task_count": record.CancelledTaskCount,
 				"agent_desired_version": record.AgentDesiredVersion, "agent_target_digest": record.AgentTargetDigest,
 				"agent_expected_count": record.AgentExpectedCount, "agent_ready_count": record.AgentReadyCount,
 				"agent_missing_count": record.AgentMissingCount, "agent_unhealthy_count": record.AgentUnhealthyCount,
@@ -337,13 +349,20 @@ func toModel(operation *domain.Operation) (*model.Operation, error) {
 	if err != nil {
 		return nil, err
 	}
+	planSummary, err := json.Marshal(planSummaryForPersistence(operation))
+	if err != nil {
+		return nil, err
+	}
 	return &model.Operation{
 		ID: operation.OperationID, RequestID: operation.RequestID, OperatorID: operation.OperatorID,
 		ManifestID: operation.ManifestID, ManifestDigest: operation.ManifestDigest, ReleaseVersion: operation.ReleaseVersion,
 		CompatibilityRange: operation.CompatibilityRange, MaintenanceWindowMinutes: operation.MaintenanceWindowMinutes,
 		Status: string(operation.Status), MigrationStatus: string(operation.MigrationStatus), MigrationType: operation.MigrationType,
 		MigrationID: operation.MigrationID, MigrationChecksum: operation.MigrationChecksum,
-		CancelledScanCount: operation.CancelledScanCount, CancelledTaskCount: operation.CancelledTaskCount,
+		ExecutionMode: string(operation.ExecutionMode), WorkDisposition: string(operation.WorkDisposition),
+		PlanSummary: planSummary, PlanDigest: operation.PlanDigest, BaselineDeploymentDigest: operation.BaselineDeploymentDigest,
+		ConfirmedDeploymentVersion: operation.ConfirmedDeploymentVersion,
+		CancelledScanCount:         operation.CancelledScanCount, CancelledTaskCount: operation.CancelledTaskCount,
 		AgentDesiredVersion: operation.AgentDesiredVersion, AgentTargetDigest: operation.AgentTargetDigest,
 		AgentExpectedCount: operation.AgentSummary.Expected, AgentReadyCount: operation.AgentSummary.Ready,
 		AgentMissingCount: operation.AgentSummary.Missing, AgentUnhealthyCount: operation.AgentSummary.Unhealthy,
@@ -372,17 +391,38 @@ func fromModel(record *model.Operation) *domain.Operation {
 		// closed for the progress projection itself.
 		progressEvents = []domain.ProgressEvent{}
 	}
-	return &domain.Operation{OperationID: record.ID, RequestID: record.RequestID, OperatorID: record.OperatorID,
+	planSummary := domain.PlanSummary{}
+	_ = json.Unmarshal(record.PlanSummary, &planSummary)
+	operation := &domain.Operation{OperationID: record.ID, RequestID: record.RequestID, OperatorID: record.OperatorID,
 		ManifestID: record.ManifestID, ManifestDigest: record.ManifestDigest, ReleaseVersion: record.ReleaseVersion,
 		CompatibilityRange: record.CompatibilityRange, MaintenanceWindowMinutes: record.MaintenanceWindowMinutes,
 		Status: domain.Status(record.Status), MigrationStatus: domain.MigrationStatus(record.MigrationStatus), MigrationType: record.MigrationType,
-		MigrationID: record.MigrationID, MigrationChecksum: record.MigrationChecksum, CancelledScanCount: record.CancelledScanCount,
+		MigrationID: record.MigrationID, MigrationChecksum: record.MigrationChecksum,
+		PlanDigest: record.PlanDigest, BaselineDeploymentDigest: record.BaselineDeploymentDigest,
+		ConfirmedDeploymentVersion: record.ConfirmedDeploymentVersion, CancelledScanCount: record.CancelledScanCount,
 		CancelledTaskCount: record.CancelledTaskCount, AgentDesiredVersion: record.AgentDesiredVersion, AgentTargetDigest: record.AgentTargetDigest,
 		AgentSummary:      domain.AgentSummary{Expected: record.AgentExpectedCount, Ready: record.AgentReadyCount, Missing: record.AgentMissingCount, Unhealthy: record.AgentUnhealthyCount},
 		AgentExpectations: agentExpectations, AgentVerificationDeadline: record.AgentVerificationDeadline,
 		ObservedDigests: observed, ProgressEvents: progressEvents, Diagnostic: record.Diagnostic, StageTimes: stageTimes,
 		CreatedAt: record.CreatedAt.UTC(), UpdatedAt: record.UpdatedAt.UTC(), CompletedAt: record.CompletedAt,
 	}
+	// An empty value is the only legacy form. Do not manufacture a scoped plan
+	// from old database rows; callers project its effective full/unknown facts.
+	if record.ExecutionMode != "" {
+		operation.ExecutionMode = domain.ExecutionMode(record.ExecutionMode)
+		operation.PlanSummary = planSummary
+	}
+	if record.WorkDisposition != "" {
+		operation.WorkDisposition = domain.WorkDisposition(record.WorkDisposition)
+	}
+	return operation
+}
+
+func planSummaryForPersistence(operation *domain.Operation) domain.PlanSummary {
+	if operation == nil || operation.ExecutionMode == "" {
+		return domain.PlanSummary{TouchedServices: []string{}}
+	}
+	return operation.PlanSummary.Clone()
 }
 
 func nonNilAgentExpectations(value []domain.AgentExpectation) []domain.AgentExpectation {

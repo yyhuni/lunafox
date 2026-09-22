@@ -112,7 +112,11 @@ func (handler *UpgradeHandler) GetOperation(c *gin.Context) {
 		writeUpgradeError(c, err)
 		return
 	}
-	httpdto.Success(c, handler.operationResponse(operation))
+	response, ok := handler.operationResponseForView(c, operation)
+	if !ok {
+		return
+	}
+	httpdto.Success(c, response)
 }
 
 // FindActive handles GET /v1/upgradeOperations:active. A 404 means there is
@@ -129,7 +133,11 @@ func (handler *UpgradeHandler) FindActive(c *gin.Context) {
 		writeUpgradeError(c, err)
 		return
 	}
-	httpdto.Success(c, handler.operationResponse(operation))
+	response, ok := handler.operationResponseForView(c, operation)
+	if !ok {
+		return
+	}
+	httpdto.Success(c, response)
 }
 
 // RetryAction dispatches POST /v1/upgradeOperations/{id}:retry. Gin cannot
@@ -179,6 +187,18 @@ func (handler *UpgradeHandler) RetryAction(c *gin.Context) {
 
 func (handler *UpgradeHandler) operationResponse(operation *domain.Operation) dto.UpgradeOperationResponse {
 	return dto.NewUpgradeOperationResponse(operation, handler.service.CurrentVersion())
+}
+
+func (handler *UpgradeHandler) operationResponseForView(c *gin.Context, operation *domain.Operation) (any, bool) {
+	switch c.Query("view") {
+	case "", "BASIC":
+		return handler.operationResponse(operation), true
+	case "FULL":
+		return dto.NewFullUpgradeOperationResponse(operation, handler.service.CurrentVersion()), true
+	default:
+		httpdto.ErrorWithStatus(c, http.StatusBadRequest, "INVALID_ARGUMENT", "INVALID_ARGUMENT", "view must be BASIC or FULL")
+		return nil, false
+	}
 }
 
 func currentUserID(c *gin.Context) (int, bool) {

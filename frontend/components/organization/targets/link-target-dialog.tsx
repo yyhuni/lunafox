@@ -108,6 +108,7 @@ function LinkTargetFormSurface({
     lineNumbersRef,
     textareaRef,
     targetValidation,
+    isTargetBatchOverLimit,
     isFormValid,
     handleTextareaScroll,
     batchCreateTargets,
@@ -146,6 +147,7 @@ function LinkTargetFormSurface({
         onScroll={handleTextareaScroll}
         isPending={batchCreateTargets.isPending}
         targetValidation={targetValidation}
+        isTargetBatchOverLimit={isTargetBatchOverLimit}
       />
 
       <LinkTargetOrganizationSection organizationName={organizationName} t={t} />

@@ -79,4 +79,11 @@ describe("initiate-scan-dialog contract", () => {
     expect(source).toContain("selectedWorkflow?.displayName || selectedWorkflow?.name")
     expect(source).toContain("selectedWorkflowDisplayName={selectedWorkflowDisplayName}")
   })
+
+  it("keeps disabled-Step form drafts in the dialog state across configuration-step remounts", () => {
+    expect(source).toContain("formValuesCacheRef")
+    expect(source).toContain("workflowProfileDraft")
+    expect(source).toContain("formValuesCacheRef={formValuesCacheRef}")
+    expect(source).toContain("workflowProfileDraft={workflowProfileDraft}")
+  })
 })

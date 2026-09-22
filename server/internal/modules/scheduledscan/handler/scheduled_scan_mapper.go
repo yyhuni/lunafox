@@ -39,6 +39,7 @@ func toCreateInput(req *dto.CreateScheduledScanRequest) (*scheduledapp.CreateSch
 		Organization:   req.Organization,
 		Target:         req.Target,
 		Agent:          req.Agent,
+		TimeZone:       req.TimeZone,
 		CronExpression: req.CronExpression,
 		IsEnabled:      req.IsEnabled,
 	}, nil
@@ -64,6 +65,7 @@ func toUpdateInput(req *dto.UpdateScheduledScanRequest) (*scheduledapp.UpdateSch
 		Organization:   req.Organization,
 		Target:         req.Target,
 		Agent:          req.Agent,
+		TimeZone:       req.TimeZone,
 		CronExpression: req.CronExpression,
 		IsEnabled:      req.IsEnabled,
 	}, nil
@@ -126,6 +128,7 @@ func toScheduledScanOutput(scan *scheduledapp.ScheduledScan) dto.ScheduledScanRe
 		Agent:                  scheduledScanAgentName(scan.AgentID),
 		AgentID:                scan.AgentID,
 		ScanMode:               scanMode,
+		TimeZone:               scan.TimeZone,
 		CronExpression:         scan.CronExpression,
 		IsEnabled:              scan.IsEnabled,
 		NextRunTime:            timeutil.ToUTCPtr(scan.NextRunTime),

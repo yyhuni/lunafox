@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yyhuni/lunafox/contracts/releasemanifest"
 	"github.com/yyhuni/lunafox/server/internal/modules/upgrade/domain"
 )
 
@@ -25,6 +26,19 @@ func (service *Service) reconcileAfterHostEvent(ctx context.Context, operation *
 	}
 	if operation.Status != domain.StatusAgentVerifying && operation.Status != domain.StatusVerifying {
 		return operation, nil
+	}
+	if operation.EffectiveExecutionMode() == domain.ExecutionModeFrontendOnly {
+		// A frontend-only plan has no Agent snapshot or lifecycle dependency.
+		// Do not call Agent target parsing, notification, reconciliation, or its
+		// timeout path merely because it shares the final verifying stage.
+		if operation.Status != domain.StatusVerifying {
+			return operation, nil
+		}
+		manifest, err := service.loadTargetManifest(operation.ManifestDigest)
+		if err != nil || manifest == nil || manifest.Digest() != operation.ManifestDigest {
+			return service.recordVerificationDiagnostic(ctx, operation, "release manifest could not be reloaded")
+		}
+		return service.verifyDeployment(ctx, operation, manifest)
 	}
 
 	// The target is re-read from the immutable digest cache. The fixed channel
@@ -81,6 +95,16 @@ func (service *Service) reconcileAfterHostEvent(ctx context.Context, operation *
 		}
 	}
 
+	return service.verifyDeployment(ctx, operation, manifest)
+}
+
+// verifyDeployment performs only the final service/digest evidence check. It
+// is shared by full and frontend-only operations after their distinct lifecycle
+// prerequisites have been satisfied by their respective branches above.
+func (service *Service) verifyDeployment(ctx context.Context, operation *domain.Operation, manifest *releasemanifest.Manifest) (*domain.Operation, error) {
+	if operation == nil || manifest == nil {
+		return service.recordVerificationDiagnostic(ctx, operation, "release manifest could not be reloaded")
+	}
 	if service.verifier == nil {
 		operation.Diagnostic = "waiting for service and dependency verification evidence"
 		operation.UpdatedAt = service.now().UTC()
@@ -113,6 +137,15 @@ func (service *Service) reconcileAfterHostEvent(ctx context.Context, operation *
 		}
 		return operation, nil
 	}
+	if operation.ExecutionMode != "" {
+		// A v2 operation is not complete until the host atomically records the
+		// fully verified deployment as its next baseline. Keep verifying on a
+		// transient confirmation failure: turning it terminal would either claim
+		// an unconfirmed frontend-only deployment or force a new full lifecycle.
+		if err := service.confirmDeployment(ctx, operation); err != nil {
+			return service.recordVerificationDiagnostic(ctx, operation, "host deployment confirmation is temporarily unavailable")
+		}
+	}
 
 	now := service.now().UTC()
 	previous := operation.Status
@@ -128,6 +161,30 @@ func (service *Service) reconcileAfterHostEvent(ctx context.Context, operation *
 		return nil, err
 	}
 	return operation, nil
+}
+
+func (service *Service) confirmDeployment(ctx context.Context, operation *domain.Operation) error {
+	if service == nil || service.dispatcher == nil || operation == nil {
+		return domain.ErrUpgradeHostUnavailable
+	}
+	if operation.ExecutionMode == "" {
+		return nil
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	confirmCtx, cancel := context.WithTimeout(ctx, hostDispatchTimeout)
+	defer cancel()
+	if err := service.dispatcher.Dispatch(confirmCtx, HostUpgradeRequest{
+		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Action: HostUpgradeActionConfirm,
+		ExecutionMode: operation.ExecutionMode, PlanDigest: operation.PlanDigest,
+		BaselineDeploymentDigest:   operation.BaselineDeploymentDigest,
+		TouchedServices:            append([]string(nil), operation.PlanSummary.TouchedServices...),
+		ConfirmedDeploymentVersion: operation.ConfirmedDeploymentVersion,
+	}); err != nil {
+		return fmt.Errorf("confirm host deployment baseline: %w", err)
+	}
+	return nil
 }
 
 func (service *Service) refreshAgentExpectations(ctx context.Context, target AgentUpgradeTarget, expected []domain.AgentExpectation) ([]domain.AgentExpectation, error) {
@@ -248,6 +305,12 @@ func mergeObservedDigests(operation *domain.Operation, values map[string]string)
 	}
 	allowed := map[string]struct{}{
 		"server": {}, "frontend": {}, "nginx": {}, "postgres": {}, "redis": {}, "loki": {}, "api": {}, "publicFrontend": {},
+	}
+	if operation.EffectiveExecutionMode() == domain.ExecutionModeFrontendOnly {
+		// Scoped verification proves only the replacement frontend and its public
+		// response. Do not let a verifier or future adapter widen the durable
+		// evidence map with untouched service identities.
+		allowed = map[string]struct{}{"frontend": {}}
 	}
 	if operation.ObservedDigests == nil {
 		operation.ObservedDigests = map[string]string{}

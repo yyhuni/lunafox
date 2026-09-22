@@ -136,6 +136,8 @@
   },
   "tooltips": {
     "targetDetails": "目标详情",
+    "targetConcept": "目标是扫描与资产发现的根实体。建议录入根域名（如 example.com）、单个 IP 或 CIDR 网段。子域名、网站等资产归属于域名，建议通过扫描策略（如子域名发现）自动枚举，或在目标详情的资产页中手动批量添加。",
+    "organizationConcept": "组织用于按企业主体、业务线或部门聚合多个目标。",
     "viewProgress": "点击查看进度详情",
     "targetSummary": "目标摘要",
     "organizationDetails": "组织详情",
@@ -984,7 +986,7 @@
       "passwordLabel": "密码*",
       "passwordPlaceholder": "请输入密码",
       "submit": "登录",
-      "accessHelp": "需要访问权限？请联系管理员。"
+      "accessHelp": "首次登录请使用 admin / admin，登录后请及时修改密码。"
     },
     "terminal": {
       "title": "月狐攻击面管理平台",
@@ -1111,6 +1113,7 @@
       "emptySummary": "尚未输入任何目标",
       "validSummary": "已通过校验 {count} 项",
       "blockingSummary": "{count} 个错误阻止提交",
+      "batchLimitSummary": "已输入 {count} 个目标；单次最多可创建 {max} 个目标。",
       "invalidIssue": "第 {line} 行：\"{target}\" - {error}",
       "invalidBadge": "非法目标",
       "collapseDetails": "收起详情",
@@ -1191,6 +1194,7 @@
       "emptySummary": "尚未输入任何内容",
       "validSummary": "已通过校验 {count} 项",
       "blockingSummary": "{count} 个错误阻止提交",
+      "batchLimitSummary": "已输入 {count} 个目标；单次最多可创建 {max} 个目标。",
       "collapseDetails": "收起详情",
       "expandDetails": "展开详情",
       "invalidIssue": "第 {line} 行：\"{target}\" - {error}",
@@ -1384,6 +1388,7 @@
       "everyDay": "每天 {time}",
       "everyWeek": "每{day} {time}",
       "everyMonth": "每月{day}号 {time}",
+      "inTimeZone": "{rule}（{timeZone}）",
       "weekdays": [
         "周日",
         "周一",
@@ -1844,6 +1849,13 @@
         "targetScanHint": "目标扫描：扫描固定的目标列表，后续新增的目标不会被扫描",
         "selectOrganization": "选择组织",
         "selectTarget": "选择扫描目标",
+        "timeZone": "时区",
+        "timeZonePlaceholder": "选择 IANA 时区",
+        "timeZoneSearchPlaceholder": "搜索时区...",
+        "timeZoneEmpty": "未找到匹配的时区",
+        "timeZoneDesc": "Cron 规则将按此 IANA 时区计算。",
+        "timeZoneRequired": "请选择时区",
+        "timeZoneInvalid": "请选择有效的 IANA 时区",
         "cronExpression": "Cron 表达式",
         "cronPlaceholder": "分 时 日 月 周（如：0 2 * * *）",
         "cronFormat": "格式：分(0-59) 时(0-23) 日(1-31) 月(1-12) 周(0-6，0=周日)",
@@ -1854,6 +1866,7 @@
         "nextExecutionTime": "下次执行时间：",
         "upcoming": "(即将执行)",
         "invalidExpression": "无效的表达式",
+        "scheduleRule": "将在 {timeZone} 按{rule}执行",
         "scanScope": "扫描范围",
         "organizationMode": "组织扫描",
         "organizationModeHint": "组织扫描模式下，执行时将动态获取该组织下所有目标",
@@ -2247,7 +2260,7 @@
       "toast": {
         "exportSuccess": "导出成功",
         "exportFailed": "导出失败",
-        "deleteSuccess": "删除成功",
+        "deleteSuccess": "已删除 {count} 条指纹",
         "deleteFailed": "删除失败"
       },
       "form": {
@@ -3016,8 +3029,8 @@
         "batchError": "批量停止失败"
       },
       "delete": {
-        "success": "删除成功",
-        "bulkSuccess": "删除成功"
+        "success": "已删除扫描记录「{name}」",
+        "bulkSuccess": "已删除 {count} 条扫描记录"
       },
       "initiate": {
         "success": "扫描已发起",
@@ -3039,8 +3052,8 @@
         "oversized": "字典超过 5 MiB，不能在线全文编辑。请下载后本地修改，再重新上传替换。"
       },
       "delete": {
-        "success": "删除成功",
-        "bulkSuccess": "删除成功",
+        "success": "已删除定时扫描",
+        "bulkSuccess": "已删除 {count} 个定时扫描",
         "error": "删除失败"
       },
     "toggle": {
@@ -3058,15 +3071,16 @@
       "create": {
         "success": "创建成功",
         "bulkSuccess": "创建成功",
-        "error": "创建失败"
+        "error": "创建失败",
+        "errorWithReason": "创建失败：{reason}"
       },
       "update": {
         "success": "更新成功",
         "error": "更新失败"
       },
       "delete": {
-        "success": "删除成功",
-        "bulkSuccess": "删除成功",
+        "success": "已删除目标「{name}」",
+        "bulkSuccess": "已删除 {count} 个目标",
         "error": "删除失败"
       },
       "link": {
@@ -3089,8 +3103,8 @@
         "error": "更新失败"
       },
       "delete": {
-        "success": "删除成功",
-        "bulkSuccess": "删除成功",
+        "success": "已删除组织「{name}」",
+        "bulkSuccess": "已删除 {count} 个组织",
         "error": "删除失败"
       }
     },
@@ -3102,8 +3116,8 @@
           "error": "创建失败"
         },
         "delete": {
-          "success": "删除成功",
-          "bulkSuccess": "删除成功",
+          "success": "已删除子域名",
+          "bulkSuccess": "已删除 {count} 个子域名",
           "error": "删除失败"
         }
       },
@@ -3114,8 +3128,8 @@
           "error": "创建失败"
         },
         "delete": {
-          "success": "删除成功",
-          "bulkSuccess": "删除成功",
+          "success": "已删除网站",
+          "bulkSuccess": "已删除 {count} 个网站",
           "error": "删除失败"
         }
       },
@@ -3126,8 +3140,8 @@
           "error": "创建失败"
         },
         "delete": {
-          "success": "删除成功",
-          "bulkSuccess": "删除成功",
+          "success": "已删除端点",
+          "bulkSuccess": "已删除 {count} 个端点",
           "error": "删除失败"
         }
       },
@@ -3138,9 +3152,21 @@
           "error": "创建失败"
         },
         "delete": {
-          "success": "删除成功",
-          "bulkSuccess": "删除成功",
+          "success": "已删除目录",
+          "bulkSuccess": "已删除 {count} 个目录",
           "error": "删除失败"
+        }
+      },
+      "ipAddress": {
+        "delete": {
+          "bulkSuccess": "已删除 {count} 个 IP 地址",
+          "error": "删除 IP 地址失败"
+        }
+      },
+      "screenshot": {
+        "delete": {
+          "bulkSuccess": "已删除 {count} 张截图",
+          "error": "删除截图失败"
         }
       }
     },
@@ -3184,7 +3210,7 @@
         "error": "更新失败"
       },
       "delete": {
-        "success": "删除成功",
+        "success": "已删除字典",
         "error": "删除失败"
       }
     },
@@ -3229,7 +3255,7 @@
         "error": "更新失败"
       },
       "delete": {
-        "success": "删除成功",
+        "success": "已删除工具",
         "error": "删除失败"
       }
     },
@@ -3243,7 +3269,7 @@
         "error": "更新失败"
       },
       "delete": {
-        "success": "删除成功",
+        "success": "已删除工作流",
         "error": "删除失败"
       }
     },
@@ -3257,8 +3283,8 @@
         "error": "更新失败"
       },
       "delete": {
-        "success": "删除成功",
-        "bulkSuccess": "删除成功",
+        "success": "已删除命令",
+        "bulkSuccess": "已删除 {count} 个命令",
         "error": "删除失败"
       }
     },
@@ -4263,7 +4289,7 @@
         "usernamePlaceholder": "admin@example.com",
         "password": "密码",
         "login": "登录",
-        "accessHelp": "需要访问权限？请联系管理员。"
+        "accessHelp": "首次登录请使用 admin / admin，登录后请及时修改密码。"
       },
       "blacklist": {
         "title": "全局黑名单",
@@ -4521,15 +4547,23 @@
     "checkFailed": "检查更新失败，请稍后重试",
     "candidateVersion": "候选版本",
     "manifestDigest": "发布清单摘要",
+    "releaseNotes": "更新说明",
+    "releaseNotesUnavailable": "此开发候选版本暂无更新说明。",
     "maintenanceWindow": "预计维护窗口：{minutes} 分钟",
     "migrationSummary": "数据库迁移：{type}",
     "migrationRiskHint": "此版本包含数据库迁移，需要管理员确认后才能执行。",
-    "upgradeRiskHint": "系统将进入维护窗口，活动任务会被取消。",
+    "upgradeRiskHint": "Server 会在执行前确认本次升级所需的范围。",
     "noMigration": "无数据库迁移",
     "startUpgrade": "开始升级",
     "upgradeStatus": "升级状态",
     "operationId": "操作 ID",
     "cancelledWork": "已取消 {scans} 个扫描和 {tasks} 个任务",
+    "frontendOnlyScope": "本次仅更新 Web 前端，活动工作未被暂停或取消。",
+    "workDisposition": {
+      "not_required": "无需取消活动工作。",
+      "cancellation_failed": "活动工作取消未完成。",
+      "legacy_unknown": "历史操作未记录取消状态。"
+    },
     "reconnecting": "Server 正在重启，正在通过已保存的操作重新连接...",
     "retryUpgrade": "重试升级",
     "retryingUpgrade": "重试中...",
@@ -4537,7 +4571,7 @@
     "confirmUpgradeTitle": "确认系统升级",
     "confirmUpgradeDescription": "确定升级到 {version} 吗？维护期间主应用可能暂时不可用。",
     "migrationRisk": "数据库迁移资格由 Server 门禁强制校验。",
-    "tasksWillBeCancelled": "活动扫描和任务会被取消，升级后不会自动续跑。",
+    "scopeConfirmedByServer": "Server 会在执行前确认是否需要暂停活动工作。",
     "noBackupRollback": "MVP 不提供自动数据库备份或回滚。",
     "confirmAcknowledgement": "我了解维护窗口以及恢复限制。",
     "cancel": "取消",
@@ -4569,6 +4603,11 @@
   "systemUpgrade": {
     "title": "系统升级",
     "description": "升级期间系统会暂时停止普通业务操作。此页面会持续显示服务端确认的阶段。",
+    "frontendOnly": {
+      "title": "前端更新进行中",
+      "description": "本次只替换 Web 前端，普通应用页面仍可使用。",
+      "activeWork": "本次更新没有暂停或取消活动扫描和任务。"
+    },
     "boundary": {
       "resolvingTitle": "正在确认升级状态",
       "resolvingDescription": "正在从服务端恢复升级状态，普通页面暂时不可用。",
@@ -4658,12 +4697,22 @@
       "title": "已确认的升级信息",
       "description": "以下内容来自服务端 Operation，不包含前端推测的百分比或剩余时间。",
       "currentVersion": "当前版本",
+      "confirmedDeploymentVersion": "已确认部署版本",
       "targetVersion": "目标版本",
       "manifest": "发布清单",
+      "scope": "更新范围",
+      "scopeFrontendOnly": "仅前端",
+      "scopeFull": "完整系统",
       "migration": "迁移状态",
       "notStarted": "未执行",
       "cancelledWork": "已取消的工作",
       "cancelledWorkValue": "扫描 {scans} 个，任务 {tasks} 个",
+      "workDispositionLabel": "活动工作取消",
+      "workDisposition": {
+        "not_required": "无需取消活动工作",
+        "cancellation_failed": "活动工作取消未完成",
+        "legacy_unknown": "历史操作未记录取消状态"
+      },
       "agents": "Agent 验证",
       "agentsValue": "就绪 {ready}/{expected}，缺失 {missing}，异常 {unhealthy}",
       "lastUpdated": "最近更新",
@@ -4685,7 +4734,9 @@
     "stop": {
       "title": "确认停止本次升级？",
       "description": "升级器会在下一个安全的取消点停止，并返回明确的终态结果。",
-      "warning": "停止不会回滚已经完成的服务或数据库变更。若已跨过迁移阶段，可能需要人工恢复。"
+      "warning": "停止不会回滚已经完成的服务或数据库变更。若已跨过迁移阶段，可能需要人工恢复。",
+      "frontendOnlyDescription": "前端替换会在下一个安全点停止，并返回明确的终态结果。",
+      "frontendOnlyWarning": "停止不会回滚已经验证并生效的前端镜像。"
     },
     "logs": {
       "title": "升级事件",
@@ -4727,6 +4778,9 @@
       "currentVersion": "当前版本",
       "targetVersion": "目标版本",
       "duration": "升级耗时",
+      "scope": "更新范围",
+      "scopeFrontendOnly": "仅前端",
+      "scopeFull": "完整系统",
       "durationUnknown": "耗时不可用",
       "durationSeconds": "{seconds} 秒",
       "durationMinutes": "{minutes} 分钟",
@@ -4734,6 +4788,12 @@
       "migrationNotRun": "未执行",
       "cancelledWork": "已取消的工作",
       "cancelledWorkValue": "扫描 {scans} 个，任务 {tasks} 个",
+      "workDispositionLabel": "活动工作取消",
+      "workDisposition": {
+        "not_required": "无需取消活动工作",
+        "cancellation_failed": "活动工作取消未完成",
+        "legacy_unknown": "历史操作未记录取消状态"
+      },
       "agents": "Agent 验证",
       "agentsValue": "就绪 {ready}/{expected}，缺失 {missing}，异常 {unhealthy}",
       "noReleaseNotes": "当前发布清单没有提供可验证的功能列表，因此这里只展示版本、组件和任务摘要。",

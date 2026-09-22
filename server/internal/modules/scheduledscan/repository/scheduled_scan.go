@@ -48,6 +48,7 @@ type scheduledScanModel struct {
 	OrganizationID         *int           `gorm:"column:organization_id"`
 	TargetID               *int           `gorm:"column:target_id"`
 	AgentID                *int           `gorm:"column:agent_id"`
+	TimeZone               string         `gorm:"column:time_zone;size:100;not null"`
 	CronExpression         string         `gorm:"column:cron_expression;size:100;not null"`
 	IsEnabled              bool           `gorm:"column:is_enabled;not null"`
 	RunCount               int            `gorm:"column:run_count;not null"`
@@ -119,11 +120,11 @@ func (repo *ScheduledScanRepository) Create(ctx context.Context, scan *scheduled
 			return err
 		}
 		referenceTime := repo.now().UTC()
-		if err := repo.calculator.Validate(model.CronExpression); err != nil {
+		if err := repo.calculator.Validate(model.CronExpression, model.TimeZone); err != nil {
 			return err
 		}
 		if model.IsEnabled {
-			nextRunTime, err := repo.calculator.FirstAfter(model.CronExpression, referenceTime)
+			nextRunTime, err := repo.calculator.FirstAfter(model.CronExpression, model.TimeZone, referenceTime)
 			if err != nil {
 				return err
 			}
@@ -168,14 +169,16 @@ func (repo *ScheduledScanRepository) Update(ctx context.Context, id int, scan *s
 		}
 
 		wasEnabled := model.IsEnabled
-		timeRuleChanged := scan.CronExpression != nil
+		previousCronExpression := model.CronExpression
+		previousTimeZone := model.TimeZone
 		if err := applyScheduledScanUpdate(&model, scan); err != nil {
 			return err
 		}
+		timeRuleChanged := model.CronExpression != previousCronExpression || model.TimeZone != previousTimeZone
 		if err := lockActiveScheduledScanTargets(tx, intPointersToIDs(model.TargetID)); err != nil {
 			return err
 		}
-		if err := repo.calculator.Validate(model.CronExpression); err != nil {
+		if err := repo.calculator.Validate(model.CronExpression, model.TimeZone); err != nil {
 			return err
 		}
 
@@ -184,7 +187,7 @@ func (repo *ScheduledScanRepository) Update(ctx context.Context, id int, scan *s
 			return err
 		}
 		if model.IsEnabled && wasEnabled && timeRuleChanged {
-			nextRunTime, err := repo.calculator.FirstAfter(model.CronExpression, referenceTime)
+			nextRunTime, err := repo.calculator.FirstAfter(model.CronExpression, model.TimeZone, referenceTime)
 			if err != nil {
 				return err
 			}
@@ -248,7 +251,7 @@ func (repo *ScheduledScanRepository) BatchUpdateStatus(ctx context.Context, upda
 				}
 				return err
 			}
-			if err := repo.calculator.Validate(model.CronExpression); err != nil {
+			if err := repo.calculator.Validate(model.CronExpression, model.TimeZone); err != nil {
 				return err
 			}
 			wasEnabled := model.IsEnabled
@@ -304,7 +307,7 @@ func (repo *ScheduledScanRepository) applyScheduledScanStatusTransition(
 			Delete(&scheduledScanOccurrenceModel{}).Error
 	}
 	if !wasEnabled {
-		nextRunTime, err := repo.calculator.FirstAfter(model.CronExpression, referenceTime)
+		nextRunTime, err := repo.calculator.FirstAfter(model.CronExpression, model.TimeZone, referenceTime)
 		if err != nil {
 			return err
 		}
@@ -441,6 +444,7 @@ func scheduledScanCreateToModel(scan *scheduledapp.ScheduledScanCreate) (*schedu
 		OrganizationID: cloneIntPtr(scan.OrganizationID),
 		TargetID:       cloneIntPtr(scan.TargetID),
 		AgentID:        cloneIntPtr(scan.AgentID),
+		TimeZone:       scan.TimeZone,
 		CronExpression: scan.CronExpression,
 		IsEnabled:      scan.IsEnabled,
 	}, nil
@@ -481,6 +485,9 @@ func applyScheduledScanUpdate(model *scheduledScanModel, scan *scheduledapp.Sche
 	if scan.AgentSet {
 		model.AgentID = cloneIntPtr(scan.AgentID)
 	}
+	if scan.TimeZone != nil {
+		model.TimeZone = *scan.TimeZone
+	}
 	if scan.CronExpression != nil {
 		model.CronExpression = *scan.CronExpression
 	}
@@ -507,6 +514,7 @@ func scheduledScanModelToRecord(item *scheduledScanModel) (*scheduledapp.Schedul
 		OrganizationID:         cloneIntPtr(item.OrganizationID),
 		TargetID:               cloneIntPtr(item.TargetID),
 		AgentID:                cloneIntPtr(item.AgentID),
+		TimeZone:               item.TimeZone,
 		CronExpression:         item.CronExpression,
 		IsEnabled:              item.IsEnabled,
 		NextRunTime:            timeutil.ToUTCPtr(item.NextRunTime),

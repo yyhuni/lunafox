@@ -20,6 +20,10 @@ export interface ParsedTargetLine {
   lineNumber: number
 }
 
+// Mirrors the server's BatchCreateTargetRequest maximum so both import flows
+// fail before sending a request the API will reject.
+export const MAX_TARGET_BATCH_SIZE = 5000
+
 export class TargetValidator {
   /**
    * Validate domain format (e.g. example.com)

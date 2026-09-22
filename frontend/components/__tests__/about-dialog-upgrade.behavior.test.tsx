@@ -9,9 +9,11 @@ import { AboutDialog } from "@/components/about-dialog"
 import { useAboutDialogState } from "@/components/about-dialog-state"
 import { AboutDialogVersionInfo } from "@/components/about-dialog-sections"
 import { SidebarMenuButton, SidebarProvider } from "@/components/ui/sidebar"
-import type { UpgradeOperation, UpdateCheckResult } from "@/types/version.types"
+import type { UpgradeOperation, UpgradeOperationFull, UpdateCheckResult } from "@/types/version.types"
 
 const digest = `sha256:${"a".repeat(64)}`
+const releaseNotesBody = "## English\n\n- Test release notes.\n\n## 简体中文\n\n- 测试发布说明。\n"
+const releaseNotesSha256 = "sha256:4406112ce062dd05feacce5f519b8cb7250fd01c7237c43e0f7335da912e8188"
 const candidate: NonNullable<UpdateCheckResult["candidate"]> = {
   name: "releaseManifests/release-1.1.0",
   manifestId: "release-1.1.0",
@@ -24,6 +26,7 @@ const candidate: NonNullable<UpdateCheckResult["candidate"]> = {
   databaseMigration: { hasDatabaseMigration: false, migrationType: "none", policyVersion: 1 },
   runtimeImageDigests: { server: digest, frontend: digest, nginx: digest },
   engineDigests: [digest],
+  releaseNotes: { body: releaseNotesBody, sha256: releaseNotesSha256 },
 }
 
 const updateResult: UpdateCheckResult = {
@@ -57,6 +60,13 @@ const operation: UpgradeOperation = {
   updatedAt: "2026-09-13T12:00:00Z",
   completedAt: null,
 }
+const fullOperation: UpgradeOperationFull = {
+  ...operation,
+  executionMode: "full",
+  workDisposition: "cancelled",
+  planSummary: { touchedServices: ["agent", "bootstrap", "engine", "engine_package", "engine_runtime", "frontend", "migration", "nginx", "server"] },
+  confirmedDeploymentVersion: operation.currentVersion,
+}
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -76,7 +86,7 @@ describe("about dialog upgrade behavior", () => {
 
   it("requires the confirmation flow and creates one durable operation for same-tick clicks", async () => {
     const createResponse = deferred<{ data: UpgradeOperation }>()
-    apiMocks.get.mockResolvedValue({ data: operation })
+    apiMocks.get.mockResolvedValue({ data: fullOperation })
     apiMocks.post.mockImplementation((path: string) => {
       if (path === "/system:checkForUpdates") return Promise.resolve({ data: updateResult })
       if (path === "/upgradeOperations") return createResponse.promise
@@ -117,13 +127,13 @@ describe("about dialog upgrade behavior", () => {
           message: "not found",
         })
       }
-      return Promise.resolve({ data: operation })
+      return Promise.resolve({ data: fullOperation })
     })
 
     const { result } = renderHookWithProviders(() => useAboutDialogState())
     await waitFor(() => expect(result.current.operation.data?.operationId).toBe(operation.operationId))
-    expect(apiMocks.get).toHaveBeenCalledWith("/upgradeOperations:active")
-    expect(apiMocks.get).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}`)
+    expect(apiMocks.get).toHaveBeenCalledWith("/upgradeOperations:active", { params: { view: "FULL" } })
+    expect(apiMocks.get).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}`, { params: { view: "FULL" } })
     expect(result.current.operation.lastConfirmedStage).toBe("queued")
   })
 
@@ -137,7 +147,7 @@ describe("about dialog upgrade behavior", () => {
           message: "not found",
         })
       }
-      return Promise.resolve({ data: operation })
+      return Promise.resolve({ data: fullOperation })
     })
 
     const { result, rerender } = renderHookWithProviders(
@@ -149,14 +159,14 @@ describe("about dialog upgrade behavior", () => {
 
     rerender({ enabled: true })
     await waitFor(() => expect(result.current.operation.data?.operationId).toBe(operation.operationId))
-    expect(apiMocks.get).toHaveBeenCalledWith("/upgradeOperations:active")
-    expect(apiMocks.get).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}`)
+    expect(apiMocks.get).toHaveBeenCalledWith("/upgradeOperations:active", { params: { view: "FULL" } })
+    expect(apiMocks.get).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}`, { params: { view: "FULL" } })
   })
 
   it("uses the server operation as the source of truth after reconnect", async () => {
     window.localStorage.setItem("lunafox.upgrade.operationId", operation.operationId)
     const recovered = {
-      ...operation,
+      ...fullOperation,
       status: "restarting" as const,
       stageTimes: { ...operation.stageTimes, restarting: "2026-09-13T12:05:00Z" },
     }
@@ -169,7 +179,7 @@ describe("about dialog upgrade behavior", () => {
   })
 
   it("does not create an operation until the confirmation checkbox is acknowledged", async () => {
-    apiMocks.get.mockResolvedValue({ data: operation })
+    apiMocks.get.mockResolvedValue({ data: fullOperation })
     apiMocks.post.mockImplementation((path: string) => {
       if (path === "/system:checkForUpdates") return Promise.resolve({ data: updateResult })
       if (path === "/upgradeOperations") return Promise.resolve({ data: operation })
@@ -201,7 +211,7 @@ describe("about dialog upgrade behavior", () => {
         isChecking={false}
         isCreating={false}
         canStartUpgrade={false}
-        operation={{ data: { ...operation, status: "needs_attention" }, isReconnecting: true }}
+        operation={{ data: { ...fullOperation, status: "needs_attention" }, isReconnecting: true }}
         onCheckUpdate={vi.fn()}
         onStartUpgrade={vi.fn()}
         onRetry={retry}
@@ -212,6 +222,35 @@ describe("about dialog upgrade behavior", () => {
     fireEvent.click(screen.getByRole("button", { name: "viewUpgradeStatus" }))
     expect(viewStatus).toHaveBeenCalledTimes(1)
     expect(retry).not.toHaveBeenCalled()
+  })
+
+  it("does not claim cancellation for a frontend-only FULL operation", () => {
+    render(
+      <AboutDialogVersionInfo
+        t={(key) => key}
+        currentVersion="1.0.0"
+        candidate={candidate}
+        hasUpdate={false}
+        checkError={null}
+        isChecking={false}
+        isCreating={false}
+        canStartUpgrade={false}
+        operation={{
+          data: {
+            ...fullOperation,
+            executionMode: "frontend_only",
+            workDisposition: "not_required",
+            planSummary: { touchedServices: ["frontend"] },
+          },
+        }}
+        onCheckUpdate={vi.fn()}
+        onStartUpgrade={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText("frontendOnlyScope")).toBeInTheDocument()
+    expect(screen.queryByText(/cancelledWork/)).not.toBeInTheDocument()
   })
 
   it("does not show upgrade-only details when the candidate is already installed", () => {
@@ -236,6 +275,55 @@ describe("about dialog upgrade behavior", () => {
     expect(screen.queryByText("manifestDigest")).not.toBeInTheDocument()
     expect(screen.queryByText("maintenanceWindow")).not.toBeInTheDocument()
     expect(screen.queryByText("noMigration")).not.toBeInTheDocument()
+  })
+
+  it("shows verified release notes as inert text and links to the candidate release", () => {
+    render(
+      <AboutDialogVersionInfo
+        t={(key) => key}
+        githubRepo="https://github.com/yyhuni/lunafox/"
+        currentVersion="1.0.0"
+        candidate={candidate}
+        hasUpdate
+        checkError={null}
+        isChecking={false}
+        isCreating={false}
+        canStartUpgrade={false}
+        operation={{}}
+        onCheckUpdate={vi.fn()}
+        onStartUpgrade={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId("release-notes-body")).toHaveTextContent("Test release notes.")
+    expect(screen.getByTestId("release-notes-body")).toHaveTextContent("测试发布说明。")
+    const releaseLink = screen.getByRole("link", { name: "viewRelease" })
+    expect(releaseLink).toHaveAttribute("href", "https://github.com/yyhuni/lunafox/releases/tag/v1.1.0")
+    expect(releaseLink).toHaveAttribute("target", "_blank")
+    expect(releaseLink).toHaveAttribute("rel", "noopener noreferrer")
+  })
+
+  it("shows the explicit unavailable state when a development candidate has no notes", () => {
+    render(
+      <AboutDialogVersionInfo
+        t={(key) => key}
+        currentVersion="0.0.0-dev"
+        candidate={{ ...candidate, releaseVersion: "0.0.0-dev", releaseNotes: undefined }}
+        hasUpdate
+        checkError={null}
+        isChecking={false}
+        isCreating={false}
+        canStartUpgrade={false}
+        operation={{}}
+        onCheckUpdate={vi.fn()}
+        onStartUpgrade={vi.fn()}
+        onRetry={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId("release-notes-unavailable")).toHaveTextContent("releaseNotesUnavailable")
+    expect(screen.getByRole("link", { name: "viewRelease" })).toHaveAttribute("href", "https://github.com/yyhuni/lunafox/releases/tag/v0.0.0-dev")
   })
 
   it("loads the installed version when the about entry is opened", async () => {

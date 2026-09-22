@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "checksumAlgorithm": "sha256-canonical-pair-v1",
+  "baselineMigration": "000001",
+  "migrations": [
+    {
+      "id": "000001",
+      "slug": "init_schema",
+      "up": "000001_init_schema.up.sql",
+      "down": "000001_init_schema.down.sql",
+      "checksum": "sha256:7c4aaf55edfc0f403bb47e2cccd491c6876e4f611cb0d0dfc585defb508b3721"
+    },
+    {
+      "id": "000002",
+      "slug": "upgrade_operation_scope",
+      "up": "000002_upgrade_operation_scope.up.sql",
+      "down": "000002_upgrade_operation_scope.down.sql",
+      "checksum": "sha256:d6e460d2c4a97058f9dafd5916c09421b2e8e1e7b732789c3847cd04908c066a"
+    },
+    {
+      "id": "000003",
+      "slug": "scheduled_scan_time_zone",
+      "up": "000003_scheduled_scan_time_zone.up.sql",
+      "down": "000003_scheduled_scan_time_zone.down.sql",
+      "checksum": "sha256:a2399a12cd536f6045810809b869f1c0c6a6a903fff2d8d4ef380bb031482107"
+    }
+  ]
+}

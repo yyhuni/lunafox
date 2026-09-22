@@ -22,6 +22,7 @@ function digest(letter) { return `sha256:${letter.repeat(64)}`; }
 function record(component, overrides = {}) {
   const descriptor = COMPONENTS[component];
   const imageDigest = digest(component === "server" ? "1" : component === "frontend" ? "2" : component === "nginx" ? "3" : "4");
+  const agentArtifactId = `sha256-${"9".repeat(64)}`;
   const value = {
     schemaVersion: 1,
     status: "published",
@@ -47,11 +48,13 @@ function record(component, overrides = {}) {
     dockerHubImage: `docker.io/yyhuni/${descriptor.repository}@${imageDigest}`,
     ...(descriptor.lockfile ? { lockfileSha256: digest("f") } : {}),
     ...(descriptor.binary ? {
+      binaryArtifactId: agentArtifactId,
+      binaryInputFingerprint: `sha256:${agentArtifactId.slice("sha256-".length)}`,
       binaryBundleDigest: digest("9"),
       binarySourceRevisionDigest: sourceRevisionDigest,
       binaryExportManifestSha256: exportManifestSha256,
       binaryProvenanceSha256: publicProvenanceSha256,
-      binaryTreePath: `agent/bin/${tag}`,
+      binaryTreePath: `agent/bin/${agentArtifactId}`,
       binaryTreeBaseManifestSha256: digest("8"),
       binarySignerIssuer: "https://token.actions.githubusercontent.com",
       binarySignerIdentity: "https://github.com/yyhuni/lunafox-private/.github/workflows/release.yml@refs/tags/*",

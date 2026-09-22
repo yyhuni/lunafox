@@ -1,7 +1,11 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -1145,7 +1149,7 @@ func TestInitialSchemaDefaultsNucleiPOCEnablementToDisabled(t *testing.T) {
 		t.Fatal("initial schema must define nuclei_poc exactly once")
 	}
 	if !strings.Contains(definition[1], "is_enabled BOOLEAN NOT NULL DEFAULT FALSE") {
-		t.Fatal("nuclei_poc.is_enabled must default to FALSE in the disposable development baseline")
+		t.Fatal("nuclei_poc.is_enabled must default to FALSE in the release-candidate baseline")
 	}
 	if strings.Contains(definition[1], "is_enabled BOOLEAN NOT NULL DEFAULT TRUE") {
 		t.Fatal("nuclei_poc.is_enabled must not default to TRUE")
@@ -1303,7 +1307,7 @@ func TestInitialSchemaIndexesVulnerabilityListQueryFields(t *testing.T) {
 	}
 }
 
-func TestDevelopmentSchemaKeepsSingleSquashedMigrationPair(t *testing.T) {
+func TestFrozenMigrationBaselineUsesNumberedPairsAndManifestChecksums(t *testing.T) {
 	entries, err := os.ReadDir("migrations")
 	if err != nil {
 		t.Fatalf("read migrations directory: %v", err)
@@ -1321,12 +1325,96 @@ func TestDevelopmentSchemaKeepsSingleSquashedMigrationPair(t *testing.T) {
 	}
 	slices.Sort(migrationFiles)
 
-	expected := []string{
-		"000001_init_schema.down.sql",
-		"000001_init_schema.up.sql",
+	type migrationEntry struct {
+		ID       string `json:"id"`
+		Slug     string `json:"slug"`
+		Up       string `json:"up"`
+		Down     string `json:"down"`
+		Checksum string `json:"checksum"`
 	}
-	if !slices.Equal(migrationFiles, expected) {
-		t.Fatalf("development schema migrations should be squashed into 000001 pair; got %v", migrationFiles)
+	var manifest struct {
+		SchemaVersion     int              `json:"schemaVersion"`
+		ChecksumAlgorithm string           `json:"checksumAlgorithm"`
+		BaselineMigration string           `json:"baselineMigration"`
+		Migrations        []migrationEntry `json:"migrations"`
+	}
+	manifestBytes, err := os.ReadFile(filepath.Join("migrations", "manifest.json"))
+	if err != nil {
+		t.Fatalf("read migration manifest: %v", err)
+	}
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		t.Fatalf("parse migration manifest: %v", err)
+	}
+	if manifest.SchemaVersion != 1 || manifest.ChecksumAlgorithm != "sha256-canonical-pair-v1" || manifest.BaselineMigration != "000001" {
+		t.Fatalf("unexpected migration manifest metadata: %#v", manifest)
+	}
+	if len(manifest.Migrations) == 0 {
+		t.Fatal("migration manifest must contain at least the frozen baseline")
+	}
+
+	canonicalPattern := regexp.MustCompile(`^(\d{6})_([a-z0-9][a-z0-9_-]*)\.(up|down)\.sql$`)
+	expectedFiles := make([]string, 0, len(manifest.Migrations)*2)
+	seenIDs := make(map[string]bool, len(manifest.Migrations))
+	for index, migration := range manifest.Migrations {
+		expectedID := fmt.Sprintf("%06d", index+1)
+		if migration.ID != expectedID || seenIDs[migration.ID] {
+			t.Fatalf("migration IDs must be contiguous and unique; entry %d has %q", index, migration.ID)
+		}
+		seenIDs[migration.ID] = true
+		if migration.Up != fmt.Sprintf("%s_%s.up.sql", migration.ID, migration.Slug) || migration.Down != fmt.Sprintf("%s_%s.down.sql", migration.ID, migration.Slug) {
+			t.Fatalf("migration %s does not use a canonical up/down pair: %#v", migration.ID, migration)
+		}
+		for _, name := range []string{migration.Up, migration.Down} {
+			if !canonicalPattern.MatchString(name) {
+				t.Fatalf("migration filename is not canonical: %s", name)
+			}
+			contents, err := os.ReadFile(filepath.Join("migrations", name))
+			if err != nil {
+				t.Fatalf("read migration %s: %v", name, err)
+			}
+			if name == migration.Down && !strings.HasPrefix(string(contents), "-- DESTRUCTIVE TEST TEARDOWN ONLY.") {
+				t.Fatalf("migration %s must be explicitly limited to test teardown", name)
+			}
+			expectedFiles = append(expectedFiles, name)
+		}
+		pairNames := []string{migration.Down, migration.Up}
+		slices.Sort(pairNames)
+		payload := strings.Builder{}
+		for _, name := range pairNames {
+			contents, err := os.ReadFile(filepath.Join("migrations", name))
+			if err != nil {
+				t.Fatalf("read migration %s for checksum: %v", name, err)
+			}
+			digest := sha256.Sum256(contents)
+			fmt.Fprintf(&payload, "%s\nsha256:%x\n", name, digest)
+		}
+		pairDigest := sha256.Sum256([]byte(payload.String()))
+		if migration.Checksum != fmt.Sprintf("sha256:%x", pairDigest) {
+			t.Fatalf("migration %s checksum = %q, want sha256:%x", migration.ID, migration.Checksum, pairDigest)
+		}
+	}
+	slices.Sort(expectedFiles)
+	if !slices.Equal(migrationFiles, expectedFiles) {
+		t.Fatalf("migration manifest must list exactly every numbered SQL pair; files=%v manifest=%v", migrationFiles, expectedFiles)
+	}
+	baseline := manifest.Migrations[0]
+	if baseline.ID != "000001" || baseline.Slug != "init_schema" {
+		t.Fatalf("000001 baseline identity changed: %#v", baseline)
+	}
+	policyBytes, err := os.ReadFile(filepath.Join("migrations", "policy.json"))
+	if err != nil {
+		t.Fatalf("read migration policy: %v", err)
+	}
+	var policy struct {
+		BaselineMigration string `json:"baselineMigration"`
+		BaselineChecksum  string `json:"baselineChecksum"`
+		MigrationManifest string `json:"migrationManifest"`
+	}
+	if err := json.Unmarshal(policyBytes, &policy); err != nil {
+		t.Fatalf("parse migration policy: %v", err)
+	}
+	if policy.BaselineMigration != baseline.ID || policy.BaselineChecksum != baseline.Checksum || policy.MigrationManifest != "manifest.json" {
+		t.Fatalf("migration policy is not bound to the frozen baseline: %#v", policy)
 	}
 }
 

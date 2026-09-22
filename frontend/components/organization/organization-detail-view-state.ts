@@ -126,6 +126,7 @@ export function useOrganizationDetailViewState({ organizationId }: OrganizationD
         unlinkTarget: tTooltips("unlinkTarget"),
         clickToCopy: tTooltips("clickToCopy"),
         copied: tTooltips("copied"),
+        targetConcept: tTooltips("targetConcept"),
       },
       types: {
         domain: tTarget("types.domain"),
@@ -169,6 +170,7 @@ export function useOrganizationDetailViewState({ organizationId }: OrganizationD
         everyDay: tScan.raw("cron.everyDay") as string,
         everyWeek: tScan.raw("cron.everyWeek") as string,
         everyMonth: tScan.raw("cron.everyMonth") as string,
+        inTimeZone: tScan.raw("cron.inTimeZone") as string,
         weekdays: tScan.raw("cron.weekdays") as string[],
       },
     }),

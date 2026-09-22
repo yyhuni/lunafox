@@ -95,22 +95,25 @@ for forbidden in tools/installer worker docker/base-tools docker/ci-tools docker
 	[ ! -e "$ROOT_DIR/$forbidden" ] || fail "private or development path is present in public Runtime tree: $forbidden"
 done
 
-# The public tree may contain only the versioned, already-verified Agent
-# bundle. Agent source remains private; accepting a broad `agent/` directory
-# here would let source or a second unverified version enter Runtime contexts.
+# The public tree may contain one immutable, already-verified Agent bundle.
+# Its directory is derived from the complete Agent input fingerprint instead
+# of the product release tag, so an unchanged Agent is not rebuilt merely for
+# a new product release. Agent source must remain private.
 if [ -e "$ROOT_DIR/agent" ]; then
 	[ ! -L "$ROOT_DIR/agent" ] || fail "public Agent boundary must not be a symlink"
-	[ -d "$ROOT_DIR/agent/bin" ] || fail "public Agent tree must contain only agent/bin/<release-tag>"
-	release_tag="$(jq -er '.releaseTag' "$ROOT_DIR/PUBLIC_PROVENANCE.json" 2>/dev/null)" ||
-		fail "public provenance releaseTag is required to validate the Agent tree"
-	[[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] ||
-		fail "public provenance releaseTag is invalid: $release_tag"
+	[ -d "$ROOT_DIR/agent/bin" ] || fail "public Agent tree must contain only agent/bin/sha256-<input-fingerprint>"
 	while IFS= read -r -d '' path; do
 		[ "$path" = "$ROOT_DIR/agent/bin" ] || fail "private or development Agent path is present in public Runtime tree: ${path#"$ROOT_DIR"/}"
 	done < <(find "$ROOT_DIR/agent" -mindepth 1 -maxdepth 1 -print0)
 	[ ! -L "$ROOT_DIR/agent/bin" ] || fail "public Agent bin boundary must not be a symlink"
-	bundle_dir="$ROOT_DIR/agent/bin/$release_tag"
-	[ -d "$bundle_dir" ] || fail "versioned public Agent bundle is missing: agent/bin/$release_tag"
+	bundle_dirs=()
+	while IFS= read -r -d '' path; do
+		bundle_dirs+=("$path")
+	done < <(find "$ROOT_DIR/agent/bin" -mindepth 1 -maxdepth 1 -type d -print0)
+	[ "${#bundle_dirs[@]}" -eq 1 ] || fail "public Agent tree must contain exactly one immutable bundle"
+	bundle_dir="${bundle_dirs[0]}"
+	agent_artifact_id="$(basename "$bundle_dir")"
+	[[ "$agent_artifact_id" =~ ^sha256-[a-f0-9]{64}$ ]] || fail "public Agent bundle directory must be sha256-<input-fingerprint>"
 	[ ! -L "$bundle_dir" ] || fail "public Agent bundle must not be a symlink"
 	while IFS= read -r -d '' path; do
 		[ "$path" = "$bundle_dir" ] || fail "unexpected Agent version or source path: ${path#"$ROOT_DIR"/}"
@@ -135,9 +138,17 @@ if [ -e "$ROOT_DIR/agent" ]; then
 	for member in "${agent_bundle_members[@]}"; do
 		member_path="$bundle_dir/$member"
 		if [ ! -f "$member_path" ] || [ -L "$member_path" ]; then
-			fail "public Agent bundle member is missing: agent/bin/$release_tag/$member"
+			fail "public Agent bundle member is missing: agent/bin/$agent_artifact_id/$member"
 		fi
 	done
+	jq -e --arg artifact_id "$agent_artifact_id" '
+		.schemaVersion == "lunafox.agent-bundle.v2" and
+		.artifactId == $artifact_id and
+		(.inputFingerprint | type == "object" and .version == 1 and .algorithm == "sha256-canonical-json-v1" and (.value | test("^sha256:[a-f0-9]{64}$"))) and
+		("sha256-" + (.inputFingerprint.value | ltrimstr("sha256:"))) == $artifact_id and
+		.publicTreePath == ("agent/bin/" + $artifact_id) and
+		(.sourceRelease.tag | test("^v[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$"))
+	' "$bundle_dir/agent-bundle.json" >/dev/null || fail "public Agent bundle manifest is not bound to its immutable artifact identity"
 fi
 
 if [ -e "$ROOT_DIR/tools" ]; then

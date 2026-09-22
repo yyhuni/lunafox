@@ -8,14 +8,14 @@ import (
 	scheduledapp "github.com/yyhuni/lunafox/server/internal/modules/scheduledscan/application"
 )
 
-func TestToScheduledScanOutputUsesCanonicalWorkflowAndOmitsLegacyFields(t *testing.T) {
+func TestToScheduledScanOutputUsesCanonicalWorkflowAndReturnsTimeZone(t *testing.T) {
 	persistedNextRunTime := time.Date(2026, 5, 20, 3, 17, 11, 123000000, time.FixedZone("input", 8*60*60))
 	output := toScheduledScanOutput(&scheduledapp.ScheduledScan{
-		ID:                     1,
-		Name:                   "daily",
-		ScanWorkflowID:         "default",
-		Configuration:          map[string]any{"steps": map[string]any{}},
-		CronExpression:         "0 2 * * *",
+		ID:             1,
+		Name:           "daily",
+		ScanWorkflowID: "default",
+		Configuration:  map[string]any{"steps": map[string]any{}},
+		TimeZone:       "UTC", CronExpression: "0 2 * * *",
 		IsEnabled:              true,
 		SuccessfulHandoffCount: 7,
 		FailedHandoffCount:     2,
@@ -38,8 +38,8 @@ func TestToScheduledScanOutputUsesCanonicalWorkflowAndOmitsLegacyFields(t *testi
 	if decoded["scanWorkflow"] != "scanWorkflows/default" {
 		t.Fatalf("expected canonical scanWorkflow, got %+v", decoded)
 	}
-	if _, ok := decoded["timeZone"]; ok {
-		t.Fatalf("retired timeZone must be omitted, got %+v", decoded)
+	if decoded["timeZone"] != "UTC" {
+		t.Fatalf("timeZone = %v, want UTC", decoded["timeZone"])
 	}
 	wantNextRunTime := persistedNextRunTime.UTC().Format(time.RFC3339Nano)
 	if decoded["nextRunTime"] != wantNextRunTime {

@@ -26,6 +26,7 @@ type CreateScheduledScanRequest struct {
 	Organization   string         `json:"organization,omitempty"`
 	Target         string         `json:"target,omitempty"`
 	Agent          string         `json:"agent,omitempty"`
+	TimeZone       string         `json:"timeZone" binding:"required"`
 	CronExpression string         `json:"cronExpression" binding:"required"`
 	IsEnabled      *bool          `json:"isEnabled,omitempty"`
 }
@@ -41,6 +42,7 @@ func (req *CreateScheduledScanRequest) UnmarshalJSON(data []byte) error {
 		"organization":   {},
 		"target":         {},
 		"agent":          {},
+		"timeZone":       {},
 		"cronExpression": {},
 		"isEnabled":      {},
 	}, &raw); err != nil {
@@ -59,6 +61,7 @@ type UpdateScheduledScanRequest struct {
 	Organization   *string        `json:"organization,omitempty"`
 	Target         *string        `json:"target,omitempty"`
 	Agent          *string        `json:"agent,omitempty"`
+	TimeZone       *string        `json:"timeZone,omitempty"`
 	CronExpression *string        `json:"cronExpression,omitempty"`
 	IsEnabled      *bool          `json:"isEnabled,omitempty"`
 	UpdateMask     string         `json:"updateMask" binding:"required"`
@@ -76,6 +79,7 @@ func (req *UpdateScheduledScanRequest) UnmarshalJSON(data []byte) error {
 		"organization":   {},
 		"target":         {},
 		"agent":          {},
+		"timeZone":       {},
 		"cronExpression": {},
 		"isEnabled":      {},
 		"updateMask":     {},
@@ -145,6 +149,7 @@ type ScheduledScanResponse struct {
 	Agent                  string         `json:"agent,omitempty"`
 	AgentID                *int           `json:"agentId,omitempty"`
 	ScanMode               string         `json:"scanMode"`
+	TimeZone               string         `json:"timeZone"`
 	CronExpression         string         `json:"cronExpression"`
 	IsEnabled              bool           `json:"isEnabled"`
 	NextRunTime            *time.Time     `json:"nextRunTime"`

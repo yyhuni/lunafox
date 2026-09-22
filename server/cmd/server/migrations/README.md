@@ -2,30 +2,35 @@
 
 ## Current Phase
 
-The repository is in the `disposable-development` phase recorded by
-`policy.json`. There is no supported persisted deployment, preserve-data
-upgrade, or in-flight task recovery contract. The only migration files are the
-squashed `000001_init_schema.up.sql` and `000001_init_schema.down.sql` pair.
+The repository is in the `release-candidate` phase recorded by `policy.json`,
+with a frozen migration baseline. There is no supported data-retaining
+deployment, preserve-data upgrade, or in-flight task recovery contract. The
+published baseline is the exact `000001_init_schema.up.sql` and
+`000001_init_schema.down.sql` pair; future schema changes must use numbered
+forward migrations.
 
 ## Upgrade Operation Baseline
 
-The squashed `000001` baseline includes `upgrade_operation`, the Server-owned
+The frozen `000001` baseline includes `upgrade_operation`, the Server-owned
 user-visible Upgrade Operation record. It binds one request ID to one immutable
 Manifest identity/digest and stores phase timestamps, migration status,
 cancelled Scan/Task counts, Agent readiness totals, observed component digests,
 and bounded diagnostics. The host journal and completion receipt remain
 separate; neither is a replacement for this database record. The table is part
-of the disposable fresh-install baseline and must not be treated as a
-data-retaining forward migration until an explicit phase-transition change
-freezes this schema and defines backup/recovery semantics.
+of the frozen release-candidate fresh-install baseline and must not be treated
+as a data-retaining forward migration until an explicit recovery-governance
+change defines backup and restore semantics.
 
-Before the baseline freezes, maintainers may update and squash `000001` so a
-new empty database directly receives the current schema. Historical cutover SQL
-and compatibility migrations must not accumulate in this development baseline.
+The `000001` bytes are immutable after publication. Maintainers must not edit
+or squash that pair. A schema change must add the next contiguous six-digit
+`up`/`down` pair, update `manifest.json` and its canonical checksum, and bind
+the migration identity and checksum in the release manifest. A `down` file is
+for isolated test teardown only; production recovery uses a verified backup
+restore or an approved forward fix.
 
-## Wordlist Resource Identity Development Cutover
+## Wordlist Resource Identity Cutover
 
-The squashed baseline stores the immutable upload basename in
+The frozen baseline stores the immutable upload basename in
 `wordlist.file_name`; the canonical API, scan, plan, Server, Agent, and Worker
 identity is derived from the stable row ID as `wordlists/{id}`. A retained
 development snapshot created before this hard cut may still have
@@ -84,9 +89,9 @@ empty database from that source revision's baseline. Applying `down` is only a
 destructive test/development teardown and does not preserve or recover Agent,
 token, location, Scan, or other business data.
 
-## Nuclei POC Source Sync Development Cutover
+## Nuclei POC Source Sync Cutover
 
-The Nuclei POC tables in `000001` are a disposable-development hard cut. The
+The Nuclei POC tables in `000001` are a frozen-baseline hard cut. The
 old repository configuration and local-preview boundary have no supported
 runtime fallback, dual write, or data backfill. Stop the matching Server and
 Frontend processes, discard any development database that still contains the
@@ -112,8 +117,8 @@ revision.
 
 The baseline checks the disjoint namespaces: users use canonical
 `wf-<lowercase-UUID>` IDs, built-ins use the reserved non-`wf-` namespace, and
-only users can carry a create request ID. In this disposable phase the table is
-part of the squashed fresh-install schema; a future preserve-data phase must
+only users can carry a create request ID. In this release-candidate phase the
+table is part of the frozen fresh-install schema; a future preserve-data phase must
 define its own forward migration and upgrade semantics before changing it.
 
 ## Scheduled Scan Execution Baseline
@@ -149,14 +154,18 @@ state. It also adds no Schedule/occurrence provenance or uniqueness to `scan`,
 `scan_task`, or saved plans; no user identity; and no occurrence HTTP/history,
 Run Now, scheduler setting, metric, alert, dashboard, or health schema.
 
-Because the development baseline is disposable, this is a hard fresh-install
-cutover. Existing Scheduled Scan data is not backfilled with a guessed time
-zone and no forward compatibility migration is added. Rebuild the database from
-empty state and recreate required schedules under the UTC-only Cron contract.
+The frozen `000001` baseline remains unchanged. Forward migration `000003`
+adds the non-null `scheduled_scan.time_zone` column and backfills every
+existing row with the explicit IANA value `UTC`; it does not rewrite
+`cron_expression` or `next_run_time`, so existing trigger instants remain
+unchanged. New writes must provide a valid IANA zone and interpret the stored
+Cron as wall-clock time in that zone. The paired down migration is destructive
+test teardown only: production recovery uses a verified backup restore or an
+approved forward fix, not removal of a Schedule's wall-clock interpretation.
 
 ## Scan Execution Input Source Hard Cut
 
-The mutable `000001` baseline requires `scan.input_source` and
+The frozen `000001` baseline requires `scan.input_source` and
 `scheduled_scan.input_source` with no database default. Both are non-null and
 accept only `scan_snapshot` or `target_inventory`. Matching Server and Frontend
 code must supply and strictly parse the value on every public and internal
@@ -172,7 +181,7 @@ boundary.
 
 ## Notification Hard Cut Runbook
 
-The notification module is also a disposable-development hard cut. Its outbox,
+The notification module is also a frozen-baseline hard cut. Its outbox,
 inbox, destination, delivery, and attempt tables replace the old
 singleton notification and global read-state shapes. No notification history,
 read state, category-specific inbox filter, destination credential, or enabled
@@ -200,16 +209,17 @@ revision and creating a new empty database from that old revision's baseline.
 It does not mean applying this revision's down migration to preserve data or
 recover notification history, read state, credentials, or in-flight delivery.
 
-## Development Rollback
+## Rollback and Recovery Boundary
 
-Development rollback means restoring code through Git or branch history and
-running another empty-state fresh install. It does not mean applying the down
-migration to preserve or recover business data. The current down migration is a
-destructive development/test teardown, and it provides no database rollback or
-in-flight task recovery promise.
+Local rollback means restoring code through Git or branch history and running
+another empty-state fresh install. It does not mean applying the down migration
+to preserve or recover business data. The current down migration is a
+destructive test-teardown operation, and it provides no database rollback or
+in-flight task recovery promise. A production failure requires a verified
+backup restore or an approved forward fix.
 
 `MigrateToVersion` with a lower target also invokes a destructive down migration
-and is limited to development/test use; it is not a production rollback API.
+and is limited to isolated test use; it is not a production rollback API.
 
 The default installer preclean removes LunaFox data volumes and configuration.
 `uninstall.sh --keep-data` only preserves files during uninstall; it does not
@@ -217,7 +227,7 @@ turn a later default install into a supported upgrade or rollback path.
 
 ## Explicit Workflow Step Enablement Cutover
 
-The Workflow Step enablement contract is a hard cut in this disposable phase.
+The Workflow Step enablement contract is a hard cut in this frozen baseline.
 Existing `scan.configuration` and Scheduled Scan rows that lack explicit Step
 `enabled` values are not backfilled, quarantined, converted at read time, or
 interpreted from current Workflow/Engine state. Before using the new code,
@@ -228,7 +238,7 @@ enabling at least one Step.
 
 ## Scan History Partition Baseline
 
-The disposable baseline partitions only scan history: the seven snapshot tables
+The frozen baseline partitions only scan history: the seven snapshot tables
 and `task_progress_log` use the same `RANGE(scan_id)` 10,000-ID half-open
 intervals and deterministic child names. The initial baseline creates `[0,
 10000)` and `[10000, 20000)`; server lifecycle provisioning creates the
@@ -260,30 +270,25 @@ does not delete Scan, Task, task-progress, or Snapshot history. The existing
 `SCAN_HISTORY_RETENTION_MODE=enforce` default remains unchanged and continues
 to be the sole physical history reclaimer.
 
-This is another empty-database cutover. Stop the development stack, discard
-the old development database, and let the updated `000001` create a new empty
-database before starting the matching Server. Do not apply an invented
-incremental migration or backfill. If any deployed data must be retained,
-stop and create a separate approved baseline-freeze and forward-migration
-change before proceeding.
+This is another empty-database cutover for the current release-candidate
+baseline. Stop the local stack, discard the old database only when its data is
+explicitly disposable, and let the matching `000001` create a new empty
+database. Do not edit the frozen pair or invent an incremental migration. If
+deployed data must be retained, stop and obtain an approved numbered forward
+migration plus recovery evidence before proceeding.
 
-## Freeze Trigger
+## Recovery Governance Gate
 
-The migration baseline must freeze before whichever happens first:
-
-- the first public stable release;
-- the first non-disposable deployment that must retain data.
-
-The current release-policy gate intentionally rejects both trigger conditions.
-Reaching either trigger requires a separate approved change that updates the
-policy and its gate together, freezes all published migration bytes, and moves
-later schema changes to new numbered forward migrations. That change must also
-define and verify upgrade compatibility, backup, recovery, and rollback before
-the stable release or data-retaining deployment proceeds.
+The migration baseline is already frozen for the release-candidate stream. The
+release-policy gate still rejects a public stable release and any deployment
+that retains data until a separate recovery-governance change supplies backup,
+restore, compatibility-window, and upgrade-rehearsal evidence. That change must
+update the policy and its gate together; it must not rewrite published `000001`
+bytes.
 
 Do not flip `stableReleaseAllowed` or `dataRetainingDeploymentAllowed` alone.
-The current checker accepts only the complete disposable-development policy, so
-any phase transition must deliberately replace its assumptions and tests.
+The checker accepts only the complete frozen-baseline policy, so any phase
+transition must deliberately replace its assumptions and tests.
 
 ## Verification
 
@@ -296,7 +301,7 @@ make verify-release-contract
 
 ## Compose Bootstrap Binding
 
-The disposable `000001` baseline includes `deployment_agent_bootstrap`, a
+The frozen `000001` baseline includes `deployment_agent_bootstrap`, a
 singleton binding to the internal Agent instance. Registration and this binding
 commit in one transaction under an advisory lock. Bootstrap publishes restricted
 credentials before commit; interrupted or mismatched database/file state fails

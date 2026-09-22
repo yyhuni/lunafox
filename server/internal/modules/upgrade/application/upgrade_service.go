@@ -115,8 +115,18 @@ type CheckForUpdatesResult struct {
 	Diagnostic     *domain.Diagnostic
 }
 
+// candidateAvailabilityResult separates the running Server binary used for
+// compatibility from the confirmed deployment version shown to operators. A
+// definitive v3 host comparison owns the latter; fallback retains the legacy
+// running-binary value.
+type candidateAvailabilityResult struct {
+	CurrentVersion string
+	HasUpdate      bool
+}
+
 // ManifestSummary is the safe, UI-facing projection of a validated release.
-// It contains identities and digests only; image refs remain host-owned.
+// It contains identities, digests, and the validated public notes; image refs
+// remain host-owned.
 type ManifestSummary struct {
 	ManifestID                string
 	ManifestDigest            string
@@ -132,6 +142,15 @@ type ManifestSummary struct {
 	MigrationPolicyVersion    int
 	RuntimeImageDigests       map[string]string
 	EngineDigests             []string
+	ReleaseNotes              *ReleaseNotesSummary
+}
+
+// ReleaseNotesSummary carries only the exact body bound by the release
+// manifest. The digest lets clients verify that a cached/rendered body still
+// belongs to the candidate they accepted.
+type ReleaseNotesSummary struct {
+	Body   string
+	Digest string
 }
 
 type CreateUpgradeOperationInput struct {
@@ -158,13 +177,13 @@ func (service *Service) CheckForUpdates(ctx context.Context, userID int) (CheckF
 	if err != nil {
 		return CheckForUpdatesResult{}, err
 	}
-	hasUpdate, err := service.hasNewerRelease(manifest.ReleaseVersion)
+	availability, err := service.candidateAvailability(ctx, manifest)
 	if err != nil {
 		return CheckForUpdatesResult{}, err
 	}
 	result := CheckForUpdatesResult{
-		CurrentVersion: service.currentVersion,
-		HasUpdate:      hasUpdate,
+		CurrentVersion: availability.CurrentVersion,
+		HasUpdate:      availability.HasUpdate,
 		Manifest:       summary,
 	}
 	if compatibilityErr := service.checkReleaseCompatibility(manifest.Upgrade.CompatibilityRange); compatibilityErr != nil {
@@ -229,11 +248,11 @@ func (service *Service) CreateOperation(ctx context.Context, userID int, input C
 	}, manifest); err != nil {
 		return nil, false, err
 	}
-	hasUpdate, err := service.hasNewerRelease(manifest.ReleaseVersion)
+	availability, err := service.candidateAvailability(ctx, manifest)
 	if err != nil {
 		return nil, false, err
 	}
-	if !hasUpdate {
+	if !availability.HasUpdate {
 		return nil, false, domain.NewUpgradeNoUpdateAvailable()
 	}
 	if err := service.checkReleaseCompatibility(manifest.Upgrade.CompatibilityRange); err != nil {
@@ -253,8 +272,14 @@ func (service *Service) CreateOperation(ctx context.Context, userID int, input C
 	service.mu.Lock()
 	defer service.mu.Unlock()
 	now := service.now().UTC()
+	operationID := uuid.NewString()
+	scopePlan, hasScopePlan, err := service.planHostScope(ctx, operationID, manifest, eligibility.MigrationType != "none")
+	if err != nil {
+		return nil, false, err
+	}
+	frontendOnly := hasScopePlan && scopePlan.ExecutionMode == domain.ExecutionModeFrontendOnly
 	var agentExpectations []domain.AgentExpectation
-	if service.agentSource != nil {
+	if !frontendOnly && service.agentSource != nil {
 		target, targetErr := service.agentTarget(manifest)
 		if targetErr != nil {
 			return nil, false, targetErr
@@ -264,31 +289,45 @@ func (service *Service) CreateOperation(ctx context.Context, userID int, input C
 			return nil, false, fmt.Errorf("snapshot agents for upgrade: %w", err)
 		}
 	}
-	operationID := uuid.NewString()
-	deadline := now.Add(service.agentVerificationTimeout)
 	operation := &domain.Operation{
-		OperationID:               operationID,
-		RequestID:                 requestID,
-		OperatorID:                userID,
-		ManifestID:                manifest.Upgrade.ManifestID,
-		ManifestDigest:            manifest.Digest(),
-		ReleaseVersion:            manifest.ReleaseVersion,
-		CompatibilityRange:        manifest.Upgrade.CompatibilityRange,
-		MaintenanceWindowMinutes:  manifest.Upgrade.MaintenanceWindowMinutes,
-		Status:                    domain.StatusQueued,
-		MigrationStatus:           domain.MigrationStatusNotStarted,
-		MigrationType:             eligibility.MigrationType,
-		MigrationID:               eligibility.MigrationID,
-		MigrationChecksum:         eligibility.Checksum,
-		AgentDesiredVersion:       manifest.ReleaseVersion,
-		AgentTargetDigest:         runtimeAgentDigest(manifest),
-		AgentSummary:              summarizeAgentExpectations(agentExpectations),
-		AgentExpectations:         agentExpectations,
-		AgentVerificationDeadline: &deadline,
-		ObservedDigests:           map[string]string{},
-		StageTimes:                map[domain.Status]time.Time{domain.StatusQueued: now},
-		CreatedAt:                 now,
-		UpdatedAt:                 now,
+		OperationID:              operationID,
+		RequestID:                requestID,
+		OperatorID:               userID,
+		ManifestID:               manifest.Upgrade.ManifestID,
+		ManifestDigest:           manifest.Digest(),
+		ReleaseVersion:           manifest.ReleaseVersion,
+		CompatibilityRange:       manifest.Upgrade.CompatibilityRange,
+		MaintenanceWindowMinutes: manifest.Upgrade.MaintenanceWindowMinutes,
+		Status:                   domain.StatusQueued,
+		MigrationStatus:          domain.MigrationStatusNotStarted,
+		MigrationType:            eligibility.MigrationType,
+		MigrationID:              eligibility.MigrationID,
+		MigrationChecksum:        eligibility.Checksum,
+		ObservedDigests:          map[string]string{},
+		StageTimes:               map[domain.Status]time.Time{domain.StatusQueued: now},
+		CreatedAt:                now,
+		UpdatedAt:                now,
+	}
+	if hasScopePlan {
+		operation.ExecutionMode = scopePlan.ExecutionMode
+		operation.PlanDigest = scopePlan.PlanDigest
+		operation.BaselineDeploymentDigest = scopePlan.BaselineDeploymentDigest
+		operation.PlanSummary = domain.PlanSummary{TouchedServices: append([]string(nil), scopePlan.TouchedServices...)}
+		operation.ConfirmedDeploymentVersion = scopePlan.ConfirmedDeploymentVersion
+	}
+	if frontendOnly {
+		operation.WorkDisposition = domain.WorkDispositionNotRequired
+	} else {
+		// A full operation is persisted before its coordinator commits. Until that
+		// result exists, the API must not imply either that work was cancelled or
+		// that cancellation was unnecessary.
+		operation.WorkDisposition = domain.WorkDispositionLegacyUnknown
+		operation.AgentDesiredVersion = manifest.ReleaseVersion
+		operation.AgentTargetDigest = runtimeAgentDigest(manifest)
+		operation.AgentSummary = summarizeAgentExpectations(agentExpectations)
+		operation.AgentExpectations = agentExpectations
+		deadline := now.Add(service.agentVerificationTimeout)
+		operation.AgentVerificationDeadline = &deadline
 	}
 	createdOperation, created, err := service.repository.CreateOrGet(ctx, operation)
 	if err != nil {
@@ -297,7 +336,7 @@ func (service *Service) CreateOperation(ctx context.Context, userID int, input C
 	if !created {
 		return createdOperation, false, nil
 	}
-	if service.coordinator != nil {
+	if !frontendOnly && service.coordinator != nil {
 		createdOperation.Status = domain.StatusStopping
 		createdOperation.UpdatedAt = service.now().UTC()
 		if createdOperation.StageTimes == nil {
@@ -315,11 +354,13 @@ func (service *Service) CreateOperation(ctx context.Context, userID int, input C
 			preparation, err = service.coordinator.Prepare(ctx)
 		}
 		if err != nil {
+			createdOperation.WorkDisposition = domain.WorkDispositionCancellationFailed
 			service.markPreparationFailed(createdOperation)
 			return createdOperation, true, err
 		}
 		createdOperation.CancelledScanCount = preparation.CancelledScanCount
 		createdOperation.CancelledTaskCount = preparation.CancelledTaskCount
+		createdOperation.WorkDisposition = domain.WorkDispositionCancelled
 		createdOperation.UpdatedAt = service.now().UTC()
 		if err := service.repository.Update(ctx, createdOperation); err != nil {
 			return createdOperation, true, err
@@ -335,6 +376,9 @@ func (service *Service) markPreparationFailed(operation *domain.Operation) {
 	if operation == nil {
 		return
 	}
+	if operation.EffectiveExecutionMode() == domain.ExecutionModeFull && operation.WorkDisposition != domain.WorkDispositionCancelled {
+		operation.WorkDisposition = domain.WorkDispositionCancellationFailed
+	}
 	now := service.now().UTC()
 	operation.Status = domain.StatusFailed
 	operation.Diagnostic = "active work could not be cancelled before upgrade handoff"
@@ -345,6 +389,55 @@ func (service *Service) markPreparationFailed(operation *domain.Operation) {
 	}
 	operation.StageTimes[domain.StatusFailed] = now
 	_ = service.repository.Update(context.Background(), operation)
+}
+
+// planHostScope obtains the one read-only host decision before the full path
+// observes Agents or cancels work. A migration still gets a v2 full plan after
+// its eligibility gate passes so a fully verified operation can establish the
+// host baseline; RequireFull prevents the host from weakening that gate.
+func (service *Service) planHostScope(ctx context.Context, operationID string, manifest *releasemanifest.Manifest, requireFull bool) (HostUpgradeScopePlan, bool, error) {
+	if manifest == nil {
+		return HostUpgradeScopePlan{}, false, domain.WrapManifestInvalid(nil)
+	}
+	planner, supported := service.dispatcher.(HostUpgradeScopePlanner)
+	if !supported || planner == nil {
+		// Schema-v1 hosts retain the established full upgrade path. Do not infer
+		// a fast path from the manifest when host capability is unknown.
+		return HostUpgradeScopePlan{}, false, nil
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	planCtx, cancel := context.WithTimeout(ctx, hostDispatchTimeout)
+	defer cancel()
+	plan, err := planner.PlanUpgradeScope(planCtx, HostUpgradeScopePlanRequest{
+		OperationID: operationID, ManifestDigest: manifest.Digest(), RequireFull: requireFull,
+	})
+	if err != nil {
+		if errors.Is(err, ErrHostUpgradeScopePlanningUnsupported) || errors.Is(err, ErrHostUpgradeScopePlanningFullOnly) {
+			// A legacy host or a candidate without composition evidence can execute
+			// only the established v1 full path. All malformed v2 replies remain
+			// hard pre-side-effect failures below.
+			return HostUpgradeScopePlan{}, false, nil
+		}
+		return HostUpgradeScopePlan{}, false, fmt.Errorf("request host upgrade scope plan: %w", domain.ErrUpgradeHostUnavailable)
+	}
+	summary := domain.PlanSummary{TouchedServices: append([]string(nil), plan.TouchedServices...)}
+	if err := domain.ValidateScopePlan(plan.ExecutionMode, summary, plan.PlanDigest, plan.BaselineDeploymentDigest, plan.ConfirmedDeploymentVersion); err != nil {
+		// A host that advertises v2 but sends malformed planning data is not a
+		// legacy host. Failing here prevents cancellation before an ambiguous
+		// scope decision can become a side effect.
+		return HostUpgradeScopePlan{}, false, fmt.Errorf("validate host upgrade scope plan: %w", domain.ErrUpgradeHostUnavailable)
+	}
+	if requireFull && plan.ExecutionMode != domain.ExecutionModeFull {
+		return HostUpgradeScopePlan{}, false, fmt.Errorf("validate migration host upgrade scope plan: %w", domain.ErrUpgradeHostUnavailable)
+	}
+	return HostUpgradeScopePlan{
+		ExecutionMode: plan.ExecutionMode, PlanDigest: plan.PlanDigest,
+		BaselineDeploymentDigest:   plan.BaselineDeploymentDigest,
+		TouchedServices:            append([]string(nil), plan.TouchedServices...),
+		ConfirmedDeploymentVersion: plan.ConfirmedDeploymentVersion,
+	}, true, nil
 }
 
 // GetOperation returns one durable operation after the same server-side
@@ -523,6 +616,127 @@ func (service *Service) hasNewerRelease(candidate string) (bool, error) {
 	return targetVersion.GT(currentVersion), nil
 }
 
+// candidateAvailability asks a v3-capable host first because the running Server
+// version cannot identify a frontend-only deployment. Only an explicitly
+// unsupported or fallback v3 result may use the legacy semantic-version path.
+func (service *Service) candidateAvailability(ctx context.Context, manifest *releasemanifest.Manifest) (candidateAvailabilityResult, error) {
+	if service == nil || manifest == nil {
+		return candidateAvailabilityResult{}, domain.WrapManifestInvalid(nil)
+	}
+	legacy := candidateAvailabilityResult{CurrentVersion: service.currentVersion}
+	if source, supported := service.dispatcher.(HostCandidateAvailabilitySource); supported && source != nil {
+		availability, err := source.CandidateAvailability(ctx, manifest.Digest())
+		if err != nil {
+			if !errors.Is(err, ErrHostCandidateAvailabilityUnsupported) {
+				return candidateAvailabilityResult{}, fmt.Errorf("read host candidate availability: %w", err)
+			}
+		} else {
+			switch availability.Decision {
+			case HostCandidateAvailabilityFallback:
+				if availability.BaselineDeploymentDigest != "" || availability.ConfirmedDeploymentVersion != "" {
+					return candidateAvailabilityResult{}, fmt.Errorf("fallback host candidate availability contains confirmed deployment evidence")
+				}
+			case HostCandidateAvailabilityAvailable, HostCandidateAvailabilityAlreadyApplied, HostCandidateAvailabilityNotNewer:
+				if _, parseErr := ociartifact.ParseArtifactManifestDigest(availability.BaselineDeploymentDigest); parseErr != nil {
+					return candidateAvailabilityResult{}, fmt.Errorf("host candidate availability baseline deployment digest is invalid: %w", parseErr)
+				}
+				if availability.ConfirmedDeploymentVersion == "" || availability.ConfirmedDeploymentVersion != strings.TrimSpace(availability.ConfirmedDeploymentVersion) {
+					return candidateAvailabilityResult{}, fmt.Errorf("host candidate availability confirmed deployment version is invalid")
+				}
+				if _, parseErr := semver.Parse(availability.ConfirmedDeploymentVersion); parseErr != nil {
+					return candidateAvailabilityResult{}, fmt.Errorf("host candidate availability confirmed deployment version is invalid: %w", parseErr)
+				}
+				hasUpdate := availability.Decision == HostCandidateAvailabilityAvailable
+				if hasUpdate && service.currentVersion != "" {
+					candidateVersion, parseErr := semver.Parse(strings.TrimSpace(manifest.ReleaseVersion))
+					if parseErr != nil {
+						return candidateAvailabilityResult{}, domain.WrapManifestInvalid(fmt.Errorf("release version is invalid: %w", parseErr))
+					}
+					runningVersion, parseErr := semver.Parse(service.currentVersion)
+					if parseErr != nil {
+						return candidateAvailabilityResult{}, fmt.Errorf("current release version is invalid: %w", parseErr)
+					}
+					// Host inventory may establish that a same-version frontend
+					// deployment is missing, but it cannot authorize a Server
+					// binary downgrade when its confirmed state is stale.
+					hasUpdate = !candidateVersion.LT(runningVersion)
+				}
+				return candidateAvailabilityResult{
+					CurrentVersion: availability.ConfirmedDeploymentVersion,
+					HasUpdate:      hasUpdate,
+				}, nil
+			default:
+				return candidateAvailabilityResult{}, fmt.Errorf("unsupported host candidate availability decision %q", availability.Decision)
+			}
+		}
+	}
+	hasUpdate, err := service.legacyCandidateAvailability(ctx, manifest)
+	if err != nil {
+		return candidateAvailabilityResult{}, err
+	}
+	legacy.HasUpdate = hasUpdate
+	return legacy, nil
+}
+
+// legacyCandidateAvailability preserves the v1/v2 behavior for hosts without
+// a comparable composition-bound inventory. It is intentionally reached only
+// after the v3 path declined comparison, never because a definitive inventory
+// decision happens to disagree with the running Server binary.
+func (service *Service) legacyCandidateAvailability(ctx context.Context, manifest *releasemanifest.Manifest) (bool, error) {
+	if service == nil || manifest == nil {
+		return false, domain.WrapManifestInvalid(nil)
+	}
+	hasUpdate, err := service.hasNewerRelease(manifest.ReleaseVersion)
+	if err != nil || !hasUpdate {
+		return hasUpdate, err
+	}
+	if service.dispatcher == nil {
+		return true, nil
+	}
+	source, supported := service.dispatcher.(HostDeploymentStateSource)
+	if !supported || source == nil {
+		return true, nil
+	}
+	state, err := source.ConfirmedDeploymentState(ctx)
+	if err != nil {
+		if errors.Is(err, ErrHostDeploymentStateUnsupported) || errors.Is(err, ErrHostDeploymentStateUnavailable) {
+			// Older hosts and hosts without an established baseline retain the
+			// existing running-version fallback. Any other state error is hard.
+			return true, nil
+		}
+		return false, fmt.Errorf("read confirmed host deployment state: %w", err)
+	}
+	if state.ReleaseVersion == "" || state.ReleaseVersion != strings.TrimSpace(state.ReleaseVersion) {
+		return false, fmt.Errorf("confirmed host deployment state has an invalid release version")
+	}
+	confirmedVersion, err := semver.Parse(state.ReleaseVersion)
+	if err != nil {
+		return false, fmt.Errorf("confirmed host deployment state release version is invalid: %w", err)
+	}
+	if _, err := ociartifact.ParseArtifactManifestDigest(state.ManifestDigest); err != nil {
+		return false, fmt.Errorf("confirmed host deployment state manifest identity is invalid: %w", err)
+	}
+	if _, err := ociartifact.ParseArtifactManifestDigest(state.StateDigest); err != nil {
+		return false, fmt.Errorf("confirmed host deployment state digest is invalid: %w", err)
+	}
+	candidateVersion, err := semver.Parse(strings.TrimSpace(manifest.ReleaseVersion))
+	if err != nil {
+		// hasNewerRelease already parses this value, but keep the invariant local
+		// to the state comparison so future callers cannot bypass it.
+		return false, domain.WrapManifestInvalid(fmt.Errorf("release version is invalid: %w", err))
+	}
+	switch {
+	case candidateVersion.LT(confirmedVersion):
+		return false, nil
+	case candidateVersion.GT(confirmedVersion):
+		return true, nil
+	case state.ManifestDigest == manifest.Digest():
+		return false, nil
+	default:
+		return false, fmt.Errorf("%w: release %s has manifest %s, confirmed manifest is %s", ErrHostDeploymentStateConflict, manifest.ReleaseVersion, manifest.Digest(), state.ManifestDigest)
+	}
+}
+
 func (service *Service) checkReleaseCompatibility(rawRange string) error {
 	compatibilityRange, err := semver.ParseRange(rawRange)
 	if err != nil {
@@ -600,6 +814,10 @@ func (service *Service) dispatch(ctx context.Context, operation *domain.Operatio
 	defer cancel()
 	if err := service.dispatcher.Dispatch(dispatchCtx, HostUpgradeRequest{
 		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Action: action,
+		ExecutionMode: operation.ExecutionMode, PlanDigest: operation.PlanDigest,
+		BaselineDeploymentDigest:   operation.BaselineDeploymentDigest,
+		TouchedServices:            append([]string(nil), operation.PlanSummary.TouchedServices...),
+		ConfirmedDeploymentVersion: operation.ConfirmedDeploymentVersion,
 	}); err != nil {
 		if action == HostUpgradeActionStop {
 			service.markStopUnavailable(operation)
@@ -619,14 +837,14 @@ func (service *Service) markHostUnavailable(operation *domain.Operation, _ error
 	// handoff no longer proves that the database is unchanged. Preserve that
 	// uncertainty as needs_recovery instead of presenting a retryable failure.
 	status := domain.StatusFailed
-	if operation.MigrationStatus == domain.MigrationStatusRunning ||
+	if operation.EffectiveExecutionMode() != domain.ExecutionModeFrontendOnly && (operation.MigrationStatus == domain.MigrationStatusRunning ||
 		operation.MigrationStatus == domain.MigrationStatusSucceeded ||
 		operation.MigrationStatus == domain.MigrationStatusFailed ||
 		operation.MigrationStatus == domain.MigrationStatusUnknown ||
 		operation.Status == domain.StatusMigrating ||
 		operation.Status == domain.StatusRestarting ||
 		operation.Status == domain.StatusAgentVerifying ||
-		operation.Status == domain.StatusVerifying {
+		operation.Status == domain.StatusVerifying) {
 		status = domain.StatusNeedsRecovery
 	}
 	operation.Status = status
@@ -645,14 +863,14 @@ func (service *Service) markStopUnavailable(operation *domain.Operation) {
 		return
 	}
 	status := domain.StatusNeedsAttention
-	if operation.MigrationStatus == domain.MigrationStatusRunning ||
+	if operation.EffectiveExecutionMode() != domain.ExecutionModeFrontendOnly && (operation.MigrationStatus == domain.MigrationStatusRunning ||
 		operation.MigrationStatus == domain.MigrationStatusSucceeded ||
 		operation.MigrationStatus == domain.MigrationStatusFailed ||
 		operation.MigrationStatus == domain.MigrationStatusUnknown ||
 		operation.Status == domain.StatusMigrating ||
 		operation.Status == domain.StatusRestarting ||
 		operation.Status == domain.StatusAgentVerifying ||
-		operation.Status == domain.StatusVerifying {
+		operation.Status == domain.StatusVerifying) {
 		status = domain.StatusNeedsRecovery
 	}
 	now := service.now().UTC()
@@ -709,6 +927,10 @@ func summarizeManifest(manifest *releasemanifest.Manifest) (ManifestSummary, err
 		engineDigests = append(engineDigests, parsed.Digest)
 	}
 	migration := manifest.Upgrade.DatabaseMigration
+	var releaseNotes *ReleaseNotesSummary
+	if manifest.ReleaseNotes != nil {
+		releaseNotes = &ReleaseNotesSummary{Body: manifest.ReleaseNotes.Body, Digest: manifest.ReleaseNotes.Digest}
+	}
 	return ManifestSummary{
 		ManifestID:                manifest.Upgrade.ManifestID,
 		ManifestDigest:            manifest.Digest(),
@@ -724,6 +946,7 @@ func summarizeManifest(manifest *releasemanifest.Manifest) (ManifestSummary, err
 		MigrationPolicyVersion:    migration.PolicyVersion,
 		RuntimeImageDigests:       digests,
 		EngineDigests:             engineDigests,
+		ReleaseNotes:              releaseNotes,
 	}, nil
 }
 

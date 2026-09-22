@@ -60,8 +60,9 @@ describe("scheduled-scans contract", () => {
     expect(secondPage.totalSize).toBe(firstPage.totalSize)
   })
 
-  it("rejects retired time-zone fields from mock producers", () => {
-    expect(handlerSource).toContain('"timeZone" in (body as Record<string, unknown>)')
-    expect(handlerSource).toContain("schedules use UTC")
+  it("requires schedule time zones from mock producers and keeps overview on UTC", () => {
+    expect(handlerSource).toContain("isIanaTimeZoneValid")
+    expect(handlerSource).toContain("timeZone must be included in updateMask")
+    expect(handlerSource).toContain("overview uses UTC")
   })
 })

@@ -32,9 +32,12 @@ import { buildWorkflowWithEngineCatalog } from "@/lib/engine-catalog"
 import { cn } from "@/lib/utils"
 import { textRole } from "@/lib/typography"
 import type { InitiateScanSelectMode } from "@/lib/initiate-scan-helpers"
-import { parseWorkflowConfigurationDraftStrict } from "@/lib/workflow-config"
+import {
+  parseWorkflowConfigurationDraftStrict,
+  type WorkflowProfileDraft,
+} from "@/lib/workflow-config"
 import type { Locale } from "@/i18n/config"
-import type { ScanWorkflowWithEngines } from "@/types/engine-config.types"
+import type { EngineConfigFormValues, ScanWorkflowWithEngines } from "@/types/engine-config.types"
 import type { ScanWorkflow } from "@/types/scan-workflow.types"
 import type { EngineCatalogDetail } from "@/types/engine-catalog.types"
 import type { ScanInputSource } from "@/types/scan.types"
@@ -318,12 +321,15 @@ interface InitiateScanConfigStepProps {
   engineCatalogDetails?: EngineCatalogDetail[]
   isEngineCatalogLoading: boolean
   isEngineCatalogError: boolean
+  isWorkflowProfileLoading?: boolean
   isSubmitting: boolean
   onConfigSync: (value: string) => void
   onConfigChange: (value: string) => void
   onResetConfig: () => void
   onYamlValidationChange: (isValid: boolean) => void
   configValidationRef?: React.Ref<ScanConfigValidationHandle>
+  formValuesCacheRef?: React.MutableRefObject<EngineConfigFormValues>
+  workflowProfileDraft?: WorkflowProfileDraft | null
 }
 
 export function InitiateScanConfigStep({
@@ -339,12 +345,15 @@ export function InitiateScanConfigStep({
   engineCatalogDetails,
   isEngineCatalogLoading,
   isEngineCatalogError,
+  isWorkflowProfileLoading = false,
   isSubmitting,
   onConfigSync,
   onConfigChange,
   onResetConfig,
   onYamlValidationChange,
   configValidationRef,
+  formValuesCacheRef,
+  workflowProfileDraft,
 }: InitiateScanConfigStepProps) {
   const selectionSummary = selectMode === "custom" && selectedWorkflowNames.length > 0
       ? selectedWorkflowNames.join("、")
@@ -358,7 +367,7 @@ export function InitiateScanConfigStep({
       return { workflow: null, error }
     }
   }, [engineCatalogDetails, locale, selectedWorkflow])
-  if (isEngineCatalogLoading) {
+  if (isEngineCatalogLoading || isWorkflowProfileLoading) {
     return <InitiateScanPanelState icon={<Spinner />} title={t("loading")} />
   }
   if (isEngineCatalogError || !workflowResult?.workflow || workflowResult.error) {
@@ -402,6 +411,8 @@ export function InitiateScanConfigStep({
           onReset={onResetConfig}
           onValidationChange={onYamlValidationChange}
           selectedScanWorkflows={selectedWorkflows}
+          formValuesCacheRef={formValuesCacheRef}
+          workflowProfileDraft={workflowProfileDraft}
           disabled={isSubmitting}
           isConfigEdited={isConfigEdited}
         />

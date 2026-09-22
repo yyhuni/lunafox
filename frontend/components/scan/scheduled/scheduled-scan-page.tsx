@@ -50,6 +50,7 @@ import {
   getCursorPaginationNavigation,
 } from "@/components/shared/data-table/business-list-query"
 import { COMPACT_PAGE_SHELL_CLASS } from "@/components/shared/layout/page-shell-density"
+import { formatScheduledScanInstant } from "@/lib/scheduled-scan-helpers"
 
 export interface ScheduledScanPageProps {
   onReady?: () => void
@@ -152,6 +153,7 @@ export default function ScheduledScanPage({
       everyDay: tScan.raw("cron.everyDay") as string,
       everyWeek: tScan.raw("cron.everyWeek") as string,
       everyMonth: tScan.raw("cron.everyMonth") as string,
+      inTimeZone: tScan.raw("cron.inTimeZone") as string,
       weekdays: tScan.raw("cron.weekdays") as string[],
     },
   }), [tColumns, tCommon, tScan])
@@ -237,16 +239,10 @@ export default function ScheduledScanPage({
   }, [nextPageToken, page])
 
   // Format date
-  const formatDate = React.useCallback((dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleString(locale, {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }, [locale])
+  const formatDate = React.useCallback(
+    (dateString: string) => formatScheduledScanInstant(dateString, locale),
+    [locale]
+  )
 
   const formatTimelineTime = React.useCallback((dateString: string) => {
     const date = new Date(dateString)

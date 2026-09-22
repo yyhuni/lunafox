@@ -81,23 +81,35 @@ func (verifier *CompositeVerifier) Verify(ctx context.Context, operation *domain
 	if err := ctx.Err(); err != nil {
 		return VerificationResult{}, err
 	}
-	if operation.MigrationType != "none" && operation.MigrationStatus != domain.MigrationStatusSucceeded {
+	frontendOnly := operation.EffectiveExecutionMode() == domain.ExecutionModeFrontendOnly
+	if !frontendOnly && operation.MigrationType != "none" && operation.MigrationStatus != domain.MigrationStatusSucceeded {
 		return VerificationResult{Passed: false, Diagnostic: "database migration has not been proved successful"}, nil
 	}
-	if operation.AgentSummary.Ready != operation.AgentSummary.Expected || operation.AgentSummary.Missing != 0 || operation.AgentSummary.Unhealthy != 0 {
+	if !frontendOnly && (operation.AgentSummary.Ready != operation.AgentSummary.Expected || operation.AgentSummary.Missing != 0 || operation.AgentSummary.Unhealthy != 0) {
 		return VerificationResult{Passed: false, Diagnostic: "one or more Agents are not ready"}, nil
 	}
 
+	requiredProbes := verifier.requiredProbes
+	requiredDigests := verifier.requiredDigests
+	if frontendOnly {
+		// The host receipt supplies frontend container health. Server-side
+		// verification proves that the target digest is reachable through the
+		// public Nginx entry after resolver convergence, without rechecking or
+		// claiming lifecycle work for untouched services.
+		requiredProbes = []string{"frontend", "publicFrontend"}
+		requiredDigests = []string{"frontend"}
+	}
 	failed := make([]string, 0)
-	for _, name := range verifier.requiredProbes {
-		if err := verifier.probes[name](ctx); err != nil {
+	for _, name := range requiredProbes {
+		probe, ok := verifier.probes[name]
+		if !ok || probe == nil || probe(ctx) != nil {
 			failed = append(failed, name)
 		}
 	}
 	if len(failed) > 0 {
 		return VerificationResult{Passed: false, ObservedDigests: cloneStringMap(evidence.ObservedDigests), Diagnostic: "health checks incomplete: " + strings.Join(failed, ", ")}, nil
 	}
-	for _, name := range verifier.requiredDigests {
+	for _, name := range requiredDigests {
 		want := strings.TrimSpace(evidence.ExpectedDigests[name])
 		got := strings.TrimSpace(evidence.ObservedDigests[name])
 		if want == "" || got == "" || want != got {

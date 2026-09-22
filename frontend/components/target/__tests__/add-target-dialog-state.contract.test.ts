@@ -6,8 +6,13 @@ const source = readFileSync(path.resolve(process.cwd(), "components/target/add-t
 
 describe("add-target-dialog-state contract", () => {
   it("preserves original target input line numbers for validation feedback", () => {
-    expect(source).toContain("TargetValidator.parseLines(value)")
-    expect(source).toContain("lineNumber: r.lineNumber")
+    expect(source).toContain("TargetValidator.parseLines(formData.targets)")
+    expect(source).toContain("lineNumber: result.lineNumber")
+  })
+
+  it("shares parsed target semantics with the submit-time batch limit guard", () => {
+    expect(source).toContain("MAX_TARGET_BATCH_SIZE")
+    expect(source).toContain("submittedTargets.length > MAX_TARGET_BATCH_SIZE")
   })
 
   it("uses multi-organization selection and submits organizationIds", () => {

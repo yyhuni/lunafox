@@ -17,9 +17,12 @@ describe("scheduled scan execution messages", () => {
     expect(enMessages.columns.scheduledScan.lastRun).toBe("Last Trigger")
   })
 
-  it("does not expose a user-configurable time-zone field", () => {
+  it("supplies labels and validation for the user-configurable IANA time-zone field", () => {
     for (const messages of [zhMessages, enMessages]) {
-      expect(messages.scan.scheduled.form).not.toHaveProperty("timeZone")
+      expect(messages.scan.scheduled.form).toHaveProperty("timeZone")
+      expect(messages.scan.scheduled.form).toHaveProperty("timeZoneRequired")
+      expect(messages.scan.scheduled.form).toHaveProperty("timeZoneInvalid")
+      expect(messages.scan.scheduled.form).toHaveProperty("scheduleRule")
     }
   })
 

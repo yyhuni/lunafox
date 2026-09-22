@@ -7,6 +7,7 @@ import { TargetSelectionWorkspace } from "@/components/target/target-selection-w
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { ScheduledScanTimeZoneField } from "@/components/scan/scheduled/scheduled-scan-time-zone-field";
 import { isCronExpressionValid } from "@/lib/scheduled-scan-helpers";
 import type { ScheduledScanSelectionMode } from "@/lib/scheduled-scan-helpers";
 import type { Organization } from "@/types/organization.types";
@@ -154,6 +155,8 @@ export function ScheduledScanPresetInfoStep({ t, className, name, setName, prese
 interface ScheduledScanScheduleStepProps {
     t: TranslationFn;
     className?: string;
+    timeZone: string;
+    setTimeZone: (value: string) => void;
     cronExpression: string;
     setCronExpression: (value: string) => void;
     cronPresets: Array<{
@@ -161,11 +164,12 @@ interface ScheduledScanScheduleStepProps {
         value: string;
     }>;
     getCronDescription: (value: string) => string;
-    getNextExecutions: (cronExpression: string) => string[];
+    getNextExecutions: (cronExpression: string, timeZone: string) => string[];
     disabled?: boolean;
 }
-export function ScheduledScanScheduleStep({ t, className, cronExpression, setCronExpression, cronPresets, getCronDescription, getNextExecutions, disabled = false, }: ScheduledScanScheduleStepProps) {
+export function ScheduledScanScheduleStep({ t, className, timeZone, setTimeZone, cronExpression, setCronExpression, cronPresets, getCronDescription, getNextExecutions, disabled = false, }: ScheduledScanScheduleStepProps) {
     return (<div className={cn("min-w-0 max-w-full space-y-3", className)}>
+      <ScheduledScanTimeZoneField id="scheduled-scan-time-zone" value={timeZone} onChange={setTimeZone} disabled={disabled} label={t("form.timeZone")} placeholder={t("form.timeZonePlaceholder")} searchPlaceholder={t("form.timeZoneSearchPlaceholder")} emptyLabel={t("form.timeZoneEmpty")} description={t("form.timeZoneDesc")}/>
       <div className="space-y-2">
         <Label>{t("form.cronExpression")} *</Label>
         <Input name="cronExpression" autoComplete="off" placeholder={t("form.cronPlaceholder")} value={cronExpression} onChange={(event) => setCronExpression(event.target.value)} className="font-mono" disabled={disabled}/>
@@ -185,11 +189,11 @@ export function ScheduledScanScheduleStep({ t, className, cronExpression, setCro
           <span className="min-w-0 flex-1 truncate font-medium">{t("form.executionPreview")}</span>
           {isCronExpressionValid(cronExpression) && (<Badge variant="secondary" className="ml-auto shrink-0"><IconCheck className="h-3 mr-1 w-3"/>{t("form.valid")}</Badge>)}
         </div>
-        <p className="text-sm break-words">{getCronDescription(cronExpression)}</p>
+        <p className="text-sm break-words">{t("form.scheduleRule", { rule: getCronDescription(cronExpression), timeZone: timeZone || t("form.timeZonePlaceholder") })}</p>
         <Separator />
         <div className="min-w-0 space-y-1">
           <p className="text-muted-foreground text-xs">{t("form.nextExecutionTime")}</p>
-          {getNextExecutions(cronExpression).map((time, index) => (<p key={index} className="text-sm break-words">• {time}{index === 0 && <span className="ml-2 text-muted-foreground">{t("form.upcoming")}</span>}</p>))}
+          {getNextExecutions(cronExpression, timeZone).map((time, index) => (<p key={index} className="text-sm break-words">• {time}{index === 0 && <span className="ml-2 text-muted-foreground">{t("form.upcoming")}</span>}</p>))}
         </div>
       </div>
     </div>);

@@ -32,7 +32,7 @@ func (handler *ScheduledScanHandler) Summarize(c *gin.Context) {
 		return
 	}
 	if c.Request.URL.Query().Get("timeZone") != "" {
-		httpdto.BadRequest(c, "timeZone query parameter is no longer supported; schedules use UTC")
+		httpdto.BadRequest(c, "timeZone query parameter is not supported; overview uses UTC")
 		return
 	}
 	overview, err := handler.service.GetOverviewSummary(c.Request.Context(), &scheduledapp.ScheduledScanOverviewInput{})
@@ -191,6 +191,7 @@ func validateScheduledScanUpdateMask(c *gin.Context, id int, request *dto.Update
 		"organization":   request.Organization != nil,
 		"target":         request.Target != nil,
 		"agent":          request.Agent != nil,
+		"timeZone":       request.TimeZone != nil,
 		"cronExpression": request.CronExpression != nil,
 		"isEnabled":      request.IsEnabled != nil,
 	}

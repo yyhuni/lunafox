@@ -128,11 +128,12 @@ describe("engine-config-form contract", () => {
     expect(source).not.toContain("getToolParamCount")
   })
 
-  it("shows clamped parameter descriptions through a quick tooltip", () => {
+  it("shows clamped parameter descriptions through the shared Tooltip timing policy", () => {
     expect(source).toContain('from "@/components/ui/tooltip"')
-    expect(source).toContain("PARAM_HELP_HOVER_OPEN_DELAY_MS = 200")
     expect(source).toContain("function ParamHelpText")
-    expect(source).toContain("<TooltipProvider delay={PARAM_HELP_HOVER_OPEN_DELAY_MS}>")
+    expect(source).toContain("<TooltipProvider>")
+    expect(source).not.toContain("PARAM_HELP_HOVER_OPEN_DELAY_MS")
+    expect(source).not.toContain("<TooltipProvider delay=")
     expect(source).toContain("<TooltipTrigger")
     expect(source).toContain("<TooltipContent")
     expect(source).not.toContain('from "@/components/ui/hover-card"')

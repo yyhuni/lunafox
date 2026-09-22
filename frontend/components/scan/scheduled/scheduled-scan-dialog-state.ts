@@ -7,6 +7,7 @@ import { useLoadScanWorkflowProfile, useScanWorkflows } from "@/hooks/use-scan-w
 import { useEngineCatalogDetails } from "@/hooks/use-engine-catalog"
 import {
   getConfigConflictMessage,
+  getBrowserTimeZone,
   getNextCronExecutions,
   validateScheduledScanStep,
   type ScheduledScanSelectionMode,
@@ -16,10 +17,12 @@ import {
   hasNoEnabledWorkflowSteps,
   serializeCanonicalWorkflowConfiguration,
   serializeWorkflowProfileDraft,
+  type WorkflowProfileDraft,
 } from "@/lib/workflow-config"
 import { buildWorkflowWithEngineCatalog } from "@/lib/engine-catalog"
 import type { Locale } from "@/i18n/config"
 import type { CreateScheduledScanRequest } from "@/types/scheduled-scan.types"
+import type { EngineConfigFormValues } from "@/types/engine-config.types"
 import type { ScanInputSource } from "@/types/scan.types"
 import type { ScanConfigValidationHandle } from "@/components/scan/scan-config-view-toggle"
 import {
@@ -97,10 +100,14 @@ export function useScheduledScanDialogState({
   const [selectedTargetId, setSelectedTargetId] = React.useState<number | null>(null)
   const [selectedAgentID, setSelectedAgentID] = React.useState<number | null>(null)
   const [inputSource, setInputSource] = React.useState<ScanInputSource>("scanSnapshot")
+  const [timeZone, setTimeZone] = React.useState("")
   const [cronExpression, setCronExpression] = React.useState("0 2 * * *")
   const [isWorkflowConfigLoading, setIsWorkflowConfigLoading] = React.useState(false)
   const [pendingWorkflowName, setPendingWorkflowName] = React.useState<string | null>(null)
   const configValidationRef = React.useRef<ScanConfigValidationHandle | null>(null)
+  const formValuesCacheRef = React.useRef<EngineConfigFormValues>({})
+  const [workflowProfileDraft, setWorkflowProfileDraft] = React.useState<WorkflowProfileDraft | null>(null)
+  const [pendingWorkflowProfileDraft, setPendingWorkflowProfileDraft] = React.useState<WorkflowProfileDraft | null>(null)
   const workflowSelectionRequestRef = React.useRef(0)
 
   const {
@@ -123,6 +130,7 @@ export function useScheduledScanDialogState({
 
   React.useEffect(() => {
     if (open) {
+      setTimeZone((current) => current || getBrowserTimeZone())
       if (presetOrganizationId) {
         setSelectionMode("organization")
         setSelectedOrgId(presetOrganizationId)
@@ -158,6 +166,7 @@ export function useScheduledScanDialogState({
 
   const resetForm = React.useCallback(() => {
     workflowSelectionRequestRef.current += 1
+    formValuesCacheRef.current = {}
     setName("")
     setSelectedScanWorkflowName(null)
     setSelectionMode("organization")
@@ -165,9 +174,12 @@ export function useScheduledScanDialogState({
     setSelectedTargetId(null)
     setSelectedAgentID(null)
     setInputSource("scanSnapshot")
+    setTimeZone("")
     setCronExpression("0 2 * * *")
     setIsWorkflowConfigLoading(false)
     setPendingWorkflowName(null)
+    setWorkflowProfileDraft(null)
+    setPendingWorkflowProfileDraft(null)
     resetConfigState()
     resetStep()
   }, [resetConfigState, resetStep])
@@ -177,12 +189,19 @@ export function useScheduledScanDialogState({
     if (!workflow) throw new Error("Selected Workflow is unavailable")
 
     const profile = await loadScanWorkflowProfile(workflowName)
-    return serializeWorkflowProfileDraft(adaptWorkflowProfile(profile, workflow))
+    const draft = adaptWorkflowProfile(profile, workflow)
+    return { configuration: serializeWorkflowProfileDraft(draft), draft }
   }, [loadScanWorkflowProfile, workflows])
 
-  const applyWorkflowSelection = React.useCallback((workflowName: string, nextConfiguration: string) => {
+  const applyWorkflowSelection = React.useCallback((
+    workflowName: string,
+    nextConfiguration: string,
+    nextWorkflowProfileDraft: WorkflowProfileDraft,
+  ) => {
+    formValuesCacheRef.current = {}
     setSelectedScanWorkflowName(workflowName)
     applyProfileConfiguration(nextConfiguration)
+    setWorkflowProfileDraft(nextWorkflowProfileDraft)
     setIsWorkflowConfigLoading(false)
   }, [applyProfileConfiguration])
 
@@ -193,25 +212,33 @@ export function useScheduledScanDialogState({
 
     if (!nextWorkflowName) {
       setPendingWorkflowName(null)
+      setPendingWorkflowProfileDraft(null)
+      formValuesCacheRef.current = {}
       setSelectedScanWorkflowName(null)
       applyProfileConfiguration("")
+      setWorkflowProfileDraft(null)
       setIsWorkflowConfigLoading(false)
       return
     }
 
     setIsWorkflowConfigLoading(true)
+    if (!isConfigEdited) {
+      formValuesCacheRef.current = {}
+      setWorkflowProfileDraft(null)
+    }
     try {
-      const nextConfiguration = await loadProfileConfiguration(nextWorkflowName)
+      const { configuration: nextConfiguration, draft } = await loadProfileConfiguration(nextWorkflowName)
       if (workflowSelectionRequestRef.current !== requestId) return
 
       if (isConfigEdited && configuration !== nextConfiguration) {
         setPendingWorkflowName(nextWorkflowName)
+        setPendingWorkflowProfileDraft(draft)
         handlePresetConfigChange(nextConfiguration)
         setIsWorkflowConfigLoading(false)
         return
       }
 
-      applyWorkflowSelection(nextWorkflowName, nextConfiguration)
+      applyWorkflowSelection(nextWorkflowName, nextConfiguration, draft)
     } catch {
       if (workflowSelectionRequestRef.current !== requestId) return
       setIsWorkflowConfigLoading(false)
@@ -227,7 +254,10 @@ export function useScheduledScanDialogState({
 
     setIsWorkflowConfigLoading(true)
     try {
-      applyProfileConfiguration(await loadProfileConfiguration(selectedScanWorkflowName))
+      const { configuration: nextConfiguration, draft } = await loadProfileConfiguration(selectedScanWorkflowName)
+      formValuesCacheRef.current = {}
+      applyProfileConfiguration(nextConfiguration)
+      setWorkflowProfileDraft(draft)
     } finally {
       setIsWorkflowConfigLoading(false)
     }
@@ -237,6 +267,13 @@ export function useScheduledScanDialogState({
     if (!isOpen) resetForm()
     onOpenChange(isOpen)
   }, [onOpenChange, resetForm])
+
+  React.useEffect(() => {
+    if (open) return
+    formValuesCacheRef.current = {}
+    setWorkflowProfileDraft(null)
+    setPendingWorkflowProfileDraft(null)
+  }, [open])
 
   const handleOrgSelect = React.useCallback((orgId: number) => {
     setSelectedOrgId((prev) => (prev === orgId ? null : orgId))
@@ -269,6 +306,7 @@ export function useScheduledScanDialogState({
       scanWorkflow: selectedScanWorkflow?.name ?? null,
       configuration,
       isYamlValid,
+      timeZone,
       cronExpression,
     })
     if (errorKey) {
@@ -292,6 +330,7 @@ export function useScheduledScanDialogState({
     selectedScanWorkflow,
     selectionMode,
     t,
+    timeZone,
   ])
 
   const handleNext = React.useCallback(() => {
@@ -328,6 +367,7 @@ export function useScheduledScanDialogState({
       configuration: canonicalConfiguration,
       scanWorkflow: selectedScanWorkflow.name,
       inputSource,
+      timeZone: timeZone.trim(),
       cronExpression: cronExpression.trim(),
     }
     if (selectionMode === "organization" && selectedOrgId) {
@@ -370,6 +410,7 @@ export function useScheduledScanDialogState({
     selectedWorkflowWithEngines,
     selectionMode,
     t,
+    timeZone,
     validateCurrentStep,
   ])
 
@@ -377,13 +418,17 @@ export function useScheduledScanDialogState({
     handleConfigOverwriteConfirm()
     if (pendingWorkflowName !== null) {
       setSelectedScanWorkflowName(pendingWorkflowName)
+      formValuesCacheRef.current = {}
+      setWorkflowProfileDraft(pendingWorkflowProfileDraft)
       setPendingWorkflowName(null)
     }
-  }, [handleConfigOverwriteConfirm, pendingWorkflowName])
+    setPendingWorkflowProfileDraft(null)
+  }, [handleConfigOverwriteConfirm, pendingWorkflowName, pendingWorkflowProfileDraft])
 
   const handleOverwriteCancel = React.useCallback(() => {
     handleConfigOverwriteCancel()
     setPendingWorkflowName(null)
+    setPendingWorkflowProfileDraft(null)
   }, [handleConfigOverwriteCancel])
 
   const getCronDescription = React.useCallback((cron: string): string => {
@@ -396,15 +441,17 @@ export function useScheduledScanDialogState({
     }
   }, [locale, t])
 
-  const getNextExecutions = React.useCallback((cron: string, count: number = 3): string[] => (
-    getNextCronExecutions(cron, new Date(), count).map((next) => (
-      next.toLocaleString(locale === "zh" ? "zh-CN" : "en-US", { timeZone: "UTC" })
+  const getNextExecutions = React.useCallback((cron: string, zone: string, count: number = 3): string[] => (
+    getNextCronExecutions(cron, zone, new Date(), count).map((next) => (
+      next.toLocaleString(locale === "zh" ? "zh-CN" : "en-US", { timeZone: zone })
     ))
   ), [locale])
 
   return {
     isPending,
     configValidationRef,
+    formValuesCacheRef,
+    workflowProfileDraft,
     orgSearchInput,
     setOrgSearchInput,
     orgPageSize,
@@ -440,10 +487,12 @@ export function useScheduledScanDialogState({
     selectedTargetId,
     selectedAgentID,
     inputSource,
+    timeZone,
     setSelectedOrgId,
     setSelectedTargetId,
     setSelectedAgentID,
     setInputSource,
+    setTimeZone,
     cronExpression,
     setCronExpression,
     configuration,

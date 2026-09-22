@@ -317,12 +317,49 @@ describe("use-targets mutation", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["organizations"] })
   })
 
-  it("批量创建目标失败时保留错误码映射与回退 key", async () => {
+  it("批量创建目标失败时优先显示已清理的后端错误原因并复用 toast id", async () => {
+    targetServiceMocks.batchCreateTargets.mockRejectedValue({
+      response: {
+        data: {
+          error: {
+            code: "INVALID_ARGUMENT",
+            message: "  Targets count exceeds maximum 5000  ",
+          },
+        },
+      },
+    })
+
+    const { result } = renderHookWithProviders(() => useBatchCreateTargets())
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          targets: [{ name: "too-many-targets.example.com" }],
+        })
+      ).rejects.toBeDefined()
+    })
+
+    expect(toastMocks.loading).toHaveBeenCalledWith(
+      "common.status.batchCreating",
+      {},
+      "batch-create-targets"
+    )
+    expect(toastMocks.dismiss).not.toHaveBeenCalledWith("batch-create-targets")
+    expect(toastMocks.error).toHaveBeenCalledWith(
+      "toast.target.create.errorWithReason",
+      { reason: "Targets count exceeds maximum 5000" },
+      "batch-create-targets"
+    )
+    expect(toastMocks.errorFromCode).not.toHaveBeenCalled()
+  })
+
+  it("批量创建目标失败时在后端消息为空白时保留错误码映射与回退 key", async () => {
     targetServiceMocks.batchCreateTargets.mockRejectedValue({
       response: {
         data: {
           error: {
             code: "CONFLICT",
+            message: "   ",
           },
         },
       },

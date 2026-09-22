@@ -2,7 +2,9 @@
 
 import React from "react"
 import type { Control, FieldValues, Path } from "react-hook-form"
+import { useTranslations } from "next-intl"
 import { semanticIcons } from "@/components/icons"
+import { InlineHelpTooltip } from "@/components/common/inline-help-tooltip"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { BulkLineValidationInput, type BulkLineValidationIssue } from "@/components/common/bulk-line-validation-input"
@@ -15,6 +17,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form"
+import { MAX_TARGET_BATCH_SIZE } from "@/lib/target-validator"
 
 type TranslationFn = (key: string, params?: Record<string, string | number | Date>) => string
 
@@ -33,6 +36,7 @@ interface LinkTargetInputSectionProps<TFieldValues extends FieldValues> {
     count: number
     invalid: Array<{ index: number; lineNumber: number; originalTarget: string; error: string }>
   }
+  isTargetBatchOverLimit: boolean
 }
 
 export function LinkTargetInputSection<TFieldValues extends FieldValues>({
@@ -44,7 +48,10 @@ export function LinkTargetInputSection<TFieldValues extends FieldValues>({
   onScroll,
   isPending,
   targetValidation,
+  isTargetBatchOverLimit,
 }: LinkTargetInputSectionProps<TFieldValues>) {
+  const tTooltips = useTranslations("tooltips")
+
   return (
     <FormField
       control={formControl}
@@ -65,7 +72,7 @@ export function LinkTargetInputSection<TFieldValues extends FieldValues>({
         const validationResult = fieldValue.trim().length > 0
           ? {
               validCount: targetValidation.count,
-              blockingIssueCount: targetValidation.invalid.length,
+              blockingIssueCount: targetValidation.invalid.length + (isTargetBatchOverLimit ? 1 : 0),
               advisoryIssueCount: 0,
               lineIssues,
             }
@@ -77,6 +84,11 @@ export function LinkTargetInputSection<TFieldValues extends FieldValues>({
               id="organization-link-targets"
               name={field.name}
               label={t("targetLabel")}
+              labelAccessory={(
+                <InlineHelpTooltip ariaLabel={t("targetLabel")}>
+                  {tTooltips("targetConcept")}
+                </InlineHelpTooltip>
+              )}
               required
               placeholder={t("placeholder")}
               value={fieldValue}
@@ -91,7 +103,9 @@ export function LinkTargetInputSection<TFieldValues extends FieldValues>({
               example={t("targetExample")}
               emptySummary={t("emptySummary")}
               validSummary={t("validSummary", { count: targetValidation.count })}
-              blockingSummary={t("blockingSummary", { count: targetValidation.invalid.length })}
+              blockingSummary={isTargetBatchOverLimit
+                ? t("batchLimitSummary", { count: targetValidation.count, max: MAX_TARGET_BATCH_SIZE })
+                : t("blockingSummary", { count: targetValidation.invalid.length })}
               collapseDetails={t("collapseDetails")}
               expandDetails={t("expandDetails")}
               validationResult={validationResult}
@@ -111,9 +125,16 @@ interface LinkTargetOrganizationSectionProps {
 }
 
 export function LinkTargetOrganizationSection({ organizationName, t }: LinkTargetOrganizationSectionProps) {
+  const tTooltips = useTranslations("tooltips")
+
   return (
     <div className="gap-2 grid">
-      <Label>{t("organizationLabel")}</Label>
+      <div className="flex items-center gap-1">
+        <Label>{t("organizationLabel")}</Label>
+        <InlineHelpTooltip ariaLabel={t("organizationLabel")}>
+          {tTooltips("organizationConcept")}
+        </InlineHelpTooltip>
+      </div>
       <div className="bg-muted/50 border flex gap-2 items-center px-3 py-2 rounded-md">
         <OrganizationIcon className="h-4 text-muted-foreground w-4" />
         <span className="font-medium">{organizationName}</span>

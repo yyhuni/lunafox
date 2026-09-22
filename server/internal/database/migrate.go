@@ -63,10 +63,10 @@ func RunMigrations(db *sql.DB) error {
 	return nil
 }
 
-// MigrateDown destructively removes the last migration for development or tests.
+// MigrateDown destructively removes the last migration for isolated tests.
 // It does not provide production data or in-flight task rollback.
 func MigrateDown(db *sql.DB) error {
-	pkg.Info("Running destructive development/test migration down...")
+	pkg.Info("Running destructive test-teardown migration down...")
 
 	source, err := iofs.New(MigrationsFS, MigrationsPath)
 	if err != nil {
@@ -87,12 +87,12 @@ func MigrateDown(db *sql.DB) error {
 		return fmt.Errorf("failed to run destructive migration down: %w", err)
 	}
 
-	pkg.Info("Destructive development/test migration down completed")
+	pkg.Info("Destructive test-teardown migration down completed")
 	return nil
 }
 
 // MigrateToVersion moves the schema to a specific version.
-// A lower target invokes destructive down migrations and is only for development or tests,
+// A lower target invokes destructive down migrations and is only for isolated tests,
 // not a production data or in-flight task rollback.
 func MigrateToVersion(db *sql.DB, version uint) error {
 	pkg.Info("Migrating to version", zap.Uint("version", version))

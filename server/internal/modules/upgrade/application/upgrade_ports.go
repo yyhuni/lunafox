@@ -2,10 +2,44 @@ package application
 
 import (
 	"context"
+	"errors"
 
 	"github.com/yyhuni/lunafox/contracts/releasemanifest"
 	"github.com/yyhuni/lunafox/server/internal/modules/upgrade/domain"
 )
+
+// ErrHostUpgradeScopePlanningUnsupported means the host explicitly reported a
+// compatible legacy/full-only protocol. It is intentionally distinct from a
+// malformed v2 reply, which must fail before Server-side cancellation begins.
+var ErrHostUpgradeScopePlanningUnsupported = errors.New("host upgrade scope planning is not supported")
+
+// ErrHostUpgradeScopePlanningFullOnly means a v2-capable host cannot bind this
+// candidate to composition evidence. The Server must retain the established v1
+// full path instead of persisting a v2 full plan that can never establish the
+// required confirmed deployment baseline.
+var ErrHostUpgradeScopePlanningFullOnly = errors.New("host upgrade scope planning is full-only for this candidate")
+
+// ErrHostDeploymentStateUnsupported means the host predates the v2 read-only
+// confirmed-state projection. It is a compatibility signal, not evidence that
+// the deployment is current.
+var ErrHostDeploymentStateUnsupported = errors.New("host deployment state projection is not supported")
+
+// ErrHostDeploymentStateUnavailable means no confirmed baseline has been
+// established yet. Availability checks may use the running Server version in
+// this case, while any malformed state remains a hard error.
+var ErrHostDeploymentStateUnavailable = errors.New("host confirmed deployment state is unavailable")
+
+// ErrHostCandidateAvailabilityUnsupported means the host does not implement
+// the isolated schema-v3 inventory comparison. The Server may retain the
+// established confirmed-state and running-version fallback in that case; a
+// malformed advertised v3 response is deliberately not this compatibility case.
+var ErrHostCandidateAvailabilityUnsupported = errors.New("host candidate availability projection is not supported")
+
+// ErrHostDeploymentStateConflict means the candidate has the same release
+// version as the confirmed deployment but a different manifest identity.
+// Treating that combination as an update would make a mutable/rebuilt release
+// silently replace an already confirmed version.
+var ErrHostDeploymentStateConflict = errors.New("candidate conflicts with confirmed host deployment state")
 
 // ManifestSource is the server-owned release inventory boundary. It has no
 // request parameters so a browser cannot choose a manifest path or image.
@@ -36,9 +70,14 @@ type ActiveSuperuserAuthorizer interface {
 // this type deliberately narrow: paths, image refs and shell commands belong
 // to the independently managed host upgrader, never to an HTTP request.
 type HostUpgradeRequest struct {
-	OperationID    string
-	ManifestDigest string
-	Action         HostUpgradeAction
+	OperationID                string
+	ManifestDigest             string
+	Action                     HostUpgradeAction
+	ExecutionMode              domain.ExecutionMode
+	PlanDigest                 string
+	BaselineDeploymentDigest   string
+	TouchedServices            []string
+	ConfirmedDeploymentVersion string
 }
 
 type HostUpgradeAction string
@@ -53,12 +92,90 @@ const (
 	// operation. Resume is reserved for non-terminal handoff recovery and must
 	// not reset a terminal journal.
 	HostUpgradeActionRepair HostUpgradeAction = "repair"
+	// Confirm is issued only after Server-side service, migration and Agent
+	// verification succeeds. It asks a v2 host to atomically record its own
+	// confirmed deployment baseline; it is never an HTTP-selectable action.
+	HostUpgradeActionConfirm HostUpgradeAction = "confirm"
 )
 
 // HostUpgradeDispatcher accepts a handoff and returns after the host process
 // has accepted it. The host process owns the long-running Compose lifecycle.
 type HostUpgradeDispatcher interface {
 	Dispatch(context.Context, HostUpgradeRequest) error
+}
+
+// HostUpgradeScopePlanRequest is deliberately read-only. The host is the only
+// process that can reconcile the candidate composition against the confirmed
+// baseline and live Compose/Docker identities, so the Server supplies no
+// client-selected scope or service list.
+type HostUpgradeScopePlanRequest struct {
+	OperationID    string
+	ManifestDigest string
+	// RequireFull is set only by Server-owned eligibility gates such as a
+	// reviewed database migration. It can narrow a host decision to full but
+	// can never be supplied by the browser or widen a frontend-only plan.
+	RequireFull bool
+}
+
+// HostUpgradeScopePlan is the auditable result of host reconciliation. The
+// Server persists it verbatim after strict validation and later returns its
+// identity in the plan-bound start request; it never recalculates a service
+// diff from release manifest fields.
+type HostUpgradeScopePlan struct {
+	ExecutionMode              domain.ExecutionMode
+	PlanDigest                 string
+	BaselineDeploymentDigest   string
+	TouchedServices            []string
+	ConfirmedDeploymentVersion string
+}
+
+// HostUpgradeScopePlanner is an optional v2 extension. A dispatcher that does
+// not implement it is an explicitly legacy/full route; a dispatcher that does
+// implement it but returns malformed data is a pre-side-effect failure.
+type HostUpgradeScopePlanner interface {
+	PlanUpgradeScope(context.Context, HostUpgradeScopePlanRequest) (HostUpgradeScopePlan, error)
+}
+
+// HostDeploymentState is the minimal host-owned projection needed for update
+// availability. The complete component inventory remains private to the host;
+// the manifest identity is enough to avoid re-offering an already applied
+// frontend-only release while the Server binary is still older.
+type HostDeploymentState struct {
+	ReleaseVersion string
+	ManifestDigest string
+	StateDigest    string
+}
+
+type HostDeploymentStateSource interface {
+	ConfirmedDeploymentState(context.Context) (HostDeploymentState, error)
+}
+
+// HostCandidateAvailabilityDecision is the bounded result of the host's
+// complete candidate-versus-confirmed inventory comparison. The Server never
+// receives the inventory itself and cannot derive this decision from a manifest.
+type HostCandidateAvailabilityDecision string
+
+const (
+	HostCandidateAvailabilityAvailable      HostCandidateAvailabilityDecision = "available"
+	HostCandidateAvailabilityAlreadyApplied HostCandidateAvailabilityDecision = "already_applied"
+	HostCandidateAvailabilityNotNewer       HostCandidateAvailabilityDecision = "not_newer"
+	HostCandidateAvailabilityFallback       HostCandidateAvailabilityDecision = "fallback"
+)
+
+// HostCandidateAvailability contains only the confirmed evidence required to
+// render update state. Fallback has no evidence and preserves the legacy
+// running-Server-version behavior.
+type HostCandidateAvailability struct {
+	Decision                   HostCandidateAvailabilityDecision
+	BaselineDeploymentDigest   string
+	ConfirmedDeploymentVersion string
+}
+
+// HostCandidateAvailabilitySource is an optional schema-v3 extension. It is
+// intentionally separate from planning and dispatch so update checks cannot
+// create an Operation, reserve the deployment lock, or mutate Compose state.
+type HostCandidateAvailabilitySource interface {
+	CandidateAvailability(context.Context, string) (HostCandidateAvailability, error)
 }
 
 // AgentUpgradeTarget is the immutable Agent release projection used by the

@@ -988,8 +988,8 @@ func targetCleanupGateScheduleCreateInput(targetID int, name string) *scheduleda
 		Configuration:  map[string]any{},
 		InputSource:    scandomain.InputSourceScanSnapshot,
 		TargetID:       &targetID,
-		CronExpression: "0 2 * * *",
-		IsEnabled:      false,
+		TimeZone:       "UTC", CronExpression: "0 2 * * *",
+		IsEnabled: false,
 	}
 }
 
@@ -998,21 +998,21 @@ type targetCleanupGateBlockingScheduleCalculator struct {
 	blocker  *targetCleanupGateBlocker
 }
 
-func (calculator *targetCleanupGateBlockingScheduleCalculator) Validate(cronExpression string) error {
+func (calculator *targetCleanupGateBlockingScheduleCalculator) Validate(cronExpression, timeZone string) error {
 	calculator.blocker.Block()
-	return calculator.delegate.Validate(cronExpression)
+	return calculator.delegate.Validate(cronExpression, timeZone)
 }
 
-func (calculator *targetCleanupGateBlockingScheduleCalculator) FirstAfter(cronExpression string, instant time.Time) (time.Time, error) {
-	return calculator.delegate.FirstAfter(cronExpression, instant)
+func (calculator *targetCleanupGateBlockingScheduleCalculator) FirstAfter(cronExpression, timeZone string, instant time.Time) (time.Time, error) {
+	return calculator.delegate.FirstAfter(cronExpression, timeZone, instant)
 }
 
-func (calculator *targetCleanupGateBlockingScheduleCalculator) LatestAtOrBefore(cronExpression string, persistedCursor, instant time.Time) (time.Time, error) {
-	return calculator.delegate.LatestAtOrBefore(cronExpression, persistedCursor, instant)
+func (calculator *targetCleanupGateBlockingScheduleCalculator) LatestAtOrBefore(cronExpression, timeZone string, persistedCursor, instant time.Time) (time.Time, error) {
+	return calculator.delegate.LatestAtOrBefore(cronExpression, timeZone, persistedCursor, instant)
 }
 
-func (calculator *targetCleanupGateBlockingScheduleCalculator) AdvanceAfter(cronExpression string, instant time.Time) (time.Time, error) {
-	return calculator.delegate.AdvanceAfter(cronExpression, instant)
+func (calculator *targetCleanupGateBlockingScheduleCalculator) AdvanceAfter(cronExpression, timeZone string, instant time.Time) (time.Time, error) {
+	return calculator.delegate.AdvanceAfter(cronExpression, timeZone, instant)
 }
 
 func targetCleanupGateScanCreateInput(targetID int) *scanrepository.ScanCreateRecord {
@@ -1341,8 +1341,8 @@ func targetCleanupGateSeedSchedule(t *testing.T, db *gorm.DB, targetID int) int 
 	t.Helper()
 	var scheduleID int
 	if err := db.Raw(`INSERT INTO scheduled_scan
-		(name, scan_workflow_id, input_source, target_id, cron_expression, is_enabled, next_run_time)
-		VALUES (?, 'cleanup-gate', 'scan_snapshot', ?, '0 2 * * *', TRUE, CURRENT_TIMESTAMP) RETURNING id`, fmt.Sprintf("target-schedule-%d", targetID), targetID).Scan(&scheduleID).Error; err != nil {
+		(name, scan_workflow_id, input_source, target_id, time_zone, cron_expression, is_enabled, next_run_time)
+		VALUES (?, 'cleanup-gate', 'scan_snapshot', ?, 'UTC', '0 2 * * *', TRUE, CURRENT_TIMESTAMP) RETURNING id`, fmt.Sprintf("target-schedule-%d", targetID), targetID).Scan(&scheduleID).Error; err != nil {
 		t.Fatalf("seed Target Schedule %d: %v", targetID, err)
 	}
 	if err := db.Exec("INSERT INTO scheduled_scan_occurrence (scheduled_scan_id, scheduled_for) VALUES (?, CURRENT_TIMESTAMP)", scheduleID).Error; err != nil {

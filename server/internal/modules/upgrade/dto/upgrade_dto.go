@@ -54,6 +54,12 @@ type ReleaseManifestSummary struct {
 	DatabaseMigration         DatabaseMigration `json:"databaseMigration"`
 	RuntimeImageDigests       map[string]string `json:"runtimeImageDigests"`
 	EngineDigests             []string          `json:"engineDigests"`
+	ReleaseNotes              *ReleaseNotes     `json:"releaseNotes,omitempty"`
+}
+
+type ReleaseNotes struct {
+	Body   string `json:"body"`
+	SHA256 string `json:"sha256"`
 }
 
 type DatabaseMigration struct {
@@ -151,6 +157,25 @@ type UpgradeOperationResponse struct {
 	CompletedAt              *time.Time           `json:"completedAt,omitempty"`
 }
 
+// UpgradePlanSummaryResponse is deliberately smaller than the host plan. The
+// browser needs the service scope for accurate lifecycle language, but plan
+// hashes, container identities, baseline state, and deployment paths remain
+// privileged audit data.
+type UpgradePlanSummaryResponse struct {
+	TouchedServices []string `json:"touchedServices"`
+}
+
+// FullUpgradeOperationResponse is an opt-in representation for current
+// frontends. Keep UpgradeOperationResponse unchanged: cached clients use a
+// strict decoder and must not receive newly added fields in the BASIC view.
+type FullUpgradeOperationResponse struct {
+	UpgradeOperationResponse
+	ExecutionMode              string                     `json:"executionMode"`
+	WorkDisposition            string                     `json:"workDisposition"`
+	PlanSummary                UpgradePlanSummaryResponse `json:"planSummary"`
+	ConfirmedDeploymentVersion string                     `json:"confirmedDeploymentVersion"`
+}
+
 func NewCheckForUpdatesResponse(result application.CheckForUpdatesResult) CheckForUpdatesResponse {
 	response := CheckForUpdatesResponse{CurrentVersion: result.CurrentVersion, HasUpdate: result.HasUpdate, Eligible: result.Eligible, Diagnostic: result.Diagnostic}
 	if result.Manifest.ManifestID != "" {
@@ -182,6 +207,32 @@ func NewUpgradeOperationResponse(operation *domain.Operation, currentVersion str
 		AgentSummary: operation.AgentSummary, ObservedDigests: cloneStringMap(operation.ObservedDigests), Diagnostic: diagnostic,
 		Logs:       upgradeLogs(operation),
 		StageTimes: stageTimes, CreatedAt: operation.CreatedAt.UTC(), UpdatedAt: operation.UpdatedAt.UTC(), CompletedAt: operation.CompletedAt,
+	}
+}
+
+func NewFullUpgradeOperationResponse(operation *domain.Operation, currentVersion string) FullUpgradeOperationResponse {
+	basic := NewUpgradeOperationResponse(operation, currentVersion)
+	if operation == nil {
+		return FullUpgradeOperationResponse{
+			UpgradeOperationResponse: basic,
+			PlanSummary:              UpgradePlanSummaryResponse{TouchedServices: []string{}},
+		}
+	}
+	confirmedDeploymentVersion := operation.ConfirmedDeploymentVersion
+	if operation.ExecutionMode == domain.ExecutionModeFrontendOnly && operation.Status == domain.StatusSucceeded {
+		// The persisted value is the immutable pre-upgrade baseline used to bind
+		// journal recovery. Once host confirmation succeeds, FULL projects the
+		// target as the newly confirmed deployment without rewriting that baseline.
+		confirmedDeploymentVersion = operation.ReleaseVersion
+	}
+	return FullUpgradeOperationResponse{
+		UpgradeOperationResponse: basic,
+		ExecutionMode:            string(operation.EffectiveExecutionMode()),
+		WorkDisposition:          string(operation.EffectiveWorkDisposition()),
+		PlanSummary: UpgradePlanSummaryResponse{
+			TouchedServices: append([]string(nil), operation.PlanSummary.TouchedServices...),
+		},
+		ConfirmedDeploymentVersion: confirmedDeploymentVersion,
 	}
 }
 
@@ -391,7 +442,15 @@ func ptrReleaseManifestSummary(summary application.ManifestSummary) *ReleaseMani
 		ReleaseVersion: summary.ReleaseVersion, DeploymentMode: summary.DeploymentMode, CompatibilityRange: summary.CompatibilityRange,
 		MaintenanceWindowMinutes: summary.MaintenanceWindowMinutes, RequiresAdminConfirmation: summary.RequiresAdminConfirmation,
 		DatabaseMigration: migration, RuntimeImageDigests: cloneStringMap(summary.RuntimeImageDigests), EngineDigests: append([]string(nil), summary.EngineDigests...),
+		ReleaseNotes: ptrReleaseNotes(summary.ReleaseNotes),
 	}
+}
+
+func ptrReleaseNotes(notes *application.ReleaseNotesSummary) *ReleaseNotes {
+	if notes == nil {
+		return nil
+	}
+	return &ReleaseNotes{Body: notes.Body, SHA256: notes.Digest}
 }
 
 func cloneStringMap(values map[string]string) map[string]string {

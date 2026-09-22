@@ -10,6 +10,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { parseRuntimeComposition } from "./verify-public-release.mjs";
+import { validateComposition } from "./resolve-release-component-composition.mjs";
 
 const REPOSITORY = "yyhuni/lunafox";
 const WORKFLOW = "public-validate.yml";
@@ -20,6 +22,7 @@ const SNAPSHOT_PATHS = Object.freeze([
   "compose.yaml",
   "engine-inventory.yaml",
   "release.manifest.yaml",
+  "runtime-composition.json",
 ]);
 const AUTHOR = Object.freeze({
   name: "LunaFox Deployment Publisher",
@@ -99,6 +102,18 @@ function validateSnapshot(snapshotDir, tag) {
   }
   const releaseVersion = files.get("release.manifest.yaml").toString("utf8").match(/^releaseVersion:\s*["']?([^"'\s]+)["']?/m)?.[1];
   if (`v${releaseVersion}` !== tag) fail("snapshot release manifest does not match the requested tag");
+  const compositionBinding = parseRuntimeComposition(files.get("release.manifest.yaml").toString("utf8"));
+  let composition;
+  try { composition = JSON.parse(files.get("runtime-composition.json").toString("utf8")); }
+  catch (error) { fail(`snapshot runtime composition is not valid JSON: ${error.message}`); }
+  let normalizedComposition;
+  try { normalizedComposition = validateComposition(composition, { requireManifestBinding: true }); }
+  catch (error) { fail(`snapshot runtime composition is invalid: ${error.message}`); }
+  if (normalizedComposition.releaseTag.replace(/^v/, "") !== tag.replace(/^v/, "")) fail("snapshot runtime composition release tag does not match the requested tag");
+  if (normalizedComposition.compositionDigest !== compositionBinding.sha256) fail("snapshot runtime composition digest does not match the release manifest");
+  if (normalizedComposition.manifestBinding.manifestDigest !== `sha256:${crypto.createHash("sha256").update(files.get("release.manifest.yaml")).digest("hex")}`) {
+    fail("snapshot runtime composition manifest binding does not match the release manifest bytes");
+  }
   const compose = files.get("compose.yaml").toString("utf8");
   if (!compose.includes("${RELEASE_REGISTRY:-docker.io}/yyhuni/")) {
     fail("snapshot Compose does not contain the unified Registry selector");
@@ -225,7 +240,7 @@ async function createPullRequest(options, branch, snapshotSha) {
       head: branch,
       base: options.baseBranch,
       maintainer_can_modify: false,
-      body: `Generated after the complete dual-Registry release closure passed.\n\nDeployment snapshot SHA-256: ${snapshotSha}\nSource projection SHA: ${options.sourceSha}\n\nThe five root deployment files are an atomic, generated snapshot.`,
+      body: `Generated after the complete dual-Registry release closure passed.\n\nDeployment snapshot SHA-256: ${snapshotSha}\nSource projection SHA: ${options.sourceSha}\n\nThe six root deployment files are an atomic, generated snapshot.`,
     },
   });
 }
