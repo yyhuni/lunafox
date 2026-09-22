@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:311781ef39bc6616fb28b2a6f7011e0ea8df86f34beca31fa820c311cf328592",
-  "releaseTag": "v0.0.1-alpha.170",
+  "sourceRevisionDigest": "sha256:0fad09105a873fe7b0feac439e4556abc56128af6e0336fccbf18c1521d24d08",
+  "releaseTag": "v0.0.1-alpha.171",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -55,7 +55,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "5c43d183e3c28c92778c9bd7324bb0da1f36c37389451662440ea8051b4f8fd5"
+      "sha256": "1bcc33f0ed5d88bc42845fee1b897de43d7aeb749ce9c684528054d8fbb1fc04"
     },
     {
       "path": "README.md",
@@ -76,7 +76,7 @@
       "type": "file",
       "mode": "0644",
       "size": 2332,
-      "sha256": "e00692d5a543ae44e77b8a7c0a53ba8999fe4ff67b2e9b95b97a82c7b5a20e1a"
+      "sha256": "89fa9d68217f6411bf1f35bb353c845cc8d172621edd74183ca889902e347e16"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/agent-bundle.sha256",
@@ -90,7 +90,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "51f641e00cb58b2fe8b88c82bd021708eddc9c924d513b7adcf403c52ef69a51"
+      "sha256": "9132d2190adcd812ba101d41c50f135db4f96fc441a638ee79110552c950dbac"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/lunafox-agent-linux-amd64",
@@ -17061,6 +17061,13 @@
       "sha256": "ccdc83c6f2790a3d1574598412116455c3183f8ad5d36a7e25e47266d26f5b1c"
     },
     {
+      "path": "release-notes/v0.0.1-alpha.171.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 3282,
+      "sha256": "6d3dff314e8460b66dfc5604f07cfa75d57435fd13d945e4b4a8aed7be0ded52"
+    },
+    {
       "path": "resources/alloy/config.alloy",
       "type": "file",
       "mode": "0644",
@@ -17120,8 +17127,8 @@
       "path": "scripts/ci/aggregate-engine-runtime-image-shards.sh",
       "type": "file",
       "mode": "0755",
-      "size": 13068,
-      "sha256": "5d6842a8cd47a7e90f4968704c2858ae19c3d0e8270dbbbc892a7b840a3cd676"
+      "size": 13151,
+      "sha256": "cfc2b982751311e69575f6f0eed245591c2f9aa960701ec5956aef56d9b22ea1"
     },
     {
       "path": "scripts/ci/assemble-public-engine-release-selftest.mjs",

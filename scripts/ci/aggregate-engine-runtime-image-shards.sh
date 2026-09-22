@@ -141,7 +141,8 @@ if [ -n "$SELECTION_INPUT" ]; then
     .kind == "lunafox.engine-release-selection.v1" and
     (.builtEngineIds | type == "array") and
     (.reusedEngineIds | type == "array") and
-    ((.builtEngineIds + .reusedEngineIds) | unique | length == (.engines | length)) and
+    # jq binds == more tightly than |, so length must be grouped before comparing.
+    ((.builtEngineIds + .reusedEngineIds) | unique | length) == (.engines | length) and
     all(.engines[]; (.engineId | type == "string") and (.disposition == "built" or .disposition == "reused"))
   ' "$SELECTION_INPUT" >/dev/null || fail "Engine selection has an invalid shape"
 	jq -e '(.builtEngineIds | sort) == .builtEngineIds and (.reusedEngineIds | sort) == .reusedEngineIds and ([.engines[] | select(.disposition == "built") | .engineId] | sort) == .builtEngineIds' "$SELECTION_INPUT" >/dev/null || fail "Engine selection built/reused IDs are not canonical"
