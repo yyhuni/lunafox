@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:a65750b425b0afb0596c2cc700111ee567fcb849e184519c780d59a86536a212",
-  "releaseTag": "v0.0.1-alpha.173",
+  "sourceRevisionDigest": "sha256:ed076b88cae6b799ec96d70fdd1c9be2239511c525e030f8d05cc5ce56c3c5e3",
+  "releaseTag": "v0.0.1-alpha.174",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -55,7 +55,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "91022378fe5b9d8800b267147e2304778840984e82c68fb6647656d1c9413bb6"
+      "sha256": "a042a917d09fa843ff9627815bdccb24eaf4286ada8cb063099f635388e4fe6f"
     },
     {
       "path": "README.md",
@@ -76,7 +76,7 @@
       "type": "file",
       "mode": "0644",
       "size": 2332,
-      "sha256": "bc46fc4c0820bc798fe8cc67090a433bf5d88ab0feedc83cb033c68979b37b41"
+      "sha256": "35cf03aa5787ec254cc8e77ff0aa1028db6b57f2612ff5a99b3152eb39405ec1"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/agent-bundle.sha256",
@@ -90,7 +90,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "99ceaa277807a1c14c7de531f3f472b376e63fc2effa352a988c22fd6ee92dfa"
+      "sha256": "39e12bdba7556726de7777ab06ac3f67ba9639114ff4cba1dfc4b78c2268a207"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/lunafox-agent-linux-amd64",
@@ -17082,6 +17082,13 @@
       "sha256": "f0fce906d4576dd6c91e4b3d01f510f506dbd38ab14ba8d122843338cbf1288e"
     },
     {
+      "path": "release-notes/v0.0.1-alpha.174.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 3738,
+      "sha256": "f2b843cadc3d26cf9be1e13c9f7fd485a392ba8a1d708a1a5ed808f44fbeab4d"
+    },
+    {
       "path": "resources/alloy/config.alloy",
       "type": "file",
       "mode": "0644",
@@ -17148,15 +17155,15 @@
       "path": "scripts/ci/assemble-public-engine-release-selftest.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 21353,
-      "sha256": "9e93a4982dd57efee22f9681ddaf0d85af76c511bb8a6a8857930197cc1beb2c"
+      "size": 22693,
+      "sha256": "e753e4bac5b9a3114523d7499c0365a911b5c13a311575dba63756f5d7e9b6d7"
     },
     {
       "path": "scripts/ci/assemble-public-engine-release.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 20560,
-      "sha256": "e63fff32c2520dfbdb8164cf6e7191167479915412b05e539ce94e28d21a05b6"
+      "size": 20969,
+      "sha256": "19809e1b1c7ca4bd7a9bfe8da628613fdb55ae197f1c1c997be44de90becbf45"
     },
     {
       "path": "scripts/ci/audit-public-security-scope.mjs",

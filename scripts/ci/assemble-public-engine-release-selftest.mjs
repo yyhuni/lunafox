@@ -229,8 +229,16 @@ function previousBundle(compositionDigest) {
 function previousManifest(composition, manifestDigest = "") {
   const runtimeComponents = composition.components.filter((component) => component.id.startsWith("runtime."));
   const packageComponents = composition.components.filter((component) => component.id.endsWith(".package"));
+  // Reuse loads the previous manifest through the public verifier, which
+  // rejects a manifest that has no bound bilingual release notes.
+  const notesBody = "## English\n\n- Previous release.\n\n## 简体中文\n\n- 上一版本。\n";
+  const notesDigest = crypto.createHash("sha256").update(Buffer.from(notesBody, "utf8")).digest("hex");
   const lines = [
     `releaseVersion: "${previousTag.slice(1)}"`,
+    "releaseNotes:",
+    `  digest: "sha256:${notesDigest}"`,
+    "  body: |",
+    ...notesBody.replace(/\n$/, "").split("\n").map((line) => (line === "" ? "" : `    ${line}`)),
     "runtimeImages:",
     ...runtimeComponents.map((component) => `  - name: ${component.id.slice("runtime.".length)}\n    refs: ["${component.artifact.ref}", "${component.artifact.ref.replace("docker.io/", "ghcr.io/")}\"]`),
     "enginePackages:",
@@ -325,6 +333,17 @@ try {
   assert.deepEqual(mixed.reusedEngineIds, [reusedEngine]);
   assert.equal(JSON.parse(fs.readFileSync(path.join(mixedOutput, "manifest.json"), "utf8")).engines.length, 2);
   assert.equal(fs.readdirSync(path.join(mixedOutput, "public-engine-package-digests")).length, 2);
+  const emptyOutput = path.join(root, "empty-precreated-output");
+  fs.mkdirSync(emptyOutput);
+  const precreated = assemble({ plan: mixedPlan, releaseContext: contextPath, previousBundle: bundlePath, previousComposition: previousCompositionPath, previousManifest: previousManifestPath, outputDir: emptyOutput, ...currentInputs() });
+  assert.equal(precreated.engineCount, 2);
+  const dirtyOutput = path.join(root, "dirty-precreated-output");
+  fs.mkdirSync(dirtyOutput);
+  fs.writeFileSync(path.join(dirtyOutput, "stale.json"), "{}\n");
+  assert.throws(
+    () => assemble({ plan: mixedPlan, releaseContext: contextPath, previousBundle: bundlePath, previousComposition: previousCompositionPath, previousManifest: previousManifestPath, outputDir: dirtyOutput, ...currentInputs() }),
+    /must not already exist/,
+  );
 
   const mismatchedPackageInputs = currentInputs();
   const mismatchedPackage = JSON.parse(fs.readFileSync(mismatchedPackageInputs.packages, "utf8"));
