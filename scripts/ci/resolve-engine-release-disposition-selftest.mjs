@@ -87,7 +87,7 @@ const discovery = {
   engineRoot: "/tmp/engines",
   engines: engineIDs.map((engineId) => {
     const directory = engineId.slice("engine.lunafox.".length);
-    return { engineId, directory, dockerfile: `${directory}/Dockerfile`, buildContext: ".", repository: `lunafox-engine-runtime-${directory}` };
+    return { engineId, directory, dockerfile: `${directory}/Dockerfile`, buildContext: ".", repository: `lunafox-engine-runtime-${directory.replaceAll("_", "-")}` };
   }),
 };
 
@@ -122,5 +122,9 @@ assert.throws(() => resolveSelection(incomplete, discovery), /must contain Runti
 const staleInventory = structuredClone(discovery);
 staleInventory.engines.pop();
 assert.throws(() => resolveSelection(mixedPlan, staleInventory), /inventory does not match source discovery/);
+
+const underscoreRepository = structuredClone(discovery);
+underscoreRepository.engines[0].repository = `lunafox-engine-runtime-${underscoreRepository.engines[0].directory}`;
+assert.throws(() => resolveSelection(mixedPlan, underscoreRepository), /repository is invalid/);
 
 process.stdout.write("ok - Engine release selection binds source inventory, paired disposition, and content-addressed package versions\n");

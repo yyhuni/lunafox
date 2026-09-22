@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:3ac0b12937acf2f81ac997638fb4a06f470a34901f38e0da59bcba4004c8e3b3",
-  "releaseTag": "v0.0.1-alpha.168",
+  "sourceRevisionDigest": "sha256:2463a39adf121340f596476ea688ca125da7fc9febd6114cd1057b016acbe2d2",
+  "releaseTag": "v0.0.1-alpha.169",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -55,7 +55,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "58e63628c78111ab4720891b373c7f6c206acb27af606374b1fcb9c4a01d33f7"
+      "sha256": "eade7f4d8526c5f43546de695ea0744c92448c0147c9df082f028a4218fa1ab8"
     },
     {
       "path": "README.md",
@@ -76,7 +76,7 @@
       "type": "file",
       "mode": "0644",
       "size": 2332,
-      "sha256": "a1e072ffed14aa316eb19687fdb8d52885ffd5dc06ac0d2d53c188c367f75219"
+      "sha256": "5ecabd40ea573f79b7567934a8088dc20008b3d6d7bad60e78feb6128a4aef99"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/agent-bundle.sha256",
@@ -90,7 +90,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "14984583d1eb5108efe03eecd9525df469117c0b34492719656ddb2ddfd7d7f6"
+      "sha256": "cb26aa312f7ba4c85856ed434668b16a54bb34bf9aaca4c88d461086c536926d"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/lunafox-agent-linux-amd64",
@@ -17047,6 +17047,13 @@
       "sha256": "29461ab15660fd2327391f7b366d03ea19c4704efe80adc27011f39691391898"
     },
     {
+      "path": "release-notes/v0.0.1-alpha.169.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 2974,
+      "sha256": "8c93035997bf1858527d82d219bdc8779822c9e3f1ecff0d2459be9b1f25920e"
+    },
+    {
       "path": "resources/alloy/config.alloy",
       "type": "file",
       "mode": "0644",
@@ -17323,15 +17330,15 @@
       "path": "scripts/ci/resolve-engine-release-disposition-selftest.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 5496,
-      "sha256": "348d6ba75cb828aa8df29a764099f881f3242da3cd0c83961ace43f68ae78410"
+      "size": 5788,
+      "sha256": "9b5f8b56b582bb7733d731c7d840c181de7cc1c346460d47debdfdb7eeb2a9fc"
     },
     {
       "path": "scripts/ci/resolve-engine-release-disposition.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 9693,
-      "sha256": "b8483569a3e28fc2770910e99f44290259782d6f68cee9a4692710cefe5f5d3e"
+      "size": 9856,
+      "sha256": "d12305309500e7251458be857ddcd5144208dce0aac27d411c9c6f0a34d72612"
     },
     {
       "path": "scripts/ci/resolve-public-runtime-composition-selftest.mjs",
