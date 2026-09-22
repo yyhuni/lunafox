@@ -87,7 +87,9 @@ function normalizeDiscovery(value) {
     assert(directory === engineId.slice("engine.lunafox.".length), `Engine discovery ${engineId} directory does not match its canonical identity`);
     assert(entry.dockerfile === `${directory}/Dockerfile`, `Engine discovery ${engineId} Dockerfile is invalid`);
     assert(entry.buildContext === ".", `Engine discovery ${engineId} buildContext is invalid`);
-    assert(entry.repository === `lunafox-engine-runtime-${directory}`, `Engine discovery ${engineId} repository is invalid`);
+    // OCI repository names cannot keep the Engine ID's underscores; discovery
+    // derives lunafox-engine-runtime-<hyphenated-local-name>.
+    assert(entry.repository === `lunafox-engine-runtime-${directory.replaceAll("_", "-")}`, `Engine discovery ${engineId} repository is invalid`);
     assert(!previousID || engineId > previousID, "Engine discovery engines must be ordered and unique by engineId");
     previousID = engineId;
     return { engineId, directory, dockerfile: entry.dockerfile, buildContext: entry.buildContext, repository: entry.repository };
