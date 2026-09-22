@@ -45,6 +45,7 @@ function scheduledScanTransport(overrides: Record<string, unknown> = {}): Record
     organizationName: null,
     scanMode: "target",
     inputSource: "scanSnapshot",
+    timeZone: "UTC",
     cronExpression: "0 2 * * *",
     isEnabled: true,
     nextRunTime: "2026-06-15T00:00:00Z",
@@ -99,6 +100,7 @@ describe("scheduled-scan.service contract", () => {
             organizationName: null,
             scanMode: "target",
             inputSource: "scanSnapshot",
+            timeZone: "UTC",
             cronExpression: "0 2 * * *",
             isEnabled: true,
             nextRunTime: "2026-06-15T00:00:00Z",
@@ -140,6 +142,7 @@ describe("scheduled-scan.service contract", () => {
       resourceName: "scheduledScans/4",
       scanWorkflow: "subdomain_discovery",
       inputSource: "scanSnapshot",
+      timeZone: "UTC",
     })
   })
 
@@ -238,6 +241,7 @@ describe("scheduled-scan.service contract", () => {
         targetName: "example.com",
         scanMode: "target",
         inputSource: "targetInventory",
+        timeZone: "UTC",
         cronExpression: "0 2 * * *",
         isEnabled: true,
         nextRunTime: "2026-06-15T00:00:00Z",
@@ -256,6 +260,7 @@ describe("scheduled-scan.service contract", () => {
       configuration: validSubdomainConfiguration,
       targetId: 7,
       agentId: 42,
+      timeZone: "Asia/Shanghai",
       cronExpression: "0 2 * * *",
       isEnabled: true,
       inputSource: "targetInventory",
@@ -268,6 +273,7 @@ describe("scheduled-scan.service contract", () => {
       configuration: validSubdomainConfiguration,
       target: "targets/7",
       agent: "agents/42",
+      timeZone: "Asia/Shanghai",
       cronExpression: "0 2 * * *",
       isEnabled: true,
     })
@@ -280,6 +286,7 @@ describe("scheduled-scan.service contract", () => {
         scanWorkflow: "subdomain_discovery",
         configuration: validSubdomainConfiguration,
         targetId: 7,
+        timeZone: "UTC",
         cronExpression: "0 2 * * *",
         inputSource: undefined,
       } as unknown as Parameters<typeof createScheduledScan>[0])
@@ -289,7 +296,7 @@ describe("scheduled-scan.service contract", () => {
   })
 
   it("更新计划扫描可清空或替换未来触发的指定节点", async () => {
-    vi.mocked(api.patch).mockResolvedValue({ data: { id: 4, name: "scheduledScans/4", displayName: "daily", scanWorkflow: "scanWorkflows/subdomain_discovery", organizationId: null, organizationName: null, targetId: 7, targetName: "example.com", scanMode: "target", inputSource: "scanSnapshot", cronExpression: "0 2 * * *", isEnabled: true, nextRunTime: "2026-06-15T02:00:00Z", lastRunTime: null, runCount: 0, successfulHandoffCount: 0, failedHandoffCount: 0, createdAt: "2026-06-14T01:02:03Z", updatedAt: "2026-06-14T01:02:03Z" } } as never)
+    vi.mocked(api.patch).mockResolvedValue({ data: { id: 4, name: "scheduledScans/4", displayName: "daily", scanWorkflow: "scanWorkflows/subdomain_discovery", organizationId: null, organizationName: null, targetId: 7, targetName: "example.com", scanMode: "target", inputSource: "scanSnapshot", timeZone: "UTC", cronExpression: "0 2 * * *", isEnabled: true, nextRunTime: "2026-06-15T02:00:00Z", lastRunTime: null, runCount: 0, successfulHandoffCount: 0, failedHandoffCount: 0, createdAt: "2026-06-14T01:02:03Z", updatedAt: "2026-06-14T01:02:03Z" } } as never)
 
     await updateScheduledScan(4, { agentId: 43 })
     expect(api.patch).toHaveBeenLastCalledWith("/scheduledScans/4", { name: "scheduledScans/4", agent: "agents/43", updateMask: "agent" })
@@ -297,6 +304,37 @@ describe("scheduled-scan.service contract", () => {
     await updateScheduledScan(4, { agentId: null })
     expect(api.patch).toHaveBeenLastCalledWith("/scheduledScans/4", { name: "scheduledScans/4", agent: "", updateMask: "agent" })
 
+  })
+
+  it("仅在显式更新时区时把 timeZone 加入 updateMask", async () => {
+    vi.mocked(api.patch).mockResolvedValue({ data: scheduledScanTransport({ timeZone: "Asia/Shanghai" }) } as never)
+
+    await updateScheduledScan(4, { timeZone: "Asia/Shanghai" })
+
+    expect(api.patch).toHaveBeenCalledWith("/scheduledScans/4", {
+      name: "scheduledScans/4",
+      timeZone: "Asia/Shanghai",
+      updateMask: "timeZone",
+    })
+  })
+
+  it.each([
+    ["missing", undefined, "missing timeZone"],
+    ["fixed offset", "UTC+8", "invalid timeZone"],
+  ])("在网络调用前拒绝创建请求中的%s时区", async (_label, timeZone, message) => {
+    await expect(
+      createScheduledScan({
+        displayName: "daily",
+        scanWorkflow: "subdomain_discovery",
+        configuration: validSubdomainConfiguration,
+        targetId: 7,
+        inputSource: "scanSnapshot",
+        timeZone,
+        cronExpression: "0 2 * * *",
+      } as unknown as Parameters<typeof createScheduledScan>[0])
+    ).rejects.toThrow(message)
+
+    expect(api.post).not.toHaveBeenCalled()
   })
 
   it("仅在来源变更时把 inputSource 加入更新请求和 updateMask", async () => {

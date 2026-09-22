@@ -110,7 +110,7 @@ function countOptions(options: Array<{ value: string; count?: number }> | undefi
  * read from its content rather than from its `aria-label`.
  */
 function AgentQuotaHint({ message }: { message: string }) {
-    return (<TooltipProvider delay={100}>
+    return (<TooltipProvider>
       <Tooltip>
         <TooltipTrigger render={(<span id={AGENT_QUOTA_STATUS_ID} role="img" tabIndex={0} aria-label={message} className={cn("inline-flex shrink-0 cursor-help", getStatusToneTextClass("warning"))}/>)}>
           <span className="sr-only">{message}</span>

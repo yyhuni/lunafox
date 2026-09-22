@@ -20,7 +20,7 @@ func TestScheduledScanRepositoryLifecycleMaintainsCursorAndOccurrenceInvariants(
 
 	enabled, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "enabled", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create(enabled) error = %v", err)
@@ -32,7 +32,7 @@ func TestScheduledScanRepositoryLifecycleMaintainsCursorAndOccurrenceInvariants(
 
 	disabled, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "disabled", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: false,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: false,
 	})
 	if err != nil || disabled.NextRunTime != nil {
 		t.Fatalf("Create(disabled) = %+v, %v; want null cursor", disabled, err)
@@ -72,14 +72,14 @@ func TestScheduledScanRepositoryBatchStatusUpdatePreservesLifecycleForMixedState
 	targetID := 7
 	enabled, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "enabled", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create(enabled) error = %v", err)
 	}
 	disabled, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "disabled", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: false,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: false,
 	})
 	if err != nil {
 		t.Fatalf("Create(disabled) error = %v", err)
@@ -135,14 +135,14 @@ func TestScheduledScanRepositoryBatchStatusUpdateIsNaturallyIdempotent(t *testin
 	targetID := 7
 	enabled, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "enabled", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create(enabled) error = %v", err)
 	}
 	disabled, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "disabled", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: false,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: false,
 	})
 	if err != nil {
 		t.Fatalf("Create(disabled) error = %v", err)
@@ -180,14 +180,14 @@ func TestScheduledScanRepositoryBatchStatusUpdateRollsBackEveryScheduleOnCursorF
 	targetID := 7
 	enabled, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "enabled", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create(enabled) error = %v", err)
 	}
 	disabled, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "disabled", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: false,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: false,
 	})
 	if err != nil {
 		t.Fatalf("Create(disabled) error = %v", err)
@@ -230,14 +230,14 @@ func TestScheduledScanRepositoryBatchStatusUpdateRollsBackEarlierWrites(t *testi
 	targetID := 7
 	first, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "first", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create(first) error = %v", err)
 	}
 	second, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "second", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create(second) error = %v", err)
@@ -277,7 +277,7 @@ func TestScheduledScanRepositoryDisabledRuleEditsKeepNullCursorUntilReenabled(t 
 	targetID := 7
 	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "disabled", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "0 * * * *", IsEnabled: false,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "0 * * * *", IsEnabled: false,
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -305,7 +305,7 @@ func TestScheduledScanRepositoryTimeRuleUpdateReplacesCursorFromOneReferenceTime
 	targetID := 7
 	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "time-rule", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -321,13 +321,80 @@ func TestScheduledScanRepositoryTimeRuleUpdateReplacesCursorFromOneReferenceTime
 	}
 }
 
+func TestScheduledScanRepositoryDoesNotRecalculateCursorWhenTimeRuleValuesAreUnchanged(t *testing.T) {
+	now := time.Date(2026, 8, 4, 10, 0, 30, 0, time.UTC)
+	repo := newScheduledScanRepositoryForTest(t).WithClock(func() time.Time { return now })
+	targetID := 7
+	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
+		Name: "unchanged-time-rule", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "0 19 * * *", IsEnabled: true,
+	})
+	if err != nil || schedule.NextRunTime == nil {
+		t.Fatalf("Create() = %+v, %v", schedule, err)
+	}
+	originalCursor := *schedule.NextRunTime
+
+	// Advance beyond the stored cursor so an unnecessary recalculation would be observable.
+	now = time.Date(2026, 8, 4, 20, 0, 30, 0, time.UTC)
+	cron := "0 19 * * *"
+	timeZone := "UTC"
+	updated, err := repo.Update(context.Background(), schedule.ID, &scheduledapp.ScheduledScanUpdate{
+		CronExpression: &cron,
+		TimeZone:       &timeZone,
+	})
+	if err != nil || updated.NextRunTime == nil || !updated.NextRunTime.Equal(originalCursor) {
+		t.Fatalf("unchanged time-rule Update changed cursor: %+v error=%v, want %s", updated, err, originalCursor)
+	}
+}
+
+func TestScheduledScanRepositoryTimeZoneUpdateReplacesCursorWithoutReadSideEffects(t *testing.T) {
+	now := time.Date(2026, 8, 4, 10, 0, 30, 0, time.UTC)
+	repo := newScheduledScanRepositoryForTest(t).WithClock(func() time.Time { return now })
+	targetID := 7
+	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
+		Name: "shanghai-wall-clock", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "0 19 * * *", IsEnabled: true,
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if schedule.TimeZone != "UTC" || schedule.CronExpression != "0 19 * * *" || schedule.NextRunTime == nil {
+		t.Fatalf("Create() did not persist the original UTC rule: %+v", schedule)
+	}
+	if want := time.Date(2026, 8, 4, 19, 0, 0, 0, time.UTC); !schedule.NextRunTime.Equal(want) {
+		t.Fatalf("initial cursor = %s, want %s", schedule.NextRunTime, want)
+	}
+
+	timeZone := "Asia/Shanghai"
+	updated, err := repo.Update(context.Background(), schedule.ID, &scheduledapp.ScheduledScanUpdate{TimeZone: &timeZone})
+	if err != nil {
+		t.Fatalf("Update(timeZone) error = %v", err)
+	}
+	if updated.TimeZone != timeZone || updated.CronExpression != "0 19 * * *" || updated.NextRunTime == nil {
+		t.Fatalf("timeZone update changed the stored rule unexpectedly: %+v", updated)
+	}
+	wantCursor := time.Date(2026, 8, 4, 11, 0, 0, 0, time.UTC)
+	if !updated.NextRunTime.Equal(wantCursor) {
+		t.Fatalf("timeZone update cursor = %s, want Shanghai wall-clock cursor %s", updated.NextRunTime, wantCursor)
+	}
+
+	read, err := repo.GetByID(context.Background(), schedule.ID)
+	if err != nil || read.NextRunTime == nil || !read.NextRunTime.Equal(wantCursor) || read.TimeZone != timeZone {
+		t.Fatalf("GetByID() rewrote the persisted time rule or cursor: %+v, %v", read, err)
+	}
+	listed, _, err := repo.List(context.Background(), scheduledapp.ScheduledScanListQuery{Page: 1, PageSize: 20})
+	if err != nil || len(listed) != 1 || listed[0].NextRunTime == nil || !listed[0].NextRunTime.Equal(wantCursor) || listed[0].TimeZone != timeZone {
+		t.Fatalf("List() rewrote the persisted time rule or cursor: %+v, %v", listed, err)
+	}
+}
+
 func TestScheduledScanRepositoryMaterializesLatestDueAndStartsOneFrozenAttempt(t *testing.T) {
 	evaluationAt := time.Date(2026, 8, 4, 10, 10, 0, 0, time.UTC)
 	repo := newScheduledScanRepositoryForTest(t).WithClock(func() time.Time { return evaluationAt })
 	targetID := 7
 	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "due", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -405,7 +472,7 @@ func TestScheduledScanRepositoryOrganizationAttemptFreezesCurrentActiveTargetsOn
 
 	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "organization-attempt", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		OrganizationID: &organizationID, CronExpression: "* * * * *", IsEnabled: true,
+		OrganizationID: &organizationID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -461,7 +528,7 @@ func TestScheduledScanRepositoryRestartKeepsExistingOccurrenceIndependent(t *tes
 	targetID := 7
 	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "restart", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -494,7 +561,7 @@ func TestScheduledScanRepositoryMaterializationRollsBackCursorWhenInsertFails(t 
 	targetID := 7
 	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "rollback", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -527,7 +594,7 @@ func TestScheduledScanRepositoryMaterializationRollsBackOccurrenceWhenCursorWrit
 	targetID := 7
 	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "rollback-cursor", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -562,7 +629,7 @@ func TestScheduledScanRepositoryFairCandidateRotatesByLastTrigger(t *testing.T) 
 	create := func(name string) *scheduledapp.ScheduledScan {
 		item, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 			Name: name, ScanWorkflowID: "default", Configuration: map[string]any{"version": name}, InputSource: scandomain.InputSourceScanSnapshot,
-			TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+			TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 		})
 		if err != nil {
 			t.Fatalf("Create(%s): %v", name, err)
@@ -595,7 +662,7 @@ func TestScheduledScanRepositoryRestartNeverReplaysAttemptedOccurrence(t *testin
 	targetID := 7
 	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "attempted", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -626,7 +693,7 @@ func TestScheduledScanRepositoryDueQueryIsStableAndLimitedToOneHundred(t *testin
 		next := evaluationAt.Add(-time.Duration(index%3) * time.Minute)
 		models = append(models, scheduledScanModel{
 			Name: fmt.Sprintf("schedule-%03d", index), ScanWorkflowID: "default", Configuration: []byte(`{}`),
-			CronExpression: "* * * * *", IsEnabled: true, NextRunTime: &next,
+			TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true, NextRunTime: &next,
 		})
 	}
 	if err := repo.db.CreateInBatches(models, 50).Error; err != nil {
@@ -693,7 +760,7 @@ func TestScheduledScanRepositoryRecordsHandoffOutcomeAggregatesExactlyOnce(t *te
 	targetID := 7
 	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "outcomes", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -760,7 +827,7 @@ func TestScheduledScanRepositoryRecordsHandoffOutcomeAggregatesExactlyOnce(t *te
 
 	deletedSchedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "deleted-owner", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create(deleted owner) error = %v", err)
@@ -788,7 +855,7 @@ func TestScheduledScanRepositoryRollsBackOutcomeWhenAggregateWriteFails(t *testi
 	targetID := 7
 	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "outcome-rollback", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -820,14 +887,14 @@ func TestScheduledScanRepositoryRollsBackOutcomeWhenAggregateWriteFails(t *testi
 
 type failingScheduleCalculator struct{ err error }
 
-func (calculator failingScheduleCalculator) Validate(string) error { return calculator.err }
-func (calculator failingScheduleCalculator) FirstAfter(string, time.Time) (time.Time, error) {
+func (calculator failingScheduleCalculator) Validate(string, string) error { return calculator.err }
+func (calculator failingScheduleCalculator) FirstAfter(string, string, time.Time) (time.Time, error) {
 	return time.Time{}, calculator.err
 }
-func (calculator failingScheduleCalculator) LatestAtOrBefore(string, time.Time, time.Time) (time.Time, error) {
+func (calculator failingScheduleCalculator) LatestAtOrBefore(string, string, time.Time, time.Time) (time.Time, error) {
 	return time.Time{}, calculator.err
 }
-func (calculator failingScheduleCalculator) AdvanceAfter(string, time.Time) (time.Time, error) {
+func (calculator failingScheduleCalculator) AdvanceAfter(string, string, time.Time) (time.Time, error) {
 	return time.Time{}, calculator.err
 }
 
@@ -836,20 +903,20 @@ type firstAfterFailingScheduleCalculator struct {
 	err                error
 }
 
-func (calculator firstAfterFailingScheduleCalculator) Validate(expression string) error {
-	return calculator.ScheduleCalculator.Validate(expression)
+func (calculator firstAfterFailingScheduleCalculator) Validate(expression, timeZone string) error {
+	return calculator.ScheduleCalculator.Validate(expression, timeZone)
 }
 
-func (calculator firstAfterFailingScheduleCalculator) FirstAfter(string, time.Time) (time.Time, error) {
+func (calculator firstAfterFailingScheduleCalculator) FirstAfter(string, string, time.Time) (time.Time, error) {
 	return time.Time{}, calculator.err
 }
 
-func (calculator firstAfterFailingScheduleCalculator) LatestAtOrBefore(expression string, cursor, instant time.Time) (time.Time, error) {
-	return calculator.ScheduleCalculator.LatestAtOrBefore(expression, cursor, instant)
+func (calculator firstAfterFailingScheduleCalculator) LatestAtOrBefore(expression, timeZone string, cursor, instant time.Time) (time.Time, error) {
+	return calculator.ScheduleCalculator.LatestAtOrBefore(expression, timeZone, cursor, instant)
 }
 
-func (calculator firstAfterFailingScheduleCalculator) AdvanceAfter(expression string, instant time.Time) (time.Time, error) {
-	return calculator.ScheduleCalculator.AdvanceAfter(expression, instant)
+func (calculator firstAfterFailingScheduleCalculator) AdvanceAfter(expression, timeZone string, instant time.Time) (time.Time, error) {
+	return calculator.ScheduleCalculator.AdvanceAfter(expression, timeZone, instant)
 }
 
 func TestScheduledScanRepositoryCreateRollsBackCalculationFailure(t *testing.T) {
@@ -859,7 +926,7 @@ func TestScheduledScanRepositoryCreateRollsBackCalculationFailure(t *testing.T) 
 	targetID := 7
 	_, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "invalid", ScanWorkflowID: "default", InputSource: scandomain.InputSourceScanSnapshot, TargetID: &targetID,
-		CronExpression: "* * * * *", IsEnabled: true,
+		TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("Create() error = %v, want %v", err, wantErr)
@@ -877,7 +944,7 @@ func TestScheduledScanRepositoryUpdateRollsBackCalculationFailure(t *testing.T) 
 	targetID := 7
 	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "calculation", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -902,7 +969,7 @@ func TestScheduledScanRepositoryDisableRollsBackOccurrenceDeletionWhenScheduleWr
 	targetID := 7
 	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "write-rollback", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
@@ -936,7 +1003,7 @@ func TestScheduledScanRepositoryRejectsUnencodableConfigurationWithoutWrites(t *
 	invalid := map[string]any{"unsupported": make(chan int)}
 	if _, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "invalid-create", ScanWorkflowID: "default", Configuration: invalid, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	}); err == nil {
 		t.Fatal("Create() accepted an unencodable configuration")
 	}
@@ -948,7 +1015,7 @@ func TestScheduledScanRepositoryRejectsUnencodableConfigurationWithoutWrites(t *
 
 	valid, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "valid", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("seed valid Schedule: %v", err)
@@ -972,14 +1039,14 @@ func TestScheduledScanRepositoryTargetScopedWritesRequireAnActiveTarget(t *testi
 
 	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "active-target-schedule", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &activeTargetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &activeTargetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("create active Target Schedule: %v", err)
 	}
 	if _, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "tombstoned-target-schedule", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &tombstonedTargetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &tombstonedTargetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	}); !errors.Is(err, scheduledapp.ErrScheduledScanInvalidArgument) {
 		t.Fatalf("create for tombstoned Target error = %v, want invalid argument", err)
 	}
@@ -1014,7 +1081,7 @@ func TestScheduledScanRepositoryRuntimeSkipsTombstonedTargetSchedule(t *testing.
 	targetID := 7
 	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
 		Name: "target-cleanup-pending", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
-		TargetID: &targetID, CronExpression: "* * * * *", IsEnabled: true,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
 	})
 	if err != nil {
 		t.Fatalf("seed Target-scoped Schedule: %v", err)

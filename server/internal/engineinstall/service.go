@@ -152,7 +152,11 @@ func (installer *EnginePackageInstaller) Install(
 		if installer.signatureVerifier == nil {
 			return VerifiedEngineInstallation{}, fmt.Errorf("Cloudflare Engine Package acceleration requires a GHCR signature verifier")
 		}
-		if err := installer.signatureVerifier.VerifyReference(ctx, acceleration.SignatureReference); err != nil {
+		transportVerifier, ok := installer.signatureVerifier.(ocisignature.DigestReferenceSignatureTransportVerifier)
+		if !ok {
+			return VerifiedEngineInstallation{}, fmt.Errorf("Cloudflare Engine Package acceleration requires a transport-aware GHCR signature verifier")
+		}
+		if err := transportVerifier.VerifyReferenceWithTransport(ctx, acceleration.SignatureReference, acceleration.DownloadReferences[0]); err != nil {
 			return VerifiedEngineInstallation{}, fmt.Errorf("verify Engine Package GHCR signature %q: %w", acceleration.SignatureReference.String(), err)
 		}
 	}

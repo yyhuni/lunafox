@@ -10,8 +10,9 @@ describe("edit-scheduled-scan-dialog-state contract", () => {
     expect(source).toContain("from \"react\"")
   })
 
-  it("initializes Edit with the UTC-only schedule contract", () => {
-    expect(source).not.toContain("setTimeZone")
-    expect(source).not.toContain("timeZone: timeZone.trim()")
+  it("initializes Edit with the saved IANA time zone and updates it selectively", () => {
+    expect(source).toContain("setTimeZone(scheduledScan.timeZone)")
+    expect(source).toContain("request.timeZone = timeZone.trim()")
+    expect(source).toContain("getNextCronExecutions(cron, zone")
   })
 })

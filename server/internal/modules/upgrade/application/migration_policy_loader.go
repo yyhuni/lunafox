@@ -17,10 +17,13 @@ type migrationPolicyDocument struct {
 	BaselineMigration              *string   `json:"baselineMigration"`
 	BaselineMutable                *bool     `json:"baselineMutable"`
 	PreserveDataUpgrade            *bool     `json:"preserveDataUpgrade"`
-	DevelopmentRollback            *string   `json:"developmentRollback"`
+	RollbackPolicy                 *string   `json:"rollbackPolicy"`
 	StableReleaseAllowed           *bool     `json:"stableReleaseAllowed"`
 	DataRetainingDeploymentAllowed *bool     `json:"dataRetainingDeploymentAllowed"`
 	FreezeTriggers                 *[]string `json:"freezeTriggers"`
+	ChecksumAlgorithm              *string   `json:"checksumAlgorithm"`
+	BaselineChecksum               *string   `json:"baselineChecksum"`
+	MigrationManifest              *string   `json:"migrationManifest"`
 }
 
 // ParseMigrationPolicy strictly parses one policy document and rejects both
@@ -57,8 +60,8 @@ func ParseMigrationPolicy(raw []byte) (domain.MigrationPolicy, error) {
 	if document.PreserveDataUpgrade == nil {
 		return domain.MigrationPolicy{}, missing("preserveDataUpgrade")
 	}
-	if document.DevelopmentRollback == nil {
-		return domain.MigrationPolicy{}, missing("developmentRollback")
+	if document.RollbackPolicy == nil {
+		return domain.MigrationPolicy{}, missing("rollbackPolicy")
 	}
 	if document.StableReleaseAllowed == nil {
 		return domain.MigrationPolicy{}, missing("stableReleaseAllowed")
@@ -69,10 +72,19 @@ func ParseMigrationPolicy(raw []byte) (domain.MigrationPolicy, error) {
 	if document.FreezeTriggers == nil {
 		return domain.MigrationPolicy{}, missing("freezeTriggers")
 	}
+	if document.ChecksumAlgorithm == nil {
+		return domain.MigrationPolicy{}, missing("checksumAlgorithm")
+	}
+	if document.BaselineChecksum == nil {
+		return domain.MigrationPolicy{}, missing("baselineChecksum")
+	}
+	if document.MigrationManifest == nil {
+		return domain.MigrationPolicy{}, missing("migrationManifest")
+	}
 	if *document.SchemaVersion <= 0 {
 		return domain.MigrationPolicy{}, domain.WrapMigrationMetadataMissing(fmt.Errorf("migration policy schemaVersion must be positive"))
 	}
-	if strings.TrimSpace(*document.Phase) == "" || strings.TrimSpace(*document.BaselineMigration) == "" || strings.TrimSpace(*document.DevelopmentRollback) == "" {
+	if strings.TrimSpace(*document.Phase) == "" || strings.TrimSpace(*document.BaselineMigration) == "" || strings.TrimSpace(*document.RollbackPolicy) == "" || strings.TrimSpace(*document.ChecksumAlgorithm) == "" || strings.TrimSpace(*document.BaselineChecksum) == "" || strings.TrimSpace(*document.MigrationManifest) == "" {
 		return domain.MigrationPolicy{}, domain.WrapMigrationMetadataMissing(fmt.Errorf("migration policy string fields must be non-empty"))
 	}
 	return domain.MigrationPolicy{
@@ -81,10 +93,13 @@ func ParseMigrationPolicy(raw []byte) (domain.MigrationPolicy, error) {
 		BaselineMigration:              *document.BaselineMigration,
 		BaselineMutable:                *document.BaselineMutable,
 		PreserveDataUpgrade:            *document.PreserveDataUpgrade,
-		DevelopmentRollback:            *document.DevelopmentRollback,
+		RollbackPolicy:                 *document.RollbackPolicy,
 		StableReleaseAllowed:           *document.StableReleaseAllowed,
 		DataRetainingDeploymentAllowed: *document.DataRetainingDeploymentAllowed,
 		FreezeTriggers:                 append([]string(nil), (*document.FreezeTriggers)...),
+		ChecksumAlgorithm:              *document.ChecksumAlgorithm,
+		BaselineChecksum:               *document.BaselineChecksum,
+		MigrationManifest:              *document.MigrationManifest,
 	}, nil
 }
 

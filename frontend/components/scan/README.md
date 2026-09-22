@@ -160,6 +160,15 @@ complete `engineConfig`; every submit path performs the at-least-one-enabled
 preflight and never merges Workflow, catalog, or form defaults. `ENGINE_CONFIG_INVALID`
 keeps the draft and requires an explicit Profile refresh/review before retry.
 
+`ScanConfigViewToggle` keeps complete form values in the owning open-dialog
+state, rather than in canonical YAML. When its view remounts in that same dialog,
+the cache restores a disabled Step's UI-only `engineConfig` draft. A newly opened
+persisted disabled branch may instead obtain that UI draft from the selected
+Workflow's already strict-adapted Profile, but only after parent identity, exact
+Step coverage, and current Engine schema validation succeed. This recovery never
+repairs an enabled Step and never survives a dialog close, reset, refresh, or
+Workflow change.
+
 Within an enabled Step, a catalog section declared `requiredEnabled: true` stays
 enabled and its inner switch is non-operable. This metadata applies only to that
 individual Engine config section: it does not enable the outer Workflow Step or

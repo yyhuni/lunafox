@@ -230,6 +230,41 @@ describe("useInitiateScanDialogState", () => {
     expect(result.current.canStart).toBe(false)
   })
 
+  it("普通和批量发起扫描在向导步骤切换期间保留当前对话框的禁用 Step 草稿", async () => {
+    hookMocks.loadWorkflowProfile.mockResolvedValue({
+      name: "scanWorkflows/full/profile",
+      scanWorkflow: "scanWorkflows/full",
+      configuration: {
+        steps: {
+          discovery: { enabled: false, engineConfig: { recon: { enabled: true, timeout: 60 } } },
+        },
+      },
+    })
+
+    const { result } = renderHook(() =>
+      useInitiateScanDialogState({
+        open: true,
+        targetIds: [1, 2],
+        onOpenChange: vi.fn(),
+        tToast: (key) => key,
+      })
+    )
+
+    await waitFor(() => expect(result.current.workflowProfileDraft?.scanWorkflow).toBe("full"))
+    const formValuesCacheRef = result.current.formValuesCacheRef
+    formValuesCacheRef.current = {
+      discovery: { enabled: false, sections: {} },
+    }
+
+    act(() => result.current.setCurrentStep(1))
+    act(() => result.current.setCurrentStep(2))
+
+    expect(result.current.formValuesCacheRef).toBe(formValuesCacheRef)
+    expect(result.current.formValuesCacheRef.current).toEqual({
+      discovery: { enabled: false, sections: {} },
+    })
+  })
+
   it("资源字段校验失败时不提交，修复后才发起扫描请求", async () => {
     hookMocks.loadWorkflowProfile.mockResolvedValue({
       name: "scanWorkflows/full/profile",

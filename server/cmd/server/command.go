@@ -11,6 +11,7 @@ type serverCommandKind uint8
 const (
 	serverCommandRun serverCommandKind = iota
 	serverCommandEngineBootstrap
+	serverCommandEngineInventory
 	serverCommandFingerprintBootstrap
 	serverCommandWordlistBootstrap
 	serverCommandAgentBootstrap
@@ -86,6 +87,8 @@ func parseServerCommand(args []string) (serverCommand, error) {
 		switch args[1] {
 		case "engine-bootstrap":
 			return serverCommand{kind: serverCommandEngineBootstrap, program: program}, nil
+		case "engine-inventory":
+			return serverCommand{kind: serverCommandEngineInventory, program: program}, nil
 		case "resetadmin":
 			return serverCommand{kind: serverCommandResetAdmin, program: program}, nil
 		case "agent-ready":
@@ -105,5 +108,5 @@ func serverUsage(program string) string {
 	if program == "" || program == "." {
 		program = "server"
 	}
-	return fmt.Sprintf("Usage: %s [engine-bootstrap|fingerprint-bootstrap <staged-corpus-path>|wordlist-bootstrap <manifest-path> <source-directory>|agent-bootstrap <credentials-path> <hostname> <agent-version>|resetadmin|agent-ready|wordlist-resource-migrate|migrate up]\n", program)
+	return fmt.Sprintf("Usage: %s [engine-bootstrap|engine-inventory|fingerprint-bootstrap <staged-corpus-path>|wordlist-bootstrap <manifest-path> <source-directory>|agent-bootstrap <credentials-path> <hostname> <agent-version>|resetadmin|agent-ready|wordlist-resource-migrate|migrate up]\n", program)
 }

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -18,17 +19,18 @@ function fixture(t) {
     ".env.example": "PUBLIC_HOST=localhost\n",
     "compose.yaml": "services: {}\n",
     "engine-inventory.yaml": "enginePackages: []\n",
-    "release.manifest.yaml": 'releaseVersion: "1.2.3-alpha.4"\n',
+    "release.manifest.yaml": 'releaseVersion: "1.2.3-alpha.4"\nreleaseNotes:\n  digest: "sha256:4406112ce062dd05feacce5f519b8cb7250fd01c7237c43e0f7335da912e8188"\n  body: |\n    ## English\n\n    - Test release notes.\n\n    ## 简体中文\n\n    - 测试发布说明。\n',
   };
   for (const [name, value] of Object.entries(files)) fs.writeFileSync(path.join(content, name), value);
   const packageName = "lunafox-v1.2.3-alpha.4-dockerhub.zip";
   const packagePath = path.join(root, packageName);
   execFileSync("python3", ["-c", "import pathlib,sys,zipfile\nr=pathlib.Path(sys.argv[1])\nwith zipfile.ZipFile(sys.argv[2],'w') as z:\n [z.write(p,p.relative_to(r).as_posix()) for p in sorted(r.iterdir())]", content, packagePath]);
   const digest = execFileSync("shasum", ["-a", "256", packagePath], { encoding: "utf8" }).split(/\s+/)[0];
+  const manifestSha256 = crypto.createHash("sha256").update(files["release.manifest.yaml"]).digest("hex");
   fs.writeFileSync(path.join(root, "scripts", "ci", "public-release-policy.json"), JSON.stringify({
-    legacyDeploymentBootstrap: { releaseTag: "v1.2.3-alpha.4", packageName, sha256: digest, paths: Object.keys(files) },
+    legacyDeploymentBootstrap: { releaseTag: "v1.2.3-alpha.4", packageName, sha256: digest, manifestSha256, paths: Object.keys(files) },
   }));
-  return { root, packagePath, output: path.join(root, "output") };
+  return { root, packagePath, manifestSha256, output: path.join(root, "output") };
 }
 
 test("extracts only the pinned complete deployment group", (t) => {
@@ -54,7 +56,9 @@ test("extracts only the pinned complete deployment group", (t) => {
     },
   });
   assert.equal(result.releaseTag, "v1.2.3-alpha.4");
+  assert.equal(result.manifestSha256, input.manifestSha256);
   assert.equal(generation.tag, "v1.2.3-alpha.4");
+  assert.deepEqual(generation.legacyBootstrap, { releaseTag: "v1.2.3-alpha.4", manifestSha256: input.manifestSha256 });
   assert.deepEqual(fs.readdirSync(input.output).sort(), [".env", ".env.example", "compose.yaml", "engine-inventory.yaml", "release.manifest.yaml"].sort());
   assert.match(fs.readFileSync(path.join(input.output, ".env"), "utf8"), /^RELEASE_REGISTRY=docker\.io$/m);
   assert.match(fs.readFileSync(path.join(input.output, "compose.yaml"), "utf8"), /\$\{RELEASE_REGISTRY:-docker\.io\}/);
@@ -65,4 +69,13 @@ test("rejects immutable digest drift", (t) => {
   const input = fixture(t);
   fs.appendFileSync(input.packagePath, "drift");
   assert.throws(() => prepareLegacyDeployment({ root: input.root, package: input.packagePath, output: input.output }), /digest/);
+});
+
+test("rejects a legacy archive whose pinned manifest identity drifts", (t) => {
+  const input = fixture(t);
+  const policyPath = path.join(input.root, "scripts", "ci", "public-release-policy.json");
+  const policy = JSON.parse(fs.readFileSync(policyPath, "utf8"));
+  policy.legacyDeploymentBootstrap.manifestSha256 = "0".repeat(64);
+  fs.writeFileSync(policyPath, JSON.stringify(policy));
+  assert.throws(() => prepareLegacyDeployment({ root: input.root, package: input.packagePath, output: input.output }), /manifest digest/);
 });

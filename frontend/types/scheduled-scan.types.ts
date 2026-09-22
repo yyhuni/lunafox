@@ -30,6 +30,7 @@ export interface ScheduledScan {
   agent?: string | null
   agentId?: number | null
   scanMode: ScanMode // Scan mode
+  timeZone: string // IANA time zone used to evaluate the Cron rule
   cronExpression: string // Cron expression
   isEnabled: boolean // Whether enabled
   nextRunTime: string | null // Persisted next trigger time; null while disabled
@@ -50,6 +51,7 @@ export interface CreateScheduledScanRequest {
   organizationId?: number // Organization scan mode
   targetId?: number // Target scan mode
   agentId?: number
+  timeZone: string // IANA time zone used to evaluate the Cron rule
   cronExpression: string // Cron expression, format: minute hour day month weekday
   isEnabled?: boolean
 }
@@ -64,6 +66,7 @@ export interface UpdateScheduledScanRequest {
   targetId?: number // Target scan mode (clears organizationId when set)
   // `null` explicitly clears the persisted Agent selection for future triggers.
   agentId?: number | null
+  timeZone?: string
   cronExpression?: string
   isEnabled?: boolean
 }

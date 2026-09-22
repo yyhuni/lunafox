@@ -15,6 +15,7 @@ import type {
   BatchDeleteTargetsRequest,
   BatchCreateTargetsRequest,
 } from "@/types/target.types"
+import { getErrorCode, getErrorMessage, getErrorResponseData } from "@/lib/response-parser"
 import { targetKeys } from "./keys"
 
 /**
@@ -119,6 +120,18 @@ export function useBatchCreateTargets() {
     ],
     onSuccess: ({ data, toast }) => {
       toast.success("toast.target.create.bulkSuccess", { count: data.createdCount || 0 })
+    },
+    onError: ({ error, toast }) => {
+      const responseData = getErrorResponseData(error)
+      const message = getErrorMessage(responseData)
+      const reason = typeof message === "string" ? message.trim() : ""
+
+      if (reason) {
+        toast.error("toast.target.create.errorWithReason", { reason })
+        return
+      }
+
+      toast.errorFromCode(getErrorCode(responseData), "toast.target.create.error")
     },
     errorFallbackKey: "toast.target.create.error",
   })

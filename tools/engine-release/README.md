@@ -124,6 +124,16 @@ unreported entries.
 optional previous-release evolution checks without reading artifacts. Node CI
 guards call these Go commands instead of maintaining a second package schema.
 
+Protected public composition publication passes a strict
+`lunafox.engine-package-version-map.v1` file through `-package-version-map`.
+Each selected Engine gets a SemVer whose build metadata is derived from its
+Runtime/Package input fingerprints. The builder uses that value in
+`package.json` and the canonical archive name, while artifact publication uses
+the archive digest for its mutable Registry tag. It therefore does not derive
+package identity from the product release tag. The legacy `-engine-version`
+flag remains available for local development, where one explicit version for a
+complete package set is still useful.
+
 The production `publish-engine-packages-v2` workflow then publishes each
 validated archive as one canonical OCI artifact: an explicit OCI image-manifest
 root type, one LunaFox package layer, and the OCI empty `{}` config descriptor.

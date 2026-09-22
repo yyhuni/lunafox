@@ -7,7 +7,9 @@ import {
   type ScanConfigValidationHandle,
 } from "@/components/scan/scan-config-view-toggle"
 import type { CompleteWordlistCatalogState } from "@/hooks/use-wordlists"
-import type { ScanWorkflowWithEngines } from "@/types/engine-config.types"
+import { serializeFormValuesToConfig } from "@/components/scan/engine-config-form"
+import type { WorkflowProfileDraft } from "@/lib/workflow-config"
+import type { EngineConfigFormValues, ScanWorkflowWithEngines } from "@/types/engine-config.types"
 
 const wordlistMocks = vi.hoisted(() => ({
   state: undefined as CompleteWordlistCatalogState | undefined,
@@ -153,6 +155,110 @@ describe("ScanConfigViewToggle resources", () => {
     expect(valid).toBe(true)
     expect(screen.queryByText("engineConfigForm.resourceRequired")).not.toBeInTheDocument()
   })
+
+  it("caches an edited disabled-Step draft across a real editor remount without leaking it into canonical YAML", async () => {
+    wordlistMocks.state = catalogState("complete", [
+      wordlistFixture(1, "dns.txt"),
+      wordlistFixture(2, "exclude.txt"),
+      wordlistFixture(3, "session.txt"),
+    ])
+    const onChange = vi.fn()
+    const onValidationChange = vi.fn()
+    const formValuesCacheRef = { current: {} } as React.MutableRefObject<EngineConfigFormValues>
+    let latestConfiguration = configuration("dns.txt", "exclude.txt")
+
+    function SessionConfigProbe() {
+      const [value, setValue] = React.useState(latestConfiguration)
+      const handleChange = React.useCallback((nextValue: string) => {
+        latestConfiguration = nextValue
+        onChange(nextValue)
+        setValue(nextValue)
+      }, [])
+      return (
+        <ScanConfigViewToggle
+          workflow={workflow}
+          configuration={value}
+          onChange={handleChange}
+          onValidationChange={onValidationChange}
+          formValuesCacheRef={formValuesCacheRef}
+        />
+      )
+    }
+
+    const firstView = render(<SessionConfigProbe />)
+    fireEvent.click(screen.getByRole("button", { name: "engineConfigForm.expand" }))
+    await chooseOption(await screen.findByRole("combobox", { name: "wordlist" }), "session.txt")
+    fireEvent.click(screen.getByRole("switch", { name: "Discovery" }))
+
+    await waitFor(() => expect(latestConfiguration).toContain("enabled: false"))
+    expect(formValuesCacheRef.current.discovery.enabled).toBe(false)
+    expect(formValuesCacheRef.current.discovery.sections.recon.params.wordlist).toBe("wordlists/3")
+
+    firstView.unmount()
+    render(
+      <ScanConfigViewToggle
+        workflow={workflow}
+        configuration={latestConfiguration}
+        onChange={onChange}
+        onValidationChange={onValidationChange}
+        formValuesCacheRef={formValuesCacheRef}
+      />
+    )
+
+    await waitFor(() => expect(onValidationChange).toHaveBeenCalledWith(true))
+    expect(onValidationChange.mock.calls.every(([isValid]) => isValid === true)).toBe(true)
+    expect(formValuesCacheRef.current.discovery.sections.recon.params.wordlist).toBe("wordlists/3")
+    expect(serializeFormValuesToConfig(formValuesCacheRef.current)).toEqual({
+      steps: { discovery: { enabled: false } },
+    })
+  })
+
+  it("recovers a missing disabled-Step draft from a strict Profile and rejects invalid fallback paths", async () => {
+    const validCache = { current: {} } as React.MutableRefObject<EngineConfigFormValues>
+    const validValidation = vi.fn()
+    const validView = render(
+      <ScanConfigViewToggle
+        workflow={workflow}
+        configuration={disabledConfiguration()}
+        onChange={vi.fn()}
+        onValidationChange={validValidation}
+        formValuesCacheRef={validCache}
+        workflowProfileDraft={workflowProfileDraft("profile.txt")}
+      />
+    )
+    await waitFor(() => expect(validValidation).toHaveBeenCalledWith(true))
+    expect(validCache.current.discovery.sections.recon.params.wordlist).toBe("profile.txt")
+    validView.unmount()
+
+    const invalidValidation = vi.fn()
+    render(
+      <ScanConfigViewToggle
+        workflow={workflow}
+        configuration={disabledConfiguration()}
+        onChange={vi.fn()}
+        onValidationChange={invalidValidation}
+        formValuesCacheRef={{ current: {} }}
+        workflowProfileDraft={workflowProfileDraft("profile.txt", "scanWorkflows/other")}
+      />
+    )
+    await waitFor(() => expect(invalidValidation).toHaveBeenCalledWith(false))
+  })
+
+  it("keeps an incomplete enabled Step invalid even when cache and Profile are available", async () => {
+    const onValidationChange = vi.fn()
+    render(
+      <ScanConfigViewToggle
+        workflow={workflow}
+        configuration="steps:\n  discovery:\n    enabled: true"
+        onChange={vi.fn()}
+        onValidationChange={onValidationChange}
+        formValuesCacheRef={{ current: disabledSessionValues("session.txt") }}
+        workflowProfileDraft={workflowProfileDraft("profile.txt")}
+      />
+    )
+
+    await waitFor(() => expect(onValidationChange).toHaveBeenCalledWith(false))
+  })
 })
 
 const ControlledConfigProbe = React.forwardRef<ScanConfigValidationHandle>(function ControlledConfigProbe(_, ref) {
@@ -195,6 +301,41 @@ function wordlistFixture(id: number, fileName: string) {
 
 function configuration(wordlist: string, exclude: string): string {
   return `steps:\n  discovery:\n    enabled: true\n    engineConfig:\n      recon:\n        enabled: true\n        wordlist: '${wordlist}'\n        exclude: '${exclude}'`
+}
+
+function disabledConfiguration(): string {
+  return "steps:\n  discovery:\n    enabled: false"
+}
+
+function disabledSessionValues(wordlist: string): EngineConfigFormValues {
+  return {
+    discovery: {
+      enabled: false,
+      sections: {
+        recon: {
+          enabled: true,
+          params: { wordlist, exclude: "exclude.txt" },
+        },
+      },
+    },
+  }
+}
+
+function workflowProfileDraft(
+  wordlist: string,
+  scanWorkflow = "scanWorkflows/default",
+): WorkflowProfileDraft {
+  return {
+    scanWorkflow,
+    steps: {
+      discovery: {
+        enabled: true,
+        engineConfig: {
+          recon: { enabled: true, wordlist, exclude: "exclude.txt" },
+        },
+      },
+    },
+  }
 }
 
 const workflow: ScanWorkflowWithEngines = {

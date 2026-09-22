@@ -88,6 +88,9 @@ func (job *RecoveryJob) RunOnce(ctx context.Context) (*domain.Operation, error) 
 	}
 	event, err := job.reader.ReadCurrent(ctx)
 	if err == nil {
+		// The recovery boundary, rather than a pluggable reader, owns the
+		// provenance marker that enables journal replay validation.
+		event.FromJournal = true
 		operation, reconcileErr := job.service.ReconcileHostEvent(ctx, event)
 		if reconcileErr != nil {
 			return operation, reconcileErr

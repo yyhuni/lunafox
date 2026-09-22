@@ -27,7 +27,7 @@ func TestCreateScheduledScanRequestRejectsLegacyWorkflowFields(t *testing.T) {
 }
 
 func TestCreateScheduledScanRequestAcceptsCanonicalScanWorkflowConfiguration(t *testing.T) {
-	payload := []byte(`{"displayName":"daily","scanWorkflow":"scanWorkflows/default","configuration":{"steps":{"subdomain_discovery":{"engineConfig":{}}}},"target":"targets/7","cronExpression":"0 2 * * *","isEnabled":true}`)
+	payload := []byte(`{"displayName":"daily","scanWorkflow":"scanWorkflows/default","configuration":{"steps":{"subdomain_discovery":{"engineConfig":{}}}},"target":"targets/7","timeZone":"Asia/Shanghai","cronExpression":"0 2 * * *","isEnabled":true}`)
 	var request CreateScheduledScanRequest
 
 	if err := json.Unmarshal(payload, &request); err != nil {
@@ -39,16 +39,19 @@ func TestCreateScheduledScanRequestAcceptsCanonicalScanWorkflowConfiguration(t *
 	if request.ScanWorkflow != "scanWorkflows/default" {
 		t.Fatalf("unexpected scan workflow: %+v", request)
 	}
+	if request.TimeZone != "Asia/Shanghai" {
+		t.Fatalf("unexpected timeZone: %+v", request)
+	}
 	if _, ok := request.Configuration["steps"]; !ok {
 		t.Fatalf("expected object configuration, got %+v", request.Configuration)
 	}
 }
 
-func TestCreateScheduledScanRequestRejectsRetiredTimeZone(t *testing.T) {
+func TestCreateScheduledScanRequestAcceptsTimeZone(t *testing.T) {
 	var request CreateScheduledScanRequest
 	err := json.Unmarshal([]byte(`{"displayName":"daily","scanWorkflow":"scanWorkflows/default","configuration":{},"cronExpression":"0 2 * * *","timeZone":"UTC"}`), &request)
-	if err == nil || !strings.Contains(err.Error(), "timeZone") {
-		t.Fatalf("expected retired timeZone rejection, got %v", err)
+	if err != nil || request.TimeZone != "UTC" {
+		t.Fatalf("expected timeZone to decode, got request=%+v error=%v", request, err)
 	}
 }
 
@@ -89,12 +92,12 @@ func TestBatchUpdateScheduledScansResponseUsesUpdatedCount(t *testing.T) {
 
 func TestScheduledScanResponseSerializesOnlyCanonicalScanWorkflow(t *testing.T) {
 	response := ScheduledScanResponse{
-		ID:                     1,
-		Name:                   "scheduledScans/1",
-		DisplayName:            "daily",
-		ScanWorkflow:           "scanWorkflows/default",
-		Configuration:          map[string]any{"steps": map[string]any{}},
-		CronExpression:         "0 2 * * *",
+		ID:            1,
+		Name:          "scheduledScans/1",
+		DisplayName:   "daily",
+		ScanWorkflow:  "scanWorkflows/default",
+		Configuration: map[string]any{"steps": map[string]any{}},
+		TimeZone:      "UTC", CronExpression: "0 2 * * *",
 		IsEnabled:              true,
 		SuccessfulHandoffCount: 3,
 		FailedHandoffCount:     1,
@@ -113,8 +116,8 @@ func TestScheduledScanResponseSerializesOnlyCanonicalScanWorkflow(t *testing.T) 
 	if decoded["scanWorkflow"] != "scanWorkflows/default" {
 		t.Fatalf("expected canonical scanWorkflow field, got %+v", decoded)
 	}
-	if _, ok := decoded["timeZone"]; ok {
-		t.Fatalf("retired timeZone field must be omitted: %+v", decoded)
+	if decoded["timeZone"] != "UTC" {
+		t.Fatalf("timeZone must be serialized on a scheduled scan: %+v", decoded)
 	}
 	if nextRunTime, ok := decoded["nextRunTime"]; !ok || nextRunTime != nil {
 		t.Fatalf("expected explicit null nextRunTime, got %+v", decoded)

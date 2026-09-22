@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl"
 import {
   clearPendingSuccessOperationId,
   hasShownUpgradeCompletion,
+  isFrontendOnlyUpgrade,
   markUpgradeCompletionShown,
   readPendingSuccessOperationId,
   useUpgradeOperation,
@@ -62,7 +63,10 @@ export function SystemUpgradeCompletionDialog() {
   if (!shouldObserve || !operation.data || operation.data.status !== "succeeded") return null
 
   const completedOperation = operation.data
-  const displayedVersion = completedOperation.currentVersion
+  const frontendOnly = isFrontendOnlyUpgrade(completedOperation)
+  // Legacy FULL records may carry an intentionally empty confirmed version.
+  // Scoped operations are validated at the service boundary and always use it.
+  const displayedVersion = completedOperation.confirmedDeploymentVersion || completedOperation.currentVersion
   const migration = completedOperation.migrationStatus === "not_started"
     ? t("completion.migrationNotRun")
     : completedOperation.migrationStatus
@@ -95,17 +99,32 @@ export function SystemUpgradeCompletionDialog() {
             <dd className={textRole.metadataValueStrong}>{formatDuration(completedOperation.createdAt, completedOperation.completedAt, t)}</dd>
           </div>
           <div className="border-t border-border/70 pt-2">
-            <dt className={textRole.metadataLabel}>{t("completion.migration")}</dt>
-            <dd className={textRole.metadataValueStrong}>{migration}</dd>
+            <dt className={textRole.metadataLabel}>{t("completion.scope")}</dt>
+            <dd className={textRole.metadataValueStrong}>{t(frontendOnly ? "completion.scopeFrontendOnly" : "completion.scopeFull")}</dd>
           </div>
-          <div className="border-t border-border/70 pt-2">
-            <dt className={textRole.metadataLabel}>{t("completion.cancelledWork")}</dt>
-            <dd className={textRole.metadataValueStrong}>{t("completion.cancelledWorkValue", { scans: completedOperation.cancelledScanCount, tasks: completedOperation.cancelledTaskCount })}</dd>
-          </div>
-          <div className="border-t border-border/70 pt-2 sm:col-span-2">
-            <dt className={textRole.metadataLabel}>{t("completion.agents")}</dt>
-            <dd className={textRole.metadataValueStrong}>{t("completion.agentsValue", { ready: completedOperation.agentSummary.ready, expected: completedOperation.agentSummary.expected, missing: completedOperation.agentSummary.missing, unhealthy: completedOperation.agentSummary.unhealthy })}</dd>
-          </div>
+          {!frontendOnly ? (
+            <>
+              <div className="border-t border-border/70 pt-2">
+                <dt className={textRole.metadataLabel}>{t("completion.migration")}</dt>
+                <dd className={textRole.metadataValueStrong}>{migration}</dd>
+              </div>
+              {completedOperation.workDisposition === "cancelled" ? (
+                <div className="border-t border-border/70 pt-2">
+                  <dt className={textRole.metadataLabel}>{t("completion.cancelledWork")}</dt>
+                  <dd className={textRole.metadataValueStrong}>{t("completion.cancelledWorkValue", { scans: completedOperation.cancelledScanCount, tasks: completedOperation.cancelledTaskCount })}</dd>
+                </div>
+              ) : (
+                <div className="border-t border-border/70 pt-2">
+                  <dt className={textRole.metadataLabel}>{t("completion.workDispositionLabel")}</dt>
+                  <dd className={textRole.metadataValueStrong}>{t(`completion.workDisposition.${completedOperation.workDisposition}`)}</dd>
+                </div>
+              )}
+              <div className="border-t border-border/70 pt-2 sm:col-span-2">
+                <dt className={textRole.metadataLabel}>{t("completion.agents")}</dt>
+                <dd className={textRole.metadataValueStrong}>{t("completion.agentsValue", { ready: completedOperation.agentSummary.ready, expected: completedOperation.agentSummary.expected, missing: completedOperation.agentSummary.missing, unhealthy: completedOperation.agentSummary.unhealthy })}</dd>
+              </div>
+            </>
+          ) : null}
         </dl>
         <p className={textRole.bodySubtle}>{t("completion.noReleaseNotes")}</p>
         <DialogFooter>

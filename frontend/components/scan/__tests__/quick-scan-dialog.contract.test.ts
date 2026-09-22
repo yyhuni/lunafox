@@ -50,4 +50,9 @@ describe("quick-scan-dialog contract", () => {
   it("avoids layout-shifting trigger hover motion", () => {
     expect(source).not.toContain("group-hover:translate-x")
   })
+
+  it("passes the quick-scan session draft and Profile through the shared configuration step", () => {
+    expect(source).toContain("formValuesCacheRef={formValuesCacheRef}")
+    expect(source).toContain("workflowProfileDraft={workflowProfileDraft}")
+  })
 })

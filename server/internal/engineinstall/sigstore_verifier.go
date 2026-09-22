@@ -17,6 +17,8 @@ type DigestReferenceSignatureVerifier interface {
 	VerifyReference(context.Context, ociartifact.DigestReference) error
 }
 
+type DigestReferenceSignatureTransportVerifier = ocisignature.DigestReferenceSignatureTransportVerifier
+
 func NewSigstoreKeylessVerifier(policy SigstoreKeylessPolicy, trustedRoot root.TrustedMaterial) (*SigstoreKeylessVerifier, error) {
 	return ocisignature.NewKeylessVerifier(policy, trustedRoot)
 }

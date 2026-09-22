@@ -34,6 +34,7 @@ func (store *scheduledScanStoreCapture) Create(_ context.Context, scan *Schedule
 		TargetID:       scan.TargetID,
 		OrganizationID: scan.OrganizationID,
 		AgentID:        scan.AgentID,
+		TimeZone:       scan.TimeZone,
 		CronExpression: scan.CronExpression,
 		IsEnabled:      scan.IsEnabled,
 		CreatedAt:      time.Date(2026, 5, 20, 0, 0, 0, 0, time.UTC),
@@ -59,6 +60,7 @@ func (store *scheduledScanStoreCapture) Update(_ context.Context, id int, scan *
 		TargetID:       scan.TargetID,
 		OrganizationID: scan.OrganizationID,
 		AgentID:        scan.AgentID,
+		TimeZone:       valueOr(scan.TimeZone, store.loaded.TimeZone),
 		CronExpression: valueOr(scan.CronExpression, "0 2 * * *"),
 		IsEnabled:      true,
 		CreatedAt:      time.Date(2026, 5, 20, 0, 0, 0, 0, time.UTC),
@@ -203,13 +205,13 @@ func TestCreateScheduledScanPersistsInternalWorkflowIDAndStepConfig(t *testing.T
 	service := newScheduledScanServiceForTest(store, scheduledWorkflowStoreForTest())
 
 	result, err := service.Create(context.Background(), &CreateScheduledScanInput{
-		Name:           "daily",
-		ScanWorkflow:   "scanWorkflows/default",
-		Configuration:  completeScheduledConfiguration(),
-		InputSource:    scanapp.InputSourceScanSnapshot,
-		Target:         "targets/7",
-		CronExpression: "0 2 * * *",
-		IsEnabled:      boolPtr(true),
+		Name:          "daily",
+		ScanWorkflow:  "scanWorkflows/default",
+		Configuration: completeScheduledConfiguration(),
+		InputSource:   scanapp.InputSourceScanSnapshot,
+		Target:        "targets/7",
+		TimeZone:      "Asia/Shanghai", CronExpression: "0 19 * * *",
+		IsEnabled: boolPtr(true),
 	})
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
@@ -220,8 +222,51 @@ func TestCreateScheduledScanPersistsInternalWorkflowIDAndStepConfig(t *testing.T
 	if _, ok := store.created.Configuration["steps"]; !ok {
 		t.Fatalf("expected step-scoped configuration persisted, got %+v", store.created.Configuration)
 	}
+	if store.created.TimeZone != "Asia/Shanghai" || store.created.CronExpression != "0 19 * * *" {
+		t.Fatalf("expected submitted wall-clock rule persisted unchanged, got %+v", store.created)
+	}
 	if result.ScanWorkflowID != "default" {
 		t.Fatalf("unexpected result scan workflow: %+v", result)
+	}
+}
+
+func TestScheduledScanCreateRejectsMissingOrInvalidTimeZone(t *testing.T) {
+	for name, timeZone := range map[string]string{
+		"missing": "",
+		"blank":   "   ",
+		"local":   "Local",
+		"offset":  "UTC+8",
+		"unknown": "Mars/Olympus",
+	} {
+		t.Run(name, func(t *testing.T) {
+			store := &scheduledScanStoreCapture{}
+			service := newScheduledScanServiceForTest(store, scheduledWorkflowStoreForTest())
+			_, err := service.Create(context.Background(), &CreateScheduledScanInput{
+				Name:           "daily",
+				ScanWorkflow:   "scanWorkflows/default",
+				Configuration:  completeScheduledConfiguration(),
+				InputSource:    scanapp.InputSourceScanSnapshot,
+				Target:         "targets/7",
+				TimeZone:       timeZone,
+				CronExpression: "0 2 * * *",
+			})
+			if err == nil || store.created != nil {
+				t.Fatalf("Create() = %v store=%+v, want invalid timeZone rejection", err, store.created)
+			}
+		})
+	}
+}
+
+func TestScheduledScanUpdatePersistsTimeZoneOnlyWhenProvided(t *testing.T) {
+	store := &scheduledScanStoreCapture{loaded: &ScheduledScan{ID: 12, Name: "daily", TimeZone: "UTC"}}
+	service := newScheduledScanServiceForTest(store, scheduledWorkflowStoreForTest())
+	timeZone := "Asia/Shanghai"
+
+	if _, err := service.Update(context.Background(), 12, &UpdateScheduledScanInput{TimeZone: &timeZone}); err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+	if store.updated == nil || store.updated.TimeZone == nil || *store.updated.TimeZone != timeZone {
+		t.Fatalf("Update() did not pass the requested timeZone to persistence: %+v", store.updated)
 	}
 }
 
@@ -242,9 +287,9 @@ func TestCreateScheduledScanPersistsCanonicalStepBranches(t *testing.T) {
 				"engineConfig": map[string]any{"must": "be dropped"},
 			},
 		}},
-		InputSource:    scanapp.InputSourceScanSnapshot,
-		Target:         "targets/7",
-		CronExpression: "0 2 * * *",
+		InputSource: scanapp.InputSourceScanSnapshot,
+		Target:      "targets/7",
+		TimeZone:    "UTC", CronExpression: "0 2 * * *",
 	})
 	if err == nil {
 		t.Fatal("expected disabled engineConfig to be rejected before persistence")
@@ -260,9 +305,9 @@ func TestCreateScheduledScanPersistsCanonicalStepBranches(t *testing.T) {
 			},
 			"port_scan": map[string]any{"enabled": false},
 		}},
-		InputSource:    scanapp.InputSourceScanSnapshot,
-		Target:         "targets/7",
-		CronExpression: "0 2 * * *",
+		InputSource: scanapp.InputSourceScanSnapshot,
+		Target:      "targets/7",
+		TimeZone:    "UTC", CronExpression: "0 2 * * *",
 	})
 	if err != nil {
 		t.Fatalf("Create returned error: %v", err)
@@ -280,12 +325,12 @@ func TestCreateScheduledScanRejectsAllUserDisabledWorkflow(t *testing.T) {
 	service := newScheduledScanServiceForTest(&scheduledScanStoreCapture{}, scheduledWorkflowStoreForTest())
 
 	_, err := service.Create(context.Background(), &CreateScheduledScanInput{
-		Name:           "disabled",
-		ScanWorkflow:   "scanWorkflows/default",
-		Configuration:  map[string]any{"steps": map[string]any{"subdomain_discovery": map[string]any{"enabled": false}}},
-		InputSource:    scanapp.InputSourceScanSnapshot,
-		Target:         "targets/7",
-		CronExpression: "0 2 * * *",
+		Name:          "disabled",
+		ScanWorkflow:  "scanWorkflows/default",
+		Configuration: map[string]any{"steps": map[string]any{"subdomain_discovery": map[string]any{"enabled": false}}},
+		InputSource:   scanapp.InputSourceScanSnapshot,
+		Target:        "targets/7",
+		TimeZone:      "UTC", CronExpression: "0 2 * * *",
 	})
 	if err == nil || !strings.Contains(err.Error(), "at least one workflow Step must be enabled") {
 		t.Fatalf("expected all-disabled scheduled scan rejection, got %v", err)
@@ -296,11 +341,11 @@ func TestCreateScheduledScanRejectsManifestTypedRefWorkflow(t *testing.T) {
 	service := newScheduledScanServiceForTest(&scheduledScanStoreCapture{}, scheduledWorkflowStoreForTest())
 
 	_, err := service.Create(context.Background(), &CreateScheduledScanInput{
-		Name:           "daily",
-		ScanWorkflow:   "engine.lunafox.subdomain_discovery",
-		Configuration:  completeScheduledConfiguration(),
-		InputSource:    scanapp.InputSourceScanSnapshot,
-		CronExpression: "0 2 * * *",
+		Name:          "daily",
+		ScanWorkflow:  "engine.lunafox.subdomain_discovery",
+		Configuration: completeScheduledConfiguration(),
+		InputSource:   scanapp.InputSourceScanSnapshot,
+		TimeZone:      "UTC", CronExpression: "0 2 * * *",
 	})
 	if err == nil {
 		t.Fatal("expected manifest typed ref scanWorkflow to fail")
@@ -367,7 +412,7 @@ func TestScheduledScanCreateValidatesResourcesBeforeStore(t *testing.T) {
 			service := NewScheduledScanService(store, scheduledWorkflowStoreForTest()).WithConfigResourceValidator(validator)
 			_, err := service.Create(context.Background(), &CreateScheduledScanInput{
 				Name: "daily", ScanWorkflow: "scanWorkflows/default", Configuration: completeScheduledConfiguration(), InputSource: scanapp.InputSourceScanSnapshot,
-				Target: "targets/7", CronExpression: "0 2 * * *",
+				Target: "targets/7", TimeZone: "UTC", CronExpression: "0 2 * * *",
 			})
 			var typed *scanapp.ConfigResourceValidationError
 			if !errors.As(err, &typed) || typed.ConfigResourceValidationCause() != string(test.cause) {
@@ -468,7 +513,7 @@ func TestScheduledScanSaveFailsClosedWhenValidatorIsNotAssembled(t *testing.T) {
 	service := NewScheduledScanService(store, scheduledWorkflowStoreForTest())
 	_, err := service.Create(context.Background(), &CreateScheduledScanInput{
 		Name: "daily", ScanWorkflow: "scanWorkflows/default", Configuration: completeScheduledConfiguration(), InputSource: scanapp.InputSourceScanSnapshot,
-		Target: "targets/7", CronExpression: "0 2 * * *",
+		Target: "targets/7", TimeZone: "UTC", CronExpression: "0 2 * * *",
 	})
 	var typed *scanapp.ConfigResourceValidationError
 	if !errors.As(err, &typed) || typed.ConfigResourceValidationCause() != string(scanapp.ConfigResourceInternal) || store.created != nil {

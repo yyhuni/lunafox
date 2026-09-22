@@ -80,6 +80,7 @@ vi.mock("@/components/scan/scheduled/scheduled-scan-dialog-state-hooks", () => (
 }))
 
 vi.mock("@/lib/scheduled-scan-helpers", () => ({
+  getBrowserTimeZone: () => "Asia/Shanghai",
   getNextCronExecutions: () => [],
   getConfigConflictMessage: () => null,
   validateScheduledScanStep: () => null,
@@ -142,6 +143,7 @@ describe("useScheduledScanDialogState", () => {
     )
 
     expect(result.current.inputSource).toBe("scanSnapshot")
+    expect(result.current.timeZone).toBe("Asia/Shanghai")
 
     act(() => result.current.setInputSource("targetInventory"))
     expect(result.current.inputSource).toBe("targetInventory")
@@ -177,5 +179,10 @@ describe("useScheduledScanDialogState", () => {
     expect(stateMocks.loadWorkflowProfile).toHaveBeenCalledWith("scanWorkflows/default")
     expect(stateMocks.applyProfileConfiguration).toHaveBeenCalledWith("steps:\n  discovery:\n    enabled: true")
     expect(result.current.selectedScanWorkflowName).toBe("scanWorkflows/default")
+    expect(result.current.workflowProfileDraft).toEqual({
+      scanWorkflow: "scanWorkflows/default",
+      steps: expect.any(Object),
+    })
+    expect(result.current.formValuesCacheRef.current).toEqual({})
   })
 })

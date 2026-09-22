@@ -31,6 +31,7 @@ const AGENT_BUNDLE_FILES = Object.freeze([
   "agent-bundle.sha256",
   "agent-bundle.sigstore.json",
 ]);
+const AGENT_ARTIFACT_ID_RE = /^sha256-[a-f0-9]{64}$/;
 
 function fail(message) {
   throw new Error(message);
@@ -154,12 +155,24 @@ function validateManifest(manifest, policy) {
   }
 }
 
-function validateVersionedAgentBundle(manifest) {
-  const prefix = `agent/bin/${manifest.releaseTag}/`;
+function validateImmutableAgentBundle(manifest, repoRoot) {
   const paths = manifest.files.filter((file) => file.path.startsWith("agent/")).map((file) => file.path).sort();
+  const artifactIds = [...new Set(paths.map((file) => /^agent\/bin\/(sha256-[a-f0-9]{64})\//.exec(file)?.[1]).filter(Boolean))];
+  if (artifactIds.length !== 1 || !AGENT_ARTIFACT_ID_RE.test(artifactIds[0] ?? "")) {
+    fail("public export must contain exactly one immutable Agent artifact directory");
+  }
+  const artifactId = artifactIds[0];
+  const prefix = `agent/bin/${artifactId}/`;
   const expected = AGENT_BUNDLE_FILES.map((name) => `${prefix}${name}`).sort();
   if (JSON.stringify(paths) !== JSON.stringify(expected)) {
-    fail("public export must contain exactly one versioned seven-file Agent bundle");
+    fail("public export must contain exactly one immutable seven-file Agent bundle");
+  }
+  const bundle = readJson(path.join(repoRoot, ...`${prefix}agent-bundle.json`.split("/")), "public Agent bundle manifest");
+  if (bundle.schemaVersion !== "lunafox.agent-bundle.v2" || bundle.artifactId !== artifactId ||
+      bundle.inputFingerprint?.version !== 1 || bundle.inputFingerprint?.algorithm !== "sha256-canonical-json-v1" ||
+      !/^sha256:[a-f0-9]{64}$/.test(bundle.inputFingerprint?.value ?? "") || `sha256-${bundle.inputFingerprint.value.slice("sha256:".length)}` !== artifactId ||
+      bundle.publicTreePath !== `agent/bin/${artifactId}`) {
+    fail("public Agent bundle manifest is not bound to its immutable artifact identity");
   }
 }
 
@@ -171,7 +184,7 @@ function validatePublicExport(options) {
   validateManifest(manifest, policy);
   const documentation = validatePublicDocumentation({ rootDir: repoRoot });
   const releaseNotes = validateReleaseNotes({ rootDir: repoRoot, tag: manifest.releaseTag });
-  if (options.requireAgentBundle) validateVersionedAgentBundle(manifest);
+  if (options.requireAgentBundle) validateImmutableAgentBundle(manifest, repoRoot);
 
   const actualManifest = buildFileManifest(repoRoot, {
     sourceRevisionDigest: manifest.sourceRevisionDigest,
@@ -247,4 +260,4 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   }
 }
 
-export { AGENT_BUNDLE_FILES, validatePublicExport };
+export { AGENT_ARTIFACT_ID_RE, AGENT_BUNDLE_FILES, validatePublicExport };

@@ -70,6 +70,21 @@ func TestStageAndPromotePackagePublishesOnlyAfterValidation(t *testing.T) {
 	}
 }
 
+func TestLoadExactPackageFailsWithoutRepairingMissingExpandedCache(t *testing.T) {
+	cacheRoot := t.TempDir()
+	archive := packageArchiveBytesForTest(t, validPackageCacheEntries(), time.Time{})
+	digest := stageRawPackageArchiveForTest(t, cacheRoot, archive)
+	installer := CacheInstaller{Root: cacheRoot, MaxArchiveBytes: 1 << 20}
+	cacheKey := packageCacheKeyForTest(digest)
+	expandedPath := filepath.Join(cacheRoot, "expanded", cacheKey)
+	if _, err := installer.LoadExactPackage(digest); err == nil {
+		t.Fatal("expected read-only exact load to reject a missing expanded cache")
+	}
+	if _, err := os.Lstat(expandedPath); !os.IsNotExist(err) {
+		t.Fatalf("read-only exact load repaired expanded cache: %v", err)
+	}
+}
+
 func TestStageAndPromotePackageRejectsDescriptorSizeMismatchWithoutCanonicalCache(t *testing.T) {
 	archive := packageArchiveBytesForTest(t, validPackageCacheEntries(), time.Time{})
 	digest, size, err := packagemanifest.ComputePackageDigest(bytes.NewReader(archive))

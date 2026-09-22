@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { TargetValidator } from "@/lib/target-validator"
+import { MAX_TARGET_BATCH_SIZE, TargetValidator } from "@/lib/target-validator"
 
 describe("TargetValidator", () => {
+  it("exports the server-aligned batch maximum", () => {
+    expect(MAX_TARGET_BATCH_SIZE).toBe(5000)
+  })
+
   it("preserves original line numbers when blank lines precede targets", () => {
     const parsed = TargetValidator.parseLines("\n\nbad target\nexample.com")
 

@@ -13,6 +13,7 @@ export interface ScheduledScanValidationInput {
   scanWorkflow: string | null
   configuration: string
   isYamlValid: boolean
+  timeZone: string
   cronExpression: string
 }
 
@@ -22,6 +23,8 @@ export type ScheduledScanValidationError =
   | "form.configurationRequired"
   | "form.noEnabledSteps"
   | "form.yamlInvalid"
+  | "form.timeZoneRequired"
+  | "form.timeZoneInvalid"
   | "form.cronRequired"
   | "toast.selectOrganization"
   | "toast.selectTarget"
@@ -45,19 +48,77 @@ export const isCronExpressionValid = (cronExpression: string): boolean => {
   }
 }
 
+const fixedOffsetTimeZonePattern = /^(?:UTC|GMT)?[+-]\d{1,2}(?::?\d{2})?$/i
+
+export const isIanaTimeZoneValid = (timeZone: string): boolean => {
+  const zone = timeZone.trim()
+  if (!zone || zone === "Local" || fixedOffsetTimeZonePattern.test(zone)) return false
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: zone }).format()
+    return true
+  } catch {
+    return false
+  }
+}
+
+export const getBrowserTimeZone = (): string => {
+  if (typeof Intl === "undefined") return ""
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? ""
+  return isIanaTimeZoneValid(timeZone) ? timeZone : ""
+}
+
+export const formatScheduledScanInstant = (
+  dateString: string,
+  locale: string,
+  viewerTimeZone: string = getBrowserTimeZone()
+): string => {
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) return "-"
+
+  return date.toLocaleString(locale, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    ...(viewerTimeZone ? { timeZone: viewerTimeZone } : {}),
+  })
+}
+
+export const getSupportedTimeZones = (selectedTimeZone?: string): string[] => {
+  let supported: string[] = []
+  try {
+    supported = Intl.supportedValuesOf("timeZone")
+  } catch {
+    // Older browsers still let a valid selected zone be displayed and validated.
+  }
+
+  const zones = new Set(["UTC", ...supported])
+  const selected = selectedTimeZone?.trim()
+  if (selected && isIanaTimeZoneValid(selected)) zones.add(selected)
+
+  return [...zones].sort((left, right) => {
+    if (left === "UTC") return -1
+    if (right === "UTC") return 1
+    return left.localeCompare(right)
+  })
+}
+
 export const getNextCronExecutions = (
   cronExpression: string,
+  timeZone: string,
   currentDate: Date = new Date(),
   count: number = 3
 ): Date[] => {
-  if (!isCronExpressionValid(cronExpression) || count <= 0) {
+  if (!isCronExpressionValid(cronExpression) || !isIanaTimeZoneValid(timeZone) || count <= 0) {
     return []
   }
 
   try {
     const interval = CronExpressionParser.parse(cronExpression.trim(), {
       currentDate,
-      tz: "UTC",
+      tz: timeZone.trim(),
     })
     return Array.from({ length: count }, () => interval.next().toDate())
   } catch {
@@ -78,6 +139,7 @@ export const validateScheduledScanStep = (
     scanWorkflow,
     configuration,
     isYamlValid,
+    timeZone,
     cronExpression,
   } = input
 
@@ -97,6 +159,8 @@ export const validateScheduledScanStep = (
       if (hasNoEnabledWorkflowSteps(configuration)) return "form.noEnabledSteps"
       return null
     case 4:
+      if (!timeZone.trim()) return "form.timeZoneRequired"
+      if (!isIanaTimeZoneValid(timeZone)) return "form.timeZoneInvalid"
       return isCronExpressionValid(cronExpression) ? null : "form.cronRequired"
     default:
       return null

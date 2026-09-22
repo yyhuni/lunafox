@@ -33,6 +33,11 @@ var (
 	// ErrDeploymentLockHeld means another owner holds the deployment lock. The
 	// caller must fail closed instead of mutating the deployment.
 	ErrDeploymentLockHeld = errors.New("deployment lock is held by another owner")
+	// ErrDeploymentLockNotOwned means the current daemon cannot prove that the
+	// requested operation still owns the deployment lock. Mutating confirmation
+	// state without this proof could promote a staged deployment after a
+	// lifecycle command took over the deployment.
+	ErrDeploymentLockNotOwned = errors.New("upgrade operation does not own the deployment lock")
 	// ErrDeploymentLockInvalid means the lock exists but cannot be trusted. It is
 	// never repaired automatically, because a crash residue must stay visible.
 	ErrDeploymentLockInvalid = errors.New("deployment lock metadata is invalid")
@@ -233,6 +238,16 @@ func (lock *DeploymentLock) MarkRecoveryFence() error {
 // the operation reached a terminal stage that needs no recovery.
 func (lock *DeploymentLock) Release() error {
 	if lock == nil {
+		return nil
+	}
+	metadata, exists, err := ReadDeploymentLock(filepath.Dir(lock.directory))
+	if err != nil {
+		return fmt.Errorf("release deployment lock: %w", err)
+	}
+	if !exists || metadata.Owner != deploymentLockOwnerUpgrade || metadata.OperationID != lock.operationID {
+		// Another owner may have taken over after this wrapper became stale. A
+		// stale upgrader must never remove that owner's lock; treat the release as
+		// an idempotent no-op and leave the visible fence intact.
 		return nil
 	}
 	var firstErr error

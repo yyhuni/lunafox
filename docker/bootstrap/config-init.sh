@@ -16,6 +16,7 @@ DB_SSLMODE="${DB_SSLMODE:-}"
 DB_PASSWORD_FILE="$CONFIG_DIR/db-password"
 JWT_SECRET_FILE="$CONFIG_DIR/jwt-secret"
 DATABASE_MODE_FILE="$CONFIG_DIR/database-mode"
+CONFIGURATION_CHANGE_GUIDE_URL="https://github.com/yyhuni/lunafox/blob/main/docs/public-deployment.md#configuration-changes-after-first-start"
 
 fail() {
 	printf 'LunaFox configuration initialization failed: %s\n' "$*" >&2
@@ -105,8 +106,10 @@ validate_persisted_mode() {
 	embedded | external) ;;
 	*) fail "persisted database mode is invalid" ;;
 	esac
+	# A mode change can point consumers at a different data store; ordinary
+	# Compose restarts must never infer or perform that migration.
 	[ "$persisted_mode" = "$DATABASE_MODE" ] ||
-		fail "DATABASE_MODE conflicts with the persisted value; use a separate database migration procedure"
+		fail "DATABASE_MODE conflicts with the persisted value; online database-mode migration is unsupported; restore the original value or create a new deployment; see $CONFIGURATION_CHANGE_GUIDE_URL"
 }
 
 input_has_value() {
@@ -115,8 +118,10 @@ input_has_value() {
 
 verify_existing_input() {
 	local persisted="$1" input="$2" label="$3"
+	# Persisted credentials are the binding for every dependent service; replacing
+	# them during a restart would desynchronize the deployment's consumers.
 	if [ -e "$persisted" ] && input_has_value "$input" && ! cmp -s "$persisted" "$input"; then
-		fail "$label input conflicts with the persisted value; restore the original input or use an explicit rotation procedure"
+		fail "$label input conflicts with the persisted value; online credential rotation is unsupported; restore the original input or create a new deployment; see $CONFIGURATION_CHANGE_GUIDE_URL"
 	fi
 }
 

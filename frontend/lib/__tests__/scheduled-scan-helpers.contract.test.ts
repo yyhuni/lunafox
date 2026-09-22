@@ -9,12 +9,14 @@ describe("scheduled-scan-helpers contract", () => {
     expect(source).toContain("export type ScheduledScanSelectionMode = \"organization\" | \"target\"")
   })
 
-  it("owns strict five-field Cron and UTC previews", () => {
+  it("owns strict five-field Cron and IANA-zone previews", () => {
     expect(source).toContain('expression.startsWith("@")')
     expect(source).toContain("parts.length !== 5")
     expect(source).toContain("CronExpressionParser.parse(expression)")
-    expect(source).toContain('tz: "UTC"')
-    expect(source).not.toContain("Intl.supportedValuesOf")
+    expect(source).toContain("isIanaTimeZoneValid")
+    expect(source).toContain("getBrowserTimeZone")
+    expect(source).toContain("Intl.supportedValuesOf")
+    expect(source).toContain("tz: timeZone.trim()")
   })
 
   it("validates the current Workflow reference without a removed preset identity", () => {

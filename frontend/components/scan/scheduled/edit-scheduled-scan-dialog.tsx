@@ -44,6 +44,7 @@ export function EditScheduledScanDialog({
     selectedTargetId,
     selectedAgentID,
     inputSource,
+    timeZone,
     cronExpression,
     setCronExpression,
     configuration,
@@ -61,6 +62,9 @@ export function EditScheduledScanDialog({
     isLoadingWorkflows,
     isWorkflowsError,
     isWorkflowConfigLoading,
+    isWorkflowProfileLoading,
+    formValuesCacheRef,
+    workflowProfileDraft,
     handleWorkflowNamesChange,
     handleConfigSync,
     handleManualConfigChange,
@@ -69,7 +73,10 @@ export function EditScheduledScanDialog({
     handleTargetSelect,
     setSelectedAgentID,
     setInputSource,
+    setTimeZone,
     handleSubmit,
+    getCronDescription,
+    getNextExecutions,
   } = useEditScheduledScanDialogState({
     open,
     scheduledScan,
@@ -156,10 +163,14 @@ export function EditScheduledScanDialog({
 
             <EditScheduledScanCronSection
               t={t}
+              timeZone={timeZone}
+              onTimeZoneChange={setTimeZone}
               cronExpression={cronExpression}
               onCronChange={setCronExpression}
               cronPresets={cronPresets}
               onPresetSelect={setCronExpression}
+              getCronDescription={getCronDescription}
+              getNextExecutions={getNextExecutions}
               disabled={isPending}
             />
           </div>
@@ -179,12 +190,15 @@ export function EditScheduledScanDialog({
             engineCatalogDetails={engineCatalogDetails}
             isEngineCatalogLoading={isEngineCatalogLoading}
             isEngineCatalogError={isEngineCatalogError}
+            isWorkflowProfileLoading={isWorkflowProfileLoading}
             isSubmitting={isPending || isWorkflowConfigLoading}
             onConfigSync={handleConfigSync}
             onConfigChange={handleManualConfigChange}
             onResetConfig={() => void handleResetWorkflowConfig()}
             onYamlValidationChange={handleYamlValidationChange}
             configValidationRef={configValidationRef}
+            formValuesCacheRef={formValuesCacheRef}
+            workflowProfileDraft={workflowProfileDraft}
           />
         </TabsContent>
       </Tabs>

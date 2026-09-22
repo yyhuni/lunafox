@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -268,6 +269,95 @@ func TestAgentVerificationRecoversAtVerifyingWithOriginalManifestTarget(t *testi
 	}
 	if agentSource.notifyCalls != 1 {
 		t.Fatalf("recovered update_required notifications = %d, want 1", agentSource.notifyCalls)
+	}
+}
+
+func TestFrontendOnlyVerificationConfirmsHostBaselineBeforeSucceeded(t *testing.T) {
+	manifest, err := LoadReleaseManifest(fixturePath("release.manifest.yaml"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest, err := manifest.RuntimeImageDigest("frontend")
+	if err != nil {
+		t.Fatal(err)
+	}
+	planDigest := "sha256:" + strings.Repeat("a", 64)
+	baselineDigest := "sha256:" + strings.Repeat("b", 64)
+	dispatcher := &upgradeDispatcherStub{}
+	service, repository := newUpgradeServiceForTest(t, dispatcher)
+	service.verifier = &agentVerificationVerifierStub{passed: true}
+	now := time.Date(2026, 9, 13, 15, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return now }
+	operation := &domain.Operation{
+		OperationID: "dddddddd-dddd-4ddd-8ddd-dddddddddddd", RequestID: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+		OperatorID: 7, ManifestID: manifest.Upgrade.ManifestID, ManifestDigest: manifest.Digest(), ReleaseVersion: manifest.ReleaseVersion,
+		CompatibilityRange: manifest.Upgrade.CompatibilityRange, Status: domain.StatusVerifying, MigrationStatus: domain.MigrationStatusNotStarted,
+		MigrationType: "none", ExecutionMode: domain.ExecutionModeFrontendOnly, WorkDisposition: domain.WorkDispositionNotRequired,
+		PlanSummary: domain.PlanSummary{TouchedServices: []string{"frontend"}}, PlanDigest: planDigest,
+		BaselineDeploymentDigest: baselineDigest, ConfirmedDeploymentVersion: "1.0.0",
+		ObservedDigests: map[string]string{"frontend": digest}, StageTimes: map[domain.Status]time.Time{domain.StatusVerifying: now}, CreatedAt: now, UpdatedAt: now,
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+
+	updated, err := service.verifyDeployment(context.Background(), operation, manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != domain.StatusSucceeded || len(dispatcher.requests) != 1 || dispatcher.requests[0].Action != HostUpgradeActionConfirm {
+		t.Fatalf("frontend confirmation result operation=%#v requests=%#v", updated, dispatcher.requests)
+	}
+}
+
+func TestFrontendOnlyConfirmationFailureDoesNotClaimSucceeded(t *testing.T) {
+	manifest, err := LoadReleaseManifest(fixturePath("release.manifest.yaml"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest, err := manifest.RuntimeImageDigest("frontend")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dispatcher := &upgradeDispatcherStub{err: errors.New("socket unavailable")}
+	service, repository := newUpgradeServiceForTest(t, dispatcher)
+	service.verifier = &agentVerificationVerifierStub{passed: true}
+	now := time.Date(2026, 9, 13, 16, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return now }
+	operation := &domain.Operation{
+		OperationID: "ffffffff-ffff-4fff-8fff-ffffffffffff", RequestID: "12121212-1212-4121-8121-121212121212",
+		OperatorID: 7, ManifestID: manifest.Upgrade.ManifestID, ManifestDigest: manifest.Digest(), ReleaseVersion: manifest.ReleaseVersion,
+		CompatibilityRange: manifest.Upgrade.CompatibilityRange, Status: domain.StatusVerifying, MigrationStatus: domain.MigrationStatusNotStarted,
+		MigrationType: "none", ExecutionMode: domain.ExecutionModeFrontendOnly, WorkDisposition: domain.WorkDispositionNotRequired,
+		PlanSummary: domain.PlanSummary{TouchedServices: []string{"frontend"}}, PlanDigest: "sha256:" + strings.Repeat("a", 64),
+		BaselineDeploymentDigest: "sha256:" + strings.Repeat("b", 64), ConfirmedDeploymentVersion: "1.0.0",
+		ObservedDigests: map[string]string{"frontend": digest}, StageTimes: map[domain.Status]time.Time{domain.StatusVerifying: now}, CreatedAt: now, UpdatedAt: now,
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+
+	updated, err := service.verifyDeployment(context.Background(), operation, manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != domain.StatusVerifying || updated.Diagnostic == "" || len(dispatcher.requests) != 1 || dispatcher.requests[0].Action != HostUpgradeActionConfirm {
+		t.Fatalf("failed confirmation result operation=%#v requests=%#v", updated, dispatcher.requests)
+	}
+}
+
+func TestMergeObservedDigestsKeepsFrontendOnlyEvidenceScoped(t *testing.T) {
+	operation := &domain.Operation{ExecutionMode: domain.ExecutionModeFrontendOnly}
+	frontendDigest := "sha256:" + strings.Repeat("a", 64)
+	otherDigest := "sha256:" + strings.Repeat("b", 64)
+	mergeObservedDigests(operation, map[string]string{
+		"frontend":       frontendDigest,
+		"server":         otherDigest,
+		"nginx":          otherDigest,
+		"publicFrontend": otherDigest,
+	})
+	if len(operation.ObservedDigests) != 1 || operation.ObservedDigests["frontend"] != frontendDigest {
+		t.Fatalf("frontend-only verifier evidence widened scope: %#v", operation.ObservedDigests)
 	}
 }
 

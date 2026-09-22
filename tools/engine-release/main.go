@@ -15,28 +15,63 @@ func main() {
 	command := flag.String("command", "", "discover, validate-build-results, build-packages, validate-package-build-results, or validate-package-artifacts")
 	engineRoot := flag.String("engine-root", "./extensions/engines", "builtin engine source root")
 	engineID := flag.String("engine-id", "", "optional canonical Engine selection for discover and validate-build-results")
+	engineIDs := flag.String("engine-ids", "", "optional comma-separated canonical Engine selection for build-packages and validate-package-artifacts")
 	resultsPath := flag.String("build-results", "", "verified runtime image build results JSON")
 	packageResultsPath := flag.String("package-build-results", "", "Engine Package build results JSON")
 	previousPackageResultsPath := flag.String("previous-package-build-results", "", "optional previous Engine Package build results JSON")
 	engineVersion := flag.String("engine-version", "", "Engine Package v2 version")
+	packageVersionMapPath := flag.String("package-version-map", "", "content-addressed per-Engine Package version map JSON")
 	outRoot := flag.String("out-root", "./dist/engine-packages", "expanded/archive package output root")
 	mode := flag.String("mode", "", "expected build result mode: development or production")
 	output := flag.String("output", "", "optional JSON output path; stdout by default")
 	flag.Parse()
 
-	if err := runCommand(*command, *engineRoot, *engineID, *resultsPath, *packageResultsPath, *previousPackageResultsPath, *engineVersion, *outRoot, *mode, *output, os.Stdout); err != nil {
+	if err := runCommandWithEngineIDsAndVersionMap(*command, *engineRoot, *engineID, *engineIDs, *resultsPath, *packageResultsPath, *previousPackageResultsPath, *engineVersion, *packageVersionMapPath, *outRoot, *mode, *output, os.Stdout); err != nil {
 		log.Print(err)
 		os.Exit(1)
 	}
 }
 
 func runCommand(command, engineRoot, selectedEngineID, resultsPath, packageResultsPath, previousPackageResultsPath, version, outRoot, expectedMode, outputPath string, stdout io.Writer) error {
+	return runCommandWithEngineIDsAndVersionMap(command, engineRoot, selectedEngineID, "", resultsPath, packageResultsPath, previousPackageResultsPath, version, "", outRoot, expectedMode, outputPath, stdout)
+}
+
+func runCommandWithEngineIDs(command, engineRoot, selectedEngineID, selectedEngineIDs, resultsPath, packageResultsPath, previousPackageResultsPath, version, outRoot, expectedMode, outputPath string, stdout io.Writer) error {
+	return runCommandWithEngineIDsAndVersionMap(command, engineRoot, selectedEngineID, selectedEngineIDs, resultsPath, packageResultsPath, previousPackageResultsPath, version, "", outRoot, expectedMode, outputPath, stdout)
+}
+
+func runCommandWithEngineIDsAndVersionMap(command, engineRoot, selectedEngineID, selectedEngineIDs, resultsPath, packageResultsPath, previousPackageResultsPath, version, packageVersionMapPath, outRoot, expectedMode, outputPath string, stdout io.Writer) error {
 	command = strings.TrimSpace(command)
 	if command == "" {
 		return fmt.Errorf("-command is required")
 	}
+	if selectedEngineID != "" && selectedEngineIDs != "" {
+		return fmt.Errorf("-engine-id and -engine-ids cannot be used together")
+	}
+	if packageVersionMapPath != "" && command != "build-packages" && command != "validate-package-build-results" && command != "validate-package-artifacts" {
+		return fmt.Errorf("-package-version-map is only supported by package commands")
+	}
+	var packageVersionMap map[string]string
+	var packageVersionMapDocument *PackageVersionMap
+	if strings.TrimSpace(packageVersionMapPath) != "" {
+		value, err := readPackageVersionMap(packageVersionMapPath)
+		if err != nil {
+			return err
+		}
+		packageVersionMapDocument = &value
+		packageVersionMap = make(map[string]string, len(value.Versions))
+		for _, entry := range value.Versions {
+			packageVersionMap[entry.EngineID] = entry.PackageVersion
+		}
+		if strings.TrimSpace(version) != "" {
+			return fmt.Errorf("-engine-version and -package-version-map cannot be used together")
+		}
+	}
 	switch command {
 	case "discover":
+		if selectedEngineIDs != "" {
+			return fmt.Errorf("-engine-ids is only supported by build-packages and validate-package-artifacts")
+		}
 		discovery, err := discoverEngineSources(engineRoot)
 		if err != nil {
 			return err
@@ -54,11 +89,14 @@ func runCommand(command, engineRoot, selectedEngineID, resultsPath, packageResul
 		if err := rejectSelectedEngineForPackageCommand(command, selectedEngineID); err != nil {
 			return err
 		}
+		if selectedEngineIDs != "" {
+			return fmt.Errorf("-engine-ids is only supported by build-packages and validate-package-artifacts")
+		}
 		packageResults, err := readPackageBuildResults(packageResultsPath)
 		if err != nil {
 			return err
 		}
-		if err := validatePackageBuildResultsShape(packageResults, strings.TrimSpace(expectedMode)); err != nil {
+		if err := validatePackageBuildResultsShapeWithVersions(packageResults, strings.TrimSpace(expectedMode), packageVersionMap); err != nil {
 			return err
 		}
 		if strings.TrimSpace(previousPackageResultsPath) != "" {
@@ -66,7 +104,7 @@ func runCommand(command, engineRoot, selectedEngineID, resultsPath, packageResul
 			if err != nil {
 				return err
 			}
-			if err := validatePackageReleaseEvolution(previous, packageResults); err != nil {
+			if err := validatePackageReleaseEvolutionWithVersions(previous, packageResults, packageVersionMap); err != nil {
 				return err
 			}
 		}
@@ -80,6 +118,8 @@ func runCommand(command, engineRoot, selectedEngineID, resultsPath, packageResul
 			if err := rejectSelectedEngineForPackageCommand(command, selectedEngineID); err != nil {
 				return err
 			}
+		} else if selectedEngineIDs != "" {
+			return fmt.Errorf("-engine-ids is only supported by build-packages and validate-package-artifacts")
 		}
 		discovery, err := discoverEngineSources(engineRoot)
 		if err != nil {
@@ -88,6 +128,16 @@ func runCommand(command, engineRoot, selectedEngineID, resultsPath, packageResul
 		if command == "validate-build-results" {
 			discovery, err = selectEngineDiscovery(discovery, selectedEngineID)
 			if err != nil {
+				return err
+			}
+		} else {
+			discovery, err = selectEngineDiscoverySet(discovery, selectedEngineIDs)
+			if err != nil {
+				return err
+			}
+		}
+		if packageVersionMap != nil {
+			if _, err := packageVersionsForDiscovery(*packageVersionMapDocument, discovery); err != nil {
 				return err
 			}
 		}
@@ -117,7 +167,7 @@ func runCommand(command, engineRoot, selectedEngineID, resultsPath, packageResul
 			if err != nil {
 				return err
 			}
-			if err := validatePackageArtifacts(discovery, results, packageResults, outRoot, packageResultsPath, strings.TrimSpace(expectedMode)); err != nil {
+			if err := validatePackageArtifactsWithVersionMap(discovery, results, packageResults, outRoot, packageResultsPath, strings.TrimSpace(expectedMode), packageVersionMap); err != nil {
 				return err
 			}
 			if strings.TrimSpace(previousPackageResultsPath) != "" {
@@ -125,7 +175,7 @@ func runCommand(command, engineRoot, selectedEngineID, resultsPath, packageResul
 				if err != nil {
 					return err
 				}
-				if err := validatePackageReleaseEvolution(previous, packageResults); err != nil {
+				if err := validatePackageReleaseEvolutionWithVersions(previous, packageResults, packageVersionMap); err != nil {
 					return err
 				}
 			}
@@ -135,7 +185,7 @@ func runCommand(command, engineRoot, selectedEngineID, resultsPath, packageResul
 			}
 			return writeCommandOutput(outputPath, append(payload, '\n'), stdout)
 		}
-		artifacts, err := buildPackages(discovery, results, version, outRoot)
+		artifacts, err := buildPackagesWithVersionMap(discovery, results, version, packageVersionMap, outRoot)
 		if err != nil {
 			return err
 		}
@@ -174,6 +224,45 @@ func rejectSelectedEngineForPackageCommand(command, selectedEngineID string) err
 		return nil
 	}
 	return fmt.Errorf("-engine-id is only supported by discover and validate-build-results; %s requires the complete discovered Engine set", command)
+}
+
+// selectEngineDiscoverySet narrows a source-bound discovery to a canonical
+// subset. Package generation accepts this only after the protected workflow
+// derives the exact built set from the immutable composition plan; callers
+// cannot use it to silently reinterpret one selected Engine as a full fleet.
+func selectEngineDiscoverySet(discovery Discovery, selectedEngineIDs string) (Discovery, error) {
+	if selectedEngineIDs == "" {
+		return discovery, nil
+	}
+	if strings.TrimSpace(selectedEngineIDs) != selectedEngineIDs {
+		return Discovery{}, fmt.Errorf("-engine-ids must not contain surrounding whitespace")
+	}
+	requested := strings.Split(selectedEngineIDs, ",")
+	if len(requested) == 0 {
+		return Discovery{}, fmt.Errorf("-engine-ids must contain one or more canonical discovered engineId values")
+	}
+	available := make(map[string]EngineSource, len(discovery.Engines))
+	for _, source := range discovery.Engines {
+		available[source.EngineID] = source
+	}
+	selected := make([]EngineSource, 0, len(requested))
+	lastID := ""
+	for _, engineID := range requested {
+		if engineID == "" || strings.TrimSpace(engineID) != engineID {
+			return Discovery{}, fmt.Errorf("-engine-ids must contain canonical discovered engineId values without whitespace")
+		}
+		if lastID != "" && engineID <= lastID {
+			return Discovery{}, fmt.Errorf("-engine-ids must be strictly sorted and unique")
+		}
+		source, ok := available[engineID]
+		if !ok {
+			return Discovery{}, fmt.Errorf("-engine-ids contains unknown discovered engineId %q", engineID)
+		}
+		selected = append(selected, source)
+		lastID = engineID
+	}
+	discovery.Engines = selected
+	return discovery, nil
 }
 
 func readPackageBuildResults(path string) (PackageBuildResults, error) {

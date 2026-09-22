@@ -320,6 +320,7 @@ export {
   getMockUpdateCheckResult,
   createMockUpgradeOperation,
   getMockUpgradeOperation,
+  getMockUpgradeOperationFull,
   observeMockUpgradeOperation,
   stopMockUpgradeOperation,
   retryMockUpgradeOperation,

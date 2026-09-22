@@ -337,6 +337,7 @@ export function ScheduledScanDataTableLoadingState({
       everyDay: tScan.raw("cron.everyDay") as string,
       everyWeek: tScan.raw("cron.everyWeek") as string,
       everyMonth: tScan.raw("cron.everyMonth") as string,
+      inTimeZone: tScan.raw("cron.inTimeZone") as string,
       weekdays: tScan.raw("cron.weekdays") as string[],
     },
   } satisfies ScheduledScanTranslations

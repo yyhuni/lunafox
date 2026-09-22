@@ -13,24 +13,58 @@ import {
   waitForPullRequestValidation,
   waitForValidation,
 } from "./publish-public-deployment.mjs";
+import { compositionCorePayload, FINGERPRINT_SCHEMA_VERSION, sha256Digest } from "./resolve-release-component-composition.mjs";
 
 const TAG = "v1.2.3-alpha.4";
 const SOURCE_SHA = "a".repeat(40);
 const COMMIT_SHA = "b".repeat(40);
 const MERGE_SHA = "c".repeat(40);
 
+function fingerprint(componentId) {
+  const inputs = {
+    schemaVersion: FINGERPRINT_SCHEMA_VERSION, componentId, kind: componentId.split(".")[0], contextPath: ".",
+    dockerfile: `${componentId.replaceAll(".", "/")}/Dockerfile`, dockerignore: "",
+    files: [], namedContexts: {}, buildArgs: {}, platforms: ["linux/amd64", "linux/arm64"],
+    baseImages: [], baseImagesResolved: true, builderPolicy: {}, generatedInputs: [],
+  };
+  return { version: FINGERPRINT_SCHEMA_VERSION, algorithm: "sha256-canonical-json-v1", digest: sha256Digest(inputs), baseImagesResolved: true, inputs };
+}
+
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "lunafox-deployment-publication-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const env = "RELEASE_REGISTRY=docker.io\n";
+  const compositionValue = {
+    schemaVersion: 1,
+    kind: "lunafox.runtime-composition",
+    releaseTag: TAG,
+    components: [{
+      id: "runtime.frontend",
+      kind: "runtime",
+      name: "frontend",
+      inputFingerprint: fingerprint("runtime.frontend"),
+      artifact: { ref: `ghcr.io/yyhuni/lunafox-frontend@sha256:${"a".repeat(64)}`, digest: `sha256:${"a".repeat(64)}` },
+      disposition: "built",
+      sourceRelease: { tag: TAG },
+      evidence: { image: "image.json", provenance: "provenance.json", sbom: "sbom.json", signature: "signature.json" },
+    }],
+    capabilities: { dynamicFrontendUpstream: true },
+  };
+  compositionValue.compositionDigest = sha256Digest(compositionCorePayload(compositionValue));
   const files = {
     ".env": env,
     ".env.example": env,
     "compose.yaml": "services:\n  server:\n    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-server@sha256:" + "d".repeat(64) + "\n",
     "engine-inventory.yaml": "enginePackages: []\n",
-    "release.manifest.yaml": 'releaseVersion: "1.2.3-alpha.4"\n',
+    "release.manifest.yaml": `releaseVersion: "1.2.3-alpha.4"\nreleaseNotes:\n  digest: "sha256:4406112ce062dd05feacce5f519b8cb7250fd01c7237c43e0f7335da912e8188"\n  body: |\n    ## English\n\n    - Test release notes.\n\n    ## 简体中文\n\n    - 测试发布说明。\nruntimeComposition:\n  schemaVersion: 1\n  asset: "runtime-composition.json"\n  sha256: "${compositionValue.compositionDigest}"\n`,
   };
   for (const [name, content] of Object.entries(files)) fs.writeFileSync(path.join(root, name), content);
+  // The reverse manifest binding is added after the manifest bytes are fixed;
+  // it is excluded from compositionDigest to avoid a circular hash.
+  compositionValue.manifestBinding = {
+    manifestDigest: sha256Digest(fs.readFileSync(path.join(root, "release.manifest.yaml"))),
+  };
+  fs.writeFileSync(path.join(root, "runtime-composition.json"), `${JSON.stringify(compositionValue, null, 2)}\n`);
   return root;
 }
 

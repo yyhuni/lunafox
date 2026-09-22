@@ -15,15 +15,28 @@ type TooltipContentProps = React.ComponentProps<typeof TooltipPrimitive.Popup> &
     container?: React.ComponentProps<typeof TooltipPrimitive.Portal>["container"]
   }
 
-function TooltipProvider({
-  delay = 0,
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
+const TOOLTIP_OPEN_DELAY_MS = 400
+const TOOLTIP_CLOSE_DELAY_MS = 0
+const TOOLTIP_ADJACENT_SWITCH_TIMEOUT_MS = 400
+
+type TooltipProviderProps = Omit<
+  React.ComponentProps<typeof TooltipPrimitive.Provider>,
+  "delay" | "closeDelay" | "timeout"
+>
+
+type TooltipTriggerProps = Omit<
+  React.ComponentProps<typeof TooltipPrimitive.Trigger>,
+  "delay" | "closeDelay" | "timeout"
+>
+
+function TooltipProvider(props: TooltipProviderProps) {
   return (
     <TooltipPrimitive.Provider
-      data-slot="tooltip-provider"
-      delay={delay}
       {...props}
+      data-slot="tooltip-provider"
+      delay={TOOLTIP_OPEN_DELAY_MS}
+      closeDelay={TOOLTIP_CLOSE_DELAY_MS}
+      timeout={TOOLTIP_ADJACENT_SWITCH_TIMEOUT_MS}
     />
   )
 }
@@ -34,9 +47,7 @@ function Tooltip({
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />
 }
 
-function TooltipTrigger({
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
+function TooltipTrigger(props: TooltipTriggerProps) {
   return (
     <TooltipPrimitive.Trigger
       data-slot="tooltip-trigger"

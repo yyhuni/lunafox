@@ -70,6 +70,8 @@ export function QuickScanDialog({ trigger }: QuickScanDialogProps) {
     isEngineCatalogError,
     hasConfig,
     hasNoEnabledSteps,
+    formValuesCacheRef,
+    workflowProfileDraft,
     handleConfigSync,
     handleManualConfigChange,
     handleResetWorkflowConfig,
@@ -212,6 +214,8 @@ export function QuickScanDialog({ trigger }: QuickScanDialogProps) {
                   onConfigChange={handleManualConfigChange}
                   onResetConfig={handleResetWorkflowConfig}
                   onYamlValidationChange={handleYamlValidationChange}
+                  formValuesCacheRef={formValuesCacheRef}
+                  workflowProfileDraft={workflowProfileDraft}
                 />
               )}
             </section>

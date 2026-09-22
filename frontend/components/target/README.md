@@ -8,6 +8,10 @@
 - The shared `BulkLineValidationInput` remains the primary task and owns line
   numbering, validation highlights, and input feedback. Do not rebuild its
   textarea shell locally.
+- `TargetValidator.parseLines` owns both the visible batch count and submitted
+  target array. `MAX_TARGET_BATCH_SIZE` mirrors the server maximum of 5,000;
+  larger batches must remain locally blocked and must not be split into
+  multiple requests by the drawer.
 - Organization association is optional and adapts the organization-domain
   `OrganizationSelectionWorkspace` in `multiple` mode. The target module owns
   organization queries and the submitted `organizationIds` state, but it must

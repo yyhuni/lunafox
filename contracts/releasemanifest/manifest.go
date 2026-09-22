@@ -10,6 +10,7 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/blang/semver"
 	"github.com/yyhuni/lunafox/contracts/ociartifact"
@@ -20,12 +21,23 @@ import (
 // Manifest is a strict, immutable deployment inventory. Its digest is the
 // SHA-256 of the exact YAML bytes accepted by Parse or Load.
 type Manifest struct {
-	ReleaseVersion string          `yaml:"releaseVersion"`
-	RuntimeImages  []RuntimeImage  `yaml:"runtimeImages"`
-	EnginePackages []EnginePackage `yaml:"enginePackages"`
-	Upgrade        UpgradeMetadata `yaml:"upgrade"`
+	ReleaseVersion     string             `yaml:"releaseVersion"`
+	ReleaseNotes       *ReleaseNotes      `yaml:"releaseNotes,omitempty"`
+	RuntimeImages      []RuntimeImage     `yaml:"runtimeImages"`
+	EnginePackages     []EnginePackage    `yaml:"enginePackages"`
+	RuntimeComposition RuntimeComposition `yaml:"runtimeComposition"`
+	Upgrade            UpgradeMetadata    `yaml:"upgrade"`
 
 	digest string
+}
+
+// ReleaseNotes is the public, user-facing explanation bound to a release.
+// Digest is calculated over Body's canonical UTF-8 bytes, including its final
+// newline. Keeping both values in the signed manifest prevents a consumer from
+// silently substituting notes from another tag.
+type ReleaseNotes struct {
+	Body   string `yaml:"body"`
+	Digest string `yaml:"digest"`
 }
 
 type RuntimeImage struct {
@@ -36,6 +48,26 @@ type RuntimeImage struct {
 type EnginePackage struct {
 	Refs []string `yaml:"refs"`
 }
+
+// RuntimeComposition identifies the canonical, provenance-bound component
+// composition used to produce this release manifest. SHA256 is the digest of
+// the composition's canonical core payload; the complete JSON asset digest is
+// bound separately by release provenance to avoid a manifest/composition hash
+// cycle.
+type RuntimeComposition struct {
+	SchemaVersion int    `yaml:"schemaVersion"`
+	Asset         string `yaml:"asset"`
+	SHA256        string `yaml:"sha256"`
+}
+
+// LegacyAlpha114ReleaseVersion and LegacyAlpha114ManifestDigest identify the
+// single public bootstrap release that predates runtime-composition evidence.
+// Keep this exception pinned to the reviewed bytes; ordinary Parse/Load calls
+// must continue to require a runtimeComposition binding.
+const (
+	LegacyAlpha114ReleaseVersion = "0.0.1-alpha.114"
+	LegacyAlpha114ManifestDigest = "sha256:e0e742054888daf0fb6482be721c82bd8e162d795143badbf2089cbd978c5e8b"
+)
 
 // UpgradeMetadata is intentionally part of the signed/reviewed release
 // inventory. It never contains a host path, command, credential, or mutable
@@ -64,6 +96,7 @@ var semVerPattern = regexp.MustCompile(`^\d+\.\d+\.\d+([\-+][0-9A-Za-z.+-]+)?$`)
 var manifestIDPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._/-]*$`)
 var migrationIDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/-]*$`)
 var checksumPattern = regexp.MustCompile(`^sha256:[a-f0-9]{64}$`)
+var releaseNotesHeadingPattern = regexp.MustCompile(`^##[ \t]+[^\n]+$`)
 
 var requiredRuntimeImages = map[string]struct{}{
 	"server": {}, "frontend": {}, "nginx": {}, "agent": {}, "bootstrap": {},
@@ -78,13 +111,42 @@ func Load(filePath string) (*Manifest, error) {
 	return Parse(raw)
 }
 
+// LoadLegacyAlpha114 is the file-oriented counterpart to ParseLegacyAlpha114.
+// It is intended only for the host's fixed legacy deployment path; callers
+// handling ordinary release-channel candidates must continue to use Load.
+func LoadLegacyAlpha114(filePath string) (*Manifest, error) {
+	raw, err := os.ReadFile(strings.TrimSpace(filePath))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read legacy release manifest: %w", err)
+	}
+	return ParseLegacyAlpha114(raw)
+}
+
 // Parse validates exactly one manifest document and retains its content hash.
 func Parse(raw []byte) (*Manifest, error) {
+	return parseManifest(raw, false)
+}
+
+// ParseLegacyAlpha114 parses only the policy-pinned v1 bootstrap manifest.
+// This is intentionally separate from Parse so a missing composition cannot
+// silently become valid for ordinary releases.
+func ParseLegacyAlpha114(raw []byte) (*Manifest, error) {
+	manifest, err := parseManifest(raw, true)
+	if err != nil {
+		return nil, err
+	}
+	if manifest.ReleaseVersion != LegacyAlpha114ReleaseVersion || manifest.Digest() != LegacyAlpha114ManifestDigest {
+		return nil, fmt.Errorf("legacy alpha.114 manifest identity is not policy-pinned")
+	}
+	return manifest, nil
+}
+
+func parseManifest(raw []byte, allowLegacyAlpha114 bool) (*Manifest, error) {
 	manifest, err := parse(raw)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse release manifest: %w", err)
 	}
-	if err := manifest.normalizeAndValidate(); err != nil {
+	if err := manifest.normalizeAndValidate(allowLegacyAlpha114); err != nil {
 		return nil, err
 	}
 	digest := sha256.Sum256(raw)
@@ -185,7 +247,7 @@ func (manifest *Manifest) writeEngineInventory(filePath string, cloudflareAccele
 	return nil
 }
 
-func (manifest *Manifest) normalizeAndValidate() error {
+func (manifest *Manifest) normalizeAndValidate(allowLegacyAlpha114 bool) error {
 	if manifest == nil {
 		return fmt.Errorf("release manifest cannot be empty")
 	}
@@ -237,7 +299,36 @@ func (manifest *Manifest) normalizeAndValidate() error {
 			return err
 		}
 	}
-	return validateUpgradeMetadata(manifest.Upgrade)
+	if err := validateUpgradeMetadata(manifest.Upgrade); err != nil {
+		return err
+	}
+	if manifest.RuntimeComposition.SchemaVersion == 0 && manifest.RuntimeComposition.Asset == "" && manifest.RuntimeComposition.SHA256 == "" {
+		if !allowLegacyAlpha114 || manifest.ReleaseVersion != LegacyAlpha114ReleaseVersion {
+			return fmt.Errorf("runtimeComposition.schemaVersion must be 1")
+		}
+	} else if err := validateRuntimeComposition(manifest.RuntimeComposition); err != nil {
+		return err
+	}
+	if manifest.ReleaseNotes == nil && allowLegacyAlpha114 && manifest.ReleaseVersion == LegacyAlpha114ReleaseVersion {
+		// The pinned alpha.114 bootstrap predates both public release notes and
+		// runtime-composition evidence; ParseLegacyAlpha114 verifies its exact
+		// raw digest immediately after this compatibility check.
+		return nil
+	}
+	return validateReleaseNotes(manifest.ReleaseVersion, manifest.ReleaseNotes)
+}
+
+func validateRuntimeComposition(composition RuntimeComposition) error {
+	if composition.SchemaVersion != 1 {
+		return fmt.Errorf("runtimeComposition.schemaVersion must be 1")
+	}
+	if composition.Asset != "runtime-composition.json" {
+		return fmt.Errorf("runtimeComposition.asset must be runtime-composition.json")
+	}
+	if !checksumPattern.MatchString(composition.SHA256) {
+		return fmt.Errorf("runtimeComposition.sha256 must be a sha256 digest")
+	}
+	return nil
 }
 
 func validateUpgradeMetadata(metadata UpgradeMetadata) error {
@@ -278,6 +369,68 @@ func validateUpgradeMetadata(metadata UpgradeMetadata) error {
 	}
 	if !checksumPattern.MatchString(migration.Checksum) {
 		return fmt.Errorf("upgrade.databaseMigration.checksum must be a sha256 digest")
+	}
+	return nil
+}
+
+func validateReleaseNotes(version string, notes *ReleaseNotes) error {
+	if notes == nil {
+		// The repository's development manifest intentionally has no public
+		// release note. Published versions must always bind one.
+		if version == "0.0.0-dev" {
+			return nil
+		}
+		return fmt.Errorf("releaseNotes is required for releaseVersion %s", version)
+	}
+	body := notes.Body
+	if !utf8.ValidString(body) {
+		return fmt.Errorf("releaseNotes.body must be valid UTF-8")
+	}
+	if len([]byte(body)) == 0 || strings.TrimSpace(body) == "" {
+		return fmt.Errorf("releaseNotes.body must be non-empty")
+	}
+	if strings.ContainsAny(body, "\r\x00\uFFFD") || strings.ContainsAny(body, "\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008\u000B\u000C\u000E\u000F\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001A\u001B\u001C\u001D\u001E\u001F\u007F") {
+		return fmt.Errorf("releaseNotes.body must use canonical UTF-8 LF text")
+	}
+	if len([]byte(body)) > 64*1024 {
+		return fmt.Errorf("releaseNotes.body must not exceed 65536 bytes")
+	}
+	if !strings.HasSuffix(body, "\n") {
+		return fmt.Errorf("releaseNotes.body must end with a newline")
+	}
+	lines := strings.Split(body, "\n")
+	sections := make(map[string]struct{}, 2)
+	for index, line := range lines {
+		heading := strings.TrimRight(line, " \t")
+		if heading != "## English" && heading != "## 简体中文" {
+			continue
+		}
+		name := heading[3:]
+		if _, duplicate := sections[name]; duplicate {
+			return fmt.Errorf("releaseNotes.body must contain exactly one English and one 简体中文 section")
+		}
+		sections[name] = struct{}{}
+		end := len(lines) - 1
+		for next := index + 1; next < len(lines); next++ {
+			if releaseNotesHeadingPattern.MatchString(lines[next]) {
+				end = next
+				break
+			}
+		}
+		if strings.TrimSpace(strings.Join(lines[index+1:end], "\n")) == "" {
+			return fmt.Errorf("releaseNotes sections must be non-empty")
+		}
+	}
+	if len(sections) != 2 {
+		return fmt.Errorf("releaseNotes.body must contain exactly one English and one 简体中文 section")
+	}
+	if !checksumPattern.MatchString(notes.Digest) {
+		return fmt.Errorf("releaseNotes.digest must be a sha256 digest")
+	}
+	hash := sha256.Sum256([]byte(body))
+	want := "sha256:" + fmt.Sprintf("%x", hash[:])
+	if notes.Digest != want {
+		return fmt.Errorf("releaseNotes.digest does not match releaseNotes.body")
 	}
 	return nil
 }

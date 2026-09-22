@@ -4,6 +4,7 @@ import { resetMockScenario, setMockScenario } from "@/mock/scenarios"
 import {
   createMockUpgradeOperation,
   getMockUpdateCheckResult,
+  getMockVersionInfo,
   observeMockUpgradeOperation,
   resetMockUpgradeOperation,
 } from "@/mock/data/version"
@@ -14,6 +15,10 @@ describe("version upgrade mock lifecycle", () => {
   afterEach(() => {
     resetMockUpgradeOperation()
     resetMockScenario()
+  })
+
+  it("uses the public repository for release links", () => {
+    expect(getMockVersionInfo().githubRepo).toBe("https://github.com/yyhuni/lunafox")
   })
 
   it("progresses the happy scenario through server-confirmed stages", () => {

@@ -7,6 +7,7 @@ import (
 	"github.com/yyhuni/lunafox/server/internal/bootstrap"
 	"github.com/yyhuni/lunafox/server/internal/config"
 	wordlistmigration "github.com/yyhuni/lunafox/server/internal/modules/catalog/migration"
+	"github.com/yyhuni/lunafox/server/internal/modules/upgrade/upgrader"
 )
 
 // Run delegates to bootstrap package for dependency wiring and server lifecycle.
@@ -16,6 +17,12 @@ func Run(ctx context.Context, cfg *config.Config, migrationsFS embed.FS) {
 
 func RunEngineBootstrap(ctx context.Context, cfg *config.Config, migrationsFS embed.FS) error {
 	return bootstrap.RunEngineBootstrap(ctx, cfg, migrationsFS)
+}
+
+// RunEngineInventory reads the exact installed Engine Package inventory for
+// the host upgrader's argument-free live-observation command.
+func RunEngineInventory(ctx context.Context, cfg *config.Config) (upgrader.EngineInventory, error) {
+	return bootstrap.RunEngineInventory(ctx, cfg)
 }
 
 func RunFingerprintBootstrap(ctx context.Context, databaseConfig *config.DatabaseConfig, corpusPath string) error {

@@ -1,4 +1,14 @@
 releaseVersion: "1.2.3"
+releaseNotes:
+  digest: "sha256:4406112ce062dd05feacce5f519b8cb7250fd01c7237c43e0f7335da912e8188"
+  body: |
+    ## English
+
+    - Test release notes.
+
+    ## 简体中文
+
+    - 测试发布说明。
 runtimeImages:
   - name: server
     refs: ["docker.io/yyhuni/lunafox-server@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ghcr.io/yyhuni/lunafox-server@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]
@@ -12,6 +22,10 @@ runtimeImages:
     refs: ["docker.io/yyhuni/lunafox-bootstrap@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ghcr.io/yyhuni/lunafox-bootstrap@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]
 enginePackages:
   - refs: ["docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"]
+runtimeComposition:
+  schemaVersion: 1
+  asset: "runtime-composition.json"
+  sha256: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 upgrade:
   manifestId: "lunafox-1.2.3"
   deploymentMode: "single-node-compose"

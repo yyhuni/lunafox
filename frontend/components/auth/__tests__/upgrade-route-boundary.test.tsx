@@ -1,11 +1,20 @@
 import { act, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+type UpgradeOperationHookMock = {
+  operationId: string | null
+  data?: { executionMode: "full" | "frontend_only" }
+  isResolving: boolean
+  isReconnecting: boolean
+  isError: boolean
+  isActive: boolean
+}
+
 const navigationMocks = vi.hoisted(() => ({
   pathname: "/overview/",
   replace: vi.fn(),
 }))
-const hookMocks = vi.hoisted(() => ({
+const hookMocks = vi.hoisted((): { operation: UpgradeOperationHookMock } => ({
   operation: {
     operationId: "operation-id" as string | null,
     isResolving: false,
@@ -26,6 +35,7 @@ vi.mock("@/components/route-progress", () => ({
 
 vi.mock("@/hooks/use-version", () => ({
   useUpgradeOperation: () => hookMocks.operation,
+  isFrontendOnlyUpgrade: (operation: { executionMode?: string } | null | undefined) => operation?.executionMode === "frontend_only",
 }))
 
 import { UpgradeRouteBoundary } from "@/components/auth/upgrade-route-boundary"
@@ -153,6 +163,28 @@ describe("UpgradeRouteBoundary", () => {
     expect(await screen.findByTestId("upgrade-route-boundary")).toBeInTheDocument()
     expect(screen.queryByTestId("ordinary-content")).not.toBeInTheDocument()
     await waitFor(() => expect(navigationMocks.replace).toHaveBeenCalledWith("/system-upgrade/"))
+  })
+
+  it("keeps ordinary routes mounted for an active host-confirmed frontend-only operation", async () => {
+    hookMocks.operation = {
+      operationId: "frontend-only-operation",
+      data: { executionMode: "frontend_only" },
+      isResolving: false,
+      isReconnecting: false,
+      isError: false,
+      isActive: true,
+    }
+
+    render(
+      <UpgradeRouteBoundary renderProtectedShell={(children) => <div data-testid="shell">{children}</div>}>
+        <div data-testid="ordinary-content">ordinary</div>
+      </UpgradeRouteBoundary>,
+    )
+
+    expect(await screen.findByTestId("shell")).toBeInTheDocument()
+    expect(screen.getByTestId("ordinary-content")).toBeInTheDocument()
+    expect(screen.queryByTestId("upgrade-route-boundary")).not.toBeInTheDocument()
+    expect(navigationMocks.replace).not.toHaveBeenCalled()
   })
 
   it("keeps the boot handoff owner until hydration before releasing an ordinary entry", async () => {

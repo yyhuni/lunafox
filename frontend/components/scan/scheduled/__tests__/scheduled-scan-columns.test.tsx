@@ -40,6 +40,7 @@ const translations: ScheduledScanTranslations = {
     everyDay: "Every day at {time}",
     everyWeek: "Every {day} at {time}",
     everyMonth: "Every month on {day} at {time}",
+    inTimeZone: "{rule} ({timeZone})",
     weekdays: [],
   },
 }
@@ -55,6 +56,7 @@ const scheduledScan: ScheduledScan = {
   targetName: null,
   scanMode: "organization",
   inputSource: "scanSnapshot",
+  timeZone: "UTC",
   cronExpression: "0 2 * * *",
   isEnabled: true,
   nextRunTime: null,
@@ -67,6 +69,30 @@ const scheduledScan: ScheduledScan = {
 }
 
 describe("scheduled scan handoff result column", () => {
+  it("shows the wall-clock rule with the saved IANA time zone and keeps raw Cron separate", () => {
+    const scan = {
+      ...scheduledScan,
+      timeZone: "Asia/Shanghai",
+      cronExpression: "0 19 * * *",
+    }
+    const column = createScheduledScanColumns({
+      formatDate: (value) => value,
+      handleEdit: vi.fn(),
+      handleDelete: vi.fn(),
+      handleToggleStatus: vi.fn(),
+      t: translations,
+    }).find((item) => (item as { accessorKey?: string }).accessorKey === "cronExpression")
+
+    if (!column || typeof column.cell !== "function") {
+      throw new Error("Expected the schedule column cell")
+    }
+
+    render(<>{column.cell({ row: { original: scan } } as never)}</>)
+
+    expect(screen.getByText("Every day at 19:00 (Asia/Shanghai)")).toBeVisible()
+    expect(screen.getByText("0 19 * * *")).toBeVisible()
+  })
+
   it("renders trigger, successful handoff, and failed handoff counts without a command surface", () => {
     const column = createScheduledScanColumns({
       formatDate: (value) => value,

@@ -101,16 +101,20 @@ export function CreateScheduledScanSheet({
     isLoadingWorkflows,
     isWorkflowsError,
     isWorkflowConfigLoading,
+    formValuesCacheRef,
+    workflowProfileDraft,
     selectionMode,
     setSelectionMode,
     selectedOrgId,
     selectedTargetId,
     selectedAgentID,
     inputSource,
+    timeZone,
     setSelectedOrgId,
     setSelectedTargetId,
     setSelectedAgentID,
     setInputSource,
+    setTimeZone,
     cronExpression,
     setCronExpression,
     configuration,
@@ -298,6 +302,8 @@ export function CreateScheduledScanSheet({
                 onResetConfig={() => void handleResetWorkflowConfig()}
                 onYamlValidationChange={handleYamlValidationChange}
                 configValidationRef={configValidationRef}
+                formValuesCacheRef={formValuesCacheRef}
+                workflowProfileDraft={workflowProfileDraft}
               />
             </div>
           )}
@@ -307,6 +313,8 @@ export function CreateScheduledScanSheet({
             <div className="h-full min-w-0 max-w-full overflow-y-auto px-4 py-3">
               <ScheduledScanScheduleStep
                 t={t}
+                timeZone={timeZone}
+                setTimeZone={setTimeZone}
                 cronExpression={cronExpression}
                 setCronExpression={setCronExpression}
                 cronPresets={CRON_PRESETS}

@@ -58,6 +58,7 @@ export interface ScheduledScanTranslations {
     everyDay: string
     everyWeek: string
     everyMonth: string
+    inTimeZone: string
     weekdays: string[]
   }
 }
@@ -111,6 +112,16 @@ function parseCronExpression(cron: string, t: ScheduledScanTranslations): string
   }
   
   return cron
+}
+
+function formatScheduleRule(
+  cron: string,
+  timeZone: string,
+  t: ScheduledScanTranslations
+): string {
+  return t.cron.inTimeZone
+    .replace('{rule}', parseCronExpression(cron, t))
+    .replace('{timeZone}', timeZone)
 }
 
 /**
@@ -213,7 +224,7 @@ export const createScheduledScanColumns = ({
       return (
         <div className="flex flex-col gap-1">
           <span className={textRole.tableCellPrimary}>
-            {parseCronExpression(cron, t)}
+            {formatScheduleRule(cron, row.original.timeZone, t)}
           </span>
           <code className={cn(textRole.tableCellSecondary, "font-mono tabular-nums")}>
             {cron}

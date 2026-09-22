@@ -13,6 +13,7 @@ const DEFAULT_POLICY = path.join(SCRIPT_DIR, "public-release-policy.json");
 const FIRST_TAG = "v0.0.1-alpha.57";
 const RUNTIME_NAMES = ["server", "frontend", "nginx", "agent", "bootstrap"];
 const DIGEST_RE = /^sha256:[a-f0-9]{64}$/;
+const RUNTIME_COMPOSITION_ASSET = "runtime-composition.json";
 
 function fail(message) { throw new Error(message); }
 
@@ -101,6 +102,93 @@ function parseEngineBlocks(text, policy) {
   return blocks;
 }
 
+function parseReleaseNotes(text, tag) {
+  const version = tag.slice(1);
+  const block = text.match(/^releaseNotes:\n  digest: "(sha256:[a-f0-9]{64})"\n  body: \|\n([\s\S]*?)^runtimeImages:/m);
+  if (!block) fail("release manifest is missing releaseNotes");
+  const lines = block[2].split("\n");
+  if (lines.at(-1) === "") lines.pop();
+  if (lines.some((line) => line !== "" && !line.startsWith("    "))) fail("releaseNotes.body has invalid YAML indentation");
+  const body = `${lines.map((line) => line === "" ? "" : line.slice(4)).join("\n")}\n`;
+  if (Buffer.byteLength(body, "utf8") === 0 || Buffer.byteLength(body, "utf8") > 64 * 1024) fail("releaseNotes.body must be non-empty and at most 64 KiB");
+  if (body.includes("\r") || body.includes("\uFFFD")) fail("releaseNotes.body must be canonical UTF-8 LF text");
+  const bodyLines = body.split("\n");
+  const sections = new Map();
+  for (const [index, line] of bodyLines.entries()) {
+    const heading = line.match(/^##[ \t]+(English|简体中文)[ \t]*$/u);
+    if (!heading) continue;
+    const name = heading[1];
+    if (sections.has(name)) fail("releaseNotes.body must contain one non-empty English and 简体中文 section");
+    let end = bodyLines.length - 1;
+    for (let next = index + 1; next < bodyLines.length; next += 1) {
+      if (/^##[ \t]+[^\n]+$/u.test(bodyLines[next])) {
+        end = next;
+        break;
+      }
+    }
+    if (!bodyLines.slice(index + 1, end).join("\n").trim()) fail("releaseNotes.body must contain one non-empty English and 简体中文 section");
+    sections.set(name, true);
+  }
+  if (sections.size !== 2) {
+    fail("releaseNotes.body must contain one non-empty English and 简体中文 section");
+  }
+  const digest = `sha256:${crypto.createHash("sha256").update(Buffer.from(body, "utf8")).digest("hex")}`;
+  if (digest !== block[1]) fail("releaseNotes.digest does not match releaseNotes.body");
+  if (version !== text.match(/^releaseVersion:\s*["']?([^"'\s]+)["']?/m)?.[1]) fail("releaseNotes version binding is invalid");
+  return { digest, bytes: Buffer.byteLength(body, "utf8") };
+}
+
+function parseYamlScalar(raw, field) {
+  const value = raw.trim();
+  if (value === "") fail(`${field} must be non-empty`);
+  if ((value.startsWith('"') && !value.endsWith('"')) || (value.startsWith("'") && !value.endsWith("'"))) {
+    fail(`${field} contains an unterminated quoted scalar`);
+  }
+  if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+    return value.slice(1, -1);
+  }
+  if (/^[0-9]+$/.test(value)) return Number(value);
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return value;
+}
+
+function parseRuntimeComposition(text) {
+  const lines = text.split(/\r?\n/);
+  const starts = lines.reduce((indexes, line, index) => {
+    if (/^runtimeComposition:[ \t]*$/.test(line)) indexes.push(index);
+    return indexes;
+  }, []);
+  if (starts.length !== 1) fail("release manifest must contain exactly one runtimeComposition section");
+
+  const start = starts[0];
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (/^[A-Za-z][A-Za-z0-9]*:[ \t]*/.test(lines[index])) {
+      end = index;
+      break;
+    }
+  }
+
+  const allowed = new Set(["schemaVersion", "asset", "sha256"]);
+  const values = {};
+  for (let index = start + 1; index < end; index += 1) {
+    const line = lines[index];
+    if (line.trim() === "" || line.trim().startsWith("#")) continue;
+    const match = /^  ([A-Za-z][A-Za-z0-9]*):[ \t]*(.*)$/.exec(line);
+    if (!match) fail(`runtimeComposition contains an invalid field line: ${line}`);
+    const [, key, rawValue] = match;
+    if (!allowed.has(key)) fail(`runtimeComposition contains unknown field ${key}`);
+    if (Object.hasOwn(values, key)) fail(`runtimeComposition contains duplicate field ${key}`);
+    values[key] = parseYamlScalar(rawValue, `runtimeComposition.${key}`);
+  }
+  for (const key of allowed) if (!Object.hasOwn(values, key)) fail(`runtimeComposition is missing ${key}`);
+  if (values.schemaVersion !== 1) fail("runtimeComposition.schemaVersion must be 1");
+  if (values.asset !== RUNTIME_COMPOSITION_ASSET) fail(`runtimeComposition.asset must be ${RUNTIME_COMPOSITION_ASSET}`);
+  if (typeof values.sha256 !== "string" || !DIGEST_RE.test(values.sha256)) fail("runtimeComposition.sha256 must be a sha256 digest");
+  return values;
+}
+
 function validateManifest(file, policy, tag) {
   if (!fs.existsSync(file)) fail(`release manifest is missing: ${file}`);
   const text = fs.readFileSync(file, "utf8");
@@ -109,8 +197,10 @@ function validateManifest(file, policy, tag) {
   if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.+-]+)?$/.test(releaseVersion)) fail("release manifest releaseVersion is invalid");
   if (`v${releaseVersion}` !== tag) fail(`release manifest releaseVersion does not match ${tag}`);
   if (tag === FIRST_TAG && releaseVersion !== "0.0.1-alpha.57") fail("alpha.57 manifest must contain releaseVersion 0.0.1-alpha.57");
+  const releaseNotes = parseReleaseNotes(text, tag);
   const runtimeImages = parseRuntimeBlocks(text);
   const enginePackages = parseEngineBlocks(text, policy);
+  const runtimeComposition = parseRuntimeComposition(text);
   const refs = [...runtimeImages.flatMap((entry) => entry.refs), ...enginePackages.flat()].map((entry) => entry.raw);
   const identities = new Set();
   for (const ref of [...runtimeImages.flatMap((entry) => entry.refs), ...enginePackages.flat()]) {
@@ -119,7 +209,7 @@ function validateManifest(file, policy, tag) {
     if (identities.has(ref.raw)) fail(`release manifest contains duplicate artifact identity: ${ref.raw}`);
     identities.add(ref.raw);
   }
-  return { checked: true, refs, runtimeImages: runtimeImages.map((entry) => entry.name), enginePackageCount: enginePackages.length, sha256: sha256File(file) };
+  return { checked: true, refs, runtimeImages: runtimeImages.map((entry) => entry.name), enginePackageCount: enginePackages.length, releaseNotes, runtimeComposition, sha256: sha256File(file) };
 }
 
 function validateProvenance(file, policy, manifestResult) {
@@ -193,4 +283,4 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   main().catch((error) => { process.stderr.write(`public release preflight failed: ${error.message}\n`); process.exitCode = 1; });
 }
 
-export { parseDigestRefs, parseEngineBlocks, parseRuntimeBlocks, validateManifest, validateProvenance, verify };
+export { parseDigestRefs, parseEngineBlocks, parseReleaseNotes, parseRuntimeBlocks, parseRuntimeComposition, validateManifest, validateProvenance, verify };

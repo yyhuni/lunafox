@@ -11,6 +11,8 @@ import { api } from "@/lib/api-client"
 import { VersionService } from "@/services/version.service"
 
 const digest = `sha256:${"a".repeat(64)}`
+const releaseNotesBody = "## English\n\n- Test release notes.\n\n## 简体中文\n\n- 测试发布说明。\n"
+const releaseNotesSha256 = "sha256:4406112ce062dd05feacce5f519b8cb7250fd01c7237c43e0f7335da912e8188"
 const operation = {
   name: "upgradeOperations/11111111-1111-4111-8111-111111111111",
   operationId: "11111111-1111-4111-8111-111111111111",
@@ -34,6 +36,14 @@ const operation = {
   createdAt: "2026-09-13T12:00:00Z",
   updatedAt: "2026-09-13T12:00:00Z",
 }
+const fullOperation = {
+  ...operation,
+  executionMode: "frontend_only",
+  workDisposition: "not_required",
+  planSummary: { touchedServices: ["frontend"] },
+  confirmedDeploymentVersion: "1.1.0",
+} as const
+const fullPlanServices = ["agent", "bootstrap", "engine", "engine_package", "engine_runtime", "frontend", "migration", "nginx", "server"]
 
 describe("version.service contract", () => {
   beforeEach(() => vi.clearAllMocks())
@@ -50,11 +60,40 @@ describe("version.service contract", () => {
         maintenanceWindowMinutes: 15, requiresAdminConfirmation: true,
         databaseMigration: { hasDatabaseMigration: false, migrationType: "none", policyVersion: 1 },
         runtimeImageDigests: { server: digest, frontend: digest, nginx: digest }, engineDigests: [digest],
+        releaseNotes: { body: releaseNotesBody, sha256: releaseNotesSha256 },
       },
     } } as never)
     const result = await VersionService.checkForUpdates()
     expect(api.post).toHaveBeenCalledWith("/system:checkForUpdates", {})
     expect(result.candidate?.manifestDigest).toBe(digest)
+    expect(result.candidate?.releaseNotes?.sha256).toBe(releaseNotesSha256)
+  })
+
+  it("rejects tampered release notes and permits the explicit development omission", async () => {
+    vi.mocked(api.post).mockResolvedValueOnce({ data: {
+      currentVersion: "0.0.0-dev", hasUpdate: false, eligible: true,
+      candidate: {
+        name: "releaseManifests/lunafox-0.0.0-dev", manifestId: "lunafox-0.0.0-dev", manifestDigest: digest,
+        releaseVersion: "0.0.0-dev", deploymentMode: "single-node-compose", compatibilityRange: ">=0.0.0 <1.0.0",
+        maintenanceWindowMinutes: 15, requiresAdminConfirmation: true,
+        databaseMigration: { hasDatabaseMigration: false, migrationType: "none", policyVersion: 1 },
+        runtimeImageDigests: { server: digest }, engineDigests: [],
+      },
+    } } as never)
+    await expect(VersionService.checkForUpdates()).resolves.toMatchObject({ candidate: { releaseVersion: "0.0.0-dev" } })
+
+    vi.mocked(api.post).mockResolvedValueOnce({ data: {
+      currentVersion: "1.0.0", hasUpdate: true, eligible: true,
+      candidate: {
+        name: "releaseManifests/release-1.1.0", manifestId: "release-1.1.0", manifestDigest: digest,
+        releaseVersion: "1.1.0", deploymentMode: "single-node-compose", compatibilityRange: ">=1.0.0 <2.0.0",
+        maintenanceWindowMinutes: 15, requiresAdminConfirmation: true,
+        databaseMigration: { hasDatabaseMigration: false, migrationType: "none", policyVersion: 1 },
+        runtimeImageDigests: { server: digest }, engineDigests: [],
+        releaseNotes: { body: releaseNotesBody.replace("Test", "Tampered"), sha256: releaseNotesSha256 },
+      },
+    } } as never)
+    await expect(VersionService.checkForUpdates()).rejects.toThrow("candidate.releaseNotes.sha256")
   })
 
   it("requires confirmation before creating an operation and sends only immutable identity", async () => {
@@ -77,6 +116,73 @@ describe("version.service contract", () => {
     await VersionService.retryUpgradeOperation(operation.operationId)
     expect(api.get).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}`)
     expect(api.post).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}:retry`, { confirmed: true })
+  })
+
+  it("requests and strictly decodes the explicit FULL projection without changing BASIC", async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: fullOperation } as never)
+
+    await expect(VersionService.getUpgradeOperationFull(operation.operationId)).resolves.toMatchObject({
+      executionMode: "frontend_only",
+      workDisposition: "not_required",
+      planSummary: { touchedServices: ["frontend"] },
+      confirmedDeploymentVersion: "1.1.0",
+    })
+    expect(api.get).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}`, { params: { view: "FULL" } })
+
+    vi.mocked(api.get).mockResolvedValueOnce({ data: operation } as never)
+    await expect(VersionService.getUpgradeOperationFull(operation.operationId)).rejects.toThrow("upgradeOperation.executionMode")
+
+    vi.mocked(api.get).mockResolvedValueOnce({ data: {
+      ...fullOperation,
+      planSummary: { touchedServices: ["frontend"], unexpected: true },
+    } } as never)
+    await expect(VersionService.getUpgradeOperationFull(operation.operationId)).rejects.toThrow("upgradeOperation.planSummary.unexpected")
+  })
+
+  it("permits empty scope facts only for explicit legacy full operations", async () => {
+    const legacy = {
+      ...operation,
+      executionMode: "full",
+      workDisposition: "legacy_unknown",
+      planSummary: { touchedServices: [] },
+      confirmedDeploymentVersion: "",
+    }
+    vi.mocked(api.get).mockResolvedValueOnce({ data: legacy } as never)
+    await expect(VersionService.getUpgradeOperationFull(operation.operationId)).resolves.toMatchObject({
+      executionMode: "full",
+      workDisposition: "legacy_unknown",
+      planSummary: { touchedServices: [] },
+      confirmedDeploymentVersion: "",
+    })
+
+    vi.mocked(api.get).mockResolvedValueOnce({ data: { ...legacy, workDisposition: "cancelled" } } as never)
+    await expect(VersionService.getUpgradeOperationFull(operation.operationId)).rejects.toThrow("upgradeOperation.planSummary.touchedServices")
+  })
+
+  it("requires a complete scoped service set for non-legacy full operations", async () => {
+    const full = {
+      ...operation,
+      executionMode: "full",
+      workDisposition: "cancelled",
+      planSummary: { touchedServices: fullPlanServices },
+      confirmedDeploymentVersion: "",
+    }
+    vi.mocked(api.get).mockResolvedValueOnce({ data: full } as never)
+    await expect(VersionService.getUpgradeOperationFull(operation.operationId)).resolves.toMatchObject({
+      executionMode: "full",
+      workDisposition: "cancelled",
+      planSummary: { touchedServices: fullPlanServices },
+      confirmedDeploymentVersion: "",
+    })
+
+    vi.mocked(api.get).mockResolvedValueOnce({ data: {
+      ...full,
+      planSummary: { touchedServices: ["agent", "bootstrap", "frontend", "nginx", "server"] },
+    } } as never)
+    await expect(VersionService.getUpgradeOperationFull(operation.operationId)).rejects.toThrow("upgradeOperation.planSummary.touchedServices")
+
+    vi.mocked(api.get).mockResolvedValueOnce({ data: { ...full, workDisposition: "not_required" } } as never)
+    await expect(VersionService.getUpgradeOperationFull(operation.operationId)).rejects.toThrow("upgradeOperation.workDisposition")
   })
 
   it("maps an empty active-operation view to null and sends an explicit stop", async () => {

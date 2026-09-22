@@ -26,6 +26,7 @@ import {
     parseWorkflowConfigurationDraftStrict,
     validateCompleteProfileEngineConfig,
     WorkflowConfigurationDraftError,
+    type WorkflowProfileDraft,
 } from "@/lib/workflow-config";
 import { cn } from "@/lib/utils";
 import { textRole } from "@/lib/typography";
@@ -69,6 +70,7 @@ export function initFormValuesFromWorkflow(
     workflow: ScanWorkflowWithEngines,
     configuration?: unknown,
     previousValues: EngineConfigFormValues = {},
+    workflowProfileDraft: WorkflowProfileDraft | null = null,
 ): EngineConfigFormValues {
     if (configuration === undefined || configuration === null || (typeof configuration === "string" && configuration.trim() === "")) {
         return {};
@@ -80,6 +82,7 @@ export function initFormValuesFromWorkflow(
     }
     const values: EngineConfigFormValues = {};
     const expectedStepIds = new Set(workflow.stages.flatMap((stage) => stage.steps.map((step) => step.stepId)));
+    let profileEngineConfigs: Record<string, Record<string, unknown>> | null = null;
     for (const stepId of Object.keys(rawSteps)) {
         if (!expectedStepIds.has(stepId)) {
             throw new WorkflowConfigurationDraftError(`configuration.steps["${stepId}"]`, "unknown Workflow Step");
@@ -98,7 +101,14 @@ export function initFormValuesFromWorkflow(
                 engineConfig = rawStep.engineConfig;
                 validateCompleteProfileEngineConfig(engineConfig, step, `${path}.engineConfig`);
             } else if (!rawStep.enabled && previous) {
+                if (!isRecord(previous.sections)) {
+                    throw new WorkflowConfigurationDraftError(`${path}.engineConfig`, "retained Engine configuration is invalid");
+                }
                 engineConfig = formSectionsToEngineConfig(previous.sections);
+                validateCompleteProfileEngineConfig(engineConfig, step, `${path}.engineConfig`);
+            } else if (!rawStep.enabled) {
+                profileEngineConfigs ??= getValidatedProfileEngineConfigs(workflow, workflowProfileDraft);
+                engineConfig = profileEngineConfigs[step.stepId];
             } else {
                 throw new WorkflowConfigurationDraftError(`${path}.engineConfig`, "complete Engine configuration is required");
             }
@@ -125,6 +135,62 @@ export function initFormValuesFromWorkflow(
         }
     }
     return values;
+}
+
+/**
+ * A canonical disabled Step has no Engine object by design. Profile recovery is
+ * therefore permitted only after the whole retained Profile still proves its
+ * parent identity, exact Step coverage, and every Engine value against the
+ * current schema; catalog defaults must never fill this boundary.
+ */
+function getValidatedProfileEngineConfigs(
+    workflow: ScanWorkflowWithEngines,
+    workflowProfileDraft: WorkflowProfileDraft | null,
+): Record<string, Record<string, unknown>> {
+    const rawDraft = workflowProfileDraft as unknown;
+    if (!isRecord(rawDraft) || typeof rawDraft.scanWorkflow !== "string") {
+        throw new WorkflowConfigurationDraftError("profile", "a validated Workflow Profile draft is required");
+    }
+    if (workflowIdentity(rawDraft.scanWorkflow) !== workflowIdentity(workflow.scanWorkflowId)) {
+        throw new WorkflowConfigurationDraftError("scanWorkflow", "Profile parent does not match the selected Workflow");
+    }
+    if (!isRecord(rawDraft.steps)) {
+        throw new WorkflowConfigurationDraftError("profile.steps", "Profile steps must be an object");
+    }
+
+    const workflowSteps = workflow.stages.flatMap((stage) => stage.steps);
+    const expectedStepIds = new Set(workflowSteps.map((step) => step.stepId));
+    for (const stepId of Object.keys(rawDraft.steps)) {
+        if (!expectedStepIds.has(stepId)) {
+            throw new WorkflowConfigurationDraftError(`profile.steps["${stepId}"]`, "unknown Workflow Step");
+        }
+    }
+
+    const engineConfigs: Record<string, Record<string, unknown>> = {};
+    for (const step of workflowSteps) {
+        const path = `profile.steps["${step.stepId}"]`;
+        const rawStep = rawDraft.steps[step.stepId];
+        if (!isRecord(rawStep)) {
+            throw new WorkflowConfigurationDraftError(path, "Profile Step is required");
+        }
+        const keys = Object.keys(rawStep).sort();
+        if (keys.length !== 2 || keys[0] !== "enabled" || keys[1] !== "engineConfig") {
+            throw new WorkflowConfigurationDraftError(path, "Profile Step must contain enabled and engineConfig");
+        }
+        if (typeof rawStep.enabled !== "boolean") {
+            throw new WorkflowConfigurationDraftError(`${path}.enabled`, "Profile Step enabled must be an explicit boolean");
+        }
+        if (!isRecord(rawStep.engineConfig)) {
+            throw new WorkflowConfigurationDraftError(`${path}.engineConfig`, "Profile engineConfig must be an object");
+        }
+        validateCompleteProfileEngineConfig(rawStep.engineConfig, step, `${path}.engineConfig`);
+        engineConfigs[step.stepId] = rawStep.engineConfig;
+    }
+    return engineConfigs;
+}
+
+function workflowIdentity(value: string): string {
+    return value.startsWith("scanWorkflows/") ? value.slice("scanWorkflows/".length) : value;
 }
 
 function formSectionsToEngineConfig(sections: Record<string, EngineConfigSectionFormValue>): Record<string, unknown> {
@@ -172,8 +238,6 @@ function getIntegerStep(param: EngineParamDefinition) {
         return 100;
     return 1;
 }
-
-const PARAM_HELP_HOVER_OPEN_DELAY_MS = 200;
 
 function WordlistResourceSelect({ fieldId, value, disabled, catalog, invalid, describedBy, onChange, }: {
     fieldId: string;
@@ -240,7 +304,7 @@ interface ParamFieldProps {
 }
 
 function ParamHelpText({ description }: { description: string }) {
-    return (<TooltipProvider delay={PARAM_HELP_HOVER_OPEN_DELAY_MS}>
+    return (<TooltipProvider>
       <Tooltip>
         <TooltipTrigger render={<p className={cn("line-clamp-2 cursor-help", textRole.helperText)} tabIndex={0}/>}>{description}</TooltipTrigger>
         {/* Center the overlay on its full-width trigger so the arrow remains centered. */}

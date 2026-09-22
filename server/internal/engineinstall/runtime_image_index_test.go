@@ -111,6 +111,36 @@ func TestNewRuntimeImageIndexVerifierCloudflareAccelerationRequiresSignatureVeri
 	}
 }
 
+func TestRuntimeImageIndexVerifierCloudflareAccelerationRejectsLegacySignatureVerifier(t *testing.T) {
+	payload := mustMarshalRuntimeImageIndex(t, nil)
+	digestValue := digest.FromBytes(payload).String()
+	dockerHub := "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@" + digestValue
+	ghcr := "ghcr.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@" + digestValue
+	legacy := &legacyDigestReferenceSignatureVerifier{}
+	verifier, err := NewRuntimeImageIndexVerifier(RuntimeImageIndexVerifierOptions{
+		MaxIndexBytes:          int64(len(payload)),
+		PerCandidateTimeout:    time.Second,
+		CloudflareAcceleration: true,
+		SignatureVerifier:      legacy,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	repositoryCreated := false
+	verifier.newRepository = func(ociartifact.DigestReference, string, bool) (runtimeImageOCIRepository, error) {
+		repositoryCreated = true
+		return runtimeImageOCIRepositoryStub{}, nil
+	}
+
+	_, err = verifier.Verify(context.Background(), repositoryname.FirstPartyEngineIDSubdomainDiscovery, []string{dockerHub, ghcr})
+	if err == nil || !strings.Contains(err.Error(), "transport-aware GHCR signature verifier") {
+		t.Fatalf("Verify() error = %v, want fail-closed verifier capability error", err)
+	}
+	if repositoryCreated {
+		t.Fatal("legacy signature verifier must be rejected before Runtime Image download")
+	}
+}
+
 func TestRuntimeImageIndexVerifierCloudflareAccelerationVerifiesGHCRAndClassifiesCFFailures(t *testing.T) {
 	payload := mustMarshalRuntimeImageIndex(t, nil)
 	digestValue := digest.FromBytes(payload).String()
@@ -150,6 +180,42 @@ func TestRuntimeImageIndexVerifierCloudflareAccelerationVerifiesGHCRAndClassifie
 			t.Fatalf("signature references = %#v, want original GHCR %q", signatureVerifier.references, ghcr)
 		}
 		if want := []string{cloudflare, dockerHub}; !reflect.DeepEqual(attempted, want) {
+			t.Fatalf("download attempts = %#v, want %#v", attempted, want)
+		}
+	})
+
+	t.Run("transport failures advance through Docker Hub to GHCR", func(t *testing.T) {
+		signatureVerifier := &recordingDigestReferenceSignatureVerifier{}
+		verifier, err := NewRuntimeImageIndexVerifier(RuntimeImageIndexVerifierOptions{
+			MaxIndexBytes:          int64(len(payload)),
+			PerCandidateTimeout:    time.Second,
+			CloudflareAcceleration: true,
+			SignatureVerifier:      signatureVerifier,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var attempted []string
+		verifier.newRepository = func(reference ociartifact.DigestReference, _ string, _ bool) (runtimeImageOCIRepository, error) {
+			attempted = append(attempted, reference.String())
+			switch reference.Registry {
+			case "docker.lunafox.cc.cd":
+				return runtimeImageOCIRepositoryStub{resolveErr: ociartifact.NewCandidateFailure(ociartifact.CandidateFailureReasonTransientServer, errors.New("bad gateway"))}, nil
+			case "docker.io":
+				return runtimeImageOCIRepositoryStub{resolveErr: ociartifact.NewCandidateFailure(ociartifact.CandidateFailureReasonTCP, errors.New("connection refused"))}, nil
+			default:
+				return runtimeImageOCIRepositoryStub{descriptor: descriptor, payload: payload}, nil
+			}
+		}
+
+		verified, err := verifier.Verify(context.Background(), repositoryname.FirstPartyEngineIDSubdomainDiscovery, []string{dockerHub, ghcr})
+		if err != nil {
+			t.Fatalf("Verify() error = %v", err)
+		}
+		if verified.Reference.String() != ghcr {
+			t.Fatalf("selected candidate = %q, want GHCR fallback %q", verified.Reference.String(), ghcr)
+		}
+		if want := []string{cloudflare, dockerHub, ghcr}; !reflect.DeepEqual(attempted, want) {
 			t.Fatalf("download attempts = %#v, want %#v", attempted, want)
 		}
 	})
@@ -737,13 +803,30 @@ func (reader *runtimeImageFailingReadCloser) Close() error             { return 
 
 type runtimeImageSignatureVerifierStub struct{}
 
+type legacyDigestReferenceSignatureVerifier struct{}
+
+func (verifier *legacyDigestReferenceSignatureVerifier) VerifyReference(context.Context, ociartifact.DigestReference) error {
+	return nil
+}
+
 type recordingDigestReferenceSignatureVerifier struct {
-	references []ociartifact.DigestReference
-	err        error
+	references          []ociartifact.DigestReference
+	transportReferences []ociartifact.DigestReference
+	err                 error
 }
 
 func (verifier *recordingDigestReferenceSignatureVerifier) VerifyReference(_ context.Context, reference ociartifact.DigestReference) error {
 	verifier.references = append(verifier.references, reference)
+	return verifier.err
+}
+
+func (verifier *recordingDigestReferenceSignatureVerifier) VerifyReferenceWithTransport(
+	_ context.Context,
+	identityReference ociartifact.DigestReference,
+	transportReference ociartifact.DigestReference,
+) error {
+	verifier.references = append(verifier.references, identityReference)
+	verifier.transportReferences = append(verifier.transportReferences, transportReference)
 	return verifier.err
 }
 

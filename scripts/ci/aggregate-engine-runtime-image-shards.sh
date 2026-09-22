@@ -11,6 +11,7 @@ MODE="${ENGINE_RELEASE_MODE:-production}"
 DISCOVERY_INPUT="${ENGINE_RUNTIME_IMAGE_DISCOVERY:-}"
 RELEASE_CONTEXT_INPUT="${ENGINE_RUNTIME_IMAGE_RELEASE_CONTEXT:-}"
 SHARDS_ROOT="${ENGINE_RUNTIME_IMAGE_SHARDS_ROOT:-}"
+SELECTION_INPUT="${ENGINE_RUNTIME_IMAGE_SELECTION:-}"
 OUTPUT_ROOT="${ENGINE_RUNTIME_IMAGE_AGGREGATE_OUTPUT_ROOT:-$ROOT_DIR/dist/public-engine-runtime}"
 
 usage() {
@@ -26,6 +27,9 @@ Environment:
                                              protected source-bound job
   ENGINE_RUNTIME_IMAGE_SHARDS_ROOT          Directory containing all selected
                                              Engine Runtime Image artifacts
+  ENGINE_RUNTIME_IMAGE_SELECTION             Optional Engine selection JSON;
+                                             when present, only builtEngineIds
+                                             are required and accepted
   ENGINE_RUNTIME_IMAGE_AGGREGATE_OUTPUT_ROOT
                                              Empty output directory for the
                                              complete receipt and evidence
@@ -40,13 +44,17 @@ fail() {
 require_regular_file() {
 	local path="$1" label="$2"
 	[ -n "$path" ] || fail "$label is required"
-	[ -f "$path" ] && [ ! -L "$path" ] || fail "$label must be a regular non-symlink file: $path"
+	if [ ! -f "$path" ] || [ -L "$path" ]; then
+		fail "$label must be a regular non-symlink file: $path"
+	fi
 }
 
 require_directory() {
 	local path="$1" label="$2"
 	[ -n "$path" ] || fail "$label is required"
-	[ -d "$path" ] && [ ! -L "$path" ] || fail "$label must be a directory, not a symlink: $path"
+	if [ ! -d "$path" ] || [ -L "$path" ]; then
+		fail "$label must be a directory, not a symlink: $path"
+	fi
 }
 
 safe_engine_id() {
@@ -77,6 +85,9 @@ require_directory "$ENGINE_ROOT" "ENGINE_ROOT"
 require_regular_file "$DISCOVERY_INPUT" "ENGINE_RUNTIME_IMAGE_DISCOVERY"
 require_regular_file "$RELEASE_CONTEXT_INPUT" "ENGINE_RUNTIME_IMAGE_RELEASE_CONTEXT"
 require_directory "$SHARDS_ROOT" "ENGINE_RUNTIME_IMAGE_SHARDS_ROOT"
+if [ -n "$SELECTION_INPUT" ]; then
+	require_regular_file "$SELECTION_INPUT" "ENGINE_RUNTIME_IMAGE_SELECTION"
+fi
 if [ -e "$OUTPUT_ROOT" ] || [ -L "$OUTPUT_ROOT" ]; then
 	fail "ENGINE_RUNTIME_IMAGE_AGGREGATE_OUTPUT_ROOT must not already exist: $OUTPUT_ROOT"
 fi
@@ -123,11 +134,26 @@ receipt_ids_file="$tmp_dir/receipt-engine-ids.txt"
 verification_ids_file="$tmp_dir/verification-engine-ids.txt"
 receipt_paths_file="$tmp_dir/receipt-paths.txt"
 verification_paths_file="$tmp_dir/verification-paths.txt"
-jq -er '.engines[] | .engineId' "$current_discovery" >"$expected_ids_file"
+if [ -n "$SELECTION_INPUT" ]; then
+	jq -e '
+    type == "object" and
+    .schemaVersion == 1 and
+    .kind == "lunafox.engine-release-selection.v1" and
+    (.builtEngineIds | type == "array") and
+    (.reusedEngineIds | type == "array") and
+    ((.builtEngineIds + .reusedEngineIds) | unique | length == (.engines | length)) and
+    all(.engines[]; (.engineId | type == "string") and (.disposition == "built" or .disposition == "reused"))
+  ' "$SELECTION_INPUT" >/dev/null || fail "Engine selection has an invalid shape"
+	jq -e '(.builtEngineIds | sort) == .builtEngineIds and (.reusedEngineIds | sort) == .reusedEngineIds and ([.engines[] | select(.disposition == "built") | .engineId] | sort) == .builtEngineIds' "$SELECTION_INPUT" >/dev/null || fail "Engine selection built/reused IDs are not canonical"
+	jq -er '.builtEngineIds[]' "$SELECTION_INPUT" >"$expected_ids_file"
+else
+	jq -er '.engines[] | .engineId' "$current_discovery" >"$expected_ids_file"
+fi
 expected_count="$(wc -l <"$expected_ids_file" | tr -d '[:space:]')"
-[ "$expected_count" -gt 0 ] || fail "current discovery found no Engines"
+[ "$expected_count" -gt 0 ] || fail "selected Engine set is empty; skip aggregate for all-reused releases"
 while IFS= read -r engine_id; do
 	[[ "$engine_id" =~ ^engine\.lunafox\.[a-z][a-z0-9_]*$ ]] || fail "discovery returned a non-canonical Engine ID: $engine_id"
+	jq -e --arg id "$engine_id" 'any(.engines[]; .engineId == $id and .disposition == "built")' "$SELECTION_INPUT" >/dev/null 2>&1 || [ -z "$SELECTION_INPUT" ] || fail "selected Engine is not marked built: $engine_id"
 done <"$expected_ids_file"
 
 find "$SHARDS_ROOT" -type f -name build-results.json -print | LC_ALL=C sort >"$receipt_paths_file"
