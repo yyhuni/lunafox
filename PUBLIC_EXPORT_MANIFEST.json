@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:cc3e728fa45f116f24f800a8d25b5a4f232b21a67b436c29c13a9d52387f4971",
-  "releaseTag": "v0.0.1-alpha.179",
+  "sourceRevisionDigest": "sha256:e84fa587d1dea395b5e6c207dd7c102ab0154d9f08e903124d85d7441cf7e571",
+  "releaseTag": "v0.0.1-alpha.180",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -55,7 +55,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "a1695e950d279c41f5efb846f81924cc4e8bec3fd1f0f5546af4c1bf1eb7f283"
+      "sha256": "04cd0c05779eec6eddb88540123c367cd99b86f0b11554695ed74bfd2ffc5c70"
     },
     {
       "path": "README.md",
@@ -76,7 +76,7 @@
       "type": "file",
       "mode": "0644",
       "size": 2332,
-      "sha256": "599d61d9af3e0992f8d8816399a4210f3fadf628a1c327eccb6d5bf1015f7833"
+      "sha256": "2064f7bb76bcbd665afd91522f43b43ca20a6b197cd79033d3df079a92d2c7fa"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/agent-bundle.sha256",
@@ -90,7 +90,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "68c7a45d0cc7c1a8d92bfffa713eb62e9b1e8c9f4d6b82e29fca26df29255a48"
+      "sha256": "0d2671a46316b0be74e5bbd20e346f65994eee077e052fe04fe74cee8ea03095"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/lunafox-agent-linux-amd64",
@@ -10890,8 +10890,8 @@
       "path": "frontend/components/tools/__tests__/wordlists-page.contract.test.ts",
       "type": "file",
       "mode": "0644",
-      "size": 6289,
-      "sha256": "5dc877edfddc5c6fe07a2a81a9c7f82bc9739bc21adaae0bb631e54d0e19730a"
+      "size": 6551,
+      "sha256": "19902969786205d472cef1ec51ebb5a62b6ad091351d52951f47c220c5348c72"
     },
     {
       "path": "frontend/components/tools/__tests__/wordlists-page.cursor-pagination.test.tsx",
@@ -11163,8 +11163,8 @@
       "path": "frontend/components/tools/wordlist-detail-drawer.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 8332,
-      "sha256": "79cfdb492ac73a67278771b4ee04d715b09e6f9e039e264b8889026e46910267"
+      "size": 9361,
+      "sha256": "b7357f8cc40de10fdb71272e0786e29a01e33063c34bbdb817a2f08174d483b9"
     },
     {
       "path": "frontend/components/tools/wordlist-edit-dialog-sections.tsx",
@@ -14614,15 +14614,15 @@
       "path": "frontend/messages/en.json",
       "type": "file",
       "mode": "0644",
-      "size": 197174,
-      "sha256": "9a38cde6726cbd5a1d9fbf65556b2cd6435a2012fe7869fe44ae27e8a9976c6a"
+      "size": 197307,
+      "sha256": "e4554858696f843dd7010db3b72d21017b089ec2f946b9eebf46d81bd3d23d9f"
     },
     {
       "path": "frontend/messages/zh.json",
       "type": "file",
       "mode": "0644",
-      "size": 189914,
-      "sha256": "0af155f23202e88aa1045d35188cf06e214d057ff96efb671783f0bdde1df360"
+      "size": 190036,
+      "sha256": "32568ce9c658c9cb613b3ac9bb0de60f6a8f8d2534c1f23f1a2a7acd31e454f8"
     },
     {
       "path": "frontend/middleware.ts",
@@ -17122,6 +17122,13 @@
       "mode": "0644",
       "size": 995,
       "sha256": "47edf03095d9d9b060a57451a5d20b645a260c0a0f35e0059442f7322eb71b00"
+    },
+    {
+      "path": "release-notes/v0.0.1-alpha.180.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 1106,
+      "sha256": "1c2865374af59b09a2068b0eccdde940f66ff5222c8258bad899c944f2eb07b0"
     },
     {
       "path": "resources/alloy/config.alloy",
