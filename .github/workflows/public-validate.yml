@@ -1027,13 +1027,13 @@ jobs:
           if [ "$disposition" = reused ]; then
             artifact_ref="$(jq -er '.components[] | select(.id == "runtime.agent") | .artifact.ref' "$plan")"
             artifact_digest="$(jq -er '.components[] | select(.id == "runtime.agent") | .artifact.digest' "$plan")"
-            source_release_tag="$(jq -er '.components[] | select(.id == "runtime.agent") | .sourceRelease.tag' "$plan")"
+            artifact_source_release_tag="$(jq -er '.components[] | select(.id == "runtime.agent") | .sourceRelease.tag' "$plan")"
             [[ "$artifact_ref" = *@"$artifact_digest" ]]
-            [[ "$source_release_tag" != "${{ steps.source.outputs.release_tag }}" ]]
+            [[ "$artifact_source_release_tag" != "${{ steps.source.outputs.release_tag }}" ]]
             {
               echo "artifact_ref=$artifact_ref"
               echo "artifact_digest=$artifact_digest"
-              echo "source_release_tag=$source_release_tag"
+              echo "artifact_source_release_tag=$artifact_source_release_tag"
             } >> "$GITHUB_OUTPUT"
           fi
       - id: verify
@@ -1055,18 +1055,24 @@ jobs:
           [[ "$artifact_id" =~ ^sha256-[a-f0-9]{64}$ ]] || { echo "invalid Agent artifact identity" >&2; exit 1; }
           input_fingerprint="sha256:${artifact_id#sha256-}"
           BUNDLE_DIR="$BUNDLE_ROOT/$artifact_id"
-          bundle_source_release_tag="${{ steps.composition.outputs.source_release_tag }}"
-          [ -n "$bundle_source_release_tag" ] || bundle_source_release_tag="$RELEASE_TAG"
           test -d "$BUNDLE_DIR" || { echo "merged public tree is missing exact Agent directory: $BUNDLE_DIR" >&2; exit 1; }
+          # A reused image keeps its original composition source tag; the
+          # bundle merged for this release is independently signed by the
+          # current private release tag and must be verified as that bundle.
+          bundle_source_release_tag="$(jq -er '.sourceRelease.tag' "$BUNDLE_DIR/agent-bundle.json")"
+          [ "$bundle_source_release_tag" = "$RELEASE_TAG" ] || {
+            echo "merged Agent bundle source release does not match the current public release: expected $RELEASE_TAG, got $bundle_source_release_tag" >&2
+            exit 1
+          }
           node scripts/ci/verify-agent-binary-bundle.mjs \
             --bundle-dir "$BUNDLE_DIR" --artifact-id "$artifact_id" \
-            --input-fingerprint "$input_fingerprint" --source-release-tag "$bundle_source_release_tag" \
+            --input-fingerprint "$input_fingerprint" --source-release-tag "$RELEASE_TAG" \
             --json | tee "$RUNNER_TEMP/agent-bundle-verification.json"
           cp "$RUNNER_TEMP/agent-bundle-verification.json" dist/agent-bundle-verification.json
           cosign verify-blob \
             --bundle "$BUNDLE_DIR/agent-bundle.sigstore.json" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-identity-regexp "^https://github\\.com/yyhuni/lunafox-private/\\.github/workflows/release\\.yml@refs/tags/${bundle_source_release_tag}$" \
+            --certificate-identity-regexp "^https://github\\.com/yyhuni/lunafox-private/\\.github/workflows/release\\.yml@refs/tags/${RELEASE_TAG}$" \
             "$BUNDLE_DIR/agent-bundle.json"
           bundle_digest="sha256:$(sha256sum "$BUNDLE_DIR/agent-bundle.json" | awk '{print $1}')"
           tree_manifest_digest="sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')"
