@@ -2189,12 +2189,14 @@ jobs:
             evidence="dist/final/runtime-evidence/public-runtime-image-evidence-${component}.json"
             component_id="runtime.$component"
             disposition="$(jq -er --arg id "$component_id" '.components[] | select(.id == $id) | .disposition' "$plan")"
-            expected_digest="$(jq -er '.digest // empty' "$evidence")"
-            expected_ref="$(jq -er '.image // empty' "$evidence")"
             if [ "$disposition" = reused ]; then
+              # Reused receipts intentionally carry the planned artifact instead of built-image fields.
               expected_digest="$(jq -er --arg id "$component_id" '.components[] | select(.id == $id and .disposition == "reused") | .artifact.digest' "$plan")"
               expected_ref="$(jq -er --arg id "$component_id" '.components[] | select(.id == $id and .disposition == "reused") | .artifact.ref' "$plan")"
-            elif [ "$disposition" != built ]; then
+            elif [ "$disposition" = built ]; then
+              expected_digest="$(jq -er '.digest // empty' "$evidence")"
+              expected_ref="$(jq -er '.image // empty' "$evidence")"
+            else
               echo "invalid Runtime composition disposition: $component" >&2
               exit 1
             fi
