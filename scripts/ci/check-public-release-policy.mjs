@@ -1083,12 +1083,12 @@ function assertPublicWorkflow(workflow, policy) {
     '--bundle-dir "$BUNDLE_DIR"',
     '--artifact-id "$artifact_id"',
     '--input-fingerprint "$input_fingerprint"',
-    '--source-release-tag "$bundle_source_release_tag"',
+    '--source-release-tag "$RELEASE_TAG"',
     "cosign verify-blob",
     "agent-bundle.sigstore.json",
     "--certificate-oidc-issuer https://token.actions.githubusercontent.com",
     "--certificate-identity-regexp",
-    "refs/tags/${bundle_source_release_tag}$",
+    "refs/tags/${RELEASE_TAG}$",
     "docker/agent/Dockerfile",
     "push: true",
     "provenance: mode=max",
@@ -1105,11 +1105,17 @@ function assertPublicWorkflow(workflow, policy) {
     if (!agentPublication.includes(required)) fail(`public Agent publication is missing: ${required}`);
   }
   for (const required of [
-    'bundle_source_release_tag="${{ steps.composition.outputs.source_release_tag }}"',
-    '[ -n "$bundle_source_release_tag" ] || bundle_source_release_tag="$RELEASE_TAG"',
-    'refs/tags/${bundle_source_release_tag}$',
+    'bundle_source_release_tag="$(jq -er \'.sourceRelease.tag\' "$BUNDLE_DIR/agent-bundle.json")"',
+    '[ "$bundle_source_release_tag" = "$RELEASE_TAG" ] || {',
+    '--source-release-tag "$RELEASE_TAG"',
+    'refs/tags/${RELEASE_TAG}$',
   ]) {
-    if (!agentPublication.includes(required)) fail(`public Agent publication must verify the immutable bundle against its planned source release: ${required}`);
+    if (!agentPublication.includes(required)) fail(`public Agent publication must bind the merged bundle to the current release: ${required}`);
+  }
+  if (agentPublication.includes('bundle_source_release_tag="${{ steps.composition.outputs.source_release_tag }}"') ||
+      agentPublication.includes('--source-release-tag "$bundle_source_release_tag"') ||
+      agentPublication.includes('refs/tags/${bundle_source_release_tag}$')) {
+    fail("public Agent publication must not use the reused image source release to verify the current Agent bundle");
   }
   // Comment-only markers satisfy the current public projection checker.
   // Executable steps must still bind the immutable artifact identity.
