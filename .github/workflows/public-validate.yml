@@ -2037,6 +2037,15 @@ jobs:
             echo "export_manifest_sha256=sha256:$(sha256sum PUBLIC_EXPORT_MANIFEST.json | awk '{print $1}')"
             echo "public_provenance_sha256=sha256:$(sha256sum PUBLIC_PROVENANCE.json | awk '{print $1}')"
           } >> "$GITHUB_OUTPUT"
+      - id: release_profile
+        name: Resolve the exact release compatibility profile
+        env:
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          release_version="${RELEASE_TAG#v}"
+          release_profile="$(node scripts/ci/release-compatibility-profile.mjs --release-version "$release_version")"
+          echo "profile=$release_profile" >> "$GITHUB_OUTPUT"
       - name: Validate release notes for final publication
         env:
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
@@ -2286,6 +2295,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
           RUNTIME_COMPOSITION_SHA256: ${{ steps.composition.outputs.composition_digest }}
+          RELEASE_PROFILE: ${{ steps.release_profile.outputs.profile }}
         run: |
           set -euo pipefail
           mkdir -p dist/final
@@ -2299,10 +2309,12 @@ jobs:
           RUNTIME_BOOTSTRAP_REFS="$(refs_for bootstrap)" \
           bash scripts/ci/generate-release-manifest.sh \
             --engine-ref-dir dist/final/engine/public-engine-package-digests \
+            --release-profile "$RELEASE_PROFILE" \
             --final-runtime-contract --verify-contract \
             --output dist/final/release.manifest.yaml
           node scripts/ci/verify-public-release.mjs \
-            --manifest dist/final/release.manifest.yaml --tag "$RELEASE_TAG" --json \
+            --manifest dist/final/release.manifest.yaml --tag "$RELEASE_TAG" \
+            --release-profile "$RELEASE_PROFILE" --json \
             > dist/final/release-verification.json
           manifest_digest="sha256:$(sha256sum dist/final/release.manifest.yaml | awk '{print $1}')"
           node scripts/ci/resolve-public-runtime-composition.mjs \
@@ -2313,9 +2325,12 @@ jobs:
             --json | tee dist/final/runtime-composition-binding.json
           node scripts/ci/verify-release-component-composition.mjs \
             --composition dist/final/runtime-composition.json \
-            --manifest dist/final/release.manifest.yaml --json \
+            --manifest dist/final/release.manifest.yaml \
+            --release-profile "$RELEASE_PROFILE" --json \
             > dist/final/runtime-composition-verification.json
       - name: Assemble and verify durable component evidence
+        env:
+          RELEASE_PROFILE: ${{ steps.release_profile.outputs.profile }}
         run: |
           set -euo pipefail
           args=(
@@ -2337,17 +2352,20 @@ jobs:
           node scripts/ci/verify-component-evidence-bundle.mjs \
             --bundle dist/final/component-evidence.json \
             --composition dist/final/runtime-composition.json \
-            --manifest dist/final/release.manifest.yaml --json \
+            --manifest dist/final/release.manifest.yaml \
+            --release-profile "$RELEASE_PROFILE" --json \
             | tee dist/final/component-evidence-verification.json
       - name: Build immutable Docker Compose deployment packages
         env:
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+          RELEASE_PROFILE: ${{ steps.release_profile.outputs.profile }}
         run: |
           set -euo pipefail
           node --test scripts/ci/generate-compose-deployment.test.mjs
           node scripts/ci/generate-compose-deployment.mjs \
             --manifest dist/final/release.manifest.yaml --tag "$RELEASE_TAG" \
             --runtime-composition dist/final/runtime-composition.json \
+            --release-profile "$RELEASE_PROFILE" \
             --output dist/final/deployment --snapshot dist/final/deployment-snapshot \
             > dist/final/deployment-packages.json
           [ "$(jq 'length' dist/final/deployment-packages.json)" -eq 1 ]
@@ -2365,11 +2383,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+          RELEASE_PROFILE: ${{ steps.release_profile.outputs.profile }}
         run: |
           set -euo pipefail
           node scripts/ci/publish-public-deployment.mjs \
             --snapshot-dir dist/final/deployment-snapshot \
             --tag "$RELEASE_TAG" --source-sha "$GITHUB_SHA" \
+            --release-profile "$RELEASE_PROFILE" \
             --timeout-seconds 10800 --json | tee dist/final/deployment-publication.json
           merge_sha="$(jq -er '.mergeSha' dist/final/deployment-publication.json)"
           [[ "$merge_sha" =~ ^[a-f0-9]{40}$ ]] || { echo "deployment merge SHA is invalid" >&2; exit 1; }
@@ -2405,6 +2425,7 @@ jobs:
       - name: Verify the complete release evidence closure
         env:
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+          RELEASE_PROFILE: ${{ steps.release_profile.outputs.profile }}
         run: |
           set -euo pipefail
           node scripts/ci/verify-public-release-evidence.mjs \
@@ -2412,12 +2433,13 @@ jobs:
             --composition dist/final/runtime-composition.json \
             --bundle dist/final/component-evidence.json \
             --provenance dist/final/public-release-provenance.json \
-            --tag "$RELEASE_TAG" --json \
+            --tag "$RELEASE_TAG" --release-profile "$RELEASE_PROFILE" --json \
             | tee dist/final/public-release-evidence-verification.json
       - name: Generate and publish the release-channel branch
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+          RELEASE_PROFILE: ${{ steps.release_profile.outputs.profile }}
         run: |
           set -euo pipefail
           channel="canary"
@@ -2442,6 +2464,7 @@ jobs:
           node scripts/ci/generate-public-channel.mjs \
             --tag "$RELEASE_TAG" --channel "$channel" --manifest dist/final/release.manifest.yaml \
             --runtime-composition dist/final/runtime-composition.json \
+            --release-profile "$RELEASE_PROFILE" \
             --output-dir "$channel_root" --publication-complete
           # The first successful publication can follow the frozen source
           # first tag, so do not manufacture a historical channel record.
