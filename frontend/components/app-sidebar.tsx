@@ -23,6 +23,8 @@ const AboutIcon = semanticIcons.navigation.about;
 const SupportAuthorIcon = semanticIcons.navigation.support;
 // Keep the framework's automatic route prefetch policy.
 const sidebarLinkPrefetch = null;
+// Keep the hover bridge long enough to reach the flyout while matching the shared reveal tier.
+const collapsedSubmenuUnmountDelayMs = 180;
 type AppSidebarNavItem = {
     title: string;
     icon: Icon;
@@ -151,8 +153,9 @@ function AppSidebarNavigationGroup({ collapsedMenuKey, current, group, isCollaps
       </SidebarGroupContent>
     </SidebarGroup>);
 }
-function CollapsedSidebarSubmenu({ current, menu, normalize, onClose, onCloseImmediately, onKeepOpen, }: {
+function CollapsedSidebarSubmenu({ current, isClosing, menu, normalize, onClose, onCloseImmediately, onKeepOpen, }: {
     current: string;
+    isClosing: boolean;
     menu: AppSidebarCollapsedMenuState;
     normalize: (path: string) => string;
     onClose: () => void;
@@ -161,7 +164,7 @@ function CollapsedSidebarSubmenu({ current, menu, normalize, onClose, onCloseImm
 }) {
     const MenuIcon = menu.icon;
     return (<div className="fixed z-50 w-max min-w-40 max-w-56" data-sidebar-collapsed-submenu="true" onMouseEnter={onKeepOpen} onMouseLeave={onClose} onFocus={onKeepOpen} onBlur={onClose} style={{ transform: `translate3d(${menu.left}px, ${menu.top}px, 0)` }}>
-      <div className="radius-overlay border border-border bg-popover p-1 text-popover-foreground shadow-md">
+      <div data-sidebar-collapsed-submenu-panel="true" className={cn("radius-overlay border border-border bg-popover p-1 text-popover-foreground shadow-md motion-reduce:animate-none", isClosing ? "animate-out fade-out-0 slide-out-to-left-1 duration-[var(--motion-duration-reveal)]" : "animate-in fade-in-0 slide-in-from-left-1 duration-[var(--motion-duration-enter)]")}>
         <div className={cn("flex max-w-full items-center gap-2 truncate px-2 py-1 text-sidebar-foreground/70", textRole.helperText)}>
           <MenuIcon className="size-4 shrink-0"/>
           <span className="truncate">{menu.title}</span>
@@ -194,6 +197,7 @@ export function AppSidebar({ warmup = false, ...props }: React.ComponentProps<ty
     const normalize = (p: string) => (p !== "/" && p.endsWith("/") ? p.slice(0, -1) : p);
     const current = normalize(pathname);
     const [collapsedMenu, setCollapsedMenu] = React.useState<AppSidebarCollapsedMenuState | null>(null);
+    const [isCollapsedMenuClosing, setIsCollapsedMenuClosing] = React.useState(false);
     const closeTimerRef = React.useRef<number | null>(null);
     const isCollapsedDesktop = state === "collapsed" && !isMobile;
     const clearCollapsedMenuCloseTimer = React.useCallback(() => {
@@ -204,18 +208,26 @@ export function AppSidebar({ warmup = false, ...props }: React.ComponentProps<ty
     }, []);
     const openCollapsedMenu = React.useCallback((menu: AppSidebarCollapsedMenuState) => {
         clearCollapsedMenuCloseTimer();
+        setIsCollapsedMenuClosing(false);
         setCollapsedMenu(menu);
     }, [clearCollapsedMenuCloseTimer]);
     const closeCollapsedMenu = React.useCallback(() => {
         clearCollapsedMenuCloseTimer();
+        setIsCollapsedMenuClosing(true);
         closeTimerRef.current = window.setTimeout(() => {
             setCollapsedMenu(null);
+            setIsCollapsedMenuClosing(false);
             closeTimerRef.current = null;
-        }, 180);
+        }, collapsedSubmenuUnmountDelayMs);
     }, [clearCollapsedMenuCloseTimer]);
     const closeCollapsedMenuImmediately = React.useCallback(() => {
         clearCollapsedMenuCloseTimer();
         setCollapsedMenu(null);
+        setIsCollapsedMenuClosing(false);
+    }, [clearCollapsedMenuCloseTimer]);
+    const keepCollapsedMenuOpen = React.useCallback(() => {
+        clearCollapsedMenuCloseTimer();
+        setIsCollapsedMenuClosing(false);
     }, [clearCollapsedMenuCloseTimer]);
     const previousPathRef = React.useRef(current);
     React.useEffect(() => {
@@ -228,9 +240,12 @@ export function AppSidebar({ warmup = false, ...props }: React.ComponentProps<ty
         }
     }, [closeCollapsedMenuImmediately, current, isMobile, setOpenMobile]);
     React.useEffect(() => {
-        if (!isCollapsedDesktop)
+        if (!isCollapsedDesktop) {
+            clearCollapsedMenuCloseTimer();
             setCollapsedMenu(null);
-    }, [isCollapsedDesktop]);
+            setIsCollapsedMenuClosing(false);
+        }
+    }, [clearCollapsedMenuCloseTimer, isCollapsedDesktop]);
     React.useEffect(() => clearCollapsedMenuCloseTimer, [clearCollapsedMenuCloseTimer]);
     const user = React.useMemo(() => ({
         name: "admin",
@@ -359,7 +374,7 @@ export function AppSidebar({ warmup = false, ...props }: React.ComponentProps<ty
     return (
     // collapsible="icon" means the sidebar can be collapsed to icon-only mode
     <Sidebar collapsible="icon" {...props}>
-      {isCollapsedDesktop && collapsedMenu ? (<CollapsedSidebarSubmenu current={current} menu={collapsedMenu} normalize={normalize} onClose={closeCollapsedMenu} onCloseImmediately={closeCollapsedMenuImmediately} onKeepOpen={clearCollapsedMenuCloseTimer}/>) : null}
+      {isCollapsedDesktop && collapsedMenu ? (<CollapsedSidebarSubmenu current={current} isClosing={isCollapsedMenuClosing} menu={collapsedMenu} normalize={normalize} onClose={closeCollapsedMenu} onCloseImmediately={closeCollapsedMenuImmediately} onKeepOpen={keepCollapsedMenuOpen}/>) : null}
       <SidebarHeader className="border-b-0 min-h-11 justify-center py-0.5">
         {/* Preserve the logo's vertical anchor while the shell width transitions. */}
         <Link href="/overview/" prefetch={sidebarLinkPrefetch} className="flex h-8 w-full gap-2 items-center min-w-0 overflow-hidden rounded-lg px-2.5 transition-colors duration-200 ease-linear hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:p-0">

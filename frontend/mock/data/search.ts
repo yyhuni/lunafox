@@ -21,6 +21,8 @@ interface MockSearchPageToken {
   id: number
 }
 
+const mockGlobalAssetSearchPageTokenPrefix = "mock-search.v2."
+
 function websiteToSearchResult(website: typeof mockWebsites[number]): WebsiteSearchResult {
   return {
     id: website.id,
@@ -64,7 +66,7 @@ function endpointToSearchResult(endpoint: typeof mockEndpoints[number]): Endpoin
 
 function matchesSearchQuery(record: SearchResult, query: GlobalAssetSearchQuery): boolean {
   if (query.mode === "plainUrl") {
-    return record.url === query.value
+    return record.url.toLocaleLowerCase().includes(query.value.toLocaleLowerCase())
   }
   return query.conditions.every((condition) => matchesCondition(record, condition))
 }
@@ -80,9 +82,6 @@ function matchesCondition(record: SearchResult, condition: GlobalAssetSearchCond
   const fieldValue = record[condition.field]
   if (typeof fieldValue !== "string") return false
   const expected = String(condition.value)
-  if (condition.field === "url") {
-    return fieldValue === expected
-  }
   return condition.operator === "=="
     ? fieldValue === expected
     : fieldValue.toLocaleLowerCase().includes(expected.toLocaleLowerCase())
@@ -96,12 +95,14 @@ function sortByCreatedAtAndID(records: SearchResult[]): SearchResult[] {
 }
 
 function encodePageToken(payload: MockSearchPageToken): string {
-  return `mock-search.v1.${encodeURIComponent(JSON.stringify(payload))}`
+  return `${mockGlobalAssetSearchPageTokenPrefix}${encodeURIComponent(JSON.stringify(payload))}`
 }
 
 function decodePageToken(raw: string | undefined, fingerprint: string): MockSearchPageToken | undefined {
   if (!raw) return undefined
-  const encoded = raw.startsWith("mock-search.v1.") ? raw.slice("mock-search.v1.".length) : ""
+  const encoded = raw.startsWith(mockGlobalAssetSearchPageTokenPrefix)
+    ? raw.slice(mockGlobalAssetSearchPageTokenPrefix.length)
+    : ""
   if (!encoded) throw new Error("invalid global asset search pageToken")
   try {
     const token = JSON.parse(decodeURIComponent(encoded)) as MockSearchPageToken

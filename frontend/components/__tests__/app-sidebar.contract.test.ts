@@ -189,7 +189,8 @@ describe("app-sidebar contract", () => {
     expect(source).toContain("translate3d(${menu.left}px, ${menu.top}px, 0)")
     expect(source).toContain("const MenuIcon = menu.icon")
     expect(source).toContain('<MenuIcon className="size-4 shrink-0"')
-    expect(source).toContain("}, 180)")
+    expect(source).toContain("const collapsedSubmenuUnmountDelayMs = 180")
+    expect(source).toContain("}, collapsedSubmenuUnmountDelayMs)")
     expect(source).toContain("onCollapsedMenuOpen({")
     expect(source).toContain('from "@/lib/ui/overlay-styles"')
     expect(source).toContain("left: rect.right + shellOverlaySideOffsets.sidebarDesktop")
@@ -197,6 +198,15 @@ describe("app-sidebar contract", () => {
     expect(source).toContain("href={subItem.url}")
     expect(source).toContain("prefetch={sidebarLinkPrefetch}")
     expect(source).not.toContain("<Popover open={isCollapsedMenuOpen}")
+  })
+
+  it("gives the collapsed flyout a compositor-friendly enter and exit transition", () => {
+    expect(source).toContain('data-sidebar-collapsed-submenu-panel="true"')
+    expect(source).toContain("animate-in fade-in-0 slide-in-from-left-1 duration-[var(--motion-duration-enter)]")
+    expect(source).toContain("animate-out fade-out-0 slide-out-to-left-1 duration-[var(--motion-duration-reveal)]")
+    expect(source).toContain("motion-reduce:animate-none")
+    expect(source).toContain("const [isCollapsedMenuClosing, setIsCollapsedMenuClosing] = React.useState(false)")
+    expect(source).not.toContain("transition-all")
   })
 
   it("avoids mounting closed sidebar collapsible content during initial shell hydration", () => {

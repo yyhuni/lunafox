@@ -4,6 +4,7 @@ export const GLOBAL_ASSET_SEARCH_DEFAULT_PAGE_SIZE = 10
 export const GLOBAL_ASSET_SEARCH_MAX_PAGE_SIZE = 100
 export const GLOBAL_ASSET_SEARCH_MAX_QUERY_BYTES = 2048
 export const GLOBAL_ASSET_SEARCH_MAX_CONDITIONS = 10
+export const GLOBAL_ASSET_SEARCH_MIN_URL_CONTAINS_RUNES = 2
 export const GLOBAL_ASSET_SEARCH_MIN_CONTAINS_RUNES = 3
 
 export type GlobalAssetSearchField = "url" | "host" | "title" | "statusCode" | "tech"
@@ -36,17 +37,13 @@ export function parseGlobalAssetSearchQuery(raw: string): GlobalAssetSearchQuery
     throw new GlobalAssetSearchQueryError(`q must not exceed ${GLOBAL_ASSET_SEARCH_MAX_QUERY_BYTES} UTF-8 bytes`)
   }
 
-  // A plain query is an observed URL identity. Its bytes must reach Server
-  // unchanged so an accepted URL with significant trailing payload bytes can
-  // still be retrieved exactly. Structured syntax keeps its own whitespace
-  // grammar below.
-  const query = raw
-  if (!query.trim()) {
+  const query = raw.trim()
+  if (!query) {
     throw new GlobalAssetSearchQueryError("q is required")
   }
 
   if (isPlainObservedURL(query) || !looksStructured(query)) {
-    assertContainsLength(query, "url")
+    assertContainsLength(query, "url", GLOBAL_ASSET_SEARCH_MIN_URL_CONTAINS_RUNES)
     return { mode: "plainUrl", value: query }
   }
 
@@ -93,9 +90,9 @@ function isPlainObservedURL(query: string): boolean {
   return /^https?:\/\//iu.test(query)
 }
 
-function assertContainsLength(value: string, field: string) {
-  if (Array.from(value).length < GLOBAL_ASSET_SEARCH_MIN_CONTAINS_RUNES) {
-    throw new GlobalAssetSearchQueryError(`${field} contains values must have at least ${GLOBAL_ASSET_SEARCH_MIN_CONTAINS_RUNES} Unicode characters`)
+function assertContainsLength(value: string, field: string, minimumRunes: number) {
+  if (Array.from(value.trim()).length < minimumRunes) {
+    throw new GlobalAssetSearchQueryError(`${field} contains values must have at least ${minimumRunes} Unicode characters`)
   }
 }
 
@@ -148,14 +145,13 @@ class StrictQueryParser {
       return { field, operator, value }
     }
 
-    if (field === "url") {
-      // URL equality is exact even when callers use the legacy `=` spelling.
-      // This mirrors the Server parser and prevents a UI-only contains branch.
-      return { field, operator: "==", value: rawValue }
-    }
-
-    if ((field === "host" || field === "title") && operator === "=") {
-      assertContainsLength(rawValue, field)
+    if (operator === "=") {
+      const minimumRunes = field === "url"
+        ? GLOBAL_ASSET_SEARCH_MIN_URL_CONTAINS_RUNES
+        : GLOBAL_ASSET_SEARCH_MIN_CONTAINS_RUNES
+      if (field === "url" || field === "host" || field === "title") {
+        assertContainsLength(rawValue, field, minimumRunes)
+      }
     }
     return { field, operator, value: rawValue }
   }

@@ -1299,6 +1299,7 @@
       "configCollapseDetails": "收起详情",
       "configExpandDetails": "展开详情",
       "configError": "错误",
+      "configSchemaErrorFallback": "配置与当前选择的工作流不匹配。",
       "advancedConfig": "高级配置",
       "quickStart": "快速启动",
       "cancel": "取消",

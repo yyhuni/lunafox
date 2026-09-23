@@ -34,9 +34,8 @@ function removeRecentSearch(query: string) {
 export function useSearchPageState() {
   const t = useTranslations("search")
   const urlSearchParams = useSearchParams()
-  // A URL in q is an exact observed-value lookup. Do not trim it while moving
-  // through client route state, otherwise a valid stored payload cannot round
-  // trip from a shareable search link.
+  // Keep the draft as entered for shareable search links; the query parser
+  // trims user-facing contains terms before building the search predicate.
   const initialQuery = urlSearchParams.get("q") ?? ""
   const initialQueryIsValid = !initialQuery || isGlobalAssetSearchQueryValid(initialQuery)
   const initialSearchParams: SearchParams | undefined = initialQuery && initialQueryIsValid

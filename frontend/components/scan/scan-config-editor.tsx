@@ -9,6 +9,7 @@ interface ScanConfigEditorProps {
   configuration: string
   onChange: (value: string) => void
   onValidationChange?: (isValid: boolean) => void
+  validationError?: string | null
   selectedScanWorkflows?: ScanWorkflow[]
   selectedCapabilities?: string[]
   isConfigEdited?: boolean
@@ -22,6 +23,7 @@ export function ScanConfigEditor({
   configuration,
   onChange,
   onValidationChange,
+  validationError,
   selectedScanWorkflows = [],
   selectedCapabilities,
   isConfigEdited = false,
@@ -41,6 +43,7 @@ export function ScanConfigEditor({
       configuration={configuration}
       onChange={onChange}
       onValidationChange={onValidationChange}
+      validationError={validationError}
       isConfigEdited={isConfigEdited}
       disabled={disabled}
       showCapabilities={showCapabilities}

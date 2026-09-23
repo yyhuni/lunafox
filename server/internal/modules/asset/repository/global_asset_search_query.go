@@ -75,7 +75,7 @@ func executeGlobalAssetSearchQuery(db *gorm.DB, ctx context.Context, table strin
 
 func applyGlobalAssetSearchPredicates(db *gorm.DB, ast assetapp.GlobalAssetSearchAST, dialect string) (*gorm.DB, error) {
 	if ast.Mode == assetapp.GlobalAssetSearchModePlainURL {
-		return applyGlobalAssetSearchTextPredicate(db, "asset.url", assetapp.GlobalAssetSearchOperatorExact, ast.PlainURL, dialect), nil
+		return applyGlobalAssetSearchTextPredicate(db, "asset.url", assetapp.GlobalAssetSearchOperatorContains, ast.PlainURL, dialect), nil
 	}
 	if ast.Mode != assetapp.GlobalAssetSearchModeStructured || len(ast.Conditions) == 0 {
 		return nil, fmt.Errorf("invalid typed global asset search AST")

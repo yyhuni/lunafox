@@ -1299,6 +1299,7 @@
       "configCollapseDetails": "Collapse details",
       "configExpandDetails": "Expand details",
       "configError": "Error",
+      "configSchemaErrorFallback": "Configuration does not match the selected workflow.",
       "advancedConfig": "Advanced Configuration",
       "quickStart": "Quick Start",
       "cancel": "Cancel",
