@@ -9,11 +9,35 @@ import type {
   WordlistText,
 } from "@/types/wordlist.types"
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function validateWordlistResponse(payload: unknown): Wordlist {
+  // tags is required by the UI contract; malformed transport data must not be coerced.
+  if (!isRecord(payload) || !Array.isArray(payload.tags)) {
+    throw new Error("Invalid Wordlist response: tags must be an array")
+  }
+
+  return payload as unknown as Wordlist
+}
+
+function validateWordlistListResponse(payload: unknown): GetWordlistsResponse {
+  if (!isRecord(payload) || !Array.isArray(payload.results)) {
+    throw new Error("Invalid Wordlist list response: results must be an array")
+  }
+
+  return {
+    ...payload,
+    results: payload.results.map(validateWordlistResponse),
+  } as GetWordlistsResponse
+}
+
 // Dictionary (Wordlist) API service
 
 export async function getWordlists(params: GetWordlistsParams = {}): Promise<GetWordlistsResponse> {
-  const response = await apiClient.get<GetWordlistsResponse>("/wordlists", { params })
-  return response.data
+  const response = await apiClient.get<unknown>("/wordlists", { params })
+  return validateWordlistListResponse(response.data)
 }
 
 export async function getWordlistTags(params: GetWordlistTagsParams = {}): Promise<GetWordlistTagsResponse> {
@@ -36,13 +60,13 @@ export async function uploadWordlist(payload: {
   }
   formData.append("file", payload.file)
 
-  const response = await apiClient.post<Wordlist>("/wordlists", formData, {
+  const response = await apiClient.post<unknown>("/wordlists", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
   })
 
-  return response.data
+  return validateWordlistResponse(response.data)
 }
 
 // Delete wordlist
@@ -52,8 +76,8 @@ export async function deleteWordlist(id: number): Promise<void> {
 
 export async function updateWordlistMetadata(payload: UpdateWordlistMetadataPayload): Promise<Wordlist> {
   const { id, ...body } = payload
-  const response = await apiClient.patch<Wordlist>(`/wordlists/${id}`, body)
-  return response.data
+  const response = await apiClient.patch<unknown>(`/wordlists/${id}`, body)
+  return validateWordlistResponse(response.data)
 }
 
 // Get wordlist content

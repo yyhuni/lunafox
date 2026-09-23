@@ -18,12 +18,16 @@ func NewWordlistHandler(svc *service.WordlistFacade) *WordlistHandler {
 }
 
 func toWordlistOutput(wordlist *service.Wordlist) dto.WordlistResponse {
+	// Preserve the required JSON array contract when the Wordlist has no tags.
+	tags := make([]string, len(wordlist.Tags))
+	copy(tags, wordlist.Tags)
+
 	return dto.WordlistResponse{
 		ID:          wordlist.ID,
 		Name:        httpdto.WordlistName(wordlist.ID),
 		FileName:    wordlist.FileName,
 		Description: wordlist.Description,
-		Tags:        append([]string(nil), wordlist.Tags...),
+		Tags:        tags,
 		FilePath:    wordlist.FilePath,
 		FileSize:    wordlist.FileSize,
 		LineCount:   wordlist.LineCount,

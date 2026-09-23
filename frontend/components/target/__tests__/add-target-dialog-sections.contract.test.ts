@@ -12,12 +12,10 @@ describe("add-target-dialog-sections contract", () => {
     expect(source).toContain("blockingIssueCount")
   })
 
-  it("explains target and organization concepts at their entry points", () => {
-    expect(source).toContain("InlineHelpTooltip")
-    expect(source).toContain('tTooltips("targetConcept")')
-    expect(source).toContain('tTooltips("organizationConcept")')
-    expect(source).toContain('ariaLabel={t("targetList")}')
-    expect(source).toContain('ariaLabel={t("linkOrganization")}')
+  it("keeps resource concepts out of creation and association entry points", () => {
+    expect(source).not.toContain("InlineHelpTooltip")
+    expect(source).not.toContain('tTooltips("targetConcept")')
+    expect(source).not.toContain('tTooltips("organizationConcept")')
   })
 
   it("adapts target creation to the shared multi-select organization workspace", () => {

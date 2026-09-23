@@ -31,7 +31,6 @@ export interface OrgTargetsTranslations {
         unlinkTarget: string;
         clickToCopy: string;
         copied: string;
-        targetConcept: string;
     };
     types: {
         domain: string;
@@ -121,7 +120,7 @@ export const createTargetColumns = ({ formatDate, navigate, handleDelete, t, }: 
             size: 350,
             minSize: 250,
             meta: { title: t.columns.targetName },
-            header: ({ column }) => (<DataTableColumnHeader column={column} title={t.columns.targetName} tooltip={t.tooltips.targetConcept}/>),
+            header: ({ column }) => (<DataTableColumnHeader column={column} title={t.columns.targetName}/>),
             cell: ({ row }) => (<TargetNameCell name={row.getValue("name") as string} targetId={row.original.id} targetType={row.original.type} t={t}/>),
         },
         {
