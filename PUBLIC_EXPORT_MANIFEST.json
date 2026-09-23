@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:2e2222a1eaed55be1cce616ffdf4a8055a47804fcbc592f6f6622d6564b5c37c",
-  "releaseTag": "v0.0.1-alpha.178",
+  "sourceRevisionDigest": "sha256:cc3e728fa45f116f24f800a8d25b5a4f232b21a67b436c29c13a9d52387f4971",
+  "releaseTag": "v0.0.1-alpha.179",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -55,7 +55,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "c386181c832a510b30a8b4d9a01ecb69c58864281d8bb677e12a1942afaa3b43"
+      "sha256": "a1695e950d279c41f5efb846f81924cc4e8bec3fd1f0f5546af4c1bf1eb7f283"
     },
     {
       "path": "README.md",
@@ -76,7 +76,7 @@
       "type": "file",
       "mode": "0644",
       "size": 2332,
-      "sha256": "1ea06563c839646b27f70975b7d44cd7017e3c3e8e3789527f96e737c300bdf6"
+      "sha256": "599d61d9af3e0992f8d8816399a4210f3fadf628a1c327eccb6d5bf1015f7833"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/agent-bundle.sha256",
@@ -90,7 +90,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "9f9104809ce2b902c4785af528e3147ef7be3dd77050e0ef317eada4371fc1a0"
+      "sha256": "68c7a45d0cc7c1a8d92bfffa713eb62e9b1e8c9f4d6b82e29fca26df29255a48"
     },
     {
       "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/lunafox-agent-linux-amd64",
@@ -17115,6 +17115,13 @@
       "mode": "0644",
       "size": 995,
       "sha256": "023ab053c84e469f33e06905e43c959d408302ddb38cfeddf0997f26ebc0a311"
+    },
+    {
+      "path": "release-notes/v0.0.1-alpha.179.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 995,
+      "sha256": "47edf03095d9d9b060a57451a5d20b645a260c0a0f35e0059442f7322eb71b00"
     },
     {
       "path": "resources/alloy/config.alloy",
