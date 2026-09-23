@@ -29,7 +29,7 @@ Use `BulkLineValidationInput` for dialogs that accept one item per line and need
 
 `LineNumberedTextarea` keeps the native textarea as the scroll and editing owner. Its gutter and validation overlay virtualize presentation rows for large logical line counts, so callers must continue to pass the logical line count and line-level highlights without creating route-local row lists. Use `countLineNumberedTextareaLines` when a caller needs a display count from raw text; validators remain responsible for parsing records and enforcing their backend-aligned limits.
 
-`BulkLineValidationInput` exposes the optional `labelAccessory` slot for a shared inline explanation affordance. Keep the `InlineHelpTooltip` trigger beside (and outside) the `<label>` element so it does not change the input's accessible name; use it only for concise domain guidance.
+`InlineHelpTooltip` owns the shared compact explanation affordance. Keep its trigger beside (and outside) an owning `<label>` when one is needed so it does not change the input's accessible name. Use it for one concise contextual explanation at the owning page header or label; do not repeat resource definitions in table headers or form labels.
 
 Bulk validation editors use the shared responsive line-numbered viewport by default so drawer and dialog forms keep the primary input usable across mobile, desktop, and tall screens. Pass `viewportClassName` only when a surrounding owner already controls the editor height, such as a full-page flex editor.
 

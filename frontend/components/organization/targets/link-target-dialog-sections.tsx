@@ -2,9 +2,7 @@
 
 import React from "react"
 import type { Control, FieldValues, Path } from "react-hook-form"
-import { useTranslations } from "next-intl"
 import { semanticIcons } from "@/components/icons"
-import { InlineHelpTooltip } from "@/components/common/inline-help-tooltip"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { BulkLineValidationInput, type BulkLineValidationIssue } from "@/components/common/bulk-line-validation-input"
@@ -50,8 +48,6 @@ export function LinkTargetInputSection<TFieldValues extends FieldValues>({
   targetValidation,
   isTargetBatchOverLimit,
 }: LinkTargetInputSectionProps<TFieldValues>) {
-  const tTooltips = useTranslations("tooltips")
-
   return (
     <FormField
       control={formControl}
@@ -84,11 +80,6 @@ export function LinkTargetInputSection<TFieldValues extends FieldValues>({
               id="organization-link-targets"
               name={field.name}
               label={t("targetLabel")}
-              labelAccessory={(
-                <InlineHelpTooltip ariaLabel={t("targetLabel")}>
-                  {tTooltips("targetConcept")}
-                </InlineHelpTooltip>
-              )}
               required
               placeholder={t("placeholder")}
               value={fieldValue}
@@ -125,16 +116,9 @@ interface LinkTargetOrganizationSectionProps {
 }
 
 export function LinkTargetOrganizationSection({ organizationName, t }: LinkTargetOrganizationSectionProps) {
-  const tTooltips = useTranslations("tooltips")
-
   return (
     <div className="gap-2 grid">
-      <div className="flex items-center gap-1">
-        <Label>{t("organizationLabel")}</Label>
-        <InlineHelpTooltip ariaLabel={t("organizationLabel")}>
-          {tTooltips("organizationConcept")}
-        </InlineHelpTooltip>
-      </div>
+      <Label>{t("organizationLabel")}</Label>
       <div className="bg-muted/50 border flex gap-2 items-center px-3 py-2 rounded-md">
         <OrganizationIcon className="h-4 text-muted-foreground w-4" />
         <span className="font-medium">{organizationName}</span>

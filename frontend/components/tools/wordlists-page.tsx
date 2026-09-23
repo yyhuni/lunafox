@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { AlertDialog, AlertDialogClose, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { AppErrorState } from "@/components/shared/feedback/app-error-state"
 import { WordlistCatalogCard, WordlistCatalogCardLoadingState } from "@/components/tools/wordlist-catalog-card"
 import { WordlistDetailDrawer } from "@/components/tools/wordlist-detail-drawer"
 import { WordlistUploadDialog } from "@/components/tools/wordlist-upload-dialog"
@@ -35,6 +36,7 @@ import { getLoadingStructureSlotAttributes } from "@/components/shared/loading/l
 import { SearchToolbarSkeleton } from "@/components/shared/loading/search-toolbar-skeleton"
 import { SearchInput } from "@/components/shared/search-input"
 import { useDeleteWordlist, useWordlistTags, useWordlists } from "@/hooks/use-wordlists"
+import { normalizeError } from "@/lib/errors/normalize-error"
 import { textRole } from "@/lib/typography"
 import type { Wordlist } from "@/types/wordlist.types"
 import { useLocale, useTranslations } from "next-intl"
@@ -102,7 +104,7 @@ export default function WordlistsPage() {
   const pageSize = query.pageSize
   const compiledFilter = compileBusinessListFilter({ search: query.search, filters: query.filters }, WORDLIST_FILTER_FIELDS)
   const compiledOrderBy = compileBusinessListOrderBy(query.sorting, WORDLIST_SORTABLE_FIELDS)
-  const { data, isLoading, isPlaceholderData } = useWordlists({
+  const { data, error, isError, isLoading, isPlaceholderData, refetch } = useWordlists({
     pageSize,
     pageToken: query.pageToken,
     filter: compiledFilter,
@@ -177,6 +179,29 @@ export default function WordlistsPage() {
         setWordlistToDelete(null)
       },
     })
+  }
+
+  if (isError) {
+    return (
+      <ContentHandoff
+        owner="wordlists-page-content"
+        layer="workspace"
+        isLoading={isLoading}
+        skeleton={<WordlistsPageLoadingState />}
+        className={WORDLISTS_WORKSPACE_HANDOFF_CLASS}
+        skeletonClassName={WORDLISTS_WORKSPACE_HANDOFF_CLASS}
+        contentClassName={WORDLISTS_WORKSPACE_HANDOFF_CLASS}
+      >
+        <div className={WORDLISTS_WORKSPACE_SURFACE_CLASS}>
+          <AppErrorState
+            error={normalizeError(error, { notFoundKind: "unexpected-error" })}
+            onRetry={refetch}
+            variant="section"
+            className="min-h-0 flex-1"
+          />
+        </div>
+      </ContentHandoff>
+    )
   }
 
   return (
