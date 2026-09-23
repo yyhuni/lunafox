@@ -29,6 +29,7 @@ func TestComposeBootstrapOrdersInitializationAndPropagatesFailure(t *testing.T) 
 				"FAIL_AT="+failure,
 				"ENGINE_INSTALL_INVENTORY_PATH=/inventory",
 				"ENGINE_INSTALL_REGISTRY=docker.io",
+				"ENGINE_INSTALL_CF_ACCELERATION=false",
 				"FINGERPRINT_BOOTSTRAP_PATH=/fingerprints",
 				"WORDLISTS_SOURCE_PATH=/wordlists",
 				"AGENT_VERSION=1.0.0",

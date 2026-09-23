@@ -77,7 +77,6 @@ export function useOrganizationListState() {
       tooltips: {
         organizationDetails: tTooltips("organizationDetails"),
         initiateScan: tTooltips("initiateScan"),
-        organizationConcept: tTooltips("organizationConcept"),
       },
     }),
     [tColumns, tCommon, tTooltips]

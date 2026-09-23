@@ -131,7 +131,10 @@ Full Changelog: https://github.com/yyhuni/lunafox/compare/v1.2.2...v1.2.3
 ```
 
 不要写私有仓库链接、凭据、内部 workflow 名称、内部构建/部署细节，或
-`chore(export)`、`chore(deploy)` 这类工程提交。验证器会在发布边界再次检查这些高风险
+`chore(export)`、`chore(deploy)` 这类工程提交。只包含 `release-notes/<tag>.md` 与
+`release-note-evidence/<tag>.json` 的 `chore(release-notes)` 候选是已审计说明的投递，
+收集器将其标为内部变更，不再要求另一条公开说明。同一标题若还改了其他路径，仍然需要审计。
+验证器会在发布边界再次检查这些高风险
 内容，但公开安全仍由发布执行者和 reviewer 共同负责。
 
 正文必须是有效 UTF-8 Markdown，去除首尾空白后不得为空，且不超过 64 KiB。PR 标签和

@@ -37,7 +37,6 @@ interface BulkLineValidationInputProps {
   name: string
   label: string
   labelClassName?: string
-  labelAccessory?: React.ReactNode
   required?: boolean
   placeholder: string
   value: string
@@ -68,7 +67,6 @@ export function BulkLineValidationInput({
   name,
   label,
   labelClassName,
-  labelAccessory,
   required,
   placeholder,
   value,
@@ -104,20 +102,11 @@ export function BulkLineValidationInput({
   ), [validationResult])
   const hasBlockingDetails = (validationResult?.lineIssues.length ?? 0) > 0
 
-  const labelElement = (
-    <Label htmlFor={id} className={labelClassName}>
-      {label} {required && <span className="text-destructive">*</span>}
-    </Label>
-  )
-
   return (
     <div className={cn("gap-3", fillHeight ? "flex h-full min-h-0 flex-col" : "grid")}>
-      {labelAccessory ? (
-        <div className="flex items-center gap-1">
-          {labelElement}
-          {labelAccessory}
-        </div>
-      ) : labelElement}
+      <Label htmlFor={id} className={labelClassName}>
+        {label} {required && <span className="text-destructive">*</span>}
+      </Label>
       <LineNumberedTextarea
         lineCount={effectiveLineCount}
         lineNumbersRef={lineNumbersRef}

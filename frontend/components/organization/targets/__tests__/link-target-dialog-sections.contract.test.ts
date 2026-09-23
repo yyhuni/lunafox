@@ -36,12 +36,10 @@ describe("link-target-dialog-sections contract", () => {
     expect(source).not.toContain("<FormDescription")
   })
 
-  it("explains target and organization concepts at their input labels", () => {
-    expect(source).toContain("InlineHelpTooltip")
-    expect(source).toContain('tTooltips("targetConcept")')
-    expect(source).toContain('tTooltips("organizationConcept")')
-    expect(source).toContain('ariaLabel={t("targetLabel")}')
-    expect(source).toContain('ariaLabel={t("organizationLabel")}')
+  it("keeps resource concepts out of association labels", () => {
+    expect(source).not.toContain("InlineHelpTooltip")
+    expect(source).not.toContain('tTooltips("targetConcept")')
+    expect(source).not.toContain('tTooltips("organizationConcept")')
   })
 
   it("keeps the organization label text-only while retaining the selected organization icon", () => {

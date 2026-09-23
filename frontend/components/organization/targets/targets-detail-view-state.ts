@@ -57,7 +57,6 @@ export function useTargetsDetailViewState({ organizationId }: TargetsDetailViewS
         unlinkTarget: tTooltips("unlinkTarget"),
         clickToCopy: tTooltips("clickToCopy"),
         copied: tTooltips("copied"),
-        targetConcept: tTooltips("targetConcept"),
       },
       types: {
         domain: tTarget("types.domain"),
