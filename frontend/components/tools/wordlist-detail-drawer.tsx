@@ -115,6 +115,13 @@ export function WordlistDetailDrawer({
                 </div>
 
                 <dl className={cn(DETAIL_DRAWER_COMPACT_FIELD_GRID_CLASS, "border-y border-border/70 py-3")}>
+                  <WordlistCopyField
+                    label={t("resourceName")}
+                    value={wordlist.name}
+                    copyLabel={tCommon("actions.copy")}
+                    copiedLabel={t("resourceNameCopied")}
+                    toastId={`wordlist-resource-name-${wordlist.id}`}
+                  />
                   <WordlistDetailField label={t("rows")} value={wordlist.lineCount?.toLocaleString() ?? "-"} />
                   <WordlistDetailField label={t("size")} value={formatWordlistFileSize(wordlist.fileSize)} />
                   <WordlistDetailField label={t("updatedAt")} value={formatWordlistUpdatedAt(wordlist.updatedAt, locale)} />
@@ -211,6 +218,36 @@ function WordlistDetailField({ label, value }: { label: string; value: string })
     <div className="min-w-0 space-y-1">
       <dt className={textRole.metadataLabel}>{label}</dt>
       <dd className={cn("break-words tabular-nums", textRole.metadataValueStrong)}>{value}</dd>
+    </div>
+  )
+}
+
+function WordlistCopyField({
+  label,
+  value,
+  copyLabel,
+  copiedLabel,
+  toastId,
+}: {
+  label: string
+  value: string
+  copyLabel: string
+  copiedLabel: string
+  toastId: string
+}) {
+  return (
+    <div className="min-w-0 space-y-1 sm:col-span-2">
+      <dt className={textRole.metadataLabel}>{label}</dt>
+      <dd className="flex min-w-0 items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
+        <code className={cn("min-w-0 flex-1 break-all", textRole.code)}>{value}</code>
+        <CopyButton
+          value={value}
+          copyLabel={copyLabel}
+          copiedLabel={copiedLabel}
+          size="icon-sm"
+          toastId={toastId}
+        />
+      </dd>
     </div>
   )
 }
