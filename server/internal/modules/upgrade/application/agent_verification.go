@@ -90,7 +90,7 @@ func (service *Service) reconcileAfterHostEvent(ctx context.Context, operation *
 			operation.StageTimes = map[domain.Status]time.Time{}
 		}
 		operation.StageTimes[domain.StatusVerifying] = now
-		if _, err := service.persistReconciledOperation(ctx, operation, previous); err != nil {
+		if _, err := service.persistReconciledOperation(ctx, operation, previous, false); err != nil {
 			return nil, err
 		}
 	}
@@ -157,7 +157,7 @@ func (service *Service) verifyDeployment(ctx context.Context, operation *domain.
 		operation.StageTimes = map[domain.Status]time.Time{}
 	}
 	operation.StageTimes[domain.StatusSucceeded] = now
-	if _, err := service.persistReconciledOperation(ctx, operation, previous); err != nil {
+	if _, err := service.persistReconciledOperation(ctx, operation, previous, false); err != nil {
 		return nil, err
 	}
 	return operation, nil
@@ -272,7 +272,7 @@ func (service *Service) moveVerificationTerminal(ctx context.Context, operation 
 		operation.StageTimes = map[domain.Status]time.Time{}
 	}
 	operation.StageTimes[status] = now
-	if _, err := service.persistReconciledOperation(ctx, operation, previous); err != nil {
+	if _, err := service.persistReconciledOperation(ctx, operation, previous, false); err != nil {
 		return nil, err
 	}
 	return operation, nil

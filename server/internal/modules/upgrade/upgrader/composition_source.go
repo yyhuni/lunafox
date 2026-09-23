@@ -61,6 +61,9 @@ func ValidateRuntimeCompositionAsset(raw []byte, manifest *releasemanifest.Manif
 	if manifest == nil {
 		return fmt.Errorf("%w: release manifest is required", ErrCompositionInvalid)
 	}
+	if !manifest.HasRuntimeComposition() {
+		return fmt.Errorf("%w: manifest has no runtimeComposition binding", ErrCompositionUnavailable)
+	}
 	if manifest.RuntimeComposition.SchemaVersion != runtimeCompositionSchemaVersion ||
 		manifest.RuntimeComposition.Asset != runtimeCompositionAssetName ||
 		!digestPattern.MatchString(manifest.RuntimeComposition.SHA256) {
@@ -95,16 +98,14 @@ func (source *CompositionCandidateDeploymentSource) LoadCandidateDeployment(_ co
 		return CandidateDeployment{}, fmt.Errorf("load candidate release manifest: %w", err)
 	}
 	manifest, err := releasemanifest.Parse(rawManifest)
-	legacyAlpha114 := false
 	if err != nil {
-		// The policy-pinned alpha.114 bootstrap predates composition evidence.
-		// Parse it only through the explicit fixed-identity exception; every
-		// other malformed or composition-less manifest remains a hard failure.
-		manifest, err = releasemanifest.ParseLegacyAlpha114(rawManifest)
+		// Composition lookup is a deployment boundary. It accepts only the
+		// policy-pinned alpha.114 bytes or the exact alpha.164 bridge profile;
+		// every other malformed or incomplete Manifest remains a hard failure.
+		manifest, err = releasemanifest.ParseLegacyCompatible(rawManifest)
 		if err != nil {
 			return CandidateDeployment{}, fmt.Errorf("validate candidate release manifest: %w", err)
 		}
-		legacyAlpha114 = true
 	}
 	if manifest.Digest() != manifestDigest {
 		return CandidateDeployment{}, ErrManifestMismatch
@@ -113,8 +114,8 @@ func (source *CompositionCandidateDeploymentSource) LoadCandidateDeployment(_ co
 	if err != nil {
 		return CandidateDeployment{}, err
 	}
-	if legacyAlpha114 {
-		return candidate, fmt.Errorf("%w: legacy alpha.114 has no composition asset", ErrCompositionUnavailable)
+	if !manifest.HasRuntimeComposition() {
+		return candidate, fmt.Errorf("%w: legacy-compatible manifest has no composition asset", ErrCompositionUnavailable)
 	}
 	binding := manifest.RuntimeComposition
 	if binding.SchemaVersion != runtimeCompositionSchemaVersion || binding.Asset != runtimeCompositionAssetName || !digestPattern.MatchString(binding.SHA256) {

@@ -204,6 +204,81 @@ func ValidateTransition(from, to Status) error {
 	return nil
 }
 
+// ValidateJournalRecoveryTransition recognizes the narrow forward-only replay
+// path used after a Server restart interrupts a Compose upgrade. Callers must
+// establish journal provenance, operation identity, scope, and digest evidence
+// before invoking it; this function only protects the durable lifecycle shape.
+// It never grants success or reopens a terminal result.
+func ValidateJournalRecoveryTransition(mode ExecutionMode, migrationType string, migrationStatus MigrationStatus, from, to Status) error {
+	if mode == "" {
+		mode = ExecutionModeFull
+	}
+	if !mode.Valid() {
+		return fmt.Errorf("unsupported execution mode %q", mode)
+	}
+	if !from.Valid() || !to.Valid() {
+		return fmt.Errorf("unsupported journal recovery transition %q -> %q", from, to)
+	}
+	if from.IsTerminal() || to.IsTerminal() || !journalRecoveryCheckpoint(from) || !journalRecoveryCheckpoint(to) || journalRecoveryRank(to) <= journalRecoveryRank(from) {
+		return fmt.Errorf("journal recovery transition from %q to %q is not allowed", from, to)
+	}
+	if err := ValidateExecutionTransition(mode, from, to); err == nil {
+		return fmt.Errorf("journal recovery transition from %q to %q must be a forward replay", from, to)
+	}
+	if mode == ExecutionModeFrontendOnly && (frontendOnlyJournalRecoveryStageForbidden(from) || frontendOnlyJournalRecoveryStageForbidden(to)) {
+		return fmt.Errorf("frontend-only journal recovery transition from %q to %q is not allowed", from, to)
+	}
+	// Restarting after any migration is safe only after the durable journal has
+	// recorded success. The application also turns failed/unknown migration
+	// evidence into needs_recovery before this guard is reached.
+	if migrationType != "none" && journalRecoveryRank(to) >= journalRecoveryRank(StatusRestarting) && migrationStatus != MigrationStatusSucceeded {
+		return fmt.Errorf("journal recovery transition from %q to %q requires a succeeded migration", from, to)
+	}
+	return nil
+}
+
+func journalRecoveryCheckpoint(status Status) bool {
+	switch status {
+	case StatusQueued, StatusStopping, StatusPreflight, StatusUpdating,
+		StatusMigrating, StatusRestarting, StatusAgentVerifying, StatusVerifying:
+		return true
+	default:
+		return false
+	}
+}
+
+func journalRecoveryRank(status Status) int {
+	switch status {
+	case StatusQueued:
+		return 0
+	case StatusStopping:
+		return 1
+	case StatusPreflight:
+		return 2
+	case StatusUpdating:
+		return 3
+	case StatusMigrating:
+		return 4
+	case StatusRestarting:
+		return 5
+	case StatusAgentVerifying:
+		return 6
+	case StatusVerifying:
+		return 7
+	default:
+		return -1
+	}
+}
+
+func frontendOnlyJournalRecoveryStageForbidden(status Status) bool {
+	switch status {
+	case StatusStopping, StatusMigrating, StatusAgentVerifying:
+		return true
+	default:
+		return false
+	}
+}
+
 func (operation *Operation) Validate() error {
 	if operation == nil {
 		return fmt.Errorf("upgrade operation is required")
@@ -297,6 +372,15 @@ type Repository interface {
 type TransitionRepository interface {
 	Repository
 	UpdateTransition(context.Context, *Operation, Status) error
+}
+
+// JournalRecoveryTransitionRepository is the separate compare-and-set path for
+// a validated host journal checkpoint that advanced while Server was down. It
+// is intentionally distinct from UpdateTransition so normal host events cannot
+// weaken the strict lifecycle graph.
+type JournalRecoveryTransitionRepository interface {
+	TransitionRepository
+	UpdateJournalRecoveryTransition(context.Context, *Operation, Status) error
 }
 
 // RetryRepository adds the one operation that is intentionally allowed to

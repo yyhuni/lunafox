@@ -97,6 +97,56 @@ func TestChannelManifestSourceAcceptsPinnedLegacyAlpha114WithoutCompositionFetch
 	}
 }
 
+func TestChannelManifestSourceAcceptsRegisteredAlpha164BridgeWithoutCompositionFetch(t *testing.T) {
+	manifestBytes, err := os.ReadFile(filepath.Join("..", "testdata", "alpha164-bridge.release.manifest.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const bridgeTag = "v0.0.1-alpha.183"
+	var compositionRequested bool
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/channels/canary.env":
+			_, _ = writer.Write(channelRecordBytes(bridgeTag, manifestBytes))
+		case "/manifests/" + bridgeTag + ".yaml":
+			_, _ = writer.Write(manifestBytes)
+		default:
+			if strings.HasSuffix(request.URL.Path, "/runtime-composition.json") {
+				compositionRequested = true
+			}
+			http.NotFound(writer, request)
+		}
+	}))
+	t.Cleanup(server.Close)
+	source := newChannelSourceForTest(t, server.URL)
+
+	manifest, err := source.Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if manifest.ReleaseVersion != "0.0.1-alpha.183" || manifest.HasRuntimeComposition() {
+		t.Fatalf("bridge manifest = version:%q composition:%t", manifest.ReleaseVersion, manifest.HasRuntimeComposition())
+	}
+	if compositionRequested {
+		t.Fatal("bridge channel load fetched a composition asset")
+	}
+	entries, err := os.ReadDir(source.compositionCache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("bridge load unexpectedly cached composition evidence: %v", entries)
+	}
+
+	reloaded, err := source.LoadTarget(manifest.Digest())
+	if err != nil {
+		t.Fatalf("LoadTarget() error = %v", err)
+	}
+	if reloaded.Digest() != manifest.Digest() || reloaded.HasRuntimeComposition() {
+		t.Fatalf("reloaded bridge target = digest:%q composition:%t", reloaded.Digest(), reloaded.HasRuntimeComposition())
+	}
+}
+
 func TestChannelManifestSourceRejectsDigestMismatch(t *testing.T) {
 	manifestBytes := releaseManifestBytes(t, "1.2.3")
 	record := []byte("SCHEMA_VERSION=3\nVERSION=v1.2.3\nRELEASE_MANIFEST=manifests/v1.2.3.yaml\nRELEASE_MANIFEST_SHA256=" + strings.Repeat("0", 64) + "\n")

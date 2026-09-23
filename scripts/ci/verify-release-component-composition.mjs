@@ -18,7 +18,7 @@ function fail(message) {
 }
 
 function parseArgs(argv) {
-  const options = { composition: "", expectedComponents: [], manifest: "", policy: "", json: false };
+  const options = { composition: "", expectedComponents: [], manifest: "", policy: "", releaseProfile: "", json: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--json") {
@@ -26,16 +26,17 @@ function parseArgs(argv) {
       continue;
     }
     if (arg === "--help" || arg === "-h") {
-      process.stdout.write("Usage: node scripts/ci/verify-release-component-composition.mjs --composition <runtime-composition.json> [--expected-components <id,id,...>] [--manifest <release.manifest.yaml> [--policy <public-release-policy.json>]] [--json]\n");
+      process.stdout.write("Usage: node scripts/ci/verify-release-component-composition.mjs --composition <runtime-composition.json> [--expected-components <id,id,...>] [--manifest <release.manifest.yaml> [--policy <public-release-policy.json>] [--release-profile <modern|alpha164-bridge>]] [--json]\n");
       process.exit(0);
     }
-    if (!["--composition", "--expected-components", "--manifest", "--policy"].includes(arg)) fail(`unknown argument: ${arg}`);
+    if (!["--composition", "--expected-components", "--manifest", "--policy", "--release-profile"].includes(arg)) fail(`unknown argument: ${arg}`);
     const value = argv[++index];
     if (!value || value.startsWith("--")) fail(`${arg} requires a value`);
     if (arg === "--composition") options.composition = path.resolve(value);
     else if (arg === "--expected-components") options.expectedComponents = value.split(",").map((item) => item.trim()).filter(Boolean);
     else if (arg === "--manifest") options.manifest = path.resolve(value);
-    else options.policy = path.resolve(value);
+    else if (arg === "--policy") options.policy = path.resolve(value);
+    else options.releaseProfile = value;
   }
   if (!options.composition) fail("--composition is required");
   if (options.policy && !options.manifest) fail("--policy requires --manifest");
@@ -112,12 +113,14 @@ function assertExactComponentInventory(composition, manifestText, policy) {
   }
 }
 
-function validateManifestBinding(composition, manifestPath, policyPath) {
+function validateManifestBinding(composition, manifestPath, policyPath, releaseProfile = "") {
   const manifestBytes = readRegularFile(manifestPath, "release manifest");
   const policy = readPolicy(policyPath || DEFAULT_POLICY);
   const tag = canonicalReleaseTag(composition.releaseTag, "runtime composition releaseTag");
-  const manifest = validateManifest(manifestPath, policy, tag);
-  if (composition.compositionDigest !== manifest.runtimeComposition.sha256) {
+  const manifest = validateManifest(manifestPath, policy, tag, releaseProfile);
+  // A bridge has no YAML composition field for alpha.164, so its immutable
+  // reverse Manifest binding below remains the evidence link for this asset.
+  if (manifest.runtimeComposition && composition.compositionDigest !== manifest.runtimeComposition.sha256) {
     fail(`runtime composition canonical digest does not match manifest: expected ${manifest.runtimeComposition.sha256}, got ${composition.compositionDigest}`);
   }
   const manifestDigest = `sha256:${manifest.sha256}`;
@@ -125,16 +128,16 @@ function validateManifestBinding(composition, manifestPath, policyPath) {
     fail("runtime composition manifest binding does not match the release manifest bytes");
   }
   assertExactComponentInventory(composition, manifestBytes.toString("utf8"), policy);
-  return { manifestDigest, releaseTag: tag };
+  return { manifestDigest, releaseTag: tag, releaseProfile: manifest.releaseProfile };
 }
 
-export function verify({ composition, expectedComponents = [], manifest = "", policy = "" }) {
+export function verify({ composition, expectedComponents = [], manifest = "", policy = "", releaseProfile = "" }) {
   const value = typeof composition === "string" ? readComposition(path.resolve(composition)) : composition;
   const normalized = validateComposition(value, {
     ...(expectedComponents.length ? { expectedComponentIds: expectedComponents } : {}),
     ...(manifest ? { requireManifestBinding: true } : {}),
   });
-  const binding = manifest ? validateManifestBinding(normalized, path.resolve(manifest), policy ? path.resolve(policy) : DEFAULT_POLICY) : null;
+  const binding = manifest ? validateManifestBinding(normalized, path.resolve(manifest), policy ? path.resolve(policy) : DEFAULT_POLICY, releaseProfile) : null;
   return {
     schemaVersion: normalized.schemaVersion,
     kind: normalized.kind,
@@ -143,7 +146,7 @@ export function verify({ composition, expectedComponents = [], manifest = "", po
     compositionDigest: normalized.compositionDigest ?? null,
     componentCount: normalized.components.length,
     reusedComponents: normalized.components.filter((component) => component.disposition === "reused").map((component) => component.id),
-    ...(binding ? { manifestDigest: binding.manifestDigest, manifestReleaseTag: binding.releaseTag } : {}),
+    ...(binding ? { manifestDigest: binding.manifestDigest, manifestReleaseTag: binding.releaseTag, releaseProfile: binding.releaseProfile } : {}),
   };
 }
 

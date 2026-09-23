@@ -3,6 +3,7 @@
 package releasemanifest
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -29,6 +30,9 @@ type Manifest struct {
 	Upgrade            UpgradeMetadata    `yaml:"upgrade"`
 
 	digest string
+
+	releaseNotesPresent       bool
+	runtimeCompositionPresent bool
 }
 
 // ReleaseNotes is the public, user-facing explanation bound to a release.
@@ -122,6 +126,17 @@ func LoadLegacyAlpha114(filePath string) (*Manifest, error) {
 	return ParseLegacyAlpha114(raw)
 }
 
+// LoadLegacyCompatible reads the one policy-pinned alpha.114 manifest or an
+// exact version registered for alpha.164 compatibility. Ordinary callers must
+// use Load so missing modern metadata never becomes a general fallback.
+func LoadLegacyCompatible(filePath string) (*Manifest, error) {
+	raw, err := os.ReadFile(strings.TrimSpace(filePath))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read legacy-compatible release manifest: %w", err)
+	}
+	return ParseLegacyCompatible(raw)
+}
+
 // Parse validates exactly one manifest document and retains its content hash.
 func Parse(raw []byte) (*Manifest, error) {
 	return parseManifest(raw, false)
@@ -136,6 +151,20 @@ func ParseLegacyAlpha114(raw []byte) (*Manifest, error) {
 		return nil, err
 	}
 	if manifest.ReleaseVersion != LegacyAlpha114ReleaseVersion || manifest.Digest() != LegacyAlpha114ManifestDigest {
+		return nil, fmt.Errorf("legacy alpha.114 manifest identity is not policy-pinned")
+	}
+	return manifest, nil
+}
+
+// ParseLegacyCompatible accepts only a Manifest with the complete alpha.114
+// or registered alpha.164 bridge field set. It is deliberately separate from
+// Parse so modern callers cannot silently accept absent release evidence.
+func ParseLegacyCompatible(raw []byte) (*Manifest, error) {
+	manifest, err := parseManifest(raw, true)
+	if err != nil {
+		return nil, err
+	}
+	if manifest.ReleaseVersion == LegacyAlpha114ReleaseVersion && manifest.Digest() != LegacyAlpha114ManifestDigest {
 		return nil, fmt.Errorf("legacy alpha.114 manifest identity is not policy-pinned")
 	}
 	return manifest, nil
@@ -160,6 +189,19 @@ func (manifest *Manifest) Digest() string {
 		return ""
 	}
 	return manifest.digest
+}
+
+// HasReleaseNotes reports whether the signed YAML document declared the
+// releaseNotes field. Compatibility parsing never fabricates omitted metadata.
+func (manifest *Manifest) HasReleaseNotes() bool {
+	return manifest != nil && manifest.releaseNotesPresent
+}
+
+// HasRuntimeComposition reports whether the signed YAML document declared the
+// runtimeComposition field. A false result is valid only for the explicit
+// legacy-compatible parser and must force a full deployment update.
+func (manifest *Manifest) HasRuntimeComposition() bool {
+	return manifest != nil && manifest.runtimeCompositionPresent
 }
 
 func (manifest *Manifest) RuntimeImageRefs(name string) ([]string, error) {
@@ -302,18 +344,20 @@ func (manifest *Manifest) normalizeAndValidate(allowLegacyAlpha114 bool) error {
 	if err := validateUpgradeMetadata(manifest.Upgrade); err != nil {
 		return err
 	}
-	if manifest.RuntimeComposition.SchemaVersion == 0 && manifest.RuntimeComposition.Asset == "" && manifest.RuntimeComposition.SHA256 == "" {
-		if !allowLegacyAlpha114 || manifest.ReleaseVersion != LegacyAlpha114ReleaseVersion {
-			return fmt.Errorf("runtimeComposition.schemaVersion must be 1")
+	if allowLegacyAlpha114 {
+		if manifest.releaseNotesPresent || manifest.runtimeCompositionPresent {
+			return fmt.Errorf("legacy-compatible release manifest must omit both releaseNotes and runtimeComposition")
 		}
-	} else if err := validateRuntimeComposition(manifest.RuntimeComposition); err != nil {
-		return err
-	}
-	if manifest.ReleaseNotes == nil && allowLegacyAlpha114 && manifest.ReleaseVersion == LegacyAlpha114ReleaseVersion {
-		// The pinned alpha.114 bootstrap predates both public release notes and
-		// runtime-composition evidence; ParseLegacyAlpha114 verifies its exact
-		// raw digest immediately after this compatibility check.
+		if manifest.ReleaseVersion != LegacyAlpha114ReleaseVersion && ReleaseCompatibilityProfileForVersion(manifest.ReleaseVersion) != ReleaseCompatibilityProfileAlpha164Bridge {
+			return fmt.Errorf("releaseVersion %s is not registered for legacy-compatible manifest parsing", manifest.ReleaseVersion)
+		}
 		return nil
+	}
+	if !manifest.runtimeCompositionPresent {
+		return fmt.Errorf("runtimeComposition.schemaVersion must be 1")
+	}
+	if err := validateRuntimeComposition(manifest.RuntimeComposition); err != nil {
+		return err
 	}
 	return validateReleaseNotes(manifest.ReleaseVersion, manifest.ReleaseNotes)
 }
@@ -464,7 +508,7 @@ func validateProductionCandidateRefs(refs []string, field string) error {
 }
 
 func parse(raw []byte) (*Manifest, error) {
-	decoder := yaml.NewDecoder(strings.NewReader(string(raw)))
+	decoder := yaml.NewDecoder(bytes.NewReader(raw))
 	decoder.KnownFields(true)
 	var result Manifest
 	if err := decoder.Decode(&result); err != nil {
@@ -477,5 +521,37 @@ func parse(raw []byte) (*Manifest, error) {
 		}
 		return nil, fmt.Errorf("release manifest must contain exactly one YAML document")
 	}
+	presence, err := manifestFieldPresence(raw)
+	if err != nil {
+		return nil, err
+	}
+	result.releaseNotesPresent = presence.releaseNotes
+	result.runtimeCompositionPresent = presence.runtimeComposition
 	return &result, nil
+}
+
+type manifestPresence struct {
+	releaseNotes       bool
+	runtimeComposition bool
+}
+
+func manifestFieldPresence(raw []byte) (manifestPresence, error) {
+	decoder := yaml.NewDecoder(bytes.NewReader(raw))
+	var document yaml.Node
+	if err := decoder.Decode(&document); err != nil {
+		return manifestPresence{}, err
+	}
+	if document.Kind != yaml.DocumentNode || len(document.Content) != 1 || document.Content[0].Kind != yaml.MappingNode {
+		return manifestPresence{}, fmt.Errorf("release manifest root must be a mapping")
+	}
+	presence := manifestPresence{}
+	for index := 0; index+1 < len(document.Content[0].Content); index += 2 {
+		switch document.Content[0].Content[index].Value {
+		case "releaseNotes":
+			presence.releaseNotes = true
+		case "runtimeComposition":
+			presence.runtimeComposition = true
+		}
+	}
+	return presence, nil
 }

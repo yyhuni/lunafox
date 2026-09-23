@@ -133,6 +133,7 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 	if err != nil {
 		return nil, fmt.Errorf("merge host progress events: %w", err)
 	}
+	journalRecoveryTransition := false
 	if err := domain.ValidateExecutionTransition(operation.EffectiveExecutionMode(), operation.Status, status); err != nil {
 		// A delayed checkpoint that is not a safety escalation is harmless. Do not
 		// turn an idempotent host retry into an API-visible failure.
@@ -142,10 +143,13 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 		// A validated journal checkpoint may be the first durable observation
 		// after downtime. It can replay a forward phase without manufacturing a
 		// success result; final success still requires Server/Agent evidence.
-		if !event.FromJournal || statusRank(status) <= statusRank(operation.Status) || statusRank(status) > statusRank(domain.StatusVerifying) {
+		if !event.FromJournal {
 			return nil, err
 		}
-		// Continue with the validated journal observation.
+		if recoveryErr := domain.ValidateJournalRecoveryTransition(operation.EffectiveExecutionMode(), operation.MigrationType, effectiveMigration, operation.Status, status); recoveryErr != nil {
+			return nil, err
+		}
+		journalRecoveryTransition = true
 	}
 	eventAt := event.UpdatedAt.UTC()
 	eventStageAt := event.StageUpdatedAt.UTC()
@@ -218,7 +222,7 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 	if status.IsTerminal() && (checkpointAdvanced || status != previousStatus) {
 		operation.CompletedAt = &now
 	}
-	updated, err := service.persistReconciledOperation(ctx, operation, previousStatus)
+	updated, err := service.persistReconciledOperation(ctx, operation, previousStatus, journalRecoveryTransition)
 	if err != nil {
 		return nil, err
 	}
@@ -478,7 +482,7 @@ func (service *Service) ReconcileJournalUnavailable(ctx context.Context, diagnos
 		operation.StageTimes = map[domain.Status]time.Time{}
 	}
 	operation.StageTimes[status] = now
-	return service.persistReconciledOperation(ctx, operation, previous)
+	return service.persistReconciledOperation(ctx, operation, previous, false)
 }
 
 // ReconcileStalledOperation closes the gap where a host process disappears or
@@ -513,7 +517,7 @@ func (service *Service) ReconcileStalledOperation(ctx context.Context, timeout t
 		operation.StageTimes = map[domain.Status]time.Time{}
 	}
 	operation.StageTimes[status] = now
-	return service.persistReconciledOperation(ctx, operation, previous)
+	return service.persistReconciledOperation(ctx, operation, previous, false)
 }
 
 // upgradeRecoveryStallTimeout derives a bounded watchdog from the release's
@@ -721,21 +725,27 @@ func sanitizeUpgradeDiagnostic(value string) string {
 	return strings.TrimSpace(value)
 }
 
-func (service *Service) persistReconciledOperation(ctx context.Context, operation *domain.Operation, expected domain.Status) (*domain.Operation, error) {
-	if transitionRepository, ok := service.repository.(domain.TransitionRepository); ok {
-		if err := transitionRepository.UpdateTransition(ctx, operation, expected); err != nil {
-			if errors.Is(err, domain.ErrUpgradeTransitionConflict) {
-				// Another event won the CAS. Return its durable state so callers do
-				// not display an in-memory stage that was never committed.
-				if latest, getErr := service.repository.Get(ctx, operation.OperationID); getErr == nil {
-					return latest, nil
-				}
-			}
-			return nil, err
+func (service *Service) persistReconciledOperation(ctx context.Context, operation *domain.Operation, expected domain.Status, journalRecovery bool) (*domain.Operation, error) {
+	var err error
+	if journalRecovery {
+		journalRepository, ok := service.repository.(domain.JournalRecoveryTransitionRepository)
+		if !ok {
+			return nil, fmt.Errorf("upgrade repository does not support validated journal recovery transitions")
 		}
-		return operation, nil
+		err = journalRepository.UpdateJournalRecoveryTransition(ctx, operation, expected)
+	} else if transitionRepository, ok := service.repository.(domain.TransitionRepository); ok {
+		err = transitionRepository.UpdateTransition(ctx, operation, expected)
+	} else {
+		err = service.repository.Update(ctx, operation)
 	}
-	if err := service.repository.Update(ctx, operation); err != nil {
+	if err != nil {
+		if errors.Is(err, domain.ErrUpgradeTransitionConflict) {
+			// Another event won the CAS. Return its durable state so callers do
+			// not display an in-memory stage that was never committed.
+			if latest, getErr := service.repository.Get(ctx, operation.OperationID); getErr == nil {
+				return latest, nil
+			}
+		}
 		return nil, err
 	}
 	return operation, nil

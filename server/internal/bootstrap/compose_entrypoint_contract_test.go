@@ -70,3 +70,84 @@ func TestComposeBootstrapDoesNotCreateResidentContainers(t *testing.T) {
 		}
 	}
 }
+
+func TestComposeBootstrapMapsOnlyTheKnownAlpha164AccelerationOmission(t *testing.T) {
+	root := filepath.Clean(filepath.Join("..", "..", ".."))
+	script, err := filepath.Abs(filepath.Join(root, "docker", "bootstrap", "bootstrap.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name         string
+		registry     string
+		acceleration *string
+		wantSuccess  bool
+	}{
+		{name: "missing acceleration with Docker Hub", registry: "docker.io", wantSuccess: true},
+		{name: "missing acceleration with GHCR", registry: "ghcr.io", wantSuccess: true},
+		{name: "invalid present acceleration", registry: "docker.io", acceleration: stringPointer("sometimes")},
+		{name: "enabled acceleration cannot select registry", registry: "docker.io", acceleration: stringPointer("true")},
+		{name: "disabled acceleration rejects unknown registry", registry: "registry.example", acceleration: stringPointer("false")},
+		{name: "missing acceleration rejects unknown registry", registry: "registry.example"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			directory := t.TempDir()
+			calls := filepath.Join(directory, "calls")
+			fakeServer := "#!/bin/sh\nprintf '%s:%s\\n' \"$1\" \"$ENGINE_INSTALL_CF_ACCELERATION\" >> \"$CALLS\"\n"
+			if err := os.WriteFile(filepath.Join(directory, "server"), []byte(fakeServer), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			environment := composeBootstrapEnvironment(map[string]string{
+				"PATH":                          directory + ":" + os.Getenv("PATH"),
+				"CALLS":                         calls,
+				"ENGINE_INSTALL_INVENTORY_PATH": "/inventory",
+				"ENGINE_INSTALL_REGISTRY":       test.registry,
+				"FINGERPRINT_BOOTSTRAP_PATH":    "/fingerprints",
+				"WORDLISTS_SOURCE_PATH":         "/wordlists",
+				"AGENT_VERSION":                 "1.0.0",
+			})
+			if test.acceleration != nil {
+				environment = append(environment, "ENGINE_INSTALL_CF_ACCELERATION="+*test.acceleration)
+			}
+			command := exec.Command("bash", script)
+			command.Env = environment
+			output, err := command.CombinedOutput()
+			if (err == nil) != test.wantSuccess {
+				t.Fatalf("exit = %v, output = %s", err, output)
+			}
+			if !test.wantSuccess {
+				return
+			}
+			data, err := os.ReadFile(calls)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.HasPrefix(string(data), "engine-bootstrap:false\n") {
+				t.Fatalf("legacy acceleration mapping calls = %s", data)
+			}
+		})
+	}
+}
+
+func composeBootstrapEnvironment(overrides map[string]string) []string {
+	environment := make([]string, 0, len(os.Environ())+len(overrides))
+	for _, entry := range os.Environ() {
+		key, _, found := strings.Cut(entry, "=")
+		if !found || key == "ENGINE_INSTALL_CF_ACCELERATION" || key == "ENGINE_INSTALL_REGISTRY" {
+			continue
+		}
+		if _, overridden := overrides[key]; !overridden {
+			environment = append(environment, entry)
+		}
+	}
+	for key, value := range overrides {
+		environment = append(environment, key+"="+value)
+	}
+	return environment
+}
+
+func stringPointer(value string) *string {
+	return &value
+}

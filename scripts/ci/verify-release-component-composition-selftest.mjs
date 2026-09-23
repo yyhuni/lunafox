@@ -133,6 +133,21 @@ try {
   fs.writeFileSync(file, `${JSON.stringify(mismatchedBinding)}\n`);
   assert.throws(() => verify({ composition: file, manifest }), /manifest binding does not match/);
 
+  const bridgeTag = "v0.0.1-alpha.183";
+  const bridgeManifest = path.join(root, "alpha164-bridge.release.manifest.yaml");
+  fs.writeFileSync(bridgeManifest, `releaseVersion: "0.0.1-alpha.183"\nruntimeImages:\n${manifestRuntime}enginePackages:\n  - refs:\n      - docker.io/yyhuni/lunafox-engine-runtime-port-scan@${digest("a")}\n      - ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@${digest("a")}\nupgrade:\n  manifestId: "lunafox-0.0.1-alpha.183"\n`);
+  const bridgeComposition = structuredClone(manifestComposition);
+  bridgeComposition.releaseTag = bridgeTag;
+  for (const component of bridgeComposition.components) component.sourceRelease.tag = bridgeTag;
+  bridgeComposition.compositionDigest = sha256Digest(compositionCorePayload(bridgeComposition));
+  fs.writeFileSync(file, `${JSON.stringify(bindCompositionToManifest(bridgeComposition, sha256Digest(fs.readFileSync(bridgeManifest))), null, 2)}\n`);
+  const bridgeResult = verify({ composition: file, manifest: bridgeManifest, releaseProfile: "alpha164-bridge" });
+  assert.equal(bridgeResult.releaseProfile, "alpha164-bridge");
+  assert.throws(
+    () => verify({ composition: file, manifest: bridgeManifest, releaseProfile: "modern" }),
+    /does not match registered profile/,
+  );
+
   process.stdout.write("ok - runtime composition validator rejects duplicate, mutable, and manifest-inconsistent component evidence\n");
 } finally {
   fs.rmSync(root, { recursive: true, force: true });

@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { generate } from './generate-compose-deployment.mjs';
-import { compositionCorePayload, FINGERPRINT_SCHEMA_VERSION, sha256Digest } from './resolve-release-component-composition.mjs';
+import { bindCompositionToManifest, compositionCorePayload, FINGERPRINT_SCHEMA_VERSION, sha256Digest } from './resolve-release-component-composition.mjs';
 
 function fingerprint(componentId) {
  const inputs = {
@@ -207,6 +207,23 @@ test('prerelease packages pin the canary channel', t => {
  const script = `import zipfile,sys\nwith zipfile.ZipFile(sys.argv[1]) as z:\n print(z.read('compose.yaml').decode())`;
  const compose = execFileSync('python3', ['-c', script, path.join(options.output, artifact.name)], { encoding: 'utf8' });
  assert.match(compose, /RELEASE_CHANNEL: canary/);
+});
+
+test('the registered alpha.164 bridge packages independent composition evidence', t => {
+ const options = fixture(t, '0.0.1-alpha.183');
+ const raw = fs.readFileSync(options.manifest, 'utf8')
+  .replace(/^releaseNotes:\n[\s\S]*?(?=^runtimeImages:)/m, '')
+  .replace(/^runtimeComposition:\n[\s\S]*$/m, '');
+ fs.writeFileSync(options.manifest, raw);
+ const composition = JSON.parse(fs.readFileSync(options.runtimeComposition, 'utf8'));
+ fs.writeFileSync(options.runtimeComposition, `${JSON.stringify(bindCompositionToManifest(composition, sha256Digest(fs.readFileSync(options.manifest))), null, 2)}\n`);
+
+ const [artifact] = generate({ ...options, releaseProfile: 'alpha164-bridge' });
+ assert.equal(artifact.name, 'lunafox-v0.0.1-alpha.183.zip');
+ assert.throws(
+  () => generate({ ...options, releaseProfile: 'modern', output: path.join(options.dir, 'wrong-profile') }),
+  /does not match registered profile/,
+ );
 });
 
 for(const failure of ['missing-image','bad-digest','development','missing-manifest','unknown-image']){

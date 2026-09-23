@@ -110,7 +110,7 @@ function writeFiles(directory, files, modes = new Map()) {
  }
 }
 
-export function generate({ root = defaultRoot, manifest, tag, output, snapshot = '', runtimeComposition = '', legacyBootstrap = null }) {
+export function generate({ root = defaultRoot, manifest, tag, output, snapshot = '', runtimeComposition = '', releaseProfile = '', legacyBootstrap = null }) {
  if (!/^v\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?$/.test(tag ?? '')) throw Error('invalid release tag');
  const policy = JSON.parse(regularFile(root, 'scripts/ci/public-release-policy.json'));
  let raw;
@@ -124,7 +124,7 @@ export function generate({ root = defaultRoot, manifest, tag, output, snapshot =
   if (runtimeComposition) throw Error('legacy bootstrap must not supply a runtime composition asset');
   ({ raw, runtime, engines } = validateLegacyBootstrapManifest(manifest, tag, policy, legacyBootstrap));
  } else {
-  const manifestResult = validateManifest(manifest, policy, tag);
+  const manifestResult = validateManifest(manifest, policy, tag, releaseProfile);
   raw = fs.readFileSync(manifest, 'utf8');
   const compositionPath = runtimeComposition || path.join(path.dirname(manifest), 'runtime-composition.json');
   compositionBytes = regularExternalFile(compositionPath, 'runtime composition asset');
@@ -134,7 +134,9 @@ export function generate({ root = defaultRoot, manifest, tag, output, snapshot =
   let normalizedComposition;
   try { normalizedComposition = validateComposition(composition, { requireManifestBinding: true }); }
   catch (error) { throw Error(`runtime composition asset is invalid: ${error.message}`); }
-  if (normalizedComposition.compositionDigest !== manifestResult.runtimeComposition.sha256) {
+  // The alpha.164 bridge omits this old-client-unknown binding from YAML, but
+  // the separately published composition must still bind the exact Manifest.
+  if (manifestResult.runtimeComposition && normalizedComposition.compositionDigest !== manifestResult.runtimeComposition.sha256) {
    throw Error(`runtime composition canonical digest does not match manifest: expected ${manifestResult.runtimeComposition.sha256}, got ${normalizedComposition.compositionDigest}`);
   }
   if (normalizedComposition.manifestBinding.manifestDigest !== `sha256:${manifestResult.sha256}`) {
@@ -238,9 +240,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   const args = {};
   for (let i = 2; i < process.argv.length; i += 2) {
    const key = process.argv[i];
-   if (!['--root', '--manifest', '--tag', '--output', '--snapshot', '--runtime-composition'].includes(key) || !process.argv[i + 1] || args[key.slice(2)]) throw Error(`invalid argument: ${key}`);
+   if (!['--root', '--manifest', '--tag', '--output', '--snapshot', '--runtime-composition', '--release-profile'].includes(key) || !process.argv[i + 1] || args[key.slice(2)]) throw Error(`invalid argument: ${key}`);
    const value = process.argv[i + 1];
    if (key === '--runtime-composition') args.runtimeComposition = value;
+   else if (key === '--release-profile') args.releaseProfile = value;
    else args[key.slice(2)] = value;
   }
   if (!args.manifest || !args.output) throw Error('--manifest and --output are required');

@@ -30,14 +30,14 @@ function isPlainObject(value) { return value !== null && typeof value === "objec
 
 function parseArgs(argv) {
   const options = {
-    manifest: "", composition: "", bundle: "", provenance: "", policy: DEFAULT_POLICY, tag: "", json: false,
+    manifest: "", composition: "", bundle: "", provenance: "", policy: DEFAULT_POLICY, tag: "", releaseProfile: "", json: false,
   };
-  const flags = new Set(["--manifest", "--composition", "--bundle", "--provenance", "--policy", "--tag"]);
+  const flags = new Set(["--manifest", "--composition", "--bundle", "--provenance", "--policy", "--tag", "--release-profile"]);
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--json") { options.json = true; continue; }
     if (arg === "--help" || arg === "-h") {
-      process.stdout.write("Usage: verify-public-release-evidence.mjs --manifest FILE --composition FILE --bundle FILE --provenance FILE --tag TAG [--policy FILE] [--json]\n");
+      process.stdout.write("Usage: verify-public-release-evidence.mjs --manifest FILE --composition FILE --bundle FILE --provenance FILE --tag TAG [--policy FILE] [--release-profile <modern|alpha164-bridge>] [--json]\n");
       process.exit(0);
     }
     if (!flags.has(arg)) fail(`unknown argument: ${arg}`);
@@ -48,7 +48,8 @@ function parseArgs(argv) {
     else if (arg === "--bundle") options.bundle = path.resolve(value);
     else if (arg === "--provenance") options.provenance = path.resolve(value);
     else if (arg === "--policy") options.policy = path.resolve(value);
-    else options.tag = value;
+    else if (arg === "--tag") options.tag = value;
+    else options.releaseProfile = value;
   }
   for (const key of ["manifest", "composition", "bundle", "provenance", "tag"]) assert(options[key], `--${key} is required`);
   assert(RELEASE_TAG_RE.test(options.tag), "--tag is invalid");
@@ -115,8 +116,8 @@ function verify(options) {
   const manifestBytes = readRegular(options.manifest, "release manifest");
   const compositionBytes = readRegular(options.composition, "runtime composition");
   const bundleBytes = readRegular(options.bundle, "component evidence bundle");
-  const compositionResult = verifyComposition({ composition: options.composition, manifest: options.manifest, policy: options.policy });
-  const evidenceResult = verifyComponentEvidence({ bundle: options.bundle, composition: options.composition, manifest: options.manifest, policy: options.policy });
+  const compositionResult = verifyComposition({ composition: options.composition, manifest: options.manifest, policy: options.policy, releaseProfile: options.releaseProfile });
+  const evidenceResult = verifyComponentEvidence({ bundle: options.bundle, composition: options.composition, manifest: options.manifest, policy: options.policy, releaseProfile: options.releaseProfile });
   assert(composition.releaseTag === options.tag && bundle.releaseTag === options.tag, "release evidence tag does not match the release");
   validateReleaseProvenance(provenance, {
     tag: options.tag,

@@ -177,6 +177,18 @@ func (repository *UpgradeOperationRepository) Update(ctx context.Context, operat
 // either wins the row lock or receives ErrUpgradeTransitionConflict; it can
 // never overwrite a newer phase with a late event.
 func (repository *UpgradeOperationRepository) UpdateTransition(ctx context.Context, operation *domain.Operation, expected domain.Status) error {
+	return repository.updateTransition(ctx, operation, expected, false)
+}
+
+// UpdateJournalRecoveryTransition atomically persists a forward journal replay
+// after the application has validated its host-only provenance and evidence.
+// It intentionally uses a separate domain guard so ordinary host events remain
+// constrained to the strict lifecycle graph.
+func (repository *UpgradeOperationRepository) UpdateJournalRecoveryTransition(ctx context.Context, operation *domain.Operation, expected domain.Status) error {
+	return repository.updateTransition(ctx, operation, expected, true)
+}
+
+func (repository *UpgradeOperationRepository) updateTransition(ctx context.Context, operation *domain.Operation, expected domain.Status, journalRecovery bool) error {
 	if repository == nil || repository.db == nil || operation == nil {
 		return fmt.Errorf("upgrade operation repository is not configured")
 	}
@@ -186,8 +198,14 @@ func (repository *UpgradeOperationRepository) UpdateTransition(ctx context.Conte
 	if !expected.Valid() {
 		return fmt.Errorf("expected upgrade status %q is invalid", expected)
 	}
-	if err := domain.ValidateExecutionTransition(operation.EffectiveExecutionMode(), expected, operation.Status); err != nil {
-		return err
+	var transitionErr error
+	if journalRecovery {
+		transitionErr = domain.ValidateJournalRecoveryTransition(operation.EffectiveExecutionMode(), operation.MigrationType, operation.MigrationStatus, expected, operation.Status)
+	} else {
+		transitionErr = domain.ValidateExecutionTransition(operation.EffectiveExecutionMode(), expected, operation.Status)
+	}
+	if transitionErr != nil {
+		return transitionErr
 	}
 	record, err := toModel(operation)
 	if err != nil {

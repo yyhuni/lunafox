@@ -20,6 +20,21 @@ func TestValidateExecutionTransitionAllowsQueuedPreflightOnlyForFrontendPlan(t *
 	}
 }
 
+func TestValidateJournalRecoveryTransitionAllowsOnlyTrustedForwardCheckpoints(t *testing.T) {
+	if err := ValidateJournalRecoveryTransition(ExecutionModeFull, "none", MigrationStatusNotStarted, StatusStopping, StatusVerifying); err != nil {
+		t.Fatalf("full stopping -> verifying journal replay: %v", err)
+	}
+	if err := ValidateJournalRecoveryTransition(ExecutionModeFull, "none", MigrationStatusNotStarted, StatusStopping, StatusSucceeded); err == nil {
+		t.Fatal("journal replay accepted terminal success")
+	}
+	if err := ValidateJournalRecoveryTransition(ExecutionModeFull, "compatible", MigrationStatusRunning, StatusStopping, StatusRestarting); err == nil {
+		t.Fatal("journal replay bypassed incomplete migration")
+	}
+	if err := ValidateJournalRecoveryTransition(ExecutionModeFrontendOnly, "none", MigrationStatusNotStarted, StatusPreflight, StatusAgentVerifying); err == nil {
+		t.Fatal("frontend-only journal replay accepted Agent verification")
+	}
+}
+
 func TestValidateScopePlanRequiresExactFrontendService(t *testing.T) {
 	digest := "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	if err := ValidateScopePlan(ExecutionModeFrontendOnly, PlanSummary{TouchedServices: []string{"frontend"}}, digest, digest, "1.2.3"); err != nil {

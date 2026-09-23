@@ -555,6 +555,49 @@ func TestComposeExecutorRunsFullPathForPinnedLegacyAlpha114(t *testing.T) {
 	}
 }
 
+func TestComposeExecutorRunsFullPathForRegisteredAlpha164Bridge(t *testing.T) {
+	root := newComposeRoot(t)
+	manifestPath := filepath.Join(root, defaultManifestName)
+	bridgeBytes := alpha164BridgeManifestFixtureBytes(t)
+	if err := os.WriteFile(manifestPath, bridgeBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := loadManifestWithLegacyCompatibility(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.HasRuntimeComposition() {
+		t.Fatal("bridge manifest unexpectedly has composition evidence")
+	}
+	store, err := NewJournalStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := Request{SchemaVersion: RequestSchema, OperationID: "alpha164-bridge-full", Action: ActionStart, ManifestDigest: manifest.Digest()}
+	now := time.Now().UTC()
+	if err := store.Save(Journal{SchemaVersion: JournalSchema, OperationID: request.OperationID, ManifestDigest: request.ManifestDigest, Stage: StageQueued, StartedAt: now, UpdatedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	runner := &recordingRunner{responses: make(map[string]RunResult)}
+	for _, service := range []string{"server", "frontend", "nginx"} {
+		refs, refsErr := manifest.RuntimeImageRefs(service)
+		if refsErr != nil {
+			t.Fatal(refsErr)
+		}
+		runner.responses[refs[0]] = RunResult{Stdout: refs[0]}
+	}
+	if err := NewComposeExecutor(runner).Execute(context.Background(), request, store); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	current, err := store.LoadCurrent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.Stage != StageVerifying {
+		t.Fatalf("bridge full path stage = %q, want %q", current.Stage, StageVerifying)
+	}
+}
+
 func TestComposeExecutorFrontendOnlyUsesSealedCommandsAndV2Receipt(t *testing.T) {
 	root := newShortRoot(t)
 	for relative, content := range map[string]string{

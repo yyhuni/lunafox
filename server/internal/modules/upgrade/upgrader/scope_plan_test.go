@@ -164,6 +164,40 @@ func TestHostScopePlannerFallsBackToFullWhenCompositionCacheIsMissing(t *testing
 	}
 }
 
+func TestHostScopePlannerUsesFullPlanForRegisteredAlpha164Bridge(t *testing.T) {
+	store, err := NewPublicJournalStore(newShortRoot(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw := alpha164BridgeManifestFixtureBytes(t)
+	manifest, err := releasemanifest.ParseLegacyCompatible(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifestPath, err := store.ManifestPath(manifest.Digest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(manifestPath, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	planner := NewHostScopePlanner(store, NewCompositionCandidateDeploymentSource(store), nil)
+	plan, err := planner.Plan(context.Background(), "alpha164-bridge", manifest.Digest(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.ExecutionMode != ExecutionModeFull {
+		t.Fatalf("bridge plan mode = %q, want full", plan.ExecutionMode)
+	}
+	if plan.Candidate.CompositionDigest != "" {
+		t.Fatalf("bridge full plan retained composition digest %q", plan.Candidate.CompositionDigest)
+	}
+	if len(plan.TouchedServices) != len(fullTouchedServices()) {
+		t.Fatalf("bridge full plan services = %v, want %v", plan.TouchedServices, fullTouchedServices())
+	}
+}
+
 func TestHostScopePlannerDoesNotDowngradeInvalidComposition(t *testing.T) {
 	root := newComposeRoot(t)
 	store, err := NewJournalStore(root)

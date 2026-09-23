@@ -125,14 +125,14 @@ func (source *ChannelManifestSource) Load() (*releasemanifest.Manifest, error) {
 	manifest, err := releasemanifest.Parse(manifestBytes)
 	legacyAlpha114 := false
 	if err != nil {
-		// alpha.114 is the one policy-pinned public bootstrap manifest that
-		// predates composition assets. Keep the ordinary channel parser strict,
-		// and invoke the explicit legacy parser only for that fixed identity.
-		manifest, err = releasemanifest.ParseLegacyAlpha114(manifestBytes)
+		// Deployment channel parsing may only admit the policy-pinned alpha.114
+		// bytes or the exact registered alpha.164 bridge profile. The ordinary
+		// parser remains strict for every other manifest shape.
+		manifest, err = releasemanifest.ParseLegacyCompatible(manifestBytes)
 		if err != nil {
 			return nil, domain.WrapManifestInvalid(err)
 		}
-		legacyAlpha114 = true
+		legacyAlpha114 = !manifest.HasRuntimeComposition()
 	}
 	if "v"+manifest.ReleaseVersion != record.version {
 		return nil, domain.NewManifestIdentityMismatch("lunafox-"+strings.TrimPrefix(record.version, "v"), manifest.Upgrade.ManifestID)
@@ -192,9 +192,9 @@ func (source *ChannelManifestSource) LoadTarget(digest string) (*releasemanifest
 	}
 	manifest, err := releasemanifest.Parse(raw)
 	if err != nil {
-		// Keep retries for the policy-pinned legacy bootstrap compatible with the
-		// same explicit exception used by the channel refresh path.
-		manifest, err = releasemanifest.ParseLegacyAlpha114(raw)
+		// Keep retries compatible with the same bounded legacy parser used by the
+		// channel refresh path. It rejects every unregistered partial manifest.
+		manifest, err = releasemanifest.ParseLegacyCompatible(raw)
 		if err != nil {
 			return nil, domain.WrapManifestInvalid(err)
 		}

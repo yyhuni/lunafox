@@ -62,11 +62,10 @@ func (loader *ManifestLoader) Load() (*releasemanifest.Manifest, error) {
 	}
 	manifest, err := releasemanifest.Load(loader.path)
 	if err != nil {
-		// The policy-pinned alpha.114 bootstrap manifest predates the
-		// runtime-composition binding. Keep the normal parser strict and accept
-		// this one exact historical byte identity only through its explicit
-		// compatibility parser.
-		if legacy, legacyErr := releasemanifest.LoadLegacyAlpha114(loader.path); legacyErr == nil {
+		// Deployment-owned loading may accept only the policy-pinned alpha.114
+		// bytes or the exact alpha.164 bridge profile. Keep the normal parser
+		// strict so absent modern evidence never becomes a general fallback.
+		if legacy, legacyErr := releasemanifest.LoadLegacyCompatible(loader.path); legacyErr == nil {
 			manifest = legacy
 			err = nil
 		}

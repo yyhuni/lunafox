@@ -7,6 +7,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { validateComposition } from "./resolve-release-component-composition.mjs";
+import {
+  ReleaseCompatibilityProfileAlpha164Bridge,
+  assertReleaseCompatibilityProfile,
+} from "./release-compatibility-profile.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = path.resolve(SCRIPT_DIR, "../..");
@@ -120,13 +124,23 @@ function validate(root, requireFirst, allowEmpty = false) {
     const version = path.basename(manifestRelative, ".yaml");
     const manifestPath = path.join(root, ...manifestRelative.split("/"));
     const manifestText = fs.readFileSync(manifestPath, "utf8");
+    const releaseVersion = manifestText.match(/^releaseVersion:\s*["']?([^"'\s]+)["']?/m)?.[1] ?? "";
+    if (`v${releaseVersion}` !== version) fail(`${manifestRelative} releaseVersion does not match its filename`);
+    const releaseProfile = assertReleaseCompatibilityProfile(releaseVersion);
+    const bridge = releaseProfile === ReleaseCompatibilityProfileAlpha164Bridge;
+    const hasReleaseNotes = /^releaseNotes:[ \t]*$/m.test(manifestText);
+    const hasRuntimeComposition = /^runtimeComposition:[ \t]*$/m.test(manifestText);
+    if (bridge && (hasReleaseNotes || hasRuntimeComposition)) {
+      fail(`${manifestRelative} alpha164-bridge manifest must omit both releaseNotes and runtimeComposition`);
+    }
     // Older channel records predate runtime composition and have no binding.
     // They stay as published; only a manifest that declares the binding needs
-    // the matching composition file.
-    if (!/^runtimeComposition:[ \t]*$/m.test(manifestText)) continue;
+    // the matching composition file. The explicit alpha.164 bridge continues
+    // to publish that asset, but binds it directly to the Manifest bytes.
+    if (!hasRuntimeComposition && !bridge) continue;
     const compositionRelative = `manifests/${version}/${RUNTIME_COMPOSITION_ASSET}`;
     if (!files.includes(compositionRelative)) fail(`${manifestRelative} points to missing ${compositionRelative}`);
-    const binding = parseRuntimeCompositionBinding(fs.readFileSync(manifestPath, "utf8"), manifestRelative);
+    const binding = hasRuntimeComposition ? parseRuntimeCompositionBinding(manifestText, manifestRelative) : null;
     const compositionPath = path.join(root, ...compositionRelative.split("/"));
     if (fs.lstatSync(compositionPath).isSymbolicLink() || !fs.statSync(compositionPath).isFile()) fail(`${compositionRelative} must be a regular file`);
     let composition;
@@ -136,7 +150,7 @@ function validate(root, requireFirst, allowEmpty = false) {
     try { normalized = validateComposition(composition, { requireManifestBinding: true }); }
     catch (error) { fail(`${compositionRelative} is invalid: ${error.message}`); }
     if (normalized.releaseTag.replace(/^v/, "") !== version.replace(/^v/, "")) fail(`${compositionRelative} release tag does not match ${manifestRelative}`);
-    if (normalized.compositionDigest !== binding.sha256) fail(`${compositionRelative} digest does not match ${manifestRelative}`);
+    if (binding && normalized.compositionDigest !== binding.sha256) fail(`${compositionRelative} digest does not match ${manifestRelative}`);
     if (normalized.manifestBinding.manifestDigest !== `sha256:${sha256(fs.readFileSync(manifestPath))}`) {
       fail(`${compositionRelative} manifest binding does not match ${manifestRelative}`);
     }

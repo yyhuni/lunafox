@@ -13,7 +13,7 @@ import {
   waitForPullRequestValidation,
   waitForValidation,
 } from "./publish-public-deployment.mjs";
-import { compositionCorePayload, FINGERPRINT_SCHEMA_VERSION, sha256Digest } from "./resolve-release-component-composition.mjs";
+import { bindCompositionToManifest, compositionCorePayload, FINGERPRINT_SCHEMA_VERSION, sha256Digest } from "./resolve-release-component-composition.mjs";
 
 const TAG = "v1.2.3-alpha.4";
 const SOURCE_SHA = "a".repeat(40);
@@ -88,6 +88,27 @@ test("snapshot contract is deterministic and Registry-selectable", (t) => {
   assert.equal(snapshotShaFromBody(`Deployment snapshot SHA-256: ${first.sha256}\n`), first.sha256);
   fs.writeFileSync(path.join(root, ".env"), "RELEASE_REGISTRY=ghcr.io\n");
   assert.throws(() => validateSnapshot(root, TAG), /must match/);
+});
+
+test("the alpha.164 bridge snapshot binds independent composition evidence", (t) => {
+  const root = fixture(t);
+  const bridgeTag = "v0.0.1-alpha.183";
+  const manifest = path.join(root, "release.manifest.yaml");
+  fs.writeFileSync(manifest, fs.readFileSync(manifest, "utf8")
+    .replace('releaseVersion: "1.2.3-alpha.4"', 'releaseVersion: "0.0.1-alpha.183"')
+    .replace(/^releaseNotes:\n[\s\S]*?(?=^runtimeComposition:)/m, "")
+    .replace(/^runtimeComposition:\n[\s\S]*$/m, ""));
+  const composition = JSON.parse(fs.readFileSync(path.join(root, "runtime-composition.json"), "utf8"));
+  composition.releaseTag = bridgeTag;
+  composition.components[0].sourceRelease.tag = bridgeTag;
+  delete composition.manifestBinding;
+  composition.compositionDigest = sha256Digest(compositionCorePayload(composition));
+  fs.writeFileSync(
+    path.join(root, "runtime-composition.json"),
+    `${JSON.stringify(bindCompositionToManifest(composition, sha256Digest(fs.readFileSync(manifest))), null, 2)}\n`,
+  );
+  assert.equal(validateSnapshot(root, bridgeTag, "alpha164-bridge").releaseProfile, "alpha164-bridge");
+  assert.throws(() => validateSnapshot(root, bridgeTag, "modern"), /does not match registered profile/);
 });
 
 test("publication creates one protected PR, reuses validation, and returns final main SHA", async (t) => {

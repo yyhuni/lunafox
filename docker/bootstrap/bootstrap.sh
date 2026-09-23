@@ -4,6 +4,15 @@ set -euo pipefail
 # Compose owns resident containers. Initialization writes a restricted credential
 # file shared with the Agent; secrets never cross the host environment.
 : "${ENGINE_INSTALL_INVENTORY_PATH:?ENGINE_INSTALL_INVENTORY_PATH is required}"
+
+# alpha.164 Compose predates this setting but supplies one of these two
+# production registry identities. Map only that proven omission; every other
+# missing or invalid configuration must still fail at the required check below.
+if [ -z "${ENGINE_INSTALL_CF_ACCELERATION+x}" ]; then
+	case "${ENGINE_INSTALL_REGISTRY:-}" in
+	docker.io | ghcr.io) export ENGINE_INSTALL_CF_ACCELERATION=false ;;
+	esac
+fi
 : "${ENGINE_INSTALL_CF_ACCELERATION:?ENGINE_INSTALL_CF_ACCELERATION is required}"
 : "${FINGERPRINT_BOOTSTRAP_PATH:?FINGERPRINT_BOOTSTRAP_PATH is required}"
 : "${WORDLISTS_SOURCE_PATH:?WORDLISTS_SOURCE_PATH is required}"

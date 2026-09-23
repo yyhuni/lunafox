@@ -8,6 +8,10 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseRuntimeComposition } from "./verify-public-release.mjs";
 import { validateComposition } from "./resolve-release-component-composition.mjs";
+import {
+  ReleaseCompatibilityProfileAlpha164Bridge,
+  assertReleaseCompatibilityProfile,
+} from "./release-compatibility-profile.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const FIRST_TAG = "v0.0.1-alpha.57";
@@ -19,12 +23,12 @@ const CHANNEL_KEYS = new Set(["SCHEMA_VERSION", "VERSION", "RELEASE_MANIFEST", "
 function fail(message) { throw new Error(message); }
 
 function usage() {
-  return "Usage: node scripts/ci/generate-public-channel.mjs --tag <tag> --channel <canary|stable> --manifest <file> --runtime-composition <file> --output-dir <dir> [--publication-complete] [--dry-run]\\n";
+  return "Usage: node scripts/ci/generate-public-channel.mjs --tag <tag> --channel <canary|stable> --manifest <file> --runtime-composition <file> --output-dir <dir> [--release-profile <modern|alpha164-bridge>] [--publication-complete] [--dry-run]\\n";
 }
 
 function parseArgs(argv) {
-  const args = { tag: "", channel: "", manifest: "", runtimeComposition: "", outputDir: "", publicationComplete: false, dryRun: false };
-  const values = new Set(["--tag", "--channel", "--manifest", "--runtime-composition", "--output-dir"]);
+  const args = { tag: "", channel: "", manifest: "", runtimeComposition: "", outputDir: "", releaseProfile: "", publicationComplete: false, dryRun: false };
+  const values = new Set(["--tag", "--channel", "--manifest", "--runtime-composition", "--output-dir", "--release-profile"]);
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--publication-complete") { args.publicationComplete = true; continue; }
@@ -37,7 +41,8 @@ function parseArgs(argv) {
     else if (arg === "--channel") args.channel = value;
     else if (arg === "--manifest") args.manifest = path.resolve(value);
     else if (arg === "--runtime-composition") args.runtimeComposition = path.resolve(value);
-    else args.outputDir = path.resolve(value);
+    else if (arg === "--output-dir") args.outputDir = path.resolve(value);
+    else args.releaseProfile = value;
   }
   if (!/^v\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?$/.test(args.tag)) fail(`invalid release tag: ${args.tag || "(missing)"}`);
   if (!/^(?:canary|stable)$/.test(args.channel)) fail(`unsupported channel: ${args.channel}`);
@@ -53,17 +58,27 @@ function runtimeBlockExists(text, name) {
   return new RegExp(`^  - name: ${name}\\n    refs:\\n(?:      - [^\\n]+\\n){2}`, "m").test(text);
 }
 
-function validateManifest(manifestPath, tag) {
+function validateManifest(manifestPath, tag, requestedReleaseProfile = "") {
   if (!fs.existsSync(manifestPath)) fail(`release manifest is missing: ${manifestPath}`);
   const raw = fs.readFileSync(manifestPath, "utf8");
   if (LEGACY_RE.test(raw) || /0\.0\.0-dev/.test(raw)) fail("release manifest contains retired or development content");
   const releaseVersion = raw.match(/^releaseVersion:\s*["']?([^"'\s]+)["']?/m)?.[1] ?? "";
   if (`v${releaseVersion}` !== tag) fail(`release manifest releaseVersion does not match ${tag}`);
+  const releaseProfile = assertReleaseCompatibilityProfile(releaseVersion, requestedReleaseProfile);
+  const bridge = releaseProfile === ReleaseCompatibilityProfileAlpha164Bridge;
+  const hasReleaseNotes = /^releaseNotes:[ \t]*$/m.test(raw);
+  const hasRuntimeComposition = /^runtimeComposition:[ \t]*$/m.test(raw);
+  if (bridge && (hasReleaseNotes || hasRuntimeComposition)) {
+    fail("alpha164-bridge manifest must omit both releaseNotes and runtimeComposition");
+  }
+  if (!bridge && (!hasReleaseNotes || !hasRuntimeComposition)) {
+    fail("modern release manifest must contain releaseNotes and runtimeComposition");
+  }
   for (const name of ["server", "frontend", "nginx", "agent", "bootstrap"]) {
     if (!runtimeBlockExists(raw, name)) fail(`release manifest is missing complete runtime image block: ${name}`);
   }
   if (!/^enginePackages:\s*$/m.test(raw)) fail("release manifest is missing enginePackages");
-  return { raw, digest: sha256(raw), runtimeComposition: parseRuntimeComposition(raw) };
+  return { raw, digest: sha256(raw), releaseProfile, runtimeComposition: bridge ? null : parseRuntimeComposition(raw) };
 }
 
 function readRuntimeComposition(filePath, expectedDigest, expectedManifestDigest, expectedTag) {
@@ -79,7 +94,7 @@ function readRuntimeComposition(filePath, expectedDigest, expectedManifestDigest
   try { normalized = validateComposition(value, { requireManifestBinding: true }); }
   catch (error) { fail(`runtime composition asset is invalid: ${error.message}`); }
   if (String(normalized.releaseTag).replace(/^v/, "") !== expectedTag.replace(/^v/, "")) fail("runtime composition asset release tag does not match manifest");
-  if (normalized.compositionDigest !== expectedDigest) fail(`runtime composition canonical digest does not match manifest: expected ${expectedDigest}, got ${normalized.compositionDigest}`);
+  if (expectedDigest && normalized.compositionDigest !== expectedDigest) fail(`runtime composition canonical digest does not match manifest: expected ${expectedDigest}, got ${normalized.compositionDigest}`);
   if (normalized.manifestBinding.manifestDigest !== `sha256:${expectedManifestDigest}`) fail("runtime composition manifest binding does not match manifest bytes");
   return { bytes, digest: normalized.compositionDigest, rawSha256: sha256(bytes) };
 }
@@ -160,9 +175,9 @@ function assertFirstInventory(tag, files, publicationComplete, dryRun) {
 
 function generate(options) {
   const manifestPath = fs.realpathSync(options.manifest);
-  const manifest = validateManifest(manifestPath, options.tag);
+  const manifest = validateManifest(manifestPath, options.tag, options.releaseProfile);
   const compositionPath = options.runtimeComposition || path.join(path.dirname(manifestPath), RUNTIME_COMPOSITION_ASSET);
-  const composition = readRuntimeComposition(compositionPath, manifest.runtimeComposition.sha256, manifest.digest, options.tag);
+  const composition = readRuntimeComposition(compositionPath, manifest.runtimeComposition?.sha256 ?? "", manifest.digest, options.tag);
   const existing = readExisting(options.outputDir);
   validateExisting(existing);
   assertFirstInventory(options.tag, existing, options.publicationComplete, options.dryRun);
@@ -200,6 +215,7 @@ function generate(options) {
     schemaVersion: 3,
     tag: options.tag,
     channel: options.channel,
+    releaseProfile: manifest.releaseProfile,
     firstRelease: options.tag === FIRST_TAG,
     publicationComplete: options.publicationComplete,
     files: [...proposed.keys()].sort(),
