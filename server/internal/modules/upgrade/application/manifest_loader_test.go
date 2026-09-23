@@ -103,6 +103,42 @@ func TestManifestLoaderAcceptsOnlyPinnedLegacyAlpha114(t *testing.T) {
 	}
 }
 
+func TestManifestLoaderAcceptsRegisteredAlpha164Bridge(t *testing.T) {
+	path := fixturePath("alpha164-bridge.release.manifest.yaml")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := sha256.Sum256(raw)
+	wantDigest := fmt.Sprintf("sha256:%x", digest[:])
+
+	loader, err := NewManifestLoader(ManifestLoadConfig{
+		Path:             path,
+		DeploymentDir:    filepath.Dir(path),
+		ExpectedDigest:   wantDigest,
+		ExpectedManifest: "lunafox-0.0.1-alpha.183",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := loader.Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if manifest.HasReleaseNotes() || manifest.HasRuntimeComposition() {
+		t.Fatalf("bridge metadata presence = notes:%t composition:%t, want both false", manifest.HasReleaseNotes(), manifest.HasRuntimeComposition())
+	}
+
+	tamperedPath := filepath.Join(t.TempDir(), "release.manifest.yaml")
+	tampered := strings.Replace(string(raw), "0.0.1-alpha.183", "0.0.1-alpha.184", 1)
+	if err := os.WriteFile(tamperedPath, []byte(tampered), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadReleaseManifest(tamperedPath, ""); !errors.Is(err, domain.ErrReleaseManifestInvalid) {
+		t.Fatalf("unregistered bridge manifest error = %v", err)
+	}
+}
+
 func TestManifestLoaderRejectsManifestOutsideDeploymentDirectory(t *testing.T) {
 	_, err := NewManifestLoader(ManifestLoadConfig{
 		Path:          filepath.Join(t.TempDir(), "outside.yaml"),

@@ -393,6 +393,15 @@ confirmed deployment inventory is the baseline for candidate availability and
 component comparison, so a confirmed frontend-only release is not offered
 again.
 
+One explicitly registered compatibility bridge may omit the two modern
+Manifest metadata blocks so an older strict client can read the target. That
+exception is version-scoped, keeps the same immutable image and upgrade
+inventory, and always takes the full Compose update path; it never enables a
+`frontend_only` plan. Its release still carries independent notes and composition
+evidence assets, but an older host does not fetch an unbound composition during
+the update. This is a direct update to the current release, not a required
+two-step installation.
+
 An administrator can check, confirm, and start an eligible update through the
 existing frontend update control. Before Server pauses scheduling or cancels
 work, a v2-capable host returns a read-only scope plan bound to the candidate

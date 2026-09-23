@@ -1,0 +1,26 @@
+releaseVersion: "0.0.1-alpha.183"
+runtimeImages:
+  - name: server
+    refs: ["docker.io/yyhuni/lunafox-server@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ghcr.io/yyhuni/lunafox-server@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]
+  - name: frontend
+    refs: ["docker.io/yyhuni/lunafox-frontend@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ghcr.io/yyhuni/lunafox-frontend@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]
+  - name: nginx
+    refs: ["docker.io/yyhuni/lunafox-nginx@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ghcr.io/yyhuni/lunafox-nginx@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]
+  - name: agent
+    refs: ["docker.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ghcr.io/yyhuni/lunafox-agent@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]
+  - name: bootstrap
+    refs: ["docker.io/yyhuni/lunafox-bootstrap@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ghcr.io/yyhuni/lunafox-bootstrap@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]
+enginePackages:
+  - refs: ["docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"]
+upgrade:
+  manifestId: "lunafox-0.0.1-alpha.183"
+  deploymentMode: "single-node-compose"
+  compatibilityRange: ">=0.0.1-alpha.164 <2.0.0"
+  maintenanceWindowMinutes: 15
+  requiresAdminConfirmation: true
+  databaseMigration:
+    hasDatabaseMigration: false
+    migrationType: "none"
+    migrationId: ""
+    checksum: ""
+    policyVersion: 1

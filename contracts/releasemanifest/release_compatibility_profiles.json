@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "releaseVersion": "0.0.1-alpha.183",
+      "profile": "alpha164-bridge"
+    }
+  ]
+}

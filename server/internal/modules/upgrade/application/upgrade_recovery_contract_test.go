@@ -428,6 +428,70 @@ func (stub recoveryJournalReaderStub) ReadCurrent(context.Context) (HostUpgradeE
 	return stub.event, stub.err
 }
 
+type journalRecoveryTransitionRepositoryStub struct {
+	*upgradeRepositoryStub
+	normalTransitions  int
+	journalTransitions int
+}
+
+func (stub *journalRecoveryTransitionRepositoryStub) UpdateTransition(ctx context.Context, operation *domain.Operation, expected domain.Status) error {
+	stub.normalTransitions++
+	if err := domain.ValidateExecutionTransition(operation.EffectiveExecutionMode(), expected, operation.Status); err != nil {
+		return err
+	}
+	return stub.Update(ctx, operation)
+}
+
+func (stub *journalRecoveryTransitionRepositoryStub) UpdateJournalRecoveryTransition(ctx context.Context, operation *domain.Operation, expected domain.Status) error {
+	stub.journalTransitions++
+	if err := domain.ValidateJournalRecoveryTransition(operation.EffectiveExecutionMode(), operation.MigrationType, operation.MigrationStatus, expected, operation.Status); err != nil {
+		return err
+	}
+	return stub.Update(ctx, operation)
+}
+
+func TestReconcileHostEventPersistsTrustedJournalForwardReplayAfterServerRestart(t *testing.T) {
+	service, baseRepository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	repository := &journalRecoveryTransitionRepositoryStub{upgradeRepositoryStub: baseRepository}
+	service.repository = repository
+	service.verifier = &agentVerificationVerifierStub{passed: true}
+	now := time.Date(2026, 9, 24, 2, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return now.Add(2 * time.Minute) }
+	manifest, err := LoadReleaseManifest(fixturePath("release.manifest.yaml"), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, err := service.agentTarget(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	operation := &domain.Operation{
+		OperationID: "a164a164-a164-4164-8164-a164a164a164", RequestID: "b164b164-b164-4164-8164-b164b164b164", OperatorID: 7,
+		ManifestID: manifest.Upgrade.ManifestID, ManifestDigest: manifest.Digest(), ReleaseVersion: manifest.ReleaseVersion,
+		CompatibilityRange: manifest.Upgrade.CompatibilityRange, Status: domain.StatusStopping,
+		MigrationStatus: domain.MigrationStatusNotStarted, MigrationType: "none", AgentDesiredVersion: target.Version,
+		AgentTargetDigest: target.Digest, CreatedAt: now, UpdatedAt: now,
+		StageTimes: map[domain.Status]time.Time{domain.StatusStopping: now}, ObservedDigests: map[string]string{},
+	}
+	baseRepository.byID[operation.OperationID] = operation
+	baseRepository.byRequest[operation.RequestID] = operation
+	baseRepository.active = operation
+
+	updated, err := service.ReconcileHostEvent(context.Background(), HostUpgradeEvent{
+		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Stage: string(domain.StatusVerifying),
+		FromJournal: true, UpdatedAt: now.Add(time.Minute), StageUpdatedAt: now.Add(time.Minute),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != domain.StatusSucceeded || updated.CompletedAt == nil {
+		t.Fatalf("trusted journal replay did not finish normal verification: %#v", updated)
+	}
+	if repository.journalTransitions != 1 || repository.normalTransitions != 1 {
+		t.Fatalf("transition persistence journal=%d normal=%d, want 1/1", repository.journalTransitions, repository.normalTransitions)
+	}
+}
+
 func TestReconcileStalledOperationUsesMaintenanceWindowAndPreMigrationAttention(t *testing.T) {
 	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
 	now := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)

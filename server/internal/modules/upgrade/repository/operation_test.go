@@ -230,6 +230,59 @@ func TestUpgradeOperationRepositoryGetByRequestAndTransitionFence(t *testing.T) 
 	}
 }
 
+func TestUpgradeOperationRepositoryJournalRecoveryTransitionIsExplicitAndForwardOnly(t *testing.T) {
+	repository := newUpgradeOperationRepositoryForTest(t)
+	operation := newTestOperation()
+	if _, created, err := repository.CreateOrGet(context.Background(), operation); err != nil || !created {
+		t.Fatalf("create operation: created=%t err=%v", created, err)
+	}
+
+	stopping := *operation
+	stopping.Status = domain.StatusStopping
+	stopping.UpdatedAt = operation.UpdatedAt.Add(time.Minute)
+	stopping.StageTimes = map[domain.Status]time.Time{domain.StatusQueued: operation.UpdatedAt, domain.StatusStopping: stopping.UpdatedAt}
+	if err := repository.UpdateTransition(context.Background(), &stopping, domain.StatusQueued); err != nil {
+		t.Fatalf("persist stopping state: %v", err)
+	}
+
+	verified := stopping
+	verified.Status = domain.StatusVerifying
+	verified.UpdatedAt = stopping.UpdatedAt.Add(time.Minute)
+	verified.StageTimes = map[domain.Status]time.Time{domain.StatusQueued: operation.UpdatedAt, domain.StatusStopping: stopping.UpdatedAt, domain.StatusVerifying: verified.UpdatedAt}
+	if err := repository.UpdateTransition(context.Background(), &verified, domain.StatusStopping); err == nil {
+		t.Fatal("ordinary transition accepted a skipped journal phase")
+	}
+	if err := repository.UpdateJournalRecoveryTransition(context.Background(), &verified, domain.StatusStopping); err != nil {
+		t.Fatalf("validated journal transition: %v", err)
+	}
+	loaded, err := repository.Get(context.Background(), operation.OperationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Status != domain.StatusVerifying {
+		t.Fatalf("journal replay status = %q, want verifying", loaded.Status)
+	}
+
+	terminal := verified
+	terminal.Status = domain.StatusSucceeded
+	terminal.UpdatedAt = verified.UpdatedAt.Add(time.Minute)
+	terminal.CompletedAt = &terminal.UpdatedAt
+	terminal.StageTimes[domain.StatusSucceeded] = terminal.UpdatedAt
+	if err := repository.UpdateJournalRecoveryTransition(context.Background(), &terminal, domain.StatusVerifying); err == nil {
+		t.Fatal("journal transition accepted a synthetic success")
+	}
+
+	unsafeMigration := stopping
+	unsafeMigration.Status = domain.StatusRestarting
+	unsafeMigration.MigrationType = "compatible"
+	unsafeMigration.MigrationStatus = domain.MigrationStatusRunning
+	unsafeMigration.UpdatedAt = stopping.UpdatedAt.Add(2 * time.Minute)
+	unsafeMigration.StageTimes = map[domain.Status]time.Time{domain.StatusQueued: operation.UpdatedAt, domain.StatusStopping: stopping.UpdatedAt, domain.StatusRestarting: unsafeMigration.UpdatedAt}
+	if err := repository.UpdateJournalRecoveryTransition(context.Background(), &unsafeMigration, domain.StatusStopping); err == nil {
+		t.Fatal("journal transition bypassed a non-terminal migration")
+	}
+}
+
 func TestUpgradeOperationRepositoryMissingRequestIsNotFound(t *testing.T) {
 	repository := newUpgradeOperationRepositoryForTest(t)
 	if _, err := repository.GetByRequest(context.Background(), "22222222-2222-4222-8222-222222222222"); !errors.Is(err, domain.ErrUpgradeNotFound) {

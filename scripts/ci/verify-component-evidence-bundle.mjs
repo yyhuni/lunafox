@@ -22,21 +22,22 @@ function fail(message) { throw new Error(message); }
 function assert(condition, message) { if (!condition) fail(message); }
 
 function parseArgs(argv) {
-  const options = { bundle: "", composition: "", manifest: "", policy: "", json: false };
+  const options = { bundle: "", composition: "", manifest: "", policy: "", releaseProfile: "", json: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--json") { options.json = true; continue; }
     if (arg === "--help" || arg === "-h") {
-      process.stdout.write("Usage: verify-component-evidence-bundle.mjs --bundle FILE --composition FILE [--manifest FILE] [--policy FILE] [--json]\n");
+      process.stdout.write("Usage: verify-component-evidence-bundle.mjs --bundle FILE --composition FILE [--manifest FILE] [--policy FILE] [--release-profile <modern|alpha164-bridge>] [--json]\n");
       process.exit(0);
     }
-    if (!["--bundle", "--composition", "--manifest", "--policy"].includes(arg)) fail(`unknown argument: ${arg}`);
+    if (!["--bundle", "--composition", "--manifest", "--policy", "--release-profile"].includes(arg)) fail(`unknown argument: ${arg}`);
     const value = argv[++index];
     if (!value || value.startsWith("--")) fail(`${arg} requires a value`);
     if (arg === "--bundle") options.bundle = path.resolve(value);
     else if (arg === "--composition") options.composition = path.resolve(value);
     else if (arg === "--manifest") options.manifest = path.resolve(value);
-    else options.policy = path.resolve(value);
+    else if (arg === "--policy") options.policy = path.resolve(value);
+    else options.releaseProfile = value;
   }
   assert(options.bundle, "--bundle is required");
   assert(options.composition, "--composition is required");
@@ -216,6 +217,7 @@ function loadVerifiedBundle(options) {
       composition: compositionInput,
       manifest: options.manifest,
       policy: options.policy || DEFAULT_POLICY,
+      releaseProfile: options.releaseProfile || "",
     });
   }
   const loaded = loadBundle(typeof options.bundle === "string" ? options.bundle : options.bundleFile);

@@ -65,13 +65,14 @@ for file in README.md README.zh-CN.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTI
 	docker/nginx/Dockerfile docker/nginx/nginx.conf \
 	scripts/ci/audit-public-security-scope.mjs scripts/ci/check-public-channel.mjs \
 	scripts/ci/check-public-release-policy.mjs scripts/ci/generate-compose-deployment.mjs \
-	scripts/ci/generate-compose-deployment.test.mjs scripts/ci/verify-public-release.mjs \
+	scripts/ci/generate-compose-deployment.test.mjs scripts/ci/release-compatibility-profile.mjs scripts/ci/verify-public-release.mjs \
 	scripts/ci/resolve-release-component-composition.mjs scripts/ci/verify-release-component-composition.mjs \
 	scripts/ci/verify-compose-cert-init-selftest.sh scripts/ci/verify-compose-config-init-selftest.sh \
 	scripts/ci/verify-public-runtime-source.sh scripts/ci/verify-public-runtime-contexts.mjs; do
 	require_file "$file"
 done
 require_regular_file release.manifest.yaml
+require_regular_file contracts/releasemanifest/release_compatibility_profiles.json
 
 LEGACY_V1_BOOTSTRAP=0
 if [ -e "$ROOT_DIR/runtime-composition.json" ] || [ -L "$ROOT_DIR/runtime-composition.json" ]; then

@@ -163,6 +163,8 @@ const REQUIRED_PUBLIC_RUNTIME_EXACT = [
   "scripts/ci/check-engine-image-tool-inventory.mjs",
   "scripts/ci/verify-distribution-registry-v2.mjs",
   "scripts/ci/verify-runtime-image-index.mjs",
+  "scripts/ci/release-compatibility-profile.mjs",
+  "contracts/releasemanifest/release_compatibility_profiles.json",
 ];
 const REQUIRED_PUBLIC_UPGRADER_PATHS = [
   "server/cmd/lunafox-upgrader/main.go",
@@ -1394,9 +1396,16 @@ function assertPublicWorkflow(workflow, policy) {
     finalRelease,
     "      - name: Generate and verify the complete release manifest",
   );
+  if (!finalRelease.includes("id: release_profile") ||
+      !finalRelease.includes("node scripts/ci/release-compatibility-profile.mjs --release-version") ||
+      !finalRelease.includes('echo "profile=$release_profile" >> "$GITHUB_OUTPUT"')) {
+    fail("public final release must resolve one version-scoped release compatibility profile");
+  }
   if (!finalManifestGeneration.includes("RUNTIME_COMPOSITION_SHA256: ${{ steps.composition.outputs.composition_digest }}") ||
-      !finalManifestGeneration.includes("generate-release-manifest.sh")) {
-    fail("public final release must pass the canonical runtime composition digest into manifest generation");
+      !finalManifestGeneration.includes("generate-release-manifest.sh") ||
+      !finalManifestGeneration.includes('RELEASE_PROFILE: ${{ steps.release_profile.outputs.profile }}') ||
+      !finalManifestGeneration.includes('--release-profile "$RELEASE_PROFILE"')) {
+    fail("public final release must pass the canonical runtime composition digest into manifest generation and pass the resolved profile");
   }
   for (const required of [
     "--mode bind",
@@ -1439,16 +1448,18 @@ function assertPublicWorkflow(workflow, policy) {
     "      - name: Build immutable Docker Compose deployment packages",
   );
   if (!finalComposePublication.includes("generate-compose-deployment.mjs") ||
-      !finalComposePublication.includes("--runtime-composition dist/final/runtime-composition.json")) {
-    fail("public final release must pass the bound runtime composition to Compose generation");
+      !finalComposePublication.includes("--runtime-composition dist/final/runtime-composition.json") ||
+      !finalComposePublication.includes('--release-profile "$RELEASE_PROFILE"')) {
+    fail("public final release must pass the bound runtime composition to Compose generation and pass the resolved profile");
   }
   const finalChannelPublication = workflowStepBlock(
     finalRelease,
     "      - name: Generate and publish the release-channel branch",
   );
   if (!finalChannelPublication.includes("generate-public-channel.mjs") ||
-      !finalChannelPublication.includes("--runtime-composition dist/final/runtime-composition.json")) {
-    fail("public final release must pass the bound runtime composition to channel generation");
+      !finalChannelPublication.includes("--runtime-composition dist/final/runtime-composition.json") ||
+      !finalChannelPublication.includes('--release-profile "$RELEASE_PROFILE"')) {
+    fail("public final release must pass the bound runtime composition to channel generation and pass the resolved profile");
   }
   const finalGitHubRelease = workflowStepBlock(
     finalRelease,

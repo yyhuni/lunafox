@@ -6,6 +6,10 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  ReleaseCompatibilityProfileAlpha164Bridge,
+  assertReleaseCompatibilityProfile,
+} from "./release-compatibility-profile.mjs";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = path.resolve(SCRIPT_DIR, "../..");
@@ -18,14 +22,14 @@ const RUNTIME_COMPOSITION_ASSET = "runtime-composition.json";
 function fail(message) { throw new Error(message); }
 
 function parseArgs(argv) {
-  const args = { root: DEFAULT_ROOT, policy: DEFAULT_POLICY, manifest: "", provenance: "", tag: FIRST_TAG, probe: false, json: false };
-  const values = new Set(["--root-dir", "--policy", "--manifest", "--provenance", "--tag"]);
+  const args = { root: DEFAULT_ROOT, policy: DEFAULT_POLICY, manifest: "", provenance: "", tag: FIRST_TAG, releaseProfile: "", probe: false, json: false };
+  const values = new Set(["--root-dir", "--policy", "--manifest", "--provenance", "--tag", "--release-profile"]);
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--probe") args.probe = true;
     else if (arg === "--json") args.json = true;
     else if (arg === "--help" || arg === "-h") {
-      process.stdout.write("Usage: node scripts/ci/verify-public-release.mjs --manifest <file> [--provenance <file>] [--tag <tag>] [--probe] [--json]\\n");
+      process.stdout.write("Usage: node scripts/ci/verify-public-release.mjs --manifest <file> [--provenance <file>] [--tag <tag>] [--release-profile <modern|alpha164-bridge>] [--probe] [--json]\\n");
       process.exit(0);
     } else if (values.has(arg)) {
       const value = argv[++index];
@@ -34,7 +38,8 @@ function parseArgs(argv) {
       else if (arg === "--policy") args.policy = path.resolve(value);
       else if (arg === "--manifest") args.manifest = path.resolve(value);
       else if (arg === "--provenance") args.provenance = path.resolve(value);
-      else args.tag = value;
+      else if (arg === "--tag") args.tag = value;
+      else args.releaseProfile = value;
     } else fail(`unknown argument: ${arg}`);
   }
   if (!args.manifest) fail("--manifest is required");
@@ -189,7 +194,24 @@ function parseRuntimeComposition(text) {
   return values;
 }
 
-function validateManifest(file, policy, tag) {
+function topLevelManifestFields(text) {
+  const fields = new Set();
+  const allowed = new Set(["releaseVersion", "releaseNotes", "runtimeImages", "enginePackages", "runtimeComposition", "upgrade"]);
+  for (const line of text.split(/\r?\n/)) {
+    if (!line || line.startsWith("#") || /^\s/.test(line)) continue;
+    const match = /^([A-Za-z][A-Za-z0-9]*):/.exec(line);
+    if (!match) fail(`release manifest has an invalid top-level line: ${line}`);
+    if (!allowed.has(match[1])) fail(`release manifest contains unknown top-level field ${match[1]}`);
+    if (fields.has(match[1])) fail(`release manifest contains duplicate top-level field ${match[1]}`);
+    fields.add(match[1]);
+  }
+  for (const required of ["releaseVersion", "runtimeImages", "enginePackages"]) {
+    if (!fields.has(required)) fail(`release manifest is missing ${required}`);
+  }
+  return fields;
+}
+
+function validateManifest(file, policy, tag, requestedReleaseProfile = "") {
   if (!fs.existsSync(file)) fail(`release manifest is missing: ${file}`);
   const text = fs.readFileSync(file, "utf8");
   if (/0\.0\.0-dev|alpha\.46|IMAGE_REGISTRY=|IMAGE_NAMESPACE=|WORKER_IMAGE|lunafox-installer|checksums\.txt/.test(text)) fail("manifest contains retired or development identity");
@@ -197,10 +219,19 @@ function validateManifest(file, policy, tag) {
   if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.+-]+)?$/.test(releaseVersion)) fail("release manifest releaseVersion is invalid");
   if (`v${releaseVersion}` !== tag) fail(`release manifest releaseVersion does not match ${tag}`);
   if (tag === FIRST_TAG && releaseVersion !== "0.0.1-alpha.57") fail("alpha.57 manifest must contain releaseVersion 0.0.1-alpha.57");
-  const releaseNotes = parseReleaseNotes(text, tag);
+  const releaseProfile = assertReleaseCompatibilityProfile(releaseVersion, requestedReleaseProfile);
+  const fields = topLevelManifestFields(text);
+  const bridge = releaseProfile === ReleaseCompatibilityProfileAlpha164Bridge;
+  if (bridge && (fields.has("releaseNotes") || fields.has("runtimeComposition"))) {
+    fail("alpha164-bridge manifest must omit both releaseNotes and runtimeComposition");
+  }
+  if (!bridge && (!fields.has("releaseNotes") || !fields.has("runtimeComposition"))) {
+    fail("modern release manifest must contain releaseNotes and runtimeComposition");
+  }
+  const releaseNotes = bridge ? null : parseReleaseNotes(text, tag);
   const runtimeImages = parseRuntimeBlocks(text);
   const enginePackages = parseEngineBlocks(text, policy);
-  const runtimeComposition = parseRuntimeComposition(text);
+  const runtimeComposition = bridge ? null : parseRuntimeComposition(text);
   const refs = [...runtimeImages.flatMap((entry) => entry.refs), ...enginePackages.flat()].map((entry) => entry.raw);
   const identities = new Set();
   for (const ref of [...runtimeImages.flatMap((entry) => entry.refs), ...enginePackages.flat()]) {
@@ -209,7 +240,7 @@ function validateManifest(file, policy, tag) {
     if (identities.has(ref.raw)) fail(`release manifest contains duplicate artifact identity: ${ref.raw}`);
     identities.add(ref.raw);
   }
-  return { checked: true, refs, runtimeImages: runtimeImages.map((entry) => entry.name), enginePackageCount: enginePackages.length, releaseNotes, runtimeComposition, sha256: sha256File(file) };
+  return { checked: true, releaseProfile, refs, runtimeImages: runtimeImages.map((entry) => entry.name), enginePackageCount: enginePackages.length, releaseNotes, runtimeComposition, sha256: sha256File(file) };
 }
 
 function validateProvenance(file, policy, manifestResult) {
@@ -266,7 +297,7 @@ async function verify(options) {
   if (policy.firstRelease?.tag !== FIRST_TAG || policy.firstRelease?.channel !== "canary" || policy.firstRelease?.stableAllowed !== false) fail("first release policy must pin alpha.57 canary");
   if (policy.signer?.issuer !== "https://token.actions.githubusercontent.com" || !/^\^https:\/\/github\\\.com\/yyhuni\/lunafox\/\\\.github\/workflows\/public-validate\\\.yml@refs\/heads\/main\$$/.test(String(policy.signer?.identityPattern))) fail("public Runtime keyless signer policy is invalid");
   if (policy.binarySigner?.issuer !== "https://token.actions.githubusercontent.com" || !String(policy.binarySigner?.identityPattern).includes("yyhuni/lunafox-private") || !String(policy.binarySigner?.identityPattern).includes("refs/tags")) fail("private Agent binary signer policy is invalid");
-  const manifest = validateManifest(options.manifest, policy, options.tag);
+  const manifest = validateManifest(options.manifest, policy, options.tag, options.releaseProfile);
   const provenance = validateProvenance(options.provenance, policy, manifest);
   const probes = [];
   if (options.probe) for (const ref of manifest.refs) probes.push(await probeRegistry(ref));

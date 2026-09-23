@@ -1,6 +1,7 @@
 package releasemanifest
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"os"
@@ -8,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"go.yaml.in/yaml/v3"
 )
 
 const testDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -263,6 +266,117 @@ func TestLoadLegacyAlpha114UsesTheExplicitException(t *testing.T) {
 	if manifest.Digest() != LegacyAlpha114ManifestDigest {
 		t.Fatalf("LoadLegacyAlpha114() digest = %q", manifest.Digest())
 	}
+}
+
+func TestReleaseCompatibilityProfileRegistryIsVersionScoped(t *testing.T) {
+	if got := ReleaseCompatibilityProfileForVersion("0.0.1-alpha.183"); got != ReleaseCompatibilityProfileAlpha164Bridge {
+		t.Fatalf("bridge profile = %q, want %q", got, ReleaseCompatibilityProfileAlpha164Bridge)
+	}
+	if got := ReleaseCompatibilityProfileForVersion("0.0.1-alpha.182"); got != ReleaseCompatibilityProfileModern {
+		t.Fatalf("unregistered profile = %q, want %q", got, ReleaseCompatibilityProfileModern)
+	}
+
+	for _, raw := range [][]byte{
+		[]byte(`{"schemaVersion":1,"profiles":[{"releaseVersion":"1.2.3","profile":"alpha164-bridge","unexpected":true}]}`),
+		[]byte(`{"schemaVersion":1,"profiles":[{"releaseVersion":"1.2.3","profile":"alpha164-bridge"},{"releaseVersion":"1.2.3","profile":"alpha164-bridge"}]}`),
+	} {
+		if _, err := parseReleaseCompatibilityProfiles(raw); err == nil {
+			t.Fatal("invalid release compatibility profile registry was accepted")
+		}
+	}
+}
+
+func TestParseLegacyCompatibleAcceptsOnlyTheRegisteredAlpha164BridgeShape(t *testing.T) {
+	raw := []byte(alpha164BridgeManifest())
+	if _, err := Parse(raw); err == nil || !strings.Contains(err.Error(), "runtimeComposition") {
+		t.Fatalf("strict Parse() error = %v, want missing runtime composition rejection", err)
+	}
+	manifest, err := ParseLegacyCompatible(raw)
+	if err != nil {
+		t.Fatalf("ParseLegacyCompatible() error = %v", err)
+	}
+	if manifest.HasReleaseNotes() || manifest.HasRuntimeComposition() {
+		t.Fatalf("legacy-compatible metadata presence = notes:%t composition:%t, want both false", manifest.HasReleaseNotes(), manifest.HasRuntimeComposition())
+	}
+	if manifest.ReleaseVersion != "0.0.1-alpha.183" {
+		t.Fatalf("bridge release version = %q", manifest.ReleaseVersion)
+	}
+
+	var alpha164 alpha164Manifest
+	decoder := yaml.NewDecoder(bytes.NewReader(raw))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&alpha164); err != nil {
+		t.Fatalf("alpha.164 schema rejected bridge Manifest: %v", err)
+	}
+
+	for _, mutation := range []string{
+		strings.Replace(alpha164BridgeManifest(), "runtimeImages:", "releaseNotes: {}\nruntimeImages:", 1),
+		strings.Replace(alpha164BridgeManifest(), "runtimeImages:", "runtimeComposition: {}\nruntimeImages:", 1),
+		strings.Replace(alpha164BridgeManifest(), "runtimeImages:", "unexpected: true\nruntimeImages:", 1),
+	} {
+		if _, err := ParseLegacyCompatible([]byte(mutation)); err == nil {
+			t.Fatal("legacy-compatible parser accepted partial or unknown modern input")
+		}
+	}
+
+	unknown := strings.Replace(alpha164BridgeManifest(), "runtimeImages:", "releaseNotes: {}\nruntimeImages:", 1)
+	decoder = yaml.NewDecoder(strings.NewReader(unknown))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&alpha164); err == nil || !strings.Contains(err.Error(), "releaseNotes") {
+		t.Fatalf("alpha.164 schema unknown-field error = %v", err)
+	}
+}
+
+// alpha164Manifest is deliberately independent from the current Manifest
+// types. It is the exact strict YAML shape from v0.0.1-alpha.164, so a future
+// current-contract change cannot accidentally weaken this regression check.
+type alpha164Manifest struct {
+	ReleaseVersion string                  `yaml:"releaseVersion"`
+	RuntimeImages  []alpha164RuntimeImage  `yaml:"runtimeImages"`
+	EnginePackages []alpha164EnginePackage `yaml:"enginePackages"`
+	Upgrade        alpha164UpgradeMetadata `yaml:"upgrade"`
+}
+
+type alpha164RuntimeImage struct {
+	Name string   `yaml:"name"`
+	Refs []string `yaml:"refs"`
+}
+
+type alpha164EnginePackage struct {
+	Refs []string `yaml:"refs"`
+}
+
+type alpha164UpgradeMetadata struct {
+	ManifestID                string                    `yaml:"manifestId"`
+	DeploymentMode            string                    `yaml:"deploymentMode"`
+	CompatibilityRange        string                    `yaml:"compatibilityRange"`
+	MaintenanceWindowMinutes  int                       `yaml:"maintenanceWindowMinutes"`
+	RequiresAdminConfirmation bool                      `yaml:"requiresAdminConfirmation"`
+	DatabaseMigration         alpha164DatabaseMigration `yaml:"databaseMigration"`
+}
+
+type alpha164DatabaseMigration struct {
+	HasDatabaseMigration bool   `yaml:"hasDatabaseMigration"`
+	MigrationType        string `yaml:"migrationType"`
+	MigrationID          string `yaml:"migrationId"`
+	Checksum             string `yaml:"checksum"`
+	PolicyVersion        int    `yaml:"policyVersion"`
+}
+
+func alpha164BridgeManifest() string {
+	manifest := strings.ReplaceAll(validManifest(), "1.2.3", "0.0.1-alpha.183")
+	releaseNotesStart := strings.Index(manifest, "releaseNotes:\n")
+	releaseNotesEnd := strings.Index(manifest, "runtimeImages:\n")
+	if releaseNotesStart < 0 || releaseNotesEnd < 0 {
+		panic("test manifest releaseNotes block is missing")
+	}
+	manifest = manifest[:releaseNotesStart] + manifest[releaseNotesEnd:]
+	compositionStart := strings.Index(manifest, "runtimeComposition:\n")
+	compositionEnd := strings.Index(manifest, "upgrade:\n")
+	if compositionStart < 0 || compositionEnd < 0 {
+		panic("test manifest runtimeComposition block is missing")
+	}
+	return manifest[:compositionStart] + manifest[compositionEnd:]
 }
 
 func validManifest() string {

@@ -141,6 +141,44 @@ func TestCompositionSourceTreatsPinnedLegacyAlpha114AsUnavailable(t *testing.T) 
 	}
 }
 
+func TestCompositionSourceTreatsRegisteredAlpha164BridgeAsUnavailable(t *testing.T) {
+	root := t.TempDir()
+	store, err := NewPublicJournalStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw := alpha164BridgeManifestFixtureBytes(t)
+	manifest, err := releasemanifest.ParseLegacyCompatible(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifestPath, err := store.ManifestPath(manifest.Digest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(manifestPath, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	source := NewCompositionCandidateDeploymentSource(store)
+	candidate, err := source.LoadCandidateDeployment(context.Background(), manifest.Digest())
+	if !errors.Is(err, ErrCompositionUnavailable) {
+		t.Fatalf("bridge composition load error = %v, want ErrCompositionUnavailable", err)
+	}
+	if candidate.ReleaseVersion != manifest.ReleaseVersion || candidate.CompositionDigest != "" {
+		t.Fatalf("bridge candidate = version:%q composition:%q", candidate.ReleaseVersion, candidate.CompositionDigest)
+	}
+}
+
+func alpha164BridgeManifestFixtureBytes(t *testing.T) []byte {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join("..", "testdata", "alpha164-bridge.release.manifest.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return raw
+}
+
 func TestNormalizeCompositionComponentRejectsIncompleteOrMismatchedFingerprintClosure(t *testing.T) {
 	component := compositionSourceTestComponent("built", "v1.0.1")
 	inputs := component["inputFingerprint"].(map[string]any)["inputs"].(map[string]any)

@@ -19,6 +19,15 @@ and Engine Runtime/Package pairs, then stores it as a `0600` file under
 planner uses this evidence for selective scope decisions; a missing cache can
 only produce a full plan, while invalid evidence fails closed.
 
+The checked-in release-profile registry contains one explicit alpha.164 bridge
+target. Its Manifest omits both `releaseNotes` and `runtimeComposition`, which
+the alpha.164 strict decoder does not know. This is not a general legacy
+fallback: deployment-bound readers alone may use the compatibility parser, it
+still rejects unknown fields and partial modern metadata, and an absent
+composition can only select the existing `full` Compose plan. The public
+Release still publishes its notes and composition assets for evidence, but the
+bridge target does not fetch or cache an unbound composition during an update.
+
 Development and legacy wiring without the three public release settings keeps
 using `application.ManifestLoader` for one Server-configured local path. Both
 sources validate the exact YAML digest and `lunafox-<releaseVersion>` identity;
@@ -50,12 +59,14 @@ must continue to use the authenticated Server user ID and the canonical
 `/v1/system:checkForUpdates`, `/v1/upgradeOperations`, and operation resource
 boundaries.
 
-The validated release manifest also binds public notes. A production manifest
-must carry `releaseNotes.body` and its `releaseNotes.digest`; the update-check
-projection exposes the same values as `candidate.releaseNotes.body` and
-`candidate.releaseNotes.sha256`. The Server never fetches a second notes URL,
-so an offline channel source and the About dialog use the exact manifest-bound
-text. Only the explicit `0.0.0-dev` development manifest may omit notes.
+The validated modern release manifest also binds public notes. A modern
+production manifest must carry `releaseNotes.body` and its
+`releaseNotes.digest`; the update-check projection exposes the same values as
+`candidate.releaseNotes.body` and `candidate.releaseNotes.sha256`. The Server
+never fetches a second notes URL, so an offline channel source and the About
+dialog use the exact manifest-bound text. Only `0.0.0-dev` and the exact
+registered alpha.164 bridge Manifest may omit notes; the latter remains a
+full-only compatibility target rather than a general missing-metadata mode.
 
 ## Execution boundary
 
@@ -100,6 +111,15 @@ digest, but it cannot mark an Operation `succeeded` while migration, service,
 API, or Agent verification remains incomplete. Migration failure or uncertain
 outcome is `needs_recovery`; an Agent validation timeout is `needs_attention`;
 only pre-migration failures are retryable without a recovery decision.
+
+Server-side final edge probes use the fixed Compose DNS endpoint
+`https://nginx`, while preserving the configured `PUBLIC_URL` host as the HTTP
+Host routing value. `PUBLIC_URL` remains the operator-facing address and is
+not resolved from within the Server container, because a localhost or
+host-mapped public address points at the wrong network namespace there. The
+probe bypasses proxy configuration and accepts the deployment-generated
+self-signed certificate only for that fixed internal endpoint; it does not
+accept a request-provided or configurable internal URL.
 
 When the host confirms a complete baseline and live-container observation, an
 exact `{frontend}` component difference may produce a v2 `frontend_only` plan.
@@ -163,6 +183,12 @@ manifest maintenance window. A missing checkpoint is allowed to settle during
 the handoff grace period; a corrupt checkpoint is classified immediately. A
 poll/reconciliation error is emitted through the structured server logger and
 does not terminate the background loop.
+
+When the Server is recreated by a full Compose update, a schema-validated
+journal may already be ahead of the persisted transient phase. Only that
+trusted recovery path can make a forward CAS transition through `verifying`;
+ordinary host events retain the strict one-edge lifecycle graph, and journal
+replay cannot manufacture `succeeded` or bypass an incomplete migration.
 
 Operation responses include the running Server's `currentVersion` and a
 maximum-32-entry `logs` projection. Entries are fixed lifecycle milestones,

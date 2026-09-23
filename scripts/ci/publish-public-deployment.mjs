@@ -12,6 +12,10 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseRuntimeComposition } from "./verify-public-release.mjs";
 import { validateComposition } from "./resolve-release-component-composition.mjs";
+import {
+  ReleaseCompatibilityProfileAlpha164Bridge,
+  assertReleaseCompatibilityProfile,
+} from "./release-compatibility-profile.mjs";
 
 const REPOSITORY = "yyhuni/lunafox";
 const WORKFLOW = "public-validate.yml";
@@ -43,17 +47,18 @@ function parseArgs(argv) {
     graphqlBase: "https://api.github.com/graphql",
     timeoutSeconds: 10800,
     pollSeconds: 20,
+    releaseProfile: "",
     json: false,
   };
   const values = new Set([
     "--snapshot-dir", "--tag", "--source-sha", "--repo", "--base-branch",
-    "--workflow", "--api-base", "--graphql-base", "--timeout-seconds", "--poll-seconds",
+    "--workflow", "--api-base", "--graphql-base", "--timeout-seconds", "--poll-seconds", "--release-profile",
   ]);
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--json") { options.json = true; continue; }
     if (arg === "--help" || arg === "-h") {
-      process.stdout.write("Usage: node scripts/ci/publish-public-deployment.mjs --snapshot-dir <dir> --tag <tag> --source-sha <sha> [--timeout-seconds <n>] [--json]\n");
+      process.stdout.write("Usage: node scripts/ci/publish-public-deployment.mjs --snapshot-dir <dir> --tag <tag> --source-sha <sha> [--release-profile <modern|alpha164-bridge>] [--timeout-seconds <n>] [--json]\n");
       process.exit(0);
     }
     if (!values.has(arg)) fail(`unknown argument: ${arg}`);
@@ -69,6 +74,7 @@ function parseArgs(argv) {
     else if (arg === "--graphql-base") options.graphqlBase = value.replace(/\/$/, "");
     else if (arg === "--timeout-seconds") options.timeoutSeconds = Number(value);
     else if (arg === "--poll-seconds") options.pollSeconds = Number(value);
+    else options.releaseProfile = value;
   }
   if (options.repo !== REPOSITORY) fail(`repository must be ${REPOSITORY}`);
   if (options.baseBranch !== "main") fail("base branch must be main");
@@ -94,15 +100,28 @@ function containedFile(root, relative) {
   return fs.readFileSync(target);
 }
 
-function validateSnapshot(snapshotDir, tag) {
+function validateSnapshot(snapshotDir, tag, requestedReleaseProfile = "") {
   const files = new Map(SNAPSHOT_PATHS.map((relative) => [relative, containedFile(snapshotDir, relative)]));
   if (!files.get(".env").equals(files.get(".env.example"))) fail("snapshot .env and .env.example must match");
   if (!/^RELEASE_REGISTRY=docker\.io$/m.test(files.get(".env").toString("utf8"))) {
     fail("snapshot must default RELEASE_REGISTRY to docker.io");
   }
-  const releaseVersion = files.get("release.manifest.yaml").toString("utf8").match(/^releaseVersion:\s*["']?([^"'\s]+)["']?/m)?.[1];
+  const manifestText = files.get("release.manifest.yaml").toString("utf8");
+  const releaseVersion = manifestText.match(/^releaseVersion:\s*["']?([^"'\s]+)["']?/m)?.[1];
   if (`v${releaseVersion}` !== tag) fail("snapshot release manifest does not match the requested tag");
-  const compositionBinding = parseRuntimeComposition(files.get("release.manifest.yaml").toString("utf8"));
+  const releaseProfile = assertReleaseCompatibilityProfile(releaseVersion, requestedReleaseProfile);
+  const bridge = releaseProfile === ReleaseCompatibilityProfileAlpha164Bridge;
+  const hasReleaseNotes = /^releaseNotes:[ \t]*$/m.test(manifestText);
+  const hasRuntimeComposition = /^runtimeComposition:[ \t]*$/m.test(manifestText);
+  if (bridge && (hasReleaseNotes || hasRuntimeComposition)) {
+    fail("snapshot alpha164-bridge manifest must omit both releaseNotes and runtimeComposition");
+  }
+  if (!bridge && (!hasReleaseNotes || !hasRuntimeComposition)) {
+    fail("snapshot modern manifest must contain releaseNotes and runtimeComposition");
+  }
+  // The bridge keeps only the reverse asset-to-Manifest binding because its
+  // YAML must remain readable by alpha.164's strict decoder.
+  const compositionBinding = bridge ? null : parseRuntimeComposition(manifestText);
   let composition;
   try { composition = JSON.parse(files.get("runtime-composition.json").toString("utf8")); }
   catch (error) { fail(`snapshot runtime composition is not valid JSON: ${error.message}`); }
@@ -110,7 +129,7 @@ function validateSnapshot(snapshotDir, tag) {
   try { normalizedComposition = validateComposition(composition, { requireManifestBinding: true }); }
   catch (error) { fail(`snapshot runtime composition is invalid: ${error.message}`); }
   if (normalizedComposition.releaseTag.replace(/^v/, "") !== tag.replace(/^v/, "")) fail("snapshot runtime composition release tag does not match the requested tag");
-  if (normalizedComposition.compositionDigest !== compositionBinding.sha256) fail("snapshot runtime composition digest does not match the release manifest");
+  if (compositionBinding && normalizedComposition.compositionDigest !== compositionBinding.sha256) fail("snapshot runtime composition digest does not match the release manifest");
   if (normalizedComposition.manifestBinding.manifestDigest !== `sha256:${crypto.createHash("sha256").update(files.get("release.manifest.yaml")).digest("hex")}`) {
     fail("snapshot runtime composition manifest binding does not match the release manifest bytes");
   }
@@ -125,7 +144,7 @@ function validateSnapshot(snapshotDir, tag) {
     hash.update(files.get(relative));
     hash.update("\0");
   }
-  return { files, sha256: hash.digest("hex") };
+  return { files, releaseProfile, sha256: hash.digest("hex") };
 }
 
 function snapshotShaFromBody(body) {
@@ -347,7 +366,7 @@ export async function waitForValidation(options, sha) {
 async function publishDeployment(input) {
   const options = { ...input, token: input.token ?? (process.env[TOKEN_ENV] ?? "").trim(), sleep: input.sleep ?? delay };
   if (!options.token) fail(`${TOKEN_ENV} is required`);
-  const snapshot = validateSnapshot(options.snapshotDir, options.tag);
+  const snapshot = validateSnapshot(options.snapshotDir, options.tag, options.releaseProfile);
   const publication = await findPublication(options, snapshot.sha256);
   let pr = publication.pr;
   let commitSha = publication.refSha;
