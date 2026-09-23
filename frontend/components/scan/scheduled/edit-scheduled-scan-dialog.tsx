@@ -50,7 +50,6 @@ export function EditScheduledScanDialog({
     configuration,
     isConfigEdited,
     isYamlValid,
-    isConfigurationSaveBlocked,
     selectedWorkflows,
     engineCatalogDetails,
     isEngineCatalogLoading,
@@ -112,7 +111,7 @@ export function EditScheduledScanDialog({
       footer={(
         <EditScheduledScanDialogFooter
           t={t}
-          isPending={isPending || isWorkflowConfigLoading || isConfigurationSaveBlocked}
+          isPending={isPending || isWorkflowConfigLoading}
         />
       )}
     >

@@ -38,6 +38,9 @@ describe("SelectedRowActionBar contract", () => {
     expect(source).toContain("countLabel")
     expect(source).toContain("onClearSelection")
     expect(source).toContain("clearSelectionLabel")
+    expect(source).toContain("selected-row-action-bar")
+    expect(source).toContain("selected-row-action-control")
+    expect(source).toContain("selection-clear-control")
   })
 
   it("keeps action semantics configurable without leaking route business logic", () => {
@@ -69,6 +72,7 @@ describe("SelectedRowActionBar contract", () => {
     for (const name of ["Default", "Success", "Muted"]) {
       const action = screen.getByRole("button", { name })
 
+      expect(action).toHaveClass("selected-row-action-control")
       expect(action).toHaveClass(
         "text-sidebar-foreground/65",
         "hover:bg-sidebar-accent",
@@ -102,6 +106,28 @@ describe("SelectedRowActionBar contract", () => {
 
     expect(screen.getByText("3")).toHaveClass("text-highlight")
     expect(screen.getByText("selected")).toBeInTheDocument()
+  })
+
+  it("keeps clear selection compact without using overlay close semantics", () => {
+    render(
+      React.createElement(SelectedRowActionBar, {
+        selectedCount: 1,
+        ariaLabel: "1 selected",
+        countLabel: "1 selected",
+        actions: [{
+          key: "delete",
+          label: "Delete",
+          onClick: () => {},
+        }],
+        onClearSelection: () => {},
+        clearSelectionLabel: "Clear selection",
+      })
+    )
+
+    const clearButton = screen.getByRole("button", { name: "Clear selection" })
+    expect(clearButton).toHaveClass("selection-clear-control")
+    expect(clearButton).not.toHaveClass("overlay-close-control")
+    expect(clearButton.querySelector("svg")).toHaveClass("size-3.5")
   })
 
   it("keeps disabled actions visible and exposes their explanation", () => {

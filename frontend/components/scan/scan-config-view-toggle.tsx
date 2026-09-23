@@ -80,6 +80,7 @@ export const ScanConfigViewToggle = React.forwardRef<
   )
   const [expandedStepIds, setExpandedStepIds] = useState<Set<string>>(() => new Set())
   const [pendingFocusFieldId, setPendingFocusFieldId] = useState<string | null>(null)
+  const [schemaValidationError, setSchemaValidationError] = useState<string | null>(null)
 
   const [formValues, setFormValues] = useState<EngineConfigFormValues>(() =>
     safelyInitFormValues(workflow, configuration, formValuesCacheRef?.current, workflowProfileDraft)
@@ -104,6 +105,15 @@ export const ScanConfigViewToggle = React.forwardRef<
     [formValuesCacheRef]
   )
 
+  const schemaValidationErrorFallback = t("configSchemaErrorFallback")
+  const reportSchemaValidationFailure = useCallback((error: unknown) => {
+    const message = error instanceof Error && error.message.trim().length > 0
+      ? error.message
+      : schemaValidationErrorFallback
+    setSchemaValidationError(message)
+    onValidationChange?.(false)
+  }, [onValidationChange, schemaValidationErrorFallback])
+
   const lastSerializedRef = React.useRef<string>("")
 
   useEffect(() => {
@@ -115,14 +125,15 @@ export const ScanConfigViewToggle = React.forwardRef<
         workflowProfileDraft,
       )
       replaceFormValues(fresh)
+      setSchemaValidationError(null)
       onValidationChange?.(true)
-    } catch {
+    } catch (error) {
       // A Profile/YAML that is not complete must not be repaired from catalog defaults.
       setFormValues({})
-      onValidationChange?.(false)
+      reportSchemaValidationFailure(error)
     }
     lastSerializedRef.current = ""
-  }, [configuration, getCachedFormValues, onValidationChange, replaceFormValues, workflow, workflowProfileDraft])
+  }, [configuration, getCachedFormValues, onValidationChange, replaceFormValues, reportSchemaValidationFailure, workflow, workflowProfileDraft])
 
   const serializeFormToYaml = useCallback(
     (values: EngineConfigFormValues): string => {
@@ -235,17 +246,19 @@ export const ScanConfigViewToggle = React.forwardRef<
       )
       replaceFormValues(rebuilt)
       lastSerializedRef.current = configuration
+      setSchemaValidationError(null)
       onValidationChange?.(true)
-    } catch {
-      onValidationChange?.(false)
+    } catch (error) {
+      reportSchemaValidationFailure(error)
     }
-  }, [configuration, getCachedFormValues, onValidationChange, replaceFormValues, viewMode, workflow, workflowProfileDraft])
+  }, [configuration, getCachedFormValues, onValidationChange, replaceFormValues, reportSchemaValidationFailure, viewMode, workflow, workflowProfileDraft])
 
   const isFormMode = viewMode === "form"
 
   const handleEditorValidationChange = useCallback(
     (syntaxValid: boolean) => {
       if (!syntaxValid) {
+        setSchemaValidationError(null)
         onValidationChange?.(false)
         return
       }
@@ -258,12 +271,13 @@ export const ScanConfigViewToggle = React.forwardRef<
           getCachedFormValues(),
           workflowProfileDraft,
         )
+        setSchemaValidationError(null)
         onValidationChange?.(true)
-      } catch {
-        onValidationChange?.(false)
+      } catch (error) {
+        reportSchemaValidationFailure(error)
       }
     },
-    [configuration, getCachedFormValues, onValidationChange, workflow, workflowProfileDraft]
+    [configuration, getCachedFormValues, onValidationChange, reportSchemaValidationFailure, workflow, workflowProfileDraft]
   )
 
   React.useImperativeHandle(ref, () => ({
@@ -278,9 +292,10 @@ export const ScanConfigViewToggle = React.forwardRef<
           workflowProfileDraft,
         )
         replaceFormValues(currentValues)
+        setSchemaValidationError(null)
         onValidationChange?.(true)
-      } catch {
-        onValidationChange?.(false)
+      } catch (error) {
+        reportSchemaValidationFailure(error)
         return false
       }
 
@@ -298,7 +313,7 @@ export const ScanConfigViewToggle = React.forwardRef<
       setPendingFocusFieldId(firstError.fieldId)
       return false
     },
-  }), [configuration, getCachedFormValues, onValidationChange, replaceFormValues, workflow, workflowProfileDraft])
+  }), [configuration, getCachedFormValues, onValidationChange, replaceFormValues, reportSchemaValidationFailure, workflow, workflowProfileDraft])
 
   useEffect(() => {
     if (!pendingFocusFieldId || viewMode !== "form") return
@@ -375,6 +390,7 @@ export const ScanConfigViewToggle = React.forwardRef<
               configuration={configuration}
               onChange={onChange}
               onValidationChange={handleEditorValidationChange}
+              validationError={schemaValidationError}
               selectedScanWorkflows={selectedScanWorkflows as never}
               isConfigEdited={isConfigEdited}
               disabled={disabled}

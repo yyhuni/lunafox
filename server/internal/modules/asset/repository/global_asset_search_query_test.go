@@ -77,13 +77,22 @@ func TestGlobalAssetSearchRepositoryUsesStableKeysetAndFieldSemantics(t *testing
 	}
 	repo := NewWebsiteRepository(db)
 
-	exactURLAST, err := assetapp.ParseGlobalAssetSearchQuery(`url="https://Example.test/Admin"`)
+	containsURLAST, err := assetapp.ParseGlobalAssetSearchQuery(`url="example"`)
+	if err != nil {
+		t.Fatalf("parse URL contains: %v", err)
+	}
+	containsURL, err := repo.SearchGlobalWebsites(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: containsURLAST, PageSize: 10})
+	if err != nil || len(containsURL) != 3 || containsURL[0].ID != 3 || containsURL[1].ID != 2 || containsURL[2].ID != 1 {
+		t.Fatalf("URL contains search must be case-insensitive and ordered: items=%+v err=%v", containsURL, err)
+	}
+
+	exactURLAST, err := assetapp.ParseGlobalAssetSearchQuery(`url=="https://Example.test/Admin"`)
 	if err != nil {
 		t.Fatalf("parse exact URL: %v", err)
 	}
 	exactURL, err := repo.SearchGlobalWebsites(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: exactURLAST, PageSize: 2})
 	if err != nil || len(exactURL) != 1 || exactURL[0].ID != 3 {
-		t.Fatalf("URL search must use exact bytes: items=%+v err=%v", exactURL, err)
+		t.Fatalf("URL double-equals search must use exact bytes: items=%+v err=%v", exactURL, err)
 	}
 
 	exactAST, err := assetapp.ParseGlobalAssetSearchQuery(`title=="Admin"`)
@@ -110,7 +119,7 @@ func TestGlobalAssetSearchRepositoryUsesStableKeysetAndFieldSemantics(t *testing
 	}
 }
 
-func TestGlobalAssetSearchRepositoryPreservesPercentBytesForExactURL(t *testing.T) {
+func TestGlobalAssetSearchRepositoryPreservesPercentBytesForURLPredicates(t *testing.T) {
 	db := newAssetRepositoryDB(t)
 	if err := db.Create([]model.Website{
 		{ID: 1, TargetID: 1, URL: "https://example.test/100%25-complete", Tech: pq.StringArray{}},
@@ -118,13 +127,39 @@ func TestGlobalAssetSearchRepositoryPreservesPercentBytesForExactURL(t *testing.
 	}).Error; err != nil {
 		t.Fatalf("seed websites: %v", err)
 	}
-	ast, err := assetapp.ParseGlobalAssetSearchQuery(`url="https://example.test/100%25-complete"`)
+	ast, err := assetapp.ParseGlobalAssetSearchQuery(`url="100%25"`)
 	if err != nil {
-		t.Fatalf("parse exact percent URL query: %v", err)
+		t.Fatalf("parse percent URL contains query: %v", err)
 	}
 	items, err := NewWebsiteRepository(db).SearchGlobalWebsites(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: ast, PageSize: 10})
 	if err != nil || len(items) != 1 || items[0].ID != 1 {
-		t.Fatalf("exact percent URL must remain literal: items=%+v err=%v", items, err)
+		t.Fatalf("URL contains wildcard bytes must remain literal: items=%+v err=%v", items, err)
+	}
+
+	exactAST, err := assetapp.ParseGlobalAssetSearchQuery(`url=="https://example.test/100%25-complete"`)
+	if err != nil {
+		t.Fatalf("parse exact percent URL query: %v", err)
+	}
+	exactItems, err := NewWebsiteRepository(db).SearchGlobalWebsites(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: exactAST, PageSize: 10})
+	if err != nil || len(exactItems) != 1 || exactItems[0].ID != 1 {
+		t.Fatalf("exact percent URL must remain literal: items=%+v err=%v", exactItems, err)
+	}
+}
+
+func TestGlobalAssetSearchRepositoryAllowsTwoCharacterURLContains(t *testing.T) {
+	db := newAssetRepositoryDB(t)
+	if err := db.Create(&model.Website{ID: 1, TargetID: 1, URL: "https://JD.com", Tech: pq.StringArray{}}).Error; err != nil {
+		t.Fatalf("seed website: %v", err)
+	}
+	for _, rawQuery := range []string{"jd", `url="jd"`} {
+		ast, err := assetapp.ParseGlobalAssetSearchQuery(rawQuery)
+		if err != nil {
+			t.Fatalf("parse two-character URL query %q: %v", rawQuery, err)
+		}
+		items, err := NewWebsiteRepository(db).SearchGlobalWebsites(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: ast, PageSize: 10})
+		if err != nil || len(items) != 1 || items[0].ID != 1 {
+			t.Fatalf("two-character URL contains query %q must match case-insensitively: items=%+v err=%v", rawQuery, items, err)
+		}
 	}
 }
 
@@ -133,7 +168,7 @@ func TestGlobalAssetSearchSQLHasNoCrossTableOrOffsetCountPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open dry-run db: %v", err)
 	}
-	ast, err := assetapp.ParseGlobalAssetSearchQuery(`host="api" && title=="Admin" && statusCode="200" && tech="nginx"`)
+	ast, err := assetapp.ParseGlobalAssetSearchQuery(`url="api" && host="api" && title=="Admin" && statusCode="200" && tech="nginx"`)
 	if err != nil {
 		t.Fatalf("parse AST: %v", err)
 	}
@@ -158,6 +193,7 @@ func TestGlobalAssetSearchSQLHasNoCrossTableOrOffsetCountPath(t *testing.T) {
 		"from website as asset",
 		"join target as active_target",
 		"active_target.deleted_at is null",
+		"asset.url ilike",
 		"asset.host ilike",
 		"asset.title =",
 		"asset.status_code =",

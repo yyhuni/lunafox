@@ -5,7 +5,7 @@ asset 模块 repository 规范：
 - `<resource>.go`：资源仓储结构体与构造函数（如 `website.go`、`host_port.go`）。
 - `<resource>_query.go`：查询职责（只读）；大结果导出可在 repository 内部使用游标，但对外只暴露 domain callback，不暴露 public `Stream/ScanRow` cursor API。
 - `asset_statistics.go`：Overview 全局当前态聚合。它只返回绑定的 domain 投影，不暴露其他模块 persistence model；历史按现存行的 `created_at` 重建且受 30 天窗口限制。
-- Website、Endpoint、Directory 和 Screenshot URL 是原始观测值；自然键、普通 URL filter 和 lookup 必须使用完整字符串 `=`，不得通过 `ILIKE`、大小写折叠、解析重建或百分号转换扩大匹配。Website Scope 只在详情关联读取时临时派生，绝不写回或参与自然键。
+- Website、Endpoint、Directory 和 Screenshot URL 是原始观测值；自然键、Target-scoped URL filter 和 lookup 必须使用完整字符串 `=`，不得通过 `ILIKE`、大小写折叠、解析重建或百分号转换扩大匹配。全局资产搜索的 URL contains 只属于独立的只读搜索谓词，不改变 URL 身份。Website Scope 只在详情关联读取时临时派生，绝不写回或参与自然键。
 - 完整行导出流使用 `ForEachByTargetID` / 明确过滤变体，保持资产行语义，不在导出阶段做会改变行数或行身份的 `DISTINCT` 聚合。
 - host-port IP 列表例外是已迁移的聚合业务列表：查询必须先限定 `target_id`，再应用 Website read scope 的精确归一化 `host==`（如存在），再应用普通 `ip/host/port` 筛选，再按 `ip` 聚合，最后按白名单 `ip` 或聚合 `MIN(created_at)` 排序分页；`totalSize` 统计筛选后的不同 IP 数量。精确 `host==` 不是归属关系，不改变 HostPort identity 或写入；普通 `host=` 继续走包含搜索。公开端口筛选、IP 排序/搜索、host 搜索和默认 `createdAt desc` 必须分别有 `target_id, port, ip`、`target_id, ip`、`target_id, host, ip` 加 `host gin_trgm_ops`、`target_id, created_at, ip` 组合索引或等价查询计划依据，不能只依赖单列索引。`ListPortOptionsByTargetID` 的 `count` 是同一 target 全集下拥有该端口的不同 IP 数，不随当前列表搜索、筛选、排序或分页条件联动。
 - website 列表是已迁移的 target-scoped 后端分页业务列表：查询必须先限定 `target_id`，再应用 `url/statusCode/tech/webserver/contentType/vhost` 白名单筛选，再按 `statusCode/contentLength/createdAt` 白名单排序，最后分页；`totalSize` 统计 target 下筛选后的站点数量。普通 URL 筛选使用完整原始值的 `=` 与既有 `target_id + url` 自然键索引，不执行 `%term%` 搜索或 URL 排序。默认排序使用 `target_id, created_at, id`，状态码和内容长度筛选/排序使用 `target_id, status_code, id`、`target_id, content_length, id`，Web 服务器、内容类型和虚拟主机等值筛选使用对应 `target_id, <field>, id` 组合索引，技术栈数组重叠使用 `tech` GIN 索引。不要把单列索引当作父资源范围全量筛选/排序的完成依据。`ListFilterOptionsByTargetID` 的 `count` 是同一 target 全集下该字段值出现次数，不随当前列表搜索、筛选、排序或分页条件联动。
@@ -46,12 +46,13 @@ root DB、`context.Background()` 或嵌套事务；协调器已经锁定 Scan/Ta
 墓碑 Target。它们不得复用 Target-scoped 的 offset/count 查询，不得读取 Snapshot、
 漏洞数据或引入跨表 `UNION`。
 
-查询只接收 application 已校验的 typed AST，所有值使用绑定参数。URL 始终使用精确
-`=`；只有 host/title 文本包含谓词使用带字面量转义的 PostgreSQL `ILIKE`，`statusCode`
-使用整数 `=`，`tech` 使用数组 `@>` 完整元素谓词。固定排序为 `(created_at DESC, id DESC)`，通过
-tuple keyset 和 `LIMIT pageSize+1` 分页。
+查询只接收 application 已校验的 typed AST，所有值使用绑定参数。全局搜索的 URL、
+host/title 单等号使用带字面量转义的 PostgreSQL `ILIKE`，双等号使用完整字符串 `=`；
+普通文本 URL 也走 URL contains 谓词。`statusCode` 使用整数 `=`，`tech` 使用数组
+`@>` 完整元素谓词。固定排序为 `(created_at DESC, id DESC)`，通过 tuple keyset 和
+`LIMIT pageSize+1` 分页。
 
 每次搜索在短事务中执行 `SET LOCAL statement_timeout = '5s'`，确保连接池复用不把
-超时设置带到其他请求。普通 URL 精确查询继续依赖原有 B-tree；host/title 的包含查询
-依赖对应 trigram GIN。若 Website detail 的虚拟 Scope 使用既有 URL trigram 缩小候选集，
-它只是内部预筛选，后续 Scope predicate 才是权威判断，绝不构成公开 URL contains 查询。
+超时设置带到其他请求。URL/host/title 的包含查询依赖对应 trigram GIN，精确查询继续
+依赖原有 B-tree。若 Website detail 的虚拟 Scope 使用既有 URL trigram 缩小候选集，它
+只是内部预筛选，后续 Scope predicate 才是权威判断，不构成公开 URL contains 查询。

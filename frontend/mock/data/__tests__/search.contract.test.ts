@@ -13,11 +13,18 @@ describe("search contract", () => {
     expect(structured.results[0]?.host).toBe("acme.com")
     expect(structured.results[0]?.tech).toContain("React")
 
-    const exactURL = getMockSearchResults({ q: "https://acme.com", assetType: "website" })
+    const plainURL = getMockSearchResults({ q: "acme", assetType: "website" })
+    expect(plainURL.results.length).toBeGreaterThan(1)
+    expect(plainURL.results.every((result) => result.url.toLowerCase().includes("acme"))).toBe(true)
+
+    const containsURL = getMockSearchResults({ q: 'url="ac"', assetType: "website" })
+    expect(containsURL.results.length).toBeGreaterThan(1)
+
+    const exactURL = getMockSearchResults({ q: 'url=="https://acme.com"', assetType: "website" })
     expect(exactURL.results).toHaveLength(1)
     expect(exactURL.results[0]?.url).toBe("https://acme.com")
 
-    expect(getMockSearchResults({ q: "acme", assetType: "website" }).results).toHaveLength(0)
+    expect(getMockSearchResults({ q: "jd", assetType: "website" }).results).toHaveLength(0)
   })
 
   it("does not retain the permissive legacy query syntax", () => {

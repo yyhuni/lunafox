@@ -18,7 +18,9 @@ import (
 const (
 	globalAssetSearchDefaultPageSize = 10
 	globalAssetSearchMaxPageSize     = 100
-	globalAssetSearchTokenVersion    = 1
+	// Version 2 invalidates cursors issued before plain URL searches became
+	// contains predicates; their cursor position is not valid for the wider set.
+	globalAssetSearchTokenVersion = 2
 )
 
 var (
@@ -41,8 +43,8 @@ const (
 	GlobalAssetSearchAssetTypeEndpoint GlobalAssetSearchAssetType = "endpoint"
 )
 
-// GlobalAssetSearchMode distinguishes an exact ordinary URL lookup from the
-// strict DSL.
+// GlobalAssetSearchMode distinguishes an ordinary URL contains search from the
+// strict structured DSL.
 type GlobalAssetSearchMode string
 
 const (
@@ -62,8 +64,7 @@ const (
 )
 
 // GlobalAssetSearchOperator controls the approved field-specific match mode.
-// URL conditions are always converted to Exact during parsing so a future
-// repository caller cannot accidentally widen an observed-URL lookup.
+// URL identity remains exact only when the caller uses the explicit == form.
 type GlobalAssetSearchOperator string
 
 const (
@@ -82,8 +83,8 @@ type GlobalAssetSearchCondition struct {
 }
 
 // GlobalAssetSearchAST is the query representation accepted by the repository.
-// It intentionally has no generic expression nodes because P0 only permits an
-// exact plain URL predicate or a flat conjunction of typed conditions.
+// It intentionally has no generic expression nodes because P0 only permits a
+// plain URL predicate or a flat conjunction of typed conditions.
 type GlobalAssetSearchAST struct {
 	Mode       GlobalAssetSearchMode
 	PlainURL   string

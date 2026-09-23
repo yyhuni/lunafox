@@ -28,8 +28,19 @@ vi.mock("next-intl", () => ({
 }))
 
 vi.mock("@/components/scan/scan-config-editor", () => ({
-  ScanConfigEditor: ({ configuration, onChange }: { configuration: string; onChange: (value: string) => void }) => (
-    <textarea aria-label="yaml-editor" value={configuration} onChange={(event) => onChange(event.target.value)} />
+  ScanConfigEditor: ({
+    configuration,
+    onChange,
+    validationError,
+  }: {
+    configuration: string
+    onChange: (value: string) => void
+    validationError?: string | null
+  }) => (
+    <>
+      <textarea aria-label="yaml-editor" value={configuration} onChange={(event) => onChange(event.target.value)} />
+      {validationError ? <p role="alert">{validationError}</p> : null}
+    </>
   ),
 }))
 
@@ -258,6 +269,29 @@ describe("ScanConfigViewToggle resources", () => {
     )
 
     await waitFor(() => expect(onValidationChange).toHaveBeenCalledWith(false))
+  })
+
+  it("shows the schema validation reason when valid YAML does not match the selected workflow", async () => {
+    render(
+      <ScanConfigViewToggle
+        workflow={workflow}
+        configuration={[
+          "steps:",
+          "  unknown-step:",
+          "    enabled: true",
+          "    engineConfig:",
+          "      recon:",
+          "        enabled: true",
+          "        wordlist: dns.txt",
+          "        exclude: exclude.txt",
+        ].join("\n")}
+        onChange={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole("switch", { name: "advancedYamlTitle" }))
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("unknown Workflow Step")
   })
 })
 

@@ -7,7 +7,7 @@ asset 模块补充规则：
 - **入口聚合**：按资产类型拆分 facade 入口（`facade_website.go`、`facade_subdomain.go`、`facade_endpoint.go`、`facade_directory.go`、`facade_host_port.go`、`facade_screenshot.go`）。
 - **Facade 边界**：facade 只保留入口委派和边界错误语义映射调用；重复的 target/resource not-found 映射统一收口到 `asset_facade_helpers.go`。
 - **列表命名**：facade/query service 的父资源列表使用 `ListByTarget`；port/repository 保留 `ListByTargetID` 表达持久化查询键。
-- **观测 URL**：Website、Endpoint、Directory 和 Screenshot 的 URL 是不可变原始证据。准入后不得 trim、百分号解码、大小写折叠、解析重建或用于宽松匹配；普通 URL 查询、自然键和详情身份均以完整存储字符串精确比较。Host/Target 校验与 Website Scope 只能创建临时派生视图，不能回写 URL。
+- **观测 URL**：Website、Endpoint、Directory 和 Screenshot 的 URL 是不可变原始证据。准入后不得 trim、百分号解码、大小写折叠或解析重建；Target-scoped URL 查询、自然键和详情身份均以完整存储字符串精确比较。全局资产搜索的 URL contains 谓词是独立的只读搜索语义，不改变 URL 身份。Host/Target 校验与 Website Scope 只能创建临时派生视图，不能回写 URL。
 - **导出边界**：target-scoped export/full-read 通过 facade/query service 的 domain callback（如 `ForEachByTarget`）流出，host-port IP 过滤使用显式 `ForEachByTargetAndIPs`，不向 handler、facade 或 application port 暴露 `*sql.Rows` / `ScanRow`。
 - **host-port IP 聚合列表**：`GET /v1/targets/:target/hostPorts` 的列表语义是一行一个聚合 IP，不是 host-port 明细行。application 只接受 `pageSize/pageToken/filter/orderBy`，旧 `page/sort/sortBy/sortOrder/keyword` 由 handler hard cut；`pageToken` 必须绑定 `targetId + filter + orderBy + pageSize`。filter 只允许默认搜索分支中的 `ip` / `host` 和端口 facet `port`，端口多选是 OR/IN；Website 详情额外使用一次不可移除的 `host=="<website.host>"`，按归一化 host 精确匹配，不能放入 OR；普通 `host="..."` 仍是包含搜索。orderBy 只允许 `ip`、`createdAt`，默认 `createdAt desc`。聚合 `createdAt` 表示同一 IP 组内最早 `created_at`。当前 host-port 资产只保存 IPv4；IPv6 结果在 application 保存前跳过，不让混合批次里的有效 IPv4 因不支持 IPv6 而失败。
 - **website 列表和 Get**：`GET /v1/targets/:target/websites` 是已迁移的后端分页业务列表，`GET /v1/websites/:website` 读取同一 Website resource shape。List/Get 都可投影由精确 `target_id + url` 命中的可选 Screenshot 摘要，不携带 image blob；这只是读模型，不改变 Website/Screenshot identity、schema 或结果写入。列表 application 只接受 `pageSize/pageToken/filter/orderBy`，旧 `page/sort/sortBy/sortOrder/keyword` 由 handler hard cut；`pageToken` 必须绑定 `targetId + filter + orderBy + pageSize`。filter 外部字段只允许 lowerCamelCase 的 `url/statusCode/tech/webserver/contentType/vhost`；普通 URL 文本和 `url` 条件均是精确原始字符串匹配，`tech` 多选是数组重叠语义，`vhost` 是布尔语义。orderBy 只允许 `statusCode/contentLength/createdAt`，默认 `createdAt desc`；不得开放 `url` 排序；`statusCode/contentLength` 排序的空值固定 `NULLS LAST`。不得接受 `status_code/content_length/content_type/created_at` 这类数据库 snake_case 字段作为外部 filter/orderBy。
@@ -29,11 +29,12 @@ asset 模块补充规则：
 repository 或通过 `UNION` 合并两张资产表。默认 Website 由前端提供，application
 不对缺失的 `assetType` 做静默降级。
 
-查询先由专用 parser 完整消费，再构造 typed AST：普通文本只匹配完整原始 URL；结构化查询
-只允许 `url`、`host`、`title`、`statusCode`、`tech` 和扁平 `&&`。`url` 的 `=` 与 `==`
-都表示精确原始字符串匹配；只有 `host` 与 `title` 的 `=` 是不区分大小写的包含匹配。
-`statusCode` 与 `tech` 两种运算符都表示精确匹配。输入上限、条件数、包含值字符下限、
-page size 和 page token 都必须在调用 repository 前校验。
+查询先由专用 parser 完整消费，再构造 typed AST：普通文本是 URL 的不区分大小写包含
+查询；结构化查询只允许 `url`、`host`、`title`、`statusCode`、`tech` 和扁平 `&&`。
+文本字段的 `=` 是包含匹配，`==` 是原始字符串精确匹配；URL contains 值至少 2 个
+Unicode 字符，host/title contains 值至少 3 个字符。`statusCode` 与 `tech` 两种运算符
+都表示类型精确匹配。输入上限、条件数、包含值字符下限、page size 和 page token 都
+必须在调用 repository 前校验。
 
 结果使用绑定查询形态的 URL-safe keyset token，排序为 `createdAt DESC, id DESC`，
 不计算 total。repository 的超时错误映射为 `ErrGlobalAssetSearchTimeout`，不把

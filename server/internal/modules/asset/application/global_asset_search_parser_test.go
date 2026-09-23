@@ -18,8 +18,8 @@ func TestParseGlobalAssetSearchQuerySupportsPlainURLAndStrictStructuredDSL(t *te
 	if err != nil || urlWithQuery.Mode != GlobalAssetSearchModePlainURL {
 		t.Fatalf("ordinary URL query strings must remain plain URL searches: ast=%+v err=%v", urlWithQuery, err)
 	}
-	if urlWithQuery.PlainURL != "https://example.test/?foo=bar%zz " {
-		t.Fatalf("plain URL bytes must not be trimmed: %q", urlWithQuery.PlainURL)
+	if urlWithQuery.PlainURL != "https://example.test/?foo=bar%zz" {
+		t.Fatalf("plain URL search term must trim presentation whitespace: %q", urlWithQuery.PlainURL)
 	}
 	urlWithDSLBytes := "HTTPS://example.test/path with=literal&&payload"
 	plainWithDSLBytes, err := ParseGlobalAssetSearchQuery(urlWithDSLBytes)
@@ -40,12 +40,19 @@ func TestParseGlobalAssetSearchQuerySupportsPlainURLAndStrictStructuredDSL(t *te
 	if structured.Conditions[2].Field != GlobalAssetSearchFieldTech || structured.Conditions[3].Field != GlobalAssetSearchFieldTech {
 		t.Fatalf("repeated fields must remain separate conditions: %+v", structured.Conditions)
 	}
-	urlCondition, err := ParseGlobalAssetSearchQuery(`url="HTTPS://Example.test/%00?x=%zz"`)
+	urlCondition, err := ParseGlobalAssetSearchQuery(`url="jd"`)
 	if err != nil {
-		t.Fatalf("parse raw URL condition: %v", err)
+		t.Fatalf("parse URL contains condition: %v", err)
 	}
-	if got := urlCondition.Conditions[0]; got.Operator != GlobalAssetSearchOperatorExact || got.Text != "HTTPS://Example.test/%00?x=%zz" {
-		t.Fatalf("URL condition must retain exact raw bytes: %+v", got)
+	if got := urlCondition.Conditions[0]; got.Operator != GlobalAssetSearchOperatorContains || got.Text != "jd" {
+		t.Fatalf("URL single-equals condition must remain contains: %+v", got)
+	}
+	exactURL, err := ParseGlobalAssetSearchQuery(`url=="HTTPS://Example.test/%00?x=%zz"`)
+	if err != nil {
+		t.Fatalf("parse exact raw URL condition: %v", err)
+	}
+	if got := exactURL.Conditions[0]; got.Operator != GlobalAssetSearchOperatorExact || got.Text != "HTTPS://Example.test/%00?x=%zz" {
+		t.Fatalf("URL double-equals condition must retain exact raw bytes: %+v", got)
 	}
 }
 
@@ -68,7 +75,6 @@ func TestParseGlobalAssetSearchQueryRejectsUnsafeOrMalformedSyntax(t *testing.T)
 	elevenConditions := strings.TrimSuffix(strings.Repeat(`tech="nginx" && `, 11), " && ")
 	cases := []string{
 		" ",
-		"ab",
 		tooLong,
 		elevenConditions,
 		`responseBody="password"`,
@@ -80,6 +86,9 @@ func TestParseGlobalAssetSearchQueryRejectsUnsafeOrMalformedSyntax(t *testing.T)
 		`url="admin" &&`,
 		`plain text host="api"`,
 		`url="unterminated`,
+		`url="a"`,
+		`host="ab"`,
+		`title="ab"`,
 	}
 	for _, raw := range cases {
 		t.Run(raw, func(t *testing.T) {
@@ -92,6 +101,11 @@ func TestParseGlobalAssetSearchQueryRejectsUnsafeOrMalformedSyntax(t *testing.T)
 
 func TestParseGlobalAssetSearchQueryUsesFieldSpecificTypedSemantics(t *testing.T) {
 	for _, raw := range []string{`statusCode="200"`, `statusCode=="200"`, `tech="Nginx"`, `tech=="Nginx"`, `title=="A"`} {
+		if _, err := ParseGlobalAssetSearchQuery(raw); err != nil {
+			t.Fatalf("query %q should be accepted: %v", raw, err)
+		}
+	}
+	for _, raw := range []string{`jd`, `url="jd"`, `url=="j"`} {
 		if _, err := ParseGlobalAssetSearchQuery(raw); err != nil {
 			t.Fatalf("query %q should be accepted: %v", raw, err)
 		}

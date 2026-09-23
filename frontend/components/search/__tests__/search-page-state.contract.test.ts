@@ -60,7 +60,7 @@ describe("search-page-state contract", () => {
     expect(source).toContain("useAssetSearch(activeSearchParams")
   })
 
-  it("preserves an exact URL lookup from the browser query string", () => {
+  it("preserves the URL search draft from the browser query string", () => {
     const rawURL = "HTTPS://Example.test/path?payload=%00%zz#fragment "
     hookMocks.query = rawURL
 

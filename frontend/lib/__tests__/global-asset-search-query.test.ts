@@ -10,11 +10,15 @@ describe("global asset search query", () => {
   it("keeps ordinary URL text out of the structured DSL", () => {
     expect(parseGlobalAssetSearchQuery("https://example.test/?foo=bar%zz ")).toEqual({
       mode: "plainUrl",
-      value: "https://example.test/?foo=bar%zz ",
+      value: "https://example.test/?foo=bar%zz",
     })
     expect(parseGlobalAssetSearchQuery("HTTPS://example.test/path with=literal&&payload")).toEqual({
       mode: "plainUrl",
       value: "HTTPS://example.test/path with=literal&&payload",
+    })
+    expect(parseGlobalAssetSearchQuery(" jd ")).toEqual({
+      mode: "plainUrl",
+      value: "jd",
     })
   })
 
@@ -35,18 +39,25 @@ describe("global asset search query", () => {
     const elevenConditions = Array.from({ length: 11 }, () => 'tech="nginx"').join(" && ")
     for (const query of [
       " ",
-      "ab",
       elevenConditions,
       'host="api" || tech="nginx"',
       'host!="api"',
       'responseBody="secret"',
       "a".repeat(2049),
+      "a",
+      'url="a"',
+      'host="ab"',
+      'title="ab"',
     ]) {
       expect(() => parseGlobalAssetSearchQuery(query)).toThrow()
     }
-    expect(parseGlobalAssetSearchQuery('url="ab"')).toEqual({
+    expect(parseGlobalAssetSearchQuery('url="jd"')).toEqual({
       mode: "structured",
-      conditions: [{ field: "url", operator: "==", value: "ab" }],
+      conditions: [{ field: "url", operator: "=", value: "jd" }],
+    })
+    expect(parseGlobalAssetSearchQuery('url=="a"')).toEqual({
+      mode: "structured",
+      conditions: [{ field: "url", operator: "==", value: "a" }],
     })
     expect(() => parseGlobalAssetSearchQuery('title=="A"')).not.toThrow()
     expect(() => parseGlobalAssetSearchQuery('tech="ng"')).not.toThrow()

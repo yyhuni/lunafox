@@ -91,7 +91,7 @@ function SelectedActionButton({ action }: { action: SelectedRowActionBarAction }
       size="sm"
       onClick={action.onClick}
       disabled={action.disabled}
-      className={getActionClassName(action.tone)}
+      className={cn("selected-row-action-control", getActionClassName(action.tone))}
     >
       {Icon && <Icon className={getIconClassName(action.tone)} aria-hidden="true" />}
       {action.label}
@@ -145,7 +145,7 @@ export function SelectedRowActionBar({
       )}
     >
       <div
-        className="radius-pill border border-border bg-popover/95 text-popover-foreground flex items-center gap-2 px-3 py-1 shadow-lg max-sm:gap-1 max-sm:px-2"
+        className="selected-row-action-bar radius-pill border border-border bg-popover/95 text-popover-foreground flex items-center gap-2 px-3 py-1 shadow-lg max-sm:gap-1 max-sm:px-2"
         role="toolbar"
         aria-label={ariaLabel}
       >
@@ -175,10 +175,10 @@ export function SelectedRowActionBar({
               variant="ghost"
               size="icon-sm"
               onClick={onClearSelection}
-              className="text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              className="selection-clear-control text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               aria-label={clearSelectionLabel}
             >
-              <X className="size-4" aria-hidden="true" />
+              <X className="size-3.5" aria-hidden="true" />
             </Button>
           </>
         )}

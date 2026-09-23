@@ -57,4 +57,9 @@ describe("edit-scheduled-scan-dialog contract", () => {
     expect(source).toContain("workflowProfileDraft={workflowProfileDraft}")
     expect(source).not.toContain("isPending || isWorkflowProfileLoading")
   })
+
+  it("keeps configuration validation blocking inside submit feedback instead of button loading", () => {
+    expect(source).toContain("isPending={isPending || isWorkflowConfigLoading}")
+    expect(source).not.toContain("isPending || isWorkflowConfigLoading || isConfigurationSaveBlocked")
+  })
 })

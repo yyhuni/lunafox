@@ -426,11 +426,11 @@ func globalAssetSearchScaleQueryFamilies(fixture globalAssetSearchScaleFixture) 
 	return []globalAssetSearchScaleQueryFamily{
 		{
 			name:                 "plain-url",
-			query:                fixture.probeURL,
-			where:                "asset.url = $1",
-			args:                 []any{fixture.probeURL},
-			expectedResultCount:  1,
-			acceptableIndexNames: []string{"idx_" + fixture.table + "_url", "unique_" + fixture.table + "_url_target"},
+			query:                "probe-global-search",
+			where:                "asset.url ILIKE $1 ESCAPE '\\'",
+			args:                 []any{contains},
+			expectedResultCount:  globalAssetSearchScaleNormalPageSize,
+			acceptableIndexNames: []string{"idx_" + fixture.table + "_url_trgm"},
 		},
 		{
 			name:                 "url-exact",
@@ -672,8 +672,8 @@ func containsGlobalAssetSearchScaleString(values []string, want string) bool {
 func measureGlobalAssetSearchScaleWidePage(t *testing.T, ctx context.Context, db *sql.DB, router http.Handler, fixture globalAssetSearchScaleFixture) globalAssetSearchScaleWidePageEvidence {
 	t.Helper()
 	values := url.Values{}
-	// Plain q is an exact observed-URL lookup. This structured predicate selects
-	// every wide fixture without changing that public search contract.
+	// Use a typed status predicate so the wide-page fixture measures response
+	// payload handling independently of URL contains selectivity.
 	values.Set("q", `statusCode="202"`)
 	values.Set("assetType", string(fixture.assetType))
 	values.Set("pageSize", fmt.Sprintf("%d", globalAssetSearchScaleWidePageSize))

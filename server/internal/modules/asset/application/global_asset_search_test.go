@@ -2,6 +2,8 @@ package application
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -94,6 +96,30 @@ func TestGlobalAssetSearchServiceBindsPageTokenToShapeAndCursor(t *testing.T) {
 		if _, err := service.Search(context.Background(), mismatched); !errors.Is(err, ErrInvalidGlobalAssetSearchPageToken) {
 			t.Fatalf("expected bound token rejection for %+v, got %v", mismatched, err)
 		}
+	}
+}
+
+func TestGlobalAssetSearchPageTokenRejectsPreContainsVersion(t *testing.T) {
+	now := time.Date(2026, 8, 7, 8, 0, 0, 0, time.UTC)
+	ast, err := ParseGlobalAssetSearchQuery("example")
+	if err != nil {
+		t.Fatalf("parse plain URL query: %v", err)
+	}
+	legacyPayload := globalAssetSearchPageToken{
+		Version:     globalAssetSearchTokenVersion - 1,
+		AssetType:   string(GlobalAssetSearchAssetTypeWebsite),
+		QueryDigest: globalAssetSearchQueryDigest(ast),
+		PageSize:    10,
+		CreatedAt:   now.Format(time.RFC3339Nano),
+		ID:          1,
+	}
+	encoded, err := json.Marshal(legacyPayload)
+	if err != nil {
+		t.Fatalf("marshal legacy page token: %v", err)
+	}
+	legacyToken := base64.RawURLEncoding.EncodeToString(encoded)
+	if _, err := decodeAndValidateGlobalAssetSearchPageToken(legacyToken, GlobalAssetSearchAssetTypeWebsite, ast, 10); !errors.Is(err, ErrInvalidGlobalAssetSearchPageToken) {
+		t.Fatalf("pre-contains page token must be rejected, got %v", err)
 	}
 }
 

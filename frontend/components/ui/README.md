@@ -162,6 +162,7 @@ These dimensions are the migration control plane baseline. They describe the cur
 | Component | Standard density | Compact density | Owner / notes |
 | --- | --- | --- | --- |
 | Button | `default` is 36px high; `action-card` is a full-width/full-height card action with 64px minimum height | `sm` and `icon-sm` are 32px; `icon` is 36px square | `Button` owns action sizing and hover geometry. |
+| Selected-row action bar | outer shell stays 42px high; transient commands use a 28px desktop footprint | `selected-row-action-control` and `selection-clear-control` expand to 32px on coarse pointers while the shell remains stable | `SelectedRowActionBar` owns this compact overlay tier so ordinary dense table controls remain 32px. |
 | Input | `size="default"` is 36px high with 12px horizontal padding | `size="sm"` is 32px high | `Input` owns text field geometry and focus ring. |
 | NumberStepperInput | 32px high compact integer stepper | same | `NumberStepperInput` owns integer stepper geometry for dense configuration forms; free-form numeric/range strings remain `Input`. Its outer shell follows the default `Input` surface in light and dark themes, while embedded +/- actions stay transparent until hover so the buttons do not read darker than the value field. |
 | Select | trigger `default` is 36px high | trigger `sm` is 32px high | `SelectTrigger` owns trigger density; content width follows the shared Base UI-backed `SelectContent` width contract and Base UI anchor vars. |
@@ -388,7 +389,7 @@ See `frontend/components/shared/README.md` for the shared component decision mat
 - Non-table dropdown families SHOULD route through shared owners in `frontend/components/shared/dropdown-menu-owners.tsx` instead of page-local `DropdownMenuTrigger` / `DropdownMenuContent` markup.
 - `HeaderIconActionMenu` owns compact global or header icon-trigger menus and reserves `width="content-fit"` as the default policy for short single-column actions.
 - `SidebarUserMenu` owns the sidebar account menu trigger, mixed-content profile label, desktop/mobile side placement, and the default-width content shell for account actions. Sidebar account loading states MUST use the same owner through `SidebarUserMenuSkeleton` / `NavUserSkeleton`; do not hand-roll a local avatar-plus-lines footer skeleton in `AppSidebar`.
-- Generic `DropdownMenuContent` and `PopoverContent` retain their `4px` anchor gap; this is the trigger-to-popup distance, not a Shell-edge clearance. Authenticated header overlays MUST use `shellOverlaySideOffsets.header` directly or through `HeaderIconActionMenu`, while desktop sidebar account menus and collapsed navigation flyouts MUST share `shellOverlaySideOffsets.sidebarDesktop`. These shared offsets preserve approximately `4px` of visible header clearance and the same visible clearance outside the sidebar; mobile account menus keep the generic compact gap.
+- Generic `DropdownMenuContent` and `PopoverContent` retain their `4px` anchor gap; this is the trigger-to-popup distance, not a Shell-edge clearance. Authenticated header overlays MUST use `shellOverlaySideOffsets.header` directly or through `HeaderIconActionMenu`, while desktop sidebar account menus and collapsed navigation flyouts MUST share `shellOverlaySideOffsets.sidebarDesktop`. These shared offsets preserve approximately `4px` of visible header clearance and the same visible clearance outside the sidebar; mobile account menus keep the generic compact gap. Collapsed navigation flyouts use the shared `220ms` enter and `180ms` reveal tiers on an inner panel, animating only `opacity` and `transform`; reduced-motion users skip the animation while the `180ms` delayed unmount remains to preserve the hover/focus bridge.
 
 ## Tabs Count Standards
 
@@ -710,7 +711,7 @@ The only approved production native-button exceptions are recorded in `frontend/
 - `action-card`: full available height and width with 64px minimum height. Use for card-like shortcut actions inside overview grids or action panels.
 - `icon-sm`: 32px square. Use for compact icon-only controls in top bars, data tables, cards, and dense toolbars.
 - `icon`: 36px square. Use for standard icon-only controls when the surrounding surface is not dense.
-- Contextual detail headers, read-only detail action rows, tool-card commands, and selected-row bulk actions SHOULD use `sm` (or `icon-sm` for icon-only controls). Keep `default` for form submits, confirmation actions, empty-state CTAs, and other page-level primary actions.
+- Contextual detail headers, read-only detail action rows, and tool-card commands SHOULD use `sm` (or `icon-sm` for icon-only controls). `SelectedRowActionBar` owns its separate `selected-row-action-control` / `selection-clear-control` compact tier. Keep `default` for form submits, confirmation actions, empty-state CTAs, and other page-level primary actions.
 - Shared loading action placeholders MUST reuse this same structural size
   contract through `ActionSkeleton`; do not restate local `h-*`, `size-*`, or
   `rounded-*` button geometry when a skeleton only needs to reserve the action
@@ -743,6 +744,7 @@ Selectable business tables use one selected-row interaction model across the pro
 - Action order and `tone` do not imply persistent primary emphasis. Do not give the first action a permanent fill or add page-local action-bar hover classes; a future persistent emphasis requirement needs an explicit reviewed shared API.
 - Destructive selected-row actions keep the shared destructive text and destructive-tinted hover treatment. Do not normalize delete, unlink, revoke, or similarly risky commands to the neutral non-destructive background.
 - Destructive selected-row actions must open a confirmation dialog before mutation. The dialog copy should summarize count and consequence instead of listing every selected row by default.
+- The selected-row action bar keeps its established 42px outer shell. Its commands use the shared `selected-row-action-control` footprint: 28px on fine pointers and 32px on coarse pointers. The clear-selection affordance uses the matching `selection-clear-control` footprint, keeps the action-bar hover treatment, and must not reuse the semantic `overlay-close-control` class.
 - Pages that keep selected rows in route state MUST pass that array back through `state.selectedRows` so shared tables can synchronize internal checkbox state after cancel, confirm, pagination, or mutation cleanup.
 - Pure selection UI changes such as deselecting rows do not need toast feedback. Business mutations do.
 

@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	globalAssetSearchMaxQueryBytes    = 2048
-	globalAssetSearchMaxConditions    = 10
-	globalAssetSearchMinContainsRunes = 3
+	globalAssetSearchMaxQueryBytes       = 2048
+	globalAssetSearchMaxConditions       = 10
+	globalAssetSearchMinURLContainsRunes = 2
+	globalAssetSearchMinContainsRunes    = 3
 )
 
 // ParseGlobalAssetSearchQuery parses and validates the only two search modes
@@ -23,20 +24,21 @@ func ParseGlobalAssetSearchQuery(raw string) (GlobalAssetSearchAST, error) {
 	if len(raw) > globalAssetSearchMaxQueryBytes {
 		return GlobalAssetSearchAST{}, fmt.Errorf("%w: q exceeds %d UTF-8 bytes", ErrInvalidGlobalAssetSearchQuery, globalAssetSearchMaxQueryBytes)
 	}
-	if strings.TrimSpace(raw) == "" {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
 		return GlobalAssetSearchAST{}, fmt.Errorf("%w: q is required", ErrInvalidGlobalAssetSearchQuery)
 	}
 
-	if isGlobalAssetSearchPlainURL(raw) || !looksLikeGlobalAssetSearchStructure(raw) {
-		// Plain q is an exact observed-URL value. Preserve it verbatim rather
-		// than treating surrounding bytes as presentation whitespace.
-		if utf8.RuneCountInString(raw) < globalAssetSearchMinContainsRunes {
-			return GlobalAssetSearchAST{}, fmt.Errorf("%w: url contains value must contain at least %d Unicode characters", ErrInvalidGlobalAssetSearchQuery, globalAssetSearchMinContainsRunes)
+	if isGlobalAssetSearchPlainURL(trimmed) || !looksLikeGlobalAssetSearchStructure(trimmed) {
+		// Plain q is a user-entered URL search term. Trim presentation
+		// whitespace, while structured quoted values retain their exact bytes.
+		if utf8.RuneCountInString(trimmed) < globalAssetSearchMinURLContainsRunes {
+			return GlobalAssetSearchAST{}, fmt.Errorf("%w: url contains value must contain at least %d Unicode characters", ErrInvalidGlobalAssetSearchQuery, globalAssetSearchMinURLContainsRunes)
 		}
-		return GlobalAssetSearchAST{Mode: GlobalAssetSearchModePlainURL, PlainURL: raw}, nil
+		return GlobalAssetSearchAST{Mode: GlobalAssetSearchModePlainURL, PlainURL: trimmed}, nil
 	}
 
-	parser := globalAssetSearchParser{input: strings.TrimSpace(raw)}
+	parser := globalAssetSearchParser{input: trimmed}
 	conditions, err := parser.parseStructured()
 	if err != nil {
 		return GlobalAssetSearchAST{}, fmt.Errorf("%w: %v", ErrInvalidGlobalAssetSearchQuery, err)
@@ -247,14 +249,16 @@ func newGlobalAssetSearchCondition(field GlobalAssetSearchField, operator Global
 		}
 		return GlobalAssetSearchCondition{Field: field, Operator: operator, StatusCode: &value}, nil
 	}
-	if field == GlobalAssetSearchFieldURL {
-		// Observed URL identity is exact even when callers retain the existing
-		// url="..." filter spelling. The value is not URL-decoded or rebuilt.
-		operator = GlobalAssetSearchOperatorExact
-	}
-	if field == GlobalAssetSearchFieldHost || field == GlobalAssetSearchFieldTitle {
-		if operator == GlobalAssetSearchOperatorContains && utf8.RuneCountInString(strings.TrimSpace(rawValue)) < globalAssetSearchMinContainsRunes {
-			return GlobalAssetSearchCondition{}, fmt.Errorf("%s contains value must contain at least %d Unicode characters", field, globalAssetSearchMinContainsRunes)
+	if operator == GlobalAssetSearchOperatorContains {
+		minimumRunes := 0
+		switch field {
+		case GlobalAssetSearchFieldURL:
+			minimumRunes = globalAssetSearchMinURLContainsRunes
+		case GlobalAssetSearchFieldHost, GlobalAssetSearchFieldTitle:
+			minimumRunes = globalAssetSearchMinContainsRunes
+		}
+		if minimumRunes > 0 && utf8.RuneCountInString(strings.TrimSpace(rawValue)) < minimumRunes {
+			return GlobalAssetSearchCondition{}, fmt.Errorf("%s contains value must contain at least %d Unicode characters", field, minimumRunes)
 		}
 	}
 	return GlobalAssetSearchCondition{Field: field, Operator: operator, Text: rawValue}, nil

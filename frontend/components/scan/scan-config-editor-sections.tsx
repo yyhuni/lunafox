@@ -16,6 +16,7 @@ interface ScanConfigEditorLayoutProps {
   configuration: string
   onChange: (value: string) => void
   onValidationChange?: (isValid: boolean) => void
+  validationError?: string | null
   isConfigEdited?: boolean
   disabled?: boolean
   showCapabilities?: boolean
@@ -28,6 +29,7 @@ export function ScanConfigEditorLayout({
   configuration,
   onChange,
   onValidationChange,
+  validationError,
   isConfigEdited = false,
   disabled = false,
   showCapabilities = true,
@@ -68,21 +70,26 @@ export function ScanConfigEditorLayout({
     validateYaml(configuration)
   }, [configuration, validateYaml])
 
+  const editorError = useMemo(
+    () => yamlError ?? (validationError ? { message: validationError, line: 1 } : null),
+    [validationError, yamlError]
+  )
+
   const lineIssues = useMemo<BulkLineValidationIssue[]>(() => {
-    if (!yamlError) return []
+    if (!editorError) return []
     return [{
       id: "yaml-error",
-      lineNumber: yamlError.line ?? 1,
+      lineNumber: editorError.line ?? 1,
       tone: "error",
       badgeLabel: t("configError"),
-      message: yamlError.message,
+      message: editorError.message,
     }]
-  }, [yamlError, t])
+  }, [editorError, t])
 
   const validationResult = configuration.trim().length > 0
     ? {
-      validCount: yamlError ? 0 : 1,
-      blockingIssueCount: yamlError ? 1 : 0,
+      validCount: editorError ? 0 : 1,
+      blockingIssueCount: editorError ? 1 : 0,
       advisoryIssueCount: 0,
       lineIssues,
     }
@@ -128,7 +135,7 @@ export function ScanConfigEditorLayout({
           example={t("configExample")}
           emptySummary={t("configEmptySummary")}
           validSummary={t("configValidSummary")}
-          blockingSummary={t("configBlockingSummary", { count: yamlError ? 1 : 0 })}
+          blockingSummary={t("configBlockingSummary", { count: editorError ? 1 : 0 })}
           collapseDetails={t("configCollapseDetails")}
           expandDetails={t("configExpandDetails")}
           validationResult={validationResult}
