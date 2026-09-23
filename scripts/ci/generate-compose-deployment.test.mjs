@@ -122,6 +122,7 @@ test('one package is reproducible, registry-selectable, and matches its snapshot
   assert.match(content['compose.yaml'],/RELEASE_CHANNEL: stable/);
   assert.match(content['compose.yaml'],/RELEASE_METADATA_BASE_URL: https:\/\/raw\.githubusercontent\.com\/yyhuni\/lunafox\/release-channel/);
   assert.match(content['compose.yaml'],/RELEASE_REGISTRY: \$\{RELEASE_REGISTRY:-docker\.io\}/);
+  assert.match(content['compose.yaml'],/ENGINE_INSTALL_CF_ACCELERATION: false/);
   assert.match(content['engine-inventory.yaml'],/docker\.io\/yyhuni\/lunafox-engine-runtime-port-scan@sha256:/);
   assert.match(content['engine-inventory.yaml'],/ghcr\.io\/yyhuni\/lunafox-engine-runtime-port-scan@sha256:/);
 
@@ -152,6 +153,8 @@ test('one package is reproducible, registry-selectable, and matches its snapshot
    assert.equal(embedded.services.upgrader.command.at(-1),registry);
    assert.equal(embedded.services.server.environment.RELEASE_REGISTRY,registry);
    assert.equal(embedded.services.server.environment.ENGINE_INSTALL_REGISTRY,registry);
+   assert.equal(embedded.services.server.environment.ENGINE_INSTALL_CF_ACCELERATION,'false');
+   assert.equal(embedded.services.bootstrap.environment.ENGINE_INSTALL_CF_ACCELERATION,'false');
    assert.ok(embedded.services.upgrader.volumes.some(volume => volume.source === '/var/run/docker.sock' && volume.target === '/var/run/docker.sock' && volume.read_only !== true));
    assert.ok(embedded.services.upgrader.volumes.some(volume => volume.source === 'lunafox_upgrade_state' && volume.target === '/deployment/.lunafox/upgrade'));
    assert.ok(embedded.services.server.volumes.some(volume => volume.source === 'lunafox_upgrade_state' && volume.target === '/opt/lunafox/.lunafox/upgrade'));

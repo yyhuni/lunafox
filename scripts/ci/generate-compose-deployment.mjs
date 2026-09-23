@@ -186,6 +186,10 @@ export function generate({ root = defaultRoot, manifest, tag, output, snapshot =
    selected.set('RELEASE_METADATA_BASE_URL', releaseMetadataBaseURL);
    selected.set('RELEASE_REGISTRY', registryExpression);
    selected.set('ENGINE_INSTALL_REGISTRY', registryExpression);
+   // The published direct-Compose package has no host-side candidate resolver.
+   // Keep its reviewed default explicit while the private root lifecycle owns
+   // the opt-in CF candidate projection.
+   selected.set('ENGINE_INSTALL_CF_ACCELERATION', 'false');
    selected.set('ENGINE_INVENTORY_HOST_PATH', './engine-inventory.yaml');
    selected.set('LUNAFOX_SHARED_DATA_VOLUME_BIND', 'lunafox_data:/opt/lunafox:rw');
    const compose = template.replace(/\$\{([A-Z_]+)(?::[^}]*)?\}/g, (expression, key) => selected.get(key) ?? expression);

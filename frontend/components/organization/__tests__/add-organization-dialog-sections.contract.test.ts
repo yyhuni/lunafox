@@ -40,12 +40,10 @@ describe("add-organization-dialog-sections contract", () => {
     expect(source).not.toContain("lineNumberedTextareaTallViewportClassName")
   })
 
-  it("explains organization and optional target concepts at their labels", () => {
-    expect(source).toContain("InlineHelpTooltip")
-    expect(source).toContain('tTooltips("organizationConcept")')
-    expect(source).toContain('tTooltips("targetConcept")')
-    expect(source).toContain('ariaLabel={t("orgName")}')
-    expect(source).toContain('ariaLabel={t("targetList")}')
+  it("keeps resource concepts out of creation labels", () => {
+    expect(source).not.toContain("InlineHelpTooltip")
+    expect(source).not.toContain('tTooltips("organizationConcept")')
+    expect(source).not.toContain('tTooltips("targetConcept")')
   })
 
   it("keeps the optional target header free of a separate clear action", () => {

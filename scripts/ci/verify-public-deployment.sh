@@ -391,7 +391,7 @@ jq -e '
 ' <<<"$compose_json" >/dev/null || fail "third-party resident images must be digest-qualified"
 
 template="$ROOT_DIR/deploy/compose.template.yaml"
-for key in SERVER_IMAGE_REF FRONTEND_IMAGE_REF NGINX_IMAGE_REF AGENT_IMAGE_REF BOOTSTRAP_IMAGE_REF RELEASE_CHANNEL RELEASE_METADATA_BASE_URL RELEASE_REGISTRY PUBLIC_HOST PUBLIC_PORT; do
+for key in SERVER_IMAGE_REF FRONTEND_IMAGE_REF NGINX_IMAGE_REF AGENT_IMAGE_REF BOOTSTRAP_IMAGE_REF RELEASE_CHANNEL RELEASE_METADATA_BASE_URL RELEASE_REGISTRY ENGINE_INSTALL_CF_ACCELERATION PUBLIC_HOST PUBLIC_PORT; do
 	grep -Fq "\${${key}:?${key} is required}" "$template" || fail "deployment template must require ${key}"
 done
 for key in PUBLIC_HOST PUBLIC_PORT; do
@@ -400,6 +400,8 @@ done
 if rg -q '\$\{(?:SERVER|FRONTEND|NGINX|AGENT|BOOTSTRAP)_IMAGE_REF' "$compose"; then
 	fail "public root Compose must contain resolved Runtime image identities"
 fi
+grep -Fq 'ENGINE_INSTALL_CF_ACCELERATION: false' "$compose" ||
+	fail "public root Compose must keep the direct Compose CF acceleration default disabled"
 if rg -n 'lunafox-loki|LOKI_PLUGIN_REF|logging:[[:space:]]*loki' "$compose" "$ROOT_DIR/.env.example" "$ROOT_DIR/resources/alloy/config.alloy"; then
 	fail "direct Compose deployment must not require the Loki Docker plugin"
 fi

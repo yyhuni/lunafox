@@ -3,7 +3,6 @@
 import type { Column } from "@tanstack/react-table"
 import { useTranslations } from "next-intl"
 import { ChevronUp, ChevronDown, ChevronsUpDown, IconEyeOff } from "@/components/icons"
-import { InlineHelpTooltip } from "@/components/common/inline-help-tooltip"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -20,7 +19,6 @@ interface DataTableColumnHeaderProps<TData, TValue> {
   column: Column<TData, TValue>
   title: string
   className?: string
-  tooltip?: string
 }
 
 /**
@@ -34,24 +32,11 @@ export function DataTableColumnHeader<TData, TValue>({
   column,
   title,
   className,
-  tooltip,
 }: DataTableColumnHeaderProps<TData, TValue>) {
   const tDataTable = useTranslations("dataTable")
 
-  const help = tooltip ? (
-    <InlineHelpTooltip ariaLabel={title}>
-      {tooltip}
-    </InlineHelpTooltip>
-  ) : null
-
   if (!column.getCanSort()) {
-    const staticHeader = <div className={cn("text-left", textRole.tableHeader, className)}>{title}</div>
-    return tooltip ? (
-      <div className="flex min-w-0 items-center gap-1">
-        {staticHeader}
-        {help}
-      </div>
-    ) : staticHeader
+    return <div className={cn("text-left", textRole.tableHeader, className)}>{title}</div>
   }
 
   const sorted = column.getIsSorted()
@@ -105,10 +90,5 @@ export function DataTableColumnHeader<TData, TValue>({
     </DropdownMenu>
   )
 
-  return tooltip ? (
-    <div className="flex min-w-0 items-center gap-1">
-      {sortableHeader}
-      {help}
-    </div>
-  ) : sortableHeader
+  return sortableHeader
 }

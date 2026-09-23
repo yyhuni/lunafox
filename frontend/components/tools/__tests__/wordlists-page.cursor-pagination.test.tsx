@@ -14,6 +14,10 @@ const wordlistHooks = vi.hoisted(() => ({
 
 vi.mock("@/hooks/use-wordlists", () => wordlistHooks)
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ back: vi.fn() }),
+}))
+
 vi.mock("@/components/tools/wordlist-upload-dialog", () => ({
   WordlistUploadDialog: () => null,
 }))
@@ -43,8 +47,11 @@ describe("WordlistsPage cursor pagination", () => {
       data: request.pageToken
         ? { results: [wordlist], totalSize: 42 }
         : { results: [wordlist], totalSize: 42, nextPageToken: "wordlists-page-two" },
+      error: null,
+      isError: false,
       isLoading: false,
       isPlaceholderData: false,
+      refetch: vi.fn(),
     }))
   })
 
@@ -94,6 +101,29 @@ describe("WordlistsPage cursor pagination", () => {
     const editTab = await screen.findByRole("tab", { name: "actions.edit" })
     fireEvent.click(editTab)
     await waitFor(() => expect(wordlistHooks.useWordlistContent).toHaveBeenLastCalledWith(1))
+  })
+
+  it("contains a malformed list response in a retryable catalog error", () => {
+    const refetch = vi.fn()
+    wordlistHooks.useWordlists.mockReturnValue({
+      data: undefined,
+      error: new Error("Invalid Wordlist response: tags must be an array"),
+      isError: true,
+      isLoading: false,
+      isPlaceholderData: false,
+      refetch,
+    })
+
+    render(<WordlistsPage />)
+
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveAttribute("data-app-error-kind", "unexpected-error")
+    expect(alert).toHaveAttribute("data-app-error-variant", "section")
+    expect(alert).not.toHaveTextContent("Invalid Wordlist response: tags must be an array")
+    expect(screen.queryByRole("button", { name: "detailTitle: common.txt" })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+    expect(refetch).toHaveBeenCalledTimes(1)
   })
 
   it("keeps an unsaved content draft when moving between detail and edit tabs", async () => {

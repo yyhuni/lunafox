@@ -203,6 +203,40 @@ func TestWordlistCreateReturnsFileNameFromUploadedFilename(t *testing.T) {
 	}
 }
 
+func TestWordlistCreateWithoutTagsReturnsEmptyTagsArray(t *testing.T) {
+	store := &wordlistManagementStoreStub{existsByFileName: map[string]bool{}}
+	router := newWordlistManagementCreateTestRouter(t, store)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", "untagged.txt")
+	if err != nil {
+		t.Fatalf("create file field: %v", err)
+	}
+	if _, err := part.Write([]byte("admin\n")); err != nil {
+		t.Fatalf("write file field: %v", err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatalf("close multipart writer: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/wordlists", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d body=%s", resp.Code, resp.Body.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(resp.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if tags, ok := payload["tags"].([]any); !ok || len(tags) != 0 {
+		t.Fatalf("untagged creation must encode tags as an empty array, got %s", resp.Body.String())
+	}
+}
+
 func TestWordlistListReturnsPaginatedCanonicalResources(t *testing.T) {
 	updatedAt := time.Date(2026, 7, 4, 8, 0, 0, 0, time.UTC)
 	store := &wordlistManagementStoreStub{
@@ -248,6 +282,32 @@ func TestWordlistListReturnsPaginatedCanonicalResources(t *testing.T) {
 	}
 	if first["lineCount"] != float64(12) || first["fileSize"] != float64(512) || first["fileHash"] != "abc123" {
 		t.Fatalf("missing wordlist metadata fields: %+v", first)
+	}
+}
+
+func TestWordlistListEncodesUntaggedTagsAsEmptyArray(t *testing.T) {
+	store := &wordlistManagementStoreStub{
+		items: []catalogdomain.Wordlist{{
+			ID:       8,
+			FileName: "untagged.txt",
+		}},
+	}
+	router := newWordlistManagementTestRouter(store)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/wordlists", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", resp.Code, resp.Body.String())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(resp.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	first := body["results"].([]any)[0].(map[string]any)
+	if tags, ok := first["tags"].([]any); !ok || len(tags) != 0 {
+		t.Fatalf("untagged list item must encode tags as an empty array, got %s", resp.Body.String())
 	}
 }
 
