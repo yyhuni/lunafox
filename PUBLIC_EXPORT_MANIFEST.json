@@ -17253,8 +17253,8 @@
       "path": "scripts/ci/check-public-release-policy.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 104037,
-      "sha256": "1b65273ac6763e0aa5a43541be91c0a9f77be912180fc09b0a6749012a386560"
+      "size": 104415,
+      "sha256": "0d34b52582ddb3d52cdd17297edfbc26e85716901639d7f5b34002629372523c"
     },
     {
       "path": "scripts/ci/component-evidence-bundle-selftest.mjs",
