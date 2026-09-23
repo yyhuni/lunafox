@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "kind": "lunafox.runtime-composition",
-  "releaseTag": "v0.0.1-alpha.181",
-  "sourceRevisionDigest": "sha256:ccd64301a33cd1a844bf93515826335554eecc811d7339718cc48be847b88c34",
-  "publicMergeCommit": "ae059921914afec27402f3d889df57095bc87897",
+  "releaseTag": "v0.0.1-alpha.183",
+  "sourceRevisionDigest": "sha256:915f7697a61da5a503c9b23f18c458e25aaf62b6c0e80a4714cd96dca9ba124e",
+  "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757",
   "components": [
     {
       "id": "engine.lunafox.directory_scan.package",
@@ -12,7 +12,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:d78ba167978d607a4ca8c1c9c14ff43e2c7e96159b2c2d496821526b5558e436",
+        "digest": "sha256:87f7632eb99c3b19d1244dd99c054962347636835bae1b6519534f34db00bea5",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -763,16 +763,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -1174,14 +1186,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-directory-scan@sha256:b4f04fde3096445fb6e7cbd3d2ff63bcfcc1bdc411e3f4d7059d390e43c381a3",
-        "digest": "sha256:b4f04fde3096445fb6e7cbd3d2ff63bcfcc1bdc411e3f4d7059d390e43c381a3"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-directory-scan@sha256:bd599e2f2f79dac84f24a8a49c4f0ac1d6b0f31467db9b2adfb1ee5d383052fb",
+        "digest": "sha256:bd599e2f2f79dac84f24a8a49c4f0ac1d6b0f31467db9b2adfb1ee5d383052fb"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-directory_scan.json",
@@ -1197,7 +1208,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:03bfb59309c82439611ca0649a3cdd749e817ad8ac9aff2de73540a570560078",
+        "digest": "sha256:e555f4b1c4e1b8afd1f8a06a0bda6846967c87069e3ab4a80680d6c40af5b5ee",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -1947,16 +1958,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -2358,18 +2381,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-directory-scan@sha256:ce79fca5deee0cdf8f12b68f177a89588aa629f061932d51bc06de7a668efe72",
-        "digest": "sha256:ce79fca5deee0cdf8f12b68f177a89588aa629f061932d51bc06de7a668efe72",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-directory-scan@sha256:98eda25224d35fddc52a34adb7886ac6e4cafcffeb6afbe6645346ed9e2e82c8",
+        "digest": "sha256:98eda25224d35fddc52a34adb7886ac6e4cafcffeb6afbe6645346ed9e2e82c8",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-directory_scan.json",
@@ -2385,7 +2407,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:7629e7d5c7ebe2bd87421810381f887623d5b8314ea03ff107d1dfbd86d19686",
+        "digest": "sha256:6416896deb917fe5e5ce667524c5c420238775b3b32e91a88860b59c09f1fe13",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -3064,16 +3086,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -3475,14 +3509,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:ccc4bdfa37e17881fd8ee297c19ad518384232f1d645a8cc48ed685da1a23033",
-        "digest": "sha256:ccc4bdfa37e17881fd8ee297c19ad518384232f1d645a8cc48ed685da1a23033"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:1dbd099ccc91b7b9caa394a46c3543831c0ffb821fea3920e0e652a76353a870",
+        "digest": "sha256:1dbd099ccc91b7b9caa394a46c3543831c0ffb821fea3920e0e652a76353a870"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-fingerprint_detection.json",
@@ -3498,7 +3531,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:896464795a78b33b402ccc4271165135a3ae3dc57c8cedff6e8c594d90ec9e10",
+        "digest": "sha256:6420860e4b1c06edfe998154d3d11b40d09e8774914509ddd611842343f6ca06",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -4176,16 +4209,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -4587,18 +4632,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:792c0284be947d33bd63ac29c3fd514b7d7673874fe9643f57fc5bb9002d82b5",
-        "digest": "sha256:792c0284be947d33bd63ac29c3fd514b7d7673874fe9643f57fc5bb9002d82b5",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:fd36e69ffcafec02d652d1e160921db6e44b2b32ef7b036253e901e12571c09c",
+        "digest": "sha256:fd36e69ffcafec02d652d1e160921db6e44b2b32ef7b036253e901e12571c09c",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-fingerprint_detection.json",
@@ -4614,7 +4658,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:e88b2994183d7fa74c9742d51e558edc56b834836bcacd1985d19c3d7d9dd632",
+        "digest": "sha256:f6256e2aa98f2127314d0bb9841694c7f122daee3c5d7be8cf4c6901a67a4acc",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -5323,16 +5367,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -5734,14 +5790,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:7106a9993011bedf07c9c54bedef4918723347cf51df533c735b82992e7ab831",
-        "digest": "sha256:7106a9993011bedf07c9c54bedef4918723347cf51df533c735b82992e7ab831"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:ae91f50b8accf02593f516548f2f624065c4ab264e8069d3aceb7beefb572911",
+        "digest": "sha256:ae91f50b8accf02593f516548f2f624065c4ab264e8069d3aceb7beefb572911"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-nuclei_vulnerability.json",
@@ -5757,7 +5812,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:4c7feaf98c4d542e503363f23f3df5f9236e5d3ceee1be056c734a062dcbf60c",
+        "digest": "sha256:7d385e48afc572cefe8f12f1233d0776212652470a5f6ac88acfdc4a62dc48b8",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -6465,16 +6520,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -6876,18 +6943,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:9bc5d96362c8123fcd7e2230095dc2eb6ba76f213622ebcccba8735be2d9e4fa",
-        "digest": "sha256:9bc5d96362c8123fcd7e2230095dc2eb6ba76f213622ebcccba8735be2d9e4fa",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:e13d58a30798a645fc874472418722b143d1ae362a714b805ea40a7e35c14133",
+        "digest": "sha256:e13d58a30798a645fc874472418722b143d1ae362a714b805ea40a7e35c14133",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-nuclei_vulnerability.json",
@@ -6903,7 +6969,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:c2dca477344b1e6e63619f800c230f1a2d014d022e143d21fb76f1ef898969c3",
+        "digest": "sha256:0033fb61268d6c22fd22828bc9d94521863c8b3233bd09659e25ee17db9082c6",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -7654,16 +7720,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -8065,14 +8143,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:5563f0df720ca7935adbfbc071f1c416602d3713b4b905388f7e90baa9d63756",
-        "digest": "sha256:5563f0df720ca7935adbfbc071f1c416602d3713b4b905388f7e90baa9d63756"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:2290e53881aaba74914e449fea3971d67d576b3892af53167ed5e9649a97afdd",
+        "digest": "sha256:2290e53881aaba74914e449fea3971d67d576b3892af53167ed5e9649a97afdd"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-port_scan.json",
@@ -8088,7 +8165,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:90111ec1b242a6dcc538ef632aff1ad118bd5da3ecbfde61b013a0ed749a8dc6",
+        "digest": "sha256:d833098830612c197c8a6cf981855104419417279de1fd4e725e9ca99a4aee2a",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -8838,16 +8915,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -9249,18 +9338,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:1c6bcd9b094add9dfa7b5063a4cc11ea12db8a6f80a7d3cd3024a4abca81c272",
-        "digest": "sha256:1c6bcd9b094add9dfa7b5063a4cc11ea12db8a6f80a7d3cd3024a4abca81c272",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:6e52d737aea913fafe63e424727b4bd279abf343deac055ec1c08fc354e51078",
+        "digest": "sha256:6e52d737aea913fafe63e424727b4bd279abf343deac055ec1c08fc354e51078",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-port_scan.json",
@@ -9276,7 +9364,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:85624b6345229aae09c1bd929f44bf8f695a1e30dcccccef6cde7e1c0ea4f000",
+        "digest": "sha256:0c9044b961c45f189fc286b4af96e18b2d50fc56af8b8b8275914bf14e511825",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -9967,16 +10055,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -10378,14 +10478,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:af8a2560fa335dbf73cb08df3e9a647e1e1ef82e27922f332dda9d7571a69e07",
-        "digest": "sha256:af8a2560fa335dbf73cb08df3e9a647e1e1ef82e27922f332dda9d7571a69e07"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:e88cfbc3bf10fe784784aa184b0ea9b82677924319b30981987a4a5e9da13985",
+        "digest": "sha256:e88cfbc3bf10fe784784aa184b0ea9b82677924319b30981987a4a5e9da13985"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-screenshot.json",
@@ -10401,7 +10500,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:5ac04726dd94ac5cbb7116ef3cdd3d357f1db502cc1c50269a500892c1d5352d",
+        "digest": "sha256:ab71d4777f2d39dca57ba57e2fa670965fc6de5c51bc3c62e371ce8e2868bcbd",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -11091,16 +11190,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -11502,18 +11613,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:cc77d5be2ad2ec4b828122a2a3322233cc43f41298dd6269a899b6b754849fb5",
-        "digest": "sha256:cc77d5be2ad2ec4b828122a2a3322233cc43f41298dd6269a899b6b754849fb5",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:e2348f29b8a5f844dbdf9c1f514ecc45bc12d5142154b25cd68d51294abba9df",
+        "digest": "sha256:e2348f29b8a5f844dbdf9c1f514ecc45bc12d5142154b25cd68d51294abba9df",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-screenshot.json",
@@ -11529,7 +11639,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:ebf114614cb0fd846ebe6fa902c9b26a9797433f77cf76393b6e22cb136940e5",
+        "digest": "sha256:fef73e95822f9fce0eb3fe95b3afdd867b1660be251d5695a5a78583f70143a0",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -12328,16 +12438,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -12739,14 +12861,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:75914e00052059f6793d52d61aa6eb11a4fdb12046acb5ae9aa7022922636a54",
-        "digest": "sha256:75914e00052059f6793d52d61aa6eb11a4fdb12046acb5ae9aa7022922636a54"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:95de1963955852565ea5a159a0d765816b0fc355cb673ad4399dd70ea149b031",
+        "digest": "sha256:95de1963955852565ea5a159a0d765816b0fc355cb673ad4399dd70ea149b031"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-subdomain_discovery.json",
@@ -12762,7 +12883,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:1ca58dff515877d21a92e91c55862ea508629dfe4fa75191061a3f7b32748d76",
+        "digest": "sha256:e472d899d2ada198624f0b79ed0cdb4204ad1d408618512a16e36ad50c560310",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -13560,16 +13681,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -13971,18 +14104,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:53600eeb5bfb9d989dc7fb24cf746f054710954fa83a35611e0bfa6506fefd43",
-        "digest": "sha256:53600eeb5bfb9d989dc7fb24cf746f054710954fa83a35611e0bfa6506fefd43",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:3e4f4232357f26abd0703064e380312f286f969b42ef89c953fde44e6ed06ebc",
+        "digest": "sha256:3e4f4232357f26abd0703064e380312f286f969b42ef89c953fde44e6ed06ebc",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-subdomain_discovery.json",
@@ -13998,7 +14130,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:a9bfdf843b6ecdf76c8f1c3604757d7a7309b9ba6634499397d11c0d086606cf",
+        "digest": "sha256:e6cc4d6b66bae5f001a56f0722550ea60f821ab4d00b08a589a319105c0a38ee",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -14738,16 +14870,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -15149,14 +15293,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:e1445ef7e891fc561b8f6c5bc2f8ecc1bd263f56076683577c5ea469c2b09ad2",
-        "digest": "sha256:e1445ef7e891fc561b8f6c5bc2f8ecc1bd263f56076683577c5ea469c2b09ad2"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:e119d797d464fb93cedd6bd7488281ea97099bcf20c5a89471cbef9eaf33bd97",
+        "digest": "sha256:e119d797d464fb93cedd6bd7488281ea97099bcf20c5a89471cbef9eaf33bd97"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-url_collection.json",
@@ -15172,7 +15315,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:16d18bd15e409431d4895463f48f4eea49afec6fed6000597a7434542fb7f625",
+        "digest": "sha256:33473fd2efea4187da2ad8b9b59dcebb41edd87315bc9436fc2cebb7f3aaab9f",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -15911,16 +16054,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -16322,18 +16477,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:cd4ec3a8d70ab6096b6d803c94ee74f5f13daa48c9158f0908c5a8c11ed44299",
-        "digest": "sha256:cd4ec3a8d70ab6096b6d803c94ee74f5f13daa48c9158f0908c5a8c11ed44299",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:1e3f251d903a9849515be87454c87919b2bbb8744d6525e7dd44845b65429126",
+        "digest": "sha256:1e3f251d903a9849515be87454c87919b2bbb8744d6525e7dd44845b65429126",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-url_collection.json",
@@ -16349,7 +16503,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:dcfe2ced5f75b99829effc6a92cd325d6f837adaec95c58eaf93650744c13aec",
+        "digest": "sha256:bc62de408fd2d84b5265c7eb4c35c21b5c8cbdf8ab0fcc38ae943b1e11da4522",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -17076,16 +17230,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -17487,14 +17653,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-website-discovery@sha256:4496e3511e4626728fe9cbb7049b4e08add421033916a032e6de2eca80d8877f",
-        "digest": "sha256:4496e3511e4626728fe9cbb7049b4e08add421033916a032e6de2eca80d8877f"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-website-discovery@sha256:dff6839ad7e382c44168211eca45cda81df4854863cb44dbd08eeddfe958925b",
+        "digest": "sha256:dff6839ad7e382c44168211eca45cda81df4854863cb44dbd08eeddfe958925b"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-website_discovery.json",
@@ -17510,7 +17675,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:28772f500b7e7993e4888a4f9c12cdd30060f94b3196e879b20d7b4c3e05a5ec",
+        "digest": "sha256:8fa6dc08de95481d3ce4d0072de9645c4d0fc9ca2939c6386ce167db9dad6c76",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -18236,16 +18401,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "named-contexts/contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -18647,18 +18824,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-website-discovery@sha256:ecfbc8788135a1476eae349571445be8b1bb086462c48508290c70e137eb0328",
-        "digest": "sha256:ecfbc8788135a1476eae349571445be8b1bb086462c48508290c70e137eb0328",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-website-discovery@sha256:bc015a7960a13545fd91fa7d71c75508b011f8fb0bf99f2c40e54e47ae0f7ade",
+        "digest": "sha256:bc015a7960a13545fd91fa7d71c75508b011f8fb0bf99f2c40e54e47ae0f7ade",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-website_discovery.json",
@@ -18674,7 +18850,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:21b0f320a8b44d50587c3fe42cdd4985f12eda08f014b27b4643315f0b3d8e63",
+        "digest": "sha256:8efc4c2ca938f1b0d5320e808c7ab7239e9b85220c1197932874c9021613adb4",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -18686,7 +18862,7 @@
           ],
           "baseImagesResolved": true,
           "buildArgs": {
-            "AGENT_ARTIFACT_ID": "sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a"
+            "AGENT_ARTIFACT_ID": "sha256-aa86d283bb3dcace3bffbe3afac5ea5c2dbaf41d52aabdf656a17e25d4f1b297"
           },
           "builderPolicy": {
             "provenance": "mode=max",
@@ -18707,25 +18883,25 @@
             {
               "digest": "sha256:6fdddcaae9958a99cb081d92ad3d8d11f32db16b5ff300d645a4693408d1df38",
               "mode": 493,
-              "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/lunafox-agent-linux-amd64",
+              "path": "agent/bin/sha256-aa86d283bb3dcace3bffbe3afac5ea5c2dbaf41d52aabdf656a17e25d4f1b297/lunafox-agent-linux-amd64",
               "size": 23904517
             },
             {
               "digest": "sha256:569449dc80b8e7a27954488d656198adc68d47eb6384903ad1f3ea4c4271467d",
               "mode": 493,
-              "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/lunafox-agent-linux-arm64",
+              "path": "agent/bin/sha256-aa86d283bb3dcace3bffbe3afac5ea5c2dbaf41d52aabdf656a17e25d4f1b297/lunafox-agent-linux-arm64",
               "size": 22504270
             },
             {
               "digest": "sha256:2b12a49b754a09e98377c96105c2975a5b48bf6b063eae0b2062ea271e0add2a",
               "mode": 493,
-              "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/lunafox-engine-mount-preflight-linux-amd64",
+              "path": "agent/bin/sha256-aa86d283bb3dcace3bffbe3afac5ea5c2dbaf41d52aabdf656a17e25d4f1b297/lunafox-engine-mount-preflight-linux-amd64",
               "size": 20000987
             },
             {
               "digest": "sha256:143872aa1a600ce25451d9319a31c4971846dc306bd85e2e85721be4d2bac5a4",
               "mode": 493,
-              "path": "agent/bin/sha256-87f80ec1018b5a4471c6334e170398aa8f5e130e5a4e8383da06109e48d3ce3a/lunafox-engine-mount-preflight-linux-arm64",
+              "path": "agent/bin/sha256-aa86d283bb3dcace3bffbe3afac5ea5c2dbaf41d52aabdf656a17e25d4f1b297/lunafox-engine-mount-preflight-linux-arm64",
               "size": 18804436
             },
             {
@@ -18746,18 +18922,17 @@
         }
       },
       "artifact": {
-        "ref": "ghcr.io/yyhuni/lunafox-agent@sha256:58a0a736bb0532e1cc5702c96e9d6e3bbc4c0d72377fb5363f55a44f59698a26",
-        "digest": "sha256:58a0a736bb0532e1cc5702c96e9d6e3bbc4c0d72377fb5363f55a44f59698a26",
+        "ref": "ghcr.io/yyhuni/lunafox-agent@sha256:be32bf59d28958ff62d6d698a866d157d0cd3d30baffb8fcecf140d8cb3042e0",
+        "digest": "sha256:be32bf59d28958ff62d6d698a866d157d0cd3d30baffb8fcecf140d8cb3042e0",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.176",
-        "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "runtime-evidence/agent.json",
@@ -18773,7 +18948,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:3745f17a72a8f77a2c5a2465b2b37b4c244255d23eca89b2bb7c79603cc7c255",
+        "digest": "sha256:95da1cb3ed78abdeceae771c4190f58048e506604cf370b790cc0d2e511f7c38",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -19293,16 +19468,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -19527,10 +19714,10 @@
               "size": 646
             },
             {
-              "digest": "sha256:dbc4ad142bc0775f9e19c6b6a0f271640a0c0fee336d98db1516d4db353f8695",
+              "digest": "sha256:c6efb16df6e3b668f1873c093bb6e2ec0980016df6a843f272dc4b74e584a26b",
               "mode": 493,
               "path": "docker/bootstrap/bootstrap.sh",
-              "size": 1300
+              "size": 1702
             },
             {
               "digest": "sha256:2b748ef4242c8b8b7f8cdc54c83e0be2df3e3c22b885e8e82d12535c262e12a0",
@@ -20127,10 +20314,10 @@
               "size": 1465
             },
             {
-              "digest": "sha256:b2037318d80a6a9ccf6c0d9f41aa160403fa49c35372bcd9a553bad6c0abbb0c",
+              "digest": "sha256:6e20294c31c30f651fda91bf1908aad2f653797701db27453b1cd6ef7c2626a2",
               "mode": 420,
               "path": "server/internal/bootstrap/compose_entrypoint_contract_test.go",
-              "size": 2333
+              "size": 5368
             },
             {
               "digest": "sha256:59e49ddeacb3bc9f54f071e6ca4c16668f84ce957bc296ec62802b68f5e8e8aa",
@@ -20259,10 +20446,16 @@
               "size": 1236
             },
             {
-              "digest": "sha256:62066a8b0753766786686ad49ece6fb1ea6f90db62364b306c884e2d4e39303c",
+              "digest": "sha256:121b415fe04c0eb0bc9bc591a12ca0239e59d7a3ddc2061fcdbaf6c850970f65",
+              "mode": 420,
+              "path": "server/internal/bootstrap/upgrade_verifier_test.go",
+              "size": 2727
+            },
+            {
+              "digest": "sha256:1746b167c2654b43b7fc6c83f846b5b0da8f6008f81be977ee63ea22dd1f6b37",
               "mode": 420,
               "path": "server/internal/bootstrap/upgrade_verifier.go",
-              "size": 3789
+              "size": 6574
             },
             {
               "digest": "sha256:4b472f18d373369da3e486812a6d62ad0967fc112a7d9ff0927643e7c38c8fa3",
@@ -29103,10 +29296,10 @@
               "size": 16679
             },
             {
-              "digest": "sha256:d9833993e49df0ea55c623750657af845b5fda99a103be268fa4b16c02be7aaf",
+              "digest": "sha256:98a0a50bad052d429503dadea6ced3225ddafee3208b22fbf7ce4aa6eb7b88d5",
               "mode": 420,
               "path": "server/internal/modules/upgrade/application/agent_verification.go",
-              "size": 13186
+              "size": 13207
             },
             {
               "digest": "sha256:feb4919a21bfd3545afd9e3c987ed55b6c7a24d498c05886bc66ebbf74bace99",
@@ -29121,16 +29314,16 @@
               "size": 18280
             },
             {
-              "digest": "sha256:18fd115e0b7296bccab8373cfe17baf04b829ef6471ab995e146986840aa1578",
+              "digest": "sha256:575db0c492f93e480215d3094f6268229f39d948307df526da51396dba276dce",
               "mode": 420,
               "path": "server/internal/modules/upgrade/application/manifest_loader_test.go",
-              "size": 4052
+              "size": 5294
             },
             {
-              "digest": "sha256:24c9215ac7f06f7c4c368246bbb625a9b19d5d6af0d811603f39a152b209a871",
+              "digest": "sha256:051fa9f3bb59b04b80268caabc71742cc2f690cf8ba8a78a760cef73c06a5ca9",
               "mode": 420,
               "path": "server/internal/modules/upgrade/application/manifest_loader.go",
-              "size": 4749
+              "size": 4732
             },
             {
               "digest": "sha256:33eeb2b49b552ee4908b492a9890ebce29947603bbffd88cc831e1c144c790cc",
@@ -29157,16 +29350,16 @@
               "size": 12613
             },
             {
-              "digest": "sha256:845b69c8dba20f9014029cd6b8a8476a042388a3aca89ed5e62c2470c7a5e0bf",
+              "digest": "sha256:0cdeeb8bcb8a1be8fe43c9079e33d23b767cc2bd864486c7d487aa5ee73d7ac1",
               "mode": 420,
               "path": "server/internal/modules/upgrade/application/upgrade_recovery_contract_test.go",
-              "size": 34850
+              "size": 37976
             },
             {
-              "digest": "sha256:dd9d9bf89ac093247be77f191d5481fabe530a65c06659c8d2679162028d5667",
+              "digest": "sha256:5eeac8f9a0ba509efc059f19d5dd41683c4f3b04296d969e99093aec0489a3c4",
               "mode": 420,
               "path": "server/internal/modules/upgrade/application/upgrade_recovery.go",
-              "size": 29508
+              "size": 29964
             },
             {
               "digest": "sha256:9194525a287e17eb0a4e1783711dea155ff5b0dd18ad08b18cab9bfb6b048532",
@@ -29217,10 +29410,10 @@
               "size": 5308
             },
             {
-              "digest": "sha256:af7d8d66ce45df8be31d9b4c89abdb3101f855c52f915115e3ad3037ed52b23d",
+              "digest": "sha256:20b520b653ffc07215cecfa0ba4f37df136e9dc60b0ce162f3e36d0f47b833fe",
               "mode": 420,
               "path": "server/internal/modules/upgrade/domain/operation_scope_test.go",
-              "size": 2244
+              "size": 3202
             },
             {
               "digest": "sha256:982b7147dc998524ae1158c11d170f438ba5dd2ca77628cf7b425532d965a97d",
@@ -29229,10 +29422,10 @@
               "size": 7135
             },
             {
-              "digest": "sha256:3d3769b18d589241d0df5497ccfeb88c936f6200249980347cd4860c0449fd6d",
+              "digest": "sha256:1de2890fa6b5db3cfa999e7fcbe9f45f0271d2ec7b3d8c3cc780381261638e4b",
               "mode": 420,
               "path": "server/internal/modules/upgrade/domain/operation.go",
-              "size": 11666
+              "size": 14843
             },
             {
               "digest": "sha256:3263c0326797d3e7712511bf7c086354569c2a931640ee9275e97af2f9cca791",
@@ -29283,16 +29476,16 @@
               "size": 11224
             },
             {
-              "digest": "sha256:8c79b46d41464fff13bd84f34f1ae10015ddd94fb735b5c34ddafc2f18c149fd",
+              "digest": "sha256:c1360379b0cd0e767ab7f1abe909787f5882f6aa9c2baa84ee28100ffc87d453",
               "mode": 420,
               "path": "server/internal/modules/upgrade/infrastructure/channel_manifest_source_test.go",
-              "size": 15206
+              "size": 16980
             },
             {
-              "digest": "sha256:3095504e41a62ac42825e3f010492eb0af4dbb79c9fc8a9a3a590d4888b6180d",
+              "digest": "sha256:cfed3d371b096509479d19c6baf515b34c64c0c39a723c3eb35f617dbc2ba5ed",
               "mode": 420,
               "path": "server/internal/modules/upgrade/infrastructure/channel_manifest_source.go",
-              "size": 17046
+              "size": 17080
             },
             {
               "digest": "sha256:963b4f732f1951d3dc98ad143edc94e10c5430b4362679379500961f572f24b5",
@@ -29307,10 +29500,10 @@
               "size": 17579
             },
             {
-              "digest": "sha256:138108864778a41ffa725376f06af877d7eef1f4c518fc4d9e0070aaaa5d6219",
+              "digest": "sha256:f0cfc0a0b459706b51ff05ee9819eacfeb0714eeebf01549d4245213977fa96b",
               "mode": 420,
               "path": "server/internal/modules/upgrade/README.md",
-              "size": 11396
+              "size": 13082
             },
             {
               "digest": "sha256:7b8f98928e48c19942e89c5ba25454622aa06d7858dc3513f366db156cc1112c",
@@ -29319,16 +29512,16 @@
               "size": 1075
             },
             {
-              "digest": "sha256:de0b6512b895b204ff2472cd093f18fd26489e26889e1272745e11783a7f28a1",
+              "digest": "sha256:9a35a4256d6b47282c126281d8f4ef9a6b94fceac7433e9b5b4d96cbbe1d0b10",
               "mode": 420,
               "path": "server/internal/modules/upgrade/repository/operation_test.go",
-              "size": 13268
+              "size": 16018
             },
             {
-              "digest": "sha256:9d073880cc1d623074872c2a71badee8959ac917420b20adfeaf4792b3b96062",
+              "digest": "sha256:a1f05632abeb79b0032834dbe3e9fb225a85eec7282c37a30db72c72ed4be59a",
               "mode": 420,
               "path": "server/internal/modules/upgrade/repository/operation.go",
-              "size": 20784
+              "size": 21803
             },
             {
               "digest": "sha256:c5726941b1c809af54abcdb562ba0e87cc0e590d8d7f69a5d26d40a755da8e26",
@@ -29349,6 +29542,12 @@
               "size": 894
             },
             {
+              "digest": "sha256:2b378a2c8fc1302102799a7d2c7dc14b6fd905f968e5484915ea4137a55f2f65",
+              "mode": 420,
+              "path": "server/internal/modules/upgrade/testdata/alpha164-bridge.release.manifest.yaml",
+              "size": 1873
+            },
+            {
               "digest": "sha256:53331d701d9b7cbac5f6eab5cd02d7b6859b0e3959cee4c1cb1dad636567aefc",
               "mode": 420,
               "path": "server/internal/modules/upgrade/testdata/migration-policy.json",
@@ -29367,10 +29566,10 @@
               "size": 13928
             },
             {
-              "digest": "sha256:d8588197894f6183237f2169775f477fd51c38e4b8f737e05ea2176b0cb3bcc8",
+              "digest": "sha256:e6d2964d63947c58b585d1e69b10077e926a10111c52fe85c43a3c191a7f12a6",
               "mode": 420,
               "path": "server/internal/modules/upgrade/upgrader/compose_test.go",
-              "size": 56256
+              "size": 57869
             },
             {
               "digest": "sha256:cf7940e7da10ddf5fb006f7a604cf2fc62aabad0c28bca9cc726c2d10d748024",
@@ -29379,16 +29578,16 @@
               "size": 39396
             },
             {
-              "digest": "sha256:070237ad98c43034914e70a2899f207a03fee4d12a3eb059cd52bb774e08fc34",
+              "digest": "sha256:00fc3605ab2415dbb238fd5f70f7b88379ff6294187449ff761c41e9d3d47ba4",
               "mode": 420,
               "path": "server/internal/modules/upgrade/upgrader/composition_source_test.go",
-              "size": 6349
+              "size": 7580
             },
             {
-              "digest": "sha256:a257678b714b0a89ca7fcdc4f31defd264a15fb65a192bcff070f4dc9a63aed5",
+              "digest": "sha256:a04e8cbef138c736ec5e87380b27214c3fd1369dfd80563bab36d969ad3e31c1",
               "mode": 420,
               "path": "server/internal/modules/upgrade/upgrader/composition_source.go",
-              "size": 35730
+              "size": 35850
             },
             {
               "digest": "sha256:1092516a91820af9dc5ab901dc11e27ab1135fb00ecef0dc74eece9d9c78fa38",
@@ -29457,10 +29656,10 @@
               "size": 2095
             },
             {
-              "digest": "sha256:1069ef7f5fb9bb67768ad258fc05d506a4d1013f6654177509b7ca37ae7a2b81",
+              "digest": "sha256:64fb377e15a9f1edc9382a57071ef1087afce791a81a556e3868c14963c87de2",
               "mode": 420,
               "path": "server/internal/modules/upgrade/upgrader/manifest_loading.go",
-              "size": 736
+              "size": 762
             },
             {
               "digest": "sha256:5e37630f9dc91666f4e7b4a0dd255e533bc764b40daef10c71c8fe1ab11cae3c",
@@ -29481,10 +29680,10 @@
               "size": 7905
             },
             {
-              "digest": "sha256:8d0fb06529c9ff33ec77d7d7e8c189149c0f5be196df23769e857693286068da",
+              "digest": "sha256:693a358d02b58a8ddce9492f960812e36c4eab5bd670cb4438ca31722f37c52b",
               "mode": 420,
               "path": "server/internal/modules/upgrade/upgrader/scope_plan_test.go",
-              "size": 27293
+              "size": 28431
             },
             {
               "digest": "sha256:76fb554b6a3ec4a4db9abddbdb19f68aa32351262625cd25af7f4e6904edc542",
@@ -29864,8 +30063,8 @@
         }
       },
       "artifact": {
-        "ref": "ghcr.io/yyhuni/lunafox-bootstrap@sha256:f7b08d2a38eab10cbf7349bbed1f7c60baafb8e9eadd7959f51053c977e92daf",
-        "digest": "sha256:f7b08d2a38eab10cbf7349bbed1f7c60baafb8e9eadd7959f51053c977e92daf",
+        "ref": "ghcr.io/yyhuni/lunafox-bootstrap@sha256:138ff4d24d259625e071fb0a59e392ee0e68362a33defc75ed0faff7f9669d23",
+        "digest": "sha256:138ff4d24d259625e071fb0a59e392ee0e68362a33defc75ed0faff7f9669d23",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
@@ -29873,8 +30072,8 @@
       },
       "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.181",
-        "publicMergeCommit": "ae059921914afec27402f3d889df57095bc87897"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "runtime-evidence/bootstrap.json",
@@ -41529,10 +41728,11 @@
           "linux/arm64"
         ]
       },
-      "disposition": "built",
+      "disposition": "reused",
       "sourceRelease": {
         "tag": "v0.0.1-alpha.181",
-        "publicMergeCommit": "ae059921914afec27402f3d889df57095bc87897"
+        "publicMergeCommit": "ae059921914afec27402f3d889df57095bc87897",
+        "compositionDigest": "sha256:ccfdf83a3116fb2dbdce9aec87fc710446501a11d8faa6c13a8dad4a81f2a7ff"
       },
       "evidence": {
         "image": "runtime-evidence/frontend.json",
@@ -41605,7 +41805,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.176",
         "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:e78545aa75dbb89619725286c8736a1acac8cd47906c0b46ddf8e60a6eccb9f3"
+        "compositionDigest": "sha256:ccfdf83a3116fb2dbdce9aec87fc710446501a11d8faa6c13a8dad4a81f2a7ff"
       },
       "evidence": {
         "image": "runtime-evidence/nginx.json",
@@ -41621,7 +41821,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:ff919d7037d833961beed64ba47c474d15ecdcf9514b46ed1126b295a0f5f2ca",
+        "digest": "sha256:ea6c1c8dac510582e49aef145ce59d06e55ecbc9c79e4db57f0ce78ed6ac984e",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -42141,16 +42341,28 @@
               "size": 20207
             },
             {
-              "digest": "sha256:265e3757da48e6715937e257d725457753f03ed48c0da292bd438e6c679ed85d",
+              "digest": "sha256:a56f000dc047cbe52d5b9e9802f390725fa778a738b8a01e1bcf98296e2614d5",
               "mode": 420,
               "path": "contracts/releasemanifest/manifest_test.go",
-              "size": 12294
+              "size": 17406
             },
             {
-              "digest": "sha256:5fc8e2ca4a51fa5b9a251be868c6a21a2735ccf1cd0b49416fc6bb849f7c1040",
+              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
               "mode": 420,
               "path": "contracts/releasemanifest/manifest.go",
-              "size": 18544
+              "size": 21330
+            },
+            {
+              "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
+              "mode": 420,
+              "path": "contracts/releasemanifest/release_compatibility_profiles.json",
+              "size": 136
+            },
+            {
+              "digest": "sha256:6a089afc645f70f74033ac29426391c7ffe68e551cad213346286e5423e22d48",
+              "mode": 420,
+              "path": "contracts/releasemanifest/release_profile.go",
+              "size": 3262
             },
             {
               "digest": "sha256:dc504af1273ed823ff2bd9080b5abb0d11cdc69f8c5f943fdb0bca6338578648",
@@ -42951,10 +43163,10 @@
               "size": 1465
             },
             {
-              "digest": "sha256:b2037318d80a6a9ccf6c0d9f41aa160403fa49c35372bcd9a553bad6c0abbb0c",
+              "digest": "sha256:6e20294c31c30f651fda91bf1908aad2f653797701db27453b1cd6ef7c2626a2",
               "mode": 420,
               "path": "server/internal/bootstrap/compose_entrypoint_contract_test.go",
-              "size": 2333
+              "size": 5368
             },
             {
               "digest": "sha256:59e49ddeacb3bc9f54f071e6ca4c16668f84ce957bc296ec62802b68f5e8e8aa",
@@ -43083,10 +43295,16 @@
               "size": 1236
             },
             {
-              "digest": "sha256:62066a8b0753766786686ad49ece6fb1ea6f90db62364b306c884e2d4e39303c",
+              "digest": "sha256:121b415fe04c0eb0bc9bc591a12ca0239e59d7a3ddc2061fcdbaf6c850970f65",
+              "mode": 420,
+              "path": "server/internal/bootstrap/upgrade_verifier_test.go",
+              "size": 2727
+            },
+            {
+              "digest": "sha256:1746b167c2654b43b7fc6c83f846b5b0da8f6008f81be977ee63ea22dd1f6b37",
               "mode": 420,
               "path": "server/internal/bootstrap/upgrade_verifier.go",
-              "size": 3789
+              "size": 6574
             },
             {
               "digest": "sha256:4b472f18d373369da3e486812a6d62ad0967fc112a7d9ff0927643e7c38c8fa3",
@@ -51927,10 +52145,10 @@
               "size": 16679
             },
             {
-              "digest": "sha256:d9833993e49df0ea55c623750657af845b5fda99a103be268fa4b16c02be7aaf",
+              "digest": "sha256:98a0a50bad052d429503dadea6ced3225ddafee3208b22fbf7ce4aa6eb7b88d5",
               "mode": 420,
               "path": "server/internal/modules/upgrade/application/agent_verification.go",
-              "size": 13186
+              "size": 13207
             },
             {
               "digest": "sha256:feb4919a21bfd3545afd9e3c987ed55b6c7a24d498c05886bc66ebbf74bace99",
@@ -51945,16 +52163,16 @@
               "size": 18280
             },
             {
-              "digest": "sha256:18fd115e0b7296bccab8373cfe17baf04b829ef6471ab995e146986840aa1578",
+              "digest": "sha256:575db0c492f93e480215d3094f6268229f39d948307df526da51396dba276dce",
               "mode": 420,
               "path": "server/internal/modules/upgrade/application/manifest_loader_test.go",
-              "size": 4052
+              "size": 5294
             },
             {
-              "digest": "sha256:24c9215ac7f06f7c4c368246bbb625a9b19d5d6af0d811603f39a152b209a871",
+              "digest": "sha256:051fa9f3bb59b04b80268caabc71742cc2f690cf8ba8a78a760cef73c06a5ca9",
               "mode": 420,
               "path": "server/internal/modules/upgrade/application/manifest_loader.go",
-              "size": 4749
+              "size": 4732
             },
             {
               "digest": "sha256:33eeb2b49b552ee4908b492a9890ebce29947603bbffd88cc831e1c144c790cc",
@@ -51981,16 +52199,16 @@
               "size": 12613
             },
             {
-              "digest": "sha256:845b69c8dba20f9014029cd6b8a8476a042388a3aca89ed5e62c2470c7a5e0bf",
+              "digest": "sha256:0cdeeb8bcb8a1be8fe43c9079e33d23b767cc2bd864486c7d487aa5ee73d7ac1",
               "mode": 420,
               "path": "server/internal/modules/upgrade/application/upgrade_recovery_contract_test.go",
-              "size": 34850
+              "size": 37976
             },
             {
-              "digest": "sha256:dd9d9bf89ac093247be77f191d5481fabe530a65c06659c8d2679162028d5667",
+              "digest": "sha256:5eeac8f9a0ba509efc059f19d5dd41683c4f3b04296d969e99093aec0489a3c4",
               "mode": 420,
               "path": "server/internal/modules/upgrade/application/upgrade_recovery.go",
-              "size": 29508
+              "size": 29964
             },
             {
               "digest": "sha256:9194525a287e17eb0a4e1783711dea155ff5b0dd18ad08b18cab9bfb6b048532",
@@ -52041,10 +52259,10 @@
               "size": 5308
             },
             {
-              "digest": "sha256:af7d8d66ce45df8be31d9b4c89abdb3101f855c52f915115e3ad3037ed52b23d",
+              "digest": "sha256:20b520b653ffc07215cecfa0ba4f37df136e9dc60b0ce162f3e36d0f47b833fe",
               "mode": 420,
               "path": "server/internal/modules/upgrade/domain/operation_scope_test.go",
-              "size": 2244
+              "size": 3202
             },
             {
               "digest": "sha256:982b7147dc998524ae1158c11d170f438ba5dd2ca77628cf7b425532d965a97d",
@@ -52053,10 +52271,10 @@
               "size": 7135
             },
             {
-              "digest": "sha256:3d3769b18d589241d0df5497ccfeb88c936f6200249980347cd4860c0449fd6d",
+              "digest": "sha256:1de2890fa6b5db3cfa999e7fcbe9f45f0271d2ec7b3d8c3cc780381261638e4b",
               "mode": 420,
               "path": "server/internal/modules/upgrade/domain/operation.go",
-              "size": 11666
+              "size": 14843
             },
             {
               "digest": "sha256:3263c0326797d3e7712511bf7c086354569c2a931640ee9275e97af2f9cca791",
@@ -52107,16 +52325,16 @@
               "size": 11224
             },
             {
-              "digest": "sha256:8c79b46d41464fff13bd84f34f1ae10015ddd94fb735b5c34ddafc2f18c149fd",
+              "digest": "sha256:c1360379b0cd0e767ab7f1abe909787f5882f6aa9c2baa84ee28100ffc87d453",
               "mode": 420,
               "path": "server/internal/modules/upgrade/infrastructure/channel_manifest_source_test.go",
-              "size": 15206
+              "size": 16980
             },
             {
-              "digest": "sha256:3095504e41a62ac42825e3f010492eb0af4dbb79c9fc8a9a3a590d4888b6180d",
+              "digest": "sha256:cfed3d371b096509479d19c6baf515b34c64c0c39a723c3eb35f617dbc2ba5ed",
               "mode": 420,
               "path": "server/internal/modules/upgrade/infrastructure/channel_manifest_source.go",
-              "size": 17046
+              "size": 17080
             },
             {
               "digest": "sha256:963b4f732f1951d3dc98ad143edc94e10c5430b4362679379500961f572f24b5",
@@ -52131,10 +52349,10 @@
               "size": 17579
             },
             {
-              "digest": "sha256:138108864778a41ffa725376f06af877d7eef1f4c518fc4d9e0070aaaa5d6219",
+              "digest": "sha256:f0cfc0a0b459706b51ff05ee9819eacfeb0714eeebf01549d4245213977fa96b",
               "mode": 420,
               "path": "server/internal/modules/upgrade/README.md",
-              "size": 11396
+              "size": 13082
             },
             {
               "digest": "sha256:7b8f98928e48c19942e89c5ba25454622aa06d7858dc3513f366db156cc1112c",
@@ -52143,16 +52361,16 @@
               "size": 1075
             },
             {
-              "digest": "sha256:de0b6512b895b204ff2472cd093f18fd26489e26889e1272745e11783a7f28a1",
+              "digest": "sha256:9a35a4256d6b47282c126281d8f4ef9a6b94fceac7433e9b5b4d96cbbe1d0b10",
               "mode": 420,
               "path": "server/internal/modules/upgrade/repository/operation_test.go",
-              "size": 13268
+              "size": 16018
             },
             {
-              "digest": "sha256:9d073880cc1d623074872c2a71badee8959ac917420b20adfeaf4792b3b96062",
+              "digest": "sha256:a1f05632abeb79b0032834dbe3e9fb225a85eec7282c37a30db72c72ed4be59a",
               "mode": 420,
               "path": "server/internal/modules/upgrade/repository/operation.go",
-              "size": 20784
+              "size": 21803
             },
             {
               "digest": "sha256:c5726941b1c809af54abcdb562ba0e87cc0e590d8d7f69a5d26d40a755da8e26",
@@ -52173,6 +52391,12 @@
               "size": 894
             },
             {
+              "digest": "sha256:2b378a2c8fc1302102799a7d2c7dc14b6fd905f968e5484915ea4137a55f2f65",
+              "mode": 420,
+              "path": "server/internal/modules/upgrade/testdata/alpha164-bridge.release.manifest.yaml",
+              "size": 1873
+            },
+            {
               "digest": "sha256:53331d701d9b7cbac5f6eab5cd02d7b6859b0e3959cee4c1cb1dad636567aefc",
               "mode": 420,
               "path": "server/internal/modules/upgrade/testdata/migration-policy.json",
@@ -52191,10 +52415,10 @@
               "size": 13928
             },
             {
-              "digest": "sha256:d8588197894f6183237f2169775f477fd51c38e4b8f737e05ea2176b0cb3bcc8",
+              "digest": "sha256:e6d2964d63947c58b585d1e69b10077e926a10111c52fe85c43a3c191a7f12a6",
               "mode": 420,
               "path": "server/internal/modules/upgrade/upgrader/compose_test.go",
-              "size": 56256
+              "size": 57869
             },
             {
               "digest": "sha256:cf7940e7da10ddf5fb006f7a604cf2fc62aabad0c28bca9cc726c2d10d748024",
@@ -52203,16 +52427,16 @@
               "size": 39396
             },
             {
-              "digest": "sha256:070237ad98c43034914e70a2899f207a03fee4d12a3eb059cd52bb774e08fc34",
+              "digest": "sha256:00fc3605ab2415dbb238fd5f70f7b88379ff6294187449ff761c41e9d3d47ba4",
               "mode": 420,
               "path": "server/internal/modules/upgrade/upgrader/composition_source_test.go",
-              "size": 6349
+              "size": 7580
             },
             {
-              "digest": "sha256:a257678b714b0a89ca7fcdc4f31defd264a15fb65a192bcff070f4dc9a63aed5",
+              "digest": "sha256:a04e8cbef138c736ec5e87380b27214c3fd1369dfd80563bab36d969ad3e31c1",
               "mode": 420,
               "path": "server/internal/modules/upgrade/upgrader/composition_source.go",
-              "size": 35730
+              "size": 35850
             },
             {
               "digest": "sha256:1092516a91820af9dc5ab901dc11e27ab1135fb00ecef0dc74eece9d9c78fa38",
@@ -52281,10 +52505,10 @@
               "size": 2095
             },
             {
-              "digest": "sha256:1069ef7f5fb9bb67768ad258fc05d506a4d1013f6654177509b7ca37ae7a2b81",
+              "digest": "sha256:64fb377e15a9f1edc9382a57071ef1087afce791a81a556e3868c14963c87de2",
               "mode": 420,
               "path": "server/internal/modules/upgrade/upgrader/manifest_loading.go",
-              "size": 736
+              "size": 762
             },
             {
               "digest": "sha256:5e37630f9dc91666f4e7b4a0dd255e533bc764b40daef10c71c8fe1ab11cae3c",
@@ -52305,10 +52529,10 @@
               "size": 7905
             },
             {
-              "digest": "sha256:8d0fb06529c9ff33ec77d7d7e8c189149c0f5be196df23769e857693286068da",
+              "digest": "sha256:693a358d02b58a8ddce9492f960812e36c4eab5bd670cb4438ca31722f37c52b",
               "mode": 420,
               "path": "server/internal/modules/upgrade/upgrader/scope_plan_test.go",
-              "size": 27293
+              "size": 28431
             },
             {
               "digest": "sha256:76fb554b6a3ec4a4db9abddbdb19f68aa32351262625cd25af7f4e6904edc542",
@@ -52688,8 +52912,8 @@
         }
       },
       "artifact": {
-        "ref": "ghcr.io/yyhuni/lunafox-server@sha256:cd61a62800025e56d234dbf2cc215621469bfa51becec111ee1d8ca1037e14e4",
-        "digest": "sha256:cd61a62800025e56d234dbf2cc215621469bfa51becec111ee1d8ca1037e14e4",
+        "ref": "ghcr.io/yyhuni/lunafox-server@sha256:2ba6df75a6ea89d7acc7103f790ec110517e0d89563f1a48286c1cc89b641be7",
+        "digest": "sha256:2ba6df75a6ea89d7acc7103f790ec110517e0d89563f1a48286c1cc89b641be7",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
@@ -52697,8 +52921,8 @@
       },
       "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.181",
-        "publicMergeCommit": "ae059921914afec27402f3d889df57095bc87897"
+        "tag": "v0.0.1-alpha.183",
+        "publicMergeCommit": "08412944f26273d86d9493b6fa1cbd229cec1757"
       },
       "evidence": {
         "image": "runtime-evidence/server.json",
@@ -52713,7 +52937,7 @@
     "runtimeCompositionSchemaVersion": 1
   },
   "manifestBinding": {
-    "manifestDigest": "sha256:ab7d12f1ae56fc9d2ee85b2879a18c67ebdb5a157cb4a04ea859fa7226f14d19"
+    "manifestDigest": "sha256:0aa0615366bde922c34726f54afd300bba0024eec39762c9dd71337e1e542648"
   },
-  "compositionDigest": "sha256:ccfdf83a3116fb2dbdce9aec87fc710446501a11d8faa6c13a8dad4a81f2a7ff"
+  "compositionDigest": "sha256:09e1d35c78671c3e131b5bcb1eff1d629fedca4e908cd398a8744912150e6e39"
 }
