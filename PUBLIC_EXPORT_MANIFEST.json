@@ -17393,8 +17393,8 @@
       "path": "scripts/ci/public-export-policy.json",
       "type": "file",
       "mode": "0644",
-      "size": 27619,
-      "sha256": "b09c025d38517e738dc23d9a413b67c3bc1089996a8e3a6603fd436b6dbb1d38"
+      "size": 27991,
+      "sha256": "110f367522b382e7bd3490457b43a5f63bfb98f7a77d4b6c671a8426abd09d4b"
     },
     {
       "path": "scripts/ci/public-release-policy.json",
