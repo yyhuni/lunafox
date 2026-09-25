@@ -2361,7 +2361,7 @@ jobs:
           RELEASE_PROFILE: ${{ steps.release_profile.outputs.profile }}
         run: |
           set -euo pipefail
-          node --test scripts/ci/generate-compose-deployment.test.mjs
+          node --test scripts/ci/third-party-image-policy.test.mjs scripts/ci/generate-compose-deployment.test.mjs
           node scripts/ci/generate-compose-deployment.mjs \
             --manifest dist/final/release.manifest.yaml --tag "$RELEASE_TAG" \
             --runtime-composition dist/final/runtime-composition.json \
