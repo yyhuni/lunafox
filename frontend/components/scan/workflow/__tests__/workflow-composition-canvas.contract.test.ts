@@ -11,7 +11,7 @@ describe("workflow-composition-canvas contract", () => {
     expect(source).toContain("@xyflow/react")
     expect(source).toContain("export function WorkflowCompositionCanvas")
     expect(source).toContain('data-workflow-composition-canvas="mock-only"')
-    expect(source).toContain('data-workflow-builder="floating-canvas"')
+    expect(source).toContain('data-workflow-builder="docked-canvas"')
     expect(source).toContain("buildGraph")
   })
 
@@ -288,19 +288,18 @@ describe("workflow-composition-canvas contract", () => {
     expect(source).toContain("engines={engines}")
   })
 
-  it("keeps the engine library as a floating tool panel with internal scrolling", () => {
+  it("docks the engine library beside the canvas with internal scrolling", () => {
     const libraryStart = source.indexOf("function EngineLibraryPanel")
     const libraryEnd = source.indexOf("function WorkflowYamlDialog")
     const libraryBlock = source.slice(libraryStart, libraryEnd)
 
     expect(libraryBlock).toContain("flex min-h-0 flex-col overflow-hidden")
-    expect(libraryBlock).toContain("styles.floatingEnginePanel")
+    expect(libraryBlock).toContain("styles.engineLibraryPanel")
     expect(libraryBlock).toContain("min-h-0 flex-1 space-y-2 overflow-y-auto")
-    expect(styles).toContain(".floatingEnginePanel")
-    expect(styles).toContain("position: absolute;")
-    expect(styles).toContain("height: min(50rem, calc(100dvh - 6.5rem));")
-    expect(styles).toContain("top: 50%;")
-    expect(styles).toContain("transform: translateY(-50%);")
+    expect(styles).toContain(".engineLibraryPanel")
+    expect(styles).toContain("flex: 0 0 18rem;")
+    expect(styles).toContain("flex-basis: clamp(8rem, 30dvh, 15rem);")
+    expect(styles).not.toContain(".floatingEnginePanel")
   })
 
   it("keeps the engine library permanently visible", () => {
@@ -315,10 +314,11 @@ describe("workflow-composition-canvas contract", () => {
     expect(styles).not.toContain(".engineLibraryToggle")
   })
 
-  it("keeps the whole builder as a full-height floating canvas", () => {
-    expect(source).toContain('className={cn("relative flex h-full min-h-0 flex-1 overflow-hidden", styles.workbench, className)}')
-    expect(source).toContain('className={cn("absolute inset-0", styles.canvasShell)}')
+  it("gives the canvas the space remaining after the docked library", () => {
+    expect(source).toContain('className={cn("relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:flex-row", styles.workbench, className)}')
+    expect(source).toContain('className={cn("relative min-h-0 min-w-0 flex-1", styles.canvasShell)}')
     expect(source).toContain("<WorkflowCanvasHeader")
+    expect(source.indexOf("<EngineLibraryPanel")).toBeLessThan(source.indexOf("<ReactFlow"))
     expect(source).not.toContain("styles.floatingFooter")
     expect(source).not.toContain('h-[clamp(18rem,42dvh,30rem)]')
     expect(source).not.toContain("styles.canvasPanel")
@@ -369,19 +369,18 @@ describe("workflow-composition-canvas contract", () => {
     expect(styles).not.toContain("transform: translateX(-50%);")
   })
 
-  it("centers automatic layouts in the desktop canvas area not obscured by the engine library", () => {
+  it("centers automatic layouts in the measured canvas width", () => {
     const actionsStart = source.indexOf("function WorkflowCanvasActions")
     const actionsEnd = source.indexOf("function EngineLibraryPanel")
     const actionsBlock = source.slice(actionsStart, actionsEnd)
 
-    expect(source).toContain("WORKFLOW_ENGINE_LIBRARY_OCCLUSION_PX = 304")
     expect(actionsBlock).toContain("getNodes")
     expect(actionsBlock).toContain("getNodesBounds")
     expect(actionsBlock).toContain("setViewport")
-    expect(actionsBlock).toContain('window.matchMedia("(min-width: 768px)").matches')
-    expect(actionsBlock).toContain("canvasWidth - libraryOcclusion")
-    expect(actionsBlock).toContain("viewport.x += libraryOcclusion")
+    expect(actionsBlock).toContain("canvasWidth,")
     expect(actionsBlock).toContain("setViewport(viewport, { duration: 200 })")
+    expect(source).not.toContain("fitViewOptions")
+    expect(source).not.toContain("WORKFLOW_ENGINE_LIBRARY_OCCLUSION_PX")
     expect(actionsBlock).not.toContain("fitView(")
   })
 
@@ -398,15 +397,15 @@ describe("workflow-composition-canvas contract", () => {
     expect(source).toContain("styles.stageNode")
     expect(source).toContain("styles.stepRow")
     expect(source).toContain("styles.engineButton")
-    expect(source).toContain("styles.floatingEnginePanel")
+    expect(source).toContain("styles.engineLibraryPanel")
     expect(styles).toContain("--workflow-canvas-background")
     expect(styles).toContain(".workbench")
     expect(styles).toContain("--workflow-stage-background")
     expect(styles).toContain("--workflow-step-background")
     expect(styles).toContain("--workflow-engine-background")
     expect(styles).toContain("--workflow-stage-selected-border")
-    expect(styles).toContain(".floatingEnginePanel")
-    expect(styles).toContain("border-radius: var(--radius-overlay);")
+    expect(styles).toContain(".engineLibraryPanel")
+    expect(styles).toContain("border-right: 1px solid var(--workflow-canvas-panel-border);")
     expect(styles).not.toContain("bg-primary/5")
   })
 

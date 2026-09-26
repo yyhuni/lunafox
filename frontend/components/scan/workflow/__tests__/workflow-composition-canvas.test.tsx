@@ -107,9 +107,6 @@ const canvasCatalogProps = {
 
 describe("WorkflowCompositionCanvas", () => {
   it("auto-layouts and focuses stages when the canvas is opened", async () => {
-    vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
-      matches: query === "(min-width: 768px)",
-    }) as MediaQueryList)
     getViewportForBoundsMock.mockClear()
     setViewportMock.mockClear()
 
@@ -121,7 +118,7 @@ describe("WorkflowCompositionCanvas", () => {
     expect(container.querySelector('[data-flow-node-id="stage-2"]')).toHaveAttribute("data-flow-node-position", "400,56")
     expect(getViewportForBoundsMock).toHaveBeenCalledWith(
       { x: 0, y: 0, width: 400, height: 120 },
-      896,
+      1200,
       800,
       0.4,
       1,
@@ -131,9 +128,6 @@ describe("WorkflowCompositionCanvas", () => {
 
   it("auto-layouts stages with room for curved serial connectors", async () => {
     const { container } = renderWithProviders(<WorkflowCompositionCanvas {...canvasCatalogProps} />)
-    vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
-      matches: query === "(min-width: 768px)",
-    }) as MediaQueryList)
     getViewportForBoundsMock.mockClear()
     setViewportMock.mockClear()
 
@@ -145,13 +139,13 @@ describe("WorkflowCompositionCanvas", () => {
     expect(container.querySelector('[data-flow-node-id="stage-2"]')).toHaveAttribute("data-flow-node-position", "400,56")
     expect(getViewportForBoundsMock).toHaveBeenCalledWith(
       { x: 0, y: 0, width: 400, height: 120 },
-      896,
+      1200,
       800,
       0.4,
       1,
       0.16,
     )
-    expect(setViewportMock).toHaveBeenCalledWith({ x: 404, y: 200, zoom: 1 }, { duration: 200 })
+    expect(setViewportMock).toHaveBeenCalledWith({ x: 100, y: 200, zoom: 1 }, { duration: 200 })
   })
 
   it("retains a dragged stage position after stage data changes", async () => {

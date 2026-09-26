@@ -69,13 +69,13 @@
   --workflow-add-stage-pad-background: color-mix(in oklab, var(--card) 96%, white 2%);
 }
 
-.floatingEnginePanel {
+.engineLibraryPanel {
   background: var(--workflow-canvas-panel);
-  border: 1px solid var(--workflow-canvas-panel-border);
-  box-shadow: var(--shadow-sm);
+  border-right: 1px solid var(--workflow-canvas-panel-border);
+  flex: 0 0 18rem;
+  min-width: 0;
   pointer-events: all;
-  position: absolute;
-  z-index: 10;
+  width: 18rem;
 }
 
 .canvasHeader {
@@ -96,16 +96,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.floatingEnginePanel {
-  border-radius: var(--radius-overlay);
-  height: min(50rem, calc(100dvh - 6.5rem));
-  left: 1rem;
-  max-height: min(50rem, calc(100dvh - 6.5rem));
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18rem;
 }
 
 .canvasActions {
@@ -323,14 +313,11 @@
     display: none;
   }
 
-  .floatingEnginePanel {
-    bottom: auto;
-    left: 0.75rem;
-    max-height: min(15rem, calc(100dvh - 17rem));
-    right: 0.75rem;
-    top: 4.75rem;
-    transform: none;
-    width: auto;
+  .engineLibraryPanel {
+    border-bottom: 1px solid var(--workflow-canvas-panel-border);
+    border-right: 0;
+    flex-basis: clamp(8rem, 30dvh, 15rem);
+    width: 100%;
   }
 
   .canvasActions {
