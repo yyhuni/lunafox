@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { resolveCompositionPlan } from "./resolve-release-component-composition.mjs";
-import { renderBuildContexts } from "./render-release-component-build-contexts.mjs";
+import { renderBuildContexts, transportReference } from "./render-release-component-build-contexts.mjs";
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "lunafox-build-contexts-"));
 const digest = (letter) => `sha256:${letter.repeat(64)}`;
@@ -59,6 +59,56 @@ try {
     baseImages: { "alpine:3.20": mutableDigest },
   }), [`alpine:3.20=docker-image://alpine:3.20@${mutableDigest}`]);
 
+  write("runtime/Dockerfile", [
+    "ARG BASE=public.ecr.aws/docker/library/alpine:3.20",
+    "FROM ${BASE} AS builder",
+    "COPY app /app",
+    "FROM builder AS final",
+  ].join("\n"));
+  const ecrPlan = planFor("runtime/Dockerfile", { "public.ecr.aws/docker/library/alpine:3.20": mutableDigest });
+  assert.equal(
+    transportReference("public.ecr.aws/docker/library/alpine:3.20", "dockerhub"),
+    "docker.io/library/alpine:3.20",
+  );
+  assert.deepEqual(renderBuildContexts({
+    root,
+    plan: ecrPlan,
+    componentID: "runtime.demo",
+    baseImages: { "public.ecr.aws/docker/library/alpine:3.20": mutableDigest },
+    transport: "dockerhub",
+  }), [`public.ecr.aws/docker/library/alpine:3.20=docker-image://docker.io/library/alpine:3.20@${mutableDigest}`]);
+  assert.throws(
+    () => transportReference("public.ecr.aws/other/alpine:3.20", "dockerhub"),
+    /unsupported Public ECR transport mapping/,
+  );
+  assert.throws(
+    () => renderBuildContexts({
+      root,
+      plan: ecrPlan,
+      componentID: "runtime.demo",
+      baseImages: { "public.ecr.aws/docker/library/alpine:3.20": digest("c") },
+      transport: "dockerhub",
+    }),
+    /does not match the verified plan/,
+  );
+
+  const pinnedEcrDigest = digest("e");
+  write("runtime/Dockerfile", `FROM public.ecr.aws/docker/library/alpine:3.20@${pinnedEcrDigest}\nCOPY app /app\n`);
+  const pinnedEcrPlan = planFor("runtime/Dockerfile", {});
+  assert.deepEqual(renderBuildContexts({
+    root,
+    plan: pinnedEcrPlan,
+    componentID: "runtime.demo",
+    baseImages: {},
+    transport: "dockerhub",
+  }), [`public.ecr.aws/docker/library/alpine:3.20@${pinnedEcrDigest}=docker-image://docker.io/library/alpine:3.20@${pinnedEcrDigest}`]);
+
+  write("runtime/Dockerfile", [
+    "ARG BASE=alpine:3.20",
+    "FROM ${BASE} AS builder",
+    "COPY app /app",
+    "FROM builder AS final",
+  ].join("\n"));
   assert.throws(
     () => renderBuildContexts({ root, plan: mutablePlan, componentID: "runtime.demo", baseImages: {} }),
     /base image identity is missing/,

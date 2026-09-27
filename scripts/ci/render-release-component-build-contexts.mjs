@@ -26,6 +26,9 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = path.resolve(SCRIPT_DIR, "../..");
 const DIGEST_RE = /^sha256:[a-f0-9]{64}$/;
 const IMAGE_REFERENCE_RE = /^[A-Za-z0-9._/:@-]+$/;
+const ECR_LIBRARY_PREFIX = "public.ecr.aws/docker/library/";
+const DOCKER_HUB_LIBRARY_PREFIX = "docker.io/library/";
+const TRANSPORT_MODES = new Set(["source", "dockerhub"]);
 
 function fail(message) {
   throw new Error(message);
@@ -59,6 +62,24 @@ function digestFromIdentity(identity, label) {
   const digest = text.includes("@") ? text.slice(text.lastIndexOf("@") + 1) : text;
   assert(DIGEST_RE.test(digest), `${label} must resolve to a sha256 digest`);
   return digest;
+}
+
+/**
+ * Return the only approved alternate transport for an official ECR library
+ * image. The Dockerfile/source reference remains the named-context key; this
+ * function only selects where BuildKit obtains the exact recorded digest.
+ */
+export function transportReference(reference, transport = "source") {
+  assert(TRANSPORT_MODES.has(transport), `unsupported base image transport: ${transport}`);
+  if (transport === "source") return reference;
+  if (reference.startsWith("public.ecr.aws/") && !reference.startsWith(ECR_LIBRARY_PREFIX)) {
+    fail(`unsupported Public ECR transport mapping: ${reference}`);
+  }
+  if (!reference.startsWith(ECR_LIBRARY_PREFIX)) return reference;
+  const suffix = reference.slice(ECR_LIBRARY_PREFIX.length);
+  assert(suffix && !suffix.startsWith("/") && !suffix.includes("//"), `unsupported Public ECR library reference: ${reference}`);
+  assert(IMAGE_REFERENCE_RE.test(suffix), `unsupported Public ECR library reference: ${reference}`);
+  return `${DOCKER_HUB_LIBRARY_PREFIX}${suffix}`;
 }
 
 function normalizeBaseImages(value) {
@@ -118,7 +139,8 @@ function componentSpecFromInputs(componentID, fingerprint) {
  * external image reference. The result is intentionally ready for both the
  * build-push-action `build-contexts` input and `docker buildx --build-context`.
  */
-export function renderBuildContexts({ root = DEFAULT_ROOT, plan, componentID, baseImages }) {
+export function renderBuildContexts({ root = DEFAULT_ROOT, plan, componentID, baseImages, transport = "source" }) {
+  assert(TRANSPORT_MODES.has(transport), `unsupported base image transport: ${transport}`);
   const normalizedPlan = validateCompositionPlan(plan);
   const id = String(componentID ?? "");
   const matching = normalizedPlan.components.filter((component) => component.id === id);
@@ -136,21 +158,31 @@ export function renderBuildContexts({ root = DEFAULT_ROOT, plan, componentID, ba
   for (const entry of actual.inputs.baseImages) {
     const reference = entry.ref;
     const digest = digestFromIdentity(entry.identity, `component ${id} base image ${reference}`);
-    if (reference.includes("@sha256:")) {
+    const transportReferenceValue = transportReference(reference, transport);
+    if (reference.includes("@sha256:") && transport === "source") {
       assert(reference.endsWith(`@${digest}`), `component ${id} pinned base image does not match its recorded identity: ${reference}`);
       continue;
     }
-    const mappedDigest = identities[reference];
-    assert(mappedDigest !== undefined, `base image identity is missing for component ${id}: ${reference}`);
-    assert(mappedDigest === digest, `base image identity does not match the verified plan for component ${id}: ${reference}`);
-    contexts.push(`${reference}=docker-image://${reference}@${digest}`);
+    if (!reference.includes("@sha256:")) {
+      const mappedDigest = identities[reference];
+      assert(mappedDigest !== undefined, `base image identity is missing for component ${id}: ${reference}`);
+      assert(mappedDigest === digest, `base image identity does not match the verified plan for component ${id}: ${reference}`);
+    }
+    const transportDigest = transportReferenceValue.includes("@")
+      ? transportReferenceValue.slice(transportReferenceValue.lastIndexOf("@") + 1)
+      : digest;
+    assert(transportDigest === digest, `base image transport digest does not match the verified plan for component ${id}: ${reference}`);
+    const transportImage = transportReferenceValue.includes("@")
+      ? transportReferenceValue
+      : `${transportReferenceValue}@${digest}`;
+    contexts.push(`${reference}=docker-image://${transportImage}`);
   }
   return [...new Set(contexts)].sort();
 }
 
 export function parseArgs(argv) {
-  const options = { root: DEFAULT_ROOT, plan: "", componentID: "", baseImages: "", output: "", json: false };
-  const valueFlags = new Set(["--root-dir", "--plan", "--component-id", "--base-images", "--output"]);
+  const options = { root: DEFAULT_ROOT, plan: "", componentID: "", baseImages: "", output: "", transport: "source", json: false };
+  const valueFlags = new Set(["--root-dir", "--plan", "--component-id", "--base-images", "--output", "--transport"]);
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--json") { options.json = true; continue; }
@@ -165,6 +197,7 @@ export function parseArgs(argv) {
     else if (arg === "--plan") options.plan = path.resolve(value);
     else if (arg === "--component-id") options.componentID = value;
     else if (arg === "--base-images") options.baseImages = path.resolve(value);
+    else if (arg === "--transport") options.transport = value;
     else options.output = path.resolve(value);
   }
   for (const [name, value] of Object.entries({ plan: options.plan, componentID: options.componentID, baseImages: options.baseImages, output: options.output })) {
@@ -187,11 +220,12 @@ function main() {
     plan: readJson(options.plan, "runtime composition plan"),
     componentID: options.componentID,
     baseImages: readJson(options.baseImages, "base image identities"),
+    transport: options.transport,
   });
   writeOutput(options.output, contexts);
   process.stdout.write(options.json
     ? `${JSON.stringify({ componentID: options.componentID, contexts }, null, 2)}\n`
-    : `rendered ${contexts.length} pinned BuildKit image context(s) for ${options.componentID}\n`);
+    : `rendered ${contexts.length} pinned BuildKit image context(s) for ${options.componentID} via ${options.transport}\n`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
