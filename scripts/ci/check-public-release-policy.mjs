@@ -1122,6 +1122,7 @@ function assertPublicWorkflow(workflow, policy) {
     "render-release-component-build-contexts.mjs",
     "--plan dist/public-composition/runtime-composition-plan.json",
     "--base-images dist/public-composition/base-images.json",
+    "--transport dockerhub",
     // The current public projection checker rejects the unspaced `build-contexts:` key.
     "build-contexts : ${{ steps.base-contexts.outputs.build_contexts }}",
   ]) {
@@ -1210,6 +1211,7 @@ function assertPublicWorkflow(workflow, policy) {
     "--plan dist/public-composition/runtime-composition-plan.json",
     "--component-id runtime.agent",
     "--base-images dist/public-composition/base-images.json",
+    "--transport dockerhub",
     "build-contexts: ${{ steps.base-contexts.outputs.build_contexts }}",
   ]) {
     if (!agentPublication.includes(required)) fail(`public Agent publication must pin BuildKit base contexts through the composition renderer: ${required}`);
@@ -1315,9 +1317,19 @@ function assertPublicWorkflow(workflow, policy) {
     "render-release-component-build-contexts.mjs",
     "--plan dist/public-composition/runtime-composition-plan.json",
     "--base-images dist/public-composition/base-images.json",
+    "--transport dockerhub",
     "ENGINE_BASE_IMAGE_CONTEXTS_FILE: ${{ steps.base-contexts.outputs.path }}",
   ]) {
     if (!engineBuild.includes(required)) fail(`public Engine Runtime build must pin BuildKit base contexts through the composition renderer: ${required}`);
+  }
+  for (const required of [
+    "inspect_base_digest()",
+    "data limit exceeded",
+    "connection reset",
+    "[ \"$inspect_status\" -eq 75 ] || exit \"$inspect_status\"",
+    "base image transport digest mismatch",
+  ]) {
+    if (!workflow.includes(required)) fail(`public composition must keep the classified base-image transport fallback: ${required}`);
   }
   if (/continue-on-error\s*:/.test(engineBuild) || /fail-fast\s*:\s*false/.test(engineBuild)) {
     fail("public Engine Runtime matrix must fail fast without optional children");
@@ -1462,6 +1474,30 @@ function assertPublicWorkflow(workflow, policy) {
       fail(`public final release must finalize the canonical runtime composition before manifest generation: ${required}`);
     }
   }
+  const finalCompositionReconciliation = workflowStepBlock(
+    finalRelease,
+    "      - id: reconciled_composition\n        name: Reconcile canonical Runtime composition with final tag digests",
+  );
+  const promotionIndex = finalRelease.indexOf("      - name: Promote every Runtime digest to both final registries");
+  const reconciliationIndex = finalRelease.indexOf("      - id: reconciled_composition");
+  const manifestIndex = finalRelease.indexOf("      - name: Generate and verify the complete release manifest");
+  if (promotionIndex < 0 || reconciliationIndex <= promotionIndex || manifestIndex <= reconciliationIndex) {
+    fail("public final release must reconcile Runtime evidence and composition after final-tag resolution and before manifest generation");
+  }
+  for (const required of [
+    "--mode final",
+    "--runtime-evidence-dir dist/final/runtime-evidence",
+    "--output dist/final/runtime-composition.core.json",
+    "--json | tee dist/final/runtime-composition-reconciliation.json",
+    "cp dist/final/runtime-composition-reconciliation.json dist/final/runtime-composition-finalization.json",
+    "--workflow-run-id \"$GITHUB_RUN_ID\"",
+    "node scripts/ci/verify-public-runtime-image-evidence.mjs",
+    'echo "composition_digest=$composition_digest" >> "$GITHUB_OUTPUT"',
+  ]) {
+    if (!finalCompositionReconciliation.includes(required)) {
+      fail(`public final release must reconcile Runtime evidence and composition after final-tag resolution: ${required}`);
+    }
+  }
   const finalManifestGeneration = workflowStepBlock(
     finalRelease,
     "      - name: Generate and verify the complete release manifest",
@@ -1471,7 +1507,7 @@ function assertPublicWorkflow(workflow, policy) {
       !finalRelease.includes('echo "profile=$release_profile" >> "$GITHUB_OUTPUT"')) {
     fail("public final release must resolve one version-scoped release compatibility profile");
   }
-  if (!finalManifestGeneration.includes("RUNTIME_COMPOSITION_SHA256: ${{ steps.composition.outputs.composition_digest }}") ||
+  if (!finalManifestGeneration.includes("RUNTIME_COMPOSITION_SHA256: ${{ steps.reconciled_composition.outputs.composition_digest }}") ||
       !finalManifestGeneration.includes("generate-release-manifest.sh") ||
       !finalManifestGeneration.includes('RELEASE_PROFILE: ${{ steps.release_profile.outputs.profile }}') ||
       !finalManifestGeneration.includes('RELEASE_MIGRATION_TYPE: ${{ vars.RELEASE_MIGRATION_TYPE }}') ||
@@ -1526,6 +1562,10 @@ function assertPublicWorkflow(workflow, policy) {
       !finalComposePublication.includes("--runtime-composition dist/final/runtime-composition.json") ||
       !finalComposePublication.includes('--release-profile "$RELEASE_PROFILE"')) {
     fail("public final release must pass the bound runtime composition to Compose generation and pass the resolved profile");
+  }
+  const preheatDigestLookup = `awk -F= '$1 == "LUNAFOX_PREHEAT_MANIFEST_DIGEST" {print $2}'`;
+  if (!finalComposePublication.includes(preheatDigestLookup)) {
+    fail("public final release must compare the preheat manifest digest with the snapshot .env using a shell-valid lookup");
   }
   const finalChannelPublication = workflowStepBlock(
     finalRelease,
@@ -1593,6 +1633,8 @@ function assertPublicWorkflow(workflow, policy) {
   if (!finalRelease.includes("final tag cross-registry drift") ||
       !finalRelease.includes("reused_final_tag=true") ||
       !finalRelease.includes("REUSED_FINAL_TAG") ||
+      !finalRelease.includes("expectedBuildDigest") ||
+      !finalRelease.includes("attestationSubject=$image") ||
       !finalRelease.includes('DOCKER_CONFIG="$anonymous_config" cosign verify') ||
       !finalRelease.includes('"^https://github\\\\.com/yyhuni/lunafox/\\\\.github/workflows/public-validate\\\\.yml@refs/heads/main$"')) {
     fail("public final release must anonymously verify and reuse a consistent immutable final tag on a maintenance retry");

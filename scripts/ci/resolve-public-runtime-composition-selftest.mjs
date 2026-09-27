@@ -57,6 +57,30 @@ try {
   const first = finalizeCompositionPlan(firstPlan, buildReceipts({ ...base, runtimeEvidenceDir: evidenceDir }, firstPlan));
   assert.equal(first.components.length, 5);
 
+  // A maintenance retry may select an already-published final tag whose
+  // digest differs from the current attempt's build. The reconciled evidence
+  // must drive finalization so the canonical composition follows the tag.
+  const retryEvidenceDir = path.join(root, "retry-evidence");
+  fs.cpSync(evidenceDir, retryEvidenceDir, { recursive: true });
+  const retryDigest = digest("f");
+  const retryEvidenceFile = path.join(retryEvidenceDir, "public-runtime-image-evidence-server.json");
+  const retryEvidence = JSON.parse(fs.readFileSync(retryEvidenceFile, "utf8"));
+  retryEvidence.digest = retryDigest;
+  retryEvidence.image = `ghcr.io/yyhuni/lunafox-server@${retryDigest}`;
+  retryEvidence.reusedFinalTag = true;
+  retryEvidence.expectedBuildDigest = retryEvidence.digest === retryDigest ? digest("1") : retryEvidence.digest;
+  retryEvidence.attestationSubject = retryEvidence.image;
+  fs.writeFileSync(retryEvidenceFile, `${JSON.stringify(retryEvidence)}\n`);
+  const retryPlan = resolvePlan(base);
+  const retryComposition = finalizeCompositionPlan(
+    retryPlan,
+    buildReceipts({ ...base, runtimeEvidenceDir: retryEvidenceDir }, retryPlan),
+  );
+  const retryServer = retryComposition.components.find((component) => component.id === "runtime.server");
+  assert.equal(retryServer.disposition, "built");
+  assert.equal(retryServer.artifact.digest, retryDigest);
+  assert.equal(retryServer.artifact.ref, retryEvidence.image);
+
   // Engine Dockerfiles use global ARG declarations before their first FROM and
   // consume repository named contexts. The public resolver must fingerprint
   // that same BuildKit shape instead of rejecting it as a stage instruction.

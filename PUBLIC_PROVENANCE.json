@@ -5,6 +5,6 @@
   "sourceRepository": "yyhuni/lunafox-private",
   "destinationRepository": "yyhuni/lunafox",
   "releaseTag": "v0.0.1-alpha.188",
-  "sourceRevisionDigest": "sha256:6ab57aa45a056145eb873fc89f2cfdedfff4ce1253dd812ec73b5a47c237aaa6",
+  "sourceRevisionDigest": "sha256:5b531f2046e451f6df86e723d4c1ea79d521eb8088f22a62ef1b03ff3cb02135",
   "privateProvenance": "retained in the protected private release evidence; not present in public Git"
 }

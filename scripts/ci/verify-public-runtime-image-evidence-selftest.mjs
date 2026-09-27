@@ -93,9 +93,32 @@ try {
   assert.equal(result.passed, true);
   assert.deepEqual(result.components.map((item) => item.component).sort(), Object.keys(COMPONENTS).sort());
 
+  const retryDigest = digest("7");
+  write("server", {
+    digest: retryDigest,
+    image: `ghcr.io/yyhuni/lunafox-server@${retryDigest}`,
+    dockerHubImage: `docker.io/yyhuni/lunafox-server@${retryDigest}`,
+    attestationSubject: `ghcr.io/yyhuni/lunafox-server@${retryDigest}`,
+    reusedFinalTag: true,
+    expectedBuildDigest: digest("1"),
+  });
+  assert.doesNotThrow(() => verify({
+    evidence: path.join(evidenceDir, "server.json"),
+    components: ["server"],
+    component: "server",
+    tag,
+    sourceRevisionDigest,
+    publicMergeCommit,
+    workflowRunId,
+    exportManifestSha256,
+    publicProvenanceSha256,
+    dockerfileSha256: digest("e"),
+  }));
+
   write("nginx", { digest: "latest" });
   assert.throws(() => verify({
     evidence: path.join(evidenceDir, "nginx.json"),
+    components: ["nginx"],
     component: "nginx",
     tag,
     sourceRevisionDigest,
@@ -109,6 +132,7 @@ try {
   write("bootstrap", { platforms: ["linux/amd64"] });
   assert.throws(() => verify({
     evidence: path.join(evidenceDir, "bootstrap.json"),
+    components: ["bootstrap"],
     component: "bootstrap",
     tag,
     sourceRevisionDigest,
@@ -122,6 +146,7 @@ try {
   write("agent", { binaryStagingIdentity: `agent-input-${tag}` });
   assert.throws(() => verify({
     evidence: path.join(evidenceDir, "agent.json"),
+    components: ["agent"],
     component: "agent",
     tag,
     sourceRevisionDigest,
