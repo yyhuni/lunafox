@@ -33,25 +33,27 @@ fi
 if [ -n "$BASE_CONTEXTS_FILE" ]; then
 	declare -A seen_base_contexts=()
 	while IFS= read -r context_entry || [ -n "$context_entry" ]; do
-		if [[ ! "$context_entry" =~ ^([A-Za-z0-9._/:-]+)=docker-image://([A-Za-z0-9._/:-]+)@(sha256:[a-f0-9]{64})$ ]]; then
+		if [[ ! "$context_entry" =~ ^([A-Za-z0-9._/:@-]+)=docker-image://([A-Za-z0-9._/:-]+)@(sha256:[a-f0-9]{64})$ ]]; then
 			fail "ENGINE_BASE_IMAGE_CONTEXTS_FILE contains an invalid BuildKit context entry"
 		fi
 		context_name="${BASH_REMATCH[1]}"
 		context_reference="${BASH_REMATCH[2]}"
 		context_digest="${BASH_REMATCH[3]}"
-		case "$context_name" in
-		public.ecr.aws/docker/library/*)
-			expected_transport="docker.io/library/${context_name#public.ecr.aws/docker/library/}"
-			[ "$context_reference" = "$expected_transport" ] || fail "Public ECR context must use its Docker Hub library transport"
-			;;
-		*)
-			[ "$context_name" = "$context_reference" ] || fail "BuildKit context name must match its image reference"
-			;;
-		esac
+		source_reference="$context_name"
 		if [[ "$context_name" == *@sha256:* ]]; then
+			source_reference="${context_name%@sha256:*}"
 			source_digest="${context_name##*@}"
 			[ "$source_digest" = "$context_digest" ] || fail "pinned BuildKit context digest must match its source identity"
 		fi
+		case "$source_reference" in
+		public.ecr.aws/docker/library/*)
+			expected_transport="docker.io/library/${source_reference#public.ecr.aws/docker/library/}"
+			[ "$context_reference" = "$expected_transport" ] || fail "Public ECR context must use its Docker Hub library transport"
+			;;
+		*)
+			[ "$source_reference" = "$context_reference" ] || fail "BuildKit context name must match its image reference"
+			;;
+		esac
 		[ -z "${seen_base_contexts[$context_name]+x}" ] || fail "ENGINE_BASE_IMAGE_CONTEXTS_FILE contains duplicate context $context_name"
 		seen_base_contexts["$context_name"]="$context_digest"
 		base_context_args+=(--build-context "$context_entry")
