@@ -15,6 +15,23 @@ describe("system-upgrade-status event stream contract", () => {
     expect(source).toContain("entry.message")
   })
 
+  it("keeps structured Agent diagnostics and route scrolling owned by the status surface", () => {
+    expect(source).toContain("function AgentDiagnostics")
+    expect(source).toContain("currentOperation.agentDiagnostics")
+    expect(source).toContain('data-testid="system-upgrade-agent-diagnostics"')
+    expect(source).toContain("h-svh min-h-0 w-full overflow-y-auto")
+    expect(source).toContain("tabIndex={0}")
+  })
+
+  it("keeps the current host activity as a bounded fact between progress and update metadata", () => {
+    expect(source).toContain("function HostActivityFact")
+    expect(source).toContain('data-testid="system-upgrade-host-activity"')
+    expect(source).toContain("currentOperation.hostActivity")
+    expect(source.indexOf("<UpgradeStageTimeline")).toBeLessThan(source.indexOf("<HostActivityFact"))
+    expect(source.indexOf("<HostActivityFact")).toBeLessThan(source.indexOf('t("facts.lastUpdated")'))
+    expect(source.indexOf("function HostActivityFact")).toBeLessThan(source.indexOf("function UpgradeLogs"))
+  })
+
   it("keeps upgrade events separate from the system-log data path", () => {
     expect(source).not.toContain("useSystemLogs")
     expect(source).not.toContain("LiveLogSurface")

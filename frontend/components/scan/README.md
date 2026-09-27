@@ -246,3 +246,22 @@ Scan launch and scheduled scan creation are right-side workbench layouts. They u
 - Do not switch these drawers back to `DialogContent` unless the product flow is reduced to a short, simple modal task.
 
 The contract tests for `initiate-scan-dialog` and `create-scheduled-scan-dialog` guard this rule so launch drawers stay visually aligned with every shared edge panel.
+
+## Duration Parameter Editor
+
+An integer parameter is a duration only when the loaded Engine Catalog detail
+explicitly declares `unit: "seconds"`. The form must not infer a unit from a
+parameter key, description, default, or numeric value. An integer with omitted
+unit metadata continues to use the ordinary `NumberStepperInput` and remains a
+neutral integer to the user.
+
+The seconds editor is a single full-row trigger. It shows the committed
+canonical integer with the localized seconds label and human-readable duration,
+then opens the shared popover containing aligned day, hour, minute, and second
+wheels. Wheel movement is local draft state; only `Apply` calls the form change
+handler. `Cancel`, outside dismissal, and `Restore default` before Apply never
+mutate the form. The editor evaluates every draft against the Catalog `minimum`
+and optional `maximum`; invalid drafts stay visible and disable Apply instead of
+being rounded, clamped, or silently replaced. When `maximum` is omitted, the day
+column grows on demand rather than imposing a frontend limit. Stored and
+submitted values remain integer seconds throughout.

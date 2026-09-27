@@ -14,6 +14,7 @@ import {
   waitForValidation,
 } from "./publish-public-deployment.mjs";
 import { bindCompositionToManifest, compositionCorePayload, FINGERPRINT_SCHEMA_VERSION, sha256Digest } from "./resolve-release-component-composition.mjs";
+import { canonicalPreheatManifestBytes } from "./preheat-manifest.mjs";
 
 const TAG = "v1.2.3-alpha.4";
 const SOURCE_SHA = "a".repeat(40);
@@ -51,11 +52,23 @@ function fixture(t) {
     capabilities: { dynamicFrontendUpstream: true },
   };
   compositionValue.compositionDigest = sha256Digest(compositionCorePayload(compositionValue));
+  const thirdPartyEntries = [
+    { service: "postgres", profiles: ["embedded"], registry: "docker.io", repository: "library/postgres", digest: `sha256:${"a".repeat(64)}`, contentAudit: "reviewed", publisherSignatureVerification: "not-approved", evidence: "release-frozen Docker Official Image digest reviewed by LunaFox" },
+    { service: "redis", profiles: ["embedded", "external"], registry: "docker.io", repository: "library/redis", digest: `sha256:${"b".repeat(64)}`, contentAudit: "reviewed", publisherSignatureVerification: "not-approved", evidence: "release-frozen Docker Official Image digest reviewed by LunaFox" },
+    { service: "loki", profiles: ["embedded", "external"], registry: "docker.io", repository: "grafana/loki", digest: `sha256:${"c".repeat(64)}`, contentAudit: "reviewed", publisherSignatureVerification: "not-approved", evidence: "release-frozen Grafana image digest reviewed by LunaFox" },
+    { service: "alloy", profiles: ["embedded", "external"], registry: "docker.io", repository: "grafana/alloy", digest: `sha256:${"d".repeat(64)}`, contentAudit: "reviewed", publisherSignatureVerification: "not-approved", evidence: "release-frozen Grafana image digest reviewed by LunaFox" },
+  ];
+  const thirdPartyCompose = thirdPartyEntries.map((entry) => `  ${entry.service}:\n    image: ${entry.registry}/${entry.repository}@${entry.digest}\n`).join("");
   const files = {
     ".env": env,
     ".env.example": env,
-    "compose.yaml": "services:\n  server:\n    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-server@sha256:" + "d".repeat(64) + "\n",
+    "compose.yaml": "services:\n  server:\n    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-server@sha256:" + "d".repeat(64) + "\n" + thirdPartyCompose,
     "engine-inventory.yaml": "enginePackages: []\n",
+    "third-party-image-policy.json": JSON.stringify({
+      schemaVersion: 1,
+      provenanceClaim: "lunafox-reviewed-content",
+      entries: thirdPartyEntries,
+    }, null, 2) + "\n",
     "release.manifest.yaml": `releaseVersion: "1.2.3-alpha.4"\nreleaseNotes:\n  digest: "sha256:4406112ce062dd05feacce5f519b8cb7250fd01c7237c43e0f7335da912e8188"\n  body: |\n    ## English\n\n    - Test release notes.\n\n    ## 简体中文\n\n    - 测试发布说明。\nruntimeComposition:\n  schemaVersion: 1\n  asset: "runtime-composition.json"\n  sha256: "${compositionValue.compositionDigest}"\n`,
   };
   for (const [name, content] of Object.entries(files)) fs.writeFileSync(path.join(root, name), content);
@@ -65,6 +78,40 @@ function fixture(t) {
     manifestDigest: sha256Digest(fs.readFileSync(path.join(root, "release.manifest.yaml"))),
   };
   fs.writeFileSync(path.join(root, "runtime-composition.json"), `${JSON.stringify(compositionValue, null, 2)}\n`);
+  const engineDigest = `sha256:${"b".repeat(64)}`;
+  const engineIdentity = `yyhuni/lunafox-engine-runtime-port-scan@${engineDigest}`;
+  const entry = {
+    candidates: [`docker.io/${engineIdentity}`, `ghcr.io/${engineIdentity}`],
+    cloudflareCandidates: [`docker.lunafox.cc.cd/${engineIdentity}`, `docker.io/${engineIdentity}`, `ghcr.io/${engineIdentity}`],
+    digest: engineDigest,
+    identityReference: `ghcr.io/${engineIdentity}`,
+    platforms: ["linux/amd64", "linux/arm64"],
+    profiles: ["embedded", "external"],
+    repository: "yyhuni/lunafox-engine-runtime-port-scan",
+    sources: [{ kind: "engine-runtime", name: "engine.lunafox.port_scan" }],
+    trust: "first-party",
+  };
+  const closures = ["embedded", "external"].map((profile) => {
+    const entries = [engineIdentity];
+    return { profile, entries, digest: sha256Digest({ profile, entries }) };
+  });
+  const preheat = {
+    schemaVersion: 1,
+    kind: "lunafox.preheat-manifest",
+    release: {
+      tag: TAG,
+      manifestDigest: sha256Digest(fs.readFileSync(path.join(root, "release.manifest.yaml"))),
+      compositionDigest: compositionValue.compositionDigest,
+      composeDigest: sha256Digest(Buffer.from(files["compose.yaml"])),
+      thirdPartyPolicyDigest: sha256Digest(Buffer.from(files["third-party-image-policy.json"])),
+    },
+    entries: [entry],
+    profileClosures: closures,
+  };
+  const preheatBytes = canonicalPreheatManifestBytes({ ...preheat, manifestDigest: sha256Digest(preheat) });
+  fs.writeFileSync(path.join(root, "preheat-manifest.json"), preheatBytes);
+  fs.appendFileSync(path.join(root, ".env"), `LUNAFOX_PREHEAT_MANIFEST_DIGEST=${JSON.parse(preheatBytes).manifestDigest}\n`);
+  fs.appendFileSync(path.join(root, ".env.example"), `LUNAFOX_PREHEAT_MANIFEST_DIGEST=${JSON.parse(preheatBytes).manifestDigest}\n`);
   return root;
 }
 
@@ -98,6 +145,14 @@ test("the alpha.164 bridge snapshot binds independent composition evidence", (t)
     .replace('releaseVersion: "1.2.3-alpha.4"', 'releaseVersion: "0.0.1-alpha.183"')
     .replace(/^releaseNotes:\n[\s\S]*?(?=^runtimeComposition:)/m, "")
     .replace(/^runtimeComposition:\n[\s\S]*$/m, ""));
+  // The bridge is intentionally the last package that predates install-time
+  // preheating. It must not smuggle a modern manifest fingerprint or asset
+  // into the historical snapshot while still retaining its composition file.
+  fs.rmSync(path.join(root, "preheat-manifest.json"));
+  for (const envName of [".env", ".env.example"]) {
+    const envPath = path.join(root, envName);
+    fs.writeFileSync(envPath, fs.readFileSync(envPath, "utf8").replace(/^LUNAFOX_PREHEAT_MANIFEST_DIGEST=.*\n/m, ""));
+  }
   const composition = JSON.parse(fs.readFileSync(path.join(root, "runtime-composition.json"), "utf8"));
   composition.releaseTag = bridgeTag;
   composition.components[0].sourceRelease.tag = bridgeTag;
@@ -108,6 +163,8 @@ test("the alpha.164 bridge snapshot binds independent composition evidence", (t)
     `${JSON.stringify(bindCompositionToManifest(composition, sha256Digest(fs.readFileSync(manifest))), null, 2)}\n`,
   );
   assert.equal(validateSnapshot(root, bridgeTag, "alpha164-bridge").releaseProfile, "alpha164-bridge");
+  assert.equal(fs.existsSync(path.join(root, "preheat-manifest.json")), false);
+  assert.equal(fs.readFileSync(path.join(root, ".env"), "utf8").includes("LUNAFOX_PREHEAT_MANIFEST_DIGEST="), false);
   assert.throws(() => validateSnapshot(root, bridgeTag, "modern"), /does not match registered profile/);
 });
 

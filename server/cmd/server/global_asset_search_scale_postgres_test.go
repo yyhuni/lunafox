@@ -47,6 +47,8 @@ const (
 	globalAssetSearchScaleWideBodyBytes          = 64 << 10
 	globalAssetSearchScaleWideHeaderBytes        = 8 << 10
 	globalAssetSearchScaleMinimumWidePayloadSize = 7 << 20
+	globalAssetSearchScaleShortHostTerm          = "qz"
+	globalAssetSearchScaleShortTitleTerm         = "qz"
 )
 
 var globalAssetSearchScaleSpecs = []globalAssetSearchScaleAssetSpec{
@@ -74,6 +76,7 @@ type globalAssetSearchScaleQueryFamily struct {
 	args                 []any
 	expectedResultCount  int
 	acceptableIndexNames []string
+	allowAssetSeqScan    bool
 }
 
 type globalAssetSearchScaleEvidence struct {
@@ -312,12 +315,12 @@ func insertGlobalAssetSearchScaleProbeRows(t *testing.T, ctx context.Context, db
 		INSERT INTO %s (target_id, url, host, title, status_code, tech, created_at)
 		SELECT $1::INTEGER,
 			'https://%s-probe-global-search-' || LPAD(value::text, 6, '0') || '.example/record/' || LPAD(value::text, 6, '0'),
-			'%s-probe-global-search-' || LPAD(value::text, 6, '0') || '.example',
-			'Global Search Probe ' || LPAD(value::text, 6, '0'),
+			'%s-probe-global-search-%s-' || LPAD(value::text, 6, '0') || '.example',
+			'Qz Global Search Probe ' || LPAD(value::text, 6, '0'),
 			201,
 			ARRAY['global-search-probe-tech']::varchar(100)[],
 			TIMESTAMPTZ '2026-08-07 10:00:00+00' - (value * INTERVAL '1 second')
-		FROM generate_series(1, %d) AS value`, spec.table, spec.table, spec.table, globalAssetSearchScaleProbeRows)
+		FROM generate_series(1, %d) AS value`, spec.table, spec.table, spec.table, globalAssetSearchScaleShortHostTerm, globalAssetSearchScaleProbeRows)
 	if _, err := db.ExecContext(ctx, query, targetID); err != nil {
 		t.Fatalf("insert %s global search probe rows: %v", spec.table, err)
 	}
@@ -325,8 +328,8 @@ func insertGlobalAssetSearchScaleProbeRows(t *testing.T, ctx context.Context, db
 		assetType:  spec.assetType,
 		table:      spec.table,
 		probeURL:   "https://" + spec.table + "-probe-global-search-000001.example/record/000001",
-		probeHost:  spec.table + "-probe-global-search-000001.example",
-		probeTitle: "Global Search Probe 000001",
+		probeHost:  spec.table + "-probe-global-search-" + globalAssetSearchScaleShortHostTerm + "-000001.example",
+		probeTitle: "Qz Global Search Probe 000001",
 	}
 }
 
@@ -449,6 +452,14 @@ func globalAssetSearchScaleQueryFamilies(fixture globalAssetSearchScaleFixture) 
 			acceptableIndexNames: []string{"idx_" + fixture.table + "_host_trgm"},
 		},
 		{
+			name:                "host-contains-two-character",
+			query:               `host="` + globalAssetSearchScaleShortHostTerm + `"`,
+			where:               "asset.host ILIKE $1 ESCAPE '\\'",
+			args:                []any{globalAssetSearchScaleContainsPattern(globalAssetSearchScaleShortHostTerm)},
+			expectedResultCount: globalAssetSearchScaleNormalPageSize,
+			allowAssetSeqScan:   true,
+		},
+		{
 			name:                 "host-exact",
 			query:                `host=="` + fixture.probeHost + `"`,
 			where:                "asset.host = $1",
@@ -463,6 +474,14 @@ func globalAssetSearchScaleQueryFamilies(fixture globalAssetSearchScaleFixture) 
 			args:                 []any{globalAssetSearchScaleContainsPattern("Global Search Probe")},
 			expectedResultCount:  globalAssetSearchScaleNormalPageSize,
 			acceptableIndexNames: []string{"idx_" + fixture.table + "_title_trgm"},
+		},
+		{
+			name:                "title-contains-two-character",
+			query:               `title="` + globalAssetSearchScaleShortTitleTerm + `"`,
+			where:               "asset.title ILIKE $1 ESCAPE '\\'",
+			args:                []any{globalAssetSearchScaleContainsPattern(globalAssetSearchScaleShortTitleTerm)},
+			expectedResultCount: globalAssetSearchScaleNormalPageSize,
+			allowAssetSeqScan:   true,
 		},
 		{
 			name:                 "title-exact",
@@ -646,11 +665,14 @@ func assertGlobalAssetSearchScalePlan(t *testing.T, fixture globalAssetSearchSca
 	if plan.evidence.TopLevelRows > globalAssetSearchScaleNormalPageSize+1 {
 		t.Fatalf("%s %s EXPLAIN top-level rows=%d exceeds pageSize+1=%d", fixture.assetType, family.name, plan.evidence.TopLevelRows, globalAssetSearchScaleNormalPageSize+1)
 	}
-	if plan.assetSeqScan {
+	if plan.assetSeqScan && !family.allowAssetSeqScan {
 		t.Fatalf("%s %s EXPLAIN used an asset-table Seq Scan: indexes=%q", fixture.assetType, family.name, plan.evidence.Indexes)
 	}
 	if plan.evidence.TempRead != 0 || plan.evidence.TempWritten != 0 {
 		t.Fatalf("%s %s EXPLAIN used temporary I/O: temp_read=%d temp_written=%d", fixture.assetType, family.name, plan.evidence.TempRead, plan.evidence.TempWritten)
+	}
+	if len(family.acceptableIndexNames) == 0 {
+		return
 	}
 	for _, expected := range family.acceptableIndexNames {
 		if containsGlobalAssetSearchScaleString(plan.evidence.Indexes, expected) {

@@ -47,6 +47,7 @@ export interface ApiKeySettings {
 
 export interface ApiKeyProviderUpdate {
   enabled: boolean
+  /** Kept for source compatibility; update serialization deliberately omits it. */
   status?: ProviderStatus
   values: Record<string, string>
 }

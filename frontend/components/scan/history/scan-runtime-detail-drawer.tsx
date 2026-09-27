@@ -263,12 +263,13 @@ export function RuntimeHeader({
             {scan.target?.displayName || scan.target?.name || t("runtimeDrawer.emptyTarget")}
           </h2>
           <Badge
+            size="compact"
             variant={getScanStatusBadgeVariant(status)}
-            className={cn("px-2 py-0.5 text-xs", getScanStatusClasses(status))}
+            className={cn("text-xs", getScanStatusClasses(status))}
           >
             {statusLabel(status)}
           </Badge>
-          <Badge variant="outline" className="px-2 py-0.5 text-xs text-muted-foreground">
+          <Badge size="compact" variant="outline" className="text-xs text-muted-foreground">
             #{scan.id}
           </Badge>
         </div>
@@ -294,11 +295,11 @@ export function RuntimeHeader({
                 {t("runtimeDrawer.meta.agent")}
               </span>
               <span className={textRole.metadataValueStrong}>{agentDisplayName}</span>
-              <Badge variant={agentTransport.variant} className="px-2 py-0.5 text-xs">
+              <Badge size="compact" variant={agentTransport.variant} className="text-xs">
                 {agentTransport.label}
               </Badge>
               {agentHealth ? (
-                <Badge variant={agentHealth.variant} className="px-2 py-0.5 text-xs">
+                <Badge size="compact" variant={agentHealth.variant} className="text-xs">
                   {agentHealth.label}
                 </Badge>
               ) : null}
@@ -508,8 +509,9 @@ export function RuntimeOverviewSidePanel({
             label={t("runtimeDrawer.sidePanel.status")}
             value={
               <Badge
+                size="compact"
                 variant={getScanStatusBadgeVariant(status)}
-                className={cn("gap-1.5 px-2 py-0.5 text-xs", getScanStatusClasses(status))}
+                className={cn("gap-1.5 text-xs", getScanStatusClasses(status))}
               >
                 {statusIcon(status)}
                 {statusLabel(status)}
@@ -738,8 +740,9 @@ export function RuntimeTaskList({
                       <div className="flex flex-wrap items-center gap-2">
                         <p className={textRole.sectionTitle}>{task.title}</p>
                         <Badge
+                          size="compact"
                           variant={getScanStatusBadgeVariant(task.status)}
-                          className={cn("h-5 px-1.5 text-xs", getScanStatusClasses(task.status))}
+                          className={cn("text-xs", getScanStatusClasses(task.status))}
                         >
                           {getRuntimeTaskStatusLabel(presentationStatus, t, statusLabel)}
                         </Badge>
@@ -748,8 +751,9 @@ export function RuntimeTaskList({
                         ) : null}
                         {task.failureKind ? (
                           <Badge
+                            size="compact"
                             variant={getScanStatusBadgeVariant("failed")}
-                            className={cn("h-5 px-1.5 text-xs", getScanStatusClasses("failed"))}
+                            className={cn("text-xs", getScanStatusClasses("failed"))}
                           >
                             {task.failureKind}
                           </Badge>

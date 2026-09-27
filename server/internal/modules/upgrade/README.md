@@ -100,7 +100,10 @@ pass, the upgrader atomically installs the target as
 `/deployment/compose.override.yaml`. A `frontend_only` operation stages a patch
 that changes only the frontend image and promotes it only after the Server's
 `confirm` action. Ordinary Compose lifecycle commands then keep using the
-confirmed images and runtime versions. The override contains no database,
+confirmed images and runtime versions. The public override is a regular `0644`
+file so the deployment user can read it even though the upgrader runs as root;
+the private `.lunafox/upgrade` journal and operation artifacts remain `0600`
+inside `0700` directories. The override contains no database,
 public address, or secret configuration. Releases that require a changed
 Compose structure or new host resources require a newly downloaded deployment
 package.
@@ -111,6 +114,17 @@ digest, but it cannot mark an Operation `succeeded` while migration, service,
 API, or Agent verification remains incomplete. Migration failure or uncertain
 outcome is `needs_recovery`; an Agent validation timeout is `needs_attention`;
 only pre-migration failures are retryable without a recovery decision.
+
+Modern public releases also bind the rendered `compose.yaml` and
+`third-party-image-policy.json` into the same preheat manifest. The channel
+source stores those bytes as immutable, release-digest-addressed assets under
+the private upgrade state. A full public upgrade stages those target assets
+alongside the release manifest, runtime composition, and preheat manifest;
+`engine-preheater` runs against that private candidate directory first. Only a
+successful preheat can promote the candidate to `/deployment`, and promotion
+compares the active Compose/policy bytes with the captured baseline so a
+concurrent operator edit fails closed. A preheat or binding failure leaves the
+active deployment and verified cache untouched.
 
 Server-side final edge probes use the fixed Compose DNS endpoint
 `https://nginx`, while preserving the configured `PUBLIC_URL` host as the HTTP
@@ -169,8 +183,11 @@ existing operation resource:
 
 - `GET /v1/upgradeOperations:active` returns the one non-terminal operation;
   an empty active set is a `404` (`upgrade_not_found`) rather than a synthetic
-  operation. The frontend treats only that response as an empty view and
-  fails closed on other lookup errors.
+  operation. The frontend treats only that response as an empty view, clears
+  any stale browser operation hint, and stops automatic polling; it never falls
+  back to that hint for an automatic FULL operation lookup. Explicit operation
+  IDs may still be used by the completion dialog, and malformed FULL data
+  remains a hard error.
 - `POST /v1/upgradeOperations/{operation}:stop` accepts only
   `{ "confirmed": true }`. It sends a bounded `stop` action to the host daemon
   and remains locked to the upgrade route until a host checkpoint or watchdog
@@ -195,11 +212,30 @@ maximum-32-entry `logs` projection. Entries are fixed lifecycle milestones,
 safe diagnostics, bounded cancellation counts, and host-generated progress
 events. Progress events are single-line catalog messages with bounded metadata;
 they are an observation stream for the current stage, not a lifecycle source
-of truth. Raw Compose stdout/stderr, paths, commands, image references,
-environment values, tokens, and credentials are never persisted or returned.
-The frontend uses the active view as its route-lock authority, renders the
-bounded timeline and shared `RawLogViewer` progress stream, and offers stop,
-retry, recheck, and terminal exit actions according to the durable state.
+of truth. The opt-in `view=FULL` representation additionally projects only
+currently non-ready Agent expectations as bounded `agentDiagnostics`: each
+entry derives `agents/{id}`, keeps its Operation-start display-name snapshot,
+and carries a closed reason code, sanitized detail, and provenance. BASIC
+responses intentionally do not include per-Agent evidence. This keeps the
+operator's current blocking evidence out of a high-volume polling log while
+retaining meaningful Agent state changes as progress events. Raw Compose
+stdout/stderr, paths, commands, image references, environment values, tokens,
+and credentials are never persisted or returned. The frontend uses the active
+view as its route-lock authority, renders the bounded timeline and shared
+`RawLogViewer` progress stream, and offers stop, retry, recheck, and terminal
+exit actions according to the durable state.
+
+For a controlled host action that is still waiting for a fixed Runner call,
+the journal and Operation may carry one optional `hostActivity` snapshot with
+only a closed action identifier, `startedAt`, and `lastHeartbeatAt`. It is an
+observation, not a lifecycle checkpoint: a heartbeat is capped at 15 seconds,
+does not change `StageTimes`, and never occupies the bounded event history.
+The Server emits this field only for the exact enhanced request
+`view=FULL&includeHostActivity=true`; BASIC and historical FULL responses omit
+it. A legacy journal or older Server with no field remains readable as no
+current host activity. Invalid present activity fails closed rather than being
+projected. Compose stdout/stderr and other raw host details stay solely in the
+host-side `logs.sh` workflow.
 
 The progress stream is deliberately separate from Server/Loki system logs.
 During service update or restart the Server and its log API may be unavailable,

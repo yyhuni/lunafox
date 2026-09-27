@@ -9,9 +9,15 @@ import { cn } from "@/lib/utils"
 export type HttpStatusBadgeSize = "table" | "default" | "overlay"
 
 const sizeClassNames: Record<HttpStatusBadgeSize, string> = {
-  table: "h-5 px-2 py-0",
-  default: "px-2 py-1",
+  table: "",
+  default: "",
   overlay: "px-1.5 py-0.5 text-xs backdrop-blur-sm",
+}
+
+const sizeProps: Record<HttpStatusBadgeSize, { size: "tag" | "compact" }> = {
+  table: { size: "compact" },
+  default: { size: "tag" },
+  overlay: { size: "compact" },
 }
 
 interface HttpStatusBadgeProps {
@@ -28,6 +34,7 @@ export function HttpStatusBadge({
   if (statusCode === null || statusCode === undefined) {
     return (
       <Badge
+        {...sizeProps[size]}
         variant="outline"
         className={cn(
           sizeClassNames[size],
@@ -43,6 +50,7 @@ export function HttpStatusBadge({
 
   return (
     <Badge
+      {...sizeProps[size]}
       variant={getHttpStatusBadgeVariant(statusCode)}
       className={cn(
         sizeClassNames[size],

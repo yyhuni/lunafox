@@ -47,7 +47,7 @@ root DB、`context.Background()` 或嵌套事务；协调器已经锁定 Scan/Ta
 漏洞数据或引入跨表 `UNION`。
 
 查询只接收 application 已校验的 typed AST，所有值使用绑定参数。全局搜索的 URL、
-host/title 单等号使用带字面量转义的 PostgreSQL `ILIKE`，双等号使用完整字符串 `=`；
+host/title 单等号使用带字面量转义的 PostgreSQL `ILIKE`，包含值至少 2 个 Unicode 字符；双等号使用完整字符串 `=`；
 普通文本 URL 也走 URL contains 谓词。`statusCode` 使用整数 `=`，`tech` 使用数组
 `@>` 完整元素谓词。固定排序为 `(created_at DESC, id DESC)`，通过 tuple keyset 和
 `LIMIT pageSize+1` 分页。

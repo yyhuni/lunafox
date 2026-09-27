@@ -16,12 +16,16 @@ COPY agent/bin/${AGENT_ARTIFACT_ID}/lunafox-agent-linux-amd64 /agent-assets/luna
 COPY agent/bin/${AGENT_ARTIFACT_ID}/lunafox-agent-linux-arm64 /agent-assets/lunafox-agent-linux-arm64
 COPY agent/bin/${AGENT_ARTIFACT_ID}/lunafox-engine-mount-preflight-linux-amd64 /agent-assets/lunafox-engine-mount-preflight-linux-amd64
 COPY agent/bin/${AGENT_ARTIFACT_ID}/lunafox-engine-mount-preflight-linux-arm64 /agent-assets/lunafox-engine-mount-preflight-linux-arm64
+COPY agent/bin/${AGENT_ARTIFACT_ID}/lunafox-engine-preheater-linux-amd64 /agent-assets/lunafox-engine-preheater-linux-amd64
+COPY agent/bin/${AGENT_ARTIFACT_ID}/lunafox-engine-preheater-linux-arm64 /agent-assets/lunafox-engine-preheater-linux-arm64
 
 RUN set -eux; \
     test -x /agent-assets/lunafox-agent-linux-amd64; \
     test -x /agent-assets/lunafox-agent-linux-arm64; \
     test -x /agent-assets/lunafox-engine-mount-preflight-linux-amd64; \
     test -x /agent-assets/lunafox-engine-mount-preflight-linux-arm64; \
+    test -x /agent-assets/lunafox-engine-preheater-linux-amd64; \
+    test -x /agent-assets/lunafox-engine-preheater-linux-arm64; \
     case "$TARGETARCH" in \
       amd64) suffix=amd64 ;; \
       arm64) suffix=arm64 ;; \
@@ -29,8 +33,10 @@ RUN set -eux; \
     esac; \
     test -x "/agent-assets/lunafox-agent-linux-${suffix}"; \
     test -x "/agent-assets/lunafox-engine-mount-preflight-linux-${suffix}"; \
+    test -x "/agent-assets/lunafox-engine-preheater-linux-${suffix}"; \
     install -m 0755 "/agent-assets/lunafox-agent-linux-${suffix}" /usr/local/bin/agent; \
     install -m 0755 "/agent-assets/lunafox-engine-mount-preflight-linux-${suffix}" /usr/local/bin/lunafox-engine-mount-preflight; \
+    install -m 0755 "/agent-assets/lunafox-engine-preheater-linux-${suffix}" /usr/local/bin/lunafox-engine-preheater; \
     rm -rf /agent-assets
 
 WORKDIR /app

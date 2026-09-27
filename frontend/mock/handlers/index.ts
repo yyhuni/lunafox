@@ -695,6 +695,11 @@ function isFingerprintUploadFile(value: FormDataEntryValue | null): value is Fil
     && typeof (value as File).type === "string"
 }
 
+function mockRequestsHostActivity(url: URL): boolean {
+  const values = url.searchParams.getAll("includeHostActivity")
+  return values.length === 1 && values[0] === "true"
+}
+
 async function resolveMockApi(request: Request) {
   await delay(MOCK_DELAY)
 
@@ -808,7 +813,7 @@ async function resolveMockApi(request: Request) {
       ? operation
       : null
     return activeOperation
-      ? json(url.searchParams.get("view") === "FULL" ? getMockUpgradeOperationFull() : activeOperation)
+      ? json(url.searchParams.get("view") === "FULL" ? getMockUpgradeOperationFull(mockRequestsHostActivity(url)) : activeOperation)
       : json({ error: { code: "NOT_FOUND", message: "No active upgrade operation." } }, { status: 404 })
   }
   {
@@ -816,7 +821,7 @@ async function resolveMockApi(request: Request) {
     if (method === "GET" && operationMatch) {
       const operation = observeMockUpgradeOperation()
       return operation && operation.operationId === operationMatch[1]
-        ? json(url.searchParams.get("view") === "FULL" ? getMockUpgradeOperationFull() : operation)
+        ? json(url.searchParams.get("view") === "FULL" ? getMockUpgradeOperationFull(mockRequestsHostActivity(url)) : operation)
         : json({ error: { code: "NOT_FOUND", message: "Upgrade operation not found." } }, { status: 404 })
     }
   }

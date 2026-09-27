@@ -10,6 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CategoryNameMap } from "@/types/tool.types";
+import { compactSurfaceClassNames } from "@/lib/ui/compact-surface-contract";
+import { cn } from "@/lib/utils";
+import { textRole } from "@/lib/typography";
 type TranslationFn = (key: string, params?: Record<string, string | number | Date>) => string;
 const ToolIcon = semanticIcons.concept.tool;
 interface AddCustomToolDialogHeaderProps {
@@ -36,7 +39,7 @@ export function AddCustomToolNameField({ t, value, isSubmitting, onChange, }: Ad
       <Label htmlFor="name">
         {t("toolName")} <span className="text-error">*</span>
       </Label>
-      <Input id="name" name="name" autoComplete="off" placeholder={t("customToolNamePlaceholder")} value={value} onChange={(event) => onChange(event.target.value)} disabled={isSubmitting} required/>
+      <Input id="name" name="name" size="sm" autoComplete="off" placeholder={t("customToolNamePlaceholder")} value={value} onChange={(event) => onChange(event.target.value)} disabled={isSubmitting} required/>
     </div>);
 }
 interface AddCustomToolDescriptionFieldProps {
@@ -62,7 +65,7 @@ export function AddCustomToolPathField({ t, value, isSubmitting, onChange, }: Ad
       <Label htmlFor="directory">
         {t("toolPath")} <span className="text-error">*</span>
       </Label>
-      <Input id="directory" name="directory" autoComplete="off" placeholder={t("toolPathPlaceholder")} value={value} onChange={(event) => onChange(event.target.value)} disabled={isSubmitting} required/>
+      <Input id="directory" name="directory" size="sm" autoComplete="off" placeholder={t("toolPathPlaceholder")} value={value} onChange={(event) => onChange(event.target.value)} disabled={isSubmitting} required/>
       <p className="text-muted-foreground text-xs">{t("toolPathHint")}</p>
     </div>);
 }
@@ -78,8 +81,8 @@ export function AddCustomToolCategoriesField({ t, isSubmitting, availableCategor
     return (<div className="gap-2 grid">
       <Label>{t("categoryTags")}</Label>
 
-      {selectedCategories.length > 0 && (<div className="bg-muted/50 border flex flex-wrap gap-2 p-3 rounded-md">
-          {selectedCategories.map((categoryName) => (<Badge key={categoryName} variant="default" className="flex gap-1 items-center px-2 py-1">
+      {selectedCategories.length > 0 && (<div className={cn(compactSurfaceClassNames.mutedInfo, "flex flex-wrap gap-2")}>
+          {selectedCategories.map((categoryName) => (<Badge key={categoryName} size="tag" variant="default" className="flex gap-1 items-center">
               {CategoryNameMap[categoryName] || categoryName}
               <button type="button" onClick={() => onRemove(categoryName)} disabled={isSubmitting} className="hover:bg-primary/20 ml-1 p-0.5 rounded-full">
                 <IconX className="h-3 w-3"/>
@@ -87,13 +90,13 @@ export function AddCustomToolCategoriesField({ t, isSubmitting, availableCategor
             </Badge>))}
         </div>)}
 
-      <div className="border flex flex-wrap gap-2 p-3 rounded-md">
+      <div className={cn(compactSurfaceClassNames.info, "flex flex-wrap gap-2")}>
         {availableCategories.length > 0 ? (availableCategories.map((categoryName) => {
             const isSelected = selectedCategories.includes(categoryName);
             return (<Badge key={categoryName} variant={isSelected ? "secondary" : "outline"} className="hover:bg-secondary/80 transition-colors" render={<button type="button" onClick={() => onToggle(categoryName)}/>}>
                   {CategoryNameMap[categoryName] || categoryName}
                 </Badge>);
-        })) : (<p className="text-muted-foreground text-sm">{t("noCategories")}</p>)}
+        })) : (<p className={textRole.helperText}>{t("noCategories")}</p>)}
       </div>
     </div>);
 }

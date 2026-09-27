@@ -60,6 +60,9 @@ func (event ProgressEvent) Validate() error {
 			return err
 		}
 	}
+	if err := ValidateHostActionProgressEvent(event.MessageKey, event.Message, event.Metadata); err != nil {
+		return err
+	}
 	return nil
 }
 

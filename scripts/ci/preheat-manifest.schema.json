@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lunafox.cc/schemas/preheat-manifest-v1.json",
+  "title": "LunaFox preheat manifest v1",
+  "type": "object",
+  "required": ["schemaVersion", "kind", "release", "entries", "profileClosures", "manifestDigest"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "lunafox.preheat-manifest" },
+    "manifestDigest": { "$ref": "#/$defs/digest" },
+    "release": { "$ref": "#/$defs/release" },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/entry" }
+    },
+    "profileClosures": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "$ref": "#/$defs/profileClosure" }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "releaseTag": {
+      "type": "string",
+      "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*(?:/[a-z0-9][a-z0-9._-]*)+$"
+    },
+    "reference": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9.-]*(?::[0-9]+)?/[a-z0-9][a-z0-9._-]*(?:/[a-z0-9][a-z0-9._-]*)+@sha256:[a-f0-9]{64}$"
+    },
+    "identity": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*(?:/[a-z0-9][a-z0-9._-]*)+@sha256:[a-f0-9]{64}$"
+    },
+    "platform": {
+      "type": "string",
+      "enum": ["linux/amd64", "linux/arm64"]
+    },
+    "profile": {
+      "type": "string",
+      "enum": ["embedded", "external"]
+    },
+    "source": {
+      "type": "object",
+      "required": ["kind", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["compose-service", "engine-runtime"] },
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]*$" }
+      }
+    },
+    "release": {
+      "type": "object",
+      "required": ["composeDigest", "compositionDigest", "manifestDigest", "tag", "thirdPartyPolicyDigest"],
+      "additionalProperties": false,
+      "properties": {
+        "composeDigest": { "$ref": "#/$defs/digest" },
+        "compositionDigest": { "$ref": "#/$defs/digest" },
+        "manifestDigest": { "$ref": "#/$defs/digest" },
+        "tag": { "$ref": "#/$defs/releaseTag" },
+        "thirdPartyPolicyDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "required": ["candidates", "cloudflareCandidates", "digest", "identityReference", "platforms", "profiles", "repository", "sources", "trust"],
+      "additionalProperties": false,
+      "properties": {
+        "candidates": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/reference" } },
+        "cloudflareCandidates": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/reference" } },
+        "digest": { "$ref": "#/$defs/digest" },
+        "identityReference": { "$ref": "#/$defs/reference" },
+        "platforms": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/platform" } },
+        "profiles": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/profile" } },
+        "repository": { "$ref": "#/$defs/repository" },
+        "sources": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/source" } },
+        "trust": { "type": "string", "enum": ["first-party", "third-party"] }
+      }
+    },
+    "profileClosure": {
+      "type": "object",
+      "required": ["digest", "entries", "profile"],
+      "additionalProperties": false,
+      "properties": {
+        "digest": { "$ref": "#/$defs/digest" },
+        "entries": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/identity" } },
+        "profile": { "$ref": "#/$defs/profile" }
+      }
+    }
+  }
+}

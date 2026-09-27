@@ -115,6 +115,117 @@ func TestFullUpgradeOperationResponseAddsScopeWithoutChangingBasicShape(t *testi
 	}
 }
 
+func TestEnhancedFullUpgradeOperationResponseProjectsOnlyValidatedHostActivity(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	operation := &domain.Operation{
+		OperationID: "11111111-1111-4111-8111-111111111111", RequestID: "22222222-2222-4222-8222-222222222222", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("a", 64), ReleaseVersion: "1.1.0", CompatibilityRange: "*",
+		Status: domain.StatusRestarting, MigrationStatus: domain.MigrationStatusNotStarted, MigrationType: "none", CreatedAt: now,
+		UpdatedAt: now.Add(time.Minute), StageTimes: map[domain.Status]time.Time{domain.StatusRestarting: now}, ObservedDigests: map[string]string{},
+		HostActivity: &domain.HostActivity{
+			Action:          domain.HostActionUpdateResidentAgent,
+			StartedAt:       now.Add(10 * time.Second),
+			LastHeartbeatAt: now.Add(30 * time.Second),
+		},
+	}
+
+	basicBytes, err := json.Marshal(NewUpgradeOperationResponse(operation, "1.0.0"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fullBytes, err := json.Marshal(NewFullUpgradeOperationResponse(operation, "1.0.0"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, payload := range map[string][]byte{"basic": basicBytes, "full": fullBytes} {
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(payload, &fields); err != nil {
+			t.Fatal(err)
+		}
+		if _, found := fields["hostActivity"]; found {
+			t.Fatalf("%s response unexpectedly contains hostActivity", name)
+		}
+	}
+
+	enhanced, err := NewEnhancedFullUpgradeOperationResponse(operation, "1.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if enhanced.HostActivity == nil || enhanced.HostActivity.Action != string(domain.HostActionUpdateResidentAgent) || !enhanced.HostActivity.StartedAt.Equal(operation.HostActivity.StartedAt) || !enhanced.HostActivity.LastHeartbeatAt.Equal(operation.HostActivity.LastHeartbeatAt) {
+		t.Fatalf("enhanced host activity = %#v", enhanced.HostActivity)
+	}
+	enhancedBytes, err := json.Marshal(enhanced)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var enhancedFields map[string]json.RawMessage
+	if err := json.Unmarshal(enhancedBytes, &enhancedFields); err != nil {
+		t.Fatal(err)
+	}
+	if string(enhancedFields["hostActivity"]) == "null" || len(enhancedFields["hostActivity"]) == 0 {
+		t.Fatalf("enhanced response hostActivity = %s", enhancedFields["hostActivity"])
+	}
+
+	operation.HostActivity = nil
+	legacy, err := NewEnhancedFullUpgradeOperationResponse(operation, "1.0.0")
+	if err != nil || legacy.HostActivity != nil {
+		t.Fatalf("legacy activity projection = %#v, err=%v", legacy.HostActivity, err)
+	}
+	operation.Status = domain.StatusSucceeded
+	operation.HostActivity = &domain.HostActivity{
+		Action:          domain.HostActionUpdateResidentAgent,
+		StartedAt:       now.Add(10 * time.Second),
+		LastHeartbeatAt: now.Add(30 * time.Second),
+	}
+	terminal, err := NewEnhancedFullUpgradeOperationResponse(operation, "1.0.0")
+	if err != nil || terminal.HostActivity != nil {
+		t.Fatalf("terminal activity projection = %#v, err=%v", terminal.HostActivity, err)
+	}
+
+	operation.Status = domain.StatusRestarting
+	operation.HostActivity.Action = domain.HostActionPullImages
+	if _, err := NewEnhancedFullUpgradeOperationResponse(operation, "1.0.0"); err == nil {
+		t.Fatal("malformed host activity was projected")
+	}
+}
+
+func TestFullUpgradeOperationResponseProjectsBlockingAgentDiagnostics(t *testing.T) {
+	now := time.Now().UTC()
+	operation := &domain.Operation{
+		OperationID: "11111111-1111-4111-8111-111111111111", RequestID: "22222222-2222-4222-8222-222222222222", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("a", 64), ReleaseVersion: "1.1.0", CompatibilityRange: "*",
+		Status: domain.StatusAgentVerifying, MigrationStatus: domain.MigrationStatusNotStarted, MigrationType: "none", CreatedAt: now, UpdatedAt: now,
+		ExecutionMode: domain.ExecutionModeFull, WorkDisposition: domain.WorkDispositionCancelled,
+		AgentExpectations: []domain.AgentExpectation{
+			{AgentID: 8, DisplayNameSnapshot: "ready-agent", DesiredVersion: "1.1.0", ObservedVersion: "1.1.0", Connected: true, Healthy: true, ClaimReady: true},
+			{AgentID: 3, DisplayNameSnapshot: "blocked-agent", DesiredVersion: "1.1.0", ObservedVersion: "1.0.0", Connected: true, Healthy: true, ClaimReady: true, ReasonCode: domain.AgentReasonVersionMismatch, DiagnosticSource: domain.AgentDiagnosticSourceServer, Diagnostic: "Agent is running a different version"},
+			{AgentID: 5, Diagnostic: "historical message with token=redacted"},
+		},
+		AgentSummary: domain.AgentSummary{Expected: 3, Ready: 1, Unhealthy: 2}, StageTimes: map[domain.Status]time.Time{}, ObservedDigests: map[string]string{},
+	}
+	full := NewFullUpgradeOperationResponse(operation, "1.0.0")
+	if len(full.AgentDiagnostics) != 2 || full.AgentDiagnostics[0].AgentID != 3 || full.AgentDiagnostics[1].AgentID != 5 {
+		t.Fatalf("diagnostics=%#v", full.AgentDiagnostics)
+	}
+	if full.AgentDiagnostics[0].Name != "agents/3" || full.AgentDiagnostics[0].DisplayNameSnapshot != "blocked-agent" || full.AgentDiagnostics[0].Source != string(domain.AgentDiagnosticSourceServer) {
+		t.Fatalf("known diagnostic=%#v", full.AgentDiagnostics[0])
+	}
+	if full.AgentDiagnostics[1].ReasonCode != domain.AgentReasonLegacyUnknown || full.AgentDiagnostics[1].Source != string(domain.AgentDiagnosticSourceHistorical) || strings.Contains(strings.ToLower(full.AgentDiagnostics[1].Detail), "token") {
+		t.Fatalf("legacy diagnostic=%#v", full.AgentDiagnostics[1])
+	}
+	basicBytes, err := json.Marshal(NewUpgradeOperationResponse(operation, "1.0.0"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var basic map[string]json.RawMessage
+	if err := json.Unmarshal(basicBytes, &basic); err != nil {
+		t.Fatal(err)
+	}
+	if _, found := basic["agentDiagnostics"]; found {
+		t.Fatal("BASIC response unexpectedly contains agentDiagnostics")
+	}
+}
+
 func TestUpgradeLogsProjectsBoundedProgressEventsAndRedactsUnsafeDiagnostic(t *testing.T) {
 	base := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
 	operation := &domain.Operation{

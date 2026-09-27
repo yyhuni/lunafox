@@ -7,6 +7,8 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/yyhuni/lunafox/server/internal/modules/upgrade/domain"
 )
 
 const (
@@ -40,6 +42,9 @@ const (
 	ProgressDigestVerificationStarted = "digestVerificationStarted"
 	ProgressOverrideInstallation      = "overrideInstallationStarted"
 	ProgressHostExecutionCompleted    = "hostExecutionCompleted"
+	ProgressHostActionStarted         = domain.HostActionProgressStarted
+	ProgressHostActionCompleted       = domain.HostActionProgressCompleted
+	ProgressHostActionFailed          = domain.HostActionProgressFailed
 )
 
 var progressMessageCatalog = map[string]string{
@@ -54,6 +59,9 @@ var progressMessageCatalog = map[string]string{
 	ProgressDigestVerificationStarted: "Verifying service digests",
 	ProgressOverrideInstallation:      "Installing persistent upgrade configuration",
 	ProgressHostExecutionCompleted:    "Host upgrade execution completed",
+	ProgressHostActionStarted:         "Host upgrade action started",
+	ProgressHostActionCompleted:       "Host upgrade action completed",
+	ProgressHostActionFailed:          "Host upgrade action failed",
 }
 
 // CatalogProgressEvent creates an event from the fixed host catalog. Keeping
@@ -68,6 +76,45 @@ func CatalogProgressEvent(stage Stage, messageKey string, at time.Time) (Progres
 		at = time.Now().UTC()
 	}
 	event := ProgressEvent{Timestamp: at.UTC(), Stage: stage, MessageKey: messageKey, Message: message, Metadata: map[string]string{}}
+	if err := event.Validate(); err != nil {
+		return ProgressEvent{}, err
+	}
+	return event, nil
+}
+
+// CatalogHostActionProgressEvent creates a fixed host-action boundary event.
+// It accepts no Runner output or error text, only the shared closed catalogs.
+func CatalogHostActionProgressEvent(stage Stage, messageKey string, action domain.HostAction, reason domain.HostActionFailureReason, at time.Time) (ProgressEvent, error) {
+	if messageKey != ProgressHostActionStarted && messageKey != ProgressHostActionCompleted && messageKey != ProgressHostActionFailed {
+		return ProgressEvent{}, fmt.Errorf("unsupported host action progress message key %q", messageKey)
+	}
+	if !domain.IsKnownHostAction(action) {
+		return ProgressEvent{}, fmt.Errorf("unsupported host action %q", action)
+	}
+	if messageKey == ProgressHostActionFailed {
+		if !domain.IsKnownHostActionFailureReason(reason) {
+			return ProgressEvent{}, fmt.Errorf("unsupported host action failure reason %q", reason)
+		}
+	} else if reason != "" {
+		return ProgressEvent{}, fmt.Errorf("host action progress event reason is only valid for failures")
+	}
+	message, ok := progressMessageCatalog[messageKey]
+	if !ok {
+		return ProgressEvent{}, fmt.Errorf("unsupported host action progress message key %q", messageKey)
+	}
+	if at.IsZero() {
+		at = time.Now().UTC()
+	}
+	// Host-action events have required metadata, so they cannot pass the
+	// generic constructor's validation until the closed action/reason catalog
+	// has been attached.
+	event := ProgressEvent{
+		Timestamp: at.UTC(), Stage: stage, MessageKey: messageKey, Message: message,
+		Metadata: map[string]string{"action": string(action)},
+	}
+	if messageKey == ProgressHostActionFailed {
+		event.Metadata["reason"] = string(reason)
+	}
 	if err := event.Validate(); err != nil {
 		return ProgressEvent{}, err
 	}
@@ -100,6 +147,9 @@ func (event ProgressEvent) Validate() error {
 		if err := validateSafeProgressText(value, MaxProgressEventMetadataValue, "metadata value"); err != nil {
 			return err
 		}
+	}
+	if err := domain.ValidateHostActionProgressEvent(event.MessageKey, event.Message, event.Metadata); err != nil {
+		return err
 	}
 	return nil
 }

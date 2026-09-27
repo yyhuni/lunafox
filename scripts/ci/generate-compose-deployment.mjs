@@ -8,6 +8,16 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { validateManifest, parseRuntimeBlocks, parseEngineBlocks } from './verify-public-release.mjs';
 import { validateComposition } from './resolve-release-component-composition.mjs';
+import {
+  canonicalThirdPartyPolicyBytes,
+  policyForProfile,
+  readThirdPartyPolicy,
+  validatePolicyAgainstComposeTemplate,
+} from './third-party-image-policy.mjs';
+import {
+  buildPreheatManifest,
+  canonicalPreheatManifestBytes,
+} from './preheat-manifest.mjs';
 
 const defaultRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const releaseMetadataBaseURL = 'https://raw.githubusercontent.com/yyhuni/lunafox/release-channel';
@@ -110,6 +120,43 @@ function writeFiles(directory, files, modes = new Map()) {
  }
 }
 
+// Fixed historical deployment packages predate the release-bound preheater.
+// Keep their Compose bytes on the old lifecycle contract instead of leaving a
+// service that references assets those packages deliberately do not contain.
+// The transform is intentionally narrow: it removes only the reviewed
+// preheater service and the exact dependency edges added with it.
+function renderHistoricalComposeTemplate(template) {
+ const lines = template.split('\n');
+ const rendered = [];
+ let skippingPreheater = false;
+ for (let index = 0; index < lines.length; index += 1) {
+  const line = lines[index];
+  if (line === '  engine-preheater:') {
+   skippingPreheater = true;
+   continue;
+  }
+  if (skippingPreheater) {
+   // A service definition is exactly two spaces deep. Everything else belongs
+   // to the removed service and must not leak into the legacy document.
+   if (/^  [A-Za-z0-9][A-Za-z0-9_-]*:\s*$/.test(line)) {
+    skippingPreheater = false;
+   } else {
+    continue;
+   }
+  }
+  if (
+   line === '    depends_on:' &&
+   lines[index + 1] === '      engine-preheater:' &&
+   lines[index + 2] === '        condition: service_completed_successfully'
+  ) {
+   index += 2;
+   continue;
+  }
+  rendered.push(line);
+ }
+ return rendered.join('\n');
+}
+
 export function generate({ root = defaultRoot, manifest, tag, output, snapshot = '', runtimeComposition = '', releaseProfile = '', legacyBootstrap = null }) {
  if (!/^v\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?$/.test(tag ?? '')) throw Error('invalid release tag');
  const policy = JSON.parse(regularFile(root, 'scripts/ci/public-release-policy.json'));
@@ -117,6 +164,7 @@ export function generate({ root = defaultRoot, manifest, tag, output, snapshot =
  let runtime;
  let engines;
  let compositionBytes = null;
+ let normalizedComposition = null;
  if (legacyBootstrap) {
   // The exact alpha.114 bootstrap predates composition evidence. This private
   // call path is intentionally non-CLI and can only materialize its v1/full
@@ -131,7 +179,6 @@ export function generate({ root = defaultRoot, manifest, tag, output, snapshot =
   let composition;
   try { composition = JSON.parse(compositionBytes.toString('utf8')); }
   catch (error) { throw Error(`runtime composition asset is not valid JSON: ${error.message}`); }
-  let normalizedComposition;
   try { normalizedComposition = validateComposition(composition, { requireManifestBinding: true }); }
   catch (error) { throw Error(`runtime composition asset is invalid: ${error.message}`); }
   // The alpha.164 bridge omits this old-client-unknown binding from YAML, but
@@ -148,10 +195,18 @@ export function generate({ root = defaultRoot, manifest, tag, output, snapshot =
   runtime = parseRuntimeBlocks(raw);
   engines = parseEngineBlocks(raw, policy);
  }
- const template = regularFile(root, 'deploy/compose.template.yaml').toString();
+ const historicalCompose = Boolean(legacyBootstrap) || releaseProfile === 'alpha164-bridge' || tag === 'v0.0.1-alpha.57';
+ const templateSource = regularFile(root, 'deploy/compose.template.yaml').toString();
+ const template = historicalCompose ? renderHistoricalComposeTemplate(templateSource) : templateSource;
  const configuration = regularFile(root, 'deploy/.env.example');
+ const thirdPartyPolicyPath = path.join(root, 'scripts/ci/third-party-image-policy.json');
+ const thirdPartyPolicyBytes = regularFile(root, 'scripts/ci/third-party-image-policy.json');
+ const thirdPartyPolicy = readThirdPartyPolicy(thirdPartyPolicyPath);
+ if (!thirdPartyPolicyBytes.equals(canonicalThirdPartyPolicyBytes(thirdPartyPolicy))) {
+  throw Error('third-party image policy source bytes are not canonical');
+ }
+ validatePolicyAgainstComposeTemplate(thirdPartyPolicy, template);
  const common = new Map([
-  ['.env.example', configuration], ['.env', configuration],
   ['LICENSE', regularFile(root, 'LICENSE')],
   ['NOTICE-CLOSED-ARTIFACTS.md', regularFile(root, 'NOTICE-CLOSED-ARTIFACTS.md')],
   ['release.manifest.yaml', Buffer.from(raw)],
@@ -160,6 +215,7 @@ export function generate({ root = defaultRoot, manifest, tag, output, snapshot =
   ['resources/alloy/config.alloy', regularFile(root, 'resources/alloy/config.alloy')],
   ['resources/fingerprints/web_fingerprint_v4.json', regularFile(root, 'resources/fingerprints/web_fingerprint_v4.json')],
   ['resources/wordlists/manifest.json', regularFile(root, 'resources/wordlists/manifest.json')],
+  ['third-party-image-policy.json', thirdPartyPolicyBytes],
  ]);
  if (compositionBytes) common.set('runtime-composition.json', compositionBytes);
  const wordlists = JSON.parse(common.get('resources/wordlists/manifest.json'));
@@ -195,10 +251,34 @@ export function generate({ root = defaultRoot, manifest, tag, output, snapshot =
    selected.set('ENGINE_INVENTORY_HOST_PATH', './engine-inventory.yaml');
    selected.set('LUNAFOX_SHARED_DATA_VOLUME_BIND', 'lunafox_data:/opt/lunafox:rw');
    const compose = template.replace(/\$\{([A-Z_]+)(?::[^}]*)?\}/g, (expression, key) => selected.get(key) ?? expression);
+   for (const profile of ['embedded', 'external']) policyForProfile(thirdPartyPolicy, profile);
    for (const key of selected.keys()) {
     if (key !== 'RELEASE_REGISTRY' && compose.includes('${' + key)) throw Error(`unresolved release input: ${key}`);
    }
    const files = new Map(common);
+   if (!historicalCompose) {
+    const preheatManifest = buildPreheatManifest({
+     releaseManifestBytes: Buffer.from(raw),
+     releaseTag: tag,
+     composition: normalizedComposition,
+     composeBytes: Buffer.from(compose),
+     thirdPartyPolicyBytes,
+     thirdPartyPolicy,
+     runtimeImages: runtime,
+     enginePackages: engines,
+    });
+    const preheatManifestBytes = canonicalPreheatManifestBytes(preheatManifest);
+    const generatedConfiguration = Buffer.concat([
+     configuration,
+     Buffer.from(`\n# Release-bound image preheat identity. Generated with this package; do not edit.\nLUNAFOX_PREHEAT_MANIFEST_DIGEST=${preheatManifest.manifestDigest}\n`),
+    ]);
+    files.set('.env.example', generatedConfiguration);
+    files.set('.env', generatedConfiguration);
+    files.set('preheat-manifest.json', preheatManifestBytes);
+   } else {
+    files.set('.env.example', configuration);
+    files.set('.env', configuration);
+   }
    const modes = new Map();
    for (const [name, source] of lifecycleScripts) {
     if (files.has(name)) throw Error(`duplicate deployment file: ${name}`);

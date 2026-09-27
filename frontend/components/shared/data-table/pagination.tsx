@@ -124,7 +124,7 @@ export function SharedCompactPagination({
         </div>
       ) : null}
 
-      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3 sm:ml-auto">
         <div className="flex items-center gap-2">
           <Label htmlFor={rowsPerPageId} className={cn("whitespace-nowrap", textRole.metadataLabel)}>
             {t("rowsPerPage")}

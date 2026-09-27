@@ -28,6 +28,14 @@ the migration identity and checksum in the release manifest. A `down` file is
 for isolated test teardown only; production recovery uses a verified backup
 restore or an approved forward fix.
 
+Release tooling compares this manifest with the previous verified release tag
+before it writes `upgrade.databaseMigration`. The previous manifest must match
+every earlier entry by ID, slug, and checksum; the current release may add at
+most one contiguous entry. A missing historical boundary, checksum drift,
+numbering gap, or multiple new entries blocks Manifest generation. The release
+risk class remains an explicit reviewed `RELEASE_MIGRATION_TYPE` input and is
+never inferred from SQL text.
+
 ## Wordlist Resource Identity Cutover
 
 The frozen baseline stores the immutable upload basename in

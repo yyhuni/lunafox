@@ -153,7 +153,7 @@ export function ServerResourcePopover() {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label={tNav("serverResources")} />}>
+      <PopoverTrigger render={<Button type="button" variant="ghost" size="icon-sm" layout="compactAction" aria-label={tNav("serverResources")} />}>
         <IconCpu className="h-4 w-4" />
         <span className="sr-only">{tNav("serverResources")}</span>
       </PopoverTrigger>

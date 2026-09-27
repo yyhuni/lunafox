@@ -7,8 +7,13 @@ import type {
 	ReleaseManifestSummary,
 	ReleaseNotes,
   UpgradeAgentSummary,
+  UpgradeAgentDiagnostic,
+  UpgradeAgentDiagnosticReasonCode,
+  UpgradeAgentDiagnosticSource,
 	UpgradeDiagnostic,
 	UpgradeExecutionMode,
+  UpgradeHostAction,
+  UpgradeHostActivity,
 	UpgradeLogEntry,
   UpgradeLogLevel,
   UpgradeMigrationStatus,
@@ -52,8 +57,9 @@ const BASIC_UPGRADE_OPERATION_FIELDS = [
 ] as const
 const FULL_UPGRADE_OPERATION_FIELDS = [
   ...BASIC_UPGRADE_OPERATION_FIELDS,
-  "executionMode", "workDisposition", "planSummary", "confirmedDeploymentVersion",
+  "executionMode", "workDisposition", "planSummary", "confirmedDeploymentVersion", "agentDiagnostics",
 ] as const
+const ENHANCED_FULL_UPGRADE_OPERATION_FIELDS = [...FULL_UPGRADE_OPERATION_FIELDS, "hostActivity"] as const
 const MAX_UPGRADE_LOG_ENTRIES = 32
 const MAX_UPGRADE_LOG_MESSAGE_LENGTH = 512
 const MAX_UPGRADE_LOG_STAGE_LENGTH = 64
@@ -62,6 +68,21 @@ const MAX_UPGRADE_LOG_METADATA_ENTRIES = 8
 const MAX_UPGRADE_LOG_METADATA_KEY_LENGTH = 64
 const MAX_UPGRADE_LOG_METADATA_VALUE_LENGTH = 128
 const MAX_RELEASE_NOTES_BYTES = 64 * 1024
+const MAX_AGENT_DIAGNOSTICS = 256
+const MAX_AGENT_DETAIL_LENGTH = 512
+const MAX_AGENT_DISPLAY_NAME_LENGTH = 100
+const AGENT_DIAGNOSTIC_SOURCES = new Set<UpgradeAgentDiagnosticSource>(["agent_heartbeat", "server_observation", "historical"])
+const AGENT_DIAGNOSTIC_REASON_CODES = new Set<UpgradeAgentDiagnosticReasonCode>([
+  "not_registered", "heartbeat_missing_or_stale", "paused", "health_reported",
+  "health_unhealthy", "claim_not_ready", "version_mismatch", "legacy_unknown",
+])
+const HOST_ACTIONS = new Set<UpgradeHostAction>([
+  "preflight", "pull_images", "update_services", "database_migration", "update_resident_agent",
+  "wait_for_service_health", "verify_runtime_images", "verify_frontend_container", "verify_frontend_edge",
+])
+const TERMINAL_UPGRADE_OPERATION_STATUSES = new Set<UpgradeOperationStatus>([
+  "succeeded", "failed", "needs_recovery", "needs_attention",
+])
 
 export class UpgradeApiError extends Error {
   readonly code: string
@@ -106,7 +127,7 @@ export class VersionService {
 	static async getUpgradeOperationFull(operationId: string): Promise<UpgradeOperationFull> {
 		assertCanonicalUUID(operationId, "operationId")
 		const response = await api.get<unknown>(`${UPGRADE_OPERATIONS_PATH}/${encodeURIComponent(operationId)}`, {
-			params: { view: FULL_UPGRADE_VIEW },
+			params: { view: FULL_UPGRADE_VIEW, includeHostActivity: "true" },
 		})
 		return parseUpgradeOperationFull(response.data)
 	}
@@ -125,7 +146,7 @@ export class VersionService {
 	static async getActiveUpgradeOperationFull(): Promise<UpgradeOperationFull | null> {
 		try {
 			const response = await api.get<unknown>(ACTIVE_UPGRADE_OPERATION_PATH, {
-				params: { view: FULL_UPGRADE_VIEW },
+				params: { view: FULL_UPGRADE_VIEW, includeHostActivity: "true" },
 			})
 			return parseUpgradeOperationFull(response.data)
 		} catch (error) {
@@ -198,7 +219,8 @@ async function parseManifestSummary(value: unknown): Promise<ReleaseManifestSumm
   const engineDigests = record.engineDigests.map((digest, index) => assertSha256Digest(digest, `candidate.engineDigests[${index}]`))
   const releaseVersion = requireNonEmpty(record.releaseVersion, "candidate.releaseVersion")
   const releaseNotes = record.releaseNotes === undefined ? undefined : await parseReleaseNotes(record.releaseNotes)
-  if (!releaseNotes && releaseVersion !== "0.0.0-dev") throw invalidResponse("candidate.releaseNotes")
+  // The Server owns manifest compatibility validation; omitted optional notes
+  // map to the existing unavailable state rather than invalidating the candidate.
   return {
     name: requireNonEmpty(record.name, "candidate.name"),
     manifestId: requireNonEmpty(record.manifestId, "candidate.manifestId"),
@@ -278,7 +300,7 @@ function parseUpgradeOperation(value: unknown): UpgradeOperation {
 
 function parseUpgradeOperationFull(value: unknown): UpgradeOperationFull {
   const record = requireObject(value, "upgradeOperation")
-  assertKnownFields(record, FULL_UPGRADE_OPERATION_FIELDS, "upgradeOperation")
+  assertKnownFields(record, ENHANCED_FULL_UPGRADE_OPERATION_FIELDS, "upgradeOperation")
   const operation = parseUpgradeOperationFields(record)
 	const executionMode = requireEnum(record.executionMode, EXECUTION_MODES, "upgradeOperation.executionMode")
 	const workDisposition = requireEnum(record.workDisposition, WORK_DISPOSITIONS, "upgradeOperation.workDisposition")
@@ -287,6 +309,8 @@ function parseUpgradeOperationFull(value: unknown): UpgradeOperationFull {
 		throw invalidResponse("upgradeOperation.workDisposition")
 	}
 	const planSummary = parseUpgradePlanSummary(record.planSummary, isLegacyFull)
+	const agentDiagnostics = parseAgentDiagnostics(record.agentDiagnostics)
+	const hostActivity = parseHostActivity(record.hostActivity, operation, executionMode)
 
   if (executionMode === "frontend_only") {
     if (workDisposition !== "not_required") throw invalidResponse("upgradeOperation.workDisposition")
@@ -310,9 +334,94 @@ function parseUpgradeOperationFull(value: unknown): UpgradeOperationFull {
     ...operation,
     executionMode,
     workDisposition,
-    planSummary,
+		planSummary,
+		agentDiagnostics,
+		...(hostActivity === undefined ? {} : { hostActivity }),
 		confirmedDeploymentVersion: requireBoundedString(record.confirmedDeploymentVersion, "upgradeOperation.confirmedDeploymentVersion", 64, executionMode === "full"),
   }
+}
+
+function parseHostActivity(value: unknown, operation: UpgradeOperation, executionMode: UpgradeExecutionMode): UpgradeHostActivity | null | undefined {
+  // An older Server ignores the opt-in parameter and returns the historical
+  // FULL representation. Missing is capability absence, not a malformed fact.
+  if (value === undefined) return undefined
+  if (value === null) return null
+  const record = requireObject(value, "upgradeOperation.hostActivity")
+  assertKnownFields(record, ["action", "startedAt", "lastHeartbeatAt"], "upgradeOperation.hostActivity")
+  if (TERMINAL_UPGRADE_OPERATION_STATUSES.has(operation.status)) throw invalidResponse("upgradeOperation.hostActivity")
+  const action = requireEnum(record.action, HOST_ACTIONS, "upgradeOperation.hostActivity.action")
+  if (!hostActionAllowedForOperation(action, operation.status, executionMode)) {
+    throw invalidResponse("upgradeOperation.hostActivity.action")
+  }
+  const startedAt = requireTimestamp(record.startedAt, "upgradeOperation.hostActivity.startedAt")
+  const lastHeartbeatAt = requireTimestamp(record.lastHeartbeatAt, "upgradeOperation.hostActivity.lastHeartbeatAt")
+  const startedAtMillis = Date.parse(startedAt)
+  const lastHeartbeatAtMillis = Date.parse(lastHeartbeatAt)
+  if (
+    startedAtMillis > lastHeartbeatAtMillis
+    || startedAtMillis < Date.parse(operation.createdAt)
+    || lastHeartbeatAtMillis > Date.parse(operation.updatedAt)
+  ) {
+    throw invalidResponse("upgradeOperation.hostActivity")
+  }
+  return { action, startedAt, lastHeartbeatAt }
+}
+
+function hostActionAllowedForOperation(action: UpgradeHostAction, status: UpgradeOperationStatus, mode: UpgradeExecutionMode): boolean {
+  switch (action) {
+    case "preflight":
+      return status === "preflight"
+    case "pull_images":
+    case "update_services":
+      return status === "updating"
+    case "database_migration":
+      return mode === "full" && status === "migrating"
+    case "update_resident_agent":
+      return mode === "full" && status === "restarting"
+    case "wait_for_service_health":
+      return mode === "frontend_only"
+        ? status === "restarting" || status === "verifying"
+        : status === "restarting" || status === "agent_verifying" || status === "verifying"
+    case "verify_runtime_images":
+      return mode === "full" && status === "verifying"
+    case "verify_frontend_container":
+    case "verify_frontend_edge":
+      return mode === "frontend_only" && status === "verifying"
+  }
+}
+
+function parseAgentDiagnostics(value: unknown): UpgradeAgentDiagnostic[] {
+  if (!Array.isArray(value) || value.length > MAX_AGENT_DIAGNOSTICS) throw invalidResponse("upgradeOperation.agentDiagnostics")
+  return value.map((item, index) => {
+    const path = `upgradeOperation.agentDiagnostics[${index}]`
+    const record = requireObject(item, path)
+    assertKnownFields(record, ["agentId", "name", "displayNameSnapshot", "reasonCode", "detail", "source"], path)
+    const agentId = requireSafeInteger(record.agentId, `${path}.agentId`, 1)
+    const name = requireString(record.name, `${path}.name`)
+    if (!/^agents\/[1-9][0-9]*$/.test(name) || name !== `agents/${agentId}`) throw invalidResponse(`${path}.name`)
+    const displayNameSnapshot = record.displayNameSnapshot === undefined || record.displayNameSnapshot === null
+      ? undefined
+      : requireBoundedAgentText(record.displayNameSnapshot, `${path}.displayNameSnapshot`, MAX_AGENT_DISPLAY_NAME_LENGTH)
+    const reasonCode = requireEnum(record.reasonCode, AGENT_DIAGNOSTIC_REASON_CODES, `${path}.reasonCode`)
+    const detail = requireBoundedAgentDiagnostic(record.detail, `${path}.detail`)
+    const source = requireEnum(record.source, AGENT_DIAGNOSTIC_SOURCES, `${path}.source`)
+    return { agentId, name, ...(displayNameSnapshot ? { displayNameSnapshot } : {}), reasonCode, detail, source }
+  })
+}
+
+function requireBoundedAgentDiagnostic(value: unknown, path: string): string {
+  const result = requireBoundedAgentText(value, path, MAX_AGENT_DETAIL_LENGTH)
+  const lower = result.toLowerCase()
+  if (["authorization", "bearer ", "jwt", "password", "passwd", "secret", "token", "private key"].some((marker) => lower.includes(marker))) {
+    throw invalidResponse(path)
+  }
+  return result
+}
+
+function requireBoundedAgentText(value: unknown, path: string, maximumLength: number): string {
+  const result = requireString(value, path)
+  if (!result.trim() || Array.from(result).length > maximumLength || /[\u0000-\u001f\u007f]/.test(result)) throw invalidResponse(path)
+  return result
 }
 
 function parseUpgradeOperationFields(record: Record<string, unknown>): UpgradeOperation {

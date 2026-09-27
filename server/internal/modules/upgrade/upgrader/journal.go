@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/yyhuni/lunafox/server/internal/modules/upgrade/domain"
 )
 
 var (
@@ -99,6 +101,15 @@ func newJournalStore(deploymentRoot string, manifestCache bool) (*JournalStore, 
 		if err := ensurePrivateDirectory(filepath.Join(root, CompositionDirectory)); err != nil {
 			return nil, err
 		}
+		if err := ensurePrivateDirectory(filepath.Join(root, DeploymentAssetDirectory)); err != nil {
+			return nil, err
+		}
+		if err := ensurePrivateDirectory(filepath.Join(root, PreheatManifestDirectory)); err != nil {
+			return nil, err
+		}
+		if err := ensurePrivateDirectory(filepath.Join(root, DeploymentSnapshotDirectory)); err != nil {
+			return nil, err
+		}
 	}
 	return &JournalStore{deploymentRoot: abs, root: root, manifestCache: manifestCache}, nil
 }
@@ -162,6 +173,55 @@ func (store *JournalStore) RuntimeCompositionPath(digest string) (string, error)
 		return "", err
 	}
 	return filepath.Join(store.root, CompositionDirectory, strings.TrimPrefix(digest, "sha256:")+".json"), nil
+}
+
+// DeploymentAssetsPath resolves the private directory containing the target
+// release's immutable Compose and third-party policy bytes. The directory name
+// is derived only from the verified release manifest digest.
+func (store *JournalStore) DeploymentAssetsPath(releaseDigest string) (string, error) {
+	if store == nil {
+		return "", fmt.Errorf("journal store is nil")
+	}
+	if !store.manifestCache {
+		return "", fmt.Errorf("deployment asset cache is unavailable")
+	}
+	if err := validateDigest(releaseDigest); err != nil {
+		return "", err
+	}
+	return filepath.Join(store.root, DeploymentAssetDirectory, strings.TrimPrefix(releaseDigest, "sha256:")), nil
+}
+
+// PreheatManifestPath resolves the immutable preheat manifest associated with
+// one release manifest digest. The preheat manifest has its own core digest,
+// but release identity is the lookup key because the host receives only the
+// release digest over the upgrade socket.
+func (store *JournalStore) PreheatManifestPath(releaseDigest string) (string, error) {
+	if store == nil {
+		return "", fmt.Errorf("journal store is nil")
+	}
+	if !store.manifestCache {
+		return "", fmt.Errorf("preheat manifest cache is unavailable")
+	}
+	if err := validateDigest(releaseDigest); err != nil {
+		return "", err
+	}
+	return filepath.Join(store.root, PreheatManifestDirectory, strings.TrimPrefix(releaseDigest, "sha256:")+".json"), nil
+}
+
+// DeploymentSnapshotPath resolves the private, digest-addressed staging
+// directory for one public release. It is deliberately not caller-selectable:
+// the upgrader receives only a verified release digest over its socket.
+func (store *JournalStore) DeploymentSnapshotPath(releaseDigest string) (string, error) {
+	if store == nil {
+		return "", fmt.Errorf("journal store is nil")
+	}
+	if !store.manifestCache {
+		return "", fmt.Errorf("deployment snapshot cache is unavailable")
+	}
+	if err := validateDigest(releaseDigest); err != nil {
+		return "", err
+	}
+	return filepath.Join(store.root, DeploymentSnapshotDirectory, strings.TrimPrefix(releaseDigest, "sha256:")), nil
 }
 
 // SetEventSink installs a best-effort observation callback. The callback is
@@ -277,6 +337,8 @@ func journalEventFor(journal Journal) JournalEvent {
 		MigrationChecksum: journal.MigrationChecksum,
 		MigrationStatus:   journal.MigrationStatus,
 		ProgressEvents:    cloneProgressEvents(journal.ProgressEvents),
+		ExecutionMode:     journal.ExecutionMode,
+		HostActivity:      domain.CloneHostActivity(journal.HostActivity),
 	}
 }
 
@@ -318,6 +380,9 @@ func (store *JournalStore) Checkpoint(operationID, manifestDigest string, stage 
 	current.StageUpdatedAt = now
 	current.Diagnostic = diagnostic
 	current.ExitCode = exitCode
+	// A checkpoint is stronger lifecycle evidence than any in-flight wait. It
+	// must retire a stale snapshot even when the caller repeats the same stage.
+	current.HostActivity = nil
 	if IsTerminal(stage) {
 		current.RepairStage = repairStageFor(previousStage)
 		current.CompletedAt = &now
@@ -401,6 +466,115 @@ func (store *JournalStore) AppendProgress(operationID, manifestDigest string, ev
 // executor; both names share the same validation and idempotency boundary.
 func (store *JournalStore) AppendProgressEvent(operationID, manifestDigest string, event ProgressEvent) (Journal, error) {
 	return store.AppendProgress(operationID, manifestDigest, event)
+}
+
+// SetHostActivity writes one current host wait snapshot without changing the
+// lifecycle checkpoint. Replayed or delayed heartbeats can never overwrite a
+// newer action, and callers may safely treat any error as non-fatal telemetry.
+func (store *JournalStore) SetHostActivity(operationID, manifestDigest string, activity domain.HostActivity) (Journal, error) {
+	if store == nil {
+		return Journal{}, fmt.Errorf("journal store is nil")
+	}
+	if err := validateOperationID(operationID); err != nil {
+		return Journal{}, err
+	}
+	if err := validateDigest(manifestDigest); err != nil {
+		return Journal{}, err
+	}
+	store.writeMu.Lock()
+	defer store.writeMu.Unlock()
+	current, err := store.LoadCurrent()
+	if err != nil {
+		return Journal{}, err
+	}
+	if current.OperationID != operationID || current.ManifestDigest != manifestDigest {
+		return Journal{}, ErrReplayDigestMismatch
+	}
+	if IsTerminal(current.Stage) {
+		return Journal{}, fmt.Errorf("terminal journal cannot accept host activity")
+	}
+	observedAt := current.UpdatedAt
+	if activity.LastHeartbeatAt.After(observedAt) {
+		observedAt = activity.LastHeartbeatAt.UTC()
+	}
+	if err := domain.ValidateHostActivity(&activity, domain.Status(current.Stage), domain.ExecutionMode(current.ExecutionMode), current.StartedAt, observedAt, time.Now().UTC()); err != nil {
+		return Journal{}, err
+	}
+	if !current.StageUpdatedAt.IsZero() && activity.StartedAt.Before(current.StageUpdatedAt) {
+		// A checkpoint is stronger than a delayed best-effort write. Some actions
+		// share adjacent stages, so ownership validation alone cannot prove that a
+		// heartbeat belongs to the current checkpoint.
+		return current, nil
+	}
+	if existing := current.HostActivity; existing != nil {
+		if existing.StartedAt.After(activity.StartedAt) {
+			return current, nil
+		}
+		if existing.StartedAt.Equal(activity.StartedAt) {
+			if existing.Action != activity.Action {
+				return Journal{}, fmt.Errorf("host activity action conflicts with an active snapshot")
+			}
+			if !activity.LastHeartbeatAt.After(existing.LastHeartbeatAt) {
+				return current, nil
+			}
+		}
+	}
+	if current.StageUpdatedAt.IsZero() {
+		// Legacy journals had only UpdatedAt. Freeze that existing checkpoint
+		// before a new observation advances UpdatedAt for the first time.
+		current.StageUpdatedAt = current.UpdatedAt
+	}
+	current.HostActivity = domain.CloneHostActivity(&activity)
+	if current.UpdatedAt.Before(activity.LastHeartbeatAt) {
+		current.UpdatedAt = activity.LastHeartbeatAt.UTC()
+	}
+	if err := store.saveLocked(current); err != nil {
+		return Journal{}, err
+	}
+	store.publish(journalEventFor(current))
+	return current, nil
+}
+
+// ClearHostActivity retires one action snapshot after its call returns. The
+// expected snapshot prevents a delayed cleanup from clearing a newer action.
+func (store *JournalStore) ClearHostActivity(operationID, manifestDigest string, expected *domain.HostActivity) (Journal, error) {
+	if store == nil {
+		return Journal{}, fmt.Errorf("journal store is nil")
+	}
+	if err := validateOperationID(operationID); err != nil {
+		return Journal{}, err
+	}
+	if err := validateDigest(manifestDigest); err != nil {
+		return Journal{}, err
+	}
+	store.writeMu.Lock()
+	defer store.writeMu.Unlock()
+	current, err := store.LoadCurrent()
+	if err != nil {
+		return Journal{}, err
+	}
+	if current.OperationID != operationID || current.ManifestDigest != manifestDigest {
+		return Journal{}, ErrReplayDigestMismatch
+	}
+	if current.HostActivity == nil {
+		return current, nil
+	}
+	if expected != nil && (current.HostActivity.Action != expected.Action || !current.HostActivity.StartedAt.Equal(expected.StartedAt)) {
+		return current, nil
+	}
+	if current.StageUpdatedAt.IsZero() {
+		current.StageUpdatedAt = current.UpdatedAt
+	}
+	current.HostActivity = nil
+	now := time.Now().UTC()
+	if now.After(current.UpdatedAt) {
+		current.UpdatedAt = now
+	}
+	if err := store.saveLocked(current); err != nil {
+		return Journal{}, err
+	}
+	store.publish(journalEventFor(current))
+	return current, nil
 }
 
 // SetMigration records the reviewed migration identity and its durable state
@@ -590,6 +764,7 @@ func (store *JournalStore) ResetForRepair(operationID, manifestDigest string) (J
 	base.CompletedAt = nil
 	base.ExitCode = nil
 	base.Diagnostic = ""
+	base.HostActivity = nil
 	if err := store.saveLocked(base); err != nil {
 		store.writeMu.Unlock()
 		return Journal{}, err
@@ -697,6 +872,8 @@ func (store *JournalStore) SaveReceipt(receipt Receipt) error {
 	event.MigrationChecksum = current.MigrationChecksum
 	event.MigrationStatus = current.MigrationStatus
 	event.ProgressEvents = cloneProgressEvents(current.ProgressEvents)
+	event.ExecutionMode = current.ExecutionMode
+	event.HostActivity = domain.CloneHostActivity(current.HostActivity)
 	store.publish(event)
 	store.writeMu.Unlock()
 	return nil
@@ -860,6 +1037,7 @@ func journalsSnapshotEqual(left, right Journal) bool {
 		left.MigrationID != right.MigrationID ||
 		left.MigrationChecksum != right.MigrationChecksum ||
 		left.MigrationStatus != right.MigrationStatus ||
+		!domain.EqualHostActivity(left.HostActivity, right.HostActivity) ||
 		!left.StageUpdatedAt.Equal(right.StageUpdatedAt) ||
 		left.ExitCode == nil != (right.ExitCode == nil) ||
 		left.Diagnostic != right.Diagnostic ||
@@ -998,7 +1176,13 @@ func (store *JournalStore) validatePrivateLayout() error {
 		filepath.Join(store.root, PlanDirectory),
 	}
 	if store.manifestCache {
-		paths = append(paths, filepath.Join(store.root, ManifestDirectory), filepath.Join(store.root, CompositionDirectory))
+			paths = append(paths,
+				filepath.Join(store.root, ManifestDirectory),
+				filepath.Join(store.root, CompositionDirectory),
+				filepath.Join(store.root, DeploymentAssetDirectory),
+				filepath.Join(store.root, PreheatManifestDirectory),
+			filepath.Join(store.root, DeploymentSnapshotDirectory),
+		)
 	}
 	for _, path := range paths {
 		if err := validatePrivateDirectoryMode(path); err != nil {
@@ -1041,20 +1225,23 @@ func atomicWrite(path string, data []byte, mode os.FileMode) error {
 	temporary, err := os.OpenFile(filepath.Join(directory, "."+base+".tmp"), os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
-			// A leftover temporary file is not safe to reuse. Remove only this
-			// exact bounded path and retry with a unique temporary name below.
+			// A leftover temporary file is not safe to reuse. Fall back to a
+			// unique name without touching the pre-existing path.
 			temporary, err = os.CreateTemp(directory, "."+base+".tmp-")
 			if err != nil {
 				return err
 			}
-			if chmodErr := temporary.Chmod(mode); chmodErr != nil {
-				_ = temporary.Close()
-				_ = os.Remove(temporary.Name())
-				return chmodErr
-			}
 		} else {
 			return err
 		}
+	}
+	// OpenFile applies the process umask before returning. Set the requested
+	// mode on the temporary handle so the renamed public override remains
+	// readable by the deployment user while private files stay restrictive.
+	if err := temporary.Chmod(mode.Perm()); err != nil {
+		_ = temporary.Close()
+		_ = os.Remove(temporary.Name())
+		return err
 	}
 	temporaryName := temporary.Name()
 	removeTemporary := true
@@ -1078,9 +1265,9 @@ func atomicWrite(path string, data []byte, mode os.FileMode) error {
 		return err
 	}
 	removeTemporary = false
-	// The temporary file was created with the requested mode. Avoid chmod'ing
-	// the destination after rename: a hostile replacement between those two
-	// syscalls could make chmod follow a symlink outside the private directory.
+	// Avoid chmod'ing the destination after rename: a hostile replacement between
+	// those two syscalls could make chmod follow a symlink outside the private
+	// directory.
 	return syncDirectory(directory)
 }
 

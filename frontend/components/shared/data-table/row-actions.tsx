@@ -52,6 +52,7 @@ export function DenseRowActionButton({
             type="button"
             variant="ghost"
             size="icon-sm"
+            layout="rowAction"
             // Keep tooltip-open colors aligned with hover to avoid a second transition.
             className="data-[popup-open]:bg-primary/10 data-[popup-open]:text-primary dark:data-[popup-open]:bg-primary/20"
             aria-label={label}

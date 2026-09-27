@@ -175,6 +175,28 @@ func TestEncodeDirectoryPreservesExactValuesAndFieldOrder(t *testing.T) {
 	}
 }
 
+func TestEncodeDirectoryAcceptsExplicitEmptyContentType(t *testing.T) {
+	item := Directory{
+		URL:           "https://example.com/no-content-type",
+		Status:        204,
+		ContentLength: 0,
+		ContentType:   "",
+		Duration:      0,
+	}
+	encoded, err := EncodeDirectory(item)
+	if err != nil {
+		t.Fatalf("EncodeDirectory() rejected an explicit empty contentType: %v", err)
+	}
+	want := `{"url":"https://example.com/no-content-type","status":204,"contentLength":0,"contentType":"","duration":0}`
+	if encoded != want {
+		t.Fatalf("EncodeDirectory() = %q, want %q", encoded, want)
+	}
+	decoded, err := DecodeDirectoryItems([]string{encoded})
+	if err != nil || len(decoded) != 1 || decoded[0] != item {
+		t.Fatalf("empty contentType did not round-trip exactly: %#v, %v", decoded, err)
+	}
+}
+
 func TestValidateDirectoryRejectsUntypedAndInvalidItems(t *testing.T) {
 	if err := Validate(ResultKindAssetDirectory, map[string]any{"url": "https://example.com"}); err == nil {
 		t.Fatal("untyped Directory item must be rejected")

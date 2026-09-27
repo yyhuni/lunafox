@@ -33,6 +33,9 @@ type HostUpgradeEvent struct {
 	// stalled-stage watchdog or create a synthetic StageTimes entry.
 	StageUpdatedAt time.Time
 	ProgressEvents []domain.ProgressEvent
+	// HostActivity is a host-journal current snapshot, never an Agent or Server
+	// verification inference. Its heartbeat may refresh UpdatedAt only.
+	HostActivity *domain.HostActivity
 	// FromJournal marks an observation read from the deployment-scoped,
 	// schema-validated checkpoint. A journal may legitimately skip transient
 	// stages while the Server was down; live/untrusted adapters must leave this
@@ -92,6 +95,9 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 	status, migrationStatus, err := mapHostStage(event.Stage, event.Migration)
 	if err != nil {
 		return nil, err
+	}
+	if err := domain.ValidateHostActivity(event.HostActivity, status, operation.EffectiveExecutionMode(), operation.CreatedAt, event.UpdatedAt, service.now().UTC()); err != nil {
+		return nil, fmt.Errorf("invalid host activity: %w", err)
 	}
 	if err := validateFrontendOnlyJournalStage(operation, event.FromJournal, status); err != nil {
 		return nil, err
@@ -173,7 +179,12 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 		}
 	}
 	checkpointAdvanced := !eventStageAt.IsZero() && (stageAt.IsZero() || eventStageAt.After(stageAt))
-	if status == operation.Status && !checkpointAdvanced && !migrationChanged && !diagnosticChanged && !observedChanged && !progressChanged {
+	candidateHostActivity := domain.CloneHostActivity(event.HostActivity)
+	if status.IsTerminal() {
+		candidateHostActivity = nil
+	}
+	hostActivityChanged := !domain.EqualHostActivity(operation.HostActivity, candidateHostActivity)
+	if status == operation.Status && !checkpointAdvanced && !migrationChanged && !diagnosticChanged && !observedChanged && !progressChanged && !hostActivityChanged {
 		// The recovery job reads the same durable checkpoint on every tick. A
 		// replay must not turn that read into synthetic stage progress, otherwise
 		// the watchdog could never classify a genuinely stalled operation.
@@ -206,6 +217,7 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 		}
 	}
 	operation.ProgressEvents = mergedProgress
+	operation.HostActivity = candidateHostActivity
 	operation.UpdatedAt = now
 	if checkpointAdvanced || status != previousStatus {
 		if operation.StageTimes == nil {
@@ -476,6 +488,7 @@ func (service *Service) ReconcileJournalUnavailable(ctx context.Context, diagnos
 	now := service.now().UTC()
 	operation.Status = status
 	operation.Diagnostic = sanitizeUpgradeDiagnostic(diagnostic)
+	operation.HostActivity = nil
 	operation.UpdatedAt = now
 	operation.CompletedAt = &now
 	if operation.StageTimes == nil {
@@ -511,6 +524,7 @@ func (service *Service) ReconcileStalledOperation(ctx context.Context, timeout t
 	now := service.now().UTC()
 	operation.Status = status
 	operation.Diagnostic = sanitizeUpgradeDiagnostic(fmt.Sprintf("upgrade made no progress after the last confirmed %s stage; host or verification requires operator attention", previous))
+	operation.HostActivity = nil
 	operation.UpdatedAt = now
 	operation.CompletedAt = &now
 	if operation.StageTimes == nil {

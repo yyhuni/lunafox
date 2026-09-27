@@ -42,8 +42,14 @@ func (service *SubfinderAPIKeySettingsService) UpdateSettings(providers catalogd
 		return nil, err
 	}
 
-	for providerName, providerConfig := range providers {
-		settings.Providers[providerName] = providerConfig
+	for providerName, requestedConfig := range providers {
+		currentConfig := settings.Providers[providerName]
+		mergedConfig := mergeSubfinderProviderConfig(currentConfig, requestedConfig)
+		if err := validateSubfinderProviderConfig(providerName, mergedConfig); err != nil {
+			return nil, err
+		}
+		mergedConfig.Status = statusAfterSubfinderProviderUpdate(currentConfig, mergedConfig)
+		settings.Providers[providerName] = mergedConfig
 	}
 	settings.ID = 1
 
@@ -74,11 +80,47 @@ func validateSubfinderProviderNames(providers catalogdomain.SubfinderProviderCon
 		if _, ok := catalogdomain.LookupSubfinderProviderDefinition(providerName); !ok {
 			return fmt.Errorf("%w: %s", ErrUnsupportedSubfinderProvider, providerName)
 		}
-		if err := validateSubfinderProviderConfig(providerName, providers[providerName]); err != nil {
-			return err
-		}
 	}
 	return nil
+}
+
+// mergeSubfinderProviderConfig applies field-level presence semantics: an omitted
+// value keeps the stored credential, while an explicit empty value clears it.
+func mergeSubfinderProviderConfig(
+	current catalogdomain.SubfinderProviderConfig,
+	requested catalogdomain.SubfinderProviderConfig,
+) catalogdomain.SubfinderProviderConfig {
+	values := make(map[string]string, len(current.Values)+len(requested.Values))
+	for fieldName, value := range current.Values {
+		values[fieldName] = value
+	}
+	for fieldName, value := range requested.Values {
+		values[fieldName] = value
+	}
+
+	return catalogdomain.SubfinderProviderConfig{
+		Enabled: requested.Enabled,
+		Values:  values,
+		// The client cannot select status; migration statuses are carried forward
+		// until a valid enabled configuration replaces them.
+		Status: current.Status,
+	}
+}
+
+func statusAfterSubfinderProviderUpdate(
+	current catalogdomain.SubfinderProviderConfig,
+	merged catalogdomain.SubfinderProviderConfig,
+) string {
+	if current.Status == catalogdomain.SubfinderProviderStatusUnsupported {
+		return current.Status
+	}
+	if current.Status == catalogdomain.SubfinderProviderStatusRequiresReconfiguration && !merged.Enabled {
+		return current.Status
+	}
+	if merged.Enabled {
+		return catalogdomain.SubfinderProviderStatusConfigured
+	}
+	return catalogdomain.SubfinderProviderStatusUnconfigured
 }
 
 func validateSubfinderProviderConfig(providerName string, providerConfig catalogdomain.SubfinderProviderConfig) error {

@@ -70,6 +70,8 @@ describe("button contract", () => {
     expect(source).toContain("between")
     expect(source).toContain("tableHeader")
     expect(source).toContain("tableHeaderInline")
+    expect(source).toContain("compactAction")
+    expect(source).toContain("rowAction")
     expect(source).toContain("data-[popup-open]:bg-primary/10")
     expect(source).toContain("data-[popup-open]:text-primary")
     expect(source).toContain("textCellLink")

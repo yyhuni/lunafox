@@ -3,10 +3,12 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 
 const source = readFileSync(path.resolve(process.cwd(), "components/shared/data-table/row-actions.tsx"), "utf8")
+const globals = readFileSync(path.resolve(process.cwd(), "app/globals.css"), "utf8")
 
 describe("row-actions contract", () => {
   it("keeps shared tooltip ownership and dense action layout in the helper layer", () => {
     expect(source).toContain("export function DenseRowActionOwner")
+    expect(source).toContain('layout="rowAction"')
     expect(source).toContain("<TooltipProvider>")
     expect(source).not.toContain("TooltipProvider delay=")
     expect(source).not.toContain("TooltipProvider delayDuration=")
@@ -33,5 +35,13 @@ describe("row-actions contract", () => {
     expect(source).toContain(
       "data-[popup-open]:bg-primary/10 data-[popup-open]:text-primary dark:data-[popup-open]:bg-primary/20"
     )
+  })
+
+  it("keeps dense row action controls compact on fine pointers and touch-safe on coarse pointers", () => {
+    expect(globals).toContain("button.dense-row-action-control")
+    expect(globals).toContain("width: 1.75rem")
+    expect(globals).toContain("height: 1.75rem")
+    expect(globals).toContain("width: 2rem")
+    expect(globals).toContain("height: 2rem")
   })
 })

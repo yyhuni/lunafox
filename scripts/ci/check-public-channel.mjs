@@ -7,6 +7,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { validateComposition } from "./resolve-release-component-composition.mjs";
+import { canonicalPreheatManifestBytes, validatePreheatManifest } from "./preheat-manifest.mjs";
+import { canonicalThirdPartyPolicyBytes, validatePolicyAgainstComposeTemplate } from "./third-party-image-policy.mjs";
 import {
   ReleaseCompatibilityProfileAlpha164Bridge,
   assertReleaseCompatibilityProfile,
@@ -16,6 +18,9 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = path.resolve(SCRIPT_DIR, "../..");
 const FIRST_TAG = "v0.0.1-alpha.57";
 const RUNTIME_COMPOSITION_ASSET = "runtime-composition.json";
+const PREHEAT_MANIFEST_ASSET = "preheat-manifest.json";
+const COMPOSE_ASSET = "compose.yaml";
+const THIRD_PARTY_POLICY_ASSET = "third-party-image-policy.json";
 const LEGACY_RE = /(?:alpha\.46|SCHEMA_VERSION=2|IMAGE_REGISTRY=|IMAGE_NAMESPACE=|WORKER_IMAGE|lunafox-installer|checksums\.txt)/;
 const ALLOWED_KEYS = new Set(["SCHEMA_VERSION", "VERSION", "RELEASE_MANIFEST", "RELEASE_MANIFEST_SHA256"]);
 
@@ -41,6 +46,11 @@ function parseArgs(argv) {
 }
 
 function sha256(bytes) { return crypto.createHash("sha256").update(bytes).digest("hex"); }
+
+function requiresPreheatManifest(version, releaseProfile, hasRuntimeComposition) {
+  return releaseProfile !== ReleaseCompatibilityProfileAlpha164Bridge &&
+    version !== FIRST_TAG && hasRuntimeComposition;
+}
 
 function parseEnv(filePath) {
   const values = new Map();
@@ -109,7 +119,7 @@ function validate(root, requireFirst, allowEmpty = false) {
     }
     if (relative.startsWith("manifests/") &&
         !/^manifests\/v\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?\.yaml$/.test(relative) &&
-        !new RegExp(`^manifests\\/v\\d+\\.\\d+\\.\\d+(?:-(?:alpha|beta|rc)\\.\\d+)?\\/${RUNTIME_COMPOSITION_ASSET}$`).test(relative)) {
+        !new RegExp(`^manifests\\/v\\d+\\.\\d+\\.\\d+(?:-(?:alpha|beta|rc)\\.\\d+)?\\/(?:${RUNTIME_COMPOSITION_ASSET}|${PREHEAT_MANIFEST_ASSET}|${COMPOSE_ASSET}|${THIRD_PARTY_POLICY_ASSET})$`).test(relative)) {
       fail(`invalid manifest filename: ${relative}`);
     }
   }
@@ -153,6 +163,49 @@ function validate(root, requireFirst, allowEmpty = false) {
     if (binding && normalized.compositionDigest !== binding.sha256) fail(`${compositionRelative} digest does not match ${manifestRelative}`);
     if (normalized.manifestBinding.manifestDigest !== `sha256:${sha256(fs.readFileSync(manifestPath))}`) {
       fail(`${compositionRelative} manifest binding does not match ${manifestRelative}`);
+    }
+    const preheatRelative = `manifests/${version}/${PREHEAT_MANIFEST_ASSET}`;
+    const composeRelative = `manifests/${version}/${COMPOSE_ASSET}`;
+    const policyRelative = `manifests/${version}/${THIRD_PARTY_POLICY_ASSET}`;
+    const needsPreheat = requiresPreheatManifest(version, releaseProfile, hasRuntimeComposition);
+    if (!needsPreheat) {
+      for (const asset of [preheatRelative, composeRelative, policyRelative]) {
+        if (files.includes(asset)) fail(`${manifestRelative} must not publish modern deployment asset ${asset}`);
+      }
+      continue;
+    }
+    if (!files.includes(preheatRelative)) fail(`${manifestRelative} points to missing ${preheatRelative}`);
+    const preheatPath = path.join(root, ...preheatRelative.split("/"));
+    if (fs.lstatSync(preheatPath).isSymbolicLink() || !fs.statSync(preheatPath).isFile()) fail(`${preheatRelative} must be a regular file`);
+    const preheatBytes = fs.readFileSync(preheatPath);
+    let preheat;
+    try { preheat = validatePreheatManifest(JSON.parse(preheatBytes.toString("utf8"))); }
+    catch (error) { fail(`${preheatRelative} is invalid: ${error.message}`); }
+    if (!preheatBytes.equals(canonicalPreheatManifestBytes(preheat))) fail(`${preheatRelative} must use canonical bytes`);
+    if (preheat.release.tag !== version ||
+        preheat.release.manifestDigest !== `sha256:${sha256(fs.readFileSync(manifestPath))}` ||
+        preheat.release.compositionDigest !== normalized.compositionDigest) {
+      fail(`${preheatRelative} release binding does not match ${manifestRelative}`);
+    }
+    for (const asset of [composeRelative, policyRelative]) {
+      if (!files.includes(asset)) fail(`${manifestRelative} points to missing ${asset}`);
+      const assetPath = path.join(root, ...asset.split("/"));
+      if (fs.lstatSync(assetPath).isSymbolicLink() || !fs.statSync(assetPath).isFile()) fail(`${asset} must be a regular file`);
+    }
+    const composeBytes = fs.readFileSync(path.join(root, ...composeRelative.split("/")));
+    const policyBytes = fs.readFileSync(path.join(root, ...policyRelative.split("/")));
+    let policy;
+    try { policy = JSON.parse(policyBytes.toString("utf8")); }
+    catch (error) { fail(`${policyRelative} is not valid JSON: ${error.message}`); }
+    try {
+      if (!policyBytes.equals(canonicalThirdPartyPolicyBytes(policy))) fail(`${policyRelative} must use canonical bytes`);
+      validatePolicyAgainstComposeTemplate(policy, composeBytes.toString("utf8"));
+    } catch (error) {
+      fail(`${policyRelative} is invalid: ${error.message}`);
+    }
+    if (preheat.release.composeDigest !== `sha256:${sha256(composeBytes)}` ||
+        preheat.release.thirdPartyPolicyDigest !== `sha256:${sha256(policyBytes)}`) {
+      fail(`${manifestRelative} deployment assets do not match preheat bindings`);
     }
   }
   if (requireFirst) {

@@ -23,8 +23,9 @@ usage() {
 Usage: ./status.sh [--help]
 
 Print a read-only readiness summary: overall state, public address, one-shot
-tasks, core service health, auxiliary services, the resident Agent, and the
-public HTTPS endpoint. It never waits and never changes the deployment.
+tasks, image-preheat state, core service health, auxiliary services, the
+resident Agent, and the public HTTPS endpoint. It never waits and never changes
+the deployment.
 
 The exit status is 0 only for a fully ready deployment, so the command can be
 used directly by monitoring and automation.

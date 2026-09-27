@@ -6,6 +6,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { generate } from './generate-compose-deployment.mjs';
 import { bindCompositionToManifest, compositionCorePayload, FINGERPRINT_SCHEMA_VERSION, sha256Digest } from './resolve-release-component-composition.mjs';
+import { validatePreheatManifest } from './preheat-manifest.mjs';
 
 function fingerprint(componentId) {
  const inputs = {
@@ -37,20 +38,37 @@ function fixture(t, version = '1.2.3') {
   schemaVersion: 1,
   kind: 'lunafox.runtime-composition',
   releaseTag: `v${version}`,
-  components: [{
-   id: 'runtime.frontend', kind: 'runtime', name: 'frontend',
-   inputFingerprint: fingerprint('runtime.frontend'),
-   artifact: { ref: `ghcr.io/yyhuni/lunafox-frontend@sha256:${'a'.repeat(64)}`, digest: `sha256:${'a'.repeat(64)}` },
-   disposition: 'built', sourceRelease: { tag: `v${version}` },
-   evidence: { image: 'image.json', provenance: 'provenance.json', sbom: 'sbom.json', signature: 'signature.json' },
-  }],
+  components: [
+   ...['server', 'frontend', 'nginx', 'agent', 'bootstrap'].map((name) => ({
+    id: `runtime.${name}`, kind: 'runtime', name,
+    inputFingerprint: fingerprint(`runtime.${name}`),
+    artifact: { ref: `ghcr.io/yyhuni/lunafox-${name}@sha256:${'a'.repeat(64)}`, digest: `sha256:${'a'.repeat(64)}`, platforms: ['linux/amd64', 'linux/arm64'] },
+    disposition: 'built', sourceRelease: { tag: `v${version}` },
+    evidence: { image: 'image.json', provenance: 'provenance.json', sbom: 'sbom.json', signature: 'signature.json' },
+   })),
+   {
+    id: 'engine.lunafox.port_scan.runtime', kind: 'engine', name: 'port_scan',
+    inputFingerprint: fingerprint('engine.lunafox.port_scan.runtime'),
+    artifact: { ref: `ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:${'b'.repeat(64)}`, digest: `sha256:${'b'.repeat(64)}`, platforms: ['linux/amd64', 'linux/arm64'] },
+    disposition: 'built', sourceRelease: { tag: `v${version}` },
+    evidence: { image: 'image.json', provenance: 'provenance.json', sbom: 'sbom.json', signature: 'signature.json' },
+   },
+   {
+    id: 'engine.lunafox.port_scan.package', kind: 'engine', name: 'port_scan',
+    inputFingerprint: fingerprint('engine.lunafox.port_scan.package'),
+    artifact: { ref: `ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:${'c'.repeat(64)}`, digest: `sha256:${'c'.repeat(64)}`, platforms: ['linux/amd64', 'linux/arm64'] },
+    disposition: 'built', sourceRelease: { tag: `v${version}` },
+    evidence: { image: 'image.json', provenance: 'provenance.json', sbom: 'sbom.json', signature: 'signature.json' },
+   },
+  ],
   capabilities: { dynamicFrontendUpstream: true },
  };
+ composition.components.sort((left, right) => left.id.localeCompare(right.id));
  composition.compositionDigest = sha256Digest(compositionCorePayload(composition));
  const runtime = ['server','frontend','nginx','agent','bootstrap'].map(name => `  - name: ${name}\n    refs:\n      - docker.io/yyhuni/lunafox-${name}@sha256:${'a'.repeat(64)}\n      - ghcr.io/yyhuni/lunafox-${name}@sha256:${'a'.repeat(64)}\n`).join('');
  const releaseNotes = '## English\n\n- Test release notes.\n\n## 简体中文\n\n- 测试发布说明。\n';
  const releaseNotesDigest = '4406112ce062dd05feacce5f519b8cb7250fd01c7237c43e0f7335da912e8188';
- fs.writeFileSync(manifest, `releaseVersion: "${version}"\nreleaseNotes:\n  digest: "sha256:${releaseNotesDigest}"\n  body: |\n${releaseNotes.trimEnd().split('\n').map(line => `    ${line}`).join('\n')}\nruntimeImages:\n${runtime}enginePackages:\n  - refs:\n      - docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:${'b'.repeat(64)}\n      - ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:${'b'.repeat(64)}\nruntimeComposition:\n  schemaVersion: 1\n  asset: "runtime-composition.json"\n  sha256: "${composition.compositionDigest}"\n`);
+ fs.writeFileSync(manifest, `releaseVersion: "${version}"\nreleaseNotes:\n  digest: "sha256:${releaseNotesDigest}"\n  body: |\n${releaseNotes.trimEnd().split('\n').map(line => `    ${line}`).join('\n')}\nruntimeImages:\n${runtime}enginePackages:\n  - refs:\n      - docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:${'c'.repeat(64)}\n      - ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:${'c'.repeat(64)}\nruntimeComposition:\n  schemaVersion: 1\n  asset: "runtime-composition.json"\n  sha256: "${composition.compositionDigest}"\n`);
  composition.manifestBinding = {
   manifestDigest: sha256Digest(fs.readFileSync(manifest)),
  };
@@ -80,10 +98,11 @@ test('one package is reproducible, registry-selectable, and matches its snapshot
  assert.deepEqual(first,second);
  assert.equal(first.length,1);
  assert.equal(first[0].name,'lunafox-v1.2.3.zip');
- const script=`import zipfile,sys,json\nwith zipfile.ZipFile(sys.argv[1]) as z:\n print(json.dumps({n:z.read(n).decode() for n in ['compose.yaml','.env','.env.example','README.md','engine-inventory.yaml','runtime-composition.json','install.sh','start.sh','restart.sh','stop.sh','status.sh','logs.sh','uninstall.sh','lunafox-lifecycle.sh']}))`;
+const script=`import zipfile,sys,json\nwith zipfile.ZipFile(sys.argv[1]) as z:\n print(json.dumps({n:z.read(n).decode() for n in ['compose.yaml','.env','.env.example','README.md','engine-inventory.yaml','release.manifest.yaml','third-party-image-policy.json','runtime-composition.json','preheat-manifest.json','install.sh','start.sh','restart.sh','stop.sh','status.sh','logs.sh','uninstall.sh','lunafox-lifecycle.sh']}))`;
  const artifact=first[0];
  const content=JSON.parse(execFileSync('python3',['-c',script,path.join(options.output,artifact.name)],{encoding:'utf8'}));
  for(const [name,value] of Object.entries(content)) assert.equal(fs.readFileSync(path.join(snapshot,name),'utf8'),value);
+ assert.equal(content['third-party-image-policy.json'], fs.readFileSync(path.join(root, 'scripts/ci/third-party-image-policy.json'), 'utf8'));
   assert.match(content['.env'],/^DB_PASSWORD=$/m);
   assert.match(content['.env'],/^JWT_SECRET=$/m);
   assert.match(content['.env'],/^DATABASE_MODE=embedded$/m);
@@ -100,8 +119,12 @@ test('one package is reproducible, registry-selectable, and matches its snapshot
   }
   assert.deepEqual(
    content['.env'].split('\n').filter(line => /^[A-Za-z_][A-Za-z0-9_]*=/.test(line)).map(line => line.split('=')[0]).sort(),
-   ['COMPOSE_PROFILES','DATABASE_MODE','DB_PASSWORD','JWT_SECRET','PUBLIC_HOST','PUBLIC_PORT','RELEASE_REGISTRY'],
+   ['COMPOSE_PROFILES','DATABASE_MODE','DB_PASSWORD','JWT_SECRET','LUNAFOX_PREHEAT_MANIFEST_DIGEST','PUBLIC_HOST','PUBLIC_PORT','RELEASE_REGISTRY'],
   );
+  const preheatManifest = validatePreheatManifest(JSON.parse(content['preheat-manifest.json']));
+  assert.equal(content['.env'].match(/^LUNAFOX_PREHEAT_MANIFEST_DIGEST=(sha256:[a-f0-9]{64})$/m)?.[1], preheatManifest.manifestDigest);
+  assert.equal(preheatManifest.release.manifestDigest, `sha256:${sha256Digest(fs.readFileSync(options.manifest)).slice('sha256:'.length)}`);
+  assert.equal(preheatManifest.entries.some(entry => entry.repository === 'yyhuni/lunafox-engine-runtime-port-scan'), true);
   assert.match(content['.env'],/^RELEASE_REGISTRY=docker\.io$/m);
   assert.equal(content['.env.example'], content['.env']);
   assert.doesNotMatch(content['.env'],/^PUBLIC_URL=/m);
@@ -110,6 +133,7 @@ test('one package is reproducible, registry-selectable, and matches its snapshot
   assert.match(content['compose.yaml'], /https:\/\/127\.0\.0\.1\/healthChecks\/current/);
   assert.doesNotMatch(content['compose.yaml'], /https:\/\/localhost\/healthChecks\/current/);
   assert.match(content['compose.yaml'],/^  config-init:$/m);
+  assert.match(content['compose.yaml'],/^  engine-preheater:$/m);
   assert.match(content['compose.yaml'],/^  upgrader:$/m);
   assert.match(content['compose.yaml'],/environment: DB_PASSWORD/);
   assert.match(content['compose.yaml'],/environment: JWT_SECRET/);
@@ -140,6 +164,7 @@ test('one package is reproducible, registry-selectable, and matches its snapshot
   assert.equal(entryModes['.env'], 0o644);
   assert.equal(entryModes['release.manifest.yaml'], 0o644);
   assert.equal(entryModes['runtime-composition.json'], 0o644);
+  assert.equal(entryModes['preheat-manifest.json'], 0o644);
 
   for(const registry of ['docker.io','ghcr.io']){
    const renderDir = path.join(options.dir, registry);
@@ -162,8 +187,49 @@ test('one package is reproducible, registry-selectable, and matches its snapshot
    assert.equal(embedded.services.server.depends_on.postgres.required, false);
    assert.equal(embedded.services.migrate.depends_on.postgres.required, false);
    assert.equal(embedded.services['config-init'].environment.COMPOSE_PROFILES, 'embedded');
+   const preheater = embedded.services['engine-preheater'];
+   assert.equal(preheater.image, embedded.services.agent.image);
+   assert.equal(preheater.restart, 'no');
+   assert.equal(preheater.network_mode, 'none');
+   assert.equal(preheater.environment.LUNAFOX_PREHEAT_TIMEOUT_SECONDS, '900');
+   assert.deepEqual(preheater.entrypoint, ['/usr/local/bin/lunafox-engine-preheater']);
+   assert.deepEqual(preheater.command, [
+    '--manifest', '/deployment/preheat-manifest.json',
+    '--release-manifest', '/deployment/release.manifest.yaml',
+    '--runtime-composition', '/deployment/runtime-composition.json',
+    '--compose', '/deployment/compose.yaml',
+    '--third-party-policy', '/deployment/third-party-image-policy.json',
+    '--manifest-digest', preheatManifest.manifestDigest,
+    '--profile', 'embedded',
+    '--cloudflare-acceleration', 'false',
+   ]);
+   assert.equal(preheater.labels['lunafox.preheat.manifest-digest'], preheatManifest.manifestDigest);
+   assert.equal(preheater.labels['lunafox.preheat.profile'], 'embedded');
+   const preheaterVolumes = new Map(preheater.volumes.map(volume => [volume.target, volume]));
+   assert.deepEqual([...preheaterVolumes.keys()].sort(), [
+    '/deployment/compose.yaml',
+    '/deployment/preheat-manifest.json',
+    '/deployment/release.manifest.yaml',
+    '/deployment/runtime-composition.json',
+    '/deployment/third-party-image-policy.json',
+    '/var/run/docker.sock',
+   ]);
+   assert.equal(preheaterVolumes.get('/var/run/docker.sock').source, '/var/run/docker.sock');
+   for (const [target, source] of [
+    ['/deployment/compose.yaml', 'compose.yaml'],
+    ['/deployment/preheat-manifest.json', 'preheat-manifest.json'],
+    ['/deployment/release.manifest.yaml', 'release.manifest.yaml'],
+    ['/deployment/runtime-composition.json', 'runtime-composition.json'],
+    ['/deployment/third-party-image-policy.json', 'third-party-image-policy.json'],
+   ]) {
+    assert.equal(path.basename(preheaterVolumes.get(target).source), source);
+   }
+   assert.equal([...preheaterVolumes.values()].every(volume => volume.read_only === true), true);
+   for (const service of ['config-init', 'redis', 'loki', 'agent-preflight', 'cert-init']) {
+    assert.equal(embedded.services[service].depends_on['engine-preheater'].condition, 'service_completed_successfully');
+   }
    assert.ok(embedded.services.agent.stop_grace_period, 'the resident Agent must declare a stop grace period');
-   for(const service of ['server','frontend','nginx','agent','bootstrap','config-init','migrate','cert-init','upgrader','agent-preflight']){
+   for(const service of ['server','frontend','nginx','agent','bootstrap','config-init','migrate','cert-init','upgrader','agent-preflight','engine-preheater']){
     assert.match(embedded.services[service].image,new RegExp(`^${registry.replace('.','\\.')}\\/yyhuni\\/lunafox-`));
    }
    const other=registry==='docker.io'?'ghcr.io':'docker.io';
@@ -185,10 +251,25 @@ test('one package is reproducible, registry-selectable, and matches its snapshot
    // The freshly rendered package must carry the derived profile and the Agent
    // grace period, which a lagging public snapshot cannot prove.
    assert.equal(external.services['config-init'].environment.COMPOSE_PROFILES, 'external');
+   assert.equal(external.services['engine-preheater'].environment.LUNAFOX_PREHEAT_TIMEOUT_SECONDS, '900');
+   const externalProfileIndex = external.services['engine-preheater'].command.indexOf('--profile');
+   assert.equal(external.services['engine-preheater'].command[externalProfileIndex + 1], 'external');
+   assert.equal(external.services['engine-preheater'].image, external.services.agent.image);
    assert.ok(external.services.agent.stop_grace_period, 'the resident Agent must declare a stop grace period');
 
    const extracted = path.join(options.dir, `extracted-${registry}`);
    execFileSync('python3', ['-c', 'import sys,zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])', path.join(options.output, artifact.name), extracted]);
+   // This is the exact shell-neutral command a native Windows PowerShell
+   // operator runs.  Calling execFileSync without a shell keeps the contract
+   // independent of Bash, cmd.exe, and PowerShell quoting rules.
+   const directCompose = JSON.parse(execFileSync('docker', [
+    'compose', '--project-directory', extracted, '--env-file', path.join(extracted, '.env'),
+    '-f', path.join(extracted, 'compose.yaml'), 'config', '--format', 'json',
+   ], { encoding: 'utf8', env: { ...process.env, RELEASE_REGISTRY: registry, DATABASE_MODE: 'embedded', COMPOSE_PROFILES: 'embedded' } }));
+   assert.equal(directCompose.services['engine-preheater'].image, directCompose.services.agent.image);
+   assert.equal(directCompose.services['engine-preheater'].environment.LUNAFOX_PREHEAT_TIMEOUT_SECONDS, '900');
+   assert.equal(directCompose.services['engine-preheater'].depends_on, undefined);
+   assert.equal(directCompose.services.redis.depends_on['engine-preheater'].condition, 'service_completed_successfully');
    const persistedDigest = 'f'.repeat(64);
    fs.writeFileSync(path.join(extracted, 'compose.override.yaml'), `services:\n  server:\n    image: ${registry}/yyhuni/lunafox-server@sha256:${persistedDigest}\n    environment:\n      RELEASE_VERSION: 1.2.4\n`);
    const restarted = JSON.parse(execFileSync('docker', ['compose', 'config', '--format', 'json'], {
@@ -201,12 +282,105 @@ test('one package is reproducible, registry-selectable, and matches its snapshot
   }
 });
 
+test('development Compose and CF lifecycle use the same preheat gate from shell-neutral entry points', t => {
+ // Public projections intentionally omit the private development Compose file.
+ // The projection self-test passes the authored source root explicitly so this
+ // contract remains covered without widening the public export allowlist.
+ const sourceRoot = path.resolve(process.env.LUNAFOX_SOURCE_ROOT || root);
+ const developmentComposePath = path.join(sourceRoot, 'docker/docker-compose.dev.yml');
+ if (!fs.existsSync(developmentComposePath)) {
+  t.skip('private development Compose is intentionally absent from the public projection');
+  return;
+ }
+ const developmentCompose = fs.readFileSync(developmentComposePath, 'utf8');
+ assert.match(developmentCompose, /^  engine-preheater:\n/m);
+ assert.match(developmentCompose, /--development-build-results/);
+ assert.match(developmentCompose, /--cloudflare-acceleration[\s\S]*- "false"/);
+ assert.match(developmentCompose, /LUNAFOX_PREHEAT_TIMEOUT_SECONDS=\$\{LUNAFOX_PREHEAT_TIMEOUT_SECONDS:-900\}/);
+ const serviceBlock = (service) => {
+  const lines = developmentCompose.split('\n');
+  const block = [];
+  let active = false;
+  for (const line of lines) {
+   if (line === `  ${service}:`) { active = true; block.push(line); continue; }
+   if (active && /^  [a-zA-Z0-9_-]+:\s*$/.test(line)) break;
+   if (active) block.push(line);
+  }
+  return block.join('\n');
+ };
+ for (const service of ['postgres', 'redis', 'loki', 'engine-bootstrap']) {
+  assert.match(serviceBlock(service), /engine-preheater:/, `${service} must wait for the development preheater`);
+ }
+
+ const lifecycle = fs.readFileSync(path.join(sourceRoot, 'deploy/lifecycle/lunafox-lifecycle.sh'), 'utf8');
+ assert.match(lifecycle, /image pulls are owned by engine-preheater/);
+ assert.match(lifecycle, /--cloudflare-acceleration\n    - "true"/);
+ assert.doesNotMatch(lifecycle, /preheat_capable_deployment[\s\S]{0,120}engine-inventory\.yaml/);
+
+ const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lunafox-dev-compose-contract-'));
+ t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+ const composePath = path.join(directory, 'docker-compose.dev.yml');
+ const envPath = path.join(directory, '.env');
+ fs.copyFileSync(path.join(sourceRoot, 'docker/docker-compose.dev.yml'), composePath);
+ fs.writeFileSync(envPath, [
+  'AGENT_IMAGE_REF=yyhuni/lunafox-agent:dev',
+  'LOKI_PUSH_URL=http://localhost:3100/loki/api/v1/push',
+  'PUBLIC_PORT=8443',
+ ].join('\n') + '\n');
+ // Native PowerShell invokes this same argv sequence; no Bash wrapper or
+ // host-side image pull is part of the development entry contract.
+ const composeConfigArgs = [
+  'compose', '--project-directory', directory, '--env-file', envPath,
+  '-f', composePath, 'config', '--format', 'json',
+ ];
+ const composeConfigEnv = { ...process.env, DATABASE_MODE: '', COMPOSE_PROFILES: '' };
+ const renderComposeConfig = () => JSON.parse(execFileSync('docker', composeConfigArgs, {
+  encoding: 'utf8',
+  env: composeConfigEnv,
+  stdio: ['ignore', 'pipe', 'pipe'],
+ }));
+ let rendered;
+ try {
+  rendered = renderComposeConfig();
+ } catch (error) {
+  const diagnostic = String(error?.stderr ?? '');
+  if (!/initial_sync.*not allowed/i.test(diagnostic)) throw error;
+  // `initial_sync` is a valid Compose Watch field, but older clients that
+  // satisfy the repository's advertised minimum reject it during config.
+  // Keep the source assertion above and validate the remaining graph through a
+  // temporary compatibility projection instead of weakening the product file.
+  fs.writeFileSync(composePath, developmentCompose.replace(/^\s+initial_sync:\s+true\s*$/gm, ''));
+  rendered = renderComposeConfig();
+ }
+ const preheater = rendered.services['engine-preheater'];
+ assert.equal(preheater.image, 'yyhuni/lunafox-agent:dev');
+ assert.equal(preheater.pull_policy, 'never');
+ assert.equal(preheater.network_mode, 'none');
+ assert.deepEqual(preheater.entrypoint, ['/usr/local/bin/lunafox-engine-preheater']);
+ assert.deepEqual(preheater.command, [
+  '--development-build-results', '/bootstrap/image-build-results.json',
+  '--cloudflare-acceleration', 'false',
+ ]);
+ assert.equal(preheater.environment.LUNAFOX_PREHEAT_TIMEOUT_SECONDS, '900');
+});
+
 test('prerelease packages pin the canary channel', t => {
  const options = fixture(t, '1.2.3-alpha.1');
  const [artifact] = generate(options);
  const script = `import zipfile,sys\nwith zipfile.ZipFile(sys.argv[1]) as z:\n print(z.read('compose.yaml').decode())`;
  const compose = execFileSync('python3', ['-c', script, path.join(options.output, artifact.name)], { encoding: 'utf8' });
  assert.match(compose, /RELEASE_CHANNEL: canary/);
+});
+
+test('the frozen alpha.57 package keeps the historical Compose lifecycle', t => {
+ const options = fixture(t, '0.0.1-alpha.57');
+ const [artifact] = generate(options);
+ const script = `import zipfile,sys,json\nwith zipfile.ZipFile(sys.argv[1]) as z:\n print(json.dumps({n:z.read(n).decode() for n in ['compose.yaml','.env','.env.example','release.manifest.yaml']}))`;
+ const content = JSON.parse(execFileSync('python3', ['-c', script, path.join(options.output, artifact.name)], { encoding: 'utf8' }));
+ assert.doesNotMatch(content['compose.yaml'], /^  engine-preheater:$/m);
+ assert.doesNotMatch(content['compose.yaml'], /engine-preheater/);
+ assert.doesNotMatch(content['.env'], /^LUNAFOX_PREHEAT_/m);
+ assert.equal(fs.existsSync(path.join(options.output, 'preheat-manifest.json')), false);
 });
 
 test('the registered alpha.164 bridge packages independent composition evidence', t => {
@@ -220,6 +394,11 @@ test('the registered alpha.164 bridge packages independent composition evidence'
 
  const [artifact] = generate({ ...options, releaseProfile: 'alpha164-bridge' });
  assert.equal(artifact.name, 'lunafox-v0.0.1-alpha.183.zip');
+ const script = `import zipfile,sys\nwith zipfile.ZipFile(sys.argv[1]) as z:\n print(z.read('compose.yaml').decode())`;
+ const compose = execFileSync('python3', ['-c', script, path.join(options.output, artifact.name)], { encoding: 'utf8' });
+ assert.doesNotMatch(compose, /^  engine-preheater:$/m);
+ assert.doesNotMatch(compose, /engine-preheater/);
+ assert.equal(fs.existsSync(path.join(options.output, 'preheat-manifest.json')), false);
  assert.throws(
   () => generate({ ...options, releaseProfile: 'modern', output: path.join(options.dir, 'wrong-profile') }),
   /does not match registered profile/,

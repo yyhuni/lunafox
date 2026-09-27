@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { USE_MOCK } from "@/mock/config"
+import { cleanupLegacyMockWorker } from "@/mock/legacy-worker-cleanup"
 
 export function MockProvider({
   children,
@@ -12,7 +13,10 @@ export function MockProvider({
 }) {
   React.useEffect(() => {
     async function ensureMockPlatform() {
-      if (!enabled) return
+      if (!enabled) {
+        await cleanupLegacyMockWorker()
+        return
+      }
 
       const { startMockWorker } = await import("@/mock/browser")
       await startMockWorker()

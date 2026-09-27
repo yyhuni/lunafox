@@ -2,6 +2,27 @@
 
 `dev:mock` / `dev:mock:noauth` must be hermetic: pages should not depend on a local 8080 backend unless the service is explicitly recorded as unsupported.
 
+## Production Boundary
+
+Production frontend builds (`NODE_ENV=production`) always use the real API and
+authentication boundary. `NEXT_PUBLIC_USE_MOCK` and `NEXT_PUBLIC_SKIP_AUTH` are
+development/verification switches only; the Next.js build fails closed if either
+is enabled in production. Vercel and Docker/Compose release builds must not set
+them.
+
+A Vercel deployment also requires a project-level `BACKEND_URL` containing the
+root HTTPS origin of the real backend. Next.js rewrites same-origin `/v1/*`
+requests through that server-side value, so it must not be replaced with a
+browser-facing cross-origin API URL. Vercel must not define
+`NEXT_PUBLIC_BACKEND_URL`; missing, malformed, or browser-public backend
+configuration fails the production build before it can deploy a frontend with
+no real API.
+
+When a real-mode page starts, it removes only registrations whose worker script
+path is `/mockServiceWorker.js`. This retires browsers that previously visited a
+mock deployment without unregistering unrelated application workers. The API
+client waits for that cleanup before sending the first real request.
+
 ## Ownership
 
 - Mock ownership now lives in the network-layer platform.
@@ -68,9 +89,18 @@ success; `stress` ends in a failed verification; `edge` ends in
 `needs_attention`; and `error` makes the status resource reconnectable. The
 browser UI must consume these responses through the normal version service,
 not branch on the selected mock scenario. The mock Operation and its polling
-cursor are persisted in browser storage so a full-page refresh exercises the
-same recovery path as a live server; `resetMockUpgradeOperation()` clears that
-fixture state for tests.
+cursor are persisted in a versioned browser-storage fixture so a full-page
+refresh exercises the same recovery path as a live server. An obsolete fixture
+version is discarded instead of resuming an incompatible simulated upgrade;
+`resetMockUpgradeOperation()` clears fixture state for tests.
+
+Mock FULL responses preserve the same compatibility boundary as Server
+responses: `hostActivity` appears only when the request is exactly
+`view=FULL&includeHostActivity=true`. An enhanced active fixture supplies one
+closed action with start and heartbeat timestamps; an enhanced terminal fixture
+returns `hostActivity: null`. The mock must not add heartbeat rows to `logs`,
+and it must never simulate raw Compose output, command text, paths, images,
+environment values, or credentials.
 
 ## Exceptions
 

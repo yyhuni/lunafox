@@ -55,7 +55,9 @@ const buttonLayoutClassNames = {
   fullWidth: "w-full",
   between: "w-full justify-between",
   tableHeader: `-ml-2 w-full justify-start gap-1 overflow-hidden hover:bg-transparent dark:hover:bg-transparent has-[>svg]:px-2 ${textRole.tableHeader}`,
-  tableHeaderInline: `-ml-2 cursor-pointer justify-start gap-1 data-[popup-open]:bg-primary/10 data-[popup-open]:text-primary data-[popup-open]:[&_svg]:text-primary has-[>svg]:px-2 ${textRole.tableHeader}`,
+  tableHeaderInline: `compact-action-control -ml-2 cursor-pointer justify-start gap-1 data-[popup-open]:bg-primary/10 data-[popup-open]:text-primary data-[popup-open]:[&_svg]:text-primary has-[>svg]:px-2 ${textRole.tableHeader}`,
+  compactAction: "compact-action-control",
+  rowAction: "dense-row-action-control",
   textCellLink: `justify-start bg-transparent p-0 text-left shadow-none underline-offset-2 hover:bg-transparent hover:text-primary hover:underline ${textRole.tableCellPrimary}`,
   actionTile: "min-w-0 flex-col items-center gap-3 border-2 text-center",
 } as const

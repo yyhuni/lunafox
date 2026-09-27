@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/yyhuni/lunafox/contracts/ociartifact"
+	"github.com/yyhuni/lunafox/contracts/preheatmanifest"
 	"github.com/yyhuni/lunafox/contracts/releasemanifest"
 )
 
@@ -45,6 +46,17 @@ func TestChannelManifestSourceFetchesValidCandidateAndCachesDigest(t *testing.T)
 	}
 	if compositionInfo.Mode().Perm() != 0o600 {
 		t.Fatalf("composition cache mode = %o, want 600", compositionInfo.Mode().Perm())
+	}
+	preheatPath := filepath.Join(source.preheatCache, strings.TrimPrefix(manifest.Digest(), "sha256:")+".json")
+	if info, statErr := os.Stat(preheatPath); statErr != nil || info.Mode().Perm() != 0o600 {
+		t.Fatalf("preheat cache = %v, want regular 0600 file", statErr)
+	}
+	assetRoot := filepath.Join(source.deploymentCache, strings.TrimPrefix(manifest.Digest(), "sha256:"))
+	for _, name := range []string{"compose.yaml", "third-party-image-policy.json"} {
+		info, statErr := os.Stat(filepath.Join(assetRoot, name))
+		if statErr != nil || info.Mode().Perm() != 0o600 {
+			t.Fatalf("deployment asset %s = %v, want regular 0600 file", name, statErr)
+		}
 	}
 }
 
@@ -314,6 +326,22 @@ func newReleaseMetadataServer(t *testing.T, current func() ([]byte, []byte)) *ht
 				return
 			}
 			_, _ = writer.Write(composition)
+		case "/manifests/v1.2.3/preheat-manifest.json", "/manifests/v1.2.4/preheat-manifest.json":
+			parsedManifest, parseErr := releasemanifest.Parse(manifest)
+			if parseErr != nil {
+				http.Error(writer, parseErr.Error(), http.StatusInternalServerError)
+				return
+			}
+			preheat, err := preheatManifestBytes(t, parsedManifest)
+			if err != nil {
+				http.Error(writer, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			_, _ = writer.Write(preheat)
+		case "/manifests/v1.2.3/compose.yaml", "/manifests/v1.2.4/compose.yaml":
+			_, _ = writer.Write([]byte("compose"))
+		case "/manifests/v1.2.3/third-party-image-policy.json", "/manifests/v1.2.4/third-party-image-policy.json":
+			_, _ = writer.Write([]byte("policy"))
 		default:
 			http.NotFound(writer, request)
 		}
@@ -453,6 +481,60 @@ func compositionComponent(id, kind, name, componentDigest, releaseVersion string
 			"signature":  "signature.json",
 		},
 	}
+}
+
+func preheatManifestBytes(t *testing.T, manifest *releasemanifest.Manifest) ([]byte, error) {
+	t.Helper()
+	digest := "sha256:" + strings.Repeat("a", 64)
+	repository := "yyhuni/lunafox-engine-runtime-port-scan"
+	entry := preheatmanifest.Entry{
+		Candidates:           []string{"docker.io/" + repository + "@" + digest, "ghcr.io/" + repository + "@" + digest},
+		CloudflareCandidates: []string{"docker.lunafox.cc.cd/" + repository + "@" + digest, "docker.io/" + repository + "@" + digest, "ghcr.io/" + repository + "@" + digest},
+		Digest:               digest,
+		IdentityReference:    "ghcr.io/" + repository + "@" + digest,
+		Platforms:            []string{preheatmanifest.PlatformLinuxAMD64, preheatmanifest.PlatformLinuxARM64},
+		Profiles:             []string{preheatmanifest.ProfileEmbedded, preheatmanifest.ProfileExternal},
+		Repository:           repository,
+		Sources:              []preheatmanifest.LogicalSource{{Kind: "engine-runtime", Name: "engine.lunafox.port_scan"}},
+		Trust:                "first-party",
+	}
+	identity := repository + "@" + digest
+	closures := make([]preheatmanifest.ProfileClosure, 0, 2)
+	for _, profile := range []string{preheatmanifest.ProfileEmbedded, preheatmanifest.ProfileExternal} {
+		closureBytes, err := json.Marshal(map[string]any{"entries": []string{identity}, "profile": profile})
+		if err != nil {
+			return nil, err
+		}
+		closures = append(closures, preheatmanifest.ProfileClosure{Profile: profile, Entries: []string{identity}, Digest: sha256String(closureBytes)})
+	}
+	value := map[string]any{
+		"entries":         []preheatmanifest.Entry{entry},
+		"kind":            preheatmanifest.Kind,
+		"profileClosures": closures,
+		"release": preheatmanifest.ReleaseBinding{
+			ComposeDigest:          sha256String([]byte("compose")),
+			CompositionDigest:      manifest.RuntimeComposition.SHA256,
+			ManifestDigest:         manifest.Digest(),
+			Tag:                    "v" + manifest.ReleaseVersion,
+			ThirdPartyPolicyDigest: sha256String([]byte("policy")),
+		},
+		"schemaVersion": preheatmanifest.SchemaVersion,
+	}
+	core, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	var object map[string]any
+	if err := json.Unmarshal(core, &object); err != nil {
+		return nil, err
+	}
+	object["manifestDigest"] = sha256String(core)
+	return json.Marshal(object)
+}
+
+func sha256String(value []byte) string {
+	sum := sha256.Sum256(value)
+	return "sha256:" + fmt.Sprintf("%x", sum[:])
 }
 
 func channelRecordBytes(version string, manifest []byte) []byte {

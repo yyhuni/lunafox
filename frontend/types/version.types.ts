@@ -99,6 +99,45 @@ export interface UpgradeAgentSummary {
   unhealthy: number
 }
 
+export type UpgradeAgentDiagnosticSource = "agent_heartbeat" | "server_observation" | "historical"
+
+export type UpgradeAgentDiagnosticReasonCode =
+  | "not_registered"
+  | "heartbeat_missing_or_stale"
+  | "paused"
+  | "health_reported"
+  | "health_unhealthy"
+  | "claim_not_ready"
+  | "version_mismatch"
+  | "legacy_unknown"
+
+export interface UpgradeAgentDiagnostic {
+  agentId: number
+  name: string
+  displayNameSnapshot?: string
+  reasonCode: UpgradeAgentDiagnosticReasonCode
+  detail: string
+  source: UpgradeAgentDiagnosticSource
+}
+
+export type UpgradeHostAction =
+  | "preflight"
+  | "pull_images"
+  | "update_services"
+  | "database_migration"
+  | "update_resident_agent"
+  | "wait_for_service_health"
+  | "verify_runtime_images"
+  | "verify_frontend_container"
+  | "verify_frontend_edge"
+
+/** A bounded current host-side wait fact from the enhanced FULL projection. */
+export interface UpgradeHostActivity {
+  action: UpgradeHostAction
+  startedAt: string
+  lastHeartbeatAt: string
+}
+
 export interface UpgradeOperation {
   name: string
   operationId: string
@@ -140,6 +179,10 @@ export interface UpgradeOperationFull extends UpgradeOperation {
   workDisposition: UpgradeWorkDisposition
   planSummary: UpgradePlanSummary
   confirmedDeploymentVersion: string
+  agentDiagnostics: UpgradeAgentDiagnostic[]
+  // Undefined means an older Server ignored the enhanced FULL opt-in. Null
+  // means a supporting Server currently has no in-flight host action.
+  hostActivity?: UpgradeHostActivity | null
 }
 
 export interface UpgradePlanSummary {

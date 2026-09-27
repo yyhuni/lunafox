@@ -4,9 +4,23 @@ import * as React from "react"
 import { History, LayoutGrid, Search, semanticIcons, X } from "@/components/icons"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AppErrorState } from "@/components/shared/feedback/app-error-state"
 import { ContentHandoff } from "@/components/shared/loading/content-handoff"
@@ -18,9 +32,11 @@ import { COMPACT_CONTENT_GUTTER_CLASS } from "@/components/shared/layout/page-sh
 import { normalizeError } from "@/lib/errors/normalize-error"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { useIsMobile } from "@/hooks/use-mobile"
 import {
   appendGlobalAssetSearchCondition,
   getGlobalAssetSearchInlineCompletion,
+  SearchSyntaxManualContent,
   SearchSyntaxGuidance,
 } from "./search-syntax-guidance"
 import type { GlobalAssetSearchField } from "@/lib/global-asset-search-query"
@@ -32,7 +48,12 @@ import {
   SearchWebsitesDataTableLoadingState,
   useSearchWebsitesResultModel,
 } from "./search-websites-data-table"
-import { SearchResultsTable } from "./search-results-table"
+import {
+  SearchEndpointColumnVisibilityMenu,
+  SearchResultsTable,
+  SearchResultsTableLoadingState,
+  useSearchEndpointsResultModel,
+} from "./search-results-table"
 import {
   SearchAssetBarShell,
   SearchInitialHeading,
@@ -79,10 +100,12 @@ function SearchAssetTypeSelector({ state, integrated = false }: {
   )
 }
 
-function AssetSearchBar({ state, className }: { state: SearchPageState; className?: string }) {
+export function SearchAssetBar({ state, className }: { state: SearchPageState; className?: string }) {
   const inputRef = React.useRef<HTMLInputElement>(null)
   const closeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isMobile = useIsMobile()
   const [syntaxOpen, setSyntaxOpen] = React.useState(false)
+  const [manualOpen, setManualOpen] = React.useState(false)
   const [caretIsAtDraftEnd, setCaretIsAtDraftEnd] = React.useState(true)
   const inlineCompletion = React.useMemo(
     () => caretIsAtDraftEnd ? getGlobalAssetSearchInlineCompletion(state.query) : "",
@@ -124,6 +147,17 @@ function AssetSearchBar({ state, className }: { state: SearchPageState; classNam
     })
   }, [])
 
+  const handleManualOpenChange = React.useCallback((open: boolean) => {
+    setManualOpen(open)
+    if (!open) focusInput()
+  }, [focusInput])
+
+  const openManual = React.useCallback(() => {
+    clearCloseTimer()
+    setSyntaxOpen(false)
+    setManualOpen(true)
+  }, [clearCloseTimer])
+
   const syncCaretPosition = React.useCallback((input: HTMLInputElement) => {
     setCaretIsAtDraftEnd(
       input.selectionStart === input.value.length && input.selectionEnd === input.value.length
@@ -164,6 +198,20 @@ function AssetSearchBar({ state, className }: { state: SearchPageState; classNam
     openSyntaxGuidance()
     focusInput()
   }, [focusInput, openSyntaxGuidance, state])
+
+  const handleManualSelectExample = React.useCallback((example: string) => {
+    state.setQuery(example)
+    setManualOpen(false)
+    setSyntaxOpen(true)
+    focusInput()
+  }, [focusInput, state])
+
+  const manualContent = (
+    <SearchSyntaxManualContent
+      t={state.t}
+      onSelectExample={handleManualSelectExample}
+    />
+  )
 
   return (
     <div className={cn("min-w-0", className)}>
@@ -213,16 +261,59 @@ function AssetSearchBar({ state, className }: { state: SearchPageState; classNam
           collisionPadding={16}
           initialFocus={false}
           finalFocus={false}
-          className="w-[var(--anchor-width)] p-0"
+          className="max-h-[var(--available-height)] w-[min(32rem,var(--available-width))] max-w-[var(--available-width)] overflow-hidden p-0"
         >
-          <SearchSyntaxGuidance
-            t={state.t}
-            onSelectField={handleSelectField}
-            onSelectExample={handleSelectExample}
-          />
+          <ScrollArea
+            className="max-h-[var(--available-height)]"
+            viewportClassName="max-h-[var(--available-height)]"
+            contentClassName="min-w-0"
+          >
+            <SearchSyntaxGuidance
+              t={state.t}
+              onSelectField={handleSelectField}
+              onSelectExample={handleSelectExample}
+              onOpenManual={openManual}
+            />
+          </ScrollArea>
         </PopoverContent>
       </Popover>
-      {state.queryError ? <p className={cn("mt-1", textRole.caption, "text-destructive")}>{state.queryError}</p> : null}
+      {isMobile ? (
+        <Drawer open={manualOpen} onOpenChange={handleManualOpenChange} swipeDirection="down">
+          <DrawerContent className="flex max-h-[calc(100dvh-3rem)] flex-col p-0">
+            <DrawerHeader className="sr-only">
+              <DrawerTitle>{state.t("manual.title")}</DrawerTitle>
+            </DrawerHeader>
+            <DrawerClose
+              render={(
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="overlay-close-control absolute top-3 right-3 z-10"
+                  aria-label={state.t("manual.close")}
+                />
+              )}
+            >
+              <X className="h-4 w-4" />
+            </DrawerClose>
+            {manualContent}
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog open={manualOpen} onOpenChange={handleManualOpenChange}>
+          <DialogContent className="flex max-h-[min(80dvh,44rem)] w-[min(42rem,calc(100vw-2rem))] flex-col gap-0 overflow-hidden p-0">
+            <DialogHeader className="sr-only">
+              <DialogTitle>{state.t("manual.title")}</DialogTitle>
+            </DialogHeader>
+            {manualContent}
+          </DialogContent>
+        </Dialog>
+      )}
+      {state.queryError ? (
+        <p role="alert" aria-label={state.t("queryErrorLabel")} className={cn("mt-1", textRole.caption, "text-destructive")}>
+          {state.queryError}
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -258,9 +349,11 @@ function SearchResultsPaginationRegion({ children }: { children: React.ReactNode
 
 function SearchResultsLoadingState({
   showWebsiteExport,
+  showEndpointColumns = false,
   websiteLoadingRowCount,
 }: {
   showWebsiteExport: boolean
+  showEndpointColumns?: boolean
   websiteLoadingRowCount: number
 }) {
   const pagination = (
@@ -286,17 +379,18 @@ function SearchResultsLoadingState({
             />
             <Skeleton className="pointer-events-none absolute left-3 h-4 w-32 rounded-full" />
           </div>
-          <ActionSkeleton size="default" widthClassName="w-10" className="radius-none border-y-0 border-r-0" />
+          <ActionSkeleton size="default" widthClassName="w-10 sm:w-20" className="radius-none border-y-0 border-r-0" />
         </SearchAssetBarShell>
         {showWebsiteExport ? <ActionSkeleton size="default" widthClassName="w-20" className="shrink-0" /> : null}
+        {showEndpointColumns ? <ActionSkeleton size="default" widthClassName="w-28" className="shrink-0" /> : null}
       </SearchResultsToolbarRegion>
 
       <SearchResultsBodyRegion>
         <div className={cn("flex-1 overflow-auto py-3", COMPACT_CONTENT_GUTTER_CLASS)}>
-          {showWebsiteExport ? <SearchWebsitesDataTableLoadingState pagination={pagination} rowCount={websiteLoadingRowCount} /> : (
-            <div className="mx-auto max-w-4xl space-y-4">
-              {Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-56 w-full rounded-md" />)}
-            </div>
+          {showWebsiteExport ? (
+            <SearchWebsitesDataTableLoadingState pagination={pagination} rowCount={websiteLoadingRowCount} />
+          ) : (
+            <SearchResultsTableLoadingState rowCount={websiteLoadingRowCount} />
           )}
         </div>
       </SearchResultsBodyRegion>
@@ -309,14 +403,16 @@ function SearchResultsLoadingState({
 export function SearchPageContent({ state }: { state: SearchPageState }) {
   const websiteResults = state.assetType === "website" && state.data ? state.data.results : EMPTY_WEBSITE_RESULTS
   const websiteResultModel = useSearchWebsitesResultModel(websiteResults)
+  const endpointResultModel = useSearchEndpointsResultModel()
   const showWebsiteExport = !state.error && state.assetType === "website" && Boolean(state.data?.results.length)
+  const showEndpointColumns = !state.error && state.assetType === "endpoint" && Boolean(state.data?.results.length)
 
   return (
     <div className="flex w-full flex-1 flex-col">
       {state.searchState === "initial" ? (
         <SearchInitialPageShell animated>
           <SearchInitialHeading title={state.t("title")} hint={state.t("hint")} />
-          <div className="w-full"><AssetSearchBar state={state} /></div>
+          <div className="w-full"><SearchAssetBar state={state} /></div>
           <SearchQuickTags onTagClick={state.handleQuickTagClick} />
 
           {state.recentSearches.length > 0 ? (
@@ -327,7 +423,7 @@ export function SearchPageContent({ state }: { state: SearchPageState }) {
               </div>
               <div className="flex flex-wrap gap-2">
                 {state.recentSearches.map((search) => (
-                  <Badge key={search} variant="secondary" className="group gap-1 py-1 pr-1.5 pl-3 hover:bg-secondary/80">
+                  <Badge key={search} size="tag" variant="secondary" className="group gap-1 pr-1.5 pl-3 hover:bg-secondary/80">
                     <button type="button" onClick={() => state.handleRecentSearchClick(search)} className="max-w-52 truncate text-left font-mono text-xs">
                       {search}
                     </button>
@@ -349,6 +445,7 @@ export function SearchPageContent({ state }: { state: SearchPageState }) {
           skeleton={(
             <SearchResultsLoadingState
               showWebsiteExport={state.assetType === "website"}
+              showEndpointColumns={state.assetType === "endpoint"}
               websiteLoadingRowCount={state.pageSize}
             />
           )}
@@ -357,8 +454,9 @@ export function SearchPageContent({ state }: { state: SearchPageState }) {
           contentClassName="flex h-full flex-col"
         >
           <SearchResultsToolbarRegion>
-            <AssetSearchBar state={state} className="w-full md:flex-1" />
+            <SearchAssetBar state={state} className="w-full md:flex-1" />
             {showWebsiteExport ? <SearchWebsiteExportMenu model={websiteResultModel} /> : null}
+            {showEndpointColumns ? <SearchEndpointColumnVisibilityMenu model={endpointResultModel} /> : null}
             {state.isFetching ? <span className={cn("whitespace-nowrap", textRole.bodySubtle)}>{state.t("loading")}</span> : null}
           </SearchResultsToolbarRegion>
 
@@ -402,7 +500,7 @@ export function SearchPageContent({ state }: { state: SearchPageState }) {
                       </SearchResultsPaginationRegion>
                     )}
                   />
-                ) : <SearchResultsTable results={state.data.results} />}
+                ) : <SearchResultsTable results={state.data.results} model={endpointResultModel} />}
               </div>
             ) : null}
           </SearchResultsBodyRegion>

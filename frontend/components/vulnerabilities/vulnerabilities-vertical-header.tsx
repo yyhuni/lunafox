@@ -94,7 +94,7 @@ export function VulnerabilitiesVerticalHeader({
       {/* Left: Filters or Bulk Actions */}
       {selectedCount > 0 ? (
         <div className="animate-in duration-200 fade-in flex flex-wrap gap-2 items-center md:gap-3 min-w-0">
-          <Badge variant="count" className="h-7 px-2 text-xs">
+          <Badge size="compact" variant="count" className="text-xs">
             {tVuln("selected", { count: selectedCount })}
           </Badge>
           <div className="bg-border/60 h-4 mx-1 w-px" />

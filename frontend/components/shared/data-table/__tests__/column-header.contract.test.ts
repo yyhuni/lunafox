@@ -15,6 +15,7 @@ describe("column-header contract", () => {
     expect(source).toContain("from \"@/lib/typography\"")
     expect(source).toContain("textRole.tableHeader")
     expect(source).toContain('layout="tableHeaderInline"')
+    expect(readFileSync(path.resolve(process.cwd(), "components/ui/button.tsx"), "utf8")).toContain("compactAction")
     expect(source).toContain("DropdownMenuContent")
     expect(source).toContain('width="compact"')
     expect(source).toContain('tDataTable("sortAsc")')

@@ -22,9 +22,10 @@ describe("wordlist-tag-picker contract", () => {
     expect(source).toContain('name="tagPickerInlineInput"')
     expect(source).toContain("setIsAddingTag(true)")
     expect(source).toContain("commitDraftTag")
-    expect(source).toContain('<div className="flex min-h-7 flex-wrap items-center gap-1.5">')
+    expect(source).toContain('density?: "default" | "compact"')
+    expect(source).toContain('compact ? "flex flex-wrap items-center gap-1" : "flex flex-wrap items-center gap-1.5"')
     expect(source.indexOf("{renderAddTagControl()}")).toBeLessThan(
-      source.indexOf('<div className="space-y-2 rounded-md border bg-muted/20 p-2.5">')
+      source.indexOf('{t("recommendedTags")}')
     )
     expect(source).not.toContain('name="tagPickerSearch"')
     expect(source).not.toContain('variant="outline" onClick={() => addTag(query)}')
@@ -33,6 +34,8 @@ describe("wordlist-tag-picker contract", () => {
   it("separates selected tags from recommended tag suggestions", () => {
     expect(source).not.toContain('t("selectedTags")')
     expect(source).toContain('t("recommendedTags")')
-    expect(source).toContain("rounded-md border bg-muted/20")
+    expect(source).toContain("compactSurfaceClassNames.mutedInfo")
+    expect(source).toContain('compact ? "space-y-1.5" : "space-y-2"')
+    expect(source).toContain('compact ? "flex max-h-40 flex-wrap gap-1 overflow-y-auto pr-1" : "flex flex-wrap gap-1.5"')
   })
 })
