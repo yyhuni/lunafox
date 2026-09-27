@@ -18,6 +18,7 @@
             "key": "timeout",
             "type": "integer",
             "default": 14400,
+            "unit": "seconds",
             "minimum": 60
           },
           {
@@ -36,6 +37,7 @@
             "key": "request-timeout",
             "type": "integer",
             "default": 10,
+            "unit": "seconds",
             "minimum": 1
           },
           {

@@ -8,16 +8,16 @@
 
 公共 `main` 分支和每个 Release 中唯一的 `lunafox-<version>.zip` 都包含等价的部署快照。每个快照包括 `compose.yaml`、`.env`、`.env.example`、经过验证的最终 release manifest、双 Registry Engine inventory、Loki 和 Alloy 配置、默认 fingerprint corpus、所需 wordlists，以及带共享 helper 的 Bash 生命周期脚本。产品和 Engine 镜像带有 digest；PostgreSQL、Redis、Loki 和 Alloy 则由多平台 manifest digest 固定。
 
-请保留解压后的目录：`.env` 是由主机负责的安装配置，相对资源路径都从此目录解析。检查 `PUBLIC_HOST` 和 `PUBLIC_PORT`；内部 HTTPS `PUBLIC_URL` 由它们派生。写入 `DB_PASSWORD` 或 `JWT_SECRET` 后，请用 `chmod 600 .env` 限制文件权限；生命周期脚本在进行任何变更前也会强制使用相同模式。
+请保留解压后的目录：`.env` 是由主机负责的安装配置，相对资源路径都从此目录解析。安装时可用 `--public-host <host>` 和 `--public-port <port>` 设置 `PUBLIC_HOST` 与 `PUBLIC_PORT`，也可以沿用 `.env` 中已有的值；随包提供的默认值是 `localhost` 和 `443`。内部 HTTPS `PUBLIC_URL` 由它们派生。写入 `DB_PASSWORD` 或 `JWT_SECRET` 后，请用 `chmod 600 .env` 限制文件权限；生命周期脚本在进行任何变更前也会强制使用相同模式。
 
 ### 从公共仓库安装
 
-在 Bash 环境中检查 `.env` 并运行生命周期脚本。它会执行一次 `docker compose up -d`，并等待部署完全就绪：
+在 Bash 环境中通过生命周期命令设置公网地址。它会执行一次 `docker compose up -d`，并等待部署完全就绪：
 
 ```console
 git clone https://github.com/yyhuni/lunafox.git
 cd lunafox
-./install.sh
+./install.sh --public-host luna.example.com
 ```
 
 同样支持 `docker compose up -d`，这是原生 Windows PowerShell 入口：
@@ -35,7 +35,7 @@ docker compose up -d
 ```console
 unzip lunafox-<version>.zip -d lunafox-<version>
 cd lunafox-<version>
-./install.sh
+./install.sh --public-host luna.example.com
 ```
 
 解压后的 ZIP 也支持直接使用 Compose：
@@ -128,7 +128,7 @@ docker compose exec server resetadmin
 
 | 脚本 | 等价 Compose 命令 | 行为 |
 | --- | --- | --- |
-| `./install.sh` | `docker compose up -d` | 首次启动和安全重跑。保留已有 `.env` 及全部命名 volume。 |
+| `./install.sh` | `docker compose up -d` | 首次启动和安全重跑。`--public-host` 和 `--public-port` 只更新对应的 `.env` 键；命名 volume 与其他设置保持不变。 |
 | `./start.sh` | `docker compose up -d` | 启动已有部署。 |
 | `./restart.sh` | `docker compose up -d --force-recreate` | 将当前 `.env` 和 `compose.override.yaml` 应用到每个容器。 |
 | `./stop.sh` | `docker compose stop` | 停止所有常驻服务并保留全部数据。 |
@@ -142,7 +142,34 @@ docker compose exec server resetadmin
 
 `install.sh` 会描述它识别到的运行类型，而不是始终叙述为首次启动：没有任何 LunaFox 数据的目录属于首次启动；只有 volumes 而没有容器的目录会在保留命名 volumes 和已安装 Engine 的情况下重建容器，不属于升级；运行中的部署会在保留配置和 volumes 的情况下启动。当这种重建部署在 `bootstrap` 等首次启动任务上失败时，footer 会在 `logs.sh` 和 `status.sh` 提示之后增加一行可选信息：如果可以丢弃保留数据，只有 `./uninstall.sh --purge --confirm` 能删除命名 volumes 并重新开始。
 
-`install.sh` 只接受 `--help`，从 `.env` 读取全部设置，并且恰好运行一次 `docker compose up -d`。它不会拉取、构建、删除容器或删除数据。默认的 `uninstall.sh` 是可恢复的：它保留命名 volumes、`.env`、发布目录，以及已完成 Upgrade Operation 写入的常规 `compose.override.yaml`。`./uninstall.sh --purge --confirm` 会先验证并删除当前 `compose.yaml` 声明的 LunaFox 命名 volumes，再移除该版本覆盖层，以便在同一目录中进行干净重装；`.env` 和发布目录仍会保留。
+`install.sh` 接受 `--public-host <host>`、`--public-port <port>`、`--cf-acceleration` 和 `--help`。公网地址参数仅限安装动作：host 必须是 hostname 或 IP address，port 必须是 1 到 65535 的十进制值。未提供的地址值沿用 `.env` 或随包提供的 `localhost` / `443` 默认值；显式参数只会原子更新对应的 `.env` 键。命令会在访问 Docker 前校验参数，并且恰好运行一次 `docker compose up -d`。默认的 `uninstall.sh` 是可恢复的：它保留命名 volumes、`.env`、发布目录，以及已完成 Upgrade Operation 写入的常规 `compose.override.yaml`。`./uninstall.sh --purge --confirm` 会先验证并删除当前 `compose.yaml` 声明的 LunaFox 命名 volumes，再移除该版本覆盖层，以便在同一目录中进行干净重装；`.env` 和发布目录仍会保留。
+
+### 镜像预热与恢复
+
+所有现代安装入口都使用同一个由 Compose 管理的
+`engine-preheater` one-shot gate：公有仓库、Release ZIP、直接 Compose、Cloudflare 加速安装，以及仍支持的开发/私有入口，都会消费同一份 release-bound `preheat-manifest.json`。应用服务启动前，它会预热当前宿主平台发布的全部 Engine Runtime，以及选定 Compose profile 的完整镜像闭包。即使某个 Workflow 被关闭，已发布的 Engine Runtime 也会保留在预热范围内；`embedded` 包含 `postgres`，`external` 排除它。
+
+预热 deadline 与 readiness 相互独立。`LUNAFOX_PREHEAT_TIMEOUT_SECONDS` 默认是 `900` 秒，允许 `300` 到 `3600`；`LUNAFOX_READY_TIMEOUT_SECONDS` 只控制外层 readiness 等待。如果 readiness 先超时，预热器会继续运行。预热失败会保留容器、日志、已验证 Docker cache、命名 volumes、数据库和应用数据。修复传输或配置问题后，可先查看只读 status 和服务日志，再只重跑这个 gate：
+
+```console
+docker compose up -d --force-recreate engine-preheater
+```
+
+Cloudflare 加速只改变同一 digest-qualified entry 的传输候选，不会生成第二份清单或不同闭包。执行 Upgrade Operation 时，目标 Compose 和 `third-party-image-policy.json` 从 immutable `manifests/<release-tag>/` channel 目录获取，并在私有 candidate snapshot 预热前与该 release 的 preheat manifest 校验绑定；只有 gate 成功后才会提升活动部署。
+
+#### Cloudflare 加速安装
+
+当 Docker Hub 或 GHCR 的传输受限时，显式启用：
+
+```console
+./install.sh --public-host luna.example.com --public-port 8443 --cf-acceleration
+```
+
+`--cf-acceleration` 是唯一的加速选项，并不是 `.env` 设置。它可以与公网地址参数组合；其他生命周期命令不接受这些仅限安装的参数。它需要 `cosign`。在唯一一次 `docker compose up -d` 之前，安装器会校验包内的 `third-party-image-policy.json`，并准备所选的完整闭包。`DATABASE_MODE=embedded` 包含 `postgres`、Redis、Loki、Alloy、第一方 Runtime 和 one-shot services、Engine Package bootstrap 以及常驻 Agent。external 模式准备相同的闭包，但不包含 `postgres`。
+
+第一方 `ghcr.io` identity 会先由 `cosign` 验证，之后才会通过 Cloudflare 下载相同 digest。PostgreSQL、Redis、Loki 和 Alloy 是经 LunaFox 审核的固定 digest 内容，并接受 OCI digest 检查；这不表示已验证发布方签名。显式启用成功后，会在 `.lunafox-cf-acceleration/` 下写入受保护的 state、Compose overlay 和 Engine inventory。请不要编辑这些文件。之后的 `./start.sh` 和 `./restart.sh` 会校验并复用该 state；直接执行 `docker compose up -d` 始终忽略它，没有该 state 的部署会保持正常的非 Cloudflare 默认行为。
+
+只有分类为 Cloudflare DNS、TCP、TLS、超时、限流或临时 5xx 的传输失败，才会尝试同一 digest 的回退顺序。策略、认证、签名、digest 和内容完整性失败都会停止，不会回退。准备失败会在 Compose 变更前保留 `.env`、容器、命名 volumes、数据库和应用数据。
 
 脚本需要 Bash 3.2 或更高版本，并可从任意工作目录运行。Windows 继续在 PowerShell 中使用直接 Compose 命令。
 
@@ -188,7 +215,8 @@ Compose 通过 one-shot services 表达初始化：
 
 credential 是 `lunafox_agent_state` 中 mode-0600 的普通 JSON 文件，绝不会通过主机环境或 Docker container metadata 传递。Registration、database binding 和 credential publication 是串行的。重复成功执行 `docker compose up -d` 会复用同一个已注册 Agent。缺失、格式错误、权限过宽、发布不完整、被删除或与数据库不一致的 identity state 都会返回明确的修复错误，绝不会静默注册另一个 Agent。
 
-默认资源也遵循相同的 fail-closed 规则。全新状态会一次性导入打包的 fingerprint corpus 和 wordlists。之后的 bootstrap 运行会校验原始 records、files、hashes、sizes、descriptions 和 tags，同时保留额外的用户资源。默认值缺失、部分删除或发生变化时会返回明确的修复错误；bootstrap 绝不会填补或覆盖这些状态。已经初始化但被完全清空的 corpus 不会被静默重新 seed。
+默认资源也遵循相同的 fail-closed 规则。全新状态会一次性导入打包的 fingerprint corpus 和 wordlists。之后的 bootstrap 运行会保留已初始化的 wordlist 记录及其持久化内容（包括用户编辑），只校验 Catalog 身份和磁盘上的常规文件边界。默认 wordlist 缺失或被部分删除时仍会返回明确的修复错误；bootstrap 绝不会填补或覆盖这些状态。已经初始化但被完全清空的 corpus 不会被静默重新 seed。
+fingerprint corpus 仍保留独立的 records 和内容完整性校验。
 
 preflight 会在业务 bootstrap 之前检查实际 Docker socket、Linux execution node、named-volume subpaths 和只读 execution mounts。常驻 Agent 启动时会再次检查 socket、平台、API version 和精确 volume identities。不支持的能力会明确失败；不存在更弱的 whole-volume fallback。Server 永远不会收到 Docker socket。
 

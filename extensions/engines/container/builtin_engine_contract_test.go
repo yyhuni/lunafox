@@ -96,6 +96,70 @@ func TestBuiltinEngineDefinitionsUseIndependentApplicabilityAndInputs(t *testing
 	}
 }
 
+func TestBuiltinEngineDurationUnitsDeclareExactSecondsInventory(t *testing.T) {
+	want := map[string]struct{}{
+		"directory_scan.ffuf.request-timeout":                 {},
+		"directory_scan.ffuf.timeout":                         {},
+		"fingerprint_detection.observer_ward.timeout":         {},
+		"fingerprint_detection.observer_ward.request-timeout": {},
+		"nuclei_vulnerability.nuclei.timeout":                 {},
+		"nuclei_vulnerability.nuclei.request-timeout":         {},
+		"port_scan.naabu_active.timeout":                      {},
+		"port_scan.naabu_passive.timeout":                     {},
+		"screenshot.capture.page-timeout":                     {},
+		"subdomain_discovery.recon.timeout":                   {},
+		"subdomain_discovery.bruteforce.timeout":              {},
+		"subdomain_discovery.resolve.timeout":                 {},
+		"url_collection.waymore.timeout":                      {},
+		"url_collection.katana.timeout":                       {},
+		"url_collection.katana.request-timeout":               {},
+		"url_collection.katana.delay":                         {},
+		"url_collection.uro.timeout":                          {},
+		"url_collection.httpx.timeout":                        {},
+		"url_collection.httpx.request-timeout":                {},
+		"website_discovery.httpx.timeout":                     {},
+		"website_discovery.httpx.request-timeout":             {},
+	}
+
+	seen := make(map[string]struct{}, len(want))
+	for _, engineName := range []string{
+		"directory_scan", "fingerprint_detection", "nuclei_vulnerability", "port_scan",
+		"screenshot", "subdomain_discovery", "url_collection", "website_discovery",
+	} {
+		path := filepath.Join("..", engineName, "engine.json")
+		payload, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		manifest, err := enginecontract.DecodeRootManifest(payload, path)
+		if err != nil {
+			t.Fatalf("DecodeRootManifest(%s) error = %v", engineName, err)
+		}
+		for _, section := range manifest.Execution.ConfigSections {
+			for _, param := range section.Params {
+				if param.Unit == "" {
+					continue
+				}
+				key := fmt.Sprintf("%s.%s.%s", engineName, section.ID, param.Key)
+				if param.Unit != engineexecution.ParamUnitSeconds {
+					t.Fatalf("%s unit = %q, want %q", key, param.Unit, engineexecution.ParamUnitSeconds)
+				}
+				if _, ok := want[key]; !ok {
+					t.Fatalf("unexpected seconds unit declaration on %s", key)
+				}
+				seen[key] = struct{}{}
+			}
+		}
+	}
+	if len(seen) != len(want) {
+		for key := range want {
+			if _, ok := seen[key]; !ok {
+				t.Errorf("missing seconds unit declaration on %s", key)
+			}
+		}
+	}
+}
+
 func TestDirectoryScanManifestDefinesExactClosedFFUFSurface(t *testing.T) {
 	path := filepath.Join("..", "directory_scan", "engine.json")
 	payload, err := os.ReadFile(path)

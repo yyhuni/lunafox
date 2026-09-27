@@ -26,6 +26,7 @@ import {
 } from "@/lib/engine-catalog"
 import { normalizeError } from "@/lib/errors/normalize-error"
 import { textRole } from "@/lib/typography"
+import { compactSurfaceClassNames } from "@/lib/ui/compact-surface-contract"
 import { cn } from "@/lib/utils"
 import type { Locale } from "@/i18n/config"
 import type { EngineParamDefinition, EngineParamValue } from "@/types/engine-config.types"
@@ -54,7 +55,7 @@ export function EngineCatalogDetailDrawer({
       onOpenChange={onOpenChange}
       title={summaryDisplay?.displayName ?? ""}
       description={summaryDisplay?.description ?? t("detailDescription")}
-      titleMeta={engine ? <Badge variant="count" className="font-mono">{engine.packageVersion}</Badge> : null}
+      titleMeta={engine ? <Badge size="compact" variant="count" className="font-mono">{engine.packageVersion}</Badge> : null}
       headerMeta={summaryDisplay ? (
         <div data-slot="engine-detail-description" className={cn("min-w-0 line-clamp-2", textRole.bodySubtle)}>
           {summaryDisplay.description}
@@ -261,7 +262,7 @@ function EngineCopyField({ label, value, toastId }: { label: string; value: stri
   return (
     <div className="min-w-0 space-y-1.5">
       <div className={textRole.metadataLabel}>{label}</div>
-      <div className="flex min-w-0 items-start gap-2 border-y border-border/70 py-2">
+      <div className={cn(compactSurfaceClassNames.value, "items-start gap-2")}>
         <code className={cn("min-w-0 flex-1 break-all", textRole.code)}>{value}</code>
         <CopyButton
           value={value}

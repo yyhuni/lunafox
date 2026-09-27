@@ -21,4 +21,9 @@ describe("form contract", () => {
     expect(source).toContain('from "@/components/ui/polymorphic"')
     expect(source).not.toContain("@radix-ui/react-slot")
   })
+
+  it("uses shared compact typography for ordinary help and validation text", () => {
+    expect(source).toContain("textRole.helperText")
+    expect(source).not.toContain('"text-muted-foreground text-sm"')
+  })
 })

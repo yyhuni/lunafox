@@ -92,6 +92,7 @@
             "key": "request-timeout",
             "type": "integer",
             "default": 10,
+            "unit": "seconds",
             "minimum": 1,
             "maximum": 120
           },
@@ -99,6 +100,7 @@
             "key": "timeout",
             "type": "integer",
             "default": 86400,
+            "unit": "seconds",
             "minimum": 60,
             "maximum": 604800
           },

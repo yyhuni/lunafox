@@ -99,6 +99,93 @@ func TestUpgradeOperationRepositoryRoundTripsAuditFields(t *testing.T) {
 	}
 }
 
+func TestUpgradeOperationRepositoryRoundTripsOptionalHostActivity(t *testing.T) {
+	repository := newUpgradeOperationRepositoryForTest(t)
+	want := newTestOperation()
+	want.Status = domain.StatusUpdating
+	want.UpdatedAt = want.CreatedAt.Add(2 * time.Minute)
+	want.HostActivity = &domain.HostActivity{
+		Action: domain.HostActionPullImages, StartedAt: want.CreatedAt.Add(time.Minute), LastHeartbeatAt: want.UpdatedAt,
+	}
+	if _, created, err := repository.CreateOrGet(context.Background(), want); err != nil || !created {
+		t.Fatalf("CreateOrGet() created=%t err=%v", created, err)
+	}
+	loaded, err := repository.Get(context.Background(), want.OperationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !domain.EqualHostActivity(loaded.HostActivity, want.HostActivity) {
+		t.Fatalf("host activity = %#v, want %#v", loaded.HostActivity, want.HostActivity)
+	}
+}
+
+func TestUpgradeOperationRepositoryRejectsMalformedPersistedHostActivity(t *testing.T) {
+	repository := newUpgradeOperationRepositoryForTest(t)
+	operation := newTestOperation()
+	if _, created, err := repository.CreateOrGet(context.Background(), operation); err != nil || !created {
+		t.Fatalf("CreateOrGet() created=%t err=%v", created, err)
+	}
+	if err := repository.db.Model(&model.Operation{}).Where("id = ?", operation.OperationID).Update("host_activity", []byte(`{"action":"shell","startedAt":"2026-09-13T12:00:00Z","lastHeartbeatAt":"2026-09-13T12:00:00Z"}`)).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.Get(context.Background(), operation.OperationID); err == nil {
+		t.Fatal("Get() accepted malformed persisted host activity")
+	}
+}
+
+func TestUpgradeOperationRepositoryRoundTripsAgentDiagnosticSnapshot(t *testing.T) {
+	repository := newUpgradeOperationRepositoryForTest(t)
+	want := newTestOperation()
+	want.AgentExpectations = []domain.AgentExpectation{{
+		AgentID: 12, DisplayNameSnapshot: "edge-12", DesiredVersion: "1.2.3", TargetDigest: want.AgentTargetDigest,
+		Connected: false, Healthy: false, ReasonCode: domain.AgentReasonHeartbeatMissing,
+		DiagnosticSource: domain.AgentDiagnosticSourceServer, Diagnostic: "Agent heartbeat is missing or stale",
+	}}
+	if _, created, err := repository.CreateOrGet(context.Background(), want); err != nil || !created {
+		t.Fatalf("CreateOrGet() created=%t err=%v", created, err)
+	}
+	loaded, err := repository.Get(context.Background(), want.OperationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(loaded.AgentExpectations) != 1 {
+		t.Fatalf("agent expectations=%#v", loaded.AgentExpectations)
+	}
+	got := loaded.AgentExpectations[0]
+	if got.DisplayNameSnapshot != "edge-12" || got.ReasonCode != domain.AgentReasonHeartbeatMissing || got.DiagnosticSource != domain.AgentDiagnosticSourceServer {
+		t.Fatalf("loaded Agent evidence=%#v", got)
+	}
+}
+
+func TestUpgradeOperationRepositoryRejectsMalformedAgentDiagnosticEvidence(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*domain.AgentExpectation)
+	}{
+		{name: "unknown reason", mutate: func(expectation *domain.AgentExpectation) { expectation.ReasonCode = "new_reason" }},
+		{name: "unknown source", mutate: func(expectation *domain.AgentExpectation) {
+			expectation.DiagnosticSource = domain.AgentDiagnosticSource("untrusted")
+		}},
+		{name: "source without reason", mutate: func(expectation *domain.AgentExpectation) { expectation.ReasonCode = "" }},
+		{name: "control detail", mutate: func(expectation *domain.AgentExpectation) { expectation.Diagnostic = "unsafe\ntext" }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			repository := newUpgradeOperationRepositoryForTest(t)
+			operation := newTestOperation()
+			expectation := domain.AgentExpectation{
+				AgentID: 12, DisplayNameSnapshot: "edge-12", DesiredVersion: operation.AgentDesiredVersion, TargetDigest: operation.AgentTargetDigest,
+				ReasonCode: domain.AgentReasonHeartbeatMissing, DiagnosticSource: domain.AgentDiagnosticSourceServer, Diagnostic: "Agent heartbeat is missing or stale",
+			}
+			test.mutate(&expectation)
+			operation.AgentExpectations = []domain.AgentExpectation{expectation}
+			if _, _, err := repository.CreateOrGet(context.Background(), operation); err == nil {
+				t.Fatal("CreateOrGet() accepted malformed Agent diagnostic evidence")
+			}
+		})
+	}
+}
+
 func TestUpgradeOperationRepositoryRoundTripsFrontendScopeFacts(t *testing.T) {
 	repository := newUpgradeOperationRepositoryForTest(t)
 	operation := newTestOperation()

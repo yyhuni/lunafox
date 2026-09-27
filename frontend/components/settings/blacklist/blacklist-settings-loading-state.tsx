@@ -78,7 +78,7 @@ function LoadingRuleGroup({
       >
         <Skeleton className="h-4 w-4 rounded-sm" />
         <span className={textRole.sectionTitle}>{title}</span>
-        <Badge variant="secondary" className="rounded-full px-1.5 py-0">
+        <Badge size="compact" variant="secondary" className="rounded-full">
           <span className="inline-flex">
             <Skeleton className="h-4 w-4 rounded-full" />
           </span>
@@ -180,9 +180,10 @@ export function BlacklistSettingsLoadingState({
                     <span className={textRole.helperText}>{t("editor.examples")}</span>
                     {EXAMPLE_RULES.map((example) => (
                       <Badge
+                        size="compact"
                         key={example}
                         variant={example.includes("/") ? "success" : "secondary"}
-                        className={cn("rounded-md px-2 py-0", textRole.code)}
+                        className={cn("rounded-md", textRole.code)}
                       >
                         {example}
                       </Badge>

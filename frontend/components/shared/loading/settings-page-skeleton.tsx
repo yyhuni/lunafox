@@ -41,7 +41,7 @@ export function SettingsPageSkeleton({
         <div className="rounded-xl border border-border bg-card/70 p-4 shadow-2xs">
           <div className="space-y-3">
             <Skeleton className="h-5 w-32" />
-            <Input aria-hidden="true" disabled tabIndex={-1} className="disabled:opacity-100" />
+            <Input size="sm" aria-hidden="true" disabled tabIndex={-1} className="disabled:opacity-100" />
             <Skeleton className="h-24 w-full rounded-xl" />
             <ActionSkeleton size="lg" widthClassName="w-28" />
           </div>
@@ -57,7 +57,7 @@ export function SettingsPageSkeleton({
           <div className="rounded-xl border border-border bg-card/70 p-4 shadow-2xs">
             <div className="space-y-3">
               <Skeleton className="h-5 w-28" />
-              <Input aria-hidden="true" disabled tabIndex={-1} className="disabled:opacity-100" />
+              <Input size="sm" aria-hidden="true" disabled tabIndex={-1} className="disabled:opacity-100" />
               <ActionSkeleton size="lg" widthClassName="w-32" />
             </div>
           </div>

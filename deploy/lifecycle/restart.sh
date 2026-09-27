@@ -24,10 +24,12 @@ Usage: ./restart.sh [--help]
 
 Recreate every deployment container with `docker compose up -d --force-recreate`
 so the current .env and compose.override.yaml take effect, then wait up to five
-minutes for the full readiness conditions. Named volumes are preserved.
+minutes for the full readiness conditions. On modern releases, the image-preheat
+gate is recreated with the deployment; named volumes are preserved.
 
 Environment:
   LUNAFOX_READY_TIMEOUT_SECONDS   ready wait in seconds (default 300)
+  LUNAFOX_PREHEAT_TIMEOUT_SECONDS image-preheat deadline in seconds (default 900; 300-3600)
 USAGE
 }
 

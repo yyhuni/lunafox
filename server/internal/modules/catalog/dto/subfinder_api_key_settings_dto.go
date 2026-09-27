@@ -1,8 +1,8 @@
 package dto
 
 type SubfinderAPIKeySettingsResponse struct {
-	Providers   map[string]SubfinderProviderState      `json:"providers"`
-	Definitions []SubfinderProviderDefinition          `json:"definitions"`
+	Providers   map[string]SubfinderProviderState `json:"providers"`
+	Definitions []SubfinderProviderDefinition     `json:"definitions"`
 }
 
 type SubfinderProviderState struct {
@@ -12,8 +12,8 @@ type SubfinderProviderState struct {
 }
 
 type SubfinderFieldValue struct {
-	Value      string `json:"value,omitempty"`
-	Configured bool   `json:"configured,omitempty"`
+	Value       string `json:"value,omitempty"`
+	Configured  bool   `json:"configured,omitempty"`
 	MaskedValue string `json:"maskedValue,omitempty"`
 }
 
@@ -39,7 +39,8 @@ type SubfinderAPIKeySettingsUpdateRequest struct {
 }
 
 type SubfinderProviderSettings struct {
-	Enabled bool              `json:"enabled"`
-	Status  string            `json:"status,omitempty"`
-	Values  map[string]string `json:"values"`
+	Enabled bool `json:"enabled"`
+	// Status is accepted for backwards-compatible decoding but is ignored by the handler.
+	Status string            `json:"status,omitempty"`
+	Values map[string]string `json:"values"`
 }

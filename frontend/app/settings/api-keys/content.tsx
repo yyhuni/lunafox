@@ -22,11 +22,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useApiKeySettings, useUpdateApiKeySettings } from "@/hooks/use-api-key-settings"
+import {
+  getApiKeyProviderFieldPlaceholder,
+  getApiKeyProviderStatus,
+  toApiKeyProviderFormState,
+  toApiKeyProviderUpdate,
+  updateApiKeyProviderFormState,
+  type ApiKeyProviderFormState,
+} from "@/lib/api-key-settings-form"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 import type {
   ApiKeyProviderDefinition,
-  ApiKeyProviderUpdate,
   ApiKeySettings,
   ProviderStatus,
 } from "@/types/api-key-settings.types"
@@ -70,28 +77,8 @@ export interface ApiKeysSettingsPageProps {
   deferInitialSkeleton?: boolean
 }
 
-type ProviderFormState = Record<string, ApiKeyProviderUpdate>
-
 function createDefaultSettings(): ApiKeySettings {
   return { providers: {}, definitions: [] }
-}
-
-function toFormState(settings: ApiKeySettings): ProviderFormState {
-  return Object.fromEntries(
-    settings.definitions.map((definition) => {
-      const providerState = settings.providers[definition.key]
-      return [
-        definition.key,
-        {
-          enabled: providerState?.enabled ?? false,
-          status: providerState?.status ?? "unconfigured",
-          values: Object.fromEntries(
-            definition.fields.map((field) => [field.name, providerState?.values?.[field.name]?.value ?? ""])
-          ),
-        },
-      ]
-    })
-  )
 }
 
 function providerAbbreviation(displayName: string): string {
@@ -121,25 +108,6 @@ function getFieldLabel(fieldName: string, t: ReturnType<typeof useTranslations>)
     blobrKey: t("fields.blobrKey"),
   }
   return known[fieldName] ?? fieldName
-}
-
-function hasRequiredCredentials(provider: ApiKeyProviderDefinition, formData: ProviderFormState): boolean {
-  const config = formData[provider.key]
-  if (!config) return false
-  return provider.fields.every((field) => !field.required || config.values[field.name]?.trim().length > 0)
-}
-
-function getProviderStatus(
-  provider: ApiKeyProviderDefinition,
-  formData: ProviderFormState,
-  dirtyProviderKeys: Set<string>
-): ProviderStatus {
-  if (dirtyProviderKeys.has(provider.key)) return "pending"
-  const config = formData[provider.key]
-  if (!config) return "unconfigured"
-  if (config.status === "requiresReconfiguration" || config.status === "unsupported") return config.status
-  if (!hasRequiredCredentials(provider, formData)) return "unconfigured"
-  return config.enabled ? "enabled" : "disabled"
 }
 
 function providerMatchesSearch(provider: ApiKeyProviderDefinition, query: string): boolean {
@@ -180,6 +148,7 @@ function PasswordInput({
       <div className={API_KEYS_PASSWORD_INPUT_FIELD_SLOT_CLASS}>
         <Input
           id={id}
+          size="sm"
           className={API_KEYS_PASSWORD_INPUT_CLASS}
           type={show ? "text" : "password"}
           name={name}
@@ -221,7 +190,7 @@ export default function ApiKeysSettingsPage({
   const { data: settings = createDefaultSettings(), isLoading } = useApiKeySettings()
   const updateMutation = useUpdateApiKeySettings()
 
-  const [formData, setFormData] = useState<ProviderFormState>({})
+  const [formData, setFormData] = useState<ApiKeyProviderFormState>({})
   const [selectedProviderKey, setSelectedProviderKey] = useState<string>("")
   const [providerSearchQuery, setProviderSearchQuery] = useState("")
   const [dirtyProviderKeys, setDirtyProviderKeys] = useState<Set<string>>(new Set())
@@ -243,7 +212,7 @@ export default function ApiKeysSettingsPage({
 
   useEffect(() => {
     if (!settings.definitions.length) return
-    setFormData(toFormState(settings))
+    setFormData(toApiKeyProviderFormState(settings))
     setDirtyProviderKeys(new Set())
     setSelectedProviderKey((current) => current && settings.definitions.some((provider) => provider.key === current) ? current : settings.definitions[0].key)
   }, [settings])
@@ -253,7 +222,7 @@ export default function ApiKeysSettingsPage({
     [providers, selectedProviderKey]
   )
   const selectedConfig = selectedProvider ? formData[selectedProvider.key] : undefined
-  const selectedStatus = selectedProvider ? getProviderStatus(selectedProvider, formData, dirtyProviderKeys) : "unconfigured"
+  const selectedStatus = selectedProvider ? getApiKeyProviderStatus(selectedProvider, formData, dirtyProviderKeys) : "unconfigured"
   const hasChanges = dirtyProviderKeys.size > 0
 
   const updateProvider = (
@@ -261,25 +230,26 @@ export default function ApiKeysSettingsPage({
     field: string,
     value: string | boolean
   ) => {
-    setFormData((previous) => {
-      const current = previous[providerKey] ?? { enabled: false, values: {} }
-      const updated = field === "enabled"
-        ? { ...current, enabled: Boolean(value) }
-        : { ...current, values: { ...current.values, [field]: String(value) } }
-
-      return {
-        ...previous,
-        [providerKey]: updated,
-      }
-    })
+    setFormData((previous) => updateApiKeyProviderFormState(previous, providerKey, field, value))
     setDirtyProviderKeys((previous) => new Set(previous).add(providerKey))
   }
 
   const handleSave = () => {
+    const submittedProviderKeys = new Set(dirtyProviderKeys)
+    const providerUpdates = Object.fromEntries(
+      [...submittedProviderKeys].flatMap((providerKey) => {
+        const provider = providers.find((candidate) => candidate.key === providerKey)
+        const config = formData[providerKey]
+        return provider && config ? [[providerKey, toApiKeyProviderUpdate(provider, config)]] : []
+      }),
+    )
     updateMutation.mutate({
-      providers: Object.fromEntries([...dirtyProviderKeys].map((providerKey) => [providerKey, formData[providerKey]])),
+      providers: providerUpdates,
+    }, {
+      onSuccess: () => {
+        setDirtyProviderKeys((previous) => new Set([...previous].filter((key) => !submittedProviderKeys.has(key))))
+      },
     })
-    setDirtyProviderKeys(new Set())
   }
 
   useEffect(() => {
@@ -333,7 +303,7 @@ export default function ApiKeysSettingsPage({
             <CardContent className={API_KEYS_PROVIDER_LIST_CONTENT_CLASS}>
               <div role="radiogroup" aria-label={t("providerGroupAriaLabel")}>
                 {filteredProviders.map((provider) => {
-                  const status = getProviderStatus(provider, formData, dirtyProviderKeys)
+                  const status = getApiKeyProviderStatus(provider, formData, dirtyProviderKeys)
                   const statusMeta = statusBadge[status]
                   const selected = provider.key === selectedProvider?.key
 
@@ -428,7 +398,11 @@ export default function ApiKeysSettingsPage({
                           name={id}
                           value={value}
                           onChange={(nextValue) => updateProvider(selectedProvider.key, field.name, nextValue)}
-                          placeholder={t("fieldPlaceholder", { field: getFieldLabel(field.name, t) })}
+                          placeholder={getApiKeyProviderFieldPlaceholder(
+                            field,
+                            selectedConfig,
+                            t("fieldPlaceholder", { field: getFieldLabel(field.name, t) }),
+                          )}
                           hideLabel={t("password.hide")}
                           showLabel={t("password.show")}
                           copyLabel={t("password.copy")}
@@ -438,6 +412,7 @@ export default function ApiKeysSettingsPage({
                       ) : (
                         <Input
                           id={id}
+                          size="sm"
                           name={id}
                           type="text"
                           autoComplete="off"

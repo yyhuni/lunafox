@@ -244,7 +244,7 @@ func (executor *ComposeExecutor) PromoteFrontendOnlyComposeOverride(store *Journ
 	if err != nil {
 		return fmt.Errorf("encode promoted Compose override: %w", err)
 	}
-	if err := atomicWrite(persistentPath, encoded, 0o600); err != nil {
+	if err := atomicWrite(persistentPath, encoded, publicComposeOverrideMode); err != nil {
 		return fmt.Errorf("promote frontend Compose override: %w", err)
 	}
 	return nil

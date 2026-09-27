@@ -55,7 +55,7 @@ require_regular_file() {
 }
 
 for file in README.md README.zh-CN.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTIFACTS.md \
-	.gitignore docs/public-deployment.md docs/public-deployment.zh-CN.md .env .env.example compose.yaml engine-inventory.yaml release.manifest.yaml \
+	.gitignore docs/public-deployment.md docs/public-deployment.zh-CN.md .env .env.example compose.yaml engine-inventory.yaml release.manifest.yaml third-party-image-policy.json \
 	deploy/compose.template.yaml deploy/.env.example \
 	resources/loki/loki-config.yaml resources/alloy/config.alloy \
 	resources/fingerprints/web_fingerprint_v4.json resources/wordlists/manifest.json \
@@ -65,7 +65,8 @@ for file in README.md README.zh-CN.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTI
 	docker/nginx/Dockerfile docker/nginx/nginx.conf \
 	scripts/ci/audit-public-security-scope.mjs scripts/ci/check-public-channel.mjs \
 	scripts/ci/check-public-release-policy.mjs scripts/ci/generate-compose-deployment.mjs \
-	scripts/ci/generate-compose-deployment.test.mjs scripts/ci/release-compatibility-profile.mjs scripts/ci/verify-public-release.mjs \
+	scripts/ci/third-party-image-policy.mjs scripts/ci/generate-compose-deployment.test.mjs \
+	scripts/ci/release-compatibility-profile.mjs scripts/ci/verify-public-release.mjs \
 	scripts/ci/resolve-release-component-composition.mjs scripts/ci/verify-release-component-composition.mjs \
 	scripts/ci/verify-compose-cert-init-selftest.sh scripts/ci/verify-compose-config-init-selftest.sh \
 	scripts/ci/verify-public-runtime-source.sh scripts/ci/verify-public-runtime-contexts.mjs; do
@@ -73,6 +74,17 @@ for file in README.md README.zh-CN.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTI
 done
 require_regular_file release.manifest.yaml
 require_regular_file contracts/releasemanifest/release_compatibility_profiles.json
+require_regular_file third-party-image-policy.json
+
+node --input-type=module - "$ROOT_DIR" <<'NODE' || fail "third-party image policy is invalid or incomplete"
+import fs from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+const root = process.argv[2];
+const policyModule = await import(pathToFileURL(path.join(root, "scripts/ci/third-party-image-policy.mjs")).href);
+const policy = policyModule.readThirdPartyPolicy(path.join(root, "third-party-image-policy.json"));
+policyModule.validatePolicyAgainstComposeTemplate(policy, fs.readFileSync(path.join(root, "compose.yaml"), "utf8"));
+NODE
 
 LEGACY_V1_BOOTSTRAP=0
 if [ -e "$ROOT_DIR/runtime-composition.json" ] || [ -L "$ROOT_DIR/runtime-composition.json" ]; then
@@ -128,6 +140,26 @@ NODE
 fi
 
 cmp -s "$ROOT_DIR/.env" "$ROOT_DIR/.env.example" || fail ".env and .env.example must start from the same generated configuration"
+
+# The generated digest is the compatibility marker for preheat-capable
+# packages. Older fixed snapshots have neither it nor the preheater service;
+# a partial new package must fail rather than silently reverting to on-demand
+# Engine pulls.
+PREHEAT_CAPABLE=0
+if grep -Eq '^LUNAFOX_PREHEAT_MANIFEST_DIGEST=sha256:[a-f0-9]{64}$' "$ROOT_DIR/.env"; then
+	PREHEAT_CAPABLE=1
+	require_regular_file preheat-manifest.json
+elif grep -q '^LUNAFOX_PREHEAT_MANIFEST_DIGEST=' "$ROOT_DIR/.env"; then
+	fail "LUNAFOX_PREHEAT_MANIFEST_DIGEST must be a sha256 digest"
+elif [ -e "$ROOT_DIR/preheat-manifest.json" ] || [ -L "$ROOT_DIR/preheat-manifest.json" ]; then
+	fail "historical deployment must not contain an unbound preheat manifest"
+fi
+
+if [ "$PREHEAT_CAPABLE" -eq 1 ]; then
+	for file in scripts/ci/preheat-manifest.mjs scripts/ci/preheat-manifest.schema.json; do
+		require_file "$file"
+	done
+fi
 
 for required in server server/scripts contracts engine-go proto extensions docker/nginx docker/bootstrap tools/engine-release tools/engine-oci-publish; do
 	[ -d "$ROOT_DIR/$required" ] || fail "public Runtime source closure is missing: $required"
@@ -192,6 +224,11 @@ custom_compose_json="$(render_compose docker.io embedded '' 5432 disable lunafox
 external_default_json="$(render_compose docker.io external database.example '' require '' '' operator-db-password '' localhost 443)" || fail "external Compose configuration with database identity defaults is invalid"
 external_custom_json="$(render_compose docker.io external 2001:db8::1 6543 verify-full lunafox_remote lunafox_external operator-db-password operator-jwt-secret example.invalid 8443)" || fail "custom external Compose configuration is invalid"
 
+expected_services='["agent","agent-preflight","alloy","bootstrap","cert-init","config-init","frontend","loki","migrate","nginx","postgres","redis","server","upgrader"]'
+if [ "$PREHEAT_CAPABLE" -eq 1 ]; then
+	expected_services='["agent","agent-preflight","alloy","bootstrap","cert-init","config-init","engine-preheater","frontend","loki","migrate","nginx","postgres","redis","server","upgrader"]'
+fi
+
 if [ "$LEGACY_V1_BOOTSTRAP" -eq 0 ]; then
 	if ! node "$ROOT_DIR/scripts/ci/verify-release-component-composition.mjs" \
 		--composition "$ROOT_DIR/runtime-composition.json" \
@@ -201,8 +238,8 @@ if [ "$LEGACY_V1_BOOTSTRAP" -eq 0 ]; then
 	fi
 fi
 
-jq -e '
-  (.services | keys | sort) == (["agent","agent-preflight","alloy","bootstrap","cert-init","config-init","frontend","loki","migrate","nginx","postgres","redis","server","upgrader"] | sort) and
+jq -e --argjson expected_services "$expected_services" '
+  (.services | keys | sort) == ($expected_services | sort) and
   (all(.services[]; .build == null)) and
   (all(.services[]; .logging.driver == "json-file" and .logging.options["max-size"] == "10m" and .logging.options["max-file"] == "3")) and
   (.services.bootstrap.restart == "no") and
@@ -272,6 +309,61 @@ jq -e '
 	fail "Compose service graph or bounded logging contract is invalid"
 }
 
+if [ "$PREHEAT_CAPABLE" -eq 1 ]; then
+	preheat_manifest_digest="$(awk -F= '$1 == "LUNAFOX_PREHEAT_MANIFEST_DIGEST" {print $2}' "$ROOT_DIR/.env")"
+	release_manifest_digest="sha256:$(shasum -a 256 "$ROOT_DIR/release.manifest.yaml" | awk '{print $1}')"
+	compose_digest="sha256:$(shasum -a 256 "$ROOT_DIR/compose.yaml" | awk '{print $1}')"
+	third_party_policy_digest="sha256:$(shasum -a 256 "$ROOT_DIR/third-party-image-policy.json" | awk '{print $1}')"
+	composition_digest="$(jq -er '.compositionDigest' "$ROOT_DIR/runtime-composition.json")"
+	jq -e \
+		--arg manifest_digest "$preheat_manifest_digest" \
+		--arg release_manifest_digest "$release_manifest_digest" \
+		--arg compose_digest "$compose_digest" \
+		--arg third_party_policy_digest "$third_party_policy_digest" \
+		--arg composition_digest "$composition_digest" '
+		  (.schemaVersion == 1) and
+		  (.kind == "lunafox.preheat-manifest") and
+		  (.manifestDigest == $manifest_digest) and
+		  (.release.manifestDigest == $release_manifest_digest) and
+		  (.release.composeDigest == $compose_digest) and
+		  (.release.compositionDigest == $composition_digest) and
+		  (.release.thirdPartyPolicyDigest == $third_party_policy_digest)
+		' "$ROOT_DIR/preheat-manifest.json" >/dev/null || fail "preheat manifest binding is invalid"
+	node --input-type=module - "$ROOT_DIR" <<'NODE' || fail "preheat manifest strict validation failed"
+import fs from "node:fs";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+const root = process.argv[2];
+const module = await import(pathToFileURL(path.join(root, "scripts/ci/preheat-manifest.mjs")).href);
+const raw = JSON.parse(fs.readFileSync(path.join(root, "preheat-manifest.json"), "utf8"));
+module.validatePreheatManifest(raw);
+NODE
+	jq -e --arg manifest_digest "$preheat_manifest_digest" '
+		  (.services["engine-preheater"].image == .services.agent.image) and
+		  (.services["engine-preheater"].restart == "no") and
+		  (.services["engine-preheater"].network_mode == "none") and
+		  (.services["engine-preheater"].secrets == null) and
+		  (.services["engine-preheater"].environment == {"LUNAFOX_PREHEAT_TIMEOUT_SECONDS":"900"}) and
+		  (.services["engine-preheater"].entrypoint == ["/usr/local/bin/lunafox-engine-preheater"]) and
+		  (.services["engine-preheater"].command == ["--manifest","/deployment/preheat-manifest.json","--release-manifest","/deployment/release.manifest.yaml","--runtime-composition","/deployment/runtime-composition.json","--compose","/deployment/compose.yaml","--third-party-policy","/deployment/third-party-image-policy.json","--manifest-digest",$manifest_digest,"--profile","embedded","--cloudflare-acceleration","false"]) and
+		  (.services["engine-preheater"].labels["lunafox.preheat.manifest-digest"] == $manifest_digest) and
+		  (.services["engine-preheater"].labels["lunafox.preheat.profile"] == "embedded") and
+		  ([.services["engine-preheater"].volumes[] | .target] | sort == ["/deployment/compose.yaml","/deployment/preheat-manifest.json","/deployment/release.manifest.yaml","/deployment/runtime-composition.json","/deployment/third-party-image-policy.json","/var/run/docker.sock"]) and
+		  ([.services["engine-preheater"].volumes[] | .read_only == true] | all) and
+		  (.services["engine-preheater"].volumes | any(.source == "/var/run/docker.sock" and .target == "/var/run/docker.sock" and .read_only == true)) and
+		  (.services["engine-preheater"].volumes | any(.target == "/deployment/preheat-manifest.json" and (.source | endswith("/preheat-manifest.json")))) and
+		  (.services["engine-preheater"].volumes | any(.target == "/deployment/release.manifest.yaml" and (.source | endswith("/release.manifest.yaml")))) and
+		  (.services["engine-preheater"].volumes | any(.target == "/deployment/runtime-composition.json" and (.source | endswith("/runtime-composition.json")))) and
+		  (.services["engine-preheater"].volumes | any(.target == "/deployment/compose.yaml" and (.source | endswith("/compose.yaml")))) and
+		  (.services["engine-preheater"].volumes | any(.target == "/deployment/third-party-image-policy.json" and (.source | endswith("/third-party-image-policy.json")))) and
+		  (all(.services["config-init"], .services.redis, .services.loki, .services["agent-preflight"], .services["cert-init"]; .depends_on["engine-preheater"].condition == "service_completed_successfully"))
+		' <<<"$compose_json" >/dev/null || fail "preheater boundary or startup gate is invalid"
+	jq -e '
+		  (.services["engine-preheater"].labels["lunafox.preheat.profile"] == "external") and
+		  ((.services["engine-preheater"].command | index("--profile")) as $index | $index != null and .services["engine-preheater"].command[$index + 1] == "external")
+		' <<<"$external_default_json" >/dev/null || fail "external Compose must pass the selected preheat profile"
+fi
+
 # An export PR still carries the previous release's rendered compose snapshot, so
 # facts introduced by the current template are asserted on the template itself
 # and on the freshly generated package contract, never on a lagging snapshot.
@@ -294,8 +386,9 @@ assert_registry_closure() {
 	  (.services.server.environment.ENGINE_INSTALL_REGISTRY == $registry) and
 	  (.services.bootstrap.environment.ENGINE_INSTALL_REGISTRY == $registry) and
 	  (.services.upgrader.command == ["--root-dir","/deployment","--layout","public","--registry",$registry]) and
-	  (["server","frontend","nginx","agent","bootstrap","config-init","migrate","cert-init","upgrader","agent-preflight"] |
-	    all(.[]; $root.services[.].image | startswith($registry + "/yyhuni/lunafox-"))) and
+		  (["server","frontend","nginx","agent","bootstrap","config-init","migrate","cert-init","upgrader","agent-preflight"] |
+		    all(.[]; $root.services[.].image | startswith($registry + "/yyhuni/lunafox-"))) and
+		  (if $root.services["engine-preheater"] then $root.services["engine-preheater"].image | startswith($registry + "/yyhuni/lunafox-") else true end) and
 	  ([.services[].image] | all(contains($other + "/yyhuni/lunafox-") | not))
 	' <<<"$rendered" >/dev/null || fail "Compose mixes first-party registries or does not propagate ${registry}"
 }
@@ -369,7 +462,11 @@ jq -e --arg root "$ROOT_DIR" '
 ' <<<"$compose_json" >/dev/null || fail "Compose persistent secret boundary is invalid"
 
 socket_owners="$(jq -r '.services | to_entries[] | select(any(.value.volumes[]?; .source == "/var/run/docker.sock")) | .key' <<<"$compose_json" | sort)"
-[ "$socket_owners" = $'agent\nagent-preflight\nalloy\nupgrader' ] || fail "only the upgrader and existing Agent execution or log collection services may mount the Docker socket"
+expected_socket_owners=$'agent\nagent-preflight\nalloy\nupgrader'
+if [ "$PREHEAT_CAPABLE" -eq 1 ]; then
+	expected_socket_owners=$'agent\nagent-preflight\nalloy\nengine-preheater\nupgrader'
+fi
+[ "$socket_owners" = "$expected_socket_owners" ] || fail "only the upgrader and declared Agent execution, preheat, or log collection services may mount the Docker socket"
 jq -e '
   (.services.agent.volumes | any(.source == "/var/run/docker.sock" and .target == "/var/run/docker.sock")) and
   (.services["agent-preflight"].image == .services.agent.image) and
@@ -392,7 +489,7 @@ jq -e '
 ' <<<"$compose_json" >/dev/null || fail "third-party resident images must be digest-qualified"
 
 template="$ROOT_DIR/deploy/compose.template.yaml"
-for key in SERVER_IMAGE_REF FRONTEND_IMAGE_REF NGINX_IMAGE_REF AGENT_IMAGE_REF BOOTSTRAP_IMAGE_REF RELEASE_CHANNEL RELEASE_METADATA_BASE_URL RELEASE_REGISTRY ENGINE_INSTALL_CF_ACCELERATION PUBLIC_HOST PUBLIC_PORT; do
+for key in SERVER_IMAGE_REF FRONTEND_IMAGE_REF NGINX_IMAGE_REF AGENT_IMAGE_REF BOOTSTRAP_IMAGE_REF RELEASE_CHANNEL RELEASE_METADATA_BASE_URL RELEASE_REGISTRY ENGINE_INSTALL_CF_ACCELERATION LUNAFOX_PREHEAT_MANIFEST_DIGEST PUBLIC_HOST PUBLIC_PORT; do
 	grep -Fq "\${${key}:?${key} is required}" "$template" || fail "deployment template must require ${key}"
 done
 for key in PUBLIC_HOST PUBLIC_PORT; do

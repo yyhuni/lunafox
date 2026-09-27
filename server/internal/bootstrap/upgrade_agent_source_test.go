@@ -40,7 +40,7 @@ func (stub *upgradeAgentPublisherStub) SendUpdateRequired(id int, payload agentd
 func TestUpgradeAgentSourceSnapshotsReadinessWithoutSecrets(t *testing.T) {
 	now := time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC)
 	heartbeat := now.Add(-30 * time.Second)
-	agent := &agentdomain.Agent{ID: 7, Status: "online", HealthState: "healthy", AgentVersion: "1.2.3", OperatingSystem: "linux", Architecture: "amd64", ContainerRuntimeReady: true, SupportedEngineAPIMajors: []uint32{5}, SessionID: "session-7", SessionEpoch: 4, LastHeartbeat: &heartbeat, AuthenticationToken: "must-not-be-copied"}
+	agent := &agentdomain.Agent{ID: 7, DisplayName: "edge-seven", Status: "online", HealthState: "healthy", AgentVersion: "1.2.3", OperatingSystem: "linux", Architecture: "amd64", ContainerRuntimeReady: true, SupportedEngineAPIMajors: []uint32{5}, SessionID: "session-7", SessionEpoch: 4, LastHeartbeat: &heartbeat, AuthenticationToken: "must-not-be-copied"}
 	source := newUpgradeAgentSource(&upgradeAgentRepositoryStub{agents: []*agentdomain.Agent{agent}}, nil, func() time.Time { return now })
 	expectations, err := source.Snapshot(context.Background(), upgradeapp.AgentUpgradeTarget{Version: "1.2.3", Digest: "sha256:" + strings.Repeat("a", 64), ImageRef: "registry.example/agent@sha256:" + strings.Repeat("a", 64)})
 	if err != nil {
@@ -51,6 +51,9 @@ func TestUpgradeAgentSourceSnapshotsReadinessWithoutSecrets(t *testing.T) {
 	}
 	if expectations[0].ObservedDigest != "" || expectations[0].Diagnostic != "" {
 		t.Fatalf("fabricated or unexpected evidence=%#v", expectations[0])
+	}
+	if expectations[0].DisplayNameSnapshot != "edge-seven" {
+		t.Fatalf("display name snapshot=%q, want edge-seven", expectations[0].DisplayNameSnapshot)
 	}
 }
 
@@ -93,5 +96,25 @@ func TestUpgradeAgentSourceClassifiesStaleAndPausedAgents(t *testing.T) {
 	}
 	if len(got) != 2 || got[0].Connected || !got[1].Paused || got[1].Healthy {
 		t.Fatalf("classification=%#v", got)
+	}
+	if got[0].ReasonCode != upgradedomain.AgentReasonHeartbeatMissing || got[0].DiagnosticSource != upgradedomain.AgentDiagnosticSourceServer {
+		t.Fatalf("stale classification=%#v", got[0])
+	}
+	if got[1].ReasonCode != upgradedomain.AgentReasonPaused || got[1].DiagnosticSource != upgradedomain.AgentDiagnosticSourceServer {
+		t.Fatalf("paused classification=%#v", got[1])
+	}
+}
+
+func TestUpgradeAgentSourceUsesHeartbeatHealthEvidence(t *testing.T) {
+	now := time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC)
+	heartbeat := now.Add(-5 * time.Second)
+	agent := &agentdomain.Agent{ID: 3, Status: "online", HealthState: "degraded", HealthReason: "engine_unavailable", HealthMessage: "Engine is unavailable", AgentVersion: "1.0.0", LastHeartbeat: &heartbeat}
+	source := newUpgradeAgentSource(&upgradeAgentRepositoryStub{agents: []*agentdomain.Agent{agent}}, nil, func() time.Time { return now })
+	got, err := source.Snapshot(context.Background(), upgradeapp.AgentUpgradeTarget{Version: "1.0.0", Digest: "sha256:" + strings.Repeat("d", 64), ImageRef: "agent@sha256:" + strings.Repeat("d", 64)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].ReasonCode != upgradedomain.AgentReasonHealthReported || got[0].DiagnosticSource != upgradedomain.AgentDiagnosticSourceHeartbeat || got[0].Diagnostic != "Engine is unavailable" {
+		t.Fatalf("heartbeat classification=%#v", got)
 	}
 }

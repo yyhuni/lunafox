@@ -16,6 +16,7 @@ This directory owns reusable production UI patterns above raw `components/ui` pr
 | Bulk line input with validation | `BulkLineValidationInput` from `@/components/common` | Local line-numbered textarea shells |
 | Business list table | shared data-table components | Page-local table toolbar/pagination/action systems |
 | Search input with an inline search icon | `SearchInput` from `@/components/shared/search-input` | Page-local absolute icon + `Input` bundles |
+| Ordinary compact read-only value or short info surface | `compactSurfaceClassNames` from `@/lib/ui/compact-surface-contract` | Repeated local `border`/`rounded`/`px`/`py` combinations |
 | Captured HTTP response evidence | `ResponseEvidencePanel` from `@/components/shared/response-evidence` | Duplicated response Tabs and scroll regions in route consumers |
 | Fixed-height metric strip with loading numeric values | shared metrics primitives such as `StatMetricRow` | Wrapping the whole strip in a page-wide handoff when only the value slot is pending |
 | Scoped list/detail or detail-tab content motion | `RouteContentTransition` from `@/components/shared/navigation/route-content-transition` | Full-page slides, shared-element morphs, or route-local reveal wrappers |

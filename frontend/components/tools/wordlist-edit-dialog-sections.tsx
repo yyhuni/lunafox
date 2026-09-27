@@ -13,6 +13,7 @@ import {
   lineNumberedTextareaResponsiveViewportClassName,
 } from "@/components/common/line-numbered-textarea"
 import { WordlistTagPicker } from "@/components/tools/wordlist-tag-picker"
+import { compactSurfaceClassNames } from "@/lib/ui/compact-surface-contract"
 import { cn } from "@/lib/utils"
 
 type TranslationFn = (key: string, params?: Record<string, string | number | Date>) => string
@@ -40,6 +41,7 @@ interface WordlistEditMetadataProps {
   tags: string[]
   onDescriptionChange: (value: string) => void
   onTagsChange: (tags: string[]) => void
+  density?: "default" | "compact"
 }
 
 export function WordlistEditMetadata({
@@ -48,20 +50,24 @@ export function WordlistEditMetadata({
   tags,
   onDescriptionChange,
   onTagsChange,
+  density = "default",
 }: WordlistEditMetadataProps) {
+  const compact = density === "compact"
+
   return (
-    <section className="space-y-3">
-      <div className="space-y-2">
+    <section className={cn(compact ? "space-y-2" : "space-y-3")}>
+      <div className={cn(compact ? "space-y-1.5" : "space-y-2")}>
         <Label htmlFor="wordlist-description">{t("description")}</Label>
         <Input
           id="wordlist-description"
+          size="sm"
           value={description}
           onChange={(event) => onDescriptionChange(event.target.value)}
         />
       </div>
-      <div className="space-y-2">
+      <div className={cn(compact ? "space-y-1.5" : "space-y-2")}>
         <Label>{t("tags")}</Label>
-        <WordlistTagPicker t={t} value={tags} onChange={onTagsChange} />
+        <WordlistTagPicker density={density} t={t} value={tags} onChange={onTagsChange} />
       </div>
     </section>
   )
@@ -115,7 +121,7 @@ export function WordlistEditEditor({
 
   if (isLoading) {
     return (
-      <div aria-busy="true" aria-label={t("loading")} role="status" className="min-h-0 flex-1 border rounded-md">
+      <div aria-busy="true" aria-label={t("loading")} role="status" className="min-h-0 flex-1 radius-control border">
         <div className="h-full" />
       </div>
     )
@@ -159,6 +165,7 @@ interface WordlistEditFooterProps {
   onSaveDialog: () => void
   canEditContent: boolean
   className?: string
+  density?: "default" | "compact"
 }
 
 export function WordlistEditFooter({
@@ -170,6 +177,7 @@ export function WordlistEditFooter({
   onSaveDialog,
   canEditContent,
   className,
+  density = "default",
 }: WordlistEditFooterProps) {
   const isSavingAny = isSaving || isSavingMetadata
   const hasAnyChanges = hasChanges || hasMetadataChanges
@@ -186,6 +194,7 @@ export function WordlistEditFooter({
       </div>
       <Button
         type="button"
+        size={density === "compact" ? "sm" : undefined}
         onClick={onSaveDialog}
         disabled={isSavingAny || !canSave}
         loading={isSavingAny}

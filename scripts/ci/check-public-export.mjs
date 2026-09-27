@@ -27,6 +27,8 @@ const AGENT_BUNDLE_FILES = Object.freeze([
   "lunafox-agent-linux-arm64",
   "lunafox-engine-mount-preflight-linux-amd64",
   "lunafox-engine-mount-preflight-linux-arm64",
+  "lunafox-engine-preheater-linux-amd64",
+  "lunafox-engine-preheater-linux-arm64",
   "agent-bundle.json",
   "agent-bundle.sha256",
   "agent-bundle.sigstore.json",
@@ -97,6 +99,32 @@ function isAllowed(relPath, compiled) {
   return compiled.prefixes.some((prefix) => relPath.startsWith(prefix));
 }
 
+function validateDestinationOwnedGroups(repoRoot, policy, manifestPaths = new Set()) {
+  const optionalUntilPresent = new Set(policy.destinationOwnedOptionalUntilPresent ?? []);
+  const groups = policy.destinationOwnedGroups ?? [];
+  for (const group of groups) {
+    const sentinel = path.join(repoRoot, ...group.sentinel.split("/"));
+    const sentinelPresent = fs.existsSync(sentinel);
+    const present = group.paths.filter((groupPath) => fs.existsSync(path.join(repoRoot, ...groupPath.split("/"))));
+    // A source-only export has no destination snapshot. Older public bases can
+    // also lack members added after the first snapshot; those members remain
+    // optional until a deployment publication materializes them.
+    if (!sentinelPresent && present.length === 0) continue;
+    if (!sentinelPresent) {
+      fail(`public repository contains a partial destination-owned group: ${group.sentinel}`);
+    }
+    for (const groupPath of group.paths) {
+      const memberExists = fs.existsSync(path.join(repoRoot, ...groupPath.split("/")));
+      if (!memberExists && !optionalUntilPresent.has(groupPath)) {
+        fail(`public repository contains a partial destination-owned group: ${group.sentinel}`);
+      }
+      if (manifestPaths.has(groupPath)) {
+        fail(`destination-owned path must be excluded from the exact manifest: ${groupPath}`);
+      }
+    }
+  }
+}
+
 function walk(root) {
   const results = [];
   const visit = (directory, relative = "") => {
@@ -165,10 +193,10 @@ function validateImmutableAgentBundle(manifest, repoRoot) {
   const prefix = `agent/bin/${artifactId}/`;
   const expected = AGENT_BUNDLE_FILES.map((name) => `${prefix}${name}`).sort();
   if (JSON.stringify(paths) !== JSON.stringify(expected)) {
-    fail("public export must contain exactly one immutable seven-file Agent bundle");
+    fail("public export must contain exactly one immutable nine-file Agent bundle");
   }
   const bundle = readJson(path.join(repoRoot, ...`${prefix}agent-bundle.json`.split("/")), "public Agent bundle manifest");
-  if (bundle.schemaVersion !== "lunafox.agent-bundle.v2" || bundle.artifactId !== artifactId ||
+  if (bundle.schemaVersion !== "lunafox.agent-bundle.v3" || bundle.artifactId !== artifactId ||
       bundle.inputFingerprint?.version !== 1 || bundle.inputFingerprint?.algorithm !== "sha256-canonical-json-v1" ||
       !/^sha256:[a-f0-9]{64}$/.test(bundle.inputFingerprint?.value ?? "") || `sha256-${bundle.inputFingerprint.value.slice("sha256:".length)}` !== artifactId ||
       bundle.publicTreePath !== `agent/bin/${artifactId}`) {
@@ -209,19 +237,7 @@ function validatePublicExport(options) {
   for (const required of policy.requiredPaths ?? []) {
     if (!manifestPaths.has(required)) fail(`public repository is missing required deployment path: ${required}`);
   }
-  for (const group of compiled.destinationOwnedGroups) {
-    const sentinel = path.join(repoRoot, ...group.sentinel.split("/"));
-    const present = group.paths.filter((groupPath) => fs.existsSync(path.join(repoRoot, ...groupPath.split("/"))));
-    // The private exporter validates the source-only tree before publication;
-    // the destination validates the complete group after projection.
-    if (!fs.existsSync(sentinel) && present.length === 0) continue;
-    if (!fs.existsSync(sentinel) || present.length !== group.paths.length) {
-      fail(`public repository contains a partial destination-owned group: ${group.sentinel}`);
-    }
-    for (const groupPath of group.paths) {
-      if (manifestPaths.has(groupPath)) fail(`destination-owned path must be excluded from the exact manifest: ${groupPath}`);
-    }
-  }
+  validateDestinationOwnedGroups(repoRoot, policy, manifestPaths);
   for (const marker of policy.generatedMarkers ?? []) {
     const text = fs.readFileSync(path.join(repoRoot, marker), "utf8");
     if (!/GENERATED/i.test(text) || !/READ[- ]ONLY/i.test(text)) fail(`generated/read-only marker is missing from ${marker}`);
@@ -260,4 +276,4 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   }
 }
 
-export { AGENT_ARTIFACT_ID_RE, AGENT_BUNDLE_FILES, validatePublicExport };
+export { AGENT_ARTIFACT_ID_RE, AGENT_BUNDLE_FILES, validateDestinationOwnedGroups, validatePublicExport };

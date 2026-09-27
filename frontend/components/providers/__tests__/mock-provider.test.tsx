@@ -1,7 +1,8 @@
 import { render, screen, waitFor } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const startMockWorker = vi.fn(async () => undefined)
+const cleanupLegacyMockWorker = vi.fn(async () => undefined)
 
 vi.mock("@/mock/config", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/mock/config")>()
@@ -15,7 +16,16 @@ vi.mock("@/mock/browser", () => ({
   startMockWorker,
 }))
 
+vi.mock("@/mock/legacy-worker-cleanup", () => ({
+  cleanupLegacyMockWorker,
+}))
+
 describe("MockProvider", () => {
+  beforeEach(() => {
+    startMockWorker.mockClear()
+    cleanupLegacyMockWorker.mockClear()
+  })
+
   it("以服务端传入的 enabled=false 为准，避免客户端 mock 开关漂移导致首屏树形不一致", async () => {
     const { MockProvider } = await import("@/components/providers/mock-provider")
 
@@ -27,6 +37,9 @@ describe("MockProvider", () => {
 
     expect(screen.getByTestId("provider-child")).toBeInTheDocument()
     expect(startMockWorker).not.toHaveBeenCalled()
+    await waitFor(() => {
+      expect(cleanupLegacyMockWorker).toHaveBeenCalledTimes(1)
+    })
   })
 
   it("启用 mock 时仍立即保留首屏树形，由 network layer 接管 worker 就绪等待", async () => {
@@ -44,5 +57,6 @@ describe("MockProvider", () => {
     await waitFor(() => {
       expect(startMockWorker).toHaveBeenCalledTimes(1)
     })
+    expect(cleanupLegacyMockWorker).not.toHaveBeenCalled()
   })
 })

@@ -38,4 +38,9 @@ describe("api-client contract", () => {
     expect(source).toContain('import("@/mock/browser")')
     expect(source).toContain("await ensureMockInterceptionReady()")
   })
+
+  it("cleans legacy mock workers before real-mode requests", () => {
+    expect(source).toContain("from '@/mock/legacy-worker-cleanup'")
+    expect(source).toContain("await cleanupLegacyMockWorker()")
+  })
 })

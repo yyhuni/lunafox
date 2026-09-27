@@ -50,8 +50,8 @@ export function InteractionLoadingDialog({
           </DialogHeader>
 
           <div className="space-y-3">
-            <Input aria-hidden="true" disabled tabIndex={-1} className="disabled:opacity-100" />
-            <Input aria-hidden="true" disabled tabIndex={-1} className="disabled:opacity-100" />
+            <Input size="sm" aria-hidden="true" disabled tabIndex={-1} className="disabled:opacity-100" />
+            <Input size="sm" aria-hidden="true" disabled tabIndex={-1} className="disabled:opacity-100" />
             <Skeleton className="h-28 w-full rounded-xl" />
             <Skeleton className="h-20 w-full rounded-xl" />
           </div>

@@ -137,6 +137,7 @@ func TestDecodeExecutionDefinitionStrictlyNormalizesCompleteDefinition(t *testin
       "key": "request-timeout",
       "type": "integer",
       "default": 10,
+      "unit": "seconds",
       "minimum": 1,
       "maximum": 60
     }, {
@@ -171,7 +172,7 @@ func TestDecodeExecutionDefinitionStrictlyNormalizesCompleteDefinition(t *testin
 		t.Fatalf("requiredEnabled declaration was lost: %#v", definition.ConfigSections[0])
 	}
 	requestTimeout := definition.ConfigSections[0].Params[0]
-	if requestTimeout.Default != 10 || requestTimeout.Minimum == nil || *requestTimeout.Minimum != 1 || requestTimeout.Maximum == nil || *requestTimeout.Maximum != 60 {
+	if requestTimeout.Default != 10 || requestTimeout.Unit != ParamUnitSeconds || requestTimeout.Minimum == nil || *requestTimeout.Minimum != 1 || requestTimeout.Maximum == nil || *requestTimeout.Maximum != 60 {
 		t.Fatalf("integer declaration was lost: %#v", requestTimeout)
 	}
 	mode := definition.ConfigSections[0].Params[1]
@@ -193,6 +194,53 @@ func TestDecodeExecutionDefinitionStrictlyNormalizesCompleteDefinition(t *testin
 	}
 	if !reflect.DeepEqual(roundtrip, definition) {
 		t.Fatalf("roundtrip lost definition fields:\n got: %#v\nwant: %#v", roundtrip, definition)
+	}
+}
+
+func TestExecutionDefinitionParamUnitAcceptsOnlyIntegerSecondsAndClonesIt(t *testing.T) {
+	minimum := 1
+	definition := validExecutionDefinitionForTest()
+	definition.ConfigSections[0].Params = append(definition.ConfigSections[0].Params, ParamDefinition{
+		Key: "timeout", Type: ParamTypeInteger, Default: 60, Minimum: &minimum, Unit: ParamUnitSeconds,
+	})
+
+	if err := ValidateExecutionDefinition(definition); err != nil {
+		t.Fatalf("ValidateExecutionDefinition() error = %v", err)
+	}
+	cloned := CloneExecutionDefinition(definition)
+	if got := cloned.ConfigSections[0].Params[1].Unit; got != ParamUnitSeconds {
+		t.Fatalf("cloned unit = %q, want %q", got, ParamUnitSeconds)
+	}
+	if got := definition.ConfigSections[0].Params[0].Unit; got != "" {
+		t.Fatalf("omitted unit changed to %q", got)
+	}
+}
+
+func TestDecodeExecutionDefinitionRejectsInvalidParamUnits(t *testing.T) {
+	cases := []struct {
+		name    string
+		payload string
+		message string
+	}{
+		{
+			name:    "unknown unit",
+			payload: `{"engineApiMajor":2,"supportedTargetTypes":["domain"],"configSections":[{"id":"scan","params":[{"key":"timeout","type":"integer","default":60,"unit":"minutes"}]}]}`,
+			message: "unsupported unit",
+		},
+		{
+			name:    "unit on string",
+			payload: `{"engineApiMajor":2,"supportedTargetTypes":["domain"],"configSections":[{"id":"scan","params":[{"key":"mode","type":"string","default":"fast","unit":"seconds"}]}]}`,
+			message: "only supported for integer",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := DecodeExecutionDefinition([]byte(tc.payload), "fixture")
+			if err == nil || !strings.Contains(err.Error(), tc.message) {
+				t.Fatalf("DecodeExecutionDefinition() error = %v, want %q", err, tc.message)
+			}
+		})
 	}
 }
 
@@ -235,6 +283,7 @@ func TestDecodeExecutionDefinitionRejectsExplicitNullDeclarations(t *testing.T) 
 		{name: "pattern", old: `"pattern":"^[a-z]+$"`, replacement: `"pattern":null`, wantSubstring: "null JSON value"},
 		{name: "enum", old: `"enum":["fast"]`, replacement: `"enum":null`, wantSubstring: "null JSON value"},
 		{name: "resource", old: `"resource":{"kind":"wordlist"}`, replacement: `"resource":null`, wantSubstring: "null JSON value"},
+		{name: "unit", old: `"default":2`, replacement: `"default":2,"unit":null`, wantSubstring: "null JSON value"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -325,6 +374,8 @@ func TestValidateExecutionDefinitionRejectsInvalidDeclaration(t *testing.T) {
 		}, "duplicate param key"},
 		{"missing param type", func(def *ExecutionDefinition) { def.ConfigSections[0].Params[0].Type = "" }, "unsupported param type"},
 		{"param type alias", func(def *ExecutionDefinition) { def.ConfigSections[0].Params[0].Type = "String" }, "unsupported param type"},
+		{"unknown param unit", func(def *ExecutionDefinition) { def.ConfigSections[0].Params[1].Unit = "minutes" }, "unsupported unit"},
+		{"unit on string param", func(def *ExecutionDefinition) { def.ConfigSections[0].Params[0].Unit = ParamUnitSeconds }, "only supported for integer"},
 		{"integer bounds on string", func(def *ExecutionDefinition) {
 			def.ConfigSections[0].Params[0].Type = "string"
 			def.ConfigSections[0].Params[0].Minimum = &minimum

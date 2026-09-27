@@ -382,6 +382,7 @@ func (service *Service) markPreparationFailed(operation *domain.Operation) {
 	now := service.now().UTC()
 	operation.Status = domain.StatusFailed
 	operation.Diagnostic = "active work could not be cancelled before upgrade handoff"
+	operation.HostActivity = nil
 	operation.UpdatedAt = now
 	operation.CompletedAt = &now
 	if operation.StageTimes == nil {
@@ -575,6 +576,7 @@ func (service *Service) RetryOperation(ctx context.Context, userID int, operatio
 	operation.Status = retryStartStatus(operation.Status, operation.MigrationStatus)
 	operation.MigrationStatus = retryMigrationStatus(operation.MigrationStatus)
 	operation.Diagnostic = ""
+	operation.HostActivity = nil
 	operation.CompletedAt = nil
 	operation.UpdatedAt = now
 	if operation.StageTimes == nil {
@@ -849,6 +851,7 @@ func (service *Service) markHostUnavailable(operation *domain.Operation, _ error
 	}
 	operation.Status = status
 	operation.Diagnostic = "host upgrader handoff was not accepted"
+	operation.HostActivity = nil
 	operation.UpdatedAt = service.now().UTC()
 	if operation.StageTimes == nil {
 		operation.StageTimes = map[domain.Status]time.Time{}
@@ -876,6 +879,7 @@ func (service *Service) markStopUnavailable(operation *domain.Operation) {
 	now := service.now().UTC()
 	operation.Status = status
 	operation.Diagnostic = "the host upgrader did not accept the stop request"
+	operation.HostActivity = nil
 	operation.UpdatedAt = now
 	operation.CompletedAt = &now
 	if operation.StageTimes == nil {

@@ -7,6 +7,7 @@ import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/co
 import { Label } from "@/components/ui/label"
 import { getStatusToneSurfaceClass, getStatusToneTextClass } from "@/lib/status-config"
 import { textRole } from "@/lib/typography"
+import { compactSurfaceClassNames } from "@/lib/ui/compact-surface-contract"
 import { cn } from "@/lib/utils"
 import {
   LineNumberedTextarea,
@@ -145,14 +146,14 @@ export function BulkAddSubdomainsInput({
       </div>
 
       {!validationResult && (
-        <div className={cn("flex items-center gap-2 rounded-md border bg-muted/20 px-3 py-2", textRole.bodyStrong)}>
+        <div className={cn(compactSurfaceClassNames.mutedInfo, "flex items-center gap-2", textRole.bodyStrong)}>
           <Info className={cn("h-4 w-4", getStatusToneTextClass("muted"))} />
           <span>{t("emptySummary")}</span>
         </div>
       )}
 
       {validationResult && validationResult.blockingIssueCount === 0 && (
-        <div className={cn("flex items-center gap-2 rounded-md px-3 py-2", getStatusToneSurfaceClass("success"), textRole.bodyStrong)}>
+        <div className={cn(compactSurfaceClassNames.info, "flex items-center gap-2", getStatusToneSurfaceClass("success"), textRole.bodyStrong)}>
           <CheckCircle className={cn("h-4 w-4", getStatusToneTextClass("success"))} />
           <span>{t("validSummary", { count: validationResult.validCount })}</span>
           {validationResult.advisoryIssueCount > 0 && (

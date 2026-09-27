@@ -8,6 +8,7 @@ const loadingStateSource = readFileSync(
   path.resolve(process.cwd(), "components/settings/api-keys/api-keys-settings-loading-state.tsx"),
   "utf8"
 )
+const formStateSource = readFileSync(path.resolve(process.cwd(), "lib/api-key-settings-form.ts"), "utf8")
 const resolvedPageSource = source.slice(source.indexOf("export default function ApiKeysSettingsPage"))
 
 describe("content contract", () => {
@@ -228,7 +229,7 @@ describe("content contract", () => {
       "data-source-name={provider.sourceName}",
       "provider.fields",
     ]) {
-      expect(source).toContain(provider)
+      expect(source + formStateSource).toContain(provider)
     }
     expect(source).not.toContain("PROVIDER_META")
     expect(source).not.toContain("DEFAULT_SETTINGS")

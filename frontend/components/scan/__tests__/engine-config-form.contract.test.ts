@@ -182,6 +182,9 @@ describe("engine-config-form contract", () => {
   it("renders integer engine parameters with the shared number stepper", () => {
     expect(source).toContain('from "@/components/ui/number-stepper-input"')
     expect(source).toContain("<NumberStepperInput")
+    expect(source).toContain("<EngineDurationInput")
+    expect(source).toContain('param.unit === "seconds"')
+    expect(source).not.toContain('param.key === "timeout"')
     expect(source).toContain("getIntegerStep(param)")
     expect(source).toContain("param.type === \"integer\"")
   })

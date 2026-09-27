@@ -23,13 +23,16 @@ usage() {
 Usage: ./start.sh [--help]
 
 Start an existing LunaFox deployment with one `docker compose up -d` and wait up
-to five minutes for the full readiness conditions.
+to five minutes for the full readiness conditions. On modern releases, the
+Compose-managed image-preheat gate first verifies every published Engine Runtime
+supported by this host and the selected Compose image closure.
 
 This command never performs a first installation. Run ./install.sh when this
 directory has no deployment yet.
 
 Environment:
   LUNAFOX_READY_TIMEOUT_SECONDS   ready wait in seconds (default 300)
+  LUNAFOX_PREHEAT_TIMEOUT_SECONDS image-preheat deadline in seconds (default 900; 300-3600)
 USAGE
 }
 

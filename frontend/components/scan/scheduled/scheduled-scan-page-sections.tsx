@@ -172,8 +172,9 @@ export function ScheduledScanTimeline({
                     </span>
                     {index === 0 ? (
                       <Badge
+                        size="compact"
                         variant="secondary"
-                        className="bg-info/10 px-2 py-0 text-info hover:bg-info/10"
+                        className="bg-info/10 text-info hover:bg-info/10"
                       >
                         {labels.soon}
                       </Badge>

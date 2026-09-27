@@ -45,7 +45,16 @@ export function DenseRowActionMenu({ ariaLabel, children, leadingActions, align 
     return (<DenseRowActionOwner className={ownerClassName}>
       {leadingActions}
       <DropdownMenu>
-        <DropdownMenuTrigger render={<Button variant="ghost" size={triggerSize} aria-label={ariaLabel}/>}> 
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              size={triggerSize}
+              layout="rowAction"
+              aria-label={ariaLabel}
+            />
+          }
+        >
             <MoreHorizontal className="h-4 w-4"/>
             <span className="sr-only">{ariaLabel}</span>
           </DropdownMenuTrigger>

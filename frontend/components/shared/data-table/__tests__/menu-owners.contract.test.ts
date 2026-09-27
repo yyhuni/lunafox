@@ -21,6 +21,7 @@ describe("menu-owners contract", () => {
   it("keeps dense row action menus on the approved shared trigger treatment", () => {
     expect(source).toContain('variant="ghost"')
     expect(source).toContain('triggerSize = "icon-sm"')
+    expect(source).toContain('layout="rowAction"')
     expect(source).toContain("<DenseRowActionOwner")
     expect(source).toContain('size={triggerSize}')
     expect(source).toContain("<MoreHorizontal className=\"h-4 w-4\"")

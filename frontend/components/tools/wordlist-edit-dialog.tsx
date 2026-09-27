@@ -6,6 +6,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog"
 import { editorDialogPanelClassName } from "@/lib/ui/overlay-styles"
+import { compactSurfaceClassNames } from "@/lib/ui/compact-surface-contract"
 import { cn } from "@/lib/utils"
 import { useWordlistEditDialogState } from "@/components/tools/wordlist-edit-dialog-state"
 import {
@@ -65,6 +66,7 @@ export function WordlistEditDialog({
           <div className="flex-1 overflow-hidden px-4 py-3">
             <div className="flex flex-col gap-2 h-full">
               <WordlistEditMetadata
+                density="compact"
                 t={t}
                 description={description}
                 tags={tags}
@@ -90,7 +92,7 @@ export function WordlistEditDialog({
                   />
                 </>
               ) : (
-                <div className="rounded-md border bg-muted/30 px-4 py-3 text-muted-foreground">
+                <div className={cn(compactSurfaceClassNames.mutedInfo, "text-muted-foreground", "text-xs leading-4")}>
                   {t("oversizedMetadataOnly")}
                 </div>
               )}
@@ -98,6 +100,7 @@ export function WordlistEditDialog({
           </div>
 
           <WordlistEditFooter
+            density="compact"
             t={t}
             isSaving={isSaving}
             isSavingMetadata={isSavingMetadata}

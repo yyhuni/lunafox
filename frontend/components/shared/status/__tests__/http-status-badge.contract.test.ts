@@ -16,12 +16,13 @@ describe("http-status-badge contract", () => {
     expect(source).toContain("textRole.tableCellSecondary")
     expect(source).toContain("font-mono")
     expect(source).toContain("tabular-nums")
+    expect(source).toContain("sizeProps")
   })
 
   it("keeps status badge density changes behind named size variants", () => {
     expect(source).toContain("sizeClassNames")
-    expect(source).toContain('table: "h-5 px-2 py-0"')
-    expect(source).toContain('default: "px-2 py-1"')
+    expect(source).toContain('table: { size: "compact" }')
+    expect(source).toContain('default: { size: "tag" }')
     expect(source).toContain('overlay: "px-1.5 py-0.5 text-xs backdrop-blur-sm"')
     expect(source).not.toContain("bg-green-500")
     expect(source).not.toContain("text-emerald")

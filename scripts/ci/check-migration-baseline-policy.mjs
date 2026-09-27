@@ -6,6 +6,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { resolveReleaseMigrationMetadata } from "./resolve-release-migration-metadata.mjs";
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const defaultRepoRoot = path.resolve(scriptDir, "../..");
 const MIGRATION_FILE_PATTERN = /^(\d{6})_([a-z0-9][a-z0-9_-]*)\.(up|down)\.sql$/;
@@ -41,12 +43,14 @@ function parseArgs(argv) {
     releaseChannel: "release-candidate",
     deploymentMode: "disposable",
     releaseManifest: "",
+    currentMigrationManifest: "",
+    previousMigrationManifest: "",
   };
 
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index];
     const value = argv[index + 1];
-    if (!["--repo-root", "--release-channel", "--deployment-mode", "--release-manifest"].includes(flag)) {
+    if (!["--repo-root", "--release-channel", "--deployment-mode", "--release-manifest", "--current-migration-manifest", "--previous-migration-manifest"].includes(flag)) {
       fail(`unknown argument: ${flag}`);
     }
     if (!value) {
@@ -56,6 +60,8 @@ function parseArgs(argv) {
     if (flag === "--release-channel") options.releaseChannel = value;
     if (flag === "--deployment-mode") options.deploymentMode = value;
     if (flag === "--release-manifest") options.releaseManifest = path.resolve(value);
+    if (flag === "--current-migration-manifest") options.currentMigrationManifest = path.resolve(value);
+    if (flag === "--previous-migration-manifest") options.previousMigrationManifest = path.resolve(value);
     index += 1;
   }
 
@@ -97,9 +103,12 @@ function pairChecksum(migrationsDir, migration) {
   return `sha256:${crypto.createHash("sha256").update(payload).digest("hex")}`;
 }
 
-function validateMigrationManifest(repoRoot, policy) {
-  const migrationsDir = path.join(repoRoot, "server/cmd/server/migrations");
-  const manifestPath = path.join(migrationsDir, policy.migrationManifest);
+function validateMigrationManifest(repoRoot, policy, manifestPathOverride = "") {
+  const defaultMigrationsDir = path.join(repoRoot, "server/cmd/server/migrations");
+  const manifestPath = manifestPathOverride
+    ? path.resolve(manifestPathOverride)
+    : path.join(defaultMigrationsDir, policy.migrationManifest);
+  const migrationsDir = path.dirname(manifestPath);
   const manifest = readJson(manifestPath, "migration manifest");
   assert.equal(manifest.schemaVersion, policy.schemaVersion, "migration manifest schemaVersion must match policy");
   assert.equal(manifest.checksumAlgorithm, CHECKSUM_ALGORITHM, "migration manifest checksum algorithm is unsupported");
@@ -145,7 +154,7 @@ function validateMigrationManifest(repoRoot, policy) {
   assert.equal(baseline.slug, "init_schema", "000001 baseline slug is immutable");
   assert.equal(baseline.checksum, policy.baselineChecksum, "000001 baseline checksum does not match policy");
   assert.equal(baseline.checksum, BASELINE_PAIR_CHECKSUM, "000001 baseline checksum changed");
-  return { manifest, entriesById };
+  return { manifest, entriesById, path: manifestPath };
 }
 
 function parseScalar(value) {
@@ -179,7 +188,26 @@ function readReleaseMigrationMetadata(manifestPath) {
   return values;
 }
 
-function validateReleaseManifest(manifestPath, policy, migrationManifest) {
+function readReleaseVersion(manifestPath) {
+  const lines = fs.readFileSync(manifestPath, "utf8").split(/\r?\n/);
+  const line = lines.find((candidate) => /^releaseVersion:\s*/.test(candidate));
+  if (!line) return "";
+  return parseScalar(line.replace(/^releaseVersion:\s*/, ""));
+}
+
+function validateReleaseMigrationBoundary(manifestPath, metadata, currentMigrationManifest, previousMigrationManifest) {
+  const releaseVersion = readReleaseVersion(manifestPath);
+  // Development placeholders and older contract fixtures are not publishable
+  // releases. Production-tagged manifests must prove their historical edge.
+  if (!releaseVersion || releaseVersion === "0.0.0-dev") return;
+  const resolved = resolveReleaseMigrationMetadata(currentMigrationManifest, previousMigrationManifest);
+  assert.equal(metadata.hasDatabaseMigration, resolved.hasDatabaseMigration, "release migration presence does not match the audited migration boundary");
+  assert.equal(metadata.migrationId, resolved.migrationId, "release migration id does not match the audited migration boundary");
+  assert.equal(metadata.checksum, resolved.checksum, "release migration checksum does not match the audited migration boundary");
+  if (!resolved.hasDatabaseMigration) assert.equal(metadata.migrationType, "none", "release without migration must use migrationType none");
+}
+
+function validateReleaseManifest(manifestPath, policy, migrationManifest, previousMigrationManifest) {
   if (!manifestPath) return;
   const metadata = readReleaseMigrationMetadata(manifestPath);
   assert.equal(metadata.policyVersion, policy.schemaVersion, "release manifest migration policyVersion does not match policy");
@@ -187,6 +215,7 @@ function validateReleaseManifest(manifestPath, policy, migrationManifest) {
     assert.equal(metadata.migrationType, "none", "release without migration must use migrationType none");
     assert.equal(metadata.migrationId, "", "release without migration must not claim a migration id");
     assert.equal(metadata.checksum, "", "release without migration must not claim a migration checksum");
+    validateReleaseMigrationBoundary(manifestPath, metadata, migrationManifest.path, previousMigrationManifest);
     return;
   }
   assert.ok(["compatible", "preserve-data", "destructive"].includes(metadata.migrationType), "release migrationType is unsupported");
@@ -195,6 +224,7 @@ function validateReleaseManifest(manifestPath, policy, migrationManifest) {
   const entry = [...migrationManifest.entriesById.values()].find((candidate) => `${candidate.id}_${candidate.slug}` === metadata.migrationId);
   assert.ok(entry, `release references unknown migration ${metadata.migrationId}`);
   assert.equal(metadata.checksum, entry.checksum, "release migration checksum does not match migration manifest");
+  validateReleaseMigrationBoundary(manifestPath, metadata, migrationManifest.path, previousMigrationManifest);
 }
 
 function validateImageDelivery(repoRoot) {
@@ -225,8 +255,14 @@ function validateImageDelivery(repoRoot) {
 function main() {
   const options = parseArgs(process.argv.slice(2));
   const policy = readPolicy(options.repoRoot);
-  const migrationManifest = validateMigrationManifest(options.repoRoot, policy);
-  validateReleaseManifest(options.releaseManifest, policy, migrationManifest);
+  const currentMigrationManifest = options.currentMigrationManifest || process.env.CURRENT_MIGRATION_MANIFEST || "";
+  const migrationManifest = validateMigrationManifest(options.repoRoot, policy, currentMigrationManifest);
+  validateReleaseManifest(
+    options.releaseManifest,
+    policy,
+    migrationManifest,
+    options.previousMigrationManifest || process.env.PREVIOUS_MIGRATION_MANIFEST || "",
+  );
   validateImageDelivery(options.repoRoot);
 
   if (options.releaseChannel === "stable" && !policy.stableReleaseAllowed) {

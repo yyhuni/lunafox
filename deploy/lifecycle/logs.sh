@@ -39,6 +39,10 @@ for argument in "$@"; do
 		usage
 		exit 0
 		;;
+	--cf-acceleration)
+		printf 'LunaFox: logs.sh does not accept --cf-acceleration; it is valid only with ./install.sh\n' >&2
+		exit 2
+		;;
 	esac
 done
 

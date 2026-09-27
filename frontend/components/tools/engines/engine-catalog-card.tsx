@@ -48,7 +48,7 @@ export function EngineCatalogCard({ engine, locale, onSelect }: EngineCatalogCar
       <span className={ENGINE_CARD_HEADER_CLASS}>
         <span className="flex min-w-0 items-start justify-between gap-3">
           <span className={cn("min-w-0 truncate", textRole.panelTitle)}>{display.displayName}</span>
-          <Badge variant="count" className="font-mono">{engine.packageVersion}</Badge>
+          <Badge size="compact" variant="count" className="font-mono">{engine.packageVersion}</Badge>
         </span>
         <span className={cn("line-clamp-2 min-h-10", textRole.bodySubtle)}>{display.description}</span>
       </span>
@@ -91,7 +91,7 @@ export function EngineCatalogCardLoadingState() {
       <div className={ENGINE_CARD_HEADER_CLASS}>
         <div className="flex items-start justify-between gap-3">
           <EngineTextPlaceholder roleClassName={textRole.panelTitle} className="w-32" />
-          <Badge aria-hidden="true" variant="count" className="relative font-mono text-transparent">
+          <Badge aria-hidden="true" size="compact" variant="count" className="relative font-mono text-transparent">
             0.0.0
             <Skeleton className="absolute inset-0 radius-badge" />
           </Badge>

@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/yyhuni/lunafox/server/internal/modules/upgrade/domain"
 )
 
 const journalReaderTestDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -40,6 +42,32 @@ func TestFileJournalEventReaderCarriesStageTimestampAndProgressEvents(t *testing
 	}
 }
 
+func TestFileJournalEventReaderCarriesValidatedHostActivity(t *testing.T) {
+	root := t.TempDir()
+	base := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
+	activity := &domain.HostActivity{
+		Action: domain.HostActionPullImages, StartedAt: base.Add(time.Minute), LastHeartbeatAt: base.Add(2 * time.Minute),
+	}
+	journal := hostJournal{
+		SchemaVersion: hostJournalSchema, OperationID: "44444444-4444-4444-8444-444444444444", ManifestDigest: journalReaderTestDigest,
+		Stage: "updating", StartedAt: base, UpdatedAt: base.Add(3 * time.Minute), StageUpdatedAt: base,
+		HostActivity: activity,
+	}
+	writeJournalReaderFixture(t, root, journal, false)
+
+	reader, err := NewFileJournalEventReader(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	event, err := reader.ReadCurrent(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !domain.EqualHostActivity(event.HostActivity, activity) {
+		t.Fatalf("host activity = %#v, want %#v", event.HostActivity, activity)
+	}
+}
+
 func TestFileJournalEventReaderAcceptsLegacyJournalWithoutProgressFields(t *testing.T) {
 	root := t.TempDir()
 	base := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
@@ -57,8 +85,27 @@ func TestFileJournalEventReaderAcceptsLegacyJournalWithoutProgressFields(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !event.StageUpdatedAt.IsZero() || len(event.ProgressEvents) != 0 {
+	if !event.StageUpdatedAt.IsZero() || len(event.ProgressEvents) != 0 || event.HostActivity != nil {
 		t.Fatalf("legacy journal event = %#v", event)
+	}
+}
+
+func TestFileJournalEventReaderRejectsMalformedHostActivity(t *testing.T) {
+	root := t.TempDir()
+	base := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
+	journal := hostJournal{
+		SchemaVersion: hostJournalSchema, OperationID: "55555555-5555-4555-8555-555555555555", ManifestDigest: journalReaderTestDigest,
+		Stage: "preflight", StartedAt: base, UpdatedAt: base.Add(2 * time.Minute), StageUpdatedAt: base,
+		HostActivity: &domain.HostActivity{Action: domain.HostActionPullImages, StartedAt: base.Add(time.Minute), LastHeartbeatAt: base.Add(2 * time.Minute)},
+	}
+	writeJournalReaderFixture(t, root, journal, false)
+
+	reader, err := NewFileJournalEventReader(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := reader.ReadCurrent(context.Background()); err == nil {
+		t.Fatal("reader accepted malformed host activity")
 	}
 }
 

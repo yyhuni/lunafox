@@ -45,6 +45,7 @@ export function ChangePasswordFormFields({
         <Label htmlFor="oldPassword">{t("currentPassword")}</Label>
         <Input
           id="oldPassword"
+          size="sm"
           name="currentPassword"
           type="password"
           autoComplete="current-password"
@@ -57,6 +58,7 @@ export function ChangePasswordFormFields({
         <Label htmlFor="newPassword">{t("newPassword")}</Label>
         <Input
           id="newPassword"
+          size="sm"
           name="newPassword"
           type="password"
           autoComplete="new-password"
@@ -69,6 +71,7 @@ export function ChangePasswordFormFields({
         <Label htmlFor="confirmPassword">{t("confirmPassword")}</Label>
         <Input
           id="confirmPassword"
+          size="sm"
           name="confirmPassword"
           type="password"
           autoComplete="new-password"
@@ -89,7 +92,7 @@ export function ChangePasswordError({ error }: ChangePasswordErrorProps) {
   if (!error) return null
 
   return (
-    <p className="text-destructive text-sm">{error}</p>
+    <p className="text-destructive text-xs leading-4">{error}</p>
   )
 }
 

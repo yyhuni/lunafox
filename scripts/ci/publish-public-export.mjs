@@ -28,6 +28,8 @@ const AGENT_BUNDLE_FILES = Object.freeze([
   "lunafox-agent-linux-arm64",
   "lunafox-engine-mount-preflight-linux-amd64",
   "lunafox-engine-mount-preflight-linux-arm64",
+  "lunafox-engine-preheater-linux-amd64",
+  "lunafox-engine-preheater-linux-arm64",
   "agent-bundle.json",
   "agent-bundle.sha256",
   "agent-bundle.sigstore.json",
@@ -457,7 +459,11 @@ function pushProjection({ exportDir, remoteUrl, branch, baseSha, tag, token, des
       const sentinelExists = gitObjectExists(repository, `${baseSha}:${group.sentinel}`);
       if (sentinelExists) {
         for (const groupPath of group.paths) {
-          if (!gitObjectExists(repository, `${baseSha}:${groupPath}`)) {
+          // A modern deployment group can gain files over time. Optional
+          // members stay absent on older public bases until the first
+          // deployment snapshot publishes them; required members still make
+          // a partial group fail closed.
+          if (!gitObjectExists(repository, `${baseSha}:${groupPath}`) && !optionalUntilPresent.has(groupPath)) {
             fail(`public base commit contains a partial destination-owned group: ${group.sentinel}`);
           }
         }

@@ -9,8 +9,11 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
+
+	"github.com/yyhuni/lunafox/server/internal/modules/upgrade/domain"
 )
 
 const testManifestDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -29,6 +32,13 @@ func TestJournalStoreUsesPrivateAtomicFiles(t *testing.T) {
 	if got := rootInfo.Mode().Perm(); got != 0o700 {
 		t.Fatalf("journal directory mode = %o, want 700", got)
 	}
+	privateRootInfo, err := os.Stat(filepath.Dir(store.Directory()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := privateRootInfo.Mode().Perm(); got != 0o700 {
+		t.Fatalf("private root directory mode = %o, want 700", got)
+	}
 	for _, path := range []string{filepath.Join(store.Directory(), CurrentStateFile), filepath.Join(store.Directory(), HistoryDirectory, "op-1.json")} {
 		info, err := os.Stat(path)
 		if err != nil {
@@ -44,6 +54,43 @@ func TestJournalStoreUsesPrivateAtomicFiles(t *testing.T) {
 	}
 	if got.OperationID != j.OperationID || got.ManifestDigest != j.ManifestDigest {
 		t.Fatalf("loaded journal = %#v, want %#v", got, j)
+	}
+}
+
+func TestAtomicWriteAppliesRequestedModeDespiteRestrictiveUmask(t *testing.T) {
+	previousUmask := syscall.Umask(0o077)
+	t.Cleanup(func() { _ = syscall.Umask(previousUmask) })
+
+	for _, testCase := range []struct {
+		name        string
+		mode        os.FileMode
+		preexisting bool
+	}{
+		{name: "public initial temporary", mode: 0o644},
+		{name: "public unique temporary", mode: 0o644, preexisting: true},
+		{name: "private initial temporary", mode: 0o600},
+		{name: "private unique temporary", mode: 0o600, preexisting: true},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			root := t.TempDir()
+			path := filepath.Join(root, "state.json")
+			if testCase.preexisting {
+				temporary := filepath.Join(root, ".state.json.tmp")
+				if err := os.WriteFile(temporary, []byte("stale"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := atomicWrite(path, []byte("current"), testCase.mode); err != nil {
+				t.Fatal(err)
+			}
+			info, err := os.Stat(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := info.Mode().Perm(); got != testCase.mode.Perm() {
+				t.Fatalf("atomic file mode = %o, want %o", got, testCase.mode.Perm())
+			}
+		})
 	}
 }
 
@@ -658,6 +705,85 @@ func TestJournalStoreAppendsBoundedProgressWithoutAdvancingStageTimestamp(t *tes
 	afterDelayed, err := store.LoadCurrent()
 	if err != nil || !afterDelayed.UpdatedAt.Equal(current.UpdatedAt) || len(afterDelayed.ProgressEvents) != len(current.ProgressEvents) {
 		t.Fatalf("retained-window replay changed journal: %#v, %v", afterDelayed, err)
+	}
+}
+
+func TestJournalStoreTracksHostActivityWithoutAdvancingLifecycleAndClearsItAtCheckpoint(t *testing.T) {
+	store := newTestStore(t)
+	base := time.Now().UTC().Add(-time.Minute).Truncate(time.Microsecond)
+	if err := store.Save(Journal{
+		SchemaVersion: JournalSchema, OperationID: "op-host-activity", ManifestDigest: testManifestDigest,
+		Stage: StageUpdating, StartedAt: base, UpdatedAt: base, StageUpdatedAt: base,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	activity := domain.HostActivity{
+		Action: domain.HostActionPullImages, StartedAt: base.Add(time.Second), LastHeartbeatAt: base.Add(2 * time.Second),
+	}
+	if _, err := store.SetHostActivity("op-host-activity", testManifestDigest, activity); err != nil {
+		t.Fatal(err)
+	}
+	current, err := store.LoadCurrent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !domain.EqualHostActivity(current.HostActivity, &activity) || !current.StageUpdatedAt.Equal(base) || !current.UpdatedAt.Equal(activity.LastHeartbeatAt) || len(current.ProgressEvents) != 0 {
+		t.Fatalf("host activity changed lifecycle evidence: %#v", current)
+	}
+
+	activity.LastHeartbeatAt = base.Add(3 * time.Second)
+	if _, err := store.SetHostActivity("op-host-activity", testManifestDigest, activity); err != nil {
+		t.Fatal(err)
+	}
+	current, err = store.LoadCurrent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !current.UpdatedAt.Equal(activity.LastHeartbeatAt) || !domain.EqualHostActivity(current.HostActivity, &activity) {
+		t.Fatalf("host heartbeat was not retained: %#v", current)
+	}
+	if _, err := store.Checkpoint("op-host-activity", testManifestDigest, StageRestarting, "", nil); err != nil {
+		t.Fatal(err)
+	}
+	current, err = store.LoadCurrent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.HostActivity != nil || current.Stage != StageRestarting {
+		t.Fatalf("checkpoint retained stale activity: %#v", current)
+	}
+}
+
+func TestJournalStoreIgnoresDelayedHostActivityAfterNewerCheckpoint(t *testing.T) {
+	store := newTestStore(t)
+	base := time.Now().UTC().Add(-time.Minute).Truncate(time.Microsecond)
+	if err := store.Save(Journal{
+		SchemaVersion: JournalSchema, OperationID: "op-stale-host-activity", ManifestDigest: testManifestDigest,
+		Stage: StageRestarting, StartedAt: base, UpdatedAt: base.Add(5 * time.Second), StageUpdatedAt: base.Add(5 * time.Second),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	stale := domain.HostActivity{
+		Action: domain.HostActionWaitForServiceHealth, StartedAt: base.Add(time.Second), LastHeartbeatAt: base.Add(2 * time.Second),
+	}
+	current, err := store.SetHostActivity("op-stale-host-activity", testManifestDigest, stale)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.HostActivity != nil || !current.StageUpdatedAt.Equal(base.Add(5*time.Second)) {
+		t.Fatalf("delayed activity revived after checkpoint: %#v", current)
+	}
+}
+
+func TestJournalStoreRejectsMalformedHostActivity(t *testing.T) {
+	store := newTestStore(t)
+	base := time.Now().UTC().Truncate(time.Microsecond)
+	if err := store.Save(Journal{
+		SchemaVersion: JournalSchema, OperationID: "op-invalid-host-activity", ManifestDigest: testManifestDigest,
+		Stage: StagePreflight, StartedAt: base, UpdatedAt: base,
+		HostActivity: &domain.HostActivity{Action: domain.HostActionPullImages, StartedAt: base, LastHeartbeatAt: base},
+	}); err == nil {
+		t.Fatal("journal accepted an action outside its lifecycle owner")
 	}
 }
 

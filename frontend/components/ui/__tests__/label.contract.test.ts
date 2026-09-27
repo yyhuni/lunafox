@@ -15,4 +15,9 @@ describe("label contract", () => {
     expect(source).toContain("<label")
     expect(source).not.toContain("@radix-ui/react-label")
   })
+
+  it("routes ordinary labels through the compact semantic typography role", () => {
+    expect(source).toContain("textRole.compactSectionTitle")
+    expect(source).toContain("leading-4")
+  })
 })

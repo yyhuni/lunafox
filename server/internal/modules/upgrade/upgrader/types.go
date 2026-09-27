@@ -15,6 +15,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/blang/semver"
+	"github.com/yyhuni/lunafox/server/internal/modules/upgrade/domain"
 )
 
 const (
@@ -24,10 +25,23 @@ const (
 	ReceiptDirectory     = "receipts"
 	ManifestDirectory    = "manifests"
 	CompositionDirectory = "compositions"
-	PlanDirectory        = "plans"
-	LockFile             = "lock"
-	SocketFile           = "upgrader.sock"
-	OverrideFileSuffix   = ".compose.json"
+	// DeploymentAssetDirectory stores immutable target Compose/policy bytes
+	// fetched from the release channel. They are keyed by release manifest
+	// digest and are never selected by a caller-provided path.
+	DeploymentAssetDirectory = "deployment-assets"
+	// PreheatManifestDirectory stores immutable release-bound preheat manifests
+	// alongside the release and composition caches. The file name is derived
+	// from the release manifest digest, so a caller cannot select an arbitrary
+	// path across the privileged boundary.
+	PreheatManifestDirectory = "preheat-manifests"
+	// DeploymentSnapshotDirectory keeps fully validated public deployment
+	// evidence until the host promotes it. Its name is fixed and every child is
+	// digest-addressed, so the Server cannot select an arbitrary host path.
+	DeploymentSnapshotDirectory = "deployment-snapshots"
+	PlanDirectory               = "plans"
+	LockFile                    = "lock"
+	SocketFile                  = "upgrader.sock"
+	OverrideFileSuffix          = ".compose.json"
 	// JournalSchema and RequestSchema intentionally retain their legacy v1
 	// values. Existing deployments may resume these records indefinitely, so a
 	// new binary must not reinterpret an omitted scope as frontend-only.
@@ -160,6 +174,9 @@ type Journal struct {
 	ExitCode       *int            `json:"exitCode,omitempty"`
 	Diagnostic     string          `json:"diagnostic,omitempty"`
 	ProgressEvents []ProgressEvent `json:"progressEvents,omitempty"`
+	// HostActivity is a current bounded observation. It must never be treated as
+	// stage progress or as a container/command output transport.
+	HostActivity *domain.HostActivity `json:"hostActivity,omitempty"`
 }
 
 // Receipt is a host-only deployment proof. It records that the Compose
@@ -463,17 +480,19 @@ func sameStringSlice(left, right []string) bool {
 // only validated operation identity, stage and bounded diagnostics. Receipt is
 // a deployment proof and never implies overall Operation success.
 type JournalEvent struct {
-	OperationID       string          `json:"operationId"`
-	ManifestDigest    string          `json:"manifestDigest"`
-	Stage             Stage           `json:"stage"`
-	UpdatedAt         time.Time       `json:"updatedAt"`
-	StageUpdatedAt    time.Time       `json:"stageUpdatedAt,omitempty"`
-	Diagnostic        string          `json:"diagnostic,omitempty"`
-	MigrationID       string          `json:"migrationId,omitempty"`
-	MigrationChecksum string          `json:"migrationChecksum,omitempty"`
-	MigrationStatus   string          `json:"migrationStatus,omitempty"`
-	ProgressEvents    []ProgressEvent `json:"progressEvents,omitempty"`
-	Receipt           *Receipt        `json:"receipt,omitempty"`
+	OperationID       string               `json:"operationId"`
+	ManifestDigest    string               `json:"manifestDigest"`
+	Stage             Stage                `json:"stage"`
+	UpdatedAt         time.Time            `json:"updatedAt"`
+	StageUpdatedAt    time.Time            `json:"stageUpdatedAt,omitempty"`
+	Diagnostic        string               `json:"diagnostic,omitempty"`
+	MigrationID       string               `json:"migrationId,omitempty"`
+	MigrationChecksum string               `json:"migrationChecksum,omitempty"`
+	MigrationStatus   string               `json:"migrationStatus,omitempty"`
+	ProgressEvents    []ProgressEvent      `json:"progressEvents,omitempty"`
+	ExecutionMode     ExecutionMode        `json:"executionMode,omitempty"`
+	HostActivity      *domain.HostActivity `json:"hostActivity,omitempty"`
+	Receipt           *Receipt             `json:"receipt,omitempty"`
 }
 
 func (event JournalEvent) Validate() error {
@@ -494,6 +513,14 @@ func (event JournalEvent) Validate() error {
 	}
 	if !event.StageUpdatedAt.IsZero() && event.StageUpdatedAt.After(event.UpdatedAt) {
 		return fmt.Errorf("journal event stageUpdatedAt is newer than updatedAt")
+	}
+	if event.HostActivity != nil {
+		if !validStage(event.Stage) {
+			return fmt.Errorf("journal event host activity requires a lifecycle stage")
+		}
+		if err := domain.ValidateHostActivity(event.HostActivity, domain.Status(event.Stage), domain.ExecutionMode(event.ExecutionMode), time.Time{}, event.UpdatedAt, time.Now().UTC()); err != nil {
+			return fmt.Errorf("invalid journal event host activity: %w", err)
+		}
 	}
 	if err := validateProgressEvents(event.ProgressEvents); err != nil {
 		return err
@@ -735,6 +762,9 @@ func (journal Journal) Validate() error {
 		if journal.StageUpdatedAt.Before(journal.StartedAt) || journal.StageUpdatedAt.After(journal.UpdatedAt) {
 			return fmt.Errorf("journal stageUpdatedAt is outside journal timestamps")
 		}
+	}
+	if err := domain.ValidateHostActivity(journal.HostActivity, domain.Status(journal.Stage), domain.ExecutionMode(journal.ExecutionMode), journal.StartedAt, journal.UpdatedAt, time.Now().UTC()); err != nil {
+		return fmt.Errorf("invalid journal host activity: %w", err)
 	}
 	if err := validateProgressEvents(journal.ProgressEvents); err != nil {
 		return err

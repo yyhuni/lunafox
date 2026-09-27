@@ -112,7 +112,7 @@ function createEngine(localId: string, locale: MockEngineLocale, sectionId: stri
       configSections: [{
         id: sectionId,
         defaultEnabled: true,
-        params: [{ key: paramKey, type: "integer", default: 3600, minimum: 1 }],
+        params: [{ key: paramKey, type: "integer", default: 3600, unit: "seconds", minimum: 1 }],
       }],
     },
     localeResources: buildEnglishLocaleResources(() => buildLocale(locale, sectionId)),
@@ -126,10 +126,10 @@ function createNucleiVulnerabilityEngine(): EngineCatalogDetail {
     defaultEnabled: true,
     params: [
       { key: "scan-targets", type: "stringArray" as const, default: ["website"], enum: ["website", "endpoint"], minItems: 1, maxItems: 2 },
-      { key: "timeout", type: "integer" as const, default: 3600, minimum: 60, maximum: 604800 },
+      { key: "timeout", type: "integer" as const, default: 3600, unit: "seconds" as const, minimum: 60, maximum: 604800 },
       { key: "concurrency", type: "integer" as const, default: 25, minimum: 1, maximum: 100 },
       { key: "rate-limit", type: "integer" as const, default: 150, minimum: 1, maximum: 1000 },
-      { key: "request-timeout", type: "integer" as const, default: 5, minimum: 1, maximum: 120 },
+      { key: "request-timeout", type: "integer" as const, default: 5, unit: "seconds" as const, minimum: 1, maximum: 120 },
       { key: "bulk-size", type: "integer" as const, default: 25, minimum: 1, maximum: 100 },
       { key: "retries", type: "integer" as const, default: 1, minimum: 0, maximum: 5 },
       { key: "severity", type: "stringArray" as const, default: ["medium", "high", "critical"], enum: ["info", "low", "medium", "high", "critical"] },
@@ -196,14 +196,14 @@ function createSubdomainDiscoveryEngine(): EngineCatalogDetail {
           id: "recon",
           defaultEnabled: true,
           params: [
-            { key: "timeout", type: "integer", default: 3600, minimum: 1 },
+            { key: "timeout", type: "integer", default: 3600, unit: "seconds", minimum: 1 },
             { key: "threads", type: "integer", default: 10, minimum: 1 },
           ],
         },
         {
           id: "bruteforce",
           params: [
-            { key: "timeout", type: "integer", default: 3600, minimum: 1 },
+            { key: "timeout", type: "integer", default: 3600, unit: "seconds", minimum: 1 },
             { key: "wordlist", type: "string", default: "subdomains-top1million-110000.txt", resource: { kind: "wordlist" } },
             { key: "resolvers", type: "string", default: "resolvers.txt", resource: { kind: "wordlist" } },
             { key: "threads", type: "integer", default: 100, minimum: 1 },
@@ -218,7 +218,7 @@ function createSubdomainDiscoveryEngine(): EngineCatalogDetail {
           defaultEnabled: true,
           requiredEnabled: true,
           params: [
-            { key: "timeout", type: "integer", default: 3600, minimum: 1 },
+            { key: "timeout", type: "integer", default: 3600, unit: "seconds", minimum: 1 },
             { key: "threads", type: "integer", default: 100, minimum: 1 },
             { key: "rate-limit", type: "integer", default: 150, minimum: 1 },
             { key: "wildcard-filter", type: "boolean", default: false },
@@ -303,8 +303,8 @@ function createDirectoryEngine(): EngineCatalogDetail {
           { key: "threads", type: "integer", default: 10, minimum: 1, maximum: 100 },
           { key: "rate", type: "integer", default: 0, minimum: 0, maximum: 1000 },
           { key: "delay", type: "string", default: "0.1-2.0" },
-          { key: "request-timeout", type: "integer", default: 10, minimum: 1, maximum: 120 },
-          { key: "timeout", type: "integer", default: 86400, minimum: 60, maximum: 604800 },
+          { key: "request-timeout", type: "integer", default: 10, unit: "seconds", minimum: 1, maximum: 120 },
+          { key: "timeout", type: "integer", default: 86400, unit: "seconds", minimum: 60, maximum: 604800 },
           { key: "follow-redirects", type: "boolean", default: false },
           { key: "http2", type: "boolean", default: false },
         ],
@@ -363,7 +363,7 @@ function createScreenshotEngine(): EngineCatalogDetail {
         id: "capture",
         defaultEnabled: true,
         params: [
-          { key: "page-timeout", type: "integer", default: 15, minimum: 1, maximum: 120 },
+          { key: "page-timeout", type: "integer", default: 15, unit: "seconds", minimum: 1, maximum: 120 },
           { key: "concurrency", type: "integer", default: 5, minimum: 1, maximum: 20 },
           { key: "retries", type: "integer", default: 1, minimum: 0, maximum: 3 },
         ],

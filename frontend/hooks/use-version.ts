@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 
 import { VersionService, isUpgradeNetworkError, toUpgradeApiError } from "@/services/version.service"
@@ -209,6 +209,8 @@ function mergeBasicUpgradeOperationIntoFullCache(queryClient: QueryClient, opera
       workDisposition: current.workDisposition,
       planSummary: current.planSummary,
       confirmedDeploymentVersion: current.confirmedDeploymentVersion,
+      agentDiagnostics: current.agentDiagnostics,
+      hostActivity: current.hostActivity,
     })
   }
 }
@@ -216,40 +218,59 @@ function mergeBasicUpgradeOperationIntoFullCache(queryClient: QueryClient, opera
 export function useUpgradeOperation(operationId?: string | null, options: UseUpgradeOperationOptions = {}) {
 	const { enabled = true } = options
 	const autoResolve = operationId === undefined
+	const queryClient = useQueryClient()
 	const [storedOperationId, setStoredOperationId] = useState<string | null>(readStoredUpgradeOperationId)
   const requestedOperationId = autoResolve ? storedOperationId : operationId
-  const queryKeyId = requestedOperationId ?? (autoResolve ? "active" : "none")
+  const queryKeyId = autoResolve ? "active" : (requestedOperationId ?? "none")
+  const storedOperationIdRef = useRef<string | null>(storedOperationId)
+  const activeLookupHintRef = useRef<string | null>(null)
+  const activeLookupPendingRef = useRef(autoResolve && storedOperationId !== null)
+  const activeLookupStartedRef = useRef(false)
+  storedOperationIdRef.current = storedOperationId
 
   useEffect(() => {
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === UPGRADE_OPERATION_STORAGE_KEY) setStoredOperationId(event.newValue)
+    const applyStoredOperationChange = (nextOperationId: string | null) => {
+      const previousOperationId = storedOperationIdRef.current
+      storedOperationIdRef.current = nextOperationId
+      setStoredOperationId(nextOperationId)
+      if (!autoResolve || nextOperationId === previousOperationId) return
+      activeLookupPendingRef.current = nextOperationId !== null
+      activeLookupStartedRef.current = false
+
+      const activeQueryKey = ["upgrade", "operation", "active"] as const
+      const activeData = queryClient.getQueryData<UpgradeOperationFull | null>(activeQueryKey)
+      // A newly persisted hint may represent an operation created in another
+      // component or tab. Refresh the fixed active resource without reviving
+      // the hint as a direct FULL lookup. Clearing a non-empty cached view also
+      // needs a refresh; clearing an already-empty view does not.
+      const hasCachedActiveData = activeData !== null && activeData !== undefined
+      if (nextOperationId !== null || hasCachedActiveData) {
+        void queryClient.invalidateQueries({ queryKey: activeQueryKey })
+      }
     }
-    const onOperationChanged = () => setStoredOperationId(readStoredUpgradeOperationId())
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === UPGRADE_OPERATION_STORAGE_KEY) applyStoredOperationChange(event.newValue)
+    }
+    const onOperationChanged = () => applyStoredOperationChange(readStoredUpgradeOperationId())
     window.addEventListener("storage", onStorage)
     window.addEventListener(UPGRADE_OPERATION_CHANGED_EVENT, onOperationChanged)
     return () => {
       window.removeEventListener("storage", onStorage)
       window.removeEventListener(UPGRADE_OPERATION_CHANGED_EVENT, onOperationChanged)
     }
-  }, [])
+  }, [autoResolve, queryClient])
 
   const query = useQuery<UpgradeOperationFull | null>({
     queryKey: ["upgrade", "operation", queryKeyId],
     queryFn: async () => {
       if (autoResolve) {
-        // The active view is the route-lock authority. A browser id is only a
-        // fallback for showing a terminal result after the active view is empty.
-        const active = await VersionService.getActiveUpgradeOperationFull()
-        if (active) return active
-        if (requestedOperationId) {
-          try {
-            return await VersionService.getUpgradeOperationFull(requestedOperationId)
-          } catch (error) {
-            const parsed = toUpgradeApiError(error)
-            if (parsed.status !== 404) throw parsed
-          }
-        }
-        return null
+        // The server-owned active view is the only automatic route-lock
+        // authority. localStorage is captured only to retire the hint that was
+        // present when this lookup began; it is never used as a fallback GET.
+        activeLookupHintRef.current = storedOperationIdRef.current
+        activeLookupPendingRef.current = true
+        activeLookupStartedRef.current = true
+        return VersionService.getActiveUpgradeOperationFull()
       }
       if (requestedOperationId) {
         try {
@@ -278,28 +299,51 @@ export function useUpgradeOperation(operationId?: string | null, options: UseUpg
     const discoveredId = query.data?.operationId
     if (discoveredId) {
       if (autoResolve && discoveredId !== storedOperationId) {
+        storedOperationIdRef.current = discoveredId
         setStoredOperationId(discoveredId)
         persistUpgradeOperationId(discoveredId)
       }
       if (query.data?.status === "succeeded") persistPendingSuccessOperationId(discoveredId)
       return
     }
-    if (autoResolve && query.isSuccess && query.data === null && storedOperationId) {
-      clearStoredUpgradeOperationId(storedOperationId)
-      setStoredOperationId(null)
+    if (autoResolve && query.isSuccess && query.data === null) {
+      // A storage event invalidates the fixed active query asynchronously. Do
+      // not interpret the previous successful null cache as the new response
+      // before the invalidated request has actually started and settled.
+      if (activeLookupPendingRef.current && (!activeLookupStartedRef.current || query.isFetching)) return
+      const lookupHint = activeLookupHintRef.current
+      const currentStoredOperationId = readStoredUpgradeOperationId()
+      activeLookupPendingRef.current = false
+      activeLookupStartedRef.current = false
+      if (lookupHint && currentStoredOperationId === lookupHint) {
+        storedOperationIdRef.current = null
+        clearStoredUpgradeOperationId(lookupHint)
+        setStoredOperationId(null)
+      } else if (currentStoredOperationId !== storedOperationId) {
+        // A newer operation may have been persisted while the active request
+        // was in flight. Keep React state aligned without deleting that hint.
+        storedOperationIdRef.current = currentStoredOperationId
+        setStoredOperationId(currentStoredOperationId)
+      }
     }
-  }, [autoResolve, query.data, query.isSuccess, storedOperationId])
+  }, [autoResolve, query.data, query.isFetching, query.isSuccess, storedOperationId])
+
+  const activeViewIsEmpty = autoResolve && query.isSuccess && query.data === null && !activeLookupPendingRef.current && !query.isFetching
+  const activeViewIsResolving = autoResolve && query.isFetching && query.data === null
 
   return useMemo(() => ({
     ...query,
     data: query.data ?? undefined,
-    operationId: query.data?.operationId ?? requestedOperationId ?? null,
+    // Keep a persisted hint while the server-owned active view is resolving so
+    // protected routes remain fail-closed. Once the active view is confirmed
+    // empty, the hint is no longer a usable operation identity.
+    operationId: query.data?.operationId ?? (activeViewIsEmpty ? null : requestedOperationId ?? null),
     isReconnecting: Boolean((requestedOperationId || autoResolve) && query.isError && isUpgradeNetworkError(query.error)),
-    isResolving: Boolean(enabled && (autoResolve || requestedOperationId) && query.isPending),
+    isResolving: Boolean(enabled && (autoResolve || requestedOperationId) && (query.isPending || activeViewIsResolving)),
     isActive: isUpgradeOperationActive(query.data?.status),
     userStage: upgradeUserStageForStatus(query.data?.status),
     lastConfirmedStage: query.data?.status,
-  }), [autoResolve, enabled, query, requestedOperationId])
+  }), [activeViewIsEmpty, activeViewIsResolving, autoResolve, enabled, query, requestedOperationId])
 }
 
 export function useCreateUpgradeOperation() {

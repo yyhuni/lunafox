@@ -42,6 +42,7 @@ const fullOperation = {
   workDisposition: "not_required",
   planSummary: { touchedServices: ["frontend"] },
   confirmedDeploymentVersion: "1.1.0",
+  agentDiagnostics: [],
 } as const
 const fullPlanServices = ["agent", "bootstrap", "engine", "engine_package", "engine_runtime", "frontend", "migration", "nginx", "server"]
 
@@ -69,7 +70,21 @@ describe("version.service contract", () => {
     expect(result.candidate?.releaseNotes?.sha256).toBe(releaseNotesSha256)
   })
 
-  it("rejects tampered release notes and permits the explicit development omission", async () => {
+  it("accepts missing release notes projections and rejects tampered release notes", async () => {
+    vi.mocked(api.post).mockResolvedValueOnce({ data: {
+      currentVersion: "0.0.1-alpha.164", hasUpdate: true, eligible: true,
+      candidate: {
+        name: "releaseManifests/lunafox-0.0.1-alpha.183", manifestId: "lunafox-0.0.1-alpha.183", manifestDigest: digest,
+        releaseVersion: "0.0.1-alpha.183", deploymentMode: "single-node-compose", compatibilityRange: ">=0.0.1-alpha.164 <2.0.0",
+        maintenanceWindowMinutes: 15, requiresAdminConfirmation: true,
+        databaseMigration: { hasDatabaseMigration: false, migrationType: "none", policyVersion: 1 },
+        runtimeImageDigests: { server: digest }, engineDigests: [],
+      },
+    } } as never)
+    const bridgeResult = await VersionService.checkForUpdates()
+    expect(bridgeResult.candidate).toMatchObject({ releaseVersion: "0.0.1-alpha.183" })
+    expect(bridgeResult.candidate?.releaseNotes).toBeUndefined()
+
     vi.mocked(api.post).mockResolvedValueOnce({ data: {
       currentVersion: "0.0.0-dev", hasUpdate: false, eligible: true,
       candidate: {
@@ -121,13 +136,36 @@ describe("version.service contract", () => {
   it("requests and strictly decodes the explicit FULL projection without changing BASIC", async () => {
     vi.mocked(api.get).mockResolvedValue({ data: fullOperation } as never)
 
-    await expect(VersionService.getUpgradeOperationFull(operation.operationId)).resolves.toMatchObject({
+    const legacyFull = await VersionService.getUpgradeOperationFull(operation.operationId)
+    expect(legacyFull).toMatchObject({
       executionMode: "frontend_only",
       workDisposition: "not_required",
       planSummary: { touchedServices: ["frontend"] },
       confirmedDeploymentVersion: "1.1.0",
     })
-    expect(api.get).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}`, { params: { view: "FULL" } })
+    expect(legacyFull.hostActivity).toBeUndefined()
+    expect(api.get).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}`, {
+      params: { view: "FULL", includeHostActivity: "true" },
+    })
+
+    const diagnosticOperation = {
+      ...fullOperation,
+      executionMode: "full" as const,
+      workDisposition: "cancelled" as const,
+      planSummary: { touchedServices: fullPlanServices },
+      agentDiagnostics: [{
+        agentId: 9,
+        name: "agents/9",
+        displayNameSnapshot: "edge-9",
+        reasonCode: "heartbeat_missing_or_stale",
+        detail: "Agent heartbeat is missing or stale",
+        source: "server_observation" as const,
+      }],
+    }
+    vi.mocked(api.get).mockResolvedValueOnce({ data: diagnosticOperation } as never)
+    await expect(VersionService.getUpgradeOperationFull(operation.operationId)).resolves.toMatchObject({
+      agentDiagnostics: [{ agentId: 9, name: "agents/9", displayNameSnapshot: "edge-9", source: "server_observation" }],
+    })
 
     vi.mocked(api.get).mockResolvedValueOnce({ data: operation } as never)
     await expect(VersionService.getUpgradeOperationFull(operation.operationId)).rejects.toThrow("upgradeOperation.executionMode")
@@ -139,6 +177,99 @@ describe("version.service contract", () => {
     await expect(VersionService.getUpgradeOperationFull(operation.operationId)).rejects.toThrow("upgradeOperation.planSummary.unexpected")
   })
 
+  it("accepts only a valid enhanced host activity while preserving older FULL responses", async () => {
+    const active = {
+      ...fullOperation,
+      status: "updating" as const,
+      stageTimes: { queued: "2026-09-13T12:00:00Z", updating: "2026-09-13T12:01:00Z" },
+      updatedAt: "2026-09-13T12:05:00Z",
+      hostActivity: {
+        action: "pull_images",
+        startedAt: "2026-09-13T12:01:00Z",
+        lastHeartbeatAt: "2026-09-13T12:04:00Z",
+      },
+    }
+    vi.mocked(api.get).mockResolvedValueOnce({ data: active } as never)
+    await expect(VersionService.getUpgradeOperationFull(operation.operationId)).resolves.toMatchObject({
+      hostActivity: active.hostActivity,
+    })
+
+    const invalidCases: Array<[string, Record<string, unknown>]> = [
+      ["upgradeOperation.hostActivity.action", { action: "unknown_action" }],
+      ["upgradeOperation.hostActivity.action", { action: "database_migration" }],
+      ["upgradeOperation.hostActivity", { startedAt: "2026-09-13T12:05:00Z", lastHeartbeatAt: "2026-09-13T12:04:00Z" }],
+      ["upgradeOperation.hostActivity.unexpected", { unexpected: true }],
+    ]
+    for (const [path, change] of invalidCases) {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { ...active, hostActivity: { ...active.hostActivity, ...change } },
+      } as never)
+      await expect(VersionService.getUpgradeOperationFull(operation.operationId)).rejects.toThrow(path)
+    }
+
+    vi.mocked(api.get).mockResolvedValueOnce({
+      data: { ...active, status: "succeeded", completedAt: "2026-09-13T12:05:00Z" },
+    } as never)
+    await expect(VersionService.getUpgradeOperationFull(operation.operationId)).rejects.toThrow("upgradeOperation.hostActivity")
+
+    vi.mocked(api.get).mockResolvedValueOnce({ data: { ...active, hostActivity: null } } as never)
+    await expect(VersionService.getUpgradeOperationFull(operation.operationId)).resolves.toMatchObject({ hostActivity: null })
+
+    const oldServer = { ...active } as Record<string, unknown>
+    delete oldServer.hostActivity
+    vi.mocked(api.get).mockResolvedValueOnce({ data: oldServer } as never)
+    const oldServerResponse = await VersionService.getUpgradeOperationFull(operation.operationId)
+    expect(oldServerResponse.hostActivity).toBeUndefined()
+
+    vi.mocked(api.get).mockResolvedValueOnce({ data: active } as never)
+    await expect(VersionService.getActiveUpgradeOperationFull()).resolves.toMatchObject({ hostActivity: active.hostActivity })
+    expect(api.get).toHaveBeenLastCalledWith("/upgradeOperations:active", {
+      params: { view: "FULL", includeHostActivity: "true" },
+    })
+
+    vi.mocked(api.get).mockResolvedValueOnce({ data: { ...operation, hostActivity: null } } as never)
+    await expect(VersionService.getUpgradeOperation(operation.operationId)).rejects.toThrow("upgradeOperation.hostActivity")
+  })
+
+  it("rejects malformed Agent diagnostic fields instead of inferring codes from text", async () => {
+    const base = {
+      ...fullOperation,
+      executionMode: "full" as const,
+      workDisposition: "cancelled" as const,
+      planSummary: { touchedServices: fullPlanServices },
+      agentDiagnostics: [{
+        agentId: 9,
+        name: "agents/9",
+        reasonCode: "legacy_unknown",
+        detail: "No reliable diagnostic was recorded",
+        source: "historical" as const,
+      }],
+    }
+    const invalidCases: Array<[string, Record<string, unknown>]> = [
+      ["source", { source: "free_text" }],
+      ["reasonCode", { reasonCode: "new_reason" }],
+      ["detail", { detail: "Authorization token leaked" }],
+      ["name", { name: "agents/10" }],
+    ]
+    for (const [field, change] of invalidCases) {
+      vi.mocked(api.get).mockResolvedValueOnce({
+        data: { ...base, agentDiagnostics: [{ ...base.agentDiagnostics[0], ...change }] },
+      } as never)
+      await expect(VersionService.getUpgradeOperationFull(operation.operationId)).rejects.toThrow(`upgradeOperation.agentDiagnostics[0].${field}`)
+    }
+
+    vi.mocked(api.get).mockResolvedValueOnce({ data: { ...base, agentDiagnostics: [] } } as never)
+    await expect(VersionService.getUpgradeOperationFull(operation.operationId)).resolves.toMatchObject({ agentDiagnostics: [] })
+
+    const missingDiagnostics = { ...base } as Record<string, unknown>
+    delete missingDiagnostics.agentDiagnostics
+    vi.mocked(api.get).mockResolvedValueOnce({ data: missingDiagnostics } as never)
+    await expect(VersionService.getUpgradeOperationFull(operation.operationId)).rejects.toThrow("upgradeOperation.agentDiagnostics")
+
+    vi.mocked(api.get).mockResolvedValueOnce({ data: { ...operation, agentDiagnostics: [] } } as never)
+    await expect(VersionService.getUpgradeOperation(operation.operationId)).rejects.toThrow("upgradeOperation.agentDiagnostics")
+  })
+
   it("permits empty scope facts only for explicit legacy full operations", async () => {
     const legacy = {
       ...operation,
@@ -146,6 +277,7 @@ describe("version.service contract", () => {
       workDisposition: "legacy_unknown",
       planSummary: { touchedServices: [] },
       confirmedDeploymentVersion: "",
+      agentDiagnostics: [],
     }
     vi.mocked(api.get).mockResolvedValueOnce({ data: legacy } as never)
     await expect(VersionService.getUpgradeOperationFull(operation.operationId)).resolves.toMatchObject({
@@ -166,6 +298,7 @@ describe("version.service contract", () => {
       workDisposition: "cancelled",
       planSummary: { touchedServices: fullPlanServices },
       confirmedDeploymentVersion: "",
+      agentDiagnostics: [],
     }
     vi.mocked(api.get).mockResolvedValueOnce({ data: full } as never)
     await expect(VersionService.getUpgradeOperationFull(operation.operationId)).resolves.toMatchObject({

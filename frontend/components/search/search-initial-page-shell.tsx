@@ -8,15 +8,12 @@ import {
 } from "@/components/shared/layout/page-shell-density"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { GLOBAL_ASSET_SEARCH_FEATURED_GUIDANCE } from "@/lib/global-asset-search-query"
 
-export const QUICK_SEARCH_TAGS = [
-  { label: 'statusCode=="200"', query: 'statusCode=="200"' },
-  { label: 'tech="nginx"', query: 'tech="nginx"' },
-  { label: 'tech="php"', query: 'tech="php"' },
-  { label: 'tech="vue"', query: 'tech="vue"' },
-  { label: 'tech="react"', query: 'tech="react"' },
-  { label: 'statusCode=="403"', query: 'statusCode=="403"' },
-]
+export const QUICK_SEARCH_TAGS = GLOBAL_ASSET_SEARCH_FEATURED_GUIDANCE.map((entry) => ({
+  label: entry.query,
+  query: entry.query,
+}))
 
 export function SearchAssetBarShell({
   children,
@@ -77,9 +74,10 @@ export function SearchQuickTags({ onTagClick }: { onTagClick?: (query: string) =
     <div className="flex flex-wrap justify-center gap-2">
       {QUICK_SEARCH_TAGS.map((tag) => (
         <Badge
+          size="tag"
           key={tag.query}
           variant="outline"
-          className="px-3 py-1 transition-colors hover:bg-accent"
+          className="px-3 transition-colors hover:bg-accent"
           render={(
             <button
               type="button"

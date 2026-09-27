@@ -13,6 +13,8 @@ const MEMBERS = Object.freeze([
   "lunafox-agent-linux-arm64",
   "lunafox-engine-mount-preflight-linux-amd64",
   "lunafox-engine-mount-preflight-linux-arm64",
+  "lunafox-engine-preheater-linux-amd64",
+  "lunafox-engine-preheater-linux-arm64",
 ]);
 
 function fail(message) { throw new Error(message); }

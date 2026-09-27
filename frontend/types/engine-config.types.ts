@@ -8,6 +8,9 @@
 /** Allowed value types for engine config parameters. */
 export type EngineParamType = "integer" | "string" | "stringArray" | "boolean"
 
+/** Semantic unit metadata used by renderers; the engine still stores typed values. */
+export type EngineParamUnit = "seconds"
+
 export type EngineParamValue = number | string | boolean | string[]
 
 /** Dynamic LunaFox resource collection referenced by a string parameter. */
@@ -23,6 +26,8 @@ export interface EngineParamManifestDefinition {
   type: EngineParamType
   /** Default value pre-filled when the section is enabled. */
   default?: EngineParamValue
+  /** Optional semantic unit supplied explicitly by the Engine Catalog detail. */
+  unit?: EngineParamUnit
   /** Minimum value constraint (integer params only). */
   minimum?: number
   /** Maximum value constraint (integer params only). */

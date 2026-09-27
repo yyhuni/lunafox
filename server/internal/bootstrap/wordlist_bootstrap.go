@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 
@@ -39,10 +38,11 @@ type defaultWordlistImport struct {
 	fileHash   string
 }
 
-// RunWordlistBootstrap copies the immutable default wordlists into shared
-// storage and records them through the Catalog boundary. A repeated run only
-// accepts the exact previously imported set; it never repairs or overwrites a
-// missing or changed resource because that state may contain user intent.
+// RunWordlistBootstrap seeds packaged wordlists into shared storage and records
+// them through the Catalog boundary. After the first import those rows and
+// files are ordinary user-managed resources, so repeated runs only validate
+// the initialized set and the physical file boundary; they never restore
+// packaged content over user edits.
 func RunWordlistBootstrap(ctx context.Context, databaseConfig *config.DatabaseConfig, basePath, manifestPath, sourceDirectory string) error {
 	if ctx == nil {
 		return errors.New("wordlist bootstrap context is required")
@@ -178,20 +178,19 @@ func requireUninitializedWordlistStorage(basePath string) error {
 
 func validatePersistedDefaultWordlist(basePath string, item defaultWordlistImport, wordlist catalogdomain.Wordlist) error {
 	expectedPath := filepath.Join(basePath, item.entry.FileName)
-	if wordlist.Description != item.entry.Description ||
-		!slices.Equal(wordlist.Tags, item.entry.Tags) ||
-		wordlist.FilePath != expectedPath ||
-		wordlist.FileSize != item.fileSize ||
-		wordlist.LineCount != item.lineCount ||
-		wordlist.FileHash != item.fileHash {
-		return fmt.Errorf("default wordlist %s catalog metadata drifted; explicit repair or reset is required", item.entry.FileName)
+	if wordlist.FileName != item.entry.FileName || wordlist.FilePath != expectedPath {
+		return fmt.Errorf("default wordlist %s catalog identity drifted; explicit repair or reset is required", item.entry.FileName)
 	}
-	metadata, err := inspectDefaultWordlistFile(expectedPath)
+
+	// The manifest describes the seed, not a permanent content checksum. The
+	// content endpoint updates the catalog's persisted stats when users edit a
+	// seeded wordlist, so startup must only protect the physical file boundary.
+	info, err := os.Lstat(expectedPath)
 	if err != nil {
 		return fmt.Errorf("validate persisted default wordlist %s: %w", item.entry.FileName, err)
 	}
-	if metadata.FileSize != item.fileSize || metadata.LineCount != item.lineCount || metadata.FileHash != item.fileHash {
-		return fmt.Errorf("default wordlist %s file content drifted; explicit repair or reset is required", item.entry.FileName)
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+		return fmt.Errorf("validate persisted default wordlist %s: wordlist must be a regular non-symlink file", item.entry.FileName)
 	}
 	return nil
 }

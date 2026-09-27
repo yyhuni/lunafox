@@ -94,7 +94,7 @@ initialMockApiKeySettings.providers.shodan = {
   values: { apiKey: { configured: true, maskedValue: "********" } },
 }
 
-const mockApiKeySettings: ApiKeySettings = cloneApiKeySettings(initialMockApiKeySettings)
+let mockApiKeySettings: ApiKeySettings = cloneApiKeySettings(initialMockApiKeySettings)
 
 function createProviderState(definition: ApiKeyProviderDefinition): ApiKeyProviderState {
   return {
@@ -128,21 +128,28 @@ export function getMockApiKeySettings(): ApiKeySettings {
   return cloneApiKeySettings(mockApiKeySettings)
 }
 
+export function resetMockApiKeySettings(): void {
+  mockApiKeySettings = cloneApiKeySettings(initialMockApiKeySettings)
+}
+
 export function updateMockApiKeySettings(settings: ApiKeySettingsUpdateRequest): ApiKeySettings {
   for (const [providerKey, update] of Object.entries(settings.providers ?? {})) {
     const previous = mockApiKeySettings.providers[providerKey]
     if (!previous) continue
+
+    const values = Object.fromEntries(
+      Object.entries(previous.values).map(([fieldName, fieldValue]) => [fieldName, { ...fieldValue }]),
+    )
+    for (const [fieldName, value] of Object.entries(update.values ?? {})) {
+      values[fieldName] = secretFieldNames.has(fieldName)
+        ? { configured: value.length > 0, maskedValue: value.length > 0 ? "********" : "" }
+        : { value, configured: value.length > 0 }
+    }
+
     mockApiKeySettings.providers[providerKey] = {
       enabled: update.enabled,
       status: update.enabled ? "configured" : "unconfigured",
-      values: Object.fromEntries(
-        Object.entries(update.values).map(([fieldName, value]) => [
-          fieldName,
-          secretFieldNames.has(fieldName)
-            ? { configured: value.length > 0, maskedValue: value.length > 0 ? "********" : "" }
-            : { value, configured: value.length > 0 },
-        ])
-      ),
+      values,
     }
   }
 

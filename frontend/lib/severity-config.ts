@@ -84,7 +84,7 @@ export const SEVERITY_VARIANTS: Record<SeverityLevel, Exclude<SeverityBadgeVaria
 }
 
 export const VULNERABILITY_SEVERITY_BADGE_CLASS =
-  `h-5 px-1.5 rounded-sm justify-center ${textRole.badge}`
+  `rounded-sm justify-center ${textRole.badge}`
 
 // Card styles for notifications (with hover states)
 export const SEVERITY_CARD_STYLES: Record<SeverityLevel, string> = {

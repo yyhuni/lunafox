@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
 import {
+  GLOBAL_ASSET_SEARCH_FEATURED_GUIDANCE,
+  GLOBAL_ASSET_SEARCH_GUIDANCE,
   GLOBAL_ASSET_SEARCH_DEFAULT_PAGE_SIZE,
+  getGlobalAssetSearchDiagnosticCode,
+  GlobalAssetSearchQueryError,
   globalAssetSearchQueryFingerprint,
   normalizeGlobalAssetSearchPageSize,
   parseGlobalAssetSearchQuery,
@@ -46,8 +50,8 @@ describe("global asset search query", () => {
       "a".repeat(2049),
       "a",
       'url="a"',
-      'host="ab"',
-      'title="ab"',
+      'host="a"',
+      'title="a"',
     ]) {
       expect(() => parseGlobalAssetSearchQuery(query)).toThrow()
     }
@@ -55,12 +59,60 @@ describe("global asset search query", () => {
       mode: "structured",
       conditions: [{ field: "url", operator: "=", value: "jd" }],
     })
+    expect(parseGlobalAssetSearchQuery('host="ab"')).toEqual({
+      mode: "structured",
+      conditions: [{ field: "host", operator: "=", value: "ab" }],
+    })
+    expect(parseGlobalAssetSearchQuery('title="登录"')).toEqual({
+      mode: "structured",
+      conditions: [{ field: "title", operator: "=", value: "登录" }],
+    })
     expect(parseGlobalAssetSearchQuery('url=="a"')).toEqual({
       mode: "structured",
       conditions: [{ field: "url", operator: "==", value: "a" }],
     })
     expect(() => parseGlobalAssetSearchQuery('title=="A"')).not.toThrow()
     expect(() => parseGlobalAssetSearchQuery('tech="ng"')).not.toThrow()
+  })
+
+  it("keeps the guidance catalog parser-valid and covers every featured field", () => {
+    expect(GLOBAL_ASSET_SEARCH_GUIDANCE.length).toBeGreaterThan(6)
+    expect(() => GLOBAL_ASSET_SEARCH_GUIDANCE.forEach((entry) => parseGlobalAssetSearchQuery(entry.query))).not.toThrow()
+    expect(GLOBAL_ASSET_SEARCH_FEATURED_GUIDANCE.map((entry) => entry.query)).toEqual([
+      'url="admin"',
+      'host="api"',
+      'title="Login"',
+      'statusCode=="200"',
+      'tech="nginx"',
+      'host="api" && statusCode=="200"',
+    ])
+  })
+
+  it("assigns stable diagnostic codes and hides unknown parser details", () => {
+    const cases = [
+      ["", "required"],
+      ["a".repeat(2049), "queryTooLong"],
+      ["domain=\"example\"", "unsupportedField"],
+      ["host!=\"api\"", "invalidOperator"],
+      ["statusCode=\"ok\"", "invalidStatusCode"],
+      ["host=\"a\"", "containsValueTooShort"],
+      ["host=api", "missingQuotedValue"],
+      ["host=\"api", "unterminatedQuotedValue"],
+      ["host=\"api\" || tech=\"nginx\"", "invalidConnector"],
+      ["host=\"api\" &&", "missingCondition"],
+    ] as const
+
+    for (const [query, code] of cases) {
+      try {
+        parseGlobalAssetSearchQuery(query)
+        throw new Error(`expected ${query} to fail`)
+      } catch (error) {
+        expect(getGlobalAssetSearchDiagnosticCode(error)).toBe(code)
+      }
+    }
+
+    expect(getGlobalAssetSearchDiagnosticCode(new Error("internal parser detail"))).toBe("unknown")
+    expect(getGlobalAssetSearchDiagnosticCode(new GlobalAssetSearchQueryError("bad", "unknown"))).toBe("unknown")
   })
 
   it("normalizes the page size and binds a stable query fingerprint", () => {

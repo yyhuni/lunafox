@@ -162,17 +162,34 @@ These dimensions are the migration control plane baseline. They describe the cur
 | Component | Standard density | Compact density | Owner / notes |
 | --- | --- | --- | --- |
 | Button | `default` is 36px high; `action-card` is a full-width/full-height card action with 64px minimum height | `sm` and `icon-sm` are 32px; `icon` is 36px square | `Button` owns action sizing and hover geometry. |
+| Popup action | 28px visual footprint on fine pointers | `compactAction` keeps 32px hit geometry on coarse pointers | `Button layout="compactAction"` owns compact popup triggers; icon-only sizes become 28px squares on fine pointers. |
 | Selected-row action bar | outer shell stays 42px high; transient commands use a 28px desktop footprint | `selected-row-action-control` and `selection-clear-control` expand to 32px on coarse pointers while the shell remains stable | `SelectedRowActionBar` owns this compact overlay tier so ordinary dense table controls remain 32px. |
+| Dense row action | 28px visual footprint on fine pointers | `dense-row-action-control` expands to 32px on coarse pointers | `DenseRowActionMenu` / `DenseRowActionButton` own this exception so menu controls do not dominate compact rows while touch targets remain stable. |
+| Dropdown menu item | 28px row height on fine pointers | shared item rows expand to 32px on coarse pointers | `DropdownMenuItem`, checkbox/radio items, and submenu triggers own the compact row geometry; callers must not add page-local padding. |
 | Input | `size="default"` is 36px high with 12px horizontal padding | `size="sm"` is 32px high | `Input` owns text field geometry and focus ring. |
 | NumberStepperInput | 32px high compact integer stepper | same | `NumberStepperInput` owns integer stepper geometry for dense configuration forms; free-form numeric/range strings remain `Input`. Its outer shell follows the default `Input` surface in light and dark themes, while embedded +/- actions stay transparent until hover so the buttons do not read darker than the value field. |
 | Select | trigger `default` is 36px high | trigger `sm` is 32px high | `SelectTrigger` owns trigger density; content width follows the shared Base UI-backed `SelectContent` width contract and Base UI anchor vars. |
 | Textarea | minimum 64px high | taller editors need shared editor/dialog ownership | `Textarea` owns ordinary multiline input density. |
-| Badge | inline, rounded, 8px horizontal padding, 4px vertical padding | count/filter variants stay tabular and compact | `Badge` owns status/severity text density through status helpers. Muted lifecycle badges retain the standard `border-border` outline so cancelled, interrupted, and not-run states remain visible on neutral surfaces. |
+| Badge | ordinary `tag` is 26px high with 8px horizontal padding and 4px vertical padding | `compact` is 20px; `micro` is 16px for count/notification marks | `Badge` owns the structural `size` contract through shared `badge-size-*` classes. Ordinary business tags, selectable chips, and metadata labels use the 26px `tag` tier; table/status/semantic counters opt into `compact` or `micro` when their surface requires it. |
 | Tabs | list heights are 32px or 36px depending on variant; metric tabs own multiline 80px indicator cells | page/content compact variants stay 32px | `TabsList`, `TabsTrigger`, and `TabsCountBadge` own filter, page-nav, content, split, minimal, metric, and tab count densities. |
 | Table row | headers are 40px; ordinary data rows use shared cell padding and content-driven height | dense data rows are 40px content rows, with a 41px measured box when the row border is included | `TableHead`, `TableCell`, and shared data-table components own row rhythm. Clickable rows and inline row links receive a transient shared pressed surface without changing geometry. |
 | Card | 24px vertical rhythm and 24px horizontal content padding | `compact` uses a named 12px internal gap, 16px vertical padding, and 16px section content padding; stat/metric variants may add bounded decorative geometry | `Card` owns shell, section, compact, stat, and metric container rhythm. |
 | Dialog | ordinary centered and confirmation panels use `px-4 py-3 gap-3` | form/configuration dialogs share this compact tier; partitioned editor and canvas chrome uses the same insets while content geometry remains domain-owned | `DialogContent`, `centeredOverlayPanelClassName`, and the compact form overlay helper own modal width and spacing. |
 | Form density | ordinary controls use 36px controls and 8px field gaps | dense toolbars use 32px controls | shared form/field components own label, helper, error, and control rhythm. |
+
+### Ordinary Compact Surface Contract
+
+普通业务表面在调用方显式选择紧凑密度。`Input`、`SelectTrigger` 和共享按钮的
+default 尺寸保持不变；单行业务字段、筛选器和元数据控件使用 `size="sm"` 或
+对应的 compact owner。只读资源名、Hash、ID、路径和其他短元数据值使用
+`compactSurfaceClassNames.value`（32px、`radius-control`、1px border）；短提示和
+辅助信息使用 `compactSurfaceClassNames.info` 或 `mutedInfo`（1px border、6px
+圆角、`px-3 py-2`）。这些 owner 位于 `@/lib/ui/compact-surface-contract`，页面不应
+复制等价的 `border`/`rounded`/`px` 组合。
+
+编辑器、代码、日志、图表、画布、媒体预览、多行值、长文案以及页面主提交/确认
+动作属于内容或交互驱动例外，保留各自 owner 的几何。loading 壳必须使用与 resolved
+控件相同的 `size` 和表面 owner，不能用局部高度近似。
 
 ## Selected Bulk Action Label Standards
 
@@ -385,6 +402,7 @@ Shared overlay owners live under `frontend/components/shared`. Route code SHOULD
 See `frontend/components/shared/README.md` for the shared component decision matrix and component-specific README files for drawer contracts.
 
 - Short single-column action menus SHOULD use `DropdownMenuContent width="content-fit"` so the menu follows its longest action label, stays at least as wide as its trigger, and avoids page-local fixed widths such as `w-48`.
+- Popup triggers and their actionable menu rows MUST share the compact action tier: use `Button layout="compactAction"` for the trigger and rely on the shared `DropdownMenuItem` / checkbox / radio / submenu styles for 28px fine-pointer rows and 32px coarse-pointer rows. Do not add local `h-*`, `py-*`, or `min-h-*` overrides to these callers.
 - Keep the default `min-w-[8rem]` width for generic menus, mixed-content menus, or menus that need a stable baseline across variable copy.
 - Non-table dropdown families SHOULD route through shared owners in `frontend/components/shared/dropdown-menu-owners.tsx` instead of page-local `DropdownMenuTrigger` / `DropdownMenuContent` markup.
 - `HeaderIconActionMenu` owns compact global or header icon-trigger menus and reserves `width="content-fit"` as the default policy for short single-column actions.
@@ -677,6 +695,7 @@ Use `textRole` from `@/lib/typography` for production-readable text roles in fou
 - Page titles and descriptions should get responsive behavior from `textRole` or shared shells such as `PageHeader`.
 - Do not scatter page-local breakpoint font sizes such as `sm:text-*`, `md:text-*`, or `lg:text-*` on ordinary headings when a shared role or shell can own the hierarchy.
 - Dense data surfaces such as tables, filters, pagination, tabs, metadata, and badges should stay stable across breakpoints unless a shared component explicitly owns a responsive rule.
+- Ordinary business tags and selectable chips MUST use `Badge`'s default `tag` size (26px); do not add page-local `h-7`, `py-0`, or `py-0.5` geometry. Use `size="compact"` for reviewed table/status metadata and `size="micro"` for notification or inline count marks.
 - Long help, onboarding, documentation-like copy, and longer empty-state explanations should use `bodyLarge` instead of local `text-base` combinations.
 
 ### Typography Workflow
@@ -711,6 +730,7 @@ The only approved production native-button exceptions are recorded in `frontend/
 - `action-card`: full available height and width with 64px minimum height. Use for card-like shortcut actions inside overview grids or action panels.
 - `icon-sm`: 32px square. Use for compact icon-only controls in top bars, data tables, cards, and dense toolbars.
 - `icon`: 36px square. Use for standard icon-only controls when the surrounding surface is not dense.
+- `layout="compactAction"`: 28px popup-trigger footprint on fine pointers, with icon-only sizes rendered as 28px squares; shared CSS expands it to 32px on coarse pointers. Use for compact top-bar popovers/menus and other controls whose popup rows use the same tier.
 - Contextual detail headers, read-only detail action rows, and tool-card commands SHOULD use `sm` (or `icon-sm` for icon-only controls). `SelectedRowActionBar` owns its separate `selected-row-action-control` / `selection-clear-control` compact tier. Keep `default` for form submits, confirmation actions, empty-state CTAs, and other page-level primary actions.
 - Shared loading action placeholders MUST reuse this same structural size
   contract through `ActionSkeleton`; do not restate local `h-*`, `size-*`, or

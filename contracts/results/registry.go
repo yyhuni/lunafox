@@ -313,7 +313,7 @@ var canonicalCodegenDescriptors = [...]CodegenDescriptor{
 			{GoName: "URL", JSONName: "url", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true}},
 			{GoName: "Status", JSONName: "status", GoType: "int", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{MinInt: int64Pointer(0), MaxInt: int64Pointer(999)}},
 			{GoName: "ContentLength", JSONName: "contentLength", GoType: "int64", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{NonNegative: true}},
-			{GoName: "ContentType", JSONName: "contentType", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true}},
+			{GoName: "ContentType", JSONName: "contentType", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
 			{GoName: "Duration", JSONName: "duration", GoType: "int64", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{NonNegative: true}},
 		},
 	},

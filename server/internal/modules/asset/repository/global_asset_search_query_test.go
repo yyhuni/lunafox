@@ -112,6 +112,22 @@ func TestGlobalAssetSearchRepositoryUsesStableKeysetAndFieldSemantics(t *testing
 	if err != nil || len(allHosts) != 3 || allHosts[0].ID != 3 || allHosts[1].ID != 2 || allHosts[2].ID != 1 {
 		t.Fatalf("host contains search must retain descending keyset order: items=%+v err=%v", allHosts, err)
 	}
+	shortHostAST, err := assetapp.ParseGlobalAssetSearchQuery(`host="ex"`)
+	if err != nil {
+		t.Fatalf("parse two-character host contains: %v", err)
+	}
+	shortHosts, err := repo.SearchGlobalWebsites(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: shortHostAST, PageSize: 10})
+	if err != nil || len(shortHosts) != 3 {
+		t.Fatalf("two-character host contains search must execute: items=%+v err=%v", shortHosts, err)
+	}
+	shortTitleAST, err := assetapp.ParseGlobalAssetSearchQuery(`title="Ad"`)
+	if err != nil {
+		t.Fatalf("parse two-character title contains: %v", err)
+	}
+	shortTitles, err := repo.SearchGlobalWebsites(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: shortTitleAST, PageSize: 10})
+	if err != nil || len(shortTitles) != 2 {
+		t.Fatalf("two-character title contains search must execute: items=%+v err=%v", shortTitles, err)
+	}
 	cursor := &assetapp.GlobalAssetSearchCursor{CreatedAt: now, ID: 2}
 	afterCursor, err := repo.SearchGlobalWebsites(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: hostContainsAST, PageSize: 10, Cursor: cursor})
 	if err != nil || len(afterCursor) != 1 || afterCursor[0].ID != 1 {

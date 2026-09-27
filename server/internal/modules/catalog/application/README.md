@@ -10,10 +10,11 @@ catalog 模块补充规则：
 - **adapter 例外**：当前无 transport-facing 或 cross-module bridge 型 adapter service 例外；`local_wordlist_file_store.go` 属于局部默认实现，不属于模块入口适配层。
 - **端口拆分**：端口按资源职责拆分，wordlist 文件能力采用 port + default implementation（`wordlist_file_ports.go` + `local_wordlist_file_store.go`）。
 - **实现唯一性**：`WordlistFileStore` 的默认实现仅保留在 `application/local_wordlist_file_store.go`，避免在 `infrastructure` 层出现同名重复实现造成歧义。
-- **共享存储权限**：wordlist 根目录是 Agent immutable materialization 的共享祖先，必须是非 symlink 的真实目录并保持精确 `0700`。Catalog 创建/上传时会收紧目录；bootstrap 仅在完整默认目录状态校验成功后修复已有根目录的权限，不会改变 partial 或 ambiguous 状态。
+- **共享存储权限**：wordlist 根目录是 Agent immutable materialization 的共享祖先，必须是非 symlink 的真实目录并保持精确 `0700`。Catalog 创建/上传时会收紧目录；bootstrap 仅在完整默认目录身份和文件边界校验成功后修复已有根目录的权限，不会改变 partial 或 ambiguous 状态，也不会用发布包元数据覆盖用户编辑。
 - **模型命名**：新增输入/输出/中间模型优先资源化命名（如 `*_query_inputs.go`、`*_item_models.go`）。
 - **历史迁移**：`aliases.go`、`errors.go` 已完成首批迁移，继续保持资源化命名不回退。
 - **Subfinder provider registry**：Subfinder API key settings 以 Engine Runtime Image 内的 Subfinder `v2.12.0` 为版本锚点，registry 是 provider key、字段、校验与 runtime YAML 生成的唯一行为源；历史八字段 provider 只允许出现在持久化迁移/status 处理和对应测试中。
+- **Subfinder provider updates**：API key 更新按 provider 内部字段合并；请求中省略的字段保留已存凭据，显式空字符串清空字段。启用配置的必填字段校验针对合并后的完整配置执行，provider `status` 由服务端计算，不能由客户端覆盖。
 - **Execution artifact reads**：`ExecutionWordlistSource` 与 `ExecutionProviderConfigSource` 只接受调用方 `context.Context`，并将取消/期限传到 repository；HTTP 管理 facade 保留面向产品管理面的既有 API，但不得用于 execution artifact 路径。
 - **Wordlist identity**：Wordlist domain/persistence 使用 `FileName`/`file_name` 表示不可变的上传 basename；HTTP、Scan、Plan 和 execution source 的 `name` 一律由稳定 ID 派生为 `wordlists/{id}`。按 `fileName` 的直接资源读取不是 runtime 入口，候选匹配必须先经过完整 Catalog 列表并唯一解析。
 - **Target 写入边界**：单条创建、批量创建/ensure 与 rename 必须统一通过 catalog domain canonical builder；DOMAIN 统一为 canonical ASCII DNS name，IPv4 统一为 canonical dotted decimal，IPv4 CIDR 持久化 masked network address；IPv6 literal、IPv6 CIDR 与 IPv4-mapped IPv6 在写入时直接拒绝，不得延迟到 scan planning 或 execution input producer。批量创建的 context-aware 路径必须在同一数据库事务内完成 active organization 业务分组校验、缺失 target 与 blacklist policy 写入、canonical target 查询和 organization-target 关联；REST 与 MCP 均复用该命令，提交后丢失响应不回滚已提交状态。
