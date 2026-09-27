@@ -80,8 +80,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Verify exact exported file manifest and immutable Agent bundle
         run: node scripts/ci/check-public-export.mjs --require-agent-bundle --json
