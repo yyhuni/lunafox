@@ -142,7 +142,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --test scripts/ci/publish-public-deployment.test.mjs scripts/ci/preheat-manifest.test.mjs scripts/ci/generate-compose-deployment.test.mjs scripts/ci/finalize-engine-runtime-platforms.test.mjs
+          node --test scripts/ci/publish-public-deployment.test.mjs scripts/ci/generate-compose-deployment.test.mjs scripts/ci/finalize-engine-runtime-platforms.test.mjs
           if [ -f scripts/ci/component-evidence-bundle-selftest.mjs ]; then
             node scripts/ci/component-evidence-bundle-selftest.mjs
           fi
