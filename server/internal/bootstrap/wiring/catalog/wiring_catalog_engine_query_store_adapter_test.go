@@ -62,6 +62,9 @@ func TestEngineCatalogAdapterSeparatesSummaryAndDetail(t *testing.T) {
 	if !item.ConfigSections[0].RequiredEnabled {
 		t.Fatalf("detail lost requiredEnabled projection: %+v", item.ConfigSections[0])
 	}
+	if got := item.ConfigSections[0].Params[0].Unit; got != engineexecution.ParamUnitSeconds {
+		t.Fatalf("detail unit = %q, want %q", got, engineexecution.ParamUnitSeconds)
+	}
 	if _, exists := item.LocaleResources["zh"]["sections"]; !exists {
 		t.Fatalf("detail missing locale resources: %+v", item.LocaleResources)
 	}
@@ -113,6 +116,7 @@ func testResolvedEnginePackage(t *testing.T) installedengines.ResolvedInstalledE
 								Key:     "timeout",
 								Type:    engineexecution.ParamTypeInteger,
 								Default: 30,
+								Unit:    engineexecution.ParamUnitSeconds,
 								Minimum: &minimum,
 							}},
 						}},

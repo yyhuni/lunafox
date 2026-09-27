@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useWordlistTags } from "@/hooks/use-wordlists"
 import { textRole } from "@/lib/typography"
+import { compactSurfaceClassNames } from "@/lib/ui/compact-surface-contract"
+import { cn } from "@/lib/utils"
 
 type TranslationFn = (key: string, params?: Record<string, string | number | Date>) => string
 
@@ -13,13 +15,15 @@ interface WordlistTagPickerProps {
   t: TranslationFn
   value: string[]
   onChange: (tags: string[]) => void
+  density?: "default" | "compact"
 }
 
 function normalizeTag(value: string) {
   return value.trim()
 }
 
-export function WordlistTagPicker({ t, value, onChange }: WordlistTagPickerProps) {
+export function WordlistTagPicker({ t, value, onChange, density = "default" }: WordlistTagPickerProps) {
+  const compact = density === "compact"
   const [draftTag, setDraftTag] = useState("")
   const [isAddingTag, setIsAddingTag] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -66,7 +70,7 @@ export function WordlistTagPicker({ t, value, onChange }: WordlistTagPickerProps
   const renderAddTagControl = () => {
     if (isAddingTag) {
       return (
-        <Badge variant="outline" className="h-7 gap-1.5 px-2">
+        <Badge size="tag" variant="outline" className="gap-1.5">
           <Plus className="h-3.5 w-3.5" />
           <input
             ref={inputRef}
@@ -105,8 +109,9 @@ export function WordlistTagPicker({ t, value, onChange }: WordlistTagPickerProps
 
     return (
       <Badge
+        size="tag"
         variant="outline"
-        className="h-7 cursor-pointer gap-1.5 px-2 hover:bg-secondary/80"
+        className="cursor-pointer gap-1.5 hover:bg-secondary/80"
         render={(<button type="button" onClick={() => setIsAddingTag(true)} />)}
       >
         <Plus className="h-3.5 w-3.5" />
@@ -116,11 +121,11 @@ export function WordlistTagPicker({ t, value, onChange }: WordlistTagPickerProps
   }
 
   return (
-    <div className="space-y-3">
-      <div className="space-y-1.5">
-        <div className="flex min-h-7 flex-wrap items-center gap-1.5">
+    <div className={compact ? "space-y-2" : "space-y-3"}>
+      <div className={compact ? "space-y-1" : "space-y-1.5"}>
+        <div className={compact ? "flex flex-wrap items-center gap-1" : "flex flex-wrap items-center gap-1.5"}>
           {value.length ? value.map((tag) => (
-            <Badge key={tag} variant="secondary" className="h-7 gap-1 rounded-md px-2">
+            <Badge key={tag} size="tag" variant="secondary" className="gap-1 rounded-md">
               <span>{tag}</span>
               <button
                 type="button"
@@ -138,16 +143,17 @@ export function WordlistTagPicker({ t, value, onChange }: WordlistTagPickerProps
         </div>
       </div>
 
-      <div className="space-y-2 rounded-md border bg-muted/20 p-2.5">
+      <div className={cn(compactSurfaceClassNames.mutedInfo, compact ? "space-y-1.5" : "space-y-2")}>
         <p className={textRole.helperText}>{t("recommendedTags")}</p>
-        <div className="flex flex-wrap gap-1.5">
+        <div className={compact ? "flex max-h-40 flex-wrap gap-1 overflow-y-auto pr-1" : "flex flex-wrap gap-1.5"}>
           {suggestions.map((tag) => {
             const isSelected = selected.has(tag.displayName)
             return (
               <Badge
+                size="tag"
                 key={tag.name}
                 variant={isSelected ? "secondary" : "outline"}
-                className="h-7 cursor-pointer gap-1.5 px-2 hover:bg-secondary/80 disabled:cursor-default disabled:opacity-60"
+                className="cursor-pointer gap-1.5 hover:bg-secondary/80 disabled:cursor-default disabled:opacity-60"
                 render={(
                   <button
                     type="button"
@@ -159,7 +165,7 @@ export function WordlistTagPicker({ t, value, onChange }: WordlistTagPickerProps
               >
                 {isSelected ? <Check className="h-3.5 w-3.5" /> : <Tag className="h-3.5 w-3.5" />}
                 <span>{tag.displayName}</span>
-                <Badge variant="count" className="h-4 min-w-4 rounded-full px-1">
+                <Badge size="micro" variant="count">
                   {tag.wordlistCount}
                 </Badge>
               </Badge>

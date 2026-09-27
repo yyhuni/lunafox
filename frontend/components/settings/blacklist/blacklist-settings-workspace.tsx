@@ -420,7 +420,7 @@ function RuleGroup({
       >
         <ChevronDown className={cn("h-4 w-4", collapsed && "-rotate-90")} aria-hidden="true" />
         <span className={textRole.sectionTitle}>{title}</span>
-        <Badge variant="secondary" className="rounded-full px-1.5 py-0">
+        <Badge size="compact" variant="secondary" className="rounded-full">
           {rules.length}
         </Badge>
         {readOnly ? <span className={textRole.helperText}>{description}</span> : null}
@@ -468,7 +468,7 @@ function RuleKindIcon({ kind }: { kind: BlacklistRuleKind }) {
 
 function RuleKindPill({ kind, label }: { kind: BlacklistRuleKind; label: string }) {
   return (
-    <Badge variant={kind === "cidr" ? "success" : "secondary"} className={cn("rounded-md px-2 py-0", textRole.code)}>
+    <Badge size="compact" variant={kind === "cidr" ? "success" : "secondary"} className={cn("rounded-md", textRole.code)}>
       {label}
     </Badge>
   )

@@ -38,6 +38,7 @@ type Operation struct {
 	ObservedDigests            []byte     `gorm:"column:observed_digests;type:jsonb;not null"`
 	StageTimes                 []byte     `gorm:"column:stage_times;type:jsonb;not null"`
 	ProgressEvents             []byte     `gorm:"column:progress_events;type:jsonb;not null"`
+	HostActivity               []byte     `gorm:"column:host_activity;type:jsonb"`
 	Diagnostic                 string     `gorm:"column:diagnostic;type:text;not null;default:''"`
 	CreatedAt                  time.Time  `gorm:"column:created_at;not null"`
 	UpdatedAt                  time.Time  `gorm:"column:updated_at;not null"`

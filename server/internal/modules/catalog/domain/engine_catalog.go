@@ -25,6 +25,7 @@ type EngineConfigParam struct {
 	Key       string
 	Type      string
 	Default   any
+	Unit      string
 	Minimum   *int
 	Maximum   *int
 	MinLength *int

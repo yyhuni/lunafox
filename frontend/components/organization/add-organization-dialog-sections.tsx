@@ -47,6 +47,7 @@ export function AddOrganizationNameField<TFieldValues extends FieldValues>({
           </FormLabel>
           <FormControl>
             <Input
+              size="sm"
               placeholder={t("orgNamePlaceholder")}
               disabled={isSubmitting}
               maxLength={50}

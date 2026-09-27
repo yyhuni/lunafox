@@ -63,6 +63,8 @@ function record(component, overrides = {}) {
         "lunafox-agent-linux-arm64",
         "lunafox-engine-mount-preflight-linux-amd64",
         "lunafox-engine-mount-preflight-linux-arm64",
+        "lunafox-engine-preheater-linux-amd64",
+        "lunafox-engine-preheater-linux-arm64",
       ],
     } : {}),
     ...overrides,

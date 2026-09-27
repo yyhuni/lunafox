@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 const SNAPSHOT = new Set([
-  ".env", ".env.example", "compose.yaml", "engine-inventory.yaml", "release.manifest.yaml",
+  ".env", ".env.example", "compose.yaml", "engine-inventory.yaml", "release.manifest.yaml", "third-party-image-policy.json", "runtime-composition.json", "preheat-manifest.json",
   // The delivered lifecycle entry points are part of the deployment snapshot: a
   // change to any of them must run the full public validation.
   "install.sh", "start.sh", "restart.sh", "stop.sh", "status.sh", "logs.sh", "uninstall.sh", "lunafox-lifecycle.sh",

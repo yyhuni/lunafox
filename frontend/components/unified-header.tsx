@@ -12,7 +12,7 @@ import { useTranslations } from "next-intl";
 import { IconCircleHalf2, IconMoon, IconSun } from "@/components/icons";
 import { useColorTheme } from "@/hooks/use-color-theme";
 import type { ThemeModeId } from "@/lib/color-themes";
-const HeaderIconPlaceholder = () => (<div className="h-8 w-8" aria-hidden="true"/>);
+const HeaderIconPlaceholder = ({ compact = true }: { compact?: boolean }) => (<div className={compact ? "compact-action-placeholder" : "size-8"} aria-hidden="true"/>);
 const HeaderActionSeparator = () => (<Separator orientation="vertical" className="mx-2 h-4! w-px self-center bg-muted-foreground/35"/>);
 const QuickScanHeaderTrigger = dynamic(() => import("@/components/scan/quick-scan-header-trigger").then((mod) => mod.QuickScanHeaderTrigger), {
     ssr: false,
@@ -38,7 +38,7 @@ export function UnifiedHeader({ warmup = false }: {
 function UnifiedHeaderWarmup() {
     return (<header data-slot="unified-header" className="bg-card border-b border-border flex h-(--header-height) items-center shrink-0">
       <div className="flex flex-1 gap-0.5 items-center md:gap-1 md:px-3 min-w-0 px-2">
-        <HeaderIconPlaceholder />
+        <HeaderIconPlaceholder compact={false} />
         <div className="flex gap-0.5 items-center md:gap-1 ml-auto shrink-0">
           {Array.from({ length: 7 }).map((_, index) => (<HeaderIconPlaceholder key={index}/>))}
         </div>

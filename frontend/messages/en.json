@@ -467,7 +467,8 @@
     "searchPlaceholder": "Search URL",
     "searchAction": "Search",
     "loading": "Loading...",
-    "invalidQuery": "Enter a valid URL query or structured condition",
+    "invalidQuery": "The query syntax is invalid. Check the format.",
+    "queryErrorLabel": "Query syntax error",
     "error": "Search failed, please try again later",
     "noResults": "No matching assets found",
     "noResultsHint": "Try adjusting your search criteria",
@@ -490,7 +491,76 @@
       "examples": "Examples",
       "contains": "Contains match",
       "exact": "Exact match",
-      "all": "Match all conditions"
+      "all": "Match all conditions",
+      "categories": {
+        "basics": "Basic queries",
+        "scenarios": "Combined scenarios"
+      },
+      "openManual": "View the full syntax guide",
+      "manualAriaLabel": "Open the global asset search syntax guide",
+      "exampleLabels": {
+        "urlContains": "URL contains",
+        "hostContains": "Host contains",
+        "titleContains": "Title contains",
+        "statusExact": "Successful status",
+        "urlExact": "Exact URL",
+        "titleExact": "Exact title",
+        "techExact": "Exact technology",
+        "statusErrorExact": "Exact error status",
+        "hostStatus": "API host success",
+        "hostTech": "Host and technology",
+        "titleStatus": "Login success",
+        "urlTech": "Admin path technology"
+      },
+      "exampleDescriptions": {
+        "urlContains": "Find assets whose URL contains admin",
+        "hostContains": "Find assets whose hostname contains api",
+        "titleContains": "Find assets whose page title contains Login",
+        "statusExact": "Match only HTTP 200 responses",
+        "urlExact": "Match the complete URL string",
+        "titleExact": "Match the complete page title",
+        "techExact": "Match the exact technology name",
+        "statusErrorExact": "Match only HTTP 404 responses",
+        "hostStatus": "Require both the host and a successful status",
+        "hostTech": "Require both the host and technology",
+        "titleStatus": "Require a login title and successful status",
+        "urlTech": "Require an admin path and technology"
+      }
+    },
+    "manual": {
+      "title": "Global asset search syntax",
+      "description": "Combine strict field conditions to search assets. Clicking an example fills the draft without starting a search.",
+      "fieldsTitle": "Available fields",
+      "operatorsTitle": "Operators",
+      "semanticsTitle": "Field matching semantics",
+      "textSemantics": "For url, host, and title, = performs a case-insensitive contains match and == performs a case-sensitive full-field match.",
+      "typedSemantics": "For statusCode, both = and == perform integer exact matching; for tech, both perform case-sensitive complete-element matching.",
+      "limitsTitle": "Query constraints",
+      "urlLimit": "URL, host, and title contains values with = require at least 2 Unicode characters",
+      "textLimit": "Exact values with == are not subject to the minimum length",
+      "statusLimit": "statusCode values must be integers",
+      "conditionLimit": "Each query can contain at most 10 conditions",
+      "quoting": "Values use double quotes and JSON-style backslash escaping",
+      "unsupportedTitle": "Unsupported syntax",
+      "unsupported": "!=, ||, and, or, parentheses, and unlisted fields are not supported. Use the approved fields, =, ==, and && instead.",
+      "examplesTitle": "Executable examples",
+      "close": "Close syntax guide"
+    },
+    "diagnostics": {
+      "required": { "message": "Enter a query.", "fix": "Enter a URL or a field condition such as host=\"api\"." },
+      "queryTooLong": { "message": "The query exceeds the length limit.", "fix": "Shorten it to 2048 UTF-8 bytes or fewer." },
+      "invalidField": { "message": "The field name is not valid.", "fix": "Choose url, host, title, statusCode, or tech." },
+      "unsupportedField": { "message": "That field is not supported.", "fix": "Use url, host, title, statusCode, or tech." },
+      "invalidOperator": { "message": "The operator is not valid.", "fix": "Use = or ==, and join conditions with &&." },
+      "invalidStatusCode": { "message": "statusCode must be an integer.", "fix": "For example, use statusCode==\"200\"." },
+      "containsValueTooShort": { "message": "The contains value is too short.", "fix": "Use at least 2 characters for URL, host, and title." },
+      "missingQuotedValue": { "message": "A quoted value is missing.", "fix": "Use a double-quoted value after the operator, such as tech=\"nginx\"." },
+      "invalidQuotedValue": { "message": "The quoted value is not valid.", "fix": "Use double quotes and JSON-style escaping for special characters." },
+      "unterminatedQuotedValue": { "message": "The quoted value is not closed.", "fix": "Add the closing double quote." },
+      "invalidConnector": { "message": "The condition connector is not valid.", "fix": "Use && between multiple conditions." },
+      "missingCondition": { "message": "A condition is missing after the connector.", "fix": "Add a complete field condition after &&." },
+      "tooManyConditions": { "message": "The query has too many conditions.", "fix": "Reduce it to 10 conditions or fewer." },
+      "unknown": { "message": "The query could not be parsed.", "fix": "Use the supported fields, operators, and double-quoted values from the syntax guide." }
     },
     "table": {
       "url": "URL",
@@ -986,7 +1056,7 @@
       "passwordLabel": "Password*",
       "passwordPlaceholder": "Enter your password",
       "submit": "Sign in",
-      "accessHelp": "First sign-in: use admin / admin, then change your password."
+      "accessHelp": "Need access? Contact your administrator."
     },
     "terminal": {
       "title": "LunaFox ASM Platform",
@@ -1315,6 +1385,16 @@
         "off": "Off",
         "on": "On",
         "unitSeconds": "seconds",
+        "chooseDuration": "Choose duration",
+        "durationDays": "Days",
+        "durationHours": "Hours",
+        "durationMinutes": "Minutes",
+        "durationSeconds": "Seconds",
+        "restoreDefault": "Restore default",
+        "cancel": "Cancel",
+        "apply": "Apply",
+        "unbounded": "unbounded",
+        "durationOutOfRange": "Duration must be between {min} and {max} seconds",
         "minimum": "Min {value}",
         "maximum": "Max {value}",
         "range": "{min}-{max}",
@@ -4292,7 +4372,7 @@
         "usernamePlaceholder": "admin@example.com",
         "password": "Password",
         "login": "Sign in",
-        "accessHelp": "First sign-in: use admin / admin, then change your password."
+        "accessHelp": "Need access? Contact an administrator."
       },
       "blacklist": {
         "title": "Global Blacklist",
@@ -4720,6 +4800,36 @@
       "agentsValue": "Ready {ready}/{expected}, missing {missing}, unhealthy {unhealthy}",
       "lastUpdated": "Last updated",
       "operationId": "Operation ID"
+    },
+    "agentDiagnostics": {
+      "title": "Agents requiring attention",
+      "description": "Only Agents that are not ready for this Upgrade Operation are listed.",
+      "empty": "All Agents in this Upgrade Operation are currently ready.",
+      "reconnecting": "Showing the most recently confirmed Agent evidence while reconnecting.",
+      "terminal": "This is the last confirmed Agent evidence for this completed operation.",
+      "source": {
+        "agent_heartbeat": "Source: Agent heartbeat",
+        "server_observation": "Source: Server observation",
+        "historical": "Source: Historical diagnostic"
+      }
+    },
+    "hostActivity": {
+      "title": "Current host activity",
+      "waiting": "The host is still waiting for this action to return.",
+      "action": "Current action",
+      "startedAt": "Started at",
+      "lastHeartbeatAt": "Last host heartbeat",
+      "actions": {
+        "preflight": "Run preflight checks",
+        "pull_images": "Pull release images",
+        "update_services": "Update services",
+        "database_migration": "Run database migration",
+        "update_resident_agent": "Update resident Agent",
+        "wait_for_service_health": "Wait for service health",
+        "verify_runtime_images": "Verify runtime images",
+        "verify_frontend_container": "Verify frontend container",
+        "verify_frontend_edge": "Verify frontend edge access"
+      }
     },
     "actions": {
       "refresh": "Check again",

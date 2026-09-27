@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	service "github.com/yyhuni/lunafox/server/internal/modules/catalog/application"
@@ -61,7 +62,6 @@ func toSubfinderProviderConfigsInput(req dto.SubfinderAPIKeySettingsUpdateReques
 	for providerName, providerConfig := range req.Providers {
 		providers[providerName] = catalogdomain.SubfinderProviderConfig{
 			Enabled: providerConfig.Enabled,
-			Status:  providerConfig.Status,
 			Values:  cloneProviderValues(providerConfig.Values),
 		}
 	}
@@ -86,7 +86,7 @@ func toSubfinderProviderStatesOutput(settings *catalogdomain.SubfinderProviderSe
 		}
 		providers[definition.Key] = dto.SubfinderProviderState{
 			Enabled: providerConfig.Enabled,
-			Status:  providerStatus(providerConfig),
+			Status:  providerStatus(definition, providerConfig),
 			Values:  toSubfinderProviderFieldValuesOutput(definition, providerConfig),
 		}
 	}
@@ -128,14 +128,22 @@ func toSubfinderProviderFieldValuesOutput(definition catalogdomain.SubfinderProv
 	return values
 }
 
-func providerStatus(providerConfig catalogdomain.SubfinderProviderConfig) string {
-	if providerConfig.Status != "" {
+func providerStatus(definition catalogdomain.SubfinderProviderDefinition, providerConfig catalogdomain.SubfinderProviderConfig) string {
+	if providerConfig.Status == catalogdomain.SubfinderProviderStatusRequiresReconfiguration || providerConfig.Status == catalogdomain.SubfinderProviderStatusUnsupported {
 		return providerConfig.Status
 	}
-	if providerConfig.Enabled {
-		return catalogdomain.SubfinderProviderStatusConfigured
+	if !providerConfig.Enabled {
+		return catalogdomain.SubfinderProviderStatusUnconfigured
 	}
-	return catalogdomain.SubfinderProviderStatusUnconfigured
+	for _, field := range definition.Fields {
+		if field.Required && strings.TrimSpace(providerConfig.Values[field.Name]) == "" {
+			return catalogdomain.SubfinderProviderStatusUnconfigured
+		}
+	}
+	if catalogdomain.BuildSubfinderProviderCredentialValue(definition.Key, providerConfig) == "" {
+		return catalogdomain.SubfinderProviderStatusUnconfigured
+	}
+	return catalogdomain.SubfinderProviderStatusConfigured
 }
 
 func maskedSecretValue(value string) string {

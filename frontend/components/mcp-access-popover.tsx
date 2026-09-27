@@ -157,7 +157,7 @@ export function McpAccessPopover() {
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label={t("open")} />}>
+      <PopoverTrigger render={<Button type="button" variant="ghost" size="icon-sm" layout="compactAction" aria-label={t("open")} />}>
         <McpIcon className="size-4" />
         <span className="sr-only">{t("open")}</span>
       </PopoverTrigger>
@@ -178,7 +178,7 @@ export function McpAccessPopover() {
           <div className="space-y-2">
             <Label htmlFor="mcp-popover-url">{t("endpoint.label")}</Label>
             <div className="relative">
-              <Input id="mcp-popover-url" value={endpoint} readOnly className="pr-10" />
+              <Input id="mcp-popover-url" size="sm" value={endpoint} readOnly className="pr-10" />
               <CopyButton
                 value={endpoint}
                 copyLabel={t("endpoint.copy")}
@@ -215,7 +215,7 @@ export function McpAccessPopover() {
             ) : revealedKey ? (
               <>
                 <div className="relative">
-                  <Input id="mcp-popover-key" value={revealedKey} readOnly className="pr-10 font-mono" />
+                  <Input id="mcp-popover-key" size="sm" value={revealedKey} readOnly className="pr-10 font-mono" />
                   <CopyButton
                     value={revealedKey}
                     copyLabel={t("key.copy")}
@@ -227,7 +227,7 @@ export function McpAccessPopover() {
                 <p className={textRole.helperText}>{wasRegenerated ? t("key.rotatedDescription") : t("key.revealedDescription")}</p>
               </>
             ) : statusQuery.isPending ? (
-              <Input id="mcp-popover-key" value={t("key.loading")} readOnly disabled />
+              <Input id="mcp-popover-key" size="sm" value={t("key.loading")} readOnly disabled />
             ) : (
               <div className="flex items-center justify-between gap-3">
                 <p className={textRole.helperText}>{configured ? t("key.lostDescription") : t("key.emptyDescription")}</p>

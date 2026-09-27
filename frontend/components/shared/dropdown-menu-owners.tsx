@@ -26,7 +26,7 @@ export interface HeaderIconActionMenuProps {
 }
 export function HeaderIconActionMenu({ ariaLabel, icon, children, align = "end", side, sideOffset = shellOverlaySideOffsets.header, buttonSize = "icon-sm", buttonVariant = "ghost", contentClassName, disabled, }: HeaderIconActionMenuProps) {
     return (<DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant={buttonVariant} size={buttonSize} aria-label={ariaLabel} disabled={disabled}/>}> 
+      <DropdownMenuTrigger render={<Button variant={buttonVariant} size={buttonSize} layout="compactAction" aria-label={ariaLabel} disabled={disabled}/>}>
           {icon}
           <span className="sr-only">{ariaLabel}</span>
         </DropdownMenuTrigger>

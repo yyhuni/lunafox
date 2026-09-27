@@ -19,6 +19,7 @@ import {
 } from "@/lib/status-config"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { compactSurfaceClassNames } from "@/lib/ui/compact-surface-contract"
 import { ScanLogList } from "@/components/scan/scan-log-list"
 import type { ScanLog } from "@/types/scan.types"
 import { formatDateTime } from "@/components/scan/scan-progress-dialog-utils"
@@ -180,9 +181,9 @@ export function ScanProgressSummary({ data, engineNames, locale, t }: ScanProgre
         <ScanStatusBadge status={data.status} t={t} />
       </div>
       {data.errorMessage && (
-        <div className="bg-destructive/10 border border-destructive/20 mt-2 p-3 rounded-md">
+        <div className={cn(compactSurfaceClassNames.info, "mt-2 bg-destructive/10 border-destructive/20")}>
           <p className={cn(textRole.bodyStrong, "text-destructive")}>{t("errorReason")}</p>
-          <p className={cn("break-words mt-1", textRole.body, "text-destructive/80")}>{data.errorMessage}</p>
+          <p className={cn("mt-1 break-words", textRole.helperText, "text-destructive/80")}>{data.errorMessage}</p>
         </div>
       )}
     </div>

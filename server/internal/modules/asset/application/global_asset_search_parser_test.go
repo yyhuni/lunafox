@@ -87,8 +87,8 @@ func TestParseGlobalAssetSearchQueryRejectsUnsafeOrMalformedSyntax(t *testing.T)
 		`plain text host="api"`,
 		`url="unterminated`,
 		`url="a"`,
-		`host="ab"`,
-		`title="ab"`,
+		`host="a"`,
+		`title="a"`,
 	}
 	for _, raw := range cases {
 		t.Run(raw, func(t *testing.T) {
@@ -108,6 +108,11 @@ func TestParseGlobalAssetSearchQueryUsesFieldSpecificTypedSemantics(t *testing.T
 	for _, raw := range []string{`jd`, `url="jd"`, `url=="j"`} {
 		if _, err := ParseGlobalAssetSearchQuery(raw); err != nil {
 			t.Fatalf("query %q should be accepted: %v", raw, err)
+		}
+	}
+	for _, raw := range []string{`host="ab"`, `title="登录"`} {
+		if _, err := ParseGlobalAssetSearchQuery(raw); err != nil {
+			t.Fatalf("two-character contains query %q should be accepted: %v", raw, err)
 		}
 	}
 	for _, raw := range []string{`statusCode="2xx"`, `statusCode="-1"`, `statusCode="+200"`, `statusCode="200.0"`} {

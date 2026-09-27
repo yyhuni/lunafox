@@ -103,9 +103,9 @@ export function WordlistCatalogCardLoadingState() {
         </div>
       </div>
       <div className={WORDLIST_CARD_TAGS_CLASS}>
-        <Skeleton className="h-6 w-16 radius-badge" />
-        <Skeleton className="h-6 w-20 radius-badge" />
-        <Skeleton className="h-6 w-8 radius-badge" />
+        <Skeleton className="badge-size-tag w-16 radius-badge" />
+        <Skeleton className="badge-size-tag w-20 radius-badge" />
+        <Skeleton className="badge-size-tag w-8 radius-badge" />
       </div>
       <div className={WORDLIST_CARD_METRICS_CLASS}>
         <div className="space-y-2">

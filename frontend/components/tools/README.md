@@ -47,6 +47,11 @@ calculate total pages or add numbered or last navigation.
 
 ## Wordlists
 
+普通字典元数据遵循共享紧凑表面契约：描述和单行筛选输入显式使用 `Input
+size="sm"`，标签保持共享 `Badge` 的 26px `tag` 层级，资源名与 Hash 等短值使用
+`compactSurfaceClassNames.value`，短的超大字典提示使用 `mutedInfo`。内容编辑器和
+YAML/代码预览继续保留内容驱动高度，不得为了统一密度而裁剪或压缩多行内容。
+
 - The Wordlists page shell and its page-owned `ContentHandoff` use the shared
   viewport-bound catalog classes in `wordlists-page-layout.ts`. Loading cards,
   results, and pagination must scroll inside that surface; they must not alter
@@ -63,9 +68,12 @@ calculate total pages or add numbered or last navigation.
   catalog remains a browsing surface without nested card actions.
 - Both tabs of `WordlistDetailDrawer` align their outer body and footer with the
   shared compact detail-drawer edge. The edit tab passes that compact footer
-  class into `WordlistEditFooter`, while `WordlistEditEditor` continues to own
-  its viewport and scroll geometry; do not apply the drawer override to the
-  standalone editor dialog.
+  class and explicit compact density into the metadata and footer owners, while
+  `WordlistEditEditor` continues to own its viewport and scroll geometry; do not
+  apply the drawer density override to the standalone editor dialog.
+- Wordlist tags and recommendation chips use the shared `Badge` `tag` tier
+  (26px). The nested recommendation count is a `micro` badge and should not
+  determine the outer chip height.
 - Loading reuses `WordlistCatalogCardLoadingState` in the same responsive grid
   as resolved cards. Recheck desktop and narrow frames before changing the card
   count or geometry.

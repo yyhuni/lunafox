@@ -158,6 +158,7 @@ const REQUIRED_PUBLIC_RUNTIME_EXACT = [
   "scripts/ci/verify-public-runtime-source.sh",
   "scripts/ci/check-migration-baseline-policy.mjs",
   "scripts/ci/check-engine-api-major-policy.mjs",
+  "scripts/ci/resolve-release-migration-metadata.mjs",
   "scripts/ci/publish-engine-runtime-images.sh",
   "scripts/ci/aggregate-engine-runtime-image-shards.sh",
   "scripts/ci/check-engine-image-tool-inventory.mjs",
@@ -195,9 +196,13 @@ const DESTINATION_DEPLOYMENT_PATHS = [
   "compose.yaml",
   "engine-inventory.yaml",
   "release.manifest.yaml",
+  "third-party-image-policy.json",
 ];
+const LEGACY_DEPLOYMENT_PATHS = DESTINATION_DEPLOYMENT_PATHS.filter((path) => path !== "third-party-image-policy.json");
 const OPTIONAL_DESTINATION_OWNED_PATHS = [
+  "third-party-image-policy.json",
   "runtime-composition.json",
+  "preheat-manifest.json",
 ];
 const PUBLISHED_MANIFESTS_WITHOUT_COMPOSITION = [
   "541e57adcb95c8557fe5783fc563282fb17cbc563e0e21ef48847121504618ab",
@@ -333,7 +338,7 @@ function assertLegacyDeploymentBootstrapPolicy(policy) {
       bootstrap?.packageName !== "lunafox-v0.0.1-alpha.114-dockerhub.zip" ||
       bootstrap?.sha256 !== "d02fe6f9da2576e3a89b52d38a03b5af6afd91670de26e67fe1f1efcf809c55c" ||
       bootstrap?.manifestSha256 !== "e0e742054888daf0fb6482be721c82bd8e162d795143badbf2089cbd978c5e8b" ||
-      JSON.stringify(bootstrap?.paths) !== JSON.stringify(DESTINATION_DEPLOYMENT_PATHS)) {
+      JSON.stringify(bootstrap?.paths) !== JSON.stringify(LEGACY_DEPLOYMENT_PATHS)) {
     fail("legacy public deployment bootstrap must remain pinned to the verified alpha.114 Docker Hub package");
   }
   if (JSON.stringify(policy.publishedManifestsWithoutComposition) !== JSON.stringify(PUBLISHED_MANIFESTS_WITHOUT_COMPOSITION)) {
@@ -975,6 +980,14 @@ function assertPublicWorkflow(workflow, policy) {
     "download_verified_asset release.manifest.yaml dist/public-composition/previous.manifest.yaml",
     "download_verified_asset component-evidence.json dist/public-composition/previous.component-evidence.json",
     "download_verified_asset public-release-provenance.json dist/public-composition/previous.public-release-provenance.json",
+    "git fetch --no-tags --depth=1 origin",
+    "refs/tags/${previous_release_tag}:refs/tags/${previous_release_tag}",
+    "git show \"${previous_release_tag}:server/cmd/server/migrations/manifest.json\"",
+    "dist/public-composition/previous-migration-manifest.json",
+    "node scripts/ci/resolve-release-migration-metadata.mjs",
+    "--current-migration-manifest server/cmd/server/migrations/manifest.json",
+    "--previous-migration-manifest dist/public-composition/previous-migration-manifest.json",
+    "--output dist/public-composition/previous-migration-resolution.json",
     "dist/public-composition/previous.manifest.yaml",
     "dist/public-composition/previous.component-evidence.json",
     "dist/public-composition/previous.public-release-provenance.json",
@@ -1404,8 +1417,12 @@ function assertPublicWorkflow(workflow, policy) {
   if (!finalManifestGeneration.includes("RUNTIME_COMPOSITION_SHA256: ${{ steps.composition.outputs.composition_digest }}") ||
       !finalManifestGeneration.includes("generate-release-manifest.sh") ||
       !finalManifestGeneration.includes('RELEASE_PROFILE: ${{ steps.release_profile.outputs.profile }}') ||
-      !finalManifestGeneration.includes('--release-profile "$RELEASE_PROFILE"')) {
-    fail("public final release must pass the canonical runtime composition digest into manifest generation and pass the resolved profile");
+      !finalManifestGeneration.includes('--release-profile "$RELEASE_PROFILE"') ||
+      !finalManifestGeneration.includes('previous_migration_manifest="dist/final/composition-plan/previous-migration-manifest.json"') ||
+      !finalManifestGeneration.includes('previous_release="${{ needs.resolve-public-runtime-composition.outputs.previous_release }}"') ||
+      !finalManifestGeneration.includes('previous_migration_args+=(--previous-migration-manifest "$previous_migration_manifest")') ||
+      !finalManifestGeneration.includes('"${previous_migration_args[@]}"')) {
+    fail("public final release must pass the canonical runtime composition digest into manifest generation and pass the resolved profile and migration boundary");
   }
   for (const required of [
     "--mode bind",
@@ -1549,10 +1566,14 @@ function assertExportPolicy(exportPolicy) {
     fail("public export policy must constrain protected validation workflow maintenance history");
   }
   const destinationOwnedExact = [...new Set(exportPolicy.destinationOwnedExact ?? [])].sort();
-  const expectedDestinationOwned = [".github/workflows/public-validate.yml", ...DESTINATION_DEPLOYMENT_PATHS, ...OPTIONAL_DESTINATION_OWNED_PATHS].sort();
+  const expectedDestinationOwned = [...new Set([
+    ".github/workflows/public-validate.yml",
+    ...DESTINATION_DEPLOYMENT_PATHS,
+    ...OPTIONAL_DESTINATION_OWNED_PATHS,
+  ])].sort();
   const optionalUntilPresent = [...new Set(exportPolicy.destinationOwnedOptionalUntilPresent ?? [])].sort();
   if (JSON.stringify(optionalUntilPresent) !== JSON.stringify([...OPTIONAL_DESTINATION_OWNED_PATHS].sort())) {
-    fail("public export policy must keep runtime composition optional until a deployment snapshot publishes it");
+    fail("public export policy must keep third-party policy, composition, and preheat assets optional until a deployment snapshot publishes them");
   }
   if (JSON.stringify(destinationOwnedExact) !== JSON.stringify(expectedDestinationOwned)) {
     fail("public export policy must declare the validation workflow and deployment snapshot as destination-owned");
@@ -1583,8 +1604,9 @@ function assertExportPolicy(exportPolicy) {
     if (!exact.has(required)) fail(`export policy does not allow checkout deployment input: ${required}`);
   }
   const groups = exportPolicy.destinationOwnedGroups ?? [];
+  const expectedGroupPaths = [...new Set([...DESTINATION_DEPLOYMENT_PATHS, ...OPTIONAL_DESTINATION_OWNED_PATHS])];
   if (groups.length !== 1 || groups[0]?.sentinel !== ".env" ||
-      JSON.stringify(groups[0]?.paths) !== JSON.stringify(DESTINATION_DEPLOYMENT_PATHS)) {
+      JSON.stringify(groups[0]?.paths) !== JSON.stringify(expectedGroupPaths)) {
     fail("public export policy must define one complete .env-sentinel deployment snapshot group");
   }
   for (const required of DESTINATION_DEPLOYMENT_PATHS) {

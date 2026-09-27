@@ -10,15 +10,17 @@ import {
   isSharedScanStatus,
 } from "@/lib/status-config"
 import { textRole } from "@/lib/typography"
+import { badgeStructuralSizeClassNames } from "@/lib/ui/badge-size-contract"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
   cn(
-    "radius-badge inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap border border-border bg-transparent px-2 py-1 text-foreground [&>svg]:pointer-events-none [&>svg]:size-3 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 transition-[color,box-shadow,border-color] dark:aria-invalid:ring-destructive/40 data-[badge-type=subdomain]:text-muted-foreground data-[badge-type=website]:text-muted-foreground data-[badge-type=ip]:text-muted-foreground data-[badge-type=endpoint]:text-muted-foreground data-[badge-type=vulnerability]:text-muted-foreground data-[badge-type=workflow]:text-muted-foreground data-[badge-type=engine]:text-muted-foreground",
+    "radius-badge inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap border border-border bg-transparent text-foreground [&>svg]:pointer-events-none [&>svg]:size-3 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 transition-[color,box-shadow,border-color] dark:aria-invalid:ring-destructive/40 data-[badge-type=subdomain]:text-muted-foreground data-[badge-type=website]:text-muted-foreground data-[badge-type=ip]:text-muted-foreground data-[badge-type=endpoint]:text-muted-foreground data-[badge-type=vulnerability]:text-muted-foreground data-[badge-type=workflow]:text-muted-foreground data-[badge-type=engine]:text-muted-foreground",
     textRole.badge
   ),
   {
     variants: {
+      size: badgeStructuralSizeClassNames,
       variant: {
         default: "",
         secondary: "",
@@ -38,6 +40,7 @@ const badgeVariants = cva(
       },
     },
     defaultVariants: {
+      size: "tag",
       variant: "default",
     },
   }
@@ -72,6 +75,7 @@ function resolveBadgeTypeStyle(
 function Badge({
   className,
   variant,
+  size,
   "data-badge-type": badgeType,
   render,
   style,
@@ -90,8 +94,9 @@ function Badge({
       defaultTagName="span"
       render={render}
       data-slot="badge"
+      data-size={size ?? "tag"}
       data-badge-type={badgeType}
-      className={cn(badgeVariants({ variant: resolvedVariant }), badgeTypeClassName, className)}
+      className={cn(badgeVariants({ size, variant: resolvedVariant }), badgeTypeClassName, className)}
       style={badgeTypeStyle}
       {...props}
     />

@@ -122,21 +122,7 @@ func TestPublicComposeExecutorUsesFixedLayoutAndPersistsTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 	raw := releaseManifestFixtureBytes(t)
-	temporaryManifest := filepath.Join(root, "candidate.yaml")
-	if err := os.WriteFile(temporaryManifest, raw, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	manifest, err := loadManifestForTest(temporaryManifest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	manifestPath, err := store.ManifestPath(manifest.Digest())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(manifestPath, raw, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	manifest, _ := installPublicPreheatFixture(t, root, store, raw)
 	executor, err := NewPublicComposeExecutor(&recordingRunner{}, "ghcr.io")
 	if err != nil {
 		t.Fatal(err)
@@ -169,6 +155,13 @@ func TestPublicComposeExecutorUsesFixedLayoutAndPersistsTarget(t *testing.T) {
 	overrideBytes, err := os.ReadFile(filepath.Join(root, publicPersistentOverrideFile))
 	if err != nil {
 		t.Fatal(err)
+	}
+	overrideInfo, err := os.Stat(filepath.Join(root, publicPersistentOverrideFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := overrideInfo.Mode().Perm(); got != publicComposeOverrideMode.Perm() {
+		t.Fatalf("public Compose override mode = %o, want %o", got, publicComposeOverrideMode.Perm())
 	}
 	var override composeOverride
 	if err := json.Unmarshal(overrideBytes, &override); err != nil {
@@ -296,6 +289,13 @@ func TestStageFrontendOnlyComposeOverrideChangesOnlyFrontendImage(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	patchInfo, err := os.Stat(patchPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := patchInfo.Mode().Perm(); got != privateUpgradeFileMode.Perm() {
+		t.Fatalf("frontend-only patch mode = %o, want %o", got, privateUpgradeFileMode.Perm())
+	}
 	var patch map[string]any
 	if err := yaml.Unmarshal(patchBytes, &patch); err != nil {
 		t.Fatal(err)
@@ -401,6 +401,13 @@ func TestPromoteFrontendOnlyComposeOverridePreservesUntouchedServices(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
+	promotedInfo, err := os.Stat(filepath.Join(root, publicPersistentOverrideFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := promotedInfo.Mode().Perm(); got != publicComposeOverrideMode.Perm() {
+		t.Fatalf("promoted public Compose override mode = %o, want %o", got, publicComposeOverrideMode.Perm())
+	}
 	services := promoted["services"].(map[string]any)
 	server := services["server"].(map[string]any)
 	if server["image"] != "ghcr.io/yyhuni/lunafox-server@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" {
@@ -490,6 +497,13 @@ func TestComposeExecutorRunsFixedLifecycleAndWritesReceipt(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(store.Directory(), HistoryDirectory, request.OperationID+OverrideFileSuffix)); err != nil {
 		t.Fatalf("compose override missing: %v", err)
 	}
+	privateOverrideInfo, err := os.Stat(filepath.Join(store.Directory(), HistoryDirectory, request.OperationID+OverrideFileSuffix))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := privateOverrideInfo.Mode().Perm(); got != privateUpgradeFileMode.Perm() {
+		t.Fatalf("private Compose override mode = %o, want %o", got, privateUpgradeFileMode.Perm())
+	}
 	keys := make([]string, 0, len(current.ProgressEvents))
 	for _, event := range current.ProgressEvents {
 		keys = append(keys, event.MessageKey)
@@ -499,16 +513,35 @@ func TestComposeExecutorRunsFixedLifecycleAndWritesReceipt(t *testing.T) {
 	}
 	wantKeys := []string{
 		ProgressPreflightStarted,
+		ProgressHostActionStarted,
+		ProgressHostActionCompleted,
 		ProgressPullImagesStarted,
+		ProgressHostActionStarted,
+		ProgressHostActionCompleted,
 		ProgressServicesUpdateStarted,
+		ProgressHostActionStarted,
+		ProgressHostActionCompleted,
 		ProgressServicesUpdated,
 		ProgressHealthCheckStarted,
+		ProgressHostActionStarted,
+		ProgressHostActionCompleted,
 		ProgressAgentVerificationStarted,
 		ProgressDigestVerificationStarted,
+		ProgressHostActionStarted,
+		ProgressHostActionCompleted,
 		ProgressHostExecutionCompleted,
 	}
 	if strings.Join(keys, ",") != strings.Join(wantKeys, ",") {
 		t.Fatalf("progress keys = %#v, want %#v", keys, wantKeys)
+	}
+	var actions []string
+	for _, event := range current.ProgressEvents {
+		if event.MessageKey == ProgressHostActionStarted {
+			actions = append(actions, event.Metadata["action"])
+		}
+	}
+	if got, want := strings.Join(actions, ","), "preflight,pull_images,update_services,wait_for_service_health,verify_runtime_images"; got != want {
+		t.Fatalf("host action coverage = %q, want %q", got, want)
 	}
 }
 
@@ -613,18 +646,8 @@ func TestComposeExecutorFrontendOnlyUsesSealedCommandsAndV2Receipt(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	manifestPath := filepath.Join(root, "candidate.yaml")
 	manifestBytes := releaseManifestFixtureBytes(t)
-	if err := os.WriteFile(manifestPath, manifestBytes, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	manifest, err := loadManifestForTest(manifestPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(mustManifestPath(t, store, manifest.Digest()), manifestBytes, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	manifest, _ := installPublicPreheatFixture(t, root, store, manifestBytes)
 	runner := &frontendOnlyRunner{}
 	executor, err := NewPublicComposeExecutor(runner, "ghcr.io")
 	if err != nil {
@@ -729,17 +752,7 @@ func TestComposeExecutorFrontendOnlyRejectsStoppingStage(t *testing.T) {
 		t.Fatal(err)
 	}
 	manifestBytes := releaseManifestFixtureBytes(t)
-	manifestPath := filepath.Join(root, "candidate.yaml")
-	if err := os.WriteFile(manifestPath, manifestBytes, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	manifest, err := loadManifestForTest(manifestPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(mustManifestPath(t, store, manifest.Digest()), manifestBytes, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	manifest, _ := installPublicPreheatFixture(t, root, store, manifestBytes)
 	runner := &frontendOnlyRunner{}
 	executor, err := NewPublicComposeExecutor(runner, "ghcr.io")
 	if err != nil {
@@ -835,17 +848,7 @@ func TestComposeExecutorFrontendOnlyFailsClosedWhenPublicEdgeDoesNotConverge(t *
 		t.Fatal(err)
 	}
 	manifestBytes := releaseManifestFixtureBytes(t)
-	manifestPath := filepath.Join(root, "candidate.yaml")
-	if err := os.WriteFile(manifestPath, manifestBytes, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	manifest, err := loadManifestForTest(manifestPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(mustManifestPath(t, store, manifest.Digest()), manifestBytes, 0o600); err != nil {
-		t.Fatal(err)
-	}
+	manifest, _ := installPublicPreheatFixture(t, root, store, manifestBytes)
 	request := Request{
 		SchemaVersion:              ScopedRequestSchema,
 		OperationID:                "frontend-only-edge-failure",

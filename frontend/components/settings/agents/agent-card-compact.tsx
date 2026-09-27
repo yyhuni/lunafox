@@ -212,7 +212,7 @@ function AgentCardCompactResolved({
                   <IconActivity className="h-2.5 w-2.5" />
                   {t("metrics.runningTasks")}
                 </span>
-                <Badge variant="secondary" className="bg-muted border-border font-mono h-5 px-1.5 text-[10px] text-foreground">
+                <Badge size="compact" variant="secondary" className="bg-muted border-border font-mono text-[10px] text-foreground">
                   {formatNumber.formatInteger(heartbeat.runningTasks)}
                 </Badge>
               </div>
@@ -221,7 +221,7 @@ function AgentCardCompactResolved({
                   <TaskSlotsIcon className="h-2.5 w-2.5" />
                   {t("metrics.usedTaskSlots")}
                 </span>
-                <Badge variant="secondary" className="bg-muted border-border font-mono h-5 px-1.5 text-[10px] text-foreground">
+                <Badge size="compact" variant="secondary" className="bg-muted border-border font-mono text-[10px] text-foreground">
                   {formatNumber.formatInteger(heartbeat.taskSlotsUsed)}
                   <span className="mx-0.5 opacity-40">/</span>
                   {agentNode.maxTasks}

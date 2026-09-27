@@ -112,7 +112,7 @@ function NotificationDestinationEditorLoadingState({
                   <Icon aria-hidden="true" className={cn("size-5", getNotificationProviderIconClass(provider))} />
                 </span>
                 <CardTitle className={NOTIFICATION_CHANNEL_DETAIL_TITLE_CLASS}>{providerTitle}</CardTitle>
-                <Badge variant={isExpanded ? "success" : "outline"}>
+                <Badge size="compact" variant={isExpanded ? "success" : "outline"}>
                   {isExpanded ? t("status.enabled") : t("status.disabled")}
                 </Badge>
               </div>
@@ -133,6 +133,7 @@ function NotificationDestinationEditorLoadingState({
               <Label>{t("destination.credentialLabel")}</Label>
               <div className={NOTIFICATION_CREDENTIAL_INPUT_SHELL_CLASS}>
                 <Input
+                  size="sm"
                   className={NOTIFICATION_CREDENTIAL_INPUT_CLASS}
                   disabled
                   placeholder={t(`${provider}.credentialPlaceholder`)}

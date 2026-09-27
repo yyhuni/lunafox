@@ -614,6 +614,9 @@ func TestReconcileHostProgressRefreshesActivityWithoutAdvancingStageOrWatchdog(t
 	event := HostUpgradeEvent{
 		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Stage: string(domain.StatusUpdating),
 		UpdatedAt: base.Add(4 * time.Minute), StageUpdatedAt: base, FromJournal: true,
+		HostActivity: &domain.HostActivity{
+			Action: domain.HostActionPullImages, StartedAt: base.Add(time.Minute), LastHeartbeatAt: base.Add(4 * time.Minute),
+		},
 		ProgressEvents: []domain.ProgressEvent{{
 			Timestamp: base.Add(4 * time.Minute), Stage: domain.StatusUpdating, MessageKey: "pullImagesStarted",
 			Message: "Pulling release images", Metadata: map[string]string{},
@@ -627,7 +630,7 @@ func TestReconcileHostProgressRefreshesActivityWithoutAdvancingStageOrWatchdog(t
 	if updated.Status != domain.StatusUpdating || !updated.StageTimes[domain.StatusUpdating].Equal(base) {
 		t.Fatalf("progress advanced stage evidence: %#v", updated)
 	}
-	if !updated.UpdatedAt.Equal(base.Add(5*time.Minute)) || len(updated.ProgressEvents) != 1 {
+	if !updated.UpdatedAt.Equal(base.Add(5*time.Minute)) || len(updated.ProgressEvents) != 1 || !domain.EqualHostActivity(updated.HostActivity, event.HostActivity) {
 		t.Fatalf("progress did not refresh observable activity: %#v", updated)
 	}
 	if repository.updates != 1 {
@@ -646,8 +649,37 @@ func TestReconcileHostProgressRefreshesActivityWithoutAdvancingStageOrWatchdog(t
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stalled.Status != domain.StatusNeedsAttention {
+	if stalled.Status != domain.StatusNeedsAttention || stalled.HostActivity != nil {
 		t.Fatalf("progress heartbeat fed stalled watchdog: %#v", stalled)
+	}
+}
+
+func TestReconcileHostEventClearsAConfirmedActivityFromLaterJournalCheckpoint(t *testing.T) {
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	base := time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return base.Add(5 * time.Minute) }
+	operation := &domain.Operation{
+		OperationID: "acacacac-acac-4cac-8cac-acacacacacac", RequestID: "dededede-dede-4ede-8ede-dededededede", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("a", 64), ReleaseVersion: "1.1.0",
+		CompatibilityRange: "*", Status: domain.StatusUpdating, MigrationStatus: domain.MigrationStatusNotStarted,
+		MigrationType: "none", CreatedAt: base, UpdatedAt: base.Add(2 * time.Minute),
+		StageTimes: map[domain.Status]time.Time{domain.StatusUpdating: base}, ObservedDigests: map[string]string{},
+		HostActivity: &domain.HostActivity{Action: domain.HostActionPullImages, StartedAt: base.Add(time.Minute), LastHeartbeatAt: base.Add(2 * time.Minute)},
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+
+	event := HostUpgradeEvent{
+		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest,
+		Stage: string(domain.StatusRestarting), UpdatedAt: base.Add(3 * time.Minute), StageUpdatedAt: base.Add(3 * time.Minute), FromJournal: true,
+	}
+	updated, err := service.ReconcileHostEvent(context.Background(), event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != domain.StatusRestarting || updated.HostActivity != nil {
+		t.Fatalf("later checkpoint retained stale activity: %#v", updated)
 	}
 }
 

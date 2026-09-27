@@ -1,10 +1,12 @@
 package repository
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -39,7 +41,10 @@ func (repository *UpgradeOperationRepository) CreateOrGet(ctx context.Context, o
 			if existing.ManifestID != operation.ManifestID || existing.ManifestDigest != operation.ManifestDigest {
 				return domain.ErrUpgradeRequestConflict
 			}
-			result = fromModel(&existing)
+			result, err = fromModel(&existing)
+			if err != nil {
+				return err
+			}
 			return nil
 		}
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -64,12 +69,18 @@ func (repository *UpgradeOperationRepository) CreateOrGet(ctx context.Context, o
 				if replay.ManifestID != operation.ManifestID || replay.ManifestDigest != operation.ManifestDigest {
 					return domain.ErrUpgradeRequestConflict
 				}
-				result = fromModel(&replay)
+				result, err = fromModel(&replay)
+				if err != nil {
+					return err
+				}
 				return nil
 			}
 			return err
 		}
-		result = fromModel(record)
+		result, err = fromModel(record)
+		if err != nil {
+			return err
+		}
 		created = true
 		return nil
 	})
@@ -90,7 +101,7 @@ func (repository *UpgradeOperationRepository) Get(ctx context.Context, operation
 		}
 		return nil, err
 	}
-	return fromModel(&record), nil
+	return fromModel(&record)
 }
 
 // GetByRequest is used by the application idempotency fast path. A missing
@@ -111,7 +122,7 @@ func (repository *UpgradeOperationRepository) GetByRequest(ctx context.Context, 
 		}
 		return nil, err
 	}
-	return fromModel(&record), nil
+	return fromModel(&record)
 }
 
 func (repository *UpgradeOperationRepository) Update(ctx context.Context, operation *domain.Operation) error {
@@ -161,7 +172,8 @@ func (repository *UpgradeOperationRepository) Update(ctx context.Context, operat
 		"agent_missing_count": record.AgentMissingCount, "agent_unhealthy_count": record.AgentUnhealthyCount,
 		"agent_expectations": record.AgentExpectations, "agent_verification_deadline": record.AgentVerificationDeadline,
 		"observed_digests": record.ObservedDigests, "stage_times": record.StageTimes, "progress_events": record.ProgressEvents,
-		"diagnostic": record.Diagnostic, "updated_at": record.UpdatedAt, "completed_at": record.CompletedAt,
+		"host_activity": record.HostActivity,
+		"diagnostic":    record.Diagnostic, "updated_at": record.UpdatedAt, "completed_at": record.CompletedAt,
 	})
 	if result.Error != nil {
 		return result.Error
@@ -225,7 +237,7 @@ func (repository *UpgradeOperationRepository) updateTransition(ctx context.Conte
 			"agent_missing_count": record.AgentMissingCount, "agent_unhealthy_count": record.AgentUnhealthyCount,
 			"agent_expectations": record.AgentExpectations, "agent_verification_deadline": record.AgentVerificationDeadline,
 			"observed_digests": record.ObservedDigests,
-			"stage_times":      record.StageTimes, "progress_events": record.ProgressEvents, "diagnostic": record.Diagnostic,
+			"stage_times":      record.StageTimes, "progress_events": record.ProgressEvents, "host_activity": record.HostActivity, "diagnostic": record.Diagnostic,
 			"updated_at": record.UpdatedAt, "completed_at": record.CompletedAt,
 		})
 	if result.Error != nil {
@@ -287,7 +299,7 @@ func (repository *UpgradeOperationRepository) ResetForRetry(ctx context.Context,
 				"agent_missing_count": record.AgentMissingCount, "agent_unhealthy_count": record.AgentUnhealthyCount,
 				"agent_expectations": record.AgentExpectations, "agent_verification_deadline": record.AgentVerificationDeadline,
 				"observed_digests": record.ObservedDigests,
-				"stage_times":      record.StageTimes, "progress_events": record.ProgressEvents, "diagnostic": record.Diagnostic,
+				"stage_times":      record.StageTimes, "progress_events": record.ProgressEvents, "host_activity": record.HostActivity, "diagnostic": record.Diagnostic,
 				"updated_at": record.UpdatedAt, "completed_at": record.CompletedAt,
 			})
 		if result.Error != nil {
@@ -340,7 +352,7 @@ func (repository *UpgradeOperationRepository) FindActive(ctx context.Context) (*
 		}
 		return nil, err
 	}
-	return fromModel(&record), nil
+	return fromModel(&record)
 }
 
 func terminalStatuses() []string {
@@ -360,6 +372,10 @@ func toModel(operation *domain.Operation) (*model.Operation, error) {
 		return nil, err
 	}
 	progressEvents, err := json.Marshal(nonNilProgressEvents(operation.ProgressEvents))
+	if err != nil {
+		return nil, err
+	}
+	hostActivity, err := marshalHostActivity(operation.HostActivity)
 	if err != nil {
 		return nil, err
 	}
@@ -385,12 +401,15 @@ func toModel(operation *domain.Operation) (*model.Operation, error) {
 		AgentExpectedCount: operation.AgentSummary.Expected, AgentReadyCount: operation.AgentSummary.Ready,
 		AgentMissingCount: operation.AgentSummary.Missing, AgentUnhealthyCount: operation.AgentSummary.Unhealthy,
 		AgentExpectations: agentExpectations, AgentVerificationDeadline: operation.AgentVerificationDeadline,
-		ObservedDigests: observed, StageTimes: stageTimes, ProgressEvents: progressEvents, Diagnostic: operation.Diagnostic,
+		ObservedDigests: observed, StageTimes: stageTimes, ProgressEvents: progressEvents, HostActivity: hostActivity, Diagnostic: operation.Diagnostic,
 		CreatedAt: operation.CreatedAt.UTC(), UpdatedAt: operation.UpdatedAt.UTC(), CompletedAt: operation.CompletedAt,
 	}, nil
 }
 
-func fromModel(record *model.Operation) *domain.Operation {
+func fromModel(record *model.Operation) (*domain.Operation, error) {
+	if record == nil {
+		return nil, fmt.Errorf("upgrade operation record is required")
+	}
 	agentExpectations := []domain.AgentExpectation{}
 	_ = json.Unmarshal(record.AgentExpectations, &agentExpectations)
 	observed := map[string]string{}
@@ -411,6 +430,10 @@ func fromModel(record *model.Operation) *domain.Operation {
 	}
 	planSummary := domain.PlanSummary{}
 	_ = json.Unmarshal(record.PlanSummary, &planSummary)
+	hostActivity, err := unmarshalHostActivity(record.HostActivity, domain.Status(record.Status), domain.ExecutionMode(record.ExecutionMode), record.CreatedAt, record.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
 	operation := &domain.Operation{OperationID: record.ID, RequestID: record.RequestID, OperatorID: record.OperatorID,
 		ManifestID: record.ManifestID, ManifestDigest: record.ManifestDigest, ReleaseVersion: record.ReleaseVersion,
 		CompatibilityRange: record.CompatibilityRange, MaintenanceWindowMinutes: record.MaintenanceWindowMinutes,
@@ -421,7 +444,7 @@ func fromModel(record *model.Operation) *domain.Operation {
 		CancelledTaskCount: record.CancelledTaskCount, AgentDesiredVersion: record.AgentDesiredVersion, AgentTargetDigest: record.AgentTargetDigest,
 		AgentSummary:      domain.AgentSummary{Expected: record.AgentExpectedCount, Ready: record.AgentReadyCount, Missing: record.AgentMissingCount, Unhealthy: record.AgentUnhealthyCount},
 		AgentExpectations: agentExpectations, AgentVerificationDeadline: record.AgentVerificationDeadline,
-		ObservedDigests: observed, ProgressEvents: progressEvents, Diagnostic: record.Diagnostic, StageTimes: stageTimes,
+		ObservedDigests: observed, ProgressEvents: progressEvents, HostActivity: hostActivity, Diagnostic: record.Diagnostic, StageTimes: stageTimes,
 		CreatedAt: record.CreatedAt.UTC(), UpdatedAt: record.UpdatedAt.UTC(), CompletedAt: record.CompletedAt,
 	}
 	// An empty value is the only legacy form. Do not manufacture a scoped plan
@@ -433,7 +456,38 @@ func fromModel(record *model.Operation) *domain.Operation {
 	if record.WorkDisposition != "" {
 		operation.WorkDisposition = domain.WorkDisposition(record.WorkDisposition)
 	}
-	return operation
+	return operation, nil
+}
+
+func marshalHostActivity(activity *domain.HostActivity) ([]byte, error) {
+	if activity == nil {
+		return nil, nil
+	}
+	encoded, err := json.Marshal(domain.CloneHostActivity(activity))
+	if err != nil {
+		return nil, fmt.Errorf("encode host activity: %w", err)
+	}
+	return encoded, nil
+}
+
+func unmarshalHostActivity(raw []byte, status domain.Status, mode domain.ExecutionMode, createdAt, updatedAt time.Time) (*domain.HostActivity, error) {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 || string(trimmed) == "null" {
+		return nil, nil
+	}
+	decoder := json.NewDecoder(bytes.NewReader(trimmed))
+	decoder.DisallowUnknownFields()
+	var activity domain.HostActivity
+	if err := decoder.Decode(&activity); err != nil {
+		return nil, fmt.Errorf("decode persisted host activity: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		return nil, fmt.Errorf("decode persisted host activity: trailing JSON data")
+	}
+	if err := domain.ValidateHostActivity(&activity, status, mode, createdAt, updatedAt, time.Now().UTC()); err != nil {
+		return nil, fmt.Errorf("invalid persisted host activity: %w", err)
+	}
+	return domain.CloneHostActivity(&activity), nil
 }
 
 func planSummaryForPersistence(operation *domain.Operation) domain.PlanSummary {
@@ -455,12 +509,12 @@ func validateOperationEvidence(operation *domain.Operation) error {
 		return fmt.Errorf("upgrade operation is required")
 	}
 	for _, expectation := range operation.AgentExpectations {
-		if expectation.AgentID <= 0 {
-			return fmt.Errorf("agent expectation requires a positive agentId")
+		if err := expectation.Validate(); err != nil {
+			return err
 		}
-		if strings.ContainsAny(expectation.Diagnostic, "\r\n") || len(expectation.Diagnostic) > 512 {
-			return fmt.Errorf("agent expectation diagnostic is invalid")
-		}
+	}
+	if err := domain.ValidateHostActivity(operation.HostActivity, operation.Status, operation.EffectiveExecutionMode(), operation.CreatedAt, operation.UpdatedAt, time.Now().UTC()); err != nil {
+		return err
 	}
 	if strings.ContainsAny(operation.Diagnostic, "\r\n") || len(operation.Diagnostic) > 2048 {
 		return fmt.Errorf("upgrade diagnostic is invalid")

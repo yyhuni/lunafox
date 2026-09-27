@@ -15,6 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from "@/components/ui/tooltip";
+import { EngineDurationInput } from "@/components/scan/engine-duration-input";
 import type { CompleteWordlistCatalogState } from "@/hooks/use-wordlists";
 import {
     configResourceFieldId,
@@ -232,13 +233,11 @@ function getEngineIcon(engineId: string): React.ReactNode {
     return <Cpu className="size-5"/>;
 }
 function getIntegerStep(param: EngineParamDefinition) {
-    if (param.key === "timeout")
-        return 60;
+    // Keep the existing coarse rate control without using the key to infer a unit.
     if (param.key === "rate")
         return 100;
     return 1;
 }
-
 function WordlistResourceSelect({ fieldId, value, disabled, catalog, invalid, describedBy, onChange, }: {
     fieldId: string;
     value: EngineParamValue;
@@ -292,6 +291,19 @@ function WordlistResourceSelect({ fieldId, value, disabled, catalog, invalid, de
 // ---------------------------------------------------------------------------
 // Param field renderer — matches mockup: label + input + help text
 // ---------------------------------------------------------------------------
+export interface EngineParamControlRenderContext {
+    fieldId: string;
+    location: ConfigResourceFieldLocation;
+    param: EngineParamDefinition;
+    value: EngineParamValue;
+    disabled: boolean;
+    onChange: (value: EngineParamValue) => void;
+}
+
+export type EngineParamControlRenderer = (
+    context: EngineParamControlRenderContext,
+) => React.ReactNode | null;
+
 interface ParamFieldProps {
     location: ConfigResourceFieldLocation;
     param: EngineParamDefinition;
@@ -301,6 +313,7 @@ interface ParamFieldProps {
     error?: ConfigResourceFieldError;
     onChange: (value: EngineParamValue) => void;
     onFieldRepaired?: (location: ConfigResourceFieldLocation) => void;
+    renderParamControl?: EngineParamControlRenderer;
 }
 
 function ParamHelpText({ description }: { description: string }) {
@@ -357,17 +370,15 @@ function EnumStringArrayPopover({ fieldId, labelId, param, value, disabled, onCh
     </Popover>);
 }
 
-function ParamField({ location, param, value, disabled, wordlistCatalog, error, onChange, onFieldRepaired }: ParamFieldProps) {
+function ParamField({ location, param, value, disabled, wordlistCatalog, error, onChange, onFieldRepaired, renderParamControl }: ParamFieldProps) {
     const tScanInitiate = useTranslations("scan.initiate");
     const fieldId = configResourceFieldId(location);
     const errorMessageId = `${fieldId}-error`;
     const unitHint = useMemo(() => {
         if (param.type !== "integer")
             return null;
-        if (param.key === "timeout")
+        if (param.unit === "seconds")
             return `(${tScanInitiate("engineConfigForm.unitSeconds")})`;
-        if (param.description?.includes("threads"))
-            return null;
         return null;
     }, [param, tScanInitiate]);
     const constraintHint = useMemo(() => {
@@ -387,25 +398,37 @@ function ParamField({ location, param, value, disabled, wordlistCatalog, error, 
     }, [param, tScanInitiate]);
     if (param.type === "boolean") {
         const labelId = `${fieldId}-label`;
+        const isChecked = Boolean(value);
         return (<div className="space-y-1">
         <p id={labelId} className={textRole.compactPrimary}>{param.key}</p>
-        <ToggleGroup type="single" value={Boolean(value) ? "on" : "off"} onValueChange={(nextValue) => {
+        <ToggleGroup type="single" value={isChecked ? "on" : "off"} onValueChange={(nextValue) => {
             if (nextValue === "on") onChange(true);
             if (nextValue === "off") onChange(false);
-        }} aria-labelledby={labelId} className="radius-control relative grid h-8 w-32 grid-cols-2 overflow-hidden border border-input bg-muted/20 p-0">
-          <span aria-hidden className={cn("pointer-events-none absolute inset-y-0 left-0 z-0 w-1/2 bg-primary transition-transform duration-200 ease-out", Boolean(value) ? "translate-x-full" : "translate-x-0")}/>
-          <ToggleGroupItem value="off" size="sm" className="radius-none relative z-10 h-full min-w-0 px-0 text-muted-foreground transition-colors hover:bg-transparent hover:text-muted-foreground data-pressed:bg-transparent data-pressed:text-primary-foreground data-pressed:hover:bg-transparent data-pressed:hover:text-primary-foreground" disabled={disabled}>
+        }} aria-labelledby={labelId} className="radius-control relative grid h-8 w-full grid-cols-2 overflow-hidden border border-input bg-muted/40 p-0.5 dark:bg-input/20">
+          <span aria-hidden className={cn("pointer-events-none absolute inset-y-0.5 left-0 z-0 w-1/2 px-0.5 transition-transform duration-200 ease-out", isChecked ? "translate-x-full" : "translate-x-0")}>
+            <span className={cn("block h-full w-full rounded-sm shadow-xs transition-colors", isChecked ? "border border-primary/40 bg-primary/15 dark:border-primary/50 dark:bg-primary/20" : "border border-border/80 bg-background dark:bg-card")} />
+          </span>
+          <ToggleGroupItem value="off" size="sm" className="radius-none relative z-10 h-full min-w-0 px-0 text-xs font-normal text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground data-pressed:bg-transparent data-pressed:font-medium data-pressed:text-foreground data-pressed:hover:bg-transparent data-pressed:hover:text-foreground" disabled={disabled}>
             {tScanInitiate("engineConfigForm.off")}
-            {!Boolean(value) ? <Check aria-hidden className="absolute right-2 size-3"/> : null}
           </ToggleGroupItem>
-          <ToggleGroupItem value="on" size="sm" className="radius-none relative z-10 h-full min-w-0 px-0 text-muted-foreground transition-colors hover:bg-transparent hover:text-muted-foreground data-pressed:bg-transparent data-pressed:text-primary-foreground data-pressed:hover:bg-transparent data-pressed:hover:text-primary-foreground" disabled={disabled}>
-            {tScanInitiate("engineConfigForm.on")}
-            {Boolean(value) ? <Check aria-hidden className="absolute right-2 size-3"/> : null}
+          <ToggleGroupItem value="on" size="sm" className="radius-none relative z-10 h-full min-w-0 px-0 text-xs font-normal text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground data-pressed:bg-transparent data-pressed:font-medium data-pressed:text-primary data-pressed:hover:bg-transparent data-pressed:hover:text-primary" disabled={disabled}>
+            <span className="inline-flex items-center gap-1.5">
+              <span aria-hidden className={cn("size-1.5 rounded-full transition-colors", isChecked ? "bg-primary" : "bg-muted-foreground/30")} />
+              {tScanInitiate("engineConfigForm.on")}
+            </span>
           </ToggleGroupItem>
         </ToggleGroup>
         {param.description ? <ParamHelpText description={param.description}/> : null}
       </div>);
     }
+    const customControl = renderParamControl?.({
+        fieldId,
+        location,
+        param,
+        value,
+        disabled,
+        onChange,
+    });
     return (<div className="space-y-1">
       <div className="flex items-center justify-between gap-2">
         <Label id={`${fieldId}-label`} htmlFor={param.type === "stringArray" && param.enum?.length ? undefined : fieldId} className={cn("flex min-w-0 items-center gap-1 truncate", textRole.compactPrimary)}>
@@ -414,7 +437,7 @@ function ParamField({ location, param, value, disabled, wordlistCatalog, error, 
         </Label>
         {constraintHint ? (<span className={cn("shrink-0", textRole.helperText)}>{constraintHint}</span>) : null}
       </div>
-      {param.resource?.kind === "wordlist" ? (<WordlistResourceSelect fieldId={fieldId} value={value} disabled={disabled} catalog={wordlistCatalog} invalid={Boolean(error)} describedBy={error ? errorMessageId : undefined} onChange={(next) => {
+      {customControl ?? (param.resource?.kind === "wordlist" ? (<WordlistResourceSelect fieldId={fieldId} value={value} disabled={disabled} catalog={wordlistCatalog} invalid={Boolean(error)} describedBy={error ? errorMessageId : undefined} onChange={(next) => {
           onChange(next);
           if (next.trim() !== "") onFieldRepaired?.(location);
       }}/>) : param.type === "string" && param.enum && param.enum.length > 0 ? (<Select value={String(value)} onValueChange={onChange} disabled={disabled}>
@@ -426,7 +449,7 @@ function ParamField({ location, param, value, disabled, wordlistCatalog, error, 
                 {String(option)}
               </SelectItem>))}
           </SelectContent>
-        </Select>) : param.type === "integer" ? (<NumberStepperInput id={fieldId} value={typeof value === "number" ? value : Number(value) || 0} min={param.minimum} max={param.maximum} step={getIntegerStep(param)} disabled={disabled} onChange={onChange}/>) : param.type === "stringArray" && param.enum && param.enum.length > 0 && (param.key === "scan-targets" || param.key === "severity") ? (<EnumStringArrayPopover fieldId={fieldId} labelId={`${fieldId}-label`} param={param} value={value} disabled={disabled} onChange={onChange}/>) : param.type === "stringArray" && param.enum && param.enum.length > 0 ? (<div id={fieldId} role="group" aria-labelledby={`${fieldId}-label`} className="grid gap-2 rounded-md border border-input bg-muted/10 p-2 sm:grid-cols-2">
+        </Select>) : param.type === "integer" && param.unit === "seconds" ? (<EngineDurationInput id={fieldId} value={typeof value === "number" ? value : Number(value) || 0} defaultValue={typeof param.default === "number" ? param.default : undefined} minimum={param.minimum} maximum={param.maximum} disabled={disabled} onChange={onChange}/>) : param.type === "integer" ? (<NumberStepperInput id={fieldId} value={typeof value === "number" ? value : Number(value) || 0} min={param.minimum} max={param.maximum} step={getIntegerStep(param)} disabled={disabled} onChange={onChange}/>) : param.type === "stringArray" && param.enum && param.enum.length > 0 && (param.key === "scan-targets" || param.key === "severity") ? (<EnumStringArrayPopover fieldId={fieldId} labelId={`${fieldId}-label`} param={param} value={value} disabled={disabled} onChange={onChange}/>) : param.type === "stringArray" && param.enum && param.enum.length > 0 ? (<div id={fieldId} role="group" aria-labelledby={`${fieldId}-label`} className="grid gap-2 rounded-md border border-input bg-muted/10 p-2 sm:grid-cols-2">
           {param.enum.map((option) => {
               const selected = Array.isArray(value) && value.includes(option);
               return (<Label key={option} htmlFor={`${fieldId}-${option}`} className="flex min-w-0 items-center gap-2 font-normal">
@@ -446,7 +469,7 @@ function ParamField({ location, param, value, disabled, wordlistCatalog, error, 
                 onChange(e.target.value.split(",").map((item) => item.trim()).filter(Boolean));
             }} variant="subtle" size="sm"/>) : (<Input id={fieldId} type="text" value={value === "" ? "" : String(value)} min={param.minimum} max={param.maximum} pattern={param.pattern} disabled={disabled} onChange={(e) => {
                 onChange(e.target.value);
-            }} variant="subtle" size="sm"/>)}
+            }} variant="subtle" size="sm"/>))}
       {error ? <FieldError id={errorMessageId}>{tScanInitiate("engineConfigForm.resourceRequired")}</FieldError> : null}
       {param.description ? <ParamHelpText description={param.description}/> : null}
     </div>);
@@ -466,16 +489,17 @@ interface SectionContentProps {
     fieldErrors: ReadonlyMap<string, ConfigResourceFieldError>;
     onParamChange: (paramKey: string, value: EngineParamValue) => void;
     onFieldRepaired?: (location: ConfigResourceFieldLocation) => void;
+    renderParamControl?: EngineParamControlRenderer;
     isLast: boolean;
 }
-function SectionContent({ stepId, section, sectionData, disabled, wordlistCatalog, fieldErrors, onParamChange, onFieldRepaired, isLast, }: SectionContentProps) {
+function SectionContent({ stepId, section, sectionData, disabled, wordlistCatalog, fieldErrors, onParamChange, onFieldRepaired, renderParamControl, isLast, }: SectionContentProps) {
     return (<div className={cn("px-4 py-3", !sectionData.enabled && "opacity-65")}>
       <div className="grid gap-3 sm:grid-cols-2">
         {section.params.map((param) => {
           const value = sectionData.params[param.key];
           if (value === undefined) return null;
           const location = { stepId, sectionId: section.id, paramKey: param.key };
-          return <ParamField key={param.key} location={location} param={param} value={value} disabled={disabled || !sectionData.enabled} wordlistCatalog={wordlistCatalog} error={fieldErrors.get(configResourceFieldKey(location))} onChange={(nextValue) => onParamChange(param.key, nextValue)} onFieldRepaired={onFieldRepaired} />;
+          return <ParamField key={param.key} location={location} param={param} value={value} disabled={disabled || !sectionData.enabled} wordlistCatalog={wordlistCatalog} error={fieldErrors.get(configResourceFieldKey(location))} onChange={(nextValue) => onParamChange(param.key, nextValue)} onFieldRepaired={onFieldRepaired} renderParamControl={renderParamControl} />;
         })}
       </div>
 
@@ -518,8 +542,9 @@ interface EngineCardProps {
     onToggleSection: (sectionId: string, enabled: boolean) => void;
     onParamChange: (sectionId: string, paramKey: string, value: EngineParamValue) => void;
     onFieldRepaired?: (location: ConfigResourceFieldLocation) => void;
+    renderParamControl?: EngineParamControlRenderer;
 }
-function EngineCard({ step, stepValues, disabled, open, wordlistCatalog, fieldErrors, onOpenChange, onToggleStep, onToggleSection, onParamChange, onFieldRepaired, }: EngineCardProps) {
+function EngineCard({ step, stepValues, disabled, open, wordlistCatalog, fieldErrors, onOpenChange, onToggleStep, onToggleSection, onParamChange, onFieldRepaired, renderParamControl, }: EngineCardProps) {
     const tScanInitiate = useTranslations("scan.initiate");
     const configSections = step.engine.execution.configSections;
     return (<div className="overflow-hidden border-t bg-card first:border-t-0">
@@ -549,7 +574,7 @@ function EngineCard({ step, stepValues, disabled, open, wordlistCatalog, fieldEr
             if (!sectionData) return null;
             return (<div key={section.id} className="border-b last:border-b-0">
                   <SectionHeader section={section} sectionData={sectionData} disabled={disabled || !stepValues.enabled} onToggleSection={(enabled) => onToggleSection(section.id, enabled)}/>
-                  {sectionData.enabled ? (<SectionContent stepId={step.stepId} section={section} sectionData={sectionData} disabled={disabled || !stepValues.enabled} wordlistCatalog={wordlistCatalog} fieldErrors={fieldErrors} onParamChange={(paramKey, value) => onParamChange(section.id, paramKey, value)} onFieldRepaired={onFieldRepaired} isLast={index === configSections.length - 1}/>) : null}
+                  {sectionData.enabled ? (<SectionContent stepId={step.stepId} section={section} sectionData={sectionData} disabled={disabled || !stepValues.enabled} wordlistCatalog={wordlistCatalog} fieldErrors={fieldErrors} onParamChange={(paramKey, value) => onParamChange(section.id, paramKey, value)} onFieldRepaired={onFieldRepaired} renderParamControl={renderParamControl} isLast={index === configSections.length - 1}/>) : null}
                 </div>);
         })}
           </div>
@@ -573,8 +598,9 @@ interface StageBlockProps {
     onToggleSection: (stepId: string, sectionId: string, enabled: boolean) => void;
     onParamChange: (stepId: string, sectionId: string, paramKey: string, value: EngineParamValue) => void;
     onFieldRepaired?: (location: ConfigResourceFieldLocation) => void;
+    renderParamControl?: EngineParamControlRenderer;
 }
-function StageBlock({ stage, stageIndex, formValues, disabled, expandedStepIds, wordlistCatalog, fieldErrors, onExpandedStepChange, onToggleStep, onToggleSection, onParamChange, onFieldRepaired, }: StageBlockProps) {
+function StageBlock({ stage, stageIndex, formValues, disabled, expandedStepIds, wordlistCatalog, fieldErrors, onExpandedStepChange, onToggleStep, onToggleSection, onParamChange, onFieldRepaired, renderParamControl, }: StageBlockProps) {
     const tScanInitiate = useTranslations("scan.initiate");
     const enabledEngineCount = stage.steps.filter((step) => {
         const stepValue = formValues[step.stepId];
@@ -597,7 +623,7 @@ function StageBlock({ stage, stageIndex, formValues, disabled, expandedStepIds, 
 
       {stage.steps.map((step) => {
         const stepValues = formValues[step.stepId];
-        return <EngineCard key={step.stepId} step={step} stepValues={stepValues ?? { enabled: false, sections: {} }} disabled={disabled || !stepValues} open={expandedStepIds.has(step.stepId)} wordlistCatalog={wordlistCatalog} fieldErrors={fieldErrors} onOpenChange={(open) => onExpandedStepChange(step.stepId, open)} onToggleStep={(enabled) => onToggleStep(step.stepId, enabled)} onToggleSection={(sectionId, enabled) => onToggleSection(step.stepId, sectionId, enabled)} onParamChange={(sectionId, paramKey, value) => onParamChange(step.stepId, sectionId, paramKey, value)} onFieldRepaired={onFieldRepaired}/>;
+        return <EngineCard key={step.stepId} step={step} stepValues={stepValues ?? { enabled: false, sections: {} }} disabled={disabled || !stepValues} open={expandedStepIds.has(step.stepId)} wordlistCatalog={wordlistCatalog} fieldErrors={fieldErrors} onOpenChange={(open) => onExpandedStepChange(step.stepId, open)} onToggleStep={(enabled) => onToggleStep(step.stepId, enabled)} onToggleSection={(sectionId, enabled) => onToggleSection(step.stepId, sectionId, enabled)} onParamChange={(sectionId, paramKey, value) => onParamChange(step.stepId, sectionId, paramKey, value)} onFieldRepaired={onFieldRepaired} renderParamControl={renderParamControl}/>;
       })}
     </div>);
 }
@@ -613,12 +639,13 @@ interface EngineConfigFormProps {
     expandedStepIds?: ReadonlySet<string>;
     onExpandedStepChange?: (stepId: string, open: boolean) => void;
     onFieldRepaired?: (location: ConfigResourceFieldLocation) => void;
+    renderParamControl?: EngineParamControlRenderer;
     onChange: (values: EngineConfigFormValues) => void;
 }
 const EMPTY_WORDLIST_CATALOG: CompleteWordlistCatalogState = { status: "complete", wordlists: [], retry: () => undefined };
 const EMPTY_FIELD_ERRORS = new Map<string, ConfigResourceFieldError>();
 
-export function EngineConfigForm({ workflow, values, disabled = false, wordlistCatalog = EMPTY_WORDLIST_CATALOG, fieldErrors = EMPTY_FIELD_ERRORS, expandedStepIds, onExpandedStepChange, onFieldRepaired, onChange, }: EngineConfigFormProps) {
+export function EngineConfigForm({ workflow, values, disabled = false, wordlistCatalog = EMPTY_WORDLIST_CATALOG, fieldErrors = EMPTY_FIELD_ERRORS, expandedStepIds, onExpandedStepChange, onFieldRepaired, renderParamControl, onChange, }: EngineConfigFormProps) {
     const tScanInitiate = useTranslations("scan.initiate");
     const [internalExpandedStepIds, setInternalExpandedStepIds] = React.useState<Set<string>>(() => new Set());
     const resolvedExpandedStepIds = expandedStepIds ?? internalExpandedStepIds;
@@ -689,7 +716,7 @@ export function EngineConfigForm({ workflow, values, disabled = false, wordlistC
         });
     }, [values, onChange]);
     return (<div className="space-y-3">
-      {workflow.stages.map((stage, index) => (<StageBlock key={stage.stageId} stage={stage} stageIndex={index} formValues={values} disabled={disabled} expandedStepIds={resolvedExpandedStepIds} wordlistCatalog={wordlistCatalog} fieldErrors={fieldErrors} onExpandedStepChange={handleExpandedStepChange} onToggleStep={handleToggleStep} onToggleSection={handleToggleSection} onParamChange={handleParamChange} onFieldRepaired={onFieldRepaired}/>))}
+      {workflow.stages.map((stage, index) => (<StageBlock key={stage.stageId} stage={stage} stageIndex={index} formValues={values} disabled={disabled} expandedStepIds={resolvedExpandedStepIds} wordlistCatalog={wordlistCatalog} fieldErrors={fieldErrors} onExpandedStepChange={handleExpandedStepChange} onToggleStep={handleToggleStep} onToggleSection={handleToggleSection} onParamChange={handleParamChange} onFieldRepaired={onFieldRepaired} renderParamControl={renderParamControl}/>))}
     </div>);
 }
 

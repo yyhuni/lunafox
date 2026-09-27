@@ -20,6 +20,7 @@
 
 import axios, { AxiosRequestConfig, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { USE_MOCK } from '@/mock/config';
+import { cleanupLegacyMockWorker } from '@/mock/legacy-worker-cleanup';
 import {
   AUTH_PRIMARY_TOKEN_FIELD,
   AUTH_PRIMARY_TOKEN_KEY,
@@ -90,6 +91,9 @@ const getLoginRedirectPath = (): string => {
 
 export const ensureMockInterceptionReady = async (): Promise<void> => {
   if (!USE_MOCK || typeof window === 'undefined') {
+    if (typeof window !== 'undefined') {
+      await cleanupLegacyMockWorker();
+    }
     return;
   }
 

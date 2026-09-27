@@ -172,7 +172,7 @@ function NotificationDestinationEditor({
             <div className={NOTIFICATION_CHANNEL_DETAIL_TITLE_ROW_CLASS}>
               <NotificationProviderIcon provider={provider} />
               <CardTitle className={NOTIFICATION_CHANNEL_DETAIL_TITLE_CLASS}>{providerTitle}</CardTitle>
-              <Badge variant={draft.enabled ? "success" : "outline"}>
+              <Badge size="compact" variant={draft.enabled ? "success" : "outline"}>
                 {draft.enabled ? t("status.enabled") : t("status.disabled")}
               </Badge>
             </div>
@@ -200,6 +200,7 @@ function NotificationDestinationEditor({
             <div className={NOTIFICATION_CREDENTIAL_INPUT_SHELL_CLASS}>
               <Input
                 id={credentialId}
+                size="sm"
                 className={NOTIFICATION_CREDENTIAL_INPUT_CLASS}
                 type={showCredential ? "text" : "password"}
                 autoComplete="off"

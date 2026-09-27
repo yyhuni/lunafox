@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	catalogapp "github.com/yyhuni/lunafox/server/internal/modules/catalog/application"
+	catalogdomain "github.com/yyhuni/lunafox/server/internal/modules/catalog/domain"
 	catalogrepo "github.com/yyhuni/lunafox/server/internal/modules/catalog/repository"
 	catalogmodel "github.com/yyhuni/lunafox/server/internal/modules/catalog/repository/persistence"
 	"gorm.io/driver/sqlite"
@@ -110,6 +111,56 @@ func TestBootstrapDefaultWordlistsImportsOnceAndPreservesUserResources(t *testin
 	}
 }
 
+func TestBootstrapDefaultWordlistsAllowsPersistedDefaultContentEdits(t *testing.T) {
+	db, basePath, imports := newWordlistBootstrapFixture(t)
+	ctx := context.Background()
+	if err := bootstrapDefaultWordlists(ctx, db, basePath, imports); err != nil {
+		t.Fatalf("initial bootstrap: %v", err)
+	}
+
+	repository := catalogrepo.NewWordlistRepository(db)
+	wordlists, err := repository.ListAllContext(ctx)
+	if err != nil {
+		t.Fatalf("list bootstrapped wordlists: %v", err)
+	}
+	var edited catalogdomain.Wordlist
+	for _, wordlist := range wordlists {
+		if wordlist.FileName == imports[0].entry.FileName {
+			edited = wordlist
+			break
+		}
+	}
+	if edited.ID == 0 {
+		t.Fatalf("bootstrapped wordlist %q not found", imports[0].entry.FileName)
+	}
+
+	service := catalogapp.NewWordlistCommandService(repository, basePath, catalogapp.NewLocalWordlistFileStore())
+	const updatedContent = "alpha\nbeta\nuser-added\n"
+	updated, err := service.UpdateWordlistContent(ctx, edited.ID, updatedContent)
+	if err != nil {
+		t.Fatalf("update default wordlist content: %v", err)
+	}
+
+	if err := bootstrapDefaultWordlists(ctx, db, basePath, imports); err != nil {
+		t.Fatalf("bootstrap after persisted content edit: %v", err)
+	}
+
+	content, err := os.ReadFile(updated.FilePath)
+	if err != nil {
+		t.Fatalf("read edited wordlist: %v", err)
+	}
+	if string(content) != updatedContent {
+		t.Fatalf("edited wordlist content = %q, want %q", content, updatedContent)
+	}
+	persisted, err := repository.GetByID(updated.ID)
+	if err != nil {
+		t.Fatalf("read edited catalog row: %v", err)
+	}
+	if persisted.FileSize != updated.FileSize || persisted.LineCount != updated.LineCount || persisted.FileHash != updated.FileHash {
+		t.Fatalf("persisted file metadata changed after bootstrap: got=%+v want=%+v", persisted, updated)
+	}
+}
+
 func TestBootstrapDefaultWordlistsRejectsPartialStateWithoutRepair(t *testing.T) {
 	db, basePath, imports := newWordlistBootstrapFixture(t)
 	ctx := context.Background()
@@ -137,18 +188,17 @@ func TestBootstrapDefaultWordlistsRejectsPartialStateWithoutRepair(t *testing.T)
 	}
 }
 
-func TestBootstrapDefaultWordlistsRejectsCatalogAndFileDrift(t *testing.T) {
+func TestBootstrapDefaultWordlistsAllowsUserManagedCatalogAndFileChanges(t *testing.T) {
 	for _, scenario := range []struct {
-		name      string
-		wantError string
-		mutate    func(*testing.T, *gorm.DB, string, defaultWordlistImport)
+		name   string
+		mutate func(*testing.T, *gorm.DB, string, defaultWordlistImport)
 	}{
-		{name: "description", wantError: "drifted", mutate: func(t *testing.T, db *gorm.DB, _ string, item defaultWordlistImport) {
+		{name: "description", mutate: func(t *testing.T, db *gorm.DB, _ string, item defaultWordlistImport) {
 			if err := db.Model(&catalogmodel.Wordlist{}).Where("file_name = ?", item.entry.FileName).Update("description", "Changed").Error; err != nil {
 				t.Fatal(err)
 			}
 		}},
-		{name: "tags", wantError: "drifted", mutate: func(t *testing.T, db *gorm.DB, _ string, item defaultWordlistImport) {
+		{name: "tags", mutate: func(t *testing.T, db *gorm.DB, _ string, item defaultWordlistImport) {
 			repository := catalogrepo.NewWordlistRepository(db)
 			wordlists, err := repository.ListAll()
 			if err != nil {
@@ -165,23 +215,57 @@ func TestBootstrapDefaultWordlistsRejectsCatalogAndFileDrift(t *testing.T) {
 			}
 			t.Fatal("default wordlist fixture not found")
 		}},
-		{name: "size", wantError: "drifted", mutate: func(t *testing.T, db *gorm.DB, _ string, item defaultWordlistImport) {
+		{name: "file size", mutate: func(t *testing.T, db *gorm.DB, _ string, item defaultWordlistImport) {
 			if err := db.Model(&catalogmodel.Wordlist{}).Where("file_name = ?", item.entry.FileName).Update("file_size", item.fileSize+1).Error; err != nil {
 				t.Fatal(err)
 			}
 		}},
-		{name: "hash", wantError: "drifted", mutate: func(t *testing.T, db *gorm.DB, _ string, item defaultWordlistImport) {
+		{name: "file hash", mutate: func(t *testing.T, db *gorm.DB, _ string, item defaultWordlistImport) {
 			if err := db.Model(&catalogmodel.Wordlist{}).Where("file_name = ?", item.entry.FileName).Update("file_hash", strings.Repeat("0", 64)).Error; err != nil {
 				t.Fatal(err)
 			}
 		}},
-		{name: "file", wantError: "drifted", mutate: func(t *testing.T, _ *gorm.DB, basePath string, item defaultWordlistImport) {
+		{name: "file content", mutate: func(t *testing.T, _ *gorm.DB, basePath string, item defaultWordlistImport) {
 			if err := os.WriteFile(filepath.Join(basePath, item.entry.FileName), []byte("changed\n"), 0o644); err != nil {
 				t.Fatal(err)
 			}
 		}},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			db, basePath, imports := newWordlistBootstrapFixture(t)
+			if err := bootstrapDefaultWordlists(context.Background(), db, basePath, imports); err != nil {
+				t.Fatalf("initial bootstrap: %v", err)
+			}
+			scenario.mutate(t, db, basePath, imports[0])
+			if err := bootstrapDefaultWordlists(context.Background(), db, basePath, imports); err != nil {
+				t.Fatalf("bootstrap after %s change: %v", scenario.name, err)
+			}
+		})
+	}
+}
+
+func TestBootstrapDefaultWordlistsRejectsMissingOrInvalidPersistedFiles(t *testing.T) {
+	for _, scenario := range []struct {
+		name      string
+		wantError string
+		mutate    func(*testing.T, *gorm.DB, string, defaultWordlistImport)
+	}{
 		{name: "missing file", wantError: "validate persisted", mutate: func(t *testing.T, _ *gorm.DB, basePath string, item defaultWordlistImport) {
 			if err := os.Remove(filepath.Join(basePath, item.entry.FileName)); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{name: "symlink", wantError: "regular non-symlink", mutate: func(t *testing.T, _ *gorm.DB, basePath string, item defaultWordlistImport) {
+			path := filepath.Join(basePath, item.entry.FileName)
+			if err := os.Remove(path); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink(item.sourcePath, path); err != nil {
+				t.Fatal(err)
+			}
+		}},
+		{name: "catalog path", wantError: "identity drifted", mutate: func(t *testing.T, db *gorm.DB, basePath string, item defaultWordlistImport) {
+			if err := db.Model(&catalogmodel.Wordlist{}).Where("file_name = ?", item.entry.FileName).Update("file_path", filepath.Join(basePath, "other.txt")).Error; err != nil {
 				t.Fatal(err)
 			}
 		}},
@@ -193,7 +277,7 @@ func TestBootstrapDefaultWordlistsRejectsCatalogAndFileDrift(t *testing.T) {
 			}
 			scenario.mutate(t, db, basePath, imports[0])
 			if err := bootstrapDefaultWordlists(context.Background(), db, basePath, imports); err == nil || !strings.Contains(err.Error(), scenario.wantError) {
-				t.Fatalf("drift error = %v", err)
+				t.Fatalf("persisted file error = %v", err)
 			}
 		})
 	}

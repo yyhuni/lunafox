@@ -38,6 +38,7 @@ import {
 } from "@/lib/workflow-config"
 import type { Locale } from "@/i18n/config"
 import type { EngineConfigFormValues, ScanWorkflowWithEngines } from "@/types/engine-config.types"
+import type { EngineParamControlRenderer } from "./engine-config-form"
 import type { ScanWorkflow } from "@/types/scan-workflow.types"
 import type { EngineCatalogDetail } from "@/types/engine-catalog.types"
 import type { ScanInputSource } from "@/types/scan.types"
@@ -330,6 +331,8 @@ interface InitiateScanConfigStepProps {
   configValidationRef?: React.Ref<ScanConfigValidationHandle>
   formValuesCacheRef?: React.MutableRefObject<EngineConfigFormValues>
   workflowProfileDraft?: WorkflowProfileDraft | null
+  renderParamControl?: EngineParamControlRenderer
+  defaultExpandedStepIds?: ReadonlySet<string>
 }
 
 export function InitiateScanConfigStep({
@@ -354,6 +357,8 @@ export function InitiateScanConfigStep({
   configValidationRef,
   formValuesCacheRef,
   workflowProfileDraft,
+  renderParamControl,
+  defaultExpandedStepIds,
 }: InitiateScanConfigStepProps) {
   const selectionSummary = selectMode === "custom" && selectedWorkflowNames.length > 0
       ? selectedWorkflowNames.join("、")
@@ -415,6 +420,8 @@ export function InitiateScanConfigStep({
           workflowProfileDraft={workflowProfileDraft}
           disabled={isSubmitting}
           isConfigEdited={isConfigEdited}
+          renderParamControl={renderParamControl}
+          defaultExpandedStepIds={defaultExpandedStepIds}
         />
       </div>
     </div>

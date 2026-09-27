@@ -46,8 +46,9 @@ describe("search-page-state contract", () => {
   })
 
   it("validates before a query reaches the search hook", () => {
-    expect(source).toContain("isGlobalAssetSearchQueryValid(nextQuery)")
-    expect(source).toContain('setQueryError(t("invalidQuery"))')
+    expect(source).toContain("parseGlobalAssetSearchQuery(nextQuery)")
+    expect(source).toContain("getGlobalAssetSearchDiagnosticCode(error)")
+    expect(source).toContain("queryDiagnosticCode")
     expect(source).toContain("setPageTokens([undefined])")
     expect(source).toContain("setPageIndex(0)")
   })
@@ -99,6 +100,59 @@ describe("search-page-state contract", () => {
     expect(result.current.searchState).toBe("initial")
     expect(result.current.recentSearches).toEqual([recentQuery])
     expect(window.localStorage.getItem("star_patrol_recent_searches")).toBe(JSON.stringify([recentQuery]))
+    expect(hookMocks.useAssetSearch).toHaveBeenLastCalledWith(undefined, { enabled: false })
+  })
+
+  it("shows a specific diagnostic only after an invalid submit and fast-fails", () => {
+    const { result } = renderHook(() => useSearchPageState())
+
+    act(() => {
+      result.current.setQuery('host="a"')
+    })
+    expect(result.current.queryError).toBeNull()
+
+    act(() => {
+      result.current.handleSearch()
+    })
+
+    expect(result.current.queryError).toContain("diagnostics.containsValueTooShort")
+    expect(result.current.queryDiagnosticCode).toBe("containsValueTooShort")
+    expect(result.current.searchState).toBe("initial")
+    expect(hookMocks.useAssetSearch).toHaveBeenLastCalledWith(undefined, { enabled: false })
+    expect(window.localStorage.getItem("star_patrol_recent_searches")).toBeNull()
+  })
+
+  it("refreshes an active diagnostic while editing and clears it when valid", () => {
+    const { result } = renderHook(() => useSearchPageState())
+
+    act(() => {
+      result.current.setQuery('statusCode="ok"')
+    })
+    act(() => {
+      result.current.handleSearch()
+    })
+    expect(result.current.queryDiagnosticCode).toBe("invalidStatusCode")
+
+    act(() => {
+      result.current.setQuery('host="')
+    })
+    expect(result.current.queryDiagnosticCode).toBe("unterminatedQuotedValue")
+
+    act(() => {
+      result.current.setQuery('host="api"')
+    })
+    expect(result.current.queryDiagnosticCode).toBeNull()
+    expect(result.current.queryError).toBeNull()
+  })
+
+  it("keeps an invalid URL q as a draft without starting a request", () => {
+    hookMocks.query = 'title="a"'
+
+    const { result } = renderHook(() => useSearchPageState())
+
+    expect(result.current.query).toBe('title="a"')
+    expect(result.current.searchState).toBe("initial")
+    expect(result.current.queryDiagnosticCode).toBe("containsValueTooShort")
     expect(hookMocks.useAssetSearch).toHaveBeenLastCalledWith(undefined, { enabled: false })
   })
 })

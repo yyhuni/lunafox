@@ -83,7 +83,7 @@ function NotificationCard({
       <span aria-hidden="true" className={cn("absolute inset-y-0 left-0 w-1", getStatusToneBgClass(priorityTone))} />
       <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
-            <Badge variant="outline" className={cn("h-4 shrink-0 px-1.5 py-0", getStatusToneBadgeClass(priorityTone))}>
+            <Badge size="micro" variant="outline" className={cn("shrink-0", getStatusToneBadgeClass(priorityTone))}>
               {priorityTitle}
             </Badge>
             <span className={textRole.helperText}>{categoryTitle}</span>
@@ -121,22 +121,19 @@ export function NotificationDrawerLayout({ state }: { state: NotificationDrawerS
 
   return (
     <Sheet open={state.open} onOpenChange={state.setOpen}>
-      <SheetTrigger render={<Button variant="ghost" size="icon-sm" className="group relative" aria-label={state.t("title")} />}>
-        <semanticIcons.concept.notification className="h-4 w-4" />
+      <SheetTrigger render={<Button variant="ghost" size="icon-sm" layout="compactAction" className="group relative" aria-label={state.t("title")} />}>
+        <semanticIcons.concept.notification className="h-4 w-4 transition-transform group-hover:animate-wiggle motion-reduce:animate-none" />
         {state.unreadCount > 0 ? (
-          <>
-            <span
-              aria-hidden="true"
-              // Keep this behind the count: the animation conveys unread status without moving the number itself.
-              className="pointer-events-none absolute -right-0.5 -top-0.5 h-4 w-4 animate-ping radius-round bg-destructive opacity-75 motion-reduce:animate-none dark:bg-destructive/60"
-            />
-            <Badge
-              variant="destructive"
-              className="absolute -right-0.5 -top-0.5 radius-round flex h-4 min-w-4 items-center justify-center border-0 bg-destructive p-0 text-[10px] text-destructive-foreground dark:bg-destructive/60"
-            >
-              {state.unreadCount > 99 ? "99+" : state.unreadCount}
-            </Badge>
-          </>
+          <Badge
+            size="micro"
+            variant="destructive"
+            className={cn(
+              "absolute -top-0.5 -right-0.5 pointer-events-none flex size-3.5 min-w-3.5 items-center justify-center border-0 bg-destructive p-0 px-0 text-[10px] font-semibold leading-none text-destructive-foreground ring-2 ring-card radius-round dark:bg-destructive/80",
+              state.unreadCount > 9 && "w-auto min-w-3.5 px-1"
+            )}
+          >
+            {state.unreadCount > 99 ? "99+" : state.unreadCount}
+          </Badge>
         ) : null}
       </SheetTrigger>
 
@@ -168,7 +165,7 @@ export function NotificationDrawerLayout({ state }: { state: NotificationDrawerS
           />
         </SheetHeader>
 
-        <div className="grid grid-cols-2 gap-2 border-b px-4 py-2 sm:flex sm:overflow-x-auto">
+        <div className="grid grid-cols-2 gap-1.5 border-b px-4 py-1.5 sm:flex sm:overflow-x-auto">
           {filterTabs.map((tab) => (
             <Button
               type="button"
@@ -178,7 +175,7 @@ export function NotificationDrawerLayout({ state }: { state: NotificationDrawerS
               onClick={() => state.setActiveFilter(tab.value)}
               className={cn(
                 // The selected Button variant has a border; reserve it here so changing filters cannot shift neighbors.
-                "radius-pill w-full justify-center border border-transparent whitespace-nowrap sm:w-auto sm:shrink-0",
+                "radius-pill h-7 w-full justify-center border border-transparent px-2.5 text-xs whitespace-nowrap has-[>svg]:px-2 sm:w-auto sm:shrink-0",
                 state.activeFilter !== tab.value && "text-muted-foreground hover:text-foreground"
               )}
             >

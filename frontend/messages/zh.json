@@ -467,7 +467,8 @@
     "searchPlaceholder": "搜索 URL",
     "searchAction": "搜索",
     "loading": "加载中...",
-    "invalidQuery": "请输入有效的 URL 查询或结构化条件",
+    "invalidQuery": "查询语法无效，请检查格式",
+    "queryErrorLabel": "查询语法错误",
     "error": "搜索失败，请稍后重试",
     "noResults": "未找到匹配的资产",
     "noResultsHint": "请尝试调整搜索条件",
@@ -490,7 +491,76 @@
       "examples": "示例",
       "contains": "包含匹配",
       "exact": "精确匹配",
-      "all": "同时满足条件"
+      "all": "同时满足条件",
+      "categories": {
+        "basics": "基础查询",
+        "scenarios": "组合场景"
+      },
+      "openManual": "查看完整语法手册",
+      "manualAriaLabel": "打开全局资产搜索语法手册",
+      "exampleLabels": {
+        "urlContains": "URL 包含",
+        "hostContains": "主机名包含",
+        "titleContains": "标题包含",
+        "statusExact": "成功状态码",
+        "urlExact": "URL 精确匹配",
+        "titleExact": "标题精确匹配",
+        "techExact": "技术指纹精确匹配",
+        "statusErrorExact": "错误状态码精确匹配",
+        "hostStatus": "API 主机成功响应",
+        "hostTech": "主机与技术指纹",
+        "titleStatus": "登录页成功响应",
+        "urlTech": "管理路径技术指纹"
+      },
+      "exampleDescriptions": {
+        "urlContains": "查找 URL 中包含 admin 的资产",
+        "hostContains": "查找主机名中包含 api 的资产",
+        "titleContains": "查找页面标题中包含 Login 的资产",
+        "statusExact": "只匹配 HTTP 200 响应",
+        "urlExact": "匹配完整 URL 字符串",
+        "titleExact": "匹配完整页面标题",
+        "techExact": "精确匹配技术指纹名称",
+        "statusErrorExact": "只匹配 HTTP 404 响应",
+        "hostStatus": "同时限定主机名和成功状态",
+        "hostTech": "同时限定主机名和技术指纹",
+        "titleStatus": "同时限定登录标题和成功状态",
+        "urlTech": "同时限定管理路径和技术指纹"
+      }
+    },
+    "manual": {
+      "title": "全局资产搜索语法",
+      "description": "使用严格的字段条件组合查询资产。点击示例只会填入草稿，不会自动搜索。",
+      "fieldsTitle": "可用字段",
+      "operatorsTitle": "运算符",
+      "semanticsTitle": "字段匹配语义",
+      "textSemantics": "url、host 和 title 使用 = 做不区分大小写的包含匹配，使用 == 做区分大小写的完整字段匹配。",
+      "typedSemantics": "statusCode 的 = 和 == 都是整数精确匹配；tech 的 = 和 == 都是大小写敏感的完整元素匹配。",
+      "limitsTitle": "查询约束",
+      "urlLimit": "URL、host 和 title 使用 = 包含匹配时至少需要 2 个 Unicode 字符",
+      "textLimit": "使用 == 精确匹配时不受最小长度限制",
+      "statusLimit": "statusCode 的值必须是整数",
+      "conditionLimit": "每条查询最多包含 10 个条件",
+      "quoting": "值必须使用双引号，并遵守 JSON 风格的反斜杠转义",
+      "unsupportedTitle": "不支持的写法",
+      "unsupported": "不支持 !=、||、and、or、括号或未列出的字段；请改用批准的字段、=、== 和 &&。",
+      "examplesTitle": "可执行示例",
+      "close": "关闭语法手册"
+    },
+    "diagnostics": {
+      "required": { "message": "请输入查询内容。", "fix": "输入 URL 或字段条件，例如 host=\"api\"。" },
+      "queryTooLong": { "message": "查询内容超过长度限制。", "fix": "将查询缩短到 2048 个 UTF-8 字节以内。" },
+      "invalidField": { "message": "字段名称格式不正确。", "fix": "从 url、host、title、statusCode 或 tech 中选择字段。" },
+      "unsupportedField": { "message": "字段不在支持范围内。", "fix": "改用 url、host、title、statusCode 或 tech。" },
+      "invalidOperator": { "message": "运算符不正确。", "fix": "使用 =、==，并用 && 连接条件。" },
+      "invalidStatusCode": { "message": "statusCode 必须是整数。", "fix": "例如使用 statusCode==\"200\"。" },
+      "containsValueTooShort": { "message": "包含匹配的值太短。", "fix": "URL、host 和 title 至少输入 2 个字符。" },
+      "missingQuotedValue": { "message": "缺少带引号的值。", "fix": "在运算符后使用双引号，例如 tech=\"nginx\"。" },
+      "invalidQuotedValue": { "message": "引号中的值不是有效格式。", "fix": "使用双引号，并对特殊字符使用 JSON 风格转义。" },
+      "unterminatedQuotedValue": { "message": "引号没有闭合。", "fix": "为值补上结尾双引号。" },
+      "invalidConnector": { "message": "条件之间的连接符不正确。", "fix": "使用 && 连接多个条件。" },
+      "missingCondition": { "message": "连接符后缺少条件。", "fix": "在 && 后补充完整的字段条件。" },
+      "tooManyConditions": { "message": "条件数量超过限制。", "fix": "将查询减少到 10 条条件以内。" },
+      "unknown": { "message": "查询无法解析。", "fix": "按照语法手册使用支持的字段、运算符和双引号值。" }
     },
     "table": {
       "url": "URL",
@@ -986,7 +1056,7 @@
       "passwordLabel": "密码*",
       "passwordPlaceholder": "请输入密码",
       "submit": "登录",
-      "accessHelp": "首次登录请使用 admin / admin，登录后请及时修改密码。"
+      "accessHelp": "需要访问权限？请联系管理员。"
     },
     "terminal": {
       "title": "月狐攻击面管理平台",
@@ -1315,6 +1385,16 @@
         "off": "关",
         "on": "开",
         "unitSeconds": "秒",
+        "chooseDuration": "选择时长",
+        "durationDays": "天",
+        "durationHours": "小时",
+        "durationMinutes": "分钟",
+        "durationSeconds": "秒",
+        "restoreDefault": "恢复默认值",
+        "cancel": "取消",
+        "apply": "应用",
+        "unbounded": "不限",
+        "durationOutOfRange": "时长必须在 {min} 到 {max} 秒之间",
         "minimum": "最小 {value}",
         "maximum": "最大 {value}",
         "range": "{min}-{max}",
@@ -4292,7 +4372,7 @@
         "usernamePlaceholder": "admin@example.com",
         "password": "密码",
         "login": "登录",
-        "accessHelp": "首次登录请使用 admin / admin，登录后请及时修改密码。"
+        "accessHelp": "需要访问权限？请联系管理员。"
       },
       "blacklist": {
         "title": "全局黑名单",
@@ -4720,6 +4800,36 @@
       "agentsValue": "就绪 {ready}/{expected}，缺失 {missing}，异常 {unhealthy}",
       "lastUpdated": "最近更新",
       "operationId": "操作 ID"
+    },
+    "agentDiagnostics": {
+      "title": "需要处理的 Agent",
+      "description": "这里只列出本次升级中尚未满足就绪条件的 Agent。",
+      "empty": "本次升级中的 Agent 当前均已就绪。",
+      "reconnecting": "正在重连，以下显示的是最近一次已确认的 Agent 证据。",
+      "terminal": "以下为本次已结束操作最后一次确认的 Agent 证据。",
+      "source": {
+        "agent_heartbeat": "来源：Agent 心跳上报",
+        "server_observation": "来源：Server 观测",
+        "historical": "来源：历史诊断"
+      }
+    },
+    "hostActivity": {
+      "title": "当前宿主活动",
+      "waiting": "宿主仍在等待此动作返回。",
+      "action": "当前动作",
+      "startedAt": "开始时间",
+      "lastHeartbeatAt": "最近宿主心跳",
+      "actions": {
+        "preflight": "执行升级前检查",
+        "pull_images": "拉取发布镜像",
+        "update_services": "更新服务",
+        "database_migration": "执行数据库迁移",
+        "update_resident_agent": "更新常驻 Agent",
+        "wait_for_service_health": "等待服务健康",
+        "verify_runtime_images": "验证运行时镜像",
+        "verify_frontend_container": "验证前端容器",
+        "verify_frontend_edge": "验证前端边缘访问"
+      }
     },
     "actions": {
       "refresh": "重新检查",

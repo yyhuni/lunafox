@@ -250,7 +250,7 @@ function LoginVisualSettingsLoadingState({
       publication={(
         <>
           <div className="flex items-center gap-2">
-            <Badge variant="success">{t("published")}</Badge>
+            <Badge size="compact" variant="success">{t("published")}</Badge>
             <span className={textRole.helperText}>{t("publishedHint")}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -341,7 +341,7 @@ function LoginVisualSettingsContent({
       publication={(
         <>
           <div className="flex items-center gap-2" aria-live="polite">
-            <Badge variant={settings.data?.draft ? "warning" : "success"}>{settings.data?.draft ? t("draft") : t("published")}</Badge>
+            <Badge size="compact" variant={settings.data?.draft ? "warning" : "success"}>{settings.data?.draft ? t("draft") : t("published")}</Badge>
             <span className={textRole.helperText}>{settings.data?.draft ? t("draftHint") : t("publishedHint")}</span>
           </div>
           <div className="flex items-center gap-2">

@@ -10,8 +10,8 @@ import (
 const (
 	globalAssetSearchMaxQueryBytes       = 2048
 	globalAssetSearchMaxConditions       = 10
-	globalAssetSearchMinURLContainsRunes = 2
-	globalAssetSearchMinContainsRunes    = 3
+	globalAssetSearchMinContainsRunes    = 2
+	globalAssetSearchMinURLContainsRunes = globalAssetSearchMinContainsRunes
 )
 
 // ParseGlobalAssetSearchQuery parses and validates the only two search modes
@@ -250,15 +250,10 @@ func newGlobalAssetSearchCondition(field GlobalAssetSearchField, operator Global
 		return GlobalAssetSearchCondition{Field: field, Operator: operator, StatusCode: &value}, nil
 	}
 	if operator == GlobalAssetSearchOperatorContains {
-		minimumRunes := 0
-		switch field {
-		case GlobalAssetSearchFieldURL:
-			minimumRunes = globalAssetSearchMinURLContainsRunes
-		case GlobalAssetSearchFieldHost, GlobalAssetSearchFieldTitle:
-			minimumRunes = globalAssetSearchMinContainsRunes
-		}
-		if minimumRunes > 0 && utf8.RuneCountInString(strings.TrimSpace(rawValue)) < minimumRunes {
-			return GlobalAssetSearchCondition{}, fmt.Errorf("%s contains value must contain at least %d Unicode characters", field, minimumRunes)
+		if field == GlobalAssetSearchFieldURL || field == GlobalAssetSearchFieldHost || field == GlobalAssetSearchFieldTitle {
+			if utf8.RuneCountInString(strings.TrimSpace(rawValue)) < globalAssetSearchMinContainsRunes {
+				return GlobalAssetSearchCondition{}, fmt.Errorf("%s contains value must contain at least %d Unicode characters", field, globalAssetSearchMinContainsRunes)
+			}
 		}
 	}
 	return GlobalAssetSearchCondition{Field: field, Operator: operator, Text: rawValue}, nil

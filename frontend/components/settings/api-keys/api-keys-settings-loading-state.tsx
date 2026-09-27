@@ -187,7 +187,7 @@ export function ApiKeysSettingsLoadingState({
                   {emailLabel}
                   <span aria-hidden="true" className="ml-1 text-destructive">*</span>
                 </Label>
-                <Input disabled aria-hidden="true" />
+                <Input size="sm" disabled aria-hidden="true" />
               </div>
 
               <div className={API_KEYS_FIELD_GROUP_CLASS}>
@@ -197,7 +197,7 @@ export function ApiKeysSettingsLoadingState({
                 </Label>
                 <div className={API_KEYS_PASSWORD_INPUT_ROW_CLASS}>
                   <div className={API_KEYS_PASSWORD_INPUT_FIELD_SLOT_CLASS}>
-                    <Input className={API_KEYS_PASSWORD_INPUT_CLASS} disabled aria-hidden="true" />
+                    <Input size="sm" className={API_KEYS_PASSWORD_INPUT_CLASS} disabled aria-hidden="true" />
                     <ActionSkeleton size="icon-sm" className={API_KEYS_PASSWORD_COPY_ACTION_CLASS} />
                   </div>
                   <ActionSkeleton size="icon" />

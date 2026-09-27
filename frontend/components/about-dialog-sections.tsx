@@ -104,7 +104,7 @@ export function AboutDialogVersionInfo({
             <span className="text-sm text-muted-foreground">{t("candidateVersion")}</span>
             <div className="flex items-center gap-2">
               <span className="font-mono text-sm">{candidate.releaseVersion}</span>
-              {hasUpdate ? <Badge variant="info" className="gap-1"><IconArrowUp className="h-3 w-3" />{t("updateAvailable")}</Badge> : <Badge variant="success" className="gap-1"><IconCheck className="h-3 w-3" />{t("upToDate")}</Badge>}
+              {hasUpdate ? <Badge size="compact" variant="info" className="gap-1"><IconArrowUp className="h-3 w-3" />{t("updateAvailable")}</Badge> : <Badge size="compact" variant="success" className="gap-1"><IconCheck className="h-3 w-3" />{t("upToDate")}</Badge>}
             </div>
           </div>
           {hasUpdate ? (
@@ -166,7 +166,7 @@ export function AboutDialogVersionInfo({
         <div className="space-y-3 border-t pt-3" data-testid="upgrade-operation-status">
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-muted-foreground">{t("upgradeStatus")}</span>
-            <Badge data-badge-type={operationStatus}>{t(`status.${operationStatus}`)}</Badge>
+            <Badge size="compact" data-badge-type={operationStatus}>{t(`status.${operationStatus}`)}</Badge>
           </div>
           {operation.isReconnecting && <p className="text-sm text-muted-foreground">{t("reconnecting")}</p>}
           <p className="text-xs text-muted-foreground">{t("operationId")}: <code className="font-mono">{operation.data.operationId}</code></p>

@@ -12,6 +12,7 @@ import {
 } from "react-hook-form"
 
 import { cn } from "@/lib/utils"
+import { textRole } from "@/lib/typography"
 import { Label } from "@/components/ui/label"
 import { PolymorphicSlot } from "@/components/ui/polymorphic"
 
@@ -129,7 +130,7 @@ function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
     <p
       data-slot="form-description"
       id={formDescriptionId}
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn(textRole.helperText, className)}
       {...props}
     />
   )
@@ -147,7 +148,7 @@ function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
     <p
       data-slot="form-message"
       id={formMessageId}
-      className={cn("text-destructive text-sm", className)}
+      className={cn("text-destructive", textRole.helperText, className)}
       {...props}
     >
       {body}

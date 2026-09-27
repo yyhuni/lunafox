@@ -194,11 +194,26 @@ func (handler *UpgradeHandler) operationResponseForView(c *gin.Context, operatio
 	case "", "BASIC":
 		return handler.operationResponse(operation), true
 	case "FULL":
+		if requestsHostActivity(c) {
+			response, err := dto.NewEnhancedFullUpgradeOperationResponse(operation, handler.service.CurrentVersion())
+			if err != nil {
+				httpdto.InternalError(c, "Upgrade operation activity is invalid")
+				return nil, false
+			}
+			return response, true
+		}
 		return dto.NewFullUpgradeOperationResponse(operation, handler.service.CurrentVersion()), true
 	default:
 		httpdto.ErrorWithStatus(c, http.StatusBadRequest, "INVALID_ARGUMENT", "INVALID_ARGUMENT", "view must be BASIC or FULL")
 		return nil, false
 	}
+}
+
+// requestsHostActivity keeps the enhanced representation unambiguous. Any
+// omitted, malformed, or repeated value preserves the historical FULL shape.
+func requestsHostActivity(c *gin.Context) bool {
+	values, found := c.GetQueryArray("includeHostActivity")
+	return found && len(values) == 1 && values[0] == "true"
 }
 
 func currentUserID(c *gin.Context) (int, bool) {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,7 +15,9 @@ import (
 	"time"
 
 	"github.com/yyhuni/lunafox/contracts/ociartifact"
+	"github.com/yyhuni/lunafox/contracts/preheatmanifest"
 	"github.com/yyhuni/lunafox/contracts/releasemanifest"
+	"github.com/yyhuni/lunafox/server/internal/modules/upgrade/domain"
 )
 
 const (
@@ -24,7 +27,12 @@ const (
 	publicComposeFile            = "compose.yaml"
 	publicEnvFile                = ".env"
 	publicPersistentOverrideFile = "compose.override.yaml"
+	publicPreheatManifestFile    = "preheat-manifest.json"
+	publicRuntimeCompositionFile = "runtime-composition.json"
+	publicThirdPartyPolicyFile   = "third-party-image-policy.json"
 	publicProjectName            = "lunafox"
+	privateUpgradeFileMode       = os.FileMode(0o600)
+	publicComposeOverrideMode    = os.FileMode(0o644)
 )
 
 var observedDigestPattern = regexp.MustCompile(`sha256:[0-9a-f]{64}`)
@@ -91,6 +99,10 @@ type ComposeExecutor struct {
 	FrontendEdgeProbeAttempts int
 	FrontendEdgeProbeDelay    time.Duration
 	FrontendEdgeProbeSleep    func(context.Context, time.Duration) error
+	// Test-only clock controls keep the production heartbeat capped at the fixed
+	// interval while allowing deterministic executor coverage without a 15s wait.
+	hostActivityHeartbeatInterval time.Duration
+	hostActivityNow               func() time.Time
 }
 
 func NewComposeExecutor(runner CommandRunner) *ComposeExecutor {
@@ -179,11 +191,20 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 	if manifest.Digest() != request.ManifestDigest {
 		return executor.failCheckpoint(store, request, failureStageFor(migrationEvidenceForJournal(current)), "manifest digest mismatch")
 	}
+	// Modern public releases bind the exact release, composition, rendered
+	// Compose bytes and third-party policy into one preheat manifest. Validate it
+	// before generating an override or invoking even `docker compose config` so
+	// a missing/tampered asset cannot mutate the deployment first.
 	// A v2 frontend-only request has already passed the host scope planner and
 	// lock-time revalidation in the daemon. Dispatch before any full-release
 	// migration, Agent, or multi-service Compose logic so the sealed scope is
 	// also enforced inside the executor itself.
 	if request.SchemaVersion == ScopedRequestSchema && request.ExecutionMode == ExecutionModeFrontendOnly {
+		if executor.PublicLayout && manifest.HasRuntimeComposition() {
+			if err := executor.validatePreheatBinding(store, request.ManifestDigest, manifest); err != nil {
+				return executor.failCheckpoint(store, request, failureStageFor(migrationEvidenceForJournal(current)), "preheat manifest validation failed")
+			}
+		}
 		return executor.executeFrontendOnly(ctx, request, store, current, manifest)
 	}
 	migration := manifest.Upgrade.DatabaseMigration
@@ -248,7 +269,16 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 		return executor.failCheckpoint(store, request, failureStageFor(migrationStarted), "unsupported database migration")
 	}
 	if err := executor.validateFixedDeploymentFiles(store.DeploymentRoot()); err != nil {
+		tryAppendHostActionLocalFailure(store, request, StagePreflight, domain.HostActionPreflight)
 		return executor.failCheckpoint(store, request, failureStageFor(migrationStarted), "deployment files are not available")
+	}
+	var candidateRoot string
+	var candidateSnapshot publicDeploymentSnapshot
+	if executor.PublicLayout && manifest.HasRuntimeComposition() && (stage == StageQueued || stage == StageStopping || stage == StagePreflight || stage == StageUpdating) {
+		candidateRoot, candidateSnapshot, err = executor.preparePublicDeploymentSnapshot(store, request.ManifestDigest, manifest)
+		if err != nil {
+			return executor.failCheckpoint(store, request, failureStageFor(migrationStarted), "preheat manifest validation failed")
+		}
 	}
 	overridePath, err := store.ComposeOverridePath(request.OperationID)
 	if err != nil {
@@ -257,9 +287,14 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 	// Regenerating the immutable override is safe on resume and repairs a
 	// checkpoint that was written just before a power loss.
 	if err := executor.writeComposeOverride(overridePath, manifest); err != nil {
+		tryAppendHostActionLocalFailure(store, request, StagePreflight, domain.HostActionPreflight)
 		return executor.failCheckpoint(store, request, failureStageFor(migrationStarted), "compose override generation failed")
 	}
 	base := executor.composeArgv(store.DeploymentRoot(), overridePath)
+	preheatBase := base
+	if candidateRoot != "" {
+		preheatBase = executor.composeArgvForProject(candidateRoot, overridePath, publicProjectName+"-preheat-candidate")
+	}
 	services := executor.observedServices()
 	// A migration is considered started for every post-migration checkpoint.
 	// If the process died while the migration command was in flight, the
@@ -274,7 +309,10 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 		fallthrough
 	case StagePreflight:
 		tryAppendCatalogProgress(store, request, StagePreflight, ProgressPreflightStarted)
-		if _, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), "config", "--quiet"), store.DeploymentRoot()); err != nil {
+		if err := executor.runControlledHostAction(ctx, store, request, StagePreflight, domain.HostActionPreflight, func() error {
+			_, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), "config", "--quiet"), store.DeploymentRoot())
+			return err
+		}); err != nil {
 			return executor.failCheckpoint(store, request, StageFailed, "compose preflight failed")
 		}
 		if _, err := store.Checkpoint(request.OperationID, request.ManifestDigest, StageUpdating, "", nil); err != nil {
@@ -282,12 +320,45 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 		}
 		fallthrough
 	case StageUpdating:
+		if executor.PublicLayout {
+			// The target Agent image is pulled with the normal release closure below,
+			// but the one-shot itself must execute before any application service is
+			// recreated. A non-zero preheater exit leaves the old services, volumes,
+			// logs and verified cache untouched.
+			if err := executor.runControlledHostAction(ctx, store, request, StageUpdating, domain.HostActionPullImages, func() error {
+				preheaterArgs := base
+				preheaterDir := store.DeploymentRoot()
+				if candidateRoot != "" {
+					preheaterArgs = preheatBase
+					preheaterDir = candidateRoot
+				}
+				_, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), preheaterArgs...), executor.preheaterUpdateArgs()...), preheaterDir)
+				return err
+			}); err != nil {
+				return executor.failCheckpoint(store, request, StageFailed, "engine preheater failed")
+			}
+			if candidateRoot != "" {
+				if err := promotePublicDeploymentSnapshotFiles(store.DeploymentRoot(), candidateSnapshot); err != nil {
+					return executor.failCheckpoint(store, request, StageFailed, "preheat manifest validation failed")
+				}
+				if err := executor.validatePreheatBinding(store, request.ManifestDigest, manifest); err != nil {
+					return executor.failCheckpoint(store, request, StageFailed, "preheat manifest validation failed")
+				}
+				candidateRoot = ""
+			}
+		}
 		tryAppendCatalogProgress(store, request, StageUpdating, ProgressPullImagesStarted)
-		if _, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), append([]string{"pull"}, executor.pullServices()...)...), store.DeploymentRoot()); err != nil {
+		if err := executor.runControlledHostAction(ctx, store, request, StageUpdating, domain.HostActionPullImages, func() error {
+			_, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), append([]string{"pull"}, executor.pullServices()...)...), store.DeploymentRoot())
+			return err
+		}); err != nil {
 			return executor.failCheckpoint(store, request, StageFailed, "compose image pull failed")
 		}
 		tryAppendCatalogProgress(store, request, StageUpdating, ProgressServicesUpdateStarted)
-		if _, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), executor.coreUpdateArgs()...), store.DeploymentRoot()); err != nil {
+		if err := executor.runControlledHostAction(ctx, store, request, StageUpdating, domain.HostActionUpdateServices, func() error {
+			_, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), executor.coreUpdateArgs()...), store.DeploymentRoot())
+			return err
+		}); err != nil {
 			return executor.failCheckpoint(store, request, StageFailed, "compose service update failed")
 		}
 		tryAppendCatalogProgress(store, request, StageUpdating, ProgressServicesUpdated)
@@ -300,7 +371,10 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 			if _, err := store.SetMigration(request.OperationID, request.ManifestDigest, migration.MigrationID, migration.Checksum, MigrationStatusRunning); err != nil {
 				return err
 			}
-			if _, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), "run", "--rm", "--no-deps", "server", "/usr/local/bin/server", "migrate", "up"), store.DeploymentRoot()); err != nil {
+			if err := executor.runControlledHostAction(ctx, store, request, StageMigrating, domain.HostActionDatabaseMigration, func() error {
+				_, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), "run", "--rm", "--no-deps", "server", "/usr/local/bin/server", "migrate", "up"), store.DeploymentRoot())
+				return err
+			}); err != nil {
 				status := MigrationStatusFailed
 				// A cancelled/expired process may have committed before it was
 				// interrupted, so its outcome is unknowable. A completed process
@@ -329,7 +403,10 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 		return executor.failCheckpoint(store, request, StageFailed, "unsupported execution stage")
 	}
 	if executor.PublicLayout && stage == StageRestarting {
-		if _, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), executor.agentUpdateArgs()...), store.DeploymentRoot()); err != nil {
+		if err := executor.runControlledHostAction(ctx, store, request, StageRestarting, domain.HostActionUpdateResidentAgent, func() error {
+			_, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), executor.agentUpdateArgs()...), store.DeploymentRoot())
+			return err
+		}); err != nil {
 			if migrationStarted {
 				return executor.failCheckpoint(store, request, StageNeedsRecovery, "resident Agent update failed after migration")
 			}
@@ -338,8 +415,19 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 	}
 
 	tryAppendCatalogProgress(store, request, stage, ProgressHealthCheckStarted)
-	healthResult, err := executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), append([]string{"ps", "--format", "json"}, services...)...), store.DeploymentRoot())
-	if err != nil || !healthyComposeOutput(healthResult.Stdout, services) {
+	var healthResult RunResult
+	err = executor.runControlledHostAction(ctx, store, request, stage, domain.HostActionWaitForServiceHealth, func() error {
+		var runErr error
+		healthResult, runErr = executor.Runner.Run(ctx, executor.binary(), append(append([]string(nil), base...), append([]string{"ps", "--format", "json"}, services...)...), store.DeploymentRoot())
+		if runErr != nil {
+			return runErr
+		}
+		if !healthyComposeOutput(healthResult.Stdout, services) {
+			return errHostActionValidationFailed
+		}
+		return nil
+	})
+	if err != nil {
 		if migrationStarted {
 			return executor.failCheckpoint(store, request, StageNeedsRecovery, "services are unhealthy after migration")
 		}
@@ -363,30 +451,41 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 	}
 	tryAppendCatalogProgress(store, request, stage, ProgressDigestVerificationStarted)
 	observed := make(map[string]string, len(services))
-	for _, service := range services {
-		// Image inspection belongs to the Docker CLI, not the Compose
-		// subcommand. Keep it as a separate fixed argv so a Compose plugin
-		// cannot reinterpret the verification request.
-		result, inspectErr := executor.Runner.Run(ctx, executor.binary(), []string{"image", "inspect", "--format", "{{index .RepoDigests 0}}", executor.imageRefForService(manifest, service)}, store.DeploymentRoot())
-		if inspectErr != nil {
-			if migrationStarted {
-				return executor.failCheckpoint(store, request, StageNeedsRecovery, "observed image verification failed after migration")
+	imageDigestMismatch := false
+	if err := executor.runControlledHostAction(ctx, store, request, StageVerifying, domain.HostActionVerifyRuntimeImages, func() error {
+		for _, service := range services {
+			// Image inspection belongs to the Docker CLI, not the Compose
+			// subcommand. Keep it as a separate fixed argv so a Compose plugin
+			// cannot reinterpret the verification request.
+			result, inspectErr := executor.Runner.Run(ctx, executor.binary(), []string{"image", "inspect", "--format", "{{index .RepoDigests 0}}", executor.imageRefForService(manifest, service)}, store.DeploymentRoot())
+			if inspectErr != nil {
+				return inspectErr
 			}
-			return executor.failCheckpoint(store, request, StageFailed, "observed image verification failed")
+			digest := observedDigest(result.Stdout)
+			want, _ := manifest.RuntimeImageDigest(service)
+			if digest != want {
+				imageDigestMismatch = true
+				return errHostActionValidationFailed
+			}
+			observed[service] = digest
 		}
-		digest := observedDigest(result.Stdout)
-		want, _ := manifest.RuntimeImageDigest(service)
-		if digest != want {
-			if migrationStarted {
+		return nil
+	}); err != nil {
+		if migrationStarted {
+			if imageDigestMismatch {
 				return executor.failCheckpoint(store, request, StageNeedsRecovery, "observed image digest differs after migration")
 			}
+			return executor.failCheckpoint(store, request, StageNeedsRecovery, "observed image verification failed after migration")
+		}
+		if imageDigestMismatch {
 			return executor.failCheckpoint(store, request, StageFailed, "observed image digest differs")
 		}
-		observed[service] = digest
+		return executor.failCheckpoint(store, request, StageFailed, "observed image verification failed")
 	}
 	if executor.PublicLayout {
 		tryAppendCatalogProgress(store, request, StageVerifying, ProgressOverrideInstallation)
-		if err := executor.writeComposeOverride(filepath.Join(store.DeploymentRoot(), publicPersistentOverrideFile), manifest); err != nil {
+		if err := executor.writePublicComposeOverride(filepath.Join(store.DeploymentRoot(), publicPersistentOverrideFile), manifest); err != nil {
+			tryAppendHostActionLocalFailure(store, request, StageVerifying, domain.HostActionVerifyRuntimeImages)
 			return executor.failCheckpoint(store, request, failureStageFor(migrationStarted), "persistent Compose override installation failed")
 		}
 	}
@@ -468,6 +567,7 @@ func (executor *ComposeExecutor) executeFrontendOnly(ctx context.Context, reques
 	case StagePreflight:
 		tryAppendCatalogProgress(store, request, StagePreflight, ProgressPreflightStarted)
 		if err := preparePlan(); err != nil {
+			tryAppendHostActionLocalFailure(store, request, StagePreflight, domain.HostActionPreflight)
 			return fail("frontend Compose staging failed")
 		}
 		if _, err := store.Checkpoint(request.OperationID, request.ManifestDigest, StageUpdating, "", nil); err != nil {
@@ -477,14 +577,21 @@ func (executor *ComposeExecutor) executeFrontendOnly(ctx context.Context, reques
 		fallthrough
 	case StageUpdating:
 		if err := preparePlan(); err != nil {
+			tryAppendHostActionLocalFailure(store, request, StageUpdating, domain.HostActionUpdateServices)
 			return fail("frontend Compose staging failed")
 		}
 		tryAppendCatalogProgress(store, request, StageUpdating, ProgressPullImagesStarted)
-		if _, err := executor.Runner.Run(ctx, executor.binary(), plan.PullArgs, store.DeploymentRoot()); err != nil {
+		if err := executor.runControlledHostAction(ctx, store, request, StageUpdating, domain.HostActionPullImages, func() error {
+			_, err := executor.Runner.Run(ctx, executor.binary(), plan.PullArgs, store.DeploymentRoot())
+			return err
+		}); err != nil {
 			return fail("frontend image pull failed")
 		}
 		tryAppendCatalogProgress(store, request, StageUpdating, ProgressServicesUpdateStarted)
-		if _, err := executor.Runner.Run(ctx, executor.binary(), plan.UpdateArgs, store.DeploymentRoot()); err != nil {
+		if err := executor.runControlledHostAction(ctx, store, request, StageUpdating, domain.HostActionUpdateServices, func() error {
+			_, err := executor.Runner.Run(ctx, executor.binary(), plan.UpdateArgs, store.DeploymentRoot())
+			return err
+		}); err != nil {
 			return fail("frontend service update failed")
 		}
 		tryAppendCatalogProgress(store, request, StageUpdating, ProgressServicesUpdated)
@@ -494,6 +601,7 @@ func (executor *ComposeExecutor) executeFrontendOnly(ctx context.Context, reques
 		stage = StageRestarting
 	case StageRestarting, StageVerifying:
 		if err := preparePlan(); err != nil {
+			tryAppendHostActionLocalFailure(store, request, stage, domain.HostActionPreflight)
 			return fail("frontend Compose staging failed")
 		}
 	default:
@@ -501,8 +609,19 @@ func (executor *ComposeExecutor) executeFrontendOnly(ctx context.Context, reques
 	}
 
 	tryAppendCatalogProgress(store, request, stage, ProgressHealthCheckStarted)
-	healthResult, err := executor.Runner.Run(ctx, executor.binary(), plan.HealthArgs, store.DeploymentRoot())
-	if err != nil || !healthyComposeOutput(healthResult.Stdout, []string{FrontendOnlyService}) {
+	var healthResult RunResult
+	err := executor.runControlledHostAction(ctx, store, request, stage, domain.HostActionWaitForServiceHealth, func() error {
+		var runErr error
+		healthResult, runErr = executor.Runner.Run(ctx, executor.binary(), plan.HealthArgs, store.DeploymentRoot())
+		if runErr != nil {
+			return runErr
+		}
+		if !healthyComposeOutput(healthResult.Stdout, []string{FrontendOnlyService}) {
+			return errHostActionValidationFailed
+		}
+		return nil
+	})
+	if err != nil {
 		return fail("frontend service is unhealthy")
 	}
 	if stage == StageRestarting {
@@ -512,19 +631,40 @@ func (executor *ComposeExecutor) executeFrontendOnly(ctx context.Context, reques
 		stage = StageVerifying
 	}
 	tryAppendCatalogProgress(store, request, stage, ProgressDigestVerificationStarted)
-	frontendContainerID, observed, err := executor.observeFrontendContainer(ctx, plan, store.DeploymentRoot())
-	if err != nil {
-		return fail("frontend container digest verification failed")
-	}
 	want, err := manifest.RuntimeImageDigest(FrontendOnlyService)
-	if err != nil || observed != want {
+	if err != nil {
+		tryAppendHostActionLocalFailure(store, request, StageVerifying, domain.HostActionVerifyFrontendContainer)
 		return fail("frontend container digest differs")
+	}
+	var frontendContainerID, observed string
+	frontendDigestMismatch := false
+	err = executor.runControlledHostAction(ctx, store, request, StageVerifying, domain.HostActionVerifyFrontendContainer, func() error {
+		var observeErr error
+		frontendContainerID, observed, observeErr = executor.observeFrontendContainer(ctx, plan, store.DeploymentRoot())
+		if observeErr != nil {
+			return observeErr
+		}
+		if observed != want {
+			frontendDigestMismatch = true
+			return errHostActionValidationFailed
+		}
+		return nil
+	})
+	if err != nil {
+		if frontendDigestMismatch {
+			return fail("frontend container digest differs")
+		}
+		return fail("frontend container digest verification failed")
 	}
 	edgeConfig, err := loadPublicEdgeConfig(store.DeploymentRoot())
 	if err != nil {
+		tryAppendHostActionLocalFailure(store, request, StageVerifying, domain.HostActionVerifyFrontendEdge)
 		return fail("public frontend configuration is invalid")
 	}
-	if _, err := executor.verifyPublicFrontend(ctx, store.DeploymentRoot(), frontendContainerID, edgeConfig, request.OperationID); err != nil {
+	if err := executor.runControlledHostAction(ctx, store, request, StageVerifying, domain.HostActionVerifyFrontendEdge, func() error {
+		_, err := executor.verifyPublicFrontend(ctx, store.DeploymentRoot(), frontendContainerID, edgeConfig, request.OperationID)
+		return err
+	}); err != nil {
 		return fail("public frontend edge did not converge")
 	}
 	receipt := receiptForRequest(request, nowUTC(), []string{FrontendOnlyService}, map[string]string{FrontendOnlyService: observed})
@@ -739,12 +879,16 @@ func ComposeArgv(deploymentRoot, overridePath string) []string {
 }
 
 func (executor *ComposeExecutor) composeArgv(deploymentRoot, overridePath string) []string {
+	return executor.composeArgvForProject(deploymentRoot, overridePath, publicProjectName)
+}
+
+func (executor *ComposeExecutor) composeArgvForProject(deploymentRoot, overridePath, projectName string) []string {
 	if executor == nil || !executor.PublicLayout {
 		return ComposeArgv(deploymentRoot, overridePath)
 	}
 	return []string{
 		"compose",
-		"--project-name", publicProjectName,
+		"--project-name", projectName,
 		"--project-directory", deploymentRoot,
 		"--env-file", filepath.Join(deploymentRoot, publicEnvFile),
 		"-f", filepath.Join(deploymentRoot, publicComposeFile),
@@ -774,6 +918,14 @@ func (executor *ComposeExecutor) coreUpdateArgs() []string {
 	return append(args, "server", "frontend", "nginx")
 }
 
+// preheaterUpdateArgs runs the target one-shot gate before any application
+// service is recreated. It stays separate from coreUpdateArgs because
+// --no-deps intentionally prevents the ordinary service update from invoking
+// a dependency that Compose may otherwise consider already completed.
+func (executor *ComposeExecutor) preheaterUpdateArgs() []string {
+	return []string{"up", "--no-build", "--force-recreate", "--no-deps", "engine-preheater"}
+}
+
 func (executor *ComposeExecutor) agentUpdateArgs() []string {
 	return []string{"up", "-d", "--no-build", "--force-recreate", "--no-deps", "--wait", "--wait-timeout", "300", "agent"}
 }
@@ -789,6 +941,17 @@ type composeOverrideService struct {
 }
 
 func (executor *ComposeExecutor) writeComposeOverride(path string, manifest *releasemanifest.Manifest) error {
+	return executor.writeComposeOverrideWithMode(path, manifest, privateUpgradeFileMode)
+}
+
+// writePublicComposeOverride writes the host-visible confirmed file. Its mode
+// is intentionally separate from operation patches so making Compose usable by
+// the deployment user cannot widen the private upgrade journal boundary.
+func (executor *ComposeExecutor) writePublicComposeOverride(path string, manifest *releasemanifest.Manifest) error {
+	return executor.writeComposeOverrideWithMode(path, manifest, publicComposeOverrideMode)
+}
+
+func (executor *ComposeExecutor) writeComposeOverrideWithMode(path string, manifest *releasemanifest.Manifest, mode os.FileMode) error {
 	if manifest == nil {
 		return fmt.Errorf("release manifest is required")
 	}
@@ -818,6 +981,10 @@ func (executor *ComposeExecutor) writeComposeOverride(path string, manifest *rel
 		}}
 		services["agent"] = composeOverrideService{Image: agent, Environment: map[string]string{"AGENT_VERSION": manifest.ReleaseVersion}}
 		services["agent-preflight"] = composeOverrideService{Image: agent, Environment: map[string]string{"AGENT_IMAGE_REF": agent}}
+		// The preheater executes target release code and consumes target evidence.
+		// Keeping it on the same Agent image prevents an old binary from accepting
+		// a new preheat-manifest contract during an in-place upgrade.
+		services["engine-preheater"] = composeOverrideService{Image: agent}
 		for _, name := range []string{"config-init", "migrate", "cert-init"} {
 			services[name] = composeOverrideService{Image: bootstrap}
 		}
@@ -840,7 +1007,7 @@ func (executor *ComposeExecutor) writeComposeOverride(path string, manifest *rel
 	if err != nil {
 		return err
 	}
-	return atomicWrite(path, append(data, '\n'), 0o600)
+	return atomicWrite(path, append(data, '\n'), mode)
 }
 
 func (executor *ComposeExecutor) validateFixedDeploymentFiles(root string) error {
@@ -856,6 +1023,169 @@ func (executor *ComposeExecutor) validateFixedDeploymentFiles(root string) error
 		}
 	}
 	return nil
+}
+
+// validatePreheatBinding loads only deployment-owned, read-only evidence. The
+// cache fallback is needed during an upgrade: the candidate manifest and its
+// preheat asset may be downloaded into the private digest cache before the
+// public deployment files are atomically promoted.
+func (executor *ComposeExecutor) validatePreheatBinding(store *JournalStore, releaseDigest string, release *releasemanifest.Manifest) error {
+	if executor == nil || !executor.PublicLayout {
+		return nil
+	}
+	if store == nil || release == nil {
+		return fmt.Errorf("preheat binding requires a public journal store and release manifest")
+	}
+	manifestBytes, err := readDeploymentEvidence(filepath.Join(store.DeploymentRoot(), publicPreheatManifestFile), 8<<20, false)
+	if err != nil {
+		cachePath, pathErr := store.PreheatManifestPath(releaseDigest)
+		if pathErr != nil {
+			return fmt.Errorf("resolve cached preheat manifest: %w", pathErr)
+		}
+		manifestBytes, err = readDeploymentEvidence(cachePath, 8<<20, true)
+		if err != nil {
+			return fmt.Errorf("read preheat manifest: %w", err)
+		}
+	}
+	preheat, err := preheatmanifest.Parse(manifestBytes)
+	if err != nil {
+		return err
+	}
+	if preheat.Release.ManifestDigest != releaseDigest || preheat.Release.Tag != "v"+release.ReleaseVersion {
+		return fmt.Errorf("preheat manifest release identity does not match target")
+	}
+	if !release.HasRuntimeComposition() || preheat.Release.CompositionDigest != release.RuntimeComposition.SHA256 {
+		return fmt.Errorf("preheat manifest composition binding does not match target")
+	}
+	profile, err := deploymentPreheatProfile(store.DeploymentRoot())
+	if err != nil {
+		return err
+	}
+	if !profileClosurePresent(preheat, profile) {
+		return fmt.Errorf("preheat manifest has no closure for profile %q", profile)
+	}
+	releasePath, err := store.ManifestPath(releaseDigest)
+	if err != nil {
+		return fmt.Errorf("resolve release manifest binding: %w", err)
+	}
+	releaseRaw, err := readDeploymentEvidenceMust(releasePath, 4<<20, true)
+	if err != nil {
+		return fmt.Errorf("read release manifest binding: %w", err)
+	}
+	compositionRaw, err := readDeploymentEvidence(filepath.Join(store.DeploymentRoot(), publicRuntimeCompositionFile), 8<<20, false)
+	if err != nil {
+		compositionPath, pathErr := store.RuntimeCompositionPath(release.RuntimeComposition.SHA256)
+		if pathErr != nil {
+			return fmt.Errorf("resolve runtime composition binding: %w", pathErr)
+		}
+		compositionRaw, err = readDeploymentEvidence(compositionPath, 8<<20, true)
+		if err != nil {
+			return fmt.Errorf("read runtime composition binding: %w", err)
+		}
+	}
+	composeRaw, err := readDeploymentEvidence(filepath.Join(store.DeploymentRoot(), publicComposeFile), 16<<20, false)
+	if err != nil {
+		return fmt.Errorf("read Compose binding: %w", err)
+	}
+	policyRaw, err := readDeploymentEvidence(filepath.Join(store.DeploymentRoot(), publicThirdPartyPolicyFile), 2<<20, false)
+	if err != nil {
+		return fmt.Errorf("read third-party policy binding: %w", err)
+	}
+	if err := ValidateRuntimeCompositionAsset(compositionRaw, release, releaseDigest, release.RuntimeComposition.SHA256); err != nil {
+		return fmt.Errorf("validate runtime composition binding: %w", err)
+	}
+	if err := preheat.ValidateBindings(preheatmanifest.BindingInputs{
+		ReleaseManifest:      releaseRaw,
+		RuntimeComposition:   compositionRaw,
+		Compose:              composeRaw,
+		ThirdPartyPolicy:     policyRaw,
+		ExpectedManifestHash: preheat.ManifestDigest,
+		Profile:              profile,
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func readDeploymentEvidence(path string, maximum int64, private bool) ([]byte, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("evidence file must be a regular file")
+	}
+	if private && info.Mode().Perm() != 0o600 {
+		return nil, fmt.Errorf("cached evidence file must use mode 0600")
+	}
+	if info.Size() <= 0 || info.Size() > maximum {
+		return nil, fmt.Errorf("evidence file size is invalid")
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = file.Close() }()
+	openedInfo, err := file.Stat()
+	if err != nil || !openedInfo.Mode().IsRegular() || openedInfo.Mode()&os.ModeSymlink != 0 || !os.SameFile(info, openedInfo) {
+		return nil, fmt.Errorf("evidence file changed during validation")
+	}
+	data, err := io.ReadAll(io.LimitReader(file, maximum+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > maximum {
+		return nil, fmt.Errorf("evidence file exceeds %d bytes", maximum)
+	}
+	return data, nil
+}
+
+func readDeploymentEvidenceMust(path string, maximum int64, private bool) ([]byte, error) {
+	return readDeploymentEvidence(path, maximum, private)
+}
+
+func deploymentPreheatProfile(root string) (string, error) {
+	envPath := filepath.Join(root, publicEnvFile)
+	data, err := readDeploymentEvidence(envPath, 1<<20, false)
+	if err != nil {
+		return "", fmt.Errorf("read deployment environment: %w", err)
+	}
+	values := map[string]string{}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, found := strings.Cut(line, "=")
+		if !found || strings.TrimSpace(key) != key || key == "" {
+			return "", fmt.Errorf("deployment environment contains a malformed entry")
+		}
+		values[key] = strings.Trim(strings.TrimSpace(value), "\"'")
+	}
+	profile := values["DATABASE_MODE"]
+	if profile == "" {
+		profile = preheatmanifest.ProfileEmbedded
+	}
+	if profile != preheatmanifest.ProfileEmbedded && profile != preheatmanifest.ProfileExternal {
+		return "", fmt.Errorf("DATABASE_MODE must be embedded or external")
+	}
+	composeProfiles := values["COMPOSE_PROFILES"]
+	if composeProfiles == "" {
+		composeProfiles = profile
+	}
+	if composeProfiles != profile {
+		return "", fmt.Errorf("COMPOSE_PROFILES must match DATABASE_MODE")
+	}
+	return profile, nil
+}
+
+func profileClosurePresent(manifest preheatmanifest.Manifest, profile string) bool {
+	for _, closure := range manifest.ProfileClosures {
+		if closure.Profile == profile && len(closure.Entries) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func (executor *ComposeExecutor) imageRefForService(manifest *releasemanifest.Manifest, service string) string {

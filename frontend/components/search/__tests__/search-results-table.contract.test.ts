@@ -7,19 +7,30 @@ describe("search-results-table contract", () => {
   it("preserves the Endpoint table ownership", () => {
     expect(source).toContain("export function SearchResultsTable")
     expect(source).toContain("EndpointSearchResult")
+    expect(source).toContain("export function useSearchEndpointsResultModel")
+    expect(source).toContain("export function SearchEndpointColumnVisibilityMenu")
+    expect(source).toContain("export function SearchResultsTableLoadingState")
+    expect(source).toContain("EndpointDetailDrawer")
   })
 
-  it("keeps the preview table on fixed semantic widths with shared column controls and no pagination", () => {
+  it("keeps the preview table on fixed semantic widths with hidden toolbar, row click drawer, and no pagination", () => {
     expect(source).toContain('columnLayout: "fixed"')
     expect(source).toContain('expandColumnIds: ["url", "title"]')
     expect(source).toContain("VisibilityState")
     expect(source).toContain("DEFAULT_SEARCH_COLUMN_VISIBILITY")
+    expect(source).toContain("host: false")
+    expect(source).toContain("location: false")
     expect(source).toContain("responseBody: false")
     expect(source).toContain("responseHeaders: false")
     expect(source).toContain("columnVisibility")
     expect(source).toContain("onColumnVisibilityChange")
-    expect(source).toContain("showColumnVisibility: true")
+    expect(source).toContain("hideToolbar: true")
+    expect(source).toContain("showColumnVisibility: false")
     expect(source).toContain("hidePagination: true")
+    expect(source).toContain("onRowClick: handleSelectEndpoint")
+    expect(source).toContain("loading,")
+    expect(source).toContain('loadingPresentation: "initial"')
+    expect(source).toContain("loadingRowCount,")
     expect(source).not.toContain("BusinessListDataTable")
   })
 

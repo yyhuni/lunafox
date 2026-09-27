@@ -5,11 +5,42 @@ import {
   createMockUpgradeOperation,
   getMockUpdateCheckResult,
   getMockVersionInfo,
+  getMockUpgradeOperationFull,
   observeMockUpgradeOperation,
   resetMockUpgradeOperation,
 } from "@/mock/data/version"
 
 const requestId = "22222222-2222-4222-8222-222222222222"
+const legacyMockUpgradeStateKey = "lunafox.mock.upgrade.state.v1"
+
+const legacyMockUpgradeState = JSON.stringify({
+  operation: {
+    name: "upgradeOperations/11111111-1111-4111-8111-111111111111",
+    operationId: "11111111-1111-4111-8111-111111111111",
+    requestId,
+    operatorId: 1,
+    manifestId: "lunafox-1.2.3",
+    manifestDigest: `sha256:${"a".repeat(64)}`,
+    currentVersion: "mock-2026.04.26",
+    releaseVersion: "mock-2026.05.01",
+    compatibilityRange: ">=1.0.0 <2.0.0",
+    maintenanceWindowMinutes: 15,
+    status: "queued",
+    migrationStatus: "not_started",
+    migrationType: "none",
+    cancelledScanCount: 0,
+    cancelledTaskCount: 0,
+    agentSummary: { expected: 0, ready: 0, missing: 0, unhealthy: 0 },
+    observedDigests: {},
+    planSummary: { touchedServices: ["frontend"] },
+    logs: [],
+    stageTimes: { queued: "2026-09-24T09:49:00Z" },
+    createdAt: "2026-09-24T09:49:00Z",
+    updatedAt: "2026-09-24T09:49:00Z",
+    completedAt: null,
+  },
+  pollCount: 0,
+})
 
 describe("version upgrade mock lifecycle", () => {
   afterEach(() => {
@@ -65,6 +96,23 @@ describe("version upgrade mock lifecycle", () => {
     expect(updating?.logs.some((entry) => /docker compose|\/|secret|token/i.test(entry.message))).toBe(false)
   })
 
+  it("returns host activity only for the enhanced mock FULL projection without heartbeat log rows", () => {
+    setMockScenario("happy")
+    createMockUpgradeOperation({ requestId, manifestId: "lunafox-1.2.3", manifestDigest: `sha256:${"a".repeat(64)}` })
+    observeMockUpgradeOperation()
+    observeMockUpgradeOperation()
+    expect(observeMockUpgradeOperation()?.status).toBe("updating")
+
+    expect(getMockUpgradeOperationFull()).not.toHaveProperty("hostActivity")
+    expect(getMockUpgradeOperationFull(true)).toMatchObject({
+      hostActivity: { action: "update_services" },
+    })
+    expect(getMockUpgradeOperationFull(true)?.logs.some((entry) => /heartbeat/i.test(entry.messageKey))).toBe(false)
+
+    for (let index = 0; index < 4; index += 1) observeMockUpgradeOperation()
+    expect(getMockUpgradeOperationFull(true)).toMatchObject({ status: "succeeded", hostActivity: null })
+  })
+
   it("keeps terminal status stable when the active view is polled again", () => {
     setMockScenario("edge")
     createMockUpgradeOperation({ requestId, manifestId: "lunafox-1.2.3", manifestDigest: `sha256:${"a".repeat(64)}` })
@@ -86,6 +134,17 @@ describe("version upgrade mock lifecycle", () => {
       operationId: created.operationId,
       status: "stopping",
     })
+    reloadedVersion.resetMockUpgradeOperation()
+  })
+
+  it("discards an obsolete persisted fixture instead of resuming its upgrade", async () => {
+    localStorage.setItem(legacyMockUpgradeStateKey, legacyMockUpgradeState)
+
+    vi.resetModules()
+    const reloadedVersion = await import("../version")
+
+    expect(reloadedVersion.getMockUpgradeOperation()).toBeNull()
+    expect(localStorage.getItem(legacyMockUpgradeStateKey)).toBeNull()
     reloadedVersion.resetMockUpgradeOperation()
   })
 

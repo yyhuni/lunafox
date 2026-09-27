@@ -13,7 +13,7 @@ describe("notification-drawer-sections contract", () => {
 
   it("uses the shared compact icon action size for the header trigger", () => {
     expect(source).toContain('size="icon-sm"')
-    expect(source).toContain('<semanticIcons.concept.notification className="h-4 w-4"')
+    expect(source).toContain('<semanticIcons.concept.notification className="h-4 w-4')
     expect(source).not.toContain('<Bell className="h-4 w-4"')
     expect(source).not.toContain('<Bell className="h-5 w-5"')
   })
@@ -49,11 +49,11 @@ describe("notification-drawer-sections contract", () => {
 
   it("keeps notification metadata compact without a redundant category icon", () => {
     expect(source).not.toContain("NotificationCategoryIcon")
-    expect(source).toContain('"h-4 shrink-0 px-1.5 py-0", getStatusToneBadgeClass(priorityTone)')
+    expect(source).toContain('<Badge size="micro" variant="outline" className={cn("shrink-0", getStatusToneBadgeClass(priorityTone))}>')
   })
 
   it("reserves the filter border in every state so selecting a filter does not move neighboring controls", () => {
-    expect(source).toContain('"radius-pill w-full justify-center border border-transparent whitespace-nowrap sm:w-auto sm:shrink-0"')
+    expect(source).toContain('"radius-pill h-7 w-full justify-center border border-transparent px-2.5 text-xs whitespace-nowrap has-[>svg]:px-2 sm:w-auto sm:shrink-0"')
   })
 
   it("keeps acknowledgement bulk-only and aligns the unread marker with metadata", () => {

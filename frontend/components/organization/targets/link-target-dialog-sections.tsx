@@ -4,6 +4,8 @@ import React from "react"
 import type { Control, FieldValues, Path } from "react-hook-form"
 import { semanticIcons } from "@/components/icons"
 import { Button } from "@/components/ui/button"
+import { compactSurfaceClassNames } from "@/lib/ui/compact-surface-contract"
+import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
 import { BulkLineValidationInput, type BulkLineValidationIssue } from "@/components/common/bulk-line-validation-input"
 import {
@@ -119,7 +121,7 @@ export function LinkTargetOrganizationSection({ organizationName, t }: LinkTarge
   return (
     <div className="gap-2 grid">
       <Label>{t("organizationLabel")}</Label>
-      <div className="bg-muted/50 border flex gap-2 items-center px-3 py-2 rounded-md">
+      <div className={cn(compactSurfaceClassNames.mutedInfo, "flex items-center gap-2")}>
         <OrganizationIcon className="h-4 text-muted-foreground w-4" />
         <span className="font-medium">{organizationName}</span>
       </div>

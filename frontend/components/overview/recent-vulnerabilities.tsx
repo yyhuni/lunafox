@@ -105,6 +105,7 @@ export function RecentVulnerabilities() {
                       <TableCell className={TABLE_DENSE_CELL_RHYTHM_CLASS}>
                         <Link href={detailHref} className="block w-full">
                           <Badge
+                            size="compact"
                             variant="outline"
                             className={cn(
                               "gap-1.5 cursor-default transition-[background-color,border-color,color]",
@@ -122,7 +123,7 @@ export function RecentVulnerabilities() {
                       </TableCell>
                       <TableCell className={TABLE_DENSE_CELL_RHYTHM_CLASS}>
                         <Link href={detailHref} className="block w-full">
-                          <Badge variant={getSeverityVariant(vuln.severity as VulnerabilitySeverity)}>
+                          <Badge size="compact" variant={getSeverityVariant(vuln.severity as VulnerabilitySeverity)}>
                             {tSeverity(vuln.severity as VulnerabilitySeverity)}
                           </Badge>
                         </Link>
