@@ -16,7 +16,7 @@ import {
   useStopUpgradeOperation,
   useUpgradeOperation,
 } from "@/hooks/use-version"
-import { type UpgradeLogEntry, type UpgradeOperationFull, type UpgradeOperationStatus, type UpgradeUserStage } from "@/types/version.types"
+import { type UpgradeAgentDiagnostic, type UpgradeHostActivity, type UpgradeLogEntry, type UpgradeOperationFull, type UpgradeOperationStatus, type UpgradeUserStage } from "@/types/version.types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertDialog, AlertDialogClose, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
@@ -91,7 +91,7 @@ function UpgradeLoadingOwner({ title, description }: { title: string; descriptio
   return (
     <main
       {...getLoadingOwnerAttributes({ owner: "system-upgrade-status", layer: "route", intent: "route" })}
-      className="flex min-h-svh w-full items-center justify-center bg-background px-4 py-8 sm:px-8"
+      className="flex h-svh min-h-0 w-full items-center justify-center overflow-y-auto overscroll-contain bg-background px-4 py-8 sm:px-8"
       data-testid="system-upgrade-loading"
     >
       <Card className="w-full max-w-lg" variant="compact">
@@ -183,6 +183,42 @@ function UpgradeStageTimeline({
   )
 }
 
+function HostActivityFact({
+  activity,
+  locale,
+  t,
+}: {
+  activity: UpgradeHostActivity
+  locale: string
+  t: (key: string, params?: Record<string, number | string>) => string
+}) {
+  return (
+    <section aria-labelledby="upgrade-host-activity-heading" className="border-t border-border/70 pt-4" data-testid="system-upgrade-host-activity">
+      <div className="flex min-w-0 items-start gap-2">
+        <semanticIcons.status.running className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+        <div className="min-w-0">
+          <h2 id="upgrade-host-activity-heading" className={textRole.sectionTitle}>{t("hostActivity.title")}</h2>
+          <p className={textRole.bodySubtle}>{t("hostActivity.waiting")}</p>
+        </div>
+      </div>
+      <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+        <div className="min-w-0">
+          <dt className={textRole.metadataLabel}>{t("hostActivity.action")}</dt>
+          <dd className={cn(textRole.metadataValueStrong, "mt-1 break-words")}>{t(`hostActivity.actions.${activity.action}`)}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className={textRole.metadataLabel}>{t("hostActivity.startedAt")}</dt>
+          <dd className={cn(textRole.metadataValue, "mt-1 break-words")}>{formatTimestamp(activity.startedAt, locale)}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className={textRole.metadataLabel}>{t("hostActivity.lastHeartbeatAt")}</dt>
+          <dd className={cn(textRole.metadataValue, "mt-1 break-words")}>{formatTimestamp(activity.lastHeartbeatAt, locale)}</dd>
+        </div>
+      </dl>
+    </section>
+  )
+}
+
 function OperationFacts({ operation, t }: { operation: UpgradeOperationFull; t: (key: string, params?: Record<string, number | string>) => string }) {
   const frontendOnly = isFrontendOnlyUpgrade(operation)
   const facts: Array<[string, string]> = [
@@ -210,6 +246,51 @@ function OperationFacts({ operation, t }: { operation: UpgradeOperationFull; t: 
         </div>
       ))}
     </dl>
+  )
+}
+
+function AgentDiagnostics({
+  diagnostics,
+  hasVerification,
+  isReconnecting,
+  terminal,
+  t,
+}: {
+  diagnostics: UpgradeAgentDiagnostic[]
+  hasVerification: boolean
+  isReconnecting: boolean
+  terminal: boolean
+  t: (key: string, params?: Record<string, number | string>) => string
+}) {
+  if (!hasVerification) return null
+  return (
+    <Card variant="compact" data-testid="system-upgrade-agent-diagnostics">
+      <CardHeader>
+        <CardTitle>{t("agentDiagnostics.title")}</CardTitle>
+        <CardDescription>{t(diagnostics.length === 0 ? "agentDiagnostics.empty" : "agentDiagnostics.description")}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isReconnecting && diagnostics.length > 0 ? <p className={cn(textRole.bodySubtle, "mb-3")}>{t("agentDiagnostics.reconnecting")}</p> : null}
+        {terminal && diagnostics.length > 0 ? <p className={cn(textRole.bodySubtle, "mb-3")}>{t("agentDiagnostics.terminal")}</p> : null}
+        {diagnostics.length === 0 ? null : (
+          <ul className="grid gap-3" aria-label={t("agentDiagnostics.title")}>
+            {diagnostics.map((item) => (
+              <li key={item.name} className="min-w-0 border-t border-border/70 pt-3 first:border-t-0 first:pt-0">
+                <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className={cn(textRole.bodyStrong, "break-words")}>{item.displayNameSnapshot || item.name}</p>
+                    <p className={cn(textRole.code, "mt-1 break-all text-muted-foreground")}>{item.name}</p>
+                  </div>
+                  <Badge size="compact" variant="warning">{item.reasonCode}</Badge>
+                </div>
+                <p className={cn(textRole.bodySubtle, "mt-2 break-words")}>{item.detail}</p>
+                <p className={cn(textRole.compactCaption, "mt-2")}>{t(`agentDiagnostics.source.${item.source}`)}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -309,7 +390,7 @@ export function SystemUpgradeStatus() {
 
   if (!operation.operationId && !operation.isError) {
     return (
-      <main className="flex min-h-svh w-full items-center justify-center bg-background px-4 py-8 sm:px-8" data-testid="system-upgrade-empty">
+      <main className="flex h-svh min-h-0 w-full items-center justify-center overflow-y-auto overscroll-contain bg-background px-4 py-8 sm:px-8" data-testid="system-upgrade-empty">
         <Card className="w-full max-w-lg" variant="compact">
           <CardHeader><CardTitle>{t("empty.title")}</CardTitle><CardDescription>{t("empty.description")}</CardDescription></CardHeader>
           <CardFooter><Button render={<Link href="/overview/" />}><semanticIcons.navigation.overview aria-hidden="true" />{t("actions.enterSystem")}</Button></CardFooter>
@@ -321,7 +402,7 @@ export function SystemUpgradeStatus() {
   if (!operation.data) {
     const reconnecting = operation.isReconnecting || operation.isError
     return (
-      <main className="flex min-h-svh w-full items-center justify-center bg-background px-4 py-8 sm:px-8" data-testid="system-upgrade-reconnect">
+      <main className="flex h-svh min-h-0 w-full items-center justify-center overflow-y-auto overscroll-contain bg-background px-4 py-8 sm:px-8" data-testid="system-upgrade-reconnect">
         <Card className="w-full max-w-lg" variant="compact">
           <CardHeader><CardTitle className="flex items-center gap-2"><semanticIcons.status.unknown className="size-5 text-primary" aria-hidden="true" />{t(reconnecting ? "reconnecting.title" : "loading.title")}</CardTitle></CardHeader>
           <CardContent>
@@ -344,12 +425,14 @@ export function SystemUpgradeStatus() {
   const isAttention = currentOperation.status === "needs_attention"
   const retryable = isFailure || isAttention
   const frontendOnly = isFrontendOnlyUpgrade(currentOperation)
+  const hasAgentVerification = !frontendOnly && currentOperation.agentSummary.expected > 0
 
   return (
     <main
       {...getLoadingOwnerAttributes({ owner: "system-upgrade-status", layer: "route", intent: "status" })}
-      className="min-h-svh w-full bg-background px-4 py-6 sm:px-8 sm:py-10"
+      className="h-svh min-h-0 w-full overflow-y-auto overscroll-contain bg-background px-4 py-6 sm:px-8 sm:py-10"
       data-testid="system-upgrade-status"
+      tabIndex={0}
     >
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <header className="flex flex-wrap items-start justify-between gap-4">
@@ -358,7 +441,7 @@ export function SystemUpgradeStatus() {
             <h1 className={cn(textRole.pageTitleDisplay, "mt-2 text-2xl")}>{t("title")}</h1>
             <p className={cn(textRole.pageDescription, "mt-2 max-w-2xl")}>{t(frontendOnly ? "frontendOnly.description" : terminal ? `statusDescription.${currentOperation.status}` : "description")}</p>
           </div>
-          <Badge variant={statusVariant(currentOperation.status)} data-testid="system-upgrade-status-badge">
+          <Badge size="compact" variant={statusVariant(currentOperation.status)} data-testid="system-upgrade-status-badge">
             {t(`status.${currentOperation.status}`)}
           </Badge>
         </header>
@@ -392,6 +475,7 @@ export function SystemUpgradeStatus() {
         <Card>
           <CardContent className="space-y-6 pt-6">
             <UpgradeStageTimeline operation={currentOperation} t={t} locale={locale} />
+            {!terminal && currentOperation.hostActivity ? <HostActivityFact activity={currentOperation.hostActivity} locale={locale} t={t} /> : null}
             <div className="grid gap-2 border-t border-border/70 pt-4 sm:grid-cols-2">
               <p className={textRole.metadataLabel}>{t("facts.lastUpdated")}: <span className={textRole.metadataValue}>{formatTimestamp(currentOperation.updatedAt, locale)}</span></p>
               <p className={cn(textRole.metadataLabel, "sm:text-right")}>{t("facts.operationId")}: <code className={cn(textRole.code, "break-all")}>{currentOperation.operationId}</code></p>
@@ -403,6 +487,14 @@ export function SystemUpgradeStatus() {
           <CardHeader><CardTitle>{t("facts.title")}</CardTitle><CardDescription>{t("facts.description")}</CardDescription></CardHeader>
           <CardContent><OperationFacts operation={currentOperation} t={t} /></CardContent>
         </Card>
+
+        <AgentDiagnostics
+          diagnostics={currentOperation.agentDiagnostics}
+          hasVerification={hasAgentVerification}
+          isReconnecting={operation.isReconnecting}
+          terminal={terminal}
+          t={t}
+        />
 
         <UpgradeLogs logs={currentOperation.logs} t={t} />
 

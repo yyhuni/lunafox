@@ -32,6 +32,10 @@ const (
 	ParamTypeString      = "string"
 	ParamTypeStringArray = "stringArray"
 
+	// ParamUnitSeconds declares that an integer parameter's canonical value is
+	// a duration represented in seconds at every execution boundary.
+	ParamUnitSeconds = "seconds"
+
 	ConfigResourceKindWordlist = "wordlist"
 )
 
@@ -63,6 +67,7 @@ type ParamDefinition struct {
 	Key       string                `json:"key"`
 	Type      string                `json:"type,omitempty"`
 	Default   any                   `json:"default,omitempty"`
+	Unit      string                `json:"unit,omitempty"`
 	Minimum   *int                  `json:"minimum,omitempty"`
 	Maximum   *int                  `json:"maximum,omitempty"`
 	MinLength *int                  `json:"minLength,omitempty"`
@@ -313,6 +318,14 @@ func validateParamDefinition(sectionID string, param ParamDefinition) error {
 	path := fmt.Sprintf("config section %q param %q", sectionID, param.Key)
 	if param.Type != ParamTypeInteger && param.Type != ParamTypeString && param.Type != ParamTypeStringArray && param.Type != ParamTypeBoolean {
 		return fmt.Errorf("%s has unsupported param type %q", path, param.Type)
+	}
+	if param.Unit != "" {
+		if param.Type != ParamTypeInteger {
+			return fmt.Errorf("%s has unit %q but type is %s; units are only supported for integer parameters", path, param.Unit, param.Type)
+		}
+		if param.Unit != ParamUnitSeconds {
+			return fmt.Errorf("%s has unsupported unit %q", path, param.Unit)
+		}
 	}
 	if param.Resource != nil {
 		if param.Type != ParamTypeString {

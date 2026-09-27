@@ -123,6 +123,8 @@ if [ -e "$ROOT_DIR/agent" ]; then
 		lunafox-agent-linux-arm64
 		lunafox-engine-mount-preflight-linux-amd64
 		lunafox-engine-mount-preflight-linux-arm64
+		lunafox-engine-preheater-linux-amd64
+		lunafox-engine-preheater-linux-arm64
 		agent-bundle.json
 		agent-bundle.sha256
 		agent-bundle.sigstore.json
@@ -142,7 +144,7 @@ if [ -e "$ROOT_DIR/agent" ]; then
 		fi
 	done
 	jq -e --arg artifact_id "$agent_artifact_id" '
-		.schemaVersion == "lunafox.agent-bundle.v2" and
+		.schemaVersion == "lunafox.agent-bundle.v3" and
 		.artifactId == $artifact_id and
 		(.inputFingerprint | type == "object" and .version == 1 and .algorithm == "sha256-canonical-json-v1" and (.value | test("^sha256:[a-f0-9]{64}$"))) and
 		("sha256-" + (.inputFingerprint.value | ltrimstr("sha256:"))) == $artifact_id and

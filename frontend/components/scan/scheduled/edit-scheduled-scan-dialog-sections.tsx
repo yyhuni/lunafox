@@ -11,6 +11,8 @@ import { ScheduledScanTimeZoneField } from "@/components/scan/scheduled/schedule
 import { isCronExpressionValid } from "@/lib/scheduled-scan-helpers";
 import type { ScheduledScan } from "@/types/scheduled-scan.types";
 import type { Target } from "@/types/target.types";
+import { compactSurfaceClassNames } from "@/lib/ui/compact-surface-contract";
+import { cn } from "@/lib/utils";
 type TranslationFn = (key: string, params?: Record<string, string | number | Date>) => string;
 type CronPreset = {
     label: string;
@@ -34,7 +36,7 @@ export function EditScheduledScanNameField({ t, name, onNameChange, }: EditSched
     return (<div className="gap-3 grid">
       <div className="gap-2 grid">
         <Label htmlFor="edit-name">{t("form.taskName")} *</Label>
-        <Input id="edit-name" name="taskName" autoComplete="off" placeholder={t("form.taskNamePlaceholder")} value={name} onChange={(event) => onNameChange(event.target.value)}/>
+        <Input id="edit-name" name="taskName" size="sm" autoComplete="off" placeholder={t("form.taskNamePlaceholder")} value={name} onChange={(event) => onNameChange(event.target.value)}/>
       </div>
     </div>);
 }
@@ -49,7 +51,7 @@ export function EditScheduledScanTargetSection({ t, scheduledScan, targets, sele
     if (scheduledScan.scanMode === "organization") {
         return (<div className="gap-2 grid">
         <Label>{t("form.scanScope")}</Label>
-        <div className="bg-muted/50 border p-3 rounded-md">
+        <div className={cn(compactSurfaceClassNames.mutedInfo, "space-y-2")}>
           <div className="flex gap-2 items-center">
             <Badge variant="secondary">{t("form.organizationMode")}</Badge>
             <span className="font-medium">{scheduledScan.organizationName}</span>
@@ -92,7 +94,7 @@ export function EditScheduledScanCronSection({ t, timeZone, onTimeZoneChange, cr
       <ScheduledScanTimeZoneField id="edit-scheduled-scan-time-zone" value={timeZone} onChange={onTimeZoneChange} disabled={disabled} label={t("form.timeZone")} placeholder={t("form.timeZonePlaceholder")} searchPlaceholder={t("form.timeZoneSearchPlaceholder")} emptyLabel={t("form.timeZoneEmpty")} description={t("form.timeZoneDesc")}/>
       <div className="gap-2 grid">
         <Label>{t("form.cronExpression")} *</Label>
-        <Input name="cronExpression" autoComplete="off" placeholder={t("form.cronPlaceholder")} value={cronExpression} onChange={(event) => onCronChange(event.target.value)} className="font-mono" disabled={disabled}/>
+        <Input name="cronExpression" size="sm" autoComplete="off" placeholder={t("form.cronPlaceholder")} value={cronExpression} onChange={(event) => onCronChange(event.target.value)} className="font-mono" disabled={disabled}/>
         <p className="text-muted-foreground text-xs">{t("form.cronFormat")}</p>
       </div>
 
@@ -105,7 +107,7 @@ export function EditScheduledScanCronSection({ t, timeZone, onTimeZoneChange, cr
         </div>
       </div>
 
-      <div className="bg-muted/50 border grid gap-3 min-w-0 overflow-hidden px-4 py-3 rounded-lg">
+      <div className={cn(compactSurfaceClassNames.mutedInfo, "grid min-w-0 gap-3 overflow-hidden")}>
         <div className="flex gap-2 items-center min-w-0">
           <IconClock className="h-4 shrink-0 text-muted-foreground w-4"/>
           <span className="font-medium min-w-0 flex-1 truncate">{t("form.executionPreview")}</span>

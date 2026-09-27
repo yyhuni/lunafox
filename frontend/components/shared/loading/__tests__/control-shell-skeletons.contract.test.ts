@@ -84,14 +84,14 @@ describe("control-shell skeleton contracts", () => {
 
   it("keeps generic settings input placeholders on the shared input shell", () => {
     expect(settingsPageSource).toContain('from "@/components/ui/input"')
-    expect(settingsPageSource).toContain('<Input aria-hidden="true" disabled tabIndex={-1} className="disabled:opacity-100" />')
+    expect(settingsPageSource).toContain('<Input size="sm" aria-hidden="true" disabled tabIndex={-1} className="disabled:opacity-100" />')
     expect(settingsPageSource).not.toContain('Skeleton className="h-10 w-full rounded-lg"')
   })
 
   it("keeps interaction dialog form and action placeholders on shared control shells", () => {
     expect(interactionLoadingDialogSource).toContain('from "@/components/ui/input"')
     expect(interactionLoadingDialogSource).toContain('from "@/components/shared/loading/action-skeleton"')
-    expect(interactionLoadingDialogSource).toContain('<Input aria-hidden="true" disabled tabIndex={-1} className="disabled:opacity-100" />')
+    expect(interactionLoadingDialogSource).toContain('<Input size="sm" aria-hidden="true" disabled tabIndex={-1} className="disabled:opacity-100" />')
     expect(interactionLoadingDialogSource).toContain('<ActionSkeleton widthClassName="w-20" />')
     expect(interactionLoadingDialogSource).toContain('<ActionSkeleton widthClassName="w-28" emphasis="primary" />')
     expect(interactionLoadingDialogSource).not.toContain('Skeleton className="h-10 w-full rounded-md"')

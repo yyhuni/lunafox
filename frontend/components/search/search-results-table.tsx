@@ -3,29 +3,136 @@
 import { useMemo, useCallback, useState } from "react"
 import { useFormatter, useTranslations } from "next-intl"
 import type { ColumnDef, VisibilityState } from "@tanstack/react-table"
+import { IconChevronDown, IconLayoutColumns } from "@/components/icons"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { DataTableColumnHeader } from "@/components/shared/data-table/column-header"
 import { HttpStatusBadge } from "@/components/shared/status/http-status-badge"
 import { UnifiedDataTable } from "@/components/shared/data-table/unified-data-table"
 import { ExpandableCell, ExpandableTagList } from "@/components/shared/data-table/expandable-cell"
+import { EndpointDetailDrawer } from "@/components/endpoints/endpoint-detail-drawer"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 import type { EndpointSearchResult } from "@/types/search.types"
 
-interface SearchResultsTableProps {
-  results: EndpointSearchResult[]
-}
-
-const DEFAULT_SEARCH_COLUMN_VISIBILITY: VisibilityState = {
+export const DEFAULT_SEARCH_COLUMN_VISIBILITY: VisibilityState = {
+  host: false,
+  location: false,
   responseBody: false,
   responseHeaders: false,
 }
 
-export function SearchResultsTable({ results }: SearchResultsTableProps) {
+export interface SearchEndpointsResultModel {
+  columnVisibility: VisibilityState
+  setColumnVisibility: React.Dispatch<React.SetStateAction<VisibilityState>>
+}
+
+export function useSearchEndpointsResultModel(): SearchEndpointsResultModel {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     DEFAULT_SEARCH_COLUMN_VISIBILITY
   )
+  return { columnVisibility, setColumnVisibility }
+}
+
+export function SearchEndpointColumnVisibilityMenu({
+  model,
+}: {
+  model: SearchEndpointsResultModel
+}) {
+  const tDataTable = useTranslations("dataTable")
+  const t = useTranslations("search.table")
+  const columns = useMemo(() => [
+    { id: "url", label: t("url") },
+    { id: "host", label: t("host") },
+    { id: "title", label: t("title") },
+    { id: "statusCode", label: t("status") },
+    { id: "tech", label: t("technologies") },
+    { id: "contentLength", label: t("contentLength") },
+    { id: "location", label: t("location") },
+    { id: "webserver", label: t("webserver") },
+    { id: "contentType", label: t("contentType") },
+    { id: "responseBody", label: t("responseBody") },
+    { id: "responseHeaders", label: t("responseHeaders") },
+    { id: "vhost", label: t("vhost") },
+    { id: "createdAt", label: t("createdAt") },
+  ], [t])
+
+  const toggleColumn = useCallback((columnId: string, value: boolean) => {
+    model.setColumnVisibility((prev) => ({
+      ...prev,
+      [columnId]: value,
+    }))
+  }, [model])
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="outline" size="default" className="shrink-0 gap-1.5">
+            <IconLayoutColumns className="h-4 w-4" />
+            {tDataTable("showColumns")}
+            <IconChevronDown className="h-4 w-4" />
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="end" width="content-fit">
+        {columns.map((column) => {
+          const isVisible = model.columnVisibility[column.id] ?? true
+          return (
+            <DropdownMenuCheckboxItem
+              key={column.id}
+              className="capitalize"
+              checked={isVisible}
+              onCheckedChange={(checked) => toggleColumn(column.id, Boolean(checked))}
+            >
+              {column.label}
+            </DropdownMenuCheckboxItem>
+          )
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+const EMPTY_RESULTS: EndpointSearchResult[] = []
+
+interface SearchResultsTableProps {
+  results: EndpointSearchResult[]
+  model?: SearchEndpointsResultModel
+  loading?: boolean
+  loadingRowCount?: number
+}
+
+export function SearchResultsTable({
+  results,
+  model,
+  loading = false,
+  loadingRowCount = 10,
+}: SearchResultsTableProps) {
+  const [activeEndpoint, setActiveEndpoint] = useState<EndpointSearchResult | null>(null)
+  const [internalColumnVisibility, setInternalColumnVisibility] = useState<VisibilityState>(
+    DEFAULT_SEARCH_COLUMN_VISIBILITY
+  )
+  const columnVisibility = model ? model.columnVisibility : internalColumnVisibility
+  const setColumnVisibility = model ? model.setColumnVisibility : setInternalColumnVisibility
   const format = useFormatter()
   const t = useTranslations("search.table")
+  const tActions = useTranslations("common.actions")
+
+  const handleSelectEndpoint = useCallback((row: unknown) => {
+    setActiveEndpoint(row as EndpointSearchResult)
+  }, [])
+
+  const handleEndpointDetailOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setActiveEndpoint(null)
+    }
+  }, [])
 
   const formatDate = useCallback((dateString: string) => {
     return format.dateTime(new Date(dateString), {
@@ -243,20 +350,48 @@ export function SearchResultsTable({ results }: SearchResultsTableProps) {
 	const columns = useMemo(() => baseColumns, [baseColumns])
 
   return (
-    <UnifiedDataTable
-      columns={columns}
-      data={results}
-      getRowId={(row) => String(row.id)}
-      state={{ columnVisibility, onColumnVisibilityChange: setColumnVisibility }}
-      ui={{
-        showColumnVisibility: true,
-        hidePagination: true,
-      }}
-      behavior={{
-        enableRowSelection: false,
-        columnLayout: "fixed",
-        expandColumnIds: ["url", "title"],
-      }}
+    <>
+      <UnifiedDataTable
+        columns={columns}
+        data={results}
+        getRowId={(row) => String(row.id)}
+        state={{ columnVisibility, onColumnVisibilityChange: setColumnVisibility }}
+        ui={{
+          hideToolbar: true,
+          showColumnVisibility: false,
+          hidePagination: true,
+          loading,
+          loadingPresentation: "initial",
+          loadingRowCount,
+        }}
+        behavior={{
+          enableRowSelection: false,
+          columnLayout: "fixed",
+          expandColumnIds: ["url", "title"],
+          onRowClick: handleSelectEndpoint,
+          getRowActionLabel: (row) => `${tActions("details")}: ${(row as EndpointSearchResult).url}`,
+        }}
+      />
+      <EndpointDetailDrawer
+        endpoint={activeEndpoint}
+        open={Boolean(activeEndpoint)}
+        onOpenChange={handleEndpointDetailOpenChange}
+        formatDate={formatDate}
+      />
+    </>
+  )
+}
+
+export function SearchResultsTableLoadingState({
+  rowCount = 10,
+}: {
+  rowCount?: number
+}) {
+  return (
+    <SearchResultsTable
+      results={EMPTY_RESULTS}
+      loading
+      loadingRowCount={rowCount}
     />
   )
 }

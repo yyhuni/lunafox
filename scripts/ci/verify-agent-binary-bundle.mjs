@@ -18,6 +18,8 @@ const FIXED_MEMBERS = Object.freeze([
   { name: "lunafox-agent-linux-arm64", kind: "agent", platform: "linux/arm64" },
   { name: "lunafox-engine-mount-preflight-linux-amd64", kind: "mount-preflight", platform: "linux/amd64" },
   { name: "lunafox-engine-mount-preflight-linux-arm64", kind: "mount-preflight", platform: "linux/arm64" },
+  { name: "lunafox-engine-preheater-linux-amd64", kind: "preheater", platform: "linux/amd64" },
+  { name: "lunafox-engine-preheater-linux-arm64", kind: "preheater", platform: "linux/arm64" },
 ]);
 const FIXED_ASSETS = new Set([...FIXED_MEMBERS.map((item) => item.name), "agent-bundle.json", "agent-bundle.sha256", "agent-bundle.sigstore.json"]);
 
@@ -101,7 +103,7 @@ function assertRegularMember(file, name) {
 function parseChecksums(file) {
   if (!fs.existsSync(file)) fail("agent-bundle.sha256 is missing");
   const lines = fs.readFileSync(file, "utf8").trimEnd().split(/\r?\n/).filter(Boolean);
-  if (lines.length !== FIXED_MEMBERS.length) fail("agent-bundle.sha256 must contain exactly four entries");
+  if (lines.length !== FIXED_MEMBERS.length) fail(`agent-bundle.sha256 must contain exactly ${FIXED_MEMBERS.length} entries`);
   const entries = new Map();
   for (const line of lines) {
     const match = /^(sha256:[a-f0-9]{64}|[a-f0-9]{64})  (.+)$/.exec(line);
@@ -126,7 +128,7 @@ function verify(options) {
     "artifactId", "destinationRepository", "inputFingerprint", "members", "platforms", "publicTreePath",
     "schemaVersion", "signerIdentity", "signerIssuer", "sourceRelease", "sourceRepository", "sourceRevision", "sourceRevisionDigest",
   ], "Agent bundle manifest");
-  if (manifest.schemaVersion !== "lunafox.agent-bundle.v2") fail("unsupported Agent bundle schema");
+  if (manifest.schemaVersion !== "lunafox.agent-bundle.v3") fail("unsupported Agent bundle schema");
   if (manifest.artifactId !== options.artifactId) fail("bundle artifact identity mismatch");
   assertExactKeys(manifest.inputFingerprint, ["algorithm", "value", "version"], "Agent bundle inputFingerprint");
   if (manifest.inputFingerprint.version !== 1 || manifest.inputFingerprint.algorithm !== "sha256-canonical-json-v1" || manifest.inputFingerprint.value !== options.inputFingerprint) {
@@ -142,7 +144,7 @@ function verify(options) {
   if (JSON.stringify(manifest.platforms) !== JSON.stringify(["linux/amd64", "linux/arm64"])) fail("bundle platform set is invalid");
   if (manifest.publicTreePath !== `agent/bin/${options.artifactId}`) fail("bundle public tree path is not bound to immutable artifact identity");
   if (manifest.signerIssuer !== PRIVATE_SIGNER_ISSUER || manifest.signerIdentity !== options.signerIdentity) fail("bundle signer identity mismatch");
-  if (!Array.isArray(manifest.members) || manifest.members.length !== FIXED_MEMBERS.length) fail("bundle must contain exactly four members");
+  if (!Array.isArray(manifest.members) || manifest.members.length !== FIXED_MEMBERS.length) fail(`bundle must contain exactly ${FIXED_MEMBERS.length} members`);
   const manifestNames = manifest.members.map((item) => item?.name);
   if (new Set(manifestNames).size !== manifestNames.length) fail("duplicate member in manifest");
   if (manifestNames.some((name) => !FIXED_MEMBERS.some((item) => item.name === name))) fail("manifest contains an unexpected member");

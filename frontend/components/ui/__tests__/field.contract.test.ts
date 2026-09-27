@@ -15,4 +15,8 @@ describe("field contract", () => {
     expect(source).toContain("has-data-[checked]:border-primary")
     expect(source).not.toContain("has-data-[state=checked]")
   })
+
+  it("uses compact typography for field errors", () => {
+    expect(source).toContain("textRole.helperText")
+  })
 })

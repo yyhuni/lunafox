@@ -34,3 +34,14 @@ and footer action layout classes live in `api-keys-settings-layout.ts`.
 - The route pairs `api-keys-header`, `api-keys-provider-list`,
   `api-keys-provider-detail`, and `api-keys-notice` between its loading and
   resolved branches. `ContentHandoff` owns the surrounding `surface` slot.
+
+## Credential update contract
+
+- Secret fields returned by the API are represented in the form as configured
+  metadata and a masked placeholder; plaintext is never reconstructed in the
+  browser.
+- A secret field that the operator has not edited is omitted from the PATCH
+  payload. Replacing it sends the new value, while explicitly clearing it sends
+  an empty string.
+- Provider status is calculated by the server and is not taken from client
+  form state.

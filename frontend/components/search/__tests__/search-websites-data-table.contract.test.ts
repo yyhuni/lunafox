@@ -49,7 +49,7 @@ describe("search websites table contract", () => {
     expect(sections).toContain("websiteLoadingRowCount={state.pageSize}")
     expect(sections).toContain('state.assetType !== "website"')
     expect(sections).toContain("<SearchResultsToolbarRegion>")
-    expect(sections).toContain("<AssetSearchBar state={state}")
+    expect(sections).toContain("<SearchAssetBar state={state}")
     expect(sections).toContain("<SearchResultsPaginationRegion>")
     expect(sections).not.toContain("state.data.results.map((result) => <SearchResultCard")
   })

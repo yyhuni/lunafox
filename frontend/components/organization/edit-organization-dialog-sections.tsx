@@ -14,6 +14,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import { compactSurfaceClassNames } from "@/lib/ui/compact-surface-contract"
+import { cn } from "@/lib/utils"
 
 type TranslationFn = (key: string, params?: Record<string, string | number | Date>) => string
 
@@ -43,6 +45,7 @@ export function EditOrganizationNameField<TFieldValues extends FieldValues>({
           </FormLabel>
           <FormControl>
             <Input
+              size="sm"
               placeholder={t("orgNamePlaceholder")}
               disabled={isSubmitting}
               maxLength={50}
@@ -106,7 +109,7 @@ interface EditOrganizationChangesNoticeProps {
 
 export function EditOrganizationChangesNotice({ t }: EditOrganizationChangesNoticeProps) {
   return (
-    <div className="bg-warning/10 p-2 rounded text-warning text-xs">
+    <div className={cn(compactSurfaceClassNames.info, "bg-warning/10 text-warning", "text-xs leading-4")}>
       {t("changesDetected")}
     </div>
   )

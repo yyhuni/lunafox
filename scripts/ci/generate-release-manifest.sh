@@ -11,6 +11,10 @@ RUNTIME_COMPOSITION_SHA256_ARG=""
 RUNTIME_COMPOSITION_SHA256_ARG_SET=0
 RELEASE_PROFILE_ARG=""
 RELEASE_PROFILE_ARG_SET=0
+CURRENT_MIGRATION_MANIFEST_ARG=""
+CURRENT_MIGRATION_MANIFEST_ARG_SET=0
+PREVIOUS_MIGRATION_MANIFEST_ARG=""
+PREVIOUS_MIGRATION_MANIFEST_ARG_SET=0
 
 usage() {
 	cat <<'USAGE'
@@ -20,7 +24,7 @@ usage() {
 	RUNTIME_FRONTEND_REFS='...' RUNTIME_NGINX_REFS='...' RUNTIME_AGENT_REFS='...' \
 	RUNTIME_BOOTSTRAP_REFS='...' \
 	RUNTIME_COMPOSITION_SHA256='sha256:<canonical-composition-digest>' \
-	./scripts/ci/generate-release-manifest.sh --engine-ref-dir dist/engine-digests [--runtime-composition-sha256 <sha256:...>] [--release-profile <modern|alpha164-bridge>] [--output <path>] [--release-notes-file <path>] [--final-runtime-contract] [--verify-contract]
+	./scripts/ci/generate-release-manifest.sh --engine-ref-dir dist/engine-digests [--current-migration-manifest <path>] [--previous-migration-manifest <path>] [--runtime-composition-sha256 <sha256:...>] [--release-profile <modern|alpha164-bridge>] [--output <path>] [--release-notes-file <path>] [--final-runtime-contract] [--verify-contract]
 
 每组必须恰好包含 Docker Hub 和 GHCR 的同一个 sha256 manifest digest。引擎组从
 --engine-ref-dir 中每个构建产物生成的 `ENGINE_ID` 和 `ENGINE_REFS` 读取。
@@ -73,6 +77,20 @@ while [ "$#" -gt 0 ]; do
 		RELEASE_PROFILE_ARG_SET=1
 		shift 2
 		;;
+	--current-migration-manifest)
+		[ "$#" -ge 2 ] || fail "$1 缺少参数"
+		[ "$CURRENT_MIGRATION_MANIFEST_ARG_SET" -eq 0 ] || fail "--current-migration-manifest 不得重复"
+		CURRENT_MIGRATION_MANIFEST_ARG="$2"
+		CURRENT_MIGRATION_MANIFEST_ARG_SET=1
+		shift 2
+		;;
+	--previous-migration-manifest)
+		[ "$#" -ge 2 ] || fail "$1 缺少参数"
+		[ "$PREVIOUS_MIGRATION_MANIFEST_ARG_SET" -eq 0 ] || fail "--previous-migration-manifest 不得重复"
+		PREVIOUS_MIGRATION_MANIFEST_ARG="$2"
+		PREVIOUS_MIGRATION_MANIFEST_ARG_SET=1
+		shift 2
+		;;
 	-h | --help)
 		usage
 		exit 0
@@ -115,18 +133,96 @@ next_release_major=$((release_major_number + 1))
 
 MIGRATION_POLICY_FILE="$ROOT_DIR/server/cmd/server/migrations/policy.json"
 MIGRATION_POLICY_VERSION="$(node -e 'const fs=require("node:fs"); const file=process.argv[1]; const policy=JSON.parse(fs.readFileSync(file,"utf8")); process.stdout.write(String(policy.schemaVersion));' "$MIGRATION_POLICY_FILE")" || fail "无法读取 migration policy version"
-RELEASE_MIGRATION_ID="$(echo "${RELEASE_MIGRATION_ID:-}" | xargs)"
-RELEASE_MIGRATION_TYPE="$(echo "${RELEASE_MIGRATION_TYPE:-none}" | xargs)"
-RELEASE_MIGRATION_CHECKSUM="$(echo "${RELEASE_MIGRATION_CHECKSUM:-}" | xargs)"
-if [ -n "$RELEASE_MIGRATION_ID" ]; then
-	[ -n "$RELEASE_MIGRATION_CHECKSUM" ] || fail "RELEASE_MIGRATION_CHECKSUM is required when RELEASE_MIGRATION_ID is set"
-	case "$RELEASE_MIGRATION_TYPE" in
+
+CURRENT_MIGRATION_MANIFEST="$ROOT_DIR/server/cmd/server/migrations/manifest.json"
+if [ "$CURRENT_MIGRATION_MANIFEST_ARG_SET" -eq 1 ]; then
+	CURRENT_MIGRATION_MANIFEST="$CURRENT_MIGRATION_MANIFEST_ARG"
+fi
+if [[ "$CURRENT_MIGRATION_MANIFEST" != /* ]]; then CURRENT_MIGRATION_MANIFEST="$ROOT_DIR/$CURRENT_MIGRATION_MANIFEST"; fi
+
+previous_migration_manifest_env="${PREVIOUS_MIGRATION_MANIFEST-}"
+if [ "$PREVIOUS_MIGRATION_MANIFEST_ARG_SET" -eq 1 ]; then
+	if [ -n "$previous_migration_manifest_env" ] && [ "$previous_migration_manifest_env" != "$PREVIOUS_MIGRATION_MANIFEST_ARG" ]; then
+		fail "--previous-migration-manifest 与 PREVIOUS_MIGRATION_MANIFEST 不一致"
+	fi
+	PREVIOUS_MIGRATION_MANIFEST="$PREVIOUS_MIGRATION_MANIFEST_ARG"
+else
+	PREVIOUS_MIGRATION_MANIFEST="$previous_migration_manifest_env"
+fi
+if [ -n "$PREVIOUS_MIGRATION_MANIFEST" ] && [[ "$PREVIOUS_MIGRATION_MANIFEST" != /* ]]; then
+	PREVIOUS_MIGRATION_MANIFEST="$ROOT_DIR/$PREVIOUS_MIGRATION_MANIFEST"
+fi
+
+migration_metadata_file="$(mktemp "$ROOT_DIR/.release-migration-metadata.XXXXXX.json")"
+tmp_file=""
+cleanup_temporary_files() {
+	[ -z "$tmp_file" ] || rm -f "$tmp_file"
+	rm -f "$migration_metadata_file"
+}
+trap cleanup_temporary_files EXIT
+migration_resolver_args=(
+	--current-migration-manifest "$CURRENT_MIGRATION_MANIFEST"
+	--output "$migration_metadata_file"
+	--json
+)
+if [ -n "$PREVIOUS_MIGRATION_MANIFEST" ]; then
+	migration_resolver_args+=(--previous-migration-manifest "$PREVIOUS_MIGRATION_MANIFEST")
+fi
+node "$ROOT_DIR/scripts/ci/resolve-release-migration-metadata.mjs" "${migration_resolver_args[@]}" >/dev/null || fail "无法解析 release migration boundary"
+
+migration_values="$(node -e '
+const fs=require("node:fs");
+const metadata=JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+process.stdout.write([
+  metadata.hasDatabaseMigration ? "true" : "false",
+  metadata.migrationType ?? "",
+  metadata.migrationId ?? "",
+  metadata.checksum ?? "",
+].join("|"));
+' "$migration_metadata_file")" || fail "无法读取 release migration metadata"
+IFS='|' read -r detected_has_migration detected_type detected_id detected_checksum <<<"$migration_values"
+if [ "$detected_has_migration" = true ]; then
+	if [ -z "$detected_id" ] || [ -z "$detected_checksum" ]; then
+		fail "release migration metadata fields are incomplete"
+	fi
+elif [ "$detected_has_migration" != false ]; then
+	fail "release migration metadata has an invalid migration flag"
+fi
+manual_migration_id="$(echo "${RELEASE_MIGRATION_ID-}" | xargs)"
+manual_migration_type="$(echo "${RELEASE_MIGRATION_TYPE-}" | xargs)"
+manual_migration_checksum="$(echo "${RELEASE_MIGRATION_CHECKSUM-}" | xargs)"
+
+if [ -n "$manual_migration_id" ] && [ -z "$manual_migration_checksum" ]; then
+	fail "RELEASE_MIGRATION_CHECKSUM is required when RELEASE_MIGRATION_ID is set"
+fi
+if [ -z "$manual_migration_id" ] && [ -n "$manual_migration_checksum" ]; then
+	fail "RELEASE_MIGRATION_CHECKSUM requires RELEASE_MIGRATION_ID"
+fi
+if [ -n "$manual_migration_id" ] && [ "$manual_migration_id" != "$detected_id" ]; then
+	fail "RELEASE_MIGRATION_ID does not match the automatically detected migration: expected ${detected_id:-none}"
+fi
+if [ -n "$manual_migration_checksum" ] && [ "$manual_migration_checksum" != "$detected_checksum" ]; then
+	fail "RELEASE_MIGRATION_CHECKSUM does not match the automatically detected migration"
+fi
+
+if [ "$detected_has_migration" = true ]; then
+	[ -z "$detected_type" ] || fail "detected migration metadata must not infer migrationType"
+	[ -n "$manual_migration_type" ] || fail "RELEASE_MIGRATION_TYPE is required when a database migration is detected"
+	[ "$manual_migration_type" != none ] || fail "RELEASE_MIGRATION_TYPE cannot be none when a database migration is detected"
+	case "$manual_migration_type" in
 	compatible | preserve-data | destructive) ;;
 	*) fail "RELEASE_MIGRATION_TYPE must be compatible, preserve-data, or destructive" ;;
 	esac
+	RELEASE_MIGRATION_ID="$detected_id"
+	RELEASE_MIGRATION_CHECKSUM="$detected_checksum"
+	RELEASE_MIGRATION_TYPE="$manual_migration_type"
 else
-	[ "$RELEASE_MIGRATION_TYPE" = none ] || fail "RELEASE_MIGRATION_TYPE must be none when no migration is declared"
-	[ -z "$RELEASE_MIGRATION_CHECKSUM" ] || fail "RELEASE_MIGRATION_CHECKSUM requires RELEASE_MIGRATION_ID"
+	[ "$detected_has_migration" = false ] || fail "release migration metadata has an invalid migration flag"
+	[ "$detected_type" = none ] || fail "release migration metadata must use none when no migration is detected"
+	[ -z "$manual_migration_type" ] || [ "$manual_migration_type" = none ] || fail "RELEASE_MIGRATION_TYPE must be none when no migration is detected"
+	RELEASE_MIGRATION_ID=""
+	RELEASE_MIGRATION_CHECKSUM=""
+	RELEASE_MIGRATION_TYPE="none"
 fi
 if [ "${RUNTIME_WORKER_REFS+x}" = x ]; then
 	fail "RUNTIME_WORKER_REFS 已删除，Engine Runtime Image 由 package v2 绑定"
@@ -268,10 +364,16 @@ if [ "$release_version" != "0.0.0-dev" ]; then
 		--tag "v$release_version" \
 		--release-profile "$release_profile" >/dev/null
 fi
-node "$ROOT_DIR/scripts/ci/check-migration-baseline-policy.mjs" \
-	--release-manifest "$tmp_file" \
-	--release-channel release-candidate \
-	--deployment-mode disposable >/dev/null
+migration_policy_check_args=(
+	--current-migration-manifest "$CURRENT_MIGRATION_MANIFEST"
+	--release-manifest "$tmp_file"
+	--release-channel release-candidate
+	--deployment-mode disposable
+)
+if [ -n "$PREVIOUS_MIGRATION_MANIFEST" ]; then
+	migration_policy_check_args+=(--previous-migration-manifest "$PREVIOUS_MIGRATION_MANIFEST")
+fi
+node "$ROOT_DIR/scripts/ci/check-migration-baseline-policy.mjs" "${migration_policy_check_args[@]}" >/dev/null
 mv "$tmp_file" "$OUTPUT_FILE"
 
 if [ "$VERIFY_CONTRACT" -eq 1 ]; then
@@ -283,7 +385,9 @@ if [ "$VERIFY_CONTRACT" -eq 1 ]; then
 			--manifest "$OUTPUT_FILE" --tag "v$release_version" \
 			--release-profile "$release_profile" >/dev/null
 	else
-		bash "$ROOT_DIR/scripts/ci/verify-release-contract.sh" "$OUTPUT_FILE" "$ROOT_DIR/.tmp-non-existent.env" current
+		release_contract_args=("$OUTPUT_FILE" "$ROOT_DIR/.tmp-non-existent.env" current)
+		release_contract_args+=("$PREVIOUS_MIGRATION_MANIFEST" "$CURRENT_MIGRATION_MANIFEST")
+		bash "$ROOT_DIR/scripts/ci/verify-release-contract.sh" "${release_contract_args[@]}"
 	fi
 elif [ "$FINAL_RUNTIME_CONTRACT" -eq 1 ]; then
 	fail "--final-runtime-contract requires --verify-contract"

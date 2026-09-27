@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "lunafox.agent-bundle.v3",
+  "artifactId": "sha256-575e0b6dfe956b399f0155214d5e1baa71e318f8bcd65f66f74957a169694bf0",
+  "inputFingerprint": {
+    "version": 1,
+    "algorithm": "sha256-canonical-json-v1",
+    "value": "sha256:575e0b6dfe956b399f0155214d5e1baa71e318f8bcd65f66f74957a169694bf0"
+  },
+  "sourceRelease": {
+    "tag": "v0.0.1-alpha.187"
+  },
+  "sourceRepository": "yyhuni/lunafox-private",
+  "destinationRepository": "yyhuni/lunafox",
+  "sourceRevision": "d79dfef7039e8bc65e3493d03830306de6b6528a",
+  "sourceRevisionDigest": "sha256:bf12761889551e820490347bc941f42b62b363fb656534acdceac7b336d62622",
+  "publicTreePath": "agent/bin/sha256-575e0b6dfe956b399f0155214d5e1baa71e318f8bcd65f66f74957a169694bf0",
+  "platforms": [
+    "linux/amd64",
+    "linux/arm64"
+  ],
+  "signerIssuer": "https://token.actions.githubusercontent.com",
+  "signerIdentity": "https://github.com/yyhuni/lunafox-private/.github/workflows/release.yml@refs/tags/*",
+  "members": [
+    {
+      "name": "lunafox-agent-linux-amd64",
+      "kind": "agent",
+      "platform": "linux/amd64",
+      "path": "lunafox-agent-linux-amd64",
+      "sha256": "sha256:e3f7f2854477db6f256fe2f3c944b865a0010728e76b656d383c8e2c218ec245",
+      "size": 23904670,
+      "executable": true,
+      "elf": true
+    },
+    {
+      "name": "lunafox-agent-linux-arm64",
+      "kind": "agent",
+      "platform": "linux/arm64",
+      "path": "lunafox-agent-linux-arm64",
+      "sha256": "sha256:db9b7d16c23538e39ff35a26e90de16a106f303c080b5ca699120a005254364d",
+      "size": 22505047,
+      "executable": true,
+      "elf": true
+    },
+    {
+      "name": "lunafox-engine-mount-preflight-linux-amd64",
+      "kind": "mount-preflight",
+      "platform": "linux/amd64",
+      "path": "lunafox-engine-mount-preflight-linux-amd64",
+      "sha256": "sha256:2b12a49b754a09e98377c96105c2975a5b48bf6b063eae0b2062ea271e0add2a",
+      "size": 20000987,
+      "executable": true,
+      "elf": true
+    },
+    {
+      "name": "lunafox-engine-mount-preflight-linux-arm64",
+      "kind": "mount-preflight",
+      "platform": "linux/arm64",
+      "path": "lunafox-engine-mount-preflight-linux-arm64",
+      "sha256": "sha256:143872aa1a600ce25451d9319a31c4971846dc306bd85e2e85721be4d2bac5a4",
+      "size": 18804436,
+      "executable": true,
+      "elf": true
+    },
+    {
+      "name": "lunafox-engine-preheater-linux-amd64",
+      "kind": "preheater",
+      "platform": "linux/amd64",
+      "path": "lunafox-engine-preheater-linux-amd64",
+      "sha256": "sha256:acaedb121ecda8a8e3e445fc07db6f4a4c85b85ccecf481faad308388b9a87bc",
+      "size": 21349406,
+      "executable": true,
+      "elf": true
+    },
+    {
+      "name": "lunafox-engine-preheater-linux-arm64",
+      "kind": "preheater",
+      "platform": "linux/arm64",
+      "path": "lunafox-engine-preheater-linux-arm64",
+      "sha256": "sha256:eb93aa91d3481768a9e8f87588d2591505802cca0a9ea9f945ff8ece49bb583f",
+      "size": 20108903,
+      "executable": true,
+      "elf": true
+    }
+  ]
+}

@@ -10,6 +10,7 @@ import type { UseFormReturn } from "react-hook-form";
 import type { AddToolFormValues } from "@/components/tools/config/add-tool-dialog-state";
 import { CategoryNameMap } from "@/types/tool.types";
 import { textRole } from "@/lib/typography";
+import { compactSurfaceClassNames } from "@/lib/ui/compact-surface-contract";
 import { cn } from "@/lib/utils";
 type TranslationFn = (key: string, params?: Record<string, string | number | Date>) => string;
 interface ToolCategorySelectorProps {
@@ -24,8 +25,8 @@ function ToolCategorySelector({ t, availableCategories, selectedCategories, disa
     return (<div className="gap-2 grid">
       <FormLabel>{t("categoryTags")}</FormLabel>
 
-      {selectedCategories.length > 0 && (<div className="bg-muted/50 border flex flex-wrap gap-2 p-3 rounded-md">
-          {selectedCategories.map((categoryName) => (<Badge key={categoryName} variant="default" className="flex gap-1 items-center px-2 py-1">
+      {selectedCategories.length > 0 && (<div className={cn(compactSurfaceClassNames.mutedInfo, "flex flex-wrap gap-2")}>
+          {selectedCategories.map((categoryName) => (<Badge key={categoryName} size="tag" variant="default" className="flex gap-1 items-center">
               {CategoryNameMap[categoryName] || categoryName}
               <button type="button" onClick={() => onRemove(categoryName)} disabled={disabled} className="hover:bg-primary/20 ml-1 p-0.5 rounded-full">
                 <IconX className="h-3 w-3"/>
@@ -33,13 +34,13 @@ function ToolCategorySelector({ t, availableCategories, selectedCategories, disa
             </Badge>))}
         </div>)}
 
-      <div className="border flex flex-wrap gap-2 p-3 rounded-md">
+      <div className={cn(compactSurfaceClassNames.info, "flex flex-wrap gap-2")}>
         {availableCategories.length > 0 ? (availableCategories.map((categoryName) => {
             const isSelected = selectedCategories.includes(categoryName);
             return (<Badge key={categoryName} variant={isSelected ? "secondary" : "outline"} className="hover:bg-secondary/80 transition-colors" render={<button type="button" onClick={() => onToggle(categoryName)}/>}>
                   {CategoryNameMap[categoryName] || categoryName}
                 </Badge>);
-        })) : (<p className="text-muted-foreground text-sm">{t("noCategories")}</p>)}
+        })) : (<p className={textRole.helperText}>{t("noCategories")}</p>)}
       </div>
     </div>);
 }
@@ -59,7 +60,7 @@ export function AddToolBasicInfoSection({ t, form, isPending, availableCategorie
       <FormField control={form.control} name="name" render={({ field }) => (<FormItem>
             <FormLabel>{t("toolName")} <span className="text-destructive">*</span></FormLabel>
             <FormControl>
-              <Input placeholder={t("toolNamePlaceholder")} disabled={isPending} maxLength={255} autoComplete="off" {...field}/>
+              <Input size="sm" placeholder={t("toolNamePlaceholder")} disabled={isPending} maxLength={255} autoComplete="off" {...field}/>
             </FormControl>
             <FormDescription>{t("characters", { count: field.value.length, max: 255 })}</FormDescription>
             <FormMessage />
@@ -68,7 +69,7 @@ export function AddToolBasicInfoSection({ t, form, isPending, availableCategorie
       <FormField control={form.control} name="repoUrl" render={({ field }) => (<FormItem>
             <FormLabel>{t("repoUrl")}</FormLabel>
             <FormControl>
-              <Input type="url" placeholder={t("repoUrlPlaceholder")} disabled={isPending} maxLength={512} autoComplete="url" inputMode="url" {...field}/>
+              <Input size="sm" type="url" placeholder={t("repoUrlPlaceholder")} disabled={isPending} maxLength={512} autoComplete="url" inputMode="url" {...field}/>
             </FormControl>
             <FormMessage />
           </FormItem>)}/>
@@ -76,7 +77,7 @@ export function AddToolBasicInfoSection({ t, form, isPending, availableCategorie
       <FormField control={form.control} name="version" render={({ field }) => (<FormItem>
             <FormLabel>{t("currentVersion")}</FormLabel>
             <FormControl>
-              <Input placeholder={t("versionPlaceholder")} disabled={isPending} maxLength={100} autoComplete="off" {...field}/>
+              <Input size="sm" placeholder={t("versionPlaceholder")} disabled={isPending} maxLength={100} autoComplete="off" {...field}/>
             </FormControl>
             <FormMessage />
           </FormItem>)}/>
@@ -139,7 +140,7 @@ export function AddToolCommandSection({ t, form, isPending, }: AddToolCommandSec
                 </span>)}
             </FormLabel>
             <FormControl>
-              <Input placeholder={t("versionCommandPlaceholder")} disabled={isPending} maxLength={500} className="font-mono text-sm" autoComplete="off" {...field}/>
+              <Input size="sm" placeholder={t("versionCommandPlaceholder")} disabled={isPending} maxLength={500} className="font-mono text-sm" autoComplete="off" {...field}/>
             </FormControl>
             <FormDescription className="space-y-1">
               <span className="block">{t("versionCommandHint")}</span>

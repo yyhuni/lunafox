@@ -188,7 +188,7 @@ export function ScanAgentSelector({ value, onChange, disabled = false }: ScanAge
               <span className={cn("block truncate", textRole.navLabel)}>{t("automatic")}</span>
               <span className={cn("block truncate", textRole.helperText)}>{t("automaticHint")}</span>
             </span>
-            <Badge variant="success" className="shrink-0">{t("recommended")}</Badge>
+            <Badge size="compact" variant="success" className="shrink-0">{t("recommended")}</Badge>
           </CommandItem>
           {picker.isInitialLoading ? (
             <AgentPickerMessage>
@@ -220,7 +220,7 @@ export function ScanAgentSelector({ value, onChange, disabled = false }: ScanAge
                 <span className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-4">
                   <span className="flex min-w-0 items-center justify-between gap-2 sm:w-36 sm:shrink-0">
                     <span className={cn("min-w-0 flex-1 truncate", textRole.navLabel)} title={agent.displayName || agent.name}>{agent.displayName || agent.name}</span>
-                    <Badge variant={agent.status !== "online" ? "secondary" : healthy ? "success" : "warning"} className="shrink-0">
+                    <Badge size="compact" variant={agent.status !== "online" ? "secondary" : healthy ? "success" : "warning"} className="shrink-0">
                       {healthLabel}
                     </Badge>
                   </span>

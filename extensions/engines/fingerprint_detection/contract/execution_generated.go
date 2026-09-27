@@ -380,7 +380,7 @@ func EncodeDirectory(item Directory) (string, error) {
 	if err := lunafoxValidateResultInt("directory status", int64(item.Status), lunafoxInt64Ptr(0), lunafoxInt64Ptr(999)); err != nil {
 		return "", err
 	}
-	if err := lunafoxValidateResultString("directory contenttype", item.ContentType, true, false); err != nil {
+	if err := lunafoxValidateResultString("directory contenttype", item.ContentType, false, false); err != nil {
 		return "", err
 	}
 	payload, err := json.Marshal(item)

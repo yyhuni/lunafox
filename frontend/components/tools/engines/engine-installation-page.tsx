@@ -187,6 +187,7 @@ export function EngineInstallationPage({ embedded = false }: { embedded?: boolea
                   <span className={textRole.metadataLabel}>{t("artifactRef")}</span>
                   <Input
                     id="engine-artifact-ref"
+                    size="sm"
                     value={artifactRef}
                     onChange={(event) => setArtifactRef(event.target.value)}
                     placeholder="registry.example/team/engine@sha256:..."

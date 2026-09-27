@@ -199,6 +199,7 @@ export function VulnerabilitiesVerticalTable({
 
                   <TableCell className={VULNERABILITIES_DENSE_CELL_CLASS}>
                     <Badge
+                      size="compact"
                       variant={SEVERITY_VARIANTS[item.severity]}
                       className={VULNERABILITY_SEVERITY_BADGE_CLASS}
                     >
@@ -213,7 +214,7 @@ export function VulnerabilitiesVerticalTable({
                   </TableCell>
 
                   <TableCell className={cn(VULNERABILITIES_DENSE_CELL_CLASS, "hidden md:table-cell")}>
-                    <Badge variant="outline" className={cn("h-5 justify-center px-2 shadow-none", textRole.badgeSubtle)}>
+                    <Badge size="compact" variant="outline" className={cn("justify-center shadow-none", textRole.badgeSubtle)}>
                       {item.source}
                     </Badge>
                   </TableCell>

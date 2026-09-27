@@ -121,6 +121,8 @@ describe("useNucleiPocSyncTask", () => {
       await result.current.mutateAsync(taskName)
     })
     expect(serviceMocks.cancelNucleiPocSyncTask).toHaveBeenCalledWith(taskName, expect.anything())
-    expect(queryClient.getQueryData(nucleiPocKeys.task(taskName))).toEqual(cancelled)
+    await waitFor(() => {
+      expect(queryClient.getQueryData(nucleiPocKeys.task(taskName))).toEqual(cancelled)
+    })
   })
 })

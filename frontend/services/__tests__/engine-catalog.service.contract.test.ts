@@ -21,6 +21,7 @@ describe("engine-catalog.service contract", () => {
     expect(apiClientMocks.get).toHaveBeenCalledWith("/engines/engine.lunafox.website_discovery")
     expect(result.execution.configSections[0]?.id).toBe("httpx")
     expect(result.execution.configSections[0]?.requiredEnabled).toBe(true)
+    expect(result.execution.configSections[0]?.params[0]?.unit).toBe("seconds")
     expect("configSchema" in result).toBe(false)
   })
 
@@ -64,6 +65,26 @@ describe("engine-catalog.service contract", () => {
     await expect(getEngineCatalogDetail("engine.lunafox.demo")).rejects.toThrow(
       "Engine catalog engine.v5 execution must not include retired fields"
     )
+  })
+
+  it("rejects unsupported or misplaced parameter units", async () => {
+    for (const params of [
+      [{ key: "timeout", type: "integer", unit: "minutes" }],
+      [{ key: "mode", type: "string", unit: "seconds" }],
+    ]) {
+      apiClientMocks.get.mockResolvedValue({
+        data: {
+          ...websiteEnginePayload(true),
+          execution: {
+            ...websiteEnginePayload(true).execution,
+            configSections: [{ id: "httpx", params }],
+          },
+        },
+      })
+      await expect(getEngineCatalogDetail("engine.lunafox.website_discovery")).rejects.toThrow(
+        /unsupported parameter unit|unit on a non-integer parameter/,
+      )
+    }
   })
 
   it("rejects the retired split execution resource fields", async () => {
@@ -139,7 +160,14 @@ function websiteEnginePayload(detail: boolean) {
     execution: {
       engineApiMajor: 2,
       supportedTargetTypes: ["domain"],
-      ...(detail ? { configSections: [{ id: "httpx", defaultEnabled: true, requiredEnabled: true, params: [] }] } : {}),
+      ...(detail ? {
+        configSections: [{
+          id: "httpx",
+          defaultEnabled: true,
+          requiredEnabled: true,
+          params: [{ key: "timeout", type: "integer", unit: "seconds", default: 60 }],
+        }],
+      } : {}),
     },
     localeResources: { zh: { engine: { displayName: "站点发现", description: "站点发现" } } },
 	}

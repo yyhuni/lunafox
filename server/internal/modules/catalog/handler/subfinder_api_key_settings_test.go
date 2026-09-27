@@ -55,6 +55,7 @@ func TestSubfinderAPIKeySettingsHandlerGetSettingsUsesRegistryMapContract(t *tes
 		settings: &catalogdomain.SubfinderProviderSettings{Providers: catalogdomain.SubfinderProviderConfigs{
 			"fofa":   {Enabled: true, Status: catalogdomain.SubfinderProviderStatusConfigured, Values: map[string]string{"email": "ops@example.com", "apiKey": "fofa-secret"}},
 			"censys": {Enabled: true, Status: catalogdomain.SubfinderProviderStatusConfigured, Values: map[string]string{"pat": "censys-pat", "orgId": "org-1"}},
+			"shodan": {Enabled: true, Status: catalogdomain.SubfinderProviderStatusUnconfigured, Values: map[string]string{"apiKey": "shodan-secret"}},
 			"gitlab": {Enabled: true, Status: catalogdomain.SubfinderProviderStatusConfigured, Values: map[string]string{"apiKey": "legacy-secret"}},
 		}},
 	})
@@ -76,6 +77,9 @@ func TestSubfinderAPIKeySettingsHandlerGetSettingsUsesRegistryMapContract(t *tes
 	}
 	if body.Providers["fofa"]["enabled"] != true || body.Providers["fofa"]["status"] != catalogdomain.SubfinderProviderStatusConfigured {
 		t.Fatalf("expected fofa provider state, got %#v", body.Providers["fofa"])
+	}
+	if body.Providers["shodan"]["status"] != catalogdomain.SubfinderProviderStatusConfigured {
+		t.Fatalf("expected server to derive shodan status, got %#v", body.Providers["shodan"])
 	}
 	if values, ok := body.Providers["fofa"]["values"].(map[string]any); ok && values["apiKey"] == "fofa-secret" {
 		t.Fatalf("response must not expose plaintext secret values: %#v", values)
@@ -119,7 +123,7 @@ func TestSubfinderAPIKeySettingsHandlerUpdateSettingsMapsRegistryValues(t *testi
 		handler.UpdateSettings,
 		http.MethodPatch,
 		"/v1/settings/apiKeys",
-		`{"providers":{"fofa":{"enabled":true,"values":{"email":"ops@example.com","apiKey":"new-fofa"}},"censys":{"enabled":true,"values":{"pat":"censys-pat","orgId":"org-1"}}}}`,
+		`{"providers":{"fofa":{"enabled":true,"status":"unconfigured","values":{"email":"ops@example.com","apiKey":"new-fofa"}},"censys":{"enabled":true,"values":{"pat":"censys-pat","orgId":"org-1"}}}}`,
 	)
 	if resp.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", resp.Code, resp.Body.String())
@@ -129,6 +133,9 @@ func TestSubfinderAPIKeySettingsHandlerUpdateSettingsMapsRegistryValues(t *testi
 	}
 	if store.updated.Providers["fofa"].Values["email"] != "ops@example.com" || store.updated.Providers["fofa"].Values["apiKey"] != "new-fofa" {
 		t.Fatalf("expected fofa input mapped to domain, got %+v", store.updated.Providers["fofa"])
+	}
+	if store.updated.Providers["fofa"].Status != catalogdomain.SubfinderProviderStatusConfigured {
+		t.Fatalf("expected status to be computed by the server, got %q", store.updated.Providers["fofa"].Status)
 	}
 	if store.updated.Providers["censys"].Values["pat"] != "censys-pat" || store.updated.Providers["censys"].Values["orgId"] != "org-1" {
 		t.Fatalf("expected censys input mapped to domain, got %+v", store.updated.Providers["censys"])

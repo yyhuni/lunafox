@@ -97,6 +97,65 @@ describe("EngineConfigForm resources", () => {
       }),
     }))
   })
+
+  it("lets a caller replace one parameter control while preserving the form update path", () => {
+    const onChange = vi.fn()
+    const timeoutWorkflow: ScanWorkflowWithEngines = {
+      ...workflow,
+      stages: [{
+        ...workflow.stages[0],
+        steps: [{
+          ...workflow.stages[0].steps[0],
+          engine: {
+            ...workflow.stages[0].steps[0].engine,
+            execution: {
+              ...workflow.stages[0].steps[0].engine.execution,
+              configSections: [{
+                ...workflow.stages[0].steps[0].engine.execution.configSections[0],
+                params: [{
+                  key: "timeout",
+                  type: "integer",
+                  unit: "seconds",
+                  default: 3600,
+                  minimum: 60,
+                  maximum: 604800,
+                }],
+              }],
+            },
+          },
+        }],
+      }],
+    }
+    const values: EngineConfigFormValues = {
+      discovery: {
+        enabled: true,
+        sections: { recon: { enabled: true, params: { timeout: 3600 } } },
+      },
+    }
+
+    render(
+      <EngineConfigForm
+        workflow={timeoutWorkflow}
+        values={values}
+        expandedStepIds={new Set(["discovery"])}
+        renderParamControl={(context) => context.param.key === "timeout" ? (
+          <button type="button" onClick={() => context.onChange(21600)}>Set six hours</button>
+        ) : null}
+        onChange={onChange}
+      />
+    )
+
+    expect(screen.getByRole("button", { name: "Set six hours" })).toBeInTheDocument()
+    expect(screen.getByText("(engineConfigForm.unitSeconds)")).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "Set six hours" }))
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      discovery: expect.objectContaining({
+        sections: expect.objectContaining({
+          recon: expect.objectContaining({ params: { timeout: 21600 } }),
+        }),
+      }),
+    }))
+  })
 })
 
 describe("EngineConfigForm disabled-Step recovery", () => {

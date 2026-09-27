@@ -34,7 +34,8 @@ const TrendBadge = memo(function TrendBadge({ change }: { change: number }) {
   
   const isPositive = change > 0
   return (
-    <Badge 
+    <Badge
+      size="compact"
       variant="outline" 
       className={getTrendToneBadgeClass(isPositive ? "positive" : "negative")}
     >

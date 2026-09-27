@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // Status is the durable user-visible lifecycle of one system upgrade.
@@ -44,22 +45,97 @@ type AgentSummary struct {
 	Unhealthy int `json:"unhealthy"`
 }
 
+// AgentDiagnosticSource identifies who produced the evidence shown to an
+// operator. It is provenance only; readiness remains defined by Ready().
+type AgentDiagnosticSource string
+
+const (
+	AgentDiagnosticSourceHeartbeat  AgentDiagnosticSource = "agent_heartbeat"
+	AgentDiagnosticSourceServer     AgentDiagnosticSource = "server_observation"
+	AgentDiagnosticSourceHistorical AgentDiagnosticSource = "historical"
+)
+
+const (
+	AgentReasonNotRegistered    = "not_registered"
+	AgentReasonHeartbeatMissing = "heartbeat_missing_or_stale"
+	AgentReasonPaused           = "paused"
+	AgentReasonHealthReported   = "health_reported"
+	AgentReasonHealthUnhealthy  = "health_unhealthy"
+	AgentReasonClaimNotReady    = "claim_not_ready"
+	AgentReasonVersionMismatch  = "version_mismatch"
+	AgentReasonLegacyUnknown    = "legacy_unknown"
+)
+
+// Valid reports whether source is one of the durable provenance values. Empty
+// remains valid only for legacy expectations that have no structured reason.
+func (source AgentDiagnosticSource) Valid() bool {
+	switch source {
+	case AgentDiagnosticSourceHeartbeat, AgentDiagnosticSourceServer, AgentDiagnosticSourceHistorical:
+		return true
+	default:
+		return false
+	}
+}
+
+// IsKnownAgentDiagnosticReasonCode keeps persisted evidence and strict API
+// decoders on one closed set of operator-facing reason codes.
+func IsKnownAgentDiagnosticReasonCode(value string) bool {
+	switch value {
+	case AgentReasonNotRegistered, AgentReasonHeartbeatMissing, AgentReasonPaused,
+		AgentReasonHealthReported, AgentReasonHealthUnhealthy, AgentReasonClaimNotReady,
+		AgentReasonVersionMismatch, AgentReasonLegacyUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
 // AgentExpectation is the immutable-at-start snapshot and subsequent
 // verification projection for one enabled Agent. It intentionally contains
 // only operational evidence; authentication material is never copied into an
 // Upgrade Operation.
 type AgentExpectation struct {
-	AgentID         int        `json:"agentId"`
-	DesiredVersion  string     `json:"desiredVersion"`
-	TargetDigest    string     `json:"targetDigest"`
-	ObservedVersion string     `json:"observedVersion,omitempty"`
-	ObservedDigest  string     `json:"observedDigest,omitempty"`
-	Connected       bool       `json:"connected"`
-	Healthy         bool       `json:"healthy"`
-	Paused          bool       `json:"paused"`
-	ClaimReady      bool       `json:"claimReady"`
-	LastObservedAt  *time.Time `json:"lastObservedAt,omitempty"`
-	Diagnostic      string     `json:"diagnostic,omitempty"`
+	AgentID             int                   `json:"agentId"`
+	DisplayNameSnapshot string                `json:"displayNameSnapshot,omitempty"`
+	DesiredVersion      string                `json:"desiredVersion"`
+	TargetDigest        string                `json:"targetDigest"`
+	ObservedVersion     string                `json:"observedVersion,omitempty"`
+	ObservedDigest      string                `json:"observedDigest,omitempty"`
+	Connected           bool                  `json:"connected"`
+	Healthy             bool                  `json:"healthy"`
+	Paused              bool                  `json:"paused"`
+	ClaimReady          bool                  `json:"claimReady"`
+	LastObservedAt      *time.Time            `json:"lastObservedAt,omitempty"`
+	ReasonCode          string                `json:"reasonCode,omitempty"`
+	DiagnosticSource    AgentDiagnosticSource `json:"diagnosticSource,omitempty"`
+	Diagnostic          string                `json:"diagnostic,omitempty"`
+}
+
+// Validate accepts legacy rows with no structured diagnostic metadata while
+// rejecting malformed metadata on new writes. Readiness intentionally remains
+// independent from these explanatory fields.
+func (expectation AgentExpectation) Validate() error {
+	if expectation.AgentID <= 0 {
+		return fmt.Errorf("agent expectation requires a positive agentId")
+	}
+	if expectation.DisplayNameSnapshot != strings.TrimSpace(expectation.DisplayNameSnapshot) || len([]rune(expectation.DisplayNameSnapshot)) > 100 || strings.IndexFunc(expectation.DisplayNameSnapshot, unicode.IsControl) >= 0 {
+		return fmt.Errorf("agent expectation display name snapshot is invalid")
+	}
+	if expectation.ReasonCode == "" && expectation.DiagnosticSource != "" {
+		return fmt.Errorf("agent expectation diagnostic source requires a reason code")
+	}
+	if expectation.ReasonCode != "" {
+		if !IsKnownAgentDiagnosticReasonCode(expectation.ReasonCode) {
+			return fmt.Errorf("agent expectation reason code is invalid")
+		}
+		if !expectation.DiagnosticSource.Valid() {
+			return fmt.Errorf("agent expectation diagnostic source is invalid")
+		}
+	}
+	if strings.ContainsAny(expectation.Diagnostic, "\r\n") || strings.IndexFunc(expectation.Diagnostic, unicode.IsControl) >= 0 || len([]rune(expectation.Diagnostic)) > 512 {
+		return fmt.Errorf("agent expectation diagnostic is invalid")
+	}
+	return nil
 }
 
 // Ready reports whether the Agent has supplied enough authenticated runtime
@@ -114,11 +190,14 @@ type Operation struct {
 	AgentVerificationDeadline  *time.Time
 	ObservedDigests            map[string]string
 	ProgressEvents             []ProgressEvent
-	Diagnostic                 string
-	StageTimes                 map[Status]time.Time
-	CreatedAt                  time.Time
-	UpdatedAt                  time.Time
-	CompletedAt                *time.Time
+	// HostActivity is a current host-side wait snapshot. StageTimes remain the
+	// lifecycle/watchdog source of truth, even while this observation refreshes.
+	HostActivity *HostActivity
+	Diagnostic   string
+	StageTimes   map[Status]time.Time
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	CompletedAt  *time.Time
 }
 
 func (status Status) IsTerminal() bool {
@@ -332,8 +411,16 @@ func (operation *Operation) Validate() error {
 	if operation.AgentVerificationDeadline != nil && operation.AgentVerificationDeadline.Before(operation.CreatedAt) {
 		return fmt.Errorf("agent verification deadline cannot precede operation creation")
 	}
+	for _, expectation := range operation.AgentExpectations {
+		if err := expectation.Validate(); err != nil {
+			return fmt.Errorf("invalid agent expectation: %w", err)
+		}
+	}
 	if err := ValidateProgressEvents(operation.ProgressEvents); err != nil {
 		return fmt.Errorf("invalid upgrade progress events: %w", err)
+	}
+	if err := ValidateHostActivity(operation.HostActivity, operation.Status, operation.EffectiveExecutionMode(), operation.CreatedAt, operation.UpdatedAt, time.Now().UTC()); err != nil {
+		return fmt.Errorf("invalid host activity: %w", err)
 	}
 	return nil
 }

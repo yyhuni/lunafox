@@ -15,6 +15,7 @@ import type { Target } from "@/types/target.types";
 import type { CursorPaginationNavigation } from "@/types/data-table.types";
 import { IconChevronRight, IconChevronLeft, IconCheck, IconClock, semanticIcons, } from "@/components/icons";
 import { cn } from "@/lib/utils";
+import { compactSurfaceClassNames } from "@/lib/ui/compact-surface-contract";
 type TranslationFn = (key: string, params?: Record<string, string | number | Date>) => string;
 const OrganizationIcon = semanticIcons.concept.organization;
 const TargetIcon = semanticIcons.concept.target;
@@ -80,7 +81,7 @@ export function ScheduledScanScopeStep({ t, className, name, setName, selectionM
     return (<div className={cn("min-w-0 max-w-full space-y-3", className)}>
       <div className="space-y-2">
         <Label htmlFor="name">{t("form.taskName")} *</Label>
-        <Input id="name" name="taskName" autoComplete="off" placeholder={t("form.taskNamePlaceholder")} value={name} onChange={(event) => setName(event.target.value)}/>
+        <Input id="name" name="taskName" size="sm" autoComplete="off" placeholder={t("form.taskNamePlaceholder")} value={name} onChange={(event) => setName(event.target.value)}/>
         <p className="text-muted-foreground text-xs">{t("form.taskNameDesc")}</p>
       </div>
       <Separator />
@@ -135,13 +136,13 @@ export function ScheduledScanPresetInfoStep({ t, className, name, setName, prese
     return (<div className={cn("min-w-0 max-w-full space-y-3", className)}>
       <div className="space-y-2">
         <Label htmlFor="name">{t("form.taskName")} *</Label>
-        <Input id="name" name="taskName" autoComplete="off" placeholder={t("form.taskNamePlaceholder")} value={name} onChange={(event) => setName(event.target.value)}/>
+        <Input id="name" name="taskName" size="sm" autoComplete="off" placeholder={t("form.taskNamePlaceholder")} value={name} onChange={(event) => setName(event.target.value)}/>
         <p className="text-muted-foreground text-xs">{t("form.taskNameDesc")}</p>
       </div>
       <Separator />
       <div className="space-y-3">
         <Label>{t("form.scanTarget")}</Label>
-        <div className="bg-muted/50 border flex min-w-0 gap-2 items-center overflow-hidden px-4 py-3 rounded-lg">
+        <div className={cn(compactSurfaceClassNames.mutedInfo, "flex min-w-0 items-center gap-2 overflow-hidden")}>
           <TargetIcon className="h-5 shrink-0 text-muted-foreground w-5"/>
           <span className="min-w-0 flex-1 truncate font-medium">{presetTargetName || presetOrganizationName}</span>
           <Badge variant="secondary" className="ml-auto shrink-0">
@@ -172,7 +173,7 @@ export function ScheduledScanScheduleStep({ t, className, timeZone, setTimeZone,
       <ScheduledScanTimeZoneField id="scheduled-scan-time-zone" value={timeZone} onChange={setTimeZone} disabled={disabled} label={t("form.timeZone")} placeholder={t("form.timeZonePlaceholder")} searchPlaceholder={t("form.timeZoneSearchPlaceholder")} emptyLabel={t("form.timeZoneEmpty")} description={t("form.timeZoneDesc")}/>
       <div className="space-y-2">
         <Label>{t("form.cronExpression")} *</Label>
-        <Input name="cronExpression" autoComplete="off" placeholder={t("form.cronPlaceholder")} value={cronExpression} onChange={(event) => setCronExpression(event.target.value)} className="font-mono" disabled={disabled}/>
+        <Input name="cronExpression" size="sm" autoComplete="off" placeholder={t("form.cronPlaceholder")} value={cronExpression} onChange={(event) => setCronExpression(event.target.value)} className="font-mono" disabled={disabled}/>
         <p className="text-muted-foreground text-xs">{t("form.cronFormat")}</p>
       </div>
       <div className="space-y-2">
@@ -183,7 +184,7 @@ export function ScheduledScanScheduleStep({ t, className, timeZone, setTimeZone,
               </Badge>))}
         </div>
       </div>
-      <div className="bg-muted/50 border min-w-0 overflow-hidden px-4 py-3 rounded-lg space-y-3">
+      <div className={cn(compactSurfaceClassNames.mutedInfo, "min-w-0 space-y-3 overflow-hidden")}>
         <div className="flex min-w-0 gap-2 items-center">
           <IconClock className="h-4 shrink-0 text-muted-foreground w-4"/>
           <span className="min-w-0 flex-1 truncate font-medium">{t("form.executionPreview")}</span>

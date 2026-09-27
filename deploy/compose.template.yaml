@@ -1,10 +1,53 @@
 # SPDX-License-Identifier: GPL-3.0-only
 name: lunafox
 services:
+  engine-preheater:
+    image: ${AGENT_IMAGE_REF:?AGENT_IMAGE_REF is required}
+    restart: 'no'
+    network_mode: none
+    entrypoint:
+    - /usr/local/bin/lunafox-engine-preheater
+    command:
+    - --manifest
+    - /deployment/preheat-manifest.json
+    - --release-manifest
+    - /deployment/release.manifest.yaml
+    - --runtime-composition
+    - /deployment/runtime-composition.json
+    - --compose
+    - /deployment/compose.yaml
+    - --third-party-policy
+    - /deployment/third-party-image-policy.json
+    - --manifest-digest
+    - ${LUNAFOX_PREHEAT_MANIFEST_DIGEST:?LUNAFOX_PREHEAT_MANIFEST_DIGEST is required}
+    - --profile
+    - ${DATABASE_MODE:-embedded}
+    - --cloudflare-acceleration
+    - "${ENGINE_INSTALL_CF_ACCELERATION:?ENGINE_INSTALL_CF_ACCELERATION is required}"
+    environment:
+      LUNAFOX_PREHEAT_TIMEOUT_SECONDS: ${LUNAFOX_PREHEAT_TIMEOUT_SECONDS:-900}
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - ./preheat-manifest.json:/deployment/preheat-manifest.json:ro
+    - ./release.manifest.yaml:/deployment/release.manifest.yaml:ro
+    - ./runtime-composition.json:/deployment/runtime-composition.json:ro
+    - ./compose.yaml:/deployment/compose.yaml:ro
+    - ./third-party-image-policy.json:/deployment/third-party-image-policy.json:ro
+    labels:
+      lunafox.preheat.manifest-digest: ${LUNAFOX_PREHEAT_MANIFEST_DIGEST:?LUNAFOX_PREHEAT_MANIFEST_DIGEST is required}
+      lunafox.preheat.profile: ${DATABASE_MODE:-embedded}
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   config-init:
     image: ${BOOTSTRAP_IMAGE_REF:?BOOTSTRAP_IMAGE_REF is required}
     restart: 'no'
     network_mode: none
+    depends_on:
+      engine-preheater:
+        condition: service_completed_successfully
     entrypoint:
     - /usr/local/bin/lunafox-config-init
     environment:
@@ -59,6 +102,9 @@ services:
   redis:
     image: docker.io/library/redis@sha256:2afba59292f25f5d1af200496db41bea2c6c816b059f57ae74703a50a03a27d0
     restart: unless-stopped
+    depends_on:
+      engine-preheater:
+        condition: service_completed_successfully
     healthcheck:
       test:
       - CMD
@@ -75,6 +121,9 @@ services:
   loki:
     image: docker.io/grafana/loki@sha256:3c8fd3570dd9219951a60d3f919c7f31923d10baee578b77bc26c4a0b32d092d
     restart: unless-stopped
+    depends_on:
+      engine-preheater:
+        condition: service_completed_successfully
     command: -config.file=/etc/loki/loki-config.yaml
     volumes:
     - ./resources/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
@@ -295,6 +344,9 @@ services:
     image: ${AGENT_IMAGE_REF:?AGENT_IMAGE_REF is required}
     restart: 'no'
     network_mode: none
+    depends_on:
+      engine-preheater:
+        condition: service_completed_successfully
     entrypoint:
     - /bin/sh
     - -ec
@@ -350,6 +402,9 @@ services:
   cert-init:
     image: ${BOOTSTRAP_IMAGE_REF:?BOOTSTRAP_IMAGE_REF is required}
     restart: 'no'
+    depends_on:
+      engine-preheater:
+        condition: service_completed_successfully
     entrypoint:
     - /usr/local/bin/lunafox-cert-init
     environment:

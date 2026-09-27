@@ -167,6 +167,34 @@
     border-radius: var(--radius-round);
   }
 
+  /* Badge dimensions are shared semantic tiers, not page-local utility values. */
+  .badge-size-tag {
+    height: 1.625rem;
+    padding-block: 0.25rem;
+    padding-inline: 0.5rem;
+  }
+
+  .badge-size-compact {
+    height: 1.25rem;
+    padding-block: 0;
+    padding-inline: 0.5rem;
+  }
+
+  .badge-size-micro {
+    height: 1rem;
+    min-width: 1rem;
+    padding-block: 0;
+    padding-inline: 0.375rem;
+  }
+
+  .badge-size-micro.px-0 {
+    padding-inline: 0;
+  }
+
+  .badge-size-micro.px-1 {
+    padding-inline: 0.25rem;
+  }
+
   .auth-visual-split {
     font-family: var(--font-sans);
   }
@@ -379,6 +407,12 @@
   75% {
     transform: rotate(2deg);
   }
+}
+
+.animate-wiggle,
+.group:hover .group-hover\:animate-wiggle {
+  animation: wiggle 0.6s ease-in-out;
+  transform-origin: top center;
 }
 
 /* progress bar stripe animation */
@@ -684,6 +718,10 @@ html[data-theme-sync] *::after {
   position: relative;
   overflow: hidden;
   background: color-mix(in oklab, var(--accent) 72%, var(--background) 28%);
+}
+
+.loading-skeleton.absolute {
+  position: absolute;
 }
 
 .loading-skeleton::after {
@@ -1132,6 +1170,38 @@ button.selected-row-action-control {
   padding-inline: 0.625rem;
 }
 
+/* Dense row commands stay visually light on desktop while preserving touch hit areas. */
+button.dense-row-action-control {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+}
+
+/* Popup action controls share the same compact visual tier as dense row commands. */
+button.compact-action-control {
+  height: 1.75rem;
+  min-height: 1.75rem;
+}
+
+button.compact-action-control[data-size="chip-icon"],
+button.compact-action-control[data-size="icon-sm"],
+button.compact-action-control[data-size="icon"],
+button.compact-action-control[data-size="icon-lg"] {
+  width: 1.75rem;
+  padding: 0;
+}
+
+/* Menu rows keep their labels and icons aligned with the compact trigger tier. */
+.compact-menu-item {
+  min-height: 1.75rem;
+  padding-block: 0.25rem;
+}
+
+.compact-action-placeholder {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
 /* Overlay close owns its own muted resting and hover treatment. */
 button.overlay-close-control {
   color: var(--muted-foreground);
@@ -1158,6 +1228,33 @@ button.selection-clear-control svg {
   }
 
   button.selected-row-action-control {
+    height: 2rem;
+  }
+
+  button.dense-row-action-control {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  button.compact-action-control {
+    height: 2rem;
+    min-height: 2rem;
+  }
+
+  button.compact-action-control[data-size="chip-icon"],
+  button.compact-action-control[data-size="icon-sm"],
+  button.compact-action-control[data-size="icon"],
+  button.compact-action-control[data-size="icon-lg"] {
+    width: 2rem;
+  }
+
+  .compact-menu-item {
+    min-height: 2rem;
+    padding-block: 0.375rem;
+  }
+
+  .compact-action-placeholder {
+    width: 2rem;
     height: 2rem;
   }
 }

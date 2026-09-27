@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/yyhuni/lunafox/contracts/preheatmanifest"
 	"github.com/yyhuni/lunafox/contracts/releasemanifest"
 	"github.com/yyhuni/lunafox/server/internal/modules/upgrade/domain"
 	"github.com/yyhuni/lunafox/server/internal/modules/upgrade/upgrader"
@@ -26,6 +27,9 @@ const (
 	maxChannelRecordBytes      = 16 * 1024
 	maxReleaseManifestBytes    = 4 * 1024 * 1024
 	maxRuntimeCompositionBytes = 8 * 1024 * 1024
+	maxPreheatManifestBytes    = 8 * 1024 * 1024
+	maxPublicComposeBytes      = 16 * 1024 * 1024
+	maxPublicPolicyBytes       = 2 * 1024 * 1024
 	manifestFetchTimeout       = 15 * time.Second
 )
 
@@ -47,6 +51,8 @@ type ChannelManifestSource struct {
 	channel          string
 	cacheDir         string
 	compositionCache string
+	preheatCache     string
+	deploymentCache  string
 	client           *http.Client
 	mu               sync.Mutex
 }
@@ -76,7 +82,9 @@ func NewChannelManifestSource(config ChannelManifestSourceConfig) (*ChannelManif
 	}
 	cacheDir := filepath.Join(root, upgrader.JournalDirectory, upgrader.ManifestDirectory)
 	compositionCache := filepath.Join(root, upgrader.JournalDirectory, upgrader.CompositionDirectory)
-	if err := ensureManifestCacheDirectory(root, cacheDir, compositionCache); err != nil {
+	preheatCache := filepath.Join(root, upgrader.JournalDirectory, upgrader.PreheatManifestDirectory)
+	deploymentCache := filepath.Join(root, upgrader.JournalDirectory, upgrader.DeploymentAssetDirectory)
+	if err := ensureManifestCacheDirectory(root, cacheDir, compositionCache, preheatCache, deploymentCache); err != nil {
 		return nil, err
 	}
 	client := &http.Client{}
@@ -93,7 +101,7 @@ func NewChannelManifestSource(config ChannelManifestSourceConfig) (*ChannelManif
 		}
 		return nil
 	}
-	return &ChannelManifestSource{baseURL: baseURL, channel: channel, cacheDir: cacheDir, compositionCache: compositionCache, client: client}, nil
+	return &ChannelManifestSource{baseURL: baseURL, channel: channel, cacheDir: cacheDir, compositionCache: compositionCache, preheatCache: preheatCache, deploymentCache: deploymentCache, client: client}, nil
 }
 
 // Load fetches and validates the current channel alias. A failed refresh never
@@ -162,6 +170,31 @@ func (source *ChannelManifestSource) Load() (*releasemanifest.Manifest, error) {
 	if err := source.persistComposition(manifest.RuntimeComposition.SHA256, compositionBytes); err != nil {
 		return nil, domain.WrapManifestInvalid(fmt.Errorf("cache runtime composition: %w", err))
 	}
+	preheatPath := path.Join("manifests", record.version, "preheat-manifest.json")
+	preheatBytes, err := source.fetch(preheatPath, maxPreheatManifestBytes)
+	if err != nil {
+		return nil, domain.WrapManifestInvalid(fmt.Errorf("fetch preheat manifest: %w", err))
+	}
+	if err := validatePreheatReleaseBinding(preheatBytes, manifest, compositionBytes); err != nil {
+		return nil, domain.WrapManifestInvalid(err)
+	}
+	composeBytes, err := source.fetch(path.Join("manifests", record.version, "compose.yaml"), maxPublicComposeBytes)
+	if err != nil {
+		return nil, domain.WrapManifestInvalid(fmt.Errorf("fetch deployment Compose: %w", err))
+	}
+	policyBytes, err := source.fetch(path.Join("manifests", record.version, "third-party-image-policy.json"), maxPublicPolicyBytes)
+	if err != nil {
+		return nil, domain.WrapManifestInvalid(fmt.Errorf("fetch third-party image policy: %w", err))
+	}
+	if err := validateDeploymentAssetBinding(composeBytes, policyBytes, preheatBytes); err != nil {
+		return nil, domain.WrapManifestInvalid(err)
+	}
+	if err := source.persistPreheat(manifest.Digest(), preheatBytes); err != nil {
+		return nil, domain.WrapManifestInvalid(fmt.Errorf("cache preheat manifest: %w", err))
+	}
+	if err := source.persistDeploymentAssets(manifest.Digest(), composeBytes, policyBytes); err != nil {
+		return nil, domain.WrapManifestInvalid(fmt.Errorf("cache deployment assets: %w", err))
+	}
 	if err := source.persist(manifest.Digest(), manifestBytes); err != nil {
 		return nil, domain.WrapManifestInvalid(err)
 	}
@@ -201,6 +234,37 @@ func (source *ChannelManifestSource) LoadTarget(digest string) (*releasemanifest
 	}
 	if manifest.Digest() != digest {
 		return nil, domain.NewManifestDigestMismatch(digest, manifest.Digest())
+	}
+	if manifest.HasRuntimeComposition() {
+		preheatPath, pathErr := source.preheatPath(digest)
+		if pathErr != nil {
+			return nil, domain.WrapManifestInvalid(pathErr)
+		}
+		preheatBytes, readErr := readRegularCachedFile(preheatPath, maxPreheatManifestBytes, 0o600)
+		if readErr != nil {
+			return nil, domain.WrapManifestInvalid(fmt.Errorf("cached preheat manifest is unavailable: %w", readErr))
+		}
+		if err := validatePreheatReleaseBinding(preheatBytes, manifest, nil); err != nil {
+			return nil, domain.WrapManifestInvalid(err)
+		}
+		compositionPath, compositionErr := source.compositionPath(manifest.RuntimeComposition.SHA256)
+		if compositionErr != nil {
+			return nil, domain.WrapManifestInvalid(compositionErr)
+		}
+		compositionBytes, compositionReadErr := readRegularCachedFile(compositionPath, maxRuntimeCompositionBytes, 0o600)
+		if compositionReadErr != nil {
+			return nil, domain.WrapManifestInvalid(fmt.Errorf("cached runtime composition is unavailable: %w", compositionReadErr))
+		}
+		if err := upgrader.ValidateRuntimeCompositionAsset(compositionBytes, manifest, manifest.Digest(), manifest.RuntimeComposition.SHA256); err != nil {
+			return nil, domain.WrapManifestInvalid(fmt.Errorf("validate cached runtime composition: %w", err))
+		}
+		composeBytes, policyBytes, assetErr := source.readDeploymentAssets(digest)
+		if assetErr != nil {
+			return nil, domain.WrapManifestInvalid(assetErr)
+		}
+		if err := validateDeploymentAssetBinding(composeBytes, policyBytes, preheatBytes); err != nil {
+			return nil, domain.WrapManifestInvalid(err)
+		}
 	}
 	return manifest, nil
 }
@@ -402,7 +466,284 @@ func (source *ChannelManifestSource) cachePath(digest string) (string, error) {
 	return filepath.Join(source.cacheDir, strings.TrimPrefix(digest, "sha256:")+".yaml"), nil
 }
 
-func ensureManifestCacheDirectory(root, cacheDir, compositionCache string) error {
+func (source *ChannelManifestSource) preheatPath(releaseDigest string) (string, error) {
+	if source == nil || source.preheatCache == "" {
+		return "", fmt.Errorf("preheat manifest cache is not configured")
+	}
+	if !strings.HasPrefix(releaseDigest, "sha256:") || !channelDigestPattern.MatchString(strings.TrimPrefix(releaseDigest, "sha256:")) {
+		return "", fmt.Errorf("release manifest digest is invalid")
+	}
+	return filepath.Join(source.preheatCache, strings.TrimPrefix(releaseDigest, "sha256:")+".json"), nil
+}
+
+func (source *ChannelManifestSource) compositionPath(digest string) (string, error) {
+	if source == nil || source.compositionCache == "" {
+		return "", fmt.Errorf("runtime composition cache is not configured")
+	}
+	if !strings.HasPrefix(digest, "sha256:") || !channelDigestPattern.MatchString(strings.TrimPrefix(digest, "sha256:")) {
+		return "", fmt.Errorf("runtime composition digest is invalid")
+	}
+	return filepath.Join(source.compositionCache, strings.TrimPrefix(digest, "sha256:")+".json"), nil
+}
+
+func (source *ChannelManifestSource) deploymentAssetsPath(releaseDigest string) (string, error) {
+	if source == nil || source.deploymentCache == "" {
+		return "", fmt.Errorf("deployment asset cache is not configured")
+	}
+	if !strings.HasPrefix(releaseDigest, "sha256:") || !channelDigestPattern.MatchString(strings.TrimPrefix(releaseDigest, "sha256:")) {
+		return "", fmt.Errorf("release manifest digest is invalid")
+	}
+	return filepath.Join(source.deploymentCache, strings.TrimPrefix(releaseDigest, "sha256:")), nil
+}
+
+func (source *ChannelManifestSource) persistPreheat(releaseDigest string, raw []byte) error {
+	target, err := source.preheatPath(releaseDigest)
+	if err != nil {
+		return err
+	}
+	if info, statErr := os.Lstat(target); statErr == nil {
+		if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
+			return fmt.Errorf("cached preheat manifest path must be a regular 0600 file")
+		}
+		file, openErr := os.Open(target)
+		if openErr != nil {
+			return openErr
+		}
+		defer func() { _ = file.Close() }()
+		openedInfo, statErr := file.Stat()
+		if statErr != nil || !openedInfo.Mode().IsRegular() || openedInfo.Mode().Perm() != 0o600 || !os.SameFile(info, openedInfo) {
+			return fmt.Errorf("cached preheat manifest path changed during validation")
+		}
+		existing, readErr := readBounded(file, maxPreheatManifestBytes)
+		if readErr != nil {
+			return readErr
+		}
+		if !bytes.Equal(existing, raw) {
+			return fmt.Errorf("cached preheat manifest path contains different bytes")
+		}
+		return nil
+	} else if !os.IsNotExist(statErr) {
+		return statErr
+	}
+	temporary, err := os.CreateTemp(source.preheatCache, ".preheat-*.tmp")
+	if err != nil {
+		return err
+	}
+	temporaryPath := temporary.Name()
+	defer func() { _ = os.Remove(temporaryPath) }()
+	if err := temporary.Chmod(0o600); err != nil {
+		return errors.Join(err, temporary.Close())
+	}
+	if _, err := temporary.Write(raw); err != nil {
+		return errors.Join(err, temporary.Close())
+	}
+	if err := temporary.Sync(); err != nil {
+		return errors.Join(err, temporary.Close())
+	}
+	if err := temporary.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(temporaryPath, target); err != nil {
+		return err
+	}
+	directory, err := os.Open(source.preheatCache)
+	if err != nil {
+		return err
+	}
+	return errors.Join(directory.Sync(), directory.Close())
+}
+
+// persistDeploymentAssets stores the target Compose and policy as one
+// digest-addressed directory. The directory rename makes the pair visible
+// together to the host upgrader; an existing pair is immutable and must match
+// byte-for-byte.
+func (source *ChannelManifestSource) persistDeploymentAssets(releaseDigest string, compose, policy []byte) error {
+	target, err := source.deploymentAssetsPath(releaseDigest)
+	if err != nil {
+		return err
+	}
+	if info, statErr := os.Lstat(target); statErr == nil {
+		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() || info.Mode().Perm() != 0o700 {
+			return fmt.Errorf("cached deployment asset path must be a regular 0700 directory")
+		}
+		cachedCompose, readErr := readRegularCachedFile(filepath.Join(target, "compose.yaml"), maxPublicComposeBytes, 0o600)
+		if readErr != nil {
+			return readErr
+		}
+		cachedPolicy, readErr := readRegularCachedFile(filepath.Join(target, "third-party-image-policy.json"), maxPublicPolicyBytes, 0o600)
+		if readErr != nil {
+			return readErr
+		}
+		if !bytes.Equal(cachedCompose, compose) || !bytes.Equal(cachedPolicy, policy) {
+			return fmt.Errorf("cached deployment assets contain different bytes")
+		}
+		return nil
+	} else if !os.IsNotExist(statErr) {
+		return statErr
+	}
+	parent := filepath.Dir(target)
+	staging, err := os.MkdirTemp(parent, ".deployment-assets-*")
+	if err != nil {
+		return err
+	}
+	removeStaging := true
+	defer func() {
+		if removeStaging {
+			_ = os.RemoveAll(staging)
+		}
+	}()
+	if err := os.Chmod(staging, 0o700); err != nil {
+		return err
+	}
+	if err := writePrivateAsset(filepath.Join(staging, "compose.yaml"), compose, maxPublicComposeBytes); err != nil {
+		return err
+	}
+	if err := writePrivateAsset(filepath.Join(staging, "third-party-image-policy.json"), policy, maxPublicPolicyBytes); err != nil {
+		return err
+	}
+	if err := os.Rename(staging, target); err != nil {
+		if !os.IsExist(err) {
+			return err
+		}
+		cachedCompose, readErr := readRegularCachedFile(filepath.Join(target, "compose.yaml"), maxPublicComposeBytes, 0o600)
+		if readErr != nil {
+			return readErr
+		}
+		cachedPolicy, readErr := readRegularCachedFile(filepath.Join(target, "third-party-image-policy.json"), maxPublicPolicyBytes, 0o600)
+		if readErr != nil {
+			return readErr
+		}
+		if !bytes.Equal(cachedCompose, compose) || !bytes.Equal(cachedPolicy, policy) {
+			return fmt.Errorf("cached deployment assets contain different bytes")
+		}
+	} else {
+		removeStaging = false
+		directory, syncErr := os.Open(parent)
+		if syncErr != nil {
+			return syncErr
+		}
+		return errors.Join(directory.Sync(), directory.Close())
+	}
+	return nil
+}
+
+func (source *ChannelManifestSource) readDeploymentAssets(releaseDigest string) ([]byte, []byte, error) {
+	root, err := source.deploymentAssetsPath(releaseDigest)
+	if err != nil {
+		return nil, nil, err
+	}
+	info, err := os.Lstat(root)
+	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() || info.Mode().Perm() != 0o700 {
+		return nil, nil, fmt.Errorf("cached deployment assets are unavailable")
+	}
+	compose, err := readRegularCachedFile(filepath.Join(root, "compose.yaml"), maxPublicComposeBytes, 0o600)
+	if err != nil {
+		return nil, nil, fmt.Errorf("read cached deployment Compose: %w", err)
+	}
+	policy, err := readRegularCachedFile(filepath.Join(root, "third-party-image-policy.json"), maxPublicPolicyBytes, 0o600)
+	if err != nil {
+		return nil, nil, fmt.Errorf("read cached third-party policy: %w", err)
+	}
+	return compose, policy, nil
+}
+
+func writePrivateAsset(target string, raw []byte, limit int64) error {
+	if len(raw) == 0 || int64(len(raw)) > limit {
+		return fmt.Errorf("deployment asset exceeds %d bytes", limit)
+	}
+	temporary, err := os.OpenFile(target+".tmp", os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+	temporaryPath := temporary.Name()
+	cleanup := true
+	defer func() {
+		if cleanup {
+			_ = os.Remove(temporaryPath)
+		}
+	}()
+	if _, err := temporary.Write(raw); err != nil {
+		_ = temporary.Close()
+		return err
+	}
+	if err := temporary.Sync(); err != nil {
+		_ = temporary.Close()
+		return err
+	}
+	if err := temporary.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(temporaryPath, 0o600); err != nil {
+		return err
+	}
+	if err := os.Rename(temporaryPath, target); err != nil {
+		return err
+	}
+	cleanup = false
+	return nil
+}
+
+func validateDeploymentAssetBinding(compose, policy, preheat []byte) error {
+	manifest, err := preheatmanifest.Parse(preheat)
+	if err != nil {
+		return fmt.Errorf("validate preheat manifest for deployment assets: %w", err)
+	}
+	digest := func(raw []byte) string {
+		sum := sha256.Sum256(raw)
+		return "sha256:" + fmt.Sprintf("%x", sum[:])
+	}
+	if digest(compose) != manifest.Release.ComposeDigest {
+		return fmt.Errorf("deployment Compose bytes do not match preheat manifest binding")
+	}
+	if digest(policy) != manifest.Release.ThirdPartyPolicyDigest {
+		return fmt.Errorf("third-party policy bytes do not match preheat manifest binding")
+	}
+	return nil
+}
+
+func validatePreheatReleaseBinding(raw []byte, manifest *releasemanifest.Manifest, compositionBytes []byte) error {
+	preheat, err := preheatmanifest.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("validate preheat manifest: %w", err)
+	}
+	if manifest == nil || !manifest.HasRuntimeComposition() {
+		return fmt.Errorf("preheat manifest requires a modern release manifest")
+	}
+	if preheat.Release.ManifestDigest != manifest.Digest() || preheat.Release.Tag != "v"+manifest.ReleaseVersion {
+		return fmt.Errorf("preheat manifest release identity does not match release manifest")
+	}
+	if preheat.Release.CompositionDigest != manifest.RuntimeComposition.SHA256 {
+		return fmt.Errorf("preheat manifest composition binding does not match release manifest")
+	}
+	if len(compositionBytes) > 0 {
+		if err := upgrader.ValidateRuntimeCompositionAsset(compositionBytes, manifest, manifest.Digest(), manifest.RuntimeComposition.SHA256); err != nil {
+			return fmt.Errorf("validate preheat runtime composition binding: %w", err)
+		}
+	}
+	return nil
+}
+
+func readRegularCachedFile(filePath string, limit int64, mode os.FileMode) ([]byte, error) {
+	info, err := os.Lstat(filePath)
+	if err != nil {
+		return nil, err
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() || info.Mode().Perm() != mode.Perm() {
+		return nil, fmt.Errorf("cached evidence file must be a regular %04o file", mode.Perm())
+	}
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = file.Close() }()
+	openedInfo, err := file.Stat()
+	if err != nil || !openedInfo.Mode().IsRegular() || openedInfo.Mode().Perm() != mode.Perm() || !os.SameFile(info, openedInfo) {
+		return nil, fmt.Errorf("cached evidence file changed during validation")
+	}
+	return readBounded(file, limit)
+}
+
+func ensureManifestCacheDirectory(root, cacheDir, compositionCache, preheatCache, deploymentCache string) error {
 	info, err := os.Lstat(root)
 	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 		return fmt.Errorf("upgrade deployment root must be a regular directory")
@@ -425,6 +766,12 @@ func ensureManifestCacheDirectory(root, cacheDir, compositionCache string) error
 		return fmt.Errorf("upgrade manifest cache path is invalid")
 	}
 	if err := ensurePrivateCacheDirectory(root, compositionCache, []string{".lunafox", "upgrade", upgrader.CompositionDirectory}); err != nil {
+		return err
+	}
+	if err := ensurePrivateCacheDirectory(root, preheatCache, []string{".lunafox", "upgrade", upgrader.PreheatManifestDirectory}); err != nil {
+		return err
+	}
+	if err := ensurePrivateCacheDirectory(root, deploymentCache, []string{".lunafox", "upgrade", upgrader.DeploymentAssetDirectory}); err != nil {
 		return err
 	}
 	return nil

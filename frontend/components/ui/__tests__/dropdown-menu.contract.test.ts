@@ -75,6 +75,11 @@ describe("dropdown-menu contract", () => {
     }
   })
 
+  it("keeps actionable menu rows on the shared compact geometry", () => {
+    expect(source).toContain("compact-menu-item")
+    expect(source).toContain("radius-control compact-menu-item")
+  })
+
   it("hard-cuts Base UI checkbox and radio menu items to close on selection", () => {
     expect(source).toContain("type DropdownMenuCheckboxItemProps = Omit<")
     expect(source).toContain("type DropdownMenuRadioItemProps = Omit<")

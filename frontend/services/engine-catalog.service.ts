@@ -1,4 +1,5 @@
 import apiClient from "@/lib/api-client"
+import type { EngineManifestExecutionDefinition } from "@/types/engine-config.types"
 import type { EngineCatalogDetail, EngineCatalogSummary } from "@/types/engine-catalog.types"
 
 export type EngineInstallRequest = { artifactRef: string; allowReplacement: boolean }
@@ -7,8 +8,7 @@ export async function installEngine(request: EngineInstallRequest): Promise<Engi
   if (!request.artifactRef || request.artifactRef !== request.artifactRef.trim()) throw new Error("A canonical OCI digest reference is required")
   const response = await apiClient.post("/engines:install", request)
   const summary = normalizeEngineCatalogSummary(response.data)
-  const configSections = response.data?.execution?.configSections
-  if (!Array.isArray(configSections)) throw new Error("Installed engine detail is missing configuration metadata")
+  const configSections = normalizeEngineCatalogDetailSections(response.data?.execution?.configSections, "Installed engine detail")
   return { ...summary, execution: { ...summary.execution, configSections } }
 }
 
@@ -28,10 +28,10 @@ export async function getEngineCatalogDetail(engineId: string): Promise<EngineCa
   }
   const response = await apiClient.get(`/engines/${encodeURIComponent(normalizedEngineId)}`)
   const summary = normalizeEngineCatalogSummary(response.data)
-  const configSections = response.data?.execution?.configSections
-  if (!Array.isArray(configSections)) {
-    throw new Error(`Engine ${normalizedEngineId} detail is missing configuration metadata`)
-  }
+  const configSections = normalizeEngineCatalogDetailSections(
+    response.data?.execution?.configSections,
+    `Engine ${normalizedEngineId} detail`,
+  )
   return {
     ...summary,
     execution: {
@@ -39,6 +39,35 @@ export async function getEngineCatalogDetail(engineId: string): Promise<EngineCa
       configSections,
     },
   }
+}
+
+function normalizeEngineCatalogDetailSections(
+  value: unknown,
+  source: string,
+): EngineManifestExecutionDefinition["configSections"] {
+  if (!Array.isArray(value)) {
+    throw new Error(`${source} is missing configuration metadata`)
+  }
+
+  for (const section of value) {
+    if (!isRecord(section) || !Array.isArray(section.params)) {
+      throw new Error(`${source} contains invalid configuration metadata`)
+    }
+    for (const param of section.params) {
+      if (!isRecord(param)) {
+        throw new Error(`${source} contains an invalid parameter declaration`)
+      }
+      const unit = param.unit
+      if (unit !== undefined && unit !== "seconds") {
+        throw new Error(`${source} contains an unsupported parameter unit`)
+      }
+      if (unit !== undefined && param.type !== "integer") {
+        throw new Error(`${source} declares a unit on a non-integer parameter`)
+      }
+    }
+  }
+
+  return value as EngineManifestExecutionDefinition["configSections"]
 }
 
 function normalizeEngineCatalogSummary(payload: unknown): EngineCatalogSummary {

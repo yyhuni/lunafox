@@ -20,6 +20,7 @@ import { CopyButton } from "@/components/shared/feedback/copy-button"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { textRole } from "@/lib/typography"
+import { compactSurfaceClassNames } from "@/lib/ui/compact-surface-contract"
 import { cn } from "@/lib/utils"
 import type { Wordlist } from "@/types/wordlist.types"
 
@@ -115,6 +116,13 @@ export function WordlistDetailDrawer({
                 </div>
 
                 <dl className={cn(DETAIL_DRAWER_COMPACT_FIELD_GRID_CLASS, "border-y border-border/70 py-3")}>
+                  <WordlistDetailField label={t("rows")} value={wordlist.lineCount?.toLocaleString() ?? "-"} />
+                  <WordlistDetailField label={t("size")} value={formatWordlistFileSize(wordlist.fileSize)} />
+                  <WordlistDetailField label={t("updatedAt")} value={formatWordlistUpdatedAt(wordlist.updatedAt, locale)} />
+                  <WordlistDetailField label={t("id")} value={String(wordlist.id)} />
+                </dl>
+
+                <dl className="min-w-0">
                   <WordlistCopyField
                     label={t("resourceName")}
                     value={wordlist.name}
@@ -122,15 +130,11 @@ export function WordlistDetailDrawer({
                     copiedLabel={t("resourceNameCopied")}
                     toastId={`wordlist-resource-name-${wordlist.id}`}
                   />
-                  <WordlistDetailField label={t("rows")} value={wordlist.lineCount?.toLocaleString() ?? "-"} />
-                  <WordlistDetailField label={t("size")} value={formatWordlistFileSize(wordlist.fileSize)} />
-                  <WordlistDetailField label={t("updatedAt")} value={formatWordlistUpdatedAt(wordlist.updatedAt, locale)} />
-                  <WordlistDetailField label={t("id")} value={String(wordlist.id)} />
                 </dl>
 
                 <div className="space-y-2">
                   <span className={textRole.metadataLabel}>{t("hash")}</span>
-                  <div className="flex min-w-0 items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 font-mono text-xs text-muted-foreground">
+                  <div className={cn(compactSurfaceClassNames.value, "gap-2 font-mono text-xs text-muted-foreground")}>
                     <span className="min-w-0 flex-1 truncate">{wordlist.fileHash || "-"}</span>
                     {wordlist.fileHash ? (
                       <CopyButton
@@ -164,6 +168,7 @@ export function WordlistDetailDrawer({
               <div className={cn("min-h-0 flex-1 overflow-hidden", DETAIL_DRAWER_COMPACT_INSET_CLASS)}>
                 <div className="flex h-full min-h-0 flex-col gap-2">
                   <WordlistEditMetadata
+                    density="compact"
                     t={tEdit}
                     description={editState.description}
                     tags={editState.tags}
@@ -188,7 +193,7 @@ export function WordlistDetailDrawer({
                       />
                     </>
                   ) : (
-                    <div className="rounded-md border bg-muted/30 px-4 py-3 text-muted-foreground">
+                    <div className={cn(compactSurfaceClassNames.mutedInfo, textRole.helperText)}>
                       {tEdit("oversizedMetadataOnly")}
                     </div>
                   )}
@@ -196,6 +201,7 @@ export function WordlistDetailDrawer({
               </div>
 
               <WordlistEditFooter
+                density="compact"
                 t={tEdit}
                 isSaving={editState.isSaving}
                 isSavingMetadata={editState.isSavingMetadata}
@@ -238,7 +244,7 @@ function WordlistCopyField({
   return (
     <div className="min-w-0 space-y-1 sm:col-span-2">
       <dt className={textRole.metadataLabel}>{label}</dt>
-      <dd className="flex min-w-0 items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
+      <dd className={cn(compactSurfaceClassNames.value, "gap-2")}>
         <code className={cn("min-w-0 flex-1 break-all", textRole.code)}>{value}</code>
         <CopyButton
           value={value}

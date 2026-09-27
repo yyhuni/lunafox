@@ -102,14 +102,14 @@ export function ScanConfigEditorLayout({
           {state.capabilityStyles.length > 0 ? (
             <div className="flex flex-wrap gap-1">
               {state.capabilityStyles.map((cap) => (
-                <Badge key={cap.key} variant="outline" className={cn("text-xs py-0", cap.color)}>
+                <Badge key={cap.key} size="tag" variant="outline" className={cn("text-xs", cap.color)}>
                   {tStages(cap.key)}
                 </Badge>
               ))}
             </div>
           ) : null}
           {isConfigEdited ? (
-            <Badge variant="outline" className="ml-auto text-xs">
+            <Badge size="tag" variant="outline" className="ml-auto text-xs">
               {t("configEdited")}
             </Badge>
           ) : null}

@@ -33,8 +33,8 @@ function FieldLegend({
       data-variant={variant}
       className={cn(
         "mb-3",
-        textRole.sectionTitle,
-        "data-[variant=legend]:text-base",
+        textRole.compactSectionTitle,
+        "data-[variant=legend]:text-base data-[variant=legend]:leading-5",
         className
       )}
       {...props}
@@ -229,7 +229,7 @@ function FieldError({
     <div
       role="alert"
       data-slot="field-error"
-      className={cn("text-destructive text-sm font-normal", className)}
+      className={cn("text-destructive", textRole.helperText, className)}
       {...props}
     >
       {content}

@@ -103,6 +103,7 @@ func (reader *FileJournalEventReader) ReadCurrent(ctx context.Context) (HostUpgr
 		UpdatedAt:                  current.UpdatedAt,
 		StageUpdatedAt:             current.StageUpdatedAt,
 		ProgressEvents:             cloneHostProgressEvents(current.ProgressEvents),
+		HostActivity:               domain.CloneHostActivity(current.HostActivity),
 		ObservedDigests:            map[string]string{},
 		FromJournal:                true,
 	}
@@ -146,6 +147,7 @@ type hostJournal struct {
 	ExitCode                   *int                 `json:"exitCode,omitempty"`
 	Diagnostic                 string               `json:"diagnostic,omitempty"`
 	ProgressEvents             []hostProgressEvent  `json:"progressEvents,omitempty"`
+	HostActivity               *domain.HostActivity `json:"hostActivity,omitempty"`
 }
 
 type hostProgressEvent struct {
@@ -199,6 +201,9 @@ func readHostJournal(path string) (hostJournal, error) {
 	}
 	if !journal.StageUpdatedAt.IsZero() && (journal.StageUpdatedAt.Before(journal.StartedAt) || journal.StageUpdatedAt.After(journal.UpdatedAt)) {
 		return hostJournal{}, fmt.Errorf("upgrade journal stageUpdatedAt is invalid")
+	}
+	if err := domain.ValidateHostActivity(journal.HostActivity, domain.Status(journal.Stage), journal.ExecutionMode, journal.StartedAt, journal.UpdatedAt, time.Now().UTC()); err != nil {
+		return hostJournal{}, fmt.Errorf("upgrade journal hostActivity is invalid: %w", err)
 	}
 	if journal.CompletedAt != nil && journal.CompletedAt.Before(journal.StartedAt) {
 		return hostJournal{}, fmt.Errorf("upgrade journal completedAt is invalid")

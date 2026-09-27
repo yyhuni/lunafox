@@ -36,7 +36,7 @@ export function CompactPaginationSkeleton({
     >
       {showSummary ? <Skeleton className={cn("h-4 rounded-full", summaryWidthClassName)} /> : null}
 
-      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-3 sm:ml-auto">
         <div className="flex items-center gap-2">
           <Skeleton className={cn("h-4 rounded-full", rowsPerPageLabelWidthClassName)} />
           <SelectShellSkeleton size="sm" widthClassName={pageSizeWidthClassName} valueWidthClassName="w-8" />

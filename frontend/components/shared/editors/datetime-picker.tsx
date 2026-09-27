@@ -73,7 +73,7 @@ export function DateTimePicker({ value, onChange, label, placeholder, minDate, }
         </Popover>
 
         {/* Time selection */}
-        <Input type="time" name="executionTime" autoComplete="off" value={time} onChange={handleTimeChange} className="[&::-webkit-calendar-picker-indicator]:appearance-none [&::-webkit-calendar-picker-indicator]:hidden appearance-none bg-background w-28"/>
+        <Input size="sm" type="time" name="executionTime" autoComplete="off" value={time} onChange={handleTimeChange} className="[&::-webkit-calendar-picker-indicator]:appearance-none [&::-webkit-calendar-picker-indicator]:hidden appearance-none bg-background w-28"/>
       </div>
     </div>);
 }

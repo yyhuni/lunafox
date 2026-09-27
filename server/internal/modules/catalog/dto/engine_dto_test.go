@@ -14,7 +14,13 @@ func TestEngineCatalogDTOSeparatesSummaryAndDetail(t *testing.T) {
 		PackageVersion: "1.0.0", ArtifactRef: "docker.io/lunafox/lunafox-engine-website-discovery@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		PackageDigest:  "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 		EngineAPIMajor: 2, SupportedTargetTypes: []string{"domain"},
-		ConfigSections:  []catalogdomain.EngineConfigSection{{ID: "httpx", RequiredEnabled: true}},
+		ConfigSections: []catalogdomain.EngineConfigSection{{
+			ID: "httpx", RequiredEnabled: true,
+			Params: []catalogdomain.EngineConfigParam{
+				{Key: "timeout", Type: "integer", Default: 30, Unit: "seconds"},
+				{Key: "threads", Type: "integer", Default: 10},
+			},
+		}},
 		LocaleResources: map[string]map[string]any{"zh": {"engine": map[string]any{"displayName": "站点发现"}}},
 	}
 	summary := NewEngineCatalogSummaryOutput(&item)
@@ -28,6 +34,12 @@ func TestEngineCatalogDTOSeparatesSummaryAndDetail(t *testing.T) {
 	if !detail.Execution.ConfigSections[0].RequiredEnabled {
 		t.Fatalf("detail lost requiredEnabled projection: %+v", detail.Execution.ConfigSections[0])
 	}
+	if got := detail.Execution.ConfigSections[0].Params[0].Unit; got != "seconds" {
+		t.Fatalf("detail unit = %q, want seconds", got)
+	}
+	if got := detail.Execution.ConfigSections[0].Params[1].Unit; got != "" {
+		t.Fatalf("omitted detail unit = %q", got)
+	}
 	payload, err := json.Marshal(detail)
 	if err != nil {
 		t.Fatal(err)
@@ -39,6 +51,9 @@ func TestEngineCatalogDTOSeparatesSummaryAndDetail(t *testing.T) {
 	}
 	if !strings.Contains(string(payload), `"requiredEnabled":true`) {
 		t.Fatalf("detail omitted requiredEnabled: %s", payload)
+	}
+	if !strings.Contains(string(payload), `"unit":"seconds"`) || strings.Contains(string(payload), `"unit":""`) {
+		t.Fatalf("detail unit JSON projection = %s", payload)
 	}
 }
 

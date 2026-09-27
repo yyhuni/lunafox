@@ -224,7 +224,7 @@ export function OrganizationSelectionWorkspace({
           </div>
           <div className="flex items-center justify-end gap-2 sm:shrink-0">
             {showSelectionCount ? (
-              <Badge variant="count" className="px-2 py-0.5">{t("selectedCount", { count: selectedOrganizationIds.length })}</Badge>
+              <Badge size="compact" variant="count">{t("selectedCount", { count: selectedOrganizationIds.length })}</Badge>
             ) : null}
             <Button type="button" variant="link" size="sm" onClick={onClearOrganizations} disabled={disabled || selectedOrganizationIds.length === 0}>
               {t("clear")}

@@ -16,22 +16,24 @@ helper. Product and Engine images are digest-qualified; PostgreSQL, Redis, Loki,
 and Alloy are pinned by multi-platform manifest digest.
 
 Keep the extracted directory: `.env` is the installation's host-owned
-configuration and relative resource paths resolve from this directory. Review
-`PUBLIC_HOST` and `PUBLIC_PORT`; the internal HTTPS `PUBLIC_URL` is derived from
-them. Once you write `DB_PASSWORD` or `JWT_SECRET`, restrict the file with
-`chmod 600 .env`; the lifecycle scripts enforce the same mode before they change
-anything.
+configuration and relative resource paths resolve from this directory. Set
+`PUBLIC_HOST` and `PUBLIC_PORT` with `--public-host <host>` and
+`--public-port <port>` during installation, or keep their existing `.env`
+values; the shipped defaults are `localhost` and `443`. The internal HTTPS
+`PUBLIC_URL` is derived from them. Once you write `DB_PASSWORD` or `JWT_SECRET`,
+restrict the file with `chmod 600 .env`; the lifecycle scripts enforce the same
+mode before they change anything.
 
 ### Install from the public repository
 
-In a Bash environment, review `.env` and run the lifecycle script. It starts the
-deployment with one `docker compose up -d` and waits until the deployment is
-fully ready:
+In a Bash environment, set the public address on the lifecycle command. It
+starts the deployment with one `docker compose up -d` and waits until the
+deployment is fully ready:
 
 ```console
 git clone https://github.com/yyhuni/lunafox.git
 cd lunafox
-./install.sh
+./install.sh --public-host luna.example.com
 ```
 
 `docker compose up -d` is equally supported and is the native Windows
@@ -52,7 +54,7 @@ permanent directory:
 ```console
 unzip lunafox-<version>.zip -d lunafox-<version>
 cd lunafox-<version>
-./install.sh
+./install.sh --public-host luna.example.com
 ```
 
 The extracted ZIP also supports the direct Compose path:
@@ -178,7 +180,7 @@ deployment state:
 
 | Script | Equivalent Compose command | Behaviour |
 | --- | --- | --- |
-| `./install.sh` | `docker compose up -d` | First start and safe re-run. Keeps an existing `.env` and every named volume. |
+| `./install.sh` | `docker compose up -d` | First start and safe re-run. `--public-host` and `--public-port` update only their matching `.env` keys; named volumes and all other settings remain intact. |
 | `./start.sh` | `docker compose up -d` | Starts an existing deployment. |
 | `./restart.sh` | `docker compose up -d --force-recreate` | Applies the current `.env` and `compose.override.yaml` to every container. |
 | `./stop.sh` | `docker compose stop` | Stops every resident service and keeps all data. |
@@ -208,14 +210,82 @@ adds one optional last line after the `logs.sh` and `status.sh` hints: if the
 preserved data can be discarded, `./uninstall.sh --purge --confirm` is the only
 way to delete the named volumes and start over.
 
-`install.sh` accepts only `--help`, reads every setting from `.env`, and runs
-`docker compose up -d` exactly once. It never pulls, builds, removes containers,
-or deletes data. Default `uninstall.sh` is reversible: it keeps named volumes,
-`.env`, the release directory, and the regular `compose.override.yaml` written
-by a completed Upgrade Operation. `./uninstall.sh --purge --confirm` verifies
-and deletes the named volumes declared by the current `compose.yaml`, then
-removes that version override for a clean reinstall from the same directory. It
-still preserves `.env` and the release directory.
+`install.sh` accepts `--public-host <host>`, `--public-port <port>`,
+`--cf-acceleration`, and `--help`. Address options are install-only: a host must
+be a hostname or IP address, and a port must be decimal 1 through 65535. An
+omitted address value keeps `.env` or the shipped `localhost` / `443` default;
+an explicit option atomically updates only its matching `.env` key. The command
+validates options before Docker access and runs `docker compose up -d` exactly
+once. Default `uninstall.sh` is reversible: it keeps named volumes, `.env`, the
+release directory, and the regular `compose.override.yaml` written by a
+completed Upgrade Operation. `./uninstall.sh --purge --confirm` verifies and
+deletes the named volumes declared by the current `compose.yaml`, then removes
+that version override for a clean reinstall from the same directory. It still
+preserves `.env` and the release directory.
+
+### Image preheat and recovery
+
+Every modern installation entry uses the same Compose-managed
+`engine-preheater` one-shot gate: the public repository, Release ZIP, direct
+Compose, Cloudflare-accelerated install, and supported development/private
+entry points all consume one release-bound `preheat-manifest.json`. Before the
+application services start, it preheats every Engine Runtime published for the
+host platform and the complete image closure for the selected Compose profile.
+That includes all published Engine Runtimes even when a Workflow is disabled;
+`embedded` includes `postgres`, while `external` excludes it.
+
+The preheat deadline is independent from readiness. The default
+`LUNAFOX_PREHEAT_TIMEOUT_SECONDS` is `900` seconds and accepts `300` through
+`3600`; `LUNAFOX_READY_TIMEOUT_SECONDS` only controls the outer readiness wait.
+If readiness expires first, the preheater is left running. A preheat failure
+keeps the containers, logs, verified Docker cache, named volumes, database, and
+application data in place. Inspect the read-only status and service log, then
+rerun only the gate after fixing transport or configuration:
+
+```console
+docker compose up -d --force-recreate engine-preheater
+```
+
+Cloudflare acceleration changes only the transport candidates for the same
+digest-qualified entries. It does not create a second manifest or a different
+closure. During an Upgrade Operation, the target Compose and
+`third-party-image-policy.json` are fetched from the immutable
+`manifests/<release-tag>/` channel directory and are validated against that
+release's preheat manifest before the private candidate snapshot is preheated;
+the active deployment is promoted only after the gate succeeds.
+
+#### Cloudflare accelerated installation
+
+When Docker Hub or GHCR transport is restricted, opt in explicitly:
+
+```console
+./install.sh --public-host luna.example.com --public-port 8443 --cf-acceleration
+```
+
+`--cf-acceleration` is the only acceleration option and is not an `.env`
+setting. It can be combined with the public-address options; no other lifecycle
+command accepts any of these install-only options. It requires `cosign`. Before
+its one `docker compose up -d`, the installer validates the packaged
+`third-party-image-policy.json` and prepares the complete selected closure.
+`DATABASE_MODE=embedded` includes `postgres`, Redis, Loki, Alloy, the
+first-party Runtime and one-shot services, Engine Package bootstrap, and the
+resident Agent. External mode prepares the same closure except `postgres`.
+
+First-party `ghcr.io` identities are verified with `cosign` before an identical
+digest is downloaded through Cloudflare. PostgreSQL, Redis, Loki, and Alloy are
+LunaFox-reviewed fixed-digest content with OCI digest checks; this does not
+claim publisher signature verification. A successful opt-in writes protected
+state, its Compose overlay, and its Engine inventory under
+`.lunafox-cf-acceleration/`. Do not edit those files. Later `./start.sh` and
+`./restart.sh` validate and reuse that state; a direct `docker compose up -d`
+always ignores it, and a deployment without that state keeps the normal
+non-Cloudflare defaults.
+
+Only a classified Cloudflare DNS, TCP, TLS, timeout, rate-limit, or temporary
+5xx transport failure can try the same-digest fallback sequence. Policy,
+authentication, signature, digest, and content-integrity failures stop without
+fallback. A preparation failure leaves `.env`, containers, named volumes,
+database, and application data in place before Compose mutation.
 
 The scripts need Bash 3.2 or newer and work from any working directory. Windows
 keeps the direct Compose commands in PowerShell.
@@ -304,12 +374,13 @@ inconsistent identity state fails with an explicit repair error and never
 silently registers another Agent.
 
 Default resources follow the same fail-closed rule. A fresh state imports the
-packaged fingerprint corpus and wordlists once. Later bootstrap runs validate
-the original records, files, hashes, sizes, descriptions, and tags while
-leaving additional user resources untouched. Missing, partially deleted, or
-changed defaults fail with an explicit repair error; bootstrap never fills in
-or overwrites that state. An initialized corpus that was fully cleared is not
-silently reseeded.
+packaged fingerprint corpus and wordlists once. Later bootstrap runs leave
+initialized wordlist rows and their persisted content untouched, including
+user edits, and only validate the catalog identity plus the physical regular
+file boundary. Missing or partially deleted default wordlists still fail with
+an explicit repair error; bootstrap never fills in or overwrites that state.
+The fingerprint corpus retains its separate record and content integrity
+checks. An initialized corpus that was fully cleared is not silently reseeded.
 
 The preflight checks the actual Docker socket, Linux execution node,
 named-volume subpaths, and read-only execution mounts before business bootstrap.

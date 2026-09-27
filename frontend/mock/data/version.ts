@@ -1,4 +1,4 @@
-import type { ReleaseManifestSummary, UpdateCheckResult, UpgradeLogEntry, UpgradeOperation, UpgradeOperationFull, UpgradeOperationStatus, VersionInfo } from '@/types/version.types'
+import type { ReleaseManifestSummary, UpdateCheckResult, UpgradeAgentDiagnostic, UpgradeHostAction, UpgradeHostActivity, UpgradeLogEntry, UpgradeOperation, UpgradeOperationFull, UpgradeOperationStatus, VersionInfo } from '@/types/version.types'
 import { getMockScenario } from "../scenarios"
 
 export const mockVersionInfo: VersionInfo = {
@@ -41,7 +41,8 @@ export const mockUpdateCheckResult: UpdateCheckResult = {
   candidate: mockCandidateManifest,
 }
 
-const MOCK_UPGRADE_STATE_KEY = "lunafox.mock.upgrade.state.v1"
+const MOCK_UPGRADE_STATE_KEY = "lunafox.mock.upgrade.state.v2"
+const LEGACY_MOCK_UPGRADE_STATE_KEY = "lunafox.mock.upgrade.state.v1"
 
 type PersistedMockUpgradeState = {
   operation: UpgradeOperation
@@ -101,6 +102,9 @@ function mockProgressLogsForStage(status: UpgradeOperationStatus, timestamp: str
 function readPersistedUpgradeState(): PersistedMockUpgradeState | null {
   if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return null
   try {
+    // Mock fixtures intentionally survive a refresh, but old schemas must not
+    // resume a simulated upgrade after the response contract changes.
+    globalThis.localStorage.removeItem(LEGACY_MOCK_UPGRADE_STATE_KEY)
     const raw = globalThis.localStorage.getItem(MOCK_UPGRADE_STATE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as Partial<PersistedMockUpgradeState>
@@ -144,6 +148,7 @@ function clearPersistedUpgradeState(): void {
   if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return
   try {
     globalThis.localStorage.removeItem(MOCK_UPGRADE_STATE_KEY)
+    globalThis.localStorage.removeItem(LEGACY_MOCK_UPGRADE_STATE_KEY)
   } catch {
     // The in-memory fixture remains reset even when browser storage is unavailable.
   }
@@ -209,7 +214,7 @@ export function getMockUpgradeOperation(): UpgradeOperation | null {
   }
 }
 
-export function getMockUpgradeOperationFull(): UpgradeOperationFull | null {
+export function getMockUpgradeOperationFull(includeHostActivity = false): UpgradeOperationFull | null {
   const operation = getMockUpgradeOperation()
   if (!operation) return null
   return {
@@ -218,6 +223,38 @@ export function getMockUpgradeOperationFull(): UpgradeOperationFull | null {
     workDisposition: "cancelled",
     planSummary: { touchedServices: ["agent", "bootstrap", "engine", "engine_package", "engine_runtime", "frontend", "migration", "nginx", "server"] },
     confirmedDeploymentVersion: operation.status === "succeeded" ? operation.releaseVersion : operation.currentVersion,
+    agentDiagnostics: mockAgentDiagnostics(operation),
+    ...(includeHostActivity ? { hostActivity: mockHostActivity(operation) } : {}),
+  }
+}
+
+function mockAgentDiagnostics(operation: UpgradeOperation): UpgradeAgentDiagnostic[] {
+  if (operation.status !== "needs_attention" || operation.agentSummary.expected <= operation.agentSummary.ready) return []
+  return [{
+    agentId: 1,
+    name: "agents/1",
+    displayNameSnapshot: "mock-edge-1",
+    reasonCode: "heartbeat_missing_or_stale",
+    detail: "Agent heartbeat is missing or stale",
+    source: "server_observation",
+  }]
+}
+
+function mockHostActivity(operation: UpgradeOperation): UpgradeHostActivity | null {
+  const actionByStatus: Partial<Record<UpgradeOperationStatus, UpgradeHostAction>> = {
+    preflight: "preflight",
+    updating: mockUpgradePollCount % 2 === 0 ? "pull_images" : "update_services",
+    migrating: "database_migration",
+    restarting: "wait_for_service_health",
+    agent_verifying: "wait_for_service_health",
+    verifying: "verify_runtime_images",
+  }
+  const action = actionByStatus[operation.status]
+  if (!action) return null
+  return {
+    action,
+    startedAt: operation.stageTimes[operation.status] ?? operation.createdAt,
+    lastHeartbeatAt: operation.updatedAt,
   }
 }
 

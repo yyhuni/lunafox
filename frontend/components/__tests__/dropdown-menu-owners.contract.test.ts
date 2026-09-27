@@ -14,6 +14,7 @@ describe("dropdown-menu owners contract", () => {
   it("keeps compact icon-trigger menus on the shared 32px action geometry", () => {
     expect(source).toContain('buttonSize = "icon-sm"')
     expect(source).toContain('buttonVariant = "ghost"')
+    expect(source).toContain('layout="compactAction"')
     expect(source).toContain('width="content-fit"')
   })
 

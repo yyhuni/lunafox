@@ -62,6 +62,7 @@ func (service *Service) reconcileAfterHostEvent(ctx context.Context, operation *
 		operation.Diagnostic = sanitizeUpgradeDiagnostic(err.Error())
 	}
 
+	previousExpectations := append([]domain.AgentExpectation(nil), operation.AgentExpectations...)
 	refreshed, refreshErr := service.refreshAgentExpectations(ctx, target, operation.AgentExpectations)
 	if refreshErr != nil {
 		return service.recordVerificationDiagnostic(ctx, operation, "Agent verification data is temporarily unavailable")
@@ -69,6 +70,9 @@ func (service *Service) reconcileAfterHostEvent(ctx context.Context, operation *
 	operation.AgentExpectations = refreshed
 	operation.AgentSummary = summarizeAgentExpectations(refreshed)
 	operation.UpdatedAt = service.now().UTC()
+	if err := appendAgentVerificationProgressEvent(operation, previousExpectations, refreshed, operation.UpdatedAt); err != nil {
+		return nil, err
+	}
 
 	if !allAgentsReady(refreshed) {
 		deadline := operation.AgentVerificationDeadline
@@ -96,6 +100,61 @@ func (service *Service) reconcileAfterHostEvent(ctx context.Context, operation *
 	}
 
 	return service.verifyDeployment(ctx, operation, manifest)
+}
+
+// appendAgentVerificationProgressEvent records only a meaningful change in
+// the blocking set or its structured evidence. Polls that repeat the same
+// observation update the Operation timestamp but do not grow the event log.
+func appendAgentVerificationProgressEvent(operation *domain.Operation, previous, current []domain.AgentExpectation, at time.Time) error {
+	if operation == nil || !agentDiagnosticStateChanged(previous, current) {
+		return nil
+	}
+	event := domain.ProgressEvent{
+		Timestamp: at.UTC(), Stage: operation.Status, MessageKey: "agentVerificationChanged",
+		Message:  "Agent verification evidence changed",
+		Metadata: map[string]string{"blockingAgents": fmt.Sprintf("%d", countBlockingAgents(current))},
+	}
+	merged, _, err := domain.MergeProgressEvents(operation.ProgressEvents, []domain.ProgressEvent{event})
+	if err != nil {
+		return fmt.Errorf("record Agent verification progress: %w", err)
+	}
+	operation.ProgressEvents = merged
+	return nil
+}
+
+func countBlockingAgents(expectations []domain.AgentExpectation) int {
+	count := 0
+	for _, expectation := range expectations {
+		if !expectation.Ready() {
+			count++
+		}
+	}
+	return count
+}
+
+func agentDiagnosticStateChanged(previous, current []domain.AgentExpectation) bool {
+	state := func(expectations []domain.AgentExpectation) map[int]string {
+		result := make(map[int]string, len(expectations))
+		for _, expectation := range expectations {
+			if expectation.AgentID <= 0 || expectation.Ready() {
+				continue
+			}
+			result[expectation.AgentID] = strings.Join([]string{
+				expectation.ReasonCode, string(expectation.DiagnosticSource), expectation.Diagnostic,
+			}, "\x00")
+		}
+		return result
+	}
+	before, after := state(previous), state(current)
+	if len(before) != len(after) {
+		return true
+	}
+	for agentID, value := range before {
+		if after[agentID] != value {
+			return true
+		}
+	}
+	return false
 }
 
 // verifyDeployment performs only the final service/digest evidence check. It
@@ -151,6 +210,7 @@ func (service *Service) verifyDeployment(ctx context.Context, operation *domain.
 	previous := operation.Status
 	operation.Status = domain.StatusSucceeded
 	operation.Diagnostic = ""
+	operation.HostActivity = nil
 	operation.CompletedAt = &now
 	operation.UpdatedAt = now
 	if operation.StageTimes == nil {
@@ -208,6 +268,9 @@ func (service *Service) refreshAgentExpectations(ctx context.Context, target Age
 	result := make([]domain.AgentExpectation, 0, len(expected))
 	for _, wanted := range expected {
 		if observed, ok := byID[wanted.AgentID]; ok {
+			// Agent identity is fixed at operation creation. The snapshot-only
+			// fallback must preserve it just as production Reconcile does.
+			observed.DisplayNameSnapshot = wanted.DisplayNameSnapshot
 			observed.DesiredVersion = wanted.DesiredVersion
 			observed.TargetDigest = wanted.TargetDigest
 			result = append(result, observed)
@@ -219,6 +282,8 @@ func (service *Service) refreshAgentExpectations(ctx context.Context, target Age
 		wanted.ObservedVersion = ""
 		wanted.ObservedDigest = ""
 		wanted.LastObservedAt = nil
+		wanted.ReasonCode = domain.AgentReasonNotRegistered
+		wanted.DiagnosticSource = domain.AgentDiagnosticSourceServer
 		wanted.Diagnostic = "Agent is no longer registered"
 		result = append(result, wanted)
 	}
@@ -266,6 +331,7 @@ func (service *Service) moveVerificationTerminal(ctx context.Context, operation 
 	now := service.now().UTC()
 	operation.Status = status
 	operation.Diagnostic = sanitizeUpgradeDiagnostic(diagnostic)
+	operation.HostActivity = nil
 	operation.CompletedAt = &now
 	operation.UpdatedAt = now
 	if operation.StageTimes == nil {

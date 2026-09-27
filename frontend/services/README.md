@@ -86,6 +86,28 @@ Backend HTTP/JSON boundaries follow the repository's Google AIP precedence rules
 - If the backend does not expose an AIP endpoint for an action, services must fail fast with an explicit error instead of silently falling back to a legacy route or pretending success.
 - New or migrated services must add focused service contract tests that assert the AIP path, payload shape, resource-name conversion, and UI-facing response shape.
 
+## Upgrade Operation FULL Compatibility
+
+The upgrade status hook requests `view=FULL&includeHostActivity=true`. The
+Server may return one optional, structured `hostActivity` fact only for that
+exact opt-in. A missing field means an older Server ignored the parameter and
+must remain a valid no-capability response; `null` means a supporting Server
+has no current controlled host action. When present as an object, the service
+strictly validates its closed action catalog, lifecycle ownership, and ordered
+timestamps. BASIC responses and historical FULL requests continue to reject
+the field, so cached clients retain their previous response shape.
+
+## Update-check Release Notes
+
+`VersionService.checkForUpdates` treats `candidate.releaseNotes` as an
+optional server projection. The Server and release-manifest parser own the
+compatibility decision, including the registered legacy bridge and development
+manifest exceptions; the frontend must not infer that policy from
+`releaseVersion`. When notes are present, the service strictly validates their
+closed fields, bilingual body, size/encoding boundaries, and SHA-256 digest.
+When notes are absent, the About surface renders its explicit unavailable state
+and does not fetch a second remote source.
+
 ## Mock Mode
 
 - A service that calls `@/lib/api-client`, `axios`, or `fetch` must stay in its real HTTP form.

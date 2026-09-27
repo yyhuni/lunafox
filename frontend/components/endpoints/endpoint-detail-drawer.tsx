@@ -155,7 +155,7 @@ function ResponseCodeRegion({
       <div className="flex justify-end">
         <CopyButton value={value} copyLabel={copyLabel} copiedLabel={copiedLabel} toastId={toastId} />
       </div>
-      <pre className="max-h-96 overflow-auto rounded-md border bg-muted/30 p-3 font-mono text-xs leading-5 whitespace-pre-wrap break-words">
+      <pre className="radius-control max-h-96 overflow-auto border bg-muted/30 p-3 font-mono text-xs leading-5 whitespace-pre-wrap break-words">
         {value}
       </pre>
     </div>

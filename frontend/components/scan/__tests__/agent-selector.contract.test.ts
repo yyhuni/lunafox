@@ -90,7 +90,7 @@ describe("scan agent selector contract", () => {
     expect(source).toContain('value="automatic"')
     expect(source).toContain("semanticIcons.concept.automaticAssignment")
     expect(source).toContain('<span className="min-w-0 flex-1">')
-    expect(source).toContain('<Badge variant="success" className="shrink-0">{t("recommended")}</Badge>')
+    expect(source).toContain('<Badge size="compact" variant="success" className="shrink-0">{t("recommended")}</Badge>')
     expect(source).not.toContain('{value === null ? <Check className="size-4 shrink-0 text-primary" /> : null}')
   })
 

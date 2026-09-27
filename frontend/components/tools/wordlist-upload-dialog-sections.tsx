@@ -147,6 +147,7 @@ export function WordlistUploadFields({
         <Label htmlFor="description">{t("descLabel")}</Label>
         <Input
           id="description"
+          size="sm"
           name="description"
           autoComplete="off"
           value={description}

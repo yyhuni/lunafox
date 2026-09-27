@@ -18,6 +18,16 @@ type agentVerificationSourceStub struct {
 	notifiedTarget AgentUpgradeTarget
 }
 
+type snapshotOnlyAgentSourceStub struct{ expectations []domain.AgentExpectation }
+
+func (stub *snapshotOnlyAgentSourceStub) Snapshot(context.Context, AgentUpgradeTarget) ([]domain.AgentExpectation, error) {
+	return append([]domain.AgentExpectation(nil), stub.expectations...), nil
+}
+
+func (*snapshotOnlyAgentSourceStub) NotifyUpdateRequired(context.Context, AgentUpgradeTarget, []domain.AgentExpectation) error {
+	return nil
+}
+
 func (stub *agentVerificationSourceStub) Snapshot(context.Context, AgentUpgradeTarget) ([]domain.AgentExpectation, error) {
 	return append([]domain.AgentExpectation(nil), stub.expectations...), nil
 }
@@ -143,6 +153,59 @@ func TestAgentVerificationRequiresReconnectBeforeSucceededAndNotifiesOnce(t *tes
 	}
 	if source.notifyCalls != 1 || verifier.calls != 1 {
 		t.Fatalf("late host event caused duplicate verification: notify=%d verifier=%d", source.notifyCalls, verifier.calls)
+	}
+}
+
+func TestAgentVerificationProgressEventSkipsUnchangedPolls(t *testing.T) {
+	now := time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC)
+	operation := &domain.Operation{Status: domain.StatusAgentVerifying}
+	previous := []domain.AgentExpectation{{
+		AgentID: 42, ReasonCode: domain.AgentReasonHeartbeatMissing, DiagnosticSource: domain.AgentDiagnosticSourceServer,
+		Diagnostic: "Agent heartbeat is missing or stale",
+	}}
+	current := append([]domain.AgentExpectation(nil), previous...)
+	if err := appendAgentVerificationProgressEvent(operation, previous, current, now); err != nil {
+		t.Fatal(err)
+	}
+	if len(operation.ProgressEvents) != 0 {
+		t.Fatalf("unchanged poll appended events=%#v", operation.ProgressEvents)
+	}
+	current[0].ReasonCode = domain.AgentReasonVersionMismatch
+	current[0].Diagnostic = "Agent is running a different version"
+	if err := appendAgentVerificationProgressEvent(operation, previous, current, now); err != nil {
+		t.Fatal(err)
+	}
+	if len(operation.ProgressEvents) != 1 || operation.ProgressEvents[0].MessageKey != "agentVerificationChanged" {
+		t.Fatalf("changed poll events=%#v", operation.ProgressEvents)
+	}
+	if err := appendAgentVerificationProgressEvent(operation, current, current, now.Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if len(operation.ProgressEvents) != 1 {
+		t.Fatalf("replayed poll duplicated events=%#v", operation.ProgressEvents)
+	}
+}
+
+func TestRefreshAgentExpectationsFallbackPreservesSnapshotsAndClassifiesDeletion(t *testing.T) {
+	target := AgentUpgradeTarget{Version: "1.2.3", Digest: "sha256:" + strings.Repeat("a", 64)}
+	service := &Service{agentSource: &snapshotOnlyAgentSourceStub{expectations: []domain.AgentExpectation{{
+		AgentID: 7, DisplayNameSnapshot: "renamed-after-start", DesiredVersion: target.Version, TargetDigest: target.Digest,
+		ObservedVersion: target.Version, Connected: true, Healthy: true, ClaimReady: true,
+	}}}}
+	expected := []domain.AgentExpectation{
+		{AgentID: 7, DisplayNameSnapshot: "start-name", DesiredVersion: target.Version, TargetDigest: target.Digest},
+		{AgentID: 8, DisplayNameSnapshot: "deleted-name", DesiredVersion: target.Version, TargetDigest: target.Digest},
+	}
+
+	refreshed, err := service.refreshAgentExpectations(context.Background(), target, expected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(refreshed) != 2 || refreshed[0].DisplayNameSnapshot != "start-name" {
+		t.Fatalf("current Agent snapshot changed during fallback reconciliation: %#v", refreshed)
+	}
+	if refreshed[1].DisplayNameSnapshot != "deleted-name" || refreshed[1].ReasonCode != domain.AgentReasonNotRegistered || refreshed[1].DiagnosticSource != domain.AgentDiagnosticSourceServer {
+		t.Fatalf("deleted Agent fallback = %#v", refreshed[1])
 	}
 }
 
@@ -363,4 +426,5 @@ func TestMergeObservedDigestsKeepsFrontendOnlyEvidenceScoped(t *testing.T) {
 
 var _ AgentUpgradeSource = (*agentVerificationSourceStub)(nil)
 var _ AgentUpgradeReconciler = (*agentVerificationSourceStub)(nil)
+var _ AgentUpgradeSource = (*snapshotOnlyAgentSourceStub)(nil)
 var _ UpgradeVerifier = (*agentVerificationVerifierStub)(nil)

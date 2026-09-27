@@ -20,11 +20,18 @@ describe("search contract", () => {
     const containsURL = getMockSearchResults({ q: 'url="ac"', assetType: "website" })
     expect(containsURL.results.length).toBeGreaterThan(1)
 
+    const containsHost = getMockSearchResults({ q: 'host="ac"', assetType: "website" })
+    expect(containsHost.results.length).toBeGreaterThan(1)
+
+    const containsTitle = getMockSearchResults({ q: 'title="Ac"', assetType: "website" })
+    expect(containsTitle.results.length).toBeGreaterThan(1)
+
     const exactURL = getMockSearchResults({ q: 'url=="https://acme.com"', assetType: "website" })
     expect(exactURL.results).toHaveLength(1)
     expect(exactURL.results[0]?.url).toBe("https://acme.com")
 
     expect(getMockSearchResults({ q: "jd", assetType: "website" }).results).toHaveLength(0)
+    expect(() => getMockSearchResults({ q: 'host="a"', assetType: "website" })).toThrow(GlobalAssetSearchQueryError)
   })
 
   it("does not retain the permissive legacy query syntax", () => {

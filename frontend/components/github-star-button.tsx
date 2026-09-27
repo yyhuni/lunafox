@@ -99,7 +99,7 @@ export function GithubStarButton() {
     };
     return (<>
       <Popover onOpenChange={handlePopoverOpenChange}>
-      <PopoverTrigger render={<Button size="sm" variant="ghost" aria-label={t("openPopover")} aria-busy={isRefreshing || undefined}/>}>
+      <PopoverTrigger render={<Button size="sm" variant="ghost" layout="compactAction" aria-label={t("openPopover")} aria-busy={isRefreshing || undefined}/>}>
           <IconBrandGithub className="size-4"/>
           {repo ? (<span className={cn(textRole.monoLabel, "hidden tabular-nums text-muted-foreground sm:inline")}>{repo.stars.toLocaleString()}</span>) : null}
         </PopoverTrigger>

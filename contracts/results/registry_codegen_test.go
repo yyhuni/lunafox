@@ -43,6 +43,11 @@ func TestCodegenDescriptorsExposeCanonicalOrderAndFieldMetadata(t *testing.T) {
 	if vulnerability.Fields[len(vulnerability.Fields)-1].GoType != "map[string]any" || !vulnerability.Fields[len(vulnerability.Fields)-1].SchemaBasics.ExplicitObject {
 		t.Fatalf("vulnerability rawOutput metadata = %#v", vulnerability.Fields[len(vulnerability.Fields)-1])
 	}
+	directory := descriptors[6]
+	contentType := directory.Fields[3]
+	if contentType.GoName != "ContentType" || contentType.JSONName != "contentType" || contentType.Presence != FieldPresenceRequired || !contentType.SchemaBasics.ValidUTF8 || contentType.SchemaBasics.NonEmpty {
+		t.Fatalf("directory contentType metadata = %#v", contentType)
+	}
 }
 
 func TestCodegenDescriptorsAreDeeplyDetached(t *testing.T) {

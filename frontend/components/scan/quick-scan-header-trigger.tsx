@@ -16,6 +16,7 @@ export function QuickScanHeaderTrigger() {
           data-slot="quick-scan-trigger"
           variant="ghost"
           size="icon-sm"
+          layout="compactAction"
           aria-label={t("quickScan")}
         >
           <IconZap className="h-4 w-4" />

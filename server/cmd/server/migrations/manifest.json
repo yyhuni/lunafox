@@ -23,6 +23,13 @@
       "up": "000003_scheduled_scan_time_zone.up.sql",
       "down": "000003_scheduled_scan_time_zone.down.sql",
       "checksum": "sha256:a2399a12cd536f6045810809b869f1c0c6a6a903fff2d8d4ef380bb031482107"
+    },
+    {
+      "id": "000004",
+      "slug": "upgrade_operation_host_activity",
+      "up": "000004_upgrade_operation_host_activity.up.sql",
+      "down": "000004_upgrade_operation_host_activity.down.sql",
+      "checksum": "sha256:940a3cefb86090ec0999fc381f7d51e3b3cea37ee87c0c67adc4afbac128d34b"
     }
   ]
 }

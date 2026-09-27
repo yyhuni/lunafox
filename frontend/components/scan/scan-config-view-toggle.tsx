@@ -24,6 +24,7 @@ import {
   EngineConfigForm,
   initFormValuesFromWorkflow,
   serializeFormValuesToConfig,
+  type EngineParamControlRenderer,
 } from "./engine-config-form"
 import {
   parseWorkflowConfigurationDraftStrict,
@@ -49,6 +50,8 @@ interface ScanConfigViewToggleProps {
   disabled?: boolean
   isConfigEdited?: boolean
   className?: string
+  renderParamControl?: EngineParamControlRenderer
+  defaultExpandedStepIds?: ReadonlySet<string>
 }
 
 export type ScanConfigValidationHandle = {
@@ -71,6 +74,8 @@ export const ScanConfigViewToggle = React.forwardRef<
   disabled = false,
   isConfigEdited = false,
   className,
+  renderParamControl,
+  defaultExpandedStepIds,
 }: ScanConfigViewToggleProps, ref) {
   const t = useTranslations("scan.initiate")
   const [viewMode, setViewMode] = useState<ConfigViewMode>("form")
@@ -78,7 +83,9 @@ export const ScanConfigViewToggle = React.forwardRef<
   const [fieldErrors, setFieldErrors] = useState<Map<string, ConfigResourceFieldError>>(
     () => new Map()
   )
-  const [expandedStepIds, setExpandedStepIds] = useState<Set<string>>(() => new Set())
+  const [expandedStepIds, setExpandedStepIds] = useState<Set<string>>(
+    () => new Set(defaultExpandedStepIds ?? [])
+  )
   const [pendingFocusFieldId, setPendingFocusFieldId] = useState<string | null>(null)
   const [schemaValidationError, setSchemaValidationError] = useState<string | null>(null)
 
@@ -383,6 +390,7 @@ export const ScanConfigViewToggle = React.forwardRef<
               expandedStepIds={expandedStepIds}
               onExpandedStepChange={handleExpandedStepChange}
               onFieldRepaired={handleFieldRepaired}
+              renderParamControl={renderParamControl}
               onChange={handleFormChange}
             />
             ) : (

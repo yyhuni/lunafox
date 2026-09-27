@@ -77,6 +77,75 @@ func TestSubfinderAPIKeySettingsServiceUpdateSettingsPreservesOmittedProviders(t
 	}
 }
 
+func TestSubfinderAPIKeySettingsServiceUpdateSettingsPreservesOmittedProviderFields(t *testing.T) {
+	store := &subfinderAPIKeySettingsStoreStub{
+		settings: &catalogdomain.SubfinderProviderSettings{Providers: catalogdomain.SubfinderProviderConfigs{
+			"fofa": {Enabled: true, Values: map[string]string{"email": "old@example.com", "apiKey": "old-fofa"}},
+		}},
+	}
+	service := NewSubfinderAPIKeySettingsService(store)
+
+	settings, err := service.UpdateSettings(catalogdomain.SubfinderProviderConfigs{
+		"fofa": {Enabled: true, Values: map[string]string{"email": "new@example.com"}},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	fofa := settings.Providers["fofa"]
+	if fofa.Values["email"] != "new@example.com" || fofa.Values["apiKey"] != "old-fofa" {
+		t.Fatalf("expected omitted api key to be preserved, got %+v", fofa)
+	}
+	if fofa.Status != catalogdomain.SubfinderProviderStatusConfigured {
+		t.Fatalf("expected server-computed configured status, got %q", fofa.Status)
+	}
+}
+
+func TestSubfinderAPIKeySettingsServiceUpdateSettingsClearsExplicitEmptyProviderField(t *testing.T) {
+	store := &subfinderAPIKeySettingsStoreStub{
+		settings: &catalogdomain.SubfinderProviderSettings{Providers: catalogdomain.SubfinderProviderConfigs{
+			"shodan": {Enabled: true, Values: map[string]string{"apiKey": "old-shodan"}},
+		}},
+	}
+	service := NewSubfinderAPIKeySettingsService(store)
+
+	settings, err := service.UpdateSettings(catalogdomain.SubfinderProviderConfigs{
+		"shodan": {Enabled: false, Values: map[string]string{"apiKey": ""}},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	shodan := settings.Providers["shodan"]
+	if value, ok := shodan.Values["apiKey"]; !ok || value != "" {
+		t.Fatalf("expected explicit empty api key to clear stored value, got %+v", shodan.Values)
+	}
+	if shodan.Status != catalogdomain.SubfinderProviderStatusUnconfigured {
+		t.Fatalf("expected disabled provider to be unconfigured, got %q", shodan.Status)
+	}
+}
+
+func TestSubfinderAPIKeySettingsServiceUpdateSettingsIgnoresClientStatus(t *testing.T) {
+	store := &subfinderAPIKeySettingsStoreStub{
+		settings: &catalogdomain.SubfinderProviderSettings{Providers: catalogdomain.SubfinderProviderConfigs{
+			"shodan": {Enabled: false, Status: catalogdomain.SubfinderProviderStatusUnconfigured, Values: map[string]string{}},
+		}},
+	}
+	service := NewSubfinderAPIKeySettingsService(store)
+
+	settings, err := service.UpdateSettings(catalogdomain.SubfinderProviderConfigs{
+		"shodan": {
+			Enabled: true,
+			Status:  catalogdomain.SubfinderProviderStatusUnconfigured,
+			Values:  map[string]string{"apiKey": "new-shodan"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := settings.Providers["shodan"].Status; got != catalogdomain.SubfinderProviderStatusConfigured {
+		t.Fatalf("expected server-computed configured status, got %q", got)
+	}
+}
+
 func TestSubfinderAPIKeySettingsServiceUpdateSettingsRejectsUnsupportedProvider(t *testing.T) {
 	service := NewSubfinderAPIKeySettingsService(&subfinderAPIKeySettingsStoreStub{})
 

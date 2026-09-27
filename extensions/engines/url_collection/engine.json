@@ -18,6 +18,7 @@
             "key": "timeout",
             "type": "integer",
             "default": 28800,
+            "unit": "seconds",
             "minimum": 60,
             "maximum": 604800
           }
@@ -27,20 +28,20 @@
         "id": "katana",
         "defaultEnabled": true,
         "params": [
-          {"key": "timeout", "type": "integer", "default": 28800, "minimum": 60, "maximum": 604800},
+          {"key": "timeout", "type": "integer", "default": 28800, "unit": "seconds", "minimum": 60, "maximum": 604800},
           {"key": "depth", "type": "integer", "default": 3, "minimum": 1, "maximum": 10},
           {"key": "concurrency", "type": "integer", "default": 10, "minimum": 1, "maximum": 100},
           {"key": "rate-limit", "type": "integer", "default": 30, "minimum": 1, "maximum": 500},
-          {"key": "request-timeout", "type": "integer", "default": 10, "minimum": 1, "maximum": 120},
+          {"key": "request-timeout", "type": "integer", "default": 10, "unit": "seconds", "minimum": 1, "maximum": 120},
           {"key": "retries", "type": "integer", "default": 1, "minimum": 0, "maximum": 5},
-          {"key": "delay", "type": "integer", "default": 0, "minimum": 0, "maximum": 30}
+          {"key": "delay", "type": "integer", "default": 0, "unit": "seconds", "minimum": 0, "maximum": 30}
         ]
       },
       {
         "id": "uro",
         "defaultEnabled": true,
       "params": [
-          {"key": "timeout", "type": "integer", "default": 3600, "minimum": 60, "maximum": 21600},
+          {"key": "timeout", "type": "integer", "default": 3600, "unit": "seconds", "minimum": 60, "maximum": 21600},
           {"key": "whitelist", "type": "stringArray", "default": []},
           {"key": "blacklist", "type": "stringArray", "default": []},
           {"key": "filters", "type": "stringArray", "default": [], "enum": ["hasparams", "noparams", "hasext", "noext", "allexts", "keepcontent", "keepslash", "vuln"]}
@@ -50,10 +51,10 @@
         "id": "httpx",
         "defaultEnabled": true,
         "params": [
-          {"key": "timeout", "type": "integer", "default": 14400, "minimum": 60, "maximum": 604800},
+          {"key": "timeout", "type": "integer", "default": 14400, "unit": "seconds", "minimum": 60, "maximum": 604800},
           {"key": "threads", "type": "integer", "default": 25, "minimum": 1, "maximum": 200},
           {"key": "rate-limit", "type": "integer", "default": 150, "minimum": 1, "maximum": 1000},
-          {"key": "request-timeout", "type": "integer", "default": 10, "minimum": 1, "maximum": 120},
+          {"key": "request-timeout", "type": "integer", "default": 10, "unit": "seconds", "minimum": 1, "maximum": 120},
           {"key": "retries", "type": "integer", "default": 1, "minimum": 0, "maximum": 5}
         ]
       }

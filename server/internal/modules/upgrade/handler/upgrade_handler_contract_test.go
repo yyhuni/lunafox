@@ -431,6 +431,85 @@ func TestUpgradeHandlerGetAndRetryUseCanonicalOperationIdentity(t *testing.T) {
 	}
 }
 
+func TestUpgradeHandlerHostActivityRequiresExactEnhancedFullOptIn(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	operation := handlerTestOperation()
+	operation.ExecutionMode = domain.ExecutionModeFull
+	operation.HostActivity = &domain.HostActivity{
+		Action:          domain.HostActionUpdateResidentAgent,
+		StartedAt:       operation.CreatedAt,
+		LastHeartbeatAt: operation.UpdatedAt,
+	}
+	service := &handlerContractService{getOperation: operation, activeOperation: operation}
+	engine := gin.New()
+	manager := auth.NewJWTManager("test-secret-key-32-chars-long!!", time.Minute, time.Hour)
+	engine.Use(middleware.AuthMiddleware(manager, handlerTokenVersionReader{version: 1}))
+	RegisterTestUpgradeHandler(engine, NewUpgradeHandler(service))
+	token, _, err := manager.GenerateAccessToken(7, "admin", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	request := func(path string) map[string]json.RawMessage {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		recorder := httptest.NewRecorder()
+		engine.ServeHTTP(recorder, req)
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("request %q status=%d body=%s", path, recorder.Code, recorder.Body.String())
+		}
+		var body map[string]json.RawMessage
+		if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+			t.Fatal(err)
+		}
+		return body
+	}
+
+	for _, path := range []string{
+		"/v1/upgradeOperations/11111111-1111-4111-8111-111111111111",
+		"/v1/upgradeOperations/11111111-1111-4111-8111-111111111111?view=FULL",
+		"/v1/upgradeOperations/11111111-1111-4111-8111-111111111111?view=FULL&includeHostActivity=false",
+		"/v1/upgradeOperations/11111111-1111-4111-8111-111111111111?view=FULL&includeHostActivity=TRUE",
+		"/v1/upgradeOperations/11111111-1111-4111-8111-111111111111?view=FULL&includeHostActivity=true&includeHostActivity=false",
+	} {
+		if _, found := request(path)["hostActivity"]; found {
+			t.Fatalf("historical response %q unexpectedly contains hostActivity", path)
+		}
+	}
+
+	for _, path := range []string{
+		"/v1/upgradeOperations/11111111-1111-4111-8111-111111111111?view=FULL&includeHostActivity=true",
+		"/v1/upgradeOperations:active?view=FULL&includeHostActivity=true",
+	} {
+		body := request(path)
+		var activity struct {
+			Action string `json:"action"`
+		}
+		if err := json.Unmarshal(body["hostActivity"], &activity); err != nil {
+			t.Fatal(err)
+		}
+		if activity.Action != string(domain.HostActionUpdateResidentAgent) {
+			t.Fatalf("enhanced response %q host activity=%s", path, body["hostActivity"])
+		}
+	}
+
+	operation.Status = domain.StatusSucceeded
+	terminal := request("/v1/upgradeOperations/11111111-1111-4111-8111-111111111111?view=FULL&includeHostActivity=true")
+	if string(terminal["hostActivity"]) != "null" {
+		t.Fatalf("terminal hostActivity = %s, want null", terminal["hostActivity"])
+	}
+
+	operation.Status = domain.StatusRestarting
+	operation.HostActivity.Action = domain.HostActionPullImages
+	malformedReq := httptest.NewRequest(http.MethodGet, "/v1/upgradeOperations/11111111-1111-4111-8111-111111111111?view=FULL&includeHostActivity=true", nil)
+	malformedReq.Header.Set("Authorization", "Bearer "+token)
+	malformedRec := httptest.NewRecorder()
+	engine.ServeHTTP(malformedRec, malformedReq)
+	if malformedRec.Code != http.StatusInternalServerError || strings.Contains(malformedRec.Body.String(), string(domain.HostActionPullImages)) {
+		t.Fatalf("malformed enhanced response status=%d body=%s", malformedRec.Code, malformedRec.Body.String())
+	}
+}
+
 func RegisterTestUpgradeHandler(engine *gin.Engine, upgradeHandler *UpgradeHandler) {
 	group := engine.Group("/v1")
 	group.POST("/system:checkForUpdates", upgradeHandler.CheckForUpdates)

@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 
 const source = readFileSync(path.resolve(process.cwd(), "next.config.ts"), "utf8")
+const vercelConfig = JSON.parse(readFileSync(path.resolve(process.cwd(), "vercel.json"), "utf8")) as {
+  env?: Record<string, string>
+}
 
 describe("next.config contract", () => {
   it("preserves current source markers", () => {
@@ -16,9 +19,20 @@ describe("next.config contract", () => {
     expect(source).not.toContain("destination: `http://${apiHost}:8080/api/:path*/`")
   })
 
-  it("does not register the backend proxy when mock mode owns v1 requests", () => {
+  it("routes Vercel real-mode v1 requests through its configured backend", () => {
     expect(source).toContain("const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true'")
-    expect(source).toContain("if (isVercel || useMock)")
+    expect(source).toContain("getRequiredVercelBackendOrigin")
+    expect(source).toContain("process.env.NODE_ENV === \"production\"")
+    expect(source).toContain("destination: `${vercelBackendOrigin}/v1/:path*`")
+    expect(source).toContain("if (useMock)")
+  })
+
+  it("keeps production Vercel builds on the real API and auth boundary", () => {
+    expect(vercelConfig.env?.NEXT_PUBLIC_USE_MOCK).toBeUndefined()
+    expect(vercelConfig.env?.NEXT_PUBLIC_SKIP_AUTH).toBeUndefined()
+    expect(source).toContain("assertProductionRuntimeFlags")
+    expect(source).toContain("const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true'")
+    expect(source).not.toContain("NEXT_PUBLIC_BACKEND_URL")
   })
 
   it("allows local dev origins used by browser smoke and playwright", () => {

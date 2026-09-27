@@ -16,18 +16,27 @@ import {
   ReleaseCompatibilityProfileAlpha164Bridge,
   assertReleaseCompatibilityProfile,
 } from "./release-compatibility-profile.mjs";
+import { canonicalThirdPartyPolicyBytes, validatePolicyAgainstComposeTemplate } from "./third-party-image-policy.mjs";
+import { validatePreheatManifest } from "./preheat-manifest.mjs";
 
 const REPOSITORY = "yyhuni/lunafox";
 const WORKFLOW = "public-validate.yml";
 const TOKEN_ENV = "GITHUB_TOKEN";
-const SNAPSHOT_PATHS = Object.freeze([
+const BASE_SNAPSHOT_PATHS = Object.freeze([
   ".env",
   ".env.example",
   "compose.yaml",
   "engine-inventory.yaml",
   "release.manifest.yaml",
+  "third-party-image-policy.json",
   "runtime-composition.json",
 ]);
+const SNAPSHOT_PATHS = Object.freeze([...BASE_SNAPSHOT_PATHS, "preheat-manifest.json"]);
+function snapshotPathsForProfile(releaseProfile) {
+  return releaseProfile === ReleaseCompatibilityProfileAlpha164Bridge
+    ? BASE_SNAPSHOT_PATHS
+    : SNAPSHOT_PATHS;
+}
 const AUTHOR = Object.freeze({
   name: "LunaFox Deployment Publisher",
   email: "deployment-publisher@users.noreply.github.com",
@@ -101,15 +110,29 @@ function containedFile(root, relative) {
 }
 
 function validateSnapshot(snapshotDir, tag, requestedReleaseProfile = "") {
-  const files = new Map(SNAPSHOT_PATHS.map((relative) => [relative, containedFile(snapshotDir, relative)]));
+  const baseFiles = new Map(BASE_SNAPSHOT_PATHS.map((relative) => [relative, containedFile(snapshotDir, relative)]));
+  const manifestText = baseFiles.get("release.manifest.yaml").toString("utf8");
+  const releaseVersion = manifestText.match(/^releaseVersion:\s*["']?([^"'\s]+)["']?/m)?.[1];
+  if (!releaseVersion || `v${releaseVersion}` !== tag) fail("snapshot release manifest does not match the requested tag");
+  const releaseProfile = assertReleaseCompatibilityProfile(releaseVersion, requestedReleaseProfile);
+  const files = new Map(baseFiles);
+  if (releaseProfile !== ReleaseCompatibilityProfileAlpha164Bridge) files.set("preheat-manifest.json", containedFile(snapshotDir, "preheat-manifest.json"));
+  let thirdPartyPolicy;
+  try { thirdPartyPolicy = JSON.parse(files.get("third-party-image-policy.json").toString("utf8")); }
+  catch (error) { fail(`snapshot third-party image policy is not valid JSON: ${error.message}`); }
+  try {
+    const canonicalPolicyBytes = canonicalThirdPartyPolicyBytes(thirdPartyPolicy);
+    if (!files.get("third-party-image-policy.json").equals(canonicalPolicyBytes)) {
+      fail("snapshot third-party image policy must use canonical bytes");
+    }
+    validatePolicyAgainstComposeTemplate(thirdPartyPolicy, files.get("compose.yaml").toString("utf8"));
+  } catch (error) {
+    fail(`snapshot third-party image policy is invalid: ${error.message}`);
+  }
   if (!files.get(".env").equals(files.get(".env.example"))) fail("snapshot .env and .env.example must match");
   if (!/^RELEASE_REGISTRY=docker\.io$/m.test(files.get(".env").toString("utf8"))) {
     fail("snapshot must default RELEASE_REGISTRY to docker.io");
   }
-  const manifestText = files.get("release.manifest.yaml").toString("utf8");
-  const releaseVersion = manifestText.match(/^releaseVersion:\s*["']?([^"'\s]+)["']?/m)?.[1];
-  if (`v${releaseVersion}` !== tag) fail("snapshot release manifest does not match the requested tag");
-  const releaseProfile = assertReleaseCompatibilityProfile(releaseVersion, requestedReleaseProfile);
   const bridge = releaseProfile === ReleaseCompatibilityProfileAlpha164Bridge;
   const hasReleaseNotes = /^releaseNotes:[ \t]*$/m.test(manifestText);
   const hasRuntimeComposition = /^runtimeComposition:[ \t]*$/m.test(manifestText);
@@ -133,12 +156,32 @@ function validateSnapshot(snapshotDir, tag, requestedReleaseProfile = "") {
   if (normalizedComposition.manifestBinding.manifestDigest !== `sha256:${crypto.createHash("sha256").update(files.get("release.manifest.yaml")).digest("hex")}`) {
     fail("snapshot runtime composition manifest binding does not match the release manifest bytes");
   }
+  if (!bridge) {
+    const envText = files.get(".env").toString("utf8");
+    const preheatDigest = envText.match(/^LUNAFOX_PREHEAT_MANIFEST_DIGEST=(sha256:[a-f0-9]{64})$/m)?.[1] ?? "";
+    if (!preheatDigest) fail("modern deployment snapshot must bind LUNAFOX_PREHEAT_MANIFEST_DIGEST");
+    let preheatManifest;
+    try {
+      preheatManifest = validatePreheatManifest(JSON.parse(files.get("preheat-manifest.json").toString("utf8")));
+    } catch (error) {
+      fail(`snapshot preheat manifest is invalid: ${error.message}`);
+    }
+    const digestFor = (relative) => `sha256:${crypto.createHash("sha256").update(files.get(relative)).digest("hex")}`;
+    if (preheatManifest.manifestDigest !== preheatDigest) fail("snapshot preheat manifest does not match .env fingerprint");
+    if (preheatManifest.release.tag !== tag ||
+        preheatManifest.release.manifestDigest !== digestFor("release.manifest.yaml") ||
+        preheatManifest.release.composeDigest !== digestFor("compose.yaml") ||
+        preheatManifest.release.compositionDigest !== normalizedComposition.compositionDigest ||
+        preheatManifest.release.thirdPartyPolicyDigest !== digestFor("third-party-image-policy.json")) {
+      fail("snapshot preheat manifest release bindings do not match the deployment snapshot");
+    }
+  }
   const compose = files.get("compose.yaml").toString("utf8");
   if (!compose.includes("${RELEASE_REGISTRY:-docker.io}/yyhuni/")) {
     fail("snapshot Compose does not contain the unified Registry selector");
   }
   const hash = crypto.createHash("sha256");
-  for (const relative of SNAPSHOT_PATHS) {
+  for (const relative of snapshotPathsForProfile(releaseProfile)) {
     hash.update(relative);
     hash.update("\0");
     hash.update(files.get(relative));
@@ -223,7 +266,7 @@ async function createCommit(options, snapshot, branch) {
   }
   const baseCommit = await request(options, `/repos/${options.repo}/git/commits/${baseSha}`);
   const tree = [];
-  for (const relative of SNAPSHOT_PATHS) {
+  for (const relative of snapshotPathsForProfile(snapshot.releaseProfile)) {
     const blob = await request(options, `/repos/${options.repo}/git/blobs`, {
       method: "POST",
       body: { content: snapshot.files.get(relative).toString("base64"), encoding: "base64" },
@@ -259,7 +302,7 @@ async function createPullRequest(options, branch, snapshotSha) {
       head: branch,
       base: options.baseBranch,
       maintainer_can_modify: false,
-      body: `Generated after the complete dual-Registry release closure passed.\n\nDeployment snapshot SHA-256: ${snapshotSha}\nSource projection SHA: ${options.sourceSha}\n\nThe six root deployment files are an atomic, generated snapshot.`,
+      body: `Generated after the complete dual-Registry release closure passed.\n\nDeployment snapshot SHA-256: ${snapshotSha}\nSource projection SHA: ${options.sourceSha}\n\nThe release-bound deployment files are an atomic, generated snapshot.`,
     },
   });
 }

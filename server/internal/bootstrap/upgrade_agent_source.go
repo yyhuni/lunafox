@@ -95,10 +95,15 @@ func (source *upgradeAgentSource) Reconcile(ctx context.Context, target upgradea
 			wanted.ObservedVersion = ""
 			wanted.ObservedDigest = ""
 			wanted.LastObservedAt = nil
+			wanted.ReasonCode = upgradedomain.AgentReasonNotRegistered
+			wanted.DiagnosticSource = upgradedomain.AgentDiagnosticSourceServer
 			wanted.Diagnostic = "Agent is no longer registered"
 			result = append(result, wanted)
 			continue
 		}
+		// The name is an immutable Operation-start snapshot. Current polling may
+		// refresh health evidence, but must not rewrite historical identity.
+		observed.DisplayNameSnapshot = wanted.DisplayNameSnapshot
 		observed.DesiredVersion = wanted.DesiredVersion
 		observed.TargetDigest = wanted.TargetDigest
 		result = append(result, observed)
@@ -146,6 +151,8 @@ type agentObservation struct {
 	Healthy        bool
 	Paused         bool
 	ClaimReady     bool
+	ReasonCode     string
+	Source         upgradedomain.AgentDiagnosticSource
 	Diagnostic     string
 	LastObservedAt *time.Time
 }
@@ -155,7 +162,7 @@ type agentObservation struct {
 // runtime can accept work now.
 func observeAgent(agent *agentdomain.Agent, now time.Time, freshness time.Duration) agentObservation {
 	if agent == nil {
-		return agentObservation{Diagnostic: "Agent is not registered"}
+		return agentObservation{ReasonCode: upgradedomain.AgentReasonNotRegistered, Source: upgradedomain.AgentDiagnosticSourceServer, Diagnostic: "Agent is not registered"}
 	}
 	lastHeartbeat := cloneTime(agent.LastHeartbeat)
 	connected := strings.EqualFold(strings.TrimSpace(agent.Status), "online") && heartbeatFresh(lastHeartbeat, now, freshness)
@@ -164,14 +171,24 @@ func observeAgent(agent *agentdomain.Agent, now time.Time, freshness time.Durati
 	paused := healthState == "paused"
 	claimReady := connected && agent.ContainerRuntimeReady && strings.EqualFold(strings.TrimSpace(agent.OperatingSystem), "linux") && supportedAgentArchitecture(agent.Architecture) && len(agent.SupportedEngineAPIMajors) > 0 && strings.TrimSpace(agent.SessionID) != "" && agent.SessionEpoch > 0
 	diagnostic := ""
+	reasonCode := ""
+	source := upgradedomain.AgentDiagnosticSourceServer
 	switch {
 	case !connected:
+		reasonCode = upgradedomain.AgentReasonHeartbeatMissing
 		diagnostic = "Agent heartbeat is missing or stale"
 	case paused:
+		reasonCode = upgradedomain.AgentReasonPaused
 		diagnostic = "Agent is paused"
 	case !healthy:
-		diagnostic = firstNonEmpty(agent.HealthReason, "Agent health is not healthy")
+		reasonCode = upgradedomain.AgentReasonHealthUnhealthy
+		diagnostic = firstNonEmpty(agent.HealthMessage, agent.HealthReason, "Agent health is not healthy")
+		if strings.TrimSpace(agent.HealthMessage) != "" || strings.TrimSpace(agent.HealthReason) != "" {
+			reasonCode = upgradedomain.AgentReasonHealthReported
+			source = upgradedomain.AgentDiagnosticSourceHeartbeat
+		}
 	case !claimReady:
+		reasonCode = upgradedomain.AgentReasonClaimNotReady
 		diagnostic = "Agent runtime is not ready to claim work"
 	}
 	return agentObservation{
@@ -179,6 +196,8 @@ func observeAgent(agent *agentdomain.Agent, now time.Time, freshness time.Durati
 		Healthy:        healthy,
 		Paused:         paused,
 		ClaimReady:     claimReady,
+		ReasonCode:     reasonCode,
+		Source:         source,
 		Diagnostic:     diagnostic,
 		LastObservedAt: lastHeartbeat,
 	}
@@ -187,26 +206,44 @@ func observeAgent(agent *agentdomain.Agent, now time.Time, freshness time.Durati
 func (source *upgradeAgentSource) expectation(agent *agentdomain.Agent, target upgradeapp.AgentUpgradeTarget, now time.Time) upgradedomain.AgentExpectation {
 	observation := observeAgent(agent, now, source.freshness)
 	diagnostic := observation.Diagnostic
+	reasonCode := observation.ReasonCode
+	var sourceKind upgradedomain.AgentDiagnosticSource
+	if reasonCode != "" {
+		sourceKind = observation.Source
+	}
 	if diagnostic == "" && strings.TrimSpace(agent.AgentVersion) != target.Version {
 		// The version target narrows an otherwise ready Agent; it never makes an
 		// Agent that cannot claim work look ready.
 		diagnostic = "Agent is running a different version"
+		reasonCode = upgradedomain.AgentReasonVersionMismatch
+		sourceKind = upgradedomain.AgentDiagnosticSourceServer
 	}
 	return upgradedomain.AgentExpectation{
-		AgentID:         agent.ID,
-		DesiredVersion:  target.Version,
-		TargetDigest:    target.Digest,
-		ObservedVersion: strings.TrimSpace(agent.AgentVersion),
+		AgentID:             agent.ID,
+		DisplayNameSnapshot: boundedDisplayName(agent.DisplayName),
+		DesiredVersion:      target.Version,
+		TargetDigest:        target.Digest,
+		ObservedVersion:     strings.TrimSpace(agent.AgentVersion),
 		// The current heartbeat contract has no image digest. Leave this empty
 		// rather than treating a configured target as observed evidence.
-		ObservedDigest: "",
-		Connected:      observation.Connected,
-		Healthy:        observation.Healthy,
-		Paused:         observation.Paused,
-		ClaimReady:     observation.ClaimReady,
-		LastObservedAt: observation.LastObservedAt,
-		Diagnostic:     diagnostic,
+		ObservedDigest:   "",
+		Connected:        observation.Connected,
+		Healthy:          observation.Healthy,
+		Paused:           observation.Paused,
+		ClaimReady:       observation.ClaimReady,
+		LastObservedAt:   observation.LastObservedAt,
+		ReasonCode:       reasonCode,
+		DiagnosticSource: sourceKind,
+		Diagnostic:       diagnostic,
 	}
+}
+
+func boundedDisplayName(value string) string {
+	value = strings.TrimSpace(value)
+	if len([]rune(value)) > 100 {
+		return string([]rune(value)[:100])
+	}
+	return value
 }
 
 func heartbeatFresh(observed *time.Time, now time.Time, freshness time.Duration) bool {

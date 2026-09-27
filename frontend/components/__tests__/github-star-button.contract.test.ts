@@ -17,6 +17,7 @@ describe("github-star-button contract", () => {
     expect(source).toContain("textRole.monoLabel")
     expect(source).toContain('size="sm"')
     expect(source).toContain('variant="ghost"')
+    expect(source).toContain('layout="compactAction"')
     expect(source).toContain('className="size-4"')
     expect(source).toContain("hidden tabular-nums text-muted-foreground sm:inline")
     expect(source).not.toContain("textRole.badgeSubtle")

@@ -66,6 +66,7 @@ const fullOperation: UpgradeOperationFull = {
   workDisposition: "cancelled",
   planSummary: { touchedServices: ["agent", "bootstrap", "engine", "engine_package", "engine_runtime", "frontend", "migration", "nginx", "server"] },
   confirmedDeploymentVersion: operation.currentVersion,
+  agentDiagnostics: [],
 }
 
 function deferred<T>() {
@@ -86,7 +87,14 @@ describe("about dialog upgrade behavior", () => {
 
   it("requires the confirmation flow and creates one durable operation for same-tick clicks", async () => {
     const createResponse = deferred<{ data: UpgradeOperation }>()
-    apiMocks.get.mockResolvedValue({ data: fullOperation })
+    let activeAvailable = false
+    apiMocks.get.mockImplementation(() => activeAvailable
+      ? Promise.resolve({ data: fullOperation })
+      : Promise.reject({
+        isAxiosError: true,
+        response: { status: 404, data: { error: { code: "NOT_FOUND", message: "No active upgrade operation." } } },
+        message: "not found",
+      }))
     apiMocks.post.mockImplementation((path: string) => {
       if (path === "/system:checkForUpdates") return Promise.resolve({ data: updateResult })
       if (path === "/upgradeOperations") return createResponse.promise
@@ -110,6 +118,7 @@ describe("about dialog upgrade behavior", () => {
     expect(request).toMatchObject({ manifestId: candidate.manifestId, manifestDigest: digest, confirmed: true })
 
     await act(async () => {
+      activeAvailable = true
       createResponse.resolve({ data: operation })
       await createResponse.promise
     })
@@ -117,37 +126,29 @@ describe("about dialog upgrade behavior", () => {
     expect(result.current.operation.operationId).toBe(operation.operationId)
   })
 
-  it("uses the persisted operation id after a fresh mount", async () => {
+  it("does not resurrect a persisted operation after the active view is empty", async () => {
     window.localStorage.setItem("lunafox.upgrade.operationId", operation.operationId)
-    apiMocks.get.mockImplementation((path: string) => {
-      if (path === "/upgradeOperations:active") {
-        return Promise.reject({
-          isAxiosError: true,
-          response: { status: 404, data: { error: { code: "NOT_FOUND", message: "No active upgrade operation." } } },
-          message: "not found",
-        })
-      }
-      return Promise.resolve({ data: fullOperation })
+    apiMocks.get.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 404, data: { error: { code: "NOT_FOUND", message: "No active upgrade operation." } } },
+      message: "not found",
     })
 
     const { result } = renderHookWithProviders(() => useAboutDialogState())
-    await waitFor(() => expect(result.current.operation.data?.operationId).toBe(operation.operationId))
-    expect(apiMocks.get).toHaveBeenCalledWith("/upgradeOperations:active", { params: { view: "FULL" } })
-    expect(apiMocks.get).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}`, { params: { view: "FULL" } })
-    expect(result.current.operation.lastConfirmedStage).toBe("queued")
+    await waitFor(() => expect(result.current.operation.isSuccess).toBe(true))
+    expect(result.current.operation.data).toBeUndefined()
+    expect(result.current.operation.operationId).toBeNull()
+    expect(window.localStorage.getItem("lunafox.upgrade.operationId")).toBeNull()
+    expect(apiMocks.get).toHaveBeenCalledWith("/upgradeOperations:active", { params: { view: "FULL", includeHostActivity: "true" } })
+    expect(apiMocks.get.mock.calls.some(([path]) => path === `/upgradeOperations/${operation.operationId}`)).toBe(false)
   })
 
-  it("does not poll while the about entry is closed, then restores the persisted operation when opened", async () => {
+  it("does not revive the persisted operation when the about entry is reopened", async () => {
     window.localStorage.setItem("lunafox.upgrade.operationId", operation.operationId)
-    apiMocks.get.mockImplementation((path: string) => {
-      if (path === "/upgradeOperations:active") {
-        return Promise.reject({
-          isAxiosError: true,
-          response: { status: 404, data: { error: { code: "NOT_FOUND", message: "No active upgrade operation." } } },
-          message: "not found",
-        })
-      }
-      return Promise.resolve({ data: fullOperation })
+    apiMocks.get.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 404, data: { error: { code: "NOT_FOUND", message: "No active upgrade operation." } } },
+      message: "not found",
     })
 
     const { result, rerender } = renderHookWithProviders(
@@ -158,9 +159,12 @@ describe("about dialog upgrade behavior", () => {
     expect(apiMocks.get).not.toHaveBeenCalled()
 
     rerender({ enabled: true })
-    await waitFor(() => expect(result.current.operation.data?.operationId).toBe(operation.operationId))
-    expect(apiMocks.get).toHaveBeenCalledWith("/upgradeOperations:active", { params: { view: "FULL" } })
-    expect(apiMocks.get).toHaveBeenCalledWith(`/upgradeOperations/${operation.operationId}`, { params: { view: "FULL" } })
+    await waitFor(() => expect(result.current.operation.isSuccess).toBe(true))
+    expect(result.current.operation.data).toBeUndefined()
+    expect(result.current.operation.operationId).toBeNull()
+    expect(window.localStorage.getItem("lunafox.upgrade.operationId")).toBeNull()
+    expect(apiMocks.get).toHaveBeenCalledWith("/upgradeOperations:active", { params: { view: "FULL", includeHostActivity: "true" } })
+    expect(apiMocks.get.mock.calls.some(([path]) => path === `/upgradeOperations/${operation.operationId}`)).toBe(false)
   })
 
   it("uses the server operation as the source of truth after reconnect", async () => {
@@ -176,6 +180,8 @@ describe("about dialog upgrade behavior", () => {
     await waitFor(() => expect(result.current.operation.data?.status).toBe("restarting"))
     expect(result.current.operation.lastConfirmedStage).toBe("restarting")
     expect(result.current.checkError).toBeNull()
+    expect(apiMocks.get).toHaveBeenCalledWith("/upgradeOperations:active", { params: { view: "FULL", includeHostActivity: "true" } })
+    expect(apiMocks.get.mock.calls.some(([path]) => path === `/upgradeOperations/${operation.operationId}`)).toBe(false)
   })
 
   it("does not create an operation until the confirmation checkbox is acknowledged", async () => {

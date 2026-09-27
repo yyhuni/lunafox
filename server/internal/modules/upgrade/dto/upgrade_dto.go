@@ -165,6 +165,18 @@ type UpgradePlanSummaryResponse struct {
 	TouchedServices []string `json:"touchedServices"`
 }
 
+// AgentDiagnosticResponse is an operator-facing projection of one blocking
+// Agent. The canonical resource name is derived from AgentID here; it is not a
+// second persisted identity field in the Upgrade Operation.
+type AgentDiagnosticResponse struct {
+	AgentID             int    `json:"agentId"`
+	Name                string `json:"name"`
+	DisplayNameSnapshot string `json:"displayNameSnapshot,omitempty"`
+	ReasonCode          string `json:"reasonCode"`
+	Detail              string `json:"detail"`
+	Source              string `json:"source"`
+}
+
 // FullUpgradeOperationResponse is an opt-in representation for current
 // frontends. Keep UpgradeOperationResponse unchanged: cached clients use a
 // strict decoder and must not receive newly added fields in the BASIC view.
@@ -174,6 +186,23 @@ type FullUpgradeOperationResponse struct {
 	WorkDisposition            string                     `json:"workDisposition"`
 	PlanSummary                UpgradePlanSummaryResponse `json:"planSummary"`
 	ConfirmedDeploymentVersion string                     `json:"confirmedDeploymentVersion"`
+	AgentDiagnostics           []AgentDiagnosticResponse  `json:"agentDiagnostics"`
+}
+
+// HostActivityResponse is the bounded current host-side wait fact exposed
+// only through the enhanced FULL representation. It intentionally omits the
+// privileged Runner details that remain available through host-side logs.
+type HostActivityResponse struct {
+	Action          string    `json:"action"`
+	StartedAt       time.Time `json:"startedAt"`
+	LastHeartbeatAt time.Time `json:"lastHeartbeatAt"`
+}
+
+// EnhancedFullUpgradeOperationResponse is opt-in so cached FULL clients keep
+// receiving the historical field shape while new clients can read activity.
+type EnhancedFullUpgradeOperationResponse struct {
+	FullUpgradeOperationResponse
+	HostActivity *HostActivityResponse `json:"hostActivity"`
 }
 
 func NewCheckForUpdatesResponse(result application.CheckForUpdatesResult) CheckForUpdatesResponse {
@@ -216,6 +245,7 @@ func NewFullUpgradeOperationResponse(operation *domain.Operation, currentVersion
 		return FullUpgradeOperationResponse{
 			UpgradeOperationResponse: basic,
 			PlanSummary:              UpgradePlanSummaryResponse{TouchedServices: []string{}},
+			AgentDiagnostics:         []AgentDiagnosticResponse{},
 		}
 	}
 	confirmedDeploymentVersion := operation.ConfirmedDeploymentVersion
@@ -233,7 +263,114 @@ func NewFullUpgradeOperationResponse(operation *domain.Operation, currentVersion
 			TouchedServices: append([]string(nil), operation.PlanSummary.TouchedServices...),
 		},
 		ConfirmedDeploymentVersion: confirmedDeploymentVersion,
+		AgentDiagnostics:           projectAgentDiagnostics(operation),
 	}
+}
+
+// NewEnhancedFullUpgradeOperationResponse projects the optional host activity
+// only after revalidating its lifecycle ownership at the HTTP boundary.
+func NewEnhancedFullUpgradeOperationResponse(operation *domain.Operation, currentVersion string) (EnhancedFullUpgradeOperationResponse, error) {
+	response := EnhancedFullUpgradeOperationResponse{
+		FullUpgradeOperationResponse: NewFullUpgradeOperationResponse(operation, currentVersion),
+	}
+	if operation == nil || operation.Status.IsTerminal() || operation.HostActivity == nil {
+		return response, nil
+	}
+	if err := domain.ValidateHostActivity(
+		operation.HostActivity,
+		operation.Status,
+		operation.EffectiveExecutionMode(),
+		operation.CreatedAt,
+		operation.UpdatedAt,
+		time.Now().UTC(),
+	); err != nil {
+		return EnhancedFullUpgradeOperationResponse{}, fmt.Errorf("validate host activity projection: %w", err)
+	}
+	response.HostActivity = &HostActivityResponse{
+		Action:          string(operation.HostActivity.Action),
+		StartedAt:       operation.HostActivity.StartedAt.UTC(),
+		LastHeartbeatAt: operation.HostActivity.LastHeartbeatAt.UTC(),
+	}
+	return response, nil
+}
+
+func projectAgentDiagnostics(operation *domain.Operation) []AgentDiagnosticResponse {
+	if operation == nil || operation.EffectiveExecutionMode() == domain.ExecutionModeFrontendOnly {
+		return []AgentDiagnosticResponse{}
+	}
+	items := make([]AgentDiagnosticResponse, 0, len(operation.AgentExpectations))
+	for _, expectation := range operation.AgentExpectations {
+		if expectation.AgentID <= 0 || expectation.Ready() {
+			continue
+		}
+		reasonCode, source := normalizeAgentDiagnosticMetadata(expectation)
+		detail := safeAgentDiagnostic(expectation.Diagnostic)
+		if detail == "" {
+			detail = "No Agent diagnostic was recorded"
+		}
+		items = append(items, AgentDiagnosticResponse{
+			AgentID:             expectation.AgentID,
+			Name:                fmt.Sprintf("agents/%d", expectation.AgentID),
+			DisplayNameSnapshot: safeAgentSnapshot(expectation.DisplayNameSnapshot),
+			ReasonCode:          reasonCode,
+			Detail:              detail,
+			Source:              string(source),
+		})
+	}
+	sort.SliceStable(items, func(i, j int) bool { return items[i].AgentID < items[j].AgentID })
+	return items
+}
+
+func normalizeAgentDiagnosticMetadata(expectation domain.AgentExpectation) (string, domain.AgentDiagnosticSource) {
+	reasonCode := strings.TrimSpace(expectation.ReasonCode)
+	source := expectation.DiagnosticSource
+	if domain.IsKnownAgentDiagnosticReasonCode(reasonCode) && source.Valid() {
+		return reasonCode, source
+	}
+	if domain.IsKnownAgentDiagnosticReasonCode(reasonCode) && source == "" {
+		return reasonCode, domain.AgentDiagnosticSourceHistorical
+	}
+	legacyReason, legacySource := legacyAgentDiagnosticMetadata(expectation.Diagnostic)
+	if legacyReason != "" {
+		return legacyReason, legacySource
+	}
+	return domain.AgentReasonLegacyUnknown, domain.AgentDiagnosticSourceHistorical
+}
+
+func legacyAgentDiagnosticMetadata(value string) (string, domain.AgentDiagnosticSource) {
+	switch strings.TrimSpace(value) {
+	case "Agent is not registered", "Agent is no longer registered":
+		return domain.AgentReasonNotRegistered, domain.AgentDiagnosticSourceServer
+	case "Agent heartbeat is missing or stale":
+		return domain.AgentReasonHeartbeatMissing, domain.AgentDiagnosticSourceServer
+	case "Agent is paused":
+		return domain.AgentReasonPaused, domain.AgentDiagnosticSourceServer
+	case "Agent runtime is not ready to claim work":
+		return domain.AgentReasonClaimNotReady, domain.AgentDiagnosticSourceServer
+	case "Agent is running a different version":
+		return domain.AgentReasonVersionMismatch, domain.AgentDiagnosticSourceServer
+	case "Agent health is not healthy":
+		return domain.AgentReasonHealthUnhealthy, domain.AgentDiagnosticSourceServer
+	default:
+		return "", domain.AgentDiagnosticSourceHistorical
+	}
+}
+
+func safeAgentSnapshot(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" || len([]rune(value)) > 100 || strings.ContainsAny(value, "\x00\r\n") {
+		return ""
+	}
+	for _, character := range value {
+		if unicode.IsControl(character) {
+			return ""
+		}
+	}
+	return value
+}
+
+func safeAgentDiagnostic(value string) string {
+	return safeUpgradeDiagnostic(value)
 }
 
 // upgradeLogs projects only bounded lifecycle evidence already present in the
