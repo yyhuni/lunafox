@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:bf12761889551e820490347bc941f42b62b363fb656534acdceac7b336d62622",
-  "releaseTag": "v0.0.1-alpha.187",
+  "sourceRevisionDigest": "sha256:6ab57aa45a056145eb873fc89f2cfdedfff4ce1253dd812ec73b5a47c237aaa6",
+  "releaseTag": "v0.0.1-alpha.188",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "a42628a92acf8569751c440b6b85f10f232a6fe7659625a05edcbffb4761f8fa"
+      "sha256": "e37e8c709e1686f086a1e04b4aed4c4ae423275b2ae9feb348d4c40ec774981c"
     },
     {
       "path": "README.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "f6b3c7c52e294397398b9b351fda387df14fd54cb371f894a9c0bd569cb4ea18"
+      "sha256": "e10629e00bf6123de75c67a242174e93c10c1260094b1b073ef81aa21a092200"
     },
     {
       "path": "agent/bin/sha256-575e0b6dfe956b399f0155214d5e1baa71e318f8bcd65f66f74957a169694bf0/agent-bundle.sha256",
@@ -92,7 +92,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "453de5e4a8447831ecd33904b3a50ea89bc0cac474964e5a48a4047ccbee68eb"
+      "sha256": "f5500cb66596531e32f8fc60dc1305995401cd8090a405309f92a18e4d075bdf"
     },
     {
       "path": "agent/bin/sha256-575e0b6dfe956b399f0155214d5e1baa71e318f8bcd65f66f74957a169694bf0/lunafox-agent-linux-amd64",
@@ -17343,6 +17343,13 @@
       "sha256": "a5ce1f320f7dea498d41aa77bcefd4eb5201ac0b2563524549a79ea87f6db956"
     },
     {
+      "path": "release-notes/v0.0.1-alpha.188.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 3220,
+      "sha256": "46235a7ad44ac97f3c25ff113fc15464f0796199ad3d01834b35b6f6f4a6ffaa"
+    },
+    {
       "path": "resources/alloy/config.alloy",
       "type": "file",
       "mode": "0644",
@@ -17479,8 +17486,8 @@
       "path": "scripts/ci/check-public-release-policy.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 106852,
-      "sha256": "2ec2839801ea8d62dcf3bf9e3026b874a6d08012d0cd3aab699fc77211661fa7"
+      "size": 110507,
+      "sha256": "acde632a4a430327ba0ad99326d4ac13a2c982560773b2c236f6a9dd3033f9eb"
     },
     {
       "path": "scripts/ci/component-evidence-bundle-selftest.mjs",
@@ -29274,15 +29281,15 @@
       "path": "server/internal/modules/upgrade/upgrader/deployment_lock.go",
       "type": "file",
       "mode": "0644",
-      "size": 11632,
-      "sha256": "7676f436b9502022949ac7f72f5556a80aaccab45b5d95ed72b91876a66b4239"
+      "size": 13254,
+      "sha256": "90f132d108f7de91095b429b3399e8999eb48f91d542c6616986e5a1af8f3dc5"
     },
     {
       "path": "server/internal/modules/upgrade/upgrader/deployment_lock_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 6157,
-      "sha256": "9b7686898cd68c5db33766729650ef3c705df16b51f51055b45f193a172eaf6f"
+      "size": 6874,
+      "sha256": "1b24024cfe5787bbf2ed4050d4e87073e4f24b919ba7dd6fd80a97b0886665b8"
     },
     {
       "path": "server/internal/modules/upgrade/upgrader/deployment_snapshot.go",

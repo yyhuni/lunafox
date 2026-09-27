@@ -41,6 +41,10 @@ var (
 	// ErrDeploymentLockInvalid means the lock exists but cannot be trusted. It is
 	// never repaired automatically, because a crash residue must stay visible.
 	ErrDeploymentLockInvalid = errors.New("deployment lock metadata is invalid")
+
+	// errDeploymentLockVanished is a normal release race: the reader inspected
+	// the directory just before its owner atomically moved it away.
+	errDeploymentLockVanished = errors.New("deployment lock vanished while reading")
 )
 
 // DeploymentLockMetadata is the host-readable lock content. It deliberately
@@ -86,6 +90,9 @@ func readDeploymentLockMetadata(directory string) (DeploymentLockMetadata, error
 	path := filepath.Join(directory, DeploymentLockMetadataFile)
 	info, err := os.Lstat(path)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) && pathVanished(directory) {
+			return DeploymentLockMetadata{}, errDeploymentLockVanished
+		}
 		return DeploymentLockMetadata{}, fmt.Errorf("%w: %s/%s is unreadable", ErrDeploymentLockInvalid, DeploymentLockDirectory, DeploymentLockMetadataFile)
 	}
 	if info.Mode()&os.ModeSymlink != 0 {
@@ -99,6 +106,9 @@ func readDeploymentLockMetadata(directory string) (DeploymentLockMetadata, error
 	}
 	payload, err := os.ReadFile(path)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) && pathVanished(directory) {
+			return DeploymentLockMetadata{}, errDeploymentLockVanished
+		}
 		return DeploymentLockMetadata{}, fmt.Errorf("%w: read %s/%s", ErrDeploymentLockInvalid, DeploymentLockDirectory, DeploymentLockMetadataFile)
 	}
 	metadata := DeploymentLockMetadata{}
@@ -136,6 +146,11 @@ func readDeploymentLockMetadata(directory string) (DeploymentLockMetadata, error
 	return metadata, nil
 }
 
+func pathVanished(directory string) bool {
+	_, err := os.Lstat(directory)
+	return errors.Is(err, os.ErrNotExist)
+}
+
 // DeploymentLock is an acquired deployment lock. Release clears it; any other
 // process can only take over by matching the recorded operation identity.
 type DeploymentLock struct {
@@ -164,11 +179,16 @@ func AcquireDeploymentLock(root, operationID string) (*DeploymentLock, error) {
 		return nil, fmt.Errorf("deployment root is required to acquire the deployment lock")
 	}
 	directory := deploymentLockPath(root)
-	if err := os.Mkdir(directory, 0o755); err != nil {
-		if !errors.Is(err, os.ErrExist) {
+	for {
+		if err := os.Mkdir(directory, 0o755); err == nil {
+			break
+		} else if !errors.Is(err, os.ErrExist) {
 			return nil, fmt.Errorf("create deployment lock: %w", err)
 		}
-		metadata, _, readErr := ReadDeploymentLock(root)
+		metadata, exists, readErr := ReadDeploymentLock(root)
+		if !exists || errors.Is(readErr, errDeploymentLockVanished) {
+			continue
+		}
 		if readErr != nil {
 			return nil, readErr
 		}
@@ -250,17 +270,40 @@ func (lock *DeploymentLock) Release() error {
 		// an idempotent no-op and leave the visible fence intact.
 		return nil
 	}
-	var firstErr error
-	if err := os.Remove(filepath.Join(lock.directory, DeploymentLockMetadataFile)); err != nil && !errors.Is(err, os.ErrNotExist) {
-		firstErr = err
+	releasedDirectory, err := moveDeploymentLockAside(lock.directory)
+	if errors.Is(err, os.ErrNotExist) {
+		// A second same-operation wrapper may have already released this lock.
+		return nil
 	}
-	if err := os.Remove(lock.directory); err != nil && !errors.Is(err, os.ErrNotExist) && firstErr == nil {
-		firstErr = err
+	if err != nil {
+		return fmt.Errorf("release deployment lock: %w", err)
 	}
-	if firstErr != nil {
-		return fmt.Errorf("release deployment lock: %w", firstErr)
+	if err := os.RemoveAll(releasedDirectory); err != nil {
+		return fmt.Errorf("release deployment lock: %w", err)
 	}
 	return nil
+}
+
+// moveDeploymentLockAside removes the lock from its public path atomically
+// before cleanup. Deleting owner before its containing directory would expose
+// a transient malformed lock to a waiter, which must otherwise fail closed.
+func moveDeploymentLockAside(directory string) (string, error) {
+	temporary, err := os.CreateTemp(filepath.Dir(directory), DeploymentLockDirectory+".release-")
+	if err != nil {
+		return "", fmt.Errorf("reserve deployment lock cleanup path: %w", err)
+	}
+	temporaryPath := temporary.Name()
+	if err := temporary.Close(); err != nil {
+		_ = os.Remove(temporaryPath)
+		return "", fmt.Errorf("close deployment lock cleanup path: %w", err)
+	}
+	if err := os.Remove(temporaryPath); err != nil {
+		return "", fmt.Errorf("clear deployment lock cleanup path: %w", err)
+	}
+	if err := os.Rename(directory, temporaryPath); err != nil {
+		return "", err
+	}
+	return temporaryPath, nil
 }
 
 func (lock *DeploymentLock) writeMetadata(metadata DeploymentLockMetadata) error {

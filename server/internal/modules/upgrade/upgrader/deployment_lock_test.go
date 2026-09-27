@@ -182,3 +182,30 @@ func TestAcquireDeploymentLockContextWaitsForRelease(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestMoveDeploymentLockAsideHidesTheLockBeforeCleanup(t *testing.T) {
+	root := t.TempDir()
+	held, err := AcquireDeploymentLock(root, "operation-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	releasedDirectory, err := moveDeploymentLockAside(held.directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := os.RemoveAll(releasedDirectory); err != nil {
+			t.Error(err)
+		}
+	}()
+	if _, exists, err := ReadDeploymentLock(root); err != nil || exists {
+		t.Fatalf("moved lock exists=%t err=%v", exists, err)
+	}
+	newLock, err := AcquireDeploymentLock(root, "operation-2")
+	if err != nil {
+		t.Fatalf("acquire after moved release lock: %v", err)
+	}
+	if err := newLock.Release(); err != nil {
+		t.Fatal(err)
+	}
+}

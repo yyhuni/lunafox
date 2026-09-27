@@ -823,6 +823,27 @@ function assertPublicWorkflow(workflow, policy) {
   const runtimeCompositionResolver = jobBlock(workflow, "resolve-public-runtime-composition");
   const publication = jobBlock(workflow, "publish-runtime-images");
   const agentPublication = jobBlock(workflow, "publish-agent-image");
+  const workflowDispatch = workflow.slice(0, workflow.indexOf("\npermissions:"));
+  if (!workflowDispatch.includes("workflow_dispatch:\n    inputs:") ||
+      !workflowDispatch.includes("      publish:") ||
+      !workflowDispatch.includes("        type: boolean") ||
+      !workflowDispatch.includes("      release_tag:") ||
+      !workflowDispatch.includes("        type: string")) {
+    fail("public workflow must define explicit immutable recovery inputs");
+  }
+  const dispatchGateStart = publicationIntent.indexOf('if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then');
+  const dispatchGateEnd = dispatchGateStart < 0 ? -1 : publicationIntent.indexOf("\n          fi", dispatchGateStart);
+  const dispatchGate = dispatchGateStart < 0 || dispatchGateEnd < 0
+    ? ""
+    : publicationIntent.slice(dispatchGateStart, dispatchGateEnd);
+  for (const required of [
+    '[ "$GITHUB_REF" = refs/heads/main ] || exit 0',
+    '[ "$DISPATCH_PUBLISH" = true ] || exit 0',
+    '[ "$DISPATCH_RELEASE_TAG" = "$release_tag" ] || {',
+    "manual recovery Tag must exactly match PUBLIC_PROVENANCE.json",
+  ]) {
+    if (!dispatchGate.includes(required)) fail(`public immutable recovery gate is missing: ${required}`);
+  }
   const validationBlocks = [validation, frontendValidation, scopeValidation, goValidation, protoValidation, contextValidation, aggregate, publicationIntent];
   validationBlocks.forEach((block, index) => {
     const label = `public validation job ${index + 1}`;
@@ -838,6 +859,27 @@ function assertPublicWorkflow(workflow, policy) {
   });
   if (!validation.includes("ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}")) {
     fail("public export validation must check the real PR head commit instead of GitHub's synthetic merge commit");
+  }
+  if (!hasRequiredJobNeeds(validation, ["publication-intent"])) {
+    fail("public export validation must wait for provenance-bound publication intent");
+  }
+  const recoveryHistoryValidation = withoutComments(workflowStepBlock(
+    validation,
+    "      - name: Verify exact exported file manifest and immutable Agent bundle",
+  ));
+  for (const required of [
+    "RECOVERY_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && needs.publication-intent.outputs.publish == 'true' }}",
+    'if [ "$RECOVERY_PUBLISH" = true ]; then',
+    'recovery_base="$(git rev-parse --verify HEAD^1)"',
+    'recovery_parent="$(git rev-parse --verify HEAD^2)"',
+    'workflow_merge_pattern="^Merge[[:space:]]pull[[:space:]]request[[:space:]]#[0-9]+[[:space:]]from[[:space:]]yyhuni/workflow/${release_tag//./\\\\.}(-retry-[0-9]+)?$"',
+    '[ "$(git diff --name-only "$recovery_base" "$recovery_parent")" = ".github/workflows/public-validate.yml" ] || {',
+    'git diff --quiet "$recovery_parent" HEAD',
+    'git checkout --detach "$recovery_parent"',
+  ]) {
+    if (!recoveryHistoryValidation.includes(required)) {
+      fail(`public export recovery must bind its parent-history check: ${required}`);
+    }
   }
   assertGitHubHostedRunner(publication, "public Runtime publication job");
   assertGitHubHostedRunner(agentPublication, "public Agent publication job");
@@ -876,6 +918,9 @@ function assertPublicWorkflow(workflow, policy) {
   if (!validation.includes('tee "$RUNNER_TEMP/public-documentation-validation.json"') ||
       validation.includes("tee dist/public-documentation-validation.json")) {
     fail("public documentation validation must keep evidence outside the exported workspace");
+  }
+  if (validation.includes("cache: pnpm") || validation.includes("cache-dependency-path: frontend/pnpm-lock.yaml")) {
+    fail("dependency-free public export validation must not configure a pnpm cache");
   }
   for (const required of [
     "pnpm/action-setup@v4",
@@ -939,10 +984,17 @@ function assertPublicWorkflow(workflow, policy) {
     "fetch-depth: 2",
     "publish: ${{ steps.intent.outputs.publish }}",
     'echo "publish=false" >> "$GITHUB_OUTPUT"',
+    'if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then',
+    '[ "$GITHUB_REF" = refs/heads/main ] || exit 0',
+    '[ "$DISPATCH_PUBLISH" = true ] || exit 0',
+    'DISPATCH_RELEASE_TAG: ${{ inputs.release_tag || \'\' }}',
+    'release_tag="$(jq -er \'.releaseTag\' PUBLIC_PROVENANCE.json)"',
+    '[ "$DISPATCH_RELEASE_TAG" = "$release_tag" ] || {',
+    "manual recovery Tag must exactly match PUBLIC_PROVENANCE.json",
+    'echo "Verified explicit immutable recovery: publish=true"',
     '[ "$GITHUB_EVENT_NAME" = push ] || exit 0',
     '[ "$GITHUB_REF" = refs/heads/main ] || exit 0',
     "git rev-parse --verify HEAD^",
-    'release_tag="$(jq -er \'.releaseTag\' PUBLIC_PROVENANCE.json)"',
     "merge_subject_pattern=",
     "squash_subject_pattern=",
     '[[ "$head_subject" =~ $merge_subject_pattern || "$head_subject" =~ $squash_subject_pattern ]] || exit 0',
@@ -1021,10 +1073,13 @@ function assertPublicWorkflow(workflow, policy) {
       fail(`${name} must consume the checked-out publication intent, completed public validation, and runtime composition plan`);
     }
   }
-  if (!publication.includes("squash_subject_pattern") ||
-      !publication.includes("chore\\\\(export\\\\):") ||
-      !publication.includes("head_subject\" =~ $merge_subject_pattern || \"$head_subject\" =~ $squash_subject_pattern")) {
-    fail("public Runtime publication must accept the configured squash-merge commit identity");
+  for (const [name, block] of [["public Runtime publication", publication], ["public Agent publication", agentPublication]]) {
+    if (!block.includes('if [ "$GITHUB_EVENT_NAME" != workflow_dispatch ]; then') ||
+        !block.includes("squash_subject_pattern") ||
+        !block.includes("chore\\\\(export\\\\):") ||
+        !block.includes("head_subject\" =~ $merge_subject_pattern || \"$head_subject\" =~ $squash_subject_pattern")) {
+      fail(`${name} must preserve generated-export head validation outside publication-intent-authorized recovery`);
+    }
   }
   for (const required of [
     'commit_ref="${image}:public-${GITHUB_SHA}"',
@@ -1224,7 +1279,9 @@ function assertPublicWorkflow(workflow, policy) {
       fail(`${name} must not contain private Agent/release authority`);
     }
   }
-  if (!hasRequiredJobNeeds(engineDiscovery, ["publication-intent", "public-validation", "resolve-public-runtime-composition"]) ||
+  if (!hasRequiredJobNeeds(engineDiscovery, ["publication-intent", "public-validation", "resolve-public-runtime-composition", "publish-runtime-images", "publish-agent-image"]) ||
+      !engineDiscovery.includes("needs.publish-runtime-images.result == 'success'") ||
+      !engineDiscovery.includes("needs.publish-agent-image.result == 'success'") ||
       !engineDiscovery.includes("outputs:") ||
       !engineDiscovery.includes("steps.matrix.outputs.matrix") ||
       !engineDiscovery.includes("-command discover") ||
@@ -1234,12 +1291,12 @@ function assertPublicWorkflow(workflow, policy) {
       !engineDiscovery.includes(engineDiscoveryArtifactUpload) ||
       engineDiscovery.includes("packages: write") ||
       engineDiscovery.includes("environment: public-engine-release")) {
-    fail("public Engine Runtime discovery must source-bind and emit the dynamic matrix with its canonical artifact layout and without publication authority");
+    fail("public Engine Runtime discovery must wait for Runtime and Agent publication, then source-bind and emit the dynamic matrix with its canonical artifact layout and without publication authority");
   }
   if (!hasRequiredJobNeeds(engineBuild, ["publication-intent", "public-engine-runtime-discover"]) ||
       !engineBuild.includes("strategy:") ||
       !engineBuild.includes("fail-fast: true") ||
-      !engineBuild.includes("max-parallel: 16") ||
+      !engineBuild.includes("max-parallel: 3") ||
       !engineBuild.includes("fromJSON(needs.public-engine-runtime-discover.outputs.platform_matrix)") ||
       !engineBuild.includes("runs-on: ${{ matrix.runner }}") ||
       !engineBuild.includes("matrix.platform") ||
@@ -1417,12 +1474,13 @@ function assertPublicWorkflow(workflow, policy) {
   if (!finalManifestGeneration.includes("RUNTIME_COMPOSITION_SHA256: ${{ steps.composition.outputs.composition_digest }}") ||
       !finalManifestGeneration.includes("generate-release-manifest.sh") ||
       !finalManifestGeneration.includes('RELEASE_PROFILE: ${{ steps.release_profile.outputs.profile }}') ||
+      !finalManifestGeneration.includes('RELEASE_MIGRATION_TYPE: ${{ vars.RELEASE_MIGRATION_TYPE }}') ||
       !finalManifestGeneration.includes('--release-profile "$RELEASE_PROFILE"') ||
       !finalManifestGeneration.includes('previous_migration_manifest="dist/final/composition-plan/previous-migration-manifest.json"') ||
       !finalManifestGeneration.includes('previous_release="${{ needs.resolve-public-runtime-composition.outputs.previous_release }}"') ||
       !finalManifestGeneration.includes('previous_migration_args+=(--previous-migration-manifest "$previous_migration_manifest")') ||
       !finalManifestGeneration.includes('"${previous_migration_args[@]}"')) {
-    fail("public final release must pass the canonical runtime composition digest into manifest generation and pass the resolved profile and migration boundary");
+    fail("public final release must pass the canonical runtime composition digest into manifest generation and pass the resolved profile, reviewed migration type, and migration boundary");
   }
   for (const required of [
     "--mode bind",
