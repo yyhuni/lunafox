@@ -106,11 +106,8 @@ jobs:
           workflow_generated_pattern="^chore\\(workflow\\):[[:space:]]update[[:space:]]public[[:space:]]validation[[:space:]]for[[:space:]]${release_tag//./\\.}$"
           workflow_squash_pattern="^chore\\(workflow\\):[[:space:]]update[[:space:]]public[[:space:]]validation[[:space:]]for[[:space:]]${release_tag//./\\.}[[:space:]]\\(#[0-9]+\\)$"
           deployment_generated_pattern="^chore\\(deploy\\):[[:space:]]finalize[[:space:]]deployment[[:space:]]snapshot[[:space:]]${release_tag//./\\.}$"
-          deployment_squash_pattern="^chore\\(deploy\\):[[:space:]]finalize[[:space:]]deployment[[:space:]]snapshot[[:space:]]${release_tag//./\\.}[[:space:]]\\(#[0-9]+\\)$"
           expected_workflow_author_name="$(jq -er '.git.workflowAuthorName' scripts/ci/public-export-policy.json)"
           expected_workflow_author_email="$(jq -er '.git.workflowAuthorEmail' scripts/ci/public-export-policy.json)"
-          expected_deployment_author_name="$(jq -er '.git.deploymentAuthorName' scripts/ci/public-export-policy.json)"
-          expected_deployment_author_email="$(jq -er '.git.deploymentAuthorEmail' scripts/ci/public-export-policy.json)"
           assert_workflow_maintenance_identity() {
             local commit="$1" author_name author_email committer_name committer_email
             author_name="$(git log -1 --format=%an "$commit")"
@@ -143,71 +140,50 @@ jobs:
               return 1
             }
           }
-          assert_deployment_squash_identity() {
-            local commit="$1" author_name author_email committer_name committer_email
-            author_name="$(git log -1 --format=%an "$commit")"
-            author_email="$(git log -1 --format=%ae "$commit")"
-            committer_name="$(git log -1 --format=%cn "$commit")"
-            committer_email="$(git log -1 --format=%ce "$commit")"
-            # GitHub rewrites a reviewed deployment PR into a squash commit:
-            # preserve the reviewed author, but require GitHub as the committer.
-            [ -n "$author_name" ] && [ -n "$author_email" ] &&
-              [ "$committer_name" = GitHub ] && [ "$committer_email" = noreply@github.com ] || {
-              echo "deployment snapshot squash identity is not authorized: $commit" >&2
-              return 1
-            }
-          }
-          validate_deployment_snapshot() {
-            local commit="$1" subject="$2" parent
-            if git rev-parse --verify "${commit}^2" >/dev/null 2>&1; then
-              echo "deployment snapshot must have exactly one parent: $commit" >&2
-              return 1
-            fi
-            parent="$(git rev-parse --verify "${commit}^1")"
-            if [[ "$subject" =~ $deployment_generated_pattern ]]; then
-              [ "$(git log -1 --format=%an "$commit")" = "$expected_deployment_author_name" ] || {
-                echo "deployment snapshot author identity is not authorized" >&2
-                return 1
-              }
-              [ "$(git log -1 --format=%ae "$commit")" = "$expected_deployment_author_email" ] || {
-                echo "deployment snapshot author email is not authorized" >&2
-                return 1
-              }
-              [ "$(git log -1 --format=%cn "$commit")" = "$expected_deployment_author_name" ] || {
-                echo "deployment snapshot committer identity is not authorized" >&2
-                return 1
-              }
-              [ "$(git log -1 --format=%ce "$commit")" = "$expected_deployment_author_email" ] || {
-                echo "deployment snapshot committer email is not authorized" >&2
-                return 1
-              }
-            elif [[ "$subject" =~ $deployment_squash_pattern ]]; then
-              assert_deployment_squash_identity "$commit"
-            else
-              echo "deployment snapshot subject is not authorized: $subject" >&2
-              return 1
-            fi
-            expected_deployment_paths="$(jq -er '
-              [.destinationOwnedGroups[] | select(.sentinel == ".env")]
-              | if length == 1 then .[0].paths | sort | join("\n") else error("deployment group policy is ambiguous") end
-            ' scripts/ci/public-export-policy.json)"
-            actual_deployment_paths="$(git diff --name-only "$parent" "$commit" | sort)"
-            [ "$actual_deployment_paths" = "$expected_deployment_paths" ] || {
-              echo "deployment snapshot must change exactly the complete destination-owned group" >&2
-              printf 'expected paths:\n%s\nactual paths:\n%s\n' "$expected_deployment_paths" "$actual_deployment_paths" >&2
-              return 1
-            }
-            validated_deployment_parent="$parent"
-          }
           deployment_recovery=false
           recovery_parent=""
-          if [[ "$head_subject" =~ $deployment_generated_pattern || "$head_subject" =~ $deployment_squash_pattern ]]; then
+          if [[ "$head_subject" =~ $deployment_generated_pattern ]]; then
             # A deployment snapshot is destination-owned, but its parent may be
             # a chain of workflow-only maintenance commits. Bind recovery to the
             # immutable snapshot shape before temporarily checking its source.
             deployment_recovery=true
-            validate_deployment_snapshot "$original_head" "$head_subject"
-            deployment_parent="$validated_deployment_parent"
+            deployment_parent="$(git rev-parse --verify HEAD^1)"
+            if git rev-parse --verify HEAD^2 >/dev/null 2>&1; then
+              echo "deployment snapshot must have exactly one parent" >&2
+              exit 1
+            fi
+            deployment_author_name="$(git log -1 --format=%an "$original_head")"
+            deployment_author_email="$(git log -1 --format=%ae "$original_head")"
+            deployment_committer_name="$(git log -1 --format=%cn "$original_head")"
+            deployment_committer_email="$(git log -1 --format=%ce "$original_head")"
+            expected_deployment_author_name="$(jq -er '.git.deploymentAuthorName' scripts/ci/public-export-policy.json)"
+            expected_deployment_author_email="$(jq -er '.git.deploymentAuthorEmail' scripts/ci/public-export-policy.json)"
+            [ "$deployment_author_name" = "$expected_deployment_author_name" ] || {
+              echo "deployment snapshot author identity is not authorized" >&2
+              exit 1
+            }
+            [ "$deployment_author_email" = "$expected_deployment_author_email" ] || {
+              echo "deployment snapshot author email is not authorized" >&2
+              exit 1
+            }
+            [ "$deployment_committer_name" = "$expected_deployment_author_name" ] || {
+              echo "deployment snapshot committer identity is not authorized" >&2
+              exit 1
+            }
+            [ "$deployment_committer_email" = "$expected_deployment_author_email" ] || {
+              echo "deployment snapshot committer email is not authorized" >&2
+              exit 1
+            }
+            expected_deployment_paths="$(jq -er '
+              [.destinationOwnedGroups[] | select(.sentinel == ".env")]
+              | if length == 1 then .[0].paths | sort | join("\n") else error("deployment group policy is ambiguous") end
+            ' scripts/ci/public-export-policy.json)"
+            actual_deployment_paths="$(git diff --name-only "$deployment_parent" "$original_head" | sort)"
+            [ "$actual_deployment_paths" = "$expected_deployment_paths" ] || {
+              echo "deployment snapshot must change exactly the complete destination-owned group" >&2
+              printf 'expected paths:\\n%s\\nactual paths:\\n%s\\n' "$expected_deployment_paths" "$actual_deployment_paths" >&2
+              exit 1
+            }
             recovery_parent="$deployment_parent"
           fi
           maintenance_head=false
@@ -284,13 +260,6 @@ jobs:
                 assert_workflow_maintenance_identity "$recovery_parent"
                 [ "$(git diff --name-only "$candidate_parent" "$recovery_parent")" = ".github/workflows/public-validate.yml" ] || {
                   echo "workflow maintenance squash commits must change only the destination-owned workflow" >&2
-                  exit 1
-                }
-                recovery_parent="$candidate_parent"
-              elif [[ "$candidate_subject" =~ $deployment_generated_pattern || "$candidate_subject" =~ $deployment_squash_pattern ]]; then
-                validate_deployment_snapshot "$recovery_parent" "$candidate_subject"
-                [ "$validated_deployment_parent" = "$candidate_parent" ] || {
-                  echo "deployment snapshot parent resolution changed during recovery: $recovery_parent" >&2
                   exit 1
                 }
                 recovery_parent="$candidate_parent"
@@ -1766,7 +1735,7 @@ jobs:
       packages: write
     strategy:
       fail-fast: true
-      max-parallel: 8
+      max-parallel: 2
       matrix: ${{ fromJSON(needs.public-engine-runtime-discover.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
@@ -1784,19 +1753,59 @@ jobs:
           set -euo pipefail
           jq -e --arg engineId "${{ matrix.engineId }}" 'any(.engines[]; .engineId == $engineId and .disposition == "built")' dist/public-engine-runtime-discovery/selection.json >/dev/null
       - uses: oras-project/setup-oras@v1
+      - id: registry-auth
+        name: Prepare isolated Engine registry credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth_root="$(mktemp -d "$RUNNER_TEMP/lunafox-engine-registry-auth.XXXXXX")"
+          docker_config="$auth_root/docker"
+          oras_config="$auth_root/oras/config.json"
+          mkdir -p "$docker_config" "$(dirname "$oras_config")"
+          printf '{"auths":{}}\n' > "$docker_config/config.json"
+          printf '{"auths":{}}\n' > "$oras_config"
+          chmod 700 "$auth_root" "$docker_config" "$(dirname "$oras_config")"
+          chmod 600 "$docker_config/config.json" "$oras_config"
+          {
+            echo "auth_root=$auth_root"
+            echo "docker_config=$docker_config"
+            echo "oras_config=$oras_config"
+          } >> "$GITHUB_OUTPUT"
       - uses: docker/login-action@v3
+        env:
+          DOCKER_CONFIG: ${{ steps.registry-auth.outputs.docker_config }}
         with:
           registry: docker.io
           username: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}
           password: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}
+          logout: false
       - uses: docker/login-action@v3
+        env:
+          DOCKER_CONFIG: ${{ steps.registry-auth.outputs.docker_config }}
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
-      # BuildKit snapshots registry credentials when the builder is created;
-      # authenticate before setup so imagetools can read Docker Hub manifests.
-      - uses: docker/setup-buildx-action@v3
+          logout: false
+      - name: Authenticate isolated Engine ORAS config
+        env:
+          ORAS_CONFIG: ${{ steps.registry-auth.outputs.oras_config }}
+          ORAS_DOCKERHUB_USERNAME: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}
+          ORAS_DOCKERHUB_TOKEN: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}
+          ORAS_GHCR_USERNAME: ${{ github.actor }}
+          ORAS_GHCR_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$ORAS_DOCKERHUB_TOKEN" | oras login \
+            --registry-config "$ORAS_CONFIG" \
+            --username "$ORAS_DOCKERHUB_USERNAME" --password-stdin docker.io
+          printf '%s' "$ORAS_GHCR_TOKEN" | oras login \
+            --registry-config "$ORAS_CONFIG" \
+            --username "$ORAS_GHCR_USERNAME" --password-stdin ghcr.io
+      - id: buildx
+        uses: docker/setup-buildx-action@v3
+        env:
+          DOCKER_CONFIG: ${{ steps.registry-auth.outputs.docker_config }}
       - uses: actions/setup-go@v5
         with:
           go-version-file: tools/engine-release/go.mod
@@ -1807,12 +1816,27 @@ jobs:
           ENGINE_IMAGE_TAG: public-${{ github.sha }}
           ENGINE_PLATFORM_BUILDS_ROOT: ${{ github.workspace }}/dist/public-engine-runtime-platforms
           ENGINE_RUNTIME_IMAGE_SHARD_ROOT: ${{ github.workspace }}/dist/public-engine-runtime-shard
+          DOCKER_CONFIG: ${{ steps.registry-auth.outputs.docker_config }}
+          ENGINE_ORAS_REGISTRY_CONFIG: ${{ steps.registry-auth.outputs.oras_config }}
+          ENGINE_BUILDER_NAME: ${{ steps.buildx.outputs.name }}
         run: bash scripts/ci/finalize-engine-runtime-platforms.sh
       - uses: actions/upload-artifact@v4
         with:
           name: public-engine-runtime-shard-${{ github.sha }}-${{ matrix.artifactKey }}
           path: dist/public-engine-runtime-shard/**
           if-no-files-found: error
+      - name: Remove Engine registry credentials
+        if: always()
+        env:
+          ENGINE_REGISTRY_AUTH_ROOT: ${{ steps.registry-auth.outputs.auth_root }}
+        run: |
+          set -euo pipefail
+          [ -n "$ENGINE_REGISTRY_AUTH_ROOT" ] || exit 0
+          case "$ENGINE_REGISTRY_AUTH_ROOT" in
+            "$RUNNER_TEMP"/*) ;;
+            *) echo "refusing to remove an unexpected credential path" >&2; exit 1 ;;
+          esac
+          rm -rf -- "$ENGINE_REGISTRY_AUTH_ROOT"
 
   public-engine-runtime-aggregate:
     if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && (needs.public-engine-runtime-finalize.result == 'success' || (fromJSON(needs.public-engine-runtime-discover.outputs.built_count) == 0 && needs.public-engine-runtime-finalize.result == 'skipped'))
