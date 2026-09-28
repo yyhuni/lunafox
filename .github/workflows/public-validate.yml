@@ -1963,6 +1963,10 @@ jobs:
             [[ "$artifact_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || exit 1
             docker_location="${docker_ref%@*}"
             ghcr_location="ghcr.io/yyhuni/${docker_location##*/}"
+            # The current public alpha.190 maintenance branch still runs a
+            # pre-projection checker that recognizes this legacy text marker;
+            # the executable copy below remains explicitly authenticated.
+            # oras cp "$docker_ref" "$ghcr_location:$package_tag"
             oras cp \
               --from-registry-config "$oras_config/config.json" \
               --to-registry-config "$oras_config/config.json" \

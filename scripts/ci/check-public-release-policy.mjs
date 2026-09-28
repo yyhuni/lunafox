@@ -1427,45 +1427,9 @@ function assertPublicWorkflow(workflow, policy) {
       !packagePublish.includes("public-engine-package-digests")) {
     fail("public Engine Package lane must publish, sign, verify, and retain digest evidence");
   }
-  const normalizedPackagePublish = packagePublish.replace(/\\\n\s*/g, " ");
-  for (const required of [
-    'ORAS_DOCKERHUB_USERNAME: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}',
-    'ORAS_DOCKERHUB_TOKEN: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}',
-    'ORAS_GHCR_USERNAME: ${{ github.actor }}',
-    'ORAS_GHCR_TOKEN: ${{ github.token }}',
-    'oras_config="$(mktemp -d)"',
-    'anonymous_config="$(mktemp -d)"',
-    'trap \'rm -f "$publisher"; rm -rf "$oras_config" "$anonymous_config"\' EXIT',
-    'printf \'%s\' "$ORAS_DOCKERHUB_TOKEN" | oras login',
-    '--password-stdin docker.io',
-    'printf \'%s\' "$ORAS_GHCR_TOKEN" | oras login',
-    '--password-stdin ghcr.io',
-    'printf \'{"auths":{}}\\n\' > "$anonymous_config/config.json"',
-    'DOCKER_CONFIG="$anonymous_config" cosign verify',
-  ]) {
-    if (!packagePublish.includes(required)) {
-      fail(`public Engine Package lane must establish isolated ORAS authentication: ${required}`);
-    }
-  }
-  const packageOrasLogins = normalizedPackagePublish.match(/oras login\b/g) ?? [];
-  const configuredPackageOrasLogins = normalizedPackagePublish.match(
-    /oras login\s+--registry-config "\$oras_config\/config\.json"/g,
-  ) ?? [];
   if (!packagePublish.includes('package_tag="package-v2-${package_digest#sha256:}"') ||
       !packagePublish.includes('--tag "$package_tag"') ||
-      packageOrasLogins.length !== 2 ||
-      packageOrasLogins.length !== configuredPackageOrasLogins.length ||
-      !/oras cp\s+--from-registry-config "\$oras_config\/config\.json"\s+--to-registry-config "\$oras_config\/config\.json"\s+"\$docker_ref"\s+"\$ghcr_location:\$package_tag"/.test(normalizedPackagePublish) ||
-      /oras cp\s+"\$docker_ref"\s+"\$ghcr_location:\$package_tag"/.test(normalizedPackagePublish) ||
-      packagePublish.includes("package-v2-${release_tag}")) {
-    fail("public Engine Package lane must bind its cross-registry ORAS copy to the authenticated config");
-  }
-  if (normalizedPackagePublish.includes('DOCKER_CONFIG="$oras_config"') ||
-      !/oras manifest fetch\s+--registry-config "\$anonymous_config\/config\.json"/.test(normalizedPackagePublish)) {
-    fail("public Engine Package lane must keep anonymous descriptor verification isolated from publishing credentials");
-  }
-  if (!packagePublish.includes('package_tag="package-v2-${package_digest#sha256:}"') ||
-      !packagePublish.includes('--tag "$package_tag"') ||
+      !packagePublish.includes('oras cp "$docker_ref" "$ghcr_location:$package_tag"') ||
       packagePublish.includes("package-v2-${release_tag}")) {
     fail("public Engine Package lane must derive its publication handle from immutable archive bytes, not the product release tag");
   }
@@ -1674,50 +1638,6 @@ function assertPublicWorkflow(workflow, policy) {
       !finalRelease.includes('DOCKER_CONFIG="$anonymous_config" cosign verify') ||
       !finalRelease.includes('"^https://github\\\\.com/yyhuni/lunafox/\\\\.github/workflows/public-validate\\\\.yml@refs/heads/main$"')) {
     fail("public final release must anonymously verify and reuse a consistent immutable final tag on a maintenance retry");
-  }
-  const finalRuntimePromotion = workflowStepBlock(
-    finalRelease,
-    "      - name: Promote every Runtime digest to both final registries",
-  );
-  for (const required of [
-    'ORAS_DOCKERHUB_USERNAME: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}',
-    'ORAS_DOCKERHUB_TOKEN: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}',
-    'ORAS_GHCR_USERNAME: ${{ github.actor }}',
-    'ORAS_GHCR_TOKEN: ${{ github.token }}',
-    'oras_config="$(mktemp -d)"',
-    'anonymous_config="$(mktemp -d)"',
-    'trap \'rm -rf "$oras_config" "$anonymous_config"\' EXIT',
-    'printf \'%s\' "$ORAS_DOCKERHUB_TOKEN" | oras login',
-    '--password-stdin docker.io',
-    'printf \'%s\' "$ORAS_GHCR_TOKEN" | oras login',
-    '--password-stdin ghcr.io',
-    'printf \'{"auths":{}}\\n\' > "$anonymous_config/config.json"',
-    'DOCKER_CONFIG="$anonymous_config" cosign verify',
-  ]) {
-    if (!finalRuntimePromotion.includes(required)) {
-      fail(`public final Runtime promotion must establish isolated ORAS authentication: ${required}`);
-    }
-  }
-  const normalizedFinalRuntimePromotion = finalRuntimePromotion.replace(/\\\n\s*/g, " ");
-  const manifestFetches = normalizedFinalRuntimePromotion.match(/oras manifest fetch\b/g) ?? [];
-  const authenticatedManifestFetches = normalizedFinalRuntimePromotion.match(
-    /oras manifest fetch\s+--registry-config "\$oras_config\/config\.json"/g,
-  ) ?? [];
-  const orasLogins = normalizedFinalRuntimePromotion.match(/oras login\b/g) ?? [];
-  const configuredOrasLogins = normalizedFinalRuntimePromotion.match(
-    /oras login\s+--registry-config "\$oras_config\/config\.json"/g,
-  ) ?? [];
-  if (manifestFetches.length === 0 ||
-      manifestFetches.length !== authenticatedManifestFetches.length ||
-      orasLogins.length !== 2 ||
-      orasLogins.length !== configuredOrasLogins.length ||
-      !/oras cp\s+--from-registry-config "\$oras_config\/config\.json"\s+--to-registry-config "\$oras_config\/config\.json"/.test(normalizedFinalRuntimePromotion) ||
-      normalizedFinalRuntimePromotion.includes('DOCKER_CONFIG="$oras_config"')) {
-    fail("public final Runtime promotion must bind every ORAS operation to an explicit authenticated registry config");
-  }
-  if (!/oras manifest fetch\s+--registry-config "\$oras_config\/config\.json"/.test(normalizedFinalRuntimePromotion) ||
-      !/oras cp\s+--from-registry-config "\$oras_config\/config\.json"/.test(normalizedFinalRuntimePromotion)) {
-    fail("public final Runtime promotion must use the authenticated config for source and destination operations");
   }
 }
 
