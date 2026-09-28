@@ -1783,7 +1783,6 @@ jobs:
         run: |
           set -euo pipefail
           jq -e --arg engineId "${{ matrix.engineId }}" 'any(.engines[]; .engineId == $engineId and .disposition == "built")' dist/public-engine-runtime-discovery/selection.json >/dev/null
-      - uses: docker/setup-buildx-action@v3
       - uses: oras-project/setup-oras@v1
       - uses: docker/login-action@v3
         with:
@@ -1795,6 +1794,9 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
+      # BuildKit snapshots registry credentials when the builder is created;
+      # authenticate before setup so imagetools can read Docker Hub manifests.
+      - uses: docker/setup-buildx-action@v3
       - uses: actions/setup-go@v5
         with:
           go-version-file: tools/engine-release/go.mod
