@@ -1922,6 +1922,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
       - name: Publish, sign, and verify immutable Engine Package v2 artifacts
+        env:
+          ORAS_DOCKERHUB_USERNAME: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}
+          ORAS_DOCKERHUB_TOKEN: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}
+          ORAS_GHCR_USERNAME: ${{ github.actor }}
+          ORAS_GHCR_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           (cd tools/engine-oci-publish && go build -o "$RUNNER_TEMP/verify-oci-signature" ./cmd/verify-signature)
@@ -1931,8 +1936,16 @@ jobs:
           digest_root=dist/public-engine-package-digests
           mkdir -p "$evidence_root/descriptors" "$evidence_root/manifests" "$evidence_root/signatures" "$evidence_root/records" "$digest_root"
           publisher="$(mktemp)"
+          oras_config="$(mktemp -d)"
           anonymous_config="$(mktemp -d)"
-          trap 'rm -f "$publisher"; rm -rf "$anonymous_config"' EXIT
+          trap 'rm -f "$publisher"; rm -rf "$oras_config" "$anonymous_config"' EXIT
+          printf '{"auths":{}}\n' > "$oras_config/config.json"
+          printf '%s' "$ORAS_DOCKERHUB_TOKEN" | oras login \
+            --registry-config "$oras_config/config.json" \
+            --username "$ORAS_DOCKERHUB_USERNAME" --password-stdin docker.io
+          printf '%s' "$ORAS_GHCR_TOKEN" | oras login \
+            --registry-config "$oras_config/config.json" \
+            --username "$ORAS_GHCR_USERNAME" --password-stdin ghcr.io
           printf '{"auths":{}}\n' > "$anonymous_config/config.json"
           (cd tools/engine-oci-publish && go build -trimpath -buildvcs=false -o "$publisher" .)
           shopt -s nullglob
@@ -1950,7 +1963,10 @@ jobs:
             [[ "$artifact_digest" =~ ^sha256:[a-f0-9]{64}$ ]] || exit 1
             docker_location="${docker_ref%@*}"
             ghcr_location="ghcr.io/yyhuni/${docker_location##*/}"
-            oras cp "$docker_ref" "$ghcr_location:$package_tag"
+            oras cp \
+              --from-registry-config "$oras_config/config.json" \
+              --to-registry-config "$oras_config/config.json" \
+              "$docker_ref" "$ghcr_location:$package_tag"
             ghcr_ref="$ghcr_location@$artifact_digest"
             for ref in "$docker_ref" "$ghcr_ref"; do
               registry_label=dockerhub
