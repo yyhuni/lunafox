@@ -99,49 +99,138 @@ jobs:
           RECOVERY_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && needs.publication-intent.outputs.publish == 'true' }}
         run: |
           set -euo pipefail
+          original_head="$(git rev-parse --verify HEAD)"
           release_tag="$(jq -er '.releaseTag' PUBLIC_PROVENANCE.json)"
           head_subject="$(git log -1 --format=%s)"
           workflow_merge_pattern="^Merge[[:space:]]pull[[:space:]]request[[:space:]]#[0-9]+[[:space:]]from[[:space:]]yyhuni/workflow/${release_tag//./\\.}(-retry-[0-9]+)?$"
-          workflow_squash_pattern="^chore\\(workflow\\):[[:space:]]update[[:space:]]public[[:space:]]validation[[:space:]]for[[:space:]]${release_tag//./\\.}([[:space:]]\\(#[0-9]+\\))?$"
+          workflow_generated_pattern="^chore\\(workflow\\):[[:space:]]update[[:space:]]public[[:space:]]validation[[:space:]]for[[:space:]]${release_tag//./\\.}$"
+          workflow_squash_pattern="^chore\\(workflow\\):[[:space:]]update[[:space:]]public[[:space:]]validation[[:space:]]for[[:space:]]${release_tag//./\\.}[[:space:]]\\(#[0-9]+\\)$"
+          deployment_generated_pattern="^chore\\(deploy\\):[[:space:]]finalize[[:space:]]deployment[[:space:]]snapshot[[:space:]]${release_tag//./\\.}$"
+          expected_workflow_author_name="$(jq -er '.git.workflowAuthorName' scripts/ci/public-export-policy.json)"
+          expected_workflow_author_email="$(jq -er '.git.workflowAuthorEmail' scripts/ci/public-export-policy.json)"
+          assert_workflow_maintenance_identity() {
+            local commit="$1" author_name author_email committer_name committer_email
+            author_name="$(git log -1 --format=%an "$commit")"
+            author_email="$(git log -1 --format=%ae "$commit")"
+            committer_name="$(git log -1 --format=%cn "$commit")"
+            committer_email="$(git log -1 --format=%ce "$commit")"
+            if [ "$author_name" = "$expected_workflow_author_name" ] &&
+              [ "$author_email" = "$expected_workflow_author_email" ] &&
+              [ "$committer_name" = "$expected_workflow_author_name" ] &&
+              [ "$committer_email" = "$expected_workflow_author_email" ]; then
+              return 0
+            fi
+            # GitHub records the reviewed author on a squash commit but writes
+            # the commit itself. Require that fixed committer identity instead
+            # of trusting a workflow-looking subject alone.
+            [ -n "$author_name" ] && [ -n "$author_email" ] &&
+              [ "$committer_name" = GitHub ] && [ "$committer_email" = noreply@github.com ] && return 0
+            echo "workflow maintenance commit identity is not authorized: $commit" >&2
+            return 1
+          }
+          assert_workflow_merge_identity() {
+            local commit="$1" author_name author_email committer_name committer_email
+            author_name="$(git log -1 --format=%an "$commit")"
+            author_email="$(git log -1 --format=%ae "$commit")"
+            committer_name="$(git log -1 --format=%cn "$commit")"
+            committer_email="$(git log -1 --format=%ce "$commit")"
+            [ -n "$author_name" ] && [ -n "$author_email" ] &&
+              [ "$committer_name" = GitHub ] && [ "$committer_email" = noreply@github.com ] || {
+              echo "workflow maintenance merge identity is not authorized: $commit" >&2
+              return 1
+            }
+          }
+          deployment_recovery=false
+          recovery_parent=""
+          if [[ "$head_subject" =~ $deployment_generated_pattern ]]; then
+            # A deployment snapshot is destination-owned, but its parent may be
+            # a chain of workflow-only maintenance commits. Bind recovery to the
+            # immutable snapshot shape before temporarily checking its source.
+            deployment_recovery=true
+            deployment_parent="$(git rev-parse --verify HEAD^1)"
+            if git rev-parse --verify HEAD^2 >/dev/null 2>&1; then
+              echo "deployment snapshot must have exactly one parent" >&2
+              exit 1
+            fi
+            deployment_author_name="$(git log -1 --format=%an "$original_head")"
+            deployment_author_email="$(git log -1 --format=%ae "$original_head")"
+            deployment_committer_name="$(git log -1 --format=%cn "$original_head")"
+            deployment_committer_email="$(git log -1 --format=%ce "$original_head")"
+            expected_deployment_author_name="$(jq -er '.git.deploymentAuthorName' scripts/ci/public-export-policy.json)"
+            expected_deployment_author_email="$(jq -er '.git.deploymentAuthorEmail' scripts/ci/public-export-policy.json)"
+            [ "$deployment_author_name" = "$expected_deployment_author_name" ] || {
+              echo "deployment snapshot author identity is not authorized" >&2
+              exit 1
+            }
+            [ "$deployment_author_email" = "$expected_deployment_author_email" ] || {
+              echo "deployment snapshot author email is not authorized" >&2
+              exit 1
+            }
+            [ "$deployment_committer_name" = "$expected_deployment_author_name" ] || {
+              echo "deployment snapshot committer identity is not authorized" >&2
+              exit 1
+            }
+            [ "$deployment_committer_email" = "$expected_deployment_author_email" ] || {
+              echo "deployment snapshot committer email is not authorized" >&2
+              exit 1
+            }
+            expected_deployment_paths="$(jq -er '
+              [.destinationOwnedGroups[] | select(.sentinel == ".env")]
+              | if length == 1 then .[0].paths | sort | join("\n") else error("deployment group policy is ambiguous") end
+            ' scripts/ci/public-export-policy.json)"
+            actual_deployment_paths="$(git diff --name-only "$deployment_parent" "$original_head" | sort)"
+            [ "$actual_deployment_paths" = "$expected_deployment_paths" ] || {
+              echo "deployment snapshot must change exactly the complete destination-owned group" >&2
+              printf 'expected paths:\\n%s\\nactual paths:\\n%s\\n' "$expected_deployment_paths" "$actual_deployment_paths" >&2
+              exit 1
+            }
+            recovery_parent="$deployment_parent"
+          fi
           maintenance_head=false
-          if [ "$RECOVERY_PUBLISH" = true ]; then
+          if [ "$deployment_recovery" = true ]; then
             maintenance_head=true
-          elif [[ "$head_subject" =~ $workflow_merge_pattern || "$head_subject" =~ $workflow_squash_pattern ]]; then
+          elif [ "$RECOVERY_PUBLISH" = true ]; then
+            maintenance_head=true
+          elif [[ "$head_subject" =~ $workflow_merge_pattern || "$head_subject" =~ $workflow_generated_pattern || "$head_subject" =~ $workflow_squash_pattern ]]; then
             maintenance_head=true
           fi
           if [ "$maintenance_head" = true ]; then
             # Workflow maintenance is destination-owned and lands after its source
             # projection. Verify every adjacent maintenance commit before checking
             # the first unchanged source projection tree.
-            recovery_base="$(git rev-parse --verify HEAD^1)"
-            recovery_parent=""
-            if git rev-parse --verify HEAD^2 >/dev/null 2>&1; then
-              recovery_parent="$(git rev-parse --verify HEAD^2)"
-            fi
-            if [ -n "$recovery_parent" ]; then
-              [[ "$head_subject" =~ $workflow_merge_pattern ]] || {
-                echo "authorized recovery must run from the matching workflow maintenance merge: $head_subject" >&2
-                exit 1
-              }
-              [ "$(git diff --name-only "$recovery_base" "$recovery_parent")" = ".github/workflows/public-validate.yml" ] || {
-                echo "authorized recovery parents must differ only in the destination-owned workflow" >&2
-                exit 1
-              }
-              git diff --quiet "$recovery_parent" HEAD || {
-                echo "authorized recovery merge must resolve to the verified workflow-maintenance parent" >&2
-                exit 1
-              }
-              recovery_parent="$recovery_base"
-            else
-              [[ "$head_subject" =~ $workflow_squash_pattern ]] || {
-                echo "authorized recovery must run from the matching workflow maintenance merge or squash commit: $head_subject" >&2
-                exit 1
-              }
-              [ "$(git diff --name-only "$recovery_base" HEAD)" = ".github/workflows/public-validate.yml" ] || {
-                echo "authorized recovery squash commit must change only the destination-owned workflow" >&2
-                exit 1
-              }
-              recovery_parent="$recovery_base"
+            if [ "$deployment_recovery" = false ]; then
+              recovery_base="$(git rev-parse --verify HEAD^1)"
+              recovery_parent=""
+              if git rev-parse --verify HEAD^2 >/dev/null 2>&1; then
+                recovery_parent="$(git rev-parse --verify HEAD^2)"
+              fi
+              if [ -n "$recovery_parent" ]; then
+                [[ "$head_subject" =~ $workflow_merge_pattern ]] || {
+                  echo "authorized recovery must run from the matching workflow maintenance merge: $head_subject" >&2
+                  exit 1
+                }
+                assert_workflow_merge_identity "$original_head"
+                [ "$(git diff --name-only "$recovery_base" "$recovery_parent")" = ".github/workflows/public-validate.yml" ] || {
+                  echo "authorized recovery parents must differ only in the destination-owned workflow" >&2
+                  exit 1
+                }
+                git diff --quiet "$recovery_parent" HEAD || {
+                  echo "authorized recovery merge must resolve to the verified workflow-maintenance parent" >&2
+                  exit 1
+                }
+                recovery_parent="$recovery_base"
+              else
+                [[ "$head_subject" =~ $workflow_generated_pattern || "$head_subject" =~ $workflow_squash_pattern ]] || {
+                  echo "authorized recovery must run from the matching workflow maintenance merge or squash commit: $head_subject" >&2
+                  exit 1
+                }
+                assert_workflow_maintenance_identity "$original_head"
+                [ "$(git diff --name-only "$recovery_base" HEAD)" = ".github/workflows/public-validate.yml" ] || {
+                  echo "authorized recovery squash commit must change only the destination-owned workflow" >&2
+                  exit 1
+                }
+                recovery_parent="$recovery_base"
+              fi
             fi
             while [ -n "$recovery_parent" ]; do
               candidate_parent="$(git rev-parse --verify "${recovery_parent}^1" 2>/dev/null || true)"
@@ -153,6 +242,7 @@ jobs:
                   echo "workflow maintenance merge is missing its second parent: $recovery_parent" >&2
                   exit 1
                 }
+                assert_workflow_merge_identity "$recovery_parent"
                 [ "$(git diff --name-only "$candidate_parent" "$candidate_second_parent")" = ".github/workflows/public-validate.yml" ] || {
                   echo "workflow maintenance merge parents must differ only in the destination-owned workflow" >&2
                   exit 1
@@ -162,7 +252,12 @@ jobs:
                   exit 1
                 }
                 recovery_parent="$candidate_parent"
-              elif [[ "$candidate_subject" =~ $workflow_squash_pattern ]]; then
+              elif [[ "$candidate_subject" =~ $workflow_generated_pattern || "$candidate_subject" =~ $workflow_squash_pattern ]]; then
+                if git rev-parse --verify "${recovery_parent}^2" >/dev/null 2>&1; then
+                  echo "workflow maintenance squash commit must have exactly one parent: $recovery_parent" >&2
+                  exit 1
+                fi
+                assert_workflow_maintenance_identity "$recovery_parent"
                 [ "$(git diff --name-only "$candidate_parent" "$recovery_parent")" = ".github/workflows/public-validate.yml" ] || {
                   echo "workflow maintenance squash commits must change only the destination-owned workflow" >&2
                   exit 1
@@ -175,6 +270,19 @@ jobs:
             git checkout --detach "$recovery_parent"
           fi
           node scripts/ci/check-public-export.mjs --require-agent-bundle --json
+          if [ "$deployment_recovery" = true ]; then
+            # Downstream jobs must inspect the actual deployment snapshot after
+            # the source projection has passed its complete export validation.
+            git diff --quiet || {
+              echo "source projection validation modified the checkout" >&2
+              exit 1
+            }
+            git checkout --detach "$original_head"
+            [ "$(git rev-parse --verify HEAD)" = "$original_head" ] || {
+              echo "failed to restore deployment snapshot after source validation" >&2
+              exit 1
+            }
+          fi
 
       - name: Verify bilingual public documentation
         # The destination-owned workflow is merged before the next source
