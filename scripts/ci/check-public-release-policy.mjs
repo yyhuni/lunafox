@@ -1335,11 +1335,40 @@ function assertPublicWorkflow(workflow, policy) {
     fail("public Engine Runtime matrix must fail fast without optional children");
   }
   if (!hasRequiredJobNeeds(engineFinalize, ["publication-intent", "public-engine-runtime-discover", "public-engine-runtime-build"]) ||
-      !engineFinalize.includes("max-parallel: 8") ||
+      !engineFinalize.includes("max-parallel: 2") ||
       !engineFinalize.includes("finalize-engine-runtime-platforms.sh") ||
       !engineFinalize.includes("public-engine-runtime-shard-") ||
       !engineFinalize.includes("packages: write")) {
     fail("public Engine Runtime finalize must assemble each exact native platform pair with publication authority");
+  }
+  const normalizedEngineFinalize = withoutComments(engineFinalize).replace(/\\\n\s*/g, " ");
+  for (const required of [
+    "id: registry-auth",
+    `auth_root=\"$(mktemp -d \"$RUNNER_TEMP/lunafox-engine-registry-auth.XXXXXX\")\"`,
+    `printf '{\"auths\":{}}\\n' > \"$docker_config/config.json\"`,
+    `printf '{\"auths\":{}}\\n' > \"$oras_config\"`,
+    "id: buildx",
+    "DOCKER_CONFIG: ${{ steps.registry-auth.outputs.docker_config }}",
+    "name: Authenticate isolated Engine ORAS config",
+    "ORAS_DOCKERHUB_USERNAME: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}",
+    "ORAS_DOCKERHUB_TOKEN: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}",
+    "ORAS_GHCR_USERNAME: ${{ github.actor }}",
+    "ORAS_GHCR_TOKEN: ${{ github.token }}",
+    "ENGINE_ORAS_REGISTRY_CONFIG: ${{ steps.registry-auth.outputs.oras_config }}",
+    "ENGINE_BUILDER_NAME: ${{ steps.buildx.outputs.name }}",
+    "name: Remove Engine registry credentials",
+    `rm -rf -- \"$ENGINE_REGISTRY_AUTH_ROOT\"`,
+  ]) {
+    if (!engineFinalize.includes(required)) fail(`public Engine Runtime finalize must establish isolated authenticated transport: ${required}`);
+  }
+  const finalizeOrasLogins = normalizedEngineFinalize.match(/oras login\b/g) ?? [];
+  const finalizeLoginLogouts = normalizedEngineFinalize.match(/logout: false\b/g) ?? [];
+  if (finalizeOrasLogins.length !== 2 ||
+      finalizeLoginLogouts.length !== 2 ||
+      !/oras login\s+--registry-config "\$ORAS_CONFIG"\s+--username "\$ORAS_DOCKERHUB_USERNAME"/.test(normalizedEngineFinalize) ||
+      !/oras login\s+--registry-config "\$ORAS_CONFIG"\s+--username "\$ORAS_GHCR_USERNAME"/.test(normalizedEngineFinalize) ||
+      normalizedEngineFinalize.includes('DOCKER_CONFIG="$anonymous_config"')) {
+    fail("public Engine Runtime finalize must authenticate both registries explicitly without an anonymous-config collapse");
   }
   if (!hasRequiredJobNeeds(engineAggregate, ["publication-intent", "public-engine-runtime-discover", "public-engine-runtime-finalize"]) ||
       !engineAggregate.includes("aggregate-engine-runtime-image-shards.sh") ||

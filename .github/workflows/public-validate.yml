@@ -1766,7 +1766,7 @@ jobs:
       packages: write
     strategy:
       fail-fast: true
-      max-parallel: 8
+      max-parallel: 2
       matrix: ${{ fromJSON(needs.public-engine-runtime-discover.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v4
@@ -1784,19 +1784,59 @@ jobs:
           set -euo pipefail
           jq -e --arg engineId "${{ matrix.engineId }}" 'any(.engines[]; .engineId == $engineId and .disposition == "built")' dist/public-engine-runtime-discovery/selection.json >/dev/null
       - uses: oras-project/setup-oras@v1
+      - id: registry-auth
+        name: Prepare isolated Engine registry credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth_root="$(mktemp -d "$RUNNER_TEMP/lunafox-engine-registry-auth.XXXXXX")"
+          docker_config="$auth_root/docker"
+          oras_config="$auth_root/oras/config.json"
+          mkdir -p "$docker_config" "$(dirname "$oras_config")"
+          printf '{"auths":{}}\n' > "$docker_config/config.json"
+          printf '{"auths":{}}\n' > "$oras_config"
+          chmod 700 "$auth_root" "$docker_config" "$(dirname "$oras_config")"
+          chmod 600 "$docker_config/config.json" "$oras_config"
+          {
+            echo "auth_root=$auth_root"
+            echo "docker_config=$docker_config"
+            echo "oras_config=$oras_config"
+          } >> "$GITHUB_OUTPUT"
       - uses: docker/login-action@v3
+        env:
+          DOCKER_CONFIG: ${{ steps.registry-auth.outputs.docker_config }}
         with:
           registry: docker.io
           username: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}
           password: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}
+          logout: false
       - uses: docker/login-action@v3
+        env:
+          DOCKER_CONFIG: ${{ steps.registry-auth.outputs.docker_config }}
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
-      # BuildKit snapshots registry credentials when the builder is created;
-      # authenticate before setup so imagetools can read Docker Hub manifests.
-      - uses: docker/setup-buildx-action@v3
+          logout: false
+      - name: Authenticate isolated Engine ORAS config
+        env:
+          ORAS_CONFIG: ${{ steps.registry-auth.outputs.oras_config }}
+          ORAS_DOCKERHUB_USERNAME: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}
+          ORAS_DOCKERHUB_TOKEN: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}
+          ORAS_GHCR_USERNAME: ${{ github.actor }}
+          ORAS_GHCR_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$ORAS_DOCKERHUB_TOKEN" | oras login \
+            --registry-config "$ORAS_CONFIG" \
+            --username "$ORAS_DOCKERHUB_USERNAME" --password-stdin docker.io
+          printf '%s' "$ORAS_GHCR_TOKEN" | oras login \
+            --registry-config "$ORAS_CONFIG" \
+            --username "$ORAS_GHCR_USERNAME" --password-stdin ghcr.io
+      - id: buildx
+        uses: docker/setup-buildx-action@v3
+        env:
+          DOCKER_CONFIG: ${{ steps.registry-auth.outputs.docker_config }}
       - uses: actions/setup-go@v5
         with:
           go-version-file: tools/engine-release/go.mod
@@ -1807,12 +1847,27 @@ jobs:
           ENGINE_IMAGE_TAG: public-${{ github.sha }}
           ENGINE_PLATFORM_BUILDS_ROOT: ${{ github.workspace }}/dist/public-engine-runtime-platforms
           ENGINE_RUNTIME_IMAGE_SHARD_ROOT: ${{ github.workspace }}/dist/public-engine-runtime-shard
+          DOCKER_CONFIG: ${{ steps.registry-auth.outputs.docker_config }}
+          ENGINE_ORAS_REGISTRY_CONFIG: ${{ steps.registry-auth.outputs.oras_config }}
+          ENGINE_BUILDER_NAME: ${{ steps.buildx.outputs.name }}
         run: bash scripts/ci/finalize-engine-runtime-platforms.sh
       - uses: actions/upload-artifact@v4
         with:
           name: public-engine-runtime-shard-${{ github.sha }}-${{ matrix.artifactKey }}
           path: dist/public-engine-runtime-shard/**
           if-no-files-found: error
+      - name: Remove Engine registry credentials
+        if: always()
+        env:
+          ENGINE_REGISTRY_AUTH_ROOT: ${{ steps.registry-auth.outputs.auth_root }}
+        run: |
+          set -euo pipefail
+          [ -n "$ENGINE_REGISTRY_AUTH_ROOT" ] || exit 0
+          case "$ENGINE_REGISTRY_AUTH_ROOT" in
+            "$RUNNER_TEMP"/*) ;;
+            *) echo "refusing to remove an unexpected credential path" >&2; exit 1 ;;
+          esac
+          rm -rf -- "$ENGINE_REGISTRY_AUTH_ROOT"
 
   public-engine-runtime-aggregate:
     if: needs.publication-intent.outputs.publish == 'true' && always() && !cancelled() && needs.publication-intent.result == 'success' && needs.public-engine-runtime-discover.result == 'success' && (needs.public-engine-runtime-finalize.result == 'success' || (fromJSON(needs.public-engine-runtime-discover.outputs.built_count) == 0 && needs.public-engine-runtime-finalize.result == 'skipped'))
