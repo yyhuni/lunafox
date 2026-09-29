@@ -603,6 +603,50 @@ require_cf_state_directory() {
 		fail "$LUNAFOX_CF_STATE_DIR must have mode 0700"
 }
 
+# An unflagged install can retire only the generated mapping it owns. Never
+# recurse here: an unexpected entry must stay intact for manual recovery.
+require_cf_state_retirement_layout() {
+	local entry name
+	if [ -L "$LUNAFOX_CF_STATE_PATH" ]; then
+		fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR is a symbolic link"
+	fi
+	[ -d "$LUNAFOX_CF_STATE_PATH" ] ||
+		fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR is not a directory"
+	[ "$(file_mode "$LUNAFOX_CF_STATE_PATH")" = 700 ] ||
+		fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR must have mode 0700"
+	for entry in "$LUNAFOX_CF_STATE_PATH"/* "$LUNAFOX_CF_STATE_PATH"/.[!.]* "$LUNAFOX_CF_STATE_PATH"/..?*; do
+		[ -e "$entry" ] || [ -L "$entry" ] || continue
+		name="${entry##*/}"
+		case "$name" in
+		"$LUNAFOX_CF_STATE_FILE" | "$LUNAFOX_CF_OVERLAY_FILE" | "$LUNAFOX_CF_INVENTORY_FILE") ;;
+		*) fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR contains unexpected entry $name" ;;
+		esac
+		if [ -L "$entry" ]; then
+			fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR/$name is a symbolic link"
+		fi
+		[ -f "$entry" ] ||
+			fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR/$name is not a regular file"
+		[ "$(file_mode "$entry")" = 600 ] ||
+			fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR/$name must have mode 0600"
+	done
+}
+
+retire_persisted_cf_acceleration() {
+	CF_ACCELERATION_ENABLED=0
+	LUNAFOX_CF_OVERLAY_USED=""
+	if ! cf_state_is_present; then
+		return 0
+	fi
+	require_cf_state_retirement_layout
+	if ! rm -f "$LUNAFOX_CF_STATE_FILE_PATH" "$LUNAFOX_CF_OVERLAY_PATH" "$LUNAFOX_CF_INVENTORY_PATH"; then
+		fail "manual Cloudflare state recovery is required: could not remove the protected Cloudflare acceleration files"
+	fi
+	if ! rmdir "$LUNAFOX_CF_STATE_PATH"; then
+		fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR changed or still contains an entry"
+	fi
+	note "retired the persisted Cloudflare acceleration mapping; this install uses the default image transport"
+}
+
 cf_state_value() {
 	awk -F= -v key="$1" '$1 == key { print substr($0, length(key) + 2); exit }' "$LUNAFOX_CF_STATE_FILE_PATH"
 }
@@ -2270,10 +2314,14 @@ action_install() {
 	fi
 	enforce_private_env_mode
 	persist_install_public_address
-	if cf_state_is_present; then
-		activate_persisted_cf_acceleration
-	elif [ "$CF_ACCELERATION_REQUESTED" = 1 ]; then
-		prepare_new_cf_acceleration
+	if [ "$CF_ACCELERATION_REQUESTED" = 1 ]; then
+		if cf_state_is_present; then
+			activate_persisted_cf_acceleration
+		else
+			prepare_new_cf_acceleration
+		fi
+	else
+		retire_persisted_cf_acceleration
 	fi
 	compose_file_args
 	require_preheat_timeout

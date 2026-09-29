@@ -276,10 +276,15 @@ digest is downloaded through Cloudflare. PostgreSQL, Redis, Loki, and Alloy are
 LunaFox-reviewed fixed-digest content with OCI digest checks; this does not
 claim publisher signature verification. A successful opt-in writes protected
 state, its Compose overlay, and its Engine inventory under
-`.lunafox-cf-acceleration/`. Do not edit those files. Later `./start.sh` and
-`./restart.sh` validate and reuse that state; a direct `docker compose up -d`
-always ignores it, and a deployment without that state keeps the normal
-non-Cloudflare defaults.
+`.lunafox-cf-acceleration/`. Do not edit those files. The mapping remains in
+use by later lifecycle commands only until you run a plain `./install.sh`.
+That unflagged install removes a safe mapping before it starts the base Compose
+graph, so later lifecycle commands use the normal non-Cloudflare transport
+until you explicitly run `./install.sh --cf-acceleration` again. It preserves
+`.env`, containers, named volumes, and application data. If the state directory
+is a symlink, has an unknown entry, a non-regular file, or an incorrect mode,
+the install stops before Compose and asks for manual state recovery. A direct
+`docker compose up -d` always ignores the mapping.
 
 Only a classified Cloudflare DNS, TCP, TLS, timeout, rate-limit, or temporary
 5xx transport failure can try the same-digest fallback sequence. Policy,
