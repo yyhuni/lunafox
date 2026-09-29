@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:b21fd6abe6531086e5f76afc8bc5ddafd58bc3b641583189f693f4041e2d91b4",
-  "releaseTag": "v0.0.1-alpha.190",
+  "sourceRevisionDigest": "sha256:b078b8f97d12cef64ad4139df6cfdf101ca5d6039d53de145d7570d7ee3d0189",
+  "releaseTag": "v0.0.1-alpha.191",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "2590f05b1eb64dd80f40da1662df5a95da99d26b1abf047a139fb4d7a744e86a"
+      "sha256": "a392b25bbe937ae9a685185191ca895102f21b0ba968f07ae51ba46c409fa8b0"
     },
     {
       "path": "README.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "1852e28bba0500f7008cace65b391e5bc6d7dc089ba88901e99a5bcf44556e9a"
+      "sha256": "3c13d8c7625176281341197cb151773dca7af64b728f9192dbc8a6c50bfc43a5"
     },
     {
       "path": "agent/bin/sha256-575e0b6dfe956b399f0155214d5e1baa71e318f8bcd65f66f74957a169694bf0/agent-bundle.sha256",
@@ -92,7 +92,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "a8825716f919632bba69317dae8ba2ac8e53a60225ce5912700a28dbbd8aa5ef"
+      "sha256": "0bd69bf2ce7b97ba9f057003e601bc6a2260ae9dbbc28348ba9abac53d3d2c33"
     },
     {
       "path": "agent/bin/sha256-575e0b6dfe956b399f0155214d5e1baa71e318f8bcd65f66f74957a169694bf0/lunafox-agent-linux-amd64",
@@ -1036,8 +1036,8 @@
       "path": "deploy/lifecycle/lunafox-lifecycle.sh",
       "type": "file",
       "mode": "0755",
-      "size": 101926,
-      "sha256": "f84ac4e81d1450fa8a7c404e50643447501fe1ef710e5a838f421ffef6c84883"
+      "size": 104105,
+      "sha256": "c84fc7db9ef9a061599b6bee1e53898a81e9b26416e42c6c08e9abb7d0b55f69"
     },
     {
       "path": "deploy/lifecycle/restart.sh",
@@ -1127,15 +1127,15 @@
       "path": "docs/public-deployment.md",
       "type": "file",
       "mode": "0644",
-      "size": 30173,
-      "sha256": "4d50912a8572fe1ffc81f6c59c04147496fe1304dc604c12acd1dbb1a712daf0"
+      "size": 30593,
+      "sha256": "8b18398756c811ee313bc333c2d463b5bd2090ea6ebf63f099453f6c08d66e41"
     },
     {
       "path": "docs/public-deployment.zh-CN.md",
       "type": "file",
       "mode": "0644",
-      "size": 27956,
-      "sha256": "1054a3a6cfae9cdd515e6e34a11c0080333395b96fbd78d5033e45cec0839166"
+      "size": 28382,
+      "sha256": "f0bae4189ee0d0925e065ef350e96ac455dfb638060d3db78a13c00b1bfb629f"
     },
     {
       "path": "engine-go/README.md",
@@ -17010,8 +17010,8 @@
       "path": "lunafox-lifecycle.sh",
       "type": "file",
       "mode": "0755",
-      "size": 101926,
-      "sha256": "f84ac4e81d1450fa8a7c404e50643447501fe1ef710e5a838f421ffef6c84883"
+      "size": 104105,
+      "sha256": "c84fc7db9ef9a061599b6bee1e53898a81e9b26416e42c6c08e9abb7d0b55f69"
     },
     {
       "path": "proto/buf.yaml",
@@ -17364,6 +17364,13 @@
       "sha256": "603866930a0c95754df99907c5629a7e010c0f67059219ccc5e101da900b6523"
     },
     {
+      "path": "release-notes/v0.0.1-alpha.191.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 1046,
+      "sha256": "0e7a68e326e8f29268b2cb73a81e1b2df39986b20dd2a4cc855652d78e472d63"
+    },
+    {
       "path": "resources/alloy/config.alloy",
       "type": "file",
       "mode": "0644",
@@ -17500,8 +17507,8 @@
       "path": "scripts/ci/check-public-release-policy.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 112874,
-      "sha256": "8a751eba5745e1d6a66e64b7e7699e93aa121608b8a263a4e61e12c3dbd80e31"
+      "size": 125019,
+      "sha256": "6266b70f447db90cbecf94f6f26e4d803d8cba7fbab2c35d842ff99484672368"
     },
     {
       "path": "scripts/ci/component-evidence-bundle-selftest.mjs",
@@ -17521,15 +17528,15 @@
       "path": "scripts/ci/finalize-engine-runtime-platforms.sh",
       "type": "file",
       "mode": "0755",
-      "size": 12154,
-      "sha256": "ae74086aadcf562da6eb2e74e0eb4d8f117cd91cb14c5bfb2471a931c9ccb292"
+      "size": 14187,
+      "sha256": "30f0b6f2ac897fe12e0d0e9927d02da9e139beca25dbdfa27b707dea928af188"
     },
     {
       "path": "scripts/ci/finalize-engine-runtime-platforms.test.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 6460,
-      "sha256": "05e1e5297a7497fe80d32f9d81d1a2c9920aeb65e6c7686dcdfe6001312dd899"
+      "size": 10021,
+      "sha256": "37b5086055c1f3e595f1dfbc0fbcda8cfeb0761f9e0920906cb5e552493b4d68"
     },
     {
       "path": "scripts/ci/fixtures/legacy-alpha114-release.manifest.yaml",

@@ -116,14 +116,31 @@ verify_host_pull docker.io/yyhuni/image@sha256:abc engine test ghcr.io/yyhuni/im
 test("retry reuses an existing immutable index instead of comparing provenance graphs", () => {
   const source = fs.readFileSync(script, "utf8");
   assert.match(source, /immutable source of truth/);
-  assert.match(source, /retry_transient_registry "oras cp \$docker_ref" oras cp "\$docker_ref" "\$ghcr_tag"/);
+  assert.match(
+    source,
+    /retry_transient_registry "oras cp \$docker_ref" \\\n+\s+oras cp --from-registry-config "\$ORAS_CONFIG" --to-registry-config "\$ORAS_CONFIG" "\$docker_ref" "\$ghcr_tag"/,
+  );
+  assert.match(source, /docker buildx imagetools create --builder "\$BUILDER_NAME" --prefer-index/);
+  assert.match(source, /docker buildx imagetools inspect --builder "\$BUILDER_NAME"/);
+  assert.match(source, /oras resolve --registry-config "\$ORAS_CONFIG"/);
+  assert.match(source, /ENGINE_ORAS_REGISTRY_CONFIG/);
+  assert.match(source, /DOCKER_CONFIG is required for authenticated finalization/);
   assert.doesNotMatch(source, /already has a different graph/);
   assert.doesNotMatch(source, /proposed-canonical/);
 });
 
+test("valid platform pairs require isolated authenticated transport before publication", t => {
+  const f = setup(t);
+  f.write("amd64", f.record("linux/amd64"));
+  f.write("arm64", f.record("linux/arm64"));
+  assert.match(f.run(), /ENGINE_BUILDER_NAME is required for authenticated finalization/);
+});
+
 test("transient registry retry retries not-found then succeeds", () => {
   const source = fs.readFileSync(script, "utf8");
-  const helper = source.slice(source.indexOf("retry_transient_registry() {"), source.indexOf("existing_digest="));
+  const helperStart = source.indexOf("retry_transient_registry() {");
+  const helperEnd = source.indexOf("\n}\n", helperStart) + 3;
+  const helper = source.slice(helperStart, helperEnd);
   const harness = `set -euo pipefail
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -146,3 +163,81 @@ out="$(retry_transient_registry inspect fake_inspect)"
   assert.equal(result.status, 0, result.stderr + result.stdout);
 });
 
+test("transient registry retry handles Docker Hub rate limits", () => {
+  const source = fs.readFileSync(script, "utf8");
+  const helperStart = source.indexOf("retry_transient_registry() {");
+  const helperEnd = source.indexOf("\n}\n", helperStart) + 3;
+  const helper = source.slice(helperStart, helperEnd);
+  const harness = `set -euo pipefail
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+${helper}
+calls_file="$tmp_dir/calls"
+echo 0 >"$calls_file"
+fake_inspect() {
+  echo $(( $(cat "$calls_file") + 1 )) >"$calls_file"
+  if [ "$(cat "$calls_file")" -lt 2 ]; then
+    echo 'toomanyrequests: You have reached a rate limit' >&2
+    return 1
+  fi
+  echo reused-index
+}
+out="$(retry_transient_registry inspect fake_inspect)"
+[ "$out" = reused-index ]
+[ "$(cat "$calls_file")" -eq 2 ]
+`;
+  const result = spawnSync("bash", ["-c", harness], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+});
+
+test("transient registry retry does not hide authentication failures", () => {
+  const source = fs.readFileSync(script, "utf8");
+  const helperStart = source.indexOf("retry_transient_registry() {");
+  const helperEnd = source.indexOf("\n}\n", helperStart) + 3;
+  const helper = source.slice(helperStart, helperEnd);
+  const harness = `set -euo pipefail
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+${helper}
+calls_file="$tmp_dir/calls"
+echo 0 >"$calls_file"
+fake_inspect() {
+  echo $(( $(cat "$calls_file") + 1 )) >"$calls_file"
+  echo 'unauthorized: authentication required' >&2
+  return 1
+}
+if retry_transient_registry inspect fake_inspect; then
+  exit 1
+fi
+[ "$(cat "$calls_file")" -eq 1 ]
+`;
+  const result = spawnSync("bash", ["-c", harness], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+});
+
+test("transient registry retry counts an initial resolve attempt against its budget", () => {
+  const source = fs.readFileSync(script, "utf8");
+  const helperStart = source.indexOf("retry_transient_registry() {");
+  const helperEnd = source.indexOf("\n}\n", helperStart) + 3;
+  const helper = source.slice(helperStart, helperEnd);
+  const harness = `set -euo pipefail
+tmp_dir="$(mktemp -d)"
+trap 'rm -rf "$tmp_dir"' EXIT
+fail() { exit 91; }
+sleep() { :; }
+${helper}
+calls_file="$tmp_dir/calls"
+echo 0 >"$calls_file"
+fake_resolve() {
+  echo $(( $(cat "$calls_file") + 1 )) >"$calls_file"
+  echo '429 Too Many Requests' >&2
+  return 1
+}
+if retry_transient_registry resolve --start-attempt 2 fake_resolve; then
+  exit 1
+fi
+[ "$(cat "$calls_file")" -eq 5 ]
+`;
+  const result = spawnSync("bash", ["-c", harness], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr + result.stdout);
+});

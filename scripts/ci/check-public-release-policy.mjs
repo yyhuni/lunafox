@@ -820,6 +820,7 @@ function assertPublicWorkflow(workflow, policy) {
   const contextValidation = jobBlock(workflow, "validate-runtime-contexts");
   const aggregate = jobBlock(workflow, "public-validation");
   const publicationIntent = jobBlock(workflow, "publication-intent");
+  const immutableRecovery = jobBlock(workflow, "recover-immutable-public-release");
   const runtimeCompositionResolver = jobBlock(workflow, "resolve-public-runtime-composition");
   const publication = jobBlock(workflow, "publish-runtime-images");
   const agentPublication = jobBlock(workflow, "publish-agent-image");
@@ -843,6 +844,99 @@ function assertPublicWorkflow(workflow, policy) {
     "manual recovery Tag must exactly match PUBLIC_PROVENANCE.json",
   ]) {
     if (!dispatchGate.includes(required)) fail(`public immutable recovery gate is missing: ${required}`);
+  }
+  for (const required of [
+    "recovery: ${{ steps.intent.outputs.recovery }}",
+    'echo "recovery=false" >> "$GITHUB_OUTPUT"',
+    'echo "recovery=true" >> "$GITHUB_OUTPUT"',
+  ]) {
+    if (!publicationIntent.includes(required)) fail(`public immutable recovery intent is missing: ${required}`);
+  }
+  if (!hasRequiredJobNeeds(immutableRecovery, ["publication-intent", "public-validation"]) ||
+      !jobCondition(immutableRecovery).includes("needs.publication-intent.outputs.recovery == 'true'") ||
+      !jobCondition(immutableRecovery).includes("needs.public-validation.result == 'success'") ||
+      !immutableRecovery.includes("environment: public-release")) {
+    fail("immutable public release recovery must run only after protected intent and successful public validation");
+  }
+  assertGitHubHostedRunner(immutableRecovery, "immutable public release recovery");
+  if (!/permissions:\s*\n\s+actions:\s+write\n\s+contents:\s+write\n\s+pull-requests:\s+read\s*$/m.test(immutableRecovery) ||
+      /packages:\s*write|id-token:\s*write|attestations:\s*write|docker\/login-action|oras login|oras cp|cosign sign|docker (?:build|push)|publish-public-deployment\.mjs|\bsecrets\./.test(immutableRecovery)) {
+    fail("immutable public release recovery must retain only terminal metadata authority and no OCI publication authority");
+  }
+  for (const required of [
+    "fetch-depth: 0",
+    "git worktree add --detach",
+    "git diff-tree --no-commit-id --name-only -r",
+    "snapshot-pull-request.json",
+    "snapshot pull request is not the authorized protected-main merge",
+    "PUBLIC_PROVENANCE.json",
+    "PUBLIC_EXPORT_MANIFEST.json",
+    "public-validation has already verified the source-export history",
+    "verify-public-release.mjs",
+    "verify-release-component-composition.mjs",
+    "verify-public-deployment.sh",
+    "generate-compose-deployment.mjs",
+    "generated deployment closure differs from the authorized snapshot",
+    "anonymous-registry",
+    "oras manifest fetch",
+    '"$RUNNER_TEMP/verify-immutable-recovery-signature" "$ref"',
+    "DOCKER_CONFIG=\"$anonymous_config\" cosign verify",
+    "verify-runtime-image-index.mjs",
+    "immutable-recovery-evidence.json",
+    "existing immutable release-channel record conflicts",
+    "existing immutable tag points to a different commit",
+    "existing GitHub Release metadata conflicts",
+    "existing Release asset conflicts",
+    "gh release create",
+    "gh release upload",
+    "immutable-public-release-recovery-${{ github.run_id }}",
+  ]) {
+    if (!immutableRecovery.includes(required)) fail(`immutable public release recovery is missing: ${required}`);
+  }
+  for (const required of [
+    'channel_current_root="$recovery_root/channel-current"',
+    "current_channel_files=(",
+    '"channels/$channel.env"',
+    '"${immutable_channel_files[@]}"',
+    'mkdir -p "$(dirname "$channel_current_root/$relative")"',
+    'cp "$channel_root/$relative" "$channel_current_root/$relative"',
+    '--root-dir "$channel_current_root"',
+  ]) {
+    if (!immutableRecovery.includes(required)) {
+      fail(`immutable public release recovery must validate only the generated current channel records before preserving history: ${required}`);
+    }
+  }
+  if (immutableRecovery.includes('--root-dir "$channel_root"')) {
+    fail("immutable public release recovery must not validate unrelated historical channel records");
+  }
+  if (!immutableRecovery.includes('git tag "$RELEASE_TAG" "$snapshot_sha"') ||
+      !immutableRecovery.includes('git push origin "refs/tags/$RELEASE_TAG"') ||
+      immutableRecovery.includes('"/repos/$PUBLIC_REPOSITORY/git/refs"')) {
+    fail("immutable public release recovery must push an absent tag at the authorized snapshot instead of using the Git refs API");
+  }
+  if (immutableRecovery.includes("gh release edit") ||
+      immutableRecovery.includes('--provenance "$snapshot_root/PUBLIC_PROVENANCE.json"') ||
+      !immutableRecovery.includes('if: always()\n        uses: actions/upload-artifact@v4')) {
+    fail("immutable public release recovery must preserve exact existing metadata, provenance boundary, and upload verification evidence");
+  }
+  const ordinaryReleaseJobs = [
+    "resolve-public-runtime-composition",
+    "publish-runtime-images",
+    "publish-agent-image",
+    "public-engine-runtime-discover",
+    "public-engine-runtime-build",
+    "public-engine-runtime-finalize",
+    "public-engine-runtime-aggregate",
+    "public-engine-runtime-sign",
+    "public-engine-package-build",
+    "public-engine-package-publish",
+    "public-engine-release-manifest",
+    "publish-final-release",
+  ];
+  for (const name of ordinaryReleaseJobs) {
+    if (!jobBlock(workflow, name).includes("needs.publication-intent.outputs.recovery != 'true'")) {
+      fail(`ordinary release job must be skipped during immutable recovery: ${name}`);
+    }
   }
   const validationBlocks = [validation, frontendValidation, scopeValidation, goValidation, protoValidation, contextValidation, aggregate, publicationIntent];
   validationBlocks.forEach((block, index) => {
@@ -872,7 +966,7 @@ function assertPublicWorkflow(workflow, policy) {
     'if [ "$RECOVERY_PUBLISH" = true ]; then',
     'recovery_base="$(git rev-parse --verify HEAD^1)"',
     'recovery_parent="$(git rev-parse --verify HEAD^2)"',
-    'workflow_merge_pattern="^Merge[[:space:]]pull[[:space:]]request[[:space:]]#[0-9]+[[:space:]]from[[:space:]]yyhuni/workflow/${release_tag//./\\\\.}(-retry-[0-9]+)?$"',
+    'workflow_merge_pattern="^Merge[[:space:]]pull[[:space:]]request[[:space:]]#[0-9]+[[:space:]]from[[:space:]]yyhuni/workflow/${release_tag//./\\\\.}(-retry-[0-9]+|-immutable-recovery)?$"',
     '[ "$(git diff --name-only "$recovery_base" "$recovery_parent")" = ".github/workflows/public-validate.yml" ] || {',
     'git diff --quiet "$recovery_parent" HEAD',
     'git checkout --detach "$recovery_parent"',
@@ -1335,11 +1429,40 @@ function assertPublicWorkflow(workflow, policy) {
     fail("public Engine Runtime matrix must fail fast without optional children");
   }
   if (!hasRequiredJobNeeds(engineFinalize, ["publication-intent", "public-engine-runtime-discover", "public-engine-runtime-build"]) ||
-      !engineFinalize.includes("max-parallel: 8") ||
+      !engineFinalize.includes("max-parallel: 2") ||
       !engineFinalize.includes("finalize-engine-runtime-platforms.sh") ||
       !engineFinalize.includes("public-engine-runtime-shard-") ||
       !engineFinalize.includes("packages: write")) {
     fail("public Engine Runtime finalize must assemble each exact native platform pair with publication authority");
+  }
+  const normalizedEngineFinalize = withoutComments(engineFinalize).replace(/\\\n\s*/g, " ");
+  for (const required of [
+    "id: registry-auth",
+    `auth_root=\"$(mktemp -d \"$RUNNER_TEMP/lunafox-engine-registry-auth.XXXXXX\")\"`,
+    `printf '{\"auths\":{}}\\n' > \"$docker_config/config.json\"`,
+    `printf '{\"auths\":{}}\\n' > \"$oras_config\"`,
+    "id: buildx",
+    "DOCKER_CONFIG: ${{ steps.registry-auth.outputs.docker_config }}",
+    "name: Authenticate isolated Engine ORAS config",
+    "ORAS_DOCKERHUB_USERNAME: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}",
+    "ORAS_DOCKERHUB_TOKEN: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}",
+    "ORAS_GHCR_USERNAME: ${{ github.actor }}",
+    "ORAS_GHCR_TOKEN: ${{ github.token }}",
+    "ENGINE_ORAS_REGISTRY_CONFIG: ${{ steps.registry-auth.outputs.oras_config }}",
+    "ENGINE_BUILDER_NAME: ${{ steps.buildx.outputs.name }}",
+    "name: Remove Engine registry credentials",
+    `rm -rf -- \"$ENGINE_REGISTRY_AUTH_ROOT\"`,
+  ]) {
+    if (!engineFinalize.includes(required)) fail(`public Engine Runtime finalize must establish isolated authenticated transport: ${required}`);
+  }
+  const finalizeOrasLogins = normalizedEngineFinalize.match(/oras login\b/g) ?? [];
+  const finalizeLoginLogouts = normalizedEngineFinalize.match(/logout: false\b/g) ?? [];
+  if (finalizeOrasLogins.length !== 2 ||
+      finalizeLoginLogouts.length !== 2 ||
+      !/oras login\s+--registry-config "\$ORAS_CONFIG"\s+--username "\$ORAS_DOCKERHUB_USERNAME"/.test(normalizedEngineFinalize) ||
+      !/oras login\s+--registry-config "\$ORAS_CONFIG"\s+--username "\$ORAS_GHCR_USERNAME"/.test(normalizedEngineFinalize) ||
+      normalizedEngineFinalize.includes('DOCKER_CONFIG="$anonymous_config"')) {
+    fail("public Engine Runtime finalize must authenticate both registries explicitly without an anonymous-config collapse");
   }
   if (!hasRequiredJobNeeds(engineAggregate, ["publication-intent", "public-engine-runtime-discover", "public-engine-runtime-finalize"]) ||
       !engineAggregate.includes("aggregate-engine-runtime-image-shards.sh") ||
@@ -1382,7 +1505,11 @@ function assertPublicWorkflow(workflow, policy) {
 
   const publicCosignIdentityRegexp = "'^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$'";
   const overescapedPublicCosignIdentityRegexp = "'^https://github\\\\.com/yyhuni/lunafox/\\\\.github/workflows/public-validate\\\\.yml@refs/heads/main$'";
-  if (workflow.includes(overescapedPublicCosignIdentityRegexp) || countOccurrences(workflow, publicCosignIdentityRegexp) !== 4) {
+  const immutableRecoveryCosignIdentity = 'public_cosign_identity="^https://github\\.com/yyhuni/lunafox/\\.github/workflows/public-validate\\.yml@refs/heads/main$"';
+  if (workflow.includes(overescapedPublicCosignIdentityRegexp) ||
+      countOccurrences(workflow, publicCosignIdentityRegexp) !== 4 ||
+      countOccurrences(immutableRecovery, immutableRecoveryCosignIdentity) !== 1 ||
+      !immutableRecovery.includes('--certificate-identity-regexp "$public_cosign_identity"')) {
     fail("public workflow must pass the exact single-escaped main workflow identity to cosign");
   }
   if (!hasRequiredJobNeeds(engineSign, ["publication-intent", "public-engine-runtime-discover", "public-engine-runtime-aggregate"]) ||
@@ -1427,9 +1554,49 @@ function assertPublicWorkflow(workflow, policy) {
       !packagePublish.includes("public-engine-package-digests")) {
     fail("public Engine Package lane must publish, sign, verify, and retain digest evidence");
   }
+  // The already-published alpha.190 workflow checker recognizes a legacy
+  // ORAS text marker in comments. Strip YAML comments before enforcing the
+  // executable promotion contract so that marker cannot reintroduce an
+  // unauthenticated copy path.
+  const normalizedPackagePublish = withoutComments(packagePublish).replace(/\\\n\s*/g, " ");
+  for (const required of [
+    'ORAS_DOCKERHUB_USERNAME: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}',
+    'ORAS_DOCKERHUB_TOKEN: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}',
+    'ORAS_GHCR_USERNAME: ${{ github.actor }}',
+    'ORAS_GHCR_TOKEN: ${{ github.token }}',
+    'oras_config="$(mktemp -d)"',
+    'anonymous_config="$(mktemp -d)"',
+    'trap \'rm -f "$publisher"; rm -rf "$oras_config" "$anonymous_config"\' EXIT',
+    'printf \'%s\' "$ORAS_DOCKERHUB_TOKEN" | oras login',
+    '--password-stdin docker.io',
+    'printf \'%s\' "$ORAS_GHCR_TOKEN" | oras login',
+    '--password-stdin ghcr.io',
+    'printf \'{"auths":{}}\\n\' > "$anonymous_config/config.json"',
+    'DOCKER_CONFIG="$anonymous_config" cosign verify',
+  ]) {
+    if (!packagePublish.includes(required)) {
+      fail(`public Engine Package lane must establish isolated ORAS authentication: ${required}`);
+    }
+  }
+  const packageOrasLogins = normalizedPackagePublish.match(/oras login\b/g) ?? [];
+  const configuredPackageOrasLogins = normalizedPackagePublish.match(
+    /oras login\s+--registry-config "\$oras_config\/config\.json"/g,
+  ) ?? [];
   if (!packagePublish.includes('package_tag="package-v2-${package_digest#sha256:}"') ||
       !packagePublish.includes('--tag "$package_tag"') ||
-      !packagePublish.includes('oras cp "$docker_ref" "$ghcr_location:$package_tag"') ||
+      packageOrasLogins.length !== 2 ||
+      packageOrasLogins.length !== configuredPackageOrasLogins.length ||
+      !/oras cp\s+--from-registry-config "\$oras_config\/config\.json"\s+--to-registry-config "\$oras_config\/config\.json"\s+"\$docker_ref"\s+"\$ghcr_location:\$package_tag"/.test(normalizedPackagePublish) ||
+      /oras cp\s+"\$docker_ref"\s+"\$ghcr_location:\$package_tag"/.test(normalizedPackagePublish) ||
+      packagePublish.includes("package-v2-${release_tag}")) {
+    fail("public Engine Package lane must bind its cross-registry ORAS copy to the authenticated config");
+  }
+  if (normalizedPackagePublish.includes('DOCKER_CONFIG="$oras_config"') ||
+      !/oras manifest fetch\s+--registry-config "\$anonymous_config\/config\.json"/.test(normalizedPackagePublish)) {
+    fail("public Engine Package lane must keep anonymous descriptor verification isolated from publishing credentials");
+  }
+  if (!packagePublish.includes('package_tag="package-v2-${package_digest#sha256:}"') ||
+      !packagePublish.includes('--tag "$package_tag"') ||
       packagePublish.includes("package-v2-${release_tag}")) {
     fail("public Engine Package lane must derive its publication handle from immutable archive bytes, not the product release tag");
   }
@@ -1638,6 +1805,50 @@ function assertPublicWorkflow(workflow, policy) {
       !finalRelease.includes('DOCKER_CONFIG="$anonymous_config" cosign verify') ||
       !finalRelease.includes('"^https://github\\\\.com/yyhuni/lunafox/\\\\.github/workflows/public-validate\\\\.yml@refs/heads/main$"')) {
     fail("public final release must anonymously verify and reuse a consistent immutable final tag on a maintenance retry");
+  }
+  const finalRuntimePromotion = workflowStepBlock(
+    finalRelease,
+    "      - name: Promote every Runtime digest to both final registries",
+  );
+  for (const required of [
+    'ORAS_DOCKERHUB_USERNAME: ${{ vars.LUNAFOX_PUBLIC_DOCKERHUB_USERNAME }}',
+    'ORAS_DOCKERHUB_TOKEN: ${{ secrets.LUNAFOX_PUBLIC_DOCKERHUB_TOKEN }}',
+    'ORAS_GHCR_USERNAME: ${{ github.actor }}',
+    'ORAS_GHCR_TOKEN: ${{ github.token }}',
+    'oras_config="$(mktemp -d)"',
+    'anonymous_config="$(mktemp -d)"',
+    'trap \'rm -rf "$oras_config" "$anonymous_config"\' EXIT',
+    'printf \'%s\' "$ORAS_DOCKERHUB_TOKEN" | oras login',
+    '--password-stdin docker.io',
+    'printf \'%s\' "$ORAS_GHCR_TOKEN" | oras login',
+    '--password-stdin ghcr.io',
+    'printf \'{"auths":{}}\\n\' > "$anonymous_config/config.json"',
+    'DOCKER_CONFIG="$anonymous_config" cosign verify',
+  ]) {
+    if (!finalRuntimePromotion.includes(required)) {
+      fail(`public final Runtime promotion must establish isolated ORAS authentication: ${required}`);
+    }
+  }
+  const normalizedFinalRuntimePromotion = finalRuntimePromotion.replace(/\\\n\s*/g, " ");
+  const manifestFetches = normalizedFinalRuntimePromotion.match(/oras manifest fetch\b/g) ?? [];
+  const authenticatedManifestFetches = normalizedFinalRuntimePromotion.match(
+    /oras manifest fetch\s+--registry-config "\$oras_config\/config\.json"/g,
+  ) ?? [];
+  const orasLogins = normalizedFinalRuntimePromotion.match(/oras login\b/g) ?? [];
+  const configuredOrasLogins = normalizedFinalRuntimePromotion.match(
+    /oras login\s+--registry-config "\$oras_config\/config\.json"/g,
+  ) ?? [];
+  if (manifestFetches.length === 0 ||
+      manifestFetches.length !== authenticatedManifestFetches.length ||
+      orasLogins.length !== 2 ||
+      orasLogins.length !== configuredOrasLogins.length ||
+      !/oras cp\s+--from-registry-config "\$oras_config\/config\.json"\s+--to-registry-config "\$oras_config\/config\.json"/.test(normalizedFinalRuntimePromotion) ||
+      normalizedFinalRuntimePromotion.includes('DOCKER_CONFIG="$oras_config"')) {
+    fail("public final Runtime promotion must bind every ORAS operation to an explicit authenticated registry config");
+  }
+  if (!/oras manifest fetch\s+--registry-config "\$oras_config\/config\.json"/.test(normalizedFinalRuntimePromotion) ||
+      !/oras cp\s+--from-registry-config "\$oras_config\/config\.json"/.test(normalizedFinalRuntimePromotion)) {
+    fail("public final Runtime promotion must use the authenticated config for source and destination operations");
   }
 }
 
