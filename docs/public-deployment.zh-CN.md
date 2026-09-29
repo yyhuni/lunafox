@@ -167,7 +167,7 @@ Cloudflare 加速只改变同一 digest-qualified entry 的传输候选，不会
 
 `--cf-acceleration` 是唯一的加速选项，并不是 `.env` 设置。它可以与公网地址参数组合；其他生命周期命令不接受这些仅限安装的参数。它需要 `cosign`。在唯一一次 `docker compose up -d` 之前，安装器会校验包内的 `third-party-image-policy.json`，并准备所选的完整闭包。`DATABASE_MODE=embedded` 包含 `postgres`、Redis、Loki、Alloy、第一方 Runtime 和 one-shot services、Engine Package bootstrap 以及常驻 Agent。external 模式准备相同的闭包，但不包含 `postgres`。
 
-第一方 `ghcr.io` identity 会先由 `cosign` 验证，之后才会通过 Cloudflare 下载相同 digest。PostgreSQL、Redis、Loki 和 Alloy 是经 LunaFox 审核的固定 digest 内容，并接受 OCI digest 检查；这不表示已验证发布方签名。显式启用成功后，会在 `.lunafox-cf-acceleration/` 下写入受保护的 state、Compose overlay 和 Engine inventory。请不要编辑这些文件。之后的 `./start.sh` 和 `./restart.sh` 会校验并复用该 state；直接执行 `docker compose up -d` 始终忽略它，没有该 state 的部署会保持正常的非 Cloudflare 默认行为。
+第一方 `ghcr.io` identity 会先由 `cosign` 验证，之后才会通过 Cloudflare 下载相同 digest。PostgreSQL、Redis、Loki 和 Alloy 是经 LunaFox 审核的固定 digest 内容，并接受 OCI digest 检查；这不表示已验证发布方签名。显式启用成功后，会在 `.lunafox-cf-acceleration/` 下写入受保护的 state、Compose overlay 和 Engine inventory。请不要编辑这些文件。该映射只会持续供后续生命周期命令使用，直到你执行一次不带参数的 `./install.sh`。这次无参数安装会在启动基础 Compose 图前移除安全的映射，之后所有生命周期命令都会使用正常的非 Cloudflare 传输；需要再次启用时，必须显式运行 `./install.sh --cf-acceleration`。此过程会保留 `.env`、容器、命名 volumes 和应用数据。若状态目录是符号链接、含未知条目、含非普通文件或权限不正确，安装会在 Compose 前停止，并要求人工恢复状态。直接执行 `docker compose up -d` 始终忽略该映射。
 
 只有分类为 Cloudflare DNS、TCP、TLS、超时、限流或临时 5xx 的传输失败，才会尝试同一 digest 的回退顺序。策略、认证、签名、digest 和内容完整性失败都会停止，不会回退。准备失败会在 Compose 变更前保留 `.env`、容器、命名 volumes、数据库和应用数据。
 

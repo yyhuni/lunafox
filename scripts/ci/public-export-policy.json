@@ -121,6 +121,15 @@
         "parentCount": 1
       },
       {
+        "hash": "3fa9e363663c0cd366cd8b1f42555dd722c5e387",
+        "subject": "chore(workflow): update public validation for v0.0.1-alpha.190",
+        "authorName": "yang yang",
+        "authorEmail": "84375838+yyhuni@users.noreply.github.com",
+        "committerName": "GitHub",
+        "committerEmail": "noreply@github.com",
+        "parentCount": 1
+      },
+      {
         "hash": "c9ec4045eed53c48ac12b2856dd554332baa1815",
         "subject": "chore(export): generated deployment projection v0.0.1-alpha.188",
         "authorName": "yang yang",
