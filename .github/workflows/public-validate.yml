@@ -2902,6 +2902,9 @@ jobs:
     needs: [publication-intent, resolve-public-runtime-composition, publish-runtime-images, publish-agent-image, public-engine-release-manifest]
     runs-on: ubuntu-22.04
     environment: public-release
+    concurrency:
+      group: cloudflare-worker-production
+      cancel-in-progress: false
     permissions:
       actions: write
       contents: write
@@ -3506,6 +3509,65 @@ jobs:
           merge_sha="$(jq -er '.mergeSha' dist/final/deployment-publication.json)"
           [[ "$merge_sha" =~ ^[a-f0-9]{40}$ ]] || { echo "deployment merge SHA is invalid" >&2; exit 1; }
           echo "merge_sha=$merge_sha" >> "$GITHUB_OUTPUT"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: tools/lunafox-ghcr-registry/pnpm-lock.yaml
+      - id: cloudflare_worker
+        name: Deploy and verify the production Cloudflare Registry Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
+          PRIVATE_SOURCE_REVISION: ${{ steps.source.outputs.source_revision_digest }}
+          PUBLIC_SOURCE_COMMIT: ${{ github.sha }}
+          WORKER_DEPLOYMENT_TAG: lunafox-${{ steps.source.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          worker_dir="$GITHUB_WORKSPACE/tools/lunafox-ghcr-registry"
+          evidence="dist/final/cloudflare-worker-release-evidence.json"
+          versions="dist/final/cloudflare-worker-versions.json"
+          mkdir -p dist/final
+          pnpm install --frozen-lockfile --dir "$worker_dir"
+          pnpm --dir "$worker_dir" test
+          pnpm --dir "$worker_dir" run typecheck
+          pnpm --dir "$worker_dir" exec wrangler check startup
+          pnpm --dir "$worker_dir" exec wrangler deploy \
+            --tag "$WORKER_DEPLOYMENT_TAG" \
+            --message "LunaFox ${RELEASE_TAG} ${PUBLIC_SOURCE_COMMIT}" \
+            --strict
+          pnpm --dir "$worker_dir" exec wrangler versions list --json > "$versions"
+          worker_version_id="$(jq -er --arg tag "$WORKER_DEPLOYMENT_TAG" '
+            [ .[] | select(.annotations["workers/tag"] == $tag) ]
+            | sort_by(.metadata.created_on)
+            | last
+            | .id
+          ' "$versions")"
+          [[ "$worker_version_id" =~ ^[0-9a-fA-F-]{16,}$ ]] || {
+            echo "wrangler did not return a tagged Worker Version ID" >&2
+            exit 1
+          }
+          echo "worker_version_id=$worker_version_id" >> "$GITHUB_OUTPUT"
+          node scripts/ci/verify-cloudflare-worker-release.mjs \
+            --policy scripts/ci/third-party-image-policy.json \
+            --snapshot-policy dist/final/deployment-snapshot/third-party-image-policy.json \
+            --worker-source tools/lunafox-ghcr-registry/src/registry.ts \
+            --registry-host docker.lunafox.cc.cd \
+            --release-tag "$RELEASE_TAG" \
+            --private-source-revision "$PRIVATE_SOURCE_REVISION" \
+            --public-source-commit "$PUBLIC_SOURCE_COMMIT" \
+            --worker-version-id "$worker_version_id" \
+            --deployment-tag "$WORKER_DEPLOYMENT_TAG" \
+            --output "$evidence" --json \
+            | tee dist/final/cloudflare-worker-release-verification.json
+          jq -e --arg tag "$RELEASE_TAG" --arg workerTag "$WORKER_DEPLOYMENT_TAG" \
+            '.schemaVersion == 1 and .kind == "lunafox.cloudflare-worker-release-evidence.v1" and .passed == true and .releaseTag == $tag and .deploymentTag == $workerTag and (.workerVersionId | length > 0) and (.smoke.currentDigests | length > 0) and .staleDigest.result.status == 403' \
+            "$evidence" >/dev/null
+          echo "Worker Version ID: $worker_version_id"
       - name: Generate the immutable release provenance record
         env:
           RELEASE_TAG: ${{ steps.source.outputs.release_tag }}
@@ -3513,12 +3575,19 @@ jobs:
           EXPORT_MANIFEST_SHA256: ${{ steps.source.outputs.export_manifest_sha256 }}
           PUBLIC_PROVENANCE_SHA256: ${{ steps.source.outputs.public_provenance_sha256 }}
           DEPLOYMENT_SNAPSHOT_COMMIT: ${{ steps.deployment.outputs.merge_sha }}
+          CLOUDFLARE_WORKER_VERSION_ID: ${{ steps.cloudflare_worker.outputs.worker_version_id }}
         run: |
           set -euo pipefail
           manifest_digest="sha256:$(sha256sum dist/final/release.manifest.yaml | awk '{print $1}')"
           runtime_composition_digest="$(jq -er '.compositionDigest' dist/final/runtime-composition.json)"
           runtime_composition_asset_sha256="sha256:$(sha256sum dist/final/runtime-composition.json | awk '{print $1}')"
           component_evidence_asset_sha256="sha256:$(sha256sum dist/final/component-evidence.json | awk '{print $1}')"
+          cloudflare_worker_evidence_asset_sha256="sha256:$(sha256sum dist/final/cloudflare-worker-release-evidence.json | awk '{print $1}')"
+          cloudflare_worker_policy_sha256="$(jq -er '.policySha256' dist/final/cloudflare-worker-release-evidence.json)"
+          cloudflare_worker_source_sha256="$(jq -er '.workerSourceSha256' dist/final/cloudflare-worker-release-evidence.json)"
+          cloudflare_worker_deployment_tag="$(jq -er '.deploymentTag' dist/final/cloudflare-worker-release-evidence.json)"
+          cloudflare_worker_host="$(jq -er '.registryHost' dist/final/cloudflare-worker-release-evidence.json)"
+          test "$CLOUDFLARE_WORKER_VERSION_ID" = "$(jq -er '.workerVersionId' dist/final/cloudflare-worker-release-evidence.json)"
           jq -n \
             --arg artifactDigest "$manifest_digest" \
             --arg runtimeCompositionDigest "$runtime_composition_digest" \
@@ -3532,7 +3601,13 @@ jobs:
             --arg releaseTag "$RELEASE_TAG" \
             --arg publicSourceCommit "$GITHUB_SHA" \
             --arg deploymentSnapshotCommit "$DEPLOYMENT_SNAPSHOT_COMMIT" \
-            '{schemaVersion:1,status:"published",releaseTag:$releaseTag,artifactDigest:$artifactDigest,runtimeComposition:{asset:"runtime-composition.json",digest:$runtimeCompositionDigest,assetSha256:$runtimeCompositionAssetSha256},componentEvidence:{asset:"component-evidence.json",assetSha256:$componentEvidenceAssetSha256},privateSourceRevision:$privateSourceRevision,publicSourceCommit:$publicSourceCommit,deploymentSnapshotCommit:$deploymentSnapshotCommit,workflowIdentity:$workflowIdentity,builderRun:$builderRun,exportManifest:$exportManifest,publicProvenance:$publicProvenance,sbom:true,scanEvidence:{runtimeImages:true,engineHandoff:true,signatures:true}}' \
+            --arg cloudflareWorkerEvidenceAssetSha256 "$cloudflare_worker_evidence_asset_sha256" \
+            --arg cloudflareWorkerVersionId "$CLOUDFLARE_WORKER_VERSION_ID" \
+            --arg cloudflareWorkerDeploymentTag "$cloudflare_worker_deployment_tag" \
+            --arg cloudflareWorkerPolicySha256 "$cloudflare_worker_policy_sha256" \
+            --arg cloudflareWorkerSourceSha256 "$cloudflare_worker_source_sha256" \
+            --arg cloudflareWorkerHost "$cloudflare_worker_host" \
+            '{schemaVersion:1,status:"published",releaseTag:$releaseTag,artifactDigest:$artifactDigest,runtimeComposition:{asset:"runtime-composition.json",digest:$runtimeCompositionDigest,assetSha256:$runtimeCompositionAssetSha256},componentEvidence:{asset:"component-evidence.json",assetSha256:$componentEvidenceAssetSha256},cloudflareWorker:{asset:"cloudflare-worker-release-evidence.json",assetSha256:$cloudflareWorkerEvidenceAssetSha256,versionId:$cloudflareWorkerVersionId,deploymentTag:$cloudflareWorkerDeploymentTag,policySha256:$cloudflareWorkerPolicySha256,sourceSha256:$cloudflareWorkerSourceSha256,registryHost:$cloudflareWorkerHost},privateSourceRevision:$privateSourceRevision,publicSourceCommit:$publicSourceCommit,deploymentSnapshotCommit:$deploymentSnapshotCommit,workflowIdentity:$workflowIdentity,builderRun:$builderRun,exportManifest:$exportManifest,publicProvenance:$publicProvenance,sbom:true,scanEvidence:{runtimeImages:true,engineHandoff:true,signatures:true,cloudflareWorker:true}}' \
             > dist/final/public-release-provenance.json
       - name: Verify the complete release evidence closure
         env:
@@ -3545,6 +3620,7 @@ jobs:
             --composition dist/final/runtime-composition.json \
             --bundle dist/final/component-evidence.json \
             --provenance dist/final/public-release-provenance.json \
+            --cloudflare-worker-evidence dist/final/cloudflare-worker-release-evidence.json \
             --tag "$RELEASE_TAG" --release-profile "$RELEASE_PROFILE" --json \
             | tee dist/final/public-release-evidence-verification.json
       - name: Generate and publish the release-channel branch
@@ -3687,6 +3763,7 @@ jobs:
             publish_asset dist/final/deployment-snapshot/preheat-manifest.json
           fi
           publish_asset dist/final/component-evidence.json
+          publish_asset dist/final/cloudflare-worker-release-evidence.json
           publish_asset dist/final/public-release-provenance.json
           publish_asset "dist/final/deployment/lunafox-${RELEASE_TAG}.zip"
           publish_asset dist/final/deployment-packages.json
@@ -3705,6 +3782,9 @@ jobs:
             dist/final/component-evidence.json
             dist/final/component-evidence-build.json
             dist/final/component-evidence-verification.json
+            dist/final/cloudflare-worker-release-evidence.json
+            dist/final/cloudflare-worker-release-verification.json
+            dist/final/cloudflare-worker-versions.json
             dist/final/composition-plan/**
             dist/final/public-release-provenance.json
             dist/final/release-verification.json
