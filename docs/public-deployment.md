@@ -286,6 +286,23 @@ is a symlink, has an unknown entry, a non-regular file, or an incorrect mode,
 the install stops before Compose and asks for manual state recovery. A direct
 `docker compose up -d` always ignores the mapping.
 
+The production Worker is deployed by the protected public release workflow, not
+by an installer or by each host. Before a channel, deployment ZIP, immutable
+tag, or GitHub Release is published, CI checks the Worker source and generated
+third-party policy, captures its Cloudflare Version ID, and smoke-tests the
+current manifest digests through `docker.lunafox.cc.cd`. The resulting
+`cloudflare-worker-release-evidence.json` is retained with the release and
+binds the source revisions, policy digest, deployment tag, response statuses,
+and timings.
+
+The Worker uses a current-digest-only hard cut. After a new release is live, an
+old third-party digest is deliberately rejected with local `403`; old clients
+must install the new release. A failed Worker deploy or smoke blocks final
+publication and can be retried with the same immutable artifacts. Operators can
+manually roll back with `pnpm exec wrangler rollback <version-id> --yes` from
+the Worker directory, using the Version ID recorded in the evidence; the POC
+domain reassignment remains a separate manual recovery action.
+
 Only a classified Cloudflare DNS, TCP, TLS, timeout, rate-limit, or temporary
 5xx transport failure can try the same-digest fallback sequence. Policy,
 authentication, signature, digest, and content-integrity failures stop without

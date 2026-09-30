@@ -169,6 +169,10 @@ Cloudflare 加速只改变同一 digest-qualified entry 的传输候选，不会
 
 第一方 `ghcr.io` identity 会先由 `cosign` 验证，之后才会通过 Cloudflare 下载相同 digest。PostgreSQL、Redis、Loki 和 Alloy 是经 LunaFox 审核的固定 digest 内容，并接受 OCI digest 检查；这不表示已验证发布方签名。显式启用成功后，会在 `.lunafox-cf-acceleration/` 下写入受保护的 state、Compose overlay 和 Engine inventory。请不要编辑这些文件。该映射只会持续供后续生命周期命令使用，直到你执行一次不带参数的 `./install.sh`。这次无参数安装会在启动基础 Compose 图前移除安全的映射，之后所有生命周期命令都会使用正常的非 Cloudflare 传输；需要再次启用时，必须显式运行 `./install.sh --cf-acceleration`。此过程会保留 `.env`、容器、命名 volumes 和应用数据。若状态目录是符号链接、含未知条目、含非普通文件或权限不正确，安装会在 Compose 前停止，并要求人工恢复状态。直接执行 `docker compose up -d` 始终忽略该映射。
 
+生产 Worker 由受保护的公共发布 workflow 负责部署，不由安装器或每台主机单独部署。在发布 channel、部署 ZIP、不可变 tag 或 GitHub Release 之前，CI 会校验 Worker 源码和生成的第三方策略，记录 Cloudflare Version ID，并通过 `docker.lunafox.cc.cd` 冒烟验证当前 release 的 manifest digest。生成的 `cloudflare-worker-release-evidence.json` 会随 release 保留，其中绑定源码版本、策略 digest、部署 tag、响应状态和耗时。
+
+Worker 采用“只允许当前 digest”的硬切策略。新 release 上线后，上一版本或其他未列出的第三方 digest 会被本地 `403` 拒绝，不提供兼容窗口；旧客户端必须安装新 release。Worker 部署或冒烟失败会阻止最终发布，但可以复用同一组不可变制品重试。需要撤销时，运维人员可以在 Worker 目录使用 evidence 中记录的 Version ID 执行 `pnpm exec wrangler rollback <version-id> --yes`；POC 域名切回仍是独立的人工恢复动作。
+
 只有分类为 Cloudflare DNS、TCP、TLS、超时、限流或临时 5xx 的传输失败，才会尝试同一 digest 的回退顺序。策略、认证、签名、digest 和内容完整性失败都会停止，不会回退。准备失败会在 Compose 变更前保留 `.env`、容器、命名 volumes、数据库和应用数据。
 
 脚本需要 Bash 3.2 或更高版本，并可从任意工作目录运行。Windows 继续在 PowerShell 中使用直接 Compose 命令。

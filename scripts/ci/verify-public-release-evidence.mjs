@@ -30,14 +30,14 @@ function isPlainObject(value) { return value !== null && typeof value === "objec
 
 function parseArgs(argv) {
   const options = {
-    manifest: "", composition: "", bundle: "", provenance: "", policy: DEFAULT_POLICY, tag: "", releaseProfile: "", json: false,
+    manifest: "", composition: "", bundle: "", provenance: "", cloudflareWorkerEvidence: "", policy: DEFAULT_POLICY, tag: "", releaseProfile: "", json: false,
   };
-  const flags = new Set(["--manifest", "--composition", "--bundle", "--provenance", "--policy", "--tag", "--release-profile"]);
+  const flags = new Set(["--manifest", "--composition", "--bundle", "--provenance", "--cloudflare-worker-evidence", "--policy", "--tag", "--release-profile"]);
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--json") { options.json = true; continue; }
     if (arg === "--help" || arg === "-h") {
-      process.stdout.write("Usage: verify-public-release-evidence.mjs --manifest FILE --composition FILE --bundle FILE --provenance FILE --tag TAG [--policy FILE] [--release-profile <modern|alpha164-bridge>] [--json]\n");
+      process.stdout.write("Usage: verify-public-release-evidence.mjs --manifest FILE --composition FILE --bundle FILE --provenance FILE --tag TAG [--cloudflare-worker-evidence FILE] [--policy FILE] [--release-profile <modern|alpha164-bridge>] [--json]\n");
       process.exit(0);
     }
     if (!flags.has(arg)) fail(`unknown argument: ${arg}`);
@@ -47,6 +47,7 @@ function parseArgs(argv) {
     else if (arg === "--composition") options.composition = path.resolve(value);
     else if (arg === "--bundle") options.bundle = path.resolve(value);
     else if (arg === "--provenance") options.provenance = path.resolve(value);
+    else if (arg === "--cloudflare-worker-evidence") options.cloudflareWorkerEvidence = path.resolve(value);
     else if (arg === "--policy") options.policy = path.resolve(value);
     else if (arg === "--tag") options.tag = value;
     else options.releaseProfile = value;
@@ -82,10 +83,12 @@ function assertAllowedKeys(value, expected, label) {
 }
 
 function validateReleaseProvenance(value, facts) {
+  const hasCloudflareWorker = value.cloudflareWorker !== undefined;
   assertAllowedKeys(value, new Set([
     "schemaVersion", "status", "releaseTag", "artifactDigest", "runtimeComposition", "componentEvidence",
     "privateSourceRevision", "publicSourceCommit", "deploymentSnapshotCommit", "workflowIdentity", "builderRun",
     "exportManifest", "publicProvenance", "sbom", "scanEvidence",
+    ...(hasCloudflareWorker ? ["cloudflareWorker"] : []),
   ]), "public release provenance");
   assert(value.schemaVersion === 1 && value.status === "published", "public release provenance schema is invalid");
   assert(value.releaseTag === facts.tag, "public release provenance tag does not match the release");
@@ -97,9 +100,19 @@ function validateReleaseProvenance(value, facts) {
   assert(typeof value.builderRun === "string" && /^https:\/\/github\.com\/yyhuni\/lunafox\/actions\/runs\/\d+$/.test(value.builderRun), "public release provenance builder run is invalid");
   assert(DIGEST_RE.test(value.exportManifest) && DIGEST_RE.test(value.publicProvenance), "public release provenance source bindings are invalid");
   assert(value.sbom === true, "public release provenance must retain SBOM evidence");
-  assertAllowedKeys(value.scanEvidence, new Set(["runtimeImages", "engineHandoff", "signatures"]), "public release provenance scanEvidence");
+  assertAllowedKeys(value.scanEvidence, new Set(["runtimeImages", "engineHandoff", "signatures", ...(hasCloudflareWorker ? ["cloudflareWorker"] : [])]), "public release provenance scanEvidence");
   assert(value.scanEvidence.runtimeImages === true && value.scanEvidence.engineHandoff === true && value.scanEvidence.signatures === true,
     "public release provenance scan evidence is incomplete");
+  if (hasCloudflareWorker) {
+    assert(value.scanEvidence.cloudflareWorker === true, "public release provenance must mark Cloudflare Worker evidence");
+    assertAllowedKeys(value.cloudflareWorker, new Set(["asset", "assetSha256", "versionId", "deploymentTag", "policySha256", "sourceSha256", "registryHost"]), "public release provenance cloudflareWorker");
+    assert(value.cloudflareWorker.asset === "cloudflare-worker-release-evidence.json", "public release provenance Cloudflare Worker asset is invalid");
+    assert(DIGEST_RE.test(value.cloudflareWorker.assetSha256), "public release provenance Cloudflare Worker asset digest is invalid");
+    assert(typeof value.cloudflareWorker.versionId === "string" && value.cloudflareWorker.versionId.length > 0, "public release provenance Cloudflare Worker Version ID is invalid");
+    assert(/^lunafox-[a-z0-9][a-z0-9.-]*$/.test(value.cloudflareWorker.deploymentTag), "public release provenance Cloudflare Worker deployment tag is invalid");
+    assert(DIGEST_RE.test(value.cloudflareWorker.policySha256) && DIGEST_RE.test(value.cloudflareWorker.sourceSha256), "public release provenance Cloudflare Worker source bindings are invalid");
+    assert(typeof value.cloudflareWorker.registryHost === "string" && value.cloudflareWorker.registryHost.length > 0, "public release provenance Cloudflare Worker host is invalid");
+  }
   assertAllowedKeys(value.runtimeComposition, new Set(["asset", "digest", "assetSha256"]), "public release provenance runtimeComposition");
   assert(value.runtimeComposition.asset === "runtime-composition.json", "public release provenance composition asset is invalid");
   assert(value.runtimeComposition.digest === facts.compositionDigest, "public release provenance composition digest does not match canonical composition");
@@ -116,16 +129,36 @@ function verify(options) {
   const manifestBytes = readRegular(options.manifest, "release manifest");
   const compositionBytes = readRegular(options.composition, "runtime composition");
   const bundleBytes = readRegular(options.bundle, "component evidence bundle");
+  const cloudflareWorkerEvidence = options.cloudflareWorkerEvidence
+    ? readJson(options.cloudflareWorkerEvidence, "Cloudflare Worker release evidence")
+    : null;
   const compositionResult = verifyComposition({ composition: options.composition, manifest: options.manifest, policy: options.policy, releaseProfile: options.releaseProfile });
   const evidenceResult = verifyComponentEvidence({ bundle: options.bundle, composition: options.composition, manifest: options.manifest, policy: options.policy, releaseProfile: options.releaseProfile });
   assert(composition.releaseTag === options.tag && bundle.releaseTag === options.tag, "release evidence tag does not match the release");
-  validateReleaseProvenance(provenance, {
+  const facts = {
     tag: options.tag,
     manifestSHA256: sha256(manifestBytes),
     compositionDigest: composition.compositionDigest,
     compositionSHA256: sha256(compositionBytes),
     bundleSHA256: sha256(bundleBytes),
-  });
+  };
+  validateReleaseProvenance(provenance, facts);
+  if (cloudflareWorkerEvidence) {
+    assert(provenance.cloudflareWorker, "public release provenance is missing Cloudflare Worker binding");
+    assert(cloudflareWorkerEvidence.schemaVersion === 1 && cloudflareWorkerEvidence.kind === "lunafox.cloudflare-worker-release-evidence.v1" && cloudflareWorkerEvidence.passed === true,
+      "Cloudflare Worker release evidence schema/status is invalid");
+    assert(cloudflareWorkerEvidence.releaseTag === options.tag, "Cloudflare Worker release evidence tag does not match the release");
+    assert(cloudflareWorkerEvidence.privateSourceRevision === provenance.privateSourceRevision, "Cloudflare Worker evidence private source revision is not bound");
+    assert(cloudflareWorkerEvidence.publicSourceCommit === provenance.publicSourceCommit, "Cloudflare Worker evidence public source commit is not bound");
+    assert(cloudflareWorkerEvidence.workerVersionId === provenance.cloudflareWorker.versionId, "Cloudflare Worker Version ID is not bound into provenance");
+    assert(cloudflareWorkerEvidence.deploymentTag === provenance.cloudflareWorker.deploymentTag, "Cloudflare Worker deployment tag is not bound into provenance");
+    assert(cloudflareWorkerEvidence.policySha256 === provenance.cloudflareWorker.policySha256, "Cloudflare Worker policy digest is not bound into provenance");
+    assert(cloudflareWorkerEvidence.workerSourceSha256 === provenance.cloudflareWorker.sourceSha256, "Cloudflare Worker source digest is not bound into provenance");
+    assert(DIGEST_RE.test(provenance.cloudflareWorker.assetSha256), "Cloudflare Worker evidence asset digest is invalid");
+    assert(provenance.cloudflareWorker.assetSha256 === sha256(readRegular(options.cloudflareWorkerEvidence, "Cloudflare Worker release evidence")), "Cloudflare Worker evidence asset bytes do not match provenance");
+    assert(cloudflareWorkerEvidence.staleDigest?.result?.status === 403, "Cloudflare Worker evidence must prove stale digest rejection");
+    assert(Array.isArray(cloudflareWorkerEvidence.smoke?.currentDigests) && cloudflareWorkerEvidence.smoke.currentDigests.length > 0, "Cloudflare Worker evidence must contain current digest smoke results");
+  }
   return {
     schemaVersion: 1,
     passed: true,

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:d0175520b8c0bf6c26e2b60d3c840ad5cea5dbfed7ba152d6b6bdc7ec3d4319e",
-  "releaseTag": "v0.0.1-alpha.192",
+  "sourceRevisionDigest": "sha256:6cf9a621ec1ef1fd00f1d6e79a7797c1b743a99b6f2a1e5141c9947fc08bfd59",
+  "releaseTag": "v0.0.1-alpha.194",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "e536375edf7611d605870825bcb7118edf9a1811b05ed3c92dd69935f1ee4039"
+      "sha256": "29d6bbf95a815ac71d1098f788cd442690df3f7f9627b7af4dc4697e8070408c"
     },
     {
       "path": "README.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "989459a513e3dcfd9aa7a90cad992d0ec9b7672ecf149ecb468a3c1fd82657cd"
+      "sha256": "da73359ed71447a47fab5d0691dbf49bea596c52c09c68a987fd080537bbeeb9"
     },
     {
       "path": "agent/bin/sha256-575e0b6dfe956b399f0155214d5e1baa71e318f8bcd65f66f74957a169694bf0/agent-bundle.sha256",
@@ -92,7 +92,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "67f73cc00cf4c54f499094017e2deaf58811b5f550287a0804bc88a8d0bd1e9a"
+      "sha256": "c126331aec1f9aa6b5858923e997942fe8da44b17e979869905af71c4cc13792"
     },
     {
       "path": "agent/bin/sha256-575e0b6dfe956b399f0155214d5e1baa71e318f8bcd65f66f74957a169694bf0/lunafox-agent-linux-amd64",
@@ -1127,15 +1127,15 @@
       "path": "docs/public-deployment.md",
       "type": "file",
       "mode": "0644",
-      "size": 30593,
-      "sha256": "8b18398756c811ee313bc333c2d463b5bd2090ea6ebf63f099453f6c08d66e41"
+      "size": 31675,
+      "sha256": "d1d758f7a1deef2e97c414b49ab64032ef105108df9881584c011640665398fb"
     },
     {
       "path": "docs/public-deployment.zh-CN.md",
       "type": "file",
       "mode": "0644",
-      "size": 28382,
-      "sha256": "f0bae4189ee0d0925e065ef350e96ac455dfb638060d3db78a13c00b1bfb629f"
+      "size": 29423,
+      "sha256": "5e98ed375871c6090519e8e50be1a38526707aa54b600ab5c33d22eb10925795"
     },
     {
       "path": "engine-go/README.md",
@@ -17378,6 +17378,20 @@
       "sha256": "36bd710cd5429a9b4b311535d1e449e66c426a7c4479ef2ac00928d5f61664ed"
     },
     {
+      "path": "release-notes/v0.0.1-alpha.193.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 742,
+      "sha256": "254437656f525d8d267ecbe15e142be204c273c2003f3fb9945c508504810b00"
+    },
+    {
+      "path": "release-notes/v0.0.1-alpha.194.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 742,
+      "sha256": "15d5ceedfa292e0740f2d424ddbb0c44f6af01d932d5d56a7830d090665d9bee"
+    },
+    {
       "path": "resources/alloy/config.alloy",
       "type": "file",
       "mode": "0644",
@@ -17514,8 +17528,8 @@
       "path": "scripts/ci/check-public-release-policy.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 125019,
-      "sha256": "6266b70f447db90cbecf94f6f26e4d803d8cba7fbab2c35d842ff99484672368"
+      "size": 129846,
+      "sha256": "18a7e51ce3dfec7030713359aeefa8a8f2878b43ac3804eaed733d92553478d1"
     },
     {
       "path": "scripts/ci/component-evidence-bundle-selftest.mjs",
@@ -17619,8 +17633,8 @@
       "path": "scripts/ci/public-export-policy.json",
       "type": "file",
       "mode": "0644",
-      "size": 29964,
-      "sha256": "ff2f98ce724ef5eb6d60526804beb487f2ac27cbc9376b6fd13a6ec200ed2811"
+      "size": 31775,
+      "sha256": "54ad6889155c94d66ab4c5713c3db715097800bff487edc9f3d9f985fbc02c6b"
     },
     {
       "path": "scripts/ci/public-release-policy.json",
@@ -17798,6 +17812,20 @@
       "sha256": "8f69bfb0fd7919675c61f51c7450b8bb5360b4f7bc7cd2eeda1d9786a53a17e0"
     },
     {
+      "path": "scripts/ci/verify-cloudflare-worker-release.mjs",
+      "type": "file",
+      "mode": "0644",
+      "size": 13467,
+      "sha256": "36b393ce1acad2c65bab0a817d3bf097aca918aac075081e6a2e437e4b991849"
+    },
+    {
+      "path": "scripts/ci/verify-cloudflare-worker-release.test.mjs",
+      "type": "file",
+      "mode": "0644",
+      "size": 4145,
+      "sha256": "c568f36b4733c13fb7a2792830bad099626351e30052163bb85ad74f416adc07"
+    },
+    {
       "path": "scripts/ci/verify-component-evidence-bundle.mjs",
       "type": "file",
       "mode": "0644",
@@ -17836,8 +17864,8 @@
       "path": "scripts/ci/verify-public-deployment.sh",
       "type": "file",
       "mode": "0755",
-      "size": 41084,
-      "sha256": "40e1cd3add3183a191e753f606d74480eec12207aac04cb705b712275a3c3d87"
+      "size": 41807,
+      "sha256": "42281f2eda71bc42d3ee98a458102fc019846550026c611a58a2202a6e0df2c7"
     },
     {
       "path": "scripts/ci/verify-public-engine-release-selftest.mjs",
@@ -17864,15 +17892,15 @@
       "path": "scripts/ci/verify-public-release-evidence-selftest.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 1950,
-      "sha256": "0c045cbe7ffb58014a7f422485ddb4dcbd4b506b7d5b7200bdc772c9c411c62c"
+      "size": 3041,
+      "sha256": "aa368a1f4e70b84fe945e88e4474d6d738fe12c623439afbca6463adbc19abdd"
     },
     {
       "path": "scripts/ci/verify-public-release-evidence.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 8894,
-      "sha256": "160cdaa8fbdbe5dd634c30d8ce88873993f5caa1c47a5808bcda7e62b6ef3e55"
+      "size": 13024,
+      "sha256": "7c4a2c4d11f0663d4bc57827f8dec88f8f0176ec8541365a8d2417aedd237769"
     },
     {
       "path": "scripts/ci/verify-public-release.mjs",
@@ -17906,8 +17934,8 @@
       "path": "scripts/ci/verify-public-runtime-source.sh",
       "type": "file",
       "mode": "0755",
-      "size": 8059,
-      "sha256": "89b4a2327b84d403c593ad113d6fd58a6221822219b0e7d78641c2236fa8402a"
+      "size": 8740,
+      "sha256": "2c5425d4c909bc89768d3b45739b908cc1045521dee77f7a268aa63dcbe39842"
     },
     {
       "path": "scripts/ci/verify-release-component-composition-selftest.mjs",
@@ -30004,6 +30032,83 @@
       "mode": "0644",
       "size": 4402,
       "sha256": "42eaf9a0d3b364f6b750af8d2e1364b27625ecb3237bc42f7e1f21e29de47f51"
+    },
+    {
+      "path": "tools/lunafox-ghcr-registry/.gitignore",
+      "type": "file",
+      "mode": "0644",
+      "size": 52,
+      "sha256": "cf71549bd87118a4e80e9affc0d6a059bbd94cd88bed9d6148c3988c89273444"
+    },
+    {
+      "path": "tools/lunafox-ghcr-registry/README.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 5268,
+      "sha256": "878affc8218bf7cb6e2194317093eb5676e9abaffd42cf70446f7942163ae49a"
+    },
+    {
+      "path": "tools/lunafox-ghcr-registry/package.json",
+      "type": "file",
+      "mode": "0644",
+      "size": 419,
+      "sha256": "6e580a39291e70c216869eec3b17d341d19543409fa9b42240c14ef92cfb2b7c"
+    },
+    {
+      "path": "tools/lunafox-ghcr-registry/pnpm-lock.yaml",
+      "type": "file",
+      "mode": "0644",
+      "size": 50678,
+      "sha256": "7461e8cf5629fed79ebb6abbae90f83f33fc32419c2973840dbf700759af7afd"
+    },
+    {
+      "path": "tools/lunafox-ghcr-registry/scripts/verify-local-registry.sh",
+      "type": "file",
+      "mode": "0755",
+      "size": 1944,
+      "sha256": "3742d7200ddb53d2e012031d8e6d9b2a6b41a09e2a28cebd8b3c2c542d1d5ebf"
+    },
+    {
+      "path": "tools/lunafox-ghcr-registry/src/registry.ts",
+      "type": "file",
+      "mode": "0644",
+      "size": 11052,
+      "sha256": "374769c23a0d2205bfa6a7f16fef50bc4a6ef057c7f906b58d76f60552437866"
+    },
+    {
+      "path": "tools/lunafox-ghcr-registry/src/worker.ts",
+      "type": "file",
+      "mode": "0644",
+      "size": 187,
+      "sha256": "e44b72bd899f8e4dac8d53c8f6af8139fd8f9357c57da1139cf9f8074629fdb4"
+    },
+    {
+      "path": "tools/lunafox-ghcr-registry/test/worker.test.ts",
+      "type": "file",
+      "mode": "0644",
+      "size": 17274,
+      "sha256": "d091cc289b8acc0a4a1083b81ec75c24b63b3b39a7e42511f8f0c4f6794aff5d"
+    },
+    {
+      "path": "tools/lunafox-ghcr-registry/tsconfig.json",
+      "type": "file",
+      "mode": "0644",
+      "size": 252,
+      "sha256": "63db202823cf55ff54e4b8064f727cb46558440da4572bb82b1c7233ef17a7e4"
+    },
+    {
+      "path": "tools/lunafox-ghcr-registry/tsconfig.test.json",
+      "type": "file",
+      "mode": "0644",
+      "size": 249,
+      "sha256": "fcaf11244d4360b4a0106301d2bd81b93f9ad2fc332852294d72cbc00bbdff61"
+    },
+    {
+      "path": "tools/lunafox-ghcr-registry/wrangler.jsonc",
+      "type": "file",
+      "mode": "0644",
+      "size": 384,
+      "sha256": "c1a6393fd385d4af7b18747a5124ef8404b3585fc4733bd878c5845df0ead604"
     },
     {
       "path": "uninstall.sh",

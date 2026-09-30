@@ -31,6 +31,25 @@ const valid = {
 };
 
 validateReleaseProvenance(valid, facts);
+const cloudflareWorker = {
+  asset: "cloudflare-worker-release-evidence.json",
+  assetSha256: digest("4"),
+  versionId: "12345678-1234-1234-1234-123456789abc",
+  deploymentTag: "lunafox-v1.2.3",
+  policySha256: digest("5"),
+  sourceSha256: digest("6"),
+  registryHost: "docker.lunafox.cc.cd",
+};
+const validWithCloudflareWorker = structuredClone(valid);
+validWithCloudflareWorker.cloudflareWorker = cloudflareWorker;
+validWithCloudflareWorker.scanEvidence.cloudflareWorker = true;
+validateReleaseProvenance(validWithCloudflareWorker, facts);
+const cloudflareAssetMismatch = structuredClone(validWithCloudflareWorker);
+cloudflareAssetMismatch.cloudflareWorker.asset = "other-evidence.json";
+assert.throws(() => validateReleaseProvenance(cloudflareAssetMismatch, facts), /Cloudflare Worker asset is invalid/);
+const cloudflareEvidenceMarkerMissing = structuredClone(validWithCloudflareWorker);
+cloudflareEvidenceMarkerMissing.scanEvidence.cloudflareWorker = false;
+assert.throws(() => validateReleaseProvenance(cloudflareEvidenceMarkerMissing, facts), /must mark Cloudflare Worker evidence/);
 const swappedComposition = structuredClone(valid);
 swappedComposition.runtimeComposition.assetSha256 = digest("4");
 assert.throws(() => validateReleaseProvenance(swappedComposition, facts), /composition asset digest does not match bytes/);

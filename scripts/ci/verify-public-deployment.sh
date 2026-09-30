@@ -72,6 +72,22 @@ for file in README.md README.zh-CN.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTI
 	scripts/ci/verify-public-runtime-source.sh scripts/ci/verify-public-runtime-contexts.mjs; do
 	require_file "$file"
 done
+for file in \
+	tools/lunafox-ghcr-registry/.gitignore \
+	tools/lunafox-ghcr-registry/README.md \
+	tools/lunafox-ghcr-registry/package.json \
+	tools/lunafox-ghcr-registry/pnpm-lock.yaml \
+	tools/lunafox-ghcr-registry/tsconfig.json \
+	tools/lunafox-ghcr-registry/tsconfig.test.json \
+	tools/lunafox-ghcr-registry/wrangler.jsonc \
+	tools/lunafox-ghcr-registry/src/registry.ts \
+	tools/lunafox-ghcr-registry/src/worker.ts \
+	tools/lunafox-ghcr-registry/test/worker.test.ts \
+	tools/lunafox-ghcr-registry/scripts/verify-local-registry.sh \
+	scripts/ci/verify-cloudflare-worker-release.mjs \
+	scripts/ci/verify-cloudflare-worker-release.test.mjs; do
+	require_file "$file"
+done
 require_regular_file release.manifest.yaml
 require_regular_file contracts/releasemanifest/release_compatibility_profiles.json
 
@@ -166,7 +182,7 @@ elif [ -e "$ROOT_DIR/third-party-image-policy.json" ] || [ -L "$ROOT_DIR/third-p
 	fail "third-party image policy requires a bound preheat manifest"
 fi
 
-for required in server server/scripts contracts engine-go proto extensions docker/nginx docker/bootstrap tools/engine-release tools/engine-oci-publish; do
+for required in server server/scripts contracts engine-go proto extensions docker/nginx docker/bootstrap tools/engine-release tools/engine-oci-publish tools/lunafox-ghcr-registry; do
 	[ -d "$ROOT_DIR/$required" ] || fail "public Runtime source closure is missing: $required"
 done
 # The public host execution surface is an explicit allowlist: the seven root
@@ -196,7 +212,7 @@ if [ -e "$ROOT_DIR/tools" ]; then
 	for tool_path in "$ROOT_DIR/tools"/*; do
 		[ -e "$tool_path" ] || continue
 		case "$(basename "$tool_path")" in
-		engine-release | engine-oci-publish) ;;
+		engine-release | engine-oci-publish | lunafox-ghcr-registry) ;;
 		*) fail "private/development tool is present in public projection: ${tool_path#"$ROOT_DIR"/}" ;;
 		esac
 	done
