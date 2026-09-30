@@ -181,6 +181,16 @@ function isAllowedCompatibilityProbe(url: URL): boolean {
   return legacyMatch !== null && repositoryPattern.test(legacyMatch[1]);
 }
 
+// OCI clients probe the Referrers API (and its legacy digest-tag fallback)
+// after pulling manifests, for any repository and with arbitrary filters.
+// The Worker serves no referrers for repositories outside the authorized
+// yyhuni Sigstore query, so an unanswered probe is an empty referrers set:
+// answer 404 like GHCR does. Docker treats 403 here as fatal and aborts the
+// pull, which would break every proxied third-party image fetch.
+function isReferrersProbe(url: URL): boolean {
+  return referrersPathPattern.test(url.pathname) || legacyReferrersTagPattern.test(url.pathname);
+}
+
 function upstreamRequestHeaders(request: Request, token: string | null): Headers {
   const headers = new Headers();
   const accept = request.headers.get("Accept");
@@ -354,7 +364,7 @@ export async function handleRequest(
       } else {
         const target = parseAuthorizedRequest(url);
         if (!target) {
-          response = policyRejected();
+          response = isReferrersProbe(url) ? notFound() : policyRejected();
         } else {
           repository = target.repository;
           const token = await getAnonymousPullToken(target, fetcher);

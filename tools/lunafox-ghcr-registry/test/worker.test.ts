@@ -103,13 +103,12 @@ describe("LunaFox GHCR registry Worker", () => {
     expect(new Headers(fetcher.mock.calls[2]?.[1]?.headers).get("Range")).toBe("bytes=0-3");
   });
 
-  it("rejects third-party manifest digest drift and third-party Referrers locally", async () => {
+  it("rejects third-party manifest digest drift while answering third-party Referrers probes as empty", async () => {
     const fetcher = vi.fn();
     const entry = THIRD_PARTY_POLICY[0];
     const wrongDigest = "sha256:" + "d".repeat(64);
     const paths = [
       `/v2/${entry.repository}/manifests/${wrongDigest}`,
-      `/v2/${entry.repository}/referrers/${entry.digest}?artifactType=${encodeURIComponent("application/vnd.dev.sigstore.bundle.v0.3+json")}`,
       `/v2/${entry.repository}/manifests/latest`,
       `/v2/library/unknown/manifests/${entry.digest}`,
       `/v2/docker.io/${entry.repository}/manifests/${entry.digest}`,
@@ -120,6 +119,19 @@ describe("LunaFox GHCR registry Worker", () => {
     for (const path of paths) {
       const response = await handleRequest(registryRequest(path), env, fetcher);
       expect(response.status).toBe(403);
+    }
+    expect(fetcher).not.toHaveBeenCalled();
+
+    // The Worker serves no Referrers for third-party repositories, so probes
+    // must read as an empty referrers set: Docker aborts proxied pulls on 403.
+    const referrerProbes = [
+      `/v2/${entry.repository}/referrers/${entry.digest}`,
+      `/v2/${entry.repository}/referrers/${entry.digest}?artifactType=${encodeURIComponent("application/vnd.dev.sigstore.bundle.v0.3+json")}`,
+      `/v2/${entry.repository}/manifests/sha256-${entry.digest.slice(7)}`,
+    ];
+    for (const path of referrerProbes) {
+      const response = await handleRequest(registryRequest(path), env, fetcher);
+      expect(response.status).toBe(404);
     }
     expect(fetcher).not.toHaveBeenCalled();
   });
@@ -271,18 +283,26 @@ describe("LunaFox GHCR registry Worker", () => {
     expect(fetcher.mock.calls[1]?.[1]?.method).toBe("HEAD");
   });
 
-  it("rejects non-Sigstore Referrers queries and extra parameters locally", async () => {
+  it("answers unauthorized Referrers queries as empty and never forwards them", async () => {
     const fetcher = vi.fn();
-    const paths = [
+    const referrerProbes = [
       `/v2/${repository}/referrers/${digest}?artifactType=application%2Fvnd.oci.image.manifest.v1%2Bjson`,
       `/v2/${repository}/referrers/${digest}?artifactType=application%2Fvnd.dev.sigstore.bundle.v0.3%2Bjson&n=1`,
       `/v2/${repository}/referrers/${digest}?artifactType=application%2Fvnd.dev.sigstore.bundle.v0.3%2Bjson&artifactType=application%2Fvnd.dev.sigstore.bundle.v0.3%2Bjson`,
       `/v2/${repository}/referrers/${digest}?artifactType=application%2Fvnd.dev.sigstore.bundle.v0.2%2Bjson`,
+    ];
+    for (const path of referrerProbes) {
+      const response = await handleRequest(registryRequest(path), env, fetcher);
+      expect(response.status).toBe(404);
+    }
+    expect(fetcher).not.toHaveBeenCalled();
+
+    // Content requests and malformed digests keep the strict local rejection.
+    const rejectedPaths = [
       `/v2/${repository}/manifests/${digest}?n=1`,
       `/v2/${repository}/referrers/sha256:${"a".repeat(63)}?artifactType=application%2Fvnd.dev.sigstore.bundle.v0.3%2Bjson`,
     ];
-
-    for (const path of paths) {
+    for (const path of rejectedPaths) {
       const response = await handleRequest(registryRequest(path), env, fetcher);
       expect(response.status).toBe(403);
     }

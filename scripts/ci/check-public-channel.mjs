@@ -17,6 +17,11 @@ import {
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_ROOT = path.resolve(SCRIPT_DIR, "../..");
 const FIRST_TAG = "v0.0.1-alpha.57";
+// The preheat/compose/policy channel assets first shipped with this tag.
+// Records that already declare a composition binding but predate this tag
+// stay as published, mirroring the recovery lane's rule that historical
+// records are immutable but may predate the current schema.
+const PREHEAT_CHANNEL_ASSETS_FIRST_TAG = "v0.0.1-alpha.190";
 const RUNTIME_COMPOSITION_ASSET = "runtime-composition.json";
 const PREHEAT_MANIFEST_ASSET = "preheat-manifest.json";
 const COMPOSE_ASSET = "compose.yaml";
@@ -47,9 +52,28 @@ function parseArgs(argv) {
 
 function sha256(bytes) { return crypto.createHash("sha256").update(bytes).digest("hex"); }
 
+function compareReleaseTags(left, right) {
+  const pattern = /^v(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$/;
+  const prereleaseRank = { alpha: 0, beta: 1, rc: 2 };
+  const parse = (tag) => {
+    const match = pattern.exec(tag);
+    if (!match) fail(`invalid release tag: ${tag}`);
+    const [, major, minor, patch, kind, prerelease] = match;
+    // A plain release outranks any prerelease of the same version.
+    return [Number(major), Number(minor), Number(patch), kind ? prereleaseRank[kind] : 3, kind ? Number(prerelease) : 0];
+  };
+  const a = parse(left);
+  const b = parse(right);
+  for (let index = 0; index < a.length; index += 1) {
+    if (a[index] !== b[index]) return a[index] < b[index] ? -1 : 1;
+  }
+  return 0;
+}
+
 function requiresPreheatManifest(version, releaseProfile, hasRuntimeComposition) {
   return releaseProfile !== ReleaseCompatibilityProfileAlpha164Bridge &&
-    version !== FIRST_TAG && hasRuntimeComposition;
+    version !== FIRST_TAG && hasRuntimeComposition &&
+    compareReleaseTags(version, PREHEAT_CHANNEL_ASSETS_FIRST_TAG) >= 0;
 }
 
 function parseEnv(filePath) {

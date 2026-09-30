@@ -2,7 +2,7 @@
 
 This is the formal, read-only OCI Distribution API proxy for public `yyhuni/lunafox-*` packages on `ghcr.io`. It is intentionally separate from `tools/ghcr-registry-proxy-poc/`, which remains available as the manual rollback Worker source.
 
-The Worker accepts only `GET` and `HEAD` for `/v2/`, digest-qualified manifest/blob paths, and the exact Sigstore v0.3 `artifactType`-filtered Referrers path. Unfiltered first-party Referrers probes and Docker's legacy `sha256-<digest>` referrer fallback receive a local `404`, matching ordinary Docker compatibility probes without expanding the proxy surface. It has no storage binding, Cache API use, GitHub token, or client authentication. The Cloudflare hostname is a transport endpoint only: release identity and Cosign verification continue to use `ghcr.io`, while the signature bundle may be fetched through this filtered transport.
+The Worker accepts only `GET` and `HEAD` for `/v2/`, digest-qualified manifest/blob paths, and the exact Sigstore v0.3 `artifactType`-filtered Referrers path. Any other Referrers probe — unfiltered, differently filtered, third-party, or Docker's legacy `sha256-<digest>` referrer fallback — receives a local `404`, the registry answer for an empty referrers set that ordinary Docker compatibility probes require to finish a pull. Policy-rejected content requests (unknown repositories, tag pulls, digest drift) stay `403`. It has no storage binding, Cache API use, GitHub token, or client authentication. The Cloudflare hostname is a transport endpoint only: release identity and Cosign verification continue to use `ghcr.io`, while the signature bundle may be fetched through this filtered transport.
 
 ## Third-party closure
 
