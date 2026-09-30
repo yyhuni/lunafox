@@ -3514,7 +3514,9 @@ jobs:
           version: 10.30.3
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # tools/lunafox-ghcr-registry pins wrangler 4.119.0 (engines node >=22);
+          # Node 20 makes `wrangler types` fail before the worker deploy step.
+          node-version: "22"
           cache: pnpm
           cache-dependency-path: tools/lunafox-ghcr-registry/pnpm-lock.yaml
       - id: cloudflare_worker
