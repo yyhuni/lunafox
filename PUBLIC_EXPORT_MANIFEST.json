@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:6cf9a621ec1ef1fd00f1d6e79a7797c1b743a99b6f2a1e5141c9947fc08bfd59",
-  "releaseTag": "v0.0.1-alpha.194",
+  "sourceRevisionDigest": "sha256:7cc3e854ca700e12c682060055880f56fc7453ddb52de84b5c1e231d711db23d",
+  "releaseTag": "v0.0.1-alpha.195",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "29d6bbf95a815ac71d1098f788cd442690df3f7f9627b7af4dc4697e8070408c"
+      "sha256": "dcab8d5abd7f233741240f208b202feb920184172c4127a4f606b72769f5c630"
     },
     {
       "path": "README.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "da73359ed71447a47fab5d0691dbf49bea596c52c09c68a987fd080537bbeeb9"
+      "sha256": "7a7d2fe3fd7c528a89769ad23c27f3ad8f20b1503657f9b63af2542e3d26f552"
     },
     {
       "path": "agent/bin/sha256-575e0b6dfe956b399f0155214d5e1baa71e318f8bcd65f66f74957a169694bf0/agent-bundle.sha256",
@@ -92,7 +92,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "c126331aec1f9aa6b5858923e997942fe8da44b17e979869905af71c4cc13792"
+      "sha256": "f50bdf8f7d0d4ea7ecd62f8ec6a473305239d547b8ca473050dbd524b14a5b3c"
     },
     {
       "path": "agent/bin/sha256-575e0b6dfe956b399f0155214d5e1baa71e318f8bcd65f66f74957a169694bf0/lunafox-agent-linux-amd64",
@@ -17392,6 +17392,13 @@
       "sha256": "15d5ceedfa292e0740f2d424ddbb0c44f6af01d932d5d56a7830d090665d9bee"
     },
     {
+      "path": "release-notes/v0.0.1-alpha.195.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 742,
+      "sha256": "ccffbb2eddc706bb9b053173b6d7efc6ca58ca6307bfca93266686c6581f0cb1"
+    },
+    {
       "path": "resources/alloy/config.alloy",
       "type": "file",
       "mode": "0644",
@@ -17654,15 +17661,15 @@
       "path": "scripts/ci/publish-public-deployment.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 22692,
-      "sha256": "327f4ab0128f82464012e6d5ed0311cb8f81e262513f1aee0a269604c840dc3c"
+      "size": 22970,
+      "sha256": "d804cf5b279ac7900801ecfa9fb2e19c5634a99c5b9fd33ea60cd26ab70c4d56"
     },
     {
       "path": "scripts/ci/publish-public-deployment.test.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 19599,
-      "sha256": "97bd9639d6956c26757691e01e4737b3ae58112c47ba2ca980a7c2fc3f3c8aa6"
+      "size": 19788,
+      "sha256": "fa61314a34d7290724f61c75bddc43a3e1d821f742fd538bd32f42d1e7e7e413"
     },
     {
       "path": "scripts/ci/publish-public-export.mjs",

@@ -310,7 +310,10 @@ async function createPullRequest(options, branch, snapshotSha) {
 async function dispatchValidation(options, ref) {
   await request(options, `/repos/${options.repo}/actions/workflows/${encodeURIComponent(options.workflow)}/dispatches`, {
     method: "POST",
-    body: { ref },
+    // The validation-only dispatch still has to satisfy the workflow's
+    // required recovery inputs; publish=false keeps it out of the recovery
+    // publication lane while release_tag binds the run to this snapshot.
+    body: { ref, inputs: { publish: "false", release_tag: options.tag } },
   });
 }
 

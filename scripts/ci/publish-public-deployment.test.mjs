@@ -267,7 +267,7 @@ function mainRun(overrides = {}) {
     status: "completed", conclusion: "success", ...overrides };
 }
 const OPTIONS = { repo: "yyhuni/lunafox", baseBranch: "main", workflow: "public-validate.yml",
-  apiBase: "https://api.test", token: "test", timeoutSeconds: 60, pollSeconds: 1, sleep: async () => {} };
+  apiBase: "https://api.test", token: "test", tag: TAG, timeoutSeconds: 60, pollSeconds: 1, sleep: async () => {} };
 
 test("PR approval binds exact identity and approves a controlled run only once", async t => {
   const original = globalThis.fetch; t.after(() => { globalThis.fetch = original; });
@@ -308,13 +308,19 @@ test("main validation waits for running push without duplicate dispatch", async 
 test("main rejects foreign success and dispatches once for missing canonical run", async t => {
   const original = globalThis.fetch; t.after(() => { globalThis.fetch = original; });
   let dispatched = 0;
+  let dispatchBody;
   globalThis.fetch = async (url, init = {}) => {
-    if (url.endsWith("/dispatches")) { dispatched++; return response({}, 204); }
+    if (url.endsWith("/dispatches")) {
+      dispatched++;
+      dispatchBody = JSON.parse(init.body);
+      return response({}, 204);
+    }
     if (url.endsWith("/git/ref/heads/main")) return response({ object: { sha: MERGE_SHA } });
     return response({ workflow_runs: [mainRun(dispatched ? {} : { head_repository: { full_name: "attacker/fork" } })] });
   };
   await waitForValidation(OPTIONS, MERGE_SHA);
   assert.equal(dispatched, 1);
+  assert.deepEqual(dispatchBody, { ref: "main", inputs: { publish: "false", release_tag: TAG } });
 });
 
 test("failed main workflow cannot be hidden by an older success", async t => {
