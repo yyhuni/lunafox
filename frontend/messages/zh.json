@@ -111,7 +111,16 @@
       "trigger": "触发",
       "success": "成功",
       "failure": "失败",
-      "lastRun": "上次触发时间"
+      "lastRun": "上次触发时间",
+      "lastFailure": "上次执行失败",
+      "failureCauses": {
+        "WORKFLOW_UNAVAILABLE": "引用的扫描流程不可用",
+        "AGENT_NOT_FOUND": "绑定的节点已被删除",
+        "CONFIG_RESOURCE_UNAVAILABLE": "配置资源不可用",
+        "ENGINE_UNAVAILABLE": "引用的引擎不可用",
+        "TARGET_UNAVAILABLE": "扫描目标已删除或无效",
+        "INTERNAL_UNAVAILABLE": "服务内部错误"
+      }
     },
     "fingerprint": {
       "name": "名称",
@@ -624,6 +633,7 @@
       "vulnsFooter": "所有扫描发现的漏洞",
       "targetsFooter": "已添加的目标总数",
       "scansFooter": "当前运行中的任务",
+      "changeScope": "近 24 小时变化",
       "updatedAt": "统计更新于 {time}",
       "noData": "暂无数据"
     },
@@ -781,8 +791,7 @@
         "open": "开放风险",
         "severityDistribution": "风险严重度分布",
         "new": "新增",
-        "newSinceYesterday": "较昨日新增",
-        "newToday": "今日新增",
+        "newInLast24h": "近 24 小时新增",
         "audited": "已审查",
         "unaudited": "待审查",
         "auditUnavailable": "审查统计暂时不可用",
@@ -793,7 +802,6 @@
         "reopened": "重新打开",
         "closed": "已关闭",
         "fixed": "已修复",
-        "trend": "较昨日",
         "loadFailed": "风险摘要加载失败",
         "loadFailedDescription": "暂时无法获取漏洞统计，请重试。",
         "unavailable": "暂时无法读取风险数据"
@@ -854,7 +862,7 @@
         "title": "资产概览",
         "assets": "资产总量",
         "targets": "监控目标",
-        "change": "较昨日",
+        "change": "近 24 小时新增",
         "trend": "近 7 天资产变化",
         "distribution": "资产类型分布",
         "total": "总计",
@@ -947,12 +955,10 @@
           "endpoints": "URL",
           "websites": "站点"
         },
-        "comparedToYesterday": "较昨日",
         "distributionTitle": "类型分布",
         "distributionHeaders": {
           "type": "类型",
-          "count": "资产数量",
-          "change": "较昨日新增"
+          "count": "资产数量"
         },
         "trendTitle": "资产趋势（近7天）",
         "tooltipDate": "日期 {label}"

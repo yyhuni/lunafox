@@ -28,6 +28,8 @@ const scan = (overrides: Partial<ScheduledScan>): ScheduledScan => ({
   runCount: overrides.runCount ?? 0,
   successfulHandoffCount: overrides.successfulHandoffCount ?? 0,
   failedHandoffCount: overrides.failedHandoffCount ?? 0,
+  lastHandoffFailureCause: overrides.lastHandoffFailureCause ?? null,
+  lastHandoffFailureTime: overrides.lastHandoffFailureTime ?? null,
   createdAt: overrides.createdAt ?? "2024-12-01T00:00:00Z",
   updatedAt: overrides.updatedAt ?? "2024-12-01T00:00:00Z",
 })

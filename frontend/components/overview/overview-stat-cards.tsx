@@ -30,14 +30,20 @@ function NumberTicker({ value }: { value: number }) {
 }
 
 const TrendBadge = memo(function TrendBadge({ change }: { change: number }) {
+  const t = useTranslations("overview.statCards")
+
   if (change === 0) return null
-  
+
   const isPositive = change > 0
+  // The badge shows only a signed count; the accessible name and hover hint must carry the 24h window scope.
+  const scopeLabel = t("changeScope")
   return (
     <Badge
       size="compact"
-      variant="outline" 
+      variant="outline"
       className={getTrendToneBadgeClass(isPositive ? "positive" : "negative")}
+      aria-label={`${scopeLabel} ${isPositive ? "+" : ""}${change}`}
+      title={scopeLabel}
     >
       {isPositive ? <IconTrendingUp className="mr-1 size-3" /> : <IconTrendingDown className="mr-1 size-3" />}
       {isPositive ? '+' : ''}{change}

@@ -58,6 +58,7 @@ func NewReaders(deps Dependencies) tools.Dependencies {
 		TargetCreator:        NewTargetWriter(deps.Targets),
 		VulnerabilityActions: NewVulnerabilityAction(deps.Vulnerabilities),
 		ScanStarter:          NewScanStarter(deps.Scans),
+		ScanStopper:          NewScanStopper(deps.Scans),
 		Operations:           NewOperationReader(deps.Scans),
 	}
 }

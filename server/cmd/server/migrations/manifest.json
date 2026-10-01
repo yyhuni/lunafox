@@ -30,6 +30,13 @@
       "up": "000004_upgrade_operation_host_activity.up.sql",
       "down": "000004_upgrade_operation_host_activity.down.sql",
       "checksum": "sha256:940a3cefb86090ec0999fc381f7d51e3b3cea37ee87c0c67adc4afbac128d34b"
+    },
+    {
+      "id": "000005",
+      "slug": "scheduled_scan_handoff_retry",
+      "up": "000005_scheduled_scan_handoff_retry.up.sql",
+      "down": "000005_scheduled_scan_handoff_retry.down.sql",
+      "checksum": "sha256:e1237440f43ddc28cac2ed077ce163fa9acae541502af37d19f776b0b7dcbc3c"
     }
   ]
 }

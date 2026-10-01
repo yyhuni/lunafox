@@ -17,7 +17,7 @@ import { TimestampCell } from "@/components/shared/data-table/timestamp-cell"
 import { getStatusToneTextClass } from "@/lib/status-config"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
-import type { ScheduledScan } from "@/types/scheduled-scan.types"
+import type { ScheduledScan, ScheduledScanHandoffFailureCause } from "@/types/scheduled-scan.types"
 import { scheduledScanTableColumnLayout } from "./scheduled-scan-table-layout"
 
 const EditIcon = semanticIcons.action.edit
@@ -38,6 +38,8 @@ export interface ScheduledScanTranslations {
     success: string
     failure: string
     lastRun: string
+    lastFailure: string
+    failureCauses: Record<ScheduledScanHandoffFailureCause, string>
   }
   actions: {
     editTask: string
@@ -320,18 +322,28 @@ export const createScheduledScanColumns = ({
       <DataTableColumnHeader column={column} title={t.columns.handoffResults} />
     ),
     cell: ({ row }) => {
+      const lastFailureCause = row.original.lastHandoffFailureCause
+      const lastFailureTime = row.original.lastHandoffFailureTime
       return (
-        <span className={cn(textRole.tableCellSecondary, "font-mono tabular-nums whitespace-nowrap")}>
-          <span>{t.columns.trigger} {row.original.runCount}</span>
-          <span aria-hidden="true"> · </span>
-          <span className={getStatusToneTextClass("success")}>
-            {t.columns.success} {row.original.successfulHandoffCount}
+        <div className="min-w-0 whitespace-nowrap">
+          <span className={cn(textRole.tableCellSecondary, "font-mono tabular-nums")}>
+            <span>{t.columns.trigger} {row.original.runCount}</span>
+            <span aria-hidden="true"> · </span>
+            <span className={getStatusToneTextClass("success")}>
+              {t.columns.success} {row.original.successfulHandoffCount}
+            </span>
+            <span aria-hidden="true"> · </span>
+            <span className={getStatusToneTextClass("error")}>
+              {t.columns.failure} {row.original.failedHandoffCount}
+            </span>
           </span>
-          <span aria-hidden="true"> · </span>
-          <span className={getStatusToneTextClass("error")}>
-            {t.columns.failure} {row.original.failedHandoffCount}
-          </span>
-        </span>
+          {lastFailureCause && (
+            <div className={cn(getStatusToneTextClass("error"), "truncate")}>
+              {t.columns.lastFailure}: {t.columns.failureCauses[lastFailureCause] ?? lastFailureCause}
+              {lastFailureTime ? ` · ${formatDate(lastFailureTime)}` : ""}
+            </div>
+          )}
+        </div>
       )
     },
     enableSorting: false,

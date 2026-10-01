@@ -48,8 +48,9 @@ the application must not translate it into either resolver selection or apply a
 fallback. A saved development schedule using that retired shape fails at normal
 Scan creation before a Task or Scan History record exists. The operator-facing
 diagnostic remains the Server Error log message `Scheduled scan handoff did not
-complete`; this module adds no retry, notification, automatic disablement, or
-new product failure surface.
+complete`; this module adds no notification, automatic disablement, or Run Now
+entry point, and its only product failure surface is the bounded retry policy
+and the Schedule-level last-handoff-failure summary described below.
 
 Create and Update validate the selected workflow through the workflow
 repository. At occurrence attempt start, the scheduler copies the latest
@@ -149,12 +150,17 @@ sets `lastRunTime` to the same UTC instant, and freezes the latest committed
 inputs before normal Scan creation starts. One Organization occurrence still
 increments the aggregate once, regardless of how many child Scans are created.
 
-Each occurrence receives one attempt with a fixed five-minute handoff deadline.
-There is no automatic retry after ordinary failure, partial success, timeout,
-cancellation, process interruption, or restart, and no compensation for
-missing Organization batch items. Already committed ordinary Scans remain
-valid. Their queued, running, completed, failed, and canceled states are owned
-only by the Scan module and never update scheduling state.
+Each occurrence attempt uses a fixed five-minute handoff deadline. A handoff
+outcome that created zero Scans (`scan_create_failed`) enters bounded automatic
+retry: up to three additional attempts scheduled 30 seconds, 1 minute, and
+3 minutes after the observed failure, each re-freezing the then-latest
+committed inputs through the same attempt-start path. Partial success, deadline
+expiration, cancellation, and interruption between `attemptedAt` and outcome
+writeback are never retried — any committed Scan makes a retry duplicate work,
+and an unknown creation state cannot be proven zero-created. Exhausted retries
+settle as one final failure. Already committed ordinary Scans remain valid.
+Their queued, running, completed, failed, and canceled states are owned only by
+the Scan module and never update scheduling state.
 
 Each Schedule retains three durable, non-negative aggregates: `runCount` counts
 committed attempt starts, `successfulHandoffCount` counts completed normal Scan
@@ -183,10 +189,17 @@ owning Schedule row:
 Complete handoff records `dispatchedAt`. Observed non-complete handoff records
 one closed `failureKind` and a bounded safe UTF-8 `failureMessage`; raw errors,
 configuration, paths, secrets, stacks, and complete batch payloads are never
-persisted. Outcome settlement and the exactly-one successful or failed Schedule
-aggregate increment commit in one repository transaction. A crash after
-`attemptedAt` but before outcome writeback intentionally remains attempted with
-an unknown result and is not replayed.
+persisted. A zero-created creation failure additionally carries one bounded
+public `failureCause` from the closed enum `WORKFLOW_UNAVAILABLE`,
+`AGENT_NOT_FOUND`, `CONFIG_RESOURCE_UNAVAILABLE`, `ENGINE_UNAVAILABLE`,
+`TARGET_UNAVAILABLE`, or `INTERNAL_UNAVAILABLE`, mapped only from typed Scan
+Create errors; the enum is an API contract that only grows. Outcome settlement
+and the exactly-one successful or failed Schedule aggregate increment commit in
+one repository transaction, together with the Schedule-level
+`last_handoff_failure_cause`/`last_handoff_failure_time` summary (written on
+final failure, cleared on success). Intermediate retryable failures persist
+retry state only. A crash after `attemptedAt` but before outcome writeback
+intentionally remains attempted with an unknown result and is not replayed.
 
 A separate managed retention job starts asynchronously with the Server and then
 runs hourly. It retains attempted occurrences for at least seven days based
@@ -195,6 +208,9 @@ only on UTC `attemptedAt`, deletes at most 1,000 rows per transaction and
 Schedule Delete bypasses retention through its ownership cascade.
 
 The occurrence ledger is internal. This phase adds no occurrence/history API or
-UI, Scheduled Scan Run Now, Scan provenance, scheduler setting, runtime tuning,
-metric, built-in alert, dashboard, health-probe dependency, retry queue,
-Undelete, or Scan lifecycle tracking.
+UI, Scan provenance, scheduler setting, runtime tuning, metric, built-in alert,
+dashboard, health-probe dependency, Undelete, or Scan lifecycle tracking. The
+only external projection of occurrence outcomes is the Schedule-level
+last-handoff-failure summary (`lastHandoffFailureCause` plus
+`lastHandoffFailureTime`); a Scheduled Scan Run Now entry point remains
+excluded.

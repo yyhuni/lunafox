@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -278,4 +279,76 @@ func TestOccurrenceDispatcherTriggerTimeFailuresRecoverOnlyOnLaterOccurrence(t *
 
 func testTime() time.Time {
 	return time.Date(2026, 8, 4, 10, 0, 0, 0, time.UTC)
+}
+
+func TestClassifyHandoffAttachesPublicCauseForZeroCreatedFailures(t *testing.T) {
+	causeCases := []struct {
+		name string
+		err  error
+		want HandoffFailureCause
+	}{
+		{name: "workflow unavailable", err: fmt.Errorf("wrap: %w", scanapp.ErrCreateInvalidScanWorkflow), want: HandoffCauseWorkflowUnavailable},
+		{name: "no workflows", err: scanapp.ErrCreateNoScanWorkflows, want: HandoffCauseWorkflowUnavailable},
+		{name: "agent not found", err: scanapp.ErrCreateAgentNotFound, want: HandoffCauseAgentNotFound},
+		{name: "engine unavailable", err: fmt.Errorf("step: %w", scanapp.ErrCreateScanWorkflowEngineUnavailable), want: HandoffCauseEngineUnavailable},
+		{name: "target not found", err: scanapp.ErrCreateTargetNotFound, want: HandoffCauseTargetUnavailable},
+		{name: "no targets", err: scanapp.ErrNoTargetsForScan, want: HandoffCauseTargetUnavailable},
+		{name: "invalid config", err: scanapp.ErrCreateInvalidConfig, want: HandoffCauseConfigResourceUnavailable},
+		{name: "unknown typed error", err: errors.New("database is unavailable"), want: HandoffCauseInternalUnavailable},
+		{name: "no error with structured all-target failures", err: nil, want: HandoffCauseTargetUnavailable},
+	}
+	for _, test := range causeCases {
+		t.Run(test.name, func(t *testing.T) {
+			var result *scanapp.BatchScanResult
+			if test.err == nil {
+				result = &scanapp.BatchScanResult{
+					Failed: []scanapp.CreateBatchItemOutcome{{Index: 0, Reason: "TARGET_NOT_FOUND"}},
+				}
+			}
+			outcome := ClassifyHandoff(result, test.err, true)
+			if outcome.Kind != HandoffScanCreateFailed || outcome.Cause != test.want {
+				t.Fatalf("outcome = %+v; want kind=%s cause=%s", outcome, HandoffScanCreateFailed, test.want)
+			}
+		})
+	}
+}
+
+func TestClassifyHandoffLeavesCauseEmptyForOtherOutcomes(t *testing.T) {
+	partial := &scanapp.BatchScanResult{
+		Scans: []scanapp.QueryScan{{TargetID: 1}}, CreatedCount: 1,
+		Failed: []scanapp.CreateBatchItemOutcome{{Index: 1, Reason: "TARGET_NOT_FOUND"}},
+	}
+	if outcome := ClassifyHandoff(partial, nil, false); outcome.Kind != HandoffPartial || outcome.Cause != "" {
+		t.Fatalf("partial outcome = %+v; want no cause", outcome)
+	}
+	if outcome := ClassifyHandoff(nil, context.DeadlineExceeded, false); outcome.Kind != HandoffDeadlineExceeded || outcome.Cause != "" {
+		t.Fatalf("deadline outcome = %+v; want no cause", outcome)
+	}
+	if outcome := ClassifyHandoff(nil, context.Canceled, false); outcome.Kind != HandoffCanceled || outcome.Cause != "" {
+		t.Fatalf("canceled outcome = %+v; want no cause", outcome)
+	}
+}
+
+func TestHandoffRetryPolicyBounds(t *testing.T) {
+	if MaxHandoffRetries != 3 {
+		t.Fatalf("MaxHandoffRetries = %d; want 3", MaxHandoffRetries)
+	}
+	delays := []time.Duration{HandoffRetryDelay(1), HandoffRetryDelay(2), HandoffRetryDelay(3)}
+	want := []time.Duration{30 * time.Second, time.Minute, 3 * time.Minute}
+	for index := range delays {
+		if delays[index] != want[index] {
+			t.Fatalf("HandoffRetryDelay(%d) = %s; want %s", index+1, delays[index], want[index])
+		}
+	}
+	if _, ok := ParseHandoffFailureCause("NOT_A_CAUSE"); ok {
+		t.Fatal("ParseHandoffFailureCause accepted an unknown value")
+	}
+	for _, cause := range []string{
+		"WORKFLOW_UNAVAILABLE", "AGENT_NOT_FOUND", "CONFIG_RESOURCE_UNAVAILABLE",
+		"ENGINE_UNAVAILABLE", "TARGET_UNAVAILABLE", "INTERNAL_UNAVAILABLE",
+	} {
+		if _, ok := ParseHandoffFailureCause(cause); !ok {
+			t.Fatalf("ParseHandoffFailureCause rejected enum value %s", cause)
+		}
+	}
 }

@@ -410,3 +410,45 @@ describe("scheduled-scan.service contract", () => {
 		).rejects.toThrow("unexpected updatedCount")
 	})
 })
+
+describe("scheduled-scan last-handoff-failure summary transport", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("round-trips a settled failure summary", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: scheduledScanTransport({
+        lastHandoffFailureCause: "CONFIG_RESOURCE_UNAVAILABLE",
+        lastHandoffFailureTime: "2026-06-14T09:00:00Z",
+      }),
+    } as never)
+    const scan = await getScheduledScan(4)
+    expect(scan.lastHandoffFailureCause).toBe("CONFIG_RESOURCE_UNAVAILABLE")
+    expect(scan.lastHandoffFailureTime).toBe("2026-06-14T09:00:00Z")
+  })
+
+  it("rejects an unknown failure cause", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: scheduledScanTransport({
+        lastHandoffFailureCause: "SOMETHING_ELSE",
+        lastHandoffFailureTime: "2026-06-14T09:00:00Z",
+      }),
+    } as never)
+    await expect(getScheduledScan(4)).rejects.toThrow("unknown lastHandoffFailureCause")
+  })
+
+  it("rejects a summary whose cause and time presence disagree", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: scheduledScanTransport({ lastHandoffFailureCause: "AGENT_NOT_FOUND" }),
+    } as never)
+    await expect(getScheduledScan(4)).rejects.toThrow("inconsistent lastHandoffFailure")
+  })
+
+  it("treats a summary with both fields absent as no failure on record", async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: scheduledScanTransport() } as never)
+    const scan = await getScheduledScan(4)
+    expect(scan.lastHandoffFailureCause).toBeNull()
+    expect(scan.lastHandoffFailureTime).toBeNull()
+  })
+})

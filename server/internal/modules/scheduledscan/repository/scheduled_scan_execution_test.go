@@ -85,8 +85,14 @@ func TestScheduledScanRepositoryBatchStatusUpdatePreservesLifecycleForMixedState
 		t.Fatalf("Create(disabled) error = %v", err)
 	}
 	attemptedAt := now.Add(-time.Minute)
-	if err := repo.db.Create(&scheduledScanOccurrenceModel{ScheduledScanID: enabled.ID, ScheduledFor: now.Add(-2 * time.Minute), AttemptedAt: &attemptedAt}).Error; err != nil {
-		t.Fatalf("seed attempted occurrence: %v", err)
+	settledKind := "scan_create_failed"
+	settledMessage := "settled failure"
+	if err := repo.db.Create(&scheduledScanOccurrenceModel{ScheduledScanID: enabled.ID, ScheduledFor: now.Add(-3 * time.Minute), AttemptedAt: &attemptedAt, FailureKind: &settledKind, FailureMessage: &settledMessage}).Error; err != nil {
+		t.Fatalf("seed settled occurrence: %v", err)
+	}
+	retryAt := now.Add(-30 * time.Second)
+	if err := repo.db.Create(&scheduledScanOccurrenceModel{ScheduledScanID: enabled.ID, ScheduledFor: now.Add(-2 * time.Minute), AttemptedAt: &attemptedAt, NextRetryAt: &retryAt}).Error; err != nil {
+		t.Fatalf("seed retry-pending occurrence: %v", err)
 	}
 	if err := repo.db.Create(&scheduledScanOccurrenceModel{ScheduledScanID: enabled.ID, ScheduledFor: now.Add(-time.Minute)}).Error; err != nil {
 		t.Fatalf("seed unattempted occurrence: %v", err)
@@ -118,14 +124,23 @@ func TestScheduledScanRepositoryBatchStatusUpdatePreservesLifecycleForMixedState
 	if unattemptedCount != 0 {
 		t.Fatalf("disable retained %d unattempted occurrences", unattemptedCount)
 	}
-	var attemptedCount int64
+	var settledCount int64
 	if err := repo.db.Model(&scheduledScanOccurrenceModel{}).
-		Where("scheduled_scan_id = ? AND attempted_at IS NOT NULL", enabled.ID).
-		Count(&attemptedCount).Error; err != nil {
-		t.Fatalf("count attempted occurrences: %v", err)
+		Where("scheduled_scan_id = ? AND failure_kind IS NOT NULL", enabled.ID).
+		Count(&settledCount).Error; err != nil {
+		t.Fatalf("count settled occurrences: %v", err)
 	}
-	if attemptedCount != 1 {
-		t.Fatalf("disable removed %d attempted occurrences", attemptedCount)
+	if settledCount != 1 {
+		t.Fatalf("disable removed %d settled occurrences", settledCount)
+	}
+	var pendingRetryCount int64
+	if err := repo.db.Model(&scheduledScanOccurrenceModel{}).
+		Where("scheduled_scan_id = ? AND next_retry_at IS NOT NULL", enabled.ID).
+		Count(&pendingRetryCount).Error; err != nil {
+		t.Fatalf("count retry-pending occurrences: %v", err)
+	}
+	if pendingRetryCount != 0 {
+		t.Fatalf("disable retained %d retry-pending occurrences", pendingRetryCount)
 	}
 }
 
@@ -776,7 +791,6 @@ func TestScheduledScanRepositoryRecordsHandoffOutcomeAggregatesExactlyOnce(t *te
 		{name: "partial", outcome: scheduledapp.HandoffOutcome{Kind: scheduledapp.HandoffPartial, Message: "partial"}, success: 1, failure: 1},
 		{name: "deadline", outcome: scheduledapp.HandoffOutcome{Kind: scheduledapp.HandoffDeadlineExceeded, Message: "deadline"}, success: 1, failure: 2},
 		{name: "canceled", outcome: scheduledapp.HandoffOutcome{Kind: scheduledapp.HandoffCanceled, Message: "canceled"}, success: 1, failure: 3},
-		{name: "scan create failed", outcome: scheduledapp.HandoffOutcome{Kind: scheduledapp.HandoffScanCreateFailed, Message: "scan create failed"}, success: 1, failure: 4},
 	}
 	for index, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -821,7 +835,7 @@ func TestScheduledScanRepositoryRecordsHandoffOutcomeAggregatesExactlyOnce(t *te
 		t.Fatalf("StartAttempt(interrupted) = %+v, %v", frozen, err)
 	}
 	stored, err := repo.GetByID(context.Background(), schedule.ID)
-	if err != nil || stored.RunCount != 1 || stored.SuccessfulHandoffCount != 1 || stored.FailedHandoffCount != 4 {
+	if err != nil || stored.RunCount != 1 || stored.SuccessfulHandoffCount != 1 || stored.FailedHandoffCount != 3 {
 		t.Fatalf("interrupted attempt aggregates = %+v, %v", stored, err)
 	}
 
@@ -1156,4 +1170,173 @@ func openScheduledScanTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("seed active target: %v", err)
 	}
 	return db
+}
+
+func TestScheduledScanRepositoryHandoffRetryLifecycleAndSummary(t *testing.T) {
+	base := time.Date(2026, 8, 4, 10, 0, 0, 0, time.UTC)
+	now := base
+	repo := newScheduledScanRepositoryForTest(t).WithClock(func() time.Time { return now })
+	targetID := 7
+	schedule, err := repo.Create(context.Background(), &scheduledapp.ScheduledScanCreate{
+		Name: "retry", ScanWorkflowID: "default", Configuration: map[string]any{"version": 1}, InputSource: scandomain.InputSourceScanSnapshot,
+		TargetID: &targetID, TimeZone: "UTC", CronExpression: "* * * * *", IsEnabled: true,
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	seedOccurrence := func(offset time.Duration) *scheduledScanOccurrenceModel {
+		occurrence := &scheduledScanOccurrenceModel{ScheduledScanID: schedule.ID, ScheduledFor: base.Add(offset)}
+		if err := repo.db.Create(occurrence).Error; err != nil {
+			t.Fatalf("seed occurrence: %v", err)
+		}
+		return occurrence
+	}
+	loadOccurrence := func(id int64) *scheduledScanOccurrenceModel {
+		var occurrence scheduledScanOccurrenceModel
+		if err := repo.db.First(&occurrence, "id = ?", id).Error; err != nil {
+			t.Fatalf("load occurrence %d: %v", id, err)
+		}
+		return &occurrence
+	}
+	loadSchedule := func() *scheduledapp.ScheduledScan {
+		stored, err := repo.GetByID(context.Background(), schedule.ID)
+		if err != nil {
+			t.Fatalf("GetByID() error = %v", err)
+		}
+		return stored
+	}
+	failedOutcome := scheduledapp.HandoffOutcome{
+		Kind: scheduledapp.HandoffScanCreateFailed, Message: "scan create failed", Cause: scheduledapp.HandoffCauseWorkflowUnavailable,
+	}
+	recordFailure := func(occurrenceID int64, at time.Time) {
+		t.Helper()
+		recorded, err := repo.RecordOutcome(context.Background(), occurrenceID, failedOutcome, at)
+		if err != nil || !recorded {
+			t.Fatalf("RecordOutcome(failed) at %s = %v, %v", at, recorded, err)
+		}
+	}
+
+	// A fresh schedule and occurrence carry no failure summary and no retry
+	// state; both summaries start null and retry_count starts at zero.
+	first := seedOccurrence(time.Minute)
+	if fresh := loadOccurrence(first.ID); fresh.RetryCount != 0 || fresh.NextRetryAt != nil || fresh.LastFailureCause != nil {
+		t.Fatalf("fresh occurrence retry state = %+v; want zero/null defaults", fresh)
+	}
+	if summary := loadSchedule(); summary.LastHandoffFailureCause != nil || summary.LastHandoffFailureTime != nil {
+		t.Fatalf("fresh schedule summary = %+v, %+v; want null", summary.LastHandoffFailureCause, summary.LastHandoffFailureTime)
+	}
+
+	// Attempt 1: a zero-created failure records retry state without settling.
+	if _, err := repo.StartAttempt(context.Background(), scheduledapp.OccurrenceCandidate{ID: first.ID, ScheduledScanID: schedule.ID, ScheduledFor: first.ScheduledFor}, base.Add(time.Second)); err != nil {
+		t.Fatalf("StartAttempt(first) error = %v", err)
+	}
+	recordFailure(first.ID, base.Add(2*time.Second))
+	stored := loadOccurrence(first.ID)
+	if stored.RetryCount != 1 || stored.NextRetryAt == nil || !stored.NextRetryAt.Equal(base.Add(32*time.Second)) {
+		t.Fatalf("first failure retry state = %+v", stored)
+	}
+	if stored.FailureKind != nil || stored.LastFailureCause == nil || *stored.LastFailureCause != "WORKFLOW_UNAVAILABLE" {
+		t.Fatalf("first failure must not settle terminal diagnostics: %+v", stored)
+	}
+	summary := loadSchedule()
+	if summary.RunCount != 1 || summary.SuccessfulHandoffCount != 0 || summary.FailedHandoffCount != 0 ||
+		summary.LastHandoffFailureCause != nil || summary.LastHandoffFailureTime != nil {
+		t.Fatalf("intermediate failure touched aggregates or summary: %+v", summary)
+	}
+
+	deadline, err := repo.EarliestRetryDeadline(context.Background())
+	if err != nil || deadline == nil || !deadline.Equal(base.Add(32*time.Second)) {
+		t.Fatalf("EarliestRetryDeadline() = %v, %v", deadline, err)
+	}
+
+	// Before the deadline the occurrence is not an eligible candidate.
+	now = base.Add(10 * time.Second)
+	candidate, err := repo.SelectAttemptCandidate(context.Background())
+	if err != nil || candidate != nil {
+		t.Fatalf("early SelectAttemptCandidate() = %+v, %v; want nil", candidate, err)
+	}
+
+	// After the deadline the retry competes as an ordinary candidate and
+	// re-freezes the latest committed inputs (an edit landed meanwhile).
+	now = base.Add(40 * time.Second)
+	if _, err := repo.Update(context.Background(), schedule.ID, &scheduledapp.ScheduledScanUpdate{Configuration: map[string]any{"version": 2}}); err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+	candidate, err = repo.SelectAttemptCandidate(context.Background())
+	if err != nil || candidate == nil || candidate.ID != first.ID {
+		t.Fatalf("retry-due SelectAttemptCandidate() = %+v, %v", candidate, err)
+	}
+	frozen, err := repo.StartAttempt(context.Background(), *candidate, now)
+	if err != nil || frozen == nil || frozen.Configuration["version"] != float64(2) {
+		t.Fatalf("retry StartAttempt() = %+v, %v; want re-frozen latest configuration", frozen, err)
+	}
+
+	// Attempts 2 and 3 keep retrying on the 1-minute and 3-minute backoffs.
+	recordFailure(first.ID, now)
+	stored = loadOccurrence(first.ID)
+	if stored.RetryCount != 2 || stored.NextRetryAt == nil || !stored.NextRetryAt.Equal(now.Add(time.Minute)) {
+		t.Fatalf("second failure retry state = %+v", stored)
+	}
+	now = base.Add(160 * time.Second)
+	if _, err := repo.StartAttempt(context.Background(), scheduledapp.OccurrenceCandidate{ID: first.ID, ScheduledScanID: schedule.ID, ScheduledFor: first.ScheduledFor}, now); err != nil {
+		t.Fatalf("StartAttempt(third) error = %v", err)
+	}
+	recordFailure(first.ID, now)
+	stored = loadOccurrence(first.ID)
+	if stored.RetryCount != 3 || stored.NextRetryAt == nil || !stored.NextRetryAt.Equal(now.Add(3*time.Minute)) {
+		t.Fatalf("third failure retry state = %+v", stored)
+	}
+	if summary := loadSchedule(); summary.FailedHandoffCount != 0 {
+		t.Fatalf("aggregates moved before exhaustion: %+v", summary)
+	}
+
+	// Attempt 4 exhausts the budget and settles terminally with the summary.
+	now = base.Add(400 * time.Second)
+	if _, err := repo.StartAttempt(context.Background(), scheduledapp.OccurrenceCandidate{ID: first.ID, ScheduledScanID: schedule.ID, ScheduledFor: first.ScheduledFor}, now); err != nil {
+		t.Fatalf("StartAttempt(final) error = %v", err)
+	}
+	recordFailure(first.ID, now)
+	stored = loadOccurrence(first.ID)
+	if stored.FailureKind == nil || stored.NextRetryAt != nil {
+		t.Fatalf("exhausted failure must settle: %+v", stored)
+	}
+	summary = loadSchedule()
+	if summary.RunCount != 4 || summary.SuccessfulHandoffCount != 0 || summary.FailedHandoffCount != 1 ||
+		summary.LastHandoffFailureCause == nil || *summary.LastHandoffFailureCause != "WORKFLOW_UNAVAILABLE" ||
+		summary.LastHandoffFailureTime == nil || !summary.LastHandoffFailureTime.Equal(now) {
+		t.Fatalf("final settlement aggregates/summary = %+v", summary)
+	}
+
+	// A later occurrence that succeeds clears the failure summary.
+	second := seedOccurrence(10 * time.Minute)
+	now = base.Add(500 * time.Second)
+	if _, err := repo.StartAttempt(context.Background(), scheduledapp.OccurrenceCandidate{ID: second.ID, ScheduledScanID: schedule.ID, ScheduledFor: second.ScheduledFor}, now); err != nil {
+		t.Fatalf("StartAttempt(success) error = %v", err)
+	}
+	recorded, err := repo.RecordOutcome(context.Background(), second.ID, scheduledapp.HandoffOutcome{Kind: scheduledapp.HandoffCompleted}, now.Add(time.Second))
+	if err != nil || !recorded {
+		t.Fatalf("RecordOutcome(completed) = %v, %v", recorded, err)
+	}
+	summary = loadSchedule()
+	if summary.RunCount != 5 || summary.SuccessfulHandoffCount != 1 || summary.FailedHandoffCount != 1 ||
+		summary.LastHandoffFailureCause != nil || summary.LastHandoffFailureTime != nil {
+		t.Fatalf("success settlement must clear the summary: %+v", summary)
+	}
+
+	// An attempt interrupted before outcome writeback never retries: its
+	// creation state is unknown, so it must stay outside the candidate pool.
+	interrupted := seedOccurrence(20 * time.Minute)
+	now = base.Add(600 * time.Second)
+	if _, err := repo.StartAttempt(context.Background(), scheduledapp.OccurrenceCandidate{ID: interrupted.ID, ScheduledScanID: schedule.ID, ScheduledFor: interrupted.ScheduledFor}, now); err != nil {
+		t.Fatalf("StartAttempt(interrupted) error = %v", err)
+	}
+	now = base.Add(700 * time.Second)
+	candidate, err = repo.SelectAttemptCandidate(context.Background())
+	if err != nil || candidate != nil {
+		t.Fatalf("interrupted occurrence must never replay: %+v, %v", candidate, err)
+	}
+	if deadline, err = repo.EarliestRetryDeadline(context.Background()); err != nil || deadline != nil {
+		t.Fatalf("EarliestRetryDeadline() after interruption = %v, %v", deadline, err)
+	}
 }

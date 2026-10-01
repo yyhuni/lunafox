@@ -112,7 +112,7 @@ func toScheduledScanOutput(scan *scheduledapp.ScheduledScan) dto.ScheduledScanRe
 	if scan.TargetID != nil {
 		scanMode = "target"
 	}
-	return dto.ScheduledScanResponse{
+	response := dto.ScheduledScanResponse{
 		ID:                     scan.ID,
 		Name:                   httpdto.ScheduledScanName(scan.ID),
 		DisplayName:            scan.Name,
@@ -139,6 +139,12 @@ func toScheduledScanOutput(scan *scheduledapp.ScheduledScan) dto.ScheduledScanRe
 		CreatedAt:              timeutil.ToUTC(scan.CreatedAt),
 		UpdatedAt:              timeutil.ToUTC(scan.UpdatedAt),
 	}
+	if scan.LastHandoffFailureCause != nil {
+		cause := string(*scan.LastHandoffFailureCause)
+		response.LastHandoffFailureCause = &cause
+	}
+	response.LastHandoffFailureTime = timeutil.ToUTCPtr(scan.LastHandoffFailureTime)
+	return response
 }
 
 func scheduledScanAgentName(id *int) string {

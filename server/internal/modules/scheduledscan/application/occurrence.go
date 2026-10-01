@@ -49,8 +49,12 @@ const (
 )
 
 type HandoffOutcome struct {
-	Kind    HandoffOutcomeKind
+	Kind HandoffOutcomeKind
+	// Message is the bounded safe terminal diagnostic written at settlement.
 	Message string
+	// Cause carries the public cause enum for zero-created creation failures;
+	// partial, deadline, cancellation, and completed outcomes leave it empty.
+	Cause HandoffFailureCause
 }
 
 func (outcome HandoffOutcome) Completed() bool {
@@ -63,6 +67,9 @@ type ExecutionRepository interface {
 	SelectAttemptCandidate(ctx context.Context) (*OccurrenceCandidate, error)
 	StartAttempt(ctx context.Context, candidate OccurrenceCandidate, attemptedAt time.Time) (*FrozenDispatchInput, error)
 	RecordOutcome(ctx context.Context, occurrenceID int64, outcome HandoffOutcome, recordedAt time.Time) (bool, error)
+	// EarliestRetryDeadline reports the oldest pending bounded-retry deadline.
+	// A nil result means no unsettled occurrence is waiting for a retry.
+	EarliestRetryDeadline(ctx context.Context) (*time.Time, error)
 }
 
 type OccurrenceRetentionRepository interface {

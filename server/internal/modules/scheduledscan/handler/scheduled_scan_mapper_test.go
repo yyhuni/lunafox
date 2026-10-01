@@ -54,3 +54,27 @@ func TestToScheduledScanOutputUsesCanonicalWorkflowAndReturnsTimeZone(t *testing
 		}
 	}
 }
+
+func TestToScheduledScanOutputProjectsLastHandoffFailureSummary(t *testing.T) {
+	failedAt := time.Date(2026, 8, 4, 10, 0, 1, 0, time.UTC)
+	cause := scheduledapp.HandoffCauseConfigResourceUnavailable
+
+	// No failure on record: both summary fields stay null together.
+	idle := toScheduledScanOutput(&scheduledapp.ScheduledScan{ID: 2})
+	if idle.LastHandoffFailureCause != nil || idle.LastHandoffFailureTime != nil {
+		t.Fatalf("empty summary = %+v, %+v; want both nil", idle.LastHandoffFailureCause, idle.LastHandoffFailureTime)
+	}
+
+	// A settled failure projects the enum cause and the settlement instant.
+	failed := toScheduledScanOutput(&scheduledapp.ScheduledScan{
+		ID:                      3,
+		LastHandoffFailureCause: &cause,
+		LastHandoffFailureTime:  &failedAt,
+	})
+	if failed.LastHandoffFailureCause == nil || *failed.LastHandoffFailureCause != string(cause) {
+		t.Fatalf("summary cause = %+v; want %s", failed.LastHandoffFailureCause, cause)
+	}
+	if failed.LastHandoffFailureTime == nil || !failed.LastHandoffFailureTime.Equal(failedAt) {
+		t.Fatalf("summary time = %+v; want %s", failed.LastHandoffFailureTime, failedAt)
+	}
+}

@@ -1888,7 +1888,8 @@ async function resolveMockApi(request: Request) {
       runCount: 0,
       successfulHandoffCount: 0,
       failedHandoffCount: 0,
-      createdAt: now,
+      lastHandoffFailureCause: null, lastHandoffFailureTime: null,
+createdAt: now,
       updatedAt: now,
     }
     mockScheduledScans.unshift(scheduledScan)

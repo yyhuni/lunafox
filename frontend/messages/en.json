@@ -111,7 +111,16 @@
       "trigger": "Trigger",
       "success": "Success",
       "failure": "Failed",
-      "lastRun": "Last Trigger"
+      "lastRun": "Last Trigger",
+      "lastFailure": "Last run failed",
+      "failureCauses": {
+        "WORKFLOW_UNAVAILABLE": "referenced scan workflow is unavailable",
+        "AGENT_NOT_FOUND": "bound agent has been deleted",
+        "CONFIG_RESOURCE_UNAVAILABLE": "configuration resource is unavailable",
+        "ENGINE_UNAVAILABLE": "referenced engine is unavailable",
+        "TARGET_UNAVAILABLE": "scan target is deleted or invalid",
+        "INTERNAL_UNAVAILABLE": "internal server error"
+      }
     },
     "fingerprint": {
       "name": "Name",
@@ -624,6 +633,7 @@
       "vulnsFooter": "All vulnerabilities from scans",
       "targetsFooter": "Total targets added",
       "scansFooter": "Currently running tasks",
+      "changeScope": "Change in last 24h",
       "updatedAt": "Updated at {time}",
       "noData": "No data"
     },
@@ -781,8 +791,7 @@
         "open": "Open risk",
         "severityDistribution": "Risk severity distribution",
         "new": "New",
-        "newSinceYesterday": "New since yesterday",
-        "newToday": "New today",
+        "newInLast24h": "New in last 24h",
         "audited": "Reviewed",
         "unaudited": "Pending review",
         "auditUnavailable": "Review statistics are temporarily unavailable",
@@ -793,7 +802,6 @@
         "reopened": "Reopened",
         "closed": "Closed",
         "fixed": "Fixed",
-        "trend": "vs yesterday",
         "loadFailed": "Could not load risk summary",
         "loadFailedDescription": "Vulnerability statistics are temporarily unavailable. Please try again.",
         "unavailable": "Risk data is temporarily unavailable"
@@ -854,7 +862,7 @@
         "title": "Asset overview",
         "assets": "Assets",
         "targets": "Monitored targets",
-        "change": "vs yesterday",
+        "change": "new in last 24h",
         "trend": "Asset change, last 7 days",
         "distribution": "Asset type distribution",
         "total": "Total",
@@ -947,12 +955,10 @@
           "endpoints": "Endpoints",
           "websites": "Websites"
         },
-        "comparedToYesterday": "vs yesterday",
         "distributionTitle": "Type Distribution",
         "distributionHeaders": {
           "type": "Type",
-          "count": "Asset Count",
-          "change": "Added Yesterday"
+          "count": "Asset Count"
         },
         "trendTitle": "Asset Trend (Last 7 Days)",
         "tooltipDate": "Date {label}"

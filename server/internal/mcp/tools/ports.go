@@ -108,6 +108,7 @@ type Dependencies struct {
 	AgentLogs            AgentLogReader
 	VulnerabilityActions VulnerabilityAction
 	ScanStarter          ScanStarter
+	ScanStopper          ScanStopper
 	Operations           OperationReader
 	TargetCreator        TargetBatchCreator
 }

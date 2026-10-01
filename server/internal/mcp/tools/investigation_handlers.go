@@ -478,6 +478,69 @@ func (registry *Registry) getOperation(ctx context.Context, req *mcp.CallToolReq
 	return successResult(ctx, result, "Returned scan operation.")
 }
 
+type scanStopToolInput struct {
+	Scan string `json:"scan"`
+}
+
+type batchScanStopToolInput struct {
+	Scans []string `json:"scans"`
+}
+
+func (registry *Registry) stopScan(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var input scanStopToolInput
+	if err := decodeRequest(req, &input); err != nil {
+		return nil, invalidParams("invalid stop_scan arguments")
+	}
+	if !isCanonicalScanReference(input.Scan) {
+		return toolError(ctx, mcpErrors.ErrInvalidInput)
+	}
+	if registry.deps.ScanStopper == nil {
+		return toolError(ctx, mcpErrors.ErrInternal)
+	}
+	result, err := registry.deps.ScanStopper.Stop(ctx, ScanStopInput(input))
+	if err != nil {
+		return toolError(ctx, err)
+	}
+	return successResult(ctx, result, fmt.Sprintf("Stopped %s and revoked %d tasks.", result.Scan, result.RevokedTaskCount))
+}
+
+func (registry *Registry) batchStopScans(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var input batchScanStopToolInput
+	if err := decodeRequest(req, &input); err != nil {
+		return nil, invalidParams("invalid batch_stop_scans arguments")
+	}
+	// Bounds and duplicates are rejected before any transaction starts; the
+	// shared repository stop constraint remains the second, identical fence.
+	if len(input.Scans) == 0 || len(input.Scans) > MaxBatchScanStopItems {
+		return toolError(ctx, mcpErrors.ErrInvalidInput)
+	}
+	seen := make(map[string]struct{}, len(input.Scans))
+	for _, name := range input.Scans {
+		if !isCanonicalScanReference(name) {
+			return toolError(ctx, mcpErrors.ErrInvalidInput)
+		}
+		if _, duplicate := seen[name]; duplicate {
+			return toolError(ctx, mcpErrors.ErrInvalidInput)
+		}
+		seen[name] = struct{}{}
+	}
+	if registry.deps.ScanStopper == nil {
+		return toolError(ctx, mcpErrors.ErrInternal)
+	}
+	result, err := registry.deps.ScanStopper.BatchStop(ctx, BatchScanStopInput(input))
+	if err != nil {
+		return toolError(ctx, err)
+	}
+	return successResult(ctx, result, fmt.Sprintf("Stopped %d scans, skipped %d terminal scans, revoked %d tasks.", result.StoppedCount, result.SkippedCount, result.RevokedTaskCount))
+}
+
+// isCanonicalScanReference enforces the single canonical scans/{id} input
+// form; bare ids and operation names are rejected without alias resolution.
+func isCanonicalScanReference(name string) bool {
+	id, err := resourcenames.ParseScan(strings.TrimSpace(name))
+	return err == nil && id > 0 && resourcenames.Scan(id) == strings.TrimSpace(name)
+}
+
 func parseCanonicalResource(name, collection string) (int, error) {
 	id, err := httpdto.ParseResourceNameID(name, collection)
 	if err != nil || fmt.Sprintf("%s/%d", collection, id) != strings.TrimSpace(name) {

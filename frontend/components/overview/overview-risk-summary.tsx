@@ -59,7 +59,8 @@ export function OverviewRiskSummary({ className }: { className?: string } = {}) 
   const { data } = assets
   const riskHistory = useStatisticsHistory(7)
   const vulnerabilityStats = useVulnerabilityStats()
-  // `changeVulns` is a net delta; a decrease must not be presented as newly discovered risk.
+  // `changeVulns` counts vulnerabilities created in the rolling 24h window, so it is never negative;
+  // the clamp keeps a future net-delta source from presenting decreases as newly discovered risk.
   const newVulnerabilityCount = Math.max(data?.changeVulns ?? 0, 0)
   const newVulnerabilityTone = newVulnerabilityCount > 0 ? "negative" : "neutral"
   const auditStats = vulnerabilityStats.data
@@ -243,7 +244,7 @@ export function OverviewRiskSummary({ className }: { className?: string } = {}) 
               )}
               <div className={OVERVIEW_RISK_SUMMARY_DETAILS_CLASS}>
                 <div className={OVERVIEW_RISK_SUMMARY_DETAIL_ROW_CLASS}>
-                  <span className={textRole.caption}>{t("newToday")}</span>
+                  <span className={textRole.caption}>{t("newInLast24h")}</span>
                   <span className={cn("shrink-0 tabular-nums", textRole.bodyStrong, getTrendToneTextClass(newVulnerabilityTone))}>{formatOverviewSignedChange(newVulnerabilityCount, locale)}</span>
                 </div>
                 {auditStats ? (

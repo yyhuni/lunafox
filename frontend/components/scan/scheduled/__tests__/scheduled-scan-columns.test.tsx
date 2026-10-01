@@ -20,6 +20,15 @@ const translations: ScheduledScanTranslations = {
     success: "Success",
     failure: "Failed",
     lastRun: "Last Trigger",
+    lastFailure: "Last run failed",
+    failureCauses: {
+      WORKFLOW_UNAVAILABLE: "referenced scan workflow is unavailable",
+      AGENT_NOT_FOUND: "bound agent has been deleted",
+      CONFIG_RESOURCE_UNAVAILABLE: "configuration resource is unavailable",
+      ENGINE_UNAVAILABLE: "referenced engine is unavailable",
+      TARGET_UNAVAILABLE: "scan target is deleted or invalid",
+      INTERNAL_UNAVAILABLE: "internal server error",
+    },
   },
   actions: {
     editTask: "Edit",
@@ -64,7 +73,8 @@ const scheduledScan: ScheduledScan = {
   runCount: 10,
   successfulHandoffCount: 8,
   failedHandoffCount: 1,
-  createdAt: "2026-08-09T00:00:00Z",
+  lastHandoffFailureCause: null, lastHandoffFailureTime: null,
+createdAt: "2026-08-09T00:00:00Z",
   updatedAt: "2026-08-09T00:00:00Z",
 }
 
@@ -112,5 +122,43 @@ describe("scheduled scan handoff result column", () => {
     expect(screen.getByText("Success 8")).toHaveClass(getStatusToneTextClass("success"))
     expect(screen.getByText("Failed 1")).toHaveClass(getStatusToneTextClass("error"))
     expect(screen.queryByRole("button")).not.toBeInTheDocument()
+  })
+})
+
+describe("scheduled scan last-handoff-failure indication", () => {
+  const handoffColumn = () =>
+    createScheduledScanColumns({
+      formatDate: (value) => value,
+      handleEdit: vi.fn(),
+      handleDelete: vi.fn(),
+      handleToggleStatus: vi.fn(),
+      t: translations,
+    }).find((item) => item.id === "handoffResults")
+
+  it("highlights the localized cause and settlement time of the latest failure", () => {
+    const column = handoffColumn()
+    if (!column || typeof column.cell !== "function") {
+      throw new Error("Expected the handoff result column cell")
+    }
+    render(
+      <>{column.cell({ row: { original: {
+        ...scheduledScan,
+        lastHandoffFailureCause: "CONFIG_RESOURCE_UNAVAILABLE",
+        lastHandoffFailureTime: "2026-08-09T02:00:00Z",
+      } } } as never)}</>
+    )
+    const indication = screen.getByText(
+      "Last run failed: configuration resource is unavailable · 2026-08-09T02:00:00Z"
+    )
+    expect(indication).toHaveClass(getStatusToneTextClass("error"))
+  })
+
+  it("omits the failure indication once the summary is cleared", () => {
+    const column = handoffColumn()
+    if (!column || typeof column.cell !== "function") {
+      throw new Error("Expected the handoff result column cell")
+    }
+    render(<>{column.cell({ row: { original: scheduledScan } } as never)}</>)
+    expect(screen.queryByText(/Last run failed/)).not.toBeInTheDocument()
   })
 })

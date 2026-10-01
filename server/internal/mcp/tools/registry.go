@@ -63,6 +63,8 @@ const (
 	ToolBatchUnreviewVulnerabilities = "batch_unreview_vulnerabilities"
 	ToolStartScan                    = "start_scan"
 	ToolGetOperation                 = "get_operation"
+	ToolStopScan                     = "stop_scan"
+	ToolBatchStopScans               = "batch_stop_scans"
 )
 
 // Registry owns LunaFox's bounded investigation and constrained-creation tool
@@ -88,7 +90,7 @@ func ToolNames() []string {
 		ToolListServerLogEntries, ToolListAgentLogEntries,
 		ToolReviewVulnerability, ToolUnreviewVulnerability,
 		ToolBatchReviewVulnerabilities, ToolBatchUnreviewVulnerabilities,
-		ToolStartScan, ToolGetOperation,
+		ToolStartScan, ToolGetOperation, ToolStopScan, ToolBatchStopScans,
 	}
 }
 

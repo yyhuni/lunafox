@@ -11,6 +11,26 @@ export type ScheduledScanStatus = "active" | "paused" | "expired"
 // Scan mode
 export type ScanMode = 'organization' | 'target'
 
+// Closed public cause enum for zero-created handoff failures; server contract
+// is additive-only, so this union only grows.
+export const SCHEDULED_SCAN_HANDOFF_FAILURE_CAUSES = [
+  'WORKFLOW_UNAVAILABLE',
+  'AGENT_NOT_FOUND',
+  'CONFIG_RESOURCE_UNAVAILABLE',
+  'ENGINE_UNAVAILABLE',
+  'TARGET_UNAVAILABLE',
+  'INTERNAL_UNAVAILABLE',
+] as const
+
+export type ScheduledScanHandoffFailureCause = (typeof SCHEDULED_SCAN_HANDOFF_FAILURE_CAUSES)[number]
+
+export function isScheduledScanHandoffFailureCause(value: unknown): value is ScheduledScanHandoffFailureCause {
+  return (
+    typeof value === 'string' &&
+    (SCHEDULED_SCAN_HANDOFF_FAILURE_CAUSES as readonly string[]).includes(value)
+  )
+}
+
 // Scheduled scan interface
 export interface ScheduledScan {
   id: number
@@ -38,6 +58,8 @@ export interface ScheduledScan {
   runCount: number // Committed trigger-attempt count
   successfulHandoffCount: number // Completed schedule-to-Scan handoff count
   failedHandoffCount: number // Observed non-complete schedule-to-Scan handoff count
+  lastHandoffFailureCause: ScheduledScanHandoffFailureCause | null // Final-failure cause of the latest failed handoff
+  lastHandoffFailureTime: string | null // Settlement time of the latest failed handoff; null together with the cause
   createdAt: string
   updatedAt: string
 }

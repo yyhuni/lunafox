@@ -232,7 +232,7 @@ describe("overview-lazy-sections contract", () => {
     expect(riskSummarySource).toContain("riskTrendData")
     expect(riskSummarySource).toContain("OverviewAreaChart")
     expect(riskSummarySource).toContain('t("trendTitle")')
-    expect(riskSummarySource).toContain('t("newToday")')
+    expect(riskSummarySource).toContain('t("newInLast24h")')
     expect(riskSummarySource).toContain('t("viewRiskDetails")')
     expect(riskSummarySource).toContain("action={(")
     expect(riskSummarySource).toContain('variant="link"')

@@ -157,8 +157,12 @@ type ScheduledScanResponse struct {
 	RunCount               int            `json:"runCount"`
 	SuccessfulHandoffCount int            `json:"successfulHandoffCount"`
 	FailedHandoffCount     int            `json:"failedHandoffCount"`
-	CreatedAt              time.Time      `json:"createdAt"`
-	UpdatedAt              time.Time      `json:"updatedAt"`
+	// LastHandoffFailureCause/Time project the Schedule-level last-failure
+	// summary; both are null together when no failure is on record.
+	LastHandoffFailureCause *string    `json:"lastHandoffFailureCause"`
+	LastHandoffFailureTime  *time.Time `json:"lastHandoffFailureTime"`
+	CreatedAt               time.Time  `json:"createdAt"`
+	UpdatedAt               time.Time  `json:"updatedAt"`
 }
 
 type ScheduledScanListResponse struct {

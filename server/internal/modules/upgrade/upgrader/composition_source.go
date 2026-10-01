@@ -239,6 +239,28 @@ func validateRuntimeComposition(raw []byte, manifest *releasemanifest.Manifest, 
 	if bindingDigest, ok := binding["manifestDigest"].(string); !ok || bindingDigest != manifestDigest || !digestPattern.MatchString(bindingDigest) {
 		return normalizedRuntimeComposition{}, fmt.Errorf("%w: manifest binding does not match the manifest", ErrCompositionInvalid)
 	}
+	coreDigest, err := canonicalCompositionCoreDigest(kind, releaseTag, sourceRevisionDigest, publicMergeCommit, components, capabilities)
+	if err != nil {
+		return normalizedRuntimeComposition{}, fmt.Errorf("%w: canonicalize composition: %v", ErrCompositionInvalid, err)
+	}
+	if coreDigest != compositionDigest {
+		return normalizedRuntimeComposition{}, fmt.Errorf("%w: composition core digest does not match", ErrCompositionInvalid)
+	}
+	if err := validateCompositionInventory(manifest, components); err != nil {
+		return normalizedRuntimeComposition{}, fmt.Errorf("%w: %v", ErrCompositionInvalid, err)
+	}
+	return normalizedRuntimeComposition{ReleaseTag: releaseTag, CompositionDigest: compositionDigest, Capabilities: capabilities, Components: components}, nil
+}
+
+// canonicalCompositionCoreDigest reproduces the release resolver's signed
+// digest over the normalized composition core. The normalized component maps
+// carry validated string slices (artifact platforms, evidence references), so
+// canonicalization must serialize them exactly like the decoded []any form.
+func canonicalCompositionCoreDigest(
+	kind, releaseTag, sourceRevisionDigest, publicMergeCommit string,
+	components []normalizedCompositionComponent,
+	capabilities map[string]any,
+) (string, error) {
 	core := map[string]any{
 		"schemaVersion": 1,
 		"kind":          kind,
@@ -254,16 +276,10 @@ func validateRuntimeComposition(raw []byte, manifest *releasemanifest.Manifest, 
 	}
 	canonical, err := canonicalCompositionJSON(core)
 	if err != nil {
-		return normalizedRuntimeComposition{}, fmt.Errorf("%w: canonicalize composition: %v", ErrCompositionInvalid, err)
+		return "", err
 	}
 	sum := sha256.Sum256(canonical)
-	if got := "sha256:" + fmt.Sprintf("%x", sum[:]); got != compositionDigest {
-		return normalizedRuntimeComposition{}, fmt.Errorf("%w: composition core digest does not match", ErrCompositionInvalid)
-	}
-	if err := validateCompositionInventory(manifest, components); err != nil {
-		return normalizedRuntimeComposition{}, fmt.Errorf("%w: %v", ErrCompositionInvalid, err)
-	}
-	return normalizedRuntimeComposition{ReleaseTag: releaseTag, CompositionDigest: compositionDigest, Capabilities: capabilities, Components: components}, nil
+	return "sha256:" + fmt.Sprintf("%x", sum[:]), nil
 }
 
 func compositionCandidateDeployment(manifest *releasemanifest.Manifest, composition normalizedRuntimeComposition) CandidateDeployment {
@@ -897,6 +913,23 @@ func writeCanonicalCompositionJSON(buffer *bytes.Buffer, value any) error {
 		buffer.WriteString(strconv.FormatUint(uint64(item), 10))
 	case uint64:
 		buffer.WriteString(strconv.FormatUint(item, 10))
+	case []string:
+		// The normalizers hand already-validated string arrays (artifact
+		// platforms, evidence references) back as []string. Their canonical
+		// bytes must stay identical to the []any form the release resolver
+		// hashed, or every composition carrying those arrays is rejected.
+		buffer.WriteByte('[')
+		for index, child := range item {
+			if index > 0 {
+				buffer.WriteByte(',')
+			}
+			encoded, err := json.Marshal(child)
+			if err != nil {
+				return err
+			}
+			buffer.Write(encoded)
+		}
+		buffer.WriteByte(']')
 	case []any:
 		buffer.WriteByte('[')
 		for index, child := range item {

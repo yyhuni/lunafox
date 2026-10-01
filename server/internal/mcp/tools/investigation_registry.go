@@ -122,6 +122,18 @@ func (registry *Registry) registerInvestigationTools(server *mcp.Server) {
 		Description: "Get one retained Scan-backed polling operation by canonical resource name.",
 		InputSchema: operationNameSchema(),
 	}, registry.getOperation)
+	server.AddTool(&mcp.Tool{
+		Name:        ToolStopScan,
+		Description: "Immediately stop one pending or running scan by canonical scans/{id} name and revoke its unfinished tasks; stopping a terminal scan fails. This mutates LunaFox data.",
+		InputSchema: stopScanSchema(),
+		Annotations: scanStopAnnotations(),
+	}, registry.stopScan)
+	server.AddTool(&mcp.Tool{
+		Name:        ToolBatchStopScans,
+		Description: "Immediately stop up to 100 pending or running scans by canonical scans/{id} names in one transaction; already-terminal scans are counted as skipped, and one unknown name fails the whole call. This mutates LunaFox data.",
+		InputSchema: batchStopScanSchema(),
+		Annotations: batchScanStopAnnotations(),
+	}, registry.batchStopScans)
 }
 
 func canonicalReferenceProperty(collection string) map[string]any {
@@ -214,6 +226,36 @@ func operationNameSchema() map[string]any {
 	return objectSchema(map[string]any{
 		"name": map[string]any{"type": "string", "pattern": "^operations/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"},
 	}, "name")
+}
+
+func stopScanSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"scan": map[string]any{"type": "string", "pattern": "^scans/[1-9][0-9]*$"},
+	}, "scan")
+}
+
+func batchStopScanSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"scans": map[string]any{
+			"type": "array", "minItems": 1, "maxItems": MaxBatchScanStopItems, "uniqueItems": true,
+			"items": map[string]any{"type": "string", "pattern": "^scans/[1-9][0-9]*$"},
+		},
+	}, "scans")
+}
+
+// scanStopAnnotations keeps the single stop non-idempotent: a repeated call
+// hits the terminal-state business failure. destructive stays false because a
+// stop discards no persisted data and the scan can simply be restarted.
+func scanStopAnnotations() *mcp.ToolAnnotations {
+	destructive := false
+	return &mcp.ToolAnnotations{ReadOnlyHint: false, DestructiveHint: &destructive, IdempotentHint: false}
+}
+
+// batchScanStopAnnotations is idempotent because terminal rows converge into
+// the skipped count instead of failing the repeated call.
+func batchScanStopAnnotations() *mcp.ToolAnnotations {
+	destructive := false
+	return &mcp.ToolAnnotations{ReadOnlyHint: false, DestructiveHint: &destructive, IdempotentHint: true}
 }
 
 func vulnerabilityDispositionSchema() map[string]any {

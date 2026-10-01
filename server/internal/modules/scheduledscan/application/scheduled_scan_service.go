@@ -44,8 +44,12 @@ type ScheduledScan struct {
 	RunCount               int
 	SuccessfulHandoffCount int
 	FailedHandoffCount     int
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
+	// LastHandoffFailureCause/Time expose the Schedule-level last-failure
+	// summary written by final settlement; nil means no failure on record.
+	LastHandoffFailureCause *HandoffFailureCause
+	LastHandoffFailureTime  *time.Time
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
 }
 
 type ScheduledScanCreate struct {

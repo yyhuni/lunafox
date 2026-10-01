@@ -54,8 +54,12 @@ type scheduledScanModel struct {
 	RunCount               int            `gorm:"column:run_count;not null"`
 	SuccessfulHandoffCount int            `gorm:"column:successful_handoff_count;not null"`
 	FailedHandoffCount     int            `gorm:"column:failed_handoff_count;not null"`
-	LastRunTime            *time.Time     `gorm:"column:last_run_time"`
-	NextRunTime            *time.Time     `gorm:"column:next_run_time"`
+	// Unsettled retryable failures keep their latest cause on the occurrence;
+	// the Schedule summary below is written only by final settlement.
+	LastHandoffFailureCause *string    `gorm:"column:last_handoff_failure_cause;size:32"`
+	LastHandoffFailureTime  *time.Time `gorm:"column:last_handoff_failure_time"`
+	LastRunTime             *time.Time `gorm:"column:last_run_time"`
+	NextRunTime             *time.Time `gorm:"column:next_run_time"`
 	CreatedAt              time.Time      `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt              time.Time      `gorm:"column:updated_at;autoUpdateTime"`
 	Organization           *organizationRefModel
@@ -74,7 +78,13 @@ type scheduledScanOccurrenceModel struct {
 	DispatchedAt    *time.Time `gorm:"column:dispatched_at"`
 	FailureKind     *string    `gorm:"column:failure_kind;size:100"`
 	FailureMessage  *string    `gorm:"column:failure_message;size:2000"`
-	CreatedAt       time.Time  `gorm:"column:created_at;autoCreateTime"`
+	// RetryCount counts committed retryable failures; NextRetryAt non-null
+	// marks an unsettled occurrence waiting for its bounded retry. Both are
+	// cleared from the retry path once terminal settlement commits.
+	RetryCount       int        `gorm:"column:retry_count;not null;default:0"`
+	NextRetryAt      *time.Time `gorm:"column:next_retry_at"`
+	LastFailureCause *string    `gorm:"column:last_failure_cause;size:32"`
+	CreatedAt        time.Time  `gorm:"column:created_at;autoCreateTime"`
 }
 
 func (scheduledScanOccurrenceModel) TableName() string {
@@ -303,7 +313,10 @@ func (repo *ScheduledScanRepository) applyScheduledScanStatusTransition(
 ) error {
 	if !model.IsEnabled {
 		model.NextRunTime = nil
-		return tx.Where("scheduled_scan_id = ? AND attempted_at IS NULL", model.ID).
+		// Unsettled rows (unattempted or retry-pending) have produced no
+		// result yet and are removed with the disable transaction; settled
+		// occurrences keep their diagnostics for normal retention.
+		return tx.Where("scheduled_scan_id = ? AND dispatched_at IS NULL AND failure_kind IS NULL AND failure_message IS NULL", model.ID).
 			Delete(&scheduledScanOccurrenceModel{}).Error
 	}
 	if !wasEnabled {
@@ -531,6 +544,14 @@ func scheduledScanModelToRecord(item *scheduledScanModel) (*scheduledapp.Schedul
 	if item.Target != nil {
 		record.TargetName = &item.Target.Name
 	}
+	if item.LastHandoffFailureCause != nil {
+		cause, ok := scheduledapp.ParseHandoffFailureCause(*item.LastHandoffFailureCause)
+		if !ok {
+			return nil, fmt.Errorf("%w: persisted last handoff failure cause %q", scheduledapp.ErrScheduledScanInvalidArgument, *item.LastHandoffFailureCause)
+		}
+		record.LastHandoffFailureCause = &cause
+	}
+	record.LastHandoffFailureTime = timeutil.ToUTCPtr(item.LastHandoffFailureTime)
 	return record, nil
 }
 

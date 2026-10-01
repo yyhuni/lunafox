@@ -53,7 +53,8 @@ const scheduledScan: ScheduledScan = {
   runCount: 0,
   successfulHandoffCount: 0,
   failedHandoffCount: 0,
-  createdAt: "2026-07-25T00:00:00.000Z",
+  lastHandoffFailureCause: null, lastHandoffFailureTime: null,
+createdAt: "2026-07-25T00:00:00.000Z",
   updatedAt: "2026-07-25T00:00:00.000Z",
 }
 

@@ -37,7 +37,8 @@ const initialMockScheduledScans: ScheduledScan[] = [
     runCount: 45,
     successfulHandoffCount: 43,
     failedHandoffCount: 2,
-    createdAt: '2024-11-15T08:00:00Z',
+    lastHandoffFailureCause: null, lastHandoffFailureTime: null,
+createdAt: '2024-11-15T08:00:00Z',
     updatedAt: '2024-12-29T02:00:00Z',
   },
   {
@@ -60,7 +61,8 @@ const initialMockScheduledScans: ScheduledScan[] = [
     runCount: 12,
     successfulHandoffCount: 12,
     failedHandoffCount: 0,
-    createdAt: '2024-10-01T10:00:00Z',
+    lastHandoffFailureCause: null, lastHandoffFailureTime: null,
+createdAt: '2024-10-01T10:00:00Z',
     updatedAt: '2024-12-29T03:00:00Z',
   },
   {
@@ -83,7 +85,8 @@ const initialMockScheduledScans: ScheduledScan[] = [
     runCount: 720,
     successfulHandoffCount: 718,
     failedHandoffCount: 2,
-    createdAt: '2024-12-01T00:00:00Z',
+    lastHandoffFailureCause: null, lastHandoffFailureTime: null,
+createdAt: '2024-12-01T00:00:00Z',
     updatedAt: '2024-12-29T11:00:00Z',
   },
   {
@@ -106,7 +109,8 @@ const initialMockScheduledScans: ScheduledScan[] = [
     runCount: 6,
     successfulHandoffCount: 5,
     failedHandoffCount: 1,
-    createdAt: '2024-06-01T08:00:00Z',
+    lastHandoffFailureCause: null, lastHandoffFailureTime: null,
+createdAt: '2024-06-01T08:00:00Z',
     updatedAt: '2024-12-20T15:00:00Z',
   },
   {
@@ -129,7 +133,8 @@ const initialMockScheduledScans: ScheduledScan[] = [
     runCount: 30,
     successfulHandoffCount: 29,
     failedHandoffCount: 1,
-    createdAt: '2024-11-29T09:00:00Z',
+    lastHandoffFailureCause: null, lastHandoffFailureTime: null,
+createdAt: '2024-11-29T09:00:00Z',
     updatedAt: '2024-12-29T04:00:00Z',
   },
 ]

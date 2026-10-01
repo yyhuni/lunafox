@@ -50,6 +50,10 @@ func (stub *schedulerRepositoryStub) MaterializeDue(context.Context, int, time.T
 	return true, stub.materializeErr
 }
 
+func (stub *schedulerRepositoryStub) EarliestRetryDeadline(context.Context) (*time.Time, error) {
+	return nil, nil
+}
+
 func (stub *schedulerRepositoryStub) SelectAttemptCandidate(context.Context) (*OccurrenceCandidate, error) {
 	stub.mu.Lock()
 	defer stub.mu.Unlock()
@@ -117,6 +121,10 @@ func (repository *drainingSchedulerRepository) MaterializeDue(context.Context, i
 	return true, nil
 }
 
+func (*drainingSchedulerRepository) EarliestRetryDeadline(context.Context) (*time.Time, error) {
+	return nil, nil
+}
+
 func (*drainingSchedulerRepository) SelectAttemptCandidate(context.Context) (*OccurrenceCandidate, error) {
 	return nil, nil
 }
@@ -175,6 +183,10 @@ func (*queuedAttemptRepository) ListDueSchedules(context.Context, time.Time) ([]
 
 func (*queuedAttemptRepository) MaterializeDue(context.Context, int, time.Time) (bool, error) {
 	return false, nil
+}
+
+func (*queuedAttemptRepository) EarliestRetryDeadline(context.Context) (*time.Time, error) {
+	return nil, nil
 }
 
 func (repository *queuedAttemptRepository) SelectAttemptCandidate(context.Context) (*OccurrenceCandidate, error) {
@@ -543,3 +555,45 @@ func TestSchedulerDoesNotWaitForCreatedScanLifecycleBeforeNextHandoff(t *testing
 		t.Fatalf("independent handoffs = dispatches %d recorded %d", dispatcher.calls, repository.recorded)
 	}
 }
+
+type retryDeadlineRepository struct {
+	*schedulerRepositoryStub
+	deadline *time.Time
+	deadlineErr error
+}
+
+func (repository *retryDeadlineRepository) EarliestRetryDeadline(context.Context) (*time.Time, error) {
+	return repository.deadline, repository.deadlineErr
+}
+
+func TestSchedulerIdleWaitShortensToEarliestRetryDeadline(t *testing.T) {
+	base := testTime()
+	controller := NewSchedulerController(nil, nil)
+	deadline := base.Add(10 * time.Second)
+	repository := &retryDeadlineRepository{schedulerRepositoryStub: &schedulerRepositoryStub{}, deadline: &deadline}
+	controller.repository = repository
+	controller.clock = fixedClock{base}
+
+	if wait := controller.idleWait(context.Background()); wait != 10*time.Second {
+		t.Fatalf("idleWait() = %s; want the shortened retry deadline", wait)
+	}
+	farDeadline := base.Add(5 * time.Minute)
+	repository.deadline = &farDeadline
+	if wait := controller.idleWait(context.Background()); wait != schedulerIdleInterval {
+		t.Fatalf("idleWait() = %s; want the fixed idle interval for a far deadline", wait)
+	}
+	pastDeadline := base.Add(-time.Minute)
+	repository.deadline = &pastDeadline
+	if wait := controller.idleWait(context.Background()); wait != 0 {
+		t.Fatalf("idleWait() = %s; want zero for an already-due retry", wait)
+	}
+	repository.deadline = nil
+	repository.deadlineErr = errors.New("query failed")
+	if wait := controller.idleWait(context.Background()); wait != schedulerIdleInterval {
+		t.Fatalf("idleWait() = %s; want the fixed idle interval when the deadline query fails", wait)
+	}
+}
+
+type fixedClock struct{ now time.Time }
+
+func (clock fixedClock) Now() time.Time { return clock.now }

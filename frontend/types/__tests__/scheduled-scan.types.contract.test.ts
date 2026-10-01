@@ -21,3 +21,21 @@ describe("scheduled-scan.types contract", () => {
     expect(source).toContain("inputSource?: ScanInputSource")
   })
 })
+
+describe("scheduled-scan last-handoff-failure summary contract", () => {
+  it("declares the closed public cause enum and the paired nullable summary fields", () => {
+    expect(source).toContain("lastHandoffFailureCause: ScheduledScanHandoffFailureCause | null")
+    expect(source).toContain("lastHandoffFailureTime: string | null")
+    for (const cause of [
+      "WORKFLOW_UNAVAILABLE",
+      "AGENT_NOT_FOUND",
+      "CONFIG_RESOURCE_UNAVAILABLE",
+      "ENGINE_UNAVAILABLE",
+      "TARGET_UNAVAILABLE",
+      "INTERNAL_UNAVAILABLE",
+    ]) {
+      expect(source).toContain(`'${cause}'`)
+    }
+    expect(source).toContain("export function isScheduledScanHandoffFailureCause")
+  })
+})

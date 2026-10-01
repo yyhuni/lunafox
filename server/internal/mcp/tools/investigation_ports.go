@@ -117,3 +117,11 @@ type ScanStarter interface {
 type OperationReader interface {
 	GetOperation(context.Context, string) (OperationRecord, error)
 }
+
+// ScanStopper is the stop counterpart to ScanStarter and stays equally narrow.
+// It MUST stay synchronous and reuse the shared Scan stop path; a stop never
+// creates an MCP operation resource or polling handle.
+type ScanStopper interface {
+	Stop(context.Context, ScanStopInput) (ScanStopOutput, error)
+	BatchStop(context.Context, BatchScanStopInput) (BatchScanStopOutput, error)
+}

@@ -80,7 +80,7 @@ func TestToolNamesExposeInvestigationAndApprovedConstrainedCreationCatalog(t *te
 		ToolListServerLogEntries, ToolListAgentLogEntries,
 		ToolReviewVulnerability, ToolUnreviewVulnerability,
 		ToolBatchReviewVulnerabilities, ToolBatchUnreviewVulnerabilities,
-		ToolStartScan, ToolGetOperation,
+		ToolStartScan, ToolGetOperation, ToolStopScan, ToolBatchStopScans,
 	} {
 		want[name] = struct{}{}
 	}

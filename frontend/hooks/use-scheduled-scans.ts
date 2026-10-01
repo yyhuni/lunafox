@@ -38,6 +38,11 @@ export const scheduledScanKeys = createResourceKeys("scheduled-scans", {
 
 export const scheduledScanOverviewKey = [...scheduledScanKeys.all, "overview"] as const
 
+// The management page refreshes its list and overview snapshot on the same
+// focus-gated cadence as the agent list; Cron granularity is one minute, so a
+// 15-second staleness window stays well below the trigger resolution.
+export const SCHEDULED_SCAN_POLL_INTERVAL_MS = 15000
+
 /**
  * Get scheduled scan list
  */
@@ -53,14 +58,16 @@ export function useScheduledScans(params: {
     queryKey: scheduledScanKeys.list(params),
     queryFn: () => getScheduledScans(params),
     placeholderData: keepPreviousData,
+    refetchInterval: SCHEDULED_SCAN_POLL_INTERVAL_MS,
   })
 }
 
 export function useScheduledScanOverviewSummary() {
-	const query = useQuery<ScheduledScanOverviewSummary>({
-		queryKey: scheduledScanOverviewKey,
-			queryFn: () => getScheduledScanOverviewSummary(),
-	})
+  const query = useQuery<ScheduledScanOverviewSummary>({
+    queryKey: scheduledScanOverviewKey,
+		queryFn: () => getScheduledScanOverviewSummary(),
+    refetchInterval: SCHEDULED_SCAN_POLL_INTERVAL_MS,
+  })
 	const hasSuccessfulData = query.data !== undefined && query.dataUpdatedAt > 0
 	return {
 		...query,

@@ -9,7 +9,8 @@ The package deliberately depends on narrow application ports supplied by
 bootstrap wiring. It must not issue loopback HTTP requests, implement
 organization membership, or persist bearer plaintext. Business writes are
 limited to `create_organization`, `create_target`, the four explicit
-vulnerability review actions, and one immediate `start_scan`; each delegates
+vulnerability review actions, one immediate `start_scan`, and the two explicit
+stop commands `stop_scan` / `batch_stop_scans`; each delegates
 to the shared application command path synchronously. `create_target.organization`
 is an optional canonical `organizations/{id}` business-group reference applied
 to the whole batch, not a tenant, user scope, or data-isolation selector. The
@@ -37,7 +38,7 @@ negotiation layer.
 | Configuration discovery | `list_scan_workflows`, `get_scan_workflow`, `get_scan_workflow_profile`, `list_engines`, `get_engine`, `list_wordlists`, `get_wordlist` |
 | Diagnostics | `list_server_log_entries`, `list_agent_log_entries` |
 | Vulnerability disposition | `review_vulnerability`, `unreview_vulnerability`, `batch_review_vulnerabilities`, `batch_unreview_vulnerabilities` |
-| Scan operation | `start_scan`, `get_operation` |
+| Scan operation | `start_scan`, `get_operation`, `stop_scan`, `batch_stop_scans` |
 | Existing constrained creates | `create_organization`, `create_target` |
 
 This is a deployment-level trusted surface. A valid static Bearer key grants
@@ -63,8 +64,21 @@ identity fail fast.
 same transaction. `get_operation` projects the Scan lifecycle and is intended
 for ordinary cross-request polling. The optional business `request_id` replays
 an identical committed request and rejects a conflicting fingerprint; it does
-not retry Scan work. Existing Scan stop/cancellation behavior remains the sole
-stop surface, and a disconnect after commit does not cancel the Scan.
+not retry Scan work. A disconnect after commit does not cancel the Scan.
+
+`stop_scan` and `batch_stop_scans` are the explicit stop surface. Both accept
+only canonical `scans/{id}` names and reuse the shared synchronous Scan stop
+path: one request-bound transaction cancels the Scan and its unfinished Tasks,
+commits, then best-effort notifies Agents; no MCP operation resource is
+created. `stop_scan` returns `{scan, status, revokedTaskCount}` for one scan
+and fails with the existing business-failure vocabulary when that scan is
+already terminal. `batch_stop_scans` accepts 1–100 unique names, mirrors the
+REST `scans:batchStop` contract exactly — one unknown name fails the whole
+call while terminal scans are counted as `skippedCount` in a successful
+`{stoppedCount, skippedCount, revokedTaskCount}` result. The single-stop-fails
+versus batch-skips asymmetry is inherited from REST on purpose: a single stop
+is an explicit intent that should fail loudly, a batch is a sweep that reports
+a tally. Per-scan and per-task detail stays a `get_scan` concern.
 
 All collection tools use bounded `page_size`/`page_token` envelopes with
 query- and parent-bound opaque cursors. Screenshot lists contain metadata only;
@@ -76,7 +90,7 @@ subject to the 1 MiB budget and returns a bounded public error when exceeded.
 ## Deliberate exclusions
 
 The MCP boundary does not expose scheduled scans, batch `start_scan`,
-`delete_operation`, arbitrary LogQL/source/time/level filters, log export,
+`delete_operation`, target- or operation-dimension stop inputs, arbitrary LogQL/source/time/level filters, log export,
 Task-progress log queries, generic vulnerability patch/delete, arbitrary
 organization/target updates or deletes, organization members/RBAC, single
 child-asset Get tools, raw Screenshot downloads/signed URLs, plaintext

@@ -130,10 +130,30 @@ func (controller *SchedulerController) run(ctx context.Context) {
 		if result.Progressed() && !result.PreAttemptError {
 			continue
 		}
-		if err := controller.waiter.Wait(ctx, schedulerIdleInterval); err != nil {
+		if err := controller.waiter.Wait(ctx, controller.idleWait(ctx)); err != nil {
 			return
 		}
 	}
+}
+
+// idleWait keeps the fixed one-minute idle interval but shortens it to the
+// earliest pending bounded-retry deadline, so a 30-second backoff is not
+// stretched to the next full minute. Controller infrastructure errors keep the
+// normal minute; the repository query failing must not busy-loop the pass.
+func (controller *SchedulerController) idleWait(ctx context.Context) time.Duration {
+	wait := schedulerIdleInterval
+	deadline, err := controller.repository.EarliestRetryDeadline(ctx)
+	if err != nil || deadline == nil {
+		return wait
+	}
+	until := deadline.Sub(controller.clock.Now().UTC())
+	if until >= wait {
+		return wait
+	}
+	if until < 0 {
+		until = 0
+	}
+	return until
 }
 
 func (controller *SchedulerController) RunPass(ctx context.Context) SchedulerPassResult {
@@ -205,6 +225,9 @@ func (controller *SchedulerController) RunPass(ctx context.Context) SchedulerPas
 		zap.Time("scheduled_scan.scheduled_for", frozen.ScheduledFor),
 		zap.String("outcome", string(outcome.Kind)),
 		zap.Duration("duration", duration),
+	}
+	if !outcome.Completed() && outcome.Cause != "" {
+		fields = append(fields, zap.String("scheduled_scan.failure_cause", string(outcome.Cause)))
 	}
 	if outcome.Completed() {
 		controller.logger.Info("Scheduled scan handoff completed", fields...)

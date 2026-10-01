@@ -94,13 +94,25 @@ func (repo *ScheduledScanRepository) MaterializeDue(ctx context.Context, schedul
 	return committed, err
 }
 
+// attemptEligibleSQL is the shared eligibility predicate for candidate
+// selection and attempt start: an occurrence is workable when it is
+// unattempted, or when its bounded retry deadline has arrived and no terminal
+// outcome was settled. The ? placeholder binds the evaluation instant.
+const attemptEligibleSQL = "(%s.attempted_at IS NULL OR (%s.next_retry_at IS NOT NULL AND %s.next_retry_at <= ? AND %s.dispatched_at IS NULL AND %s.failure_kind IS NULL))"
+
+func attemptEligible(alias string) string {
+	return fmt.Sprintf(attemptEligibleSQL, alias, alias, alias, alias, alias)
+}
+
 func (repo *ScheduledScanRepository) SelectAttemptCandidate(ctx context.Context) (*scheduledapp.OccurrenceCandidate, error) {
+	now := repo.now().UTC()
 	var row struct {
 		ID              int64
 		ScheduledScanID int       `gorm:"column:scheduled_scan_id"`
 		ScheduledFor    time.Time `gorm:"column:scheduled_for"`
 	}
-	query := `
+	oldestEligible := "oldest.attempted_at IS NULL OR (oldest.next_retry_at IS NOT NULL AND oldest.next_retry_at <= ? AND oldest.dispatched_at IS NULL AND oldest.failure_kind IS NULL)"
+	query := fmt.Sprintf(`
 			SELECT occurrence.id, occurrence.scheduled_scan_id, occurrence.scheduled_for
 		FROM scheduled_scan AS schedule
 		JOIN scheduled_scan_occurrence AS occurrence
@@ -109,26 +121,29 @@ func (repo *ScheduledScanRepository) SelectAttemptCandidate(ctx context.Context)
 			ON active_target.id = schedule.target_id AND active_target.deleted_at IS NULL
 		WHERE schedule.is_enabled = TRUE
 			AND (schedule.target_id IS NULL OR active_target.id IS NOT NULL)
-			AND occurrence.attempted_at IS NULL
+			AND occurrence.dispatched_at IS NULL
+			AND occurrence.failure_kind IS NULL
+			AND %s
 			AND occurrence.id = (
 				SELECT oldest.id
 				FROM scheduled_scan_occurrence AS oldest
 				WHERE oldest.scheduled_scan_id = schedule.id
-					AND oldest.attempted_at IS NULL
+					AND (%s)
 				ORDER BY oldest.scheduled_for ASC, oldest.id ASC
 				LIMIT 1
 			)
 			ORDER BY schedule.last_run_time ASC NULLS FIRST, schedule.id ASC, occurrence.id ASC
-			LIMIT 1`
+			LIMIT 1`, attemptEligible("occurrence"), oldestEligible)
+	args := []any{now, now}
 	if repo.db.Dialector.Name() == "postgres" {
-		query = `
+		query = fmt.Sprintf(`
 			SELECT occurrence.id, occurrence.scheduled_scan_id, occurrence.scheduled_for
 			FROM scheduled_scan AS schedule
 			JOIN LATERAL (
 				SELECT oldest.id, oldest.scheduled_scan_id, oldest.scheduled_for
 				FROM scheduled_scan_occurrence AS oldest
 				WHERE oldest.scheduled_scan_id = schedule.id
-					AND oldest.attempted_at IS NULL
+					AND (%s)
 				ORDER BY oldest.scheduled_for ASC, oldest.id ASC
 				LIMIT 1
 			) AS occurrence ON TRUE
@@ -136,10 +151,12 @@ func (repo *ScheduledScanRepository) SelectAttemptCandidate(ctx context.Context)
 				ON active_target.id = schedule.target_id AND active_target.deleted_at IS NULL
 			WHERE schedule.is_enabled = TRUE
 				AND (schedule.target_id IS NULL OR active_target.id IS NOT NULL)
+				AND %s
 			ORDER BY schedule.last_run_time ASC NULLS FIRST, schedule.id ASC, occurrence.id ASC
-			LIMIT 1`
+			LIMIT 1`, oldestEligible, attemptEligible("occurrence"))
+		args = []any{now, now}
 	}
-	result := repo.db.WithContext(ctx).Raw(query).Scan(&row)
+	result := repo.db.WithContext(ctx).Raw(query, args...).Scan(&row)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -188,16 +205,23 @@ func (repo *ScheduledScanRepository) StartAttempt(
 
 		var occurrence scheduledScanOccurrenceModel
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id = ? AND scheduled_scan_id = ? AND attempted_at IS NULL", candidate.ID, candidate.ScheduledScanID).
+			Where("id = ? AND scheduled_scan_id = ? AND ("+attemptEligible("scheduled_scan_occurrence")+")",
+				candidate.ID, candidate.ScheduledScanID, attemptedAt).
 			First(&occurrence).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return nil
 			}
 			return err
 		}
+		// A retry moves the same occurrence through this path again: the new
+		// attempt instant replaces attempted_at (driving lastRunTime, runCount,
+		// and retention age) and clears the consumed retry deadline.
 		result := tx.Model(&scheduledScanOccurrenceModel{}).
-			Where("id = ? AND attempted_at IS NULL", occurrence.ID).
-			Update("attempted_at", attemptedAt)
+			Where("id = ? AND ("+attemptEligible("scheduled_scan_occurrence")+")", occurrence.ID, attemptedAt).
+			Updates(map[string]any{
+				"attempted_at":  attemptedAt,
+				"next_retry_at": nil,
+			})
 		if result.Error != nil {
 			return result.Error
 		}
@@ -309,12 +333,19 @@ func (repo *ScheduledScanRepository) RecordOutcome(
 	if repo == nil || repo.db == nil || occurrenceID <= 0 {
 		return false, nil
 	}
+	if !outcome.Completed() && outcome.Cause != "" {
+		if _, ok := scheduledapp.ParseHandoffFailureCause(string(outcome.Cause)); !ok {
+			return false, fmt.Errorf("invalid scheduled scan handoff failure cause %q", outcome.Cause)
+		}
+	}
 	updates := map[string]any{}
 	counterColumn := "failed_handoff_count"
 	if outcome.Completed() {
 		updates["dispatched_at"] = recordedAt.UTC()
 		updates["failure_kind"] = nil
 		updates["failure_message"] = nil
+		updates["next_retry_at"] = nil
+		updates["last_failure_cause"] = nil
 		counterColumn = "successful_handoff_count"
 	} else {
 		kind := strings.TrimSpace(string(outcome.Kind))
@@ -330,10 +361,12 @@ func (repo *ScheduledScanRepository) RecordOutcome(
 	recorded := false
 	err := repo.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var occurrence struct {
-			ScheduledScanID int `gorm:"column:scheduled_scan_id"`
+			ScheduledScanID int  `gorm:"column:scheduled_scan_id"`
+			RetryCount      int  `gorm:"column:retry_count"`
+			NextRetryAt     *time.Time `gorm:"column:next_retry_at"`
 		}
 		if err := tx.Model(&scheduledScanOccurrenceModel{}).
-			Select("scheduled_scan_id").
+			Select("scheduled_scan_id", "retry_count", "next_retry_at").
 			Where("id = ?", occurrenceID).
 			Take(&occurrence).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -342,8 +375,44 @@ func (repo *ScheduledScanRepository) RecordOutcome(
 			return err
 		}
 
-		// Conditional settlement is the idempotency gate. The aggregate update
-		// must commit with it so a retry can never create a second outcome count.
+		// A zero-created creation failure with remaining retry budget records
+		// retry state instead of settling: the occurrence stays unsettled and
+		// neither aggregate moves until a terminal outcome or exhaustion.
+		if outcome.RetryableAfterFailures(occurrence.RetryCount) {
+			cause := outcome.Cause
+			if cause == "" {
+				cause = scheduledapp.HandoffCauseInternalUnavailable
+			}
+			nextRetryAt := recordedAt.UTC().Add(scheduledapp.HandoffRetryDelay(occurrence.RetryCount + 1))
+			result := tx.Model(&scheduledScanOccurrenceModel{}).
+				Where("id = ? AND attempted_at IS NOT NULL AND dispatched_at IS NULL AND failure_kind IS NULL AND failure_message IS NULL AND next_retry_at IS NULL", occurrenceID).
+				Updates(map[string]any{
+					"retry_count":        occurrence.RetryCount + 1,
+					"next_retry_at":      nextRetryAt,
+					"last_failure_cause": string(cause),
+				})
+			if result.Error != nil {
+				return result.Error
+			}
+			recorded = result.RowsAffected == 1
+			return nil
+		}
+
+		// Terminal cause fallback: partial, deadline, and cancellation carry no
+		// creation-cause enum, but the Schedule summary always exposes one
+		// bounded value, so those settle as the internal operational cause.
+		summaryCause := outcome.Cause
+		if !outcome.Completed() {
+			updates["next_retry_at"] = nil
+			if summaryCause == "" {
+				summaryCause = scheduledapp.HandoffCauseInternalUnavailable
+			}
+			updates["last_failure_cause"] = string(summaryCause)
+		}
+
+		// Conditional settlement is the idempotency gate. The aggregate and
+		// summary updates must commit with it so a retry can never create a
+		// second outcome count or a summary without its settlement.
 		result := tx.Model(&scheduledScanOccurrenceModel{}).
 			Where("id = ? AND attempted_at IS NOT NULL AND dispatched_at IS NULL AND failure_kind IS NULL AND failure_message IS NULL", occurrenceID).
 			Updates(updates)
@@ -354,9 +423,19 @@ func (repo *ScheduledScanRepository) RecordOutcome(
 			return nil
 		}
 
+		scheduleUpdates := map[string]any{
+			counterColumn: gorm.Expr(counterColumn + " + ?", 1),
+		}
+		if outcome.Completed() {
+			scheduleUpdates["last_handoff_failure_cause"] = nil
+			scheduleUpdates["last_handoff_failure_time"] = nil
+		} else {
+			scheduleUpdates["last_handoff_failure_cause"] = string(summaryCause)
+			scheduleUpdates["last_handoff_failure_time"] = recordedAt.UTC()
+		}
 		result = tx.Model(&scheduledScanModel{}).
 			Where("id = ?", occurrence.ScheduledScanID).
-			UpdateColumn(counterColumn, gorm.Expr(counterColumn+" + ?", 1))
+			Updates(scheduleUpdates)
 		if result.Error != nil {
 			return result.Error
 		}
@@ -370,6 +449,33 @@ func (repo *ScheduledScanRepository) RecordOutcome(
 		return false, err
 	}
 	return recorded, nil
+}
+
+// EarliestRetryDeadline reports the oldest pending bounded-retry deadline so
+// the controller can shorten its idle wait. Disable and Delete remove retry
+// rows, so no enabled-state join is needed here.
+func (repo *ScheduledScanRepository) EarliestRetryDeadline(ctx context.Context) (*time.Time, error) {
+	if repo == nil || repo.db == nil {
+		return nil, nil
+	}
+	var occurrence scheduledScanOccurrenceModel
+	err := repo.db.WithContext(ctx).
+		Model(&scheduledScanOccurrenceModel{}).
+		Select("id", "next_retry_at").
+		Where("next_retry_at IS NOT NULL AND dispatched_at IS NULL AND failure_kind IS NULL").
+		Order("next_retry_at ASC").
+		Take(&occurrence).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if occurrence.NextRetryAt == nil {
+		return nil, nil
+	}
+	value := occurrence.NextRetryAt.UTC()
+	return &value, nil
 }
 
 func (repo *ScheduledScanRepository) DeleteOccurrenceBatch(ctx context.Context, attemptedAtCutoff time.Time) (int64, error) {

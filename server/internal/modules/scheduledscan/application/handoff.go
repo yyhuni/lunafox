@@ -73,7 +73,31 @@ func ClassifyHandoff(result *scanapp.BatchScanResult, err error, targetScoped bo
 	case errors.Is(err, context.Canceled):
 		return safeHandoffOutcome(HandoffCanceled, "Scan creation was canceled before handoff completed.")
 	}
-	return safeHandoffOutcome(HandoffScanCreateFailed, "Scan creation did not complete.")
+	outcome := safeHandoffOutcome(HandoffScanCreateFailed, "Scan creation did not complete.")
+	outcome.Cause = classifyScanCreateFailureCause(err, result)
+	return outcome
+}
+
+// classifyScanCreateFailureCause resolves the public cause for a zero-created
+// failure. A typed error wins; a structured all-target-not-found batch is the
+// only result-only mapping, and everything else fails closed to internal.
+func classifyScanCreateFailureCause(err error, result *scanapp.BatchScanResult) HandoffFailureCause {
+	if err != nil {
+		return ClassifyHandoffFailureCause(err)
+	}
+	if result != nil && len(result.Failed) > 0 {
+		allTargetNotFound := true
+		for _, item := range result.Failed {
+			if item.Reason != "TARGET_NOT_FOUND" {
+				allTargetNotFound = false
+				break
+			}
+		}
+		if allTargetNotFound {
+			return HandoffCauseTargetUnavailable
+		}
+	}
+	return HandoffCauseInternalUnavailable
 }
 
 func safeHandoffOutcome(kind HandoffOutcomeKind, message string) HandoffOutcome {

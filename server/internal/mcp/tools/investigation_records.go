@@ -166,6 +166,34 @@ type StartScanOutput struct {
 	Scan      string `json:"scan"`
 }
 
+type ScanStopInput struct {
+	Scan string
+}
+
+// ScanStopOutput echoes the canonical scan reference and its committed
+// terminal status so callers can chain straight into read tools.
+type ScanStopOutput struct {
+	Scan             string `json:"scan"`
+	Status           string `json:"status"`
+	RevokedTaskCount int    `json:"revokedTaskCount"`
+}
+
+// MaxBatchScanStopItems mirrors the shared repository stop constraint; MCP
+// must not widen or narrow the REST/MCP batch stop ceiling independently.
+const MaxBatchScanStopItems = 100
+
+type BatchScanStopInput struct {
+	Scans []string
+}
+
+// BatchScanStopOutput reports only bounded counts per the shared batch stop
+// contract; per-scan or per-task detail stays a get_scan concern.
+type BatchScanStopOutput struct {
+	StoppedCount     int `json:"stoppedCount"`
+	SkippedCount     int `json:"skippedCount"`
+	RevokedTaskCount int `json:"revokedTaskCount"`
+}
+
 type OperationRecord struct {
 	Name        string         `json:"name"`
 	Scan        string         `json:"scan"`

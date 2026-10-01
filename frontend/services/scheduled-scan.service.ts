@@ -11,23 +11,26 @@ import { parseWorkflowConfigurationStrict } from '@/lib/workflow-config'
 import { isIanaTimeZoneValid } from '@/lib/scheduled-scan-helpers'
 import type {
   GetScheduledScansResponse,
-	ScheduledScan,
-	CreateScheduledScanRequest,
-	UpdateScheduledScanRequest,
-	ScheduledScanOverviewSummary,
-	ScheduledScanOverviewUpcoming,
-	ScanMode,
-	BatchUpdateScheduledScanStatusInput,
-	BatchUpdateScheduledScanStatusRequest,
-	BatchUpdateScheduledScanStatusResponse,
+  ScheduledScan,
+  CreateScheduledScanRequest,
+  UpdateScheduledScanRequest,
+  ScheduledScanOverviewSummary,
+  ScheduledScanOverviewUpcoming,
+  ScanMode,
+  BatchUpdateScheduledScanStatusInput,
+  BatchUpdateScheduledScanStatusRequest,
+  BatchUpdateScheduledScanStatusResponse,
 } from '@/types/scheduled-scan.types'
+import { isScheduledScanHandoffFailureCause } from '@/types/scheduled-scan.types'
 import { isScanInputSource, type ScanInputSource } from '@/types/scan.types'
 
-type ScheduledScanAipDto = Omit<ScheduledScan, "successfulHandoffCount" | "failedHandoffCount" | "inputSource" | "timeZone"> & {
+type ScheduledScanAipDto = Omit<ScheduledScan, "successfulHandoffCount" | "failedHandoffCount" | "inputSource" | "timeZone" | "lastHandoffFailureCause" | "lastHandoffFailureTime"> & {
   successfulHandoffCount?: unknown
   failedHandoffCount?: unknown
   inputSource?: unknown
   timeZone?: unknown
+  lastHandoffFailureCause?: unknown
+  lastHandoffFailureTime?: unknown
 }
 
 type GetScheduledScansAipResponse = Omit<GetScheduledScansResponse, "scheduledScans"> & {
@@ -199,6 +202,29 @@ function parseBatchUpdateScheduledScanStatusResponse(
   return { updatedCount }
 }
 
+// The last-failure summary is one closed enum value plus its settlement time;
+// the two fields must be present or absent together.
+function parseLastHandoffFailureSummary(scan: ScheduledScanAipDto): {
+  lastHandoffFailureCause: ScheduledScan["lastHandoffFailureCause"]
+  lastHandoffFailureTime: ScheduledScan["lastHandoffFailureTime"]
+} {
+  const cause = scan.lastHandoffFailureCause ?? null
+  const time = scan.lastHandoffFailureTime ?? null
+  if (cause === null && time === null) {
+    return { lastHandoffFailureCause: null, lastHandoffFailureTime: null }
+  }
+  if (cause === null || time === null) {
+    throw new Error('Scheduled scan response has an inconsistent lastHandoffFailure summary')
+  }
+  if (!isScheduledScanHandoffFailureCause(cause)) {
+    throw new Error('Scheduled scan response has an unknown lastHandoffFailureCause')
+  }
+  if (typeof time !== 'string' || Number.isNaN(Date.parse(time))) {
+    throw new Error('Scheduled scan response has an invalid lastHandoffFailureTime')
+  }
+  return { lastHandoffFailureCause: cause, lastHandoffFailureTime: time }
+}
+
 function normalizeScheduledScan(scan: ScheduledScanAipDto): ScheduledScan {
   return {
     ...scan,
@@ -206,6 +232,7 @@ function normalizeScheduledScan(scan: ScheduledScanAipDto): ScheduledScan {
     timeZone: parseTimeZone(scan.timeZone, 'Scheduled scan response'),
     successfulHandoffCount: parseNonNegativeInteger(scan.successfulHandoffCount, "successfulHandoffCount"),
     failedHandoffCount: parseNonNegativeInteger(scan.failedHandoffCount, "failedHandoffCount"),
+    ...parseLastHandoffFailureSummary(scan),
     name: scan.displayName,
     resourceName: scan.name,
     scanWorkflow: scan.scanWorkflow.startsWith('scanWorkflows/')
