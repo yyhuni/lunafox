@@ -146,7 +146,7 @@ const script=`import zipfile,sys,json\nwith zipfile.ZipFile(sys.argv[1]) as z:\n
   assert.match(content['compose.yaml'],/RELEASE_CHANNEL: stable/);
   assert.match(content['compose.yaml'],/RELEASE_METADATA_BASE_URL: https:\/\/raw\.githubusercontent\.com\/yyhuni\/lunafox\/release-channel/);
   assert.match(content['compose.yaml'],/RELEASE_REGISTRY: \$\{RELEASE_REGISTRY:-docker\.io\}/);
-  assert.match(content['compose.yaml'],/ENGINE_INSTALL_CF_ACCELERATION: false/);
+  assert.doesNotMatch(content['compose.yaml'],/ENGINE_INSTALL_CF_ACCELERATION|cloudflare-acceleration/);
   assert.match(content['engine-inventory.yaml'],/docker\.io\/yyhuni\/lunafox-engine-runtime-port-scan@sha256:/);
   assert.match(content['engine-inventory.yaml'],/ghcr\.io\/yyhuni\/lunafox-engine-runtime-port-scan@sha256:/);
 
@@ -178,8 +178,6 @@ const script=`import zipfile,sys,json\nwith zipfile.ZipFile(sys.argv[1]) as z:\n
    assert.equal(embedded.services.upgrader.command.at(-1),registry);
    assert.equal(embedded.services.server.environment.RELEASE_REGISTRY,registry);
    assert.equal(embedded.services.server.environment.ENGINE_INSTALL_REGISTRY,registry);
-   assert.equal(embedded.services.server.environment.ENGINE_INSTALL_CF_ACCELERATION,'false');
-   assert.equal(embedded.services.bootstrap.environment.ENGINE_INSTALL_CF_ACCELERATION,'false');
    assert.ok(embedded.services.upgrader.volumes.some(volume => volume.source === '/var/run/docker.sock' && volume.target === '/var/run/docker.sock' && volume.read_only !== true));
    assert.ok(embedded.services.upgrader.volumes.some(volume => volume.source === 'lunafox_upgrade_state' && volume.target === '/deployment/.lunafox/upgrade'));
    assert.ok(embedded.services.server.volumes.some(volume => volume.source === 'lunafox_upgrade_state' && volume.target === '/opt/lunafox/.lunafox/upgrade'));
@@ -201,7 +199,6 @@ const script=`import zipfile,sys,json\nwith zipfile.ZipFile(sys.argv[1]) as z:\n
     '--third-party-policy', '/deployment/third-party-image-policy.json',
     '--manifest-digest', preheatManifest.manifestDigest,
     '--profile', 'embedded',
-    '--cloudflare-acceleration', 'false',
    ]);
    assert.equal(preheater.labels['lunafox.preheat.manifest-digest'], preheatManifest.manifestDigest);
    assert.equal(preheater.labels['lunafox.preheat.profile'], 'embedded');
@@ -295,7 +292,6 @@ test('development Compose and CF lifecycle use the same preheat gate from shell-
  const developmentCompose = fs.readFileSync(developmentComposePath, 'utf8');
  assert.match(developmentCompose, /^  engine-preheater:\n/m);
  assert.match(developmentCompose, /--development-build-results/);
- assert.match(developmentCompose, /--cloudflare-acceleration[\s\S]*- "false"/);
  assert.match(developmentCompose, /LUNAFOX_PREHEAT_TIMEOUT_SECONDS=\$\{LUNAFOX_PREHEAT_TIMEOUT_SECONDS:-900\}/);
  const serviceBlock = (service) => {
   const lines = developmentCompose.split('\n');
@@ -313,8 +309,8 @@ test('development Compose and CF lifecycle use the same preheat gate from shell-
  }
 
  const lifecycle = fs.readFileSync(path.join(sourceRoot, 'deploy/lifecycle/lunafox-lifecycle.sh'), 'utf8');
- assert.match(lifecycle, /image pulls are owned by engine-preheater/);
- assert.match(lifecycle, /--cloudflare-acceleration\n    - "true"/);
+ assert.match(lifecycle, /LUNAFOX_ONESHOT_SERVICES="engine-preheater /);
+ assert.doesNotMatch(lifecycle, /cloudflare-acceleration/);
  assert.doesNotMatch(lifecycle, /preheat_capable_deployment[\s\S]{0,120}engine-inventory\.yaml/);
 
  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lunafox-dev-compose-contract-'));
@@ -359,7 +355,6 @@ test('development Compose and CF lifecycle use the same preheat gate from shell-
  assert.deepEqual(preheater.entrypoint, ['/usr/local/bin/lunafox-engine-preheater']);
  assert.deepEqual(preheater.command, [
   '--development-build-results', '/bootstrap/image-build-results.json',
-  '--cloudflare-acceleration', 'false',
  ]);
  assert.equal(preheater.environment.LUNAFOX_PREHEAT_TIMEOUT_SECONDS, '900');
 });

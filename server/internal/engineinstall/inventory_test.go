@@ -126,42 +126,6 @@ func TestLoadSelectedRegistryInventoryAcceptsOnlyTheExplicitCanonicalRegistry(t 
 	}
 }
 
-func TestLoadInventoryCloudflareAccelerationRequiresCFDockerHubAndGHCRSequence(t *testing.T) {
-	refs := []string{
-		"docker.lunafox.cc.cd/yyhuni/lunafox-engine-website-discovery@" + inventoryDigestA,
-		"docker.io/yyhuni/lunafox-engine-website-discovery@" + inventoryDigestA,
-		"ghcr.io/yyhuni/lunafox-engine-website-discovery@" + inventoryDigestA,
-	}
-	path := writeInventory(t, `enginePackages:
-  - refs:
-      - `+refs[0]+`
-      - `+refs[1]+`
-      - `+refs[2]+`
-`)
-
-	inventory, err := LoadInventory(path, InventoryModeCloudflareAccelerated)
-	if err != nil {
-		t.Fatalf("LoadInventory() error = %v", err)
-	}
-	got := make([]string, 0, len(inventory.EnginePackages[0].Candidates.References))
-	for _, reference := range inventory.EnginePackages[0].Candidates.References {
-		got = append(got, reference.String())
-	}
-	if !reflect.DeepEqual(got, refs) {
-		t.Fatalf("accelerated candidate order = %#v, want %#v", got, refs)
-	}
-
-	invalidPath := writeInventory(t, `enginePackages:
-  - refs:
-      - `+refs[1]+`
-      - `+refs[0]+`
-      - `+refs[2]+`
-`)
-	if _, err := LoadInventory(invalidPath, InventoryModeCloudflareAccelerated); err == nil || !strings.Contains(err.Error(), "Docker Hub followed by GHCR") {
-		t.Fatalf("invalid accelerated inventory error = %v", err)
-	}
-}
-
 func TestLoadInventoryRejectsInvalidDocumentOrCandidates(t *testing.T) {
 	validRef := "docker.io/yyhuni/lunafox-engine-subdomain-discovery@" + inventoryDigestA
 	tests := []struct {

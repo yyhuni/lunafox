@@ -21,22 +21,12 @@ func TestResolveEngineBootstrapInstallPolicy(t *testing.T) {
 		}
 	})
 
-	t.Run("Cloudflare production acceleration", func(t *testing.T) {
-		policy, err := resolveEngineBootstrapInstallPolicy(config.EngineInstallConfig{CFAcceleration: true})
-		if err != nil {
-			t.Fatalf("resolve Cloudflare production policy: %v", err)
-		}
-		if policy.inventoryMode != engineinstall.InventoryModeCloudflareAccelerated || !policy.cloudflareAcceleration {
-			t.Fatalf("unexpected Cloudflare production policy: %+v", policy)
-		}
-	})
-
 	t.Run("selected public registry", func(t *testing.T) {
 		policy, err := resolveEngineBootstrapInstallPolicy(config.EngineInstallConfig{Registry: "ghcr.io"})
 		if err != nil {
 			t.Fatalf("resolve selected Registry policy: %v", err)
 		}
-		if policy.inventoryMode != engineinstall.InventoryModeSelectedRegistry || policy.selectedRegistry != "ghcr.io" || policy.cloudflareAcceleration {
+		if policy.inventoryMode != engineinstall.InventoryModeSelectedRegistry || policy.selectedRegistry != "ghcr.io" {
 			t.Fatalf("unexpected selected Registry policy: %+v", policy)
 		}
 	})
@@ -94,7 +84,6 @@ func TestResolveEngineBootstrapInstallPolicyRejectsDevelopmentSettingsInProducti
 		{name: "identity Registry", mutate: func(cfg *config.EngineInstallConfig) { cfg.DevelopmentRuntimeImageIdentityRegistry = "localhost:5000" }, want: "ENGINE_INSTALL_DEVELOPMENT_RUNTIME_IMAGE_IDENTITY_REGISTRY"},
 		{name: "transport Registry", mutate: func(cfg *config.EngineInstallConfig) { cfg.DevelopmentRuntimeImageTransportRegistry = "registry:5000" }, want: "ENGINE_INSTALL_DEVELOPMENT_RUNTIME_IMAGE_TRANSPORT_REGISTRY"},
 		{name: "invalid selected Registry", mutate: func(cfg *config.EngineInstallConfig) { cfg.Registry = "registry.example" }, want: "ENGINE_INSTALL_REGISTRY must be docker.io or ghcr.io"},
-		{name: "selected Registry plus Cloudflare", mutate: func(cfg *config.EngineInstallConfig) { cfg.Registry = "docker.io"; cfg.CFAcceleration = true }, want: "ENGINE_INSTALL_REGISTRY cannot be combined"},
 	}
 
 	for _, test := range tests {

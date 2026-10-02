@@ -72,22 +72,6 @@ for file in README.md README.zh-CN.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTI
 	scripts/ci/verify-public-runtime-source.sh scripts/ci/verify-public-runtime-contexts.mjs; do
 	require_file "$file"
 done
-for file in \
-	tools/lunafox-ghcr-registry/.gitignore \
-	tools/lunafox-ghcr-registry/README.md \
-	tools/lunafox-ghcr-registry/package.json \
-	tools/lunafox-ghcr-registry/pnpm-lock.yaml \
-	tools/lunafox-ghcr-registry/tsconfig.json \
-	tools/lunafox-ghcr-registry/tsconfig.test.json \
-	tools/lunafox-ghcr-registry/wrangler.jsonc \
-	tools/lunafox-ghcr-registry/src/registry.ts \
-	tools/lunafox-ghcr-registry/src/worker.ts \
-	tools/lunafox-ghcr-registry/test/worker.test.ts \
-	tools/lunafox-ghcr-registry/scripts/verify-local-registry.sh \
-	scripts/ci/verify-cloudflare-worker-release.mjs \
-	scripts/ci/verify-cloudflare-worker-release.test.mjs; do
-	require_file "$file"
-done
 require_regular_file release.manifest.yaml
 require_regular_file contracts/releasemanifest/release_compatibility_profiles.json
 
@@ -182,7 +166,7 @@ elif [ -e "$ROOT_DIR/third-party-image-policy.json" ] || [ -L "$ROOT_DIR/third-p
 	fail "third-party image policy requires a bound preheat manifest"
 fi
 
-for required in server server/scripts contracts engine-go proto extensions docker/nginx docker/bootstrap tools/engine-release tools/engine-oci-publish tools/lunafox-ghcr-registry; do
+for required in server server/scripts contracts engine-go proto extensions docker/nginx docker/bootstrap tools/engine-release tools/engine-oci-publish; do
 	[ -d "$ROOT_DIR/$required" ] || fail "public Runtime source closure is missing: $required"
 done
 # The public host execution surface is an explicit allowlist: the seven root
@@ -212,7 +196,7 @@ if [ -e "$ROOT_DIR/tools" ]; then
 	for tool_path in "$ROOT_DIR/tools"/*; do
 		[ -e "$tool_path" ] || continue
 		case "$(basename "$tool_path")" in
-		engine-release | engine-oci-publish | lunafox-ghcr-registry) ;;
+		engine-release | engine-oci-publish) ;;
 		*) fail "private/development tool is present in public projection: ${tool_path#"$ROOT_DIR"/}" ;;
 		esac
 	done
@@ -332,6 +316,10 @@ jq -e --argjson expected_services "$expected_services" '
 
 if [ "$PREHEAT_CAPABLE" -eq 1 ]; then
 	preheat_manifest_digest="$(awk -F= '$1 == "LUNAFOX_PREHEAT_MANIFEST_DIGEST" {print $2}' "$ROOT_DIR/.env")"
+	# Byte-level digest for the published-legacy exemption inside strict
+	# validation: only already-published manifest bytes may skip schema checks.
+	PREHEAT_MANIFEST_SHA256="$(shasum -a 256 "$ROOT_DIR/preheat-manifest.json" | awk '{print $1}')"
+	export PREHEAT_MANIFEST_SHA256
 	release_manifest_digest="sha256:$(shasum -a 256 "$ROOT_DIR/release.manifest.yaml" | awk '{print $1}')"
 	compose_digest="sha256:$(shasum -a 256 "$ROOT_DIR/compose.yaml" | awk '{print $1}')"
 	third_party_policy_digest="sha256:$(shasum -a 256 "$ROOT_DIR/third-party-image-policy.json" | awk '{print $1}')"
@@ -357,7 +345,7 @@ import { pathToFileURL } from "node:url";
 const root = process.argv[2];
 const module = await import(pathToFileURL(path.join(root, "scripts/ci/preheat-manifest.mjs")).href);
 const raw = JSON.parse(fs.readFileSync(path.join(root, "preheat-manifest.json"), "utf8"));
-module.validatePreheatManifest(raw);
+module.validatePreheatManifest(raw, { fileSha256: process.env.PREHEAT_MANIFEST_SHA256 ?? "" });
 NODE
 	jq -e --arg manifest_digest "$preheat_manifest_digest" '
 		  (.services["engine-preheater"].image == .services.agent.image) and
@@ -366,7 +354,7 @@ NODE
 		  (.services["engine-preheater"].secrets == null) and
 		  (.services["engine-preheater"].environment == {"LUNAFOX_PREHEAT_TIMEOUT_SECONDS":"900"}) and
 		  (.services["engine-preheater"].entrypoint == ["/usr/local/bin/lunafox-engine-preheater"]) and
-		  (.services["engine-preheater"].command == ["--manifest","/deployment/preheat-manifest.json","--release-manifest","/deployment/release.manifest.yaml","--runtime-composition","/deployment/runtime-composition.json","--compose","/deployment/compose.yaml","--third-party-policy","/deployment/third-party-image-policy.json","--manifest-digest",$manifest_digest,"--profile","embedded","--cloudflare-acceleration","false"]) and
+		  (.services["engine-preheater"].command == ["--manifest","/deployment/preheat-manifest.json","--release-manifest","/deployment/release.manifest.yaml","--runtime-composition","/deployment/runtime-composition.json","--compose","/deployment/compose.yaml","--third-party-policy","/deployment/third-party-image-policy.json","--manifest-digest",$manifest_digest,"--profile","embedded"]) and
 		  (.services["engine-preheater"].labels["lunafox.preheat.manifest-digest"] == $manifest_digest) and
 		  (.services["engine-preheater"].labels["lunafox.preheat.profile"] == "embedded") and
 		  ([.services["engine-preheater"].volumes[] | .target] | sort == ["/deployment/compose.yaml","/deployment/preheat-manifest.json","/deployment/release.manifest.yaml","/deployment/runtime-composition.json","/deployment/third-party-image-policy.json","/var/run/docker.sock"]) and
@@ -510,7 +498,7 @@ jq -e '
 ' <<<"$compose_json" >/dev/null || fail "third-party resident images must be digest-qualified"
 
 template="$ROOT_DIR/deploy/compose.template.yaml"
-for key in SERVER_IMAGE_REF FRONTEND_IMAGE_REF NGINX_IMAGE_REF AGENT_IMAGE_REF BOOTSTRAP_IMAGE_REF RELEASE_CHANNEL RELEASE_METADATA_BASE_URL RELEASE_REGISTRY ENGINE_INSTALL_CF_ACCELERATION LUNAFOX_PREHEAT_MANIFEST_DIGEST PUBLIC_HOST PUBLIC_PORT; do
+for key in SERVER_IMAGE_REF FRONTEND_IMAGE_REF NGINX_IMAGE_REF AGENT_IMAGE_REF BOOTSTRAP_IMAGE_REF RELEASE_CHANNEL RELEASE_METADATA_BASE_URL RELEASE_REGISTRY LUNAFOX_PREHEAT_MANIFEST_DIGEST PUBLIC_HOST PUBLIC_PORT; do
 	grep -Fq "\${${key}:?${key} is required}" "$template" || fail "deployment template must require ${key}"
 done
 for key in PUBLIC_HOST PUBLIC_PORT; do
@@ -523,12 +511,9 @@ fi
 # the public deployment workflow materializes the new package. That legacy
 # snapshot predates this setting, so absence is valid only during the handoff.
 # Once present, both server and bootstrap must explicitly keep acceleration off.
-cf_acceleration_lines="$(grep -Fc 'ENGINE_INSTALL_CF_ACCELERATION:' "$compose" || true)"
-cf_acceleration_disabled="$(grep -Fc 'ENGINE_INSTALL_CF_ACCELERATION: false' "$compose" || true)"
-case "$cf_acceleration_lines:$cf_acceleration_disabled" in
-0:0 | 2:2) ;;
-*) fail "public root Compose must keep the direct Compose CF acceleration default disabled" ;;
-esac
+if grep -Fq 'ENGINE_INSTALL_CF_ACCELERATION:' "$compose"; then
+	fail "public root Compose must not carry the removed CF acceleration key"
+fi
 if rg -n 'lunafox-loki|LOKI_PLUGIN_REF|logging:[[:space:]]*loki' "$compose" "$ROOT_DIR/.env.example" "$ROOT_DIR/resources/alloy/config.alloy"; then
 	fail "direct Compose deployment must not require the Loki Docker plugin"
 fi

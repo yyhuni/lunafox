@@ -15,7 +15,6 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/yyhuni/lunafox/contracts/ociartifact"
-	"github.com/yyhuni/lunafox/contracts/ocidistribution"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -252,30 +251,12 @@ func (manifest *Manifest) RuntimeImageDigests() (map[string]string, error) {
 
 // WriteEngineInventory projects only immutable engine refs needed by bootstrap.
 func (manifest *Manifest) WriteEngineInventory(filePath string) error {
-	return manifest.writeEngineInventory(filePath, false)
-}
-
-// WriteCloudflareAcceleratedEngineInventory preserves release identity while
-// adding the approved transport candidate ahead of the release candidates.
-func (manifest *Manifest) WriteCloudflareAcceleratedEngineInventory(filePath string) error {
-	return manifest.writeEngineInventory(filePath, true)
-}
-
-func (manifest *Manifest) writeEngineInventory(filePath string, cloudflareAcceleration bool) error {
 	if manifest == nil || len(manifest.EnginePackages) == 0 {
 		return fmt.Errorf("release engine inventory is required")
 	}
 	enginePackages := make([]EnginePackage, len(manifest.EnginePackages))
 	for index, enginePackage := range manifest.EnginePackages {
-		refs := append([]string(nil), enginePackage.Refs...)
-		if cloudflareAcceleration {
-			acceleration, err := ocidistribution.BuildCloudflareAcceleration(refs)
-			if err != nil {
-				return fmt.Errorf("map enginePackages[%d] for Cloudflare acceleration: %w", index, err)
-			}
-			refs = acceleration.DownloadReferenceStrings()
-		}
-		enginePackages[index] = EnginePackage{Refs: refs}
+		enginePackages[index] = EnginePackage{Refs: append([]string(nil), enginePackage.Refs...)}
 	}
 	payload, err := yaml.Marshal(struct {
 		EnginePackages []EnginePackage `yaml:"enginePackages"`

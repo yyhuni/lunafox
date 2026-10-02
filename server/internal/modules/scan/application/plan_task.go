@@ -140,7 +140,6 @@ func (e *PlanTaskError) Unwrap() error { return e.Err }
 type PlanTaskCompiler struct {
 	packages               PlanTaskPackageReader
 	resources              ConfigResourceResolver
-	runtimeImageRefsMapper func([]string) ([]string, error)
 }
 
 // EncodeResolvedExecutionPlan validates and deterministically encodes the
@@ -166,16 +165,6 @@ func NewPlanTaskCompiler(packages PlanTaskPackageReader, resources ConfigResourc
 		return nil, fmt.Errorf("PlanTask package reader is required")
 	}
 	return &PlanTaskCompiler{packages: packages, resources: resources}, nil
-}
-
-// WithRuntimeImageReferencesMapper applies a Server-owned transport mapping
-// only after the package's original Runtime Image references pass validation.
-func (compiler *PlanTaskCompiler) WithRuntimeImageReferencesMapper(mapper func([]string) ([]string, error)) *PlanTaskCompiler {
-	if compiler == nil {
-		return nil
-	}
-	compiler.runtimeImageRefsMapper = mapper
-	return compiler
 }
 
 func (compiler *PlanTaskCompiler) PlanTask(request PlanTaskRequest) (PlanTaskOutcome, error) {
@@ -242,13 +231,6 @@ func (compiler *PlanTaskCompiler) compileExecutablePlan(
 	if len(refs) == 0 {
 		return nil, planTaskError(PlanTaskPackageError, fmt.Errorf("runtime image refs are required"))
 	}
-	if compiler.runtimeImageRefsMapper != nil {
-		refs, err = compiler.runtimeImageRefsMapper(refs)
-		if err != nil {
-			return nil, planTaskError(PlanTaskPackageError, fmt.Errorf("map runtime image download references: %w", err))
-		}
-	}
-
 	scalarConfig, resourceBindings, err := compiler.projectConfig(ctx, request.StepID, finalConfig, definition.Execution)
 	if err != nil {
 		return nil, err

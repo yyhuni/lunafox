@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/yyhuni/lunafox/contracts/ociartifact"
-	"github.com/yyhuni/lunafox/contracts/ocidistribution"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,9 +23,6 @@ const (
 	// InventoryModeSelectedRegistry validates both canonical public locations,
 	// then exposes only the explicitly selected Registry to the installer.
 	InventoryModeSelectedRegistry InventoryMode = "selected-registry"
-	// InventoryModeCloudflareAccelerated requires CF, Docker Hub, then GHCR
-	// transport candidates for one verified first-party release artifact.
-	InventoryModeCloudflareAccelerated InventoryMode = "cloudflare-accelerated"
 )
 
 // Inventory is the typed bootstrap-only set of required Engine Package v2
@@ -101,8 +97,6 @@ func (mode InventoryMode) requiredCandidateCount() (int, error) {
 		return 2, nil
 	case InventoryModeSelectedRegistry:
 		return 2, nil
-	case InventoryModeCloudflareAccelerated:
-		return 3, nil
 	default:
 		return 0, fmt.Errorf("unsupported Engine Package v2 inventory mode %q", mode)
 	}
@@ -156,11 +150,6 @@ func validateInventoryDocumentForRegistry(document inventoryDocument, mode Inven
 				requiredCandidates,
 				candidateLabel,
 			)
-		}
-		if mode == InventoryModeCloudflareAccelerated {
-			if _, err := ocidistribution.ParseCloudflareAcceleration(item.Refs); err != nil {
-				return nil, fmt.Errorf("enginePackages[%d].refs: %w", index, err)
-			}
 		}
 		if mode == InventoryModeSelectedRegistry {
 			if selectedRegistry == "" {

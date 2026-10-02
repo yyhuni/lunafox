@@ -214,7 +214,6 @@ func configFromViper(v *viper.Viper) *Config {
 			MaxPackageBytes:                          v.GetInt64("ENGINE_INSTALL_MAX_PACKAGE_BYTES"),
 			DevelopmentMode:                          v.GetBool("ENGINE_INSTALL_DEVELOPMENT_MODE"),
 			AllowPlainHTTP:                           v.GetBool("ENGINE_INSTALL_ALLOW_PLAIN_HTTP"),
-			CFAcceleration:                           v.GetBool("ENGINE_INSTALL_CF_ACCELERATION"),
 			Registry:                                 v.GetString("ENGINE_INSTALL_REGISTRY"),
 			DevelopmentRuntimeImageIdentityRegistry:  v.GetString("ENGINE_INSTALL_DEVELOPMENT_RUNTIME_IMAGE_IDENTITY_REGISTRY"),
 			DevelopmentRuntimeImageTransportRegistry: v.GetString("ENGINE_INSTALL_DEVELOPMENT_RUNTIME_IMAGE_TRANSPORT_REGISTRY"),

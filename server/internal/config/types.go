@@ -77,7 +77,6 @@ type EngineInstallConfig struct {
 	MaxPackageBytes                          int64  `mapstructure:"ENGINE_INSTALL_MAX_PACKAGE_BYTES"`
 	DevelopmentMode                          bool   `mapstructure:"ENGINE_INSTALL_DEVELOPMENT_MODE"`
 	AllowPlainHTTP                           bool   `mapstructure:"ENGINE_INSTALL_ALLOW_PLAIN_HTTP"`
-	CFAcceleration                           bool   `mapstructure:"ENGINE_INSTALL_CF_ACCELERATION"`
 	Registry                                 string `mapstructure:"ENGINE_INSTALL_REGISTRY"`
 	DevelopmentRuntimeImageIdentityRegistry  string `mapstructure:"ENGINE_INSTALL_DEVELOPMENT_RUNTIME_IMAGE_IDENTITY_REGISTRY"`
 	DevelopmentRuntimeImageTransportRegistry string `mapstructure:"ENGINE_INSTALL_DEVELOPMENT_RUNTIME_IMAGE_TRANSPORT_REGISTRY"`

@@ -121,3 +121,43 @@ func TestParseGlobalAssetSearchQueryUsesFieldSpecificTypedSemantics(t *testing.T
 		}
 	}
 }
+
+func TestParseGlobalAssetSearchQuerySupportsHasScreenshotBoolean(t *testing.T) {
+	for _, raw := range []string{`hasScreenshot="true"`, `hasScreenshot=="true"`} {
+		ast, err := ParseGlobalAssetSearchQuery(raw)
+		if err != nil {
+			t.Fatalf("query %q should be accepted: %v", raw, err)
+		}
+		condition := ast.Conditions[0]
+		if condition.Field != GlobalAssetSearchFieldHasScreenshot || condition.HasScreenshot == nil || !*condition.HasScreenshot {
+			t.Fatalf("query %q must parse into a true hasScreenshot condition: %+v", raw, condition)
+		}
+	}
+	falseAST, err := ParseGlobalAssetSearchQuery(`hasScreenshot="false"`)
+	if err != nil {
+		t.Fatalf("parse false polarity: %v", err)
+	}
+	if condition := falseAST.Conditions[0]; condition.HasScreenshot == nil || *condition.HasScreenshot {
+		t.Fatalf("false polarity must be preserved verbatim: %+v", condition)
+	}
+
+	combined, err := ParseGlobalAssetSearchQuery(`host="api" && hasScreenshot=="false"`)
+	if err != nil {
+		t.Fatalf("parse combined boolean query: %v", err)
+	}
+	if len(combined.Conditions) != 2 || combined.Conditions[1].Field != GlobalAssetSearchFieldHasScreenshot || *combined.Conditions[1].HasScreenshot {
+		t.Fatalf("hasScreenshot must compose with flat AND conditions: %+v", combined.Conditions)
+	}
+
+	for _, raw := range []string{
+		`hasScreenshot=="TRUE"`,
+		`hasScreenshot="True"`,
+		`hasScreenshot="1"`,
+		`hasScreenshot==""`,
+		`hasScreenshot=" true "`,
+	} {
+		if _, err := ParseGlobalAssetSearchQuery(raw); !errors.Is(err, ErrInvalidGlobalAssetSearchQuery) {
+			t.Fatalf("query %q should be rejected without boolean normalization: %v", raw, err)
+		}
+	}
+}
