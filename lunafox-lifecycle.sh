@@ -32,13 +32,6 @@ LUNAFOX_LOCK_DIR=.lunafox-lifecycle.lock
 LUNAFOX_LOCK_METADATA=owner
 LUNAFOX_LOCK_SCHEMA=1
 LUNAFOX_CF_STATE_DIR=.lunafox-cf-acceleration
-LUNAFOX_CF_STATE_FILE=state
-LUNAFOX_CF_OVERLAY_FILE=compose.cf-acceleration.yaml
-LUNAFOX_CF_INVENTORY_FILE=engine-inventory.yaml
-LUNAFOX_CF_STATE_SCHEMA=1
-LUNAFOX_CF_REGISTRY=docker.lunafox.cc.cd
-LUNAFOX_THIRD_PARTY_POLICY_FILE=third-party-image-policy.json
-LUNAFOX_ENGINE_INVENTORY_FILE=engine-inventory.yaml
 LUNAFOX_MIN_COMPOSE_VERSION=2.24.0
 LUNAFOX_INSTALL_TIMEOUT_SECONDS=900
 LUNAFOX_DAILY_TIMEOUT_SECONDS=300
@@ -65,20 +58,17 @@ LUNAFOX_OVERRIDING_KEYS="RELEASE_REGISTRY RELEASE_CHANNEL RELEASE_METADATA_BASE_
 RELEASE_VERSION AGENT_VERSION PUBLIC_HOST PUBLIC_PORT DATABASE_MODE COMPOSE_PROFILES \
 DB_HOST DB_PORT DB_USER DB_NAME DB_SSLMODE DB_PASSWORD JWT_SECRET \
 	SERVER_IMAGE_REF FRONTEND_IMAGE_REF NGINX_IMAGE_REF AGENT_IMAGE_REF BOOTSTRAP_IMAGE_REF \
-	ENGINE_INSTALL_REGISTRY ENGINE_INSTALL_CF_ACCELERATION ENGINE_INVENTORY_HOST_PATH LUNAFOX_SHARED_DATA_VOLUME_BIND \
+	ENGINE_INSTALL_REGISTRY ENGINE_INVENTORY_HOST_PATH LUNAFOX_SHARED_DATA_VOLUME_BIND \
 	COMPOSE_FILE COMPOSE_PROJECT_NAME COMPOSE_ENV_FILES COMPOSE_PATH_SEPARATOR"
 
 READY_TIMEOUT=""
 UNINSTALL_PURGE=0
 UNINSTALL_CONFIRM=0
 LOCK_HELD=0
-CF_ACCELERATION_REQUESTED=0
-CF_ACCELERATION_ENABLED=0
 INSTALL_PUBLIC_HOST=""
 INSTALL_PUBLIC_PORT=""
 INSTALL_PUBLIC_HOST_SET=0
 INSTALL_PUBLIC_PORT_SET=0
-LUNAFOX_CF_OVERLAY_USED=""
 BASE_COMPOSE_ARGS=()
 COMPOSE_ARGS=()
 
@@ -204,11 +194,6 @@ resolve_root() {
 	LUNAFOX_COMPOSE_PATH="$directory/$LUNAFOX_COMPOSE_FILE"
 	LUNAFOX_LOCK_PATH="$directory/$LUNAFOX_LOCK_DIR"
 	LUNAFOX_CF_STATE_PATH="$directory/$LUNAFOX_CF_STATE_DIR"
-	LUNAFOX_CF_STATE_FILE_PATH="$LUNAFOX_CF_STATE_PATH/$LUNAFOX_CF_STATE_FILE"
-	LUNAFOX_CF_OVERLAY_PATH="$LUNAFOX_CF_STATE_PATH/$LUNAFOX_CF_OVERLAY_FILE"
-	LUNAFOX_CF_INVENTORY_PATH="$LUNAFOX_CF_STATE_PATH/$LUNAFOX_CF_INVENTORY_FILE"
-	LUNAFOX_THIRD_PARTY_POLICY_PATH="$directory/$LUNAFOX_THIRD_PARTY_POLICY_FILE"
-	LUNAFOX_ENGINE_INVENTORY_PATH="$directory/$LUNAFOX_ENGINE_INVENTORY_FILE"
 }
 
 # -------------------------------------------------------- host environment ----
@@ -241,9 +226,6 @@ base_compose_file_args() {
 
 compose_file_args() {
 	COMPOSE_ARGS=("${BASE_COMPOSE_ARGS[@]}")
-	if [ -n "$LUNAFOX_CF_OVERLAY_USED" ]; then
-		COMPOSE_ARGS+=(-f "$LUNAFOX_CF_OVERLAY_PATH")
-	fi
 }
 
 lf_compose() {
@@ -496,915 +478,39 @@ reset_persisted_override() {
 	fi
 }
 
-# ---------------------------------------------------- CF acceleration ----
-
-# The policy is deliberately rendered here instead of parsed with a best-effort
-# JSON matcher. The public package is release-frozen; byte equality makes a
-# malformed, extra, stale, or edited policy fail before any Compose mutation
-# without adding jq, Node, or Python as an operator prerequisite.
-render_expected_third_party_policy() {
-	cat <<'POLICY'
-{
-  "schemaVersion": 1,
-  "provenanceClaim": "lunafox-reviewed-content",
-  "entries": [
-    {
-      "service": "postgres",
-      "profiles": [
-        "embedded"
-      ],
-      "registry": "docker.io",
-      "repository": "library/postgres",
-      "digest": "sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675",
-      "contentAudit": "reviewed",
-      "publisherSignatureVerification": "not-approved",
-      "evidence": "release-frozen Docker Official Image digest reviewed by LunaFox"
-    },
-    {
-      "service": "redis",
-      "profiles": [
-        "embedded",
-        "external"
-      ],
-      "registry": "docker.io",
-      "repository": "library/redis",
-      "digest": "sha256:2afba59292f25f5d1af200496db41bea2c6c816b059f57ae74703a50a03a27d0",
-      "contentAudit": "reviewed",
-      "publisherSignatureVerification": "not-approved",
-      "evidence": "release-frozen Docker Official Image digest reviewed by LunaFox"
-    },
-    {
-      "service": "loki",
-      "profiles": [
-        "embedded",
-        "external"
-      ],
-      "registry": "docker.io",
-      "repository": "grafana/loki",
-      "digest": "sha256:3c8fd3570dd9219951a60d3f919c7f31923d10baee578b77bc26c4a0b32d092d",
-      "contentAudit": "reviewed",
-      "publisherSignatureVerification": "not-approved",
-      "evidence": "release-frozen Grafana image digest reviewed by LunaFox"
-    },
-    {
-      "service": "alloy",
-      "profiles": [
-        "embedded",
-        "external"
-      ],
-      "registry": "docker.io",
-      "repository": "grafana/alloy",
-      "digest": "sha256:b8ec653c44235fbe910879145dac3597d66b0aaecf60bcbbe82580767771a839",
-      "contentAudit": "reviewed",
-      "publisherSignatureVerification": "not-approved",
-      "evidence": "release-frozen Grafana image digest reviewed by LunaFox"
-    }
-  ]
-}
-POLICY
-}
-
-validate_third_party_policy() {
-	local expected
-	require_env_regular_file "$LUNAFOX_THIRD_PARTY_POLICY_PATH" "$LUNAFOX_THIRD_PARTY_POLICY_FILE" ||
-		fail "$LUNAFOX_THIRD_PARTY_POLICY_FILE is missing; restore the release package before enabling Cloudflare acceleration"
-	[ -r "$LUNAFOX_THIRD_PARTY_POLICY_PATH" ] ||
-		fail "$LUNAFOX_THIRD_PARTY_POLICY_FILE is not readable; restore the release package before enabling Cloudflare acceleration"
-	require_command cmp
-	expected="$(mktemp "$LUNAFOX_ROOT/.lunafox-third-party-policy.XXXXXX")" ||
-		fail "could not stage the third-party image policy validation"
-	register_cleanup_path "$expected"
-	render_expected_third_party_policy >"$expected" || fail "could not render the third-party image policy validation"
-	if ! cmp -s "$expected" "$LUNAFOX_THIRD_PARTY_POLICY_PATH"; then
-		fail "$LUNAFOX_THIRD_PARTY_POLICY_FILE does not match the release-frozen LunaFox-reviewed digest policy"
+# --------------------------------------------- retired CF acceleration ----
+# Cloudflare registry acceleration was removed. A deployment that still carries
+# the persisted acceleration state directory or env keys is migrated on its
+# next lifecycle action: the retired state is removed with one warning and all
+# pulls use the official registries directly. Unexpected entries inside the
+# state directory are preserved for manual recovery instead of being deleted.
+retire_legacy_cf_acceleration() {
+	if [ -f "$LUNAFOX_ENV_PATH" ] && grep -qE '^(CF_ACCELERATION|ENGINE_INSTALL_CF_ACCELERATION)=' "$LUNAFOX_ENV_PATH"; then
+		note "CF acceleration keys in $LUNAFOX_ENV_FILE are deprecated and were removed; pulls use the official registries"
+		sed -i.bak -E '/^(CF_ACCELERATION|ENGINE_INSTALL_CF_ACCELERATION)=/d' "$LUNAFOX_ENV_PATH" ||
+			fail "could not remove the deprecated CF acceleration keys from $LUNAFOX_ENV_FILE"
+		rm -f "$LUNAFOX_ENV_PATH.bak"
 	fi
-}
-
-cf_internal_file_is_valid() {
-	local path="$1" label="$2"
-	if [ -L "$path" ]; then
-		fail "$label must be a regular file, but it is a symbolic link"
+	if [ ! -e "$LUNAFOX_CF_STATE_PATH" ] && [ ! -L "$LUNAFOX_CF_STATE_PATH" ]; then
+		return 0
 	fi
-	[ -f "$path" ] || fail "$label is missing or is not a regular file"
-	[ -r "$path" ] || fail "$label is not readable"
-	[ "$(file_mode "$path")" = 600 ] || fail "$label must have mode 0600"
-}
-
-cf_state_is_present() {
-	[ -e "$LUNAFOX_CF_STATE_PATH" ] || [ -L "$LUNAFOX_CF_STATE_PATH" ]
-}
-
-require_cf_state_directory() {
-	if [ -L "$LUNAFOX_CF_STATE_PATH" ]; then
-		fail "$LUNAFOX_CF_STATE_DIR must be a directory, but it is a symbolic link"
+	if [ -L "$LUNAFOX_CF_STATE_PATH" ] || [ ! -d "$LUNAFOX_CF_STATE_PATH" ]; then
+		fail "$LUNAFOX_CF_STATE_DIR is not a directory; remove it manually and retry"
 	fi
-	[ -d "$LUNAFOX_CF_STATE_PATH" ] || fail "$LUNAFOX_CF_STATE_DIR is not a directory"
-	[ "$(file_mode "$LUNAFOX_CF_STATE_PATH")" = 700 ] ||
-		fail "$LUNAFOX_CF_STATE_DIR must have mode 0700"
-}
-
-# An unflagged install can retire only the generated mapping it owns. Never
-# recurse here: an unexpected entry must stay intact for manual recovery.
-require_cf_state_retirement_layout() {
-	local entry name
-	if [ -L "$LUNAFOX_CF_STATE_PATH" ]; then
-		fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR is a symbolic link"
-	fi
-	[ -d "$LUNAFOX_CF_STATE_PATH" ] ||
-		fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR is not a directory"
-	[ "$(file_mode "$LUNAFOX_CF_STATE_PATH")" = 700 ] ||
-		fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR must have mode 0700"
 	for entry in "$LUNAFOX_CF_STATE_PATH"/* "$LUNAFOX_CF_STATE_PATH"/.[!.]* "$LUNAFOX_CF_STATE_PATH"/..?*; do
 		[ -e "$entry" ] || [ -L "$entry" ] || continue
-		name="${entry##*/}"
-		case "$name" in
-		"$LUNAFOX_CF_STATE_FILE" | "$LUNAFOX_CF_OVERLAY_FILE" | "$LUNAFOX_CF_INVENTORY_FILE") ;;
-		*) fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR contains unexpected entry $name" ;;
-		esac
-		if [ -L "$entry" ]; then
-			fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR/$name is a symbolic link"
-		fi
-		[ -f "$entry" ] ||
-			fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR/$name is not a regular file"
-		[ "$(file_mode "$entry")" = 600 ] ||
-			fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR/$name must have mode 0600"
-	done
-}
-
-retire_persisted_cf_acceleration() {
-	CF_ACCELERATION_ENABLED=0
-	LUNAFOX_CF_OVERLAY_USED=""
-	if ! cf_state_is_present; then
-		return 0
-	fi
-	require_cf_state_retirement_layout
-	if ! rm -f "$LUNAFOX_CF_STATE_FILE_PATH" "$LUNAFOX_CF_OVERLAY_PATH" "$LUNAFOX_CF_INVENTORY_PATH"; then
-		fail "manual Cloudflare state recovery is required: could not remove the protected Cloudflare acceleration files"
-	fi
-	if ! rmdir "$LUNAFOX_CF_STATE_PATH"; then
-		fail "manual Cloudflare state recovery is required: $LUNAFOX_CF_STATE_DIR changed or still contains an entry"
-	fi
-	note "retired the persisted Cloudflare acceleration mapping; this install uses the default image transport"
-}
-
-cf_state_value() {
-	awk -F= -v key="$1" '$1 == key { print substr($0, length(key) + 2); exit }' "$LUNAFOX_CF_STATE_FILE_PATH"
-}
-
-validate_cf_state_shape() {
-	if ! awk '
-		BEGIN {
-			split("schema enabled database_mode server_ref frontend_ref nginx_ref agent_ref bootstrap_ref postgres_ref redis_ref loki_ref alloy_ref", keys, " ")
-			for (key_index in keys) allowed[keys[key_index]] = 1
-		}
-		{
-			separator = index($0, "=")
-			if (separator < 2) invalid = 1
-			key = substr($0, 1, separator - 1)
-			if (!(key in allowed) || seen[key]++) invalid = 1
-		}
-		END {
-			for (key_index in keys) if (!seen[keys[key_index]]) invalid = 1
-			exit invalid ? 1 : 0
-		}
-	' "$LUNAFOX_CF_STATE_FILE_PATH"; then
-		fail "$LUNAFOX_CF_STATE_DIR/$LUNAFOX_CF_STATE_FILE has an unrecognised or incomplete state shape"
-	fi
-}
-
-render_cf_state() {
-	printf 'schema=%s\n' "$LUNAFOX_CF_STATE_SCHEMA"
-	printf 'enabled=true\n'
-	printf 'database_mode=%s\n' "$CF_DATABASE_MODE"
-	printf 'server_ref=%s\n' "$CF_SERVER_REF"
-	printf 'frontend_ref=%s\n' "$CF_FRONTEND_REF"
-	printf 'nginx_ref=%s\n' "$CF_NGINX_REF"
-	printf 'agent_ref=%s\n' "$CF_AGENT_REF"
-	printf 'bootstrap_ref=%s\n' "$CF_BOOTSTRAP_REF"
-	printf 'postgres_ref=%s\n' "$CF_POSTGRES_REF"
-	printf 'redis_ref=%s\n' "$CF_REDIS_REF"
-	printf 'loki_ref=%s\n' "$CF_LOKI_REF"
-	printf 'alloy_ref=%s\n' "$CF_ALLOY_REF"
-}
-
-load_cf_state() {
-	local expected
-	require_cf_state_directory
-	cf_internal_file_is_valid "$LUNAFOX_CF_STATE_FILE_PATH" "$LUNAFOX_CF_STATE_DIR/$LUNAFOX_CF_STATE_FILE"
-	cf_internal_file_is_valid "$LUNAFOX_CF_OVERLAY_PATH" "$LUNAFOX_CF_STATE_DIR/$LUNAFOX_CF_OVERLAY_FILE"
-	if ! preheat_capable_deployment; then
-		cf_internal_file_is_valid "$LUNAFOX_CF_INVENTORY_PATH" "$LUNAFOX_CF_STATE_DIR/$LUNAFOX_CF_INVENTORY_FILE"
-	fi
-	validate_cf_state_shape
-
-	CF_STATE_SCHEMA_VALUE="$(cf_state_value schema)"
-	CF_STATE_ENABLED_VALUE="$(cf_state_value enabled)"
-	CF_DATABASE_MODE="$(cf_state_value database_mode)"
-	CF_SERVER_REF="$(cf_state_value server_ref)"
-	CF_FRONTEND_REF="$(cf_state_value frontend_ref)"
-	CF_NGINX_REF="$(cf_state_value nginx_ref)"
-	CF_AGENT_REF="$(cf_state_value agent_ref)"
-	CF_BOOTSTRAP_REF="$(cf_state_value bootstrap_ref)"
-	CF_POSTGRES_REF="$(cf_state_value postgres_ref)"
-	CF_REDIS_REF="$(cf_state_value redis_ref)"
-	CF_LOKI_REF="$(cf_state_value loki_ref)"
-	CF_ALLOY_REF="$(cf_state_value alloy_ref)"
-
-	[ "$CF_STATE_SCHEMA_VALUE" = "$LUNAFOX_CF_STATE_SCHEMA" ] ||
-		fail "$LUNAFOX_CF_STATE_DIR/$LUNAFOX_CF_STATE_FILE has an unsupported schema"
-	[ "$CF_STATE_ENABLED_VALUE" = true ] ||
-		fail "$LUNAFOX_CF_STATE_DIR/$LUNAFOX_CF_STATE_FILE enabled must be exactly true"
-	case "$CF_DATABASE_MODE" in
-	embedded | external) ;;
-	*) fail "$LUNAFOX_CF_STATE_DIR/$LUNAFOX_CF_STATE_FILE has an unsupported database mode" ;;
-	esac
-	for field in CF_SERVER_REF CF_FRONTEND_REF CF_NGINX_REF CF_AGENT_REF CF_BOOTSTRAP_REF CF_REDIS_REF CF_LOKI_REF CF_ALLOY_REF; do
-		[ -n "${!field}" ] || fail "$LUNAFOX_CF_STATE_DIR/$LUNAFOX_CF_STATE_FILE has an empty $field"
-	done
-	case "$CF_DATABASE_MODE" in
-	embedded) [ -n "$CF_POSTGRES_REF" ] || fail "$LUNAFOX_CF_STATE_DIR/$LUNAFOX_CF_STATE_FILE must select PostgreSQL for embedded mode" ;;
-	external) [ -z "$CF_POSTGRES_REF" ] || fail "$LUNAFOX_CF_STATE_DIR/$LUNAFOX_CF_STATE_FILE must not select PostgreSQL for external mode" ;;
-	esac
-	expected="$(mktemp "$LUNAFOX_ROOT/.lunafox-cf-state.XXXXXX")" || fail "could not stage Cloudflare state validation"
-	register_cleanup_path "$expected"
-	render_cf_state >"$expected" || fail "could not render Cloudflare state validation"
-	if ! cmp -s "$expected" "$LUNAFOX_CF_STATE_FILE_PATH"; then
-		fail "$LUNAFOX_CF_STATE_DIR/$LUNAFOX_CF_STATE_FILE is not a canonical Cloudflare acceleration state"
-	fi
-}
-
-set_base_service_image() {
-	local service="$1" image="$2"
-	[ -n "$image" ] || fail "the rendered Compose service $service has an empty image"
-	case "$service" in
-	config-init)
-		[ -z "${BASE_CONFIG_INIT_IMAGE:-}" ] || fail "the rendered Compose graph has duplicate image entries for config-init"
-		BASE_CONFIG_INIT_IMAGE="$image"
-		;;
-	postgres)
-		[ -z "${BASE_POSTGRES_IMAGE:-}" ] || fail "the rendered Compose graph has duplicate image entries for postgres"
-		BASE_POSTGRES_IMAGE="$image"
-		;;
-	redis)
-		[ -z "${BASE_REDIS_IMAGE:-}" ] || fail "the rendered Compose graph has duplicate image entries for redis"
-		BASE_REDIS_IMAGE="$image"
-		;;
-	loki)
-		[ -z "${BASE_LOKI_IMAGE:-}" ] || fail "the rendered Compose graph has duplicate image entries for loki"
-		BASE_LOKI_IMAGE="$image"
-		;;
-	server)
-		[ -z "${BASE_SERVER_IMAGE:-}" ] || fail "the rendered Compose graph has duplicate image entries for server"
-		BASE_SERVER_IMAGE="$image"
-		;;
-	frontend)
-		[ -z "${BASE_FRONTEND_IMAGE:-}" ] || fail "the rendered Compose graph has duplicate image entries for frontend"
-		BASE_FRONTEND_IMAGE="$image"
-		;;
-	bootstrap)
-		[ -z "${BASE_BOOTSTRAP_IMAGE:-}" ] || fail "the rendered Compose graph has duplicate image entries for bootstrap"
-		BASE_BOOTSTRAP_IMAGE="$image"
-		;;
-	migrate)
-		[ -z "${BASE_MIGRATE_IMAGE:-}" ] || fail "the rendered Compose graph has duplicate image entries for migrate"
-		BASE_MIGRATE_IMAGE="$image"
-		;;
-	agent-preflight)
-		[ -z "${BASE_AGENT_PREFLIGHT_IMAGE:-}" ] || fail "the rendered Compose graph has duplicate image entries for agent-preflight"
-		BASE_AGENT_PREFLIGHT_IMAGE="$image"
-		;;
-	nginx)
-		[ -z "${BASE_NGINX_IMAGE:-}" ] || fail "the rendered Compose graph has duplicate image entries for nginx"
-		BASE_NGINX_IMAGE="$image"
-		;;
-	cert-init)
-		[ -z "${BASE_CERT_INIT_IMAGE:-}" ] || fail "the rendered Compose graph has duplicate image entries for cert-init"
-		BASE_CERT_INIT_IMAGE="$image"
-		;;
-	agent)
-		[ -z "${BASE_AGENT_IMAGE:-}" ] || fail "the rendered Compose graph has duplicate image entries for agent"
-		BASE_AGENT_IMAGE="$image"
-		;;
-	upgrader)
-		[ -z "${BASE_UPGRADER_IMAGE:-}" ] || fail "the rendered Compose graph has duplicate image entries for upgrader"
-		BASE_UPGRADER_IMAGE="$image"
-		;;
-	alloy)
-		[ -z "${BASE_ALLOY_IMAGE:-}" ] || fail "the rendered Compose graph has duplicate image entries for alloy"
-		BASE_ALLOY_IMAGE="$image"
-		;;
-	engine-preheater)
-		[ -z "${BASE_ENGINE_PREHEATER_IMAGE:-}" ] || fail "the rendered Compose graph has duplicate image entries for engine-preheater"
-		BASE_ENGINE_PREHEATER_IMAGE="$image"
-		;;
-	*) fail "Cloudflare acceleration cannot map the unexpected Compose service $service" ;;
-	esac
-}
-
-rendered_compose_service_images() {
-	awk '
-		/^services:[[:space:]]*$/ { active = 1; next }
-		active && /^[^[:space:]]/ { exit }
-		active && /^  [A-Za-z0-9][A-Za-z0-9_.-]*:[[:space:]]*$/ {
-			service = $1
-			sub(/:$/, "", service)
-			next
-		}
-		active && /^    image:[[:space:]]+/ {
-			image = $0
-			sub(/^    image:[[:space:]]*/, "", image)
-			gsub(/^[\047\"]|[\047\"]$/, "", image)
-			if (service == "" || image == "") exit 1
-			print service "\t" image
-		}
-	' "$1"
-}
-
-validate_first_party_base_image() {
-	local service="$1" component="$2" reference="$3"
-	if [[ ! "$reference" =~ ^(docker\.io|ghcr\.io)/yyhuni/lunafox-${component}@sha256:[a-f0-9]{64}$ ]]; then
-		fail "the rendered Compose image for $service is not the fixed first-party $component release identity"
-	fi
-}
-
-validate_exact_third_party_image() {
-	local service="$1" expected="$2" actual="$3"
-	[ "$actual" = "$expected" ] ||
-		fail "the rendered Compose image for $service does not match the release-frozen third-party policy"
-}
-
-capture_cf_image_closure() {
-	local rendered images service image required_services
-	BASE_CONFIG_INIT_IMAGE=""
-	BASE_POSTGRES_IMAGE=""
-	BASE_REDIS_IMAGE=""
-	BASE_LOKI_IMAGE=""
-	BASE_SERVER_IMAGE=""
-	BASE_FRONTEND_IMAGE=""
-	BASE_BOOTSTRAP_IMAGE=""
-	BASE_MIGRATE_IMAGE=""
-	BASE_AGENT_PREFLIGHT_IMAGE=""
-	BASE_NGINX_IMAGE=""
-	BASE_CERT_INIT_IMAGE=""
-	BASE_AGENT_IMAGE=""
-	BASE_UPGRADER_IMAGE=""
-	BASE_ALLOY_IMAGE=""
-	BASE_ENGINE_PREHEATER_IMAGE=""
-	rendered="$(mktemp "$LUNAFOX_ROOT/.lunafox-cf-rendered-compose.XXXXXX")" || fail "could not stage the rendered Compose graph"
-	register_cleanup_path "$rendered"
-	if ! lf_base_compose config >"$rendered" 2>&1; then
-		fail "the base Compose configuration cannot be rendered for Cloudflare acceleration"
-	fi
-	images="$(mktemp "$LUNAFOX_ROOT/.lunafox-cf-service-images.XXXXXX")" || fail "could not inspect the rendered Compose image closure"
-	register_cleanup_path "$images"
-	if ! rendered_compose_service_images "$rendered" >"$images"; then
-		fail "the rendered Compose image closure has an unsupported shape"
-	fi
-	while IFS=$'\t' read -r service image; do
-		[ -n "$service" ] || continue
-		set_base_service_image "$service" "$image"
-	done <"$images"
-
-	required_services="config-init redis loki server frontend bootstrap migrate agent-preflight nginx cert-init agent upgrader alloy"
-	if [ "$CF_DATABASE_MODE" = embedded ]; then
-		required_services="config-init postgres redis loki server frontend bootstrap migrate agent-preflight nginx cert-init agent upgrader alloy"
-	fi
-	[ -n "$BASE_ENGINE_PREHEATER_IMAGE" ] && required_services="$required_services engine-preheater"
-	for service in $required_services; do
-		case "$service" in
-		config-init) image="$BASE_CONFIG_INIT_IMAGE" ;;
-		postgres) image="$BASE_POSTGRES_IMAGE" ;;
-		redis) image="$BASE_REDIS_IMAGE" ;;
-		loki) image="$BASE_LOKI_IMAGE" ;;
-		server) image="$BASE_SERVER_IMAGE" ;;
-		frontend) image="$BASE_FRONTEND_IMAGE" ;;
-		bootstrap) image="$BASE_BOOTSTRAP_IMAGE" ;;
-		migrate) image="$BASE_MIGRATE_IMAGE" ;;
-		agent-preflight) image="$BASE_AGENT_PREFLIGHT_IMAGE" ;;
-		nginx) image="$BASE_NGINX_IMAGE" ;;
-		cert-init) image="$BASE_CERT_INIT_IMAGE" ;;
-		agent) image="$BASE_AGENT_IMAGE" ;;
-		upgrader) image="$BASE_UPGRADER_IMAGE" ;;
-		alloy) image="$BASE_ALLOY_IMAGE" ;;
-		engine-preheater) image="$BASE_ENGINE_PREHEATER_IMAGE" ;;
-		esac
-		[ -n "$image" ] || fail "the rendered Compose graph is missing required service image $service"
-	done
-
-	validate_first_party_base_image config-init bootstrap "$BASE_CONFIG_INIT_IMAGE"
-	validate_first_party_base_image server server "$BASE_SERVER_IMAGE"
-	validate_first_party_base_image frontend frontend "$BASE_FRONTEND_IMAGE"
-	validate_first_party_base_image bootstrap bootstrap "$BASE_BOOTSTRAP_IMAGE"
-	validate_first_party_base_image migrate bootstrap "$BASE_MIGRATE_IMAGE"
-	validate_first_party_base_image agent-preflight agent "$BASE_AGENT_PREFLIGHT_IMAGE"
-	validate_first_party_base_image nginx nginx "$BASE_NGINX_IMAGE"
-	validate_first_party_base_image cert-init bootstrap "$BASE_CERT_INIT_IMAGE"
-	validate_first_party_base_image agent agent "$BASE_AGENT_IMAGE"
-	if [ -n "$BASE_ENGINE_PREHEATER_IMAGE" ]; then
-		validate_first_party_base_image engine-preheater agent "$BASE_ENGINE_PREHEATER_IMAGE"
-	fi
-	validate_first_party_base_image upgrader bootstrap "$BASE_UPGRADER_IMAGE"
-	[ "$BASE_CONFIG_INIT_IMAGE" = "$BASE_BOOTSTRAP_IMAGE" ] || fail "the first-party config-init image does not match bootstrap"
-	[ "$BASE_MIGRATE_IMAGE" = "$BASE_BOOTSTRAP_IMAGE" ] || fail "the first-party migrate image does not match bootstrap"
-	[ "$BASE_CERT_INIT_IMAGE" = "$BASE_BOOTSTRAP_IMAGE" ] || fail "the first-party cert-init image does not match bootstrap"
-	[ "$BASE_UPGRADER_IMAGE" = "$BASE_BOOTSTRAP_IMAGE" ] || fail "the first-party upgrader image does not match bootstrap"
-	[ "$BASE_AGENT_PREFLIGHT_IMAGE" = "$BASE_AGENT_IMAGE" ] || fail "the first-party agent-preflight image does not match agent"
-	if [ -n "$BASE_ENGINE_PREHEATER_IMAGE" ]; then
-		[ "$BASE_ENGINE_PREHEATER_IMAGE" = "$BASE_AGENT_IMAGE" ] || fail "the first-party engine-preheater image does not match agent"
-	fi
-
-	if [ "$CF_DATABASE_MODE" = embedded ]; then
-		validate_exact_third_party_image postgres "docker.io/library/postgres@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675" "$BASE_POSTGRES_IMAGE"
-	fi
-	validate_exact_third_party_image redis "docker.io/library/redis@sha256:2afba59292f25f5d1af200496db41bea2c6c816b059f57ae74703a50a03a27d0" "$BASE_REDIS_IMAGE"
-	validate_exact_third_party_image loki "docker.io/grafana/loki@sha256:3c8fd3570dd9219951a60d3f919c7f31923d10baee578b77bc26c4a0b32d092d" "$BASE_LOKI_IMAGE"
-	validate_exact_third_party_image alloy "docker.io/grafana/alloy@sha256:b8ec653c44235fbe910879145dac3597d66b0aaecf60bcbbe82580767771a839" "$BASE_ALLOY_IMAGE"
-}
-
-resolve_cf_database_mode() {
-	CF_DATABASE_MODE="$(compose_environment_value DATABASE_MODE || true)"
-	case "$CF_DATABASE_MODE" in
-	embedded | external) ;;
-	*) fail "DATABASE_MODE must be exactly embedded or external before enabling Cloudflare acceleration" ;;
-	esac
-	local profile
-	profile="$(compose_environment_value COMPOSE_PROFILES || true)"
-	[ "$profile" = "$CF_DATABASE_MODE" ] ||
-		fail "COMPOSE_PROFILES must equal DATABASE_MODE before enabling Cloudflare acceleration"
-}
-
-discover_cf_image_closure() {
-	validate_third_party_policy
-	resolve_cf_database_mode
-	capture_cf_image_closure
-}
-
-# Modern deployment snapshots carry this digest and let the Compose preheater
-# own all registry traffic. Historical fixed snapshots have no such binding and
-# retain their legacy host-side CF preparation path for compatibility.
-preheat_capable_deployment() {
-	[ -f "$LUNAFOX_ENV_PATH" ] || return 1
-	grep -Eq '^LUNAFOX_PREHEAT_MANIFEST_DIGEST=sha256:[a-f0-9]{64}$' "$LUNAFOX_ENV_PATH" || return 1
-	[ -f "$LUNAFOX_ROOT/preheat-manifest.json" ] || return 1
-}
-
-repository_from_digest_ref() {
-	local reference="$1" remainder
-	remainder="${reference#*/}"
-	printf '%s' "${remainder%@*}"
-}
-
-digest_from_digest_ref() {
-	printf '%s' "${1##*@}"
-}
-
-first_party_docker_reference() {
-	local reference="$1" repository digest
-	repository="$(repository_from_digest_ref "$reference")"
-	digest="$(digest_from_digest_ref "$reference")"
-	printf 'docker.io/%s@%s' "$repository" "$digest"
-}
-
-first_party_ghcr_reference() {
-	local reference="$1" repository digest
-	repository="$(repository_from_digest_ref "$reference")"
-	digest="$(digest_from_digest_ref "$reference")"
-	printf 'ghcr.io/%s@%s' "$repository" "$digest"
-}
-
-cloudflare_reference() {
-	local reference="$1" repository digest
-	repository="$(repository_from_digest_ref "$reference")"
-	digest="$(digest_from_digest_ref "$reference")"
-	printf '%s/%s@%s' "$LUNAFOX_CF_REGISTRY" "$repository" "$digest"
-}
-
-first_party_state_candidate_is_valid() {
-	local base="$1" selected="$2" docker_reference ghcr_reference cloudflare
-	docker_reference="$(first_party_docker_reference "$base")"
-	ghcr_reference="$(first_party_ghcr_reference "$base")"
-	cloudflare="$(cloudflare_reference "$base")"
-	[ "$selected" = "$cloudflare" ] || [ "$selected" = "$docker_reference" ] || [ "$selected" = "$ghcr_reference" ]
-}
-
-third_party_state_candidate_is_valid() {
-	local original="$1" selected="$2" cloudflare
-	cloudflare="$(cloudflare_reference "$original")"
-	[ "$selected" = "$cloudflare" ] || [ "$selected" = "$original" ]
-}
-
-yaml_engine_package_refs() {
-	local inventory="$1"
-	awk '
-		function emit(value) {
-			gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
-			gsub(/^[\047\"]|[\047\"]$/, "", value)
-			if (value == "") { invalid = 1; return }
-			print block "\t" value
-		}
-		/^enginePackages:[[:space:]]*$/ { active = 1; next }
-		!active { next }
-		/^  - refs:[[:space:]]*\[/ {
-			block++
-			inside = 0
-			values = $0
-			sub(/^.*\[/, "", values)
-			sub(/\][[:space:]]*$/, "", values)
-			count = split(values, refs, ",")
-			for (item_index = 1; item_index <= count; item_index++) emit(refs[item_index])
-			next
-		}
-		/^  - refs:[[:space:]]*$/ { block++; inside = 1; next }
-		/^  - / { invalid = 1; next }
-		inside && /^      - / {
-			value = $0
-			sub(/^      - /, "", value)
-			emit(value)
-			next
-		}
-		/^[A-Za-z][A-Za-z0-9_-]*:[[:space:]]*/ { exit }
-		/^[[:space:]]*$/ { next }
-		{ invalid = 1 }
-		END { if (!active || block == 0 || invalid) exit 1 }
-	' "$inventory"
-}
-
-append_cf_engine_inventory_block() {
-	local output="$1" docker_reference="$2" ghcr_reference="$3" count="$4" repository digest
-	[ "$count" = 2 ] || fail "$LUNAFOX_ENGINE_INVENTORY_FILE must contain exactly Docker Hub and GHCR candidates for every Engine Package"
-	if [[ ! "$docker_reference" =~ ^docker\.io/(yyhuni/lunafox-engine-runtime-[a-z0-9][a-z0-9._-]*)@(sha256:[a-f0-9]{64})$ ]]; then
-		fail "$LUNAFOX_ENGINE_INVENTORY_FILE has an invalid Docker Hub Engine Package identity"
-	fi
-	repository="${BASH_REMATCH[1]}"
-	digest="${BASH_REMATCH[2]}"
-	[ "$ghcr_reference" = "ghcr.io/$repository@$digest" ] ||
-		fail "$LUNAFOX_ENGINE_INVENTORY_FILE does not preserve the GHCR Engine Package identity"
-	printf '  - refs:\n      - "%s/%s@%s"\n      - "%s"\n      - "%s"\n' \
-		"$LUNAFOX_CF_REGISTRY" "$repository" "$digest" "$docker_reference" "$ghcr_reference" >>"$output" ||
-		fail "could not render the accelerated Engine inventory"
-}
-
-render_cf_engine_inventory() {
-	local output="$1" refs block reference current_block="" docker_reference="" ghcr_reference="" count=0 expected_block=1
-	refs="$(mktemp "$LUNAFOX_ROOT/.lunafox-cf-engine-refs.XXXXXX")" || fail "could not stage the Engine inventory validation"
-	register_cleanup_path "$refs"
-	if ! yaml_engine_package_refs "$LUNAFOX_ENGINE_INVENTORY_PATH" >"$refs"; then
-		fail "$LUNAFOX_ENGINE_INVENTORY_FILE has an unsupported Engine Package inventory shape"
-	fi
-	[ -s "$refs" ] || fail "$LUNAFOX_ENGINE_INVENTORY_FILE has no Engine Packages"
-	printf 'enginePackages:\n' >"$output" || fail "could not render the accelerated Engine inventory"
-	while IFS=$'\t' read -r block reference; do
-		case "$block" in '' | *[!0-9]*) fail "$LUNAFOX_ENGINE_INVENTORY_FILE has an invalid Engine Package block" ;; esac
-		[ -n "$reference" ] || fail "$LUNAFOX_ENGINE_INVENTORY_FILE has an empty Engine Package reference"
-		if [ -z "$current_block" ]; then
-			[ "$block" = "$expected_block" ] || fail "$LUNAFOX_ENGINE_INVENTORY_FILE has non-contiguous Engine Package blocks"
-			current_block="$block"
-		elif [ "$block" != "$current_block" ]; then
-			append_cf_engine_inventory_block "$output" "$docker_reference" "$ghcr_reference" "$count"
-			expected_block=$((expected_block + 1))
-			[ "$block" = "$expected_block" ] || fail "$LUNAFOX_ENGINE_INVENTORY_FILE has non-contiguous Engine Package blocks"
-			current_block="$block"
-			docker_reference=""
-			ghcr_reference=""
-			count=0
-		fi
-		count=$((count + 1))
-		case "$reference" in
-		docker.io/*)
-			[ -z "$docker_reference" ] || fail "$LUNAFOX_ENGINE_INVENTORY_FILE has duplicate Docker Hub Engine Package candidates"
-			docker_reference="$reference"
+		case "$(basename "$entry")" in
+		state | compose.cf-acceleration.yaml | engine-inventory.yaml) ;;
+		*)
+			fail "$LUNAFOX_CF_STATE_DIR contains unexpected entry $(basename "$entry"); remove it manually and retry"
 			;;
-		ghcr.io/*)
-			[ -z "$ghcr_reference" ] || fail "$LUNAFOX_ENGINE_INVENTORY_FILE has duplicate GHCR Engine Package candidates"
-			ghcr_reference="$reference"
-			;;
-		*) fail "$LUNAFOX_ENGINE_INVENTORY_FILE has an unsupported Engine Package registry" ;;
 		esac
-	done <"$refs"
-	[ -n "$current_block" ] || fail "$LUNAFOX_ENGINE_INVENTORY_FILE has no Engine Packages"
-	append_cf_engine_inventory_block "$output" "$docker_reference" "$ghcr_reference" "$count"
-}
-
-render_cf_overlay() {
-	local output="$1" preheat_digest=""
-	if preheat_capable_deployment; then
-		preheat_digest="$(awk -F= '$1 == "LUNAFOX_PREHEAT_MANIFEST_DIGEST" {print $2}' "$LUNAFOX_ENV_PATH")"
-	fi
-	cat >"$output" <<EOF
-services:
-  config-init:
-    image: ${CF_BOOTSTRAP_REF}
-  redis:
-    image: ${CF_REDIS_REF}
-  loki:
-    image: ${CF_LOKI_REF}
-  server:
-    image: ${CF_SERVER_REF}
-    environment:
-      AGENT_IMAGE_REF: ${CF_AGENT_REF}
-      ENGINE_INSTALL_REGISTRY: ""
-      ENGINE_INSTALL_CF_ACCELERATION: "true"
-  frontend:
-    image: ${CF_FRONTEND_REF}
-  bootstrap:
-    image: ${CF_BOOTSTRAP_REF}
-    environment:
-      ENGINE_INSTALL_REGISTRY: ""
-      ENGINE_INSTALL_CF_ACCELERATION: "true"
-  migrate:
-    image: ${CF_BOOTSTRAP_REF}
-  agent-preflight:
-    image: ${CF_AGENT_REF}
-    environment:
-      AGENT_IMAGE_REF: ${CF_AGENT_REF}
-  nginx:
-    image: ${CF_NGINX_REF}
-  cert-init:
-    image: ${CF_BOOTSTRAP_REF}
-  agent:
-    image: ${CF_AGENT_REF}
-  upgrader:
-    image: ${CF_BOOTSTRAP_REF}
-  alloy:
-    image: ${CF_ALLOY_REF}
-EOF
-	if ! preheat_capable_deployment; then
-		cat >>"$output" <<EOF
-  bootstrap:
-    volumes:
-      - ./${LUNAFOX_CF_STATE_DIR}/${LUNAFOX_CF_INVENTORY_FILE}:/bootstrap/engine-inventory.yaml:ro
-EOF
-	fi
-	if preheat_capable_deployment; then
-		cat >>"$output" <<EOF
-  engine-preheater:
-    image: ${CF_AGENT_REF}
-    command:
-    - --manifest
-    - /deployment/preheat-manifest.json
-    - --release-manifest
-    - /deployment/release.manifest.yaml
-    - --runtime-composition
-    - /deployment/runtime-composition.json
-    - --compose
-    - /deployment/compose.yaml
-    - --third-party-policy
-    - /deployment/third-party-image-policy.json
-    - --manifest-digest
-    - ${preheat_digest}
-    - --profile
-    - ${CF_DATABASE_MODE}
-    - --cloudflare-acceleration
-    - "true"
-    environment:
-      LUNAFOX_PREHEAT_TIMEOUT_SECONDS: \${LUNAFOX_PREHEAT_TIMEOUT_SECONDS:-900}
-EOF
-	fi
-	if [ "$CF_DATABASE_MODE" = embedded ]; then
-		{
-			printf '  postgres:\n'
-			printf '    image: %s\n' "$CF_POSTGRES_REF"
-		} >>"$output" || fail "could not render the embedded Cloudflare overlay"
-	fi
-}
-
-validate_cf_state_mapping() {
-	[ "$CF_DATABASE_MODE" = "$CURRENT_CF_DATABASE_MODE" ] ||
-		fail "$LUNAFOX_CF_STATE_DIR/$LUNAFOX_CF_STATE_FILE database mode does not match the current .env"
-	first_party_state_candidate_is_valid "$BASE_SERVER_IMAGE" "$CF_SERVER_REF" || fail "Cloudflare state server_ref is not an approved same-digest candidate"
-	first_party_state_candidate_is_valid "$BASE_FRONTEND_IMAGE" "$CF_FRONTEND_REF" || fail "Cloudflare state frontend_ref is not an approved same-digest candidate"
-	first_party_state_candidate_is_valid "$BASE_NGINX_IMAGE" "$CF_NGINX_REF" || fail "Cloudflare state nginx_ref is not an approved same-digest candidate"
-	first_party_state_candidate_is_valid "$BASE_AGENT_IMAGE" "$CF_AGENT_REF" || fail "Cloudflare state agent_ref is not an approved same-digest candidate"
-	first_party_state_candidate_is_valid "$BASE_BOOTSTRAP_IMAGE" "$CF_BOOTSTRAP_REF" || fail "Cloudflare state bootstrap_ref is not an approved same-digest candidate"
-	if [ "$CF_DATABASE_MODE" = embedded ]; then
-		third_party_state_candidate_is_valid "$BASE_POSTGRES_IMAGE" "$CF_POSTGRES_REF" || fail "Cloudflare state postgres_ref is not an approved same-digest candidate"
-	fi
-	third_party_state_candidate_is_valid "$BASE_REDIS_IMAGE" "$CF_REDIS_REF" || fail "Cloudflare state redis_ref is not an approved same-digest candidate"
-	third_party_state_candidate_is_valid "$BASE_LOKI_IMAGE" "$CF_LOKI_REF" || fail "Cloudflare state loki_ref is not an approved same-digest candidate"
-	third_party_state_candidate_is_valid "$BASE_ALLOY_IMAGE" "$CF_ALLOY_REF" || fail "Cloudflare state alloy_ref is not an approved same-digest candidate"
-}
-
-validate_persisted_cf_acceleration() {
-	local expected_overlay expected_inventory
-	load_cf_state
-	CF_STATE_DATABASE_MODE="$CF_DATABASE_MODE"
-	CURRENT_CF_DATABASE_MODE="$(compose_environment_value DATABASE_MODE || true)"
-	case "$CURRENT_CF_DATABASE_MODE" in
-	embedded | external) ;;
-	*) fail "DATABASE_MODE must be exactly embedded or external for a persisted Cloudflare acceleration state" ;;
-	esac
-	discover_cf_image_closure
-	# The closure discovery intentionally reads the current .env. Reapply the
-	# parsed state only after that check so the overlay is compared in state mode.
-	CF_DATABASE_MODE="$CF_STATE_DATABASE_MODE"
-	validate_cf_state_mapping
-	expected_overlay="$(mktemp "$LUNAFOX_ROOT/.lunafox-cf-overlay.XXXXXX")" || fail "could not stage Cloudflare overlay validation"
-	register_cleanup_path "$expected_overlay"
-	render_cf_overlay "$expected_overlay" || fail "could not render Cloudflare overlay validation"
-	if ! cmp -s "$expected_overlay" "$LUNAFOX_CF_OVERLAY_PATH"; then
-		fail "$LUNAFOX_CF_STATE_DIR/$LUNAFOX_CF_OVERLAY_FILE does not match the validated Cloudflare state"
-	fi
-	if preheat_capable_deployment; then
-		# The preheater consumes the release-bound manifest directly. A modern CF
-		# overlay must not manufacture an Engine closure beside that canonical input.
-		if [ -e "$LUNAFOX_CF_INVENTORY_PATH" ] || [ -L "$LUNAFOX_CF_INVENTORY_PATH" ]; then
-			fail "$LUNAFOX_CF_STATE_DIR/$LUNAFOX_CF_INVENTORY_FILE is forbidden for a preheat-capable deployment"
-		fi
-	else
-		expected_inventory="$(mktemp "$LUNAFOX_ROOT/.lunafox-cf-inventory.XXXXXX")" || fail "could not stage Cloudflare Engine inventory validation"
-		register_cleanup_path "$expected_inventory"
-		render_cf_engine_inventory "$expected_inventory"
-		if ! cmp -s "$expected_inventory" "$LUNAFOX_CF_INVENTORY_PATH"; then
-			fail "$LUNAFOX_CF_STATE_DIR/$LUNAFOX_CF_INVENTORY_FILE does not match the current Engine Package closure"
-		fi
-	fi
-	CF_DATABASE_MODE="$CF_STATE_DATABASE_MODE"
-}
-
-activate_persisted_cf_acceleration() {
-	CF_ACCELERATION_ENABLED=0
-	LUNAFOX_CF_OVERLAY_USED=""
-	if ! cf_state_is_present; then
-		return 0
-	fi
-	validate_persisted_cf_acceleration
-	CF_ACCELERATION_ENABLED=1
-	LUNAFOX_CF_OVERLAY_USED=1
-	note "using the persisted Cloudflare acceleration mapping"
-}
-
-verify_cf_first_party_identities() {
-	local component reference
-	require_command cosign
-	for component in server frontend nginx agent bootstrap; do
-		case "$component" in
-		server) reference="$BASE_SERVER_IMAGE" ;;
-		frontend) reference="$BASE_FRONTEND_IMAGE" ;;
-		nginx) reference="$BASE_NGINX_IMAGE" ;;
-		agent) reference="$BASE_AGENT_IMAGE" ;;
-		bootstrap) reference="$BASE_BOOTSTRAP_IMAGE" ;;
-		esac
-		reference="$(first_party_ghcr_reference "$reference")"
-		if ! cosign verify \
-			--certificate-oidc-issuer https://token.actions.githubusercontent.com \
-			--certificate-identity-regexp '^https://github\.com/yyhuni/lunafox/\.github/workflows/public-validate\.yml@refs/heads/main$' \
-			"$reference" >/dev/null; then
-			fail "GHCR signature verification failed for the first-party $component image; Cloudflare transport fallback is not permitted"
-		fi
 	done
-}
-
-is_cf_transport_failure_output() {
-	local message
-	message="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
-	case "$message" in
-	*"no such host"* | *"temporary failure in name resolution"* | *"network is unreachable"* | *"connection refused"* | *"connection reset"* | *"connection timed out"* | *"i/o timeout"* | *"tls handshake timeout"* | *"temporary error"* | *"too many requests"* | *"status code 429"* | *"bad gateway"* | *"service unavailable"* | *"gateway timeout"* | *"status code 500"* | *"status code 502"* | *"status code 503"* | *"status code 504"*)
-		return 0
-		;;
-	*) return 1 ;;
-	esac
-}
-
-pull_cf_candidate() {
-	local reference="$1" output_file status
-	output_file="$(mktemp "$LUNAFOX_ROOT/.lunafox-cf-pull.XXXXXX")" || fail "could not capture Docker pull output"
-	register_cleanup_path "$output_file"
-	if docker pull "$reference" >"$output_file" 2>&1; then
-		# These helpers return the selected immutable reference on stdout. Keep
-		# Docker's progress visible without letting it corrupt that return value.
-		cat "$output_file" >&2
-		CF_PULL_OUTPUT=""
-		return 0
-	else
-		# Capture this in the branch: after `if` completes, `$?` is the `if`
-		# construct's status rather than Docker's transport result.
-		status=$?
-	fi
-	CF_PULL_OUTPUT="$(cat "$output_file")"
-	cat "$output_file" >&2
-	return "$status"
-}
-
-pull_accelerated_first_party_image() {
-	local component="$1" base_reference="$2" cloudflare docker_reference ghcr_reference
-	cloudflare="$(cloudflare_reference "$base_reference")"
-	docker_reference="$(first_party_docker_reference "$base_reference")"
-	ghcr_reference="$(first_party_ghcr_reference "$base_reference")"
-	if pull_cf_candidate "$cloudflare"; then
-		printf '%s' "$cloudflare"
-		return 0
-	fi
-	if ! is_cf_transport_failure_output "$CF_PULL_OUTPUT"; then
-		fail "Cloudflare returned a terminal policy, authentication, or integrity failure for $component; direct fallback is not permitted"
-	fi
-	warn "Cloudflare transport failed for $component; trying the same digest from Docker Hub"
-	if pull_cf_candidate "$docker_reference"; then
-		printf '%s' "$docker_reference"
-		return 0
-	fi
-	if ! is_cf_transport_failure_output "$CF_PULL_OUTPUT"; then
-		fail "Docker Hub returned a terminal failure for the verified $component image"
-	fi
-	warn "Docker Hub transport failed for $component; trying the verified GHCR identity"
-	if pull_cf_candidate "$ghcr_reference"; then
-		printf '%s' "$ghcr_reference"
-		return 0
-	fi
-	fail "all verified first-party candidates are unavailable for $component"
-}
-
-pull_accelerated_third_party_image() {
-	local service="$1" original_reference="$2" cloudflare
-	cloudflare="$(cloudflare_reference "$original_reference")"
-	if pull_cf_candidate "$cloudflare"; then
-		printf '%s' "$cloudflare"
-		return 0
-	fi
-	if ! is_cf_transport_failure_output "$CF_PULL_OUTPUT"; then
-		fail "Cloudflare returned a terminal policy, authentication, or integrity failure for reviewed third-party image $service; direct fallback is not permitted"
-	fi
-	warn "Cloudflare transport failed for reviewed third-party image $service; trying its audited Docker Hub digest"
-	if pull_cf_candidate "$original_reference"; then
-		printf '%s' "$original_reference"
-		return 0
-	fi
-	fail "the reviewed third-party image $service could not be pulled from its only permitted fallback"
-}
-
-prepare_new_cf_acceleration() {
-	local staging
-	if cf_state_is_present; then
-		fail "$LUNAFOX_CF_STATE_DIR already exists; validate or remove its incomplete state manually before enabling Cloudflare acceleration"
-	fi
-	discover_cf_image_closure
-	if preheat_capable_deployment; then
-		note "using the release-bound Cloudflare candidate mapping; image pulls are owned by engine-preheater"
-		CF_SERVER_REF="$(cloudflare_reference "$BASE_SERVER_IMAGE")"
-		CF_FRONTEND_REF="$(cloudflare_reference "$BASE_FRONTEND_IMAGE")"
-		CF_NGINX_REF="$(cloudflare_reference "$BASE_NGINX_IMAGE")"
-		CF_AGENT_REF="$(cloudflare_reference "$BASE_AGENT_IMAGE")"
-		CF_BOOTSTRAP_REF="$(cloudflare_reference "$BASE_BOOTSTRAP_IMAGE")"
-		if [ "$CF_DATABASE_MODE" = embedded ]; then
-			CF_POSTGRES_REF="$(cloudflare_reference "$BASE_POSTGRES_IMAGE")"
-		else
-			CF_POSTGRES_REF=""
-		fi
-		CF_REDIS_REF="$(cloudflare_reference "$BASE_REDIS_IMAGE")"
-		CF_LOKI_REF="$(cloudflare_reference "$BASE_LOKI_IMAGE")"
-		CF_ALLOY_REF="$(cloudflare_reference "$BASE_ALLOY_IMAGE")"
-	else
-		verify_cf_first_party_identities
-		note "preparing the complete ${CF_DATABASE_MODE} Cloudflare image closure before Compose startup"
-		CF_SERVER_REF="$(pull_accelerated_first_party_image server "$BASE_SERVER_IMAGE")"
-		CF_FRONTEND_REF="$(pull_accelerated_first_party_image frontend "$BASE_FRONTEND_IMAGE")"
-		CF_NGINX_REF="$(pull_accelerated_first_party_image nginx "$BASE_NGINX_IMAGE")"
-		CF_AGENT_REF="$(pull_accelerated_first_party_image agent "$BASE_AGENT_IMAGE")"
-		CF_BOOTSTRAP_REF="$(pull_accelerated_first_party_image bootstrap "$BASE_BOOTSTRAP_IMAGE")"
-		if [ "$CF_DATABASE_MODE" = embedded ]; then
-			CF_POSTGRES_REF="$(pull_accelerated_third_party_image postgres "$BASE_POSTGRES_IMAGE")"
-		else
-			CF_POSTGRES_REF=""
-		fi
-		CF_REDIS_REF="$(pull_accelerated_third_party_image redis "$BASE_REDIS_IMAGE")"
-		CF_LOKI_REF="$(pull_accelerated_third_party_image loki "$BASE_LOKI_IMAGE")"
-		CF_ALLOY_REF="$(pull_accelerated_third_party_image alloy "$BASE_ALLOY_IMAGE")"
-	fi
-
-	staging="$(mktemp -d "$LUNAFOX_ROOT/.lunafox-cf-stage.XXXXXX")" || fail "could not stage Cloudflare acceleration state"
-	register_cleanup_directory "$staging"
-	chmod 0700 "$staging" || fail "could not restrict staged Cloudflare acceleration state"
-	if ! preheat_capable_deployment; then
-		render_cf_engine_inventory "$staging/$LUNAFOX_CF_INVENTORY_FILE"
-	fi
-	render_cf_overlay "$staging/$LUNAFOX_CF_OVERLAY_FILE"
-	render_cf_state >"$staging/$LUNAFOX_CF_STATE_FILE" || fail "could not write staged Cloudflare acceleration state"
-	chmod 0600 "$staging/$LUNAFOX_CF_STATE_FILE" "$staging/$LUNAFOX_CF_OVERLAY_FILE" ||
-		fail "could not restrict staged Cloudflare acceleration files"
-	if ! preheat_capable_deployment; then
-		chmod 0600 "$staging/$LUNAFOX_CF_INVENTORY_FILE" || fail "could not restrict staged Cloudflare Engine inventory"
-	fi
-	if [ -e "$LUNAFOX_CF_STATE_PATH" ] || [ -L "$LUNAFOX_CF_STATE_PATH" ]; then
-		fail "$LUNAFOX_CF_STATE_DIR appeared while Cloudflare acceleration was being prepared; retry after confirming no other lifecycle command is running"
-	fi
-	if ! mv "$staging" "$LUNAFOX_CF_STATE_PATH"; then
-		fail "could not atomically persist Cloudflare acceleration state"
-	fi
-	CLEANUP_DIRECTORIES=""
-	CF_ACCELERATION_ENABLED=1
-	LUNAFOX_CF_OVERLAY_USED=1
-	note "persisted the Cloudflare acceleration mapping without changing .env"
-}
-
-reset_persisted_cf_acceleration() {
-	[ "$CF_ACCELERATION_ENABLED" = 1 ] || return 0
-	if ! rm -f "$LUNAFOX_CF_STATE_FILE_PATH" "$LUNAFOX_CF_OVERLAY_PATH" "$LUNAFOX_CF_INVENTORY_PATH"; then
-		fail "the LunaFox volumes were removed, but could not remove the protected Cloudflare acceleration files; remove $LUNAFOX_CF_STATE_DIR manually after fixing the filesystem condition"
-	fi
-	if ! rmdir "$LUNAFOX_CF_STATE_PATH"; then
-		fail "the LunaFox volumes were removed, but could not remove the protected Cloudflare acceleration directory; remove $LUNAFOX_CF_STATE_DIR manually after confirming no lifecycle command is running"
-	fi
-	CF_ACCELERATION_ENABLED=0
-	LUNAFOX_CF_OVERLAY_USED=""
+	note "removing the retired Cloudflare acceleration state at $LUNAFOX_CF_STATE_DIR"
+	rm -f "$LUNAFOX_CF_STATE_PATH"/state "$LUNAFOX_CF_STATE_PATH"/compose.cf-acceleration.yaml "$LUNAFOX_CF_STATE_PATH"/engine-inventory.yaml ||
+		fail "could not remove the retired Cloudflare acceleration files"
+	rmdir "$LUNAFOX_CF_STATE_PATH" ||
+		fail "could not remove $LUNAFOX_CF_STATE_DIR; remove it manually and retry"
 }
 
 # ------------------------------------------------------------------ lock ----
@@ -2314,15 +1420,7 @@ action_install() {
 	fi
 	enforce_private_env_mode
 	persist_install_public_address
-	if [ "$CF_ACCELERATION_REQUESTED" = 1 ]; then
-		if cf_state_is_present; then
-			activate_persisted_cf_acceleration
-		else
-			prepare_new_cf_acceleration
-		fi
-	else
-		retire_persisted_cf_acceleration
-	fi
+	retire_legacy_cf_acceleration
 	compose_file_args
 	require_preheat_timeout
 	require_renderable_configuration
@@ -2349,7 +1447,7 @@ action_start() {
 		fail "this directory has no LunaFox deployment yet; run ./install.sh for the first start"
 		;;
 	esac
-	activate_persisted_cf_acceleration
+	retire_legacy_cf_acceleration
 	compose_file_args
 	enforce_private_env_mode
 	require_preheat_timeout
@@ -2377,7 +1475,7 @@ action_restart() {
 		fail "this directory has no LunaFox deployment yet; run ./install.sh for the first start"
 		;;
 	esac
-	activate_persisted_cf_acceleration
+	retire_legacy_cf_acceleration
 	compose_file_args
 	enforce_private_env_mode
 	require_preheat_timeout
@@ -2405,7 +1503,7 @@ action_stop() {
 		fail "$LUNAFOX_DEPLOYMENT_DETAIL; resolve it manually before retrying"
 		;;
 	esac
-	activate_persisted_cf_acceleration
+	retire_legacy_cf_acceleration
 	compose_file_args
 	enforce_private_env_mode
 	require_renderable_configuration
@@ -2448,7 +1546,7 @@ action_status() {
 		return 1
 		;;
 	esac
-	activate_persisted_cf_acceleration
+	retire_legacy_cf_acceleration
 	compose_file_args
 	# status is read-only, so it never rewrites .env permissions and never treats
 	# a permissive mode as a readiness failure: the documented direct Compose path
@@ -2544,7 +1642,7 @@ action_logs() {
 	base_compose_file_args
 	compose_file_args
 	require_env_regular_file "$LUNAFOX_ENV_PATH" ".env" || fail "$LUNAFOX_ENV_FILE is missing; there is no deployment to read logs from"
-	activate_persisted_cf_acceleration
+	retire_legacy_cf_acceleration
 	compose_file_args
 	require_renderable_configuration
 	if [ "$#" -eq 0 ]; then
@@ -2573,7 +1671,7 @@ action_uninstall() {
 		fail "$LUNAFOX_DEPLOYMENT_DETAIL; resolve it manually before retrying"
 		;;
 	esac
-	activate_persisted_cf_acceleration
+	retire_legacy_cf_acceleration
 	compose_file_args
 	enforce_private_env_mode
 	require_renderable_configuration
@@ -2614,7 +1712,7 @@ action_uninstall() {
 			docker volume rm "$name" >/dev/null 2>&1 || fail "could not remove the LunaFox volume $name; it was preserved"
 		done
 		reset_persisted_override
-		reset_persisted_cf_acceleration
+		retire_legacy_cf_acceleration
 		if [ -n "$LUNAFOX_OVERRIDE_USED" ]; then
 			printf 'LunaFox: SUCCESS the deployment, its LunaFox volumes, and %s were removed.\n' "$LUNAFOX_OVERRIDE_FILE"
 		else
@@ -2638,7 +1736,7 @@ Usage: lunafox-lifecycle.sh <action>
 This helper implements the LunaFox public Compose lifecycle actions. Run the
 root scripts instead of calling it directly:
 
-  ./install.sh [--public-host <host>] [--public-port <port>] [--cf-acceleration]
+  ./install.sh [--public-host <host>] [--public-port <port>]
                    first start, repeatable, keeps existing data
   ./start.sh       start an existing deployment
   ./restart.sh     recreate the deployment containers
@@ -2653,8 +1751,7 @@ parse_install_options() {
 	while [ "$#" -gt 0 ]; do
 		case "$1" in
 		--cf-acceleration)
-			[ "$CF_ACCELERATION_REQUESTED" = 0 ] || usage_failure "install accepts --cf-acceleration at most once"
-			CF_ACCELERATION_REQUESTED=1
+			usage_failure "--cf-acceleration was removed; installs pull directly from the official registries"
 			;;
 		--public-host)
 			shift
@@ -2682,7 +1779,7 @@ parse_install_options() {
 
 reject_install_only_option() {
 	case "$1" in
-	--cf-acceleration | --public-host | --public-port)
+	--public-host | --public-port)
 		usage_failure "$1 is valid only with install"
 		;;
 	esac
@@ -2732,7 +1829,7 @@ main() {
 			case "$1" in
 			--purge) UNINSTALL_PURGE=1 ;;
 			--confirm) UNINSTALL_CONFIRM=1 ;;
-			--cf-acceleration | --public-host | --public-port) usage_failure "$1 is valid only with install" ;;
+			--public-host | --public-port) usage_failure "$1 is valid only with install" ;;
 			*) usage_failure "uninstall does not accept: $1" ;;
 			esac
 			shift

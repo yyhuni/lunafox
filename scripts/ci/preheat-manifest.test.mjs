@@ -8,6 +8,7 @@ import {
   buildPreheatManifest,
   canonicalPreheatManifestBytes,
   PREHEAT_MANIFEST_KIND,
+  PUBLISHED_LEGACY_PREHEAT_MANIFEST_SHA256,
   validatePreheatManifest,
 } from "./preheat-manifest.mjs";
 import { sha256Digest } from "./resolve-release-component-composition.mjs";
@@ -119,7 +120,7 @@ test("builds a canonical release-bound closure including disabled Engine Runtime
   assert.equal(first.profileClosures.find((closure) => closure.profile === "external").entries.some((entry) => entry.includes("library/postgres@")), false);
   const agent = first.entries.find((entry) => entry.repository === "yyhuni/lunafox-agent");
   assert.deepEqual(agent.sources.map((source) => source.name), ["agent", "agent-preflight", "engine-preheater"]);
-  assert.deepEqual(agent.cloudflareCandidates.map((candidate) => candidate.split("/")[0]), ["docker.lunafox.cc.cd", "docker.io", "ghcr.io"]);
+  assert.deepEqual(agent.candidates.map((candidate) => candidate.split("/")[0]), ["docker.io", "ghcr.io"]);
 });
 
 test("fails closed for bind drift, unbound runtime, duplicate identities, and unsupported platform", () => {
@@ -146,6 +147,27 @@ test("fails closed for bind drift, unbound runtime, duplicate identities, and un
   const unsupportedPlatform = structuredClone(manifest);
   unsupportedPlatform.entries[0].platforms = ["linux/s390x"];
   assert.throws(() => validatePreheatManifest(unsupportedPlatform), /unsupported platform/);
+});
+
+test("published-legacy exemption is byte-pinned and cannot widen", () => {
+  const legacy = buildPreheatManifest(fixture());
+  for (const entry of legacy.entries) {
+    entry.cloudflareCandidates = [...entry.candidates];
+  }
+  // Byte-exact hit against the published pin skips schema validation.
+  const [publishedSha256] = PUBLISHED_LEGACY_PREHEAT_MANIFEST_SHA256;
+  assert.equal(validatePreheatManifest(legacy, { fileSha256: publishedSha256 }), legacy);
+  // Self-declared fields never grant the exemption: without the caller-provided
+  // byte digest the legacy keys must still fail strict validation.
+  assert.throws(() => validatePreheatManifest(legacy), /entries\[0\] has unknown or missing fields/);
+  // Any byte drift (wrong digest) keeps the file on the strict path.
+  assert.throws(() => validatePreheatManifest(legacy, { fileSha256: "0".repeat(64) }), /entries\[0\] has unknown or missing fields/);
+  // A malformed object must not slip through the exemption branch.
+  assert.throws(() => validatePreheatManifest(null, { fileSha256: publishedSha256 }), /preheat manifest is malformed/);
+  assert.throws(() => validatePreheatManifest({}, { fileSha256: publishedSha256 }), /preheat manifest is malformed/);
+  // Current-schema manifests ignore the exemption entirely.
+  const current = buildPreheatManifest(fixture());
+  assert.equal(validatePreheatManifest(current, { fileSha256: publishedSha256 }).manifestDigest, current.manifestDigest);
 });
 
 test("canonical bytes are a strict input contract", () => {

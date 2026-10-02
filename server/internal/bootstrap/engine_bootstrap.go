@@ -25,7 +25,6 @@ type engineBootstrapInstallPolicy struct {
 	allowCurrentPackageReplacement bool
 	runtimeImageRegistryTransport  *engineinstall.RuntimeImageRegistryTransport
 	allowDevelopmentSinglePlatform bool
-	cloudflareAcceleration         bool
 	selectedRegistry               string
 }
 
@@ -92,7 +91,6 @@ func RunEngineBootstrap(ctx context.Context, cfg *config.Config, migrationsFS em
 		AllowPlainHTTP:                 policy.allowPlainHTTP,
 		DevelopmentRegistryTransport:   policy.runtimeImageRegistryTransport,
 		AllowDevelopmentSinglePlatform: policy.allowDevelopmentSinglePlatform,
-		CloudflareAcceleration:         policy.cloudflareAcceleration,
 		SignatureVerifier:              signatureVerifier,
 	})
 	if err != nil {
@@ -132,27 +130,17 @@ func resolveEngineBootstrapInstallPolicy(installConfig config.EngineInstallConfi
 		case selectedRegistry != installConfig.Registry:
 			return engineBootstrapInstallPolicy{}, fmt.Errorf("ENGINE_INSTALL_REGISTRY must not contain surrounding whitespace")
 		case selectedRegistry != "":
-			if installConfig.CFAcceleration {
-				return engineBootstrapInstallPolicy{}, fmt.Errorf("ENGINE_INSTALL_REGISTRY cannot be combined with ENGINE_INSTALL_CF_ACCELERATION")
-			}
 			if selectedRegistry != "docker.io" && selectedRegistry != "ghcr.io" {
 				return engineBootstrapInstallPolicy{}, fmt.Errorf("ENGINE_INSTALL_REGISTRY must be docker.io or ghcr.io")
 			}
 			return engineBootstrapInstallPolicy{inventoryMode: engineinstall.InventoryModeSelectedRegistry, selectedRegistry: selectedRegistry}, nil
 		default:
-			mode := engineinstall.InventoryModeProduction
-			if installConfig.CFAcceleration {
-				mode = engineinstall.InventoryModeCloudflareAccelerated
-			}
-			return engineBootstrapInstallPolicy{inventoryMode: mode, cloudflareAcceleration: installConfig.CFAcceleration}, nil
+			return engineBootstrapInstallPolicy{inventoryMode: engineinstall.InventoryModeProduction}, nil
 		}
 	}
 
 	if !installConfig.AllowPlainHTTP {
 		return engineBootstrapInstallPolicy{}, fmt.Errorf("ENGINE_INSTALL_ALLOW_PLAIN_HTTP=true is required in Engine install development mode")
-	}
-	if installConfig.CFAcceleration {
-		return engineBootstrapInstallPolicy{}, fmt.Errorf("ENGINE_INSTALL_CF_ACCELERATION requires production Engine install mode")
 	}
 	if installConfig.Registry != "" {
 		return engineBootstrapInstallPolicy{}, fmt.Errorf("ENGINE_INSTALL_REGISTRY requires production Engine install mode")

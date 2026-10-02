@@ -13,8 +13,12 @@ import (
 )
 
 type globalAssetSearchResponse struct {
-	Results       any    `json:"results"`
-	NextPageToken string `json:"nextPageToken,omitempty"`
+	Results any `json:"results"`
+	// TotalSize is capped at GlobalAssetSearchTotalSizeCap; TotalSizeCapped
+	// reports that the real match count is larger. Both appear on every page.
+	TotalSize       int64  `json:"totalSize"`
+	TotalSizeCapped bool   `json:"totalSizeCapped"`
+	NextPageToken   string `json:"nextPageToken,omitempty"`
 }
 
 // Search returns one selected current-state asset type from all active Targets.
@@ -53,7 +57,7 @@ func (handler *GlobalAssetSearchHandler) Search(c *gin.Context) {
 		for index := range result.Websites {
 			items = append(items, globalSearchWebsiteResponse(result.Websites[index]))
 		}
-		httpdto.Success(c, globalAssetSearchResponse{Results: items, NextPageToken: result.NextPageToken})
+		httpdto.Success(c, globalAssetSearchResponse{Results: items, TotalSize: result.TotalSize, TotalSizeCapped: result.TotalSizeCapped, NextPageToken: result.NextPageToken})
 		return
 	}
 
@@ -61,7 +65,7 @@ func (handler *GlobalAssetSearchHandler) Search(c *gin.Context) {
 	for index := range result.Endpoints {
 		items = append(items, globalSearchEndpointResponse(result.Endpoints[index]))
 	}
-	httpdto.Success(c, globalAssetSearchResponse{Results: items, NextPageToken: result.NextPageToken})
+	httpdto.Success(c, globalAssetSearchResponse{Results: items, TotalSize: result.TotalSize, TotalSizeCapped: result.TotalSizeCapped, NextPageToken: result.NextPageToken})
 }
 
 func globalSearchWebsiteResponse(website assetdomain.Website) dto.WebsiteResponse {

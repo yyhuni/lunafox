@@ -301,6 +301,7 @@
       "page": "第 {current} 页，共 {total} 页",
       "rowsPerPage": "每页显示",
       "total": "共 {count} 条",
+      "totalCapped": "共 {count}+ 条",
       "first": "首页",
       "last": "末页",
       "previous": "上一页",
@@ -492,7 +493,8 @@
       "url": "URL 地址",
       "title": "页面标题",
       "tech": "指纹",
-      "status": "HTTP 状态码"
+      "status": "HTTP 状态码",
+      "hasScreenshot": "有截图"
     },
     "syntax": {
       "fields": "字段",
@@ -515,6 +517,7 @@
         "urlExact": "URL 精确匹配",
         "titleExact": "标题精确匹配",
         "techExact": "技术指纹精确匹配",
+        "hasScreenshot": "有截图",
         "statusErrorExact": "错误状态码精确匹配",
         "hostStatus": "API 主机成功响应",
         "hostTech": "主机与技术指纹",
@@ -529,6 +532,7 @@
         "urlExact": "匹配完整 URL 字符串",
         "titleExact": "匹配完整页面标题",
         "techExact": "精确匹配技术指纹名称",
+        "hasScreenshot": "只查找当前有截图的资产",
         "statusErrorExact": "只匹配 HTTP 404 响应",
         "hostStatus": "同时限定主机名和成功状态",
         "hostTech": "同时限定主机名和技术指纹",
@@ -558,10 +562,11 @@
     "diagnostics": {
       "required": { "message": "请输入查询内容。", "fix": "输入 URL 或字段条件，例如 host=\"api\"。" },
       "queryTooLong": { "message": "查询内容超过长度限制。", "fix": "将查询缩短到 2048 个 UTF-8 字节以内。" },
-      "invalidField": { "message": "字段名称格式不正确。", "fix": "从 url、host、title、statusCode 或 tech 中选择字段。" },
-      "unsupportedField": { "message": "字段不在支持范围内。", "fix": "改用 url、host、title、statusCode 或 tech。" },
+      "invalidField": { "message": "字段名称格式不正确。", "fix": "从 url、host、title、statusCode、tech 或 hasScreenshot 中选择字段。" },
+      "unsupportedField": { "message": "字段不在支持范围内。", "fix": "改用 url、host、title、statusCode、tech 或 hasScreenshot。" },
       "invalidOperator": { "message": "运算符不正确。", "fix": "使用 =、==，并用 && 连接条件。" },
       "invalidStatusCode": { "message": "statusCode 必须是整数。", "fix": "例如使用 statusCode==\"200\"。" },
+      "invalidBoolean": { "message": "hasScreenshot 只接受 \"true\" 或 \"false\"。", "fix": "例如使用 hasScreenshot==\"true\"。" },
       "containsValueTooShort": { "message": "包含匹配的值太短。", "fix": "URL、host 和 title 至少输入 2 个字符。" },
       "missingQuotedValue": { "message": "缺少带引号的值。", "fix": "在运算符后使用双引号，例如 tech=\"nginx\"。" },
       "invalidQuotedValue": { "message": "引号中的值不是有效格式。", "fix": "使用双引号，并对特殊字符使用 JSON 风格转义。" },

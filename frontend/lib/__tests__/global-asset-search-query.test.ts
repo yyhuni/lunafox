@@ -39,6 +39,27 @@ describe("global asset search query", () => {
     })
   })
 
+  it("parses hasScreenshot as an exact boolean with both operators", () => {
+    expect(parseGlobalAssetSearchQuery('hasScreenshot="true"')).toEqual({
+      mode: "structured",
+      conditions: [{ field: "hasScreenshot", operator: "=", value: "true" }],
+    })
+    expect(parseGlobalAssetSearchQuery('hasScreenshot=="false"')).toEqual({
+      mode: "structured",
+      conditions: [{ field: "hasScreenshot", operator: "==", value: "false" }],
+    })
+    expect(parseGlobalAssetSearchQuery('host="api" && hasScreenshot=="true"')).toEqual({
+      mode: "structured",
+      conditions: [
+        { field: "host", operator: "=", value: "api" },
+        { field: "hasScreenshot", operator: "==", value: "true" },
+      ],
+    })
+    for (const query of ['hasScreenshot=="TRUE"', 'hasScreenshot="1"', 'hasScreenshot==""', 'hasScreenshot=" true "']) {
+      expect(() => parseGlobalAssetSearchQuery(query)).toThrow(GlobalAssetSearchQueryError)
+    }
+  })
+
   it("fast-fails unsafe, oversized, or too-broad queries", () => {
     const elevenConditions = Array.from({ length: 11 }, () => 'tech="nginx"').join(" && ")
     for (const query of [
@@ -95,6 +116,7 @@ describe("global asset search query", () => {
       ["domain=\"example\"", "unsupportedField"],
       ["host!=\"api\"", "invalidOperator"],
       ["statusCode=\"ok\"", "invalidStatusCode"],
+      ["hasScreenshot=\"yes\"", "invalidBoolean"],
       ["host=\"a\"", "containsValueTooShort"],
       ["host=api", "missingQuotedValue"],
       ["host=\"api", "unterminatedQuotedValue"],
