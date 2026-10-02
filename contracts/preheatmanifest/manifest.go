@@ -24,7 +24,6 @@ const (
 	SchemaVersion      = 1
 	Kind               = "lunafox.preheat-manifest"
 	CanonicalAlgorithm = "sha256-canonical-json-v1"
-	CloudflareRegistry = "docker.lunafox.cc.cd"
 	ProfileEmbedded    = "embedded"
 	ProfileExternal    = "external"
 	PlatformLinuxAMD64 = "linux/amd64"
@@ -61,15 +60,14 @@ type ReleaseBinding struct {
 // Entry identifies one content-addressed image. Sources retain the logical
 // service/Engine owners after equal repository and digest values are deduped.
 type Entry struct {
-	Candidates           []string        `json:"candidates"`
-	CloudflareCandidates []string        `json:"cloudflareCandidates"`
-	Digest               string          `json:"digest"`
-	IdentityReference    string          `json:"identityReference"`
-	Platforms            []string        `json:"platforms"`
-	Profiles             []string        `json:"profiles"`
-	Repository           string          `json:"repository"`
-	Sources              []LogicalSource `json:"sources"`
-	Trust                string          `json:"trust"`
+	Candidates        []string        `json:"candidates"`
+	Digest            string          `json:"digest"`
+	IdentityReference string          `json:"identityReference"`
+	Platforms         []string        `json:"platforms"`
+	Profiles          []string        `json:"profiles"`
+	Repository        string          `json:"repository"`
+	Sources           []LogicalSource `json:"sources"`
+	Trust             string          `json:"trust"`
 }
 
 type LogicalSource struct {
@@ -290,15 +288,14 @@ func entryIdentity(entry Entry) string {
 
 func entryCore(entry Entry) map[string]any {
 	return map[string]any{
-		"candidates":           entry.Candidates,
-		"cloudflareCandidates": entry.CloudflareCandidates,
-		"digest":               entry.Digest,
-		"identityReference":    entry.IdentityReference,
-		"platforms":            entry.Platforms,
-		"profiles":             entry.Profiles,
-		"repository":           entry.Repository,
-		"sources":              entry.Sources,
-		"trust":                entry.Trust,
+		"candidates":        entry.Candidates,
+		"digest":            entry.Digest,
+		"identityReference": entry.IdentityReference,
+		"platforms":         entry.Platforms,
+		"profiles":          entry.Profiles,
+		"repository":        entry.Repository,
+		"sources":           entry.Sources,
+		"trust":             entry.Trust,
 	}
 }
 
@@ -346,8 +343,8 @@ func (entry Entry) validate(index int) error {
 		}
 		previousSource = current
 	}
-	if len(entry.Candidates) == 0 || len(entry.CloudflareCandidates) == 0 {
-		return fmt.Errorf("%s candidate lists are required", label)
+	if len(entry.Candidates) == 0 {
+		return fmt.Errorf("%s.candidates are required", label)
 	}
 	seenCandidates := map[string]struct{}{}
 	parsedCandidates := make([]ociartifact.DigestReference, len(entry.Candidates))
@@ -361,19 +358,6 @@ func (entry Entry) validate(index int) error {
 		}
 		seenCandidates[raw] = struct{}{}
 		parsedCandidates[candidateIndex] = reference
-	}
-	parsedCloudflare := make([]ociartifact.DigestReference, len(entry.CloudflareCandidates))
-	seenCloudflare := map[string]struct{}{}
-	for candidateIndex, raw := range entry.CloudflareCandidates {
-		reference, err := parseCandidate(raw, entry.Repository, entry.Digest, fmt.Sprintf("%s.cloudflareCandidates[%d]", label, candidateIndex))
-		if err != nil {
-			return err
-		}
-		if _, exists := seenCloudflare[raw]; exists {
-			return fmt.Errorf("%s.cloudflareCandidates contains duplicate candidate", label)
-		}
-		seenCloudflare[raw] = struct{}{}
-		parsedCloudflare[candidateIndex] = reference
 	}
 	identityReference, err := parseCandidate(entry.IdentityReference, entry.Repository, entry.Digest, label+".identityReference")
 	if err != nil {
@@ -390,15 +374,9 @@ func (entry Entry) validate(index int) error {
 		if identityReference != parsedCandidates[1] {
 			return fmt.Errorf("%s.identityReference must be the GHCR candidate", label)
 		}
-		if len(parsedCloudflare) != 3 || parsedCloudflare[0].Registry != CloudflareRegistry || parsedCloudflare[1] != parsedCandidates[0] || parsedCloudflare[2] != parsedCandidates[1] {
-			return fmt.Errorf("%s.cloudflareCandidates must be CF, Docker Hub, GHCR", label)
-		}
 	case "third-party":
 		if len(parsedCandidates) != 1 || identityReference != parsedCandidates[0] {
 			return fmt.Errorf("%s third-party identity must use its only origin candidate", label)
-		}
-		if len(parsedCloudflare) != 2 || parsedCloudflare[0].Registry != CloudflareRegistry || parsedCloudflare[1] != parsedCandidates[0] {
-			return fmt.Errorf("%s.cloudflareCandidates must be CF then origin", label)
 		}
 	}
 	return nil

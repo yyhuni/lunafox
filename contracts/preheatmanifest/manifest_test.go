@@ -11,15 +11,14 @@ const testDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 func canonicalTestManifest(t *testing.T) []byte {
 	t.Helper()
 	entry := Entry{
-		Candidates:           []string{"docker.io/yyhuni/lunafox-engine-runtime-port-scan@" + testDigest, "ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@" + testDigest},
-		CloudflareCandidates: []string{"docker.lunafox.cc.cd/yyhuni/lunafox-engine-runtime-port-scan@" + testDigest, "docker.io/yyhuni/lunafox-engine-runtime-port-scan@" + testDigest, "ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@" + testDigest},
-		Digest:               testDigest,
-		IdentityReference:    "ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@" + testDigest,
-		Platforms:            []string{PlatformLinuxAMD64, PlatformLinuxARM64},
-		Profiles:             []string{ProfileEmbedded, ProfileExternal},
-		Repository:           "yyhuni/lunafox-engine-runtime-port-scan",
-		Sources:              []LogicalSource{{Kind: "engine-runtime", Name: "engine.lunafox.port_scan"}},
-		Trust:                "first-party",
+		Candidates:        []string{"docker.io/yyhuni/lunafox-engine-runtime-port-scan@" + testDigest, "ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@" + testDigest},
+		Digest:            testDigest,
+		IdentityReference: "ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@" + testDigest,
+		Platforms:         []string{PlatformLinuxAMD64, PlatformLinuxARM64},
+		Profiles:          []string{ProfileEmbedded, ProfileExternal},
+		Repository:        "yyhuni/lunafox-engine-runtime-port-scan",
+		Sources:           []LogicalSource{{Kind: "engine-runtime", Name: "engine.lunafox.port_scan"}},
+		Trust:             "first-party",
 	}
 	closures := make([]ProfileClosure, 0, 2)
 	for _, profile := range []string{ProfileEmbedded, ProfileExternal} {

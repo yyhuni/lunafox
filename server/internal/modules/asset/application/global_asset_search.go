@@ -21,6 +21,10 @@ const (
 	// Version 2 invalidates cursors issued before plain URL searches became
 	// contains predicates; their cursor position is not valid for the wider set.
 	globalAssetSearchTokenVersion = 2
+	// GlobalAssetSearchTotalSizeCap bounds the match count a search response
+	// reports. Exact totals are unaffordable under trigram contains matching at
+	// release scale, so stores count at most cap+1 rows and report cap+"capped".
+	GlobalAssetSearchTotalSizeCap = 10000
 )
 
 var (
@@ -56,11 +60,12 @@ const (
 type GlobalAssetSearchField string
 
 const (
-	GlobalAssetSearchFieldURL        GlobalAssetSearchField = "url"
-	GlobalAssetSearchFieldHost       GlobalAssetSearchField = "host"
-	GlobalAssetSearchFieldTitle      GlobalAssetSearchField = "title"
-	GlobalAssetSearchFieldStatusCode GlobalAssetSearchField = "statusCode"
-	GlobalAssetSearchFieldTech       GlobalAssetSearchField = "tech"
+	GlobalAssetSearchFieldURL           GlobalAssetSearchField = "url"
+	GlobalAssetSearchFieldHost          GlobalAssetSearchField = "host"
+	GlobalAssetSearchFieldTitle         GlobalAssetSearchField = "title"
+	GlobalAssetSearchFieldStatusCode    GlobalAssetSearchField = "statusCode"
+	GlobalAssetSearchFieldTech          GlobalAssetSearchField = "tech"
+	GlobalAssetSearchFieldHasScreenshot GlobalAssetSearchField = "hasScreenshot"
 )
 
 // GlobalAssetSearchOperator controls the approved field-specific match mode.
@@ -73,13 +78,14 @@ const (
 )
 
 // GlobalAssetSearchCondition is a fully typed structured-search predicate.
-// StatusCode is populated only for statusCode predicates; Text is populated
-// for the four string-backed fields.
+// StatusCode is populated only for statusCode predicates, HasScreenshot only
+// for hasScreenshot predicates; Text is populated for the string-backed fields.
 type GlobalAssetSearchCondition struct {
-	Field      GlobalAssetSearchField
-	Operator   GlobalAssetSearchOperator
-	Text       string
-	StatusCode *int
+	Field         GlobalAssetSearchField
+	Operator      GlobalAssetSearchOperator
+	Text          string
+	StatusCode    *int
+	HasScreenshot *bool
 }
 
 // GlobalAssetSearchAST is the query representation accepted by the repository.
@@ -117,24 +123,27 @@ type GlobalAssetSearchStoreQuery struct {
 }
 
 // GlobalWebsiteSearchStore executes a query against the Website current-state
-// table only.
+// table only. The capped match count covers the whole query, not the page.
 type GlobalWebsiteSearchStore interface {
-	SearchGlobalWebsites(ctx context.Context, query GlobalAssetSearchStoreQuery) ([]assetdomain.Website, error)
+	SearchGlobalWebsites(ctx context.Context, query GlobalAssetSearchStoreQuery) ([]assetdomain.Website, int64, bool, error)
 }
 
 // GlobalEndpointSearchStore executes a query against the Endpoint current-state
-// table only.
+// table only. The capped match count covers the whole query, not the page.
 type GlobalEndpointSearchStore interface {
-	SearchGlobalEndpoints(ctx context.Context, query GlobalAssetSearchStoreQuery) ([]assetdomain.Endpoint, error)
+	SearchGlobalEndpoints(ctx context.Context, query GlobalAssetSearchStoreQuery) ([]assetdomain.Endpoint, int64, bool, error)
 }
 
-// GlobalAssetSearchResult contains exactly one selected asset type and no
-// count-derived metadata.
+// GlobalAssetSearchResult contains exactly one selected asset type plus the
+// capped match count. TotalSize never exceeds GlobalAssetSearchTotalSizeCap;
+// TotalSizeCapped reports whether the real match count is larger.
 type GlobalAssetSearchResult struct {
-	AssetType     GlobalAssetSearchAssetType
-	Websites      []assetdomain.Website
-	Endpoints     []assetdomain.Endpoint
-	NextPageToken string
+	AssetType       GlobalAssetSearchAssetType
+	Websites        []assetdomain.Website
+	Endpoints       []assetdomain.Endpoint
+	NextPageToken   string
+	TotalSize       int64
+	TotalSizeCapped bool
 }
 
 // GlobalAssetSearchService validates and dispatches current-state search
@@ -182,7 +191,7 @@ func (service *GlobalAssetSearchService) Search(ctx context.Context, input Globa
 		if service.websiteStore == nil {
 			return nil, errors.New("global Website search store unavailable")
 		}
-		items, err := service.websiteStore.SearchGlobalWebsites(ctx, query)
+		items, totalSize, totalSizeCapped, err := service.websiteStore.SearchGlobalWebsites(ctx, query)
 		if err != nil {
 			return nil, mapGlobalAssetSearchStoreError(err)
 		}
@@ -190,11 +199,12 @@ func (service *GlobalAssetSearchService) Search(ctx context.Context, input Globa
 		if err != nil {
 			return nil, err
 		}
+		result.TotalSize, result.TotalSizeCapped = totalSize, totalSizeCapped
 	case GlobalAssetSearchAssetTypeEndpoint:
 		if service.endpointStore == nil {
 			return nil, errors.New("global Endpoint search store unavailable")
 		}
-		items, err := service.endpointStore.SearchGlobalEndpoints(ctx, query)
+		items, totalSize, totalSizeCapped, err := service.endpointStore.SearchGlobalEndpoints(ctx, query)
 		if err != nil {
 			return nil, mapGlobalAssetSearchStoreError(err)
 		}
@@ -202,6 +212,7 @@ func (service *GlobalAssetSearchService) Search(ctx context.Context, input Globa
 		if err != nil {
 			return nil, err
 		}
+		result.TotalSize, result.TotalSizeCapped = totalSize, totalSizeCapped
 	}
 	return result, nil
 }
@@ -319,6 +330,9 @@ func globalAssetSearchCanonicalQuery(ast GlobalAssetSearchAST) string {
 		value := condition.Text
 		if condition.StatusCode != nil {
 			value = fmt.Sprintf("%d", *condition.StatusCode)
+		}
+		if condition.HasScreenshot != nil {
+			value = fmt.Sprintf("%t", *condition.HasScreenshot)
 		}
 		conditions = append(conditions, string(condition.Field)+string(condition.Operator)+strconvQuote(value))
 	}

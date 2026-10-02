@@ -123,7 +123,6 @@ func publicFixturePreheatManifest(manifest *releasemanifest.Manifest, compose, p
 	entryDigest := digest("c")
 	entry := preheatmanifest.Entry{
 		Candidates:           []string{"docker.io/" + repository + "@" + entryDigest, "ghcr.io/" + repository + "@" + entryDigest},
-		CloudflareCandidates: []string{"docker.lunafox.cc.cd/" + repository + "@" + entryDigest, "docker.io/" + repository + "@" + entryDigest, "ghcr.io/" + repository + "@" + entryDigest},
 		Digest:               entryDigest,
 		IdentityReference:    "ghcr.io/" + repository + "@" + entryDigest,
 		Platforms:            []string{preheatmanifest.PlatformLinuxAMD64, preheatmanifest.PlatformLinuxARM64},

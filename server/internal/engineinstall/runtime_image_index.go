@@ -21,7 +21,6 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/yyhuni/lunafox/contracts/enginemanifest/runtimeimage"
 	"github.com/yyhuni/lunafox/contracts/ociartifact"
-	"github.com/yyhuni/lunafox/contracts/ocidistribution"
 	"github.com/yyhuni/lunafox/contracts/ocisignature"
 	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry/remote"
@@ -100,15 +99,6 @@ func NewRuntimeImageIndexVerifier(options RuntimeImageIndexVerifierOptions) (*Ru
 		!options.AllowDevelopmentSinglePlatform) {
 		return nil, fmt.Errorf("Runtime Image development transport requires plain HTTP, an identity-to-transport Registry mapping, and single-platform policy")
 	}
-	if options.CloudflareAcceleration {
-		if usesDevelopmentTransport {
-			return nil, fmt.Errorf("Cloudflare Runtime Image acceleration cannot be combined with development transport")
-		}
-		if options.SignatureVerifier == nil {
-			return nil, fmt.Errorf("Cloudflare Runtime Image acceleration requires a GHCR signature verifier")
-		}
-	}
-
 	return &RuntimeImageIndexVerifier{options: options, newRepository: newRuntimeImageRepository}, nil
 }
 
@@ -129,30 +119,12 @@ func (verifier *RuntimeImageIndexVerifier) Verify(ctx context.Context, _ string,
 	if err != nil {
 		return VerifiedRuntimeImageIndex{}, fmt.Errorf("parse Runtime Image candidates: %w", err)
 	}
-	if verifier.options.CloudflareAcceleration {
-		acceleration, err := ocidistribution.BuildCloudflareAcceleration(refs)
-		if err != nil {
-			return VerifiedRuntimeImageIndex{}, fmt.Errorf("map Runtime Image Cloudflare acceleration: %w", err)
-		}
-		transportVerifier, ok := verifier.options.SignatureVerifier.(ocisignature.DigestReferenceSignatureTransportVerifier)
-		if !ok {
-			return VerifiedRuntimeImageIndex{}, fmt.Errorf("Cloudflare Runtime Image acceleration requires a transport-aware GHCR signature verifier")
-		}
-		if err := transportVerifier.VerifyReferenceWithTransport(ctx, acceleration.SignatureReference, acceleration.DownloadReferences[0]); err != nil {
-			return VerifiedRuntimeImageIndex{}, fmt.Errorf("verify Runtime Image GHCR signature %q: %w", acceleration.SignatureReference.String(), err)
-		}
-		candidates, err = runtimeimage.ParseCandidates(acceleration.DownloadReferenceStrings())
-		if err != nil {
-			return VerifiedRuntimeImageIndex{}, fmt.Errorf("parse accelerated Runtime Image candidates: %w", err)
-		}
-	}
-
 	var lastUnavailable error
 	for _, reference := range candidates.References {
 		if err := ctx.Err(); err != nil {
 			return VerifiedRuntimeImageIndex{}, err
 		}
-		if verifier.options.SignatureVerifier != nil && !verifier.options.CloudflareAcceleration {
+		if verifier.options.SignatureVerifier != nil {
 			if err := verifier.options.SignatureVerifier.VerifyReference(ctx, reference); err != nil {
 				if ocisignature.IsTransportError(err) {
 					lastUnavailable = err
@@ -165,7 +137,7 @@ func (verifier *RuntimeImageIndexVerifier) Verify(ctx context.Context, _ string,
 		if err == nil {
 			return verified, nil
 		}
-		if !ocidistribution.CanAdvanceAfterFailure(reference, err) {
+		if !ociartifact.IsCandidateUnavailable(err) {
 			return VerifiedRuntimeImageIndex{}, err
 		}
 		lastUnavailable = err

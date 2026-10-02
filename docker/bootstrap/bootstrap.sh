@@ -5,37 +5,19 @@ set -euo pipefail
 # file shared with the Agent; secrets never cross the host environment.
 : "${ENGINE_INSTALL_INVENTORY_PATH:?ENGINE_INSTALL_INVENTORY_PATH is required}"
 
-# alpha.164 Compose predates this setting but supplies one of these two
-# production registry identities. Map only that proven omission; every other
-# missing or invalid configuration must still fail at the required check below.
-if [ -z "${ENGINE_INSTALL_CF_ACCELERATION+x}" ]; then
-	case "${ENGINE_INSTALL_REGISTRY:-}" in
-	docker.io | ghcr.io) export ENGINE_INSTALL_CF_ACCELERATION=false ;;
-	esac
+# CF acceleration was removed; a legacy deployment may still carry the old
+# key. Degrade to direct registry pulls with one warning instead of failing.
+if [ -n "${ENGINE_INSTALL_CF_ACCELERATION:-}" ]; then
+	echo 'ENGINE_INSTALL_CF_ACCELERATION is deprecated and ignored; pulling directly from the official registries' >&2
 fi
-: "${ENGINE_INSTALL_CF_ACCELERATION:?ENGINE_INSTALL_CF_ACCELERATION is required}"
 : "${FINGERPRINT_BOOTSTRAP_PATH:?FINGERPRINT_BOOTSTRAP_PATH is required}"
 : "${WORDLISTS_SOURCE_PATH:?WORDLISTS_SOURCE_PATH is required}"
 : "${AGENT_VERSION:?AGENT_VERSION is required}"
 
-case "$ENGINE_INSTALL_CF_ACCELERATION" in
-true)
-	[ -z "${ENGINE_INSTALL_REGISTRY:-}" ] || {
-		echo 'ENGINE_INSTALL_REGISTRY must be empty when ENGINE_INSTALL_CF_ACCELERATION=true' >&2
-		exit 1
-	}
-	;;
-false)
-	case "${ENGINE_INSTALL_REGISTRY:-}" in
-	docker.io | ghcr.io) ;;
-	*)
-		echo 'ENGINE_INSTALL_REGISTRY must be docker.io or ghcr.io when CF acceleration is disabled' >&2
-		exit 1
-		;;
-	esac
-	;;
+case "${ENGINE_INSTALL_REGISTRY:-}" in
+docker.io | ghcr.io) ;;
 *)
-	echo 'ENGINE_INSTALL_CF_ACCELERATION must be exactly true or false' >&2
+	echo 'ENGINE_INSTALL_REGISTRY must be docker.io or ghcr.io' >&2
 	exit 1
 	;;
 esac
