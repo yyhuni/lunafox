@@ -34,6 +34,12 @@ const FIRST_PARTY_REPOSITORY_RE = /^yyhuni\/lunafox-[a-z0-9][a-z0-9._-]*$/;
 export const PUBLISHED_LEGACY_PREHEAT_MANIFEST_SHA256 = Object.freeze([
   // v0.0.1-alpha.198 deployment snapshot retained on public main.
   "c6d1308be2a3c1ca561938956079a42d00688504fffd98a784ecb1d228a39888",
+  // Immutable channel history on the public release-channel branch.
+  "cb900807339c1c5beec67cb376943f18deae4ed92418eb015b58d194c11d735f",
+  "455f08c9b9bb62ad1349c4ac20c99be2a461c0bcaf0a359374a31bb81e256627",
+  "7bbcc8220fee44f9bd27b0f2bdef9758262e65a0a274f03cf06a56fabfe3e85c",
+  "fbd8fe4149bb92612f31feccad8ca8a0438b217c6707a6f3d7692628e901f2e2",
+  "81a7589a11df96f0bd927da30fa547b2facd978650769b34fd352c54470fa8ad",
 ]);
 
 function fail(message) {

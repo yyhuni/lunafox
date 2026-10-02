@@ -7,7 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { validateComposition } from "./resolve-release-component-composition.mjs";
-import { canonicalPreheatManifestBytes, validatePreheatManifest } from "./preheat-manifest.mjs";
+import { canonicalPreheatManifestBytes, PUBLISHED_LEGACY_PREHEAT_MANIFEST_SHA256, validatePreheatManifest } from "./preheat-manifest.mjs";
 import { canonicalThirdPartyPolicyBytes, validatePolicyAgainstComposeTemplate } from "./third-party-image-policy.mjs";
 import {
   ReleaseCompatibilityProfileAlpha164Bridge,
@@ -202,10 +202,15 @@ function validate(root, requireFirst, allowEmpty = false) {
     const preheatPath = path.join(root, ...preheatRelative.split("/"));
     if (fs.lstatSync(preheatPath).isSymbolicLink() || !fs.statSync(preheatPath).isFile()) fail(`${preheatRelative} must be a regular file`);
     const preheatBytes = fs.readFileSync(preheatPath);
+    // Channel history predating the cloudflareCandidates removal keeps the
+    // legacy entry schema; those immutable published assets are byte-pinned
+    // through the shared exemption and skip schema/canonical re-validation.
+    const preheatSha256 = sha256(preheatBytes);
+    const legacyPinned = PUBLISHED_LEGACY_PREHEAT_MANIFEST_SHA256.includes(preheatSha256);
     let preheat;
-    try { preheat = validatePreheatManifest(JSON.parse(preheatBytes.toString("utf8"))); }
+    try { preheat = validatePreheatManifest(JSON.parse(preheatBytes.toString("utf8")), { fileSha256: preheatSha256 }); }
     catch (error) { fail(`${preheatRelative} is invalid: ${error.message}`); }
-    if (!preheatBytes.equals(canonicalPreheatManifestBytes(preheat))) fail(`${preheatRelative} must use canonical bytes`);
+    if (!legacyPinned && !preheatBytes.equals(canonicalPreheatManifestBytes(preheat))) fail(`${preheatRelative} must use canonical bytes`);
     if (preheat.release.tag !== version ||
         preheat.release.manifestDigest !== `sha256:${sha256(fs.readFileSync(manifestPath))}` ||
         preheat.release.compositionDigest !== normalized.compositionDigest) {

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:e618758fe872870282741aeeada44a50fb8a205f8621923d4017368e3435a950",
+  "sourceRevisionDigest": "sha256:4a2c8dd0b9317d75deea9d7c92beed122d55a14b53bcc3af90b8de078e963a3e",
   "releaseTag": "v0.0.1-alpha.199",
   "generatedReadOnly": true,
   "excludedPaths": [
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "4aa55d1ed7f570903dfc33d65c6bd131035995a1f8e40b334a6080e14de47f75"
+      "sha256": "166b88dfd0727da527f44c2bf2426c995e4bfa3786eda9e5db95878af7bb6fd8"
     },
     {
       "path": "README.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "0112bb3d4f40f7aacbc3794982989e13aca0edf7fdf539f3128fa039553f7066"
+      "sha256": "68cab1534281521209aff041d9d83e2343d069afb331d9be0ba57e476e64cd7e"
     },
     {
       "path": "agent/bin/sha256-cb983117d43ba7882f829105cc0271776f5eda2b70009871b942839fb655560a/agent-bundle.sha256",
@@ -92,7 +92,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "20f3f0ed1956255a52e4fd5f2b350184642e67025558b0d265c3e51a0872a3f6"
+      "sha256": "0df32d0aa031d2b24cf0e2b7c42d4b97769cfad443a909caa814084b4e80c144"
     },
     {
       "path": "agent/bin/sha256-cb983117d43ba7882f829105cc0271776f5eda2b70009871b942839fb655560a/lunafox-agent-linux-amd64",
@@ -17535,8 +17535,8 @@
       "path": "scripts/ci/check-public-channel.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 16151,
-      "sha256": "abb78be2b9b6c012c65087733d81934273e28a5797f17e6bbd068adfe04fb1ea"
+      "size": 16610,
+      "sha256": "1c7e51b342e23c759e4d2b28f37a0cd41a470ab9c249764838a1271bcbec2cfc"
     },
     {
       "path": "scripts/ci/check-public-export.mjs",
@@ -17619,8 +17619,8 @@
       "path": "scripts/ci/preheat-manifest.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 26580,
-      "sha256": "59f3957e58e1c0ab654a2fab8aeb4b2ae48fb56e8cf55bcf1bc2024e9c312eb8"
+      "size": 26999,
+      "sha256": "c7f173820d4d46ebf55ad147b5e987e85437ac2dcd084484ceb8d6f456b62896"
     },
     {
       "path": "scripts/ci/preheat-manifest.schema.json",
