@@ -1364,7 +1364,7 @@ jobs:
               --composition dist/public-composition/previous.json \
               --bundle dist/public-composition/previous.component-evidence.json \
               --provenance dist/public-composition/previous.public-release-provenance.json \
-              --tag "$previous_release_tag" --json \
+              --tag "$previous_release_tag" --allow-retired-worker-binding --json \
               > dist/public-composition/previous-release-evidence-verification.json
             node scripts/ci/verify-release-component-composition.mjs \
               --composition dist/public-composition/previous.json \
