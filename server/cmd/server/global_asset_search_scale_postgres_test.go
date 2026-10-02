@@ -51,6 +51,12 @@ const (
 	globalAssetSearchScaleShortTitleTerm         = "qz"
 )
 
+// Noise screenshots keep the screenshot table large enough that the planner
+// cannot "optimize" hasScreenshot queries by seq-scanning the screenshot side
+// and probing assets per screenshot row. Declared outside the const block
+// above because the scale selftest pins those lines byte-for-byte.
+const globalAssetSearchScaleNoiseScreenshotRows = 100_000
+
 var globalAssetSearchScaleSpecs = []globalAssetSearchScaleAssetSpec{
 	{assetType: assetapp.GlobalAssetSearchAssetTypeWebsite, table: "website"},
 	{assetType: assetapp.GlobalAssetSearchAssetTypeEndpoint, table: "endpoint"},
@@ -173,6 +179,9 @@ func TestGlobalAssetSearchScalePostgres(t *testing.T) {
 					plan := collectGlobalAssetSearchScalePlan(t, ctx, sqlDB, evidenceDir, fixture, family)
 					assertGlobalAssetSearchScalePlan(t, fixture, family, plan)
 					evidence.Plans = append(evidence.Plans, plan.evidence)
+					cappedCountPlan := collectGlobalAssetSearchScaleCappedCountPlan(t, ctx, sqlDB, evidenceDir, fixture, family)
+					assertGlobalAssetSearchScaleCappedCountPlan(t, fixture, cappedCountPlan)
+					evidence.Plans = append(evidence.Plans, cappedCountPlan.evidence)
 				})
 			}
 			evidence.WidePages = append(evidence.WidePages, measureGlobalAssetSearchScaleWidePage(t, ctx, sqlDB, router, fixture))
@@ -261,10 +270,14 @@ func seedGlobalAssetSearchScaleFixture(t *testing.T, ctx context.Context, db *sq
 	noiseRows := globalAssetSearchScaleRowsPerAsset - globalAssetSearchScaleProbeRows - globalAssetSearchScaleWideRows - globalAssetSearchScaleTombstoneRows
 	insertGlobalAssetSearchScaleNoiseRows(t, ctx, db, spec, activeTargetID, noiseRows)
 	fixture := insertGlobalAssetSearchScaleProbeRows(t, ctx, db, spec, activeTargetID)
+	insertGlobalAssetSearchScaleProbeScreenshots(t, ctx, db, spec, activeTargetID)
 	insertGlobalAssetSearchScaleWideRows(t, ctx, db, spec, activeTargetID)
 	insertGlobalAssetSearchScaleTombstoneRows(t, ctx, db, spec, tombstoneTargetID)
 	if _, err := db.ExecContext(ctx, "ANALYZE "+spec.table); err != nil {
 		t.Fatalf("analyze %s global search scale fixture: %v", spec.table, err)
+	}
+	if _, err := db.ExecContext(ctx, "ANALYZE screenshot"); err != nil {
+		t.Fatalf("analyze screenshot global search scale fixture: %v", err)
 	}
 
 	var totalRows, activeRows, tombstoneRows int
@@ -330,6 +343,43 @@ func insertGlobalAssetSearchScaleProbeRows(t *testing.T, ctx context.Context, db
 		probeURL:   "https://" + spec.table + "-probe-global-search-000001.example/record/000001",
 		probeHost:  spec.table + "-probe-global-search-" + globalAssetSearchScaleShortHostTerm + "-000001.example",
 		probeTitle: "Qz Global Search Probe 000001",
+	}
+}
+
+func insertGlobalAssetSearchScaleProbeScreenshots(t *testing.T, ctx context.Context, db *sql.DB, spec globalAssetSearchScaleAssetSpec, targetID int) {
+	t.Helper()
+	// Probe URLs carry the screenshots the hasScreenshot true-polarity family
+	// matches; noise URLs carry the bulk so the screenshot side is too large to
+	// drive the plan. URL expressions must byte-match the probe/noise row
+	// generators so existence stays keyed on (target_id, url).
+	probeQuery := fmt.Sprintf(`
+		INSERT INTO screenshot (target_id, url, status_code, image, created_at)
+		SELECT $1::INTEGER,
+			'https://%s-probe-global-search-' || LPAD(value::text, 6, '0') || '.example/record/' || LPAD(value::text, 6, '0'),
+			201,
+			DECODE('89504e470d0a1a0a', 'hex'),
+			TIMESTAMPTZ '2026-08-07 10:00:00+00' - (value * INTERVAL '1 second')
+		FROM generate_series(1, $2::INTEGER) AS value`, spec.table)
+	if _, err := db.ExecContext(ctx, probeQuery, targetID, globalAssetSearchScaleProbeRows); err != nil {
+		t.Fatalf("insert %s global search probe screenshots: %v", spec.table, err)
+	}
+	noiseQuery := fmt.Sprintf(`
+		INSERT INTO screenshot (target_id, url, status_code, image, created_at)
+		SELECT $1::INTEGER,
+			'https://%s-noise-' || LPAD(value::text, 7, '0') || '.example/asset/' || value::text,
+			200,
+			DECODE('89504e470d0a1a0a', 'hex'),
+			TIMESTAMPTZ '2026-08-07 09:00:00+00' - (value * INTERVAL '1 second')
+		FROM generate_series(1, $2::INTEGER) AS value`, spec.table)
+	if _, err := db.ExecContext(ctx, noiseQuery, targetID, globalAssetSearchScaleNoiseScreenshotRows); err != nil {
+		t.Fatalf("insert %s global search noise screenshots: %v", spec.table, err)
+	}
+	var screenshotRows int
+	if err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM screenshot WHERE target_id = $1", targetID).Scan(&screenshotRows); err != nil {
+		t.Fatalf("count %s probe screenshots: %v", spec.table, err)
+	}
+	if want := globalAssetSearchScaleProbeRows + globalAssetSearchScaleNoiseScreenshotRows; screenshotRows != want {
+		t.Fatalf("unexpected %s probe screenshot rows: got %d want %d", spec.table, screenshotRows, want)
 	}
 }
 
@@ -515,6 +565,26 @@ func globalAssetSearchScaleQueryFamilies(fixture globalAssetSearchScaleFixture) 
 			expectedResultCount:  globalAssetSearchScaleNormalPageSize,
 			acceptableIndexNames: []string{"idx_" + fixture.table + "_host_trgm", "idx_" + fixture.table + "_tech_gin"},
 		},
+		{
+			name:                "and-has-screenshot-true",
+			query:               `host="probe-global-search" && hasScreenshot=="true"`,
+			where:               "asset.host ILIKE $1 ESCAPE '\\' AND EXISTS (SELECT 1 FROM screenshot AS shot WHERE shot.target_id = asset.target_id AND shot.url = asset.url)",
+			args:                []any{contains},
+			expectedResultCount: globalAssetSearchScaleNormalPageSize,
+			// The host trigram GIN stays the driving access path; the existence
+			// probe rides unique_screenshot_per_target per candidate row.
+			acceptableIndexNames: []string{"idx_" + fixture.table + "_host_trgm", "unique_screenshot_per_target"},
+		},
+		{
+			name:  "and-has-screenshot-false",
+			query: `host="probe-global-search" && hasScreenshot=="false"`,
+			where: "asset.host ILIKE $1 ESCAPE '\\' AND NOT EXISTS (SELECT 1 FROM screenshot AS shot WHERE shot.target_id = asset.target_id AND shot.url = asset.url)",
+			args:  []any{contains},
+			// Probe rows all carry screenshots, so the negative polarity must
+			// produce an empty result set while keeping the same plan shape.
+			expectedResultCount:  0,
+			acceptableIndexNames: []string{"idx_" + fixture.table + "_host_trgm"},
+		},
 	}
 }
 
@@ -615,6 +685,7 @@ type globalAssetSearchScalePlanNode struct {
 type globalAssetSearchScaleCollectedPlan struct {
 	evidence     globalAssetSearchScalePlanEvidence
 	assetSeqScan bool
+	maxNodeRows  float64
 }
 
 func collectGlobalAssetSearchScalePlan(t *testing.T, ctx context.Context, db *sql.DB, evidenceDir string, fixture globalAssetSearchScaleFixture, family globalAssetSearchScaleQueryFamily) globalAssetSearchScaleCollectedPlan {
@@ -646,9 +717,43 @@ func collectGlobalAssetSearchScalePlan(t *testing.T, ctx context.Context, db *sq
 	return collected
 }
 
+func collectGlobalAssetSearchScaleCappedCountPlan(t *testing.T, ctx context.Context, db *sql.DB, evidenceDir string, fixture globalAssetSearchScaleFixture, family globalAssetSearchScaleQueryFamily) globalAssetSearchScaleCollectedPlan {
+	t.Helper()
+	// Mirror of the repository's capped-count statement so the plan gate covers
+	// the count SQL that every search response now executes.
+	query := "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) SELECT COUNT(*) FROM (SELECT 1 FROM " + fixture.table + " AS asset JOIN target AS active_target ON active_target.id = asset.target_id AND active_target.deleted_at IS NULL WHERE " + family.where + " LIMIT $" + fmt.Sprintf("%d", len(family.args)+1) + ") AS capped_matches"
+	args := append(append([]any(nil), family.args...), assetapp.GlobalAssetSearchTotalSizeCap+1)
+	var raw string
+	if err := db.QueryRowContext(ctx, query, args...).Scan(&raw); err != nil {
+		t.Fatalf("collect %s %s capped-count JSON EXPLAIN: %v", fixture.assetType, family.name, err)
+	}
+	var documents []globalAssetSearchScalePlanDocument
+	if err := json.Unmarshal([]byte(raw), &documents); err != nil || len(documents) != 1 {
+		t.Fatalf("decode %s %s capped-count JSON EXPLAIN: documents=%d err=%v", fixture.assetType, family.name, len(documents), err)
+	}
+	collected := globalAssetSearchScaleCollectedPlan{
+		evidence: globalAssetSearchScalePlanEvidence{
+			AssetType:    string(fixture.assetType),
+			Family:       family.name + "-capped-count",
+			File:         filepath.ToSlash(filepath.Join("plans", string(fixture.assetType)+"-"+family.name+"-capped-count.json")),
+			TopLevelRows: int(documents[0].Plan.ActualRows),
+		},
+	}
+	collectGlobalAssetSearchScalePlanFacts(documents[0].Plan, fixture.table, &collected)
+	sort.Strings(collected.evidence.Indexes)
+	planPath := filepath.Join(evidenceDir, collected.evidence.File)
+	if err := os.WriteFile(planPath, append([]byte(raw), '\n'), 0o644); err != nil {
+		t.Fatalf("write %s %s capped-count raw JSON EXPLAIN: %v", fixture.assetType, family.name, err)
+	}
+	return collected
+}
+
 func collectGlobalAssetSearchScalePlanFacts(node globalAssetSearchScalePlanNode, assetTable string, collected *globalAssetSearchScaleCollectedPlan) {
 	collected.evidence.TempRead += node.TempReadBlocks
 	collected.evidence.TempWritten += node.TempWrittenBlocks
+	if node.ActualRows > collected.maxNodeRows {
+		collected.maxNodeRows = node.ActualRows
+	}
 	if node.IndexName != "" {
 		collected.evidence.Indexes = append(collected.evidence.Indexes, node.IndexName)
 	}
@@ -680,6 +785,24 @@ func assertGlobalAssetSearchScalePlan(t *testing.T, fixture globalAssetSearchSca
 		}
 	}
 	t.Fatalf("%s %s EXPLAIN did not use a relevant index %q: got %q", fixture.assetType, family.name, family.acceptableIndexNames, plan.evidence.Indexes)
+}
+
+func assertGlobalAssetSearchScaleCappedCountPlan(t *testing.T, fixture globalAssetSearchScaleFixture, plan globalAssetSearchScaleCollectedPlan) {
+	t.Helper()
+	// The capped-count statement is a secondary shape of the same family: it
+	// must stay bounded and spill-free, but its access path is deliberately
+	// left to the planner. For small match sets PostgreSQL legitimately picks
+	// an asset Seq Scan over the family's index (the status-code family's 200
+	// matching rows cost less to count directly), so index and Seq Scan
+	// assertions stay on the page plan, and the count is bounded here by
+	// cap+1 rows, zero temp I/O, the shared 5s statement_timeout, and the
+	// handler-to-JSON p99 gate that executes the count on every request.
+	if plan.maxNodeRows > float64(assetapp.GlobalAssetSearchTotalSizeCap+1) {
+		t.Fatalf("%s %s capped-count EXPLAIN rows=%.0f exceeds cap+1=%d", fixture.assetType, plan.evidence.Family, plan.maxNodeRows, assetapp.GlobalAssetSearchTotalSizeCap+1)
+	}
+	if plan.evidence.TempRead != 0 || plan.evidence.TempWritten != 0 {
+		t.Fatalf("%s %s capped-count EXPLAIN used temporary I/O: temp_read=%d temp_written=%d", fixture.assetType, plan.evidence.Family, plan.evidence.TempRead, plan.evidence.TempWritten)
+	}
 }
 
 func containsGlobalAssetSearchScaleString(values []string, want string) bool {

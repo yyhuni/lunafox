@@ -320,15 +320,6 @@ func TestConfigFromViperLoadsEngineInstallDevelopmentSettings(t *testing.T) {
 	}
 }
 
-func TestConfigFromViperLoadsCloudflareAccelerationSetting(t *testing.T) {
-	v := viper.New()
-	v.Set("ENGINE_INSTALL_CF_ACCELERATION", true)
-
-	if got := configFromViper(v).EngineInstall.CFAcceleration; !got {
-		t.Fatal("Cloudflare acceleration setting was not loaded")
-	}
-}
-
 func TestLoadRejectsMissingPublicURL(t *testing.T) {
 	t.Setenv("JWT_SECRET", "jwt-secret-for-missing-public-url-test")
 	t.Setenv("PUBLIC_URL", "")

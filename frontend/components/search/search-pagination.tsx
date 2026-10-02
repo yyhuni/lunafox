@@ -13,6 +13,7 @@ interface SearchPaginationProps {
   onFirstPage: () => void
   onPageSizeChange: (pageSize: number) => void
   pageSizeOptions?: number[]
+  summary?: string
   className?: React.ComponentProps<"div">["className"]
 }
 
@@ -28,6 +29,7 @@ export function SearchPagination({
   onFirstPage,
   onPageSizeChange,
   pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
+  summary,
   className,
 }: SearchPaginationProps) {
   return (
@@ -42,6 +44,7 @@ export function SearchPagination({
       onNextPage={onNextPage}
       onPageSizeChange={onPageSizeChange}
       pageSizeOptions={pageSizeOptions}
+      summary={summary}
       className={className}
     />
   )

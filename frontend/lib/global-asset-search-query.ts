@@ -8,7 +8,7 @@ export const GLOBAL_ASSET_SEARCH_MIN_CONTAINS_RUNES = 2
 /** Kept as a named compatibility export; all text contains fields share this limit. */
 export const GLOBAL_ASSET_SEARCH_MIN_URL_CONTAINS_RUNES = GLOBAL_ASSET_SEARCH_MIN_CONTAINS_RUNES
 
-export type GlobalAssetSearchField = "url" | "host" | "title" | "statusCode" | "tech"
+export type GlobalAssetSearchField = "url" | "host" | "title" | "statusCode" | "tech" | "hasScreenshot"
 export type GlobalAssetSearchOperator = "=" | "=="
 
 export type GlobalAssetSearchDiagnosticCode =
@@ -18,6 +18,7 @@ export type GlobalAssetSearchDiagnosticCode =
   | "unsupportedField"
   | "invalidOperator"
   | "invalidStatusCode"
+  | "invalidBoolean"
   | "containsValueTooShort"
   | "missingQuotedValue"
   | "invalidQuotedValue"
@@ -27,7 +28,7 @@ export type GlobalAssetSearchDiagnosticCode =
   | "tooManyConditions"
   | "unknown"
 
-export const GLOBAL_ASSET_SEARCH_FIELDS = ["url", "host", "title", "statusCode", "tech"] as const satisfies readonly GlobalAssetSearchField[]
+export const GLOBAL_ASSET_SEARCH_FIELDS = ["url", "host", "title", "statusCode", "tech", "hasScreenshot"] as const satisfies readonly GlobalAssetSearchField[]
 
 export const GLOBAL_ASSET_SEARCH_FIELD_LABEL_KEYS = {
   url: "fields.url",
@@ -35,6 +36,7 @@ export const GLOBAL_ASSET_SEARCH_FIELD_LABEL_KEYS = {
   title: "fields.title",
   statusCode: "fields.status",
   tech: "fields.tech",
+  hasScreenshot: "fields.hasScreenshot",
 } as const satisfies Record<GlobalAssetSearchField, string>
 
 export const GLOBAL_ASSET_SEARCH_OPERATORS = [
@@ -86,6 +88,7 @@ const GLOBAL_ASSET_SEARCH_DIAGNOSTIC_CODES = new Set<GlobalAssetSearchDiagnostic
   "unsupportedField",
   "invalidOperator",
   "invalidStatusCode",
+  "invalidBoolean",
   "containsValueTooShort",
   "missingQuotedValue",
   "invalidQuotedValue",
@@ -119,6 +122,7 @@ const RAW_GLOBAL_ASSET_SEARCH_GUIDANCE: readonly GlobalAssetSearchGuidanceEntry[
   { id: "title-contains", category: "basics", query: 'title="Login"', labelKey: "syntax.exampleLabels.titleContains", descriptionKey: "syntax.exampleDescriptions.titleContains", featured: true },
   { id: "status-exact", category: "basics", query: 'statusCode=="200"', labelKey: "syntax.exampleLabels.statusExact", descriptionKey: "syntax.exampleDescriptions.statusExact", featured: true },
   { id: "tech-exact-nginx", category: "basics", query: 'tech="nginx"', labelKey: "syntax.exampleLabels.techExact", descriptionKey: "syntax.exampleDescriptions.techExact", featured: true },
+  { id: "has-screenshot", category: "basics", query: 'hasScreenshot=="true"', labelKey: "syntax.exampleLabels.hasScreenshot", descriptionKey: "syntax.exampleDescriptions.hasScreenshot" },
   { id: "url-exact", category: "basics", query: 'url=="https://example.com"', labelKey: "syntax.exampleLabels.urlExact", descriptionKey: "syntax.exampleDescriptions.urlExact" },
   { id: "title-exact", category: "basics", query: 'title=="Admin Login"', labelKey: "syntax.exampleLabels.titleExact", descriptionKey: "syntax.exampleDescriptions.titleExact" },
   { id: "status-exact-404", category: "basics", query: 'statusCode="404"', labelKey: "syntax.exampleLabels.statusExact", descriptionKey: "syntax.exampleDescriptions.statusErrorExact" },
@@ -252,6 +256,15 @@ class StrictQueryParser {
         throw new GlobalAssetSearchQueryError("statusCode must be an integer", "invalidStatusCode")
       }
       return { field, operator, value }
+    }
+
+    if (field === "hasScreenshot") {
+      // Both operators share one exact semantics; anything outside lowercase
+      // "true"/"false" is rejected instead of being coerced to a boolean.
+      if (rawValue !== "true" && rawValue !== "false") {
+        throw new GlobalAssetSearchQueryError('hasScreenshot must be "true" or "false"', "invalidBoolean")
+      }
+      return { field, operator, value: rawValue }
     }
 
     if (operator === "=" && (field === "url" || field === "host" || field === "title")) {

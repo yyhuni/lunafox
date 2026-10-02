@@ -17,7 +17,7 @@ import {
 
 describe("SearchSyntaxGuidance", () => {
   it("uses the parser whitelist and keeps every suggested example valid", () => {
-    expect(GLOBAL_ASSET_SEARCH_FIELDS).toEqual(["url", "host", "title", "statusCode", "tech"])
+    expect(GLOBAL_ASSET_SEARCH_FIELDS).toEqual(["url", "host", "title", "statusCode", "tech", "hasScreenshot"])
     expect(GLOBAL_ASSET_SEARCH_SYNTAX_EXAMPLES).toHaveLength(GLOBAL_ASSET_SEARCH_GUIDANCE.length)
     expect(GLOBAL_ASSET_SEARCH_FEATURED_GUIDANCE).toHaveLength(6)
     expect(GLOBAL_ASSET_SEARCH_FEATURED_GUIDANCE.map((entry) => entry.query)).toEqual([

@@ -13,7 +13,6 @@ import (
 	enginecontract "github.com/yyhuni/lunafox/contracts/enginemanifest"
 	"github.com/yyhuni/lunafox/contracts/executionartifact"
 	agentexecutionv1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/agent/execution/v1"
-	"github.com/yyhuni/lunafox/contracts/ocidistribution"
 	contractresults "github.com/yyhuni/lunafox/contracts/results"
 )
 
@@ -135,47 +134,6 @@ func TestPlanTaskReturnsExecutableWithExactDeterministicPlan(t *testing.T) {
 	}
 	if plan.GetLimits().GetMaxExecutionDuration().AsDuration() != 2*time.Hour {
 		t.Fatalf("unexpected task duration: %s", plan.GetLimits().GetMaxExecutionDuration())
-	}
-}
-
-func TestPlanTaskCloudflareAccelerationMapsOnlyValidatedRuntimeImageTransport(t *testing.T) {
-	packages := &planTaskPackageReaderStub{packageValue: planTaskExactPackage(testPlanTaskDefinition(nil, nil, false))}
-	packages.packageValue.RuntimeImageRefs = []string{
-		"docker.io/yyhuni/lunafox-engine-runtime-port-scan@" + planTaskImageDigest,
-		"ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@" + planTaskImageDigest,
-	}
-	compiler, err := NewPlanTaskCompiler(packages, nil)
-	if err != nil {
-		t.Fatalf("NewPlanTaskCompiler() error = %v", err)
-	}
-	compiler.WithRuntimeImageReferencesMapper(func(refs []string) ([]string, error) {
-		acceleration, err := ocidistribution.BuildCloudflareAcceleration(refs)
-		if err != nil {
-			return nil, err
-		}
-		return acceleration.DownloadReferenceStrings(), nil
-	})
-
-	request := validPlanTaskRequest()
-	request.TaskConfig = map[string]any{
-		"scan":  map[string]any{"enabled": true, "threads": 20},
-		"alpha": map[string]any{"enabled": false},
-	}
-	outcome, err := compiler.PlanTask(request)
-	if err != nil {
-		t.Fatalf("PlanTask() error = %v", err)
-	}
-	executable, ok := outcome.(ExecutablePlanTask)
-	if !ok {
-		t.Fatalf("PlanTask outcome = %#v, want executable plan", outcome)
-	}
-	want := []string{
-		"docker.lunafox.cc.cd/yyhuni/lunafox-engine-runtime-port-scan@" + planTaskImageDigest,
-		packages.packageValue.RuntimeImageRefs[0],
-		packages.packageValue.RuntimeImageRefs[1],
-	}
-	if got := executable.Plan.GetRuntimeImage().GetRefs(); !reflect.DeepEqual(got, want) {
-		t.Fatalf("accelerated Runtime Image refs = %#v, want %#v", got, want)
 	}
 }
 

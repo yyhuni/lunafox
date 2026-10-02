@@ -78,6 +78,11 @@ function matchesCondition(record: SearchResult, condition: GlobalAssetSearchCond
   if (condition.field === "tech") {
     return record.tech.includes(String(condition.value))
   }
+  if (condition.field === "hasScreenshot") {
+    // Mock datasets carry no screenshots, mirroring a screenshot-less
+    // database: only the "false" polarity can match.
+    return condition.value === "false"
+  }
 
   const fieldValue = record[condition.field]
   if (typeof fieldValue !== "string") return false
