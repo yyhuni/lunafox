@@ -11,8 +11,8 @@
   },
   "sourceRepository": "yyhuni/lunafox-private",
   "destinationRepository": "yyhuni/lunafox",
-  "sourceRevision": "4aa5872d55a97420d7f8d2695c67589604f8d6e6",
-  "sourceRevisionDigest": "sha256:7e63b202f482e2f3400045abc31fb46cd42d52f7bc03f37e614dcbb3f384eae2",
+  "sourceRevision": "f04fa62263758cab9e6153fb503244c590441b10",
+  "sourceRevisionDigest": "sha256:8e53ab73a9a299cb14fd485427645816ba8748b94b28c4c159c12260db39d574",
   "publicTreePath": "agent/bin/sha256-cb983117d43ba7882f829105cc0271776f5eda2b70009871b942839fb655560a",
   "platforms": [
     "linux/amd64",

@@ -296,10 +296,16 @@ async function findExistingPublication({ apiBase, owner, repo, baseBranch, tag, 
 
     // A merged PR is checked first so a conflicting immutable publication
     // cannot be hidden by an unrelated open retry PR on the same branch.
+    let mergedBranchOccupied = false;
     for (const publication of matches.filter((item) => publicationState(item) === "merged")) {
       const decision = classifyExistingPublication(publication, manifestSha256, agentBundleSha256, { branchExists: refResult.found });
       if (decision.action === "conflict") {
-        fail(`destination branch ${branch} already has a merged PR with a different export manifest or Agent bundle`);
+        // A merged export PR is immutable history under this branch name. A
+        // re-export with a different identity (for example a release tag that
+        // moved to pick up pipeline fixes) must not reuse it, but per the
+        // retry-suffix contract below it may claim the next suffix instead.
+        mergedBranchOccupied = true;
+        break;
       }
       if (decision.action === "reuse") {
         if (publication.head?.sha && refSha && publication.head.sha !== refSha) {
@@ -308,6 +314,7 @@ async function findExistingPublication({ apiBase, owner, repo, baseBranch, tag, 
         return { branch, refSha, pr: publication, state: decision.state };
       }
     }
+    if (mergedBranchOccupied) continue;
     for (const publication of matches.filter((item) => publicationState(item) !== "merged")) {
       const decision = classifyExistingPublication(publication, manifestSha256, agentBundleSha256, { branchExists: refResult.found });
       if (decision.action === "reuse") {

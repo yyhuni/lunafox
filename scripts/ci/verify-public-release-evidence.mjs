@@ -116,6 +116,20 @@ function verify(options) {
   const manifestBytes = readRegular(options.manifest, "release manifest");
   const compositionBytes = readRegular(options.composition, "runtime composition");
   const bundleBytes = readRegular(options.bundle, "component evidence bundle");
+  // The cloudflare-acceleration removal dropped this whole chain together with
+  // the worker evidence; only the worker part was supposed to go. Restore the
+  // core verification so provenance, composition, and bundle stay bound.
+  const compositionResult = verifyComposition({ composition: options.composition, manifest: options.manifest, policy: options.policy, releaseProfile: options.releaseProfile });
+  const evidenceResult = verifyComponentEvidence({ bundle: options.bundle, composition: options.composition, manifest: options.manifest, policy: options.policy, releaseProfile: options.releaseProfile });
+  assert(composition.releaseTag === options.tag && bundle.releaseTag === options.tag, "release evidence tag does not match the release");
+  const facts = {
+    tag: options.tag,
+    manifestSHA256: sha256(manifestBytes),
+    compositionDigest: composition.compositionDigest,
+    compositionSHA256: sha256(compositionBytes),
+    bundleSHA256: sha256(bundleBytes),
+  };
+  validateReleaseProvenance(provenance, facts);
   return {
     schemaVersion: 1,
     passed: true,

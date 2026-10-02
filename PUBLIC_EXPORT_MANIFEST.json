@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:7e63b202f482e2f3400045abc31fb46cd42d52f7bc03f37e614dcbb3f384eae2",
+  "sourceRevisionDigest": "sha256:8e53ab73a9a299cb14fd485427645816ba8748b94b28c4c159c12260db39d574",
   "releaseTag": "v0.0.1-alpha.199",
   "generatedReadOnly": true,
   "excludedPaths": [
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "7a69c6bff60dbcd10a60494369e1f50293780e673be16c9592d021022451f143"
+      "sha256": "5861a01041f9be0519297ebdb5e65d8a0196d7ae13292ad86a83d2d8cadc0314"
     },
     {
       "path": "README.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "862148598bbd67d49989a10c0033ebc0ada24922705a3f422868e0810daf83ee"
+      "sha256": "a6575b8eacca0cbfe182b92ae1ecb57c3ff86597c489001eeb1c7432652fbe0f"
     },
     {
       "path": "agent/bin/sha256-cb983117d43ba7882f829105cc0271776f5eda2b70009871b942839fb655560a/agent-bundle.sha256",
@@ -92,7 +92,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "e7255dbae8b4ec00829d30e1e9e418d5ee4ce10abadc75cbec3e16633135b1fa"
+      "sha256": "741377277a7a74d09e8f9208e562b92a791fa1612add18921f2d4d65122ecf59"
     },
     {
       "path": "agent/bin/sha256-cb983117d43ba7882f829105cc0271776f5eda2b70009871b942839fb655560a/lunafox-agent-linux-amd64",
@@ -17689,8 +17689,8 @@
       "path": "scripts/ci/publish-public-export.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 30881,
-      "sha256": "b7a321abb1e1da459db5985a11b34690724e8cf26f79c0ab5b6e4bc576ae28b5"
+      "size": 31200,
+      "sha256": "1d8f32afcd0e8cff182bb80ed2c83d21dac38c39318230b0ae08b3b266c9bf8a"
     },
     {
       "path": "scripts/ci/release-compatibility-profile.mjs",
@@ -17906,8 +17906,8 @@
       "path": "scripts/ci/verify-public-release-evidence.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 8120,
-      "sha256": "c140297c00b2b7a7b0d067bc7be72b2251924a6ccf767c7aad19509991fd2dba"
+      "size": 9150,
+      "sha256": "2b98c35b3ea311723f19b2c2bdbb39aaae814e90148d6bbd111ae903efcc5b97"
     },
     {
       "path": "scripts/ci/verify-public-release.mjs",
