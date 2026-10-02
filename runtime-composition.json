@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "kind": "lunafox.runtime-composition",
-  "releaseTag": "v0.0.1-alpha.198",
-  "sourceRevisionDigest": "sha256:7cab4eb3432eb5bdac73f608464f7b877ec18fdecb37452ae9ccf7fa0c97c12a",
-  "publicMergeCommit": "69817398b3b2150a9d0877a02cd5ab531a03ca5e",
+  "releaseTag": "v0.0.1-alpha.199",
+  "sourceRevisionDigest": "sha256:e618758fe872870282741aeeada44a50fb8a205f8621923d4017368e3435a950",
+  "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0",
   "components": [
     {
       "id": "engine.lunafox.directory_scan.package",
@@ -12,7 +12,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:c73eb2642b9fe2b59fe488b9886f4132f1be25f9d282b013978255b9e61ee556",
+        "digest": "sha256:7c5bd39431511d9b55bb34df208f5cf1d1f538448de3dbbde739fb96bacb8ae7",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -733,18 +733,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -757,16 +745,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -781,10 +769,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -1198,14 +1186,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-directory-scan@sha256:02adc2c141084bc8d8db317fdf38f96882d4941a0c5a676986fb5e5c7d226dd0",
-        "digest": "sha256:02adc2c141084bc8d8db317fdf38f96882d4941a0c5a676986fb5e5c7d226dd0"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-directory-scan@sha256:6e669bf902cd70c31d3f37a5a52b7a86393f1050a64500cac018ed8ed1581aaa",
+        "digest": "sha256:6e669bf902cd70c31d3f37a5a52b7a86393f1050a64500cac018ed8ed1581aaa"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-directory_scan.json",
@@ -1221,7 +1208,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:d849f5935b6465772792765263ff6228b8aae34065d0e4f955517900bb848af7",
+        "digest": "sha256:d6a428e74997b36bbdd34993a1f3117449a1c8d2251e4a4a4968d571327115ac",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -1941,18 +1928,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -1965,16 +1940,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -1989,10 +1964,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -2406,18 +2381,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-directory-scan@sha256:5ce0213afe2869fa0d0aab144862782f5f0ed593a74a640c85bd8098a14b59ac",
-        "digest": "sha256:5ce0213afe2869fa0d0aab144862782f5f0ed593a74a640c85bd8098a14b59ac",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-directory-scan@sha256:18ab653b4e35aa3f7ea3b8749a2dfed5c2869e91df4091e47cea74850b1234c0",
+        "digest": "sha256:18ab653b4e35aa3f7ea3b8749a2dfed5c2869e91df4091e47cea74850b1234c0",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-directory_scan.json",
@@ -2433,7 +2407,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:8f24c5b805c5ad0356e941d85b0ec7a7e79a3a8a53599af42ffdfffdf1a475de",
+        "digest": "sha256:e2c75492840fa5e239f70daf73a4522f3a08e99802fdf32cfa5f7d35cfcfad26",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -3082,18 +3056,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -3106,16 +3068,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -3130,10 +3092,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -3547,14 +3509,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:6fde458440373594604e4a5befc9dccccf939068b3f04f9eae50d4f72e3640c0",
-        "digest": "sha256:6fde458440373594604e4a5befc9dccccf939068b3f04f9eae50d4f72e3640c0"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:48736183bc89ff6fb1360866ea2bfd2784fb80c6dc6d2b574f076d9b145b15bc",
+        "digest": "sha256:48736183bc89ff6fb1360866ea2bfd2784fb80c6dc6d2b574f076d9b145b15bc"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-fingerprint_detection.json",
@@ -3570,7 +3531,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:a6ef731d297e9b606dd61dddc4f4074ac3638e19f8596537ee47ed185d506719",
+        "digest": "sha256:cb4583bfa3dc9074323346fe7c394b8d937be17186ab557b3135dba176c75845",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -4218,18 +4179,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -4242,16 +4191,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -4266,10 +4215,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -4683,18 +4632,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:71e6e330f5a0ee4ed9f05c6965f04612407ccf6080b97638bbccd8f82d48817e",
-        "digest": "sha256:71e6e330f5a0ee4ed9f05c6965f04612407ccf6080b97638bbccd8f82d48817e",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:f7e7878949a75f91105e19d6ad449a9ffe57db94a0a868d74d4ff44eeb55e3f0",
+        "digest": "sha256:f7e7878949a75f91105e19d6ad449a9ffe57db94a0a868d74d4ff44eeb55e3f0",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-fingerprint_detection.json",
@@ -4710,7 +4658,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:1f3cfa1077b9c6a5d36a3509a219a83cf1cef8e0624ab28c20be128eb1b5778e",
+        "digest": "sha256:5d6a67c6e57414ce45f5b3414e560e46f40b4bc26bc3962c8127cab57f74fb2d",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -5389,18 +5337,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -5413,16 +5349,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -5437,10 +5373,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -5854,14 +5790,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:6e1f50e6be8f4d758271b8cb87478b88d168ba4fe0b999cf2f9e25a1d0dbab0b",
-        "digest": "sha256:6e1f50e6be8f4d758271b8cb87478b88d168ba4fe0b999cf2f9e25a1d0dbab0b"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:5865658c0c4644bf2f740e14639c3b26cab6c5c54df56d62548134750b22be88",
+        "digest": "sha256:5865658c0c4644bf2f740e14639c3b26cab6c5c54df56d62548134750b22be88"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-nuclei_vulnerability.json",
@@ -5877,7 +5812,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:9777d7760b168e759ee116d150cda5bcbe6a764a6eef301a56b01f41addd3415",
+        "digest": "sha256:bc0df0ad0f3d2a92002ceb9f6f6b5f4c481f7b28ab7e8bb920aa8291c77eb4e5",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -6555,18 +6490,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -6579,16 +6502,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -6603,10 +6526,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -7020,18 +6943,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:21297e2d706f67c78042bae01cd747e79682f8cc25a8a3fc213f91dcecf29017",
-        "digest": "sha256:21297e2d706f67c78042bae01cd747e79682f8cc25a8a3fc213f91dcecf29017",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:7ee0fb42499799136fb502db4287d103ef23d4fa9b7cfb53d57ea20506968a74",
+        "digest": "sha256:7ee0fb42499799136fb502db4287d103ef23d4fa9b7cfb53d57ea20506968a74",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-nuclei_vulnerability.json",
@@ -7047,7 +6969,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:b9094c8d8fef1f306ca2cc78acb0caccee1392817613e4c52f3c1fe49e097938",
+        "digest": "sha256:cf9ddf0adada9944165395a6896699f579d3ce2a7ce89f46fe8fb95e650cab8d",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -7768,18 +7690,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -7792,16 +7702,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -7816,10 +7726,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -8233,14 +8143,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:1dad65f0d6f287e07aa56fc9e9eb68cab96dc4e2b33cf0b0b3affe6ba0996f4d",
-        "digest": "sha256:1dad65f0d6f287e07aa56fc9e9eb68cab96dc4e2b33cf0b0b3affe6ba0996f4d"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:c6b637ab92787b788de7d080b9536efb2bbea63e10ad98cb14818da0e41d9304",
+        "digest": "sha256:c6b637ab92787b788de7d080b9536efb2bbea63e10ad98cb14818da0e41d9304"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-port_scan.json",
@@ -8256,7 +8165,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:6e50f302912ec223f691f17f5706ec280d3581637d920e35aaafa6c53a36648c",
+        "digest": "sha256:7cb641fb58288973ea2eaf61c370da30450c27597851e20ae2e421b39b2dc8e0",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -8976,18 +8885,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -9000,16 +8897,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -9024,10 +8921,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -9441,18 +9338,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:ea423c0bc5aea51df5fa93939ccd7894acedab8c68f7552980b7c2518b93583f",
-        "digest": "sha256:ea423c0bc5aea51df5fa93939ccd7894acedab8c68f7552980b7c2518b93583f",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:ee7983b5abd96a612f37c5c5b0c957e14ba7a22bf115c1ff5a422759a71ae577",
+        "digest": "sha256:ee7983b5abd96a612f37c5c5b0c957e14ba7a22bf115c1ff5a422759a71ae577",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-port_scan.json",
@@ -9468,7 +9364,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:72e7ed1b59657a390bc3787bd1faf0df5a0044ae2341f21dc722e3a2c7d652a1",
+        "digest": "sha256:17095a6ddf6c696b88fb1b09ac47c3bc09df7fc637fbaf0016f44a6a000b5d66",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -10129,18 +10025,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -10153,16 +10037,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -10177,10 +10061,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -10594,14 +10478,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:1e679d5398da5863e0130d9ecaae82fca713e8267b3a2de57f40fc8738f2a75a",
-        "digest": "sha256:1e679d5398da5863e0130d9ecaae82fca713e8267b3a2de57f40fc8738f2a75a"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:fe09dc329a05137e9f0f6f57a070164e435e21f2de966eaa53bcfb6825cb0ad7",
+        "digest": "sha256:fe09dc329a05137e9f0f6f57a070164e435e21f2de966eaa53bcfb6825cb0ad7"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-screenshot.json",
@@ -10617,7 +10500,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:b9e920aaa78d9fc82021f0784c80f8846a55295d2dbfcb09e51f393f3dc8a4a5",
+        "digest": "sha256:28b705a08cf5fb34ed8a72e8b7bf9e4b224a144337fb76bc1d0434f7bb672518",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -11277,18 +11160,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -11301,16 +11172,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -11325,10 +11196,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -11742,18 +11613,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:6913176c0840edafb164785c4ad53fdfbe45123b43c55616fb9c8bd2853a32ac",
-        "digest": "sha256:6913176c0840edafb164785c4ad53fdfbe45123b43c55616fb9c8bd2853a32ac",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:dc9a7091edb78dccfa9b5e41c85f3ec0085307d8321a27b40ab7b13c7edf24c8",
+        "digest": "sha256:dc9a7091edb78dccfa9b5e41c85f3ec0085307d8321a27b40ab7b13c7edf24c8",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-screenshot.json",
@@ -11769,7 +11639,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:bb6fd71eb3e055a07d1d84d834f630177386b44c8b3d778c545f15bdbe11abf8",
+        "digest": "sha256:9228b58cf2abfdba65c30d3415e245416e3356edbc38de567bb21d94df95bc61",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -12538,18 +12408,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -12562,16 +12420,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -12586,10 +12444,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -13003,14 +12861,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:91be9fb129515145a3d80c4f52c10f82ca868b739148dfdc114e38dbf29d0048",
-        "digest": "sha256:91be9fb129515145a3d80c4f52c10f82ca868b739148dfdc114e38dbf29d0048"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:391eeac7ddc0fbdafab9eed5cc5e7cfe6ceba2d118b6e9afeb16f55d860e7bbe",
+        "digest": "sha256:391eeac7ddc0fbdafab9eed5cc5e7cfe6ceba2d118b6e9afeb16f55d860e7bbe"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-subdomain_discovery.json",
@@ -13026,7 +12883,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:351bc9fc9d709e6a60f6134a6c262782dc29ce83c03c5fcc2565d3e152eebbc5",
+        "digest": "sha256:df6b7d12cf1bf6b2aa9ce31eb0f455f1b092b7794a60bc6e193b1ba552bd7579",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -13794,18 +13651,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -13818,16 +13663,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -13842,10 +13687,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -14259,18 +14104,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:731ab9cfccecff34ae2de04c5f48fd436f1eca049c507ee8fe5a1439667cb08b",
-        "digest": "sha256:731ab9cfccecff34ae2de04c5f48fd436f1eca049c507ee8fe5a1439667cb08b",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:cce2ebb00dd563f86aad14108517eb822c9770526a9771996279f05416485d61",
+        "digest": "sha256:cce2ebb00dd563f86aad14108517eb822c9770526a9771996279f05416485d61",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-subdomain_discovery.json",
@@ -14286,7 +14130,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:be5f7667476a2599d73bbff44d0dc73b42337d204447d97760b498172c17e8a8",
+        "digest": "sha256:3d902cc660139fa953269a255e8594461a78a4684296103aa019cfdb562e4351",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -14996,18 +14840,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -15020,16 +14852,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -15044,10 +14876,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -15461,14 +15293,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:985947bfee25b158d148448415ec604bf527a2b68e3a5b7f6bc11284103851ae",
-        "digest": "sha256:985947bfee25b158d148448415ec604bf527a2b68e3a5b7f6bc11284103851ae"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:92abce23c96a54ee9462b6d08fd733e3e36cc6d4d40b08c88f8c93d40026d098",
+        "digest": "sha256:92abce23c96a54ee9462b6d08fd733e3e36cc6d4d40b08c88f8c93d40026d098"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-url_collection.json",
@@ -15484,7 +15315,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:f71ae6e56bbec517bac1e10f12888427e3a97a3de68e0071974a0f56f968d822",
+        "digest": "sha256:6a41f44b7d79425fd11a0e6addd83e820eaab76535422b97f04468a931bcbbb4",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -16193,18 +16024,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -16217,16 +16036,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -16241,10 +16060,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -16658,18 +16477,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:1f06f24d9d821540bd2c1aa25c1c365c6c988d33f79e44663029a22ff2da757f",
-        "digest": "sha256:1f06f24d9d821540bd2c1aa25c1c365c6c988d33f79e44663029a22ff2da757f",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:7acf0ea3578df20b8da0531bd716345c2bd59d72cf8a9ebfe1b2ebedfc4d9c18",
+        "digest": "sha256:7acf0ea3578df20b8da0531bd716345c2bd59d72cf8a9ebfe1b2ebedfc4d9c18",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-url_collection.json",
@@ -16685,7 +16503,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:a91a1f1cf0a46a783c2edca609e080737c616e3d2adaa29231eed0bdddfb6fb2",
+        "digest": "sha256:afed7bf9bab287d5377745f82ab21dcf1ac00386b57437f55f50b9c5a33f2019",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -17382,18 +17200,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -17406,16 +17212,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -17430,10 +17236,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -17847,14 +17653,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-website-discovery@sha256:6016f5b88c7ea6b3b5885d443367f68dcd5aeee5a7906e7244e68a2b3d9562ad",
-        "digest": "sha256:6016f5b88c7ea6b3b5885d443367f68dcd5aeee5a7906e7244e68a2b3d9562ad"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-website-discovery@sha256:3aca58fc9cd3804cfcf8a63e3c73725630b9fcfec80c808ac9ee94cde77b9a29",
+        "digest": "sha256:3aca58fc9cd3804cfcf8a63e3c73725630b9fcfec80c808ac9ee94cde77b9a29"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-website_discovery.json",
@@ -17870,7 +17675,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:6bac3d4fbe0548a87505624ca9f4277d8743561ae0c7b891fcb508ede492cbb3",
+        "digest": "sha256:6fc80d2fec3cca54b47f5e6970f50bc183ef6c389f01b4eb9bd102532caa5d0c",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -18566,18 +18371,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "named-contexts/contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "named-contexts/contracts/ocisignature/keyless_test.go",
@@ -18590,16 +18383,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "named-contexts/contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -18614,10 +18407,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "named-contexts/contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -19031,18 +18824,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-website-discovery@sha256:c29591bb83c6ba3b0dc837d8056bcedd5f69376985b08f4f5ab29c2d394a5038",
-        "digest": "sha256:c29591bb83c6ba3b0dc837d8056bcedd5f69376985b08f4f5ab29c2d394a5038",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-website-discovery@sha256:04255a3f51afedd19e91139b0cb3b429d9f80d75e28aae819e0cf55afc19d9c2",
+        "digest": "sha256:04255a3f51afedd19e91139b0cb3b429d9f80d75e28aae819e0cf55afc19d9c2",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-website_discovery.json",
@@ -19058,7 +18850,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:54b49d59ba60dd564b9af2dbeb81491cc043b59fba7dbfc424e2e4da03a27ee9",
+        "digest": "sha256:bad83d640523ca0e129c11e62fa24b9289b23a301830ed687c747423d24cb18d",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -19070,7 +18862,7 @@
           ],
           "baseImagesResolved": true,
           "buildArgs": {
-            "AGENT_ARTIFACT_ID": "sha256-409072accc0949f69cceae619d1539611017f5434eb29b42773f0cbaf856c7ff"
+            "AGENT_ARTIFACT_ID": "sha256-cb983117d43ba7882f829105cc0271776f5eda2b70009871b942839fb655560a"
           },
           "builderPolicy": {
             "provenance": "mode=max",
@@ -19089,40 +18881,40 @@
               "size": 233
             },
             {
-              "digest": "sha256:f959a7839a037496e3beb663969ac22595b05dc7eed337abab4f77104c07ebae",
+              "digest": "sha256:990e5a1ddd21806b3f7c6903c2f4f949fb095b918d7df4d9e0c3ddd1d477d13c",
               "mode": 493,
-              "path": "agent/bin/sha256-409072accc0949f69cceae619d1539611017f5434eb29b42773f0cbaf856c7ff/lunafox-agent-linux-amd64",
-              "size": 23905278
+              "path": "agent/bin/sha256-cb983117d43ba7882f829105cc0271776f5eda2b70009871b942839fb655560a/lunafox-agent-linux-amd64",
+              "size": 23905083
             },
             {
-              "digest": "sha256:85ed7c24cf9f684d6fb091864523802c6669368a0f1a96aaf02a0705fa56ef6c",
+              "digest": "sha256:1d38ce1db75d857b5c60792e563356681debe3486aca2fe5c26c5dcdd104da0a",
               "mode": 493,
-              "path": "agent/bin/sha256-409072accc0949f69cceae619d1539611017f5434eb29b42773f0cbaf856c7ff/lunafox-agent-linux-arm64",
-              "size": 22504799
+              "path": "agent/bin/sha256-cb983117d43ba7882f829105cc0271776f5eda2b70009871b942839fb655560a/lunafox-agent-linux-arm64",
+              "size": 22503084
             },
             {
               "digest": "sha256:2b12a49b754a09e98377c96105c2975a5b48bf6b063eae0b2062ea271e0add2a",
               "mode": 493,
-              "path": "agent/bin/sha256-409072accc0949f69cceae619d1539611017f5434eb29b42773f0cbaf856c7ff/lunafox-engine-mount-preflight-linux-amd64",
+              "path": "agent/bin/sha256-cb983117d43ba7882f829105cc0271776f5eda2b70009871b942839fb655560a/lunafox-engine-mount-preflight-linux-amd64",
               "size": 20000987
             },
             {
               "digest": "sha256:143872aa1a600ce25451d9319a31c4971846dc306bd85e2e85721be4d2bac5a4",
               "mode": 493,
-              "path": "agent/bin/sha256-409072accc0949f69cceae619d1539611017f5434eb29b42773f0cbaf856c7ff/lunafox-engine-mount-preflight-linux-arm64",
+              "path": "agent/bin/sha256-cb983117d43ba7882f829105cc0271776f5eda2b70009871b942839fb655560a/lunafox-engine-mount-preflight-linux-arm64",
               "size": 18804436
             },
             {
-              "digest": "sha256:a88ecfee096c948f9b4d0b7dc863b4c1158c5b7924a5c5d45248afdf4a5b1a0b",
+              "digest": "sha256:1ba5e3e337065c5ca57f6b0be3400669c76230f209f3686d2f7a061a803268e8",
               "mode": 493,
-              "path": "agent/bin/sha256-409072accc0949f69cceae619d1539611017f5434eb29b42773f0cbaf856c7ff/lunafox-engine-preheater-linux-amd64",
-              "size": 21349654
+              "path": "agent/bin/sha256-cb983117d43ba7882f829105cc0271776f5eda2b70009871b942839fb655560a/lunafox-engine-preheater-linux-amd64",
+              "size": 21326598
             },
             {
-              "digest": "sha256:d9bea496352cf3427fd9153fd318b0dbad49d57ac77110279ea9bfb2b8e1e7eb",
+              "digest": "sha256:f6a1018d3dfae74041a3e721beeb6cc382608d0985323a42ab72f2372202bf7d",
               "mode": 493,
-              "path": "agent/bin/sha256-409072accc0949f69cceae619d1539611017f5434eb29b42773f0cbaf856c7ff/lunafox-engine-preheater-linux-arm64",
-              "size": 20108911
+              "path": "agent/bin/sha256-cb983117d43ba7882f829105cc0271776f5eda2b70009871b942839fb655560a/lunafox-engine-preheater-linux-arm64",
+              "size": 20105815
             },
             {
               "digest": "sha256:7a3b440c3cc79c9c1d75099b07afacabec805dfe4117862e7faa0804f66f9107",
@@ -19142,18 +18934,17 @@
         }
       },
       "artifact": {
-        "ref": "ghcr.io/yyhuni/lunafox-agent@sha256:3b07d8f4b20a002a88b1e4d9dcb97ef01ee319befa690de24ac06ed75105cd8f",
-        "digest": "sha256:3b07d8f4b20a002a88b1e4d9dcb97ef01ee319befa690de24ac06ed75105cd8f",
+        "ref": "ghcr.io/yyhuni/lunafox-agent@sha256:1413ad1bf9015b414f4fe8065bbd5a67a2461b0d9a243f1fbd30db715fe3b720",
+        "digest": "sha256:1413ad1bf9015b414f4fe8065bbd5a67a2461b0d9a243f1fbd30db715fe3b720",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.197",
-        "publicMergeCommit": "208bee4b47820d6a37c136c12f645fd21f6ad940",
-        "compositionDigest": "sha256:a7a8b7c1e9e60521283e502185fceddd20fb7929790c65334641bf6e74bff4d8"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "runtime-evidence/agent.json",
@@ -19169,7 +18960,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:715268d14bb1800f57433ac1377a3dd07aa22478604d11d0c29b098de2ce7751",
+        "digest": "sha256:5ae9fd6f9060b2b6658b7fe5a0b06406c76d20c7cadbd14b79f601fc66a4991c",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -19659,18 +19450,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "contracts/ocisignature/keyless_test.go",
@@ -19683,16 +19462,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -19707,10 +19486,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -19947,10 +19726,10 @@
               "size": 646
             },
             {
-              "digest": "sha256:c6efb16df6e3b668f1873c093bb6e2ec0980016df6a843f272dc4b74e584a26b",
+              "digest": "sha256:7cf7b1d0d6c341103f03dc26bd27585665ac390c5fd124c0841e9db506c92bc8",
               "mode": 493,
               "path": "docker/bootstrap/bootstrap.sh",
-              "size": 1702
+              "size": 1200
             },
             {
               "digest": "sha256:2b748ef4242c8b8b7f8cdc54c83e0be2df3e3c22b885e8e82d12535c262e12a0",
@@ -20169,16 +19948,16 @@
               "size": 1201
             },
             {
-              "digest": "sha256:d02cddcf194f6491008a8a9b42e93512dd45b7dc0aae0c1e1f422f5e79bc6df3",
+              "digest": "sha256:0367cb08e0c8407226f1d5e653c464e2d605cfb4e8f8c47b3ad7c9e1e843fe89",
               "mode": 420,
               "path": "server/cmd/server/global_asset_search_postgres_test.go",
-              "size": 11410
+              "size": 13640
             },
             {
-              "digest": "sha256:42ef1f0f7b61ce97aedbc3a85f6eafab4dd2e1a5d98912c4264224d77b334342",
+              "digest": "sha256:2ed1393c63c4157c0b85fffee776cedccdd1c4898cbe7a173c6d7445df3f6418",
               "mode": 420,
               "path": "server/cmd/server/global_asset_search_scale_postgres_test.go",
-              "size": 34799
+              "size": 42317
             },
             {
               "digest": "sha256:ab797b5c19755fdd2fb3fbd6d2c2b71c284c07fbde4cd8ffc016de53274cd9c5",
@@ -20571,22 +20350,22 @@
               "size": 1465
             },
             {
-              "digest": "sha256:6e20294c31c30f651fda91bf1908aad2f653797701db27453b1cd6ef7c2626a2",
+              "digest": "sha256:bb573e471737cf956285b722894bd847ad7d5399e90003138299503cd47a379e",
               "mode": 420,
               "path": "server/internal/bootstrap/compose_entrypoint_contract_test.go",
-              "size": 5368
+              "size": 5550
             },
             {
-              "digest": "sha256:59e49ddeacb3bc9f54f071e6ca4c16668f84ce957bc296ec62802b68f5e8e8aa",
+              "digest": "sha256:fb7b75dc1db1c230587ba296f418f4787569a19c074b55161340036a70092ee0",
               "mode": 420,
               "path": "server/internal/bootstrap/engine_bootstrap_test.go",
-              "size": 5644
+              "size": 4964
             },
             {
-              "digest": "sha256:d86ea84bdb2bffb00c53f0a4879f0f787568d29058a05c947e93d0330017e33d",
+              "digest": "sha256:7edbbe0e9d11089ca126cd0885c6eb6bd3acb78f09897bffd17032bb9a189791",
               "mode": 420,
               "path": "server/internal/bootstrap/engine_bootstrap.go",
-              "size": 7904
+              "size": 7288
             },
             {
               "digest": "sha256:1c4b76ad985af225786ede3b7e63c0042c7a8ed492cfbac9f8cb813c83f7463d",
@@ -20619,10 +20398,10 @@
               "size": 5425
             },
             {
-              "digest": "sha256:5e870491b160e29738486287ebad7a7edaeccb1e53a80da54bd2f133edb1d97e",
+              "digest": "sha256:30252ad83358b80fdbe41b72b5c1637a627b2c73c74af286b806b1a2ddbf9d2d",
               "mode": 420,
               "path": "server/internal/bootstrap/infra.go",
-              "size": 12343
+              "size": 12274
             },
             {
               "digest": "sha256:c01740b94e1d96935584272aef72f853b3ed3d3d8203fde20383664f43921be4",
@@ -20721,10 +20500,10 @@
               "size": 1279
             },
             {
-              "digest": "sha256:50d9fded84305b462fa844baed0f49dc0dbb3944bfef3ad5466f618fed08b2c2",
+              "digest": "sha256:70bd3f859118de5dca55330402f67e6494371283b9ea3d1e921e109d78dcbf5f",
               "mode": 420,
               "path": "server/internal/bootstrap/wiring.go",
-              "size": 62178
+              "size": 62142
             },
             {
               "digest": "sha256:585847857779f778238c882f2fe15dc1bd0f0be0dade487aad7d7e6f22ab4159",
@@ -20769,10 +20548,10 @@
               "size": 2111
             },
             {
-              "digest": "sha256:80d5ffaef1e12f060775703ce4dc9fc4bf59e8b26d15a4b554e6d40788c8964b",
+              "digest": "sha256:dcdef32761cfe234ce4d8f5992277b322f862007aaf6bf02f382feff24028bbc",
               "mode": 420,
               "path": "server/internal/bootstrap/wiring/asset/wiring_asset_endpoint_store_adapter.go",
-              "size": 2618
+              "size": 2631
             },
             {
               "digest": "sha256:6321ad73bc01674810df422c2a21bbeddd0bef76d153eeca5509d4f2584a7f18",
@@ -20805,10 +20584,10 @@
               "size": 1167
             },
             {
-              "digest": "sha256:359fb5614bb01411246cd5583211b6d7ea432eb4342aa105f44bb1a11fb1414a",
+              "digest": "sha256:ec1610f62929856e14262835cb5b2b5681072b116ebeb58d73778c915f2f84c9",
               "mode": 420,
               "path": "server/internal/bootstrap/wiring/asset/wiring_asset_website_store_adapter.go",
-              "size": 3006
+              "size": 3019
             },
             {
               "digest": "sha256:9173f1820f59ec7bcab968d4ebbd212e00f89da1274b052a49669190548400ae",
@@ -21033,16 +20812,16 @@
               "size": 631
             },
             {
-              "digest": "sha256:c6604075c79445afcc74326e280d53f0cb3ea9601490db40a97622c9a99fc354",
+              "digest": "sha256:75f86fc0a8df67c22bc45db16e6a5e8d5c5af64afaf9aed0bb96b035b23f432b",
               "mode": 420,
               "path": "server/internal/bootstrap/wiring/scan/exports_test.go",
-              "size": 3008
+              "size": 2657
             },
             {
-              "digest": "sha256:fd6a10f25854bf86112c5d0503a7e0736616ec101f21bb5e60f27db7586d3d35",
+              "digest": "sha256:4b3ba3550f3bff7af69a41ff8deff0fec13f3416395b50305311ca5c558680a1",
               "mode": 420,
               "path": "server/internal/bootstrap/wiring/scan/exports.go",
-              "size": 7774
+              "size": 6894
             },
             {
               "digest": "sha256:3d261fccb600b2a47e5c3fc274f811effbce7a6b7ed659787fc8631db035fb50",
@@ -21441,10 +21220,10 @@
               "size": 636
             },
             {
-              "digest": "sha256:27078a8502805cbed6be617a1ea369005b1672dacda18aa1ddbe883e417357df",
+              "digest": "sha256:9588a1956e3b87315f6d1444a398e5b6e5f279b7ab15582e3855390b9bd38ad5",
               "mode": 420,
               "path": "server/internal/config/config_test.go",
-              "size": 15891
+              "size": 15617
             },
             {
               "digest": "sha256:69fb8d9ba4dc79acac33c6268487e0b94258a6a910935371f8867e9e6dd583f2",
@@ -21453,16 +21232,16 @@
               "size": 5465
             },
             {
-              "digest": "sha256:ac6f153eb846b2d75804779e1821e393e930a16d2a1cec0893b7ace1988ac0bd",
+              "digest": "sha256:3a549dedbb18903fbc0210e339ea7081d3717947226f9ce41b6856f03f409d48",
               "mode": 420,
               "path": "server/internal/config/load.go",
-              "size": 8721
+              "size": 8631
             },
             {
-              "digest": "sha256:f40e11e2cbf593e83570069cda8a8fa484dd5b21ae39d23a39569e50501eb47e",
+              "digest": "sha256:5de7c263a9ab91e67789022ac9aa8cf1d1ab9c0fb158c937c85f8cf141dbf462",
               "mode": 420,
               "path": "server/internal/config/types.go",
-              "size": 5875
+              "size": 5778
             },
             {
               "digest": "sha256:d086e1a3f907ac4b461c8c906414d3b82de1243c8fee2f545eb9a647ebb7ed8f",
@@ -21549,16 +21328,16 @@
               "size": 1104
             },
             {
-              "digest": "sha256:c0d3cff801bf165d301e4837b0c187f42e93d536322fe60f318b974dde4dcf0c",
+              "digest": "sha256:77589a77eff728d8fecf086d247d0fb12328dbbcca8d38d3458e56fe6cf1aedd",
               "mode": 420,
               "path": "server/internal/engineinstall/inventory_test.go",
-              "size": 8989
+              "size": 7720
             },
             {
-              "digest": "sha256:1624ee782705b4fd236b825ce2732cb24da72b2151f6e85cc5f1dcf710c4cb51",
+              "digest": "sha256:f18fb056326e217de05f32fea6c74c91e62499841c053ce488b4795c6179860e",
               "mode": 420,
               "path": "server/internal/engineinstall/inventory.go",
-              "size": 7065
+              "size": 6515
             },
             {
               "digest": "sha256:667628ab895e0a4cb6e1b78f0608ea667b53e18cf35130295cbde83a10fa4a56",
@@ -21567,10 +21346,10 @@
               "size": 38810
             },
             {
-              "digest": "sha256:ca35afe3066019e25a9a8f86f0a48e1f805431600fbcbaa292f018be4ed2fd5d",
+              "digest": "sha256:3563fa6145e198510238ab922224ac9129554be77a9e25bbefb87f642a5c4dab",
               "mode": 420,
               "path": "server/internal/engineinstall/oci_package_puller.go",
-              "size": 23368
+              "size": 23280
             },
             {
               "digest": "sha256:c903383ac52bffc7968056f8eee93c549bdd3b02abdd5b9c88b450f7519dba76",
@@ -21603,28 +21382,28 @@
               "size": 4722
             },
             {
-              "digest": "sha256:0d604e51bc6f627db1bdb6af6376d9b6299c7c080775ff6dc6e8de647fbcfe20",
+              "digest": "sha256:069ee8159ca500e05544f5f966b3a3d728814dd64ad75c1d1722e770e4636324",
               "mode": 420,
               "path": "server/internal/engineinstall/runtime_image_index_test.go",
-              "size": 38253
+              "size": 31020
             },
             {
-              "digest": "sha256:73b683a79a563916156922b5d4a7b35f52dfdaaa693b381c63d87340121d8b7c",
+              "digest": "sha256:23518003e4c4f91f54e0bf57ef32df2221d34a13aa4c3e023e31c1c2f56ef54d",
               "mode": 420,
               "path": "server/internal/engineinstall/runtime_image_index.go",
-              "size": 21898
+              "size": 20412
             },
             {
-              "digest": "sha256:e144497a9b348b77b4be0a93cedc5dd8340f11301cd18970bc6fa539447f1cc1",
+              "digest": "sha256:260b23500fa8656230d34a8a401cb53dd67ee32fe5bce6773d9cd7625b41c961",
               "mode": 420,
               "path": "server/internal/engineinstall/service_test.go",
-              "size": 18775
+              "size": 15741
             },
             {
-              "digest": "sha256:a5d9e3c3e0afc6a95d1be5f9b32b5613d8a7f3f4c9a2d88c727a877d0147a36a",
+              "digest": "sha256:c789f40de83c21c4cf5bd98298617d1cf08d2e842e42f9575b37710fa51a4282",
               "mode": 420,
               "path": "server/internal/engineinstall/service.go",
-              "size": 10148
+              "size": 8913
             },
             {
               "digest": "sha256:cc8c0436f728170932e185565b6dcd5198a5265b39bc609c5d7993be88b75379",
@@ -23475,28 +23254,28 @@
               "size": 2423
             },
             {
-              "digest": "sha256:8ae1712e042c4506c332fa60c717c24fbacc84507135cb5c208fc6ce12959345",
+              "digest": "sha256:c1d878563ba27cd55bbf4005df49bfbc237a8b41136dcab0c1444fab9a9988be",
               "mode": 420,
               "path": "server/internal/modules/asset/application/global_asset_search_parser_test.go",
-              "size": 5048
+              "size": 6669
             },
             {
-              "digest": "sha256:4d73f9b3acc06596aabac4451769409c2f92347242920cbe337db2c9de8aeab2",
+              "digest": "sha256:2ee0313c7aa62a13d3a8d72f14cd2be580fe1694125a1b7dc495057fffde5419",
               "mode": 420,
               "path": "server/internal/modules/asset/application/global_asset_search_parser.go",
-              "size": 8707
+              "size": 9542
             },
             {
-              "digest": "sha256:1de3f8a1ebd15e9eee68dd198e6bc7ef8e5ae8c121a0d64a80085dea7f2e2b6a",
+              "digest": "sha256:efd957bf368156e9ed730376c1ddb743e54e696da16134b00418c3b765132d1b",
               "mode": 420,
               "path": "server/internal/modules/asset/application/global_asset_search_test.go",
-              "size": 6535
+              "size": 9467
             },
             {
-              "digest": "sha256:134bea37e03433c1902fa52a62402e50c9690339ea2fff3d91f417feaa19b621",
+              "digest": "sha256:014602c871278b7b15c9e41a8320b22cc516cef0248ce771f46bed8b44128d6e",
               "mode": 420,
               "path": "server/internal/modules/asset/application/global_asset_search.go",
-              "size": 12288
+              "size": 13347
             },
             {
               "digest": "sha256:4954af1396cc6338e6a495727ae4a5ac4f153b416b5a7c1807c2eed00c6950a5",
@@ -23991,10 +23770,10 @@
               "size": 638
             },
             {
-              "digest": "sha256:19f19619311bfac9f4d586142d3eea35d29e9c620eeed1b40ed37cb5498af412",
+              "digest": "sha256:84614cc52d87a430cfa4edd4839c93bd19dbc3fc92eaf04a1e7898451305ba89",
               "mode": 420,
               "path": "server/internal/modules/asset/handler/README.md",
-              "size": 2147
+              "size": 2337
             },
             {
               "digest": "sha256:9f82cdde0f83cbf46558bb6722446f2d5f9942ea63fa336aed8569e28ae61ac6",
@@ -24033,10 +23812,10 @@
               "size": 777
             },
             {
-              "digest": "sha256:24f99d63f4a451328ca1adbd18c723ec9c2b498ea75a906afa048594df3a45b9",
+              "digest": "sha256:a5e4fb694ea91915a49bd8287a6c7b8e6ff45bdeeff51de357e95fb614608476",
               "mode": 420,
               "path": "server/internal/modules/asset/handler/search/handler_test.go",
-              "size": 5998
+              "size": 6997
             },
             {
               "digest": "sha256:5e2e76e96d6e2721c54d487df5e1ba3c724cfa6f789d801915e6fd9274640659",
@@ -24045,10 +23824,10 @@
               "size": 644
             },
             {
-              "digest": "sha256:0608267d96f41d8bd4ebfc9528ac1a39ba29d53dde9d4c525266bc4391270afe",
+              "digest": "sha256:fc6252339446844a58e0d22e17198378143c607f0a4c41c1bc064ec914845b95",
               "mode": 420,
               "path": "server/internal/modules/asset/handler/search/read.go",
-              "size": 4194
+              "size": 4569
             },
             {
               "digest": "sha256:a7d8e6480ab03c2932bdbcf11511e841a4437f84ba78f1ba86f755c78cb5a875",
@@ -24183,10 +23962,10 @@
               "size": 2585
             },
             {
-              "digest": "sha256:979e29032dd22e17fc423b40a46d15d4f4aef523ac3e3cce6a720b6179761599",
+              "digest": "sha256:823b958a813348387d4936aad2fff62ca4b3bdb3770a506d4f2fdbc26904d44d",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/endpoint_query.go",
-              "size": 6517
+              "size": 6596
             },
             {
               "digest": "sha256:489a83d386d43ffca3b809897c3fa665490fad388282e133ccc499e1b7ffacdb",
@@ -24195,16 +23974,16 @@
               "size": 869
             },
             {
-              "digest": "sha256:f86618e72deae0596915f0d2c72a7bede31c42e5f8ed142f3b52e230d27bbb50",
+              "digest": "sha256:5496f3573c79ec1913d1a4dd7f140848a5a83910a913d8ec439dbed48443b7f9",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/global_asset_search_query_test.go",
-              "size": 11022
+              "size": 19670
             },
             {
-              "digest": "sha256:ef7799b70e1f5b93b20e1115702dd35f8b97ac1c331fd384a1127d64c18131f9",
+              "digest": "sha256:d49486b2554b184b0d230e42afba28c50e21571f587a4e98087c5cf56d283f95",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/global_asset_search_query.go",
-              "size": 5334
+              "size": 7585
             },
             {
               "digest": "sha256:13b75725cc65be60f92396d8b850bbd97c60e2b2cb611d8c3a057428bbd5ff20",
@@ -24351,10 +24130,10 @@
               "size": 2067
             },
             {
-              "digest": "sha256:e91d4d73ac8c73c8586fa9dccc7ba7f38311c4f14140c5e8dfc1188fa60a2a45",
+              "digest": "sha256:375ddd87121af1fd980871bd733ac23bbcac3e6be13bc4e8f4b8f7f664220376",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/website_query.go",
-              "size": 6088
+              "size": 6167
             },
             {
               "digest": "sha256:1c540642cd5c79d66ee111d3585a08471784ffe69e66874f8543a2383494fe83",
@@ -27039,16 +26818,16 @@
               "size": 8470
             },
             {
-              "digest": "sha256:a840d5f700e3196901abe3c1f4797f36e16888ab14cab2372ab9cb3c42f3584b",
+              "digest": "sha256:f6fadf9426782e94faafbb2c144ad9a243b3e3d8db525e1d51d81571dccd3677",
               "mode": 420,
               "path": "server/internal/modules/scan/application/plan_task_test.go",
-              "size": 28959
+              "size": 27322
             },
             {
-              "digest": "sha256:7298e82cc7f80216f8941b30dac0bb672197cca85d49962639adb4ce25c5510b",
+              "digest": "sha256:77bf9568df0994f40a57f0f9dc32f803038fa49ec0424eefb91fef924c7c0b18",
               "mode": 420,
               "path": "server/internal/modules/scan/application/plan_task.go",
-              "size": 23146
+              "size": 22469
             },
             {
               "digest": "sha256:6202c9aa156cd402742172ae06b4fb8a9ebd58ee54c9cf6de1d109118a174534",
@@ -29769,10 +29548,10 @@
               "size": 11828
             },
             {
-              "digest": "sha256:e63b17ef7871c3b4f765575e2fb330295b1f8a105f0b65dc9b8c964d96214a26",
+              "digest": "sha256:9a3626d66b4e20b48f8bf413ba36bdcf7b75f20d706c7c5fa5b5a8874abe90f6",
               "mode": 420,
               "path": "server/internal/modules/upgrade/infrastructure/channel_manifest_source_test.go",
-              "size": 20847
+              "size": 20678
             },
             {
               "digest": "sha256:03ec2c4ed6d52831e0bf001224164f7a8de06244f0fe9a2f14b9da16c47f38c2",
@@ -29979,10 +29758,10 @@
               "size": 12486
             },
             {
-              "digest": "sha256:abc34b2d284a554969b296c80a1861275d06988d868fb84d01402b74b957f5b7",
+              "digest": "sha256:c7f6c869743f85ebe8a3bbef8484a395aa4dbbca2d7ed56aa71be90988fd28b3",
               "mode": 420,
               "path": "server/internal/modules/upgrade/upgrader/preheat_fixture_test.go",
-              "size": 9460
+              "size": 9276
             },
             {
               "digest": "sha256:2ccf5f3dd3682e820983cda0c7e9c8a7eb00920dc624f41b04292525e689aba4",
@@ -30386,8 +30165,8 @@
         }
       },
       "artifact": {
-        "ref": "ghcr.io/yyhuni/lunafox-bootstrap@sha256:3d99f948f47602794f6bd2444350931fa672c36fe1fc47dd5cae0fe7c2f11835",
-        "digest": "sha256:3d99f948f47602794f6bd2444350931fa672c36fe1fc47dd5cae0fe7c2f11835",
+        "ref": "ghcr.io/yyhuni/lunafox-bootstrap@sha256:40eed707aab35bdc498d856f8b93443891343d6fa81b1c953b1f9687e07e6720",
+        "digest": "sha256:40eed707aab35bdc498d856f8b93443891343d6fa81b1c953b1f9687e07e6720",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
@@ -30395,8 +30174,8 @@
       },
       "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.198",
-        "publicMergeCommit": "69817398b3b2150a9d0877a02cd5ab531a03ca5e"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "runtime-evidence/bootstrap.json",
@@ -30412,7 +30191,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:a90b4ebb8f39d6ebab86d9a80a29c97c511a36154e8ac8302e2066e683b70590",
+        "digest": "sha256:cac3e9f9b47979089d387cce54fd5e3a032cfc93bab4f034c0dde353ce72f430",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -34635,10 +34414,10 @@
               "size": 2572
             },
             {
-              "digest": "sha256:28c4abdc9587970c3980be5073f19279bf9592fbcbcf8d8b0e2c586cdd5fb7a7",
+              "digest": "sha256:d2f80d98071e15a75f781bc6920d9ff406349d9750d2981d180191392e889aec",
               "mode": 420,
               "path": "frontend/components/search/__tests__/search-syntax-guidance.test.tsx",
-              "size": 3314
+              "size": 3331
             },
             {
               "digest": "sha256:d355575b390fd7961b4cf857e4f813e91bf568d53592ee4457c5a288372a8457",
@@ -34653,10 +34432,10 @@
               "size": 285
             },
             {
-              "digest": "sha256:d7e7779a5531197ed6480e243f0ceabef88674df57582860501c0f400c9cbef2",
+              "digest": "sha256:ccd79e8cdd8473d9d9fbe3d76f410ef83aab605bc80b51807f2ceeeef0b28adf",
               "mode": 420,
               "path": "frontend/components/search/README.md",
-              "size": 8402
+              "size": 8677
             },
             {
               "digest": "sha256:cf5dbf81ab7adeeeb7b279386b4eab62775113987b917b5fbfd877b49c9e3c40",
@@ -34665,16 +34444,16 @@
               "size": 2484
             },
             {
-              "digest": "sha256:af39583db9b7f4070eedf087f2b8450f94507d8f3e80666291642c08c907f516",
+              "digest": "sha256:0e5212ae7db67da6826eab14cc8495288cde20b0c003be70530cd0eac4c6d085",
               "mode": 420,
               "path": "frontend/components/search/search-page-sections.tsx",
-              "size": 21813
+              "size": 21923
             },
             {
-              "digest": "sha256:69b2d121e342bc4a8b8cfa2582997220cc5aafae0f44928bdfb683e9c0c38e96",
+              "digest": "sha256:43342f88f0482a45c81f1edfc87bdda8ddb944c2613106ca1e0fcf6b1d969b00",
               "mode": 420,
               "path": "frontend/components/search/search-page-state.ts",
-              "size": 8571
+              "size": 9098
             },
             {
               "digest": "sha256:35c636b910a89cebe76afe12245f97d632d994dfc78ae67b3c1a6e25df82307d",
@@ -34683,10 +34462,10 @@
               "size": 246
             },
             {
-              "digest": "sha256:f4a0a39c7b691fba4968af9c5675158752c6f565bbb27dd01606c344dd370ff7",
+              "digest": "sha256:64b9f7f4a729802137a578c6cace0d2a6c219960190e1bebe1c45278185f1935",
               "mode": 420,
               "path": "frontend/components/search/search-pagination.tsx",
-              "size": 1191
+              "size": 1245
             },
             {
               "digest": "sha256:d99119085a51cd843ff64312de21944bacdb5f66e2aa47a16dd29efdd520ae98",
@@ -39585,10 +39364,10 @@
               "size": 3457
             },
             {
-              "digest": "sha256:35b360eeb88bc27fe875ef4531fb04a4cf585bc2b7874f0ce8318ab82f68169d",
+              "digest": "sha256:599847e6d5096e20cd05d263dd19fd3f5b3af178446c723a7ac70637ecd40150",
               "mode": 420,
               "path": "frontend/lib/__tests__/global-asset-search-query.test.ts",
-              "size": 4964
+              "size": 5965
             },
             {
               "digest": "sha256:8c69fc3f31f518a156564587acd8a4941cc392c095e36c69d76a4267e7a8f30c",
@@ -39981,10 +39760,10 @@
               "size": 3007
             },
             {
-              "digest": "sha256:f7d740e0d5440848f5fdd824b5247966ae2cd875625fde1b057567981b782f34",
+              "digest": "sha256:c6e33535b786b2e685934dd10b86888bcd05e2d872565326c486ed88675a35d2",
               "mode": 420,
               "path": "frontend/lib/global-asset-search-query.ts",
-              "size": 13310
+              "size": 14034
             },
             {
               "digest": "sha256:4fb10d41f9856a3963fd1c56b4844f2ea1e88b89af55ce6dd761fe6b4d59a570",
@@ -40209,16 +39988,16 @@
               "size": 19894
             },
             {
-              "digest": "sha256:7e7beb75140e4e96b4ba3a701546e6b8d27ff62591ddc231c2479a6b8a9650c4",
+              "digest": "sha256:41fb6dae00474e9b6c754d757422da5af8c8292e27dba650daee081fdb9b24e5",
               "mode": 420,
               "path": "frontend/messages/en.json",
-              "size": 204356
+              "size": 204725
             },
             {
-              "digest": "sha256:df352986fd7f9b6acb0db97b9bb02712679e55e96f542e2207a073302831a0d6",
+              "digest": "sha256:ef60b6cc9f1cd1c473f9c1e7141393acac53829fc811ae9a294ad6d610f7094f",
               "mode": 420,
               "path": "frontend/messages/zh.json",
-              "size": 196845
+              "size": 197196
             },
             {
               "digest": "sha256:aef14a62c45a01622d477d5435aa582a7a038ad622a4a7671ecaf24e9ff551e3",
@@ -40707,10 +40486,10 @@
               "size": 3850
             },
             {
-              "digest": "sha256:39590f4196a52fd4ac51ebf760519077515e70687ef6c24d85916763a6352988",
+              "digest": "sha256:c1c3f6ebbc11e26cc4481cea608595a582c6d95da6e945e2352facc1cf4411e9",
               "mode": 420,
               "path": "frontend/mock/data/search.ts",
-              "size": 5204
+              "size": 5417
             },
             {
               "digest": "sha256:91faf9bf9e5ca19233003c239159aa64972f0e664566e0a26189536688ed1478",
@@ -42057,10 +41836,10 @@
               "size": 927
             },
             {
-              "digest": "sha256:bd411c80d26bb868493755b9608321b05e819751ed24428fc44594719e098024",
+              "digest": "sha256:31e40d25b078ed04fd04a27203b316b0d969e6f0469f5147707e8ac2a6fc76c0",
               "mode": 420,
               "path": "frontend/types/search.types.ts",
-              "size": 848
+              "size": 1038
             },
             {
               "digest": "sha256:b5c692dac0b44fa948993bc90ba8d7d4b28c067c2e5d83d433206602f1d49a3b",
@@ -42140,8 +41919,8 @@
         }
       },
       "artifact": {
-        "ref": "ghcr.io/yyhuni/lunafox-frontend@sha256:c77c8132fd38eb2beff65db33d44a13aa982fe06e945c9cb8a184bdd6ace6ed4",
-        "digest": "sha256:c77c8132fd38eb2beff65db33d44a13aa982fe06e945c9cb8a184bdd6ace6ed4",
+        "ref": "ghcr.io/yyhuni/lunafox-frontend@sha256:f204aa0e87c86cd672ce929f927170c56d6fe61c70656dd49a0fbf0811b89693",
+        "digest": "sha256:f204aa0e87c86cd672ce929f927170c56d6fe61c70656dd49a0fbf0811b89693",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
@@ -42149,8 +41928,8 @@
       },
       "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.198",
-        "publicMergeCommit": "69817398b3b2150a9d0877a02cd5ab531a03ca5e"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "runtime-evidence/frontend.json",
@@ -42239,7 +42018,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:91b25ed3fcc8d404b41899db4742ef64d35c48def7d41d6958ecb1cb95f3732f",
+        "digest": "sha256:2be6c7957f23f8a8b7da270d2ff9482871e61f24e9f731a58937c59ddfcb43ef",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -42729,18 +42508,6 @@
               "size": 9207
             },
             {
-              "digest": "sha256:7a384d902ba11c247a86c6bc88e7a585d8a5eb083a33dbbb4c1bd15b0510ef68",
-              "mode": 420,
-              "path": "contracts/ocidistribution/cloudflare_test.go",
-              "size": 4222
-            },
-            {
-              "digest": "sha256:5e3e5b6573736be9f2a31396017721114102ec15760e39b720a797ec2eb191c5",
-              "mode": 420,
-              "path": "contracts/ocidistribution/cloudflare.go",
-              "size": 4989
-            },
-            {
               "digest": "sha256:873707bf9163f1bcf1754fd49f7074ae13ca0c5d42c9fff13474ceeb22bbb230",
               "mode": 420,
               "path": "contracts/ocisignature/keyless_test.go",
@@ -42753,16 +42520,16 @@
               "size": 13804
             },
             {
-              "digest": "sha256:5771ed9498f1a76fafe918587a7ed7b4a5162167ff1d4f54ac519d187bf0fe15",
+              "digest": "sha256:63049d15c035b3c906101a7738d0ce9b3923cd420c1a2146fb97c426d998feca",
               "mode": 420,
               "path": "contracts/preheatmanifest/manifest_test.go",
-              "size": 7198
+              "size": 6930
             },
             {
-              "digest": "sha256:64c6c2be8ab714a7273ab797d9d5a5db291e62105539b51229096ed3d807271f",
+              "digest": "sha256:01f35ad1e9f26cfc41e9f2e3b4cfe2be481b9a69d75bd22ab6bea43c1dcc3154",
               "mode": 420,
               "path": "contracts/preheatmanifest/manifest.go",
-              "size": 24918
+              "size": 23584
             },
             {
               "digest": "sha256:5db5cb8e47d4ae5b9a033bb39ffa84f155bd8e9c72d5485edddaf3dc5d3a5780",
@@ -42777,10 +42544,10 @@
               "size": 17406
             },
             {
-              "digest": "sha256:53d70dad89280a45a6b7ea207f3b1abbed98a24b08712376e2cc39ed21e4292d",
+              "digest": "sha256:5e01550c2b4c7639c4e51c3a8f5850d8a4f046f8fd34fb2207b4cb44f1195802",
               "mode": 420,
               "path": "contracts/releasemanifest/manifest.go",
-              "size": 21330
+              "size": 20523
             },
             {
               "digest": "sha256:9930375aad26fc96c2499dc1ee0f77d11a4b5a4a78a3ceae662c9e0af10d2e17",
@@ -43215,16 +42982,16 @@
               "size": 1201
             },
             {
-              "digest": "sha256:d02cddcf194f6491008a8a9b42e93512dd45b7dc0aae0c1e1f422f5e79bc6df3",
+              "digest": "sha256:0367cb08e0c8407226f1d5e653c464e2d605cfb4e8f8c47b3ad7c9e1e843fe89",
               "mode": 420,
               "path": "server/cmd/server/global_asset_search_postgres_test.go",
-              "size": 11410
+              "size": 13640
             },
             {
-              "digest": "sha256:42ef1f0f7b61ce97aedbc3a85f6eafab4dd2e1a5d98912c4264224d77b334342",
+              "digest": "sha256:2ed1393c63c4157c0b85fffee776cedccdd1c4898cbe7a173c6d7445df3f6418",
               "mode": 420,
               "path": "server/cmd/server/global_asset_search_scale_postgres_test.go",
-              "size": 34799
+              "size": 42317
             },
             {
               "digest": "sha256:ab797b5c19755fdd2fb3fbd6d2c2b71c284c07fbde4cd8ffc016de53274cd9c5",
@@ -43617,22 +43384,22 @@
               "size": 1465
             },
             {
-              "digest": "sha256:6e20294c31c30f651fda91bf1908aad2f653797701db27453b1cd6ef7c2626a2",
+              "digest": "sha256:bb573e471737cf956285b722894bd847ad7d5399e90003138299503cd47a379e",
               "mode": 420,
               "path": "server/internal/bootstrap/compose_entrypoint_contract_test.go",
-              "size": 5368
+              "size": 5550
             },
             {
-              "digest": "sha256:59e49ddeacb3bc9f54f071e6ca4c16668f84ce957bc296ec62802b68f5e8e8aa",
+              "digest": "sha256:fb7b75dc1db1c230587ba296f418f4787569a19c074b55161340036a70092ee0",
               "mode": 420,
               "path": "server/internal/bootstrap/engine_bootstrap_test.go",
-              "size": 5644
+              "size": 4964
             },
             {
-              "digest": "sha256:d86ea84bdb2bffb00c53f0a4879f0f787568d29058a05c947e93d0330017e33d",
+              "digest": "sha256:7edbbe0e9d11089ca126cd0885c6eb6bd3acb78f09897bffd17032bb9a189791",
               "mode": 420,
               "path": "server/internal/bootstrap/engine_bootstrap.go",
-              "size": 7904
+              "size": 7288
             },
             {
               "digest": "sha256:1c4b76ad985af225786ede3b7e63c0042c7a8ed492cfbac9f8cb813c83f7463d",
@@ -43665,10 +43432,10 @@
               "size": 5425
             },
             {
-              "digest": "sha256:5e870491b160e29738486287ebad7a7edaeccb1e53a80da54bd2f133edb1d97e",
+              "digest": "sha256:30252ad83358b80fdbe41b72b5c1637a627b2c73c74af286b806b1a2ddbf9d2d",
               "mode": 420,
               "path": "server/internal/bootstrap/infra.go",
-              "size": 12343
+              "size": 12274
             },
             {
               "digest": "sha256:c01740b94e1d96935584272aef72f853b3ed3d3d8203fde20383664f43921be4",
@@ -43767,10 +43534,10 @@
               "size": 1279
             },
             {
-              "digest": "sha256:50d9fded84305b462fa844baed0f49dc0dbb3944bfef3ad5466f618fed08b2c2",
+              "digest": "sha256:70bd3f859118de5dca55330402f67e6494371283b9ea3d1e921e109d78dcbf5f",
               "mode": 420,
               "path": "server/internal/bootstrap/wiring.go",
-              "size": 62178
+              "size": 62142
             },
             {
               "digest": "sha256:585847857779f778238c882f2fe15dc1bd0f0be0dade487aad7d7e6f22ab4159",
@@ -43815,10 +43582,10 @@
               "size": 2111
             },
             {
-              "digest": "sha256:80d5ffaef1e12f060775703ce4dc9fc4bf59e8b26d15a4b554e6d40788c8964b",
+              "digest": "sha256:dcdef32761cfe234ce4d8f5992277b322f862007aaf6bf02f382feff24028bbc",
               "mode": 420,
               "path": "server/internal/bootstrap/wiring/asset/wiring_asset_endpoint_store_adapter.go",
-              "size": 2618
+              "size": 2631
             },
             {
               "digest": "sha256:6321ad73bc01674810df422c2a21bbeddd0bef76d153eeca5509d4f2584a7f18",
@@ -43851,10 +43618,10 @@
               "size": 1167
             },
             {
-              "digest": "sha256:359fb5614bb01411246cd5583211b6d7ea432eb4342aa105f44bb1a11fb1414a",
+              "digest": "sha256:ec1610f62929856e14262835cb5b2b5681072b116ebeb58d73778c915f2f84c9",
               "mode": 420,
               "path": "server/internal/bootstrap/wiring/asset/wiring_asset_website_store_adapter.go",
-              "size": 3006
+              "size": 3019
             },
             {
               "digest": "sha256:9173f1820f59ec7bcab968d4ebbd212e00f89da1274b052a49669190548400ae",
@@ -44079,16 +43846,16 @@
               "size": 631
             },
             {
-              "digest": "sha256:c6604075c79445afcc74326e280d53f0cb3ea9601490db40a97622c9a99fc354",
+              "digest": "sha256:75f86fc0a8df67c22bc45db16e6a5e8d5c5af64afaf9aed0bb96b035b23f432b",
               "mode": 420,
               "path": "server/internal/bootstrap/wiring/scan/exports_test.go",
-              "size": 3008
+              "size": 2657
             },
             {
-              "digest": "sha256:fd6a10f25854bf86112c5d0503a7e0736616ec101f21bb5e60f27db7586d3d35",
+              "digest": "sha256:4b3ba3550f3bff7af69a41ff8deff0fec13f3416395b50305311ca5c558680a1",
               "mode": 420,
               "path": "server/internal/bootstrap/wiring/scan/exports.go",
-              "size": 7774
+              "size": 6894
             },
             {
               "digest": "sha256:3d261fccb600b2a47e5c3fc274f811effbce7a6b7ed659787fc8631db035fb50",
@@ -44487,10 +44254,10 @@
               "size": 636
             },
             {
-              "digest": "sha256:27078a8502805cbed6be617a1ea369005b1672dacda18aa1ddbe883e417357df",
+              "digest": "sha256:9588a1956e3b87315f6d1444a398e5b6e5f279b7ab15582e3855390b9bd38ad5",
               "mode": 420,
               "path": "server/internal/config/config_test.go",
-              "size": 15891
+              "size": 15617
             },
             {
               "digest": "sha256:69fb8d9ba4dc79acac33c6268487e0b94258a6a910935371f8867e9e6dd583f2",
@@ -44499,16 +44266,16 @@
               "size": 5465
             },
             {
-              "digest": "sha256:ac6f153eb846b2d75804779e1821e393e930a16d2a1cec0893b7ace1988ac0bd",
+              "digest": "sha256:3a549dedbb18903fbc0210e339ea7081d3717947226f9ce41b6856f03f409d48",
               "mode": 420,
               "path": "server/internal/config/load.go",
-              "size": 8721
+              "size": 8631
             },
             {
-              "digest": "sha256:f40e11e2cbf593e83570069cda8a8fa484dd5b21ae39d23a39569e50501eb47e",
+              "digest": "sha256:5de7c263a9ab91e67789022ac9aa8cf1d1ab9c0fb158c937c85f8cf141dbf462",
               "mode": 420,
               "path": "server/internal/config/types.go",
-              "size": 5875
+              "size": 5778
             },
             {
               "digest": "sha256:d086e1a3f907ac4b461c8c906414d3b82de1243c8fee2f545eb9a647ebb7ed8f",
@@ -44595,16 +44362,16 @@
               "size": 1104
             },
             {
-              "digest": "sha256:c0d3cff801bf165d301e4837b0c187f42e93d536322fe60f318b974dde4dcf0c",
+              "digest": "sha256:77589a77eff728d8fecf086d247d0fb12328dbbcca8d38d3458e56fe6cf1aedd",
               "mode": 420,
               "path": "server/internal/engineinstall/inventory_test.go",
-              "size": 8989
+              "size": 7720
             },
             {
-              "digest": "sha256:1624ee782705b4fd236b825ce2732cb24da72b2151f6e85cc5f1dcf710c4cb51",
+              "digest": "sha256:f18fb056326e217de05f32fea6c74c91e62499841c053ce488b4795c6179860e",
               "mode": 420,
               "path": "server/internal/engineinstall/inventory.go",
-              "size": 7065
+              "size": 6515
             },
             {
               "digest": "sha256:667628ab895e0a4cb6e1b78f0608ea667b53e18cf35130295cbde83a10fa4a56",
@@ -44613,10 +44380,10 @@
               "size": 38810
             },
             {
-              "digest": "sha256:ca35afe3066019e25a9a8f86f0a48e1f805431600fbcbaa292f018be4ed2fd5d",
+              "digest": "sha256:3563fa6145e198510238ab922224ac9129554be77a9e25bbefb87f642a5c4dab",
               "mode": 420,
               "path": "server/internal/engineinstall/oci_package_puller.go",
-              "size": 23368
+              "size": 23280
             },
             {
               "digest": "sha256:c903383ac52bffc7968056f8eee93c549bdd3b02abdd5b9c88b450f7519dba76",
@@ -44649,28 +44416,28 @@
               "size": 4722
             },
             {
-              "digest": "sha256:0d604e51bc6f627db1bdb6af6376d9b6299c7c080775ff6dc6e8de647fbcfe20",
+              "digest": "sha256:069ee8159ca500e05544f5f966b3a3d728814dd64ad75c1d1722e770e4636324",
               "mode": 420,
               "path": "server/internal/engineinstall/runtime_image_index_test.go",
-              "size": 38253
+              "size": 31020
             },
             {
-              "digest": "sha256:73b683a79a563916156922b5d4a7b35f52dfdaaa693b381c63d87340121d8b7c",
+              "digest": "sha256:23518003e4c4f91f54e0bf57ef32df2221d34a13aa4c3e023e31c1c2f56ef54d",
               "mode": 420,
               "path": "server/internal/engineinstall/runtime_image_index.go",
-              "size": 21898
+              "size": 20412
             },
             {
-              "digest": "sha256:e144497a9b348b77b4be0a93cedc5dd8340f11301cd18970bc6fa539447f1cc1",
+              "digest": "sha256:260b23500fa8656230d34a8a401cb53dd67ee32fe5bce6773d9cd7625b41c961",
               "mode": 420,
               "path": "server/internal/engineinstall/service_test.go",
-              "size": 18775
+              "size": 15741
             },
             {
-              "digest": "sha256:a5d9e3c3e0afc6a95d1be5f9b32b5613d8a7f3f4c9a2d88c727a877d0147a36a",
+              "digest": "sha256:c789f40de83c21c4cf5bd98298617d1cf08d2e842e42f9575b37710fa51a4282",
               "mode": 420,
               "path": "server/internal/engineinstall/service.go",
-              "size": 10148
+              "size": 8913
             },
             {
               "digest": "sha256:cc8c0436f728170932e185565b6dcd5198a5265b39bc609c5d7993be88b75379",
@@ -46521,28 +46288,28 @@
               "size": 2423
             },
             {
-              "digest": "sha256:8ae1712e042c4506c332fa60c717c24fbacc84507135cb5c208fc6ce12959345",
+              "digest": "sha256:c1d878563ba27cd55bbf4005df49bfbc237a8b41136dcab0c1444fab9a9988be",
               "mode": 420,
               "path": "server/internal/modules/asset/application/global_asset_search_parser_test.go",
-              "size": 5048
+              "size": 6669
             },
             {
-              "digest": "sha256:4d73f9b3acc06596aabac4451769409c2f92347242920cbe337db2c9de8aeab2",
+              "digest": "sha256:2ee0313c7aa62a13d3a8d72f14cd2be580fe1694125a1b7dc495057fffde5419",
               "mode": 420,
               "path": "server/internal/modules/asset/application/global_asset_search_parser.go",
-              "size": 8707
+              "size": 9542
             },
             {
-              "digest": "sha256:1de3f8a1ebd15e9eee68dd198e6bc7ef8e5ae8c121a0d64a80085dea7f2e2b6a",
+              "digest": "sha256:efd957bf368156e9ed730376c1ddb743e54e696da16134b00418c3b765132d1b",
               "mode": 420,
               "path": "server/internal/modules/asset/application/global_asset_search_test.go",
-              "size": 6535
+              "size": 9467
             },
             {
-              "digest": "sha256:134bea37e03433c1902fa52a62402e50c9690339ea2fff3d91f417feaa19b621",
+              "digest": "sha256:014602c871278b7b15c9e41a8320b22cc516cef0248ce771f46bed8b44128d6e",
               "mode": 420,
               "path": "server/internal/modules/asset/application/global_asset_search.go",
-              "size": 12288
+              "size": 13347
             },
             {
               "digest": "sha256:4954af1396cc6338e6a495727ae4a5ac4f153b416b5a7c1807c2eed00c6950a5",
@@ -47037,10 +46804,10 @@
               "size": 638
             },
             {
-              "digest": "sha256:19f19619311bfac9f4d586142d3eea35d29e9c620eeed1b40ed37cb5498af412",
+              "digest": "sha256:84614cc52d87a430cfa4edd4839c93bd19dbc3fc92eaf04a1e7898451305ba89",
               "mode": 420,
               "path": "server/internal/modules/asset/handler/README.md",
-              "size": 2147
+              "size": 2337
             },
             {
               "digest": "sha256:9f82cdde0f83cbf46558bb6722446f2d5f9942ea63fa336aed8569e28ae61ac6",
@@ -47079,10 +46846,10 @@
               "size": 777
             },
             {
-              "digest": "sha256:24f99d63f4a451328ca1adbd18c723ec9c2b498ea75a906afa048594df3a45b9",
+              "digest": "sha256:a5e4fb694ea91915a49bd8287a6c7b8e6ff45bdeeff51de357e95fb614608476",
               "mode": 420,
               "path": "server/internal/modules/asset/handler/search/handler_test.go",
-              "size": 5998
+              "size": 6997
             },
             {
               "digest": "sha256:5e2e76e96d6e2721c54d487df5e1ba3c724cfa6f789d801915e6fd9274640659",
@@ -47091,10 +46858,10 @@
               "size": 644
             },
             {
-              "digest": "sha256:0608267d96f41d8bd4ebfc9528ac1a39ba29d53dde9d4c525266bc4391270afe",
+              "digest": "sha256:fc6252339446844a58e0d22e17198378143c607f0a4c41c1bc064ec914845b95",
               "mode": 420,
               "path": "server/internal/modules/asset/handler/search/read.go",
-              "size": 4194
+              "size": 4569
             },
             {
               "digest": "sha256:a7d8e6480ab03c2932bdbcf11511e841a4437f84ba78f1ba86f755c78cb5a875",
@@ -47229,10 +46996,10 @@
               "size": 2585
             },
             {
-              "digest": "sha256:979e29032dd22e17fc423b40a46d15d4f4aef523ac3e3cce6a720b6179761599",
+              "digest": "sha256:823b958a813348387d4936aad2fff62ca4b3bdb3770a506d4f2fdbc26904d44d",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/endpoint_query.go",
-              "size": 6517
+              "size": 6596
             },
             {
               "digest": "sha256:489a83d386d43ffca3b809897c3fa665490fad388282e133ccc499e1b7ffacdb",
@@ -47241,16 +47008,16 @@
               "size": 869
             },
             {
-              "digest": "sha256:f86618e72deae0596915f0d2c72a7bede31c42e5f8ed142f3b52e230d27bbb50",
+              "digest": "sha256:5496f3573c79ec1913d1a4dd7f140848a5a83910a913d8ec439dbed48443b7f9",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/global_asset_search_query_test.go",
-              "size": 11022
+              "size": 19670
             },
             {
-              "digest": "sha256:ef7799b70e1f5b93b20e1115702dd35f8b97ac1c331fd384a1127d64c18131f9",
+              "digest": "sha256:d49486b2554b184b0d230e42afba28c50e21571f587a4e98087c5cf56d283f95",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/global_asset_search_query.go",
-              "size": 5334
+              "size": 7585
             },
             {
               "digest": "sha256:13b75725cc65be60f92396d8b850bbd97c60e2b2cb611d8c3a057428bbd5ff20",
@@ -47397,10 +47164,10 @@
               "size": 2067
             },
             {
-              "digest": "sha256:e91d4d73ac8c73c8586fa9dccc7ba7f38311c4f14140c5e8dfc1188fa60a2a45",
+              "digest": "sha256:375ddd87121af1fd980871bd733ac23bbcac3e6be13bc4e8f4b8f7f664220376",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/website_query.go",
-              "size": 6088
+              "size": 6167
             },
             {
               "digest": "sha256:1c540642cd5c79d66ee111d3585a08471784ffe69e66874f8543a2383494fe83",
@@ -50085,16 +49852,16 @@
               "size": 8470
             },
             {
-              "digest": "sha256:a840d5f700e3196901abe3c1f4797f36e16888ab14cab2372ab9cb3c42f3584b",
+              "digest": "sha256:f6fadf9426782e94faafbb2c144ad9a243b3e3d8db525e1d51d81571dccd3677",
               "mode": 420,
               "path": "server/internal/modules/scan/application/plan_task_test.go",
-              "size": 28959
+              "size": 27322
             },
             {
-              "digest": "sha256:7298e82cc7f80216f8941b30dac0bb672197cca85d49962639adb4ce25c5510b",
+              "digest": "sha256:77bf9568df0994f40a57f0f9dc32f803038fa49ec0424eefb91fef924c7c0b18",
               "mode": 420,
               "path": "server/internal/modules/scan/application/plan_task.go",
-              "size": 23146
+              "size": 22469
             },
             {
               "digest": "sha256:6202c9aa156cd402742172ae06b4fb8a9ebd58ee54c9cf6de1d109118a174534",
@@ -52815,10 +52582,10 @@
               "size": 11828
             },
             {
-              "digest": "sha256:e63b17ef7871c3b4f765575e2fb330295b1f8a105f0b65dc9b8c964d96214a26",
+              "digest": "sha256:9a3626d66b4e20b48f8bf413ba36bdcf7b75f20d706c7c5fa5b5a8874abe90f6",
               "mode": 420,
               "path": "server/internal/modules/upgrade/infrastructure/channel_manifest_source_test.go",
-              "size": 20847
+              "size": 20678
             },
             {
               "digest": "sha256:03ec2c4ed6d52831e0bf001224164f7a8de06244f0fe9a2f14b9da16c47f38c2",
@@ -53025,10 +52792,10 @@
               "size": 12486
             },
             {
-              "digest": "sha256:abc34b2d284a554969b296c80a1861275d06988d868fb84d01402b74b957f5b7",
+              "digest": "sha256:c7f6c869743f85ebe8a3bbef8484a395aa4dbbca2d7ed56aa71be90988fd28b3",
               "mode": 420,
               "path": "server/internal/modules/upgrade/upgrader/preheat_fixture_test.go",
-              "size": 9460
+              "size": 9276
             },
             {
               "digest": "sha256:2ccf5f3dd3682e820983cda0c7e9c8a7eb00920dc624f41b04292525e689aba4",
@@ -53432,8 +53199,8 @@
         }
       },
       "artifact": {
-        "ref": "ghcr.io/yyhuni/lunafox-server@sha256:8ce4d75a9cec35bc507f0dae5fbc7876ab399d897867c401c7e3614c87019bd4",
-        "digest": "sha256:8ce4d75a9cec35bc507f0dae5fbc7876ab399d897867c401c7e3614c87019bd4",
+        "ref": "ghcr.io/yyhuni/lunafox-server@sha256:a80530006d30e5e79780e04998b7ea8d93cfe70af6d276771c54fda5610125f6",
+        "digest": "sha256:a80530006d30e5e79780e04998b7ea8d93cfe70af6d276771c54fda5610125f6",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
@@ -53441,8 +53208,8 @@
       },
       "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.198",
-        "publicMergeCommit": "69817398b3b2150a9d0877a02cd5ab531a03ca5e"
+        "tag": "v0.0.1-alpha.199",
+        "publicMergeCommit": "816fb77b4cf37829acce745ce8101429e6dd9ee0"
       },
       "evidence": {
         "image": "runtime-evidence/server.json",
@@ -53457,7 +53224,7 @@
     "runtimeCompositionSchemaVersion": 1
   },
   "manifestBinding": {
-    "manifestDigest": "sha256:ce9ef643d8e6506800c3c044f43a6be1cbf71619269e7dc5cf102bac87a7470e"
+    "manifestDigest": "sha256:5c81162ad644b3bb3c56ff7e730fdc53f4219fcb0bc34a8d9c827d8328bb1b18"
   },
-  "compositionDigest": "sha256:2d537888e0452ce972ba073fadaf8763b59283a3b39e206878b0a42024c9a366"
+  "compositionDigest": "sha256:88e20652d37129713081ab80e4583ea99d6b0a69e7c500c3ed2a48fb3918dceb"
 }

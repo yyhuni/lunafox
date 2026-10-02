@@ -2,7 +2,7 @@
 name: lunafox
 services:
   engine-preheater:
-    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:3b07d8f4b20a002a88b1e4d9dcb97ef01ee319befa690de24ac06ed75105cd8f
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:1413ad1bf9015b414f4fe8065bbd5a67a2461b0d9a243f1fbd30db715fe3b720
     restart: 'no'
     network_mode: none
     entrypoint:
@@ -22,8 +22,6 @@ services:
     - ${LUNAFOX_PREHEAT_MANIFEST_DIGEST:?LUNAFOX_PREHEAT_MANIFEST_DIGEST is required}
     - --profile
     - ${DATABASE_MODE:-embedded}
-    - --cloudflare-acceleration
-    - "false"
     environment:
       LUNAFOX_PREHEAT_TIMEOUT_SECONDS: ${LUNAFOX_PREHEAT_TIMEOUT_SECONDS:-900}
     volumes:
@@ -42,7 +40,7 @@ services:
         max-size: 10m
         max-file: '3'
   config-init:
-    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-bootstrap@sha256:3d99f948f47602794f6bd2444350931fa672c36fe1fc47dd5cae0fe7c2f11835
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-bootstrap@sha256:40eed707aab35bdc498d856f8b93443891343d6fa81b1c953b1f9687e07e6720
     restart: 'no'
     network_mode: none
     depends_on:
@@ -143,18 +141,17 @@ services:
         max-size: 10m
         max-file: '3'
   server:
-    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-server@sha256:8ce4d75a9cec35bc507f0dae5fbc7876ab399d897867c401c7e3614c87019bd4
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-server@sha256:a80530006d30e5e79780e04998b7ea8d93cfe70af6d276771c54fda5610125f6
     restart: unless-stopped
     environment:
-      RELEASE_VERSION: 0.0.1-alpha.198
-      AGENT_VERSION: 0.0.1-alpha.198
-      AGENT_IMAGE_REF: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:3b07d8f4b20a002a88b1e4d9dcb97ef01ee319befa690de24ac06ed75105cd8f
+      RELEASE_VERSION: 0.0.1-alpha.199
+      AGENT_VERSION: 0.0.1-alpha.199
+      AGENT_IMAGE_REF: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:1413ad1bf9015b414f4fe8065bbd5a67a2461b0d9a243f1fbd30db715fe3b720
       RELEASE_CHANNEL: canary
       RELEASE_METADATA_BASE_URL: https://raw.githubusercontent.com/yyhuni/lunafox/release-channel
       RELEASE_REGISTRY: ${RELEASE_REGISTRY:-docker.io}
       LUNAFOX_SHARED_DATA_VOLUME_BIND: lunafox_data:/opt/lunafox:rw
       ENGINE_INSTALL_REGISTRY: ${RELEASE_REGISTRY:-docker.io}
-      ENGINE_INSTALL_CF_ACCELERATION: false
       PUBLIC_HOST: ${PUBLIC_HOST:?PUBLIC_HOST is required}
       PUBLIC_PORT: ${PUBLIC_PORT:?PUBLIC_PORT is required}
       JWT_SECRET_FILE: /run/lunafox-config/jwt-secret
@@ -231,7 +228,7 @@ services:
       lunafox.logs.component: server
       lunafox.logs.container: lunafox-server
   frontend:
-    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-frontend@sha256:c77c8132fd38eb2beff65db33d44a13aa982fe06e945c9cb8a184bdd6ace6ed4
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-frontend@sha256:f204aa0e87c86cd672ce929f927170c56d6fe61c70656dd49a0fbf0811b89693
     restart: unless-stopped
     depends_on:
       server:
@@ -254,7 +251,7 @@ services:
         max-size: 10m
         max-file: '3'
   bootstrap:
-    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-bootstrap@sha256:3d99f948f47602794f6bd2444350931fa672c36fe1fc47dd5cae0fe7c2f11835
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-bootstrap@sha256:40eed707aab35bdc498d856f8b93443891343d6fa81b1c953b1f9687e07e6720
     restart: 'no'
     depends_on:
       config-init:
@@ -264,8 +261,8 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
-      RELEASE_VERSION: 0.0.1-alpha.198
-      AGENT_VERSION: 0.0.1-alpha.198
+      RELEASE_VERSION: 0.0.1-alpha.199
+      AGENT_VERSION: 0.0.1-alpha.199
       JWT_SECRET_FILE: /run/lunafox-config/jwt-secret
       PUBLIC_HOST: ${PUBLIC_HOST:?PUBLIC_HOST is required}
       PUBLIC_PORT: ${PUBLIC_PORT:?PUBLIC_PORT is required}
@@ -288,7 +285,6 @@ services:
       ENGINE_PACKAGE_CACHE_ROOT: ${ENGINE_PACKAGE_CACHE_ROOT:-/opt/lunafox/engine-packages}
       ENGINE_INSTALL_INVENTORY_PATH: /bootstrap/engine-inventory.yaml
       ENGINE_INSTALL_REGISTRY: ${RELEASE_REGISTRY:-docker.io}
-      ENGINE_INSTALL_CF_ACCELERATION: false
       FINGERPRINT_BOOTSTRAP_PATH: /bootstrap/fingerprints/web_fingerprint_v4.json
       WORDLISTS_SOURCE_PATH: /bootstrap/wordlists
       LUNAFOX_AGENT_STATE_VOLUME: lunafox_agent_state
@@ -309,7 +305,7 @@ services:
         max-size: 10m
         max-file: '3'
   migrate:
-    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-bootstrap@sha256:3d99f948f47602794f6bd2444350931fa672c36fe1fc47dd5cae0fe7c2f11835
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-bootstrap@sha256:40eed707aab35bdc498d856f8b93443891343d6fa81b1c953b1f9687e07e6720
     restart: 'no'
     entrypoint:
     - /usr/local/bin/server
@@ -341,7 +337,7 @@ services:
         max-size: 10m
         max-file: '3'
   agent-preflight:
-    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:3b07d8f4b20a002a88b1e4d9dcb97ef01ee319befa690de24ac06ed75105cd8f
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:1413ad1bf9015b414f4fe8065bbd5a67a2461b0d9a243f1fbd30db715fe3b720
     restart: 'no'
     network_mode: none
     depends_on:
@@ -361,7 +357,7 @@ services:
         --shared-root /opt/lunafox \
         --run-id "compose-$$HOSTNAME"
     environment:
-      AGENT_IMAGE_REF: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:3b07d8f4b20a002a88b1e4d9dcb97ef01ee319befa690de24ac06ed75105cd8f
+      AGENT_IMAGE_REF: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:1413ad1bf9015b414f4fe8065bbd5a67a2461b0d9a243f1fbd30db715fe3b720
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock:ro
     - lunafox_data:/opt/lunafox
@@ -400,7 +396,7 @@ services:
         max-size: 10m
         max-file: '3'
   cert-init:
-    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-bootstrap@sha256:3d99f948f47602794f6bd2444350931fa672c36fe1fc47dd5cae0fe7c2f11835
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-bootstrap@sha256:40eed707aab35bdc498d856f8b93443891343d6fa81b1c953b1f9687e07e6720
     restart: 'no'
     depends_on:
       engine-preheater:
@@ -417,7 +413,7 @@ services:
         max-size: 10m
         max-file: '3'
   agent:
-    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:3b07d8f4b20a002a88b1e4d9dcb97ef01ee319befa690de24ac06ed75105cd8f
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:1413ad1bf9015b414f4fe8065bbd5a67a2461b0d9a243f1fbd30db715fe3b720
     container_name: lunafox-agent
     hostname: lunafox-agent
     restart: unless-stopped
@@ -432,7 +428,7 @@ services:
     environment:
       AGENT_CONTROL_URL: http://server:9090
       AGENT_BOOTSTRAP_CREDENTIALS_PATH: /var/lib/lunafox-agent/bootstrap.json
-      AGENT_VERSION: 0.0.1-alpha.198
+      AGENT_VERSION: 0.0.1-alpha.199
       AGENT_HOSTNAME: lunafox-agent
       LUNAFOX_AGENT_CONTAINER_NAME: lunafox-agent
       LUNAFOX_AGENT_DISABLE_SELF_UPDATE: 'true'
@@ -453,7 +449,7 @@ services:
       lunafox.logs.component: agent
       lunafox.logs.container: lunafox-agent
   upgrader:
-    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-bootstrap@sha256:3d99f948f47602794f6bd2444350931fa672c36fe1fc47dd5cae0fe7c2f11835
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-bootstrap@sha256:40eed707aab35bdc498d856f8b93443891343d6fa81b1c953b1f9687e07e6720
     restart: unless-stopped
     network_mode: none
     entrypoint:
