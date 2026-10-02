@@ -48,27 +48,57 @@ func TestGlobalAssetSearchPostgresIntegration(t *testing.T) {
 	query := assetapp.GlobalAssetSearchStoreQuery{AST: ast, PageSize: 10}
 
 	beforeTimeout := globalAssetSearchPostgresStatementTimeout(t, ctx, sqlDB)
-	websites, err := websiteRepo.SearchGlobalWebsites(ctx, query)
+	websites, websiteTotal, websiteCapped, err := websiteRepo.SearchGlobalWebsites(ctx, query)
 	if err != nil {
 		t.Fatalf("search current Websites: %v", err)
 	}
 	if got := globalAssetSearchWebsiteIDs(websites); strings.Join(intStrings(got), ",") != strings.Join(intStrings(fixture.websiteIDs), ",") {
 		t.Fatalf("Website search must return only active current rows: got=%v want=%v", got, fixture.websiteIDs)
 	}
+	if websiteTotal != int64(len(fixture.websiteIDs)) || websiteCapped {
+		t.Fatalf("Website search must report the exact capped count: total=%d capped=%v", websiteTotal, websiteCapped)
+	}
 	if afterTimeout := globalAssetSearchPostgresStatementTimeout(t, ctx, sqlDB); afterTimeout != beforeTimeout {
 		t.Fatalf("successful search leaked statement_timeout: before=%q after=%q", beforeTimeout, afterTimeout)
 	}
 
-	endpoints, err := endpointRepo.SearchGlobalEndpoints(ctx, query)
+	endpoints, endpointTotal, endpointCapped, err := endpointRepo.SearchGlobalEndpoints(ctx, query)
 	if err != nil {
 		t.Fatalf("search current Endpoints: %v", err)
 	}
 	if got := globalAssetSearchEndpointIDs(endpoints); strings.Join(intStrings(got), ",") != strings.Join(intStrings(fixture.endpointIDs), ",") {
 		t.Fatalf("Endpoint search must use only the Endpoint current table: got=%v want=%v", got, fixture.endpointIDs)
 	}
+	if endpointTotal != int64(len(fixture.endpointIDs)) || endpointCapped {
+		t.Fatalf("Endpoint search must report the exact capped count: total=%d capped=%v", endpointTotal, endpointCapped)
+	}
+
+	screenshotTrueAST, err := assetapp.ParseGlobalAssetSearchQuery(`title="Global search" && hasScreenshot=="true"`)
+	if err != nil {
+		t.Fatalf("parse hasScreenshot true probe: %v", err)
+	}
+	screenshotTrueItems, _, _, err := websiteRepo.SearchGlobalWebsites(ctx, assetapp.GlobalAssetSearchStoreQuery{AST: screenshotTrueAST, PageSize: 10})
+	if err != nil {
+		t.Fatalf("search Websites with screenshots: %v", err)
+	}
+	if got := globalAssetSearchWebsiteIDs(screenshotTrueItems); len(got) != 1 || got[0] != fixture.websiteIDs[0] {
+		t.Fatalf("hasScreenshot true must match only the Website with a current screenshot: got=%v want=[%d]", got, fixture.websiteIDs[0])
+	}
+
+	screenshotFalseAST, err := assetapp.ParseGlobalAssetSearchQuery(`title="Global search" && hasScreenshot="false"`)
+	if err != nil {
+		t.Fatalf("parse hasScreenshot false probe: %v", err)
+	}
+	screenshotFalseItems, _, _, err := websiteRepo.SearchGlobalWebsites(ctx, assetapp.GlobalAssetSearchStoreQuery{AST: screenshotFalseAST, PageSize: 10})
+	if err != nil {
+		t.Fatalf("search Websites without screenshots: %v", err)
+	}
+	if got := globalAssetSearchWebsiteIDs(screenshotFalseItems); len(got) != 1 || got[0] != fixture.websiteIDs[1] {
+		t.Fatalf("hasScreenshot false must match only the screenshot-less Website: got=%v want=[%d]", got, fixture.websiteIDs[1])
+	}
 
 	globalAssetSearchPostgresInstallSlowWebsiteView(t, ctx, sqlDB)
-	timeoutItems, err := websiteRepo.SearchGlobalWebsites(ctx, query)
+	timeoutItems, _, _, err := websiteRepo.SearchGlobalWebsites(ctx, query)
 	if !errors.Is(err, assetapp.ErrGlobalAssetSearchTimeout) {
 		t.Fatalf("slow PostgreSQL statement error = %v, want %v", err, assetapp.ErrGlobalAssetSearchTimeout)
 	}
@@ -148,6 +178,15 @@ func seedGlobalAssetSearchPostgresFixture(t *testing.T, ctx context.Context, db 
 
 	firstEndpoint := globalAssetSearchPostgresInsertEndpoint(t, ctx, db, activeOne, "https://active-one.example/api/global-search-probe", now)
 	_ = globalAssetSearchPostgresInsertEndpoint(t, ctx, db, deleted, "https://deleted.example/api/global-search-probe", now.Add(-time.Second))
+
+	// Only the first Website's (target_id, url) carries a current-state
+	// screenshot so both hasScreenshot polarities stay distinguishable.
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO screenshot (target_id, url, status_code, image, created_at)
+		VALUES ($1, $2, 200, DECODE('89504e470d0a1a0a', 'hex'), $3)
+	`, activeOne, "https://active-one.example/global-search-probe", now); err != nil {
+		t.Fatalf("create current-state Screenshot fixture: %v", err)
+	}
 
 	var scanID int
 	if err := db.QueryRowContext(ctx, `

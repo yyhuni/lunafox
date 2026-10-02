@@ -496,6 +496,7 @@ export function SearchPageContent({ state }: { state: SearchPageState }) {
                           onPreviousPage={state.handlePreviousPage}
                           onNextPage={state.handleNextPage}
                           onPageSizeChange={state.handlePageSizeChange}
+                          summary={state.paginationSummary}
                         />
                       </SearchResultsPaginationRegion>
                     )}
@@ -516,6 +517,7 @@ export function SearchPageContent({ state }: { state: SearchPageState }) {
                 onPreviousPage={state.handlePreviousPage}
                 onNextPage={state.handleNextPage}
                 onPageSizeChange={state.handlePageSizeChange}
+                summary={state.paginationSummary}
               />
             </SearchResultsPaginationRegion>
           ) : null}

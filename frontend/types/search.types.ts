@@ -29,6 +29,10 @@ export type SearchState = "initial" | "searching" | "results"
 
 export interface SearchResponse {
   results: SearchResult[]
+  // Capped match count: totalSize is exact up to the backend cap; when
+  // totalSizeCapped is true the real match count exceeds totalSize.
+  totalSize?: number
+  totalSizeCapped?: boolean
   nextPageToken?: string
 }
 

@@ -60,6 +60,6 @@ func (adapter *assetEndpointStoreAdapter) CountByTargetID(targetID int) (int64, 
 	return adapter.repo.CountByTargetID(targetID)
 }
 
-func (adapter *assetEndpointStoreAdapter) SearchGlobalEndpoints(ctx context.Context, query assetapp.GlobalAssetSearchStoreQuery) ([]assetdomain.Endpoint, error) {
+func (adapter *assetEndpointStoreAdapter) SearchGlobalEndpoints(ctx context.Context, query assetapp.GlobalAssetSearchStoreQuery) ([]assetdomain.Endpoint, int64, bool, error) {
 	return adapter.repo.SearchGlobalEndpoints(ctx, query)
 }

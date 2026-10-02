@@ -19,7 +19,6 @@ import (
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/yyhuni/lunafox/contracts/ociartifact"
-	"github.com/yyhuni/lunafox/contracts/ocidistribution"
 	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/errcode"
@@ -151,7 +150,7 @@ func (puller *ORASPackagePuller) ConsumePackageLayer(
 		if parentErr := ctx.Err(); parentErr != nil {
 			return ConsumedPackageLayer{}, parentErr
 		}
-		if !ocidistribution.CanAdvanceAfterFailure(reference.DigestReference(), err) {
+		if !ociartifact.IsCandidateUnavailable(err) {
 			return ConsumedPackageLayer{}, err
 		}
 		lastUnavailable = err

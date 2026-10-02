@@ -16,12 +16,13 @@ import (
 // SearchGlobalWebsites searches the Website current-state table across active
 // Targets. It deliberately does not reuse the target-scoped list query, whose
 // offset/count contract and permissive scope grammar are not safe here.
-func (r *WebsiteRepository) SearchGlobalWebsites(ctx context.Context, query assetapp.GlobalAssetSearchStoreQuery) ([]assetdomain.Website, error) {
+func (r *WebsiteRepository) SearchGlobalWebsites(ctx context.Context, query assetapp.GlobalAssetSearchStoreQuery) ([]assetdomain.Website, int64, bool, error) {
 	var rows []model.Website
-	if err := executeGlobalAssetSearchQuery(r.db, ctx, "website", query, &rows); err != nil {
-		return nil, err
+	totalSize, totalSizeCapped, err := executeGlobalAssetSearchQuery(r.db, ctx, "website", query, &rows)
+	if err != nil {
+		return nil, 0, false, err
 	}
-	return websiteModelListToDomain(rows), nil
+	return websiteModelListToDomain(rows), totalSize, totalSizeCapped, nil
 }
 
 // FindByTargetID finds websites by target ID with pagination and filter

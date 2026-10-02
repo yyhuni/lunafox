@@ -156,6 +156,16 @@ export function useSearchPageState() {
     enabled: searchState === "searching" || searchState === "results",
   })
 
+  const tPagination = useTranslations("common.pagination")
+  // The capped summary is display-only: navigation stays token-driven, so the
+  // summary never authorizes a page transition.
+  const paginationSummary = React.useMemo(() => {
+    if (data?.totalSize === undefined) return undefined
+    return data.totalSizeCapped
+      ? tPagination("totalCapped", { count: data.totalSize })
+      : tPagination("total", { count: data.totalSize })
+  }, [data?.totalSize, data?.totalSizeCapped, tPagination])
+
   React.useEffect(() => {
     if (searchState === "searching" && !isLoading && (data || error)) {
       setSearchState("results")
@@ -240,6 +250,7 @@ export function useSearchPageState() {
     canFirstPage: pageIndex > 0,
     canPreviousPage: pageIndex > 0,
     canNextPage: Boolean(data?.nextPageToken),
+    paginationSummary,
     setQuery,
     handleSearch,
     handleQuickTagClick,
