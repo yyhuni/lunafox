@@ -31,13 +31,15 @@ function isPlainObject(value) { return value !== null && typeof value === "objec
 function parseArgs(argv) {
   const options = {
     manifest: "", composition: "", bundle: "", provenance: "", policy: DEFAULT_POLICY, tag: "", releaseProfile: "", json: false,
+    allowRetiredWorkerBinding: false,
   };
   const flags = new Set(["--manifest", "--composition", "--bundle", "--provenance", "--policy", "--tag", "--release-profile"]);
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--json") { options.json = true; continue; }
+    if (arg === "--allow-retired-worker-binding") { options.allowRetiredWorkerBinding = true; continue; }
     if (arg === "--help" || arg === "-h") {
-      process.stdout.write("Usage: verify-public-release-evidence.mjs --manifest FILE --composition FILE --bundle FILE --provenance FILE --tag TAG [--policy FILE] [--release-profile <modern|alpha164-bridge>] [--json]\n");
+      process.stdout.write("Usage: verify-public-release-evidence.mjs --manifest FILE --composition FILE --bundle FILE --provenance FILE --tag TAG [--policy FILE] [--release-profile <modern|alpha164-bridge>] [--allow-retired-worker-binding] [--json]\n");
       process.exit(0);
     }
     if (!flags.has(arg)) fail(`unknown argument: ${arg}`);
@@ -81,12 +83,21 @@ function assertAllowedKeys(value, expected, label) {
   assert(JSON.stringify(keys) === JSON.stringify(want), `${label} has an unexpected field set`);
 }
 
-function validateReleaseProvenance(value, facts) {
-  assertAllowedKeys(value, new Set([
+function validateReleaseProvenance(value, facts, options = {}) {
+  const expectedKeys = new Set([
     "schemaVersion", "status", "releaseTag", "artifactDigest", "runtimeComposition", "componentEvidence",
     "privateSourceRevision", "publicSourceCommit", "deploymentSnapshotCommit", "workflowIdentity", "builderRun",
     "exportManifest", "publicProvenance", "sbom", "scanEvidence",
-  ]), "public release provenance");
+  ]);
+  // Releases published before the cloudflare-acceleration removal carry a
+  // cloudflareWorker binding in their provenance. Reading such a historical
+  // asset for component reuse must tolerate the retired key; new publications
+  // never set it and keep the strict field set.
+  if (options.allowRetiredWorkerBinding && "cloudflareWorker" in value) {
+    assert(isPlainObject(value.cloudflareWorker), "public release provenance cloudflareWorker binding is invalid");
+    expectedKeys.add("cloudflareWorker");
+  }
+  assertAllowedKeys(value, expectedKeys, "public release provenance");
   assert(value.schemaVersion === 1 && value.status === "published", "public release provenance schema is invalid");
   assert(value.releaseTag === facts.tag, "public release provenance tag does not match the release");
   assert(value.artifactDigest === facts.manifestSHA256, "public release provenance manifest digest does not match bytes");
@@ -129,7 +140,7 @@ function verify(options) {
     compositionSHA256: sha256(compositionBytes),
     bundleSHA256: sha256(bundleBytes),
   };
-  validateReleaseProvenance(provenance, facts);
+  validateReleaseProvenance(provenance, facts, { allowRetiredWorkerBinding: options.allowRetiredWorkerBinding });
   return {
     schemaVersion: 1,
     passed: true,
