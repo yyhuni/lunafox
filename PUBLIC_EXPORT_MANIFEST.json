@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:4a2c8dd0b9317d75deea9d7c92beed122d55a14b53bcc3af90b8de078e963a3e",
+  "sourceRevisionDigest": "sha256:46bdb05b23a5e9bc1f17272d8e6e7d95e3a2876eece7401686f049f2b91c4734",
   "releaseTag": "v0.0.1-alpha.199",
   "generatedReadOnly": true,
   "excludedPaths": [
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "166b88dfd0727da527f44c2bf2426c995e4bfa3786eda9e5db95878af7bb6fd8"
+      "sha256": "d36ad62e555a9c035e653d4bf882d2b4d43853e1226341dbd0336cb79d157bec"
     },
     {
       "path": "README.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "68cab1534281521209aff041d9d83e2343d069afb331d9be0ba57e476e64cd7e"
+      "sha256": "3dc648b8b2f8f8e506932689c98bae1165d4081e3d55c45df5e1e0fdbe5aaa97"
     },
     {
       "path": "agent/bin/sha256-cb983117d43ba7882f829105cc0271776f5eda2b70009871b942839fb655560a/agent-bundle.sha256",
@@ -92,7 +92,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "0df32d0aa031d2b24cf0e2b7c42d4b97769cfad443a909caa814084b4e80c144"
+      "sha256": "38e398d0343bd9f7d85f3c3a95f60f054d275443c3bcd9829dc25da1b588e2ca"
     },
     {
       "path": "agent/bin/sha256-cb983117d43ba7882f829105cc0271776f5eda2b70009871b942839fb655560a/lunafox-agent-linux-amd64",
@@ -17675,8 +17675,8 @@
       "path": "scripts/ci/publish-public-deployment.mjs",
       "type": "file",
       "mode": "0644",
-      "size": 22970,
-      "sha256": "d804cf5b279ac7900801ecfa9fb2e19c5634a99c5b9fd33ea60cd26ab70c4d56"
+      "size": 23214,
+      "sha256": "697d63fcda1dae3637457a691232f813b403e347ccb255a74f4593864e28b6ac"
     },
     {
       "path": "scripts/ci/publish-public-deployment.test.mjs",

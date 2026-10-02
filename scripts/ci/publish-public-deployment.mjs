@@ -248,8 +248,14 @@ async function findPublication(options, snapshotSha) {
     const matches = (Array.isArray(pulls) ? pulls : []).filter((pr) => pr.head?.ref === branch && pr.base?.ref === "main");
     const merged = matches.find((pr) => pr.merged_at);
     if (merged) {
-      if (snapshotShaFromBody(merged.body) !== snapshotSha) fail(`deployment ${options.tag} already merged with a different snapshot`);
-      return { branch, refSha: ref.value?.object?.sha ?? merged.head?.sha ?? "", pr: merged, merged: true };
+      // A merged deployment PR is immutable history under this branch name. A
+      // re-publication with a different snapshot (for example a release tag
+      // that moved to pick up pipeline fixes) must not reuse it; per the
+      // retry-suffix scan it claims the next suffix instead.
+      if (snapshotShaFromBody(merged.body) === snapshotSha) {
+        return { branch, refSha: ref.value?.object?.sha ?? merged.head?.sha ?? "", pr: merged, merged: true };
+      }
+      continue;
     }
     const open = matches.find((pr) => pr.state === "open" && snapshotShaFromBody(pr.body) === snapshotSha && ref.found);
     if (open) return { branch, refSha: ref.value.object.sha, pr: open, merged: false };
