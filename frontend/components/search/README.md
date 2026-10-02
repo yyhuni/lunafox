@@ -90,9 +90,12 @@
   replace the draft. The form submit path remains the only way to start a
   query; do not reuse the broader
   `SmartFilterInput` DSL here.
-- The result response contains `results` and optional `nextPageToken`, never a
-  page number or total. Query, asset type, and page-size changes reset token
-  history.
+- The result response contains `results`, the capped match total (`totalSize`
+  with `totalSizeCapped` marking "10000+" style capped counts), and an optional
+  `nextPageToken`; never a page number. Query, asset type, and page-size
+  changes reset token history. The capped total is display-only: it never
+  authorizes a page transition, and the pagination area shows "共 N 条" or
+  "共 10000+ 条" via the shared `common.pagination` keys.
 - Website results use `SearchWebsitesDataTable`, a read-only adapter over the
   canonical target website evidence-list table surface. It reuses the
   `RelationEvidenceListFrame`, three-column header, website identity, HTTP

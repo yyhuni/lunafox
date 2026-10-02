@@ -68,6 +68,6 @@ func (adapter *assetWebsiteStoreAdapter) CountByTargetID(targetID int) (int64, e
 	return adapter.repo.CountByTargetID(targetID)
 }
 
-func (adapter *assetWebsiteStoreAdapter) SearchGlobalWebsites(ctx context.Context, query assetapp.GlobalAssetSearchStoreQuery) ([]assetdomain.Website, error) {
+func (adapter *assetWebsiteStoreAdapter) SearchGlobalWebsites(ctx context.Context, query assetapp.GlobalAssetSearchStoreQuery) ([]assetdomain.Website, int64, bool, error) {
 	return adapter.repo.SearchGlobalWebsites(ctx, query)
 }

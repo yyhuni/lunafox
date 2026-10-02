@@ -869,7 +869,6 @@ func wireScanModule(repos *repositoryBundle, infra *infra, cfg *config.Config, n
 		repos.engineRepo,
 		infra.installedEngineQuery,
 		configResourceResolver,
-		cfg.EngineInstall.CFAcceleration,
 	)
 	if err != nil {
 		return scanModuleWiring{}, err

@@ -45,13 +45,6 @@ func TestNewPlanTaskCompilerFailsFastWhenProductionDependencyIsMissing(t *testin
 	}
 }
 
-func TestNewPlanTaskCompilerRejectsAmbiguousCloudflareAccelerationConfiguration(t *testing.T) {
-	query := &installedPackageQueryStub{}
-	if _, err := newPlanTaskCompiler(query, nil, true, false); err == nil || !strings.Contains(err.Error(), "at most one Cloudflare acceleration") {
-		t.Fatalf("ambiguous Cloudflare acceleration error = %v", err)
-	}
-}
-
 func TestNewScanTaskStoreAdapterRetainsDiagnosticTerminalCapability(t *testing.T) {
 	store := NewScanTaskStoreAdapter(scanrepo.NewScanTaskRepository(nil))
 	if _, ok := store.(scanapp.EngineDiagnosticTerminalTaskStore); !ok {

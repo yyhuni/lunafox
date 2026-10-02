@@ -71,7 +71,7 @@ func TestComposeBootstrapDoesNotCreateResidentContainers(t *testing.T) {
 	}
 }
 
-func TestComposeBootstrapMapsOnlyTheKnownAlpha164AccelerationOmission(t *testing.T) {
+func TestComposeBootstrapRequiresKnownRegistryAndIgnoresLegacyAccelerationKey(t *testing.T) {
 	root := filepath.Clean(filepath.Join("..", "..", ".."))
 	script, err := filepath.Abs(filepath.Join(root, "docker", "bootstrap", "bootstrap.sh"))
 	if err != nil {
@@ -82,20 +82,21 @@ func TestComposeBootstrapMapsOnlyTheKnownAlpha164AccelerationOmission(t *testing
 		registry     string
 		acceleration *string
 		wantSuccess  bool
+		wantWarning  bool
 	}{
-		{name: "missing acceleration with Docker Hub", registry: "docker.io", wantSuccess: true},
-		{name: "missing acceleration with GHCR", registry: "ghcr.io", wantSuccess: true},
-		{name: "invalid present acceleration", registry: "docker.io", acceleration: stringPointer("sometimes")},
-		{name: "enabled acceleration cannot select registry", registry: "docker.io", acceleration: stringPointer("true")},
-		{name: "disabled acceleration rejects unknown registry", registry: "registry.example", acceleration: stringPointer("false")},
-		{name: "missing acceleration rejects unknown registry", registry: "registry.example"},
+		{name: "Docker Hub without the legacy key", registry: "docker.io", wantSuccess: true},
+		{name: "GHCR without the legacy key", registry: "ghcr.io", wantSuccess: true},
+		{name: "legacy enabled key is ignored", registry: "ghcr.io", acceleration: stringPointer("true"), wantSuccess: true, wantWarning: true},
+		{name: "legacy malformed key is ignored", registry: "docker.io", acceleration: stringPointer("sometimes"), wantSuccess: true, wantWarning: true},
+		{name: "unknown registry fails", registry: "registry.example"},
+		{name: "unknown registry fails with the legacy key", registry: "registry.example", acceleration: stringPointer("false")},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			directory := t.TempDir()
 			calls := filepath.Join(directory, "calls")
-			fakeServer := "#!/bin/sh\nprintf '%s:%s\\n' \"$1\" \"$ENGINE_INSTALL_CF_ACCELERATION\" >> \"$CALLS\"\n"
+			fakeServer := "#!/bin/sh\nprintf '%s\\n' \"$1\" >> \"$CALLS\"\n"
 			if err := os.WriteFile(filepath.Join(directory, "server"), []byte(fakeServer), 0o755); err != nil {
 				t.Fatal(err)
 			}
@@ -124,8 +125,11 @@ func TestComposeBootstrapMapsOnlyTheKnownAlpha164AccelerationOmission(t *testing
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !strings.HasPrefix(string(data), "engine-bootstrap:false\n") {
-				t.Fatalf("legacy acceleration mapping calls = %s", data)
+			if !strings.HasPrefix(string(data), "engine-bootstrap\n") {
+				t.Fatalf("bootstrap call order = %s", data)
+			}
+			if test.wantWarning && !strings.Contains(string(output), "ENGINE_INSTALL_CF_ACCELERATION is deprecated") {
+				t.Fatalf("legacy key warning missing from output: %s", output)
 			}
 		})
 	}

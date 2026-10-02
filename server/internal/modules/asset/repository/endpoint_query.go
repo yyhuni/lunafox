@@ -16,12 +16,13 @@ import (
 
 // SearchGlobalEndpoints searches the Endpoint current-state table across
 // active Targets without consulting snapshots or any other asset table.
-func (r *EndpointRepository) SearchGlobalEndpoints(ctx context.Context, query assetapp.GlobalAssetSearchStoreQuery) ([]assetdomain.Endpoint, error) {
+func (r *EndpointRepository) SearchGlobalEndpoints(ctx context.Context, query assetapp.GlobalAssetSearchStoreQuery) ([]assetdomain.Endpoint, int64, bool, error) {
 	var rows []model.Endpoint
-	if err := executeGlobalAssetSearchQuery(r.db, ctx, "endpoint", query, &rows); err != nil {
-		return nil, err
+	totalSize, totalSizeCapped, err := executeGlobalAssetSearchQuery(r.db, ctx, "endpoint", query, &rows)
+	if err != nil {
+		return nil, 0, false, err
 	}
-	return endpointModelListToDomain(rows), nil
+	return endpointModelListToDomain(rows), totalSize, totalSizeCapped, nil
 }
 
 // FindByTargetID finds endpoints by target ID with pagination and filter

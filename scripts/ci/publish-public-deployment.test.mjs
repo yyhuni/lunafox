@@ -82,7 +82,6 @@ function fixture(t) {
   const engineIdentity = `yyhuni/lunafox-engine-runtime-port-scan@${engineDigest}`;
   const entry = {
     candidates: [`docker.io/${engineIdentity}`, `ghcr.io/${engineIdentity}`],
-    cloudflareCandidates: [`docker.lunafox.cc.cd/${engineIdentity}`, `docker.io/${engineIdentity}`, `ghcr.io/${engineIdentity}`],
     digest: engineDigest,
     identityReference: `ghcr.io/${engineIdentity}`,
     platforms: ["linux/amd64", "linux/arm64"],

@@ -228,12 +228,24 @@ func globalAssetSearchField(raw string) (GlobalAssetSearchField, error) {
 		return GlobalAssetSearchFieldStatusCode, nil
 	case string(GlobalAssetSearchFieldTech):
 		return GlobalAssetSearchFieldTech, nil
+	case string(GlobalAssetSearchFieldHasScreenshot):
+		return GlobalAssetSearchFieldHasScreenshot, nil
 	default:
 		return "", fmt.Errorf("unsupported field %q", raw)
 	}
 }
 
 func newGlobalAssetSearchCondition(field GlobalAssetSearchField, operator GlobalAssetSearchOperator, rawValue string) (GlobalAssetSearchCondition, error) {
+	if field == GlobalAssetSearchFieldHasScreenshot {
+		// Booleans are exact by nature: both operators share one semantics and
+		// any value outside lowercase "true"/"false" is rejected instead of
+		// being normalized, so a typo can never silently widen the filter.
+		value, err := parseGlobalAssetSearchBoolean(rawValue)
+		if err != nil {
+			return GlobalAssetSearchCondition{}, err
+		}
+		return GlobalAssetSearchCondition{Field: field, Operator: operator, HasScreenshot: &value}, nil
+	}
 	if field == GlobalAssetSearchFieldStatusCode {
 		if rawValue == "" {
 			return GlobalAssetSearchCondition{}, fmt.Errorf("statusCode must be an integer")
@@ -257,4 +269,15 @@ func newGlobalAssetSearchCondition(field GlobalAssetSearchField, operator Global
 		}
 	}
 	return GlobalAssetSearchCondition{Field: field, Operator: operator, Text: rawValue}, nil
+}
+
+func parseGlobalAssetSearchBoolean(rawValue string) (bool, error) {
+	switch rawValue {
+	case "true":
+		return true, nil
+	case "false":
+		return false, nil
+	default:
+		return false, fmt.Errorf("hasScreenshot must be \"true\" or \"false\"")
+	}
 }
