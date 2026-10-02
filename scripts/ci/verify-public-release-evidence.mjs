@@ -98,6 +98,13 @@ function validateReleaseProvenance(value, facts, options = {}) {
     expectedKeys.add("cloudflareWorker");
   }
   assertAllowedKeys(value, expectedKeys, "public release provenance");
+  const expectedScanKeys = new Set(["runtimeImages", "engineHandoff", "signatures"]);
+  if (options.allowRetiredWorkerBinding && "cloudflareWorker" in (value.scanEvidence ?? {})) {
+    // Historical assets also recorded the worker scan under scanEvidence.
+    assert(value.scanEvidence.cloudflareWorker === true, "public release provenance scan evidence cloudflareWorker is invalid");
+    expectedScanKeys.add("cloudflareWorker");
+  }
+  assertAllowedKeys(value.scanEvidence, expectedScanKeys, "public release provenance scanEvidence");
   assert(value.schemaVersion === 1 && value.status === "published", "public release provenance schema is invalid");
   assert(value.releaseTag === facts.tag, "public release provenance tag does not match the release");
   assert(value.artifactDigest === facts.manifestSHA256, "public release provenance manifest digest does not match bytes");
@@ -108,7 +115,6 @@ function validateReleaseProvenance(value, facts, options = {}) {
   assert(typeof value.builderRun === "string" && /^https:\/\/github\.com\/yyhuni\/lunafox\/actions\/runs\/\d+$/.test(value.builderRun), "public release provenance builder run is invalid");
   assert(DIGEST_RE.test(value.exportManifest) && DIGEST_RE.test(value.publicProvenance), "public release provenance source bindings are invalid");
   assert(value.sbom === true, "public release provenance must retain SBOM evidence");
-  assertAllowedKeys(value.scanEvidence, new Set(["runtimeImages", "engineHandoff", "signatures"]), "public release provenance scanEvidence");
   assert(value.scanEvidence.runtimeImages === true && value.scanEvidence.engineHandoff === true && value.scanEvidence.signatures === true,
     "public release provenance scan evidence is incomplete");
   assertAllowedKeys(value.runtimeComposition, new Set(["asset", "digest", "assetSha256"]), "public release provenance runtimeComposition");

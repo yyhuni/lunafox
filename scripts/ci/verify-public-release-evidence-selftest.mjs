@@ -37,6 +37,14 @@ assert.throws(() => validateReleaseProvenance(retiredWorkerBinding, facts), /une
 // Historical assets published before the worker removal keep the retired
 // binding; reading them for reuse tolerates it, new publications do not.
 validateReleaseProvenance(retiredWorkerBinding, facts, { allowRetiredWorkerBinding: true });
+retiredWorkerBinding.scanEvidence.cloudflareWorker = true;
+const scanOnlyRetired = structuredClone(valid);
+scanOnlyRetired.scanEvidence.cloudflareWorker = true;
+assert.throws(() => validateReleaseProvenance(scanOnlyRetired, facts), /scanEvidence has an unexpected field set/);
+validateReleaseProvenance(retiredWorkerBinding, facts, { allowRetiredWorkerBinding: true });
+const badRetiredScan = structuredClone(retiredWorkerBinding);
+badRetiredScan.scanEvidence.cloudflareWorker = false;
+assert.throws(() => validateReleaseProvenance(badRetiredScan, facts, { allowRetiredWorkerBinding: true }), /cloudflareWorker is invalid/);
 assert.doesNotThrow(() => validateReleaseProvenance(valid, facts, { allowRetiredWorkerBinding: true }));
 const malformedRetired = structuredClone(valid);
 malformedRetired.cloudflareWorker = "not-an-object";
