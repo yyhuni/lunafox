@@ -489,7 +489,6 @@ func preheatManifestBytes(t *testing.T, manifest *releasemanifest.Manifest) ([]b
 	repository := "yyhuni/lunafox-engine-runtime-port-scan"
 	entry := preheatmanifest.Entry{
 		Candidates:           []string{"docker.io/" + repository + "@" + digest, "ghcr.io/" + repository + "@" + digest},
-		CloudflareCandidates: []string{"docker.lunafox.cc.cd/" + repository + "@" + digest, "docker.io/" + repository + "@" + digest, "ghcr.io/" + repository + "@" + digest},
 		Digest:               digest,
 		IdentityReference:    "ghcr.io/" + repository + "@" + digest,
 		Platforms:            []string{preheatmanifest.PlatformLinuxAMD64, preheatmanifest.PlatformLinuxARM64},

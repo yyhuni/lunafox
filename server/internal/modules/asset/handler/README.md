@@ -30,6 +30,8 @@ Each resource subdirectory follows a fixed responsibility split:
 
 全局搜索 handler 位于 `search/`，只处理 `GET /v1/assets:search`。成功响应复用现有
 Website/Endpoint read shape：`tech` 是数组，响应头和响应体是完整字符串，并保留
-Endpoint 的 evidence truncation flags；响应不包含漏洞摘要、total 或页码。无效输入
+Endpoint 的 evidence truncation flags；响应不包含漏洞摘要或页码，但每次请求（含翻页）
+都携带封顶总数 `totalSize` 与 `totalSizeCapped`：命中数不超过 10000 时 `totalSize`
+为精确值，超过时固定为 10000 且 `totalSizeCapped=true`。无效输入
 统一映射为 `400 INVALID_ARGUMENT`，数据库搜索超时映射为可识别的
 `DEADLINE_EXCEEDED` gateway response。

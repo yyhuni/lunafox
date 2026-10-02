@@ -12,35 +12,39 @@ import (
 )
 
 type globalAssetSearchWebsiteStoreStub struct {
-	items []assetdomain.Website
-	err   error
-	query GlobalAssetSearchStoreQuery
-	calls int
+	items           []assetdomain.Website
+	err             error
+	query           GlobalAssetSearchStoreQuery
+	calls           int
+	totalSize       int64
+	totalSizeCapped bool
 }
 
-func (stub *globalAssetSearchWebsiteStoreStub) SearchGlobalWebsites(_ context.Context, query GlobalAssetSearchStoreQuery) ([]assetdomain.Website, error) {
+func (stub *globalAssetSearchWebsiteStoreStub) SearchGlobalWebsites(_ context.Context, query GlobalAssetSearchStoreQuery) ([]assetdomain.Website, int64, bool, error) {
 	stub.calls++
 	stub.query = query
 	if stub.err != nil {
-		return nil, stub.err
+		return nil, 0, false, stub.err
 	}
-	return append([]assetdomain.Website(nil), stub.items...), nil
+	return append([]assetdomain.Website(nil), stub.items...), stub.totalSize, stub.totalSizeCapped, nil
 }
 
 type globalAssetSearchEndpointStoreStub struct {
-	items []assetdomain.Endpoint
-	err   error
-	query GlobalAssetSearchStoreQuery
-	calls int
+	items           []assetdomain.Endpoint
+	err             error
+	query           GlobalAssetSearchStoreQuery
+	calls           int
+	totalSize       int64
+	totalSizeCapped bool
 }
 
-func (stub *globalAssetSearchEndpointStoreStub) SearchGlobalEndpoints(_ context.Context, query GlobalAssetSearchStoreQuery) ([]assetdomain.Endpoint, error) {
+func (stub *globalAssetSearchEndpointStoreStub) SearchGlobalEndpoints(_ context.Context, query GlobalAssetSearchStoreQuery) ([]assetdomain.Endpoint, int64, bool, error) {
 	stub.calls++
 	stub.query = query
 	if stub.err != nil {
-		return nil, stub.err
+		return nil, 0, false, stub.err
 	}
-	return append([]assetdomain.Endpoint(nil), stub.items...), nil
+	return append([]assetdomain.Endpoint(nil), stub.items...), stub.totalSize, stub.totalSizeCapped, nil
 }
 
 func TestGlobalAssetSearchServiceDefaultsAndSingleTableDispatch(t *testing.T) {
@@ -99,6 +103,32 @@ func TestGlobalAssetSearchServiceBindsPageTokenToShapeAndCursor(t *testing.T) {
 	}
 }
 
+func TestGlobalAssetSearchPageTokenBindsHasScreenshotPolarity(t *testing.T) {
+	now := time.Date(2026, 8, 7, 8, 0, 0, 0, time.UTC)
+	websiteStore := &globalAssetSearchWebsiteStoreStub{items: []assetdomain.Website{{ID: 3, CreatedAt: now}, {ID: 2, CreatedAt: now}}}
+	service := NewGlobalAssetSearchService(websiteStore, &globalAssetSearchEndpointStoreStub{})
+
+	pageSize := 1
+	first, err := service.Search(context.Background(), GlobalAssetSearchInput{Query: `hasScreenshot=="true"`, AssetType: GlobalAssetSearchAssetTypeWebsite, PageSize: &pageSize})
+	if err != nil {
+		t.Fatalf("first search: %v", err)
+	}
+	if first.NextPageToken == "" {
+		t.Fatal("expected next page token")
+	}
+	websiteStore.items = []assetdomain.Website{{ID: 2, CreatedAt: now}}
+	second, err := service.Search(context.Background(), GlobalAssetSearchInput{Query: `hasScreenshot=="true"`, AssetType: GlobalAssetSearchAssetTypeWebsite, PageSize: &pageSize, PageToken: first.NextPageToken})
+	if err != nil {
+		t.Fatalf("same-polarity token must stay valid: %v", err)
+	}
+	if len(second.Websites) != 1 || second.Websites[0].ID != 2 {
+		t.Fatalf("token must page within the same boolean query, got %+v", second.Websites)
+	}
+	if _, err := service.Search(context.Background(), GlobalAssetSearchInput{Query: `hasScreenshot=="false"`, AssetType: GlobalAssetSearchAssetTypeWebsite, PageSize: &pageSize, PageToken: first.NextPageToken}); !errors.Is(err, ErrInvalidGlobalAssetSearchPageToken) {
+		t.Fatalf("token issued for true must be rejected for false, got %v", err)
+	}
+}
+
 func TestGlobalAssetSearchPageTokenRejectsPreContainsVersion(t *testing.T) {
 	now := time.Date(2026, 8, 7, 8, 0, 0, 0, time.UTC)
 	ast, err := ParseGlobalAssetSearchQuery("example")
@@ -149,5 +179,27 @@ func TestGlobalAssetSearchServiceMapsRepositoryTimeout(t *testing.T) {
 	service := NewGlobalAssetSearchService(&globalAssetSearchWebsiteStoreStub{err: ErrGlobalAssetSearchTimeout}, &globalAssetSearchEndpointStoreStub{})
 	if _, err := service.Search(context.Background(), GlobalAssetSearchInput{Query: "example", AssetType: GlobalAssetSearchAssetTypeWebsite}); !errors.Is(err, ErrGlobalAssetSearchTimeout) {
 		t.Fatalf("expected timeout sentinel, got %v", err)
+	}
+}
+
+func TestGlobalAssetSearchServicePassesThroughCappedTotal(t *testing.T) {
+	websiteStore := &globalAssetSearchWebsiteStoreStub{totalSize: GlobalAssetSearchTotalSizeCap, totalSizeCapped: true}
+	endpointStore := &globalAssetSearchEndpointStoreStub{totalSize: 7}
+	service := NewGlobalAssetSearchService(websiteStore, endpointStore)
+
+	capped, err := service.Search(context.Background(), GlobalAssetSearchInput{Query: "example", AssetType: GlobalAssetSearchAssetTypeWebsite})
+	if err != nil {
+		t.Fatalf("website search: %v", err)
+	}
+	if capped.TotalSize != GlobalAssetSearchTotalSizeCap || !capped.TotalSizeCapped {
+		t.Fatalf("capped total must pass through unchanged, got total=%d capped=%v", capped.TotalSize, capped.TotalSizeCapped)
+	}
+
+	exact, err := service.Search(context.Background(), GlobalAssetSearchInput{Query: "example", AssetType: GlobalAssetSearchAssetTypeEndpoint})
+	if err != nil {
+		t.Fatalf("endpoint search: %v", err)
+	}
+	if exact.TotalSize != 7 || exact.TotalSizeCapped {
+		t.Fatalf("exact total must pass through unchanged, got total=%d capped=%v", exact.TotalSize, exact.TotalSizeCapped)
 	}
 }

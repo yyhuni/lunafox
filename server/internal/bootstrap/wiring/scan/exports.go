@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/yyhuni/lunafox/contracts/ocidistribution"
 	"github.com/yyhuni/lunafox/server/internal/installedengines"
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 	catalogapp "github.com/yyhuni/lunafox/server/internal/modules/catalog/application"
@@ -79,12 +78,7 @@ func NewScanApplicationService(
 	engineRegistrationRepo *catalogrepo.EngineRepository,
 	installedPackageQuery installedengines.Query,
 	configResources scanapp.ConfigResourceResolver,
-	cloudflareAcceleration ...bool,
 ) (*scanapp.ScanFacade, error) {
-	if len(cloudflareAcceleration) > 1 {
-		return nil, fmt.Errorf("at most one Cloudflare acceleration setting is supported")
-	}
-	useCloudflareAcceleration := len(cloudflareAcceleration) == 1 && cloudflareAcceleration[0]
 	commandService := scanapp.NewScanCommandService(domainRepository, nil)
 	queryService := scanapp.NewScanQueryService(queryStore)
 	lifecycleService := scanapp.NewLifecycleService(commandStore, stopStore, notifier)
@@ -100,7 +94,7 @@ func NewScanApplicationService(
 	createService := scanapp.NewScanCreateService(commandStore, lookupFn, quickTargetEnsurer, newScanCreateWorkflowReader(workflowRepo), newScanCreateEnginePackageReader(installedPackageQuery), organizationTargets).
 		WithEngineRegistrationReader(newScanCreateEngineRegistrationReader(engineRegistrationRepo)).
 		WithAgentLookup(agentLookup)
-	compiler, err := newPlanTaskCompiler(installedPackageQuery, configResources, useCloudflareAcceleration)
+	compiler, err := newPlanTaskCompiler(installedPackageQuery, configResources)
 	if err != nil {
 		return nil, err
 	}
@@ -133,11 +127,7 @@ func NewConfigResourceValidationComponents(
 	return resolver, validator, nil
 }
 
-func newPlanTaskCompiler(installedPackageQuery installedengines.Query, configResources scanapp.ConfigResourceResolver, cloudflareAcceleration ...bool) (*scanapp.PlanTaskCompiler, error) {
-	if len(cloudflareAcceleration) > 1 {
-		return nil, fmt.Errorf("at most one Cloudflare acceleration setting is supported")
-	}
-	useCloudflareAcceleration := len(cloudflareAcceleration) == 1 && cloudflareAcceleration[0]
+func newPlanTaskCompiler(installedPackageQuery installedengines.Query, configResources scanapp.ConfigResourceResolver) (*scanapp.PlanTaskCompiler, error) {
 	exactReader, err := scaninfra.NewPlanTaskExactPackageReader(installedPackageQuery)
 	if err != nil {
 		return nil, fmt.Errorf("initialize exact Engine Package reader: %w", err)
@@ -148,15 +138,6 @@ func newPlanTaskCompiler(installedPackageQuery installedengines.Query, configRes
 	compiler, err := scanapp.NewPlanTaskCompiler(exactReader, configResources)
 	if err != nil {
 		return nil, fmt.Errorf("initialize PlanTask compiler: %w", err)
-	}
-	if useCloudflareAcceleration {
-		compiler.WithRuntimeImageReferencesMapper(func(refs []string) ([]string, error) {
-			acceleration, err := ocidistribution.BuildCloudflareAcceleration(refs)
-			if err != nil {
-				return nil, err
-			}
-			return acceleration.DownloadReferenceStrings(), nil
-		})
 	}
 	return compiler, nil
 }

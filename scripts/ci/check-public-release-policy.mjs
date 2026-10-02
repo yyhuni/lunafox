@@ -190,26 +190,6 @@ const REQUIRED_PUBLIC_DOCUMENTATION_PATHS = [
   "scripts/ci/validate-public-documentation.mjs",
   "scripts/ci/validate-public-documentation.test.mjs",
 ];
-const REQUIRED_PUBLIC_CLOUDFLARE_WORKER_EXACT = [
-  "tools/lunafox-ghcr-registry/.gitignore",
-  "tools/lunafox-ghcr-registry/README.md",
-  "tools/lunafox-ghcr-registry/package.json",
-  "tools/lunafox-ghcr-registry/pnpm-lock.yaml",
-  "tools/lunafox-ghcr-registry/tsconfig.json",
-  "tools/lunafox-ghcr-registry/tsconfig.test.json",
-  "tools/lunafox-ghcr-registry/wrangler.jsonc",
-  "tools/lunafox-ghcr-registry/src/registry.ts",
-  "tools/lunafox-ghcr-registry/src/worker.ts",
-  "tools/lunafox-ghcr-registry/test/worker.test.ts",
-  "tools/lunafox-ghcr-registry/scripts/verify-local-registry.sh",
-  "scripts/ci/verify-cloudflare-worker-release.mjs",
-  "scripts/ci/verify-cloudflare-worker-release.test.mjs",
-];
-const REQUIRED_PUBLIC_CLOUDFLARE_WORKER_PREFIXES = [
-  "tools/lunafox-ghcr-registry/src/",
-  "tools/lunafox-ghcr-registry/test/",
-  "tools/lunafox-ghcr-registry/scripts/",
-];
 const DESTINATION_DEPLOYMENT_PATHS = [
   ".env",
   ".env.example",
@@ -1361,17 +1341,12 @@ function assertPublicWorkflow(workflow, policy) {
   const packagePublish = jobBlock(workflow, "public-engine-package-publish");
   const engineManifest = jobBlock(workflow, "public-engine-release-manifest");
   const finalRelease = jobBlock(workflow, "publish-final-release");
-  if (!/^    concurrency:\s*\n\s+group:\s*cloudflare-worker-production\s*\n\s+cancel-in-progress:\s*false\s*$/m.test(finalRelease)) {
-    fail("public final release must serialize production Cloudflare Worker deployments without cancellation");
+  if (!finalRelease.includes("environment: public-release")) {
+    fail("public final release must use the protected public-release environment");
   }
-  if (!finalRelease.includes("environment: public-release") ||
-      !finalRelease.includes("CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}") ||
-      !finalRelease.includes("CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}")) {
-    fail("Cloudflare Worker deployment must use the protected public-release environment secrets");
-  }
-  for (const block of [validation, frontendValidation, scopeValidation, goValidation, protoValidation, contextValidation, aggregate, publicationIntent, runtimeCompositionResolver, publication, agentPublication]) {
+  for (const block of [validation, frontendValidation, scopeValidation, goValidation, protoValidation, contextValidation, aggregate, publicationIntent, runtimeCompositionResolver, publication, agentPublication, finalRelease]) {
     if (/CLOUDFLARE_(?:API_TOKEN|ACCOUNT_ID)|wrangler deploy|docker\.lunafox\.cc\.cd/.test(block)) {
-      fail("Cloudflare production credentials and deployment markers must stay out of non-final public jobs");
+      fail("Cloudflare production credentials and deployment markers must stay out of public jobs");
     }
   }
   const engineDiscoveryArtifactName = "public-engine-runtime-discovery-${{ github.sha }}";
@@ -1795,45 +1770,20 @@ function assertPublicWorkflow(workflow, policy) {
   if (!finalEvidenceArtifact.includes("dist/final/component-evidence.json")) {
     fail("public final release artifact must retain the durable component evidence bundle");
   }
-  const workerGate = workflowStepBlock(
-    finalRelease,
-    "      - id: cloudflare_worker\n        name: Deploy and verify the production Cloudflare Registry Worker",
-  );
-  if (workerGate.length === 0) fail("public final release is missing the Cloudflare Worker gate");
-  for (const required of [
-    "pnpm install --frozen-lockfile",
-    "pnpm --dir \"$worker_dir\" test",
-    "pnpm --dir \"$worker_dir\" run typecheck",
-    "pnpm --dir \"$worker_dir\" exec wrangler check startup",
-    "third-party-image-policy.json",
+  for (const forbidden of [
+    "cloudflare_worker",
     "verify-cloudflare-worker-release.mjs",
-    "pnpm --dir \"$worker_dir\" exec wrangler deploy",
-    "pnpm --dir \"$worker_dir\" exec wrangler versions list --json",
     "cloudflare-worker-release-evidence.json",
-    "Worker Version ID",
+    "wrangler deploy",
   ]) {
-    if (!workerGate.includes(required)) fail(`Cloudflare Worker gate is missing: ${required}`);
+    if (finalRelease.includes(forbidden)) fail(`public final release must not retain the removed Cloudflare Worker gate: ${forbidden}`);
   }
   const snapshotIndex = finalRelease.indexOf("      - id: deployment\n");
-  const workerIndex = finalRelease.indexOf("      - id: cloudflare_worker\n");
   const provenanceIndex = finalRelease.indexOf("      - name: Generate the immutable release provenance record");
   const channelIndex = finalRelease.indexOf("      - name: Generate and publish the release-channel branch");
   const releaseIndex = finalRelease.indexOf("      - name: Publish the final GitHub Release metadata");
-  if (snapshotIndex < 0 || workerIndex < snapshotIndex || provenanceIndex < workerIndex || channelIndex < workerIndex || releaseIndex < workerIndex) {
-    fail("Cloudflare Worker gate must run after the deployment snapshot and before provenance/channel/GitHub Release publication");
-  }
-  for (const required of [
-    "workerVersionId",
-    "deploymentTag",
-    "policySha256",
-    "publicSourceCommit",
-    "privateSourceRevision",
-    "smoke",
-    "public-release-provenance.json",
-    "publish_asset dist/final/cloudflare-worker-release-evidence.json",
-    "--cloudflare-worker-evidence dist/final/cloudflare-worker-release-evidence.json",
-  ]) {
-    if (!finalRelease.includes(required)) fail(`public final release must retain Cloudflare Worker evidence binding: ${required}`);
+  if (snapshotIndex < 0 || provenanceIndex < snapshotIndex || channelIndex < snapshotIndex || releaseIndex < snapshotIndex) {
+    fail("provenance, channel, and GitHub Release publication must run after the deployment snapshot");
   }
   if (!finalRelease.includes('node scripts/ci/check-public-channel.mjs --root-dir "$channel_root"') ||
       finalRelease.includes("check-public-channel.mjs --root-dir \"$channel_root\" --require-first-release")) {
@@ -2009,15 +1959,9 @@ function assertExportPolicy(exportPolicy) {
   for (const required of REQUIRED_PUBLIC_RUNTIME_EXACT) {
     if (!exact.has(required)) fail(`export policy is missing public Runtime input: ${required}`);
   }
-  for (const required of REQUIRED_PUBLIC_CLOUDFLARE_WORKER_EXACT) {
-    if (!exact.has(required)) fail(`export policy is missing Cloudflare Worker input: ${required}`);
-  }
   const prefixes = new Set(exportPolicy.allowlist?.prefixes ?? []);
   for (const required of REQUIRED_PUBLIC_RUNTIME_PREFIXES) {
     if (!prefixes.has(required)) fail(`export policy is missing public Runtime prefix: ${required}`);
-  }
-  for (const required of REQUIRED_PUBLIC_CLOUDFLARE_WORKER_PREFIXES) {
-    if (!prefixes.has(required)) fail(`export policy is missing Cloudflare Worker prefix: ${required}`);
   }
   if ((exportPolicy.publicRuntimeImages ?? []).length !== PUBLIC_RUNTIME_COMPONENTS.length) {
     fail("export policy must declare exactly four public Runtime Image descriptors");
@@ -2126,14 +2070,9 @@ function assertExportPolicy(exportPolicy) {
       fail(`export policy must keep private Runtime material denied: ${required}`);
     }
   }
-  for (const required of ["server", "server/scripts", "contracts", "engine-go", "proto", "extensions", "docker/bootstrap", "docker/nginx", "tools/engine-release", "tools/engine-oci-publish", "tools/lunafox-ghcr-registry/src", "tools/lunafox-ghcr-registry/test", "tools/lunafox-ghcr-registry/scripts"]) {
+  for (const required of ["server", "server/scripts", "contracts", "engine-go", "proto", "extensions", "docker/bootstrap", "docker/nginx", "tools/engine-release", "tools/engine-oci-publish"]) {
     if (!prefixes.has(`${required}/`) && ![...prefixes].some((prefix) => prefix.startsWith(`${required}/`))) {
       fail(`export policy does not expose the approved Runtime closure: ${required}`);
-    }
-  }
-  for (const required of ["node_modules", "\\.wrangler", "\\.DS_Store", "worker-(?:configuration", "startup\\.cpuprofile"]) {
-    if (!denyPatternText.some((pattern) => pattern.includes(required))) {
-      fail(`export policy must keep generated Cloudflare Worker state denied: ${required}`);
     }
   }
 }

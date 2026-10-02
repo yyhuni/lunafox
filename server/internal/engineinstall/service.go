@@ -9,7 +9,6 @@ import (
 
 	enginepackagecatalog "github.com/yyhuni/lunafox/contracts/enginemanifest/packagecatalog"
 	"github.com/yyhuni/lunafox/contracts/ociartifact"
-	"github.com/yyhuni/lunafox/contracts/ocidistribution"
 	"github.com/yyhuni/lunafox/contracts/ocisignature"
 )
 
@@ -140,27 +139,6 @@ func (installer *EnginePackageInstaller) Install(
 		}
 		validatedCandidates.References = verified
 	}
-	if len(validatedCandidates.References) == 3 {
-		references := make([]string, len(validatedCandidates.References))
-		for index, reference := range validatedCandidates.References {
-			references[index] = reference.String()
-		}
-		acceleration, err := ocidistribution.ParseCloudflareAcceleration(references)
-		if err != nil {
-			return VerifiedEngineInstallation{}, fmt.Errorf("parse Engine Package Cloudflare acceleration: %w", err)
-		}
-		if installer.signatureVerifier == nil {
-			return VerifiedEngineInstallation{}, fmt.Errorf("Cloudflare Engine Package acceleration requires a GHCR signature verifier")
-		}
-		transportVerifier, ok := installer.signatureVerifier.(ocisignature.DigestReferenceSignatureTransportVerifier)
-		if !ok {
-			return VerifiedEngineInstallation{}, fmt.Errorf("Cloudflare Engine Package acceleration requires a transport-aware GHCR signature verifier")
-		}
-		if err := transportVerifier.VerifyReferenceWithTransport(ctx, acceleration.SignatureReference, acceleration.DownloadReferences[0]); err != nil {
-			return VerifiedEngineInstallation{}, fmt.Errorf("verify Engine Package GHCR signature %q: %w", acceleration.SignatureReference.String(), err)
-		}
-	}
-
 	var cached CachedEnginePackage
 	var projection json.RawMessage
 	consumed, err := installer.puller.ConsumePackageLayer(ctx, validatedCandidates, func(

@@ -20,7 +20,7 @@ HELPER="$ROOT_DIR/lunafox-lifecycle.sh"
 
 usage() {
 	cat <<'USAGE'
-Usage: ./install.sh [--public-host <host>] [--public-port <port>] [--cf-acceleration] [--help]
+Usage: ./install.sh [--public-host <host>] [--public-port <port>] [--help]
 
 Start this LunaFox deployment with one `docker compose up -d` and wait until it
 is fully ready, including the resident Agent and the public HTTPS endpoint. The
@@ -38,9 +38,6 @@ LunaFox data yet, .env is created from .env.example.
 Options:
   --public-host <host>  set PUBLIC_HOST to a hostname or IP address
   --public-port <port>  set PUBLIC_PORT to a port from 1 to 65535 (default 443)
-  --cf-acceleration  prepare the complete selected image closure through the
-                     reviewed Cloudflare registry route. This opt-in requires
-                     cosign to verify first-party GHCR identities first.
   --help             show this help
 
 Environment:
@@ -67,7 +64,6 @@ validate_public_port() {
 	fi
 }
 
-CF_ACCELERATION=0
 PUBLIC_HOST_SET=0
 PUBLIC_PORT_SET=0
 INSTALL_ARGS=(install)
@@ -78,11 +74,7 @@ while [ "$#" -gt 0 ]; do
 		exit 0
 		;;
 	--cf-acceleration)
-		if [ "$CF_ACCELERATION" = 1 ]; then
-			usage_failure "install.sh accepts --cf-acceleration at most once"
-		fi
-		CF_ACCELERATION=1
-		INSTALL_ARGS+=(--cf-acceleration)
+		usage_failure "--cf-acceleration was removed; installs pull directly from the official registries"
 		;;
 	--public-host)
 		shift

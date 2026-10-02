@@ -18,7 +18,6 @@ export const PREHEAT_MANIFEST_KIND = "lunafox.preheat-manifest";
 export const PREHEAT_MANIFEST_ALGORITHM = "sha256-canonical-json-v1";
 export const PREHEAT_PROFILES = Object.freeze(["embedded", "external"]);
 export const PREHEAT_PLATFORMS = Object.freeze(["linux/amd64", "linux/arm64"]);
-export const CLOUDFLARE_REGISTRY = "docker.lunafox.cc.cd";
 
 const DIGEST_RE = /^sha256:[a-f0-9]{64}$/;
 const RELEASE_TAG_RE = /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
@@ -107,7 +106,7 @@ function normalizeReferenceList(rawReferences, label, repository, digest) {
 function normalizeEntry(entry, index) {
   const label = `entries[${index}]`;
   assertExactKeys(entry, [
-    "candidates", "cloudflareCandidates", "digest", "identityReference", "platforms",
+    "candidates", "digest", "identityReference", "platforms",
     "profiles", "repository", "sources", "trust",
   ], label);
   assert(typeof entry.repository === "string" && REPOSITORY_RE.test(entry.repository), `${label}.repository is invalid`);
@@ -117,7 +116,6 @@ function normalizeEntry(entry, index) {
   const profiles = normalizeProfiles(entry.profiles, `${label}.profiles`);
   const sources = normalizeSources(entry.sources, `${label}.sources`);
   const candidates = normalizeReferenceList(entry.candidates, `${label}.candidates`, entry.repository, entry.digest);
-  const cloudflareCandidates = normalizeReferenceList(entry.cloudflareCandidates, `${label}.cloudflareCandidates`, entry.repository, entry.digest);
   const identityReference = parseReference(entry.identityReference, `${label}.identityReference`);
   assert(identityReference.repository === entry.repository && identityReference.digest === entry.digest, `${label}.identityReference does not preserve image identity`);
 
@@ -125,11 +123,9 @@ function normalizeEntry(entry, index) {
     assert(FIRST_PARTY_REPOSITORY_RE.test(entry.repository), `${label}.repository is not a first-party LunaFox repository`);
     assert(candidates.length === 2 && candidates[0].registry === "docker.io" && candidates[1].registry === "ghcr.io", `${label}.candidates must be Docker Hub then GHCR`);
     assert(identityReference.raw === candidates[1].raw, `${label}.identityReference must be the GHCR candidate`);
-    assert(cloudflareCandidates.length === 3 && cloudflareCandidates[0].registry === CLOUDFLARE_REGISTRY && cloudflareCandidates[1].raw === candidates[0].raw && cloudflareCandidates[2].raw === candidates[1].raw, `${label}.cloudflareCandidates must be CF, Docker Hub, GHCR`);
   } else {
     assert(candidates.length === 1, `${label}.candidates must contain one third-party origin`);
     assert(identityReference.raw === candidates[0].raw, `${label}.identityReference must be the third-party origin`);
-    assert(cloudflareCandidates.length === 2 && cloudflareCandidates[0].registry === CLOUDFLARE_REGISTRY && cloudflareCandidates[1].raw === candidates[0].raw, `${label}.cloudflareCandidates must be CF then the third-party origin`);
   }
   return {
     repository: entry.repository,
@@ -139,7 +135,6 @@ function normalizeEntry(entry, index) {
     profiles,
     sources,
     candidates: candidates.map((reference) => reference.raw),
-    cloudflareCandidates: cloudflareCandidates.map((reference) => reference.raw),
     identityReference: identityReference.raw,
   };
 }
@@ -269,7 +264,6 @@ function firstPartyTransport(reference) {
     trust: "first-party",
     identityReference: ghcr,
     candidates: [docker, ghcr],
-    cloudflareCandidates: [`${CLOUDFLARE_REGISTRY}/${reference.repository}@${reference.digest}`, docker, ghcr],
   };
 }
 
@@ -278,7 +272,6 @@ function thirdPartyTransport(reference) {
     trust: "third-party",
     identityReference: reference.raw,
     candidates: [reference.raw],
-    cloudflareCandidates: [`${CLOUDFLARE_REGISTRY}/${reference.repository}@${reference.digest}`, reference.raw],
   };
 }
 
@@ -293,7 +286,7 @@ function addEntry(entries, draft) {
     });
     return;
   }
-  assert(existing.trust === draft.trust && existing.identityReference === draft.identityReference && JSON.stringify(existing.candidates) === JSON.stringify(draft.candidates) && JSON.stringify(existing.cloudflareCandidates) === JSON.stringify(draft.cloudflareCandidates), `preheat image identity has conflicting transport policy: ${key}`);
+  assert(existing.trust === draft.trust && existing.identityReference === draft.identityReference && JSON.stringify(existing.candidates) === JSON.stringify(draft.candidates), `preheat image identity has conflicting transport policy: ${key}`);
   assert(JSON.stringify(existing.platforms) === JSON.stringify(draft.platforms), `preheat image identity has conflicting platform declarations: ${key}`);
   for (const profile of draft.profiles) existing.profiles.add(profile);
   existing.sources.set(`${draft.source.kind}:${draft.source.name}`, draft.source);
@@ -433,7 +426,6 @@ export function buildPreheatManifest({
     profiles: [...entry.profiles].sort(),
     sources: [...entry.sources.values()].sort((left, right) => `${left.kind}:${left.name}`.localeCompare(`${right.kind}:${right.name}`)),
     candidates: [...entry.candidates],
-    cloudflareCandidates: [...entry.cloudflareCandidates],
     identityReference: entry.identityReference,
   })).sort((left, right) => identity(left).localeCompare(identity(right)));
   const manifest = {

@@ -49,6 +49,7 @@ func TestGlobalAssetSearchHandlerUsesCanonicalQueryAndReturnsCompleteAssetPayloa
 			CreatedAt:       now,
 		}},
 		NextPageToken: "next-token",
+		TotalSize:     123,
 	}}
 	handler := NewGlobalAssetSearchHandler(stub)
 	recorder := performGlobalAssetSearchRequest(t, handler, "/v1/assets:search?q=example&assetType=website")
@@ -61,15 +62,34 @@ func TestGlobalAssetSearchHandlerUsesCanonicalQueryAndReturnsCompleteAssetPayloa
 	body := recorder.Body.String()
 	for _, expected := range []string{
 		`"results"`, `"nextPageToken":"next-token"`, `"name":"targets/3/websites/7"`, `"tech":["nginx"]`, `"responseHeaders":"server: nginx"`, `"responseBody"`, "admin",
+		`"totalSize":123`, `"totalSizeCapped":false`,
 	} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("missing %q in response: %s", expected, body)
 		}
 	}
-	for _, forbidden := range []string{`"total"`, `"totalSize"`, `"totalPages"`, `"vulnerabilities"`} {
+	for _, forbidden := range []string{`"total"`, `"totalPages"`, `"vulnerabilities"`} {
 		if strings.Contains(body, forbidden) {
 			t.Fatalf("response must not include %q: %s", forbidden, body)
 		}
+	}
+}
+
+func TestGlobalAssetSearchHandlerReportsCappedTotalWhenMatchExceedsCap(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	stub := &globalAssetSearchHandlerServiceStub{result: &service.GlobalAssetSearchResult{
+		AssetType:       service.GlobalAssetSearchAssetTypeWebsite,
+		Websites:        []assetdomain.Website{{ID: 7, TargetID: 3, URL: "https://api.example.test/admin", Tech: []string{}}},
+		TotalSize:       service.GlobalAssetSearchTotalSizeCap,
+		TotalSizeCapped: true,
+	}}
+	recorder := performGlobalAssetSearchRequest(t, NewGlobalAssetSearchHandler(stub), "/v1/assets:search?q=example&assetType=website")
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	body := recorder.Body.String()
+	if !strings.Contains(body, `"totalSize":10000`) || !strings.Contains(body, `"totalSizeCapped":true`) {
+		t.Fatalf("capped response must report the cap and the capped flag: %s", body)
 	}
 }
 

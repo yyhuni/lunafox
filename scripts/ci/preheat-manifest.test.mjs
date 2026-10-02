@@ -119,7 +119,7 @@ test("builds a canonical release-bound closure including disabled Engine Runtime
   assert.equal(first.profileClosures.find((closure) => closure.profile === "external").entries.some((entry) => entry.includes("library/postgres@")), false);
   const agent = first.entries.find((entry) => entry.repository === "yyhuni/lunafox-agent");
   assert.deepEqual(agent.sources.map((source) => source.name), ["agent", "agent-preflight", "engine-preheater"]);
-  assert.deepEqual(agent.cloudflareCandidates.map((candidate) => candidate.split("/")[0]), ["docker.lunafox.cc.cd", "docker.io", "ghcr.io"]);
+  assert.deepEqual(agent.candidates.map((candidate) => candidate.split("/")[0]), ["docker.io", "ghcr.io"]);
 });
 
 test("fails closed for bind drift, unbound runtime, duplicate identities, and unsupported platform", () => {
