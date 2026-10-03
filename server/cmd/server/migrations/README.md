@@ -171,6 +171,14 @@ Cron as wall-clock time in that zone. The paired down migration is destructive
 test teardown only: production recovery uses a verified backup restore or an
 approved forward fix, not removal of a Schedule's wall-clock interpretation.
 
+Forward migration `000006` is a data-only reconciliation of the same cursor
+invariant: it clears a retained `next_run_time` on disabled Schedule rows that
+were written before disable transactions cleared the cursor, without touching
+enabled rows' cursors or any `cron_expression`, `time_zone`, or `is_enabled`
+value. It is idempotent and intentionally not reversible — the cleared values
+are stale cursors that must not be restored, and its down file is a no-op
+destructive-teardown placeholder.
+
 ## Scan Execution Input Source Hard Cut
 
 The frozen `000001` baseline requires `scan.input_source` and
