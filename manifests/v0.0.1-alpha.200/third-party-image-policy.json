@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "provenanceClaim": "lunafox-reviewed-content",
+  "entries": [
+    {
+      "service": "postgres",
+      "profiles": [
+        "embedded"
+      ],
+      "registry": "docker.io",
+      "repository": "library/postgres",
+      "digest": "sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675",
+      "contentAudit": "reviewed",
+      "publisherSignatureVerification": "not-approved",
+      "evidence": "release-frozen Docker Official Image digest reviewed by LunaFox"
+    },
+    {
+      "service": "redis",
+      "profiles": [
+        "embedded",
+        "external"
+      ],
+      "registry": "docker.io",
+      "repository": "library/redis",
+      "digest": "sha256:2afba59292f25f5d1af200496db41bea2c6c816b059f57ae74703a50a03a27d0",
+      "contentAudit": "reviewed",
+      "publisherSignatureVerification": "not-approved",
+      "evidence": "release-frozen Docker Official Image digest reviewed by LunaFox"
+    },
+    {
+      "service": "loki",
+      "profiles": [
+        "embedded",
+        "external"
+      ],
+      "registry": "docker.io",
+      "repository": "grafana/loki",
+      "digest": "sha256:3c8fd3570dd9219951a60d3f919c7f31923d10baee578b77bc26c4a0b32d092d",
+      "contentAudit": "reviewed",
+      "publisherSignatureVerification": "not-approved",
+      "evidence": "release-frozen Grafana image digest reviewed by LunaFox"
+    },
+    {
+      "service": "alloy",
+      "profiles": [
+        "embedded",
+        "external"
+      ],
+      "registry": "docker.io",
+      "repository": "grafana/alloy",
+      "digest": "sha256:b8ec653c44235fbe910879145dac3597d66b0aaecf60bcbbe82580767771a839",
+      "contentAudit": "reviewed",
+      "publisherSignatureVerification": "not-approved",
+      "evidence": "release-frozen Grafana image digest reviewed by LunaFox"
+    }
+  ]
+}
