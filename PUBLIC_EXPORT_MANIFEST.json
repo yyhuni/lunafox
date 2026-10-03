@@ -92,7 +92,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9313,
-      "sha256": "1cef1fd2a0d66bcd77b2a453597fa94047987b8533d177482074ab324860dda6"
+      "sha256": "27d5b00381f0897299ba556b1b781d83bf26b92dd3dc5666758dcd3ab5f75d79"
     },
     {
       "path": "agent/bin/sha256-d56c53b06b9d4ab60dea7051fbd2db0649286bb9345e8bb41fc70861a6c6843e/lunafox-agent-linux-amd64",
