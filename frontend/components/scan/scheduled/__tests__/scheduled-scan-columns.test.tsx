@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import { getStatusToneTextClass } from "@/lib/status-config"
@@ -21,6 +21,9 @@ const translations: ScheduledScanTranslations = {
     failure: "Failed",
     lastRun: "Last Trigger",
     lastFailure: "Last run failed",
+    viewHistory: "View run history",
+    viewHistoryHint: "Click to view run history within the retention window",
+    hasFailureIndicator: "Has failed runs",
     failureCauses: {
       WORKFLOW_UNAVAILABLE: "referenced scan workflow is unavailable",
       AGENT_NOT_FOUND: "bound agent has been deleted",
@@ -103,7 +106,7 @@ describe("scheduled scan handoff result column", () => {
     expect(screen.getByText("0 19 * * *")).toBeVisible()
   })
 
-  it("renders trigger, successful handoff, and failed handoff counts without a command surface", () => {
+  it("renders trigger, successful handoff, and failed handoff counts in one click-through control", () => {
     const column = createScheduledScanColumns({
       formatDate: (value) => value,
       handleEdit: vi.fn(),
@@ -121,11 +124,10 @@ describe("scheduled scan handoff result column", () => {
     expect(screen.getByText("Trigger 10")).toBeVisible()
     expect(screen.getByText("Success 8")).toHaveClass(getStatusToneTextClass("success"))
     expect(screen.getByText("Failed 1")).toHaveClass(getStatusToneTextClass("error"))
-    expect(screen.queryByRole("button")).not.toBeInTheDocument()
   })
 })
 
-describe("scheduled scan last-handoff-failure indication", () => {
+describe("scheduled scan handoff metric opens run history", () => {
   const handoffColumn = () =>
     createScheduledScanColumns({
       formatDate: (value) => value,
@@ -135,7 +137,26 @@ describe("scheduled scan last-handoff-failure indication", () => {
       t: translations,
     }).find((item) => item.id === "handoffResults")
 
-  it("highlights the localized cause and settlement time of the latest failure", () => {
+  it("activating the metric opens the edit drawer on the occurrences tab", () => {
+    const handleEdit = vi.fn()
+    const column = createScheduledScanColumns({
+      formatDate: (value) => value,
+      handleEdit,
+      handleDelete: vi.fn(),
+      handleToggleStatus: vi.fn(),
+      t: translations,
+    }).find((item) => item.id === "handoffResults")
+    if (!column || typeof column.cell !== "function") {
+      throw new Error("Expected the handoff result column cell")
+    }
+    render(<>{column.cell({ row: { original: scheduledScan } } as never)}</>)
+
+    fireEvent.click(screen.getByRole("button"))
+
+    expect(handleEdit).toHaveBeenCalledWith(scheduledScan, "occurrences")
+  })
+
+  it("marks failed schedules with a compact failure indicator and no inline cause line", () => {
     const column = handoffColumn()
     if (!column || typeof column.cell !== "function") {
       throw new Error("Expected the handoff result column cell")
@@ -147,18 +168,16 @@ describe("scheduled scan last-handoff-failure indication", () => {
         lastHandoffFailureTime: "2026-08-09T02:00:00Z",
       } } } as never)}</>
     )
-    const indication = screen.getByText(
-      "Last run failed: configuration resource is unavailable · 2026-08-09T02:00:00Z"
-    )
-    expect(indication).toHaveClass(getStatusToneTextClass("error"))
+    expect(screen.getByRole("img", { name: "Has failed runs" })).toBeVisible()
+    expect(screen.queryByText(/Last run failed/)).not.toBeInTheDocument()
   })
 
-  it("omits the failure indication once the summary is cleared", () => {
+  it("omits the failure indicator once no failed handoffs remain", () => {
     const column = handoffColumn()
     if (!column || typeof column.cell !== "function") {
       throw new Error("Expected the handoff result column cell")
     }
-    render(<>{column.cell({ row: { original: scheduledScan } } as never)}</>)
-    expect(screen.queryByText(/Last run failed/)).not.toBeInTheDocument()
+    render(<>{column.cell({ row: { original: { ...scheduledScan, failedHandoffCount: 0 } } } as never)}</>)
+    expect(screen.queryByRole("img", { name: "Has failed runs" })).not.toBeInTheDocument()
   })
 })

@@ -1170,8 +1170,10 @@ button.selected-row-action-control {
   padding-inline: 0.625rem;
 }
 
-/* Dense row commands stay visually light on desktop while preserving touch hit areas. */
-button.dense-row-action-control {
+/* Dense row commands stay visually light on desktop while preserving touch hit areas.
+   Anchors render navigational row actions (detail links) and share the same tier. */
+button.dense-row-action-control,
+a.dense-row-action-control {
   width: 1.75rem;
   height: 1.75rem;
   padding: 0;
@@ -1195,6 +1197,30 @@ button.compact-action-control[data-size="icon-lg"] {
 .compact-menu-item {
   min-height: 1.75rem;
   padding-block: 0.25rem;
+}
+
+/*
+ * Compact-density menus open from 12px inline trigger controls (table column
+ * headers, chip-like toggles). Their rows drop to the same text tier as the
+ * trigger so the opened menu does not visually jump a size class above the
+ * element that opened it. Icon and row heights shrink one step with the text;
+ * the group label keeps its muted caption treatment and is differentiated by
+ * color and weight rather than size.
+ */
+[data-slot="dropdown-menu-content"][data-density="compact"] [data-slot="dropdown-menu-item"],
+[data-slot="dropdown-menu-content"][data-density="compact"] [data-slot="dropdown-menu-label"] {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+[data-slot="dropdown-menu-content"][data-density="compact"] .compact-menu-item {
+  min-height: 1.5rem;
+  padding-block: 0.125rem;
+}
+
+[data-slot="dropdown-menu-content"][data-density="compact"] [data-slot="dropdown-menu-item"] svg:not([class*="size-"]) {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .compact-action-placeholder {
@@ -1231,7 +1257,8 @@ button.selection-clear-control svg {
     height: 2rem;
   }
 
-  button.dense-row-action-control {
+  button.dense-row-action-control,
+  a.dense-row-action-control {
     width: 2rem;
     height: 2rem;
   }

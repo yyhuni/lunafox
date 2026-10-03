@@ -10,7 +10,7 @@ describe("scan searchable picker contract", () => {
     expect(source).toContain("<CommandInput")
     expect(source).toContain('className="w-[var(--anchor-width)] overflow-hidden p-0"')
     expect(source).toContain('className="max-h-52 sm:max-h-72"')
-    expect(source).toContain('className="h-auto min-h-10 overflow-hidden py-2 text-left font-normal"')
+    expect(source).toContain('className="h-auto min-h-9 overflow-hidden py-1.5 text-left font-normal"')
   })
 
   it("reports its open state without moving picker-specific behavior into the shared overlay", () => {

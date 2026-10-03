@@ -181,6 +181,7 @@ export function VulnerabilitiesVerticalTable({
                       type="button"
                       variant="ghost"
                       size="icon-sm"
+                      layout="rowAction"
                       className="hover:text-foreground text-muted-foreground"
                       title={item.isReviewed ? tVuln("markAsPending") : tVuln("markAsReviewed")}
                       aria-label={item.isReviewed ? tVuln("markAsPending") : tVuln("markAsReviewed")}

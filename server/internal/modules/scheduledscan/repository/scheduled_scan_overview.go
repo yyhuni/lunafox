@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"sort"
+	"time"
 
 	scheduledapp "github.com/yyhuni/lunafox/server/internal/modules/scheduledscan/application"
 	"github.com/yyhuni/lunafox/server/internal/pkg/timeutil"
@@ -56,6 +58,23 @@ func (repo *ScheduledScanRepository) GetOverviewSummary(
 			return err
 		}
 
+		// The horizon axis is a Cron expansion over every enabled Schedule: it
+		// deliberately does not reuse the upcoming LIMIT and shares one
+		// consistent snapshot with the counts above.
+		var horizonRows []scheduledScanModel
+		if !query.HorizonStart.IsZero() && !query.HorizonEnd.IsZero() && query.HorizonEnd.After(query.HorizonStart) {
+			if err := activeScheduledScanQuery(tx.Model(&scheduledScanModel{})).
+				Select("scheduled_scan.id, scheduled_scan.name, scheduled_scan.organization_id, scheduled_scan.target_id, scheduled_scan.cron_expression, scheduled_scan.time_zone").
+				Preload("Organization").
+				Preload("Target").
+				Where("scheduled_scan.is_enabled = ?", true).
+				Order("scheduled_scan.id ASC").
+				Find(&horizonRows).Error; err != nil {
+				return err
+			}
+			projection.HorizonBuckets = expandHorizonBuckets(repo.calculator, horizonRows, query.HorizonStart, query.HorizonEnd)
+		}
+
 		projection.EnabledScheduledScanCount = counts.EnabledScheduledScanCount
 		projection.PausedScheduledScanCount = counts.PausedScheduledScanCount
 		projection.TodayScheduledScanCount = counts.TodayScheduledScanCount
@@ -98,4 +117,63 @@ func scheduledScanTargetDisplayName(item *targetRefModel) *string {
 	}
 	name := item.Name
 	return &name
+}
+
+type horizonBucketKey struct {
+	scheduleID int
+	hourStart  time.Time
+}
+
+// expandHorizonBuckets projects every enabled Schedule's Cron rule onto UTC
+// hour buckets inside [start, end). One Schedule contributes at most one item
+// per bucket. The per-Schedule expansion cap is a fuse: exceeding it stops
+// that Schedule silently instead of failing the overview (AD-04).
+func expandHorizonBuckets(
+	calculator scheduledapp.ScheduleCalculator,
+	rows []scheduledScanModel,
+	start, end time.Time,
+) []scheduledapp.ScheduledScanHorizonBucket {
+	if calculator == nil || len(rows) == 0 {
+		return []scheduledapp.ScheduledScanHorizonBucket{}
+	}
+	start = start.UTC()
+	end = end.UTC()
+	buckets := make(map[time.Time][]scheduledapp.ScheduledScanHorizonItem)
+	seen := make(map[horizonBucketKey]struct{})
+	for _, row := range rows {
+		cursor := start
+		for range scheduledapp.MaxHorizonExpansionsPerSchedule {
+			next, err := calculator.FirstAfter(row.CronExpression, row.TimeZone, cursor)
+			if err != nil || !next.Before(end) {
+				break
+			}
+			hourStart := next.UTC().Truncate(time.Hour)
+			key := horizonBucketKey{scheduleID: row.ID, hourStart: hourStart}
+			if _, duplicate := seen[key]; !duplicate {
+				seen[key] = struct{}{}
+				buckets[hourStart] = append(buckets[hourStart], scheduledapp.ScheduledScanHorizonItem{
+					ID:                      row.ID,
+					DisplayName:             row.Name,
+					OrganizationID:          cloneIntPtr(row.OrganizationID),
+					OrganizationDisplayName: scheduledScanOrganizationDisplayName(row.Organization),
+					TargetID:                cloneIntPtr(row.TargetID),
+					TargetDisplayName:       scheduledScanTargetDisplayName(row.Target),
+				})
+			}
+			cursor = next
+		}
+	}
+	hours := make([]time.Time, 0, len(buckets))
+	for hourStart := range buckets {
+		hours = append(hours, hourStart)
+	}
+	sort.Slice(hours, func(left, right int) bool { return hours[left].Before(hours[right]) })
+	out := make([]scheduledapp.ScheduledScanHorizonBucket, 0, len(hours))
+	for _, hourStart := range hours {
+		out = append(out, scheduledapp.ScheduledScanHorizonBucket{
+			HourStart: hourStart,
+			Items:     buckets[hourStart],
+		})
+	}
+	return out
 }

@@ -2,6 +2,7 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import {
   getScheduledScans,
   getScheduledScan,
+  getScheduledScanOccurrences,
   createScheduledScan,
   updateScheduledScan,
   deleteScheduledScan,
@@ -18,6 +19,7 @@ import type {
   CreateScheduledScanRequest,
   UpdateScheduledScanRequest,
   GetScheduledScansResponse,
+  GetScheduledScanOccurrencesResponse,
 	ScheduledScan,
 	ScheduledScanOverviewSummary,
 	BatchUpdateScheduledScanStatusInput,
@@ -35,6 +37,10 @@ export const scheduledScanKeys = createResourceKeys("scheduled-scans", {
   }) => params,
   detail: (id: number) => id,
 })
+
+export const scheduledScanOccurrenceKeys = {
+  history: (id: number, params: { page?: number; pageSize?: number }) => [...scheduledScanKeys.all, "occurrences", id, params] as const,
+}
 
 export const scheduledScanOverviewKey = [...scheduledScanKeys.all, "overview"] as const
 
@@ -85,6 +91,22 @@ export function useScheduledScan(id: number) {
     queryKey: scheduledScanKeys.detail(id),
     queryFn: () => getScheduledScan(id),
     enabled: !!id,
+  })
+}
+
+/**
+ * Get the retention-bounded occurrence history of one scheduled scan. The
+ * run-history tab loads on open and refreshes manually only; it deliberately
+ * registers no polling interval (see the page auto-refresh contract).
+ */
+export function useScheduledScanOccurrences(id: number, params: { page?: number; pageSize?: number } = { pageSize: 20 }) {
+  return useQuery<GetScheduledScanOccurrencesResponse>({
+    queryKey: scheduledScanOccurrenceKeys.history(id, params),
+    queryFn: () => getScheduledScanOccurrences(id, params),
+    enabled: !!id,
+    // Keep the previous page stable during a manual refresh instead of
+    // flashing the loading state inside the drawer.
+    placeholderData: keepPreviousData,
   })
 }
 

@@ -113,6 +113,9 @@
       "failure": "Failed",
       "lastRun": "Last Trigger",
       "lastFailure": "Last run failed",
+      "viewHistory": "View run history",
+      "viewHistoryHint": "Click to view run history within the retention window",
+      "hasFailureIndicator": "Has failed runs",
       "failureCauses": {
         "WORKFLOW_UNAVAILABLE": "referenced scan workflow is unavailable",
         "AGENT_NOT_FOUND": "bound agent has been deleted",
@@ -1868,7 +1871,48 @@
       "editTabs": {
         "label": "Scheduled scan editor sections",
         "basicInfo": "Basic Information",
-        "scanConfiguration": "Scan Configuration"
+        "scanConfiguration": "Scan Configuration",
+        "occurrences": "Run History"
+      },
+      "occurrences": {
+        "summary": {
+          "retentionBounded": "Run history within the retention window",
+          "total": "Total",
+          "succeeded": "Succeeded",
+          "failed": "Failed",
+          "retrying": "Retrying",
+          "dispatching": "In Flight",
+          "pending": "Pending"
+        },
+        "columns": {
+          "scheduledFor": "Scheduled At",
+          "status": "Status",
+          "result": "Outcome / Diagnostics",
+          "duration": "Duration"
+        },
+        "status": {
+          "PENDING": "Pending",
+          "DISPATCHING": "In Flight",
+          "RETRYING": "Retrying",
+          "SUCCEEDED": "Succeeded",
+          "FAILED": "Failed"
+        },
+        "result": {
+          "succeededHandoff": "Scan created successfully",
+          "retryProgress": "Retry {current}/{max}",
+          "retryExhausted": "Retry budget exhausted ({current}/{max})",
+          "awaitRetry": "Waiting for the next automatic retry",
+          "suspectedStuck": "Unsettled for over {minutes} minutes; the scheduler may be stuck",
+          "noDiagnostics": "No diagnostics"
+        },
+        "empty": {
+          "title": "No run history yet",
+          "description": "This schedule has no retained trigger records; once a scheduled time fires, each trigger and its outcome will appear here."
+        },
+        "refresh": "Refresh",
+        "loadFailed": "Failed to load run history",
+        "close": "Close",
+        "loadFailedRetry": "Retry"
       },
       "stepIndicator": "Step {current}/{total}",
       "steps": {
@@ -1891,10 +1935,15 @@
 		  }
 		},
         "timeline": {
-          "title": "Upcoming Execution Plan",
+          "title": "Schedule Distribution",
           "next24HoursCount": "Next 24 hours · {count} tasks",
-          "soon": "Soon",
-          "empty": "No upcoming scheduled scans"
+          "windowLabel": "Past 6 hours · Next 24 hours",
+          "soon": "Upcoming",
+          "now": "Now",
+          "future": "Planned",
+          "relativeMinutes": "in {count} min",
+          "relativeTomorrow": "tomorrow {time}",
+          "empty": "No scheduled runs in the next 30 hours"
         },
         "frequency": {
           "title": "Execution Frequency Distribution",

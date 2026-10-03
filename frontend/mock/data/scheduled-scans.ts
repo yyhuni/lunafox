@@ -10,10 +10,11 @@ function createMockScheduledConfiguration() {
   return getMockCanonicalWorkflowConfiguration()
 }
 
-const mockScheduledScanClock = new Date()
-
 function getMockNextRunTime(cronExpression: string, timeZone: string): string | null {
-  return getNextCronExecutions(cronExpression, timeZone, mockScheduledScanClock, 1)[0]?.toISOString() ?? null
+  // Read the clock per call so the seeded cursor and the overview asOfTime
+  // stay in sync; a module-load snapshot would drift into the past while the
+  // dev server keeps running.
+  return getNextCronExecutions(cronExpression, timeZone, new Date(), 1)[0]?.toISOString() ?? null
 }
 
 const initialMockScheduledScans: ScheduledScan[] = [
@@ -141,6 +142,14 @@ createdAt: '2024-11-29T09:00:00Z',
 
 export const mockScheduledScans = structuredClone(initialMockScheduledScans)
 
+// Cursors are recomputed on every read so list/overview responses never show a
+// nextRunTime that drifted into the past while the dev server kept running.
+function refreshMockScheduledScanCursors() {
+  for (const scan of mockScheduledScans) {
+    scan.nextRunTime = scan.isEnabled ? getMockNextRunTime(scan.cronExpression, scan.timeZone) : null
+  }
+}
+
 export function resetMockScheduledScans() {
   mockScheduledScans.splice(0, mockScheduledScans.length, ...structuredClone(initialMockScheduledScans))
 }
@@ -152,6 +161,7 @@ export function getMockScheduledScans(params?: {
   targetId?: number
   organizationId?: number
 }): GetScheduledScansResponse {
+  refreshMockScheduledScanCursors()
   const pageTokenMatch = params?.pageToken?.match(/^mock-scheduled-scan-page-(\d+)$/)
   const page = pageTokenMatch ? Number.parseInt(pageTokenMatch[1]!, 10) : 1
   const pageSize = params?.pageSize || 10
@@ -189,21 +199,27 @@ export function getMockScheduledScans(params?: {
   }
 }
 
-type MockScheduledScanOverviewResponse = Omit<ScheduledScanOverviewSummary, 'upcomingScheduledScans'> & {
-  upcomingScheduledScans: Array<{
-    name: string
-    displayName: string
-    organization: string | null
-    organizationDisplayName: string | null
-    target: string | null
-    targetDisplayName: string | null
-    nextRunTime: string
-  }>
+type MockScheduledScanOverviewScopeItem = {
+  name: string
+  displayName: string
+  organization: string | null
+  organizationDisplayName: string | null
+  target: string | null
+  targetDisplayName: string | null
+}
+
+type MockScheduledScanOverviewResponse = Omit<
+  ScheduledScanOverviewSummary,
+  'upcomingScheduledScans' | 'horizonBuckets'
+> & {
+  upcomingScheduledScans: Array<MockScheduledScanOverviewScopeItem & { nextRunTime: string }>
+  horizonBuckets: Array<{ hourStart: string; items: MockScheduledScanOverviewScopeItem[] }>
 }
 
 export function getMockScheduledScanOverviewSummary(
   asOfTime: Date = new Date()
 ): MockScheduledScanOverviewResponse {
+  refreshMockScheduledScanCursors()
   const asOfTimestamp = asOfTime.getTime()
   const start = new Date(asOfTime)
   start.setUTCHours(0, 0, 0, 0)
@@ -240,6 +256,54 @@ export function getMockScheduledScanOverviewSummary(
         targetDisplayName: scan.targetName,
         nextRunTime: scan.nextRunTime!,
       })),
+    horizonWindow: {
+      start: new Date(asOfTimestamp - 6 * 60 * 60 * 1000).toISOString(),
+      end: new Date(asOfTimestamp + 24 * 60 * 60 * 1000).toISOString(),
+    },
+    horizonBuckets: getMockHorizonBuckets(enabledScheduledScans, asOfTimestamp),
+  }
+}
+
+// Mirror of the server horizon projection: expand every enabled schedule's
+// cron inside [now-6h, now+24h), dedupe per UTC hour, return API-shaped items.
+function getMockHorizonBuckets(enabledScheduledScans: ScheduledScan[], asOfTimestamp: number) {
+  const horizonStart = asOfTimestamp - 6 * 60 * 60 * 1000
+  const horizonEnd = asOfTimestamp + 24 * 60 * 60 * 1000
+  const buckets = new Map<number, MockScheduledScanOverviewScopeItem[]>()
+  for (const scan of enabledScheduledScans) {
+    if (!scan.cronExpression || !scan.timeZone) continue
+    const occurrences = getNextCronExecutions(
+      scan.cronExpression,
+      scan.timeZone,
+      new Date(horizonStart),
+      2000,
+    )
+    for (const occurrence of occurrences) {
+      if (occurrence.getTime() >= horizonEnd) break
+      const hourStart = Math.floor(occurrence.getTime() / (60 * 60 * 1000)) * 60 * 60 * 1000
+      const items = buckets.get(hourStart) ?? []
+      if (!items.some((item) => item.name === scan.name)) {
+        items.push(horizonBucketItem(scan))
+        buckets.set(hourStart, items)
+      }
+    }
+  }
+  return Array.from(buckets.entries())
+    .sort((left, right) => left[0] - right[0])
+    .map(([hourStart, items]) => ({
+      hourStart: new Date(hourStart).toISOString(),
+      items,
+    }))
+}
+
+function horizonBucketItem(scan: ScheduledScan): MockScheduledScanOverviewScopeItem {
+  return {
+    name: scan.name,
+    displayName: scan.displayName,
+    organization: scan.organizationId === null ? null : `organizations/${scan.organizationId}`,
+    organizationDisplayName: scan.organizationName,
+    target: scan.targetId === null ? null : `targets/${scan.targetId}`,
+    targetDisplayName: scan.targetName,
   }
 }
 

@@ -253,7 +253,7 @@ function RecentScanColumnHeader() {
         <span className={textRole.caption}>{t("recentStatus")}</span>
         <span className={textRole.caption}>{t("recentCreatedAt")}</span>
       </div>
-      <span aria-hidden="true" className="size-8 shrink-0" />
+      <span aria-hidden="true" className="compact-action-placeholder shrink-0" />
     </div>
   )
 }
@@ -280,6 +280,7 @@ function RecentScanRow({ scan }: { scan: ScanListRecord }) {
               <Button
                 variant="ghost"
                 size="icon-sm"
+                layout="rowAction"
                 className="shrink-0 text-muted-foreground hover:text-foreground"
                 render={<Link href={detailsHref} aria-label={t("viewRecent")} />}
               >

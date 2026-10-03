@@ -57,23 +57,35 @@ func TestScheduledScanManagedJobsJoinBeforeInfrastructureCloses(t *testing.T) {
 	}
 }
 
-func TestScheduledScanRouterAddsNoOccurrenceOrRunNowSurface(t *testing.T) {
+// The router may expose exactly one approved occurrence surface: the
+// read-only history list (add-scheduled-scan-occurrence-history). Run Now
+// and every occurrence write or custom-method surface stay forbidden.
+func TestScheduledScanRouterExposesOnlyReadOnlyOccurrenceHistory(t *testing.T) {
 	repositoryRoot := bootstrapRepositoryRoot(t)
 	routerDir := filepath.Join(repositoryRoot, "server/internal/modules/scheduledscan/router")
 	entries, err := os.ReadDir(routerDir)
 	if err != nil {
 		t.Fatalf("read Scheduled Scan router directory: %v", err)
 	}
+	approvedOccurrencesRoute := `protected.GET("/scheduledScans/:scheduledScan/occurrences", scheduledScanHandler.ListOccurrences)`
+	approvedCount := 0
 	for _, entry := range entries {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".go" || strings.HasSuffix(entry.Name(), "_test.go") {
 			continue
 		}
 		source := strings.ToLower(readBootstrapContractFile(t, filepath.Join(routerDir, entry.Name())))
-		for _, forbidden := range []string{"occurrence", "runnow", "run-now", ":run"} {
+		approvedCount += strings.Count(source, strings.ToLower(approvedOccurrencesRoute))
+		for _, forbidden := range []string{"runnow", "run-now", ":run"} {
 			if strings.Contains(source, forbidden) {
-				t.Fatalf("Scheduled Scan router %s adds forbidden first-phase surface %q", entry.Name(), forbidden)
+				t.Fatalf("Scheduled Scan router %s adds forbidden surface %q", entry.Name(), forbidden)
 			}
 		}
+		if strings.Contains(source, "occurrences") && !strings.Contains(source, strings.ToLower(approvedOccurrencesRoute)) {
+			t.Fatalf("Scheduled Scan router %s references occurrences outside the approved read-only route", entry.Name())
+		}
+	}
+	if approvedCount != 1 {
+		t.Fatalf("Scheduled Scan router must register the approved occurrence history route exactly once, got %d", approvedCount)
 	}
 }
 

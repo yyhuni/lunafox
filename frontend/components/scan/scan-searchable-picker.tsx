@@ -61,7 +61,7 @@ export function ScanSearchablePicker({
             type="button"
             variant="outline"
             layout="between"
-            className="h-auto min-h-10 overflow-hidden py-2 text-left font-normal"
+            className="h-auto min-h-9 overflow-hidden py-1.5 text-left font-normal"
             disabled={disabled}
             aria-label={ariaLabel}
           />

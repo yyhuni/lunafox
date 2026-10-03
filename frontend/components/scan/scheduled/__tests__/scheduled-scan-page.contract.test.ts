@@ -43,9 +43,10 @@ describe("scheduled-scan-page contract", () => {
 		expect(source).toContain("overview.data.next24HoursScheduledScanCount")
 		expect(source).not.toContain("pageSize: 1000")
 		expect(source).not.toContain("buildScheduledScanInsights")
-		expect(sectionsSource).toContain("ScheduledScanOverviewUpcoming")
+		expect(sectionsSource).toContain("ScheduledScanHorizonBucket")
 		expect(sectionsSource).toContain("next24HoursCount")
-		expect(sectionsSource).toContain("scan.displayName")
+		expect(sectionsSource).toContain("horizonWindow")
+		expect(sectionsSource).toContain("item.displayName")
 	})
 
   it("derives scheduled scan loading geometry from the resolved page layout owner", () => {

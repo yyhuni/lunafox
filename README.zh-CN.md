@@ -42,18 +42,9 @@ docker compose up -d
 ./install.sh --public-host luna.example.com --public-port 8443
 ```
 
-当 Docker Hub 或 GHCR 在当前网络受限时，中国大陆用户可以选择 Cloudflare
-镜像下载通道：
-
-```console
-./install.sh --public-host luna.example.com --public-port 8443 --cf-acceleration
-```
-
 `--public-host` 和 `--public-port` 会持久化 `PUBLIC_HOST` 和 `PUBLIC_PORT`，
-`PUBLIC_URL` 由它们派生。`--cf-acceleration` 需要 `cosign`，仅由
-`install.sh` 在镜像拉取阶段启用；它不会改变 `RELEASE_REGISTRY`，直接执行
-`docker compose up -d` 不会启用该功能。详见[公共部署指南](docs/public-deployment.zh-CN.md#cloudflare-加速安装)，
-了解前置条件、镜像范围、验证和回退行为。
+`PUBLIC_URL` 由它们派生。镜像来源、验证与回退行为详见
+[公共部署指南](docs/public-deployment.zh-CN.md)。
 
 ## 登录与初始凭据
 

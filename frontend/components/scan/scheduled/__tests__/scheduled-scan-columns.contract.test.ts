@@ -60,7 +60,7 @@ describe("scheduled-scan-columns contract", () => {
     expect(source).not.toContain('accessorKey: "workflowNames"')
   })
 
-  it("uses one compact, non-interactive handoff result metric", () => {
+  it("uses one compact click-through handoff result metric that opens run history", () => {
     const handoffColumnSource = source.slice(
       source.indexOf('id: "handoffResults"'),
       source.indexOf('accessorKey: "lastRunTime"')
@@ -69,10 +69,15 @@ describe("scheduled-scan-columns contract", () => {
     expect(handoffColumnSource).toContain("scheduledScanTableColumnLayout.handoffResults")
     expect(handoffColumnSource).toContain('getStatusToneTextClass("success")')
     expect(handoffColumnSource).toContain('getStatusToneTextClass("error")')
-    expect(handoffColumnSource).toContain("row.original.successfulHandoffCount")
-    expect(handoffColumnSource).toContain("row.original.failedHandoffCount")
+    expect(handoffColumnSource).toContain("scan.successfulHandoffCount")
+    expect(handoffColumnSource).toContain("scan.failedHandoffCount")
+    expect(handoffColumnSource).toContain('handleEdit(scan, "occurrences")')
+    expect(handoffColumnSource).toContain("t.columns.hasFailureIndicator")
     expect(handoffColumnSource).not.toContain('accessorKey: "runCount"')
     expect(handoffColumnSource).not.toContain("<Badge")
-    expect(handoffColumnSource).not.toContain("onClick")
+    // The inline last-failure cause text line is gone; the failure cause is
+    // inspected in the run-history tab instead.
+    expect(handoffColumnSource).not.toContain("t.columns.lastFailure")
+    expect(handoffColumnSource).not.toContain("failureCauses")
   })
 })

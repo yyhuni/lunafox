@@ -113,13 +113,40 @@ scan-options validation runs before leaving step 3 through the shared editor's
   `runCount` after a process interruption. `lastRunTime` means last
   trigger-attempt time. Keep table/detail copy aligned with those meanings.
 - A later occurrence uses the latest committed Schedule inputs at attempt start
-  and makes one normal Scan Create attempt. The UI must not imply automatic
-  occurrence retry, partial-batch compensation, Scan state tracking, or that
-  saving a Schedule reserves current resources.
-- First-phase management remains Schedule-only. Do not add occurrence history,
-  scheduling provenance to Scan History, Run Now, a global scheduler setting,
-  runtime tuning, a scheduler dashboard, metrics/alerts, or scheduler health
-state. The existing four-step workbench remains the complete create flow.
+  and makes one normal Scan Create attempt. The UI must not imply
+  partial-batch compensation, Scan state tracking, or that saving a Schedule
+  reserves current resources.
+- Management remains Schedule-only apart from the approved read-only run
+  history: the "调度结果" cell is one click-through control (plus an equivalent
+  row-menu action) that opens the edit drawer directly on its "调度记录" tab,
+  and a compact failure dot marks rows with `failedHandoffCount > 0`. The cell
+  must not render an inline last-failure cause line; the cause is inspected in
+  the run-history tab. Do not add scheduling provenance to Scan History, Run
+  Now, a global scheduler setting, runtime tuning, a scheduler dashboard,
+  metrics/alerts, or scheduler health state. The existing four-step workbench
+  remains the complete create flow.
+
+## Run History (Occurrence Tab)
+
+- The edit drawer's third tab reads `GET /v1/scheduledScans/{id}/occurrences`
+  through `getScheduledScanOccurrences` only. The response is the server's
+  read-only projection: rows newest `scheduledFor` first, a closed status enum
+  (`PENDING`, `DISPATCHING`, `RETRYING`, `SUCCEEDED`, `FAILED`) derived
+  server-side, and `statusCounts` aggregated across the retention window. The
+  client must not re-derive status from raw timestamps and must reject unknown
+  enum values at the transport boundary.
+- `durationMs` exists only on `SUCCEEDED` rows; failed rows have no settlement
+  timestamp and must render `-`, never a synthesized value. Counts and rows
+  are retention-bounded; copy must not equate them with the lifetime
+  `runCount` aggregates.
+- A `DISPATCHING` row whose `attemptedAt` is older than the five-minute
+  handoff deadline is annotated as suspected-stuck. This is the only
+  client-side interpretation allowed on top of the projection.
+- The tab loads once on open and refreshes manually only. It must not register
+  `refetchInterval` polling (see the scheduled-scan page auto-refresh
+  contract) and must show its explicit empty state when no occurrences are
+  retained. While the tab is active the drawer footer shows only a close
+  action; the save action stays on the configuration tabs.
 
 ## Organization Scope Selection
 

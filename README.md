@@ -43,19 +43,10 @@ host and HTTPS port during installation:
 ./install.sh --public-host luna.example.com --public-port 8443
 ```
 
-When Docker Hub or GHCR transport is restricted, users in mainland China can
-opt into the Cloudflare image download route:
-
-```console
-./install.sh --public-host luna.example.com --public-port 8443 --cf-acceleration
-```
-
 `--public-host` and `--public-port` persist `PUBLIC_HOST` and `PUBLIC_PORT`,
-and `PUBLIC_URL` is derived from them. `--cf-acceleration` requires `cosign` and
-is enabled only by `install.sh` for image pulls; it does not change
-`RELEASE_REGISTRY`, and direct `docker compose up -d` does not enable it. See the
-[public deployment guide](docs/public-deployment.md#cloudflare-accelerated-installation)
-for prerequisites, image scope, verification, and fallback behavior.
+and `PUBLIC_URL` is derived from them. See the
+[public deployment guide](docs/public-deployment.md) for image sources,
+verification, and fallback behavior.
 
 ## Login and initial credentials
 

@@ -20,6 +20,7 @@ type scheduledScanService interface {
 	List(context.Context, scheduledapp.ScheduledScanListQuery) ([]scheduledapp.ScheduledScan, int64, error)
 	GetOverviewSummary(context.Context, *scheduledapp.ScheduledScanOverviewInput) (*scheduledapp.ScheduledScanOverview, error)
 	GetByID(context.Context, int) (*scheduledapp.ScheduledScan, error)
+	ListOccurrenceHistory(context.Context, scheduledapp.OccurrenceHistoryQuery) (*scheduledapp.OccurrenceHistory, error)
 	Create(context.Context, *scheduledapp.CreateScheduledScanInput) (*scheduledapp.ScheduledScan, error)
 	Update(context.Context, int, *scheduledapp.UpdateScheduledScanInput) (*scheduledapp.ScheduledScan, error)
 	BatchUpdateStatus(context.Context, []scheduledapp.ScheduledScanStatusUpdate) (int, error)
@@ -75,6 +76,26 @@ func (handler *ScheduledScanHandler) GetByID(c *gin.Context) {
 		return
 	}
 	httpdto.Success(c, toScheduledScanOutput(item))
+}
+
+// ListOccurrences returns one newest-first retention-bounded occurrence
+// history page with full-window status counts for one Scheduled Scan.
+func (handler *ScheduledScanHandler) ListOccurrences(c *gin.Context) {
+	id, ok := parseScheduledScanID(c)
+	if !ok {
+		return
+	}
+	var query dto.ScheduledScanOccurrenceListQuery
+	if !httpdto.BindQuery(c, &query) {
+		return
+	}
+	history, err := handler.service.ListOccurrenceHistory(c.Request.Context(), toOccurrenceHistoryQuery(id, &query))
+	if err != nil {
+		handleScheduledScanError(c, err)
+		return
+	}
+	occurrences, counts := toScheduledScanOccurrenceListOutput(id, history)
+	httpdto.Success(c, dto.NewScheduledScanOccurrenceListResponse(occurrences, counts, history.Total, query.GetPage(), query.GetPageSize()))
 }
 
 func (handler *ScheduledScanHandler) Create(c *gin.Context) {

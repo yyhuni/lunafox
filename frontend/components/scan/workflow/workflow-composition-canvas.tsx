@@ -1027,6 +1027,7 @@ function WorkflowStageInspector({
                         type="button"
                         variant="quiet"
                         size="icon-sm"
+                        layout="rowAction"
                         aria-label={t("canvas.removeEngine")}
                         disabled={readOnly}
                         onClick={() => onRemoveEngine(stage.id, step.id)}

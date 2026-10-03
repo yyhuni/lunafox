@@ -34,7 +34,8 @@ export function AgentCardCompactLoadingState() {
             </div>
           </div>
         </div>
-        <ActionSkeleton size="icon-sm" />
+        {/* Match the loaded dense row action trigger footprint (28px fine / 32px coarse) so hydration does not shift the header row. */}
+        <ActionSkeleton size="icon-sm" className="size-7" />
       </div>
 
       <div className={AGENT_CARD_BODY_CLASS}>

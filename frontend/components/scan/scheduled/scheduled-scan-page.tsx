@@ -7,6 +7,7 @@ import type { SelectedRowActionBarAction } from "@/components/shared/data-table"
 import { ScheduledScanDataTable } from "@/components/scan/scheduled/scheduled-scan-data-table"
 import { useLocale, useTranslations } from "next-intl"
 import { createScheduledScanColumns } from "@/components/scan/scheduled/scheduled-scan-columns"
+import type { ScheduledScanEditTab } from "@/components/scan/scheduled/edit-scheduled-scan-dialog"
 import {
 	ScheduledScanInsightGrid,
 	ScheduledScanOverviewFailure,
@@ -104,6 +105,7 @@ export default function ScheduledScanPage({
   } = useInteractionOpenLoader<"create-dialog">()
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false)
   const [editDialogOpen, setEditDialogOpen] = React.useState(false)
+  const [editDialogInitialTab, setEditDialogInitialTab] = React.useState<ScheduledScanEditTab>("basic")
   const [editingScheduledScan, setEditingScheduledScan] = React.useState<ScheduledScan | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
   const [deletingScheduledScan, setDeletingScheduledScan] = React.useState<ScheduledScan | null>(null)
@@ -134,6 +136,9 @@ export default function ScheduledScanPage({
       failure: tColumns("scheduledScan.failure"),
       lastRun: tColumns("scheduledScan.lastRun"),
       lastFailure: tColumns("scheduledScan.lastFailure"),
+      viewHistory: tColumns("scheduledScan.viewHistory"),
+      viewHistoryHint: tColumns("scheduledScan.viewHistoryHint"),
+      hasFailureIndicator: tColumns("scheduledScan.hasFailureIndicator"),
       failureCauses: {
         WORKFLOW_UNAVAILABLE: tColumns("scheduledScan.failureCauses.WORKFLOW_UNAVAILABLE"),
         AGENT_NOT_FOUND: tColumns("scheduledScan.failureCauses.AGENT_NOT_FOUND"),
@@ -262,18 +267,35 @@ export default function ScheduledScanPage({
     })
   }, [locale])
 
-  const formatTimelineDate = React.useCallback((dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString(locale, {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
-  }, [locale])
+  // Relative queue-card labels share the overview snapshot instant so the
+  // countdown never disagrees with the axis pointer between refreshes.
+  const formatTimelineRelative = React.useCallback((dateString: string, asOfTime: string) => {
+    const diffMinutes = Math.round((Date.parse(dateString) - Date.parse(asOfTime)) / 60000)
+    if (diffMinutes > 0 && diffMinutes < 60) {
+      return tScan("scheduled.workbench.timeline.relativeMinutes", { count: diffMinutes })
+    }
+    const target = new Date(dateString)
+    const now = new Date(asOfTime)
+    const tomorrow = new Date(now)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const sameDay = (left: Date, right: Date) =>
+      left.getDate() === right.getDate() && left.getMonth() === right.getMonth() && left.getFullYear() === right.getFullYear()
+    if (sameDay(target, tomorrow)) {
+      return tScan("scheduled.workbench.timeline.relativeTomorrow", {
+        time: target.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", hour12: false }),
+      })
+    }
+    if (!sameDay(target, now)) {
+      return `${dateString ? new Date(dateString).toLocaleDateString(locale, { month: "2-digit", day: "2-digit" }) : ""} ${target.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", hour12: false })}`
+    }
+    return target.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", hour12: false })
+  }, [locale, tScan])
 
-  // Edit task
-  const handleEdit = React.useCallback((scan: ScheduledScan) => {
+  // Edit task; the run-history destination opens the drawer on its
+  // read-only occurrence tab directly from the handoff metric or row menu.
+  const handleEdit = React.useCallback((scan: ScheduledScan, tab: ScheduledScanEditTab = "basic") => {
     setEditingScheduledScan(scan)
+    setEditDialogInitialTab(tab)
     setEditDialogOpen(true)
   }, [])
 
@@ -434,17 +456,23 @@ export default function ScheduledScanPage({
 					/>
 				) : null}
 				<ScheduledScanTimeline
-					items={overview.data.upcomingScheduledScans}
+					horizonWindow={overview.data.horizonWindow}
+					horizonBuckets={overview.data.horizonBuckets}
+					upcoming={overview.data.upcomingScheduledScans}
+					asOfTime={overview.data.asOfTime}
 					labels={{
 						title: tScan("scheduled.workbench.timeline.title"),
 						next24HoursCount: tScan("scheduled.workbench.timeline.next24HoursCount", {
 							count: overview.data.next24HoursScheduledScanCount,
 						}),
-						soon: tScan("scheduled.workbench.timeline.soon"),
 						empty: tScan("scheduled.workbench.timeline.empty"),
+						windowLabel: tScan("scheduled.workbench.timeline.windowLabel"),
+						soon: tScan("scheduled.workbench.timeline.soon"),
+						now: tScan("scheduled.workbench.timeline.now"),
+						future: tScan("scheduled.workbench.timeline.future"),
 					}}
 					formatTime={formatTimelineTime}
-					formatDate={formatTimelineDate}
+					formatRelativeTime={(dateString) => formatTimelineRelative(dateString, overview.data.asOfTime)}
 				/>
 			</ScheduledScanInsightGrid>
 		</>
@@ -502,6 +530,7 @@ export default function ScheduledScanPage({
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           scheduledScan={editingScheduledScan}
+          initialTab={editDialogInitialTab}
           onSuccess={() => {
             refetch()
           }}

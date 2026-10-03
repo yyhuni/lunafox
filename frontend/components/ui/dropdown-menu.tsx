@@ -17,6 +17,12 @@ type MenuPositionProps = Pick<
 
 type DropdownMenuContentProps = React.ComponentProps<typeof DropdownMenuPrimitive.Popup> & MenuPositionProps & {
   width?: "default" | "content-fit" | "compact"
+  /**
+   * Compact density matches the 12px inline trigger tier (table headers,
+   * chip-like controls) so the opened menu does not visually jump a size
+   * above the element that opened it.
+   */
+  density?: "default" | "compact"
   container?: React.ComponentProps<typeof DropdownMenuPrimitive.Portal>["container"]
 }
 
@@ -68,6 +74,7 @@ function DropdownMenuContent({
   positionMethod,
   container,
   width = "default",
+  density = "default",
   ...props
 }: DropdownMenuContentProps) {
   return (
@@ -88,6 +95,7 @@ function DropdownMenuContent({
       >
         <DropdownMenuPrimitive.Popup
           data-slot="dropdown-menu-content"
+          data-density={density}
           className={cn(
             floatingSurfaceClassName,
             floatingContentMotionClassName,
@@ -210,7 +218,9 @@ function DropdownMenuLabel({
       data-slot="dropdown-menu-label"
       data-inset={inset}
       className={cn(
-        "px-2 py-1.5 text-sm font-medium data-[inset]:pl-8",
+        // Group labels read as quiet captions, one step below the text-sm
+        // menu items they introduce, instead of competing with them.
+        "px-2 py-1.5 text-xs font-medium text-muted-foreground data-[inset]:pl-8",
         className
       )}
       {...props}

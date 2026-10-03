@@ -9,19 +9,24 @@ import {
 } from '@/lib/resource-name'
 import { parseWorkflowConfigurationStrict } from '@/lib/workflow-config'
 import { isIanaTimeZoneValid } from '@/lib/scheduled-scan-helpers'
+import { isScheduledScanHandoffFailureCause, isScheduledScanOccurrenceStatus } from '@/types/scheduled-scan.types'
 import type {
   GetScheduledScansResponse,
+  GetScheduledScanOccurrencesResponse,
   ScheduledScan,
+  ScheduledScanOccurrence,
+  ScheduledScanOccurrenceStatusCounts,
   CreateScheduledScanRequest,
   UpdateScheduledScanRequest,
   ScheduledScanOverviewSummary,
   ScheduledScanOverviewUpcoming,
+  ScheduledScanHorizonBucket,
+  ScheduledScanHorizonItem,
   ScanMode,
   BatchUpdateScheduledScanStatusInput,
   BatchUpdateScheduledScanStatusRequest,
   BatchUpdateScheduledScanStatusResponse,
 } from '@/types/scheduled-scan.types'
-import { isScheduledScanHandoffFailureCause } from '@/types/scheduled-scan.types'
 import { isScanInputSource, type ScanInputSource } from '@/types/scan.types'
 
 type ScheduledScanAipDto = Omit<ScheduledScan, "successfulHandoffCount" | "failedHandoffCount" | "inputSource" | "timeZone" | "lastHandoffFailureCause" | "lastHandoffFailureTime"> & {
@@ -98,39 +103,85 @@ function parseScheduledScanOverviewUpcoming(value: unknown, index: number): Sche
 	const id = Number(match[1])
 	if (!Number.isSafeInteger(id)) throw overviewResponseError(`upcomingScheduledScans[${index}].name`)
 
+	const scope = parseScheduledScanOverviewScope(record, `upcomingScheduledScans[${index}]`)
+
+	return {
+		id,
+		resourceName,
+		displayName: requiredOverviewString(record, "displayName"),
+		scanMode: scope.scanMode,
+		organizationName: scope.organizationName,
+		targetName: scope.targetName,
+		nextRunTime: requiredOverviewTimestamp(record, "nextRunTime"),
+	}
+}
+
+function parseScheduledScanOverviewScope(
+	record: Record<string, unknown>,
+	fieldPrefix: string,
+): { scanMode: ScanMode; organizationName: string | null; targetName: string | null } {
 	const organization = nullableOverviewString(record, "organization")
 	const organizationName = nullableOverviewString(record, "organizationDisplayName")
 	const target = nullableOverviewString(record, "target")
 	const targetName = nullableOverviewString(record, "targetDisplayName")
 	let scanMode: ScanMode
 	if (target !== null && targetName === null) {
-		throw overviewResponseError(`upcomingScheduledScans[${index}].targetDisplayName`)
+		throw overviewResponseError(`${fieldPrefix}.targetDisplayName`)
 	}
 	if (organization !== null && organizationName === null) {
-		throw overviewResponseError(`upcomingScheduledScans[${index}].organizationDisplayName`)
+		throw overviewResponseError(`${fieldPrefix}.organizationDisplayName`)
 	}
 	if (target === null && targetName !== null) {
-		throw overviewResponseError(`upcomingScheduledScans[${index}].target`)
+		throw overviewResponseError(`${fieldPrefix}.target`)
 	}
 	if (organization === null && organizationName !== null) {
-		throw overviewResponseError(`upcomingScheduledScans[${index}].organization`)
+		throw overviewResponseError(`${fieldPrefix}.organization`)
 	}
 	if (target !== null && organization === null) {
 		scanMode = "target"
 	} else if (organization !== null && target === null) {
 		scanMode = "organization"
 	} else {
-		throw overviewResponseError(`upcomingScheduledScans[${index}].scope`)
+		throw overviewResponseError(`${fieldPrefix}.scope`)
 	}
+	return { scanMode, organizationName, targetName }
+}
+
+function parseScheduledScanHorizonItem(value: unknown, index: number): ScheduledScanHorizonItem {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		throw overviewResponseError(`horizonBuckets[${index}].items`)
+	}
+	const record = value as Record<string, unknown>
+	const resourceName = requiredOverviewString(record, "name")
+	const match = /^scheduledScans\/([1-9]\d*)$/.exec(resourceName)
+	if (!match) throw overviewResponseError(`horizonBuckets[${index}].items.name`)
+	const id = Number(match[1])
+	if (!Number.isSafeInteger(id)) throw overviewResponseError(`horizonBuckets[${index}].items.name`)
+
+	const scope = parseScheduledScanOverviewScope(record, `horizonBuckets[${index}].items`)
 
 	return {
 		id,
 		resourceName,
 		displayName: requiredOverviewString(record, "displayName"),
-		scanMode,
-		organizationName,
-		targetName,
-		nextRunTime: requiredOverviewTimestamp(record, "nextRunTime"),
+		scanMode: scope.scanMode,
+		organizationName: scope.organizationName,
+		targetName: scope.targetName,
+	}
+}
+
+function parseScheduledScanHorizonBucket(value: unknown, index: number): ScheduledScanHorizonBucket {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		throw overviewResponseError(`horizonBuckets[${index}]`)
+	}
+	const record = value as Record<string, unknown>
+	const items = record.items
+	if (!Array.isArray(items) || items.length < 1) {
+		throw overviewResponseError(`horizonBuckets[${index}].items`)
+	}
+	return {
+		hourStart: requiredOverviewTimestamp(record, "hourStart"),
+		items: items.map((item, itemIndex) => parseScheduledScanHorizonItem(item, itemIndex)),
 	}
 }
 
@@ -143,6 +194,15 @@ function parseScheduledScanOverviewSummary(value: unknown): ScheduledScanOvervie
 	if (!Array.isArray(upcoming) || upcoming.length > 5) {
 		throw overviewResponseError("upcomingScheduledScans")
 	}
+	const horizonBuckets = record.horizonBuckets
+	if (!Array.isArray(horizonBuckets)) {
+		throw overviewResponseError("horizonBuckets")
+	}
+	const horizonWindow = record.horizonWindow
+	if (typeof horizonWindow !== "object" || horizonWindow === null || Array.isArray(horizonWindow)) {
+		throw overviewResponseError("horizonWindow")
+	}
+	const horizonWindowRecord = horizonWindow as Record<string, unknown>
 	return {
 		asOfTime: requiredOverviewTimestamp(record, "asOfTime"),
 		enabledScheduledScanCount: parseNonNegativeInteger(record.enabledScheduledScanCount, "enabledScheduledScanCount"),
@@ -150,6 +210,11 @@ function parseScheduledScanOverviewSummary(value: unknown): ScheduledScanOvervie
 		todayScheduledScanCount: parseNonNegativeInteger(record.todayScheduledScanCount, "todayScheduledScanCount"),
 		next24HoursScheduledScanCount: parseNonNegativeInteger(record.next24HoursScheduledScanCount, "next24HoursScheduledScanCount"),
 		upcomingScheduledScans: upcoming.map(parseScheduledScanOverviewUpcoming),
+		horizonWindow: {
+			start: requiredOverviewTimestamp(horizonWindowRecord, "start"),
+			end: requiredOverviewTimestamp(horizonWindowRecord, "end"),
+		},
+		horizonBuckets: horizonBuckets.map(parseScheduledScanHorizonBucket),
 	}
 }
 
@@ -345,12 +410,116 @@ export async function getScheduledScanOverviewSummary(): Promise<ScheduledScanOv
 	return parseScheduledScanOverviewSummary(res.data)
 }
 
+function parseNullableTimestamp(value: unknown, field: string): string | null {
+  if (value === null || value === undefined) return null
+  if (typeof value !== 'string' || Number.isNaN(Date.parse(value))) {
+    throw new Error(`Scheduled scan occurrence response has an invalid ${field}`)
+  }
+  return value
+}
+
+function parseNullableString(value: unknown, field: string): string | null {
+  if (value === null || value === undefined) return null
+  if (typeof value !== 'string') {
+    throw new Error(`Scheduled scan occurrence response has an invalid ${field}`)
+  }
+  return value
+}
+
+// The occurrence projection derives its status server-side; the transport
+// layer only rejects values outside the closed enum instead of re-deriving.
+function parseScheduledScanOccurrence(value: unknown, index: number): ScheduledScanOccurrence {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error(`Scheduled scan occurrence response has an invalid occurrences[${index}]`)
+  }
+  const record = value as Record<string, unknown>
+  const status = record.status
+  if (!isScheduledScanOccurrenceStatus(status)) {
+    throw new Error(`Scheduled scan occurrence response has an unknown status at occurrences[${index}]`)
+  }
+  const id = parseNonNegativeInteger(record.id, `occurrences[${index}].id`)
+  const resourceName = record.name
+  if (typeof resourceName !== 'string') {
+    throw new Error(`Scheduled scan occurrence response is missing name at occurrences[${index}]`)
+  }
+  const nameMatch = /^scheduledScans\/[1-9]\d*\/occurrences\/([1-9]\d*)$/.exec(resourceName)
+  if (!nameMatch || Number(nameMatch[1]) !== id) {
+    throw new Error(`Scheduled scan occurrence response has an inconsistent name at occurrences[${index}]`)
+  }
+  const failureCause = record.failureCause ?? null
+  if (failureCause !== null && !isScheduledScanHandoffFailureCause(failureCause)) {
+    throw new Error(`Scheduled scan occurrence response has an unknown failureCause at occurrences[${index}]`)
+  }
+  const durationMs = record.durationMs ?? null
+  if (durationMs !== null && (typeof durationMs !== 'number' || !Number.isSafeInteger(durationMs) || durationMs < 0)) {
+    throw new Error(`Scheduled scan occurrence response has an invalid durationMs at occurrences[${index}]`)
+  }
+  return {
+    name: resourceName,
+    id,
+    scheduledFor: parseNullableTimestamp(record.scheduledFor, `occurrences[${index}].scheduledFor`) ?? '',
+    attemptedAt: parseNullableTimestamp(record.attemptedAt, `occurrences[${index}].attemptedAt`),
+    dispatchedAt: parseNullableTimestamp(record.dispatchedAt, `occurrences[${index}].dispatchedAt`),
+    status,
+    failureKind: parseNullableString(record.failureKind, `occurrences[${index}].failureKind`),
+    failureCause,
+    failureMessage: parseNullableString(record.failureMessage, `occurrences[${index}].failureMessage`),
+    retryCount: parseNonNegativeInteger(record.retryCount, `occurrences[${index}].retryCount`),
+    nextRetryAt: parseNullableTimestamp(record.nextRetryAt, `occurrences[${index}].nextRetryAt`),
+    durationMs,
+  }
+}
+
+function parseScheduledScanOccurrencesResponse(value: unknown): GetScheduledScanOccurrencesResponse {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('Scheduled scan occurrence response has an invalid body')
+  }
+  const record = value as Record<string, unknown>
+  const occurrences = record.occurrences
+  if (!Array.isArray(occurrences)) {
+    throw new Error('Scheduled scan occurrence response has an invalid occurrences')
+  }
+  const counts = record.statusCounts
+  if (typeof counts !== 'object' || counts === null || Array.isArray(counts)) {
+    throw new Error('Scheduled scan occurrence response has an invalid statusCounts')
+  }
+  const countsRecord = counts as Record<string, unknown>
+  const statusCounts: ScheduledScanOccurrenceStatusCounts = {
+    pending: parseNonNegativeInteger(countsRecord.pending, 'statusCounts.pending'),
+    dispatching: parseNonNegativeInteger(countsRecord.dispatching, 'statusCounts.dispatching'),
+    retrying: parseNonNegativeInteger(countsRecord.retrying, 'statusCounts.retrying'),
+    succeeded: parseNonNegativeInteger(countsRecord.succeeded, 'statusCounts.succeeded'),
+    failed: parseNonNegativeInteger(countsRecord.failed, 'statusCounts.failed'),
+  }
+  return {
+    occurrences: occurrences.map(parseScheduledScanOccurrence),
+    statusCounts,
+    ...(record.totalSize !== undefined ? { totalSize: parseNonNegativeInteger(record.totalSize, 'totalSize') } : {}),
+    ...(typeof record.nextPageToken === 'string' && record.nextPageToken ? { nextPageToken: record.nextPageToken } : {}),
+  }
+}
+
 /**
  * Get scheduled scan details
  */
 export async function getScheduledScan(id: number): Promise<ScheduledScan> {
   const res = await api.get<ScheduledScanAipDto>(`/scheduledScans/${id}`)
   return normalizeScheduledScan(res.data)
+}
+
+/**
+ * Get the retention-bounded occurrence history of one scheduled scan,
+ * newest first, with full-window status counts.
+ */
+export async function getScheduledScanOccurrences(id: number, params?: {
+  page?: number
+  pageSize?: number
+}): Promise<GetScheduledScanOccurrencesResponse> {
+  const apiParams: Record<string, unknown> = {}
+  if (params?.page) apiParams.page = params.page
+  if (params?.pageSize) apiParams.pageSize = params.pageSize
+  const res = await api.get<unknown>(`/scheduledScans/${id}/occurrences`, { params: apiParams })
+  return parseScheduledScanOccurrencesResponse(res.data)
 }
 
 /**

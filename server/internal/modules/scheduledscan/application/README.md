@@ -108,6 +108,22 @@ consistent visible-set snapshot. A retired `timeZone` query parameter is
 rejected at the HTTP boundary; there is no Server, database, or browser-zone
 fallback.
 
+### Schedule Horizon Projection
+
+The overview additionally returns `horizonWindow` and `horizonBuckets` for the
+management page's schedule distribution axis. The window is server-defined and
+rolling: `start = asOfTime − 6h`, `end = asOfTime + 24h` (30 UTC hour buckets);
+the future segment keeps the same window semantics as the 24-hour count. Unlike
+the upcoming list, the horizon is a read-time Cron expansion over every enabled
+Schedule — it does not reuse the five-row upcoming limit. Occurrences are
+aggregated per UTC hour bucket with one item per Schedule per bucket; disabled
+Schedules and rows without a cursor do not contribute. Per-Schedule expansion
+is bounded by `MaxHorizonExpansionsPerSchedule` (2000, safely above a
+minute-level Cron's 1800-occurrence peak inside the window); reaching the cap
+stops that Schedule silently. The expansion runs inside the same repeatable
+read snapshot as the counts, and the `timeZone` query parameter stays
+rejected.
+
 ## Management Batch Status Contract
 
 `POST /v1/scheduledScans:batchUpdate` atomically assigns the enabled state of
@@ -207,10 +223,20 @@ only on UTC `attemptedAt`, deletes at most 1,000 rows per transaction and
 100,000 rows per five-minute run, and performs no immediate or backoff retry.
 Schedule Delete bypasses retention through its ownership cascade.
 
-The occurrence ledger is internal. This phase adds no occurrence/history API or
-UI, Scan provenance, scheduler setting, runtime tuning, metric, built-in alert,
-dashboard, health-probe dependency, Undelete, or Scan lifecycle tracking. The
-only external projection of occurrence outcomes is the Schedule-level
-last-handoff-failure summary (`lastHandoffFailureCause` plus
-`lastHandoffFailureTime`); a Scheduled Scan Run Now entry point remains
-excluded.
+The occurrence ledger stays internal except for one approved read-only
+projection: `GET /scheduledScans/{id}/occurrences` (see `occurrence_history.go`)
+returns retention-bounded rows newest `scheduledFor` first plus
+`statusCounts` aggregated across the whole window. Each row carries one
+server-derived `status` from the closed enum `PENDING`, `DISPATCHING`,
+`RETRYING`, `SUCCEEDED`, `FAILED` — derived in `DeriveOccurrenceStatus` in the
+RecordOutcome settlement precedence, never persisted as a column, and never
+re-derived by clients. `DISPATCHING` deliberately covers both in-flight and
+stuck-past-deadline attempts; the projection keeps the raw `attemptedAt` so
+clients can flag suspected-stuck rows. `durationMs` exists only on `SUCCEEDED`
+rows (`dispatchedAt - attemptedAt`); failed rows have no settlement timestamp
+and project a null duration instead of a synthesized value. Counts reflect
+only retained rows and must not be coerced against the lifetime `runCount` or
+handoff aggregates. No occurrence write surface, Scan provenance, scheduler
+setting, runtime tuning, metric, built-in alert, dashboard, health-probe
+dependency, Undelete, Scan lifecycle tracking, or Run Now entry point may be
+added.

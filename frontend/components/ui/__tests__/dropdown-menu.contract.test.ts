@@ -32,9 +32,15 @@ describe("dropdown-menu contract", () => {
 
   it("owns a shared content-fit width mode for short action menus", () => {
     expect(source).toContain('width = "default"')
-    expect(source).toContain('width?: "default" | "content-fit"')
+    expect(source).toContain('width?: "default" | "content-fit" | "compact"')
     expect(source).toContain('width === "default" && "min-w-[8rem]"')
     expect(source).toContain('width === "content-fit" && "w-max min-w-(--anchor-width)"')
+  })
+
+  it("owns a compact density mode for menus opened from 12px inline triggers", () => {
+    expect(source).toContain('density = "default"')
+    expect(source).toContain('density?: "default" | "compact"')
+    expect(source).toContain('data-density={density}')
   })
 
   it("uses Base UI as the dropdown menu primitive backend", () => {

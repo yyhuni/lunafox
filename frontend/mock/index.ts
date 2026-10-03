@@ -186,6 +186,10 @@ export {
   getMockScheduledScanById,
   resetMockScheduledScans,
 } from './data/scheduled-scans'
+export {
+  getMockScheduledScanOccurrences,
+  resetMockScheduledScanOccurrences,
+} from './data/scheduled-scan-occurrences'
 
 // Directories
 export {

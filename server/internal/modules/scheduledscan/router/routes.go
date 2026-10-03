@@ -11,6 +11,7 @@ func RegisterScheduledScanRoutes(protected *gin.RouterGroup, scheduledScanHandle
 	protected.POST("/scheduledScans", scheduledScanHandler.Create)
 	protected.POST("/scheduledScans:batchUpdate", scheduledScanHandler.BatchUpdate)
 	protected.GET("/scheduledScans/:scheduledScan", scheduledScanHandler.GetByID)
+	protected.GET("/scheduledScans/:scheduledScan/occurrences", scheduledScanHandler.ListOccurrences)
 	protected.PATCH("/scheduledScans/:scheduledScan", scheduledScanHandler.Update)
 	protected.DELETE("/scheduledScans/:scheduledScan", scheduledScanHandler.Delete)
 }

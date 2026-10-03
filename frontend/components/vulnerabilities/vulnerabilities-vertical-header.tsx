@@ -124,7 +124,7 @@ export function VulnerabilitiesVerticalHeader({
             variant="ghost"
             size="icon-sm"
             onClick={onClearSelection}
-            className="hover:text-foreground text-muted-foreground"
+            className="selection-clear-control hover:text-foreground text-muted-foreground"
             aria-label={tActions("deselectAll")}
           >
             <X className="h-3.5 w-3.5" />

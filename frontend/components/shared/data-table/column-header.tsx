@@ -67,7 +67,10 @@ export function DataTableColumnHeader<TData, TValue>({
         <span className="min-w-0 truncate">{title}</span>
         <SortIcon className="shrink-0 text-muted-foreground" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" width="compact">
+      {/* The menu opens from a 12px tableHeaderInline trigger, so it uses the
+          compact density to stay on the trigger's tier instead of jumping to
+          the standard 14px menu rows. */}
+      <DropdownMenuContent align="start" width="compact" density="compact">
         <DropdownMenuLabel>{tDataTable("sortMethod")}</DropdownMenuLabel>
         <DropdownMenuItem onClick={() => setSort("asc")}>
           <ChevronUp />

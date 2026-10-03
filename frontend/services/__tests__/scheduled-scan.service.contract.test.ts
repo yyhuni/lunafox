@@ -75,6 +75,21 @@ function scheduledScanOverviewTransport(overrides: Record<string, unknown> = {})
 			targetDisplayName: "example.com",
 			nextRunTime: "2026-06-14T09:00:00Z",
 		}],
+		horizonWindow: {
+			start: "2026-06-14T02:00:00Z",
+			end: "2026-06-15T08:00:00Z",
+		},
+		horizonBuckets: [{
+			hourStart: "2026-06-14T09:00:00Z",
+			items: [{
+				name: "scheduledScans/4",
+				displayName: "daily",
+				organization: null,
+				organizationDisplayName: null,
+				target: "targets/7",
+				targetDisplayName: "example.com",
+			}],
+		}],
 		...overrides,
 	}
 }
@@ -181,6 +196,20 @@ describe("scheduled-scan.service contract", () => {
 				scanMode: "target",
 				targetName: "example.com",
 			}],
+			horizonWindow: {
+				start: "2026-06-14T02:00:00Z",
+				end: "2026-06-15T08:00:00Z",
+			},
+			horizonBuckets: [{
+				hourStart: "2026-06-14T09:00:00Z",
+				items: [{
+					id: 4,
+					resourceName: "scheduledScans/4",
+					displayName: "daily",
+					scanMode: "target",
+					targetName: "example.com",
+				}],
+			}],
 		})
 	})
 
@@ -188,6 +217,9 @@ describe("scheduled-scan.service contract", () => {
 		["negative count", scheduledScanOverviewTransport({ enabledScheduledScanCount: -1 }), "enabledScheduledScanCount"],
 		["too many upcoming tasks", scheduledScanOverviewTransport({ upcomingScheduledScans: Array(6).fill({}) }), "upcomingScheduledScans"],
 		["missing scoped display name", scheduledScanOverviewTransport({ upcomingScheduledScans: [{ name: "scheduledScans/4", displayName: "daily", organization: null, organizationDisplayName: null, target: "targets/7", targetDisplayName: null, nextRunTime: "2026-06-14T09:00:00Z" }] }), "upcomingScheduledScans[0].targetDisplayName"],
+		["missing horizon window", scheduledScanOverviewTransport({ horizonWindow: undefined }), "horizonWindow"],
+		["missing horizon buckets", scheduledScanOverviewTransport({ horizonBuckets: undefined }), "horizonBuckets"],
+		["empty horizon bucket", scheduledScanOverviewTransport({ horizonBuckets: [{ hourStart: "2026-06-14T09:00:00Z", items: [] }] }), "horizonBuckets[0].items"],
 	])("rejects overview response with %s", async (_name, payload, expectedField) => {
 		vi.mocked(api.get).mockResolvedValue({ data: payload } as never)
 		await expect(getScheduledScanOverviewSummary()).rejects.toThrow(`invalid ${expectedField}`)

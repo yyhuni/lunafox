@@ -113,6 +113,9 @@
       "failure": "失败",
       "lastRun": "上次触发时间",
       "lastFailure": "上次执行失败",
+      "viewHistory": "查看调度记录",
+      "viewHistoryHint": "点击查看保留期内的调度记录",
+      "hasFailureIndicator": "存在失败记录",
       "failureCauses": {
         "WORKFLOW_UNAVAILABLE": "引用的扫描流程不可用",
         "AGENT_NOT_FOUND": "绑定的节点已被删除",
@@ -1868,7 +1871,48 @@
       "editTabs": {
         "label": "定时扫描编辑分区",
         "basicInfo": "基本信息",
-        "scanConfiguration": "扫描配置"
+        "scanConfiguration": "扫描配置",
+        "occurrences": "调度记录"
+      },
+      "occurrences": {
+        "summary": {
+          "retentionBounded": "保留期内的调度记录",
+          "total": "总调度",
+          "succeeded": "成功",
+          "failed": "失败",
+          "retrying": "重试中",
+          "dispatching": "进行中",
+          "pending": "待触发"
+        },
+        "columns": {
+          "scheduledFor": "计划触发时间",
+          "status": "状态",
+          "result": "执行结果 / 诊断说明",
+          "duration": "耗时"
+        },
+        "status": {
+          "PENDING": "待触发",
+          "DISPATCHING": "进行中",
+          "RETRYING": "重试中",
+          "SUCCEEDED": "成功",
+          "FAILED": "失败"
+        },
+        "result": {
+          "succeededHandoff": "已成功创建扫描任务",
+          "retryProgress": "重试进度 {current}/{max}",
+          "retryExhausted": "已达最大重试上限 ({current}/{max})",
+          "awaitRetry": "等待下一次自动重试",
+          "suspectedStuck": "超过 {minutes} 分钟未结算，疑似调度卡住",
+          "noDiagnostics": "无诊断信息"
+        },
+        "empty": {
+          "title": "暂无调度记录",
+          "description": "该任务在保留期内还没有触发记录；到达计划的执行时间后，这里会展示每次触发的状态与结果。"
+        },
+        "refresh": "刷新",
+        "loadFailed": "调度记录加载失败",
+        "close": "关闭",
+        "loadFailedRetry": "重试"
       },
       "stepIndicator": "步骤 {current}/{total}",
       "steps": {
@@ -1891,10 +1935,15 @@
 		  }
 		},
         "timeline": {
-          "title": "近期执行计划",
+          "title": "排期分布",
           "next24HoursCount": "未来 24 小时 · {count} 项",
+          "windowLabel": "过去 6 小时 · 未来 24 小时",
           "soon": "即将执行",
-          "empty": "暂无即将执行的定时扫描"
+          "now": "当前",
+          "future": "后续计划",
+          "relativeMinutes": "{count} 分钟后",
+          "relativeTomorrow": "明天 {time}",
+          "empty": "未来 30 小时内暂无待触发任务"
         },
         "frequency": {
           "title": "执行频率分布",

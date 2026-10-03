@@ -142,12 +142,12 @@ docker compose exec server resetadmin
 
 `install.sh` 会描述它识别到的运行类型，而不是始终叙述为首次启动：没有任何 LunaFox 数据的目录属于首次启动；只有 volumes 而没有容器的目录会在保留命名 volumes 和已安装 Engine 的情况下重建容器，不属于升级；运行中的部署会在保留配置和 volumes 的情况下启动。当这种重建部署在 `bootstrap` 等首次启动任务上失败时，footer 会在 `logs.sh` 和 `status.sh` 提示之后增加一行可选信息：如果可以丢弃保留数据，只有 `./uninstall.sh --purge --confirm` 能删除命名 volumes 并重新开始。
 
-`install.sh` 接受 `--public-host <host>`、`--public-port <port>`、`--cf-acceleration` 和 `--help`。公网地址参数仅限安装动作：host 必须是 hostname 或 IP address，port 必须是 1 到 65535 的十进制值。未提供的地址值沿用 `.env` 或随包提供的 `localhost` / `443` 默认值；显式参数只会原子更新对应的 `.env` 键。命令会在访问 Docker 前校验参数，并且恰好运行一次 `docker compose up -d`。默认的 `uninstall.sh` 是可恢复的：它保留命名 volumes、`.env`、发布目录，以及已完成 Upgrade Operation 写入的常规 `compose.override.yaml`。`./uninstall.sh --purge --confirm` 会先验证并删除当前 `compose.yaml` 声明的 LunaFox 命名 volumes，再移除该版本覆盖层，以便在同一目录中进行干净重装；`.env` 和发布目录仍会保留。
+`install.sh` 接受 `--public-host <host>`、`--public-port <port>` 和 `--help`。公网地址参数仅限安装动作：host 必须是 hostname 或 IP address，port 必须是 1 到 65535 的十进制值。未提供的地址值沿用 `.env` 或随包提供的 `localhost` / `443` 默认值；显式参数只会原子更新对应的 `.env` 键。命令会在访问 Docker 前校验参数，并且恰好运行一次 `docker compose up -d`。默认的 `uninstall.sh` 是可恢复的：它保留命名 volumes、`.env`、发布目录，以及已完成 Upgrade Operation 写入的常规 `compose.override.yaml`。`./uninstall.sh --purge --confirm` 会先验证并删除当前 `compose.yaml` 声明的 LunaFox 命名 volumes，再移除该版本覆盖层，以便在同一目录中进行干净重装；`.env` 和发布目录仍会保留。
 
 ### 镜像预热与恢复
 
 所有现代安装入口都使用同一个由 Compose 管理的
-`engine-preheater` one-shot gate：公有仓库、Release ZIP、直接 Compose、Cloudflare 加速安装，以及仍支持的开发/私有入口，都会消费同一份 release-bound `preheat-manifest.json`。应用服务启动前，它会预热当前宿主平台发布的全部 Engine Runtime，以及选定 Compose profile 的完整镜像闭包。即使某个 Workflow 被关闭，已发布的 Engine Runtime 也会保留在预热范围内；`embedded` 包含 `postgres`，`external` 排除它。
+`engine-preheater` one-shot gate：公有仓库、Release ZIP、直接 Compose，以及仍支持的开发/私有入口，都会消费同一份 release-bound `preheat-manifest.json`。应用服务启动前，它会预热当前宿主平台发布的全部 Engine Runtime，以及选定 Compose profile 的完整镜像闭包。即使某个 Workflow 被关闭，已发布的 Engine Runtime 也会保留在预热范围内；`embedded` 包含 `postgres`，`external` 排除它。
 
 预热 deadline 与 readiness 相互独立。`LUNAFOX_PREHEAT_TIMEOUT_SECONDS` 默认是 `900` 秒，允许 `300` 到 `3600`；`LUNAFOX_READY_TIMEOUT_SECONDS` 只控制外层 readiness 等待。如果 readiness 先超时，预热器会继续运行。预热失败会保留容器、日志、已验证 Docker cache、命名 volumes、数据库和应用数据。修复传输或配置问题后，可先查看只读 status 和服务日志，再只重跑这个 gate：
 
@@ -155,27 +155,7 @@ docker compose exec server resetadmin
 docker compose up -d --force-recreate engine-preheater
 ```
 
-Cloudflare 加速只改变同一 digest-qualified entry 的传输候选，不会生成第二份清单或不同闭包。执行 Upgrade Operation 时，目标 Compose 和 `third-party-image-policy.json` 从 immutable `manifests/<release-tag>/` channel 目录获取，并在私有 candidate snapshot 预热前与该 release 的 preheat manifest 校验绑定；只有 gate 成功后才会提升活动部署。
-
-#### Cloudflare 加速安装
-
-当 Docker Hub 或 GHCR 的传输受限时，显式启用：
-
-```console
-./install.sh --public-host luna.example.com --public-port 8443 --cf-acceleration
-```
-
-`--cf-acceleration` 是唯一的加速选项，并不是 `.env` 设置。它可以与公网地址参数组合；其他生命周期命令不接受这些仅限安装的参数。它需要 `cosign`。在唯一一次 `docker compose up -d` 之前，安装器会校验包内的 `third-party-image-policy.json`，并准备所选的完整闭包。`DATABASE_MODE=embedded` 包含 `postgres`、Redis、Loki、Alloy、第一方 Runtime 和 one-shot services、Engine Package bootstrap 以及常驻 Agent。external 模式准备相同的闭包，但不包含 `postgres`。
-
-第一方 `ghcr.io` identity 会先由 `cosign` 验证，之后才会通过 Cloudflare 下载相同 digest。PostgreSQL、Redis、Loki 和 Alloy 是经 LunaFox 审核的固定 digest 内容，并接受 OCI digest 检查；这不表示已验证发布方签名。显式启用成功后，会在 `.lunafox-cf-acceleration/` 下写入受保护的 state、Compose overlay 和 Engine inventory。请不要编辑这些文件。该映射只会持续供后续生命周期命令使用，直到你执行一次不带参数的 `./install.sh`。这次无参数安装会在启动基础 Compose 图前移除安全的映射，之后所有生命周期命令都会使用正常的非 Cloudflare 传输；需要再次启用时，必须显式运行 `./install.sh --cf-acceleration`。此过程会保留 `.env`、容器、命名 volumes 和应用数据。若状态目录是符号链接、含未知条目、含非普通文件或权限不正确，安装会在 Compose 前停止，并要求人工恢复状态。直接执行 `docker compose up -d` 始终忽略该映射。
-
-生产 Worker 由受保护的公共发布 workflow 负责部署，不由安装器或每台主机单独部署。在发布 channel、部署 ZIP、不可变 tag 或 GitHub Release 之前，CI 会校验 Worker 源码和生成的第三方策略，记录 Cloudflare Version ID，并通过 `docker.lunafox.cc.cd` 冒烟验证当前 release 的 manifest digest。生成的 `cloudflare-worker-release-evidence.json` 会随 release 保留，其中绑定源码版本、策略 digest、部署 tag、响应状态和耗时。
-
-Worker 采用“只允许当前 digest”的硬切策略。新 release 上线后，上一版本或其他未列出的第三方 digest 会被本地 `403` 拒绝，不提供兼容窗口；旧客户端必须安装新 release。Worker 部署或冒烟失败会阻止最终发布，但可以复用同一组不可变制品重试。需要撤销时，运维人员可以在 Worker 目录使用 evidence 中记录的 Version ID 执行 `pnpm exec wrangler rollback <version-id> --yes`；POC 域名切回仍是独立的人工恢复动作。
-
-只有分类为 Cloudflare DNS、TCP、TLS、超时、限流或临时 5xx 的传输失败，才会尝试同一 digest 的回退顺序。策略、认证、签名、digest 和内容完整性失败都会停止，不会回退。准备失败会在 Compose 变更前保留 `.env`、容器、命名 volumes、数据库和应用数据。
-
-脚本需要 Bash 3.2 或更高版本，并可从任意工作目录运行。Windows 继续在 PowerShell 中使用直接 Compose 命令。
+执行 Upgrade Operation 时，目标 Compose 和 `third-party-image-policy.json` 从 immutable `manifests/<release-tag>/` channel 目录获取，并在私有 candidate snapshot 预热前与该 release 的 preheat manifest 校验绑定；只有 gate 成功后才会提升活动部署。
 
 ### 部署锁与恢复
 

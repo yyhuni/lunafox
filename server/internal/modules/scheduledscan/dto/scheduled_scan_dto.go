@@ -181,13 +181,36 @@ type ScheduledScanOverviewUpcomingResponse struct {
 	NextRunTime             time.Time `json:"nextRunTime"`
 }
 
+// ScheduledScanHorizonItemResponse shares the upcoming item shape so the axis
+// tooltip and the upcoming list render one projection.
+type ScheduledScanHorizonItemResponse struct {
+	Name                    string  `json:"name"`
+	DisplayName             string  `json:"displayName"`
+	Organization            *string `json:"organization"`
+	OrganizationDisplayName *string `json:"organizationDisplayName"`
+	Target                  *string `json:"target"`
+	TargetDisplayName       *string `json:"targetDisplayName"`
+}
+
+type ScheduledScanHorizonWindowResponse struct {
+	Start time.Time `json:"start"`
+	End   time.Time `json:"end"`
+}
+
+type ScheduledScanHorizonBucketResponse struct {
+	HourStart time.Time                          `json:"hourStart"`
+	Items     []ScheduledScanHorizonItemResponse `json:"items"`
+}
+
 type ScheduledScanOverviewResponse struct {
-	AsOfTime                      time.Time                               `json:"asOfTime"`
-	EnabledScheduledScanCount     int64                                   `json:"enabledScheduledScanCount"`
-	PausedScheduledScanCount      int64                                   `json:"pausedScheduledScanCount"`
-	TodayScheduledScanCount       int64                                   `json:"todayScheduledScanCount"`
-	Next24HoursScheduledScanCount int64                                   `json:"next24HoursScheduledScanCount"`
+	AsOfTime                      time.Time                              `json:"asOfTime"`
+	EnabledScheduledScanCount     int64                                  `json:"enabledScheduledScanCount"`
+	PausedScheduledScanCount      int64                                  `json:"pausedScheduledScanCount"`
+	TodayScheduledScanCount       int64                                  `json:"todayScheduledScanCount"`
+	Next24HoursScheduledScanCount int64                                  `json:"next24HoursScheduledScanCount"`
 	UpcomingScheduledScans        []ScheduledScanOverviewUpcomingResponse `json:"upcomingScheduledScans"`
+	HorizonWindow                 ScheduledScanHorizonWindowResponse      `json:"horizonWindow"`
+	HorizonBuckets                []ScheduledScanHorizonBucketResponse    `json:"horizonBuckets"`
 }
 
 func NewScheduledScanListResponse(data []ScheduledScanResponse, total int64, page, pageSize int) ScheduledScanListResponse {

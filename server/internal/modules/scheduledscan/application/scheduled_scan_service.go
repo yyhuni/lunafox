@@ -145,12 +145,13 @@ type ScheduledScanConfigResourceValidator interface {
 }
 
 type ScheduledScanService struct {
-	store      ScheduledScanStore
-	workflows  ScheduledScanWorkflowStore
-	agents     scanapp.ScanCreateAgentLookup
-	resources  ScheduledScanConfigResourceValidator
-	calculator ScheduleCalculator
-	now        func() time.Time
+	store        ScheduledScanStore
+	workflows    ScheduledScanWorkflowStore
+	agents       scanapp.ScanCreateAgentLookup
+	resources    ScheduledScanConfigResourceValidator
+	calculator   ScheduleCalculator
+	occurrences  ScheduledScanOccurrenceStore
+	now          func() time.Time
 }
 
 func NewScheduledScanService(store ScheduledScanStore, workflows ScheduledScanWorkflowStore) *ScheduledScanService {
@@ -393,6 +394,44 @@ func (service *ScheduledScanService) GetByID(ctx context.Context, id int) (*Sche
 		return nil, ErrScheduledScanNotFound
 	}
 	return service.store.GetByID(ctx, id)
+}
+
+// WithOccurrenceStore attaches the read-only occurrence ledger port used by
+// the occurrence history projection. Without it ListOccurrenceHistory fails
+// closed with an invalid-argument error instead of silently empty history.
+func (service *ScheduledScanService) WithOccurrenceStore(store ScheduledScanOccurrenceStore) *ScheduledScanService {
+	if service != nil {
+		service.occurrences = store
+	}
+	return service
+}
+
+// ListOccurrenceHistory returns one newest-first page of the retention-bounded
+// occurrence history for one Scheduled Scan plus the full-window status
+// counts. Unknown schedules reuse the GetByID not-found semantics.
+func (service *ScheduledScanService) ListOccurrenceHistory(ctx context.Context, query OccurrenceHistoryQuery) (*OccurrenceHistory, error) {
+	if service == nil || service.store == nil || service.occurrences == nil {
+		return nil, fmt.Errorf("%w: occurrence store is not configured", ErrScheduledScanInvalidArgument)
+	}
+	if query.ScheduledScanID <= 0 {
+		return nil, fmt.Errorf("%w: scheduled scan is required", ErrScheduledScanInvalidArgument)
+	}
+	if _, err := service.store.GetByID(ctx, query.ScheduledScanID); err != nil {
+		return nil, err
+	}
+	snapshots, total, err := service.occurrences.ListOccurrences(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	counts, err := service.occurrences.CountOccurrencesByStatus(ctx, query.ScheduledScanID)
+	if err != nil {
+		return nil, err
+	}
+	records := make([]OccurrenceRecord, 0, len(snapshots))
+	for _, snapshot := range snapshots {
+		records = append(records, projectOccurrenceRecord(snapshot))
+	}
+	return &OccurrenceHistory{Records: records, Total: total, Counts: counts}, nil
 }
 
 func (service *ScheduledScanService) Delete(ctx context.Context, id int) error {

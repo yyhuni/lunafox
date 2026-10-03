@@ -198,6 +198,12 @@ func TestScheduledScanOverviewUsesOneClockReadAndUTCMidnight(t *testing.T) {
 	if store.overviewQuery.UpcomingItemsLimit != 5 {
 		t.Fatalf("upcoming item limit = %d, want 5", store.overviewQuery.UpcomingItemsLimit)
 	}
+	if want := asOfTime.Add(-ScheduledScanHorizonLookback); !store.overviewQuery.HorizonStart.Equal(want) || !overview.HorizonWindow.Start.Equal(want) {
+		t.Fatalf("horizon start = %s / %s, want %s", store.overviewQuery.HorizonStart, overview.HorizonWindow.Start, want)
+	}
+	if want := asOfTime.Add(ScheduledScanHorizonDuration); !store.overviewQuery.HorizonEnd.Equal(want) || !overview.HorizonWindow.End.Equal(want) {
+		t.Fatalf("horizon end = %s / %s, want %s", store.overviewQuery.HorizonEnd, overview.HorizonWindow.End, want)
+	}
 }
 
 func TestCreateScheduledScanPersistsInternalWorkflowIDAndStepConfig(t *testing.T) {

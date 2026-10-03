@@ -31,6 +31,57 @@ export function isScheduledScanHandoffFailureCause(value: unknown): value is Sch
   )
 }
 
+// Closed public status enum for the occurrence history projection; the
+// server contract is additive-only, so this union only grows.
+export const SCHEDULED_SCAN_OCCURRENCE_STATUSES = [
+  'PENDING',
+  'DISPATCHING',
+  'RETRYING',
+  'SUCCEEDED',
+  'FAILED',
+] as const
+
+export type ScheduledScanOccurrenceStatus = (typeof SCHEDULED_SCAN_OCCURRENCE_STATUSES)[number]
+
+export function isScheduledScanOccurrenceStatus(value: unknown): value is ScheduledScanOccurrenceStatus {
+  return (
+    typeof value === 'string' &&
+    (SCHEDULED_SCAN_OCCURRENCE_STATUSES as readonly string[]).includes(value)
+  )
+}
+
+// One retention-bounded occurrence history row. The status is derived
+// server-side; durationMs exists only on SUCCEEDED rows.
+export interface ScheduledScanOccurrence {
+  name: string // Canonical nested resource name: scheduledScans/{scanId}/occurrences/{id}
+  id: number
+  scheduledFor: string
+  attemptedAt: string | null
+  dispatchedAt: string | null
+  status: ScheduledScanOccurrenceStatus
+  failureKind: string | null
+  failureCause: ScheduledScanHandoffFailureCause | null
+  failureMessage: string | null
+  retryCount: number
+  nextRetryAt: string | null
+  durationMs: number | null
+}
+
+export interface ScheduledScanOccurrenceStatusCounts {
+  pending: number
+  dispatching: number
+  retrying: number
+  succeeded: number
+  failed: number
+}
+
+export interface GetScheduledScanOccurrencesResponse {
+  occurrences: ScheduledScanOccurrence[]
+  statusCounts: ScheduledScanOccurrenceStatusCounts
+  totalSize?: number
+  nextPageToken?: string
+}
+
 // Scheduled scan interface
 export interface ScheduledScan {
   id: number
@@ -129,6 +180,26 @@ export interface ScheduledScanOverviewUpcoming {
 	nextRunTime: string
 }
 
+// Horizon items share the upcoming item shape minus its cursor timestamp.
+export interface ScheduledScanHorizonItem {
+	id: number
+	resourceName: string
+	displayName: string
+	scanMode: ScanMode
+	organizationName: string | null
+	targetName: string | null
+}
+
+export interface ScheduledScanHorizonWindow {
+	start: string
+	end: string
+}
+
+export interface ScheduledScanHorizonBucket {
+	hourStart: string
+	items: ScheduledScanHorizonItem[]
+}
+
 export interface ScheduledScanOverviewSummary {
 	asOfTime: string
 	enabledScheduledScanCount: number
@@ -136,4 +207,6 @@ export interface ScheduledScanOverviewSummary {
 	todayScheduledScanCount: number
 	next24HoursScheduledScanCount: number
 	upcomingScheduledScans: ScheduledScanOverviewUpcoming[]
+	horizonWindow: ScheduledScanHorizonWindow
+	horizonBuckets: ScheduledScanHorizonBucket[]
 }

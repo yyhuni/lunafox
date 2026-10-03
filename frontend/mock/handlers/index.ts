@@ -49,6 +49,7 @@ import {
   getMockRegistrationToken,
   getMockRegistrationTokenById,
   getMockScheduledScanById,
+  getMockScheduledScanOccurrences,
   getMockScheduledScanOverviewSummary,
   getMockScheduledScans,
   getMockScanLogs,
@@ -1900,6 +1901,17 @@ createdAt: now,
     if (method === "GET" && scheduledScanMatch) {
       const scheduledScan = getMockScheduledScanById(Number.parseInt(scheduledScanMatch[1], 10))
       return scheduledScan ? json(scheduledScan) : json({ error: "Scheduled scan not found" }, { status: 404 })
+    }
+    const occurrenceMatch = path.match(/^\/scheduledScans\/(\d+)\/occurrences$/)
+    if (method === "GET" && occurrenceMatch) {
+      const scheduledScanId = Number.parseInt(occurrenceMatch[1], 10)
+      if (!getMockScheduledScanById(scheduledScanId)) {
+        return json({ error: "Scheduled scan not found" }, { status: 404 })
+      }
+      return json(getMockScheduledScanOccurrences(scheduledScanId, {
+        page: parseNumeric(url.searchParams.get("page")) || 1,
+        pageSize: parseNumeric(url.searchParams.get("pageSize")) || 10,
+      }))
     }
     if (method === "PATCH" && scheduledScanMatch) {
       const scheduledScanId = Number.parseInt(scheduledScanMatch[1], 10)

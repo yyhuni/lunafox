@@ -18,10 +18,12 @@ import { getStatusToneTextClass } from "@/lib/status-config"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 import type { ScheduledScan, ScheduledScanHandoffFailureCause } from "@/types/scheduled-scan.types"
+import type { ScheduledScanEditTab } from "@/components/scan/scheduled/edit-scheduled-scan-dialog"
 import { scheduledScanTableColumnLayout } from "./scheduled-scan-table-layout"
 
 const EditIcon = semanticIcons.action.edit
 const DeleteIcon = semanticIcons.action.delete
+const ViewIcon = semanticIcons.action.view
 const OrganizationIcon = semanticIcons.concept.organization
 const TargetIcon = semanticIcons.concept.target
 
@@ -39,6 +41,9 @@ export interface ScheduledScanTranslations {
     failure: string
     lastRun: string
     lastFailure: string
+    viewHistory: string
+    viewHistoryHint: string
+    hasFailureIndicator: string
     failureCauses: Record<ScheduledScanHandoffFailureCause, string>
   }
   actions: {
@@ -67,7 +72,7 @@ export interface ScheduledScanTranslations {
 
 interface CreateColumnsProps {
   formatDate: (dateString: string) => string
-  handleEdit: (scan: ScheduledScan) => void
+  handleEdit: (scan: ScheduledScan, tab?: ScheduledScanEditTab) => void
   handleDelete: (scan: ScheduledScan) => void
   handleToggleStatus: (scan: ScheduledScan, enabled: boolean) => void
   t: ScheduledScanTranslations
@@ -131,15 +136,21 @@ function formatScheduleRule(
  */
 function ScheduledScanRowActions({
   onEdit,
+  onViewHistory,
   onDelete,
   t,
 }: {
   onEdit: () => void
+  onViewHistory: () => void
   onDelete: () => void
   t: ScheduledScanTranslations
 }) {
   return (
     <DenseRowActionMenu ariaLabel={t.actions.openMenu}>
+      <DropdownMenuItem onClick={onViewHistory}>
+        <ViewIcon />
+        {t.columns.viewHistory}
+      </DropdownMenuItem>
       <DropdownMenuItem onClick={onEdit}>
         <EditIcon />
         {t.actions.editTask}
@@ -322,28 +333,37 @@ export const createScheduledScanColumns = ({
       <DataTableColumnHeader column={column} title={t.columns.handoffResults} />
     ),
     cell: ({ row }) => {
-      const lastFailureCause = row.original.lastHandoffFailureCause
-      const lastFailureTime = row.original.lastHandoffFailureTime
+      const scan = row.original
+      const hasFailure = scan.failedHandoffCount > 0
       return (
-        <div className="min-w-0 whitespace-nowrap">
-          <span className={cn(textRole.tableCellSecondary, "font-mono tabular-nums")}>
-            <span>{t.columns.trigger} {row.original.runCount}</span>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            handleEdit(scan, "occurrences")
+          }}
+          title={t.columns.viewHistoryHint}
+          className="group -ml-1.5 inline-flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 text-left transition-colors hover:bg-muted/40"
+        >
+          <span className={cn(textRole.tableCellSecondary, "font-mono tabular-nums transition-colors group-hover:text-foreground")}>
+            <span>{t.columns.trigger} {scan.runCount}</span>
             <span aria-hidden="true"> · </span>
             <span className={getStatusToneTextClass("success")}>
-              {t.columns.success} {row.original.successfulHandoffCount}
+              {t.columns.success} {scan.successfulHandoffCount}
             </span>
             <span aria-hidden="true"> · </span>
-            <span className={getStatusToneTextClass("error")}>
-              {t.columns.failure} {row.original.failedHandoffCount}
+            <span className={hasFailure ? getStatusToneTextClass("error") : undefined}>
+              {t.columns.failure} {scan.failedHandoffCount}
             </span>
           </span>
-          {lastFailureCause && (
-            <div className={cn(getStatusToneTextClass("error"), "truncate")}>
-              {t.columns.lastFailure}: {t.columns.failureCauses[lastFailureCause] ?? lastFailureCause}
-              {lastFailureTime ? ` · ${formatDate(lastFailureTime)}` : ""}
-            </div>
+          {hasFailure && (
+            <span
+              className={cn(getStatusToneTextClass("error"), "size-1.5 shrink-0 rounded-full bg-current")}
+              role="img"
+              aria-label={t.columns.hasFailureIndicator}
+            />
           )}
-        </div>
+        </button>
       )
     },
     enableSorting: false,
@@ -371,7 +391,8 @@ export const createScheduledScanColumns = ({
     enableResizing: false,
     cell: ({ row }) => (
       <ScheduledScanRowActions
-        onEdit={() => handleEdit(row.original)}
+        onEdit={() => handleEdit(row.original, "basic")}
+        onViewHistory={() => handleEdit(row.original, "occurrences")}
         onDelete={() => handleDelete(row.original)}
         t={t}
       />

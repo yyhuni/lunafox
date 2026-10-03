@@ -875,7 +875,8 @@ func wireScanModule(repos *repositoryBundle, infra *infra, cfg *config.Config, n
 	}
 	scheduledScanSvc := scheduledscanapp.NewScheduledScanService(repos.scheduledScanRepo, repos.scanWorkflowRepo).
 		WithAgentLookup(scanwiring.NewScanCreateAgentLookupAdapter(repos.agentRepo)).
-		WithConfigResourceValidator(configResourceValidator)
+		WithConfigResourceValidator(configResourceValidator).
+		WithOccurrenceStore(repos.scheduledScanRepo)
 	scheduledScanController := scheduledscanapp.NewSchedulerController(
 		repos.scheduledScanRepo,
 		scheduledscanapp.NewOccurrenceDispatcher(scanSvc),

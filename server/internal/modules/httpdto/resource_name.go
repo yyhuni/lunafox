@@ -96,6 +96,10 @@ func ScheduledScanName(id int) string {
 	return fmt.Sprintf("scheduledScans/%d", id)
 }
 
+func ScheduledScanOccurrenceName(scanID int, id int64) string {
+	return fmt.Sprintf("scheduledScans/%d/occurrences/%d", scanID, id)
+}
+
 func ScanTaskName(scanID, taskID int) string {
 	return resourcenames.Task(scanID, taskID)
 }

@@ -15,14 +15,21 @@ import {
   EditScheduledScanCronSection,
   EditScheduledScanDialogFooter,
 } from "@/components/scan/scheduled/edit-scheduled-scan-dialog-sections"
+import { ScheduledScanOccurrencesTab } from "@/components/scan/scheduled/scheduled-scan-occurrences-tab"
+import { Button } from "@/components/ui/button"
+import { formatDate } from "@/lib/utils"
 import { useLocale, useTranslations } from "next-intl"
 import type { Locale } from "@/i18n/config"
 import type { ScheduledScan } from "@/types/scheduled-scan.types"
+
+export type ScheduledScanEditTab = "basic" | "configuration" | "occurrences"
 
 interface EditScheduledScanDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   scheduledScan: ScheduledScan | null
+  /** Initial tab; the management list opens the run-history tab directly from the handoff metric. */
+  initialTab?: ScheduledScanEditTab
   onSuccess?: () => void
 }
 
@@ -30,6 +37,7 @@ export function EditScheduledScanDialog({
   open,
   onOpenChange,
   scheduledScan,
+  initialTab = "basic",
   onSuccess,
 }: EditScheduledScanDialogProps) {
   const t = useTranslations("scan.scheduled")
@@ -94,8 +102,8 @@ export function EditScheduledScanDialog({
   )
 
   React.useEffect(() => {
-    if (open) setActiveTab("basic")
-  }, [open, scheduledScan?.id])
+    if (open) setActiveTab(initialTab)
+  }, [open, scheduledScan?.id, initialTab])
 
   if (!scheduledScan) return null
 
@@ -108,12 +116,20 @@ export function EditScheduledScanDialog({
       closeDisabled={isPending}
       bodyClassName="flex min-h-0 flex-col overflow-hidden"
       formProps={{ onSubmit: handleFormSubmit }}
-      footer={(
-        <EditScheduledScanDialogFooter
-          t={t}
-          isPending={isPending || isWorkflowConfigLoading}
-        />
-      )}
+      footer={
+        activeTab === "occurrences" ? (
+          <div className="flex w-full items-center justify-end">
+            <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+              {t("occurrences.close")}
+            </Button>
+          </div>
+        ) : (
+          <EditScheduledScanDialogFooter
+            t={t}
+            isPending={isPending || isWorkflowConfigLoading}
+          />
+        )
+      }
     >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col gap-3">
         <TabsList variant="content" className="w-full justify-start border-b" aria-label={t("editTabs.label")}>
@@ -122,6 +138,9 @@ export function EditScheduledScanDialog({
           </TabsTrigger>
           <TabsTrigger value="configuration" variant="content">
             {t("editTabs.scanConfiguration")}
+          </TabsTrigger>
+          <TabsTrigger value="occurrences" variant="content">
+            {t("editTabs.occurrences")}
           </TabsTrigger>
         </TabsList>
 
@@ -198,6 +217,13 @@ export function EditScheduledScanDialog({
             configValidationRef={configValidationRef}
             formValuesCacheRef={formValuesCacheRef}
             workflowProfileDraft={workflowProfileDraft}
+          />
+        </TabsContent>
+
+        <TabsContent value="occurrences" keepMounted className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <ScheduledScanOccurrencesTab
+            scheduledScanId={scheduledScan.id}
+            formatDate={formatDate}
           />
         </TabsContent>
       </Tabs>

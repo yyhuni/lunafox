@@ -73,6 +73,9 @@ export function OverviewScheduledScans() {
       failure: tColumns("scheduledScan.failure"),
       lastRun: tColumns("scheduledScan.lastRun"),
       lastFailure: tColumns("scheduledScan.lastFailure"),
+      viewHistory: tColumns("scheduledScan.viewHistory"),
+      viewHistoryHint: tColumns("scheduledScan.viewHistoryHint"),
+      hasFailureIndicator: tColumns("scheduledScan.hasFailureIndicator"),
       failureCauses: {
         WORKFLOW_UNAVAILABLE: tColumns("scheduledScan.failureCauses.WORKFLOW_UNAVAILABLE"),
         AGENT_NOT_FOUND: tColumns("scheduledScan.failureCauses.AGENT_NOT_FOUND"),

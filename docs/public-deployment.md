@@ -211,7 +211,7 @@ preserved data can be discarded, `./uninstall.sh --purge --confirm` is the only
 way to delete the named volumes and start over.
 
 `install.sh` accepts `--public-host <host>`, `--public-port <port>`,
-`--cf-acceleration`, and `--help`. Address options are install-only: a host must
+and `--help`. Address options are install-only: a host must
 be a hostname or IP address, and a port must be decimal 1 through 65535. An
 omitted address value keeps `.env` or the shipped `localhost` / `443` default;
 an explicit option atomically updates only its matching `.env` key. The command
@@ -227,7 +227,7 @@ preserves `.env` and the release directory.
 
 Every modern installation entry uses the same Compose-managed
 `engine-preheater` one-shot gate: the public repository, Release ZIP, direct
-Compose, Cloudflare-accelerated install, and supported development/private
+Compose, and supported development/private
 entry points all consume one release-bound `preheat-manifest.json`. Before the
 application services start, it preheats every Engine Runtime published for the
 host platform and the complete image closure for the selected Compose profile.
@@ -246,71 +246,11 @@ rerun only the gate after fixing transport or configuration:
 docker compose up -d --force-recreate engine-preheater
 ```
 
-Cloudflare acceleration changes only the transport candidates for the same
-digest-qualified entries. It does not create a second manifest or a different
-closure. During an Upgrade Operation, the target Compose and
+During an Upgrade Operation, the target Compose and
 `third-party-image-policy.json` are fetched from the immutable
 `manifests/<release-tag>/` channel directory and are validated against that
 release's preheat manifest before the private candidate snapshot is preheated;
 the active deployment is promoted only after the gate succeeds.
-
-#### Cloudflare accelerated installation
-
-When Docker Hub or GHCR transport is restricted, opt in explicitly:
-
-```console
-./install.sh --public-host luna.example.com --public-port 8443 --cf-acceleration
-```
-
-`--cf-acceleration` is the only acceleration option and is not an `.env`
-setting. It can be combined with the public-address options; no other lifecycle
-command accepts any of these install-only options. It requires `cosign`. Before
-its one `docker compose up -d`, the installer validates the packaged
-`third-party-image-policy.json` and prepares the complete selected closure.
-`DATABASE_MODE=embedded` includes `postgres`, Redis, Loki, Alloy, the
-first-party Runtime and one-shot services, Engine Package bootstrap, and the
-resident Agent. External mode prepares the same closure except `postgres`.
-
-First-party `ghcr.io` identities are verified with `cosign` before an identical
-digest is downloaded through Cloudflare. PostgreSQL, Redis, Loki, and Alloy are
-LunaFox-reviewed fixed-digest content with OCI digest checks; this does not
-claim publisher signature verification. A successful opt-in writes protected
-state, its Compose overlay, and its Engine inventory under
-`.lunafox-cf-acceleration/`. Do not edit those files. The mapping remains in
-use by later lifecycle commands only until you run a plain `./install.sh`.
-That unflagged install removes a safe mapping before it starts the base Compose
-graph, so later lifecycle commands use the normal non-Cloudflare transport
-until you explicitly run `./install.sh --cf-acceleration` again. It preserves
-`.env`, containers, named volumes, and application data. If the state directory
-is a symlink, has an unknown entry, a non-regular file, or an incorrect mode,
-the install stops before Compose and asks for manual state recovery. A direct
-`docker compose up -d` always ignores the mapping.
-
-The production Worker is deployed by the protected public release workflow, not
-by an installer or by each host. Before a channel, deployment ZIP, immutable
-tag, or GitHub Release is published, CI checks the Worker source and generated
-third-party policy, captures its Cloudflare Version ID, and smoke-tests the
-current manifest digests through `docker.lunafox.cc.cd`. The resulting
-`cloudflare-worker-release-evidence.json` is retained with the release and
-binds the source revisions, policy digest, deployment tag, response statuses,
-and timings.
-
-The Worker uses a current-digest-only hard cut. After a new release is live, an
-old third-party digest is deliberately rejected with local `403`; old clients
-must install the new release. A failed Worker deploy or smoke blocks final
-publication and can be retried with the same immutable artifacts. Operators can
-manually roll back with `pnpm exec wrangler rollback <version-id> --yes` from
-the Worker directory, using the Version ID recorded in the evidence; the POC
-domain reassignment remains a separate manual recovery action.
-
-Only a classified Cloudflare DNS, TCP, TLS, timeout, rate-limit, or temporary
-5xx transport failure can try the same-digest fallback sequence. Policy,
-authentication, signature, digest, and content-integrity failures stop without
-fallback. A preparation failure leaves `.env`, containers, named volumes,
-database, and application data in place before Compose mutation.
-
-The scripts need Bash 3.2 or newer and work from any working directory. Windows
-keeps the direct Compose commands in PowerShell.
 
 ### Deployment lock and recovery
 

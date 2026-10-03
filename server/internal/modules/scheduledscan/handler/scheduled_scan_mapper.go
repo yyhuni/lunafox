@@ -194,6 +194,24 @@ func toScheduledScanOverviewOutput(overview *scheduledapp.ScheduledScanOverview)
 			NextRunTime:             timeutil.ToUTC(item.NextRunTime),
 		})
 	}
+	horizonBuckets := make([]dto.ScheduledScanHorizonBucketResponse, 0, len(overview.HorizonBuckets))
+	for _, bucket := range overview.HorizonBuckets {
+		items := make([]dto.ScheduledScanHorizonItemResponse, 0, len(bucket.Items))
+		for _, item := range bucket.Items {
+			items = append(items, dto.ScheduledScanHorizonItemResponse{
+				Name:                    httpdto.ScheduledScanName(item.ID),
+				DisplayName:             item.DisplayName,
+				Organization:            scheduledScanOrganizationName(item.OrganizationID),
+				OrganizationDisplayName: item.OrganizationDisplayName,
+				Target:                  scheduledScanTargetName(item.TargetID),
+				TargetDisplayName:       item.TargetDisplayName,
+			})
+		}
+		horizonBuckets = append(horizonBuckets, dto.ScheduledScanHorizonBucketResponse{
+			HourStart: timeutil.ToUTC(bucket.HourStart),
+			Items:     items,
+		})
+	}
 	return dto.ScheduledScanOverviewResponse{
 		AsOfTime:                      timeutil.ToUTC(overview.AsOfTime),
 		EnabledScheduledScanCount:     overview.EnabledScheduledScanCount,
@@ -201,5 +219,10 @@ func toScheduledScanOverviewOutput(overview *scheduledapp.ScheduledScanOverview)
 		TodayScheduledScanCount:       overview.TodayScheduledScanCount,
 		Next24HoursScheduledScanCount: overview.Next24HoursScheduledScanCount,
 		UpcomingScheduledScans:        upcoming,
+		HorizonWindow: dto.ScheduledScanHorizonWindowResponse{
+			Start: timeutil.ToUTC(overview.HorizonWindow.Start),
+			End:   timeutil.ToUTC(overview.HorizonWindow.End),
+		},
+		HorizonBuckets: horizonBuckets,
 	}
 }

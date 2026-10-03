@@ -39,3 +39,22 @@ describe("scheduled-scan last-handoff-failure summary contract", () => {
     expect(source).toContain("export function isScheduledScanHandoffFailureCause")
   })
 })
+
+describe("scheduled-scan occurrence history contract", () => {
+  it("declares the closed status enum with the additive-only guard", () => {
+    expect(source).toContain("export const SCHEDULED_SCAN_OCCURRENCE_STATUSES")
+    expect(source).toContain("export type ScheduledScanOccurrenceStatus")
+    expect(source).toContain("export function isScheduledScanOccurrenceStatus")
+    for (const status of ["PENDING", "DISPATCHING", "RETRYING", "SUCCEEDED", "FAILED"]) {
+      expect(source).toContain(`'${status}'`)
+    }
+  })
+
+  it("projects server-derived rows whose duration exists only on succeeded runs", () => {
+    expect(source).toContain("export interface ScheduledScanOccurrence {")
+    expect(source).toContain("status: ScheduledScanOccurrenceStatus")
+    expect(source).toContain("durationMs: number | null")
+    expect(source).toContain("export interface GetScheduledScanOccurrencesResponse {")
+    expect(source).toContain("statusCounts: ScheduledScanOccurrenceStatusCounts")
+  })
+})
