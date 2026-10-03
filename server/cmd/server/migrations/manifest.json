@@ -37,6 +37,13 @@
       "up": "000005_scheduled_scan_handoff_retry.up.sql",
       "down": "000005_scheduled_scan_handoff_retry.down.sql",
       "checksum": "sha256:e1237440f43ddc28cac2ed077ce163fa9acae541502af37d19f776b0b7dcbc3c"
+    },
+    {
+      "id": "000006",
+      "slug": "scheduled_scan_disabled_cursor_cleanup",
+      "up": "000006_scheduled_scan_disabled_cursor_cleanup.up.sql",
+      "down": "000006_scheduled_scan_disabled_cursor_cleanup.down.sql",
+      "checksum": "sha256:671903f6b223cef7516f8caba85fa0ff359bbc7df0d40a4c8f4f9ae7da1c8053"
     }
   ]
 }

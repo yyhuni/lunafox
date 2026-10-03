@@ -41,11 +41,56 @@ export interface DenseRowActionMenuProps {
     ownerClassName?: string;
     triggerSize?: ButtonSize;
 }
+// Anchor liveness is checked through isConnected and computed display rather
+// than geometry: jsdom reports zero rects for laid-out elements, so a rect
+// check would close every menu in the test environment.
+function hasDetachedOrHiddenAnchor(anchor: HTMLElement | null): boolean {
+    if (!anchor || !anchor.isConnected) {
+        return true;
+    }
+    const view = anchor.ownerDocument.defaultView;
+    if (!view) {
+        return true;
+    }
+    for (let node: HTMLElement | null = anchor; node; node = node.parentElement) {
+        if (view.getComputedStyle(node).display === "none") {
+            return true;
+        }
+    }
+    return false;
+}
 export function DenseRowActionMenu({ ariaLabel, children, leadingActions, align = "end", menuClassName, ownerClassName, triggerSize = "icon-sm", }: DenseRowActionMenuProps) {
+    const [open, setOpen] = React.useState(false);
+    const anchorRef = React.useRef<HTMLButtonElement | null>(null);
+    React.useEffect(() => {
+        if (!open) {
+            return;
+        }
+        // A trigger that is detached or hidden while the menu measures it
+        // strands the popup at the viewport origin; self-heal by closing.
+        const closeIfAnchorUnusable = () => {
+            if (hasDetachedOrHiddenAnchor(anchorRef.current)) {
+                setOpen(false);
+            }
+        };
+        closeIfAnchorUnusable();
+        const observer = typeof IntersectionObserver === "undefined"
+            ? null
+            : new IntersectionObserver(closeIfAnchorUnusable);
+        observer?.observe(anchorRef.current!);
+        window.addEventListener("resize", closeIfAnchorUnusable);
+        document.addEventListener("scroll", closeIfAnchorUnusable, { capture: true, passive: true });
+        return () => {
+            observer?.disconnect();
+            window.removeEventListener("resize", closeIfAnchorUnusable);
+            document.removeEventListener("scroll", closeIfAnchorUnusable, { capture: true } as EventListenerOptions);
+        };
+    }, [open]);
     return (<DenseRowActionOwner className={ownerClassName}>
       {leadingActions}
-      <DropdownMenu>
+      <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger
+          ref={anchorRef}
           render={
             <Button
               variant="ghost"

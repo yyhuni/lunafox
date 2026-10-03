@@ -1,0 +1,4 @@
+-- DESTRUCTIVE TEST TEARDOWN ONLY.
+-- Production recovery uses an approved forward fix. The cleared values are
+-- stale cursors that must not be restored; teardown recreates the schema
+-- from the baseline, so this down migration is a deliberate no-op.

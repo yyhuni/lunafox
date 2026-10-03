@@ -43,7 +43,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@base-ui/react": "^1.6.0",
+    "@base-ui/react": "^1.8.0",
     "@codemirror/commands": "^6.10.1",
     "@codemirror/lang-yaml": "^6.1.2",
     "@codemirror/language": "^6.12.1",
