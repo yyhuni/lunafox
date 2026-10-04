@@ -8,23 +8,38 @@ import (
 	upgradeapp "github.com/yyhuni/lunafox/server/internal/modules/upgrade/application"
 )
 
-type upgradeSchedulerPauser interface {
+// upgradeSchedulerLifecycle gates scheduled-scan claiming across the upgrade
+// handoff. Pause assumes the host will replace this process; Resume releases
+// the gate whenever an Upgrade Operation ends while the process keeps serving.
+type upgradeSchedulerLifecycle interface {
 	Pause()
+	Resume()
 }
 
 // upgradePreDispatchCoordinator pauses scheduled work and drains the active
 // Scan set through the existing atomic stop lifecycle before host handoff.
 type upgradePreDispatchCoordinator struct {
 	scans     *scanapp.ScanFacade
-	scheduler upgradeSchedulerPauser
+	scheduler upgradeSchedulerLifecycle
 }
 
-func newUpgradePreDispatchCoordinator(scans *scanapp.ScanFacade, scheduler upgradeSchedulerPauser) *upgradePreDispatchCoordinator {
+func newUpgradePreDispatchCoordinator(scans *scanapp.ScanFacade, scheduler upgradeSchedulerLifecycle) *upgradePreDispatchCoordinator {
 	return &upgradePreDispatchCoordinator{scans: scans, scheduler: scheduler}
 }
 
 func (coordinator *upgradePreDispatchCoordinator) Prepare(ctx context.Context) (upgradeapp.PreparationResult, error) {
 	return coordinator.prepareLegacy(ctx)
+}
+
+// Resume releases the scheduler pause for Upgrade Operations that reached a
+// terminal outcome in this process. It is idempotent: a scheduler that was
+// never paused stays runnable, so the upgrade service may call it on every
+// in-process terminal commit.
+func (coordinator *upgradePreDispatchCoordinator) Resume() {
+	if coordinator == nil || coordinator.scheduler == nil {
+		return
+	}
+	coordinator.scheduler.Resume()
 }
 
 // PrepareForUpgrade is the production path. It pauses the scheduler first,
@@ -41,11 +56,14 @@ func (coordinator *upgradePreDispatchCoordinator) PrepareForUpgrade(ctx context.
 		coordinator.scheduler.Pause()
 	}
 	outcome, err := coordinator.scans.StopAllActiveForUpgrade(ctx, operationID)
-	if err != nil {
-		return upgradeapp.PreparationResult{}, fmt.Errorf("cancel all active scans for upgrade: %w", err)
+	if err == nil && outcome == nil {
+		err = fmt.Errorf("cancel all active scans for upgrade returned no outcome")
 	}
-	if outcome == nil {
-		return upgradeapp.PreparationResult{}, fmt.Errorf("cancel all active scans for upgrade returned no outcome")
+	if err != nil {
+		// The handoff never happened, so this process keeps serving. The pause
+		// must not outlive the aborted preparation that acquired it.
+		coordinator.Resume()
+		return upgradeapp.PreparationResult{}, fmt.Errorf("cancel all active scans for upgrade: %w", err)
 	}
 	return upgradeapp.PreparationResult{
 		CancelledScanCount: outcome.CancelledScanCount,
@@ -66,6 +84,15 @@ func (coordinator *upgradePreDispatchCoordinator) prepareLegacy(ctx context.Cont
 	if coordinator.scheduler != nil {
 		coordinator.scheduler.Pause()
 	}
+	result, err := coordinator.cancelActiveScans(ctx)
+	if err != nil {
+		coordinator.Resume()
+		return result, err
+	}
+	return result, nil
+}
+
+func (coordinator *upgradePreDispatchCoordinator) cancelActiveScans(ctx context.Context) (upgradeapp.PreparationResult, error) {
 	result := upgradeapp.PreparationResult{}
 	for _, status := range []string{"pending", "running"} {
 		for {
@@ -110,3 +137,4 @@ func (coordinator *upgradePreDispatchCoordinator) prepareLegacy(ctx context.Cont
 }
 
 var _ upgradeapp.PreDispatchCoordinator = (*upgradePreDispatchCoordinator)(nil)
+var _ upgradeapp.SchedulerResumer = (*upgradePreDispatchCoordinator)(nil)

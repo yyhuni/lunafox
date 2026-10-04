@@ -27,6 +27,7 @@ type ServiceConfig struct {
 	Authorizer               ActiveSuperuserAuthorizer
 	Dispatcher               HostUpgradeDispatcher
 	Coordinator              PreDispatchCoordinator
+	Resumer                  SchedulerResumer
 	AgentSource              AgentUpgradeSource
 	Verifier                 UpgradeVerifier
 	CurrentVersion           string
@@ -45,6 +46,7 @@ type Service struct {
 	authorizer               ActiveSuperuserAuthorizer
 	dispatcher               HostUpgradeDispatcher
 	coordinator              PreDispatchCoordinator
+	resumer                  SchedulerResumer
 	agentSource              AgentUpgradeSource
 	verifier                 UpgradeVerifier
 	currentVersion           string
@@ -91,6 +93,7 @@ func NewService(config ServiceConfig) (*Service, error) {
 		authorizer:               config.Authorizer,
 		dispatcher:               config.Dispatcher,
 		coordinator:              config.Coordinator,
+		resumer:                  config.Resumer,
 		agentSource:              config.AgentSource,
 		verifier:                 config.Verifier,
 		currentVersion:           currentVersion,
@@ -372,6 +375,18 @@ func (service *Service) CreateOperation(ctx context.Context, userID int, input C
 	return createdOperation, true, nil
 }
 
+// releaseSchedulerPause returns scheduled claiming to the scheduler. The
+// pre-handoff pause assumes the host upgrader will replace this process; every
+// terminal Upgrade Operation outcome committed by the process that keeps
+// serving must release it, or every Schedule — including per-minute ones —
+// stays dead until a manual restart. Resume is idempotent, so a scheduler that
+// was never paused is unaffected.
+func (service *Service) releaseSchedulerPause() {
+	if service != nil && service.resumer != nil {
+		service.resumer.Resume()
+	}
+}
+
 func (service *Service) markPreparationFailed(operation *domain.Operation) {
 	if operation == nil {
 		return
@@ -389,6 +404,7 @@ func (service *Service) markPreparationFailed(operation *domain.Operation) {
 		operation.StageTimes = map[domain.Status]time.Time{}
 	}
 	operation.StageTimes[domain.StatusFailed] = now
+	service.releaseSchedulerPause()
 	_ = service.repository.Update(context.Background(), operation)
 }
 
@@ -858,6 +874,10 @@ func (service *Service) markHostUnavailable(operation *domain.Operation, _ error
 	}
 	operation.StageTimes[status] = operation.UpdatedAt
 	operation.CompletedAt = &operation.UpdatedAt
+	if operation.EffectiveExecutionMode() != domain.ExecutionModeFrontendOnly {
+		// The host never accepted the handoff, so this process keeps serving.
+		service.releaseSchedulerPause()
+	}
 	_ = service.repository.Update(context.Background(), operation)
 }
 
@@ -886,6 +906,10 @@ func (service *Service) markStopUnavailable(operation *domain.Operation) {
 		operation.StageTimes = map[domain.Status]time.Time{}
 	}
 	operation.StageTimes[status] = now
+	if operation.EffectiveExecutionMode() != domain.ExecutionModeFrontendOnly {
+		// The stop was never accepted, so this process keeps serving.
+		service.releaseSchedulerPause()
+	}
 	_ = service.repository.Update(context.Background(), operation)
 }
 
