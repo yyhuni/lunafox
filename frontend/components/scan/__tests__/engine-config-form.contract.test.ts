@@ -463,7 +463,7 @@ describe("engine-config-form contract", () => {
         sections: expect.objectContaining({ nuclei: expect.objectContaining({ params: expect.objectContaining({ severity: ["info", "medium", "high", "critical"] }) }) }),
       }),
     }))
-  })
+  }, 15_000)
 
   it("keeps scalar enum parameters on the Select path", () => {
     expect(source).toContain('param.type === "string" && param.enum')

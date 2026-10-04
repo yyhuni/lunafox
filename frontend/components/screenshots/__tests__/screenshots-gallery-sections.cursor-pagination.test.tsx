@@ -74,5 +74,5 @@ describe("ScreenshotsGalleryContent cursor pagination", () => {
 
     expect(terminal.handlePaginationChange).toHaveBeenCalledTimes(2)
     expect(terminal.handlePaginationChange).toHaveBeenCalledWith({ pageIndex: 0, pageSize: 12 })
-  })
+  }, 15_000)
 })

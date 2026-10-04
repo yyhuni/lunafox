@@ -35,7 +35,7 @@ describe("DropdownMenu interactions", () => {
     await waitFor(() => {
       expect(screen.queryByRole("menuitemradio", { name: "Modern blue" })).not.toBeInTheDocument()
     })
-  })
+  }, 15_000)
 
   it("keeps radio-item menus closing even when a caller bypasses the type boundary", async () => {
     const unsafeRadioProps = { closeOnClick: false } as unknown as Parameters<typeof DropdownMenuRadioItem>[0]

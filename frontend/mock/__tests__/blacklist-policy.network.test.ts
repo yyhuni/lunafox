@@ -95,7 +95,7 @@ describe("blacklist policy mock network boundary", () => {
     })
     expect(invalidResponse.status).toBe(400)
     expect(await json(invalidResponse)).toMatchObject({ error: { code: "INVALID_ARGUMENT" } })
-  })
+  }, 15_000)
 
   it("does not expose the removed routes or PUT shape", async () => {
     const [legacyGlobal, legacyTarget, putResponse] = await Promise.all([

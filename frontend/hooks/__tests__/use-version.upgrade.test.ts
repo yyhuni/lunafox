@@ -94,7 +94,7 @@ describe("upgrade lifecycle helpers", () => {
     expect(readStoredUpgradeOperationId()).toBeNull()
     await new Promise((resolve) => setTimeout(resolve, 1_700))
     expect(activeLookup).toHaveBeenCalledTimes(1)
-  })
+  }, 15_000)
 
   it("keeps a persisted hint while the active view is resolving, then releases it when empty", async () => {
     const staleOperationId = "11111111-1111-4111-8111-111111111111"

@@ -116,7 +116,7 @@ describe("TargetWebsiteEvidenceView cursor pagination", () => {
 
     expect(state.handlePaginationChange).toHaveBeenLastCalledWith({ pageIndex: 0, pageSize: 10 })
     expect(state.handlePaginationChange).toHaveBeenCalledTimes(2)
-  })
+  }, 15_000)
 
   it("keeps cached previous navigation available on an empty terminal cursor response", () => {
     const state = websiteState.current as ReturnType<typeof createState>

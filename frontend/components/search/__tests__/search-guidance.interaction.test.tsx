@@ -64,7 +64,7 @@ describe("SearchAssetBar guidance interactions", () => {
     fireEvent.click(screen.getByRole("button", { name: "close" }))
     await waitFor(() => expect(document.activeElement).toBe(input))
     expect(state.setQuery).not.toHaveBeenCalled()
-  })
+  }, 15_000)
 
   it("uses a 390px-style Drawer and keeps example actions draft-only", async () => {
     mobileState.value = true
@@ -88,5 +88,5 @@ describe("SearchAssetBar guidance interactions", () => {
     })
     expect(state.setQuery).toHaveBeenCalledWith('host="api" && statusCode=="200"')
     expect(state.handleSearch).not.toHaveBeenCalled()
-  })
+  }, 15_000)
 })

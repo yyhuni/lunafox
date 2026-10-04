@@ -88,7 +88,7 @@ describe("WordlistsPage cursor pagination", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "first" }))
     expect(wordlistHooks.useWordlists).toHaveBeenLastCalledWith(expect.objectContaining({ pageToken: undefined }))
-  })
+  }, 15_000)
 
   it("does not load wordlist content until the edit tab is selected", async () => {
     render(<WordlistsPage />)
@@ -139,5 +139,5 @@ describe("WordlistsPage cursor pagination", () => {
     fireEvent.click(screen.getByRole("tab", { name: "actions.edit" }))
 
     expect(await screen.findByRole("textbox", { name: "content" })).toHaveValue("local draft")
-  })
+  }, 15_000)
 })

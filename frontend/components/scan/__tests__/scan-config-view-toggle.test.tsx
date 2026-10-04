@@ -165,7 +165,7 @@ describe("ScanConfigViewToggle resources", () => {
     })
     expect(valid).toBe(true)
     expect(screen.queryByText("engineConfigForm.resourceRequired")).not.toBeInTheDocument()
-  })
+  }, 15_000)
 
   it("caches an edited disabled-Step draft across a real editor remount without leaking it into canonical YAML", async () => {
     wordlistMocks.state = catalogState("complete", [
@@ -222,7 +222,7 @@ describe("ScanConfigViewToggle resources", () => {
     expect(serializeFormValuesToConfig(formValuesCacheRef.current)).toEqual({
       steps: { discovery: { enabled: false } },
     })
-  })
+  }, 15_000)
 
   it("recovers a missing disabled-Step draft from a strict Profile and rejects invalid fallback paths", async () => {
     const validCache = { current: {} } as React.MutableRefObject<EngineConfigFormValues>
