@@ -470,6 +470,7 @@ func buildDependencies(infra *infra, cfg *config.Config) (*deps, error) {
 		Authorizer:            upgradeAuthorizer,
 		Dispatcher:            hostUpgradeDispatcher,
 		Coordinator:           upgradeCoordinator,
+		Resumer:               upgradeCoordinator,
 		AgentSource:           upgradeAgentSource,
 		Verifier:              upgradeVerifier,
 		CurrentVersion:        infra.releaseVersion,

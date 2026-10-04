@@ -253,6 +253,14 @@ type UpgradePreDispatchCoordinator interface {
 	PrepareForUpgrade(context.Context, string) (PreparationResult, error)
 }
 
+// SchedulerResumer releases the scheduler pause acquired before host handoff.
+// The pause assumes the handoff will replace this process; every Upgrade
+// Operation that reaches a terminal outcome in the still-running process must
+// resume scheduled claiming through this port. Resume is idempotent.
+type SchedulerResumer interface {
+	Resume()
+}
+
 // MigrationPolicyFunc adapts the existing file loader and deterministic test
 // policies without making application code depend on filesystem details.
 type MigrationPolicyFunc func(context.Context) (domain.MigrationPolicy, error)
