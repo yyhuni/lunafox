@@ -60,6 +60,8 @@ describe("Scheduled Scan overview mock network boundary", () => {
     }
   })
 
+  // Three full overview projections over a growing task set; slow shared CI
+  // runners legitimately need more than the default 5s budget.
   it("keeps the response bounded and reflects empty and paused task sets", async () => {
     const enabled = mockScheduledScans.find((scheduledScan) => scheduledScan.isEnabled)
     if (!enabled) throw new Error("mock Scheduled Scan fixtures require an enabled task")
@@ -96,5 +98,5 @@ describe("Scheduled Scan overview mock network boundary", () => {
       next24HoursScheduledScanCount: 0,
       upcomingScheduledScans: [],
     })
-  })
+  }, 20_000)
 })
