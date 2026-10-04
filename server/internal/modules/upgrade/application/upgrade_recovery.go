@@ -762,6 +762,12 @@ func (service *Service) persistReconciledOperation(ctx context.Context, operatio
 		}
 		return nil, err
 	}
+	if operation.Status.IsTerminal() && operation.EffectiveExecutionMode() != domain.ExecutionModeFrontendOnly {
+		// A terminal reconcile means no host swap will replace this process on
+		// this operation's behalf; scheduled claiming must come back. A process
+		// that never paused (fresh start after a completed swap) no-ops.
+		service.releaseSchedulerPause()
+	}
 	return operation, nil
 }
 
