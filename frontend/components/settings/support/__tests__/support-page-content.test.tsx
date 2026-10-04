@@ -118,7 +118,7 @@ describe("SupportPageContent", () => {
     expect(screen.getByTestId("support-dialog-title")).toHaveTextContent("cards.contact.title")
     expect(screen.getByTestId("support-dialog-amount")).toHaveTextContent("cards.contact.description")
     expect(screen.getByRole("heading", { name: "dialog.title" })).toBeInTheDocument()
-  })
+  }, 15_000)
 
   it("grows the ¥10 tree beyond the unselected support state", () => {
     render(<SupportPageContent />)

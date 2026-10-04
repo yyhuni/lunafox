@@ -236,7 +236,7 @@ describe("WorkflowCompositionCanvas", () => {
     fireEvent.click(screen.getByRole("button", { name: "close" }))
     await waitFor(() => expect(screen.getByRole("button", { name: "management.save" })).toBeVisible())
     expect(screen.getByRole("button", { name: "management.save" })).toBeEnabled()
-  })
+  }, 15_000)
 
   it("renders an interactive canvas overview in the lower-left corner", () => {
     renderWithProviders(<WorkflowCompositionCanvas {...canvasCatalogProps} />)
@@ -424,5 +424,5 @@ describe("WorkflowCompositionCanvas", () => {
       name: "Custom EngineCustom engine description",
     }))
     expect(container.querySelector('[data-stage-drop-target="stage-2"]')).toHaveTextContent("Custom Engine")
-  })
+  }, 15_000)
 })

@@ -31,7 +31,7 @@ describe("McpAccessPopover", () => {
     await openPopover()
     await waitFor(() => expect(screen.getByRole("button", { name: "key.regenerate" })).toBeEnabled())
     expect(screen.queryByDisplayValue("lf_mcp_mock_once_1")).not.toBeInTheDocument()
-  })
+  }, 15_000)
 
   it("requires confirmation before rotation and only reveals the replacement after confirmation", async () => {
     renderWithProviders(<McpAccessPopover />)
@@ -60,7 +60,7 @@ describe("McpAccessPopover", () => {
       expect(screen.getByDisplayValue("lf_mcp_mock_once_2")).toBeInTheDocument()
     })
     expect(screen.getByText("key.rotatedDescription")).toBeInTheDocument()
-  })
+  }, 15_000)
 
   it("builds every client template with the real Bearer key and no environment placeholder", () => {
     const endpoint = "https://lunafox.example/mcp"

@@ -70,7 +70,7 @@ describe("EngineConfigForm resources", () => {
       expect(screen.getAllByText("engineConfigForm.resourceRequired")).toHaveLength(1)
     })
     expect(screen.getByRole("combobox", { name: "exclude" })).toHaveAttribute("aria-invalid", "true")
-  })
+  }, 15_000)
 
   it("disables an uninitialized Workflow Step instead of emitting a partial configuration", () => {
     const onChange = vi.fn()

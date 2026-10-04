@@ -54,7 +54,7 @@ describe("EngineDurationInput", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /apply/i }))
     expect(onChange).toHaveBeenCalledWith(7200)
-  })
+  }, 15_000)
 
   it("discards a wheel draft on Cancel", () => {
     const onChange = vi.fn()

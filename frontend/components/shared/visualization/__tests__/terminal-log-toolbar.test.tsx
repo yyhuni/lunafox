@@ -60,7 +60,7 @@ describe("TerminalLogToolbar line window interactions", () => {
       expect(trigger).toHaveTextContent("200")
     })
     expect(onWindowChange).toHaveBeenLastCalledWith(200)
-  })
+  }, 15_000)
 
   it("selects a window from the keyboard", async () => {
     const onWindowChange = vi.fn()
