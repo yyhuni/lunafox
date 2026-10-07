@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "kind": "lunafox.runtime-composition",
-  "releaseTag": "v0.0.1-alpha.205",
-  "sourceRevisionDigest": "sha256:4d142cf5f13da76b1eeb691db339a9c6b939254ea60efa94514bccadcc62f7c3",
-  "publicMergeCommit": "332a1d97343ec940ebf9e4553b513a2d7a365cab",
+  "releaseTag": "v0.0.1-alpha.206",
+  "sourceRevisionDigest": "sha256:3abc71592c86b991f4ee9d42d609cdacf516fdfb19747d6e288bff0d30693ed7",
+  "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29",
   "components": [
     {
       "id": "engine.lunafox.directory_scan.package",
@@ -12,7 +12,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:7c5bd39431511d9b55bb34df208f5cf1d1f538448de3dbbde739fb96bacb8ae7",
+        "digest": "sha256:fd23e246ec726fa39994c28f2e03d64092ab54b2083f683ca5cb051ca8b26005",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -22,7 +22,7 @@
               "resolved": true
             },
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             },
@@ -1186,14 +1186,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-directory-scan@sha256:fdaf4b2ad8eef7de22ce0f1aa3d8594bad5afe531540ea38833f6d964de8f5fa",
-        "digest": "sha256:fdaf4b2ad8eef7de22ce0f1aa3d8594bad5afe531540ea38833f6d964de8f5fa"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-directory-scan@sha256:b0d637dc81ee84b9aac3ad69e047d2d6a0b2bd68f8e28c9f7a63f5169fc01d2f",
+        "digest": "sha256:b0d637dc81ee84b9aac3ad69e047d2d6a0b2bd68f8e28c9f7a63f5169fc01d2f"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-directory_scan.json",
@@ -1209,7 +1208,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:d6a428e74997b36bbdd34993a1f3117449a1c8d2251e4a4a4968d571327115ac",
+        "digest": "sha256:75de55b3c4bd8de692d088da95eb6f2c4713dc4acc4ca0997ddff645df37c898",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -1219,7 +1218,7 @@
               "resolved": true
             },
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             },
@@ -2382,18 +2381,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-directory-scan@sha256:31bb94905943d3c3913606c6af98f30546309f615051ba3cf6dd6dac9f68aaa8",
-        "digest": "sha256:31bb94905943d3c3913606c6af98f30546309f615051ba3cf6dd6dac9f68aaa8",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-directory-scan@sha256:d802977e5cfaa0e178b59e63540aab17453a886bf1f488b01d7bedafb0c34950",
+        "digest": "sha256:d802977e5cfaa0e178b59e63540aab17453a886bf1f488b01d7bedafb0c34950",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-directory_scan.json",
@@ -2409,12 +2407,12 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:e2c75492840fa5e239f70daf73a4522f3a08e99802fdf32cfa5f7d35cfcfad26",
+        "digest": "sha256:c84f438dfaaa84fe3fa557b8fdd642d1b92638b9992d4ccd83b6e1886a7375e8",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             },
@@ -3511,14 +3509,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:d62c5b4cbcffc1bb5604c205ed443c882aee59530e11a61532b175d6a25ee7c1",
-        "digest": "sha256:d62c5b4cbcffc1bb5604c205ed443c882aee59530e11a61532b175d6a25ee7c1"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:0d2f2e8ce05247fc8b2922799776e9509786875e2d20dab35b153f03546b7f06",
+        "digest": "sha256:0d2f2e8ce05247fc8b2922799776e9509786875e2d20dab35b153f03546b7f06"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-fingerprint_detection.json",
@@ -3534,12 +3531,12 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:cb4583bfa3dc9074323346fe7c394b8d937be17186ab557b3135dba176c75845",
+        "digest": "sha256:aefeb420711a7875bfd1069bf94bdec212b49b707bcd6f5ebe623a7feb5c4e1e",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             },
@@ -4635,18 +4632,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:2d39ea425c13af9a46899cbda4d684560a1b537f42e8c7a27ae854448f80b86e",
-        "digest": "sha256:2d39ea425c13af9a46899cbda4d684560a1b537f42e8c7a27ae854448f80b86e",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:9d865d9225a9ae35b04b38d7df926a019f0a8bf452248b2f53b125d92d9d391e",
+        "digest": "sha256:9d865d9225a9ae35b04b38d7df926a019f0a8bf452248b2f53b125d92d9d391e",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-fingerprint_detection.json",
@@ -4662,7 +4658,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:5d6a67c6e57414ce45f5b3414e560e46f40b4bc26bc3962c8127cab57f74fb2d",
+        "digest": "sha256:befdc24f9ab3f134157d7dfb7c0509bbf63b1bd9f8c56f7aaba46f3fd6ee166e",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -4672,7 +4668,7 @@
               "resolved": true
             },
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             },
@@ -5794,14 +5790,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:2e9d4755d6db7faece96c78b257b69407390cf7c66eb180da184c41a47001c14",
-        "digest": "sha256:2e9d4755d6db7faece96c78b257b69407390cf7c66eb180da184c41a47001c14"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:8875c465284be4c4de84377f511efc758df341a1baedf6a1c2d9913f5a67ae79",
+        "digest": "sha256:8875c465284be4c4de84377f511efc758df341a1baedf6a1c2d9913f5a67ae79"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-nuclei_vulnerability.json",
@@ -5817,7 +5812,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:bc0df0ad0f3d2a92002ceb9f6f6b5f4c481f7b28ab7e8bb920aa8291c77eb4e5",
+        "digest": "sha256:b0e17bccf131112c3e089d403fa8daa5072c2be5ee0ae78ea5ca058182033ee4",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -5827,7 +5822,7 @@
               "resolved": true
             },
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             },
@@ -6948,18 +6943,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:9eb8d77c68062262035c81115ccdc721906bbed00d4223e45be742204b7bf2c4",
-        "digest": "sha256:9eb8d77c68062262035c81115ccdc721906bbed00d4223e45be742204b7bf2c4",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:8763d5b704f258dd9bc646b1b7dbfcc17751e5ea4436c73f826541116296c137",
+        "digest": "sha256:8763d5b704f258dd9bc646b1b7dbfcc17751e5ea4436c73f826541116296c137",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-nuclei_vulnerability.json",
@@ -6975,7 +6969,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:cf9ddf0adada9944165395a6896699f579d3ce2a7ce89f46fe8fb95e650cab8d",
+        "digest": "sha256:74ce5efd233577dada8ed08995d087664c649beb2660db039266c2ddde20fcc4",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -6985,7 +6979,7 @@
               "resolved": true
             },
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             },
@@ -8149,14 +8143,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:b047c5a3fba474767a7b56f10b6e4a14888da36a48e50c25703a4c4f4b24ff55",
-        "digest": "sha256:b047c5a3fba474767a7b56f10b6e4a14888da36a48e50c25703a4c4f4b24ff55"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:b829cfa9e171a1b673d628d9f49e8017191fe187d1094253304097fc1ba660d7",
+        "digest": "sha256:b829cfa9e171a1b673d628d9f49e8017191fe187d1094253304097fc1ba660d7"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-port_scan.json",
@@ -8172,7 +8165,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:7cb641fb58288973ea2eaf61c370da30450c27597851e20ae2e421b39b2dc8e0",
+        "digest": "sha256:d9a6cb15d5792d2e553650e4bb90976674019b279c2e63f278c7382c3a055e0b",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -8182,7 +8175,7 @@
               "resolved": true
             },
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             },
@@ -9345,18 +9338,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:d15af6454ef915ebb1a4f81745b78250ac49b468eeff1ff874ee03873868f412",
-        "digest": "sha256:d15af6454ef915ebb1a4f81745b78250ac49b468eeff1ff874ee03873868f412",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:fcdf4da732c07f5d621ab0d7df6404c1cdb73b98515552bbf262fddc82ae0e89",
+        "digest": "sha256:fcdf4da732c07f5d621ab0d7df6404c1cdb73b98515552bbf262fddc82ae0e89",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-port_scan.json",
@@ -9372,7 +9364,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:17095a6ddf6c696b88fb1b09ac47c3bc09df7fc637fbaf0016f44a6a000b5d66",
+        "digest": "sha256:09e40af22c90a15bc5abe60bcd0e2bdf1c19268aaeeb89e8b27cf76d2b55dc10",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -9387,7 +9379,7 @@
               "resolved": true
             },
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             }
@@ -10486,14 +10478,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:c6520990853c0e923fd90cbb43c9502648107d2f7bc1af7c7f56f58431a7b9f5",
-        "digest": "sha256:c6520990853c0e923fd90cbb43c9502648107d2f7bc1af7c7f56f58431a7b9f5"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:772aa44430770db15cf765e62e940ea353952c23756be9abf6a26f298e7e5bd1",
+        "digest": "sha256:772aa44430770db15cf765e62e940ea353952c23756be9abf6a26f298e7e5bd1"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-screenshot.json",
@@ -10509,7 +10500,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:28b705a08cf5fb34ed8a72e8b7bf9e4b224a144337fb76bc1d0434f7bb672518",
+        "digest": "sha256:8e19a8319b9fc6ddba08f9e2b017246cc77eb75c9eb1bfdfc0e7c28c0b564c8e",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -10524,7 +10515,7 @@
               "resolved": true
             },
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             }
@@ -11622,18 +11613,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:aa804d1ad365cdd1b0a9ed3057eb18bba0add878794a918346bf93fab68dfb0b",
-        "digest": "sha256:aa804d1ad365cdd1b0a9ed3057eb18bba0add878794a918346bf93fab68dfb0b",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:9bd5577f5f9f3baaee994c33372c9437ba72243c7ed9b9d349e12a967c0e3736",
+        "digest": "sha256:9bd5577f5f9f3baaee994c33372c9437ba72243c7ed9b9d349e12a967c0e3736",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-screenshot.json",
@@ -11649,7 +11639,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:9228b58cf2abfdba65c30d3415e245416e3356edbc38de567bb21d94df95bc61",
+        "digest": "sha256:55fcab5253997ea4dc08c7220e07189a98abe6ceae1bf7a8f4f66473617ec2c0",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -11659,7 +11649,7 @@
               "resolved": true
             },
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             },
@@ -12871,14 +12861,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:9dfc7255bfa1b617c3e10869aa841ba0a18f034d3de97e4758aaefe6f3c1909d",
-        "digest": "sha256:9dfc7255bfa1b617c3e10869aa841ba0a18f034d3de97e4758aaefe6f3c1909d"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:29403d423bd6f9515c1ca627dae0a26918fc13896408c4d5255cbd23ed3eff40",
+        "digest": "sha256:29403d423bd6f9515c1ca627dae0a26918fc13896408c4d5255cbd23ed3eff40"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-subdomain_discovery.json",
@@ -12894,7 +12883,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:df6b7d12cf1bf6b2aa9ce31eb0f455f1b092b7794a60bc6e193b1ba552bd7579",
+        "digest": "sha256:ffd5bbfffc6c3be80bfddfac00fceb017f3ef2ec5dededdd87a26977fd262f62",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -12904,7 +12893,7 @@
               "resolved": true
             },
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             },
@@ -14115,18 +14104,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:cc9c067fef3e3ffe1a7cc524385809b190bfb4f748c91686bf1b829eb2be7c1e",
-        "digest": "sha256:cc9c067fef3e3ffe1a7cc524385809b190bfb4f748c91686bf1b829eb2be7c1e",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:846c6583efceade04f45754e648f81e3a88c2d14cb89e46782232f272dd2e551",
+        "digest": "sha256:846c6583efceade04f45754e648f81e3a88c2d14cb89e46782232f272dd2e551",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-subdomain_discovery.json",
@@ -14142,12 +14130,12 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:3d902cc660139fa953269a255e8594461a78a4684296103aa019cfdb562e4351",
+        "digest": "sha256:f211160fc5947d3f16d816629f49f49015e550a5c4b738625326f59d5f859c97",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             },
@@ -15305,14 +15293,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:35bcc89c6aeceac2c9d43d76ed8e9d5a4f27f21eabac3da0567f64fb47ea8c54",
-        "digest": "sha256:35bcc89c6aeceac2c9d43d76ed8e9d5a4f27f21eabac3da0567f64fb47ea8c54"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:238cf6524b4cd8196134eed1e36969355af6be31a99f43e73810fd2117058fb8",
+        "digest": "sha256:238cf6524b4cd8196134eed1e36969355af6be31a99f43e73810fd2117058fb8"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-url_collection.json",
@@ -15328,12 +15315,12 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:6a41f44b7d79425fd11a0e6addd83e820eaab76535422b97f04468a931bcbbb4",
+        "digest": "sha256:46796207e94301de4b6ee1459c7d0dd6063e7888adc51ca2f477d97961e16d6c",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             },
@@ -16490,18 +16477,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:c7f8361adb81b8ccabfdcfa6fd5ac89cb419e5fd42fa9fa776cb5e6f3b69e204",
-        "digest": "sha256:c7f8361adb81b8ccabfdcfa6fd5ac89cb419e5fd42fa9fa776cb5e6f3b69e204",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:8daa54b377194afa0c63d1a090d81503eafd4776215260cd54ef3f15901c54b4",
+        "digest": "sha256:8daa54b377194afa0c63d1a090d81503eafd4776215260cd54ef3f15901c54b4",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-url_collection.json",
@@ -16517,7 +16503,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:afed7bf9bab287d5377745f82ab21dcf1ac00386b57437f55f50b9c5a33f2019",
+        "digest": "sha256:4c37ef562983870101dcdccc30f6b092bd39f6b7dd7a4ddb8aa3533a505ebbe3",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -16527,7 +16513,7 @@
               "resolved": true
             },
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             },
@@ -17667,14 +17653,13 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-website-discovery@sha256:f752e729e3939552d43caeaa294c12e9d540abdfe6aec73c4be71e517c7790f2",
-        "digest": "sha256:f752e729e3939552d43caeaa294c12e9d540abdfe6aec73c4be71e517c7790f2"
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-website-discovery@sha256:3de74607ee60697a96f030eea09ef8d51468ec96f163e021021df145f79e6080",
+        "digest": "sha256:3de74607ee60697a96f030eea09ef8d51468ec96f163e021021df145f79e6080"
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-website_discovery.json",
@@ -17690,7 +17675,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:6fc80d2fec3cca54b47f5e6970f50bc183ef6c389f01b4eb9bd102532caa5d0c",
+        "digest": "sha256:3568b79efe9f3d2abc3cfb9cdef0ec9ba3225f8f4526b24c8cf8ddb85a4aa6ff",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -17700,7 +17685,7 @@
               "resolved": true
             },
             {
-              "identity": "sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d",
+              "identity": "sha256:dc9ad6c05acc7a88e5b71bde60a5fe3bd4b9f0db209011711b464107438a8107",
               "ref": "public.ecr.aws/docker/library/golang:1.26-bookworm",
               "resolved": true
             },
@@ -18839,18 +18824,17 @@
         }
       },
       "artifact": {
-        "ref": "docker.io/yyhuni/lunafox-engine-runtime-website-discovery@sha256:93e2126b7c044b428e2837627f8755b82dad82f078ef0ee0fb3b7d9402bb31cb",
-        "digest": "sha256:93e2126b7c044b428e2837627f8755b82dad82f078ef0ee0fb3b7d9402bb31cb",
+        "ref": "docker.io/yyhuni/lunafox-engine-runtime-website-discovery@sha256:a25a05d1fdbf72949754adc452377fadaccff2f6baca1bb2a13f27980ef4131a",
+        "digest": "sha256:a25a05d1fdbf72949754adc452377fadaccff2f6baca1bb2a13f27980ef4131a",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.199",
-        "publicMergeCommit": "cd27946acc7693a0736686e523e6ef6ad3966707",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-website_discovery.json",
@@ -18961,7 +18945,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.201",
         "publicMergeCommit": "491992e57ba564a1cfe56a4a11b6527ffe03ab87",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "compositionDigest": "sha256:5e4033cf36ec62251e05433a62c6570dc7e5b3f937697eab56e5d898ba27755c"
       },
       "evidence": {
         "image": "runtime-evidence/agent.json",
@@ -18977,7 +18961,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:605cf30a7a32e19238d507001dde03d80af766b9364308d966aaa9edecb95f15",
+        "digest": "sha256:76419dbb99634bd162e261e1e951b935244c71d93740dfc852c43ab941ab31be",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -18987,7 +18971,7 @@
               "resolved": true
             },
             {
-              "identity": "sha256:0f063af2d465d8dcae54cce04278ada488b96f77b42449c8d071e47d016cc65a",
+              "identity": "sha256:eb36c1664dd974cde625f736e02c204383deebe03977365caaec5bf49f794348",
               "ref": "golang:1.26",
               "resolved": true
             }
@@ -27933,10 +27917,10 @@
               "size": 2018
             },
             {
-              "digest": "sha256:d595f5e99d86200ead754986254afeb1a3fee1b22c60284dbaab3fa13b4a69a2",
+              "digest": "sha256:36eeaef75c130ace6a41c9579979bff081c713169ffa61d5aeca63919e900f12",
               "mode": 420,
               "path": "server/internal/modules/scheduledscan/repository/scheduled_scan_concurrency_postgres_test.go",
-              "size": 21150
+              "size": 22749
             },
             {
               "digest": "sha256:0d36cc9261f35d18dd5b939626645d1709eab5fce466485f0a4c8b8ce0c414b0",
@@ -27945,16 +27929,16 @@
               "size": 1835
             },
             {
-              "digest": "sha256:d4b0cbb7842ab07d44a5e9cc355f7b34c3cc22bd249b96c6bd554f869db731bb",
+              "digest": "sha256:30f270eb85143e253e69d0107419338a971efc7f4b5dc887fedc91b070c44dc3",
               "mode": 420,
               "path": "server/internal/modules/scheduledscan/repository/scheduled_scan_execution_test.go",
-              "size": 66771
+              "size": 68156
             },
             {
-              "digest": "sha256:e5f00367f8cf699f820dcb289e63d9e1f2624d65d7404ec198c01fd995a4527c",
+              "digest": "sha256:3fd8aa8d6175e72ac0cc8b4a89ce507350f0a471d13f58359f01b517f1701c57",
               "mode": 420,
               "path": "server/internal/modules/scheduledscan/repository/scheduled_scan_execution.go",
-              "size": 17769
+              "size": 17970
             },
             {
               "digest": "sha256:8de8e2996a74fcca4c25eee8d99b21d2e284ec098f87827ddbff919566dc8b53",
@@ -30260,18 +30244,17 @@
         }
       },
       "artifact": {
-        "ref": "ghcr.io/yyhuni/lunafox-bootstrap@sha256:ccd2c8e9746112f50eae96a65db318ca94ad7788881fa18298e96b5e0003c1da",
-        "digest": "sha256:ccd2c8e9746112f50eae96a65db318ca94ad7788881fa18298e96b5e0003c1da",
+        "ref": "ghcr.io/yyhuni/lunafox-bootstrap@sha256:904ac6d56a1569c9de173a556aa35523348cd7dca6f54ce286658472567f5ba0",
+        "digest": "sha256:904ac6d56a1569c9de173a556aa35523348cd7dca6f54ce286658472567f5ba0",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.204",
-        "publicMergeCommit": "96b955cad8096915f821e13fbf56ddd532c5992f",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "runtime-evidence/bootstrap.json",
@@ -30287,7 +30270,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:97ac58ad99a6674c5e290a0ec8e6ee1c45c5e6b404c8e1bb3dc8e45958425138",
+        "digest": "sha256:957fd701680bf6b3193cdb919411addc5b83cb22f618ef8c1f414983158b4592",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -32380,10 +32363,10 @@
               "size": 371
             },
             {
-              "digest": "sha256:dcefa9791e7c079a830abac34a73c2e71aa7a642f6eca89c0e16d803b804b117",
+              "digest": "sha256:1e9e36d3f2afd73f738d00fbeba2a9eac2eafb11fc91ac44899b1b8fc8f84574",
               "mode": 420,
               "path": "frontend/components/notifications/__tests__/notification-drawer-sections.contract.test.ts",
-              "size": 5326
+              "size": 5675
             },
             {
               "digest": "sha256:7e7327b7c186807a6d7cdcfc19d8171f38183d7b209c7f2f3670f053421108ed",
@@ -32404,10 +32387,10 @@
               "size": 106
             },
             {
-              "digest": "sha256:38675a80e1b6d221fe1b808e35d30465432012c548d786ebffb0aab5a3735d60",
+              "digest": "sha256:21934b4a916c683dc4ad9e339cae4e6e5c9c1754fb0f31cf22e9c8da3c81f0b9",
               "mode": 420,
               "path": "frontend/components/notifications/notification-drawer-sections.tsx",
-              "size": 10457
+              "size": 10111
             },
             {
               "digest": "sha256:6e468995f8d4b175f1d3c45d51e0a573412e08c6ac67110b9e9b8975a9685c66",
@@ -34030,10 +34013,10 @@
               "size": 11461
             },
             {
-              "digest": "sha256:f3a04a7795baf34d10a0e0532f361ff287e6bf6f025a6c2c648f2daf47280051",
+              "digest": "sha256:98af71bff20f24660490033840755a6a89d1ce1f9f4f7011a1f2f7c440f2d389",
               "mode": 420,
               "path": "frontend/components/scan/scheduled/__tests__/edit-scheduled-scan-dialog.contract.test.ts",
-              "size": 3185
+              "size": 3336
             },
             {
               "digest": "sha256:6df1290ff35e09efcffe71e180fdb0cad3ff6ab1ba652ab0196f3ad0d077f1eb",
@@ -34144,10 +34127,10 @@
               "size": 14774
             },
             {
-              "digest": "sha256:ac803bc014da6309db1e383efd5e1b193c09dade84f4a791b7b14a81d0a31cb9",
+              "digest": "sha256:d1fb60b5bcb4a3d4d1564fa43a7962c0a70602af6a0a7a5a1a4b314e8ed0a8ba",
               "mode": 420,
               "path": "frontend/components/scan/scheduled/edit-scheduled-scan-dialog.tsx",
-              "size": 7847
+              "size": 8249
             },
             {
               "digest": "sha256:eefe6ead0cd6a4b38fb878d2affd7ad2ed7435db779968645919b012bee2cc07",
@@ -40540,10 +40523,10 @@
               "size": 5935
             },
             {
-              "digest": "sha256:3a3bfc0ef781376819d512dc12d2404259a4f856a4d99e1b947da13c80c41908",
+              "digest": "sha256:71b3c04d4b20605b25938d4780d6a8ad588a889b1f982f82e98bbb418c31d06b",
               "mode": 420,
               "path": "frontend/mock/data/notifications.ts",
-              "size": 4892
+              "size": 5978
             },
             {
               "digest": "sha256:a4966bc4b8cc107f6dd5151d4dca703cbcc0df61d2e3f95cf776b5c394f08119",
@@ -42033,8 +42016,8 @@
         }
       },
       "artifact": {
-        "ref": "ghcr.io/yyhuni/lunafox-frontend@sha256:55f19eaed67a8cc3e6b22b862be396960eabce8e851ee1bd626310ef8ebc9d10",
-        "digest": "sha256:55f19eaed67a8cc3e6b22b862be396960eabce8e851ee1bd626310ef8ebc9d10",
+        "ref": "ghcr.io/yyhuni/lunafox-frontend@sha256:fda127a68f8c5808bfee9990167523d0f11b5c7bed86dc4683bd7d07437bc358",
+        "digest": "sha256:fda127a68f8c5808bfee9990167523d0f11b5c7bed86dc4683bd7d07437bc358",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
@@ -42042,8 +42025,8 @@
       },
       "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.205",
-        "publicMergeCommit": "332a1d97343ec940ebf9e4553b513a2d7a365cab"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "runtime-evidence/frontend.json",
@@ -42116,7 +42099,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.176",
         "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "compositionDigest": "sha256:5e4033cf36ec62251e05433a62c6570dc7e5b3f937697eab56e5d898ba27755c"
       },
       "evidence": {
         "image": "runtime-evidence/nginx.json",
@@ -42132,7 +42115,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:6121528a308c35827d0be4e485a713d34eca8e709f29fbd3d89a415c07189fd4",
+        "digest": "sha256:5b66759342c4fa78641dc465c7ab38784b8bc3385e9cd3ee086069301139c3c3",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -42142,7 +42125,7 @@
               "resolved": true
             },
             {
-              "identity": "sha256:0f063af2d465d8dcae54cce04278ada488b96f77b42449c8d071e47d016cc65a",
+              "identity": "sha256:eb36c1664dd974cde625f736e02c204383deebe03977365caaec5bf49f794348",
               "ref": "golang:1.26",
               "resolved": true
             }
@@ -51064,10 +51047,10 @@
               "size": 2018
             },
             {
-              "digest": "sha256:d595f5e99d86200ead754986254afeb1a3fee1b22c60284dbaab3fa13b4a69a2",
+              "digest": "sha256:36eeaef75c130ace6a41c9579979bff081c713169ffa61d5aeca63919e900f12",
               "mode": 420,
               "path": "server/internal/modules/scheduledscan/repository/scheduled_scan_concurrency_postgres_test.go",
-              "size": 21150
+              "size": 22749
             },
             {
               "digest": "sha256:0d36cc9261f35d18dd5b939626645d1709eab5fce466485f0a4c8b8ce0c414b0",
@@ -51076,16 +51059,16 @@
               "size": 1835
             },
             {
-              "digest": "sha256:d4b0cbb7842ab07d44a5e9cc355f7b34c3cc22bd249b96c6bd554f869db731bb",
+              "digest": "sha256:30f270eb85143e253e69d0107419338a971efc7f4b5dc887fedc91b070c44dc3",
               "mode": 420,
               "path": "server/internal/modules/scheduledscan/repository/scheduled_scan_execution_test.go",
-              "size": 66771
+              "size": 68156
             },
             {
-              "digest": "sha256:e5f00367f8cf699f820dcb289e63d9e1f2624d65d7404ec198c01fd995a4527c",
+              "digest": "sha256:3fd8aa8d6175e72ac0cc8b4a89ce507350f0a471d13f58359f01b517f1701c57",
               "mode": 420,
               "path": "server/internal/modules/scheduledscan/repository/scheduled_scan_execution.go",
-              "size": 17769
+              "size": 17970
             },
             {
               "digest": "sha256:8de8e2996a74fcca4c25eee8d99b21d2e284ec098f87827ddbff919566dc8b53",
@@ -53391,18 +53374,17 @@
         }
       },
       "artifact": {
-        "ref": "ghcr.io/yyhuni/lunafox-server@sha256:ac3ebf4c094c038071eac1636d464a4b6c716a2d018da5991f00040378a4876a",
-        "digest": "sha256:ac3ebf4c094c038071eac1636d464a4b6c716a2d018da5991f00040378a4876a",
+        "ref": "ghcr.io/yyhuni/lunafox-server@sha256:95635675adde997f008adbb88e6cc0d965d1c1effbd20128173deae7a41f68d6",
+        "digest": "sha256:95635675adde997f008adbb88e6cc0d965d1c1effbd20128173deae7a41f68d6",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.204",
-        "publicMergeCommit": "96b955cad8096915f821e13fbf56ddd532c5992f",
-        "compositionDigest": "sha256:eaea1ad72869bcf4855b3e735404ab38bccb66f2c40e3d53fe8c1d41db4c1a78"
+        "tag": "v0.0.1-alpha.206",
+        "publicMergeCommit": "d97978141e7e9abd4c27c319fa7f6ad0c677dd29"
       },
       "evidence": {
         "image": "runtime-evidence/server.json",
@@ -53417,7 +53399,7 @@
     "runtimeCompositionSchemaVersion": 1
   },
   "manifestBinding": {
-    "manifestDigest": "sha256:80aeeacdc6623646c84be4086f0b23a1e3015dfb0b3f4c1579d5978ce4879459"
+    "manifestDigest": "sha256:ee033f2fe7026bc8ed61f582d71bcb439b36bffededfb3af57dcb2eff46bfb2f"
   },
-  "compositionDigest": "sha256:5e4033cf36ec62251e05433a62c6570dc7e5b3f937697eab56e5d898ba27755c"
+  "compositionDigest": "sha256:81e0a7a8a7a79e8a87fd7b8cbff06a9917599d890073602cebbb0dfcaad857eb"
 }
