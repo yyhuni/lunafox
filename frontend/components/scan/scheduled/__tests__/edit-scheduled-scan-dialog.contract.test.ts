@@ -30,7 +30,9 @@ describe("edit-scheduled-scan-dialog contract", () => {
     expect(source).toContain("InitiateScanConfigStep")
     expect(source).toContain('value="basic"')
     expect(source).toContain('value="configuration"')
-    expect(source).toContain('bodyClassName="flex min-h-0 flex-col overflow-hidden"')
+    expect(source).toContain('bodyClassName="flex min-h-0 flex-col overflow-hidden p-0 gap-0"')
+    expect(source).toContain("COMPACT_FORM_OVERLAY_HORIZONTAL_INSET_CLASS")
+    expect(source).toContain("COMPACT_FORM_OVERLAY_INSET_CLASS")
     expect(source).not.toContain("Sidebar")
   })
 

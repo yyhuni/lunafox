@@ -111,8 +111,50 @@ func (repo *ScheduledScanRepository) SelectAttemptCandidate(ctx context.Context)
 		ScheduledScanID int       `gorm:"column:scheduled_scan_id"`
 		ScheduledFor    time.Time `gorm:"column:scheduled_for"`
 	}
-	oldestEligible := "oldest.attempted_at IS NULL OR (oldest.next_retry_at IS NOT NULL AND oldest.next_retry_at <= ? AND oldest.dispatched_at IS NULL AND oldest.failure_kind IS NULL)"
-	query := fmt.Sprintf(`
+	query, argCount := attemptCandidateQuery(repo.db.Dialector.Name())
+	args := make([]any, argCount)
+	for i := range args {
+		args[i] = now
+	}
+	result := repo.db.WithContext(ctx).Raw(query, args...).Scan(&row)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 || row.ID == 0 {
+		return nil, nil
+	}
+	return &scheduledapp.OccurrenceCandidate{
+		ID:              row.ID,
+		ScheduledScanID: row.ScheduledScanID,
+		ScheduledFor:    row.ScheduledFor.UTC(),
+	}, nil
+}
+
+// attemptCandidateQuery picks the oldest eligible occurrence on the schedule
+// that has waited longest. On Postgres the LATERAL alias projects only id,
+// scheduled_scan_id, and scheduled_for, so eligibility stays on the base table
+// inside the subquery.
+func attemptCandidateQuery(dialect string) (string, int) {
+	if dialect == "postgres" {
+		return fmt.Sprintf(`
+			SELECT occurrence.id, occurrence.scheduled_scan_id, occurrence.scheduled_for
+			FROM scheduled_scan AS schedule
+			JOIN LATERAL (
+				SELECT oldest.id, oldest.scheduled_scan_id, oldest.scheduled_for
+				FROM scheduled_scan_occurrence AS oldest
+				WHERE oldest.scheduled_scan_id = schedule.id
+					AND %s
+				ORDER BY oldest.scheduled_for ASC, oldest.id ASC
+				LIMIT 1
+			) AS occurrence ON TRUE
+			LEFT JOIN target AS active_target
+				ON active_target.id = schedule.target_id AND active_target.deleted_at IS NULL
+			WHERE schedule.is_enabled = TRUE
+				AND (schedule.target_id IS NULL OR active_target.id IS NOT NULL)
+			ORDER BY schedule.last_run_time ASC NULLS FIRST, schedule.id ASC, occurrence.id ASC
+			LIMIT 1`, attemptEligible("oldest")), 1
+	}
+	return fmt.Sprintf(`
 			SELECT occurrence.id, occurrence.scheduled_scan_id, occurrence.scheduled_for
 		FROM scheduled_scan AS schedule
 		JOIN scheduled_scan_occurrence AS occurrence
@@ -128,46 +170,12 @@ func (repo *ScheduledScanRepository) SelectAttemptCandidate(ctx context.Context)
 				SELECT oldest.id
 				FROM scheduled_scan_occurrence AS oldest
 				WHERE oldest.scheduled_scan_id = schedule.id
-					AND (%s)
+					AND %s
 				ORDER BY oldest.scheduled_for ASC, oldest.id ASC
 				LIMIT 1
 			)
 			ORDER BY schedule.last_run_time ASC NULLS FIRST, schedule.id ASC, occurrence.id ASC
-			LIMIT 1`, attemptEligible("occurrence"), oldestEligible)
-	args := []any{now, now}
-	if repo.db.Dialector.Name() == "postgres" {
-		query = fmt.Sprintf(`
-			SELECT occurrence.id, occurrence.scheduled_scan_id, occurrence.scheduled_for
-			FROM scheduled_scan AS schedule
-			JOIN LATERAL (
-				SELECT oldest.id, oldest.scheduled_scan_id, oldest.scheduled_for
-				FROM scheduled_scan_occurrence AS oldest
-				WHERE oldest.scheduled_scan_id = schedule.id
-					AND (%s)
-				ORDER BY oldest.scheduled_for ASC, oldest.id ASC
-				LIMIT 1
-			) AS occurrence ON TRUE
-			LEFT JOIN target AS active_target
-				ON active_target.id = schedule.target_id AND active_target.deleted_at IS NULL
-			WHERE schedule.is_enabled = TRUE
-				AND (schedule.target_id IS NULL OR active_target.id IS NOT NULL)
-				AND %s
-			ORDER BY schedule.last_run_time ASC NULLS FIRST, schedule.id ASC, occurrence.id ASC
-			LIMIT 1`, oldestEligible, attemptEligible("occurrence"))
-		args = []any{now, now}
-	}
-	result := repo.db.WithContext(ctx).Raw(query, args...).Scan(&row)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	if result.RowsAffected == 0 || row.ID == 0 {
-		return nil, nil
-	}
-	return &scheduledapp.OccurrenceCandidate{
-		ID:              row.ID,
-		ScheduledScanID: row.ScheduledScanID,
-		ScheduledFor:    row.ScheduledFor.UTC(),
-	}, nil
+			LIMIT 1`, attemptEligible("occurrence"), attemptEligible("oldest")), 2
 }
 
 func (repo *ScheduledScanRepository) StartAttempt(
@@ -361,8 +369,8 @@ func (repo *ScheduledScanRepository) RecordOutcome(
 	recorded := false
 	err := repo.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var occurrence struct {
-			ScheduledScanID int  `gorm:"column:scheduled_scan_id"`
-			RetryCount      int  `gorm:"column:retry_count"`
+			ScheduledScanID int        `gorm:"column:scheduled_scan_id"`
+			RetryCount      int        `gorm:"column:retry_count"`
 			NextRetryAt     *time.Time `gorm:"column:next_retry_at"`
 		}
 		if err := tx.Model(&scheduledScanOccurrenceModel{}).
@@ -424,7 +432,7 @@ func (repo *ScheduledScanRepository) RecordOutcome(
 		}
 
 		scheduleUpdates := map[string]any{
-			counterColumn: gorm.Expr(counterColumn + " + ?", 1),
+			counterColumn: gorm.Expr(counterColumn+" + ?", 1),
 		}
 		if outcome.Completed() {
 			scheduleUpdates["last_handoff_failure_cause"] = nil

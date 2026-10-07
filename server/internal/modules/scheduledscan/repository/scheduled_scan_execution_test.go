@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -1338,5 +1339,33 @@ func TestScheduledScanRepositoryHandoffRetryLifecycleAndSummary(t *testing.T) {
 	}
 	if deadline, err = repo.EarliestRetryDeadline(context.Background()); err != nil || deadline != nil {
 		t.Fatalf("EarliestRetryDeadline() after interruption = %v, %v", deadline, err)
+	}
+}
+
+func TestAttemptCandidatePostgresQueryKeepsEligibilityOnTheBaseTable(t *testing.T) {
+	query, argCount := attemptCandidateQuery("postgres")
+	if argCount != 1 || strings.Count(query, "?") != 1 {
+		t.Fatalf("postgres candidate query args = %d, placeholders = %d; want 1", argCount, strings.Count(query, "?"))
+	}
+	lateralEnd := strings.Index(query, ") AS occurrence")
+	if lateralEnd < 0 {
+		t.Fatal("postgres candidate query must alias the LATERAL subquery as occurrence")
+	}
+	inner, outer := query[:lateralEnd], query[lateralEnd:]
+	for _, column := range []string{"attempted_at", "next_retry_at", "dispatched_at", "failure_kind"} {
+		if !strings.Contains(inner, "oldest."+column) {
+			t.Errorf("LATERAL filter missing oldest.%s", column)
+		}
+		if strings.Contains(outer, "occurrence."+column) {
+			t.Errorf("outer query references occurrence.%s, which the LATERAL alias does not project", column)
+		}
+	}
+
+	sqliteQuery, sqliteArgs := attemptCandidateQuery("sqlite")
+	if sqliteArgs != 2 || strings.Count(sqliteQuery, "?") != 2 {
+		t.Fatalf("sqlite candidate query args = %d, placeholders = %d; want 2", sqliteArgs, strings.Count(sqliteQuery, "?"))
+	}
+	if !strings.Contains(sqliteQuery, "JOIN scheduled_scan_occurrence AS occurrence") || !strings.Contains(sqliteQuery, "occurrence.attempted_at") {
+		t.Fatal("sqlite candidate query must filter the joined occurrence table")
 	}
 }

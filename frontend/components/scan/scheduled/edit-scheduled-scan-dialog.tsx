@@ -17,7 +17,11 @@ import {
 } from "@/components/scan/scheduled/edit-scheduled-scan-dialog-sections"
 import { ScheduledScanOccurrencesTab } from "@/components/scan/scheduled/scheduled-scan-occurrences-tab"
 import { Button } from "@/components/ui/button"
-import { formatDate } from "@/lib/utils"
+import {
+  COMPACT_FORM_OVERLAY_HORIZONTAL_INSET_CLASS,
+  COMPACT_FORM_OVERLAY_INSET_CLASS,
+} from "@/components/shared/layout/page-shell-density"
+import { cn, formatDate } from "@/lib/utils"
 import { useLocale, useTranslations } from "next-intl"
 import type { Locale } from "@/i18n/config"
 import type { ScheduledScan } from "@/types/scheduled-scan.types"
@@ -114,7 +118,7 @@ export function EditScheduledScanDialog({
       title={t("editTitle")}
       description={t("editDesc")}
       closeDisabled={isPending}
-      bodyClassName="flex min-h-0 flex-col overflow-hidden"
+      bodyClassName="flex min-h-0 flex-col overflow-hidden p-0 gap-0"
       formProps={{ onSubmit: handleFormSubmit }}
       footer={
         activeTab === "occurrences" ? (
@@ -131,8 +135,13 @@ export function EditScheduledScanDialog({
         )
       }
     >
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col gap-3">
-        <TabsList variant="content" className="w-full justify-start border-b" aria-label={t("editTabs.label")}>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col gap-0">
+        <TabsList
+          variant="content"
+          size="md"
+          className={cn("w-full shrink-0 justify-start border-b", COMPACT_FORM_OVERLAY_HORIZONTAL_INSET_CLASS)}
+          aria-label={t("editTabs.label")}
+        >
           <TabsTrigger value="basic" variant="content">
             {t("editTabs.basicInfo")}
           </TabsTrigger>
@@ -144,7 +153,7 @@ export function EditScheduledScanDialog({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="basic" keepMounted className="min-h-0 overflow-y-auto pr-1">
+        <TabsContent value="basic" keepMounted className={cn("min-h-0 flex-1 overflow-y-auto", COMPACT_FORM_OVERLAY_INSET_CLASS)}>
           <div className="grid gap-3">
             <EditScheduledScanNameField
               t={t}
@@ -194,7 +203,7 @@ export function EditScheduledScanDialog({
           </div>
         </TabsContent>
 
-        <TabsContent value="configuration" keepMounted className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <TabsContent value="configuration" keepMounted className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", COMPACT_FORM_OVERLAY_INSET_CLASS)}>
           <InitiateScanConfigStep
             t={tInitiate}
             configuration={configuration}
@@ -220,7 +229,7 @@ export function EditScheduledScanDialog({
           />
         </TabsContent>
 
-        <TabsContent value="occurrences" keepMounted className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <TabsContent value="occurrences" keepMounted className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", COMPACT_FORM_OVERLAY_INSET_CLASS)}>
           <ScheduledScanOccurrencesTab
             scheduledScanId={scheduledScan.id}
             formatDate={formatDate}

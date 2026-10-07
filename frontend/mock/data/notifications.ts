@@ -82,7 +82,35 @@ const INITIAL_NOTIFICATIONS: readonly NotificationInboxItem[] = [
   },
 ] as const
 
-export const mockNotifications: NotificationInboxItem[] = INITIAL_NOTIFICATIONS.map((item) => ({ ...item }))
+const GENERATED_UNREAD_NOTIFICATIONS: readonly NotificationInboxItem[] = Array.from(
+  { length: 120 },
+  (_, index) => {
+    const id = index + 7
+    const categories = ["vulnerability", "scan", "system"] as const
+    const category = categories[index % categories.length]
+    const priorities = ["normal", "high", "critical"] as const
+    const priority = priorities[index % priorities.length]
+    return {
+      name: `users/current/notifications/${id}`,
+      kind: category === "vulnerability" ? "vulnerability-observed" : category === "scan" ? "scan-succeeded" : "agent-offline",
+      category,
+      priority,
+      subject: `tasks/${id}`,
+      title: `Unread test notification #${id}`,
+      message: `Detailed notification payload for batch item ${id}.`,
+      occurredAt: new Date(Date.now() - index * 60_000).toISOString(),
+      createdAt: new Date(Date.now() - index * 60_000).toISOString(),
+      readAt: null,
+    }
+  }
+)
+
+const ALL_INITIAL_NOTIFICATIONS: readonly NotificationInboxItem[] = [
+  ...INITIAL_NOTIFICATIONS,
+  ...GENERATED_UNREAD_NOTIFICATIONS,
+]
+
+export const mockNotifications: NotificationInboxItem[] = ALL_INITIAL_NOTIFICATIONS.map((item) => ({ ...item }))
 
 function cloneNotification(notification: NotificationInboxItem): NotificationInboxItem {
   return { ...notification }
@@ -143,5 +171,5 @@ export function getMockUnreadCount(): NotificationUnreadCount {
 }
 
 export function resetMockNotifications(): void {
-  mockNotifications.splice(0, mockNotifications.length, ...INITIAL_NOTIFICATIONS.map((item) => ({ ...item })))
+  mockNotifications.splice(0, mockNotifications.length, ...ALL_INITIAL_NOTIFICATIONS.map((item) => ({ ...item })))
 }
