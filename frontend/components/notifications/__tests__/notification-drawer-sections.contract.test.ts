@@ -18,6 +18,14 @@ describe("notification-drawer-sections contract", () => {
     expect(source).not.toContain('<Bell className="h-5 w-5"')
   })
 
+  it("uses a compact unread dot instead of a numeric header badge", () => {
+    expect(source).toContain(
+      'className="radius-round pointer-events-none absolute top-1 right-1 size-2 bg-destructive ring-2 ring-card dark:bg-destructive/80"'
+    )
+    expect(source).toContain('aria-hidden="true"')
+    expect(source).not.toContain('"99+"')
+  })
+
   it("uses the shared compact feedback drawer layout without overriding edge-panel motion", () => {
     expect(source).toContain("compactFeedbackDrawerContentClassName")
     expect(source).not.toContain("sideMotion")

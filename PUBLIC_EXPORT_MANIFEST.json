@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:4d142cf5f13da76b1eeb691db339a9c6b939254ea60efa94514bccadcc62f7c3",
-  "releaseTag": "v0.0.1-alpha.205",
+  "sourceRevisionDigest": "sha256:3abc71592c86b991f4ee9d42d609cdacf516fdfb19747d6e288bff0d30693ed7",
+  "releaseTag": "v0.0.1-alpha.206",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "f517af2a5aaadae4cb53845c3db8ae7a38498c72522367564fdf3a4f7241835a"
+      "sha256": "880917106eb477f3f295f66a84ce9e1b8b4aeeaffad2a4dc0db50a23bff2f0e1"
     },
     {
       "path": "README.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "335f700c3fab2df09efcd8d47fe15ff1d8da548eb538cc01b354a2af845a2fdb"
+      "sha256": "efe4090abcde4a957365713efda1281d5c6becde0f5e6d302ad92efe04e29746"
     },
     {
       "path": "agent/bin/sha256-d56c53b06b9d4ab60dea7051fbd2db0649286bb9345e8bb41fc70861a6c6843e/agent-bundle.sha256",
@@ -91,8 +91,8 @@
       "path": "agent/bin/sha256-d56c53b06b9d4ab60dea7051fbd2db0649286bb9345e8bb41fc70861a6c6843e/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
-      "size": 9313,
-      "sha256": "6fbe151dd3ba8ae7bdfddb14c00f93c689f5386d3b9a31d53ebc3fbe70166987"
+      "size": 9181,
+      "sha256": "ed759dc41e919c9b213ff7c57c367e1a90896056af339537c25def3f10bff0f7"
     },
     {
       "path": "agent/bin/sha256-d56c53b06b9d4ab60dea7051fbd2db0649286bb9345e8bb41fc70861a6c6843e/lunafox-agent-linux-amd64",
@@ -5768,8 +5768,8 @@
       "path": "frontend/components/notifications/__tests__/notification-drawer-sections.contract.test.ts",
       "type": "file",
       "mode": "0644",
-      "size": 5326,
-      "sha256": "dcefa9791e7c079a830abac34a73c2e71aa7a642f6eca89c0e16d803b804b117"
+      "size": 5675,
+      "sha256": "1e9e36d3f2afd73f738d00fbeba2a9eac2eafb11fc91ac44899b1b8fc8f84574"
     },
     {
       "path": "frontend/components/notifications/__tests__/notification-drawer-state.contract.test.ts",
@@ -5796,8 +5796,8 @@
       "path": "frontend/components/notifications/notification-drawer-sections.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 10457,
-      "sha256": "38675a80e1b6d221fe1b808e35d30465432012c548d786ebffb0aab5a3735d60"
+      "size": 10111,
+      "sha256": "21934b4a916c683dc4ad9e339cae4e6e5c9c1754fb0f31cf22e9c8da3c81f0b9"
     },
     {
       "path": "frontend/components/notifications/notification-drawer-state.ts",
@@ -7700,8 +7700,8 @@
       "path": "frontend/components/scan/scheduled/__tests__/edit-scheduled-scan-dialog.contract.test.ts",
       "type": "file",
       "mode": "0644",
-      "size": 3185,
-      "sha256": "f3a04a7795baf34d10a0e0532f361ff287e6bf6f025a6c2c648f2daf47280051"
+      "size": 3336,
+      "sha256": "98af71bff20f24660490033840755a6a89d1ce1f9f4f7011a1f2f7c440f2d389"
     },
     {
       "path": "frontend/components/scan/scheduled/__tests__/index.contract.test.ts",
@@ -7833,8 +7833,8 @@
       "path": "frontend/components/scan/scheduled/edit-scheduled-scan-dialog.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 7847,
-      "sha256": "ac803bc014da6309db1e383efd5e1b193c09dade84f4a791b7b14a81d0a31cb9"
+      "size": 8249,
+      "sha256": "d1fb60b5bcb4a3d4d1564fa43a7962c0a70602af6a0a7a5a1a4b314e8ed0a8ba"
     },
     {
       "path": "frontend/components/scan/scheduled/index.ts",
@@ -15288,8 +15288,8 @@
       "path": "frontend/mock/data/notifications.ts",
       "type": "file",
       "mode": "0644",
-      "size": 4892,
-      "sha256": "3a3bfc0ef781376819d512dc12d2404259a4f856a4d99e1b947da13c80c41908"
+      "size": 5978,
+      "sha256": "71b3c04d4b20605b25938d4780d6a8ad588a889b1f982f82e98bbb418c31d06b"
     },
     {
       "path": "frontend/mock/data/nuclei-pocs.ts",
@@ -17474,6 +17474,13 @@
       "mode": "0644",
       "size": 424,
       "sha256": "13f55cafb65d5898d29db1bb90972b3f7bc758624311efc648264443d1bd2021"
+    },
+    {
+      "path": "release-notes/v0.0.1-alpha.206.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 1004,
+      "sha256": "eef2429765c780b13ab3f420ee4aad3830de606129c9c4f4915b0012cb35b7cf"
     },
     {
       "path": "resources/alloy/config.alloy",
@@ -27405,8 +27412,8 @@
       "path": "server/internal/modules/scheduledscan/repository/scheduled_scan_concurrency_postgres_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 21150,
-      "sha256": "d595f5e99d86200ead754986254afeb1a3fee1b22c60284dbaab3fa13b4a69a2"
+      "size": 22749,
+      "sha256": "36eeaef75c130ace6a41c9579979bff081c713169ffa61d5aeca63919e900f12"
     },
     {
       "path": "server/internal/modules/scheduledscan/repository/scheduled_scan_contract_test.go",
@@ -27419,15 +27426,15 @@
       "path": "server/internal/modules/scheduledscan/repository/scheduled_scan_execution.go",
       "type": "file",
       "mode": "0644",
-      "size": 17769,
-      "sha256": "e5f00367f8cf699f820dcb289e63d9e1f2624d65d7404ec198c01fd995a4527c"
+      "size": 17970,
+      "sha256": "3fd8aa8d6175e72ac0cc8b4a89ce507350f0a471d13f58359f01b517f1701c57"
     },
     {
       "path": "server/internal/modules/scheduledscan/repository/scheduled_scan_execution_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 66771,
-      "sha256": "d4b0cbb7842ab07d44a5e9cc355f7b34c3cc22bd249b96c6bd554f869db731bb"
+      "size": 68156,
+      "sha256": "30f270eb85143e253e69d0107419338a971efc7f4b5dc887fedc91b070c44dc3"
     },
     {
       "path": "server/internal/modules/scheduledscan/repository/scheduled_scan_occurrence_history.go",

@@ -56,6 +56,32 @@ func TestScheduledScanLifecycleConcurrencyPostgres(t *testing.T) {
 		}
 	})
 
+	t.Run("lateral candidate query selects a retry-due occurrence and waits for a future deadline", func(t *testing.T) {
+		resetScheduledScanConcurrencyFixture(t, db)
+		_, pending := seedScheduledScanPostgresFixture(t, repo, db, "retry", 1)
+		due := scheduledScanPostgresNow().Add(-time.Minute)
+		if err := db.Model(&scheduledScanOccurrenceModel{}).Where("id = ?", pending.ID).Updates(map[string]any{
+			"attempted_at":  due.Add(-time.Minute),
+			"next_retry_at": due,
+			"retry_count":   1,
+		}).Error; err != nil {
+			t.Fatalf("mark occurrence retry-due: %v", err)
+		}
+
+		candidate, err := repo.SelectAttemptCandidate(context.Background())
+		if err != nil || candidate == nil || candidate.ID != pending.ID {
+			t.Fatalf("retry-due SelectAttemptCandidate() = %+v, %v; want occurrence %d", candidate, err, pending.ID)
+		}
+
+		if err := db.Model(&scheduledScanOccurrenceModel{}).Where("id = ?", pending.ID).Update("next_retry_at", scheduledScanPostgresNow().Add(time.Hour)).Error; err != nil {
+			t.Fatalf("push retry deadline forward: %v", err)
+		}
+		candidate, err = repo.SelectAttemptCandidate(context.Background())
+		if err != nil || candidate != nil {
+			t.Fatalf("future retry SelectAttemptCandidate() = %+v, %v; want none", candidate, err)
+		}
+	})
+
 	t.Run("concurrent attempt start increments aggregates exactly once", func(t *testing.T) {
 		resetScheduledScanConcurrencyFixture(t, db)
 		schedule, candidate := seedScheduledScanPostgresFixture(t, repo, db, "exactly-once", 1)
@@ -141,7 +167,7 @@ func TestScheduledScanLifecycleConcurrencyPostgres(t *testing.T) {
 		}
 	})
 
-	t.Run("disable first deletes only unattempted occurrences", func(t *testing.T) {
+	t.Run("disable first deletes unsettled occurrences", func(t *testing.T) {
 		resetScheduledScanConcurrencyFixture(t, db)
 		schedule, candidate := seedScheduledScanPostgresFixture(t, repo, db, "disable-first", 1)
 		installScheduledScanSleepTrigger(t, db, "scheduled_scan", "UPDATE OF is_enabled")
@@ -166,11 +192,11 @@ func TestScheduledScanLifecycleConcurrencyPostgres(t *testing.T) {
 		if attempted.err != nil || attempted.input != nil {
 			t.Fatalf("attempt after disable = %+v, %v", attempted.input, attempted.err)
 		}
-		assertScheduledScanPostgresState(t, db, schedule.ID, false, 0, 1)
+		assertScheduledScanPostgresState(t, db, schedule.ID, false, 0, 0)
 		assertOrdinaryScanSurvives(t, db)
 	})
 
-	t.Run("attempt first survives disable without deleting ordinary scans", func(t *testing.T) {
+	t.Run("attempt first commits before disable removes unsettled occurrences", func(t *testing.T) {
 		resetScheduledScanConcurrencyFixture(t, db)
 		schedule, candidate := seedScheduledScanPostgresFixture(t, repo, db, "attempt-first-disable", 1)
 		installScheduledScanSleepTrigger(t, db, "scheduled_scan_occurrence", "UPDATE OF attempted_at")
@@ -195,7 +221,7 @@ func TestScheduledScanLifecycleConcurrencyPostgres(t *testing.T) {
 		if updated.err != nil || updated.item == nil || updated.item.IsEnabled {
 			t.Fatalf("disable after attempt = %+v, %v", updated.item, updated.err)
 		}
-		assertScheduledScanPostgresState(t, db, schedule.ID, false, 1, 2)
+		assertScheduledScanPostgresState(t, db, schedule.ID, false, 1, 0)
 		assertOrdinaryScanSurvives(t, db)
 	})
 
@@ -299,10 +325,11 @@ func openScheduledScanConcurrencyPostgres(t *testing.T) *gorm.DB {
 			id SERIAL PRIMARY KEY, name VARCHAR(200) NOT NULL, scan_workflow_id VARCHAR(100) NOT NULL,
 			configuration JSONB NOT NULL, input_source VARCHAR(32) NOT NULL CHECK (input_source IN ('scan_snapshot', 'target_inventory')),
 			organization_id INTEGER, target_id INTEGER, agent_id INTEGER,
-			cron_expression VARCHAR(100) NOT NULL,
+			time_zone VARCHAR(100) NOT NULL, cron_expression VARCHAR(100) NOT NULL,
 			is_enabled BOOLEAN NOT NULL, run_count INTEGER NOT NULL DEFAULT 0,
 			successful_handoff_count INTEGER NOT NULL DEFAULT 0,
 			failed_handoff_count INTEGER NOT NULL DEFAULT 0,
+			last_handoff_failure_cause VARCHAR(32), last_handoff_failure_time TIMESTAMPTZ,
 			last_run_time TIMESTAMPTZ, next_run_time TIMESTAMPTZ,
 			created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -317,7 +344,12 @@ func openScheduledScanConcurrencyPostgres(t *testing.T) *gorm.DB {
 			scheduled_for TIMESTAMPTZ NOT NULL,
 			attempted_at TIMESTAMPTZ, dispatched_at TIMESTAMPTZ,
 			failure_kind VARCHAR(100), failure_message VARCHAR(2000),
+			retry_count INTEGER NOT NULL DEFAULT 0,
+			next_retry_at TIMESTAMPTZ, last_failure_cause VARCHAR(32),
 			created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			CONSTRAINT scheduled_scan_occurrence_retry_requires_attempt CHECK (
+				next_retry_at IS NULL OR attempted_at IS NOT NULL
+			),
 			UNIQUE (scheduled_scan_id, scheduled_for)
 		)`,
 	}

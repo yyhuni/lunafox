@@ -124,16 +124,10 @@ export function NotificationDrawerLayout({ state }: { state: NotificationDrawerS
       <SheetTrigger render={<Button variant="ghost" size="icon-sm" layout="compactAction" className="group relative" aria-label={state.t("title")} />}>
         <semanticIcons.concept.notification className="h-4 w-4 transition-transform group-hover:animate-wiggle motion-reduce:animate-none" />
         {state.unreadCount > 0 ? (
-          <Badge
-            size="micro"
-            variant="destructive"
-            className={cn(
-              "absolute -top-0.5 -right-0.5 pointer-events-none flex size-3.5 min-w-3.5 items-center justify-center border-0 bg-destructive p-0 px-0 text-[10px] font-semibold leading-none text-destructive-foreground ring-2 ring-card radius-round dark:bg-destructive/80",
-              state.unreadCount > 9 && "w-auto min-w-3.5 px-1"
-            )}
-          >
-            {state.unreadCount > 99 ? "99+" : state.unreadCount}
-          </Badge>
+          <span
+            className="radius-round pointer-events-none absolute top-1 right-1 size-2 bg-destructive ring-2 ring-card dark:bg-destructive/80"
+            aria-hidden="true"
+          />
         ) : null}
       </SheetTrigger>
 
