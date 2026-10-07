@@ -149,13 +149,24 @@ func (service *Service) ReconcileHostEvent(ctx context.Context, event HostUpgrad
 		// A validated journal checkpoint may be the first durable observation
 		// after downtime. It can replay a forward phase without manufacturing a
 		// success result; final success still requires Server/Agent evidence.
-		if !event.FromJournal {
-			return nil, err
+		if event.FromJournal && status == domain.StatusFailed && preCheckpointUpgradeFailure(operation) {
+			// Snapshot preparation can fail before the preflight checkpoint.
+			// queued and stopping cannot enter failed, and a terminal journal
+			// stage is not a forward replay. Record needs_attention so recovery
+			// does not keep reporting that illegal transition.
+			status = domain.StatusNeedsAttention
+			if fallbackErr := domain.ValidateExecutionTransition(operation.EffectiveExecutionMode(), operation.Status, status); fallbackErr != nil {
+				return nil, fallbackErr
+			}
+		} else {
+			if !event.FromJournal {
+				return nil, err
+			}
+			if recoveryErr := domain.ValidateJournalRecoveryTransition(operation.EffectiveExecutionMode(), operation.MigrationType, effectiveMigration, operation.Status, status); recoveryErr != nil {
+				return nil, err
+			}
+			journalRecoveryTransition = true
 		}
-		if recoveryErr := domain.ValidateJournalRecoveryTransition(operation.EffectiveExecutionMode(), operation.MigrationType, effectiveMigration, operation.Status, status); recoveryErr != nil {
-			return nil, err
-		}
-		journalRecoveryTransition = true
 	}
 	eventAt := event.UpdatedAt.UTC()
 	eventStageAt := event.StageUpdatedAt.UTC()
@@ -595,6 +606,24 @@ func operationNeedsRecovery(operation *domain.Operation) bool {
 		operation.Status == domain.StatusRestarting ||
 		operation.Status == domain.StatusAgentVerifying ||
 		operation.Status == domain.StatusVerifying
+}
+
+// preCheckpointUpgradeFailure is a host failure recorded before Compose has
+// an executable checkpoint. Migration has not started, so the operator-visible
+// outcome is attention rather than recovery.
+func preCheckpointUpgradeFailure(operation *domain.Operation) bool {
+	if operation == nil {
+		return false
+	}
+	if operation.Status != domain.StatusQueued && operation.Status != domain.StatusStopping {
+		return false
+	}
+	switch operation.MigrationStatus {
+	case "", domain.MigrationStatusNotStarted:
+		return operation.MigrationType == "" || operation.MigrationType == "none"
+	default:
+		return false
+	}
 }
 
 // isUpgradeRecordNotFound keeps the application package independent from the

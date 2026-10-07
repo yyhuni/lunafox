@@ -277,7 +277,7 @@ func (executor *ComposeExecutor) Execute(ctx context.Context, request Request, s
 	if executor.PublicLayout && manifest.HasRuntimeComposition() && (stage == StageQueued || stage == StageStopping || stage == StagePreflight || stage == StageUpdating) {
 		candidateRoot, candidateSnapshot, err = executor.preparePublicDeploymentSnapshot(store, request.ManifestDigest, manifest)
 		if err != nil {
-			return executor.failCheckpoint(store, request, failureStageFor(migrationStarted), "preheat manifest validation failed")
+			return executor.failCheckpoint(store, request, failureStageFor(migrationStarted), preheatValidationDiagnostic(err))
 		}
 	}
 	overridePath, err := store.ComposeOverridePath(request.OperationID)
@@ -853,6 +853,19 @@ func failureStageFor(migrationEvidence bool) Stage {
 	return StageFailed
 }
 
+func preheatValidationDiagnostic(err error) string {
+	const fallback = "preheat manifest validation failed"
+	if err == nil {
+		return fallback
+	}
+	reason := strings.TrimSpace(err.Error())
+	// Paths and multiline output stay out of the operator-facing journal.
+	if reason == "" || strings.ContainsAny(reason, "/\\\n\r") || len(reason) > 180 {
+		return fallback
+	}
+	return fallback + ": " + reason
+}
+
 func (executor *ComposeExecutor) failCheckpoint(store *JournalStore, request Request, stage Stage, diagnostic string) error {
 	_, err := store.Checkpoint(request.OperationID, request.ManifestDigest, stage, diagnostic, nil)
 	return err
@@ -1162,21 +1175,7 @@ func deploymentPreheatProfile(root string) (string, error) {
 		}
 		values[key] = strings.Trim(strings.TrimSpace(value), "\"'")
 	}
-	profile := values["DATABASE_MODE"]
-	if profile == "" {
-		profile = preheatmanifest.ProfileEmbedded
-	}
-	if profile != preheatmanifest.ProfileEmbedded && profile != preheatmanifest.ProfileExternal {
-		return "", fmt.Errorf("DATABASE_MODE must be embedded or external")
-	}
-	composeProfiles := values["COMPOSE_PROFILES"]
-	if composeProfiles == "" {
-		composeProfiles = profile
-	}
-	if composeProfiles != profile {
-		return "", fmt.Errorf("COMPOSE_PROFILES must match DATABASE_MODE")
-	}
-	return profile, nil
+	return resolveComposeProfile(values["DATABASE_MODE"], values["COMPOSE_PROFILES"])
 }
 
 func profileClosurePresent(manifest preheatmanifest.Manifest, profile string) bool {
