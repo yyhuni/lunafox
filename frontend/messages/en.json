@@ -4789,6 +4789,8 @@
       "phaseProgress": "Stage progress",
       "stageCount": "Stage {current} of {total}",
       "pending": "Not started",
+      "current": "Current stage",
+      "complete": "Completed",
       "stages": {
         "preparing": "Prepare upgrade",
         "stopping": "Stop active work",
@@ -4859,7 +4861,15 @@
       "agents": "Agent verification",
       "agentsValue": "Ready {ready}/{expected}, missing {missing}, unhealthy {unhealthy}",
       "lastUpdated": "Last updated",
-      "operationId": "Operation ID"
+      "operationId": "Operation ID",
+      "drawerTitle": "Confirmed upgrade details and deployment metadata"
+    },
+    "diagnostics": {
+      "title": "Diagnostic details"
+    },
+    "mock": {
+      "mode": "Mock mode",
+      "live": "Live simulation"
     },
     "agentDiagnostics": {
       "title": "Agents requiring attention",
@@ -4892,6 +4902,12 @@
       }
     },
     "actions": {
+      "copyDiagnostics": "Copy diagnostics",
+      "diagnosticsCopied": "Diagnostics copied",
+      "demoMode": "UI Preview",
+      "startLiveMock": "Start Live Mock Upgrade",
+      "startingLiveMock": "Starting Mock...",
+      "exitDemo": "Exit Preview",
       "refresh": "Check again",
       "refreshing": "Checking...",
       "retry": "Retry upgrade",
@@ -4902,7 +4918,16 @@
       "confirmStop": "Stop upgrade",
       "keepRunning": "Keep upgrading",
       "enterSystem": "Enter system",
+      "showFacts": "Show details",
+      "hideFacts": "Hide details",
       "leave": "Return to system"
+    },
+    "schemes": {
+      "title": "Design Schemes",
+      "minimal": "Scheme 1: Minimalist Center (macOS / Vercel)",
+      "pipeline": "Scheme 2: Vertical Pipeline (GitHub Actions / Linear)",
+      "terminal": "Scheme 3: Hacker Terminal (Raycast / Warp)",
+      "dashboard": "Scheme 4: Clean Dashboard (Cloudflare / Datadog)"
     },
     "stop": {
       "title": "Stop this upgrade?",

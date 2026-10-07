@@ -27,7 +27,7 @@ describe("system-upgrade-status event stream contract", () => {
     expect(source).toContain("function HostActivityFact")
     expect(source).toContain('data-testid="system-upgrade-host-activity"')
     expect(source).toContain("currentOperation.hostActivity")
-    expect(source.indexOf("<UpgradeStageTimeline")).toBeLessThan(source.indexOf("<HostActivityFact"))
+    expect(source.indexOf('aria-label={t("timeline.stageList")}')).toBeLessThan(source.indexOf("<HostActivityFact"))
     expect(source.indexOf("<HostActivityFact")).toBeLessThan(source.indexOf('t("facts.lastUpdated")'))
     expect(source.indexOf("function HostActivityFact")).toBeLessThan(source.indexOf("function UpgradeLogs"))
   })
