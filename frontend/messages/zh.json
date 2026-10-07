@@ -4789,6 +4789,8 @@
       "phaseProgress": "阶段进度",
       "stageCount": "第 {current} / {total} 阶段",
       "pending": "尚未开始",
+      "current": "当前阶段",
+      "complete": "已完成",
       "stages": {
         "preparing": "准备升级",
         "stopping": "停止活动工作",
@@ -4859,7 +4861,15 @@
       "agents": "Agent 验证",
       "agentsValue": "就绪 {ready}/{expected}，缺失 {missing}，异常 {unhealthy}",
       "lastUpdated": "最近更新",
-      "operationId": "操作 ID"
+      "operationId": "操作 ID",
+      "drawerTitle": "已确认的升级信息与部署元数据"
+    },
+    "diagnostics": {
+      "title": "诊断详情"
+    },
+    "mock": {
+      "mode": "Mock 模式",
+      "live": "实时仿真中"
     },
     "agentDiagnostics": {
       "title": "需要处理的 Agent",
@@ -4892,6 +4902,12 @@
       }
     },
     "actions": {
+      "copyDiagnostics": "复制排查信息",
+      "diagnosticsCopied": "已复制排查信息",
+      "demoMode": "效果演示模式",
+      "startLiveMock": "启动实时 Mock 升级",
+      "startingLiveMock": "正在启动 Mock...",
+      "exitDemo": "退出演示",
       "refresh": "重新检查",
       "refreshing": "检查中...",
       "retry": "重试升级",
@@ -4902,7 +4918,16 @@
       "confirmStop": "确认停止升级",
       "keepRunning": "继续升级",
       "enterSystem": "进入系统",
+      "showFacts": "展开详情",
+      "hideFacts": "收起详情",
       "leave": "返回系统"
+    },
+    "schemes": {
+      "title": "设计风格方案",
+      "minimal": "方案 1: 极简居中 (macOS / Vercel)",
+      "pipeline": "方案 2: 竖向流水线 (GitHub Actions / Linear)",
+      "terminal": "方案 3: 极客暗黑终端 (Raycast / Warp)",
+      "dashboard": "方案 4: 规范平铺看板 (Cloudflare / Datadog)"
     },
     "stop": {
       "title": "确认停止本次升级？",

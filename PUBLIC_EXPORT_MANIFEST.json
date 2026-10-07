@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:e36c49442928f22404b13a1acdecaa196a74637598c5ca248d34a8071f88634d",
-  "releaseTag": "v0.0.1-alpha.207",
+  "sourceRevisionDigest": "sha256:a9a074a9dc520639e875a7e8db0015ad37dec3cabe4d71b522450cef57769cdd",
+  "releaseTag": "v0.0.1-alpha.208",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "fe827d127413b0d825a8a333c834ab921f4b6c1e16213229197584427eaba77b"
+      "sha256": "e2c3058363f3089caf591a5f5fa2383ebc59661b7ede635e2493312b9d903b6d"
     },
     {
       "path": "README.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "b0d6c412fa0f907f39be035b52472d8d91151a7844c8907587750b8dca0490ee"
+      "sha256": "1b12d3ff12e141d88c5116367fda19738ce6d0fac87053f7c7bfb3215ccf6320"
     },
     {
       "path": "agent/bin/sha256-d56c53b06b9d4ab60dea7051fbd2db0649286bb9345e8bb41fc70861a6c6843e/agent-bundle.sha256",
@@ -92,7 +92,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9173,
-      "sha256": "0785d6354059e478b7dad24ac9ee0c03deaf9885ea51801f20d5cdc5e44d4dd9"
+      "sha256": "7c4b41fe89146a9be39b6a836a4fbba62fa20b919b7728cae9521af9ff8c00d8"
     },
     {
       "path": "agent/bin/sha256-d56c53b06b9d4ab60dea7051fbd2db0649286bb9345e8bb41fc70861a6c6843e/lunafox-agent-linux-amd64",
@@ -4662,15 +4662,15 @@
       "path": "frontend/components/__tests__/system-upgrade-messages.contract.test.ts",
       "type": "file",
       "mode": "0644",
-      "size": 2271,
-      "sha256": "29c3ee60bdbcd6e97949cd9ed14482bd8b5122f3c07c8dd79f84801ed045a19a"
+      "size": 2798,
+      "sha256": "381933c7a61fc9cb64a1edbb61c73e7a8986cc84247598ba42aab18d90157538"
     },
     {
       "path": "frontend/components/__tests__/system-upgrade-status.contract.test.ts",
       "type": "file",
       "mode": "0644",
-      "size": 2284,
-      "sha256": "e4477a7c837d2d36e604dd1ad87677720c29ed245c24d2304c01f7f46738f5b6"
+      "size": 2299,
+      "sha256": "2cb43b200702ee3e6786117a6e989eca22da03fec89998334e45447094bd821d"
     },
     {
       "path": "frontend/components/__tests__/system-upgrade-status.test.tsx",
@@ -10570,8 +10570,8 @@
       "path": "frontend/components/system-upgrade-status.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 26167,
-      "sha256": "7dd388ba3e3cb5f4d43a1ef865d648b233b8fe134006506c50a14d4f33a212e1"
+      "size": 51118,
+      "sha256": "c809cee7a09507c2f2b15ab1210cb4e56470c1859d8a9e6d8c27962f8e4d9f71"
     },
     {
       "path": "frontend/components/target/README.md",
@@ -14763,15 +14763,15 @@
       "path": "frontend/messages/en.json",
       "type": "file",
       "mode": "0644",
-      "size": 206654,
-      "sha256": "a176c3401217228e0f6d9f1d6b42d6c525bce192b634c2529e200d244d42fcf9"
+      "size": 207594,
+      "sha256": "451504eb027efa5d8215f2d55322f9799952c3f50544dfc217b49feac244e20d"
     },
     {
       "path": "frontend/messages/zh.json",
       "type": "file",
       "mode": "0644",
-      "size": 199120,
-      "sha256": "35af462f335f4a614bd11088d1fb99e2de1ba94895400e2cde1e19b7f19820f0"
+      "size": 200069,
+      "sha256": "6dd6461c423695c06c503feb87d872a6757b458af02ed5c89989ed05c2320e17"
     },
     {
       "path": "frontend/middleware.ts",
@@ -17488,6 +17488,13 @@
       "mode": "0644",
       "size": 841,
       "sha256": "2dc9866f75250988be1cf5fe10c6a6157df7ad9a62ac829d9cc862fc5de8afe0"
+    },
+    {
+      "path": "release-notes/v0.0.1-alpha.208.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 649,
+      "sha256": "92c2be6240f6a9cfc39c2b2550b7da8107660a10a2c98cd6b7a0a31445984c5d"
     },
     {
       "path": "resources/alloy/config.alloy",
