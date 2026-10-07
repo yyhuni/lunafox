@@ -536,18 +536,40 @@ func deploymentPreheatProfileFromEnvironment(environment []byte) (string, error)
 	if err != nil {
 		return "", err
 	}
-	profile := values["DATABASE_MODE"]
+	return resolveComposeProfile(values["DATABASE_MODE"], values["COMPOSE_PROFILES"])
+}
+
+// resolveComposeProfile applies the documented Compose interpolation before
+// comparing COMPOSE_PROFILES with DATABASE_MODE. Install templates keep
+// COMPOSE_PROFILES=${DATABASE_MODE:-embedded}; Docker Compose expands that
+// before a container starts, but the upgrader reads the raw env file.
+func resolveComposeProfile(databaseMode, composeProfiles string) (string, error) {
+	profile := databaseMode
 	if profile == "" {
 		profile = preheatmanifest.ProfileEmbedded
 	}
 	if profile != preheatmanifest.ProfileEmbedded && profile != preheatmanifest.ProfileExternal {
 		return "", fmt.Errorf("DATABASE_MODE must be embedded or external")
 	}
-	composeProfiles := values["COMPOSE_PROFILES"]
-	if composeProfiles == "" {
-		composeProfiles = profile
+	resolved := composeProfiles
+	switch composeProfiles {
+	case "":
+		resolved = profile
+	case "${DATABASE_MODE}":
+		resolved = databaseMode
+		if resolved == "" {
+			resolved = profile
+		}
+	case "${DATABASE_MODE:-embedded}", "${DATABASE_MODE:-external}":
+		if databaseMode != "" {
+			resolved = databaseMode
+		} else if composeProfiles == "${DATABASE_MODE:-external}" {
+			resolved = preheatmanifest.ProfileExternal
+		} else {
+			resolved = preheatmanifest.ProfileEmbedded
+		}
 	}
-	if composeProfiles != profile {
+	if resolved != profile {
 		return "", fmt.Errorf("COMPOSE_PROFILES must match DATABASE_MODE")
 	}
 	return profile, nil

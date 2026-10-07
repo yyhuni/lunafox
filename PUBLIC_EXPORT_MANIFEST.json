@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:3abc71592c86b991f4ee9d42d609cdacf516fdfb19747d6e288bff0d30693ed7",
-  "releaseTag": "v0.0.1-alpha.206",
+  "sourceRevisionDigest": "sha256:e36c49442928f22404b13a1acdecaa196a74637598c5ca248d34a8071f88634d",
+  "releaseTag": "v0.0.1-alpha.207",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "880917106eb477f3f295f66a84ce9e1b8b4aeeaffad2a4dc0db50a23bff2f0e1"
+      "sha256": "fe827d127413b0d825a8a333c834ab921f4b6c1e16213229197584427eaba77b"
     },
     {
       "path": "README.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "efe4090abcde4a957365713efda1281d5c6becde0f5e6d302ad92efe04e29746"
+      "sha256": "b0d6c412fa0f907f39be035b52472d8d91151a7844c8907587750b8dca0490ee"
     },
     {
       "path": "agent/bin/sha256-d56c53b06b9d4ab60dea7051fbd2db0649286bb9345e8bb41fc70861a6c6843e/agent-bundle.sha256",
@@ -91,8 +91,8 @@
       "path": "agent/bin/sha256-d56c53b06b9d4ab60dea7051fbd2db0649286bb9345e8bb41fc70861a6c6843e/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
-      "size": 9181,
-      "sha256": "ed759dc41e919c9b213ff7c57c367e1a90896056af339537c25def3f10bff0f7"
+      "size": 9173,
+      "sha256": "0785d6354059e478b7dad24ac9ee0c03deaf9885ea51801f20d5cdc5e44d4dd9"
     },
     {
       "path": "agent/bin/sha256-d56c53b06b9d4ab60dea7051fbd2db0649286bb9345e8bb41fc70861a6c6843e/lunafox-agent-linux-amd64",
@@ -17483,6 +17483,13 @@
       "sha256": "eef2429765c780b13ab3f420ee4aad3830de606129c9c4f4915b0012cb35b7cf"
     },
     {
+      "path": "release-notes/v0.0.1-alpha.207.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 841,
+      "sha256": "2dc9866f75250988be1cf5fe10c6a6157df7ad9a62ac829d9cc862fc5de8afe0"
+    },
+    {
       "path": "resources/alloy/config.alloy",
       "type": "file",
       "mode": "0644",
@@ -29239,15 +29246,15 @@
       "path": "server/internal/modules/upgrade/application/upgrade_recovery.go",
       "type": "file",
       "mode": "0644",
-      "size": 31108,
-      "sha256": "94cceb5b42f25cf23f3c46c981f8774844549e4718e30259211bf48c55465c8d"
+      "size": 32318,
+      "sha256": "1263fa768aff48236885a06c49f30fbb7f7192d3aed36b70ec08cc53b4211fa8"
     },
     {
       "path": "server/internal/modules/upgrade/application/upgrade_recovery_contract_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 39907,
-      "sha256": "3feeea7f8fd79e56285eb17aea4ad881b8e54ceea122a4b26e628d86c0681091"
+      "size": 44177,
+      "sha256": "7d371f692791266c621b616c0c83870e8cee427572d12ecb4b26fbd0bcbfc65b"
     },
     {
       "path": "server/internal/modules/upgrade/application/upgrade_scheduler_pause_release_test.go",
@@ -29498,8 +29505,8 @@
       "path": "server/internal/modules/upgrade/upgrader/compose.go",
       "type": "file",
       "mode": "0644",
-      "size": 53848,
-      "sha256": "8f59743326b5960dca3934f09734a907a1652c8cd43307d64b83bda318db7e7e"
+      "size": 53823,
+      "sha256": "a4277ae605d7e8f4757b2f240c3f0de33d4ec45a059800669b3d2a4119152c55"
     },
     {
       "path": "server/internal/modules/upgrade/upgrader/compose_scope.go",
@@ -29558,11 +29565,18 @@
       "sha256": "1b24024cfe5787bbf2ed4050d4e87073e4f24b919ba7dd6fd80a97b0886665b8"
     },
     {
+      "path": "server/internal/modules/upgrade/upgrader/deployment_profile_test.go",
+      "type": "file",
+      "mode": "0644",
+      "size": 3016,
+      "sha256": "19069a25d3f5a3ef1f309394872026b35a0780c4b78bb8c737a18f67a196cfb7"
+    },
+    {
       "path": "server/internal/modules/upgrade/upgrader/deployment_snapshot.go",
       "type": "file",
       "mode": "0644",
-      "size": 22622,
-      "sha256": "f16f0d26cb9fe353ce10d26c1db6a832666f09f7b7c0370145d77ee16f66aa1f"
+      "size": 23441,
+      "sha256": "a65dff4cf2a8111608937c21c863074ba2994f53485479e2d007b84e50899548"
     },
     {
       "path": "server/internal/modules/upgrade/upgrader/deployment_state.go",

@@ -683,6 +683,76 @@ func TestReconcileHostEventClearsAConfirmedActivityFromLaterJournalCheckpoint(t 
 	}
 }
 
+func TestReconcileJournalFailedBeforePreflightBecomesAttention(t *testing.T) {
+	service, baseRepository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	repository := &journalRecoveryTransitionRepositoryStub{upgradeRepositoryStub: baseRepository}
+	service.repository = repository
+	now := time.Date(2026, 10, 7, 5, 36, 11, 0, time.UTC)
+	service.now = func() time.Time { return now.Add(2 * time.Second) }
+	planDigest := "sha256:" + strings.Repeat("a", 64)
+	services := []string{"agent", "bootstrap", "engine", "engine_package", "engine_runtime", "frontend", "migration", "nginx", "server"}
+	operation := &domain.Operation{
+		OperationID: "12121212-1212-4121-8121-121212121212", RequestID: "13131313-1313-4131-8131-131313131313", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("b", 64), ReleaseVersion: "1.1.0",
+		CompatibilityRange: "*", Status: domain.StatusStopping, MigrationStatus: domain.MigrationStatusNotStarted, MigrationType: "none",
+		ExecutionMode: domain.ExecutionModeFull, WorkDisposition: domain.WorkDispositionCancelled,
+		PlanSummary: domain.PlanSummary{TouchedServices: services}, PlanDigest: planDigest,
+		CreatedAt: now, UpdatedAt: now,
+		StageTimes: map[domain.Status]time.Time{domain.StatusQueued: now, domain.StatusStopping: now}, ObservedDigests: map[string]string{},
+	}
+	baseRepository.byID[operation.OperationID] = operation
+	baseRepository.byRequest[operation.RequestID] = operation
+	baseRepository.active = operation
+
+	event := HostUpgradeEvent{
+		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Stage: string(domain.StatusFailed),
+		Diagnostic: "preheat manifest validation failed", ExecutionMode: operation.ExecutionMode, PlanDigest: planDigest,
+		TouchedServices: services, FromJournal: true, UpdatedAt: now.Add(time.Second), StageUpdatedAt: now.Add(time.Second),
+	}
+	updated, err := service.ReconcileHostEvent(context.Background(), event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != domain.StatusNeedsAttention || updated.CompletedAt == nil || updated.Diagnostic != "preheat manifest validation failed" {
+		t.Fatalf("preflight failure result = %#v", updated)
+	}
+	if repository.journalTransitions != 0 || repository.normalTransitions != 1 {
+		t.Fatalf("transition persistence journal=%d normal=%d, want 0/1", repository.journalTransitions, repository.normalTransitions)
+	}
+	again, err := service.ReconcileHostEvent(context.Background(), event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.Status != domain.StatusNeedsAttention || repository.normalTransitions != 1 {
+		t.Fatalf("second poll rewrote a terminal preflight failure: status=%s transitions=%d", again.Status, repository.normalTransitions)
+	}
+}
+
+func TestReconcileLiveFailureBeforePreflightStaysIllegal(t *testing.T) {
+	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
+	now := time.Date(2026, 10, 7, 5, 36, 11, 0, time.UTC)
+	operation := &domain.Operation{
+		OperationID: "14141414-1414-4141-8141-141414141414", RequestID: "15151515-1515-4151-8151-151515151515", OperatorID: 7,
+		ManifestID: "release-1.1.0", ManifestDigest: "sha256:" + strings.Repeat("c", 64), ReleaseVersion: "1.1.0",
+		CompatibilityRange: "*", Status: domain.StatusStopping, MigrationStatus: domain.MigrationStatusNotStarted, MigrationType: "none",
+		CreatedAt: now, UpdatedAt: now, StageTimes: map[domain.Status]time.Time{domain.StatusStopping: now}, ObservedDigests: map[string]string{},
+	}
+	repository.byID[operation.OperationID] = operation
+	repository.byRequest[operation.RequestID] = operation
+	repository.active = operation
+
+	_, err := service.ReconcileHostEvent(context.Background(), HostUpgradeEvent{
+		OperationID: operation.OperationID, ManifestDigest: operation.ManifestDigest, Stage: string(domain.StatusFailed),
+		Diagnostic: "preheat manifest validation failed", UpdatedAt: now.Add(time.Second), StageUpdatedAt: now.Add(time.Second),
+	})
+	if err == nil || !strings.Contains(err.Error(), `from "stopping" to "failed"`) {
+		t.Fatalf("live preflight failure error = %v", err)
+	}
+	if operation.Status != domain.StatusStopping || repository.updates != 0 {
+		t.Fatalf("live preflight failure changed the operation: status=%s updates=%d", operation.Status, repository.updates)
+	}
+}
+
 func TestReconcileJournalUnavailableClosesQueuedOperationWithAttention(t *testing.T) {
 	service, repository := newUpgradeServiceForTest(t, &upgradeDispatcherStub{})
 	now := time.Now().UTC()
