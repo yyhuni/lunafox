@@ -17,6 +17,7 @@ import {
   TABLE_DENSE_ROW_CLASS,
   TABLE_DENSE_ROW_ESTIMATED_HEIGHT_PX,
   TABLE_DENSE_ROW_RHYTHM_HEIGHT_PX,
+  TABLE_HEADER_ESTIMATED_HEIGHT_PX,
   TABLE_HEADER_RHYTHM_HEIGHT_PX,
   TableBody,
   TableCell,
@@ -338,17 +339,31 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
 
   // Enable virtual scrolling only for large datasets (>100 rows)
   const enableVirtualScrolling = !isLoading && rows.length > 100
+  const virtualHeaderRef = React.useRef<HTMLTableSectionElement>(null)
+  // The list starts below the header inside the same scroll container.
+  const [virtualScrollMargin, setVirtualScrollMargin] = React.useState(TABLE_HEADER_ESTIMATED_HEIGHT_PX)
 
   const rowVirtualizer = useVirtualizer<HTMLDivElement, HTMLTableRowElement>({
     count: rows.length,
     getScrollElement: () => tableContainerRef.current,
     estimateSize: () => rowRhythm.estimatedHeight,
     overscan: 10, // Number of items to render outside visible area
+    scrollMargin: enableVirtualScrolling ? virtualScrollMargin : 0,
     enabled: enableVirtualScrolling,
+    // Measurement updates from the row ref. Avoid a nested flushSync render.
+    useFlushSync: false,
   })
 
   const virtualRows = enableVirtualScrolling ? rowVirtualizer.getVirtualItems() : []
   const totalSize = enableVirtualScrolling ? rowVirtualizer.getTotalSize() : 0
+  // Recompute every render. Scrolling changes the visible window without
+  // changing totalSize, so this offset cannot be cached on totalSize alone.
+  let renderedOffset = 0
+  const virtualRowTranslateY = virtualRows.map((virtualRow) => {
+    const translateY = virtualRow.start - virtualScrollMargin - renderedOffset
+    renderedOffset += virtualRow.size
+    return translateY
+  })
 
   const measureTableContainerWidth = React.useCallback(() => {
     const tableContainer = tableContainerRef.current
@@ -391,6 +406,20 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
   React.useLayoutEffect(() => {
     measureTableContainerWidth()
   }, [measureTableContainerWidth, tableColumnVisibility])
+
+  React.useLayoutEffect(() => {
+    if (!enableVirtualScrolling) {
+      return
+    }
+
+    const header = virtualHeaderRef.current
+    const nextMargin = header?.offsetHeight ?? 0
+    if (nextMargin <= 0) {
+      return
+    }
+
+    setVirtualScrollMargin((current) => current === nextMargin ? current : nextMargin)
+  }, [enableVirtualScrolling, tableColumnVisibility])
 
   const visibleLeafColumns = React.useMemo(() => {
     void columnSizeVars
@@ -630,6 +659,12 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
           ? undefined
           : { minHeight: `${stableTableSurfaceMinHeight}px` }}
       >
+        <div
+          style={enableVirtualScrolling ? {
+            height: `${totalSize + virtualScrollMargin}px`,
+            position: "relative",
+          } : undefined}
+        >
         <table
           className={cn("caption-bottom text-sm w-full", columnLayout === "fixed" && "table-fixed")}
           style={{
@@ -644,7 +679,7 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
               ))}
             </colgroup>
           )}
-          <TableHeader>
+          <TableHeader ref={virtualHeaderRef}>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
@@ -670,21 +705,18 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
                 </TableRow>
               ))}
           </TableHeader>
-          <TableBody
-            style={enableVirtualScrolling ? {
-              height: `${totalSize}px`,
-              position: 'relative',
-            } : undefined}
-          >
+          <TableBody>
               {isLoading ? (
                 loadingRows
               ) : rows.length ? (
                 enableVirtualScrolling ? (
-                  // Virtual scrolling mode for large datasets
-                  virtualRows.map((virtualRow) => {
+                  // Rows stay in table flow so columns keep the colgroup axis.
+                  // translateY is relative to that static position: subtract the
+                  // header scroll margin and the sizes of virtual rows already
+                  // rendered above this one. minHeight lets wrapped cells grow;
+                  // a fixed height would measure as one line and overlap the next row.
+                  virtualRows.map((virtualRow, index) => {
                     const row = rows[virtualRow.index]
-                    // Absolute rows must retain their natural content height. A fixed
-                    // rhythm height hides multiline cells from measurement and overlaps rows.
                     return (
                       <TableRow
                         key={row.id}
@@ -702,12 +734,8 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
                         onFocus={() => handleRowIntent(row)}
                         onKeyDown={(event) => handleRowKeyDown(event, row)}
                         style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
                           minHeight: rowRhythm.rhythmHeight,
-                          transform: `translateY(${virtualRow.start}px)`,
+                          transform: `translateY(${virtualRowTranslateY[index]}px)`,
                         }}
                       >
                         {row.getVisibleCells().map((cell) => (
@@ -767,6 +795,7 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
               )}
           </TableBody>
         </table>
+        </div>
       </div>
       {!hidePagination && (
         <div

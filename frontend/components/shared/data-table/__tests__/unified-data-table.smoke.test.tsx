@@ -356,6 +356,8 @@ describe("UnifiedDataTable", () => {
   })
 
   it("将虚拟滚动保留在显式的大数据表面", () => {
+    const offsetHeight = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(640)
+    const offsetWidth = vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(960)
     const columns: ColumnDef<Row>[] = [
       {
         accessorKey: "name",
@@ -368,23 +370,35 @@ describe("UnifiedDataTable", () => {
       name: `row-${index + 1}`,
     }))
 
-    const { container } = renderWithProviders(
-      <UnifiedDataTable<Row>
-        data={data}
-        columns={columns}
-        getRowId={(row) => String(row.id)}
-        state={{
-          pagination: { pageIndex: 0, pageSize: 101 },
-          paginationInfo: { total: 101, totalPages: 1, page: 1, pageSize: 101 },
-        }}
-        ui={{ hideToolbar: true }}
-        behavior={{ enableRowSelection: false }}
-      />
-    )
+    try {
+      const { container } = renderWithProviders(
+        <UnifiedDataTable<Row>
+          data={data}
+          columns={columns}
+          getRowId={(row) => String(row.id)}
+          state={{
+            pagination: { pageIndex: 0, pageSize: 101 },
+            paginationInfo: { total: 101, totalPages: 1, page: 1, pageSize: 101 },
+          }}
+          ui={{ hideToolbar: true }}
+          behavior={{ enableRowSelection: false }}
+        />
+      )
 
-    const tableSurface = container.querySelector<HTMLDivElement>('[data-slot="data-table"]')
+      const tableSurface = container.querySelector<HTMLDivElement>('[data-slot="data-table"]')
+      const virtualRow = container.querySelector<HTMLTableRowElement>("tbody tr")
+      const virtualScrollSurface = tableSurface?.querySelector<HTMLDivElement>(":scope > div")
 
-    expect(tableSurface).toHaveClass("max-h-150", "overflow-y-auto")
+      expect(tableSurface).toHaveClass("max-h-150", "overflow-y-auto")
+      expect(virtualScrollSurface?.style.position).toBe("relative")
+      expect(virtualRow).not.toBeNull()
+      expect(virtualRow?.style.position).not.toBe("absolute")
+      expect(virtualRow?.style.minHeight).toBe("40px")
+      expect(virtualRow?.style.transform).toContain("translateY")
+    } finally {
+      offsetHeight.mockRestore()
+      offsetWidth.mockRestore()
+    }
   })
 
   it("兼容扩展列以明确的列宽填满剩余空间", () => {
