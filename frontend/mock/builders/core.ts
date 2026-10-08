@@ -14,6 +14,73 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
+const WRAPPING_SCAN_ENGINE_IDS = [
+  "engine.lunafox.subdomain_discovery",
+  "engine.lunafox.port_scan",
+  "engine.lunafox.web_crawling",
+  "engine.lunafox.directory_scan",
+  "engine.lunafox.screenshot",
+  "engine.lunafox.nuclei_vulnerability",
+]
+
+function resolveMockScanListSize() {
+  const parsed = Number.parseInt(process.env.NEXT_PUBLIC_MOCK_SCAN_LIST_SIZE ?? "", 10)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 0
+}
+
+function resolveRequestedScanPage(params?: { page?: number; pageToken?: string }) {
+  const token = params?.pageToken?.trim()
+  if (token) {
+    const page = Number.parseInt(token, 10)
+    if (Number.isFinite(page) && page > 0) return page
+  }
+  return params?.page && params.page > 0 ? params.page : 1
+}
+
+function expandScanList(params: Parameters<typeof buildScans>[0], targetCount: number): GetScansResponse {
+  const seeds = getMockScans({ page: 1, pageSize: 1000 }).results
+  const seed = seeds[0]
+  if (!seed) {
+    return {
+      results: [],
+      total: 0,
+      page: 1,
+      pageSize: params?.pageSize || 10,
+      totalPages: 0,
+    }
+  }
+
+  const expanded = Array.from({ length: targetCount }, (_, index) => {
+    const targetName = `scan-history-row-${index + 1}.customer-api-shared-gateway.platform.example.com`
+    return {
+      ...clone(seed),
+      id: 10000 + index,
+      targetId: 10000 + index,
+      plannedEngineIds: [...WRAPPING_SCAN_ENGINE_IDS],
+      target: {
+        id: 10000 + index,
+        name: targetName,
+        displayName: targetName,
+        type: seed.target?.type ?? "domain",
+      },
+    }
+  })
+  const page = resolveRequestedScanPage(params)
+  const pageSize = params?.pageSize || 10
+  const start = (page - 1) * pageSize
+  const total = expanded.length
+
+  return {
+    results: expanded.slice(start, start + pageSize),
+    total,
+    totalSize: total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize),
+    nextPageToken: page * pageSize < total ? String(page + 1) : undefined,
+  }
+}
+
 function mapScenario<T>(happyValue: T, emptyValue: T, stressValue: T, edgeValue: T): T {
   const scenario = getMockScenario()
   if (scenario === "empty") return emptyValue
@@ -331,6 +398,12 @@ export function buildScans(params?: {
       pageSize: params?.pageSize || 10,
       totalPages: 0,
     }
+  }
+  // Default fixtures stay under the virtual-scroll threshold. This env only
+  // exists so a local mock session can render wrapped scan-history rows.
+  const mockScanListSize = resolveMockScanListSize()
+  if (mockScanListSize > 0) {
+    return expandScanList(params, mockScanListSize)
   }
   const base = clone(getMockScans(params))
   if (getMockScenario() === "happy") {

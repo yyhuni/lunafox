@@ -119,6 +119,15 @@ describe("unified-data-table contract", () => {
     expect(source).not.toContain("max-h-[600px]")
   })
 
+  it("keeps virtual rows in table flow and measures wrapped content", () => {
+    expect(source).toContain("scrollMargin: enableVirtualScrolling ? virtualScrollMargin : 0")
+    expect(source).toContain("const translateY = virtualRow.start - virtualScrollMargin - renderedOffset")
+    expect(source).toContain("minHeight: rowRhythm.rhythmHeight")
+    expect(source).toContain("ref={rowVirtualizer.measureElement}")
+    expect(source).not.toContain("position: 'absolute'")
+    expect(source).not.toContain('position: "absolute"')
+  })
+
   it("supports sticky critical columns through shared column metadata", () => {
     expect(source).toContain("getStickyColumnClassName")
     expect(source).toContain('from "./sticky-column-shell"')

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:a9a074a9dc520639e875a7e8db0015ad37dec3cabe4d71b522450cef57769cdd",
-  "releaseTag": "v0.0.1-alpha.208",
+  "sourceRevisionDigest": "sha256:690e109e7a9af91801855781db014ea1d45c733ee3c44b83c89f8a7638199bce",
+  "releaseTag": "v0.0.1-alpha.209",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "e2c3058363f3089caf591a5f5fa2383ebc59661b7ede635e2493312b9d903b6d"
+      "sha256": "0db92fd5dd95733428aef1d4266c6a397edc70f229d9b8abf89fd2d4fb012179"
     },
     {
       "path": "README.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "1b12d3ff12e141d88c5116367fda19738ce6d0fac87053f7c7bfb3215ccf6320"
+      "sha256": "b346eea986f96954797e726d3cf1977fe9b1491bbecd6ec1364e7e866a758119"
     },
     {
       "path": "agent/bin/sha256-d56c53b06b9d4ab60dea7051fbd2db0649286bb9345e8bb41fc70861a6c6843e/agent-bundle.sha256",
@@ -91,8 +91,8 @@
       "path": "agent/bin/sha256-d56c53b06b9d4ab60dea7051fbd2db0649286bb9345e8bb41fc70861a6c6843e/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
-      "size": 9173,
-      "sha256": "7c4b41fe89146a9be39b6a836a4fbba62fa20b919b7728cae9521af9ff8c00d8"
+      "size": 9181,
+      "sha256": "0f0a284cac2fda65fa11ac6b64b7a7484cd5aff5f5d74b72387b925a932f7376"
     },
     {
       "path": "agent/bin/sha256-d56c53b06b9d4ab60dea7051fbd2db0649286bb9345e8bb41fc70861a6c6843e/lunafox-agent-linux-amd64",
@@ -9100,8 +9100,8 @@
       "path": "frontend/components/shared/data-table/README.md",
       "type": "file",
       "mode": "0644",
-      "size": 35595,
-      "sha256": "bf3d9cc0226f6fd1ac63b10d57890e8824b16ca970b9a651cbcd8aa71b1ce0c9"
+      "size": 35826,
+      "sha256": "9afa3cb7141018686c258ab3026dc1db12c02a2765030c157e026491a80908a1"
     },
     {
       "path": "frontend/components/shared/data-table/__tests__/business-list-data-table.contract.test.ts",
@@ -9282,15 +9282,15 @@
       "path": "frontend/components/shared/data-table/__tests__/unified-data-table.contract.test.ts",
       "type": "file",
       "mode": "0644",
-      "size": 16336,
-      "sha256": "29d94c15b750710caa1cd310e732dd57cf515cdbbbced44675df07f7d76da902"
+      "size": 16870,
+      "sha256": "6226042b91d2c6be00069c9d577906b18da1bf23f2b2469621c9f1060b1bac38"
     },
     {
       "path": "frontend/components/shared/data-table/__tests__/unified-data-table.smoke.test.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 31835,
-      "sha256": "d4417a74a41d05cbda1ce42daa8242e71feda9f58f4d0b43cc9ac812df33213f"
+      "size": 32630,
+      "sha256": "3f228433c8e6257986b362d1764427895aa32212faebc0f2e9b62ea4f3468677"
     },
     {
       "path": "frontend/components/shared/data-table/__tests__/use-cursor-pagination-scope.test.tsx",
@@ -9485,8 +9485,8 @@
       "path": "frontend/components/shared/data-table/unified-data-table.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 32017,
-      "sha256": "11b915712da53dfcb0ca072951adb2e1ea4a023c49ab231208e8209af8b1f49e"
+      "size": 33316,
+      "sha256": "74e2852ec23aef5ef80726d684c9e05e920afbae2b77fcba90489f0414446e7d"
     },
     {
       "path": "frontend/components/shared/data-table/use-cursor-pagination-scope.ts",
@@ -14914,11 +14914,18 @@
       "sha256": "388f371b660f8197deea0bbbce0b0f89f70f9888dfc4e7eddbfe5202922ef511"
     },
     {
+      "path": "frontend/mock/builders/__tests__/scan-list-size.test.ts",
+      "type": "file",
+      "mode": "0644",
+      "size": 976,
+      "sha256": "0b8eda2d9cf6354d11022305b383ad494fb6390014e23e98552ebbdc68aea6d2"
+    },
+    {
       "path": "frontend/mock/builders/core.ts",
       "type": "file",
       "mode": "0644",
-      "size": 14580,
-      "sha256": "881074ae09a965e69732fca2e372fe36d1fba7ce5c557955df1816601ffe8682"
+      "size": 16858,
+      "sha256": "3fedd74e36571b39c9fd3246637a7e3e70ffcee5420fc4b48c4c90606b3e0e9e"
     },
     {
       "path": "frontend/mock/builders/endpoints.ts",
@@ -17495,6 +17502,13 @@
       "mode": "0644",
       "size": 649,
       "sha256": "92c2be6240f6a9cfc39c2b2550b7da8107660a10a2c98cd6b7a0a31445984c5d"
+    },
+    {
+      "path": "release-notes/v0.0.1-alpha.209.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 526,
+      "sha256": "50d4cb33ff1152969be3d179078b8a64877efcc0b63799cb317a9a67fd905196"
     },
     {
       "path": "resources/alloy/config.alloy",
