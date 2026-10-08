@@ -144,8 +144,8 @@ services:
     image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-server@sha256:f866b4434bb65b07b7322e2ed391d4357c3c4815a8cc6c7d83cbc12d57ac8322
     restart: unless-stopped
     environment:
-      RELEASE_VERSION: 0.0.1-alpha.208
-      AGENT_VERSION: 0.0.1-alpha.208
+      RELEASE_VERSION: 0.0.1-alpha.209
+      AGENT_VERSION: 0.0.1-alpha.209
       AGENT_IMAGE_REF: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:8efcd291a1a3999877600fb772228c6e881965ccd6f2559be642461eb47bc413
       RELEASE_CHANNEL: canary
       RELEASE_METADATA_BASE_URL: https://raw.githubusercontent.com/yyhuni/lunafox/release-channel
@@ -228,7 +228,7 @@ services:
       lunafox.logs.component: server
       lunafox.logs.container: lunafox-server
   frontend:
-    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-frontend@sha256:345903177a081f8a1adb8ad4ff8ae86808e60e04268a002b653c70dd6879b765
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-frontend@sha256:a8bb568cfb7ba80765b6ab814436c7a2f4cb18d3027ce6a76572b027fe688d97
     restart: unless-stopped
     depends_on:
       server:
@@ -261,8 +261,8 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
-      RELEASE_VERSION: 0.0.1-alpha.208
-      AGENT_VERSION: 0.0.1-alpha.208
+      RELEASE_VERSION: 0.0.1-alpha.209
+      AGENT_VERSION: 0.0.1-alpha.209
       JWT_SECRET_FILE: /run/lunafox-config/jwt-secret
       PUBLIC_HOST: ${PUBLIC_HOST:?PUBLIC_HOST is required}
       PUBLIC_PORT: ${PUBLIC_PORT:?PUBLIC_PORT is required}
@@ -428,7 +428,7 @@ services:
     environment:
       AGENT_CONTROL_URL: http://server:9090
       AGENT_BOOTSTRAP_CREDENTIALS_PATH: /var/lib/lunafox-agent/bootstrap.json
-      AGENT_VERSION: 0.0.1-alpha.208
+      AGENT_VERSION: 0.0.1-alpha.209
       AGENT_HOSTNAME: lunafox-agent
       LUNAFOX_AGENT_CONTAINER_NAME: lunafox-agent
       LUNAFOX_AGENT_DISABLE_SELF_UPDATE: 'true'
