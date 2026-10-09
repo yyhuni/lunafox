@@ -36,6 +36,7 @@ type EngineConfigParamOutput struct {
 	Type      string                           `json:"type,omitempty"`
 	Default   any                              `json:"default,omitempty"`
 	Unit      string                           `json:"unit,omitempty"`
+	Format    string                           `json:"format,omitempty"`
 	Minimum   *int                             `json:"minimum,omitempty"`
 	Maximum   *int                             `json:"maximum,omitempty"`
 	MinLength *int                             `json:"minLength,omitempty"`
@@ -99,6 +100,7 @@ func toEngineConfigSectionOutputs(sections []catalogdomain.EngineConfigSection) 
 			params = append(params, EngineConfigParamOutput{
 				Key: param.Key, Type: param.Type, Default: param.Default,
 				Unit:    param.Unit,
+				Format:  param.Format,
 				Minimum: param.Minimum, Maximum: param.Maximum,
 				MinLength: param.MinLength, MaxLength: param.MaxLength,
 				MinItems: param.MinItems, MaxItems: param.MaxItems,

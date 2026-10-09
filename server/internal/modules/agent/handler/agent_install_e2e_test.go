@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -121,12 +120,7 @@ func TestAgentInstallE2EImageBuildArgsMatchDockerfileContract(t *testing.T) {
 		}
 		t.Fatalf("read Agent Dockerfile: %v", err)
 	}
-	args := agentInstallE2EImageBuildArgs(
-		rootDir,
-		"lunafox-agent-install-e2e:test",
-		strings.Repeat("a", 40),
-		agentInstallE2EManifestDigest("lunafox-agent-install-e2e:test"),
-	)
+	args := agentInstallE2EImageBuildArgs(rootDir, "lunafox-agent-install-e2e:test")
 
 	for _, context := range []struct {
 		name string
@@ -143,12 +137,16 @@ func TestAgentInstallE2EImageBuildArgsMatchDockerfileContract(t *testing.T) {
 			t.Fatalf("E2E build is missing named context %q", context.name)
 		}
 	}
+	// Local source builds do not require public release provenance args.
+	// Release images consume a verified binary instead of this Dockerfile.
 	for _, name := range []string{"PUBLIC_MERGE_SHA", "PUBLIC_EXPORT_MANIFEST_SHA256"} {
-		if !strings.Contains(string(dockerfile), "ARG "+name) {
-			t.Fatalf("Dockerfile no longer declares build arg %q", name)
+		if strings.Contains(string(dockerfile), "ARG "+name) {
+			t.Fatalf("local Agent Dockerfile must not require release build arg %q", name)
 		}
-		if !agentInstallE2EHasBuildArg(args, name) {
-			t.Fatalf("E2E build is missing non-empty build arg %q", name)
+		for index := 0; index+1 < len(args); index++ {
+			if args[index] == "--build-arg" && (args[index+1] == name || strings.HasPrefix(args[index+1], name+"=")) {
+				t.Fatalf("E2E build must not pass release build arg %q", name)
+			}
 		}
 	}
 }
@@ -276,11 +274,7 @@ func ensureAgentInstallE2ECleanStart(t *testing.T, ctx context.Context, dockerBi
 func buildAgentInstallE2EImage(t *testing.T, ctx context.Context, dockerBin, imageRef string) {
 	t.Helper()
 	rootDir := agentInstallE2ERepoRoot(t)
-	publicMergeSHA, err := agentInstallE2ECurrentRevision(ctx, rootDir)
-	if err != nil {
-		t.Fatalf("resolve Agent build revision: %v", err)
-	}
-	args := agentInstallE2EImageBuildArgs(rootDir, imageRef, publicMergeSHA, agentInstallE2EManifestDigest(imageRef))
+	args := agentInstallE2EImageBuildArgs(rootDir, imageRef)
 	if _, err := runAgentInstallE2EDocker(ctx, dockerBin, args...); err != nil {
 		t.Fatalf("build Agent image: %v", err)
 	}
@@ -306,33 +300,12 @@ func agentInstallE2EIsPublicProjectionRoot(rootDir string) bool {
 	return err == nil
 }
 
-func agentInstallE2ECurrentRevision(ctx context.Context, rootDir string) (string, error) {
-	output, err := exec.CommandContext(ctx, "git", "-C", rootDir, "rev-parse", "HEAD").CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("git rev-parse HEAD: %w\n%s", err, output)
-	}
-	revision := strings.TrimSpace(string(output))
-	if len(revision) != 40 {
-		return "", fmt.Errorf("git rev-parse HEAD returned an invalid revision %q", revision)
-	}
-	return revision, nil
-}
-
-func agentInstallE2EManifestDigest(imageRef string) string {
-	digest := sha256.Sum256([]byte("agent-install-e2e:" + imageRef))
-	return fmt.Sprintf("sha256:%x", digest)
-}
-
-func agentInstallE2EImageBuildArgs(rootDir, imageRef, publicMergeSHA, publicExportManifestSHA256 string) []string {
-	// The local smoke image has no release manifest; use an explicit synthetic
-	// digest while binding the other provenance marker to the checked-out revision.
+func agentInstallE2EImageBuildArgs(rootDir, imageRef string) []string {
 	return []string{
 		"build",
 		"--build-context", "contracts=" + filepath.Join(rootDir, "contracts"),
 		"--build-context", "engine-go=" + filepath.Join(rootDir, "engine-go"),
 		"--build-context", "proto=" + filepath.Join(rootDir, "proto"),
-		"--build-arg", "PUBLIC_MERGE_SHA=" + publicMergeSHA,
-		"--build-arg", "PUBLIC_EXPORT_MANIFEST_SHA256=" + publicExportManifestSHA256,
 		"--file", filepath.Join(rootDir, "agent", "Dockerfile"),
 		"--tag", imageRef,
 		filepath.Join(rootDir, "agent"),
@@ -342,16 +315,6 @@ func agentInstallE2EImageBuildArgs(rootDir, imageRef, publicMergeSHA, publicExpo
 func agentInstallE2EHasOption(args []string, option, value string) bool {
 	for index := 0; index+1 < len(args); index++ {
 		if args[index] == option && args[index+1] == value {
-			return true
-		}
-	}
-	return false
-}
-
-func agentInstallE2EHasBuildArg(args []string, name string) bool {
-	prefix := name + "="
-	for index := 0; index+1 < len(args); index++ {
-		if args[index] == "--build-arg" && strings.HasPrefix(args[index+1], prefix) && len(args[index+1]) > len(prefix) {
 			return true
 		}
 	}

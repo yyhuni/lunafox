@@ -103,6 +103,14 @@ argv. Image conformance executes FFUF, verifies the exact version and ELF
 architecture, and checks the generated Engine API v2 entrypoint on both
 `linux/amd64` and `linux/arm64` release manifests.
 
+`ffuf.headers` is a `stringArray` with `format: http-headers` and default `[]`.
+Each `Name: Value` line is passed unchanged as a separate `-H` argument, so
+Cookie and Authorization values may contain commas, colons, semicolons, and
+spaces. Invalid names, empty values, and control characters fail before FFUF
+starts; validation errors never include credentials. Duplicate names preserve
+argv order, with wire semantics owned by pinned FFUF. The optional pinned
+FFUF integration suite includes real local-endpoint header delivery.
+
 Runtime unit tests skip fixed-version process behavior when a pinned binary is
 not available. Set `LUNAFOX_FFUF_INTEGRATION_BINARY` to an executable official
 FFUF v2.2.1 binary to exercise raw payload, redirect, target TLS, HTTP/2, HTTP/1

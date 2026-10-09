@@ -8,6 +8,9 @@
       "description": "Probe Server-materialized URLs using httpx.",
       "name": "HTTPX",
       "params": {
+        "headers": {
+          "description": "HTTP request headers in Name: Value form, each mapped to a separate -H argument."
+        },
         "rate-limit": {
           "description": "Maximum httpx requests per second mapped to -rate-limit."
         },

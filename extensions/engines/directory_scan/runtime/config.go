@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	enginecontract "github.com/yyhuni/lunafox/engines/directory_scan/contract"
+	"golang.org/x/net/http/httpguts"
 )
 
 var (
@@ -54,6 +55,13 @@ func ValidateConfig(config enginecontract.FfufConfig) error {
 	}
 	if config.Timeout < 60 || config.Timeout > 604800 {
 		return invalidFFUFConfig("timeout")
+	}
+	// Typed callers can bypass Server admission; never echo credential values.
+	for index, header := range config.Headers {
+		name, value, found := strings.Cut(header, ":")
+		if !found || !httpguts.ValidHeaderFieldName(name) || strings.TrimSpace(value) == "" || !httpguts.ValidHeaderFieldValue(value) {
+			return invalidFFUFConfig(fmt.Sprintf("headers[%d]", index))
+		}
 	}
 	return nil
 }

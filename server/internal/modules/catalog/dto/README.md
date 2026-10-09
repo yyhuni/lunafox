@@ -13,6 +13,12 @@ catalog 模块 DTO 规范：
 
 ## Scan Workflow Responses
 
+Engine Catalog detail and install responses preserve parameter `format` from
+the validated installed package. Omitted formats stay omitted; `http-headers`
+is the shared `stringArray` semantic format and cannot be combined with `enum`.
+Catalog summaries continue to omit configuration sections. The Catalog does
+not add a `sensitive` annotation or infer a format from parameter names.
+
 - `GET /v1/scanWorkflows` returns scan workflow summaries and omits `configuration`; list consumers should not depend on default engine config being present in collection items.
 - `GET /v1/scanWorkflows/:scanWorkflow` returns the same pure orchestration resource shape and omits `configuration`.
 - `GET /v1/scanWorkflows/:scanWorkflow/profile` returns the only Profile shape: parent identity plus every Step as `{enabled: true, engineConfig: <complete current defaults>}`. The Profile is a fully enabled editing draft; callers can disable Steps before submit. The Step switch is Workflow-owned; Engine `configSection` switches remain inside `engineConfig`.

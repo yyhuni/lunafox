@@ -23,6 +23,9 @@
         "follow-redirects": {
           "description": "扫描期间跟随 HTTP 重定向。"
         },
+        "headers": {
+          "description": "HTTP 请求头，格式为 Name: Value，每项独立映射到一个 -H 参数。"
+        },
         "http2": {
           "description": "HTTPS 请求允许使用 HTTP/2，并保留 HTTP/1 回退。"
         },

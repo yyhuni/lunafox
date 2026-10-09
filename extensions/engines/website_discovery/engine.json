@@ -45,6 +45,12 @@
             "type": "integer",
             "default": 1,
             "minimum": 0
+          },
+          {
+            "key": "headers",
+            "type": "stringArray",
+            "format": "http-headers",
+            "default": []
           }
         ]
       }

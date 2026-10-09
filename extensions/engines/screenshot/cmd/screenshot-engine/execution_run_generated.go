@@ -944,6 +944,7 @@ func lunafoxProjectCaptureConfig(section *engineexecutionpb.ConfigSection) (engi
 	var seenPageTimeout bool
 	var seenConcurrency bool
 	var seenRetries bool
+	var seenHeaders bool
 	for _, param := range section.GetParams() {
 		if param == nil || param.GetValue() == nil {
 			return enginecontract.CaptureConfig{}, errors.New("Engine config scalar value is required")
@@ -979,6 +980,16 @@ func lunafoxProjectCaptureConfig(section *engineexecutionpb.ConfigSection) (engi
 				return enginecontract.CaptureConfig{}, errors.New("Engine config scalar type does not match the Engine Definition")
 			}
 			projected.Retries = typed.IntegerValue
+		case "headers":
+			if seenHeaders {
+				return enginecontract.CaptureConfig{}, errors.New("duplicate Engine config scalar parameter")
+			}
+			seenHeaders = true
+			typed, ok := param.GetValue().(*engineexecutionpb.ConfigValue_StringArrayValue)
+			if !ok {
+				return enginecontract.CaptureConfig{}, errors.New("Engine config scalar type does not match the Engine Definition")
+			}
+			projected.Headers = append([]string(nil), typed.StringArrayValue.GetValues()...)
 		default:
 			return enginecontract.CaptureConfig{}, errors.New("Engine config contains an undeclared or resource-valued scalar parameter")
 		}
@@ -990,6 +1001,9 @@ func lunafoxProjectCaptureConfig(section *engineexecutionpb.ConfigSection) (engi
 		return enginecontract.CaptureConfig{}, errors.New("Engine config is missing a required scalar parameter")
 	}
 	if !seenRetries {
+		return enginecontract.CaptureConfig{}, errors.New("Engine config is missing a required scalar parameter")
+	}
+	if !seenHeaders {
 		return enginecontract.CaptureConfig{}, errors.New("Engine config is missing a required scalar parameter")
 	}
 	return projected, nil

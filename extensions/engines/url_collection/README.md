@@ -35,8 +35,27 @@ input Target, and staged on task-local disk. After every enabled tool succeeds,
 raw `asset.endpoint.v1` records are submitted through
 `Execution.Results.Endpoints`. Endpoint identity is the Collector/HTTPX input
 URL, not a redirect target. URL Collection adds no retry, resume, checkpoint,
-intermediate-file reuse, historical Website fallback, authenticated collection,
-directory scanning, or frontend surface.
+intermediate-file reuse, historical Website fallback, directory scanning, or
+frontend surface.
+
+## HTTP Headers
+
+Katana and HTTPX each expose an independent `headers` array with
+`type: stringArray`, `format: http-headers`, and default `[]`. Configure each
+stage that needs target authentication explicitly; headers are not copied
+between stages or forwarded to Waymore's historical providers. Each line is
+passed unchanged as a separate `-H` argument. Invalid names, empty values, or
+control characters fail before the tool starts without exposing header values
+in errors. Duplicate names retain order in argv; wire behavior belongs to the
+pinned tool.
+
+Real local-endpoint header regressions use the pinned image-local binaries:
+
+```sh
+LUNAFOX_TEST_KATANA_BIN=/absolute/path/to/katana \
+LUNAFOX_TEST_HTTPX_BIN=/absolute/path/to/httpx \
+go test ./runtime -run TestPinnedHTTPToolsDeliverHeaders -count=1 -v
+```
 
 Runtime Image tools and their exact versions are declared in `Dockerfile`,
 `requirements.lock`, and the container conformance fixtures. The Python lock

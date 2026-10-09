@@ -23,6 +23,9 @@
         "follow-redirects": {
           "description": "Follow HTTP redirects during scanning."
         },
+        "headers": {
+          "description": "HTTP request headers in Name: Value form, each mapped to a separate -H argument."
+        },
         "http2": {
           "description": "Allow HTTP/2 for HTTPS requests with HTTP/1 fallback."
         },
