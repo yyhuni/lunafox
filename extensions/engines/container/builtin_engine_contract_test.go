@@ -202,6 +202,7 @@ func TestDirectoryScanManifestDefinesExactClosedFFUFSurface(t *testing.T) {
 		{key: "timeout", kind: "integer", defaultValue: 86400, minimum: intPointer(60), maximum: intPointer(604800)},
 		{key: "follow-redirects", kind: "boolean", defaultValue: false},
 		{key: "http2", kind: "boolean", defaultValue: false},
+		{key: "headers", kind: "stringArray", defaultValue: []any{}},
 	}
 	sections := definition.Execution.ConfigSections
 	if len(sections) != 1 || sections[0].ID != "ffuf" || !sections[0].DefaultEnabled || len(sections[0].Params) != len(want) {
@@ -235,7 +236,7 @@ func TestDirectoryScanManifestDefinesExactClosedFFUFSurface(t *testing.T) {
 		t.Fatalf("materialized Directory defaults = %#v", ffuf)
 	}
 
-	for _, control := range []string{"headers", "authentication", "arbitrary-flags", "ignore-body"} {
+	for _, control := range []string{"authentication", "arbitrary-flags", "ignore-body"} {
 		t.Run("reject_"+control, func(t *testing.T) {
 			_, err := engineexecution.NormalizeAndValidateConfig(map[string]any{
 				"ffuf": map[string]any{"enabled": true, control: "forbidden"},
@@ -278,6 +279,7 @@ func TestURLCollectionManifestExposesOnlyConfirmedConfiguration(t *testing.T) {
 			{"request-timeout", "integer", "10", intPointer(1), intPointer(120), nil},
 			{"retries", "integer", "1", intPointer(0), intPointer(5), nil},
 			{"delay", "integer", "0", intPointer(0), intPointer(30), nil},
+			{"headers", "stringArray", []any{}, nil, nil, nil},
 		}},
 		{"uro", true, []expectedParam{
 			{"timeout", "integer", "3600", intPointer(60), intPointer(21600), nil},
@@ -291,6 +293,7 @@ func TestURLCollectionManifestExposesOnlyConfirmedConfiguration(t *testing.T) {
 			{"rate-limit", "integer", "150", intPointer(1), intPointer(1000), nil},
 			{"request-timeout", "integer", "10", intPointer(1), intPointer(120), nil},
 			{"retries", "integer", "1", intPointer(0), intPointer(5), nil},
+			{"headers", "stringArray", []any{}, nil, nil, nil},
 		}},
 	}
 	if len(manifest.Execution.ConfigSections) != len(expected) {
@@ -310,6 +313,53 @@ func TestURLCollectionManifestExposesOnlyConfirmedConfiguration(t *testing.T) {
 				t.Fatalf("%s.%s added project-specific restrictions: %#v", wantSection.id, wantParam.key, gotParam)
 			}
 		}
+	}
+}
+
+func TestTargetHTTPHeaderDeclarations(t *testing.T) {
+	for engine, sections := range map[string][]string{
+		"website_discovery":    {"httpx"},
+		"directory_scan":       {"ffuf"},
+		"nuclei_vulnerability": {"nuclei"},
+		"url_collection":       {"katana", "httpx"},
+		"screenshot":           {"capture"},
+	} {
+		t.Run(engine, func(t *testing.T) {
+			payload, err := os.ReadFile(filepath.Join("..", engine, "engine.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			manifest, err := enginecontract.DecodeEngineDefinition(payload, engine+"/engine.json")
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, sectionID := range sections {
+				found := false
+				for _, section := range manifest.Execution.ConfigSections {
+					if section.ID != sectionID {
+						continue
+					}
+					for _, param := range section.Params {
+						if param.Key != "headers" {
+							continue
+						}
+						found = true
+						if param.Type != "stringArray" || param.Format != "http-headers" || len(param.Enum) != 0 || !reflect.DeepEqual(param.Default, []any{}) {
+							t.Fatalf("%s.headers metadata = %#v", sectionID, param)
+						}
+					}
+				}
+				if !found {
+					t.Fatalf("%s.headers declaration is required", sectionID)
+				}
+				_, err := engineexecution.NormalizeAndValidateConfig(map[string]any{
+					sectionID: map[string]any{"headers": []string{"Cookie: a=1; b=two", "Authorization: Bearer local-test-token"}},
+				}, manifest.Execution)
+				if err != nil {
+					t.Fatalf("%s.headers valid configuration rejected: %v", sectionID, err)
+				}
+			}
+		})
 	}
 }
 

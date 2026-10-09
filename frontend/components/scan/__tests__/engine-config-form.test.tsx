@@ -15,6 +15,7 @@ import {
 import type { CompleteWordlistCatalogState } from "@/hooks/use-wordlists"
 import type {
   EngineConfigFormValues,
+  EngineParamManifestDefinition,
   ScanWorkflowWithEngines,
 } from "@/types/engine-config.types"
 import type { WorkflowProfileDraft } from "@/lib/workflow-config"
@@ -157,6 +158,37 @@ describe("EngineConfigForm resources", () => {
     }))
   })
 })
+
+describe("EngineConfigForm header metadata", () => {
+  it("selects and commits the header editor for an arbitrary parameter key", async () => {
+    const onChange = vi.fn()
+    renderHeaderParam({ key: "request-fields", type: "stringArray", format: "http-headers", default: [] }, onChange)
+    fireEvent.click(screen.getByRole("button", { name: "request-fields" }))
+    fireEvent.click(await screen.findByRole("button", { name: "+ Cookie" }))
+    fireEvent.change(screen.getByLabelText("headerValuePlaceholder"), { target: { value: "a=1; b=two,three:four" } })
+    fireEvent.click(screen.getByRole("button", { name: "done" }))
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      discovery: expect.objectContaining({ sections: { recon: { enabled: true, params: { "request-fields": ["Cookie: a=1; b=two,three:four"] } } } }),
+    }))
+  })
+
+  it("keeps an ordinary array named headers as a text input when format is omitted", () => {
+    renderHeaderParam({ key: "headers", type: "stringArray", default: [] }, vi.fn())
+    expect(screen.getByRole("textbox", { name: "headers" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "headers" })).not.toBeInTheDocument()
+  })
+})
+
+function renderHeaderParam(param: EngineParamManifestDefinition, onChange: (values: EngineConfigFormValues) => void) {
+  const headerWorkflow = structuredClone(workflow)
+  headerWorkflow.stages[0].steps[0].engine.execution.configSections[0].params = [param]
+  render(<EngineConfigForm
+    workflow={headerWorkflow}
+    values={{ discovery: { enabled: true, sections: { recon: { enabled: true, params: { [param.key]: [] } } } } }}
+    expandedStepIds={new Set(["discovery"])}
+    onChange={onChange}
+  />)
+}
 
 describe("EngineConfigForm disabled-Step recovery", () => {
   const canonicalDisabledConfiguration = {

@@ -70,6 +70,8 @@ type CaptureConfig struct {
 	Concurrency int64
 	// Source: engine.json.execution.configSections["capture"].params["retries"].
 	Retries int64
+	// Source: engine.json.execution.configSections["capture"].params["headers"].
+	Headers []string
 }
 
 type PlatformResources struct {

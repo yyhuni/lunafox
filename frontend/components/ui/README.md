@@ -727,6 +727,7 @@ The only approved production native-button exceptions are recorded in `frontend/
 
 - `default`: 36px height. Use for form submits, dialog footers, empty-state CTAs, retry actions, and normal-density page actions.
 - `sm`: 32px height. Use for dense table/list toolbars, filter strips, and compact operator controls.
+- `xs`: 28px height with 12px labels. Use for compact editor popover actions, such as duration picker footers. Keep page-level actions and ordinary dialog footers on their existing sizes; callers MUST NOT override button height or font size to obtain this tier.
 - `action-card`: full available height and width with 64px minimum height. Use for card-like shortcut actions inside overview grids or action panels.
 - `icon-sm`: 32px square. Use for compact icon-only controls in top bars, data tables, cards, and dense toolbars.
 - `icon`: 36px square. Use for standard icon-only controls when the surrounding surface is not dense.

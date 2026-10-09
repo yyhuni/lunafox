@@ -8,6 +8,9 @@
       "description": "使用 httpx 探测已收集的 URL，并上报已验证的端点元数据。",
       "name": "HTTPX",
       "params": {
+        "headers": {
+          "description": "HTTP 请求头，格式为 Name: Value，每项独立映射到一个 -H 参数。"
+        },
         "rate-limit": {
           "description": "映射到 -rate-limit 的 httpx 每秒请求速率上限。"
         },
@@ -37,6 +40,9 @@
         },
         "depth": {
           "description": "映射到 -d 的 Katana 最大爬取深度。"
+        },
+        "headers": {
+          "description": "HTTP 请求头，格式为 Name: Value，每项独立映射到一个 -H 参数。"
         },
         "rate-limit": {
           "description": "映射到 -rl 的 Katana 每秒请求速率上限。"

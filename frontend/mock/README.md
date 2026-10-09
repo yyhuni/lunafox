@@ -38,6 +38,15 @@ client waits for that cleanup before sending the first real request.
   envelope as the Server. Mock fixtures use canonical branches (at least one
   enabled for executable requests) and never infer enablement from the mock
   Workflow or Engine catalog.
+- URL Collection Catalog detail mirrors all four production manifest sections
+  (`waymore`, `katana`, `uro`, `httpx`), including parameter defaults, bounds,
+  and the Uro `filters` enum, plus independent `http-headers` parameters on
+  Katana and HTTPX. Workflow Profiles
+  materialize these sections from the same Catalog detail.
+- Website Discovery Catalog detail mirrors its complete production manifest,
+  including the real `httpx.headers` format, defaults, and bounds. Its locale
+  metadata matches the packaged English resource in every mock locale branch;
+  no frontend-only `sensitive` marker is added to any Engine header parameter.
 - Website Mock List/Get mirrors the real `GET /v1/targets/{target}/websites` and `GET /v1/websites/{website}` contracts, including canonical `name` and optional Screenshot summaries without image bytes. The old `websiteRelations` pseudo resource is intentionally absent.
 - Website detail asset requests use the same mandatory leading scope filter as real mode: `host==` is an exact normalized observed-host filter, while `websiteUrl==` is a structured HTTP(S) origin and path-boundary filter. Mock handlers reject an `OR` or non-leading scope clause rather than widening to Target-wide data.
 - Nuclei POC collection activation is intercepted at the network layer with

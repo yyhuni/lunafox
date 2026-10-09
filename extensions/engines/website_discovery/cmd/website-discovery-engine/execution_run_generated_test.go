@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
+
+	engineexecutionpb "github.com/yyhuni/lunafox/engine-go/protocol"
 )
 
 type recordingInputResolver struct {
@@ -76,5 +79,26 @@ func TestGeneratedInputHandlesPropagateContextAndErrors(t *testing.T) {
 	cancel()
 	if _, err := input.WebsiteURLs.Path(cancelled); !errors.Is(err, context.Canceled) {
 		t.Fatalf("cancelled Path() error = %v", err)
+	}
+}
+
+func TestGeneratedConfigPreservesRequiredHeaderArray(t *testing.T) {
+	enabled := true
+	section := &engineexecutionpb.ConfigSection{SectionId: "httpx", Enabled: &enabled}
+	for _, key := range []string{"timeout", "threads", "rate-limit", "request-timeout", "retries"} {
+		section.Params = append(section.Params, &engineexecutionpb.ConfigValue{ParamKey: key, Value: &engineexecutionpb.ConfigValue_IntegerValue{IntegerValue: 60}})
+	}
+	if _, err := lunafoxProjectHTTPXConfig(section); err == nil {
+		t.Fatal("complete config without headers was accepted")
+	}
+	headers := []string{"Cookie: a=1; b=two", `X-Fields: a,b:c; "quoted"`}
+	section.Params = append(section.Params, &engineexecutionpb.ConfigValue{ParamKey: "headers", Value: &engineexecutionpb.ConfigValue_StringArrayValue{StringArrayValue: &engineexecutionpb.StringArrayValue{Values: headers}}})
+	projected, err := lunafoxProjectHTTPXConfig(section)
+	if err != nil || !reflect.DeepEqual(projected.Headers, headers) {
+		t.Fatalf("projected headers = %#v, %v", projected.Headers, err)
+	}
+	projected.Headers[0] = "changed"
+	if headers[0] != "Cookie: a=1; b=two" {
+		t.Fatal("generated config aliased the transport values")
 	}
 }

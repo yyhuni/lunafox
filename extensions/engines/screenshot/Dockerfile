@@ -27,13 +27,20 @@ ARG HTTPX_VERSION
 ARG GOPROXY
 ENV CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOTOOLCHAIN=local GOPROXY=$GOPROXY
 WORKDIR /out
+COPY screenshot/patches/httpx-v1.10.0-browser-headers.patch /tmp/browser-headers.patch
+# Rod replaces the whole header map. Patch a private pinned module copy so
+# browser capture retains every header without mutating the shared Go cache.
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
     --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
     set -eux; \
-    GOPATH=/go GOBIN= go install "github.com/projectdiscovery/httpx/cmd/httpx@${HTTPX_VERSION}"; \
-    for candidate in "/go/bin/${TARGETOS}_${TARGETARCH}/httpx" "/go/bin/httpx"; do \
-      if [ -x "$candidate" ]; then install -m 0755 "$candidate" /out/httpx; break; fi; \
-    done; \
+    test "$HTTPX_VERSION" = v1.10.0; \
+    go mod download "github.com/projectdiscovery/httpx@${HTTPX_VERSION}"; \
+    cp -a "/go/pkg/mod/github.com/projectdiscovery/httpx@${HTTPX_VERSION}" /tmp/httpx; \
+    chmod -R u+w /tmp/httpx; \
+    cd /tmp/httpx; \
+    git apply --check /tmp/browser-headers.patch; \
+    git apply /tmp/browser-headers.patch; \
+    go build -trimpath -o /out/httpx ./cmd/httpx; \
     test -x /out/httpx
 
 FROM --platform=$BUILDPLATFORM public.ecr.aws/docker/library/alpine:3.23.2 AS cwebp-builder
@@ -136,7 +143,7 @@ RUN set -eux; \
       'export CHROMIUM_FLAGS="$CHROMIUM_FLAGS --disable-features=UseOzonePlatform"' \
       'export CHROMIUM_FLAGS="$CHROMIUM_FLAGS --disable-dev-shm-usage"' \
       > /etc/chromium.d/99-lunafox-headless; \
-    printf '%s\n' "httpx=${HTTPX_VERSION}" "chromium=${CHROMIUM_VERSION}" "cwebp=${LIBWEBP_VERSION}" > /opt/lunafox-tools/VERSIONS; \
+    printf '%s\n' "httpx=${HTTPX_VERSION}" 'httpx-browser-headers=lunafox.1' "chromium=${CHROMIUM_VERSION}" "cwebp=${LIBWEBP_VERSION}" > /opt/lunafox-tools/VERSIONS; \
     ln -s /usr/bin/chromium /opt/lunafox-tools/bin/chromium; \
     chmod 0755 /opt/lunafox-engine/bin/screenshot-runtime-engine
 

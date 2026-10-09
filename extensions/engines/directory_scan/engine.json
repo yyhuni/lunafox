@@ -113,6 +113,12 @@
             "key": "http2",
             "type": "boolean",
             "default": false
+          },
+          {
+            "key": "headers",
+            "type": "stringArray",
+            "format": "http-headers",
+            "default": []
           }
         ]
       }

@@ -241,6 +241,7 @@ func TestBuiltinProfileMaterializesEnabledStepsFromCurrentDefinition(t *testing.
 		"timeout":               86400,
 		"follow-redirects":      false,
 		"http2":                 false,
+		"headers":               []string{},
 	}
 	if got := config["ffuf"]; !reflect.DeepEqual(got, wantFFUF) {
 		t.Fatalf("Directory ffuf defaults = %#v, want current Definition defaults %#v", got, wantFFUF)

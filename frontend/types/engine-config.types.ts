@@ -11,6 +11,9 @@ export type EngineParamType = "integer" | "string" | "stringArray" | "boolean"
 /** Semantic unit metadata used by renderers; the engine still stores typed values. */
 export type EngineParamUnit = "seconds"
 
+/** Semantic format metadata used by renderers to select specialized parameter controls. */
+export type EngineParamFormat = "http-headers"
+
 export type EngineParamValue = number | string | boolean | string[]
 
 /** Dynamic LunaFox resource collection referenced by a string parameter. */
@@ -28,6 +31,10 @@ export interface EngineParamManifestDefinition {
   default?: EngineParamValue
   /** Optional semantic unit supplied explicitly by the Engine Catalog detail. */
   unit?: EngineParamUnit
+  /** Optional semantic format distinguishing specialized controls (e.g. "http-headers"). */
+  format?: EngineParamFormat
+  /** Whether this parameter contains sensitive credentials that should be masked. */
+  sensitive?: boolean
   /** Minimum value constraint (integer params only). */
   minimum?: number
   /** Maximum value constraint (integer params only). */
