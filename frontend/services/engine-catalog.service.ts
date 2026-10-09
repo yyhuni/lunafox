@@ -64,6 +64,16 @@ function normalizeEngineCatalogDetailSections(
       if (unit !== undefined && param.type !== "integer") {
         throw new Error(`${source} declares a unit on a non-integer parameter`)
       }
+      const format = param.format
+      if (format !== undefined && format !== "http-headers") {
+        throw new Error(`${source} contains an unsupported parameter format`)
+      }
+      if (format !== undefined && param.type !== "stringArray") {
+        throw new Error(`${source} declares a format on a non-stringArray parameter`)
+      }
+      if (format !== undefined && param.enum !== undefined) {
+        throw new Error(`${source} declares an HTTP headers format with enum`)
+      }
     }
   }
 

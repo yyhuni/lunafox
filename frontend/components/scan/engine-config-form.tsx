@@ -1,7 +1,7 @@
 "use client";
 import React, { useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { Check, ChevronDown, ChevronRight, Cpu, RefreshCw, } from "@/components/icons";
+import { ChevronDown, ChevronRight, Cpu, RefreshCw, } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,6 +16,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger, } from "@/componen
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, } from "@/components/ui/tooltip";
 import { EngineDurationInput } from "@/components/scan/engine-duration-input";
+import { EngineHttpHeadersPopover } from "@/components/scan/engine-http-headers-popover";
 import type { CompleteWordlistCatalogState } from "@/hooks/use-wordlists";
 import {
     configResourceFieldId,
@@ -232,12 +233,6 @@ function getEngineIcon(engineId: string): React.ReactNode {
     void engineId;
     return <Cpu className="size-5"/>;
 }
-function getIntegerStep(param: EngineParamDefinition) {
-    // Keep the existing coarse rate control without using the key to infer a unit.
-    if (param.key === "rate")
-        return 100;
-    return 1;
-}
 function WordlistResourceSelect({ fieldId, value, disabled, catalog, invalid, describedBy, onChange, }: {
     fieldId: string;
     value: EngineParamValue;
@@ -356,8 +351,9 @@ function EnumStringArrayPopover({ fieldId, labelId, param, value, disabled, onCh
         <span className="min-w-0 truncate">{selectedSummary}</span>
         <ChevronDown aria-hidden className="size-4 shrink-0 text-muted-foreground"/>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[var(--anchor-width)] p-1">
-        <div role="group" aria-labelledby={labelId} className="grid gap-1">
+      <PopoverContent align="start" className="w-[var(--anchor-width)] overflow-hidden p-1">
+        {/* Keep the popover anchored while long enum lists scroll inside the option region. */}
+        <div role="group" aria-labelledby={labelId} className="grid max-h-52 gap-1 overflow-y-auto p-1 sm:max-h-72">
           {options.map((option) => {
               const selected = currentValues.includes(option);
               return (<Label key={option} htmlFor={`${fieldId}-${option}`} className="flex min-w-0 items-center gap-2 rounded-sm px-2 py-1.5 font-normal hover:bg-accent">
@@ -440,7 +436,7 @@ function ParamField({ location, param, value, disabled, wordlistCatalog, error, 
       {customControl ?? (param.resource?.kind === "wordlist" ? (<WordlistResourceSelect fieldId={fieldId} value={value} disabled={disabled} catalog={wordlistCatalog} invalid={Boolean(error)} describedBy={error ? errorMessageId : undefined} onChange={(next) => {
           onChange(next);
           if (next.trim() !== "") onFieldRepaired?.(location);
-      }}/>) : param.type === "string" && param.enum && param.enum.length > 0 ? (<Select value={String(value)} onValueChange={onChange} disabled={disabled}>
+      }}/>) : param.type === "stringArray" && param.format === "http-headers" ? (<EngineHttpHeadersPopover fieldId={fieldId} labelId={`${fieldId}-label`} value={value} disabled={disabled} invalid={Boolean(error)} describedBy={error ? errorMessageId : undefined} onChange={onChange}/>) : param.type === "string" && param.enum && param.enum.length > 0 ? (<Select value={String(value)} onValueChange={onChange} disabled={disabled}>
           <SelectTrigger id={fieldId} size="sm" className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -449,23 +445,7 @@ function ParamField({ location, param, value, disabled, wordlistCatalog, error, 
                 {String(option)}
               </SelectItem>))}
           </SelectContent>
-        </Select>) : param.type === "integer" && param.unit === "seconds" ? (<EngineDurationInput id={fieldId} value={typeof value === "number" ? value : Number(value) || 0} defaultValue={typeof param.default === "number" ? param.default : undefined} minimum={param.minimum} maximum={param.maximum} disabled={disabled} onChange={onChange}/>) : param.type === "integer" ? (<NumberStepperInput id={fieldId} value={typeof value === "number" ? value : Number(value) || 0} min={param.minimum} max={param.maximum} step={getIntegerStep(param)} disabled={disabled} onChange={onChange}/>) : param.type === "stringArray" && param.enum && param.enum.length > 0 && (param.key === "scan-targets" || param.key === "severity") ? (<EnumStringArrayPopover fieldId={fieldId} labelId={`${fieldId}-label`} param={param} value={value} disabled={disabled} onChange={onChange}/>) : param.type === "stringArray" && param.enum && param.enum.length > 0 ? (<div id={fieldId} role="group" aria-labelledby={`${fieldId}-label`} className="grid gap-2 rounded-md border border-input bg-muted/10 p-2 sm:grid-cols-2">
-          {param.enum.map((option) => {
-              const selected = Array.isArray(value) && value.includes(option);
-              return (<Label key={option} htmlFor={`${fieldId}-${option}`} className="flex min-w-0 items-center gap-2 font-normal">
-                <Checkbox id={`${fieldId}-${option}`} checked={selected} disabled={disabled} onCheckedChange={(checked) => {
-                    const current = Array.isArray(value) ? value : [];
-                    if (!checked && selected && param.minItems !== undefined && current.length <= param.minItems) return;
-                    if (checked && !selected && param.maxItems !== undefined && current.length >= param.maxItems) return;
-                    const next = checked ? [...current, option] : current.filter((item) => item !== option);
-                    const order = new Map(param.enum!.map((item, index) => [item, index]));
-                    next.sort((left, right) => (order.get(left) ?? 0) - (order.get(right) ?? 0));
-                    onChange(next);
-                }} />
-                <span className="truncate">{option}</span>
-              </Label>);
-          })}
-        </div>) : param.type === "stringArray" ? (<Input id={fieldId} type="text" value={Array.isArray(value) ? value.join(",") : ""} disabled={disabled} onChange={(e) => {
+        </Select>) : param.type === "integer" && param.unit === "seconds" ? (<EngineDurationInput id={fieldId} value={typeof value === "number" ? value : Number(value) || 0} defaultValue={typeof param.default === "number" ? param.default : undefined} minimum={param.minimum} maximum={param.maximum} disabled={disabled} onChange={onChange}/>) : param.type === "integer" ? (<NumberStepperInput id={fieldId} value={typeof value === "number" ? value : Number(value) || 0} min={param.minimum} max={param.maximum} disabled={disabled} onChange={onChange}/>) : param.type === "stringArray" && param.enum && param.enum.length > 0 ? (<EnumStringArrayPopover fieldId={fieldId} labelId={`${fieldId}-label`} param={param} value={value} disabled={disabled} onChange={onChange}/>) : param.type === "stringArray" ? (<Input id={fieldId} type="text" value={Array.isArray(value) ? value.join(",") : ""} disabled={disabled} onChange={(e) => {
                 onChange(e.target.value.split(",").map((item) => item.trim()).filter(Boolean));
             }} variant="subtle" size="sm"/>) : (<Input id={fieldId} type="text" value={value === "" ? "" : String(value)} min={param.minimum} max={param.maximum} pattern={param.pattern} disabled={disabled} onChange={(e) => {
                 onChange(e.target.value);

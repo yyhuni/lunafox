@@ -185,8 +185,41 @@ describe("engine-config-form contract", () => {
     expect(source).toContain("<EngineDurationInput")
     expect(source).toContain('param.unit === "seconds"')
     expect(source).not.toContain('param.key === "timeout"')
-    expect(source).toContain("getIntegerStep(param)")
+    expect(source).not.toContain("getIntegerStep")
     expect(source).toContain("param.type === \"integer\"")
+  })
+
+  it.each(["rate", "request-rate"])("increments %s by one and retains manifest bounds", (paramKey) => {
+    const workflow = structuredClone(workflowWithMultiSectionEngine)
+    workflow.stages[0].steps[0].engine.execution.configSections[0].params = [
+      { key: paramKey, type: "integer", default: 100, minimum: 99, maximum: 101 },
+    ]
+    const configuration = profileConfigurationFor(workflow)
+    configuration.steps.subdomain_discovery.enabled = true
+    const initialValues = initFormValuesFromWorkflow(workflow, configuration)
+    function ControlledForm() {
+      const [values, setValues] = React.useState(initialValues)
+      return React.createElement(EngineConfigForm, { workflow, values, onChange: setValues })
+    }
+    render(React.createElement(ControlledForm))
+    fireEvent.click(screen.getByRole("button", { name: "engineConfigForm.expand" }))
+    const input = screen.getByRole("spinbutton", { name: paramKey })
+    const increase = screen.getByRole("button", { name: "增加" })
+    const decrease = screen.getByRole("button", { name: "减少" })
+    expect(input).toHaveValue(100)
+    expect(input).toHaveAttribute("step", "1")
+    expect(input).toHaveAttribute("min", "99")
+    expect(input).toHaveAttribute("max", "101")
+    fireEvent.click(increase)
+    expect(input).toHaveValue(101)
+    expect(increase).toBeDisabled()
+    fireEvent.click(decrease)
+    expect(input).toHaveValue(100)
+    fireEvent.click(decrease)
+    expect(input).toHaveValue(99)
+    expect(decrease).toBeDisabled()
+    fireEvent.change(input, { target: { value: "100" } })
+    expect(input).toHaveValue(100)
   })
 
   it("renders resource-backed wordlist parameters through the wordlist resource selector", () => {
@@ -197,6 +230,12 @@ describe("engine-config-form contract", () => {
     expect(source).not.toContain('param.key === "wordlist"')
     expect(source).not.toContain("useCompleteWordlistCatalogState")
     expect(source).not.toContain("useWordlists(")
+  })
+
+  it("renders semantic http-headers engine parameters with the shared EngineHttpHeadersPopover", () => {
+    expect(source).toContain('param.format === "http-headers"')
+    expect(source).toContain("<EngineHttpHeadersPopover")
+    expect(source).not.toContain('param.key === "headers"')
   })
 
   it("uses the engine-level toggle as the Workflow Step switch", () => {
@@ -465,8 +504,75 @@ describe("engine-config-form contract", () => {
     }))
   }, 15_000)
 
+  it.each(["filters", "risk-levels"])("renders %s as a multi-select popover with cardinality and enum-order preservation", (paramKey) => {
+    const workflow: ScanWorkflowWithEngines = {
+      ...workflowWithMultiSectionEngine,
+      stages: [{
+        ...workflowWithMultiSectionEngine.stages[0],
+        steps: [{
+          ...workflowWithMultiSectionEngine.stages[0].steps[0],
+          engine: {
+            ...workflowWithMultiSectionEngine.stages[0].steps[0].engine,
+            execution: {
+              ...workflowWithMultiSectionEngine.stages[0].steps[0].engine.execution,
+              configSections: [{
+                id: "options",
+                name: "Options",
+                defaultEnabled: true,
+                params: [{ key: paramKey, type: "stringArray", enum: ["hasparams", "noparams", "hasext"], minItems: 1, maxItems: 2 }],
+              }],
+            },
+          },
+        }],
+      }],
+    }
+    const initialValues = initFormValuesFromWorkflow(workflow, {
+      steps: { subdomain_discovery: { enabled: true, engineConfig: { options: { enabled: true, [paramKey]: ["noparams", "hasext"] } } } },
+    })
+    const handleChange = vi.fn()
+    function ControlledForm() {
+      const [values, setValues] = React.useState(initialValues)
+      return React.createElement(EngineConfigForm, {
+        workflow,
+        values,
+        onChange: (next) => {
+          setValues(next)
+          handleChange(serializeFormValuesToConfig(next))
+        },
+      })
+    }
+    render(React.createElement(ControlledForm))
+    fireEvent.click(screen.getByRole("button", { name: "engineConfigForm.expand" }))
+    const trigger = screen.getByRole("button", { name: paramKey })
+    expect(trigger).toHaveTextContent("noparams, hasext")
+    expect(screen.queryByRole("checkbox", { name: "hasparams" })).not.toBeInTheDocument()
+    fireEvent.click(trigger)
+    expect(screen.getByRole("group", { name: paramKey })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("checkbox", { name: "hasparams" }))
+    expect(handleChange).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole("checkbox", { name: "hasext" }))
+    fireEvent.click(screen.getByRole("checkbox", { name: "hasparams" }))
+    expect(trigger).toHaveTextContent("hasparams, noparams")
+    expect(handleChange).toHaveBeenLastCalledWith({
+      steps: { subdomain_discovery: { enabled: true, engineConfig: { options: { enabled: true, [paramKey]: ["hasparams", "noparams"] } } } },
+    })
+    fireEvent.click(screen.getByRole("checkbox", { name: "noparams" }))
+    handleChange.mockClear()
+    fireEvent.click(screen.getByRole("checkbox", { name: "hasparams" }))
+    expect(handleChange).not.toHaveBeenCalled()
+    expect(screen.getByRole("checkbox", { name: "hasparams" })).toBeChecked()
+    fireEvent.click(trigger)
+    expect(trigger).toHaveTextContent("hasparams")
+    expect(screen.queryByRole("checkbox", { name: "hasparams" })).not.toBeInTheDocument()
+  }, 15_000)
+
   it("keeps scalar enum parameters on the Select path", () => {
     expect(source).toContain('param.type === "string" && param.enum')
     expect(source).toContain('param.type === "stringArray" && param.enum')
+  })
+
+  it("bounds enum multi-select lists and scrolls the option region", () => {
+    expect(source).toContain('className="w-[var(--anchor-width)] overflow-hidden p-1"')
+    expect(source).toContain('className="grid max-h-52 gap-1 overflow-y-auto p-1 sm:max-h-72"')
   })
 })

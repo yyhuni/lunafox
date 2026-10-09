@@ -19,6 +19,7 @@ func TestEngineCatalogDTOSeparatesSummaryAndDetail(t *testing.T) {
 			Params: []catalogdomain.EngineConfigParam{
 				{Key: "timeout", Type: "integer", Default: 30, Unit: "seconds"},
 				{Key: "threads", Type: "integer", Default: 10},
+				{Key: "headers", Type: "stringArray", Format: "http-headers", Default: []string{}},
 			},
 		}},
 		LocaleResources: map[string]map[string]any{"zh": {"engine": map[string]any{"displayName": "站点发现"}}},
@@ -40,6 +41,12 @@ func TestEngineCatalogDTOSeparatesSummaryAndDetail(t *testing.T) {
 	if got := detail.Execution.ConfigSections[0].Params[1].Unit; got != "" {
 		t.Fatalf("omitted detail unit = %q", got)
 	}
+	if got := detail.Execution.ConfigSections[0].Params[2].Format; got != "http-headers" {
+		t.Fatalf("detail format = %q, want http-headers", got)
+	}
+	if detail.Execution.ConfigSections[0].Params[0].Format != "" {
+		t.Fatal("omitted detail format was changed")
+	}
 	payload, err := json.Marshal(detail)
 	if err != nil {
 		t.Fatal(err)
@@ -54,6 +61,9 @@ func TestEngineCatalogDTOSeparatesSummaryAndDetail(t *testing.T) {
 	}
 	if !strings.Contains(string(payload), `"unit":"seconds"`) || strings.Contains(string(payload), `"unit":""`) {
 		t.Fatalf("detail unit JSON projection = %s", payload)
+	}
+	if strings.Count(string(payload), `"format"`) != 1 || !strings.Contains(string(payload), `"format":"http-headers"`) {
+		t.Fatalf("detail format JSON projection = %s", payload)
 	}
 }
 

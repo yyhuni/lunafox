@@ -8,6 +8,7 @@ describe("button size contract", () => {
   it("owns shared structural button sizes for controls and action placeholders", () => {
     expect(source).toContain('default: "h-9"')
     expect(source).toContain('sm: "h-8"')
+    expect(source).toContain('xs: "h-7"')
     expect(source).toContain('lg: "h-10"')
     expect(source).toContain('"action-card": "h-full min-h-16 w-full"')
     expect(source).toContain('"icon-sm": "size-8"')

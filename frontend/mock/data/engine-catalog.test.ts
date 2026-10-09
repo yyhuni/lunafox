@@ -1,9 +1,46 @@
 import { beforeEach, describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs"
+import path from "node:path"
+import { localizeEngineCatalogDetail } from "@/lib/engine-catalog"
 
 import { getMockEngineCatalog, getMockEngineCatalogDetail, installMockEngine, resetMockEngineCatalog } from "./engine-catalog"
 
 const firstRef = "registry.example/team/engine@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 const replacementRef = "registry.example/team/engine@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+
+describe("mock Website Discovery Engine contract", () => {
+  it("matches the complete production manifest and English locale including real headers metadata", () => {
+    const root = path.resolve(process.cwd(), "../extensions/engines/website_discovery")
+    const manifest = JSON.parse(readFileSync(path.join(root, "engine.json"), "utf8"))
+    const locale = JSON.parse(readFileSync(path.join(root, "locales/en.json"), "utf8"))
+    const engine = getMockEngineCatalogDetail(manifest.engineId)
+    expect(engine?.execution).toEqual(manifest.execution)
+    expect(engine?.localeResources.en).toEqual(locale)
+    expect(engine?.localeResources.zh).toEqual(locale)
+    expect(engine?.execution.configSections[0].params.at(-1)).not.toHaveProperty("sensitive")
+  })
+})
+
+describe("mock URL Collection Engine contract", () => {
+  it("matches every production stage and parameter including independent HTTP headers", () => {
+    const manifest = JSON.parse(readFileSync(path.resolve(process.cwd(), "../extensions/engines/url_collection/engine.json"), "utf8"))
+    const engine = getMockEngineCatalogDetail("engine.lunafox.url_collection")
+    if (!engine) throw new Error("mock URL Collection Engine is unavailable")
+    expect(engine.execution).toEqual(manifest.execution)
+    for (const sectionId of ["katana", "httpx"]) {
+      expect(engine.execution.configSections.find((section) => section.id === sectionId)?.params).toContainEqual({
+        key: "headers", type: "stringArray", format: "http-headers", default: [],
+      })
+    }
+    for (const locale of ["en", "zh"] as const) {
+      const localized = localizeEngineCatalogDetail(engine, locale)
+      for (const section of localized.execution.configSections) {
+        expect(section.name).toBeTruthy()
+        for (const param of section.params) expect(param.description).toBeTruthy()
+      }
+    }
+  })
+})
 
 describe("mock Engine catalog installation", () => {
   beforeEach(resetMockEngineCatalog)
@@ -47,6 +84,7 @@ describe("mock Screenshot Engine contract", () => {
         { key: "page-timeout", type: "integer", default: 15, unit: "seconds", minimum: 1, maximum: 120 },
         { key: "concurrency", type: "integer", default: 5, minimum: 1, maximum: 20 },
         { key: "retries", type: "integer", default: 1, minimum: 0, maximum: 3 },
+        { key: "headers", type: "stringArray", format: "http-headers", default: [] },
       ],
     }])
   })
@@ -77,6 +115,7 @@ describe("mock Directory Scan Engine contract", () => {
           { key: "timeout", type: "integer", default: 86400, unit: "seconds", minimum: 60, maximum: 604800 },
           { key: "follow-redirects", type: "boolean", default: false },
           { key: "http2", type: "boolean", default: false },
+          { key: "headers", type: "stringArray", format: "http-headers", default: [] },
         ],
       }],
     })
@@ -92,7 +131,7 @@ describe("mock Nuclei vulnerability Engine contract", () => {
       defaultEnabled: true,
       params: [
         { key: "scan-targets", type: "stringArray", default: ["website"], enum: ["website", "endpoint"], minItems: 1, maxItems: 2 },
-        { key: "timeout", type: "integer", default: 3600, unit: "seconds", minimum: 60, maximum: 604800 },
+        { key: "timeout", type: "integer", default: 28800, unit: "seconds", minimum: 60, maximum: 604800 },
         { key: "concurrency", type: "integer", default: 25, minimum: 1, maximum: 100 },
         { key: "rate-limit", type: "integer", default: 150, minimum: 1, maximum: 1000 },
         { key: "request-timeout", type: "integer", default: 5, unit: "seconds", minimum: 1, maximum: 120 },
@@ -101,6 +140,7 @@ describe("mock Nuclei vulnerability Engine contract", () => {
         { key: "severity", type: "stringArray", default: ["medium", "high", "critical"], enum: ["info", "low", "medium", "high", "critical"] },
         { key: "tags", type: "stringArray", default: [] },
         { key: "exclude-tags", type: "stringArray", default: [] },
+        { key: "headers", type: "stringArray", format: "http-headers", default: [] },
       ],
     }])
   })

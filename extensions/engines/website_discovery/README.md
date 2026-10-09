@@ -85,9 +85,34 @@ owned by the external tool and reuses the completed candidate artifact.
 
 The engine uses the standard LunaFox section-level config shape:
 
-- `httpx`: `enabled`, `timeout`, `threads`, `rate-limit`, `request-timeout`, `retries`
+- `httpx`: `enabled`, `timeout`, `threads`, `rate-limit`, `request-timeout`, `retries`, `headers`
 
 The `httpx` stage defaults to enabled. `timeout` is the process timeout in seconds; `request-timeout` is mapped to httpx's per-request timeout.
+
+`headers` defaults to `[]` and declares `type: "stringArray"` plus
+`format: "http-headers"`. Each `Name: Value` entry becomes an independent `-H`
+argument with its original bytes and order; commas and additional colons are
+not split. The shared Definition contract validates defaults and submitted
+configuration, and the runtime also validates typed callers before launch.
+HTTPX command progress masks each header argument. This does not encrypt
+persisted configuration or sanitize scanner output/result evidence (including
+HTTPX's `-include-response` evidence).
+
+Server must support the format contract before installing the updated immutable
+Engine package. Existing saved plans/configs are not migrated; create new
+configuration from the updated Profile after package replacement.
+
+Verify delivery using the actual pinned scanner against an isolated local HTTP
+endpoint:
+
+```sh
+cd extensions/engines/website_discovery
+LUNAFOX_TEST_HTTPX_BIN=/absolute/path/to/httpx go test ./runtime -run TestHTTPXHeadersReachLocalEndpoint -count=1 -v
+```
+
+The optional integration test skips when that binary is not supplied. Ordinary
+tests always verify structured argv, invalid-header rejection, and progress
+masking.
 
 ## Execution And Results
 

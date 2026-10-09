@@ -61,7 +61,7 @@ describe("mock default Workflow contract", () => {
           nuclei: {
             enabled: true,
             "scan-targets": ["website"],
-            timeout: 3600,
+            timeout: 28800,
             concurrency: 25,
             "rate-limit": 150,
             "request-timeout": 5,

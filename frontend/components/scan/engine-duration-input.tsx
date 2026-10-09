@@ -214,9 +214,9 @@ export function EngineDurationInput({
         <PopoverContent
           align="end"
           aria-label={t("chooseDuration")}
-          className="w-80 p-0 shadow-lg"
+          className="w-80 p-0"
         >
-          <div className="border-b border-border/70 bg-muted/30 px-3 py-2">
+          <div className="border-b border-border/70 bg-muted/30 px-3 py-1.5">
             <div className="grid grid-cols-4 text-center">
               {([
                 ["days", "durationDays"],
@@ -292,35 +292,34 @@ export function EngineDurationInput({
           ) : null}
 
           {/* Footer action bar */}
-          <div className="flex items-center justify-between gap-2 border-t border-border/70 bg-muted/20 px-3 py-2">
+          <div className="flex items-center justify-between gap-2 border-t border-border/70 bg-muted/20 px-3 py-1.5">
             <Button
               type="button"
               variant="ghost"
-              size="sm"
+              size="xs"
               disabled={disabled || defaultValue === undefined}
               onClick={() => {
                 if (defaultValue !== undefined) setDraft(durationPartsFromSeconds(defaultValue))
               }}
-              className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5"
+              className="text-muted-foreground hover:text-foreground"
             >
               <RefreshCw aria-hidden className="size-3" />
               <span>{t("restoreDefault")}</span>
             </Button>
             <div className="flex items-center gap-1.5">
-              <Button type="button" variant="ghost" size="sm" onClick={closeAndDiscard} className="text-xs">
+              <Button type="button" variant="ghost" size="xs" onClick={closeAndDiscard}>
                 {t("cancel")}
               </Button>
               <Button
                 type="button"
                 variant="primary"
-                size="sm"
+                size="xs"
                 disabled={disabled || !validCandidate}
                 onClick={() => {
                   if (!validCandidate) return
                   onChange(candidate)
                   setOpen(false)
                 }}
-                className="text-xs"
               >
                 {t("apply")}
               </Button>

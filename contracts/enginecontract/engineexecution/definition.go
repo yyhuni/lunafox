@@ -36,6 +36,9 @@ const (
 	// a duration represented in seconds at every execution boundary.
 	ParamUnitSeconds = "seconds"
 
+	// ParamFormatHTTPHeaders declares ordered HTTP request header lines.
+	ParamFormatHTTPHeaders = "http-headers"
+
 	ConfigResourceKindWordlist = "wordlist"
 )
 
@@ -68,6 +71,7 @@ type ParamDefinition struct {
 	Type      string                `json:"type,omitempty"`
 	Default   any                   `json:"default,omitempty"`
 	Unit      string                `json:"unit,omitempty"`
+	Format    string                `json:"format,omitempty"`
 	Minimum   *int                  `json:"minimum,omitempty"`
 	Maximum   *int                  `json:"maximum,omitempty"`
 	MinLength *int                  `json:"minLength,omitempty"`
@@ -81,6 +85,30 @@ type ParamDefinition struct {
 
 type ParamResourceBinding struct {
 	Kind string `json:"kind"`
+}
+
+func (param *ParamDefinition) UnmarshalJSON(payload []byte) error {
+	type wireParam ParamDefinition
+	var value wireParam
+	wire := struct {
+		*wireParam
+		Format *string `json:"format"`
+	}{wireParam: &value}
+	decoder := json.NewDecoder(bytes.NewReader(payload))
+	decoder.DisallowUnknownFields()
+	decoder.UseNumber()
+	if err := decoder.Decode(&wire); err != nil {
+		return err
+	}
+	// Omission selects ordinary semantics; a present blank format is invalid.
+	if wire.Format != nil {
+		if *wire.Format != ParamFormatHTTPHeaders {
+			return fmt.Errorf("param %q has unsupported format %q", value.Key, *wire.Format)
+		}
+		value.Format = *wire.Format
+	}
+	*param = ParamDefinition(value)
+	return nil
 }
 
 // MarshalJSON preserves the distinction between an omitted execution-resource
@@ -327,6 +355,17 @@ func validateParamDefinition(sectionID string, param ParamDefinition) error {
 			return fmt.Errorf("%s has unsupported unit %q", path, param.Unit)
 		}
 	}
+	if param.Format != "" {
+		if param.Format != ParamFormatHTTPHeaders {
+			return fmt.Errorf("%s has unsupported format %q", path, param.Format)
+		}
+		if param.Type != ParamTypeStringArray {
+			return fmt.Errorf("%s format %q requires stringArray type", path, param.Format)
+		}
+		if param.Enum != nil {
+			return fmt.Errorf("%s format %q must not declare enum", path, param.Format)
+		}
+	}
 	if param.Resource != nil {
 		if param.Type != ParamTypeString {
 			return fmt.Errorf("%s has resource binding but type is %s", path, param.Type)
@@ -468,8 +507,11 @@ func validateParamValue(path string, value any, param ParamDefinition) error {
 		}
 		if param.MinItems != nil || param.MaxItems != nil {
 			seen := make(map[string]struct{}, len(values))
-			for _, text := range values {
+			for index, text := range values {
 				if _, exists := seen[text]; exists {
+					if param.Format == ParamFormatHTTPHeaders {
+						return fmt.Errorf("%s[%d] contains a duplicate header", path, index)
+					}
 					return fmt.Errorf("%s contains duplicate value %q", path, text)
 				}
 				seen[text] = struct{}{}
@@ -479,6 +521,9 @@ func validateParamValue(path string, value any, param ParamDefinition) error {
 			if param.Enum != nil && !stringInEnum(text, param.Enum) {
 				return fmt.Errorf("%s contains a value not in enum", path)
 			}
+		}
+		if param.Format == ParamFormatHTTPHeaders {
+			return validateHTTPHeaders(path, values)
 		}
 	}
 	return nil

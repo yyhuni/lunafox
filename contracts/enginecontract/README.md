@@ -13,5 +13,14 @@ Current packages:
 
 - `engineexecution`: the versioned `ExecutionDefinition` model, strict
   normalized decoding/cloning, and config defaulting plus closed-shape, type,
-  enum, range, length, and pattern validation. It has no v1 aliases and does not
+  enum, range, length, pattern, and semantic format validation. It has no v1 aliases and does not
   persist or expose a standalone JSON Schema projection.
+
+Parameter `format` is optional and currently accepts only `http-headers` on a
+`stringArray` without `enum`. Each value must be a `Name: Value` HTTP request
+header with a valid token name and non-empty valid value; CR/LF and invalid
+controls fail before execution. Defaults and runtime values use the same HTTP
+grammar. Empty arrays are valid, and validation preserves bytes and order.
+Errors identify the field/index without exposing header contents. Format is
+semantic metadata, independent of the parameter key; it is not a UI widget or
+a storage/log confidentiality annotation.

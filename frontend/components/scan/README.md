@@ -247,6 +247,13 @@ Scan launch and scheduled scan creation are right-side workbench layouts. They u
 
 The contract tests for `initiate-scan-dialog` and `create-scheduled-scan-dialog` guard this rule so launch drawers stay visually aligned with every shared edge panel.
 
+## Integer Parameter Step
+
+Ordinary integer parameters use `NumberStepperInput` with its default step of
+one, independent of parameter key. The form retains the configured value and
+Catalog `minimum`/`maximum`; it must not assign a coarser step to `rate` or
+other names. Users may also enter integers directly.
+
 ## Duration Parameter Editor
 
 An integer parameter is a duration only when the loaded Engine Catalog detail
@@ -265,3 +272,56 @@ and optional `maximum`; invalid drafts stay visible and disable Apply instead of
 being rounded, clamped, or silently replaced. When `maximum` is omitted, the day
 column grows on demand rather than imposing a frontend limit. Stored and
 submitted values remain integer seconds throughout.
+
+The duration picker's Restore default, Cancel, and Apply footer actions use
+the shared `Button size="xs"` contract (28px height, 12px labels), with no
+local height or font overrides.
+
+## Enum String-Array Parameter Editor
+
+Ordinary `stringArray` parameters with a non-empty `enum` all use the same
+`EnumStringArrayPopover`, independent of parameter key or Engine identity.
+Its trigger summarizes committed values; the overlay contains a labeled
+shared Checkbox Group. Each toggle commits immediately, retains enum declaration
+order, and enforces `minItems` and `maxItems` without applying defaults.
+Arrays without enum options retain the ordinary free-text array input.
+Explicit semantic editors such as `format: "http-headers"` keep precedence.
+The option region follows the scan picker geometry with `max-h-52 sm:max-h-72`
+and `overflow-y-auto`; the popover remains anchored while longer enum lists
+scroll inside that region.
+
+## HTTP Headers Parameter Editor
+
+A `stringArray` parameter renders the headers popover only when the loaded
+Engine Catalog detail explicitly declares `format: "http-headers"`. The form
+must not infer the control from a parameter key, a default value, or an
+engine identity; engines that do not declare the format keep the ordinary
+string-array input and non-HTTP engines never see the parameter at all.
+
+The editor commits canonical `"Name: Value"` string rows. Preset buttons
+prefill only the header name (`Cookie`, `Authorization` plus the `Bearer`
+scheme prefix); credential values are never templated. Rows missing a name
+or an entirely empty value are not serialized. Draft rows are local until
+`Done`; outside dismissal never mutates the form, and `Clear`
+resets only the draft — the committed value changes exclusively through
+`Done`. Values are visually masked by default in the popover. The Server
+Definition/Catalog contract now supports `format: "http-headers"` only on
+`stringArray` without `enum`; the service rejects unsupported combinations.
+Website Discovery, Directory FFUF, Nuclei, URL Collection Katana/HTTPX, and
+Screenshot capture now declare real Engine header parameters. Header values are
+masked by the editor based on their semantic format; Engine metadata carries no
+generic `sensitive` annotation. Website Discovery masks header arguments in command
+progress; the other affected runtimes retain aggregate-only progress.
+
+Two non-obvious layout constraints are locked by
+`engine-http-headers-popover.contract.test.ts`: the entry list's
+`overflow-y-auto` container keeps `p-1` because a scroll box also clips the
+other axis and would otherwise shave the inputs' 3px focus rings; and the
+popover positions with `positionMethod="fixed"` plus `collisionPadding`
+because scan drawers animate with transforms that break non-fixed anchor
+math. The popover shares the `EngineDurationInput` band layout — `p-0`
+content with muted `bg-muted/30` toolbar and `bg-muted/20` footer bands —
+and uses `lib/ui/compact-control-tier.ts` for its compact 28px controls
+(one step below the form's 32px inputs). The duration picker uses the shared
+`Button size="xs"` for the same action geometry. Both popovers keep
+`px-3 py-1.5` bands.

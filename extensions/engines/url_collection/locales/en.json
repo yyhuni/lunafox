@@ -8,6 +8,9 @@
       "description": "Probe collected URLs using httpx and report verified endpoint metadata.",
       "name": "HTTPX",
       "params": {
+        "headers": {
+          "description": "HTTP request headers in Name: Value form, each mapped to a separate -H argument."
+        },
         "rate-limit": {
           "description": "Maximum httpx requests per second mapped to -rate-limit."
         },
@@ -37,6 +40,9 @@
         },
         "depth": {
           "description": "Maximum Katana crawl depth mapped to -d."
+        },
+        "headers": {
+          "description": "HTTP request headers in Name: Value form, each mapped to a separate -H argument."
         },
         "rate-limit": {
           "description": "Maximum Katana requests per second mapped to -rl."

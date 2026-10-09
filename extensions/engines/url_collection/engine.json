@@ -34,7 +34,8 @@
           {"key": "rate-limit", "type": "integer", "default": 30, "minimum": 1, "maximum": 500},
           {"key": "request-timeout", "type": "integer", "default": 10, "unit": "seconds", "minimum": 1, "maximum": 120},
           {"key": "retries", "type": "integer", "default": 1, "minimum": 0, "maximum": 5},
-          {"key": "delay", "type": "integer", "default": 0, "unit": "seconds", "minimum": 0, "maximum": 30}
+          {"key": "delay", "type": "integer", "default": 0, "unit": "seconds", "minimum": 0, "maximum": 30},
+          {"key": "headers", "type": "stringArray", "format": "http-headers", "default": []}
         ]
       },
       {
@@ -55,7 +56,8 @@
           {"key": "threads", "type": "integer", "default": 25, "minimum": 1, "maximum": 200},
           {"key": "rate-limit", "type": "integer", "default": 150, "minimum": 1, "maximum": 1000},
           {"key": "request-timeout", "type": "integer", "default": 10, "unit": "seconds", "minimum": 1, "maximum": 120},
-          {"key": "retries", "type": "integer", "default": 1, "minimum": 0, "maximum": 5}
+          {"key": "retries", "type": "integer", "default": 1, "minimum": 0, "maximum": 5},
+          {"key": "headers", "type": "stringArray", "format": "http-headers", "default": []}
         ]
       }
     ]

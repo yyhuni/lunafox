@@ -278,6 +278,11 @@ func normalizeRuntimeParamValue(path string, value any, param ParamDefinition) (
 				return nil, fmt.Errorf("%s contains a value not in: %s", path, strings.Join(param.Enum, ", "))
 			}
 		}
+		if param.Format == ParamFormatHTTPHeaders {
+			if err := validateHTTPHeaders(path, values); err != nil {
+				return nil, err
+			}
+		}
 		return values, nil
 	default:
 		return nil, fmt.Errorf("invalid execution definition: %s has unsupported type %q", path, param.Type)

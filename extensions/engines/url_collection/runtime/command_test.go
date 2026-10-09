@@ -76,3 +76,41 @@ func containsArgument(args []string, wanted string) bool {
 	}
 	return false
 }
+
+func TestTargetHTTPToolsPreserveAndValidateIndependentHeaders(t *testing.T) {
+	builds := map[string]func([]string) (toolCommand, error){
+		"katana": func(headers []string) (toolCommand, error) {
+			return buildKatanaCommand("/inputs", "/output", enginecontract.KatanaConfig{Timeout: 60, Depth: 1, Concurrency: 1, RateLimit: 10, RequestTimeout: 2, Headers: headers})
+		},
+		"httpx": func(headers []string) (toolCommand, error) {
+			return buildHTTPXCommand("/inputs", "/output", enginecontract.HTTPXConfig{Timeout: 60, Threads: 1, RateLimit: 10, RequestTimeout: 2, Headers: headers})
+		},
+	}
+	for name, build := range builds {
+		t.Run(name, func(t *testing.T) {
+			headers := []string{"Cookie: a=1; b=two", "Authorization: Bearer local-test", `X-Fields: a,b:c; "quoted"`, "X-Fields: second"}
+			command, err := build(headers)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got []string
+			for index, arg := range command.args {
+				if arg == "-H" {
+					got = append(got, command.args[index+1])
+				}
+			}
+			if !reflect.DeepEqual(got, headers) {
+				t.Fatalf("headers = %#v, want %#v", got, headers)
+			}
+			for _, header := range []string{"secret-without-colon", "Bad Name: secret", "X-Secret: ", "X-Secret: secret\r\nInjected: yes", "X-Secret: secret\x00"} {
+				command, err := build([]string{"X-Valid: ok", header})
+				if err == nil || !strings.Contains(err.Error(), name+".headers[1]") || strings.Contains(err.Error(), "secret") {
+					t.Fatalf("invalid header error = %v", err)
+				}
+				if len(command.args) != 0 {
+					t.Fatal("invalid config returned executable arguments")
+				}
+			}
+		})
+	}
+}

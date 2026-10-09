@@ -11,6 +11,9 @@
         "concurrency": {
           "description": "Concurrent browser pages"
         },
+        "headers": {
+          "description": "HTTP request headers for both probing and browser navigation, in Name: Value form."
+        },
         "page-timeout": {
           "description": "Page wait timeout in seconds"
         },

@@ -3,9 +3,11 @@ package urlcollectionruntime
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	enginecontract "github.com/yyhuni/lunafox/engines/url_collection/contract"
+	"golang.org/x/net/http/httpguts"
 )
 
 // toolCommand is the complete, fixed invocation of one image-local tool.
@@ -43,9 +45,13 @@ func buildKatanaCommand(seedPath, outputPath string, config enginecontract.Katan
 			return toolCommand{}, fmt.Errorf("katana %s is invalid", label)
 		}
 	}
+	headerArgs, err := buildHeaderArgs("katana", config.Headers)
+	if err != nil {
+		return toolCommand{}, err
+	}
 	return toolCommand{
 		name: "katana",
-		args: []string{
+		args: append([]string{
 			"-list", seedPath, "-o", outputPath, "-silent",
 			"-d", strconv.FormatInt(config.Depth, 10),
 			"-c", strconv.FormatInt(config.Concurrency, 10),
@@ -54,7 +60,7 @@ func buildKatanaCommand(seedPath, outputPath string, config enginecontract.Katan
 			"-retry", strconv.FormatInt(config.Retries, 10),
 			"-rd", strconv.FormatInt(config.Delay, 10),
 			"-fs", "rdn", "-dr",
-		},
+		}, headerArgs...),
 		timeout: time.Duration(config.Timeout) * time.Second,
 	}, nil
 }
@@ -90,9 +96,13 @@ func buildHTTPXCommand(inputPath, outputPath string, config enginecontract.HTTPX
 			return toolCommand{}, fmt.Errorf("httpx %s is invalid", label)
 		}
 	}
+	headerArgs, err := buildHeaderArgs("httpx", config.Headers)
+	if err != nil {
+		return toolCommand{}, err
+	}
 	return toolCommand{
 		name: "httpx",
-		args: []string{
+		args: append([]string{
 			"-list", inputPath, "-json", "-silent", "-no-color",
 			"-status-code", "-content-type", "-content-length", "-location", "-title", "-server",
 			"-tech-detect", "-cdn", "-vhost", "-include-response", "-rstr", "2000", "-random-agent",
@@ -101,7 +111,21 @@ func buildHTTPXCommand(inputPath, outputPath string, config enginecontract.HTTPX
 			"-timeout", strconv.FormatInt(config.RequestTimeout, 10),
 			"-retries", strconv.FormatInt(config.Retries, 10),
 			"-o", outputPath,
-		},
+		}, headerArgs...),
 		timeout: time.Duration(config.Timeout) * time.Second,
 	}, nil
+}
+
+// Both target-HTTP tools accept repeated -H values. Typed callers can bypass
+// Server admission, so validate without exposing credentials in errors.
+func buildHeaderArgs(section string, headers []string) ([]string, error) {
+	args := make([]string, 0, 2*len(headers))
+	for index, header := range headers {
+		name, value, found := strings.Cut(header, ":")
+		if !found || !httpguts.ValidHeaderFieldName(name) || strings.TrimSpace(value) == "" || !httpguts.ValidHeaderFieldValue(value) {
+			return nil, fmt.Errorf("%s.headers[%d] must contain a valid Name: Value HTTP header", section, index)
+		}
+		args = append(args, "-H", header)
+	}
+	return args, nil
 }

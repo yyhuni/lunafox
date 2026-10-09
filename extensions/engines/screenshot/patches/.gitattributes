@@ -1,0 +1,2 @@
+# Unified diff context prefixes are required before blank and tab-indented lines.
+httpx-v1.10.0-browser-headers.patch whitespace=-blank-at-eol,-space-before-tab
