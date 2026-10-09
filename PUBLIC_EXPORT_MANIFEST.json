@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:e7e5b018f8e67ca2e14623124a3312b81841fdc0c4af14ff5db7e72db5dc7a69",
-  "releaseTag": "v0.0.1-alpha.212",
+  "sourceRevisionDigest": "sha256:8f27a8add965c10cc2386b7e86ed5b3d42b4dd48a545c0ed42f3406fa3b41b0f",
+  "releaseTag": "v0.0.1-alpha.213",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "19063930290743679f9d83c732eed1fa621e28d37f6a2daebbd2e39e5d366561"
+      "sha256": "ee0b5963cb83352c982c03fef6e264047570848b18a87bb7e01da90f8b0f0899"
     },
     {
       "path": "README.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "83a0dff60a9aeb31dfc75a4acef107022b682eaf3b1f762f473b0d66dd3646c1"
+      "sha256": "86aae26b1437ff01b7dd6ba425f50d95ce2d068a6cb7d6b16865e6500d4f8c27"
     },
     {
       "path": "agent/bin/sha256-8b9983c2f060cd7a98329a55aeffe58e6e9fb7e1af0d1bda7813bf6ea14520ca/agent-bundle.sha256",
@@ -91,8 +91,8 @@
       "path": "agent/bin/sha256-8b9983c2f060cd7a98329a55aeffe58e6e9fb7e1af0d1bda7813bf6ea14520ca/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
-      "size": 9181,
-      "sha256": "2810cec74ee54c61c947e033eb2126e1cb602db0d18371328ea349c1ac103d70"
+      "size": 9173,
+      "sha256": "b11b4f0358a34b7af3cdb793132c937cefca55df82063442c88ca05884e7ec8d"
     },
     {
       "path": "agent/bin/sha256-8b9983c2f060cd7a98329a55aeffe58e6e9fb7e1af0d1bda7813bf6ea14520ca/lunafox-agent-linux-amd64",
@@ -2534,15 +2534,8 @@
       "path": "extensions/engines/screenshot/tests/container/container-conformance.sh",
       "type": "file",
       "mode": "0755",
-      "size": 3410,
-      "sha256": "9eb5652921fd2271f9fdfda007193c9b6a617f334636f9eb9672a683f80576e8"
-    },
-    {
-      "path": "extensions/engines/screenshot/tests/container/header_fixture.py",
-      "type": "file",
-      "mode": "0644",
-      "size": 1055,
-      "sha256": "0bdcb7d322d42b00b96d04d0c03783f26450b398272bda1e5371c616792e2567"
+      "size": 4565,
+      "sha256": "b57fff09c70dbf37db7b0f2cf6975c1aac040e97a213eb5fd5c75e5d083d3fdf"
     },
     {
       "path": "extensions/engines/screenshot/tests/container/image-conformance.json",
@@ -17642,6 +17635,13 @@
       "mode": "0644",
       "size": 773,
       "sha256": "b837dd3893e65a4635a1b7d455f1849216901f370630d8ac4af87c2a213cdeee"
+    },
+    {
+      "path": "release-notes/v0.0.1-alpha.213.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 1008,
+      "sha256": "63f27cb5952dd064acf47fa29810783753e452b5dcd22271d4320a7caaeb664a"
     },
     {
       "path": "resources/alloy/config.alloy",

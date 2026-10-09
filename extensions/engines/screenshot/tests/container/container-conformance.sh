@@ -4,7 +4,6 @@ set -eu
 engine_path="${1:-/opt/lunafox-engine/bin/screenshot-runtime-engine}"
 tools_dir=/opt/lunafox-tools/bin
 versions_file=/opt/lunafox-tools/VERSIONS
-fixture_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 root=/tmp/lunafox-screenshot-conformance
 input="$root/input.txt"
 output="$root/httpx.jsonl"
@@ -40,12 +39,47 @@ chromium --version 2>&1 | grep -F '131.0.6778.85' >/dev/null || fail "Chromium b
 cwebp -version 2>&1 | grep -F '1.6.0' >/dev/null || fail "cwebp binary version mismatch"
 
 mkdir -p "$root" "$workspace"
-python3 "$fixture_dir/header_fixture.py" >"$root/requests.jsonl" 2>/dev/null &
+# The release checker copies this script alone. Keep the fixture inline so
+# both the image build mount and that single-file copy can start it.
+cat >"$root/header_fixture.py" <<'PY'
+import json
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+EXPECTED = {
+    "Cookie": "a=1; b=two",
+    "Authorization": "Bearer local-test-token",
+    "X-Fields": 'a,b:c; "quoted"',
+}
+
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == "/health":
+            self.send_response(200)
+            self.end_headers()
+            return
+        matched = all(self.headers.get(key) == value for key, value in EXPECTED.items())
+        print(json.dumps({
+            "browser": self.headers.get("Sec-Fetch-Dest") == "document",
+            "matched": matched,
+        }), flush=True)
+        self.send_response(200 if matched else 401)
+        self.send_header("Content-Type", "text/html")
+        self.end_headers()
+        self.wfile.write(b"<!doctype html><title>LunaFox Screenshot</title><main>offline conformance</main>")
+
+    def log_message(self, *_args):
+        pass
+
+HTTPServer(("127.0.0.1", 18080), Handler).serve_forever()
+PY
+python3 "$root/header_fixture.py" >"$root/requests.jsonl" 2>"$root/fixture.err" &
 server_pid=$!
 i=0
 while ! (python3 -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:18080/health", timeout=1).read()' >/dev/null 2>&1); do
 	i=$((i + 1))
-	[ "$i" -lt 20 ] || fail "local fixture server did not start"
+	if [ "$i" -ge 50 ]; then
+		fail "local fixture server did not start: $(tr '\n' ' ' <"$root/fixture.err")"
+	fi
 	sleep 0.1
 done
 
