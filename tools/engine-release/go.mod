@@ -7,6 +7,8 @@ require github.com/yyhuni/lunafox/contracts v0.0.0
 require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
+	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
 )
 
 replace github.com/yyhuni/lunafox/contracts => ../../contracts

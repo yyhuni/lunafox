@@ -111,8 +111,16 @@ func (r *Runtime) runHTTPXStage(ctx context.Context, run *websiteDiscoveryRun) (
 
 func renderHTTPXCommand(command httpxCommand) string {
 	parts := []string{"httpx"}
+	maskNext := false
 	for _, arg := range command.args {
+		// Progress is persisted outside the Engine; execution keeps the real argv.
+		if maskNext {
+			parts = append(parts, "[REDACTED]")
+			maskNext = false
+			continue
+		}
 		parts = append(parts, quoteCommandPartForProgress(arg))
+		maskNext = arg == "-H"
 	}
 	return strings.Join(parts, " ")
 }

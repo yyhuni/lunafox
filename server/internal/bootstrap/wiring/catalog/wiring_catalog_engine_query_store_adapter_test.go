@@ -3,6 +3,8 @@ package catalogwiring
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	engineexecution "github.com/yyhuni/lunafox/contracts/enginecontract/engineexecution"
@@ -11,6 +13,7 @@ import (
 	"github.com/yyhuni/lunafox/server/internal/installedengines"
 	catalogapp "github.com/yyhuni/lunafox/server/internal/modules/catalog/application"
 	catalogdomain "github.com/yyhuni/lunafox/server/internal/modules/catalog/domain"
+	catalogdto "github.com/yyhuni/lunafox/server/internal/modules/catalog/dto"
 )
 
 type engineCatalogPackageReaderStub struct {
@@ -65,6 +68,12 @@ func TestEngineCatalogAdapterSeparatesSummaryAndDetail(t *testing.T) {
 	if got := item.ConfigSections[0].Params[0].Unit; got != engineexecution.ParamUnitSeconds {
 		t.Fatalf("detail unit = %q, want %q", got, engineexecution.ParamUnitSeconds)
 	}
+	if got := item.ConfigSections[0].Params[1].Format; got != engineexecution.ParamFormatHTTPHeaders {
+		t.Fatalf("detail format = %q, want %q", got, engineexecution.ParamFormatHTTPHeaders)
+	}
+	if item.ConfigSections[0].Params[0].Format != "" {
+		t.Fatal("omitted format was changed")
+	}
 	if _, exists := item.LocaleResources["zh"]["sections"]; !exists {
 		t.Fatalf("detail missing locale resources: %+v", item.LocaleResources)
 	}
@@ -77,6 +86,45 @@ func TestEngineCatalogAdapterMapsUnknownEngineToNotFound(t *testing.T) {
 	adapter := newEngineCatalogQueryStoreAdapter(engineCatalogPackageReaderStub{})
 	if _, err := adapter.GetEngineByID(context.Background(), "engine.lunafox.unknown"); !errors.Is(err, catalogapp.ErrEngineNotFound) {
 		t.Fatalf("GetEngineByID() error = %v", err)
+	}
+}
+
+func TestWebsiteDiscoveryPackageProjectsRealHeaderMetadata(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "..", "..", "extensions", "engines", "website_discovery")
+	entries := []enginepackagecatalog.PackageLayoutEntry{{Path: "package.json", Mode: 0o644, Payload: []byte(`{
+		"packageFormatVersion":"lunafox.engine-package.v2",
+		"engineId":"engine.lunafox.website_discovery",
+		"engineVersion":"1.0.0",
+		"runtimeImage":{"refs":["docker.io/lunafox/lunafox-engine-website-discovery@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]}
+	}`)}}
+	for _, path := range []string{"engine.json", "locales/en.json", "locales/zh.json"} {
+		payload, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(path)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		entries = append(entries, enginepackagecatalog.PackageLayoutEntry{Path: path, Mode: 0o644, Payload: payload})
+	}
+	layout, err := enginepackagecatalog.DecodeEnginePackageLayout(entries, "website-discovery-fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	adapter := newEngineCatalogQueryStoreAdapter(engineCatalogPackageReaderStub{packages: []installedengines.ResolvedInstalledEnginePackage{{Registration: testInstalledEngineRecord(), Layout: layout}}})
+	item, err := adapter.GetEngineByID(context.Background(), "engine.lunafox.website_discovery")
+	if err != nil {
+		t.Fatal(err)
+	}
+	detail := catalogdto.NewEngineCatalogDetailOutput(item)
+	params := detail.Execution.ConfigSections[0].Params
+	headers := params[len(params)-1]
+	if headers.Key != "headers" || headers.Type != engineexecution.ParamTypeStringArray || headers.Format != engineexecution.ParamFormatHTTPHeaders {
+		t.Fatalf("package-to-Catalog headers = %+v", headers)
+	}
+	defaults, err := engineexecution.NormalizeAndValidateConfig(map[string]any{}, layout.Definition.EngineDefinition.Execution)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if values, ok := defaults["httpx"].(map[string]any)["headers"].([]string); !ok || values == nil || len(values) != 0 {
+		t.Fatalf("package header defaults = %#v", defaults)
 	}
 }
 
@@ -118,6 +166,9 @@ func testResolvedEnginePackage(t *testing.T) installedengines.ResolvedInstalledE
 								Default: 30,
 								Unit:    engineexecution.ParamUnitSeconds,
 								Minimum: &minimum,
+							}, {
+								Key: "headers", Type: engineexecution.ParamTypeStringArray,
+								Format: engineexecution.ParamFormatHTTPHeaders, Default: []string{},
 							}},
 						}},
 					},

@@ -73,6 +73,12 @@ Registry is generated uniformly for every Engine and is not Catalog membership
 metadata. The adapter rejects a stale `inputs` field rather than silently
 dropping or defaulting it.
 
+Detail/install parameter metadata accepts omitted `format` or `http-headers`
+on `stringArray` without `enum`. Unknown, null, or incompatible formats fail
+at the service boundary. The service preserves supported metadata for the
+form, whose editor choice depends on type and format rather than parameter
+names. `sensitive` is not part of the backend contract.
+
 ## AIP Boundary Adaptation
 
 Backend HTTP/JSON boundaries follow the repository's Google AIP precedence rules. Frontend pages and components must not adapt directly to backend AIP DTOs.

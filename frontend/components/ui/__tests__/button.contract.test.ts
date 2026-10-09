@@ -8,6 +8,11 @@ const outlineVariant = source.slice(source.indexOf("outline:"), source.indexOf("
 const surfaceVariant = source.slice(source.indexOf("surface:"), source.indexOf("secondary:"))
 
 describe("button contract", () => {
+  it("owns compact editor actions through the xs size", () => {
+    expect(source).toContain('xs: `${buttonStructuralSizeClassNames.xs} gap-1.5 px-3 text-xs has-[>svg]:px-2.5`')
+    expect(readme).toContain('`xs`: 28px height with 12px labels')
+  })
+
   it("uses theme-driven radius without hover motion for primary actions", () => {
     expect(source).toContain("radius-control")
     expect(source).not.toContain("hover:border-b-2")

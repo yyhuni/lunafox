@@ -40,6 +40,12 @@ The `capture` Engine section exposes only:
 | `page-timeout` | 15 | 1--120 | One page screenshot timeout in seconds |
 | `concurrency` | 5 | 1--20 | Direct HTTPX `-threads` value |
 | `retries` | 1 | 0--3 | HTTPX probe retry count |
+| `headers` | `[]` | HTTP header lines | Repeated `Name: Value` headers for probing and browser navigation |
+
+`headers` uses `type: stringArray` and `format: http-headers`. Empty headers
+preserve existing requests; values containing invalid names, empty values, or
+control characters fail before HTTPX starts without including credentials in
+errors. Header lines are passed as separate `-H` arguments without shell parsing.
 
 `configSections[].defaultEnabled` remains an Engine-internal section default;
 it does not enable the Workflow Step. A disabled Workflow Step is skipped by
@@ -54,6 +60,11 @@ The image pins HTTPX `v1.10.0`, Chromium `131.0.6778.85` from a dated Debian
 security snapshot with architecture-specific SHA256 verification, and official
 cwebp/libwebp `v1.6.0`. The same browser build is supported on amd64 and arm64.
 Browser acquisition is offline at runtime: HTTPX always uses `-system-chrome`.
+The pinned HTTPX source has one local patch in `patches/`: Rod replaces the
+entire extra-header map on each call, so all browser headers must be installed
+in one call. The build fails if this patch no longer applies. Offline image
+conformance requires Cookie, Authorization, and a punctuation-bearing header
+on both the HTTPX probe and a Chromium document navigation.
 The image fixes Chromium to headless software rendering with no zygote and no
 shared-memory dependency so the same root runtime remains stable on amd64 and
 arm64. The image and its subprocesses run as root without browser sandbox

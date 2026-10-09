@@ -1,6 +1,7 @@
 export const buttonStructuralSizeClassNames = {
   default: "h-9",
   sm: "h-8",
+  xs: "h-7",
   lg: "h-10",
   "action-card": "h-full min-h-16 w-full",
   content: "h-auto",

@@ -101,6 +101,38 @@ describe("engine-catalog.service contract", () => {
     )
   })
 
+  it("preserves supported formats and omitted metadata in detail and install responses", async () => {
+    const payload = websiteEnginePayload(true)
+    const data = { ...payload, execution: { ...payload.execution, configSections: [{ id: "httpx", params: [
+      { key: "request-fields", type: "stringArray", format: "http-headers", default: [] },
+      { key: "headers", type: "stringArray", default: [] },
+    ] }] } }
+    apiClientMocks.get.mockResolvedValue({ data })
+    apiClientMocks.post.mockResolvedValue({ data })
+    for (const result of [await getEngineCatalogDetail(payload.engineId), await installEngine({ artifactRef: payload.artifactRef, allowReplacement: false })]) {
+      expect(result.execution.configSections[0].params).toEqual(data.execution.configSections[0].params)
+      expect(result.execution.configSections[0].params[1]).not.toHaveProperty("format")
+    }
+  })
+
+  it("rejects unknown, misplaced, null, and enum-constrained formats at both response boundaries", async () => {
+    const payload = websiteEnginePayload(true)
+    for (const param of [
+      { key: "fields", type: "stringArray", format: "unknown" },
+      { key: "fields", type: "stringArray", format: "" },
+      { key: "fields", type: "stringArray", format: null },
+      { key: "fields", type: "string", format: "http-headers" },
+      { key: "fields", type: "integer", format: "http-headers" },
+      { key: "fields", type: "stringArray", format: "http-headers", enum: ["X: v"] },
+    ]) {
+      const data = { ...payload, execution: { ...payload.execution, configSections: [{ id: "httpx", params: [param] }] } }
+      apiClientMocks.get.mockResolvedValue({ data })
+      apiClientMocks.post.mockResolvedValue({ data })
+      await expect(getEngineCatalogDetail(payload.engineId)).rejects.toThrow(/format/)
+      await expect(installEngine({ artifactRef: payload.artifactRef, allowReplacement: false })).rejects.toThrow(/format/)
+    }
+  })
+
   it("rejects every manifest version except engine.v5", async () => {
     apiClientMocks.get.mockResolvedValue({
       data: [{ ...engineV5Payload(false), manifestVersion: "engine.v6" }],

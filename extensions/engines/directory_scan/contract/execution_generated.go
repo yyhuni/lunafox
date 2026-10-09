@@ -94,6 +94,8 @@ type FfufConfig struct {
 	FollowRedirects bool
 	// Source: engine.json.execution.configSections["ffuf"].params["http2"].
 	Http2 bool
+	// Source: engine.json.execution.configSections["ffuf"].params["headers"].
+	Headers []string
 }
 
 type PlatformResources struct {

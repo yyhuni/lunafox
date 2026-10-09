@@ -1,4 +1,5 @@
 import type { EngineCatalogDetail } from "@/types/engine-catalog.types"
+import type { EngineConfigSectionManifestDefinition, EngineParamManifestDefinition } from "@/types/engine-config.types"
 
 // Keep built-in mock strings aligned with the packaged Engine locale resources.
 const engines: EngineCatalogDetail[] = [
@@ -12,12 +13,8 @@ const engines: EngineCatalogDetail[] = [
   createDirectoryEngine(),
   createScreenshotEngine(),
   createNucleiVulnerabilityEngine(),
-  createEngine("website_discovery", {
-    displayName: "Website Discovery", description: "Probe target-scoped URL lists for live websites and report website findings.", sectionName: "HTTPX", sectionDescription: "Probe Server-materialized URLs using httpx.", timeoutDescription: "Runtime timeout in seconds for the httpx process.",
-  }, "httpx"),
-  createEngine("url_collection", {
-    displayName: "URL Collection", description: "Collect target-scoped URLs from historical sources and crawling, then report endpoint findings.", sectionName: "Waymore", sectionDescription: "Collect historical URLs for domain Targets using Waymore.", timeoutDescription: "Runtime timeout in seconds for the Waymore process.",
-  }, "waymore"),
+  createWebsiteDiscoveryEngine(),
+  createUrlCollectionEngine(),
 ]
 
 let operatorEngine: EngineCatalogDetail | undefined
@@ -97,6 +94,9 @@ type MockEngineLocale = {
 function createEngine(localId: string, locale: MockEngineLocale, sectionId: string): EngineCatalogDetail {
   const engineId = `engine.lunafox.${localId}`
   const paramKey = "timeout"
+  const params: EngineParamManifestDefinition[] = [
+    { key: paramKey, type: "integer", default: 3600, unit: "seconds", minimum: 1 },
+  ]
   return {
     name: `engines/${engineId}`,
     engineId,
@@ -112,21 +112,147 @@ function createEngine(localId: string, locale: MockEngineLocale, sectionId: stri
       configSections: [{
         id: sectionId,
         defaultEnabled: true,
-        params: [{ key: paramKey, type: "integer", default: 3600, unit: "seconds", minimum: 1 }],
+        params,
       }],
     },
     localeResources: buildEnglishLocaleResources(() => buildLocale(locale, sectionId)),
   }
 }
 
+function createWebsiteDiscoveryEngine(): EngineCatalogDetail {
+  const locale = {
+    displayName: "Website Discovery", description: "Probe target-scoped URL lists for live websites and report website findings.", sectionName: "HTTPX", sectionDescription: "Probe Server-materialized URLs using httpx.", timeoutDescription: "Runtime timeout in seconds for the httpx process.",
+  }
+  const engine = createEngine("website_discovery", locale, "httpx")
+  engine.execution.configSections[0].params = [
+    { key: "timeout", type: "integer", default: 14400, unit: "seconds", minimum: 60 },
+    { key: "threads", type: "integer", default: 25, minimum: 1 },
+    { key: "rate-limit", type: "integer", default: 150, minimum: 1 },
+    { key: "request-timeout", type: "integer", default: 10, unit: "seconds", minimum: 1 },
+    { key: "retries", type: "integer", default: 1, minimum: 0 },
+    { key: "headers", type: "stringArray", format: "http-headers", default: [] },
+  ]
+  engine.localeResources = buildEnglishLocaleResources(() => ({
+    engine: { displayName: locale.displayName, description: locale.description },
+    sections: {
+      httpx: {
+        name: locale.sectionName,
+        description: locale.sectionDescription,
+        params: {
+          timeout: { description: locale.timeoutDescription },
+          threads: { description: "Number of concurrent httpx workers mapped to -threads." },
+          "rate-limit": { description: "Maximum httpx requests per second mapped to -rate-limit." },
+          "request-timeout": { description: "Per-request timeout in seconds mapped to -timeout." },
+          retries: { description: "Number of httpx retries mapped to -retries." },
+          headers: { description: "HTTP request headers in Name: Value form, each mapped to a separate -H argument." },
+        },
+      },
+    },
+  }))
+  return engine
+}
+
+function createUrlCollectionEngine(): EngineCatalogDetail {
+  const locale = {
+    displayName: "URL Collection", description: "Collect target-scoped URLs from historical sources and crawling, then report endpoint findings.", sectionName: "Waymore", sectionDescription: "Collect historical URLs for domain Targets using Waymore.", timeoutDescription: "Runtime timeout in seconds for the Waymore process.",
+  }
+  const engine = createEngine("url_collection", locale, "waymore")
+  engine.execution.configSections = [
+    {
+      id: "waymore",
+      defaultEnabled: true,
+      params: [{ key: "timeout", type: "integer", default: 28800, unit: "seconds", minimum: 60, maximum: 604800 }],
+    },
+    {
+      id: "katana",
+      defaultEnabled: true,
+      params: [
+        { key: "timeout", type: "integer", default: 28800, unit: "seconds", minimum: 60, maximum: 604800 },
+        { key: "depth", type: "integer", default: 3, minimum: 1, maximum: 10 },
+        { key: "concurrency", type: "integer", default: 10, minimum: 1, maximum: 100 },
+        { key: "rate-limit", type: "integer", default: 30, minimum: 1, maximum: 500 },
+        { key: "request-timeout", type: "integer", default: 10, unit: "seconds", minimum: 1, maximum: 120 },
+        { key: "retries", type: "integer", default: 1, minimum: 0, maximum: 5 },
+        { key: "delay", type: "integer", default: 0, unit: "seconds", minimum: 0, maximum: 30 },
+        { key: "headers", type: "stringArray", format: "http-headers", default: [] },
+      ],
+    },
+    {
+      id: "uro",
+      defaultEnabled: true,
+      params: [
+        { key: "timeout", type: "integer", default: 3600, unit: "seconds", minimum: 60, maximum: 21600 },
+        { key: "whitelist", type: "stringArray", default: [] },
+        { key: "blacklist", type: "stringArray", default: [] },
+        { key: "filters", type: "stringArray", default: [], enum: ["hasparams", "noparams", "hasext", "noext", "allexts", "keepcontent", "keepslash", "vuln"] },
+      ],
+    },
+    {
+      id: "httpx",
+      defaultEnabled: true,
+      params: [
+        { key: "timeout", type: "integer", default: 14400, unit: "seconds", minimum: 60, maximum: 604800 },
+        { key: "threads", type: "integer", default: 25, minimum: 1, maximum: 200 },
+        { key: "rate-limit", type: "integer", default: 150, minimum: 1, maximum: 1000 },
+        { key: "request-timeout", type: "integer", default: 10, unit: "seconds", minimum: 1, maximum: 120 },
+        { key: "retries", type: "integer", default: 1, minimum: 0, maximum: 5 },
+        { key: "headers", type: "stringArray", format: "http-headers", default: [] },
+      ],
+    },
+  ]
+  engine.localeResources = buildEnglishLocaleResources(() => ({
+    engine: { displayName: locale.displayName, description: locale.description },
+    sections: {
+      waymore: buildLocale(locale, "waymore").sections.waymore,
+      katana: {
+        name: "Katana",
+        description: "Crawl Server-materialized URL seeds using Katana.",
+        params: {
+          timeout: { description: "Runtime timeout in seconds for the Katana process." },
+          depth: { description: "Maximum crawl depth." },
+          concurrency: { description: "Concurrent crawler workers." },
+          "rate-limit": { description: "Maximum requests per second." },
+          "request-timeout": { description: "Per-request timeout in seconds." },
+          retries: { description: "Retries per request." },
+          delay: { description: "Delay between requests in seconds." },
+          headers: { description: "HTTP request headers in Name: Value form, each mapped to a separate -H argument." },
+        },
+      },
+      uro: {
+        name: "Uro",
+        description: "Filter collected URLs using Uro before optional verification.",
+        params: {
+          timeout: { description: "Runtime timeout in seconds for the Uro process." },
+          whitelist: { description: "File extensions retained by Uro." },
+          blacklist: { description: "File extensions excluded by Uro." },
+          filters: { description: "Filter URLs by parameters, extensions, content, and trailing slashes." },
+        },
+      },
+      httpx: {
+        name: "HTTPX",
+        description: "Probe collected URLs using httpx and report verified endpoint metadata.",
+        params: {
+          timeout: { description: "Runtime timeout in seconds for the httpx process." },
+          threads: { description: "Concurrent httpx workers." },
+          "rate-limit": { description: "Maximum requests per second." },
+          "request-timeout": { description: "Per-request timeout in seconds." },
+          retries: { description: "Retries per request." },
+          headers: { description: "HTTP request headers in Name: Value form, each mapped to a separate -H argument." },
+        },
+      },
+    },
+  }))
+  return engine
+}
+
 function createNucleiVulnerabilityEngine(): EngineCatalogDetail {
   const engineId = "engine.lunafox.nuclei_vulnerability"
-  const configSections = [{
+  const configSections: EngineConfigSectionManifestDefinition[] = [{
     id: "nuclei",
     defaultEnabled: true,
     params: [
       { key: "scan-targets", type: "stringArray" as const, default: ["website"], enum: ["website", "endpoint"], minItems: 1, maxItems: 2 },
-      { key: "timeout", type: "integer" as const, default: 3600, unit: "seconds" as const, minimum: 60, maximum: 604800 },
+      { key: "timeout", type: "integer" as const, default: 28800, unit: "seconds" as const, minimum: 60, maximum: 604800 },
       { key: "concurrency", type: "integer" as const, default: 25, minimum: 1, maximum: 100 },
       { key: "rate-limit", type: "integer" as const, default: 150, minimum: 1, maximum: 1000 },
       { key: "request-timeout", type: "integer" as const, default: 5, unit: "seconds" as const, minimum: 1, maximum: 120 },
@@ -135,6 +261,7 @@ function createNucleiVulnerabilityEngine(): EngineCatalogDetail {
       { key: "severity", type: "stringArray" as const, default: ["medium", "high", "critical"], enum: ["info", "low", "medium", "high", "critical"] },
       { key: "tags", type: "stringArray" as const, default: [] as string[] },
       { key: "exclude-tags", type: "stringArray" as const, default: [] as string[] },
+      { key: "headers", type: "stringArray" as const, format: "http-headers" as const, default: [] as string[] },
     ],
   }]
   return {
@@ -159,7 +286,7 @@ function createNucleiVulnerabilityEngine(): EngineCatalogDetail {
       sections: {
         nuclei: {
           name: "Nuclei",
-          description: "Run the anonymous Website and Endpoint scan with approved templates.",
+          description: "Run the Website and Endpoint scan with approved templates.",
           params: {
             "scan-targets": { description: "Asset sources to scan" },
             timeout: { description: "Wall-clock scan timeout in seconds" },
@@ -171,6 +298,7 @@ function createNucleiVulnerabilityEngine(): EngineCatalogDetail {
             severity: { description: "Allowed template severities" },
             tags: { description: "Included template tags" },
             "exclude-tags": { description: "Excluded template tags" },
+            headers: { description: "HTTP request headers in Name: Value form, each mapped to a separate -H argument." },
           },
         },
       },
@@ -307,6 +435,7 @@ function createDirectoryEngine(): EngineCatalogDetail {
           { key: "timeout", type: "integer", default: 86400, unit: "seconds", minimum: 60, maximum: 604800 },
           { key: "follow-redirects", type: "boolean", default: false },
           { key: "http2", type: "boolean", default: false },
+          { key: "headers", type: "stringArray" as const, format: "http-headers", default: [] as string[] },
         ],
       }],
     },
@@ -340,6 +469,7 @@ function buildDirectoryLocale() {
           timeout: { description: "Deadline in seconds for each Website FFUF process." },
           "follow-redirects": { description: "Follow HTTP redirects during scanning." },
           http2: { description: "Allow HTTP/2 for HTTPS requests with HTTP/1 fallback." },
+          headers: { description: "HTTP request headers in Name: Value form, each mapped to a separate -H argument." },
         },
       },
     },
@@ -366,6 +496,7 @@ function createScreenshotEngine(): EngineCatalogDetail {
           { key: "page-timeout", type: "integer", default: 15, unit: "seconds", minimum: 1, maximum: 120 },
           { key: "concurrency", type: "integer", default: 5, minimum: 1, maximum: 20 },
           { key: "retries", type: "integer", default: 1, minimum: 0, maximum: 3 },
+          { key: "headers", type: "stringArray" as const, format: "http-headers", default: [] as string[] },
         ],
       }],
     },
@@ -379,6 +510,7 @@ function createScreenshotEngine(): EngineCatalogDetail {
             "page-timeout": { description: "Page wait timeout in seconds" },
             concurrency: { description: "Concurrent browser pages" },
             retries: { description: "Additional screenshot attempts per URL" },
+            headers: { description: "HTTP request headers for both probing and browser navigation, in Name: Value form." },
           },
         },
       },
@@ -430,7 +562,10 @@ function buildLocale(locale: MockEngineLocale, sectionId: string) {
       [sectionId]: {
         name: locale.sectionName,
         description: locale.sectionDescription,
-        params: { timeout: { description: locale.timeoutDescription } },
+        params: {
+          timeout: { description: locale.timeoutDescription },
+          headers: { description: "Custom HTTP headers and authentication cookies" },
+        },
       },
     },
   }

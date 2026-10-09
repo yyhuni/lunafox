@@ -54,5 +54,8 @@ func BuildFFUFArgs(candidate string, config enginecontract.FfufConfig) ([]string
 	if config.Http2 {
 		args = append(args, "-http2")
 	}
+	for _, header := range config.Headers {
+		args = append(args, "-H", header)
+	}
 	return args, nil
 }

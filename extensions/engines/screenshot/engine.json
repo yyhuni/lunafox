@@ -35,6 +35,12 @@
             "default": 1,
             "minimum": 0,
             "maximum": 3
+          },
+          {
+            "key": "headers",
+            "type": "stringArray",
+            "format": "http-headers",
+            "default": []
           }
         ]
       }

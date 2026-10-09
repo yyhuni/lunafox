@@ -30,6 +30,32 @@ type ffufJSONRecord struct {
 	raw           []byte
 }
 
+func TestPinnedFFUFDeliversHeaders(t *testing.T) {
+	binary := requirePinnedFFUFBinary(t)
+	received := make(chan http.Header, 4)
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		received <- request.Header.Clone()
+		response.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	config := ffufIntegrationConfig(writeFFUFWordlist(t, "header-check"))
+	config.Headers = []string{"Cookie: a=1; b=two", "Authorization: Bearer local-test-token", `X-Fields: a,b:c; "quoted"`}
+	records, _ := runPinnedFFUF(t, binary, server.URL+"/", config)
+	if len(records) != 1 || records[0].Status != http.StatusOK {
+		t.Fatalf("records = %#v, want one successful request", records)
+	}
+	select {
+	case headers := <-received:
+		for name, want := range map[string]string{"Cookie": "a=1; b=two", "Authorization": "Bearer local-test-token", "X-Fields": `a,b:c; "quoted"`} {
+			if got := headers.Get(name); got != want {
+				t.Fatalf("%s = %q, want %q", name, got, want)
+			}
+		}
+	default:
+		t.Fatal("FFUF did not reach the local endpoint")
+	}
+}
+
 func TestPinnedFFUFPreservesRawPayloadShapesAndCommentLookingLines(t *testing.T) {
 	binary := requirePinnedFFUFBinary(t)
 	requests := make(chan string, 4)

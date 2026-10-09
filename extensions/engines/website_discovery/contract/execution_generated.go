@@ -74,6 +74,8 @@ type HTTPXConfig struct {
 	RequestTimeout int64
 	// Source: engine.json.execution.configSections["httpx"].params["retries"].
 	Retries int64
+	// Source: engine.json.execution.configSections["httpx"].params["headers"].
+	Headers []string
 }
 
 type PlatformResources struct {

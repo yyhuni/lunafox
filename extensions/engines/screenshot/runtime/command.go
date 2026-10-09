@@ -3,9 +3,11 @@ package screenshotruntime
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	enginecontract "github.com/yyhuni/lunafox/engines/screenshot/contract"
+	"golang.org/x/net/http/httpguts"
 )
 
 type httpxCommand struct {
@@ -22,6 +24,13 @@ func validateScreenshotConfig(config enginecontract.CaptureConfig) error {
 	}
 	if config.Retries < 0 || config.Retries > 3 {
 		return fmt.Errorf("retries must be between 0 and 3")
+	}
+	// Typed callers can bypass Server admission; never echo credential values.
+	for index, header := range config.Headers {
+		name, value, found := strings.Cut(header, ":")
+		if !found || !httpguts.ValidHeaderFieldName(name) || strings.TrimSpace(value) == "" || !httpguts.ValidHeaderFieldValue(value) {
+			return fmt.Errorf("capture.headers[%d] must contain a valid Name: Value HTTP header", index)
+		}
 	}
 	return nil
 }
@@ -44,6 +53,9 @@ func buildHTTPXCommand(candidatePath, workspace string, config enginecontract.Ca
 		"-ho", "force-device-scale-factor=1",
 		"-ob", "-esb", "-ehb",
 		"-srd", workspace,
+	}
+	for _, header := range config.Headers {
+		args = append(args, "-H", header)
 	}
 	return httpxCommand{args: args}, nil
 }

@@ -1,0 +1,22 @@
+--- a/runner/headless.go
++++ b/runner/headless.go
+@@ -198,12 +198,18 @@
+ 
++	extraHeaders := make([]string, 0, 2*len(headers))
+ 	for _, header := range headers {
+ 		headerParts := strings.SplitN(header, ":", 2)
+ 		if len(headerParts) != 2 {
+ 			continue
+ 		}
+ 		key := strings.TrimSpace(headerParts[0])
+ 		value := strings.TrimSpace(headerParts[1])
+-		_, _ = page.SetExtraHeaders([]string{key, value})
++		extraHeaders = append(extraHeaders, key, value)
+ 	}
++	if len(extraHeaders) > 0 {
++		if _, err := page.SetExtraHeaders(extraHeaders); err != nil {
++			return page, networkRequests.Slice, err
++		}
++	}
+ 
+ 	page = page.Timeout(timeout)

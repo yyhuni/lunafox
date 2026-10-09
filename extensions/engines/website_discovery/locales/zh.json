@@ -8,6 +8,9 @@
       "description": "使用 httpx 探测 Server 物化的 URL 列表。",
       "name": "HTTPX",
       "params": {
+        "headers": {
+          "description": "Name: Value 格式的 HTTP 请求头，每项映射到一个独立的 -H 参数。"
+        },
         "rate-limit": {
           "description": "映射到 -rate-limit 的 httpx 每秒速率上限。"
         },
