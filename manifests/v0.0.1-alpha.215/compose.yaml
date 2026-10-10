@@ -1,0 +1,518 @@
+# SPDX-License-Identifier: GPL-3.0-only
+name: lunafox
+services:
+  engine-preheater:
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:dbb29d5aa358f61de67394dc26cdb415d937b9cc01ee5fe32094f4487bc34cc5
+    restart: 'no'
+    network_mode: none
+    entrypoint:
+    - /usr/local/bin/lunafox-engine-preheater
+    command:
+    - --manifest
+    - /deployment/preheat-manifest.json
+    - --release-manifest
+    - /deployment/release.manifest.yaml
+    - --runtime-composition
+    - /deployment/runtime-composition.json
+    - --compose
+    - /deployment/compose.yaml
+    - --third-party-policy
+    - /deployment/third-party-image-policy.json
+    - --manifest-digest
+    - ${LUNAFOX_PREHEAT_MANIFEST_DIGEST:?LUNAFOX_PREHEAT_MANIFEST_DIGEST is required}
+    - --profile
+    - ${DATABASE_MODE:-embedded}
+    environment:
+      LUNAFOX_PREHEAT_TIMEOUT_SECONDS: ${LUNAFOX_PREHEAT_TIMEOUT_SECONDS:-900}
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - ./preheat-manifest.json:/deployment/preheat-manifest.json:ro
+    - ./release.manifest.yaml:/deployment/release.manifest.yaml:ro
+    - ./runtime-composition.json:/deployment/runtime-composition.json:ro
+    - ./compose.yaml:/deployment/compose.yaml:ro
+    - ./third-party-image-policy.json:/deployment/third-party-image-policy.json:ro
+    labels:
+      lunafox.preheat.manifest-digest: ${LUNAFOX_PREHEAT_MANIFEST_DIGEST:?LUNAFOX_PREHEAT_MANIFEST_DIGEST is required}
+      lunafox.preheat.profile: ${DATABASE_MODE:-embedded}
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  config-init:
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-bootstrap@sha256:2b012aaa5d1cd089e7b20ca9a62260b7a17493d4cd9a1b9fa50560ba739a92bc
+    restart: 'no'
+    network_mode: none
+    depends_on:
+      engine-preheater:
+        condition: service_completed_successfully
+    entrypoint:
+    - /usr/local/bin/lunafox-config-init
+    environment:
+      DATABASE_MODE: ${DATABASE_MODE:-embedded}
+      # config-init rejects a profile that disagrees with DATABASE_MODE before
+      # any database or application consumer starts.
+      COMPOSE_PROFILES: ${COMPOSE_PROFILES:-}
+      DB_HOST: ${DB_HOST:-}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_SSLMODE: ${DB_SSLMODE:-}
+    secrets:
+    - source: db_password_input
+      target: db-password-input
+    - source: jwt_secret_input
+      target: jwt-secret-input
+    volumes:
+    - lunafox_config:/var/lib/lunafox-config
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  postgres:
+    profiles:
+    - embedded
+    # PostgreSQL 18 changed its data-directory contract. Keep the embedded
+    # database on major 17 while this deployment persists /var/lib/postgresql/data.
+    image: docker.io/library/postgres@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675
+    restart: unless-stopped
+    depends_on:
+      config-init:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_DB: ${DB_NAME:-lunafox}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD_FILE: /run/lunafox-config/db-password
+    volumes:
+    - postgres_data:/var/lib/postgresql/data
+    - lunafox_config:/run/lunafox-config:ro
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-lunafox}
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  redis:
+    image: docker.io/library/redis@sha256:2afba59292f25f5d1af200496db41bea2c6c816b059f57ae74703a50a03a27d0
+    restart: unless-stopped
+    depends_on:
+      engine-preheater:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+      - CMD
+      - redis-cli
+      - ping
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  loki:
+    image: docker.io/grafana/loki@sha256:3c8fd3570dd9219951a60d3f919c7f31923d10baee578b77bc26c4a0b32d092d
+    restart: unless-stopped
+    depends_on:
+      engine-preheater:
+        condition: service_completed_successfully
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+    - ./resources/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+    - loki_data:/loki
+    healthcheck:
+      test:
+      - CMD
+      - /usr/bin/loki
+      - -verify-config=true
+      - -config.file=/etc/loki/loki-config.yaml
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  server:
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-server@sha256:b000663f69691ba3cd8382f47e10d1f303cc31571516eb408b1e5b320926fb02
+    restart: unless-stopped
+    environment:
+      RELEASE_VERSION: 0.0.1-alpha.215
+      AGENT_VERSION: 0.0.1-alpha.215
+      AGENT_IMAGE_REF: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:dbb29d5aa358f61de67394dc26cdb415d937b9cc01ee5fe32094f4487bc34cc5
+      RELEASE_CHANNEL: canary
+      RELEASE_METADATA_BASE_URL: https://raw.githubusercontent.com/yyhuni/lunafox/release-channel
+      RELEASE_REGISTRY: ${RELEASE_REGISTRY:-docker.io}
+      LUNAFOX_SHARED_DATA_VOLUME_BIND: lunafox_data:/opt/lunafox:rw
+      ENGINE_INSTALL_REGISTRY: ${RELEASE_REGISTRY:-docker.io}
+      PUBLIC_HOST: ${PUBLIC_HOST:?PUBLIC_HOST is required}
+      PUBLIC_PORT: ${PUBLIC_PORT:?PUBLIC_PORT is required}
+      JWT_SECRET_FILE: /run/lunafox-config/jwt-secret
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD_FILE: /run/lunafox-config/db-password
+      DB_NAME: ${DB_NAME:-lunafox}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      DB_TIMEZONE: ${DB_TIMEZONE:-UTC}
+      DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-25}
+      DB_MAX_IDLE_CONNS: ${DB_MAX_IDLE_CONNS:-5}
+      DB_CONN_MAX_LIFETIME: ${DB_CONN_MAX_LIFETIME:-300}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: ${REDIS_DB:-0}
+      LOKI_URL: ${LOKI_URL:-http://loki:3100}
+      SERVER_GRPC_PORT: ${SERVER_GRPC_PORT:-9090}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      GIN_MODE: ${GIN_MODE:-release}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      JWT_ACCESS_EXPIRE: ${JWT_ACCESS_EXPIRE:-15m}
+      JWT_REFRESH_EXPIRE: ${JWT_REFRESH_EXPIRE:-168h}
+      WORDLISTS_BASE_PATH: ${WORDLISTS_BASE_PATH:-/opt/lunafox/wordlists}
+      ENGINE_PACKAGE_CACHE_ROOT: ${ENGINE_PACKAGE_CACHE_ROOT:-/opt/lunafox/engine-packages}
+      FINGERPRINT_ARTIFACTS_BASE_PATH: ${FINGERPRINT_ARTIFACTS_BASE_PATH:-/opt/lunafox/fingerprint-artifacts}
+      LOGIN_VISUALS_BASE_PATH: ${LOGIN_VISUALS_BASE_PATH:-/opt/lunafox/login-visuals}
+      WORKFLOW_DEFINITIONS_ROOT: ${WORKFLOW_DEFINITIONS_ROOT:-/usr/local/share/lunafox/workflows}
+      NUCLEI_POC_WORKSPACE_ROOT: ${NUCLEI_POC_WORKSPACE_ROOT:-/var/lib/lunafox/nuclei-poc-workspaces}
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      ALL_PROXY: ${ALL_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-}
+      http_proxy: ${http_proxy:-}
+      https_proxy: ${https_proxy:-}
+      all_proxy: ${all_proxy:-}
+      no_proxy: ${no_proxy:-}
+    depends_on:
+      config-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+        required: false
+      redis:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      bootstrap:
+        condition: service_completed_successfully
+    expose:
+    - '8080'
+    - '9090'
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    volumes:
+    - lunafox_data:/opt/lunafox
+    - lunafox_upgrade_state:/opt/lunafox/.lunafox/upgrade
+    - lunafox_config:/run/lunafox-config:ro
+    healthcheck:
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8080/healthChecks/current
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    labels:
+      lunafox.logs.component: server
+      lunafox.logs.container: lunafox-server
+  frontend:
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-frontend@sha256:1d3d7b189303165a8350c886f29cfe46e17ad8f854b561255834ae463c3d29d9
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    expose:
+    - '3000'
+    healthcheck:
+      test:
+      - CMD
+      - node
+      - -e
+      - require('http').get('http://localhost:3000',res=>process.exit(res.statusCode<500?0:1)).on('error',()=>process.exit(1))
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  bootstrap:
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-bootstrap@sha256:2b012aaa5d1cd089e7b20ca9a62260b7a17493d4cd9a1b9fa50560ba739a92bc
+    restart: 'no'
+    depends_on:
+      config-init:
+        condition: service_completed_successfully
+      agent-preflight:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      RELEASE_VERSION: 0.0.1-alpha.215
+      AGENT_VERSION: 0.0.1-alpha.215
+      JWT_SECRET_FILE: /run/lunafox-config/jwt-secret
+      PUBLIC_HOST: ${PUBLIC_HOST:?PUBLIC_HOST is required}
+      PUBLIC_PORT: ${PUBLIC_PORT:?PUBLIC_PORT is required}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD_FILE: /run/lunafox-config/db-password
+      DB_NAME: ${DB_NAME:-lunafox}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      DB_TIMEZONE: ${DB_TIMEZONE:-UTC}
+      DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-25}
+      DB_MAX_IDLE_CONNS: ${DB_MAX_IDLE_CONNS:-5}
+      DB_CONN_MAX_LIFETIME: ${DB_CONN_MAX_LIFETIME:-300}
+      LOKI_URL: ${LOKI_URL:-http://loki:3100}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      WORDLISTS_BASE_PATH: ${WORDLISTS_BASE_PATH:-/opt/lunafox/wordlists}
+      FINGERPRINT_ARTIFACTS_BASE_PATH: ${FINGERPRINT_ARTIFACTS_BASE_PATH:-/opt/lunafox/fingerprint-artifacts}
+      LOGIN_VISUALS_BASE_PATH: ${LOGIN_VISUALS_BASE_PATH:-/opt/lunafox/login-visuals}
+      WORKFLOW_DEFINITIONS_ROOT: ${WORKFLOW_DEFINITIONS_ROOT:-/usr/local/share/lunafox/workflows}
+      ENGINE_PACKAGE_CACHE_ROOT: ${ENGINE_PACKAGE_CACHE_ROOT:-/opt/lunafox/engine-packages}
+      ENGINE_INSTALL_INVENTORY_PATH: /bootstrap/engine-inventory.yaml
+      ENGINE_INSTALL_REGISTRY: ${RELEASE_REGISTRY:-docker.io}
+      FINGERPRINT_BOOTSTRAP_PATH: /bootstrap/fingerprints/web_fingerprint_v4.json
+      WORDLISTS_SOURCE_PATH: /bootstrap/wordlists
+      LUNAFOX_AGENT_STATE_VOLUME: lunafox_agent_state
+      LUNAFOX_ENGINE_EXECUTION_VOLUME: lunafox_engine_execution
+      LUNAFOX_ENGINE_EXECUTION_ROOT: /var/lib/lunafox/engine-execution
+      LUNAFOX_SHARED_DATA_VOLUME_BIND: lunafox_data:/opt/lunafox:rw
+    volumes:
+    - lunafox_data:/opt/lunafox
+    - lunafox_config:/run/lunafox-config:ro
+    - lunafox_engine_execution:/var/lib/lunafox/engine-execution
+    - ./resources/fingerprints/web_fingerprint_v4.json:/bootstrap/fingerprints/web_fingerprint_v4.json:ro
+    - ./resources/wordlists:/bootstrap/wordlists:ro
+    - ./engine-inventory.yaml:/bootstrap/engine-inventory.yaml:ro
+    - lunafox_agent_state:/var/lib/lunafox-agent
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  migrate:
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-bootstrap@sha256:2b012aaa5d1cd089e7b20ca9a62260b7a17493d4cd9a1b9fa50560ba739a92bc
+    restart: 'no'
+    entrypoint:
+    - /usr/local/bin/server
+    command:
+    - migrate
+    - up
+    depends_on:
+      config-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+        required: false
+    environment:
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD_FILE: /run/lunafox-config/db-password
+      DB_NAME: ${DB_NAME:-lunafox}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      DB_TIMEZONE: ${DB_TIMEZONE:-UTC}
+      DB_MAX_OPEN_CONNS: ${DB_MAX_OPEN_CONNS:-25}
+      DB_MAX_IDLE_CONNS: ${DB_MAX_IDLE_CONNS:-5}
+      DB_CONN_MAX_LIFETIME: ${DB_CONN_MAX_LIFETIME:-300}
+    volumes:
+    - lunafox_config:/run/lunafox-config:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  agent-preflight:
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:dbb29d5aa358f61de67394dc26cdb415d937b9cc01ee5fe32094f4487bc34cc5
+    restart: 'no'
+    network_mode: none
+    depends_on:
+      engine-preheater:
+        condition: service_completed_successfully
+    entrypoint:
+    - /bin/sh
+    - -ec
+    command:
+    - |
+      exec /usr/local/bin/lunafox-engine-mount-preflight \
+        --profile capability \
+        --image-ref "$$AGENT_IMAGE_REF" \
+        --execution-volume lunafox_engine_execution \
+        --execution-root /var/lib/lunafox/engine-execution \
+        --shared-volume lunafox_data \
+        --shared-root /opt/lunafox \
+        --run-id "compose-$$HOSTNAME"
+    environment:
+      AGENT_IMAGE_REF: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:dbb29d5aa358f61de67394dc26cdb415d937b9cc01ee5fe32094f4487bc34cc5
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - lunafox_data:/opt/lunafox
+    - lunafox_engine_execution:/var/lib/lunafox/engine-execution
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  nginx:
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-nginx@sha256:cfa9901b8c6efad43fe73f7bbfe3f65eb1893e421d655194f7e46d184172c21d
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+      cert-init:
+        condition: service_completed_successfully
+    ports:
+    - ${PUBLIC_PORT:?PUBLIC_PORT is required}:443
+    volumes:
+    - lunafox_ssl:/etc/nginx/ssl:ro
+    # Nginx listens on IPv4; localhost may resolve to an unbound ::1.
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget -q --no-check-certificate -O /dev/null https://127.0.0.1/healthChecks/current
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  cert-init:
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-bootstrap@sha256:2b012aaa5d1cd089e7b20ca9a62260b7a17493d4cd9a1b9fa50560ba739a92bc
+    restart: 'no'
+    depends_on:
+      engine-preheater:
+        condition: service_completed_successfully
+    entrypoint:
+    - /usr/local/bin/lunafox-cert-init
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?PUBLIC_HOST is required}
+    volumes:
+    - lunafox_ssl:/etc/nginx/ssl
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  agent:
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-agent@sha256:dbb29d5aa358f61de67394dc26cdb415d937b9cc01ee5fe32094f4487bc34cc5
+    container_name: lunafox-agent
+    hostname: lunafox-agent
+    restart: unless-stopped
+    # The Agent waits up to 30 seconds for Engine Container cleanup during
+    # shutdown; the Compose default of 10 seconds would SIGKILL it early.
+    stop_grace_period: 30s
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      server:
+        condition: service_healthy
+    environment:
+      AGENT_CONTROL_URL: http://server:9090
+      AGENT_BOOTSTRAP_CREDENTIALS_PATH: /var/lib/lunafox-agent/bootstrap.json
+      AGENT_VERSION: 0.0.1-alpha.215
+      AGENT_HOSTNAME: lunafox-agent
+      LUNAFOX_AGENT_CONTAINER_NAME: lunafox-agent
+      LUNAFOX_AGENT_DISABLE_SELF_UPDATE: 'true'
+      LUNAFOX_SHARED_DATA_VOLUME_BIND: lunafox_data:/opt/lunafox:rw
+      LUNAFOX_ENGINE_EXECUTION_VOLUME: lunafox_engine_execution
+      LUNAFOX_ENGINE_EXECUTION_ROOT: /var/lib/lunafox/engine-execution
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - lunafox_data:/opt/lunafox
+    - lunafox_engine_execution:/var/lib/lunafox/engine-execution
+    - lunafox_agent_state:/var/lib/lunafox-agent
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    labels:
+      lunafox.logs.component: agent
+      lunafox.logs.container: lunafox-agent
+  upgrader:
+    image: ${RELEASE_REGISTRY:-docker.io}/yyhuni/lunafox-bootstrap@sha256:2b012aaa5d1cd089e7b20ca9a62260b7a17493d4cd9a1b9fa50560ba739a92bc
+    restart: unless-stopped
+    network_mode: none
+    entrypoint:
+    - /usr/local/bin/lunafox-upgrader
+    command:
+    - --root-dir
+    - /deployment
+    - --layout
+    - public
+    - --registry
+    - ${RELEASE_REGISTRY:-docker.io}
+    volumes:
+    - .:/deployment
+    - lunafox_upgrade_state:/deployment/.lunafox/upgrade
+    - /var/run/docker.sock:/var/run/docker.sock
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  alloy:
+    image: docker.io/grafana/alloy@sha256:b8ec653c44235fbe910879145dac3597d66b0aaecf60bcbbe82580767771a839
+    restart: unless-stopped
+    command:
+    - run
+    - --storage.path=/var/lib/alloy/data
+    - /etc/alloy/config.alloy
+    depends_on:
+      loki:
+        condition: service_healthy
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - ./resources/alloy/config.alloy:/etc/alloy/config.alloy:ro
+    - alloy_data:/var/lib/alloy/data
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+volumes:
+  lunafox_config:
+    name: lunafox_config
+  postgres_data:
+    name: lunafox_postgres
+  lunafox_data:
+    name: lunafox_data
+  lunafox_engine_execution:
+    name: lunafox_engine_execution
+  lunafox_agent_state:
+    name: lunafox_agent_state
+  lunafox_ssl:
+    name: lunafox_ssl
+  lunafox_upgrade_state:
+    name: lunafox_upgrade_state
+  loki_data:
+    name: lunafox_loki
+  alloy_data:
+    name: lunafox_alloy
+networks:
+  default:
+    name: lunafox_network
+secrets:
+  db_password_input:
+    environment: DB_PASSWORD
+  jwt_secret_input:
+    environment: JWT_SECRET
