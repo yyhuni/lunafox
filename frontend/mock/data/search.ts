@@ -68,7 +68,8 @@ function matchesSearchQuery(record: SearchResult, query: GlobalAssetSearchQuery)
   if (query.mode === "plainUrl") {
     return record.url.toLocaleLowerCase().includes(query.value.toLocaleLowerCase())
   }
-  return query.conditions.every((condition) => matchesCondition(record, condition))
+  const matches = query.conditions.map((condition) => matchesCondition(record, condition))
+  return query.combinator === "or" ? matches.some(Boolean) : matches.every(Boolean)
 }
 
 function matchesCondition(record: SearchResult, condition: GlobalAssetSearchCondition): boolean {

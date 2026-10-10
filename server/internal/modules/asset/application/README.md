@@ -30,7 +30,9 @@ repository 或通过 `UNION` 合并两张资产表。默认 Website 由前端提
 不对缺失的 `assetType` 做静默降级。
 
 查询先由专用 parser 完整消费，再构造 typed AST：普通文本是 URL 的不区分大小写包含
-查询；结构化查询只允许 `url`、`host`、`title`、`statusCode`、`tech` 和扁平 `&&`。
+查询；结构化查询只允许 `url`、`host`、`title`、`statusCode`、`tech`，以及同一种扁平连接符。
+大小写不敏感的独立单词 `and` 与 `&&` 是同一个合取连接符；`or` 与 `||` 是同一个析取连接符。
+同一条查询不能混用这两套连接符，也不能用括号分组。
 文本字段的 `=` 是包含匹配，`==` 是原始字符串精确匹配；URL、host/title contains 值均至少 2 个
 Unicode 字符。`statusCode` 与 `tech` 两种运算符
 都表示类型精确匹配。输入上限、条件数、包含值字符下限、page size 和 page token 都

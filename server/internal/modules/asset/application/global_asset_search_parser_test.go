@@ -70,6 +70,104 @@ func TestParseGlobalAssetSearchQuerySupportsTenConditions(t *testing.T) {
 	}
 }
 
+func TestParseGlobalAssetSearchQueryAcceptsAndAsConjunction(t *testing.T) {
+	baseline, err := ParseGlobalAssetSearchQuery(`url="admin" && host="api" && title=="Login"`)
+	if err != nil {
+		t.Fatalf("baseline: %v", err)
+	}
+	for _, raw := range []string{
+		`url="admin" and host="api" and title=="Login"`,
+		`url="admin" AND host="api" And title=="Login"`,
+		`url="admin"&&host="api" and title=="Login"`,
+	} {
+		got, err := ParseGlobalAssetSearchQuery(raw)
+		if err != nil {
+			t.Fatalf("parse %q: %v", raw, err)
+		}
+		if got.Mode != baseline.Mode || got.Combinator != baseline.Combinator || len(got.Conditions) != len(baseline.Conditions) {
+			t.Fatalf("%q AST = %+v, want %+v", raw, got, baseline)
+		}
+		for index := range baseline.Conditions {
+			if got.Conditions[index] != baseline.Conditions[index] {
+				t.Fatalf("%q condition %d = %+v, want %+v", raw, index, got.Conditions[index], baseline.Conditions[index])
+			}
+		}
+	}
+
+	plain, err := ParseGlobalAssetSearchQuery("login and admin")
+	if err != nil || plain.Mode != GlobalAssetSearchModePlainURL || plain.PlainURL != "login and admin" {
+		t.Fatalf("plain text containing and = %+v, err=%v", plain, err)
+	}
+	quoted, err := ParseGlobalAssetSearchQuery(`title="foo and bar"`)
+	if err != nil || quoted.Mode != GlobalAssetSearchModeStructured || len(quoted.Conditions) != 1 || quoted.Conditions[0].Text != "foo and bar" {
+		t.Fatalf("quoted and = %+v, err=%v", quoted, err)
+	}
+	for _, raw := range []string{`url="admin" and`, `host="api" android="x"`} {
+		if _, err := ParseGlobalAssetSearchQuery(raw); !errors.Is(err, ErrInvalidGlobalAssetSearchQuery) {
+			t.Fatalf("expected invalid query for %q, got %v", raw, err)
+		}
+	}
+}
+
+func TestParseGlobalAssetSearchQueryAcceptsOrAsDisjunction(t *testing.T) {
+	baseline, err := ParseGlobalAssetSearchQuery(`url="admin" || host="api" || title=="Login"`)
+	if err != nil {
+		t.Fatalf("baseline: %v", err)
+	}
+	if baseline.Combinator != GlobalAssetSearchCombinatorOr {
+		t.Fatalf("|| combinator = %q", baseline.Combinator)
+	}
+	for _, raw := range []string{
+		`url="admin" or host="api" or title=="Login"`,
+		`url="admin" OR host="api" Or title=="Login"`,
+		`url="admin"||host="api" or title=="Login"`,
+	} {
+		got, err := ParseGlobalAssetSearchQuery(raw)
+		if err != nil {
+			t.Fatalf("parse %q: %v", raw, err)
+		}
+		if got.Combinator != baseline.Combinator || len(got.Conditions) != len(baseline.Conditions) {
+			t.Fatalf("%q AST = %+v, want %+v", raw, got, baseline)
+		}
+		for index := range baseline.Conditions {
+			if got.Conditions[index] != baseline.Conditions[index] {
+				t.Fatalf("%q condition %d = %+v, want %+v", raw, index, got.Conditions[index], baseline.Conditions[index])
+			}
+		}
+		if globalAssetSearchQueryDigest(got) != globalAssetSearchQueryDigest(baseline) {
+			t.Fatalf("%q digest differs from ||", raw)
+		}
+	}
+
+	andAST, err := ParseGlobalAssetSearchQuery(`url="admin" && host="api" && title=="Login"`)
+	if err != nil {
+		t.Fatalf("and baseline: %v", err)
+	}
+	if globalAssetSearchQueryDigest(andAST) == globalAssetSearchQueryDigest(baseline) {
+		t.Fatal("AND and OR of the same conditions must not share a page token digest")
+	}
+
+	plain, err := ParseGlobalAssetSearchQuery("login or admin")
+	if err != nil || plain.Mode != GlobalAssetSearchModePlainURL || plain.PlainURL != "login or admin" {
+		t.Fatalf("plain text containing or = %+v, err=%v", plain, err)
+	}
+	quoted, err := ParseGlobalAssetSearchQuery(`title="foo or bar"`)
+	if err != nil || quoted.Mode != GlobalAssetSearchModeStructured || len(quoted.Conditions) != 1 || quoted.Conditions[0].Text != "foo or bar" {
+		t.Fatalf("quoted or = %+v, err=%v", quoted, err)
+	}
+	for _, raw := range []string{
+		`url="admin" or`,
+		`url="admin" ||`,
+		`host="api" origin="x"`,
+		`url="admin" && host="api" or title=="Login"`,
+		`url="admin" or host="api" and title=="Login"`,
+	} {
+		if _, err := ParseGlobalAssetSearchQuery(raw); !errors.Is(err, ErrInvalidGlobalAssetSearchQuery) {
+			t.Fatalf("expected invalid query for %q, got %v", raw, err)
+		}
+	}
+}
+
 func TestParseGlobalAssetSearchQueryRejectsUnsafeOrMalformedSyntax(t *testing.T) {
 	tooLong := strings.Repeat("a", globalAssetSearchMaxQueryBytes+1)
 	elevenConditions := strings.TrimSuffix(strings.Repeat(`tech="nginx" && `, 11), " && ")
@@ -79,9 +177,7 @@ func TestParseGlobalAssetSearchQueryRejectsUnsafeOrMalformedSyntax(t *testing.T)
 		elevenConditions,
 		`responseBody="password"`,
 		`url!="admin"`,
-		`url="admin" || host="api"`,
-		`url="admin" and host="api"`,
-		`url="admin" or host="api"`,
+		`url="admin" && host="api" || title=="Login"`,
 		`(url="admin")`,
 		`url="admin" &&`,
 		`plain text host="api"`,

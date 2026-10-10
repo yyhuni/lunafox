@@ -104,63 +104,95 @@ func countGlobalAssetSearchMatches(transaction *gorm.DB, table string, query ass
 	return count, false, nil
 }
 
+type globalAssetSearchPredicate struct {
+	clause string
+	args   []any
+}
+
 func applyGlobalAssetSearchPredicates(db *gorm.DB, ast assetapp.GlobalAssetSearchAST, dialect string) (*gorm.DB, error) {
 	if ast.Mode == assetapp.GlobalAssetSearchModePlainURL {
-		return applyGlobalAssetSearchTextPredicate(db, "asset.url", assetapp.GlobalAssetSearchOperatorContains, ast.PlainURL, dialect), nil
+		predicate := globalAssetSearchTextPredicate("asset.url", assetapp.GlobalAssetSearchOperatorContains, ast.PlainURL, dialect)
+		return db.Where(predicate.clause, predicate.args...), nil
 	}
 	if ast.Mode != assetapp.GlobalAssetSearchModeStructured || len(ast.Conditions) == 0 {
 		return nil, fmt.Errorf("invalid typed global asset search AST")
 	}
+	if ast.Combinator != "" && ast.Combinator != assetapp.GlobalAssetSearchCombinatorAnd && ast.Combinator != assetapp.GlobalAssetSearchCombinatorOr {
+		return nil, fmt.Errorf("unsupported global asset search combinator %q", ast.Combinator)
+	}
+	predicates := make([]globalAssetSearchPredicate, 0, len(ast.Conditions))
 	for _, condition := range ast.Conditions {
-		switch condition.Field {
-		case assetapp.GlobalAssetSearchFieldURL:
-			db = applyGlobalAssetSearchTextPredicate(db, "asset.url", condition.Operator, condition.Text, dialect)
-		case assetapp.GlobalAssetSearchFieldHost:
-			db = applyGlobalAssetSearchTextPredicate(db, "asset.host", condition.Operator, condition.Text, dialect)
-		case assetapp.GlobalAssetSearchFieldTitle:
-			db = applyGlobalAssetSearchTextPredicate(db, "asset.title", condition.Operator, condition.Text, dialect)
-		case assetapp.GlobalAssetSearchFieldStatusCode:
-			if condition.StatusCode == nil {
-				return nil, fmt.Errorf("statusCode condition has no integer value")
-			}
-			db = db.Where("asset.status_code = ?", *condition.StatusCode)
-		case assetapp.GlobalAssetSearchFieldTech:
-			if dialect != "postgres" {
-				return nil, fmt.Errorf("global tech search requires PostgreSQL")
-			}
-			// @> is an exact element-array containment predicate backed by the
-			// existing tech GIN index; it never turns an array into substring text.
-			db = db.Where("asset.tech @> ?::varchar(100)[]", pq.Array([]string{condition.Text}))
-		case assetapp.GlobalAssetSearchFieldHasScreenshot:
-			if condition.HasScreenshot == nil {
-				return nil, fmt.Errorf("hasScreenshot condition has no boolean value")
-			}
-			// The probe rides the unique_screenshot_per_target(target_id, url)
-			// index and never reads the image column; current-state screenshots
-			// are unique per (target_id, url), so no new index is required.
-			existence := "EXISTS"
-			if !*condition.HasScreenshot {
-				existence = "NOT EXISTS"
-			}
-			db = db.Where(existence + " (SELECT 1 FROM screenshot AS shot WHERE shot.target_id = asset.target_id AND shot.url = asset.url)")
-		default:
-			return nil, fmt.Errorf("unsupported global asset search field %q", condition.Field)
+		predicate, err := globalAssetSearchConditionPredicate(condition, dialect)
+		if err != nil {
+			return nil, err
 		}
+		predicates = append(predicates, predicate)
+	}
+	if ast.Combinator == assetapp.GlobalAssetSearchCombinatorOr && len(predicates) > 1 {
+		clauses := make([]string, len(predicates))
+		args := make([]any, 0)
+		for index, predicate := range predicates {
+			clauses[index] = predicate.clause
+			args = append(args, predicate.args...)
+		}
+		// The parentheses keep the keyset cursor outside the disjunction.
+		// Without them, GORM would AND the cursor to the last OR term only.
+		return db.Where("("+strings.Join(clauses, " OR ")+")", args...), nil
+	}
+	for _, predicate := range predicates {
+		db = db.Where(predicate.clause, predicate.args...)
 	}
 	return db, nil
 }
 
-func applyGlobalAssetSearchTextPredicate(db *gorm.DB, column string, operator assetapp.GlobalAssetSearchOperator, value, dialect string) *gorm.DB {
+func globalAssetSearchConditionPredicate(condition assetapp.GlobalAssetSearchCondition, dialect string) (globalAssetSearchPredicate, error) {
+	switch condition.Field {
+	case assetapp.GlobalAssetSearchFieldURL:
+		return globalAssetSearchTextPredicate("asset.url", condition.Operator, condition.Text, dialect), nil
+	case assetapp.GlobalAssetSearchFieldHost:
+		return globalAssetSearchTextPredicate("asset.host", condition.Operator, condition.Text, dialect), nil
+	case assetapp.GlobalAssetSearchFieldTitle:
+		return globalAssetSearchTextPredicate("asset.title", condition.Operator, condition.Text, dialect), nil
+	case assetapp.GlobalAssetSearchFieldStatusCode:
+		if condition.StatusCode == nil {
+			return globalAssetSearchPredicate{}, fmt.Errorf("statusCode condition has no integer value")
+		}
+		return globalAssetSearchPredicate{clause: "asset.status_code = ?", args: []any{*condition.StatusCode}}, nil
+	case assetapp.GlobalAssetSearchFieldTech:
+		if dialect != "postgres" {
+			return globalAssetSearchPredicate{}, fmt.Errorf("global tech search requires PostgreSQL")
+		}
+		// @> is an exact element-array containment predicate backed by the
+		// existing tech GIN index; it never turns an array into substring text.
+		return globalAssetSearchPredicate{clause: "asset.tech @> ?::varchar(100)[]", args: []any{pq.Array([]string{condition.Text})}}, nil
+	case assetapp.GlobalAssetSearchFieldHasScreenshot:
+		if condition.HasScreenshot == nil {
+			return globalAssetSearchPredicate{}, fmt.Errorf("hasScreenshot condition has no boolean value")
+		}
+		// The probe rides the unique_screenshot_per_target(target_id, url)
+		// index and never reads the image column; current-state screenshots
+		// are unique per (target_id, url), so no new index is required.
+		existence := "EXISTS"
+		if !*condition.HasScreenshot {
+			existence = "NOT EXISTS"
+		}
+		return globalAssetSearchPredicate{clause: existence + " (SELECT 1 FROM screenshot AS shot WHERE shot.target_id = asset.target_id AND shot.url = asset.url)"}, nil
+	default:
+		return globalAssetSearchPredicate{}, fmt.Errorf("unsupported global asset search field %q", condition.Field)
+	}
+}
+
+func globalAssetSearchTextPredicate(column string, operator assetapp.GlobalAssetSearchOperator, value, dialect string) globalAssetSearchPredicate {
 	if operator == assetapp.GlobalAssetSearchOperatorExact {
-		return db.Where(column+" = ?", value)
+		return globalAssetSearchPredicate{clause: column + " = ?", args: []any{value}}
 	}
 	pattern := globalAssetSearchContainsPattern(value)
 	if dialect == "postgres" {
-		return db.Where(column+" ILIKE ? ESCAPE '\\'", pattern)
+		return globalAssetSearchPredicate{clause: column + " ILIKE ? ESCAPE '\\'", args: []any{pattern}}
 	}
 	// SQLite is used only by focused repository tests. PostgreSQL production
 	// search uses ILIKE above so the configured trigram operator classes apply.
-	return db.Where("LOWER("+column+") LIKE LOWER(?) ESCAPE '\\'", pattern)
+	return globalAssetSearchPredicate{clause: "LOWER(" + column + ") LIKE LOWER(?) ESCAPE '\\'", args: []any{pattern}}
 }
 
 func globalAssetSearchContainsPattern(value string) string {

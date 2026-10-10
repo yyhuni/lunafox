@@ -406,6 +406,77 @@ func TestGlobalAssetSearchSQLHasNoCrossTableOrOffsetCountPath(t *testing.T) {
 	}
 }
 
+func TestGlobalAssetSearchRepositoryMatchesAnyFlatOrCondition(t *testing.T) {
+	db := newAssetRepositoryDB(t)
+	now := time.Date(2026, 8, 7, 9, 0, 0, 0, time.UTC)
+	if err := db.Create([]model.Website{
+		{ID: 1, TargetID: 1, URL: "https://left.example.test/admin", Host: "left.example.test", Title: "Left", CreatedAt: now, Tech: pq.StringArray{}},
+		{ID: 2, TargetID: 1, URL: "https://right.example.test/home", Host: "api.example.test", Title: "Right", CreatedAt: now.Add(-time.Second), Tech: pq.StringArray{}},
+		{ID: 3, TargetID: 1, URL: "https://other.example.test/home", Host: "other.example.test", Title: "Other", CreatedAt: now.Add(-2 * time.Second), Tech: pq.StringArray{}},
+	}).Error; err != nil {
+		t.Fatalf("seed websites: %v", err)
+	}
+	repo := NewWebsiteRepository(db)
+
+	orAST, err := assetapp.ParseGlobalAssetSearchQuery(`url="left.example" or host="api.example"`)
+	if err != nil {
+		t.Fatalf("parse or query: %v", err)
+	}
+	matched, total, capped, err := repo.SearchGlobalWebsites(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: orAST, PageSize: 10})
+	if err != nil || len(matched) != 2 || matched[0].ID != 1 || matched[1].ID != 2 || total != 2 || capped {
+		t.Fatalf("flat OR must match either condition: items=%+v total=%d capped=%v err=%v", matched, total, capped, err)
+	}
+
+	andAST, err := assetapp.ParseGlobalAssetSearchQuery(`url="left.example" and host="api.example"`)
+	if err != nil {
+		t.Fatalf("parse and query: %v", err)
+	}
+	excluded, andTotal, _, err := repo.SearchGlobalWebsites(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: andAST, PageSize: 10})
+	if err != nil || len(excluded) != 0 || andTotal != 0 {
+		t.Fatalf("AND of the same exclusive conditions must match nothing: items=%+v total=%d err=%v", excluded, andTotal, err)
+	}
+
+	afterCursor, cursorTotal, cursorCapped, err := repo.SearchGlobalWebsites(context.Background(), assetapp.GlobalAssetSearchStoreQuery{
+		AST:      orAST,
+		PageSize: 10,
+		Cursor:   &assetapp.GlobalAssetSearchCursor{CreatedAt: now, ID: 1},
+	})
+	if err != nil || len(afterCursor) != 1 || afterCursor[0].ID != 2 || cursorTotal != 2 || cursorCapped {
+		t.Fatalf("OR cursor must filter the page without changing the match count: items=%+v total=%d capped=%v err=%v", afterCursor, cursorTotal, cursorCapped, err)
+	}
+}
+
+func TestGlobalAssetSearchOrSQLGroupsDisjunctionOutsideCursor(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{DryRun: true})
+	if err != nil {
+		t.Fatalf("open dry-run db: %v", err)
+	}
+	ast, err := assetapp.ParseGlobalAssetSearchQuery(`url="admin" || host="api" || tech="nginx"`)
+	if err != nil {
+		t.Fatalf("parse AST: %v", err)
+	}
+	query := db.Table("website AS asset").
+		Select("asset.*").
+		Joins("JOIN target AS active_target ON active_target.id = asset.target_id AND active_target.deleted_at IS NULL")
+	query, err = applyGlobalAssetSearchPredicates(query, ast, "postgres")
+	if err != nil {
+		t.Fatalf("apply predicates: %v", err)
+	}
+	statement := query.Where("(asset.created_at, asset.id) < (?, ?)", time.Now().UTC(), 17).Find(&[]model.Website{}).Statement
+	if statement == nil {
+		t.Fatal("expected SQL statement")
+	}
+	sql := strings.ToLower(statement.SQL.String())
+	orAt := strings.Index(sql, " or ")
+	cursorAt := strings.Index(sql, "(asset.created_at, asset.id) <")
+	if orAt < 0 || cursorAt < 0 || orAt > cursorAt {
+		t.Fatalf("OR group must precede the keyset cursor: %s", sql)
+	}
+	if !strings.Contains(sql, "asset.tech @>") {
+		t.Fatalf("OR group must keep the tech predicate: %s", sql)
+	}
+}
+
 func TestMapGlobalAssetSearchRepositoryErrorMapsPostgresCancellation(t *testing.T) {
 	if !errors.Is(mapGlobalAssetSearchRepositoryError(errors.New("ERROR: canceling statement due to statement timeout (SQLSTATE 57014)")), assetapp.ErrGlobalAssetSearchTimeout) {
 		t.Fatal("statement timeout must not cross the repository boundary")

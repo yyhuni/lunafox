@@ -88,12 +88,23 @@ type GlobalAssetSearchCondition struct {
 	HasScreenshot *bool
 }
 
+// GlobalAssetSearchCombinator selects the only two flat combinations P0 allows.
+// A single condition uses AND because the joiner is unused. Mixed AND/OR is
+// rejected by the parser instead of being given a precedence.
+type GlobalAssetSearchCombinator string
+
+const (
+	GlobalAssetSearchCombinatorAnd GlobalAssetSearchCombinator = "and"
+	GlobalAssetSearchCombinatorOr  GlobalAssetSearchCombinator = "or"
+)
+
 // GlobalAssetSearchAST is the query representation accepted by the repository.
 // It intentionally has no generic expression nodes because P0 only permits a
-// plain URL predicate or a flat conjunction of typed conditions.
+// plain URL predicate or one flat conjunction or disjunction of typed conditions.
 type GlobalAssetSearchAST struct {
 	Mode       GlobalAssetSearchMode
 	PlainURL   string
+	Combinator GlobalAssetSearchCombinator
 	Conditions []GlobalAssetSearchCondition
 }
 
@@ -337,7 +348,13 @@ func globalAssetSearchCanonicalQuery(ast GlobalAssetSearchAST) string {
 		conditions = append(conditions, string(condition.Field)+string(condition.Operator)+strconvQuote(value))
 	}
 	sort.Strings(conditions)
-	return "structured:" + strings.Join(conditions, "&&")
+	// OR must not reuse an AND page token for the same predicates. A single
+	// condition has no joiner, so its digest stays compatible with older tokens.
+	joiner := "&&"
+	if ast.Combinator == GlobalAssetSearchCombinatorOr {
+		joiner = "||"
+	}
+	return "structured:" + strings.Join(conditions, joiner)
 }
 
 func strconvQuote(value string) string {

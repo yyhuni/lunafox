@@ -10,6 +10,7 @@ export const GLOBAL_ASSET_SEARCH_MIN_URL_CONTAINS_RUNES = GLOBAL_ASSET_SEARCH_MI
 
 export type GlobalAssetSearchField = "url" | "host" | "title" | "statusCode" | "tech" | "hasScreenshot"
 export type GlobalAssetSearchOperator = "=" | "=="
+export type GlobalAssetSearchCombinator = "and" | "or"
 
 export type GlobalAssetSearchDiagnosticCode =
   | "required"
@@ -43,6 +44,7 @@ export const GLOBAL_ASSET_SEARCH_OPERATORS = [
   { value: "=", labelKey: "syntax.contains" },
   { value: "==", labelKey: "syntax.exact" },
   { value: "&&", labelKey: "syntax.all" },
+  { value: "||", labelKey: "syntax.any" },
 ] as const
 
 export type GlobalAssetSearchGuidanceCategory = "basics" | "scenarios"
@@ -69,7 +71,7 @@ export interface GlobalAssetSearchCondition {
 
 export type GlobalAssetSearchQuery =
   | { mode: "plainUrl"; value: string }
-  | { mode: "structured"; conditions: GlobalAssetSearchCondition[] }
+  | { mode: "structured"; combinator: GlobalAssetSearchCombinator; conditions: GlobalAssetSearchCondition[] }
 
 export class GlobalAssetSearchQueryError extends Error {
   readonly code: GlobalAssetSearchDiagnosticCode
@@ -131,6 +133,7 @@ const RAW_GLOBAL_ASSET_SEARCH_GUIDANCE: readonly GlobalAssetSearchGuidanceEntry[
   { id: "host-tech", category: "scenarios", query: 'host="api" && tech="nginx"', labelKey: "syntax.exampleLabels.hostTech", descriptionKey: "syntax.exampleDescriptions.hostTech" },
   { id: "title-status", category: "scenarios", query: 'title="Login" && statusCode=="200"', labelKey: "syntax.exampleLabels.titleStatus", descriptionKey: "syntax.exampleDescriptions.titleStatus" },
   { id: "url-tech", category: "scenarios", query: 'url="admin" && tech="nginx"', labelKey: "syntax.exampleLabels.urlTech", descriptionKey: "syntax.exampleDescriptions.urlTech" },
+  { id: "url-or-host", category: "scenarios", query: 'url="admin" || host="api"', labelKey: "syntax.exampleLabels.urlOrHost", descriptionKey: "syntax.exampleDescriptions.urlOrHost" },
 ]
 
 export function parseGlobalAssetSearchQuery(raw: string): GlobalAssetSearchQuery {
@@ -151,7 +154,8 @@ export function parseGlobalAssetSearchQuery(raw: string): GlobalAssetSearchQuery
     return { mode: "plainUrl", value: query }
   }
 
-  return { mode: "structured", conditions: new StrictQueryParser(query).parse() }
+  const parsed = new StrictQueryParser(query).parse()
+  return { mode: "structured", combinator: parsed.combinator, conditions: parsed.conditions }
 }
 
 export function isGlobalAssetSearchQueryValid(raw: string): boolean {
@@ -179,7 +183,7 @@ export function globalAssetSearchQueryFingerprint(query: GlobalAssetSearchQuery,
     : `structured:${query.conditions
       .map((condition) => `${condition.field}${condition.operator}${JSON.stringify(String(condition.value))}`)
       .sort()
-      .join("&&")}`
+      .join(query.combinator === "or" ? "||" : "&&")}`
   return `${assetType}:${pageSize}:${canonical}`
 }
 
@@ -208,8 +212,10 @@ class StrictQueryParser {
 
   constructor(private readonly input: string) {}
 
-  parse(): GlobalAssetSearchCondition[] {
+  parse(): { combinator: GlobalAssetSearchCombinator; conditions: GlobalAssetSearchCondition[] } {
     const conditions: GlobalAssetSearchCondition[] = []
+    let combinator: GlobalAssetSearchCombinator = "and"
+    let chosen = false
     this.skipWhitespace()
 
     while (!this.atEnd()) {
@@ -222,22 +228,32 @@ class StrictQueryParser {
       }
       this.skipWhitespace()
       if (this.atEnd()) break
-      if (!this.consume("&&")) {
+      const next = this.consumeConnector()
+      if (!next) {
         throw new GlobalAssetSearchQueryError(
-          `expected && at character ${this.position}`,
+          `expected &&, and, ||, or the word or at character ${this.position}`,
+          "invalidConnector"
+        )
+      }
+      if (!chosen) {
+        combinator = next
+        chosen = true
+      } else if (next !== combinator) {
+        throw new GlobalAssetSearchQueryError(
+          `mixed and/or connectors at character ${this.position}`,
           "invalidConnector"
         )
       }
       this.skipWhitespace()
       if (this.atEnd()) {
-        throw new GlobalAssetSearchQueryError("missing condition after &&", "missingCondition")
+        throw new GlobalAssetSearchQueryError("missing condition after connector", "missingCondition")
       }
     }
 
     if (conditions.length === 0) {
       throw new GlobalAssetSearchQueryError("q is required", "required")
     }
-    return conditions
+    return { combinator, conditions }
   }
 
   private parseCondition(): GlobalAssetSearchCondition {
@@ -342,6 +358,25 @@ class StrictQueryParser {
   private consume(value: string): boolean {
     if (!this.input.startsWith(value, this.position)) return false
     this.position += value.length
+    return true
+  }
+
+  // Words are recognized only as whole tokens, so android and origin stay field
+  // names. Plain text that merely contains "and" or "or" never reaches this parser.
+  private consumeConnector(): GlobalAssetSearchCombinator | null {
+    if (this.consume("&&")) return "and"
+    if (this.consume("||")) return "or"
+    if (this.consumeWord("and")) return "and"
+    if (this.consumeWord("or")) return "or"
+    return null
+  }
+
+  private consumeWord(word: string): boolean {
+    if (this.position + word.length > this.input.length) return false
+    if (this.input.slice(this.position, this.position + word.length).toLowerCase() !== word) return false
+    const next = this.input[this.position + word.length]
+    if (next !== undefined && isIdentifierPart(next)) return false
+    this.position += word.length
     return true
   }
 
