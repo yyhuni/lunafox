@@ -120,20 +120,6 @@
       "recoveryPath": "Move floating action geometry into a shared table/shell helper and remove this exception."
     },
     {
-      "id": "spacing-app-blacklist-baseline",
-      "check": "spacing",
-      "rule": "arbitrary-spacing-or-size",
-      "count": 2,
-      "status": "narrow",
-      "scope": "app/settings/blacklist/content.tsx",
-      "pattern": "*",
-      "class": "runtime-calculated-geometry",
-      "owner": "frontend-foundation",
-      "reason": "Blacklist editor keeps two bounded editor heights for scan-friendly blacklist editing after final convergence.",
-      "reviewTrigger": "When blacklist editor layout, density, or editor primitives change.",
-      "recoveryPath": "Move editor heights to shared editor or settings panel size tokens before adding more local dimensions."
-    },
-    {
       "id": "spacing-auth-baseline",
       "check": "spacing",
       "rule": "arbitrary-spacing-or-size",

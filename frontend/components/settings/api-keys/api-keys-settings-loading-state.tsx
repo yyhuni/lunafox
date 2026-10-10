@@ -1,5 +1,4 @@
 import { ShieldCheck } from "@/components/icons"
-import { PageHeader } from "@/components/common/page-header"
 import { ActionSkeleton } from "@/components/shared/loading/action-skeleton"
 import {
   getLoadingOwnerAttributes,
@@ -52,12 +51,10 @@ import {
   API_KEYS_PROVIDER_SWITCH_SLOT_CLASS,
   API_KEYS_SECURITY_NOTICE_CARD_CLASS,
   API_KEYS_SECURITY_NOTICE_CONTENT_CLASS,
-} from "@/app/settings/api-keys/api-keys-settings-layout"
+} from "@/app/scan/config/data-sources/api-keys-settings-layout"
 
 export interface ApiKeysSettingsLoadingStateProps {
   owner?: string
-  pageTitle: string
-  pageDescription: string
   enableLabel: string
   emailLabel: string
   apiKeyLabel: string
@@ -79,8 +76,6 @@ const API_KEYS_LOADING_PROVIDER_ROWS = [
 
 export function ApiKeysSettingsLoadingState({
   owner,
-  pageTitle,
-  pageDescription,
   enableLabel,
   emailLabel,
   apiKeyLabel,
@@ -100,10 +95,6 @@ export function ApiKeysSettingsLoadingState({
       data-slot="api-keys-settings-loading-state"
       className={API_KEYS_PAGE_SHELL_CLASS}
     >
-      <div {...getLoadingStructureSlotAttributes("api-keys-header")}>
-        <PageHeader code="API-01" title={pageTitle} description={pageDescription} />
-      </div>
-
       <div className={API_KEYS_CONTENT_SHELL_CLASS}>
         <div className={API_KEYS_MASTER_DETAIL_GRID_CLASS}>
           <Card

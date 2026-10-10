@@ -350,7 +350,7 @@ describe("loading route contracts", () => {
   it("makes hidden-readiness page workspaces explicit below the protected route owner", () => {
     for (const [id, owner] of [
       ["route_scan_scheduled", "scheduled-scan-page-route"],
-      ["route_settings_api_keys", "api-keys-page-route"],
+      ["route_scan_config_data_sources", "api-keys-page-route"],
       ["route_settings_database_health", "database-health-page-route"],
       ["route_settings_notifications", "notification-settings-page-route"],
       ["route_settings_support", "support-page-route"],
@@ -381,7 +381,7 @@ describe("loading route contracts", () => {
     const cases = [
       ["route_organizations_id", "organization-detail-view-content", "workspace"],
       ["route_scan_config_workflows", "scan-workflow-page-content", "workspace"],
-      ["route_settings_blacklist", "blacklist-page-content", "workspace"],
+      ["route_scan_config_blacklist", "blacklist-page-content", "workspace"],
       ["route_settings_agents", "agent-list-overview", "section"],
       ["route_settings_agents", "agent-list-toolbar", "section"],
       ["route_settings_agents", "agent-list-results", "section"],

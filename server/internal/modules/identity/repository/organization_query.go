@@ -164,3 +164,18 @@ func (r *OrganizationRepository) ListTargetsByOrganizationIDContext(ctx context.
 
 	return targets, total, err
 }
+
+// ListActiveTargetsByOrganizationIDContext returns every non-deleted target in the organization.
+// Scan expansion must use this method. The paginated list treats a non-positive page size as 20, so passing 0 does not mean "all".
+func (r *OrganizationRepository) ListActiveTargetsByOrganizationIDContext(ctx context.Context, organizationID int) ([]model.OrganizationTargetRef, error) {
+	var targets []model.OrganizationTargetRef
+	err := dbtx.Resolve(ctx, r.db).WithContext(ctx).Model(&model.OrganizationTargetRef{}).
+		Joins("INNER JOIN organization_target ON organization_target.target_id = target.id").
+		Where("organization_target.organization_id = ? AND target.deleted_at IS NULL", organizationID).
+		Order("target.created_at DESC, target.id DESC").
+		Find(&targets).Error
+	if err != nil {
+		return nil, err
+	}
+	return targets, nil
+}

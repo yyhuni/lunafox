@@ -1331,10 +1331,12 @@
     "editTask": "Edit Task",
     "configuration": {
       "title": "Scan Configuration",
-      "description": "Manage scan workflows and available engines.",
+      "description": "Manage workflows, engines, data sources, and the global blacklist.",
       "tabsLabel": "Scan configuration navigation",
       "workflows": "Workflows",
-      "engines": "Engines"
+      "engines": "Engines",
+      "dataSources": "Data sources",
+      "blacklist": "Global blacklist"
     },
     "inputSource": {
       "label": "Scan input",
@@ -1378,6 +1380,8 @@
       "configHelper": "YAML format, defines workflow steps and engine parameters.",
       "advancedYamlTitle": "Advanced mode: YAML editor",
       "advancedYamlHelper": "Edit the raw YAML configuration directly",
+      "modeForm": "Form",
+      "modeYaml": "YAML",
       "resetDefaults": "Reset",
       "configExample": "Example: steps → subdomain_discovery → engineConfig → recon → enabled: true",
       "configEmptySummary": "No configuration loaded",
@@ -4454,6 +4458,10 @@
       "blacklist": {
         "title": "Global Blacklist",
         "description": "Configure global exclusion rules for new scans.",
+        "notice": {
+          "label": "Note: ",
+          "description": "This configures the global blacklist. New scans exclude the ranges it defines, and those ranges are combined with the target blacklist as a union."
+        },
         "loadError": "Failed to load blacklist rules",
         "groups": {
           "domain": "Domain rules",

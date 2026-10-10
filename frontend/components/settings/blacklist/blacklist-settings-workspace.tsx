@@ -5,12 +5,11 @@ import { useTranslations } from "next-intl"
 
 import { BulkLineValidationInput, type BulkLineValidationResult } from "@/components/common/bulk-line-validation-input"
 import { countLineNumberedTextareaLines } from "@/components/common/line-numbered-textarea"
-import { PageHeader } from "@/components/common/page-header"
 import {
   BlacklistSettingsLoadingState,
   EXAMPLE_RULES,
 } from "@/components/settings/blacklist/blacklist-settings-loading-state"
-import { ChevronDown, semanticIcons } from "@/components/icons"
+import { ChevronDown, Info, semanticIcons } from "@/components/icons"
 import { AppErrorState } from "@/components/shared/feedback/app-error-state"
 import { ContentHandoff } from "@/components/shared/loading/content-handoff"
 import { useDetailShellReadySignal } from "@/components/shared/loading/detail-shell-ready-context"
@@ -46,6 +45,8 @@ import {
   BLACKLIST_EDITOR_TITLE_GROUP_CLASS,
   BLACKLIST_EMBEDDED_CONTENT_SHELL_CLASS,
   BLACKLIST_EMBEDDED_PAGE_SHELL_CLASS,
+  BLACKLIST_NOTICE_CARD_CLASS,
+  BLACKLIST_NOTICE_CONTENT_CLASS,
   BLACKLIST_PAGE_SHELL_CLASS,
   BLACKLIST_RULE_GROUP_TABLE_CLASS,
   BLACKLIST_RULE_GROUP_TRIGGER_CLASS,
@@ -74,16 +75,12 @@ interface BlacklistSettingsWorkspaceProps {
   embedded?: boolean
   targetId?: number
   owner?: string
-  pageTitle?: string
-  pageDescription?: string
 }
 
 export function BlacklistSettingsWorkspace({
   embedded = false,
   targetId,
   owner,
-  pageTitle,
-  pageDescription,
 }: BlacklistSettingsWorkspaceProps) {
   const t = useTranslations("pages.settings.blacklist")
   const isTargetScope = embedded && targetId !== undefined
@@ -214,8 +211,6 @@ export function BlacklistSettingsWorkspace({
         <BlacklistSettingsLoadingState
           embedded={embedded}
           scope={isTargetScope ? "target" : "global"}
-          pageTitle={pageTitle}
-          pageDescription={pageDescription}
         />
       )}
       className="flex min-h-0 flex-1 flex-col"
@@ -224,16 +219,6 @@ export function BlacklistSettingsWorkspace({
       prepareContentBeforeHandoff
     >
       <div className={embedded ? BLACKLIST_EMBEDDED_PAGE_SHELL_CLASS : BLACKLIST_PAGE_SHELL_CLASS}>
-        {!embedded ? (
-          <header {...getLoadingStructureSlotAttributes("blacklist-header")}>
-            <PageHeader
-              code="BLK-01"
-              title={pageTitle ?? t("title")}
-              description={pageDescription ?? t("description")}
-            />
-          </header>
-        ) : null}
-
         <div className={embedded ? BLACKLIST_EMBEDDED_CONTENT_SHELL_CLASS : BLACKLIST_CONTENT_SHELL_CLASS}>
           <div className={BLACKLIST_WORKBENCH_GRID_CLASS}>
             <Card
@@ -380,6 +365,21 @@ export function BlacklistSettingsWorkspace({
               </CardContent>
             </Card>
           </div>
+          {embedded ? null : (
+            <Card
+              {...getLoadingStructureSlotAttributes("blacklist-notice")}
+              variant="compact"
+              className={BLACKLIST_NOTICE_CARD_CLASS}
+            >
+              <CardContent className={BLACKLIST_NOTICE_CONTENT_CLASS}>
+                <Info className="mt-0.5 size-4 shrink-0" />
+                <p className={textRole.bodySubtle}>
+                  <span className={textRole.bodyStrong}>{t("notice.label")}</span>
+                  {t("notice.description")}
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </ContentHandoff>

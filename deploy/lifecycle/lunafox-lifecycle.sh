@@ -213,10 +213,11 @@ sanitize_host_environment() {
 # CF state is deliberately not added here: it has to pass its own integrity
 # checks against this base graph before it can affect any Compose command.
 base_compose_file_args() {
+	local env_path="${1:-$LUNAFOX_ENV_PATH}"
 	BASE_COMPOSE_ARGS=(
 		--project-name "$LUNAFOX_PROJECT_NAME"
 		--project-directory "$LUNAFOX_ROOT"
-		--env-file "$LUNAFOX_ENV_PATH"
+		--env-file "$env_path"
 		-f "$LUNAFOX_COMPOSE_PATH"
 	)
 	if [ -n "$LUNAFOX_OVERRIDE_USED" ]; then
@@ -716,7 +717,11 @@ owned_volumes() {
 # with the name it is delivered as; Compose stays the single source of truth for
 # both.
 load_declared_volumes() {
-	DECLARED_VOLUME_PAIRS="$(lf_compose config 2>/dev/null | awk -v project="$LUNAFOX_PROJECT_NAME" '
+	local rendered
+	if ! rendered="$(lf_compose config 2>/dev/null)"; then
+		fail "could not render the Compose volume declarations; fix the deployment configuration before retrying"
+	fi
+	DECLARED_VOLUME_PAIRS="$(printf '%s\n' "$rendered" | awk -v project="$LUNAFOX_PROJECT_NAME" '
 		/^volumes:$/ { inside = 1; next }
 		/^[a-z]/ { inside = 0 }
 		inside && /^  [A-Za-z0-9._-]+:$/ {
@@ -1656,45 +1661,51 @@ action_uninstall() {
 	require_docker_socket
 	sanitize_host_environment
 	validate_override_file
-	base_compose_file_args
-	compose_file_args
 	if [ "$UNINSTALL_PURGE" = 1 ] && [ "$UNINSTALL_CONFIRM" != 1 ]; then
 		usage_failure "--purge requires --confirm, because it permanently deletes the LunaFox volumes"
 	fi
 	acquire_lock uninstall
-	classify_deployment
-	case "$LUNAFOX_DEPLOYMENT_STATE" in
-	fresh)
-		fail "this directory has no LunaFox deployment to remove"
-		;;
-	missing_env | mode_conflict | collision)
-		fail "$LUNAFOX_DEPLOYMENT_DETAIL; resolve it manually before retrying"
-		;;
-	esac
+	local compose_env_path="$LUNAFOX_ENV_PATH"
+	if [ "$UNINSTALL_PURGE" = 1 ] && ! require_env_regular_file "$LUNAFOX_ENV_PATH" ".env"; then
+		# Purge only needs resource names, so missing live configuration must not
+		# require creating .env over the residual data it is about to discard.
+		require_env_regular_file "$LUNAFOX_ENV_TEMPLATE_PATH" "$LUNAFOX_ENV_TEMPLATE" ||
+			fail "$LUNAFOX_ENV_FILE and $LUNAFOX_ENV_TEMPLATE are missing; restore the deployment template before purging"
+		compose_env_path="$LUNAFOX_ENV_TEMPLATE_PATH"
+	fi
+	base_compose_file_args "$compose_env_path"
+	compose_file_args
+	if [ "$UNINSTALL_PURGE" != 1 ]; then
+		classify_deployment
+		case "$LUNAFOX_DEPLOYMENT_STATE" in
+		fresh)
+			fail "this directory has no LunaFox deployment to remove"
+			;;
+		missing_env | mode_conflict | collision)
+			fail "$LUNAFOX_DEPLOYMENT_DETAIL; resolve it manually before retrying"
+			;;
+		esac
+	fi
 	retire_legacy_cf_acceleration
 	compose_file_args
-	enforce_private_env_mode
+	if [ "$compose_env_path" = "$LUNAFOX_ENV_PATH" ]; then
+		enforce_private_env_mode
+	fi
 	require_renderable_configuration
 
-	local name key failed="" removable="" skipped=""
+	local name existing removable="" holders
 	if [ "$UNINSTALL_PURGE" = 1 ]; then
 		load_declared_volumes
-		for name in $(owned_volumes); do
-			key="$(volume_compose_key "$name")"
-			if ! key_is_declared "$key"; then
-				# Owned by this project but not declared by the current compose file:
-				# never delete a resource this release does not describe.
-				skipped="$skipped $name"
-				continue
+		if ! existing="$(docker volume ls --format '{{.Name}}' 2>/dev/null)"; then
+			fail "could not list Docker volumes; no deployment resources were removed"
+		fi
+		# Confirmation authorizes exact Compose-declared names, including orphaned
+		# volumes with absent or foreign labels; project labels never widen scope.
+		for name in $DECLARED_VOLUME_NAMES; do
+			if grep -Fxq "$name" <<<"$existing"; then
+				removable="$removable $name"
 			fi
-			removable="$removable $name"
 		done
-		if [ -n "$skipped" ]; then
-			printf 'LunaFox:   keeping volumes that the current compose.yaml does not declare:%s\n' "$skipped"
-		fi
-		if [ -n "$failed" ]; then
-			fail "these declared volumes cannot be verified as LunaFox-owned, so nothing was removed:$failed"
-		fi
 	fi
 
 	progress "removing this deployment's containers, orphan containers, and project network"
@@ -1703,13 +1714,19 @@ action_uninstall() {
 	fi
 
 	if [ "$UNINSTALL_PURGE" = 1 ]; then
+		# Check every selected volume before deleting any. Docker still rejects a
+		# holder arriving after this check because removal never uses --force.
 		for name in $removable; do
-			local holders
-			holders="$(docker ps -a --filter "volume=$name" --format '{{.Names}}' 2>/dev/null || true)"
-			if [ -n "$holders" ]; then
-				fail "$name is still used by: $(printf '%s' "$holders" | tr '\n' ' '); it was preserved"
+			if ! holders="$(docker ps -a --filter "volume=$name" --format '{{.Names}}' 2>/dev/null)"; then
+				fail "could not check containers using $name; no volumes were removed"
 			fi
-			docker volume rm "$name" >/dev/null 2>&1 || fail "could not remove the LunaFox volume $name; it was preserved"
+			if [ -n "$holders" ]; then
+				fail "$name is still used by: $(printf '%s' "$holders" | tr '\n' ' '); no volumes were removed"
+			fi
+		done
+		for name in $removable; do
+			docker volume rm "$name" >/dev/null 2>&1 ||
+				fail "could not remove the declared volume $name; it was preserved, but earlier volumes may already have been removed"
 		done
 		reset_persisted_override
 		retire_legacy_cf_acceleration

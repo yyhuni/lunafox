@@ -74,7 +74,9 @@ func (adapter *scanTargetLookupAdapter) ListOrganizationTargetRefs(ctx context.C
 	if !exists {
 		return nil, scanapp.ErrCreateTargetNotFound
 	}
-	targets, _, err := adapter.organizationRepo.ListTargetsByOrganizationIDContext(ctx, organizationID, 0, 0, "", "")
+	// The paginated organization-target list defaults a non-positive page size to 20.
+	// Scan expansion needs the full active membership, matching scheduled-scan freeze.
+	targets, err := adapter.organizationRepo.ListActiveTargetsByOrganizationIDContext(ctx, organizationID)
 	if err != nil {
 		return nil, err
 	}

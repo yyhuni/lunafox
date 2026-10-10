@@ -218,10 +218,23 @@ an explicit option atomically updates only its matching `.env` key. The command
 validates options before Docker access and runs `docker compose up -d` exactly
 once. Default `uninstall.sh` is reversible: it keeps named volumes, `.env`, the
 release directory, and the regular `compose.override.yaml` written by a
-completed Upgrade Operation. `./uninstall.sh --purge --confirm` verifies and
-deletes the named volumes declared by the current `compose.yaml`, then removes
-that version override for a clean reinstall from the same directory. It still
-preserves `.env` and the release directory.
+completed Upgrade Operation. `./uninstall.sh --purge --confirm` permanently
+deletes existing volumes at the exact names declared by the current Compose
+file stack (`compose.yaml` and any regular `compose.override.yaml`), regardless
+of missing or different ownership labels. This includes unlabelled residual
+volumes left by an interrupted installation. It then removes that version
+override for a clean reinstall from the same directory. Undeclared volumes,
+`.env`, and the release directory are preserved.
+
+Confirmed purge skips installation ownership and database-mode classification.
+If `.env` is missing, it reads `.env.example` only to render Compose; it never
+creates `.env`. Invalid Compose inputs still prevent cleanup. After project
+containers are removed, any remaining container reference to a selected volume
+prevents all volume deletions. Docker query or deletion failures return an
+error and retain the version override; a removal failure can leave an earlier
+volume already deleted. Retrying an already empty purge is allowed. Confirming
+purge authorizes deletion by exact declared name even when the volume belongs
+to another project, so its data cannot be recovered through this command.
 
 ### Image preheat and recovery
 

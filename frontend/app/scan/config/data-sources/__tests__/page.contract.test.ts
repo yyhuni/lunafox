@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 
-const source = readFileSync(path.resolve(process.cwd(), "app/settings/api-keys/page.tsx"), "utf8")
-const workspaceSource = readFileSync(path.resolve(process.cwd(), "app/settings/api-keys/api-keys-settings-workspace.tsx"), "utf8")
-const layoutSource = readFileSync(path.resolve(process.cwd(), "app/settings/api-keys/api-keys-settings-layout.ts"), "utf8")
-const contentSource = readFileSync(path.resolve(process.cwd(), "app/settings/api-keys/content.tsx"), "utf8")
+const source = readFileSync(path.resolve(process.cwd(), "app/scan/config/data-sources/page.tsx"), "utf8")
+const workspaceSource = readFileSync(path.resolve(process.cwd(), "app/scan/config/data-sources/api-keys-settings-workspace.tsx"), "utf8")
+const layoutSource = readFileSync(path.resolve(process.cwd(), "app/scan/config/data-sources/api-keys-settings-layout.ts"), "utf8")
+const contentSource = readFileSync(path.resolve(process.cwd(), "app/scan/config/data-sources/content.tsx"), "utf8")
 const loadingStateSource = readFileSync(
   path.resolve(process.cwd(), "components/settings/api-keys/api-keys-settings-loading-state.tsx"),
   "utf8"
@@ -13,9 +13,11 @@ const loadingStateSource = readFileSync(
 
 describe("page contract", () => {
   it("keeps the route shell server-rendered", () => {
-    expect(source).toContain("export default function ApiKeysSettingsPage")
-    expect(source).toContain("ApiKeysSettingsWorkspace")
+    expect(source).toContain("export default function ScanConfigurationDataSourcesPage")
+    expect(source).toContain("ScanConfigurationWorkspace")
+    expect(source).toContain('activeTab="dataSources"')
     expect(source).toContain("<ApiKeysSettingsWorkspace />")
+    expect(source).not.toContain("redirect(")
     expect(source).not.toContain("\"use client\"")
     expect(source).not.toContain("next/dynamic")
     expect(source).not.toContain("getTranslations")
@@ -31,11 +33,10 @@ describe("page contract", () => {
     expect(workspaceSource).toContain('owner="api-keys-page-route"')
     expect(workspaceSource).toContain('layer="workspace"')
     expect(workspaceSource).toContain('intent="data"')
-    expect(workspaceSource).toContain('const pageTitle = t("title")')
-    expect(workspaceSource).toContain('const pageDescription = t("description")')
+    expect(workspaceSource).not.toContain('const pageTitle = t("title")')
+    expect(workspaceSource).not.toContain("pageDescription")
     expect(workspaceSource).toContain("<ApiKeysSettingsLoadingState")
-    expect(workspaceSource).toContain("pageTitle={pageTitle}")
-    expect(workspaceSource).toContain("pageDescription={pageDescription}")
+    expect(workspaceSource).not.toContain("pageTitle={pageTitle}")
     expect(workspaceSource).toContain("<ApiKeysSettingsPageContent")
     expect(workspaceSource).toContain("onReady={onReady}")
     expect(workspaceSource).toContain("deferInitialSkeleton={deferInitialSkeleton}")
@@ -65,8 +66,9 @@ describe("page contract", () => {
   })
 
   it("pairs the route-critical API key regions across loading and content", () => {
+    expect(loadingStateSource).not.toContain("api-keys-header")
+    expect(contentSource).not.toContain("api-keys-header")
     for (const slot of [
-      "api-keys-header",
       "api-keys-provider-list",
       "api-keys-provider-detail",
       "api-keys-notice",

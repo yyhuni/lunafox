@@ -3,13 +3,13 @@
 import React, { useCallback, useEffect, useState } from "react"
 import * as yaml from "js-yaml"
 import { useTranslations } from "next-intl"
-import { FileCode, RefreshCw } from "@/components/icons"
+import { RefreshCw, Zap } from "@/components/icons"
 
 import { cn } from "@/lib/utils"
 import { textRole } from "@/lib/typography"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useCompleteWordlistCatalogState } from "@/hooks/use-wordlists"
 import {
   configResourceFieldKey,
@@ -52,6 +52,9 @@ interface ScanConfigViewToggleProps {
   className?: string
   renderParamControl?: EngineParamControlRenderer
   defaultExpandedStepIds?: ReadonlySet<string>
+  workflowSummary?: string
+  configuredEngineCount?: number
+  configuredStageCount?: number
 }
 
 export type ScanConfigValidationHandle = {
@@ -76,6 +79,9 @@ export const ScanConfigViewToggle = React.forwardRef<
   className,
   renderParamControl,
   defaultExpandedStepIds,
+  workflowSummary,
+  configuredEngineCount,
+  configuredStageCount,
 }: ScanConfigViewToggleProps, ref) {
   const t = useTranslations("scan.initiate")
   const [viewMode, setViewMode] = useState<ConfigViewMode>("form")
@@ -334,53 +340,58 @@ export const ScanConfigViewToggle = React.forwardRef<
   return (
     <ScrollArea className={cn("min-h-0 flex-1", className)} contentClassName="!min-w-0 w-full">
       <div className="flex min-h-full flex-col gap-3">
-        <div className="radius-surface flex flex-wrap items-center justify-between gap-3 border bg-muted/20 px-4 py-3">
-          <div className="flex min-w-0 items-center gap-3">
-          <span className="flex size-7 shrink-0 items-center justify-center text-muted-foreground">
-            <FileCode className="size-7" />
-          </span>
-          <div className="min-w-0 space-y-1">
-            <p className={textRole.sectionTitle}>{t("advancedYamlTitle")}</p>
-            <p className={textRole.helperText}>{t("advancedYamlHelper")}</p>
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <h3 className={cn("shrink-0", textRole.sectionTitle)}>{t("steps.engineConfig")}</h3>
+            {workflowSummary ? (
+              <span
+                title={workflowSummary}
+                className="inline-flex min-w-0 max-w-[130px] sm:max-w-[200px] shrink items-center gap-1 rounded border border-border/60 bg-muted/30 px-1.5 py-0.5 text-[11px] text-muted-foreground"
+              >
+                <Zap className="size-3 shrink-0" />
+                <span className="truncate">{workflowSummary}</span>
+              </span>
+            ) : null}
+            {isConfigEdited ? (
+              <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-warning">
+                <span className="size-1.5 rounded-full bg-warning" />
+                {t("configEdited")}
+              </span>
+            ) : null}
           </div>
 
-          <div className="flex items-center gap-2">
-          {isFormMode && onReset ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleResetToDefaults}
-              disabled={disabled}
-              className="gap-1.5"
+          <div className="flex shrink-0 items-center gap-2">
+            {isFormMode && onReset ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleResetToDefaults}
+                disabled={disabled}
+                className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <RefreshCw className="size-3" />
+                {t("resetDefaults")}
+              </Button>
+            ) : null}
+            <Tabs
+              value={viewMode}
+              onValueChange={(val) => handleViewModeChange(val === "yaml")}
             >
-              <RefreshCw className="size-3" />
-              {t("resetDefaults")}
-            </Button>
-          ) : null}
-          <Switch
-            checked={!isFormMode}
-            onCheckedChange={handleViewModeChange}
-            disabled={disabled}
-            aria-label={t("advancedYamlTitle")}
-          />
+              <TabsList variant="filter" size="sm" className="h-7 p-[2px]" aria-label={t("advancedYamlTitle")}>
+                <TabsTrigger value="form" variant="filter" size="sm" className="h-[calc(100%-1px)] px-2 py-0.5 text-xs">
+                  {t("modeForm")}
+                </TabsTrigger>
+                <TabsTrigger value="yaml" variant="filter" size="sm" className="h-[calc(100%-1px)] px-2 py-0.5 text-xs">
+                  {t("modeYaml")}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
-          <h3 className={textRole.sectionTitle}>{t("steps.engineConfig")}</h3>
-          {isConfigEdited ? (
-            <span className="inline-flex shrink-0 items-center gap-1 text-[11px] text-warning">
-              <span className="size-1.5 rounded-full bg-warning" />
-              {t("configEdited")}
-            </span>
-          ) : null}
-          </div>
-
-          <div className="min-h-0 flex-1">
-            {isFormMode ? (
+        <div className="min-h-0 flex-1">
+          {isFormMode ? (
             <EngineConfigForm
               workflow={workflow}
               values={formValues}
@@ -393,7 +404,7 @@ export const ScanConfigViewToggle = React.forwardRef<
               renderParamControl={renderParamControl}
               onChange={handleFormChange}
             />
-            ) : (
+          ) : (
             <ScanConfigEditor
               configuration={configuration}
               onChange={onChange}
@@ -406,8 +417,7 @@ export const ScanConfigViewToggle = React.forwardRef<
               showLabel={false}
               className="h-full"
             />
-            )}
-          </div>
+          )}
         </div>
       </div>
     </ScrollArea>

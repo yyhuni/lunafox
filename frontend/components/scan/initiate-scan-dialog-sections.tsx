@@ -1,7 +1,6 @@
 import React from "react"
 import {
   AlertTriangle,
-  Box,
   CheckCircle2,
   Clock,
   ChevronLeft,
@@ -360,10 +359,13 @@ export function InitiateScanConfigStep({
   renderParamControl,
   defaultExpandedStepIds,
 }: InitiateScanConfigStepProps) {
-  const selectionSummary = selectMode === "custom" && selectedWorkflowNames.length > 0
-      ? selectedWorkflowNames.join("、")
-      : t("validation.workflowsMissing")
   const selectedWorkflow = selectedWorkflows[0]
+  const workflowDisplayName =
+    selectedWorkflow?.displayName ||
+    (selectedWorkflow?.name ? selectedWorkflow.name.replace(/^scanWorkflows\//, "") : undefined) ||
+    (selectMode === "custom" && selectedWorkflowNames.length > 0
+      ? selectedWorkflowNames.map((name) => name.replace(/^scanWorkflows\//, "")).join("、")
+      : undefined)
   const workflowResult = React.useMemo(() => {
     if (!selectedWorkflow?.steps?.length || !engineCatalogDetails || !locale) return null
     try {
@@ -385,45 +387,26 @@ export function InitiateScanConfigStep({
   const configuredStageCount = workflowModel.stages.length
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2 text-muted-foreground">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <Zap className="size-4 shrink-0" />
-            <span className={cn("min-w-0 truncate", textRole.metadataValueStrong)}>{selectionSummary}</span>
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Box className="size-3.5 shrink-0" />
-            <span className={textRole.helperText}>{t("engineConfiguredSummary", { count: configuredEngineCount })}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Clock className="size-3.5 shrink-0" />
-            <span className={textRole.helperText}>{t("stageCount", { count: configuredStageCount })}</span>
-          </div>
-          {!isYamlValid || !hasConfig ? <span className={cn("text-warning", textRole.helperText)}>{t("validation.yamlError")}</span> : null}
-        </div>
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col">
-        <ScanConfigViewToggle
-          ref={configValidationRef}
-          workflow={workflowModel}
-          configuration={configuration}
-          onSync={onConfigSync}
-          onChange={onConfigChange}
-          onReset={onResetConfig}
-          onValidationChange={onYamlValidationChange}
-          selectedScanWorkflows={selectedWorkflows}
-          formValuesCacheRef={formValuesCacheRef}
-          workflowProfileDraft={workflowProfileDraft}
-          disabled={isSubmitting}
-          isConfigEdited={isConfigEdited}
-          renderParamControl={renderParamControl}
-          defaultExpandedStepIds={defaultExpandedStepIds}
-        />
-      </div>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <ScanConfigViewToggle
+        ref={configValidationRef}
+        workflow={workflowModel}
+        configuration={configuration}
+        onSync={onConfigSync}
+        onChange={onConfigChange}
+        onReset={onResetConfig}
+        onValidationChange={onYamlValidationChange}
+        selectedScanWorkflows={selectedWorkflows}
+        formValuesCacheRef={formValuesCacheRef}
+        workflowProfileDraft={workflowProfileDraft}
+        disabled={isSubmitting}
+        isConfigEdited={isConfigEdited}
+        renderParamControl={renderParamControl}
+        defaultExpandedStepIds={defaultExpandedStepIds}
+        workflowSummary={workflowDisplayName}
+        configuredEngineCount={configuredEngineCount}
+        configuredStageCount={configuredStageCount}
+      />
     </div>
   )
 }

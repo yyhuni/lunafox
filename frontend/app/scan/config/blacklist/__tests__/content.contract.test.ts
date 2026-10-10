@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 
 const source = readFileSync(path.resolve(process.cwd(), "components/settings/blacklist/blacklist-settings-workspace.tsx"), "utf8")
-const routeSource = readFileSync(path.resolve(process.cwd(), "app/settings/blacklist/content.tsx"), "utf8")
+const routeSource = readFileSync(path.resolve(process.cwd(), "app/scan/config/blacklist/page.tsx"), "utf8")
 const layoutSource = readFileSync(path.resolve(process.cwd(), "components/settings/blacklist/blacklist-settings-layout.ts"), "utf8")
 const loadingStateSource = readFileSync(
   path.resolve(process.cwd(), "components/settings/blacklist/blacklist-settings-loading-state.tsx"),
@@ -13,7 +13,19 @@ const loadingStateSource = readFileSync(
 describe("blacklist settings workspace contract", () => {
   it("keeps route ownership thin and the shared workspace as the only editor owner", () => {
     expect(source).toContain("export function BlacklistSettingsWorkspace")
-    expect(routeSource).toContain("BlacklistSettingsWorkspace")
+    expect(routeSource).toContain("ScanConfigurationWorkspace")
+    expect(routeSource).toContain('activeTab="blacklist"')
+    expect(routeSource).toContain("<BlacklistSettingsWorkspace />")
+    expect(routeSource).not.toContain("redirect(")
+    expect(routeSource).not.toContain("<PageHeader")
+    expect(source).not.toContain("<PageHeader")
+    expect(source).toContain('getLoadingStructureSlotAttributes("blacklist-notice")')
+    expect(source).toContain("embedded ? null")
+    expect(source).toContain('t("notice.label")')
+    expect(loadingStateSource).toContain('getLoadingStructureSlotAttributes("blacklist-notice")')
+    expect(source).not.toContain("blacklist-header")
+    expect(loadingStateSource).not.toContain("blacklist-header")
+    expect(loadingStateSource).not.toContain("<PageHeader")
     expect(source).toContain("BlacklistSettingsLoadingState")
     expect(loadingStateSource).toContain("export function BlacklistSettingsLoadingState")
     expect(source).not.toContain("BlacklistSettingsSkeleton")
@@ -79,6 +91,8 @@ describe("blacklist settings workspace contract", () => {
       "BLACKLIST_EDITOR_CONTENT_CLASS",
       "BLACKLIST_EDITOR_ACTION_ROW_CLASS",
       "BLACKLIST_EDITOR_ACTION_GROUP_CLASS",
+      "BLACKLIST_NOTICE_CARD_CLASS",
+      "BLACKLIST_NOTICE_CONTENT_CLASS",
     ]
 
     for (const constant of sharedLayoutConstants) {
@@ -93,7 +107,7 @@ describe("blacklist settings workspace contract", () => {
     expect(layoutSource).toContain(
       'export const BLACKLIST_RULE_LIST_CONTENT_CLASS = "h-96 min-h-0 flex-none space-y-3 overflow-auto lg:h-auto lg:flex-1"'
     )
-    expect(layoutSource).toContain('export const BLACKLIST_RULE_LIST_HEADER_CLASS = "px-4 pb-2.5"')
+    expect(layoutSource).toContain('export const BLACKLIST_RULE_LIST_HEADER_CLASS = "px-4 pb-2.5 pt-3"')
     expect(layoutSource).toContain('export const BLACKLIST_EDITOR_HEADER_CLASS = "px-4 pb-2.5 pt-3"')
     expect(source).toContain('variant="compact"')
     expect(loadingStateSource).toContain('variant="compact"')

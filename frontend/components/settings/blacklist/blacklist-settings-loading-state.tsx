@@ -8,7 +8,7 @@ import {
   getLineNumberGutterWidth,
 } from "@/components/common/line-numbered-textarea"
 import { BulkLineValidationInput } from "@/components/common/bulk-line-validation-input"
-import { PageHeader } from "@/components/common/page-header"
+import { Info } from "@/components/icons"
 import { ActionSkeleton } from "@/components/shared/loading/action-skeleton"
 import {
   getLoadingOwnerAttributes,
@@ -34,6 +34,8 @@ import {
   BLACKLIST_EDITOR_STATUS_SLOT_CLASS,
   BLACKLIST_EDITOR_TITLE_GROUP_CLASS,
   BLACKLIST_EDITOR_VIEWPORT_CLASS,
+  BLACKLIST_NOTICE_CARD_CLASS,
+  BLACKLIST_NOTICE_CONTENT_CLASS,
   BLACKLIST_PAGE_SHELL_CLASS,
   BLACKLIST_RULE_GROUP_TABLE_CLASS,
   BLACKLIST_RULE_GROUP_TRIGGER_CLASS,
@@ -56,8 +58,6 @@ interface BlacklistSettingsLoadingStateProps {
   className?: string
   embedded?: boolean
   scope?: "global" | "target"
-  pageTitle?: string
-  pageDescription?: string
 }
 
 function LoadingRuleGroup({
@@ -111,8 +111,6 @@ export function BlacklistSettingsLoadingState({
   className,
   embedded = false,
   scope = "global",
-  pageTitle,
-  pageDescription,
 }: BlacklistSettingsLoadingStateProps) {
   const t = useTranslations("pages.settings.blacklist")
   const editorLabel = scope === "target" ? t("editor.targetInputLabel") : t("editor.inputLabel")
@@ -132,16 +130,6 @@ export function BlacklistSettingsLoadingState({
         className
       )}
     >
-      {!embedded ? (
-        <header {...getLoadingStructureSlotAttributes("blacklist-header")}>
-          <PageHeader
-            code="BLK-01"
-            title={pageTitle ?? t("title")}
-            description={pageDescription ?? t("description")}
-          />
-        </header>
-      ) : null}
-
       <div className={embedded ? BLACKLIST_EMBEDDED_CONTENT_SHELL_CLASS : BLACKLIST_CONTENT_SHELL_CLASS}>
         <div className={BLACKLIST_WORKBENCH_GRID_CLASS}>
           <Card
@@ -249,7 +237,21 @@ export function BlacklistSettingsLoadingState({
             </CardContent>
           </Card>
         </div>
-
+        {embedded ? null : (
+          <Card
+            {...getLoadingStructureSlotAttributes("blacklist-notice")}
+            variant="compact"
+            className={BLACKLIST_NOTICE_CARD_CLASS}
+          >
+            <CardContent className={BLACKLIST_NOTICE_CONTENT_CLASS}>
+              <Info className="mt-0.5 size-4 shrink-0" />
+              <p className={textRole.bodySubtle}>
+                <span className={textRole.bodyStrong}>{t("notice.label")}</span>
+                {t("notice.description")}
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )
