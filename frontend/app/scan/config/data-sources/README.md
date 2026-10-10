@@ -1,8 +1,11 @@
-# API Keys Settings Page
+# Data Source Settings
 
-This route keeps the resolved credential editor and initial loading state on one
-shared geometry path. Shared page, master-detail, provider row, credential field,
-and footer action layout classes live in `api-keys-settings-layout.ts`.
+This scan-configuration tab keeps the resolved credential editor and initial
+loading state on one shared geometry path. The scan configuration shell owns the
+page title. This tab does not render its own page header or a purpose sentence
+above the form. The security notice stays in the form region. Shared master-detail, provider
+row, credential field, and footer action layout classes live in
+`api-keys-settings-layout.ts`.
 
 - `frontend/components/settings/api-keys/api-keys-settings-loading-state.tsx`
   owns `ApiKeysSettingsLoadingState`; resolved content and workspace data loading
@@ -31,9 +34,12 @@ and footer action layout classes live in `api-keys-settings-layout.ts`.
   vertical inset. The credential form stack and security notice use the same
   compact card rhythm in ready and loading states; do not restore a looser
   row-only or default-card variant on either branch.
-- The route pairs `api-keys-header`, `api-keys-provider-list`,
-  `api-keys-provider-detail`, and `api-keys-notice` between its loading and
-  resolved branches. `ContentHandoff` owns the surrounding `surface` slot.
+- The route lives at `/scan/config/data-sources/`. `/settings/api-keys/` is not a
+  route and does not redirect here.
+- The route pairs `api-keys-provider-list`, `api-keys-provider-detail`, and
+  `api-keys-notice` between its loading and resolved branches. `ContentHandoff`
+  owns the surrounding `surface` slot. Do not restore `api-keys-header` for a
+  purpose sentence above the form.
 
 ## Credential update contract
 

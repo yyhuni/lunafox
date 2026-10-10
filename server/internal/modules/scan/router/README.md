@@ -30,5 +30,6 @@ duplicate, missing, or deleted names are request errors.
 ## Constraints
 - Register business routes through `RegisterScanRoutes`
 - Normal scan creation uses `POST /v1/scans:batchCreate` for one or more target/organization scopes; do not reintroduce `POST /v1/scans` as a create route.
+- An organization scope expands to every active target in that organization. Resolve that membership with an unpaginated query; the organization-target list's default page size is 20.
 - Gin stores collection custom methods through an internal `/scans:customMethod` dispatch route; client-facing paths remain the canonical AIP custom methods listed above.
 - Task progress log writes are runtime data-plane operations and are not exposed through HTTP routes.

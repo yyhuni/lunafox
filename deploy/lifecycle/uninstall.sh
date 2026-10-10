@@ -27,11 +27,13 @@ and the project network. Named volumes, .env, certificates, upgrade state, and
 compose.override.yaml are preserved together with this release directory, so
 ./install.sh or ./start.sh can restore the deployment.
 
-  --purge --confirm   additionally delete the LunaFox named volumes declared by
-                      the current compose.yaml after verifying their ownership,
-                      then reset a persisted compose.override.yaml. Data in
-                      those volumes cannot be recovered; .env and this release
-                      directory are still preserved.
+  --purge --confirm   additionally delete existing volumes at the exact names
+                      declared by the current Compose file stack, regardless of
+                      ownership labels, then reset compose.override.yaml.
+                      Volumes still used by containers are refused. Data cannot
+                      be recovered; undeclared volumes, .env, and this release
+                      directory are preserved. If .env is missing, .env.example
+                      is read only to render Compose; no .env is created.
 
 --purge without --confirm fails before anything is removed.
 USAGE

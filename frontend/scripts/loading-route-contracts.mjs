@@ -295,11 +295,10 @@ const routeLoadingGeometryInventory = {
       ],
     },
   },
-  route_settings_api_keys: {
+  route_scan_config_data_sources: {
     "api-keys-page-route": {
       requiredSlots: [
         "surface",
-        "api-keys-header",
         "api-keys-provider-list",
         "api-keys-provider-detail",
         "api-keys-notice",
@@ -317,13 +316,13 @@ const routeLoadingGeometryInventory = {
       requiredSlots: ["surface", "agent-list-results-primary-region"],
     },
   },
-  route_settings_blacklist: {
+  route_scan_config_blacklist: {
     "blacklist-page-content": {
       requiredSlots: [
         "surface",
-        "blacklist-header",
         "blacklist-controls",
         "blacklist-list",
+        "blacklist-notice",
       ],
     },
   },
@@ -584,9 +583,9 @@ const protectedRouteIds = [
   "route_scan_history_id_vulnerabilities",
   "route_scan_history_id_websites",
   "route_scan_scheduled",
-  "route_settings_api_keys",
+  "route_scan_config_data_sources",
   "route_settings_agents",
-  "route_settings_blacklist",
+  "route_scan_config_blacklist",
   "route_settings_database_health",
   "route_settings_login_visual",
   "route_settings_notifications",
@@ -665,10 +664,10 @@ const routeFirstScreenOwnerConfigs = {
     createFirstScreenOwner("agent-list-toolbar", "section"),
     createFirstScreenOwner("agent-list-results", "section"),
   ], "section"),
-  route_settings_api_keys: createFirstScreenOwnerConfig([
+  route_scan_config_data_sources: createFirstScreenOwnerConfig([
     createFirstScreenOwner("api-keys-page-route"),
   ]),
-  route_settings_blacklist: createFirstScreenOwnerConfig([
+  route_scan_config_blacklist: createFirstScreenOwnerConfig([
     createFirstScreenOwner("blacklist-page-content"),
   ]),
   route_settings_database_health: createFirstScreenOwnerConfig([

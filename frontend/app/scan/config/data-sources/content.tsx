@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react"
 import { useTranslations } from "next-intl"
 
 import { Eye, IconEyeOff, ExternalLink, ShieldCheck } from "@/components/icons"
-import { PageHeader } from "@/components/common/page-header"
 import { CopyButton } from "@/components/shared/feedback/copy-button"
 import { getLoadingStructureSlotAttributes } from "@/components/shared/loading/loading-owner"
 import { SearchInput } from "@/components/shared/search-input"
@@ -71,8 +70,6 @@ import {
 } from "./api-keys-settings-layout"
 
 export interface ApiKeysSettingsPageProps {
-  pageTitle: string
-  pageDescription: string
   onReady?: () => void
   deferInitialSkeleton?: boolean
 }
@@ -181,8 +178,6 @@ function PasswordInput({
 }
 
 export default function ApiKeysSettingsPage({
-  pageTitle,
-  pageDescription,
   onReady,
   deferInitialSkeleton = false,
 }: ApiKeysSettingsPageProps) {
@@ -261,8 +256,6 @@ export default function ApiKeysSettingsPage({
     return (
       <ApiKeysSettingsLoadingState
         owner="api-keys-page"
-        pageTitle={pageTitle}
-        pageDescription={pageDescription}
         enableLabel={t("enableLabel")}
         emailLabel={t("fields.email")}
         apiKeyLabel={t("fields.apiKey")}
@@ -278,10 +271,6 @@ export default function ApiKeysSettingsPage({
 
   return (
     <div className={API_KEYS_PAGE_SHELL_CLASS}>
-      <div {...getLoadingStructureSlotAttributes("api-keys-header")}>
-        <PageHeader code="API-01" title={pageTitle} description={pageDescription} />
-      </div>
-
       <div className={API_KEYS_CONTENT_SHELL_CLASS}>
         <div className={API_KEYS_MASTER_DETAIL_GRID_CLASS}>
           <Card

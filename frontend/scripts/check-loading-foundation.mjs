@@ -53,7 +53,7 @@ const approvedLoadingOwners = new Set([
 // declaring a slot without an explicit owner or shared-template review.
 const approvedLoadingStructureSlotTemplates = new Set([
   "app/scan/history/[id]/scan-history-detail-shell-layout.tsx",
-  "app/settings/api-keys/content.tsx",
+  "app/scan/config/data-sources/content.tsx",
   "app/targets/[id]/target-detail-shell-layout.tsx",
   "components/overview/overview-lazy-sections.tsx",
   "components/overview/overview-sections-skeleton.tsx",

@@ -142,7 +142,9 @@ docker compose exec server resetadmin
 
 `install.sh` 会描述它识别到的运行类型，而不是始终叙述为首次启动：没有任何 LunaFox 数据的目录属于首次启动；只有 volumes 而没有容器的目录会在保留命名 volumes 和已安装 Engine 的情况下重建容器，不属于升级；运行中的部署会在保留配置和 volumes 的情况下启动。当这种重建部署在 `bootstrap` 等首次启动任务上失败时，footer 会在 `logs.sh` 和 `status.sh` 提示之后增加一行可选信息：如果可以丢弃保留数据，只有 `./uninstall.sh --purge --confirm` 能删除命名 volumes 并重新开始。
 
-`install.sh` 接受 `--public-host <host>`、`--public-port <port>` 和 `--help`。公网地址参数仅限安装动作：host 必须是 hostname 或 IP address，port 必须是 1 到 65535 的十进制值。未提供的地址值沿用 `.env` 或随包提供的 `localhost` / `443` 默认值；显式参数只会原子更新对应的 `.env` 键。命令会在访问 Docker 前校验参数，并且恰好运行一次 `docker compose up -d`。默认的 `uninstall.sh` 是可恢复的：它保留命名 volumes、`.env`、发布目录，以及已完成 Upgrade Operation 写入的常规 `compose.override.yaml`。`./uninstall.sh --purge --confirm` 会先验证并删除当前 `compose.yaml` 声明的 LunaFox 命名 volumes，再移除该版本覆盖层，以便在同一目录中进行干净重装；`.env` 和发布目录仍会保留。
+`install.sh` 接受 `--public-host <host>`、`--public-port <port>` 和 `--help`。公网地址参数仅限安装动作：host 必须是 hostname 或 IP address，port 必须是 1 到 65535 的十进制值。未提供的地址值沿用 `.env` 或随包提供的 `localhost` / `443` 默认值；显式参数只会原子更新对应的 `.env` 键。命令会在访问 Docker 前校验参数，并且恰好运行一次 `docker compose up -d`。默认的 `uninstall.sh` 是可恢复的：它保留命名 volumes、`.env`、发布目录，以及已完成 Upgrade Operation 写入的常规 `compose.override.yaml`。`./uninstall.sh --purge --confirm` 会按当前 Compose 文件栈（`compose.yaml` 和存在的常规 `compose.override.yaml`）声明的精确名称永久删除已存在的 volumes，忽略缺失或不同的归属标签，包括中断安装留下的无标签残留卷。随后移除该版本覆盖层，以便在同一目录中进行干净重装；未声明卷、`.env` 和发布目录仍会保留。
+
+确认 purge 后会跳过安装用的归属与数据库模式分类。若 `.env` 缺失，只读使用 `.env.example` 解析 Compose，不会创建 `.env`；无效的 Compose 输入仍会阻止清理。移除本项目容器后，只要任一目标卷仍被容器引用，就不会删除任何卷。Docker 查询或删除失败会报错并保留版本覆盖层；删除过程中失败时，较早处理的卷可能已经被删除。已无目标卷时允许重复 purge。确认 purge 即授权按声明的精确名称删除，即使卷属于其他项目，其数据也无法通过此命令恢复。
 
 ### 镜像预热与恢复
 

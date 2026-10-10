@@ -9,6 +9,7 @@ identity 模块 repository 规范：
 
 约束：
 
+- `ListTargetsByOrganizationIDContext` 是分页查询，`pageSize <= 0` 表示默认 20 条，不是全部成员。需要某个组织的全部有效目标时用 `ListActiveTargetsByOrganizationIDContext`。
 - 禁止使用 `*_mutation.go` 命名。
 - 禁止使用泛名 `types.go`。
 - `*_query.go` 不得出现写操作方法；`*_command.go` 不得出现查询方法。

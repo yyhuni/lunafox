@@ -141,7 +141,7 @@ describe("ScanConfigViewToggle resources", () => {
     const ref = React.createRef<ScanConfigValidationHandle>()
     render(<ControlledConfigProbe ref={ref} />)
 
-    fireEvent.click(screen.getByRole("switch", { name: "advancedYamlTitle" }))
+    fireEvent.click(screen.getByRole("tab", { name: "modeYaml" }))
     expect(screen.getByRole("textbox", { name: "yaml-editor" })).toBeInTheDocument()
 
     let valid = true
@@ -289,7 +289,7 @@ describe("ScanConfigViewToggle resources", () => {
       />
     )
 
-    fireEvent.click(screen.getByRole("switch", { name: "advancedYamlTitle" }))
+    fireEvent.click(screen.getByRole("tab", { name: "modeYaml" }))
 
     expect(await screen.findByRole("alert")).toHaveTextContent("unknown Workflow Step")
   })

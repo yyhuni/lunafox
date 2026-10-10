@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 
-const source = readFileSync(path.resolve(process.cwd(), "app/settings/api-keys/content.tsx"), "utf8")
-const layoutSource = readFileSync(path.resolve(process.cwd(), "app/settings/api-keys/api-keys-settings-layout.ts"), "utf8")
+const source = readFileSync(path.resolve(process.cwd(), "app/scan/config/data-sources/content.tsx"), "utf8")
+const layoutSource = readFileSync(path.resolve(process.cwd(), "app/scan/config/data-sources/api-keys-settings-layout.ts"), "utf8")
 const loadingStateSource = readFileSync(
   path.resolve(process.cwd(), "components/settings/api-keys/api-keys-settings-loading-state.tsx"),
   "utf8"
@@ -15,11 +15,15 @@ describe("content contract", () => {
   it("keeps the API keys page scoped to subfinder data-source credentials", () => {
     expect(source).toContain("export default function ApiKeysSettingsPage")
     expect(source).toContain('useTranslations("pages.apiKeys")')
-    expect(source).toContain("pageTitle: string")
-    expect(source).toContain("pageDescription: string")
-    expect(source).toContain("<PageHeader code=\"API-01\" title={pageTitle} description={pageDescription} />")
+    expect(source).not.toContain("pageTitle: string")
+    expect(source).not.toContain("pageDescription")
+    expect(source).not.toContain("api-keys-header")
+    expect(source).toContain("textRole.bodySubtle")
+    expect(source).toContain('t("securityNotice.label")')
+    expect(source).toContain('t("securityNotice.description")')
+    expect(source).not.toContain("<PageHeader")
     expect(source).not.toContain('const pageTitle = t("title")')
-    expect(source).not.toContain('const pageDescription = t("description")')
+    expect(source).not.toContain('t("description")')
     expect(source).toContain("useApiKeySettings")
     expect(source).not.toContain("系统开放 API")
   })
@@ -33,8 +37,8 @@ describe("content contract", () => {
     expect(source).not.toContain("export function ApiKeysSettingsLoadingState")
     expect(source).not.toContain("api-keys-settings-skeleton")
     expect(source).toContain("API_KEYS_MASTER_DETAIL_GRID_CLASS")
-    expect(source).toContain("<PageHeader")
-    expect(source).toContain("code=\"API-01\"")
+    expect(source).not.toContain("<PageHeader")
+    expect(source).not.toContain("code=\"API-01\"")
     expect(source).not.toContain('Skeleton className="h-full min-h-96')
   })
 
@@ -67,7 +71,7 @@ describe("content contract", () => {
     ]
 
     expect(source).toContain('from "./api-keys-settings-layout"')
-    expect(loadingStateSource).toContain('from "@/app/settings/api-keys/api-keys-settings-layout"')
+    expect(loadingStateSource).toContain('from "@/app/scan/config/data-sources/api-keys-settings-layout"')
     for (const constant of sharedLayoutConstants) {
       expect(layoutSource).toContain(`export const ${constant}`)
       expect(source).toContain(constant)
@@ -96,8 +100,10 @@ describe("content contract", () => {
     expect(source).toContain("if (isLoading && !deferInitialSkeleton)")
     expect(source).toContain("if (isLoading) return null")
     expect(source).toContain('owner="api-keys-page"')
-    expect(source).toContain('pageTitle={pageTitle}')
-    expect(source).toContain('pageDescription={pageDescription}')
+    expect(source).not.toContain('pageTitle={pageTitle}')
+    expect(source).not.toContain("pageDescription")
+    expect(loadingStateSource).not.toContain("pageDescription")
+    expect(loadingStateSource).not.toContain("api-keys-header")
     expect(source).not.toContain("MasterDetailSkeleton")
     expect(source).not.toContain("ApiKeysSettingsSkeleton")
   })

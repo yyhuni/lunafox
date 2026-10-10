@@ -1,10 +1,10 @@
 import {
   COMPACT_CONTENT_GUTTER_CLASS,
-  COMPACT_FLEX_PAGE_SHELL_CLASS,
 } from "@/components/shared/layout/page-shell-density"
 
-export const BLACKLIST_PAGE_SHELL_CLASS =
-  COMPACT_FLEX_PAGE_SHELL_CLASS
+// The scan-configuration shell already owns the page padding. This shell only
+// fills the tab content slot.
+export const BLACKLIST_PAGE_SHELL_CLASS = "flex min-h-0 flex-1 flex-col"
 
 export const BLACKLIST_CONTENT_SHELL_CLASS =
   `flex min-h-0 flex-1 flex-col gap-3 ${COMPACT_CONTENT_GUTTER_CLASS}`
@@ -15,9 +15,11 @@ export const BLACKLIST_EMBEDDED_CONTENT_SHELL_CLASS = "flex min-h-0 flex-1 flex-
 
 export const BLACKLIST_WORKBENCH_GRID_CLASS = "grid gap-3 lg:min-h-0 lg:flex-1 lg:grid-cols-3"
 
-export const BLACKLIST_RULE_LIST_CARD_CLASS = "flex min-h-0 flex-col gap-3 overflow-hidden"
+// Compact cards add their own vertical padding. Clear it here and match the
+// editor header inset so the two titles share one top line.
+export const BLACKLIST_RULE_LIST_CARD_CLASS = "flex min-h-0 flex-col gap-3 overflow-hidden py-0"
 
-export const BLACKLIST_RULE_LIST_HEADER_CLASS = "px-4 pb-2.5"
+export const BLACKLIST_RULE_LIST_HEADER_CLASS = "px-4 pb-2.5 pt-3"
 
 // Small screens need a stable viewport; desktop bounds the list to the workbench height.
 // Rule counts are data-dependent, so both states scroll inside this shared surface.
@@ -60,3 +62,7 @@ export const BLACKLIST_EDITOR_TEXTAREA_CLASS = "py-0"
 export const BLACKLIST_EDITOR_ACTION_ROW_CLASS = "flex flex-wrap items-center justify-between gap-3 px-4 py-3"
 
 export const BLACKLIST_EDITOR_ACTION_GROUP_CLASS = "flex flex-wrap items-center gap-2"
+
+export const BLACKLIST_NOTICE_CARD_CLASS = "shrink-0"
+
+export const BLACKLIST_NOTICE_CONTENT_CLASS = "flex items-start gap-3"

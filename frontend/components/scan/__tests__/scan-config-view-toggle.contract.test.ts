@@ -21,11 +21,11 @@ describe("scan-config-view-toggle contract", () => {
   it("keeps advanced controls and both modes inside one shared content scroll region", () => {
     expect(source).toContain('<ScrollArea className={cn("min-h-0 flex-1", className)} contentClassName="!min-w-0 w-full">')
     expect(source).toContain('className="flex min-h-full flex-col gap-3"')
-    expect(source).toContain('className="radius-surface flex flex-wrap items-center justify-between gap-3 border bg-muted/20 px-4 py-3"')
+    expect(source).toContain('aria-label={t("advancedYamlTitle")}')
     expect(source).toContain('className="min-h-0 flex-1"')
     expect(source).toContain("showLabel={false}")
     expect(source).not.toContain('<ScrollArea className="h-full" contentClassName="!min-w-0 w-full">')
-    expect(source).not.toContain('radius-surface min-h-0 flex-1 overflow-hidden border border-border/60 bg-card')
+    expect(source).not.toContain('bg-muted/20 px-4 py-3')
   })
 
   it("serializes current form values before switching into yaml mode", () => {
@@ -34,7 +34,7 @@ describe("scan-config-view-toggle contract", () => {
     expect(source).toContain("if (yamlStr !== configuration)")
     expect(source).toContain("onSync?: (value: string) => void")
     expect(source).toContain("const applySyncedConfig = onSync ?? onChange")
-    expect(source).toContain("onCheckedChange={handleViewModeChange}")
+    expect(source).toContain("handleViewModeChange")
     expect(source).not.toContain("lastValid")
   })
 

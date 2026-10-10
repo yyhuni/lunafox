@@ -21,7 +21,7 @@ const fingerprintHandoffViews = [
 ] as const
 
 const routeBoundaryHandoffFiles = [
-  "app/settings/api-keys/api-keys-settings-workspace.tsx",
+  "app/scan/config/data-sources/api-keys-settings-workspace.tsx",
   "app/settings/database-health/database-health-workspace.tsx",
   "app/settings/notifications/notification-settings-workspace.tsx",
   "app/settings/support/support-workspace.tsx",
@@ -39,7 +39,7 @@ const detailShellOverviewBoundaryFiles = [
 ] as const
 
 const routeHandoffReadinessChildren = [
-  "app/settings/api-keys/content.tsx",
+  "app/scan/config/data-sources/content.tsx",
   "components/settings/database-health/database-health-view.tsx",
   "components/settings/notifications/notification-settings-page-content.tsx",
   "components/settings/support/support-page-content.tsx",
@@ -72,7 +72,7 @@ const detailShellNestedFallbacks = [
 const routeCriticalDirectImportFiles = [
   "app/vulnerabilities/page.tsx",
   "app/vulnerabilities/vulnerabilities-workspace.tsx",
-  "app/settings/api-keys/page.tsx",
+  "app/scan/config/data-sources/page.tsx",
   "app/settings/database-health/page.tsx",
   "app/settings/notifications/page.tsx",
   "app/settings/support/page.tsx",
@@ -85,6 +85,7 @@ const routeCriticalDirectImportFiles = [
   "app/organizations/[id]/page.tsx",
   "app/scan/config/workflows/page.tsx",
   "app/scan/config/engines/page.tsx",
+  "app/scan/config/blacklist/page.tsx",
   "app/tools/nuclei/page.tsx",
   "app/tools/wordlists/page.tsx",
   "app/tools/fingerprints/fingerprinthub/page.tsx",

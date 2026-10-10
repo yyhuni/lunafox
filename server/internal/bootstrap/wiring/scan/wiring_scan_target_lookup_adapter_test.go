@@ -10,6 +10,8 @@ import (
 	catalogapp "github.com/yyhuni/lunafox/server/internal/modules/catalog/application"
 	catalogrepo "github.com/yyhuni/lunafox/server/internal/modules/catalog/repository"
 	catalogmodel "github.com/yyhuni/lunafox/server/internal/modules/catalog/repository/persistence"
+	identityrepo "github.com/yyhuni/lunafox/server/internal/modules/identity/repository"
+	identitymodel "github.com/yyhuni/lunafox/server/internal/modules/identity/repository/persistence"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -76,5 +78,79 @@ func TestScanTargetLookupAdapterEnsureQuickTargetsCreatesMissingAndReusesExistin
 	}
 	if count != 1 {
 		t.Fatalf("expected exactly one created target row, got %d", count)
+	}
+}
+
+func TestScanTargetLookupAdapterListsEveryOrganizationTargetPastDefaultPageSize(t *testing.T) {
+	dbName := url.QueryEscape(fmt.Sprintf("%s_%p", t.Name(), t))
+	db, err := gorm.Open(sqlite.Open("file:"+dbName+"?mode=memory&cache=private"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	for _, stmt := range []string{
+		`CREATE TABLE organization (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			created_at DATETIME NOT NULL,
+			deleted_at DATETIME
+		)`,
+		`CREATE TABLE target (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			type TEXT NOT NULL,
+			created_at DATETIME NOT NULL,
+			last_scanned_at DATETIME,
+			deleted_at DATETIME
+		)`,
+		`CREATE TABLE organization_target (
+			organization_id INTEGER NOT NULL,
+			target_id INTEGER NOT NULL,
+			PRIMARY KEY (organization_id, target_id)
+		)`,
+	} {
+		if err := db.Exec(stmt).Error; err != nil {
+			t.Fatalf("migrate %q: %v", stmt, err)
+		}
+	}
+
+	org := &identitymodel.Organization{Name: "Acme", Description: "core team"}
+	if err := db.Create(org).Error; err != nil {
+		t.Fatalf("create organization: %v", err)
+	}
+	base := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
+	wantIDs := make([]int, 0, 21)
+	for index := 0; index < 21; index++ {
+		target := &identitymodel.OrganizationTargetRef{
+			Name:      fmt.Sprintf("member-%02d.example.com", index),
+			Type:      "domain",
+			CreatedAt: base.Add(time.Duration(index) * time.Hour),
+		}
+		if err := db.Create(target).Error; err != nil {
+			t.Fatalf("create target %d: %v", index, err)
+		}
+		if err := db.Exec(
+			"INSERT INTO organization_target (organization_id, target_id) VALUES (?, ?)",
+			org.ID,
+			target.ID,
+		).Error; err != nil {
+			t.Fatalf("link target %d: %v", target.ID, err)
+		}
+		wantIDs = append(wantIDs, target.ID)
+	}
+
+	adapter := newScanTargetLookupAdapter(nil, nil, identityrepo.NewOrganizationRepository(db))
+	refs, err := adapter.ListOrganizationTargetRefs(context.Background(), org.ID)
+	if err != nil {
+		t.Fatalf("list organization targets: %v", err)
+	}
+	if len(refs) != len(wantIDs) {
+		t.Fatalf("expected %d targets, got %d", len(wantIDs), len(refs))
+	}
+	for index := range refs {
+		wantID := wantIDs[len(wantIDs)-1-index]
+		if refs[index].ID != wantID {
+			t.Fatalf("target %d = %d, want %d", index, refs[index].ID, wantID)
+		}
 	}
 }

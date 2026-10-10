@@ -304,7 +304,6 @@ export function AppSidebar({ warmup = false, ...props }: React.ComponentProps<ty
                     title: t('scanConfiguration'),
                     url: "/scan/config/workflows/",
                     icon: semanticIcons.concept.workflow,
-                    badge: t('beta'),
                 },
             ],
         },
@@ -353,14 +352,6 @@ export function AppSidebar({ warmup = false, ...props }: React.ComponentProps<ty
                         {
                             title: t('notifications'),
                             url: "/settings/notifications/",
-                        },
-                        {
-                            title: t('apiKeys'),
-                            url: "/settings/api-keys/",
-                        },
-                        {
-                            title: t('globalBlacklist'),
-                            url: "/settings/blacklist/",
                         },
                         ...(loginVisualUnlocked ? [{
                             title: t('loginVisual'),

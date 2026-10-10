@@ -99,7 +99,10 @@ selected-assignment indicator; Agent rows do not add a selection checkmark.
 
 The canonical workflow-management route is `/scan/config/workflows/`. It and
 the canonical Engine route `/scan/config/engines/` share the Scan Configuration
-title and route-driven primary Tabs. The legacy `/scan/workflow/` and
+title and route-driven primary Tabs. Beta appears after the Workflow and Engine
+tab labels only. The sidebar Scan Configuration item, the Data Sources tab, and
+the Blacklist tab do not show Beta. The global blacklist route is
+`/scan/config/blacklist/`. The legacy `/scan/workflow/` and
 `/tools/engines/` routes are redirect-only compatibility aliases. The shared
 shell applies only to the two management views: entering the composition
 builder removes its title and Tabs so an in-progress workflow remains in the

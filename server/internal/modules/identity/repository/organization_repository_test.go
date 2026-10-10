@@ -459,6 +459,70 @@ func TestOrganizationRepositoryListTargetsByOrganizationID(t *testing.T) {
 	}
 }
 
+func TestOrganizationRepositoryActiveTargetListIsNotCappedByDefaultPageSize(t *testing.T) {
+	db := newOrganizationRepositoryTestDB(t)
+	repo := NewOrganizationRepository(db)
+
+	org := &model.Organization{Name: "Acme", Description: "core team"}
+	otherOrg := &model.Organization{Name: "Other", Description: "other team"}
+	mustCreateOrganization(t, db, org)
+	mustCreateOrganization(t, db, otherOrg)
+
+	base := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	active := make([]*model.OrganizationTargetRef, 0, 21)
+	for index := 0; index < 21; index++ {
+		target := &model.OrganizationTargetRef{
+			Name:      fmt.Sprintf("member-%02d.example.com", index),
+			Type:      "domain",
+			CreatedAt: base.Add(time.Duration(index) * time.Hour),
+		}
+		mustCreateTarget(t, db, target)
+		mustLinkOrganizationTarget(t, db, org.ID, target.ID)
+		active = append(active, target)
+	}
+	deletedAt := base.Add(30 * time.Hour)
+	deleted := &model.OrganizationTargetRef{
+		Name:      "deleted.example.com",
+		Type:      "domain",
+		CreatedAt: base.Add(22 * time.Hour),
+		DeletedAt: &deletedAt,
+	}
+	other := &model.OrganizationTargetRef{
+		Name:      "other.example.com",
+		Type:      "domain",
+		CreatedAt: base.Add(23 * time.Hour),
+	}
+	mustCreateTarget(t, db, deleted)
+	mustCreateTarget(t, db, other)
+	mustLinkOrganizationTarget(t, db, org.ID, deleted.ID)
+	mustLinkOrganizationTarget(t, db, otherOrg.ID, other.ID)
+
+	page, total, err := repo.ListTargetsByOrganizationID(org.ID, 0, 0, "", "")
+	if err != nil {
+		t.Fatalf("default page failed: %v", err)
+	}
+	if total != 21 || len(page) != 20 {
+		t.Fatalf("default page size = 20, got len=%d total=%d", len(page), total)
+	}
+	if page[0].ID != active[20].ID || page[len(page)-1].ID != active[1].ID {
+		t.Fatalf("default page = ids %d..%d, want %d..%d", page[0].ID, page[len(page)-1].ID, active[20].ID, active[1].ID)
+	}
+
+	all, err := repo.ListActiveTargetsByOrganizationIDContext(context.Background(), org.ID)
+	if err != nil {
+		t.Fatalf("list active targets failed: %v", err)
+	}
+	if len(all) != 21 {
+		t.Fatalf("expected all 21 active targets, got %d", len(all))
+	}
+	for index := range all {
+		want := active[len(active)-1-index]
+		if all[index].ID != want.ID {
+			t.Fatalf("active target %d = %d, want %d", index, all[index].ID, want.ID)
+		}
+	}
+}
+
 func TestOrganizationRepositoryListTargetsByOrganizationIDReturnsDBError(t *testing.T) {
 	db := newOrganizationRepositoryTestDB(t)
 	closeOrganizationRepositorySQLDB(t, db)

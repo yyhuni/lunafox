@@ -1331,10 +1331,12 @@
     "editTask": "编辑任务",
     "configuration": {
       "title": "扫描配置",
-      "description": "管理扫描工作流与可用引擎。",
+      "description": "管理工作流、引擎、数据源与全局黑名单。",
       "tabsLabel": "扫描配置导航",
       "workflows": "工作流",
-      "engines": "引擎"
+      "engines": "引擎",
+      "dataSources": "数据源",
+      "blacklist": "全局黑名单"
     },
     "inputSource": {
       "label": "扫描输入",
@@ -1378,6 +1380,8 @@
       "configHelper": "YAML 格式，定义工作流步骤和引擎参数。",
       "advancedYamlTitle": "高级模式：YAML 编辑器",
       "advancedYamlHelper": "直接编辑原始 YAML 配置",
+      "modeForm": "表单",
+      "modeYaml": "YAML",
       "resetDefaults": "重置",
       "configExample": "示例：steps → subdomain_discovery → engineConfig → recon → enabled: true",
       "configEmptySummary": "暂无配置",
@@ -4454,6 +4458,10 @@
       "blacklist": {
         "title": "全局黑名单",
         "description": "配置供后续扫描使用的全局排除规则。",
+        "notice": {
+          "label": "说明：",
+          "description": "此为全局黑名单的配置。新建的扫描会排除掉黑名单规定的范围，此范围与目标的黑名单合并做并集。"
+        },
         "loadError": "加载黑名单规则失败",
         "groups": {
           "domain": "域名规则",

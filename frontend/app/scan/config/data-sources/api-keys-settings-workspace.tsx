@@ -20,8 +20,6 @@ const ApiKeysSettingsPageContent = dynamic<ApiKeysSettingsPageProps>(
 
 export function ApiKeysSettingsWorkspace() {
   const t = useTranslations("pages.apiKeys")
-  const pageTitle = t("title")
-  const pageDescription = t("description")
 
   return (
     <HiddenReadinessRouteBoundary
@@ -30,8 +28,6 @@ export function ApiKeysSettingsWorkspace() {
       intent="data"
       skeleton={(
         <ApiKeysSettingsLoadingState
-          pageTitle={pageTitle}
-          pageDescription={pageDescription}
           enableLabel={t("enableLabel")}
           emailLabel={t("fields.email")}
           apiKeyLabel={t("fields.apiKey")}
@@ -48,8 +44,6 @@ export function ApiKeysSettingsWorkspace() {
     >
       {({ onReady, deferInitialSkeleton }) => (
         <ApiKeysSettingsPageContent
-          pageTitle={pageTitle}
-          pageDescription={pageDescription}
           onReady={onReady}
           deferInitialSkeleton={deferInitialSkeleton}
         />

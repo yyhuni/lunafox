@@ -252,6 +252,7 @@ Route-critical direct import examples are captured in:
   - `app/organizations/[id]/page.tsx`
   - `app/scan/config/workflows/page.tsx`
   - `app/scan/config/engines/page.tsx`
+  - `app/scan/config/blacklist/page.tsx`
   - `app/tools/nuclei/page.tsx`
   - `app/tools/wordlists/page.tsx`
 - child workspaces under an already visible shell:
@@ -364,7 +365,7 @@ width before the handoff starts.
 
 The current audited examples include:
 
-- `app/settings/api-keys/page.tsx`
+- `app/scan/config/data-sources/page.tsx`
 - `app/settings/database-health/page.tsx`
 - `app/settings/notifications/page.tsx`
 - `app/settings/support/page.tsx`

@@ -1,14 +1,11 @@
-import {
-  COMPACT_CONTENT_GUTTER_CLASS,
-  COMPACT_FULL_PAGE_SHELL_CLASS,
-} from "@/components/shared/layout/page-shell-density"
+import { COMPACT_CONTENT_GUTTER_CLASS } from "@/components/shared/layout/page-shell-density"
 
 export const API_KEYS_WORKSPACE_HANDOFF_CLASS =
   "flex h-full min-h-0 flex-1 flex-col"
 
 export const API_KEYS_WORKSPACE_STATE_CLASS = "flex h-full min-h-0 flex-1 flex-col"
 
-export const API_KEYS_PAGE_SHELL_CLASS = COMPACT_FULL_PAGE_SHELL_CLASS
+export const API_KEYS_PAGE_SHELL_CLASS = "flex min-h-0 flex-1 flex-col gap-3"
 
 export const API_KEYS_CONTENT_SHELL_CLASS =
   `flex min-h-0 flex-1 flex-col gap-3 ${COMPACT_CONTENT_GUTTER_CLASS}`

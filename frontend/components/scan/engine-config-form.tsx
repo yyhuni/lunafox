@@ -2,7 +2,6 @@
 import React, { useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronRight, Cpu, RefreshCw, } from "@/components/icons";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FieldError } from "@/components/ui/field";
@@ -527,40 +526,61 @@ interface EngineCardProps {
 function EngineCard({ step, stepValues, disabled, open, wordlistCatalog, fieldErrors, onOpenChange, onToggleStep, onToggleSection, onParamChange, onFieldRepaired, renderParamControl, }: EngineCardProps) {
     const tScanInitiate = useTranslations("scan.initiate");
     const configSections = step.engine.execution.configSections;
-    return (<div className="overflow-hidden border-t bg-card first:border-t-0">
-      <Collapsible open={open} onOpenChange={onOpenChange}>
-        <div className="flex items-center gap-3 px-4 py-3">
-          <span className={cn("flex size-5 shrink-0 items-center justify-center", stepValues.enabled ? "text-interaction-accent" : "text-muted-foreground")}>
-            {getEngineIcon(step.engineId)}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className={cn("truncate", textRole.navLabel)}>{step.engine.displayName}</p>
-            {step.engine.description ? (
-              <p className={cn("truncate", textRole.helperText)} title={step.engine.description}>
-                {step.engine.description}
-              </p>
-            ) : null}
-          </div>
-          <Switch checked={stepValues.enabled} disabled={disabled} onCheckedChange={onToggleStep} aria-label={step.engine.displayName}/>
-          <CollapsibleTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label={open ? tScanInitiate("engineConfigForm.collapse") : tScanInitiate("engineConfigForm.expand")}/> }>
-              {open ? (<ChevronDown className="size-4"/>) : (<ChevronRight className="size-4"/>)}
+    return (
+      <div className="overflow-hidden bg-card">
+        <Collapsible open={open} onOpenChange={onOpenChange}>
+          <div className="group flex items-center justify-between gap-3 px-3.5 py-2.5 transition-colors hover:bg-muted/10">
+            <CollapsibleTrigger
+              className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-sm text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              aria-label={open ? tScanInitiate("engineConfigForm.collapse") : tScanInitiate("engineConfigForm.expand")}
+            >
+              <span className={cn("flex size-5 shrink-0 items-center justify-center", stepValues.enabled ? "text-interaction-accent" : "text-muted-foreground/60")}>
+                {getEngineIcon(step.engineId)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium text-sm text-foreground">{step.engine.displayName}</p>
+                {step.engine.description ? (
+                  <p className="truncate text-xs text-muted-foreground/70" title={step.engine.description}>
+                    {step.engine.description}
+                  </p>
+                ) : null}
+              </div>
             </CollapsibleTrigger>
-        </div>
 
-        <CollapsibleContent>
-          <div className="border-t bg-muted/10">
-            {configSections.map((section, index) => {
-            const sectionData = stepValues.sections[section.id];
-            if (!sectionData) return null;
-            return (<div key={section.id} className="border-b last:border-b-0">
-                  <SectionHeader section={section} sectionData={sectionData} disabled={disabled || !stepValues.enabled} onToggleSection={(enabled) => onToggleSection(section.id, enabled)}/>
-                  {sectionData.enabled ? (<SectionContent stepId={step.stepId} section={section} sectionData={sectionData} disabled={disabled || !stepValues.enabled} wordlistCatalog={wordlistCatalog} fieldErrors={fieldErrors} onParamChange={(paramKey, value) => onParamChange(section.id, paramKey, value)} onFieldRepaired={onFieldRepaired} renderParamControl={renderParamControl} isLast={index === configSections.length - 1}/>) : null}
-                </div>);
-        })}
+            <div className="flex shrink-0 items-center gap-2.5">
+              <Switch
+                checked={stepValues.enabled}
+                disabled={disabled}
+                onCheckedChange={onToggleStep}
+                aria-label={step.engine.displayName}
+              />
+              <CollapsibleTrigger
+                className="flex size-5 cursor-pointer items-center justify-center rounded-sm text-muted-foreground/50 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                tabIndex={-1}
+                aria-hidden="true"
+              >
+                <ChevronRight className={cn("size-4 transition-transform duration-200", open && "rotate-90")} />
+              </CollapsibleTrigger>
+            </div>
           </div>
-        </CollapsibleContent>
-      </Collapsible>
-    </div>);
+
+          <CollapsibleContent>
+            <div className="border-t bg-muted/10">
+              {configSections.map((section, index) => {
+                const sectionData = stepValues.sections[section.id];
+                if (!sectionData) return null;
+                return (
+                  <div key={section.id} className="border-b last:border-b-0">
+                    <SectionHeader section={section} sectionData={sectionData} disabled={disabled || !stepValues.enabled} onToggleSection={(enabled) => onToggleSection(section.id, enabled)}/>
+                    {sectionData.enabled ? (<SectionContent stepId={step.stepId} section={section} sectionData={sectionData} disabled={disabled || !stepValues.enabled} wordlistCatalog={wordlistCatalog} fieldErrors={fieldErrors} onParamChange={(paramKey, value) => onParamChange(section.id, paramKey, value)} onFieldRepaired={onFieldRepaired} renderParamControl={renderParamControl} isLast={index === configSections.length - 1}/>) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+    );
 }
 // ---------------------------------------------------------------------------
 // Stage block — dot + label header, then engine cards
@@ -588,24 +608,42 @@ function StageBlock({ stage, stageIndex, formValues, disabled, expandedStepIds, 
             return false;
         return Boolean(stepValue?.enabled) && step.engine.execution.configSections.some((section) => stepValue.sections[section.id]?.enabled !== false);
     }).length;
-    return (<div className="radius-surface overflow-hidden border border-sidebar-border bg-card">
-      <div className="flex items-center justify-between gap-3 bg-muted px-4 py-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="size-2 rounded-full bg-primary"/>
-          <span className={cn("truncate", textRole.navLabel)}>
-            {tScanInitiate("engineConfigForm.stageLabel", { index: stageIndex + 1, stageId: stage.stageId })}
+    return (
+      <div className="divide-y divide-border/40">
+        <div className="flex items-center justify-between gap-3 bg-muted/30 px-3.5 py-1.5">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className={cn("size-1.5 shrink-0 rounded-full", enabledEngineCount > 0 ? "bg-primary" : "bg-muted-foreground/40")}/>
+            <span className={cn("truncate text-xs font-medium text-muted-foreground")}>
+              {tScanInitiate("engineConfigForm.stageLabel", { index: stageIndex + 1, stageId: stage.stageId })}
+            </span>
+          </div>
+          <span className="text-[11px] text-muted-foreground/70">
+            {tScanInitiate("engineConfigForm.enabledSummary", { enabled: enabledEngineCount, total: stage.steps.length })}
           </span>
         </div>
-        <Badge variant="outline">
-          {tScanInitiate("engineConfigForm.enabledSummary", { enabled: enabledEngineCount, total: stage.steps.length })}
-        </Badge>
-      </div>
 
-      {stage.steps.map((step) => {
-        const stepValues = formValues[step.stepId];
-        return <EngineCard key={step.stepId} step={step} stepValues={stepValues ?? { enabled: false, sections: {} }} disabled={disabled || !stepValues} open={expandedStepIds.has(step.stepId)} wordlistCatalog={wordlistCatalog} fieldErrors={fieldErrors} onOpenChange={(open) => onExpandedStepChange(step.stepId, open)} onToggleStep={(enabled) => onToggleStep(step.stepId, enabled)} onToggleSection={(sectionId, enabled) => onToggleSection(step.stepId, sectionId, enabled)} onParamChange={(sectionId, paramKey, value) => onParamChange(step.stepId, sectionId, paramKey, value)} onFieldRepaired={onFieldRepaired} renderParamControl={renderParamControl}/>;
-      })}
-    </div>);
+        {stage.steps.map((step) => {
+          const stepValues = formValues[step.stepId];
+          return (
+            <EngineCard
+              key={step.stepId}
+              step={step}
+              stepValues={stepValues ?? { enabled: false, sections: {} }}
+              disabled={disabled || !stepValues}
+              open={expandedStepIds.has(step.stepId)}
+              wordlistCatalog={wordlistCatalog}
+              fieldErrors={fieldErrors}
+              onOpenChange={(open) => onExpandedStepChange(step.stepId, open)}
+              onToggleStep={(enabled) => onToggleStep(step.stepId, enabled)}
+              onToggleSection={(sectionId, enabled) => onToggleSection(step.stepId, sectionId, enabled)}
+              onParamChange={(sectionId, paramKey, value) => onParamChange(step.stepId, sectionId, paramKey, value)}
+              onFieldRepaired={onFieldRepaired}
+              renderParamControl={renderParamControl}
+            />
+          );
+        })}
+      </div>
+    );
 }
 // ---------------------------------------------------------------------------
 // Main form component
@@ -695,9 +733,28 @@ export function EngineConfigForm({ workflow, values, disabled = false, wordlistC
             },
         });
     }, [values, onChange]);
-    return (<div className="space-y-3">
-      {workflow.stages.map((stage, index) => (<StageBlock key={stage.stageId} stage={stage} stageIndex={index} formValues={values} disabled={disabled} expandedStepIds={resolvedExpandedStepIds} wordlistCatalog={wordlistCatalog} fieldErrors={fieldErrors} onExpandedStepChange={handleExpandedStepChange} onToggleStep={handleToggleStep} onToggleSection={handleToggleSection} onParamChange={handleParamChange} onFieldRepaired={onFieldRepaired} renderParamControl={renderParamControl}/>))}
-    </div>);
+    return (
+      <div className="radius-surface overflow-hidden border border-border bg-card divide-y divide-border/60">
+        {workflow.stages.map((stage, index) => (
+          <StageBlock
+            key={stage.stageId}
+            stage={stage}
+            stageIndex={index}
+            formValues={values}
+            disabled={disabled}
+            expandedStepIds={resolvedExpandedStepIds}
+            wordlistCatalog={wordlistCatalog}
+            fieldErrors={fieldErrors}
+            onExpandedStepChange={handleExpandedStepChange}
+            onToggleStep={handleToggleStep}
+            onToggleSection={handleToggleSection}
+            onParamChange={handleParamChange}
+            onFieldRepaired={onFieldRepaired}
+            renderParamControl={renderParamControl}
+          />
+        ))}
+      </div>
+    );
 }
 
 function isValidEngineParameterValue(value: unknown, type: string): boolean {
