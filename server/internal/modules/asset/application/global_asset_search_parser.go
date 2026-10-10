@@ -39,14 +39,14 @@ func ParseGlobalAssetSearchQuery(raw string) (GlobalAssetSearchAST, error) {
 	}
 
 	parser := globalAssetSearchParser{input: trimmed}
-	conditions, err := parser.parseStructured()
+	conditions, combinator, err := parser.parseStructured()
 	if err != nil {
 		return GlobalAssetSearchAST{}, fmt.Errorf("%w: %v", ErrInvalidGlobalAssetSearchQuery, err)
 	}
 	if len(conditions) == 0 || len(conditions) > globalAssetSearchMaxConditions {
 		return GlobalAssetSearchAST{}, fmt.Errorf("%w: structured query must contain at most %d conditions", ErrInvalidGlobalAssetSearchQuery, globalAssetSearchMaxConditions)
 	}
-	return GlobalAssetSearchAST{Mode: GlobalAssetSearchModeStructured, Conditions: conditions}, nil
+	return GlobalAssetSearchAST{Mode: GlobalAssetSearchModeStructured, Combinator: combinator, Conditions: conditions}, nil
 }
 
 func isGlobalAssetSearchPlainURL(raw string) bool {
@@ -98,28 +98,37 @@ type globalAssetSearchParser struct {
 	pos   int
 }
 
-func (parser *globalAssetSearchParser) parseStructured() ([]GlobalAssetSearchCondition, error) {
+func (parser *globalAssetSearchParser) parseStructured() ([]GlobalAssetSearchCondition, GlobalAssetSearchCombinator, error) {
 	conditions := make([]GlobalAssetSearchCondition, 0, 1)
+	combinator := GlobalAssetSearchCombinatorAnd
+	chosen := false
 	parser.skipSpace()
 	for {
 		condition, err := parser.parseCondition()
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		conditions = append(conditions, condition)
 		if len(conditions) > globalAssetSearchMaxConditions {
-			return nil, fmt.Errorf("structured query must contain at most %d conditions", globalAssetSearchMaxConditions)
+			return nil, "", fmt.Errorf("structured query must contain at most %d conditions", globalAssetSearchMaxConditions)
 		}
 		parser.skipSpace()
 		if parser.atEnd() {
-			return conditions, nil
+			return conditions, combinator, nil
 		}
-		if !parser.consume("&&") {
-			return nil, fmt.Errorf("expected && between conditions at byte %d", parser.pos)
+		next, ok := parser.consumeConnector()
+		if !ok {
+			return nil, "", fmt.Errorf("expected &&, and, ||, or the word or between conditions at byte %d", parser.pos)
+		}
+		if !chosen {
+			combinator = next
+			chosen = true
+		} else if next != combinator {
+			return nil, "", fmt.Errorf("mixed and/or connectors at byte %d", parser.pos)
 		}
 		parser.skipSpace()
 		if parser.atEnd() {
-			return nil, fmt.Errorf("missing condition after &&")
+			return nil, "", fmt.Errorf("missing condition after connector")
 		}
 	}
 }
@@ -210,6 +219,37 @@ func (parser *globalAssetSearchParser) consume(value string) bool {
 		return true
 	}
 	return false
+}
+
+// consumeConnector accepts a flat AND or OR joiner. Words must end on an
+// identifier boundary so android and origin stay field names. Plain text that
+// merely contains those words never reaches this parser, because
+// looksLikeGlobalAssetSearchStructure does not treat them as structure.
+func (parser *globalAssetSearchParser) consumeConnector() (GlobalAssetSearchCombinator, bool) {
+	switch {
+	case parser.consume("&&"):
+		return GlobalAssetSearchCombinatorAnd, true
+	case parser.consume("||"):
+		return GlobalAssetSearchCombinatorOr, true
+	case parser.consumeWord("and"):
+		return GlobalAssetSearchCombinatorAnd, true
+	case parser.consumeWord("or"):
+		return GlobalAssetSearchCombinatorOr, true
+	default:
+		return "", false
+	}
+}
+
+func (parser *globalAssetSearchParser) consumeWord(word string) bool {
+	end := parser.pos + len(word)
+	if end > len(parser.input) || !strings.EqualFold(parser.input[parser.pos:end], word) {
+		return false
+	}
+	if end < len(parser.input) && isGlobalAssetSearchIdentifierPart(parser.input[end]) {
+		return false
+	}
+	parser.pos = end
+	return true
 }
 
 func (parser *globalAssetSearchParser) atEnd() bool {

@@ -506,6 +506,7 @@
       "contains": "Contains match",
       "exact": "Exact match",
       "all": "Match all conditions",
+      "any": "Match any condition",
       "categories": {
         "basics": "Basic queries",
         "scenarios": "Combined scenarios"
@@ -525,7 +526,8 @@
         "hostStatus": "API host success",
         "hostTech": "Host and technology",
         "titleStatus": "Login success",
-        "urlTech": "Admin path technology"
+        "urlTech": "Admin path technology",
+        "urlOrHost": "URL or host"
       },
       "exampleDescriptions": {
         "urlContains": "Find assets whose URL contains admin",
@@ -540,7 +542,8 @@
         "hostStatus": "Require both the host and a successful status",
         "hostTech": "Require both the host and technology",
         "titleStatus": "Require a login title and successful status",
-        "urlTech": "Require an admin path and technology"
+        "urlTech": "Require an admin path and technology",
+        "urlOrHost": "Match an admin URL or an API host"
       }
     },
     "manual": {
@@ -558,7 +561,7 @@
       "conditionLimit": "Each query can contain at most 10 conditions",
       "quoting": "Values use double quotes and JSON-style backslash escaping",
       "unsupportedTitle": "Unsupported syntax",
-      "unsupported": "!=, ||, and, or, parentheses, and unlisted fields are not supported. Use the approved fields, =, ==, and && instead.",
+      "unsupported": "!=, parentheses, and unlisted fields are not supported. Use && or the word and when every condition must match, and || or the word or when any condition may match. Do not mix the two in one query.",
       "examplesTitle": "Executable examples",
       "close": "Close syntax guide"
     },
@@ -567,15 +570,15 @@
       "queryTooLong": { "message": "The query exceeds the length limit.", "fix": "Shorten it to 2048 UTF-8 bytes or fewer." },
       "invalidField": { "message": "The field name is not valid.", "fix": "Choose url, host, title, statusCode, tech, or hasScreenshot." },
       "unsupportedField": { "message": "That field is not supported.", "fix": "Use url, host, title, statusCode, tech, or hasScreenshot." },
-      "invalidOperator": { "message": "The operator is not valid.", "fix": "Use = or ==, and join conditions with &&." },
+      "invalidOperator": { "message": "The operator is not valid.", "fix": "Use = or ==. Join conditions with && or the word and, or with || or the word or." },
       "invalidStatusCode": { "message": "statusCode must be an integer.", "fix": "For example, use statusCode==\"200\"." },
       "invalidBoolean": { "message": "hasScreenshot accepts only \"true\" or \"false\".", "fix": "For example, use hasScreenshot==\"true\"." },
       "containsValueTooShort": { "message": "The contains value is too short.", "fix": "Use at least 2 characters for URL, host, and title." },
       "missingQuotedValue": { "message": "A quoted value is missing.", "fix": "Use a double-quoted value after the operator, such as tech=\"nginx\"." },
       "invalidQuotedValue": { "message": "The quoted value is not valid.", "fix": "Use double quotes and JSON-style escaping for special characters." },
       "unterminatedQuotedValue": { "message": "The quoted value is not closed.", "fix": "Add the closing double quote." },
-      "invalidConnector": { "message": "The condition connector is not valid.", "fix": "Use && between multiple conditions." },
-      "missingCondition": { "message": "A condition is missing after the connector.", "fix": "Add a complete field condition after &&." },
+      "invalidConnector": { "message": "The condition connector is not valid.", "fix": "Use && or the word and for match-all, or || or the word or for match-any. Do not mix them in one query." },
+      "missingCondition": { "message": "A condition is missing after the connector.", "fix": "Add a complete field condition after &&, and, ||, or or." },
       "tooManyConditions": { "message": "The query has too many conditions.", "fix": "Reduce it to 10 conditions or fewer." },
       "unknown": { "message": "The query could not be parsed.", "fix": "Use the supported fields, operators, and double-quoted values from the syntax guide." }
     },

@@ -506,6 +506,7 @@
       "contains": "包含匹配",
       "exact": "精确匹配",
       "all": "同时满足条件",
+      "any": "满足任一条件",
       "categories": {
         "basics": "基础查询",
         "scenarios": "组合场景"
@@ -525,7 +526,8 @@
         "hostStatus": "API 主机成功响应",
         "hostTech": "主机与技术指纹",
         "titleStatus": "登录页成功响应",
-        "urlTech": "管理路径技术指纹"
+        "urlTech": "管理路径技术指纹",
+        "urlOrHost": "URL 或主机名"
       },
       "exampleDescriptions": {
         "urlContains": "查找 URL 中包含 admin 的资产",
@@ -540,7 +542,8 @@
         "hostStatus": "同时限定主机名和成功状态",
         "hostTech": "同时限定主机名和技术指纹",
         "titleStatus": "同时限定登录标题和成功状态",
-        "urlTech": "同时限定管理路径和技术指纹"
+        "urlTech": "同时限定管理路径和技术指纹",
+        "urlOrHost": "URL 含 admin，或主机名含 api"
       }
     },
     "manual": {
@@ -558,7 +561,7 @@
       "conditionLimit": "每条查询最多包含 10 个条件",
       "quoting": "值必须使用双引号，并遵守 JSON 风格的反斜杠转义",
       "unsupportedTitle": "不支持的写法",
-      "unsupported": "不支持 !=、||、and、or、括号或未列出的字段；请改用批准的字段、=、== 和 &&。",
+      "unsupported": "不支持 !=、括号或未列出的字段。条件必须同时满足时使用 && 或 and；满足任一条件即可时使用 || 或 or。同一条查询不能混用这两种连接符。",
       "examplesTitle": "可执行示例",
       "close": "关闭语法手册"
     },
@@ -567,15 +570,15 @@
       "queryTooLong": { "message": "查询内容超过长度限制。", "fix": "将查询缩短到 2048 个 UTF-8 字节以内。" },
       "invalidField": { "message": "字段名称格式不正确。", "fix": "从 url、host、title、statusCode、tech 或 hasScreenshot 中选择字段。" },
       "unsupportedField": { "message": "字段不在支持范围内。", "fix": "改用 url、host、title、statusCode、tech 或 hasScreenshot。" },
-      "invalidOperator": { "message": "运算符不正确。", "fix": "使用 =、==，并用 && 连接条件。" },
+      "invalidOperator": { "message": "运算符不正确。", "fix": "使用 = 或 ==。条件之间使用 && 或 and，或者使用 || 或 or。" },
       "invalidStatusCode": { "message": "statusCode 必须是整数。", "fix": "例如使用 statusCode==\"200\"。" },
       "invalidBoolean": { "message": "hasScreenshot 只接受 \"true\" 或 \"false\"。", "fix": "例如使用 hasScreenshot==\"true\"。" },
       "containsValueTooShort": { "message": "包含匹配的值太短。", "fix": "URL、host 和 title 至少输入 2 个字符。" },
       "missingQuotedValue": { "message": "缺少带引号的值。", "fix": "在运算符后使用双引号，例如 tech=\"nginx\"。" },
       "invalidQuotedValue": { "message": "引号中的值不是有效格式。", "fix": "使用双引号，并对特殊字符使用 JSON 风格转义。" },
       "unterminatedQuotedValue": { "message": "引号没有闭合。", "fix": "为值补上结尾双引号。" },
-      "invalidConnector": { "message": "条件之间的连接符不正确。", "fix": "使用 && 连接多个条件。" },
-      "missingCondition": { "message": "连接符后缺少条件。", "fix": "在 && 后补充完整的字段条件。" },
+      "invalidConnector": { "message": "条件之间的连接符不正确。", "fix": "同时满足用 && 或 and，满足任一条件用 || 或 or。同一条查询不能混用。" },
+      "missingCondition": { "message": "连接符后缺少条件。", "fix": "在 &&、and、|| 或 or 后补充完整的字段条件。" },
       "tooManyConditions": { "message": "条件数量超过限制。", "fix": "将查询减少到 10 条条件以内。" },
       "unknown": { "message": "查询无法解析。", "fix": "按照语法手册使用支持的字段、运算符和双引号值。" }
     },

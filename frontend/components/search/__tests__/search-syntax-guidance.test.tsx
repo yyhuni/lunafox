@@ -55,7 +55,7 @@ describe("SearchSyntaxGuidance", () => {
     expect(onSelectField).toHaveBeenCalledWith("host")
     expect(onSelectExample).toHaveBeenCalledWith('statusCode=="200"')
     expect(screen.queryByText("!=")).not.toBeInTheDocument()
-    expect(screen.queryByText("||")).not.toBeInTheDocument()
+    expect(screen.getByText("||")).toBeInTheDocument()
   })
 
   it("renders field-specific matching semantics in the full manual", () => {

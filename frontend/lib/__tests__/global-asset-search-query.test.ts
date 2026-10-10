@@ -24,12 +24,83 @@ describe("global asset search query", () => {
       mode: "plainUrl",
       value: "jd",
     })
+    expect(parseGlobalAssetSearchQuery("login and admin")).toEqual({
+      mode: "plainUrl",
+      value: "login and admin",
+    })
+    expect(parseGlobalAssetSearchQuery("login or admin")).toEqual({
+      mode: "plainUrl",
+      value: "login or admin",
+    })
+  })
+
+  it("treats the word and as the same flat conjunction as &&", () => {
+    const expected = {
+      mode: "structured",
+      combinator: "and",
+      conditions: [
+        { field: "url", operator: "=", value: "admin" },
+        { field: "host", operator: "=", value: "api" },
+        { field: "title", operator: "==", value: "Login" },
+      ],
+    }
+    for (const query of [
+      'url="admin" and host="api" and title=="Login"',
+      'url="admin" AND host="api" And title=="Login"',
+      'url="admin"&&host="api" and title=="Login"',
+    ]) {
+      expect(parseGlobalAssetSearchQuery(query)).toEqual(expected)
+    }
+    expect(parseGlobalAssetSearchQuery('title="foo and bar"')).toEqual({
+      mode: "structured",
+      combinator: "and",
+      conditions: [{ field: "title", operator: "=", value: "foo and bar" }],
+    })
+    const withAnd = parseGlobalAssetSearchQuery('host="api" and tech="nginx"')
+    const withSymbol = parseGlobalAssetSearchQuery('host="api" && tech="nginx"')
+    expect(globalAssetSearchQueryFingerprint(withAnd, "website", 10)).toBe(
+      globalAssetSearchQueryFingerprint(withSymbol, "website", 10)
+    )
+  })
+
+  it("treats the word or as the same flat disjunction as ||", () => {
+    const expected = {
+      mode: "structured",
+      combinator: "or",
+      conditions: [
+        { field: "url", operator: "=", value: "admin" },
+        { field: "host", operator: "=", value: "api" },
+        { field: "title", operator: "==", value: "Login" },
+      ],
+    }
+    for (const query of [
+      'url="admin" or host="api" or title=="Login"',
+      'url="admin" OR host="api" Or title=="Login"',
+      'url="admin"||host="api" or title=="Login"',
+    ]) {
+      expect(parseGlobalAssetSearchQuery(query)).toEqual(expected)
+    }
+    expect(parseGlobalAssetSearchQuery('title="foo or bar"')).toEqual({
+      mode: "structured",
+      combinator: "and",
+      conditions: [{ field: "title", operator: "=", value: "foo or bar" }],
+    })
+    const withOr = parseGlobalAssetSearchQuery('host="api" or tech="nginx"')
+    const withSymbol = parseGlobalAssetSearchQuery('host="api" || tech="nginx"')
+    const withAnd = parseGlobalAssetSearchQuery('host="api" && tech="nginx"')
+    expect(globalAssetSearchQueryFingerprint(withOr, "website", 10)).toBe(
+      globalAssetSearchQueryFingerprint(withSymbol, "website", 10)
+    )
+    expect(globalAssetSearchQueryFingerprint(withOr, "website", 10)).not.toBe(
+      globalAssetSearchQueryFingerprint(withAnd, "website", 10)
+    )
   })
 
   it("parses the approved fields with their typed values", () => {
     const query = parseGlobalAssetSearchQuery('host="api" && title=="Admin" && statusCode="200" && tech="nginx"')
     expect(query).toEqual({
       mode: "structured",
+      combinator: "and",
       conditions: [
         { field: "host", operator: "=", value: "api" },
         { field: "title", operator: "==", value: "Admin" },
@@ -42,14 +113,17 @@ describe("global asset search query", () => {
   it("parses hasScreenshot as an exact boolean with both operators", () => {
     expect(parseGlobalAssetSearchQuery('hasScreenshot="true"')).toEqual({
       mode: "structured",
+      combinator: "and",
       conditions: [{ field: "hasScreenshot", operator: "=", value: "true" }],
     })
     expect(parseGlobalAssetSearchQuery('hasScreenshot=="false"')).toEqual({
       mode: "structured",
+      combinator: "and",
       conditions: [{ field: "hasScreenshot", operator: "==", value: "false" }],
     })
     expect(parseGlobalAssetSearchQuery('host="api" && hasScreenshot=="true"')).toEqual({
       mode: "structured",
+      combinator: "and",
       conditions: [
         { field: "host", operator: "=", value: "api" },
         { field: "hasScreenshot", operator: "==", value: "true" },
@@ -65,7 +139,8 @@ describe("global asset search query", () => {
     for (const query of [
       " ",
       elevenConditions,
-      'host="api" || tech="nginx"',
+      'host="api" && tech="nginx" || title="Login"',
+      'host="api" or tech="nginx" && title="Login"',
       'host!="api"',
       'responseBody="secret"',
       "a".repeat(2049),
@@ -78,18 +153,22 @@ describe("global asset search query", () => {
     }
     expect(parseGlobalAssetSearchQuery('url="jd"')).toEqual({
       mode: "structured",
+      combinator: "and",
       conditions: [{ field: "url", operator: "=", value: "jd" }],
     })
     expect(parseGlobalAssetSearchQuery('host="ab"')).toEqual({
       mode: "structured",
+      combinator: "and",
       conditions: [{ field: "host", operator: "=", value: "ab" }],
     })
     expect(parseGlobalAssetSearchQuery('title="登录"')).toEqual({
       mode: "structured",
+      combinator: "and",
       conditions: [{ field: "title", operator: "=", value: "登录" }],
     })
     expect(parseGlobalAssetSearchQuery('url=="a"')).toEqual({
       mode: "structured",
+      combinator: "and",
       conditions: [{ field: "url", operator: "==", value: "a" }],
     })
     expect(() => parseGlobalAssetSearchQuery('title=="A"')).not.toThrow()
@@ -120,8 +199,14 @@ describe("global asset search query", () => {
       ["host=\"a\"", "containsValueTooShort"],
       ["host=api", "missingQuotedValue"],
       ["host=\"api", "unterminatedQuotedValue"],
-      ["host=\"api\" || tech=\"nginx\"", "invalidConnector"],
+      ["host=\"api\" && tech=\"nginx\" or title=\"Login\"", "invalidConnector"],
+      ["host=\"api\" or tech=\"nginx\" && title=\"Login\"", "invalidConnector"],
+      ["host=\"api\" android=\"x\"", "invalidConnector"],
+      ["host=\"api\" origin=\"x\"", "invalidConnector"],
       ["host=\"api\" &&", "missingCondition"],
+      ["host=\"api\" and", "missingCondition"],
+      ["host=\"api\" ||", "missingCondition"],
+      ["host=\"api\" or", "missingCondition"],
     ] as const
 
     for (const [query, code] of cases) {

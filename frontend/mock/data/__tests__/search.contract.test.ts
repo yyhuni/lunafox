@@ -34,9 +34,18 @@ describe("search contract", () => {
     expect(() => getMockSearchResults({ q: 'host="a"', assetType: "website" })).toThrow(GlobalAssetSearchQueryError)
   })
 
-  it("does not retain the permissive legacy query syntax", () => {
-    expect(() => getMockSearchResults({
+  it("matches either technology for a flat OR and still rejects mixed connectors", () => {
+    const either = getMockSearchResults({
       q: 'tech="React" || tech="Vue.js"',
+      assetType: "website",
+    })
+    expect(either.results.length).toBeGreaterThan(1)
+    expect(either.results.some((result) => result.tech.includes("React"))).toBe(true)
+    expect(either.results.some((result) => result.tech.includes("Vue.js"))).toBe(true)
+    expect(either.results.every((result) => result.tech.includes("React") || result.tech.includes("Vue.js"))).toBe(true)
+
+    expect(() => getMockSearchResults({
+      q: 'tech="React" && tech="Vue.js" || host="api"',
       assetType: "website",
     })).toThrow(GlobalAssetSearchQueryError)
     expect(getMockSearchResults({
