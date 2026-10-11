@@ -80,6 +80,8 @@ RELEASE_REGISTRY=docker.io
 # RELEASE_REGISTRY=ghcr.io
 ```
 
+The [database environment variables](docs/public-deployment.md#database-environment-variables) section lists every database setting, its default, and which values stay fixed after the first start.
+
 After the first successful start, `DATABASE_MODE`, `DB_PASSWORD`, and
 `JWT_SECRET` are persisted in `lunafox_config`. Changing them to a different
 non-empty value in `.env` does not migrate or rotate a running deployment and

@@ -23,6 +23,7 @@ type SchedulerPassResult struct {
 	Materialized    int
 	Attempted       bool
 	PreAttemptError bool
+	FailureStage    string
 	Err             error
 }
 
@@ -121,11 +122,12 @@ func (controller *SchedulerController) run(ctx context.Context) {
 	for ctx.Err() == nil {
 		result := controller.RunPass(ctx)
 		if result.Err != nil {
-			controller.logger.Error("Scheduled scan controller pass failed",
+			fields := []zap.Field{
 				zap.Int("scheduled_scan.materialized_count", result.Materialized),
 				zap.Bool("scheduled_scan.attempted", result.Attempted),
-				zap.String("error.kind", runtimeErrorKind(result.Err)),
-			)
+				zap.String("failure.stage", result.FailureStage),
+			}
+			controller.logger.Error("Scheduled scan controller pass failed", append(fields, diagnosticErrorFields("error", result.Err)...)...)
 		}
 		if result.Progressed() && !result.PreAttemptError {
 			continue
@@ -158,15 +160,15 @@ func (controller *SchedulerController) idleWait(ctx context.Context) time.Durati
 
 func (controller *SchedulerController) RunPass(ctx context.Context) SchedulerPassResult {
 	if controller == nil || controller.repository == nil || controller.dispatcher == nil || controller.clock == nil {
-		return SchedulerPassResult{PreAttemptError: true, Err: fmt.Errorf("scheduled scan controller is not configured")}
+		return SchedulerPassResult{PreAttemptError: true, FailureStage: "controller_configuration", Err: fmt.Errorf("scheduled scan controller is not configured")}
 	}
 	if controller.IsPaused() {
-		return SchedulerPassResult{PreAttemptError: true, Err: fmt.Errorf("scheduled scan controller is paused")}
+		return SchedulerPassResult{PreAttemptError: true, FailureStage: "controller_paused", Err: fmt.Errorf("scheduled scan controller is paused")}
 	}
 	evaluationAt := controller.clock.Now().UTC()
 	dueSchedules, err := controller.repository.ListDueSchedules(ctx, evaluationAt)
 	if err != nil {
-		return SchedulerPassResult{PreAttemptError: true, Err: err}
+		return SchedulerPassResult{PreAttemptError: true, FailureStage: "list_due_schedules", Err: err}
 	}
 	result := SchedulerPassResult{}
 	for _, due := range dueSchedules {
@@ -176,6 +178,7 @@ func (controller *SchedulerController) RunPass(ctx context.Context) SchedulerPas
 		}
 		if materializeErr != nil {
 			result.PreAttemptError = true
+			result.FailureStage = "materialize_due"
 			result.Err = materializeErr
 			return result
 		}
@@ -184,6 +187,7 @@ func (controller *SchedulerController) RunPass(ctx context.Context) SchedulerPas
 	candidate, err := controller.repository.SelectAttemptCandidate(ctx)
 	if err != nil {
 		result.PreAttemptError = true
+		result.FailureStage = "select_attempt_candidate"
 		result.Err = err
 		return result
 	}
@@ -194,6 +198,7 @@ func (controller *SchedulerController) RunPass(ctx context.Context) SchedulerPas
 	frozen, err := controller.repository.StartAttempt(ctx, *candidate, attemptedAt)
 	if err != nil {
 		result.PreAttemptError = true
+		result.FailureStage = "start_attempt"
 		result.Err = err
 		return result
 	}
@@ -212,27 +217,36 @@ func (controller *SchedulerController) RunPass(ctx context.Context) SchedulerPas
 	if duration < 0 {
 		duration = 0
 	}
-	if recordErr != nil {
-		result.Err = fmt.Errorf("record scheduled scan handoff outcome: %w", recordErr)
-		return result
-	}
-	if !recorded {
-		return result
-	}
 	fields := []zap.Field{
 		zap.Int("scheduled_scan.id", frozen.ScheduledScanID),
 		zap.Int64("scheduled_scan.occurrence.id", frozen.OccurrenceID),
 		zap.Time("scheduled_scan.scheduled_for", frozen.ScheduledFor),
 		zap.String("outcome", string(outcome.Kind)),
 		zap.Duration("duration", duration),
+		zap.Time("scheduled_scan.attempted_at", attemptedAt),
+		zap.Int("scheduled_scan.attempt_number", frozen.RetryCount+1),
+		zap.Duration("scheduled_scan.handoff_deadline", handoffDeadline),
+		zap.Bool("outcome.recorded", recorded && recordErr == nil),
 	}
 	if !outcome.Completed() && outcome.Cause != "" {
 		fields = append(fields, zap.String("scheduled_scan.failure_cause", string(outcome.Cause)))
 	}
-	if outcome.Completed() {
+	if recordErr != nil {
+		result.FailureStage = "record_outcome"
+		result.Err = fmt.Errorf("record scheduled scan handoff outcome: %w", recordErr)
+		fields = append(fields, diagnosticErrorFields("outcome.error", recordErr)...)
+	}
+	if !outcome.Completed() {
+		fields = append(fields, zap.String("failure.stage", "scan_create"))
+		controller.logger.Error("Scheduled scan handoff did not complete", append(fields, handoffDiagnosticFields(*frozen, batchResult, dispatchErr)...)...)
+	} else if recordErr != nil {
+		fields = append(fields, handoffDiagnosticFields(*frozen, batchResult, dispatchErr)...)
+		fields = append(fields, zap.String("failure.stage", "record_outcome"))
+		controller.logger.Error("Scheduled scan handoff outcome could not be recorded", fields...)
+	} else if recorded {
 		controller.logger.Info("Scheduled scan handoff completed", fields...)
 	} else {
-		controller.logger.Error("Scheduled scan handoff did not complete", fields...)
+		controller.logger.Debug("Scheduled scan handoff occurrence no longer exists", fields...)
 	}
 	return result
 }

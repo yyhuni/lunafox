@@ -567,6 +567,12 @@ for key in DB_HOST DB_PORT DB_USER DB_NAME DB_SSLMODE; do
 		fail "deploy/.env.example must not assign ${key} outside the commented external database example"
 	fi
 done
+for key in DB_TIMEZONE DB_MAX_OPEN_CONNS DB_MAX_IDLE_CONNS DB_CONN_MAX_LIFETIME; do
+	grep -Eq "^#${key}=" "$source_env" || fail "deploy/.env.example must keep ${key} in the commented database tuning example"
+	if grep -Eq "^${key}=" "$source_env"; then
+		fail "deploy/.env.example must not assign ${key} outside the commented database tuning example"
+	fi
+done
 grep -Eq '^DB_PASSWORD=$' "$source_env" || fail "deploy/.env.example must leave DB_PASSWORD empty for automatic generation"
 grep -Eq '^JWT_SECRET=$' "$source_env" || fail "deploy/.env.example must leave JWT_SECRET empty for automatic generation"
 if grep -Eq '^PUBLIC_URL=' "$source_env"; then
@@ -595,6 +601,13 @@ grep -Fq '## 首次启动后的配置变更' "$ROOT_DIR/docs/public-deployment.z
 grep -Fq '不支持在线数据库模式迁移' "$ROOT_DIR/docs/public-deployment.zh-CN.md" || fail "Chinese deployment docs must state that online database-mode migration is unsupported"
 grep -Fq '不支持在线凭据轮换' "$ROOT_DIR/docs/public-deployment.zh-CN.md" || fail "Chinese deployment docs must state that online credential rotation is unsupported"
 grep -Fq 'docs/public-deployment.md#configuration-changes-after-first-start' "$ROOT_DIR/README.md" "$ROOT_DIR/README.zh-CN.md" || fail "README files must link to post-start configuration guidance"
+grep -Fq '#database-environment-variables' "$ROOT_DIR/README.md" "$ROOT_DIR/README.zh-CN.md" || fail "README files must link to the database environment variable list"
+grep -Fq 'id="database-environment-variables"' "$ROOT_DIR/docs/public-deployment.md" "$ROOT_DIR/docs/public-deployment.zh-CN.md" || fail "deployment docs must anchor the database environment variable list"
+grep -Fq '## Database environment variables' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must list database environment variables"
+grep -Fq '## 数据库环境变量' "$ROOT_DIR/docs/public-deployment.zh-CN.md" || fail "Chinese deployment docs must list database environment variables"
+for key in DB_TIMEZONE DB_MAX_OPEN_CONNS DB_MAX_IDLE_CONNS DB_CONN_MAX_LIFETIME; do
+	grep -Fq "\`${key}\`" "$ROOT_DIR/docs/public-deployment.md" "$ROOT_DIR/docs/public-deployment.zh-CN.md" || fail "deployment docs must document ${key}"
+done
 # A failed start may already have created containers, so the documentation has to
 # describe the preserved scene instead of claiming nothing changed.
 grep -Fq 'nothing is rolled back' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must state that a failure leaves the deployment in place and rolls nothing back"

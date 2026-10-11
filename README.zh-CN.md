@@ -74,6 +74,8 @@ RELEASE_REGISTRY=docker.io
 # RELEASE_REGISTRY=ghcr.io
 ```
 
+[数据库环境变量](docs/public-deployment.zh-CN.md#database-environment-variables)一节列出全部数据库设置、默认值，以及首次启动后哪些值保持固定。
+
 首次成功启动后，`DATABASE_MODE`、`DB_PASSWORD` 和 `JWT_SECRET` 会持久化到
 `lunafox_config`。之后在 `.env` 中将它们改成不同的非空值不会迁移或轮换正在运行的部署，而是快速失败；空的凭据输入会复用持久化值。
 恢复和新建部署步骤请参阅[配置变更说明](docs/public-deployment.md#configuration-changes-after-first-start)。

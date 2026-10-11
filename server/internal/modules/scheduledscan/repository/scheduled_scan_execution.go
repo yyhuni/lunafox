@@ -259,6 +259,7 @@ func (repo *ScheduledScanRepository) StartAttempt(
 			ScheduledScanID: schedule.ID,
 			ScheduledFor:    occurrence.ScheduledFor.UTC(),
 			ScanWorkflowID:  schedule.ScanWorkflowID,
+			RetryCount:      occurrence.RetryCount,
 			Configuration:   configuration,
 			InputSource:     inputSource,
 			TargetIDs:       append([]int(nil), targetIDs...),

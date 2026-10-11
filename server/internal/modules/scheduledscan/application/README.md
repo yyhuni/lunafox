@@ -202,6 +202,34 @@ owning Schedule row:
 
 ## Diagnostics, Retention, And Exclusions
 
+Server handoff failure logs preserve diagnostics separately from the safe
+persisted/API summaries below. They include frozen Workflow/Agent/input-source
+metadata, target count and a five-ID sample, attempt start and number
+(`retry_count + 1`), the five-minute deadline, batch counts and up to five
+failed/skipped samples. `failure.stage` identifies `scan_create` or outcome
+writeback; typed PlanTask/resource classifications and SQLSTATE remain visible
+in the bounded error chain. Controller failures name the actual failing
+repository operation rather than guessing a Scan Create substage.
+
+`error.chain` contains at most eight error nodes, each with type and up to 1024
+UTF-8 bytes of sanitized text; joined errors are supported and chain/sample
+truncation is explicit. Known credential markers (password, token, secret,
+authorization, cookie, API/private key, credentials) and URLs redact the whole
+text entry. Config-input errors redact all chain text, including outer wrappers;
+incomplete chains also omit text. No complete configuration, Target names,
+SQL query/detail or batch payload is logged. Free-text redaction covers known
+representations, not arbitrary secret strings, so logs still require operator
+access control and review before external sharing. Log stacktraces identify
+the logging call; the diagnostic chain does not claim an original exception
+stack or prove CPU saturation.
+
+`outcome.recorded` distinguishes the observed creation outcome from writeback.
+Failed creation is logged even if writeback errors or an occurrence was deleted;
+`outcome.error.chain` retains independent writeback diagnostics. Completed
+creation with a writeback error emits `Scheduled scan handoff outcome could not
+be recorded`. Successful creation after occurrence deletion emits only Debug.
+These diagnostics neither replay unknown attempts nor change bounded retry.
+
 Complete handoff records `dispatchedAt`. Observed non-complete handoff records
 one closed `failureKind` and a bounded safe UTF-8 `failureMessage`; raw errors,
 configuration, paths, secrets, stacks, and complete batch payloads are never

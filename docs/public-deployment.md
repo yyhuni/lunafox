@@ -119,6 +119,27 @@ system trust roots. Custom CA file mounting is not supported by this release.
 reach only the initializer as Compose secret files and must not be committed or
 printed in support logs.
 
+<a id="database-environment-variables"></a>
+
+## Database environment variables
+
+Commented lines in `.env.example` are optional overrides. Uncomment a line only to replace the default. The next start reads the edited value from `.env`.
+
+| Variable | Default when unset | After the first successful start |
+| --- | --- | --- |
+| `DB_HOST` | `postgres` | Changeable on a later start. |
+| `DB_PORT` | `5432` | Changeable on a later start. |
+| `DB_USER` | `postgres` | Changeable on a later start. |
+| `DB_NAME` | `lunafox` | Changeable on a later start. |
+| `DB_SSLMODE` | `disable` | Changeable on a later start. External mode still requires an explicit value before the first start. |
+| `DB_PASSWORD` | Generated when empty in embedded mode. | Fixed. A different non-empty value fails, and an empty value reuses the persisted secret. |
+| `DB_TIMEZONE` | `UTC` | Changeable on a later start. This sets the PostgreSQL session time zone on application connections. |
+| `DB_MAX_OPEN_CONNS` | `25` | Changeable on a later start. Maximum open connections in the application pool. |
+| `DB_MAX_IDLE_CONNS` | `5` | Changeable on a later start. Maximum idle connections in the application pool. |
+| `DB_CONN_MAX_LIFETIME` | `300` | Changeable on a later start. Maximum lifetime of one pooled connection, in seconds. |
+
+`DATABASE_MODE` is fixed after the first successful start, and `COMPOSE_PROFILES` must remain `${DATABASE_MODE:-embedded}`. `JWT_SECRET` follows the same non-empty conflict rule as `DB_PASSWORD`. See [Configuration changes after first start](#configuration-changes-after-first-start).
+
 ## Start and lifecycle
 
 Docker with Linux container support and Docker Compose 2.24.0 or newer are the

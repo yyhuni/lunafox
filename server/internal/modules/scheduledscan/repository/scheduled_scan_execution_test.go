@@ -1269,7 +1269,7 @@ func TestScheduledScanRepositoryHandoffRetryLifecycleAndSummary(t *testing.T) {
 		t.Fatalf("retry-due SelectAttemptCandidate() = %+v, %v", candidate, err)
 	}
 	frozen, err := repo.StartAttempt(context.Background(), *candidate, now)
-	if err != nil || frozen == nil || frozen.Configuration["version"] != float64(2) {
+	if err != nil || frozen == nil || frozen.Configuration["version"] != float64(2) || frozen.RetryCount != 1 {
 		t.Fatalf("retry StartAttempt() = %+v, %v; want re-frozen latest configuration", frozen, err)
 	}
 

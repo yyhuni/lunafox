@@ -331,8 +331,11 @@ func TestSchedulerFailedHandoffStillCountsAsProgressWithoutRetry(t *testing.T) {
 	if fields["outcome"] != "scan_create_failed" {
 		t.Fatalf("handoff failure fields = %+v", fields)
 	}
-	if strings.Contains(fmt.Sprint(fields), "private backend failure") {
-		t.Fatalf("handoff failure log exposed raw error text: %+v", fields)
+	if !strings.Contains(fmt.Sprint(fields["error.chain"]), "private backend failure") || fields["failure.stage"] != "scan_create" || fields["outcome.recorded"] != true {
+		t.Fatalf("handoff failure log lost internal diagnostics: %+v", fields)
+	}
+	if strings.Contains(repository.recordedOutcomes[0].Message, "private backend failure") {
+		t.Fatalf("persisted failure exposed diagnostic: %+v", repository.recordedOutcomes)
 	}
 }
 
@@ -526,8 +529,12 @@ func TestSchedulerShutdownCancellationLeavesAttemptOutcomeUnknownWithoutReplay(t
 	if dispatcher.calls != 1 || repository.startCalls != 1 || len(repository.recordedOutcomes) != 0 {
 		t.Fatalf("shutdown replay/outcome state = dispatches %d starts %d outcomes %+v", dispatcher.calls, repository.startCalls, repository.recordedOutcomes)
 	}
-	if logs.FilterMessage("Scheduled scan handoff did not complete").Len() != 0 || logs.FilterMessage("Scheduled scan controller pass failed").Len() != 1 {
+	if logs.FilterMessage("Scheduled scan handoff did not complete").Len() != 1 || logs.FilterMessage("Scheduled scan controller pass failed").Len() != 1 {
 		t.Fatalf("shutdown cancellation logs = %+v", logs.All())
+	}
+	fields := logs.FilterMessage("Scheduled scan handoff did not complete").All()[0].ContextMap()
+	if fields["outcome.recorded"] != false || fields["outcome.error.kind"] != "canceled" {
+		t.Fatalf("shutdown cancellation lost writeback diagnostic: %+v", fields)
 	}
 }
 
@@ -558,7 +565,7 @@ func TestSchedulerDoesNotWaitForCreatedScanLifecycleBeforeNextHandoff(t *testing
 
 type retryDeadlineRepository struct {
 	*schedulerRepositoryStub
-	deadline *time.Time
+	deadline    *time.Time
 	deadlineErr error
 }
 

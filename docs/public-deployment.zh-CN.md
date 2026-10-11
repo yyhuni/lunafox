@@ -82,6 +82,27 @@ DB_PASSWORD='the existing remote database password'
 
 `JWT_SECRET` 仍然是可选项，为空时会生成。配置输入只会作为 Compose secret files 传给 initializer，不得提交到仓库或打印到支持日志中。
 
+<a id="database-environment-variables"></a>
+
+## 数据库环境变量
+
+`.env.example` 中的注释行是可选覆盖项。只有在需要替换默认值时才取消注释。下次启动会从 `.env` 读取修改后的值。
+
+| 变量 | 未设置时的默认值 | 首次成功启动之后 |
+| --- | --- | --- |
+| `DB_HOST` | `postgres` | 可在之后的启动中修改。 |
+| `DB_PORT` | `5432` | 可在之后的启动中修改。 |
+| `DB_USER` | `postgres` | 可在之后的启动中修改。 |
+| `DB_NAME` | `lunafox` | 可在之后的启动中修改。 |
+| `DB_SSLMODE` | `disable` | 可在之后的启动中修改。External 模式在首次启动前仍必须显式设置。 |
+| `DB_PASSWORD` | 在 embedded 模式中为空时生成。 | 固定。不同的非空值会失败，空值会复用已持久化的密码。 |
+| `DB_TIMEZONE` | `UTC` | 可在之后的启动中修改。它设置应用连接使用的 PostgreSQL session time zone。 |
+| `DB_MAX_OPEN_CONNS` | `25` | 可在之后的启动中修改。应用连接池的最大打开连接数。 |
+| `DB_MAX_IDLE_CONNS` | `5` | 可在之后的启动中修改。应用连接池的最大空闲连接数。 |
+| `DB_CONN_MAX_LIFETIME` | `300` | 可在之后的启动中修改。池化连接的最长生存时间，单位是秒。 |
+
+首次成功启动后 `DATABASE_MODE` 即固定，`COMPOSE_PROFILES` 必须保持为 `${DATABASE_MODE:-embedded}`。`JWT_SECRET` 与 `DB_PASSWORD` 遵循相同的非空冲突规则。详见[首次启动后的配置变更](#configuration-changes-after-first-start)。
+
 ## 启动与生命周期
 
 主机前置条件是支持 Linux 容器的 Docker，以及 2.24.0 或更高版本的 Docker Compose。从解压目录运行：

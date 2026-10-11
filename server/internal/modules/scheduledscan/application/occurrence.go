@@ -31,11 +31,13 @@ type FrozenDispatchInput struct {
 	ScheduledScanID int
 	ScheduledFor    time.Time
 	ScanWorkflowID  string
-	Configuration   map[string]any
-	InputSource     scandomain.InputSource
-	TargetIDs       []int
-	TargetScoped    bool
-	AgentID         *int
+	// RetryCount is the committed retry ordinal, used only for diagnostics.
+	RetryCount    int
+	Configuration map[string]any
+	InputSource   scandomain.InputSource
+	TargetIDs     []int
+	TargetScoped  bool
+	AgentID       *int
 }
 
 type HandoffOutcomeKind string
