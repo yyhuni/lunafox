@@ -5,10 +5,12 @@ export const GLOBAL_ASSET_SEARCH_MAX_PAGE_SIZE = 100
 export const GLOBAL_ASSET_SEARCH_MAX_QUERY_BYTES = 2048
 export const GLOBAL_ASSET_SEARCH_MAX_CONDITIONS = 10
 export const GLOBAL_ASSET_SEARCH_MIN_CONTAINS_RUNES = 2
-/** Kept as a named compatibility export; all text contains fields share this limit. */
+/** url, host, and title share this contains minimum. responseHeaders uses its own. */
 export const GLOBAL_ASSET_SEARCH_MIN_URL_CONTAINS_RUNES = GLOBAL_ASSET_SEARCH_MIN_CONTAINS_RUNES
+/** Two-character patterns cannot use a pg_trgm GIN index, so header contains starts at 3. */
+export const GLOBAL_ASSET_SEARCH_MIN_RESPONSE_HEADER_CONTAINS_RUNES = 3
 
-export type GlobalAssetSearchField = "url" | "host" | "title" | "statusCode" | "tech" | "hasScreenshot"
+export type GlobalAssetSearchField = "url" | "host" | "title" | "statusCode" | "tech" | "hasScreenshot" | "responseHeaders"
 export type GlobalAssetSearchOperator = "=" | "=="
 export type GlobalAssetSearchCombinator = "and" | "or"
 
@@ -29,7 +31,7 @@ export type GlobalAssetSearchDiagnosticCode =
   | "tooManyConditions"
   | "unknown"
 
-export const GLOBAL_ASSET_SEARCH_FIELDS = ["url", "host", "title", "statusCode", "tech", "hasScreenshot"] as const satisfies readonly GlobalAssetSearchField[]
+export const GLOBAL_ASSET_SEARCH_FIELDS = ["url", "host", "title", "statusCode", "tech", "hasScreenshot", "responseHeaders"] as const satisfies readonly GlobalAssetSearchField[]
 
 export const GLOBAL_ASSET_SEARCH_FIELD_LABEL_KEYS = {
   url: "fields.url",
@@ -38,6 +40,7 @@ export const GLOBAL_ASSET_SEARCH_FIELD_LABEL_KEYS = {
   statusCode: "fields.status",
   tech: "fields.tech",
   hasScreenshot: "fields.hasScreenshot",
+  responseHeaders: "fields.responseHeaders",
 } as const satisfies Record<GlobalAssetSearchField, string>
 
 export const GLOBAL_ASSET_SEARCH_OPERATORS = [
@@ -125,6 +128,7 @@ const RAW_GLOBAL_ASSET_SEARCH_GUIDANCE: readonly GlobalAssetSearchGuidanceEntry[
   { id: "status-exact", category: "basics", query: 'statusCode=="200"', labelKey: "syntax.exampleLabels.statusExact", descriptionKey: "syntax.exampleDescriptions.statusExact", featured: true },
   { id: "tech-exact-nginx", category: "basics", query: 'tech="nginx"', labelKey: "syntax.exampleLabels.techExact", descriptionKey: "syntax.exampleDescriptions.techExact", featured: true },
   { id: "has-screenshot", category: "basics", query: 'hasScreenshot=="true"', labelKey: "syntax.exampleLabels.hasScreenshot", descriptionKey: "syntax.exampleDescriptions.hasScreenshot" },
+  { id: "response-headers-contains", category: "basics", query: 'responseHeaders="rememberMe=deleteMe"', labelKey: "syntax.exampleLabels.responseHeaders", descriptionKey: "syntax.exampleDescriptions.responseHeaders" },
   { id: "url-exact", category: "basics", query: 'url=="https://example.com"', labelKey: "syntax.exampleLabels.urlExact", descriptionKey: "syntax.exampleDescriptions.urlExact" },
   { id: "title-exact", category: "basics", query: 'title=="Admin Login"', labelKey: "syntax.exampleLabels.titleExact", descriptionKey: "syntax.exampleDescriptions.titleExact" },
   { id: "status-exact-404", category: "basics", query: 'statusCode="404"', labelKey: "syntax.exampleLabels.statusExact", descriptionKey: "syntax.exampleDescriptions.statusErrorExact" },
@@ -285,6 +289,9 @@ class StrictQueryParser {
 
     if (operator === "=" && (field === "url" || field === "host" || field === "title")) {
       assertContainsLength(rawValue, field, GLOBAL_ASSET_SEARCH_MIN_CONTAINS_RUNES)
+    }
+    if (operator === "=" && field === "responseHeaders") {
+      assertContainsLength(rawValue, field, GLOBAL_ASSET_SEARCH_MIN_RESPONSE_HEADER_CONTAINS_RUNES)
     }
     return { field, operator, value: rawValue }
   }

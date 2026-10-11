@@ -8,10 +8,11 @@ import (
 )
 
 const (
-	globalAssetSearchMaxQueryBytes       = 2048
-	globalAssetSearchMaxConditions       = 10
-	globalAssetSearchMinContainsRunes    = 2
-	globalAssetSearchMinURLContainsRunes = globalAssetSearchMinContainsRunes
+	globalAssetSearchMaxQueryBytes                  = 2048
+	globalAssetSearchMaxConditions                  = 10
+	globalAssetSearchMinContainsRunes               = 2
+	globalAssetSearchMinURLContainsRunes            = globalAssetSearchMinContainsRunes
+	globalAssetSearchMinResponseHeaderContainsRunes = 3
 )
 
 // ParseGlobalAssetSearchQuery parses and validates the only two search modes
@@ -270,6 +271,8 @@ func globalAssetSearchField(raw string) (GlobalAssetSearchField, error) {
 		return GlobalAssetSearchFieldTech, nil
 	case string(GlobalAssetSearchFieldHasScreenshot):
 		return GlobalAssetSearchFieldHasScreenshot, nil
+	case string(GlobalAssetSearchFieldResponseHeaders):
+		return GlobalAssetSearchFieldResponseHeaders, nil
 	default:
 		return "", fmt.Errorf("unsupported field %q", raw)
 	}
@@ -305,6 +308,15 @@ func newGlobalAssetSearchCondition(field GlobalAssetSearchField, operator Global
 		if field == GlobalAssetSearchFieldURL || field == GlobalAssetSearchFieldHost || field == GlobalAssetSearchFieldTitle {
 			if utf8.RuneCountInString(strings.TrimSpace(rawValue)) < globalAssetSearchMinContainsRunes {
 				return GlobalAssetSearchCondition{}, fmt.Errorf("%s contains value must contain at least %d Unicode characters", field, globalAssetSearchMinContainsRunes)
+			}
+		}
+		// Two-character ILIKE patterns extract no pg_trgm trigram, so they cannot
+		// use the response_headers GIN index. Header text is large enough that the
+		// resulting asset-table scan is likely to hit the search statement timeout.
+		// url, host, and title keep the two-character minimum.
+		if field == GlobalAssetSearchFieldResponseHeaders {
+			if utf8.RuneCountInString(strings.TrimSpace(rawValue)) < globalAssetSearchMinResponseHeaderContainsRunes {
+				return GlobalAssetSearchCondition{}, fmt.Errorf("%s contains value must contain at least %d Unicode characters", field, globalAssetSearchMinResponseHeaderContainsRunes)
 			}
 		}
 	}

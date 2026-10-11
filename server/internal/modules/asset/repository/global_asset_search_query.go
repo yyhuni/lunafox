@@ -153,6 +153,9 @@ func globalAssetSearchConditionPredicate(condition assetapp.GlobalAssetSearchCon
 		return globalAssetSearchTextPredicate("asset.host", condition.Operator, condition.Text, dialect), nil
 	case assetapp.GlobalAssetSearchFieldTitle:
 		return globalAssetSearchTextPredicate("asset.title", condition.Operator, condition.Text, dialect), nil
+	case assetapp.GlobalAssetSearchFieldResponseHeaders:
+		// Match the stored header blob only. Truncation stays a result flag.
+		return globalAssetSearchTextPredicate("asset.response_headers", condition.Operator, condition.Text, dialect), nil
 	case assetapp.GlobalAssetSearchFieldStatusCode:
 		if condition.StatusCode == nil {
 			return globalAssetSearchPredicate{}, fmt.Errorf("statusCode condition has no integer value")

@@ -57,7 +57,7 @@ type Website struct {
 	StatusCode      *int            `gorm:"column:status_code;index:idx_website_status_code;index:idx_website_target_status_code_id,priority:2" json:"statusCode"`
 	ContentLength   *int            `gorm:"column:content_length;index:idx_website_target_content_length_id,priority:2" json:"contentLength"`
 	Vhost           *bool           `gorm:"column:vhost;index:idx_website_target_vhost_id,priority:2" json:"vhost"`
-	ResponseHeaders string          `gorm:"column:response_headers;type:text" json:"responseHeaders"`
+	ResponseHeaders string          `gorm:"column:response_headers;type:text;index:idx_website_response_headers_trgm,type:gin,expression:response_headers gin_trgm_ops" json:"responseHeaders"`
 	Target          *AssetTargetRef `gorm:"foreignKey:TargetID" json:"target,omitempty"`
 }
 
@@ -89,7 +89,7 @@ type Endpoint struct {
 	StatusCode               *int            `gorm:"column:status_code;index:idx_endpoint_status_code;index:idx_endpoint_target_status_code_id,priority:2" json:"statusCode"`
 	ContentLength            *int            `gorm:"column:content_length;index:idx_endpoint_target_content_length_id,priority:2" json:"contentLength"`
 	Vhost                    *bool           `gorm:"column:vhost;index:idx_endpoint_target_vhost_id,priority:2" json:"vhost"`
-	ResponseHeaders          string          `gorm:"column:response_headers;type:text" json:"responseHeaders"`
+	ResponseHeaders          string          `gorm:"column:response_headers;type:text;index:idx_endpoint_response_headers_trgm,type:gin,expression:response_headers gin_trgm_ops" json:"responseHeaders"`
 	ResponseHeadersTruncated bool            `gorm:"column:response_headers_truncated;not null;default:false" json:"responseHeadersTruncated"`
 	Target                   *AssetTargetRef `gorm:"foreignKey:TargetID" json:"target,omitempty"`
 }

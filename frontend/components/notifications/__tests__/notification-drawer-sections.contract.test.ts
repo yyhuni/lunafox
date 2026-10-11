@@ -64,15 +64,15 @@ describe("notification-drawer-sections contract", () => {
     expect(source).toContain('"radius-pill h-7 w-full justify-center border border-transparent px-2.5 text-xs whitespace-nowrap has-[>svg]:px-2 sm:w-auto sm:shrink-0"')
   })
 
-  it("keeps acknowledgement bulk-only and aligns the unread marker with metadata", () => {
+  it("supports per-item mark-as-read acknowledgement and aligns unread markers with metadata", () => {
     expect(source).toContain("getStatusToneBgClass")
     expect(source).toContain('"absolute inset-y-0 left-0 w-1", getStatusToneBgClass(priorityTone)')
-    expect(source).toContain('className={cn("radius-round size-1.5", getStatusToneBgClass(priorityTone))}')
+    expect(source).toContain('"radius-round size-1.5 shrink-0 transition-opacity"')
     expect(source).toContain("state.handleMarkAll")
-    expect(source).not.toContain("onMarkRead")
-    expect(source).not.toContain("isMarkingRead")
-    expect(source).not.toContain("state.handleMarkRead")
-    expect(source).not.toContain("state.isMarkingRead")
+    expect(source).toContain("onMarkRead")
+    expect(source).toContain("isMarkingRead")
+    expect(source).toContain("state.handleMarkRead")
+    expect(source).toContain("state.isMarkingRead")
   })
 
   it("keeps cards presentation-only without task navigation or payload parsing", () => {
@@ -80,7 +80,7 @@ describe("notification-drawer-sections contract", () => {
     expect(cardSource).toContain("<article")
     expect(cardSource).toContain("notification.title")
     expect(cardSource).toContain("notification.message")
-    expect(cardSource).not.toContain("onClick")
+    expect(cardSource).not.toContain("<article onClick")
     expect(cardSource).not.toContain("router.push")
     expect(cardSource).not.toContain("nucleiPocSyncTasks")
     expect(cardSource).not.toContain("payload")

@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { BellOff, Info, semanticIcons } from "@/components/icons"
+import { BellOff, Check, Info, semanticIcons } from "@/components/icons"
 import { EdgePanelHeader } from "@/components/shared/edge-panel-header"
 import { Spinner } from "@/components/shared/loading/spinner"
 import { Badge } from "@/components/ui/badge"
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { getStatusToneBadgeClass, getStatusToneBgClass, type StatusTone } from "@/lib/status-config"
 import { textRole } from "@/lib/typography"
 import { compactFeedbackDrawerContentClassName } from "@/lib/ui/overlay-styles"
@@ -37,12 +38,18 @@ function NotificationCard({
   categoryTitle,
   priorityTitle,
   formattedTime,
+  markReadLabel,
+  onMarkRead,
+  isMarkingRead = false,
   loading = false,
 }: {
   notification?: NotificationInboxItem
   categoryTitle?: string
   priorityTitle?: string
   formattedTime?: string
+  markReadLabel?: string
+  onMarkRead?: (name: string) => void
+  isMarkingRead?: boolean
   loading?: boolean
 }) {
   if (loading) {
@@ -87,10 +94,51 @@ function NotificationCard({
               {priorityTitle}
             </Badge>
             <span className={textRole.helperText}>{categoryTitle}</span>
-            <time className={cn("ml-auto shrink-0 tabular-nums", textRole.helperText)} dateTime={notification.createdAt}>
-              {formattedTime}
-            </time>
-            {unread ? <span aria-hidden="true" className={cn("radius-round size-1.5", getStatusToneBgClass(priorityTone))} /> : null}
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+              <time className={cn("tabular-nums", textRole.helperText)} dateTime={notification.createdAt}>
+                {formattedTime}
+              </time>
+              {unread ? (
+                <div className="flex items-center gap-1.5">
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "radius-round size-1.5 shrink-0 transition-opacity",
+                      getStatusToneBgClass(priorityTone)
+                    )}
+                  />
+                  {onMarkRead && markReadLabel ? (
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={(
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            layout="rowAction"
+                            aria-label={markReadLabel}
+                            disabled={isMarkingRead}
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              onMarkRead(notification.name)
+                            }}
+                            className={cn(
+                              "size-5 min-h-5 min-w-5 p-0 text-muted-foreground/60 transition-[color,background-color,opacity] hover:bg-muted hover:text-foreground",
+                              isMarkingRead
+                                ? "opacity-100"
+                                : "opacity-40 group-hover:opacity-100 focus-visible:opacity-100"
+                            )}
+                          />
+                        )}
+                      >
+                        {isMarkingRead ? <Spinner className="size-3" /> : <Check className="size-3.5" />}
+                      </TooltipTrigger>
+                      <TooltipContent side="top">{markReadLabel}</TooltipContent>
+                    </Tooltip>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           </div>
           <p className={cn("mt-1 truncate", textRole.bodyStrong)}>{notification.title}</p>
           <p className={cn("mt-1 whitespace-pre-line break-words", textRole.helperText)}>{notification.message}</p>
@@ -208,6 +256,9 @@ export function NotificationDrawerLayout({ state }: { state: NotificationDrawerS
                           categoryTitle={state.categoryTitleMap[notification.category]}
                           priorityTitle={state.t(`priorities.${notification.priority}`)}
                           formattedTime={state.formatTimestamp(notification.createdAt)}
+                          markReadLabel={state.t("markRead")}
+                          onMarkRead={state.handleMarkRead}
+                          isMarkingRead={state.isMarkingRead && state.markingNotificationName === notification.name}
                         />
                       ))}
                     </div>

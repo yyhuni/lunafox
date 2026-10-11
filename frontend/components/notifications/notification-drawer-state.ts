@@ -6,6 +6,7 @@ import type { Locale } from "@/i18n/config"
 import { useNotificationSSE } from "@/hooks/use-notification-sse"
 import {
   useMarkAllNotificationsRead,
+  useMarkNotificationRead,
   useNotificationPages,
   useUnreadCount,
 } from "@/hooks/use-notifications"
@@ -52,6 +53,7 @@ export function useNotificationDrawerState() {
 
   const inbox = useNotificationPages()
   const unread = useUnreadCount()
+  const markRead = useMarkNotificationRead()
   const markAllRead = useMarkAllNotificationsRead()
 
   const allNotifications = React.useMemo<NotificationInboxItem[]>(
@@ -115,6 +117,13 @@ export function useNotificationDrawerState() {
     [t]
   )
 
+  const handleMarkRead = React.useCallback((name: string) => {
+    if (markRead.isPending) {
+      return
+    }
+    markRead.mutate(name)
+  }, [markRead])
+
   const handleMarkAll = React.useCallback(() => {
     if (unreadCount === 0 || markAllRead.isPending) {
       return
@@ -133,6 +142,8 @@ export function useNotificationDrawerState() {
     isFetchingNextPage: inbox.isFetchingNextPage,
     hasNextPage: inbox.hasNextPage,
     fetchNextPage: inbox.fetchNextPage,
+    isMarkingRead: markRead.isPending,
+    markingNotificationName: markRead.variables,
     isMarkingAll: markAllRead.isPending,
     allNotifications,
     unreadCount,
@@ -142,6 +153,7 @@ export function useNotificationDrawerState() {
     categoryTitleMap,
     timeGroupLabels,
     formatTimestamp: (value: string) => formatNotificationTimestamp(value, locale),
+    handleMarkRead,
     handleMarkAll,
   }
 }

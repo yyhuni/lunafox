@@ -10,10 +10,19 @@ import { buildBackendUrl } from "@/lib/env"
 import type {
   ListNotificationsRequest,
   ListNotificationsResponse,
+  NotificationInboxItem,
   NotificationUnreadCount,
 } from "@/types/notification.types"
 
 const inboxPath = "/users/current/notifications"
+
+function notificationPathSegment(name: string): string {
+  const match = /^users\/(?:current|[1-9]\d*)\/notifications\/([1-9]\d*)$/.exec(name)
+  if (!match) {
+    throw new Error("Notification resource name is invalid")
+  }
+  return match[1]
+}
 
 type NotificationStreamErrorBody = {
   error?: {
@@ -47,6 +56,12 @@ export class NotificationService {
     const response = await api.get<ListNotificationsResponse>(inboxPath, {
       params,
     })
+    return response.data
+  }
+
+  static async markRead(name: string): Promise<NotificationInboxItem> {
+    const segment = notificationPathSegment(name)
+    const response = await api.post<NotificationInboxItem>(`${inboxPath}/${segment}:markRead`)
     return response.data
   }
 

@@ -173,6 +173,19 @@ describe("global asset search query", () => {
     })
     expect(() => parseGlobalAssetSearchQuery('title=="A"')).not.toThrow()
     expect(() => parseGlobalAssetSearchQuery('tech="ng"')).not.toThrow()
+    expect(parseGlobalAssetSearchQuery('responseHeaders="rememberMe=deleteMe"')).toEqual({
+      mode: "structured",
+      combinator: "and",
+      conditions: [{ field: "responseHeaders", operator: "=", value: "rememberMe=deleteMe" }],
+    })
+    expect(parseGlobalAssetSearchQuery('responseHeaders=="x"')).toEqual({
+      mode: "structured",
+      combinator: "and",
+      conditions: [{ field: "responseHeaders", operator: "==", value: "x" }],
+    })
+    for (const query of ['responseHeaders="ok"', 'responseHeaders="ab"', 'responseHeaders="  ab"', 'responseBody="secret"']) {
+      expect(() => parseGlobalAssetSearchQuery(query)).toThrow()
+    }
   })
 
   it("keeps the guidance catalog parser-valid and covers every featured field", () => {
@@ -197,6 +210,7 @@ describe("global asset search query", () => {
       ["statusCode=\"ok\"", "invalidStatusCode"],
       ["hasScreenshot=\"yes\"", "invalidBoolean"],
       ["host=\"a\"", "containsValueTooShort"],
+      ["responseHeaders=\"ok\"", "containsValueTooShort"],
       ["host=api", "missingQuotedValue"],
       ["host=\"api", "unterminatedQuotedValue"],
       ["host=\"api\" && tech=\"nginx\" or title=\"Login\"", "invalidConnector"],

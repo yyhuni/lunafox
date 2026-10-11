@@ -234,6 +234,7 @@ export function SearchSyntaxManualContent({ t, onSelectExample }: SearchSyntaxMa
           <h3 className={textRole.sectionTitle}>{t("manual.limitsTitle")}</h3>
           <ul className={cn(textRole.bodySubtle, "list-disc space-y-1 pl-5")}>
             <li>{t("manual.urlLimit")}</li>
+            <li>{t("manual.responseHeaderLimit")}</li>
             <li>{t("manual.textLimit")}</li>
             <li>{t("manual.statusLimit")}</li>
             <li>{t("manual.conditionLimit")}</li>

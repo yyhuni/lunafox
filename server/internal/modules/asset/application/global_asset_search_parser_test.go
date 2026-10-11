@@ -211,6 +211,16 @@ func TestParseGlobalAssetSearchQueryUsesFieldSpecificTypedSemantics(t *testing.T
 			t.Fatalf("two-character contains query %q should be accepted: %v", raw, err)
 		}
 	}
+	for _, raw := range []string{`responseHeaders="rememberMe=deleteMe"`, `responseHeaders="Set-Cookie: rememberMe=deleteMe"`, `responseHeaders=="x"`, `responseHeaders==""`} {
+		if _, err := ParseGlobalAssetSearchQuery(raw); err != nil {
+			t.Fatalf("response header query %q should be accepted: %v", raw, err)
+		}
+	}
+	for _, raw := range []string{`responseHeaders="a"`, `responseHeaders="ok"`, `responseHeaders="  ab"`, `responseBody="password"`} {
+		if _, err := ParseGlobalAssetSearchQuery(raw); !errors.Is(err, ErrInvalidGlobalAssetSearchQuery) {
+			t.Fatalf("response header query %q should be rejected: %v", raw, err)
+		}
+	}
 	for _, raw := range []string{`statusCode="2xx"`, `statusCode="-1"`, `statusCode="+200"`, `statusCode="200.0"`} {
 		if _, err := ParseGlobalAssetSearchQuery(raw); !errors.Is(err, ErrInvalidGlobalAssetSearchQuery) {
 			t.Fatalf("query %q should be rejected: %v", raw, err)

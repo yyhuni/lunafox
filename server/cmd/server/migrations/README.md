@@ -179,6 +179,12 @@ value. It is idempotent and intentionally not reversible — the cleared values
 are stale cursors that must not be restored, and its down file is a no-op
 destructive-teardown placeholder.
 
+Forward migration `000007` adds `idx_website_response_headers_trgm` and
+`idx_endpoint_response_headers_trgm` so global asset search can match the
+stored raw `response_headers` text. It does not index `response_body` and does
+not change the frozen `000001` baseline. Its down file only drops those
+indexes for isolated test teardown.
+
 ## Scan Execution Input Source Hard Cut
 
 The frozen `000001` baseline requires `scan.input_source` and

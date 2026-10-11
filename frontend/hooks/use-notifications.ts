@@ -5,6 +5,7 @@ import { createResourceKeys } from "@/hooks/_shared/query-keys"
 import { NotificationService } from "@/services/notification.service"
 import type {
   ListNotificationsRequest,
+  NotificationInboxItem,
 } from "@/types/notification.types"
 
 const notificationKeyBase = createResourceKeys("notification-inbox", {
@@ -45,6 +46,22 @@ export function useNotificationPages(pageSize = 50) {
       ...(pageParam ? { pageToken: pageParam } : {}),
     }),
     getNextPageParam: (page) => page.nextPageToken || undefined,
+  })
+}
+
+export function useMarkNotificationRead() {
+  return useResourceMutation<NotificationInboxItem, string>({
+    mutationFn: (name) => NotificationService.markRead(name),
+    retry: false,
+    loadingToast: {
+      key: "toast.notification.markRead.loading",
+      id: (name) => `notification-mark-read-${name}`,
+    },
+    invalidate: [{ queryKey: notificationKeys.all }],
+    onSuccess: ({ toast }) => {
+      toast.success("toast.notification.markRead.success")
+    },
+    errorFallbackKey: "toast.notification.markRead.error",
   })
 }
 

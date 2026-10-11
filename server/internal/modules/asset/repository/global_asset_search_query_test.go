@@ -195,6 +195,83 @@ func TestGlobalAssetSearchRepositoryFiltersByScreenshotExistence(t *testing.T) {
 	}
 }
 
+func TestGlobalAssetSearchRepositoryMatchesStoredResponseHeaders(t *testing.T) {
+	db := newAssetRepositoryDB(t)
+	now := time.Date(2026, 8, 7, 9, 0, 0, 0, time.UTC)
+	stored := "HTTP/1.1 403 Forbidden\r\nSet-Cookie: rememberMe=deleteMe\r\n"
+	if err := db.Create([]model.Website{
+		{ID: 1, TargetID: 1, URL: "https://shiro.example.test/admin", Host: "shiro.example.test", Title: "Denied", ResponseHeaders: stored, CreatedAt: now, Tech: pq.StringArray{}},
+		{ID: 2, TargetID: 1, URL: "https://other.example.test/", Host: "other.example.test", Title: "Other", ResponseHeaders: "Server: nginx\r\n", CreatedAt: now.Add(-time.Second), Tech: pq.StringArray{}},
+	}).Error; err != nil {
+		t.Fatalf("seed websites: %v", err)
+	}
+	if err := db.Create([]model.Endpoint{
+		{ID: 11, TargetID: 1, URL: "https://shiro.example.test/truncated", Host: "shiro.example.test", ResponseHeaders: "Set-Cookie: rememberMe=deleteMe", ResponseHeadersTruncated: true, CreatedAt: now, Tech: pq.StringArray{}},
+		{ID: 12, TargetID: 1, URL: "https://other.example.test/truncated", Host: "other.example.test", ResponseHeaders: "Server: nginx", ResponseHeadersTruncated: true, CreatedAt: now.Add(-time.Second), Tech: pq.StringArray{}},
+	}).Error; err != nil {
+		t.Fatalf("seed endpoints: %v", err)
+	}
+
+	websiteRepo := NewWebsiteRepository(db)
+	containsAST, err := assetapp.ParseGlobalAssetSearchQuery(`responseHeaders="rememberme=deleteme"`)
+	if err != nil {
+		t.Fatalf("parse contains: %v", err)
+	}
+	contains, _, _, err := websiteRepo.SearchGlobalWebsites(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: containsAST, PageSize: 10})
+	if err != nil || len(contains) != 1 || contains[0].ID != 1 || contains[0].ResponseHeaders != stored {
+		t.Fatalf("contains search must be case-insensitive against stored headers: items=%+v err=%v", contains, err)
+	}
+	exactAST, err := assetapp.ParseGlobalAssetSearchQuery(`responseHeaders=="HTTP/1.1 403 Forbidden\r\nSet-Cookie: rememberMe=deleteMe\r\n"`)
+	if err != nil {
+		t.Fatalf("parse exact: %v", err)
+	}
+	exact, _, _, err := websiteRepo.SearchGlobalWebsites(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: exactAST, PageSize: 10})
+	if err != nil || len(exact) != 1 || exact[0].ID != 1 {
+		t.Fatalf("exact search must match the full stored header blob: items=%+v err=%v", exact, err)
+	}
+	partialExactAST, err := assetapp.ParseGlobalAssetSearchQuery(`responseHeaders=="rememberMe=deleteMe"`)
+	if err != nil {
+		t.Fatalf("parse partial exact: %v", err)
+	}
+	partialExact, _, _, err := websiteRepo.SearchGlobalWebsites(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: partialExactAST, PageSize: 10})
+	if err != nil || len(partialExact) != 0 {
+		t.Fatalf("exact search must not match a header substring: items=%+v err=%v", partialExact, err)
+	}
+
+	endpointRepo := NewEndpointRepository(db)
+	truncated, _, _, err := endpointRepo.SearchGlobalEndpoints(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: containsAST, PageSize: 10})
+	if err != nil || len(truncated) != 1 || truncated[0].ID != 11 || !truncated[0].ResponseHeadersTruncated {
+		t.Fatalf("truncated rows must stay searchable on stored text: items=%+v err=%v", truncated, err)
+	}
+}
+
+func TestGlobalAssetSearchResponseHeaderSQLIgnoresTruncation(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{DryRun: true})
+	if err != nil {
+		t.Fatalf("open dry-run db: %v", err)
+	}
+	ast, err := assetapp.ParseGlobalAssetSearchQuery(`responseHeaders="rememberMe=deleteMe"`)
+	if err != nil {
+		t.Fatalf("parse AST: %v", err)
+	}
+	query := db.Table("endpoint AS asset").Select("asset.*")
+	query, err = applyGlobalAssetSearchPredicates(query, ast, "postgres")
+	if err != nil {
+		t.Fatalf("apply predicates: %v", err)
+	}
+	statement := query.Find(&[]model.Endpoint{}).Statement
+	if statement == nil {
+		t.Fatal("expected SQL statement")
+	}
+	sql := strings.ToLower(statement.SQL.String())
+	if !strings.Contains(sql, "asset.response_headers ilike") {
+		t.Fatalf("response header contains SQL must use ILIKE: %s", sql)
+	}
+	if strings.Contains(sql, "response_headers_truncated") || strings.Contains(sql, "response_body") {
+		t.Fatalf("response header search must not filter truncation or read the body: %s", sql)
+	}
+}
+
 func TestGlobalAssetSearchHasScreenshotSQLUsesExistenceProbe(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{DryRun: true})
 	if err != nil {

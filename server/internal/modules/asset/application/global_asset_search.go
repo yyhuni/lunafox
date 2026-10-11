@@ -60,12 +60,13 @@ const (
 type GlobalAssetSearchField string
 
 const (
-	GlobalAssetSearchFieldURL           GlobalAssetSearchField = "url"
-	GlobalAssetSearchFieldHost          GlobalAssetSearchField = "host"
-	GlobalAssetSearchFieldTitle         GlobalAssetSearchField = "title"
-	GlobalAssetSearchFieldStatusCode    GlobalAssetSearchField = "statusCode"
-	GlobalAssetSearchFieldTech          GlobalAssetSearchField = "tech"
-	GlobalAssetSearchFieldHasScreenshot GlobalAssetSearchField = "hasScreenshot"
+	GlobalAssetSearchFieldURL             GlobalAssetSearchField = "url"
+	GlobalAssetSearchFieldHost            GlobalAssetSearchField = "host"
+	GlobalAssetSearchFieldTitle           GlobalAssetSearchField = "title"
+	GlobalAssetSearchFieldStatusCode      GlobalAssetSearchField = "statusCode"
+	GlobalAssetSearchFieldTech            GlobalAssetSearchField = "tech"
+	GlobalAssetSearchFieldHasScreenshot   GlobalAssetSearchField = "hasScreenshot"
+	GlobalAssetSearchFieldResponseHeaders GlobalAssetSearchField = "responseHeaders"
 )
 
 // GlobalAssetSearchOperator controls the approved field-specific match mode.

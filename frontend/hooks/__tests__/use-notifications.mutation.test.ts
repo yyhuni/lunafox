@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   notificationKeys,
   useMarkAllNotificationsRead,
+  useMarkNotificationRead,
   useNotifications,
 } from "@/hooks/use-notifications"
 import { renderHookWithProviders } from "@/test/utils/render-with-providers"
@@ -10,6 +11,7 @@ import { createTestQueryClient } from "@/test/utils/test-query-client"
 
 const notificationServiceMocks = vi.hoisted(() => ({
   list: vi.fn(),
+  markRead: vi.fn(),
   markAllRead: vi.fn(),
   getUnreadCount: vi.fn(),
 }))
@@ -73,5 +75,31 @@ describe("use-notifications mutation", () => {
       type: "active",
     })
     expect(toastMocks.errorFromCode).not.toHaveBeenCalled()
+  })
+
+  it("单条标记已读成功会使 notificationKeys.all 失效", async () => {
+    notificationServiceMocks.markRead.mockResolvedValue({
+      name: "users/current/notifications/1",
+      title: "Test notification",
+      readAt: "2026-10-11T12:00:00Z",
+    })
+
+    const queryClient = createTestQueryClient()
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+    const { result } = renderHookWithProviders(() => useMarkNotificationRead(), { queryClient })
+
+    await act(async () => {
+      await result.current.mutateAsync("users/current/notifications/1")
+    })
+
+    expect(notificationServiceMocks.markRead).toHaveBeenCalledWith("users/current/notifications/1")
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: notificationKeys.all,
+    })
+    expect(toastMocks.success).toHaveBeenCalledWith(
+      "toast.notification.markRead.success",
+      undefined,
+      "notification-mark-read-users/current/notifications/1"
+    )
   })
 })

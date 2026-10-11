@@ -57,6 +57,11 @@ const (
 // above because the scale selftest pins those lines byte-for-byte.
 const globalAssetSearchScaleNoiseScreenshotRows = 100_000
 
+const (
+	globalAssetSearchScaleResponseHeaderValue = "Set-Cookie: rememberMe=deleteMe"
+	globalAssetSearchScaleResponseHeaderTerm  = "rememberMe=deleteMe"
+)
+
 var globalAssetSearchScaleSpecs = []globalAssetSearchScaleAssetSpec{
 	{assetType: assetapp.GlobalAssetSearchAssetTypeWebsite, table: "website"},
 	{assetType: assetapp.GlobalAssetSearchAssetTypeEndpoint, table: "endpoint"},
@@ -324,16 +329,19 @@ func insertGlobalAssetSearchScaleNoiseRows(t *testing.T, ctx context.Context, db
 
 func insertGlobalAssetSearchScaleProbeRows(t *testing.T, ctx context.Context, db *sql.DB, spec globalAssetSearchScaleAssetSpec, targetID int) globalAssetSearchScaleFixture {
 	t.Helper()
+	// Only probe rows store this header substring. Noise, wide, and tombstone
+	// rows must not contain it, so the selective contains family stays indexable.
 	query := fmt.Sprintf(`
-		INSERT INTO %s (target_id, url, host, title, status_code, tech, created_at)
+		INSERT INTO %s (target_id, url, host, title, status_code, tech, response_headers, created_at)
 		SELECT $1::INTEGER,
 			'https://%s-probe-global-search-' || LPAD(value::text, 6, '0') || '.example/record/' || LPAD(value::text, 6, '0'),
 			'%s-probe-global-search-%s-' || LPAD(value::text, 6, '0') || '.example',
 			'Qz Global Search Probe ' || LPAD(value::text, 6, '0'),
 			201,
 			ARRAY['global-search-probe-tech']::varchar(100)[],
+			'%s',
 			TIMESTAMPTZ '2026-08-07 10:00:00+00' - (value * INTERVAL '1 second')
-		FROM generate_series(1, %d) AS value`, spec.table, spec.table, spec.table, globalAssetSearchScaleShortHostTerm, globalAssetSearchScaleProbeRows)
+		FROM generate_series(1, %d) AS value`, spec.table, spec.table, spec.table, globalAssetSearchScaleShortHostTerm, globalAssetSearchScaleResponseHeaderValue, globalAssetSearchScaleProbeRows)
 	if _, err := db.ExecContext(ctx, query, targetID); err != nil {
 		t.Fatalf("insert %s global search probe rows: %v", spec.table, err)
 	}
@@ -452,14 +460,15 @@ func assertGlobalAssetSearchScaleIndexInventory(t *testing.T, ctx context.Contex
 			t.Fatalf("close %s scale index rows: %v", spec.table, err)
 		}
 		for name, required := range map[string]string{
-			"idx_" + spec.table + "_url_trgm":    "using gin (url gin_trgm_ops)",
-			"idx_" + spec.table + "_host_trgm":   "using gin (host gin_trgm_ops)",
-			"idx_" + spec.table + "_title_trgm":  "using gin (title gin_trgm_ops)",
-			"idx_" + spec.table + "_tech_gin":    "using gin (tech)",
-			"idx_" + spec.table + "_url":         "(url)",
-			"idx_" + spec.table + "_host":        "(host)",
-			"idx_" + spec.table + "_title":       "(title)",
-			"idx_" + spec.table + "_status_code": "(status_code)",
+			"idx_" + spec.table + "_url_trgm":              "using gin (url gin_trgm_ops)",
+			"idx_" + spec.table + "_host_trgm":             "using gin (host gin_trgm_ops)",
+			"idx_" + spec.table + "_title_trgm":            "using gin (title gin_trgm_ops)",
+			"idx_" + spec.table + "_response_headers_trgm": "using gin (response_headers gin_trgm_ops)",
+			"idx_" + spec.table + "_tech_gin":              "using gin (tech)",
+			"idx_" + spec.table + "_url":                   "(url)",
+			"idx_" + spec.table + "_host":                  "(host)",
+			"idx_" + spec.table + "_title":                 "(title)",
+			"idx_" + spec.table + "_status_code":           "(status_code)",
 		} {
 			definition, ok := definitions[name]
 			if !ok || !strings.Contains(definition, required) {
@@ -467,8 +476,8 @@ func assertGlobalAssetSearchScaleIndexInventory(t *testing.T, ctx context.Contex
 			}
 		}
 		for name, definition := range definitions {
-			if strings.Contains(definition, "using gin") && (strings.Contains(definition, "response_body") || strings.Contains(definition, "response_headers")) {
-				t.Fatalf("%s must not create response-evidence GIN index %q: %s", spec.table, name, definition)
+			if strings.Contains(definition, "using gin") && strings.Contains(definition, "response_body") {
+				t.Fatalf("%s must not create a response body GIN index %q: %s", spec.table, name, definition)
 			}
 		}
 	}
@@ -584,6 +593,14 @@ func globalAssetSearchScaleQueryFamilies(fixture globalAssetSearchScaleFixture) 
 			// produce an empty result set while keeping the same plan shape.
 			expectedResultCount:  0,
 			acceptableIndexNames: []string{"idx_" + fixture.table + "_host_trgm"},
+		},
+		{
+			name:                 "response-headers-contains",
+			query:                `responseHeaders="` + globalAssetSearchScaleResponseHeaderTerm + `"`,
+			where:                "asset.response_headers ILIKE $1 ESCAPE '\\'",
+			args:                 []any{globalAssetSearchScaleContainsPattern(globalAssetSearchScaleResponseHeaderTerm)},
+			expectedResultCount:  globalAssetSearchScaleNormalPageSize,
+			acceptableIndexNames: []string{"idx_" + fixture.table + "_response_headers_trgm"},
 		},
 	}
 }

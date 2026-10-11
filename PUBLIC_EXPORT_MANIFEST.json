@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:a52648658a1e0d32eb728b3acedcc2bd860926f5a1fd6c1c22eb33c06ddb083b",
-  "releaseTag": "v0.0.1-alpha.216",
+  "sourceRevisionDigest": "sha256:4dba89373e13c1e6755e2ce20d7daafea5aa2fd1e35edd76f0404839c410dfac",
+  "releaseTag": "v0.0.1-alpha.217",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "dcb46319b69c19b2d819fe0e1fdc89e01281dded2321eed5368277c53357e42d"
+      "sha256": "673a7d732681e9615d6ed7e3dcc9c74a104e81b6e3708021cd4434b0cd84d502"
     },
     {
       "path": "README.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "2fb5b6f5c402b447a156237387706386acd91448e111aa7a8dff35d4816cf9fa"
+      "sha256": "315540f94987ced324d3477f6b1b81da65774c96d2cf35b097407c9beabaadbd"
     },
     {
       "path": "agent/bin/sha256-8b9983c2f060cd7a98329a55aeffe58e6e9fb7e1af0d1bda7813bf6ea14520ca/agent-bundle.sha256",
@@ -91,8 +91,8 @@
       "path": "agent/bin/sha256-8b9983c2f060cd7a98329a55aeffe58e6e9fb7e1af0d1bda7813bf6ea14520ca/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
-      "size": 9181,
-      "sha256": "7415522f1dbed443382f855f5d837e2b547f4b33454aa750ab1da6596c5d3fbf"
+      "size": 9173,
+      "sha256": "e45d28f3d0c754ad5e892d7031c3b468e6c54bd81e47de42c6ed0f44e363f739"
     },
     {
       "path": "agent/bin/sha256-8b9983c2f060cd7a98329a55aeffe58e6e9fb7e1af0d1bda7813bf6ea14520ca/lunafox-agent-linux-amd64",
@@ -5831,15 +5831,15 @@
       "path": "frontend/components/notifications/__tests__/notification-drawer-sections.contract.test.ts",
       "type": "file",
       "mode": "0644",
-      "size": 5675,
-      "sha256": "1e9e36d3f2afd73f738d00fbeba2a9eac2eafb11fc91ac44899b1b8fc8f84574"
+      "size": 5656,
+      "sha256": "13d6a3c7fbc6a11c532aa4bb4b4ccb561f6c6a58097e7a59adc9a252c0dd6f63"
     },
     {
       "path": "frontend/components/notifications/__tests__/notification-drawer-state.contract.test.ts",
       "type": "file",
       "mode": "0644",
-      "size": 935,
-      "sha256": "7e7327b7c186807a6d7cdcfc19d8171f38183d7b209c7f2f3670f053421108ed"
+      "size": 927,
+      "sha256": "599f49ee8f261aa35fe878065f4591841c3f43a918fd7df2f3ecbaf21d228bad"
     },
     {
       "path": "frontend/components/notifications/__tests__/notification-drawer.contract.test.ts",
@@ -5859,15 +5859,15 @@
       "path": "frontend/components/notifications/notification-drawer-sections.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 10111,
-      "sha256": "21934b4a916c683dc4ad9e339cae4e6e5c9c1754fb0f31cf22e9c8da3c81f0b9"
+      "size": 12400,
+      "sha256": "9a5fb4ac259f024c6e8a556af9c858809b38a6fdbf22e711f14c48ce09deca5f"
     },
     {
       "path": "frontend/components/notifications/notification-drawer-state.ts",
       "type": "file",
       "mode": "0644",
-      "size": 4279,
-      "sha256": "6e468995f8d4b175f1d3c45d51e0a573412e08c6ac67110b9e9b8975a9685c66"
+      "size": 4615,
+      "sha256": "886b31450058ed34ca164cc824e135cc4a913521aba396cd3268a6b33e903146"
     },
     {
       "path": "frontend/components/notifications/notification-drawer.tsx",
@@ -8358,8 +8358,8 @@
       "path": "frontend/components/search/__tests__/search-syntax-guidance.test.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 3325,
-      "sha256": "7c227f05bc6fce06224f3681c10f7f84f35b87af923e38ea0870014a5a61344a"
+      "size": 3576,
+      "sha256": "e9e76812150a456a6b8a79e952cf8e8c3c25f2adc40350ae2ee5328f8f78ce7a"
     },
     {
       "path": "frontend/components/search/__tests__/search-websites-data-table.contract.test.ts",
@@ -8428,8 +8428,8 @@
       "path": "frontend/components/search/search-syntax-guidance.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 9618,
-      "sha256": "66b4dde1b2ef04bdd88f6f71bb0edbde27d8a882113f806a1e64c9f8f94c3b6e"
+      "size": 9673,
+      "sha256": "ec5491e66653134bae20a981c247961fe9e2a1fdacbd7b6162ae5bdac38711ad"
     },
     {
       "path": "frontend/components/search/search-websites-data-table.tsx",
@@ -12712,15 +12712,15 @@
       "path": "frontend/hooks/__tests__/use-notifications.contract.test.ts",
       "type": "file",
       "mode": "0644",
-      "size": 864,
-      "sha256": "ae9a7f31d0b62d16a73353452cebf0744f9693cdb05ca77973a380e9aacd0e7e"
+      "size": 856,
+      "sha256": "3a0537ae252a8514aba2a3c928319eeb3293d3625c5c5dd417d646a2f2fdd634"
     },
     {
       "path": "frontend/hooks/__tests__/use-notifications.mutation.test.ts",
       "type": "file",
       "mode": "0644",
-      "size": 2174,
-      "sha256": "d6f3309c281ba9b44f27c88ab9e3a9840cbcbf3e51c4cc27cd1ea29bb1846342"
+      "size": 3191,
+      "sha256": "5fa8d42bc4acb6059161c8ff95cdf48ae8c3ac4463e4e9cff596b5b5f1fb1cda"
     },
     {
       "path": "frontend/hooks/__tests__/use-nuclei-poc-activation.test.ts",
@@ -13517,8 +13517,8 @@
       "path": "frontend/hooks/use-notifications.ts",
       "type": "file",
       "mode": "0644",
-      "size": 2341,
-      "sha256": "86da20113d3c6e5d7e143d417a71f34bc74a0030316a734b16fafb53232a97f3"
+      "size": 2902,
+      "sha256": "51c4769eca0b18b7ade3aaea89891a8c78acac40ceb5c58d58ac2a5e67430b03"
     },
     {
       "path": "frontend/hooks/use-nuclei-pocs.ts",
@@ -14126,8 +14126,8 @@
       "path": "frontend/lib/__tests__/global-asset-search-query.test.ts",
       "type": "file",
       "mode": "0644",
-      "size": 9361,
-      "sha256": "75bb9c4c273e7b95b1c51624cca912d7299ee592b5782be551d563885df14258"
+      "size": 10072,
+      "sha256": "68bab8118089f7b2b92561ca816874da4d2b34ab217a1fc6e6e4486aaef8540f"
     },
     {
       "path": "frontend/lib/__tests__/http-status-config.contract.test.ts",
@@ -14588,8 +14588,8 @@
       "path": "frontend/lib/global-asset-search-query.ts",
       "type": "file",
       "mode": "0644",
-      "size": 15767,
-      "sha256": "5b06f44e4ca4527446da0426e50e055b59dd420a724553fe534e05f8ed12cd0f"
+      "size": 16400,
+      "sha256": "6421895eb345a0f91bc13e13680c33422f502735bfb194774dda03047d400354"
     },
     {
       "path": "frontend/lib/http-status-config.ts",
@@ -14861,15 +14861,15 @@
       "path": "frontend/messages/en.json",
       "type": "file",
       "mode": "0644",
-      "size": 209001,
-      "sha256": "0ebc25f20a6096f8a9b7b051f82f6ec2690b969cbfbdf90e93cfe06d35dc9cd0"
+      "size": 209627,
+      "sha256": "5669b23416bd1c4bac25d21086da3f29e6f35d2a9dc73ab9a81e95268817521a"
     },
     {
       "path": "frontend/messages/zh.json",
       "type": "file",
       "mode": "0644",
-      "size": 201471,
-      "sha256": "d2a26bd91bcc3d5ee4b21d72c783b7b101ee102f3f8b1b84b14dec744984fdf7"
+      "size": 202060,
+      "sha256": "9d0dac220bbb7d692744f890041e4275eb86bcf84f9e6f9675708299e43f1de0"
     },
     {
       "path": "frontend/middleware.ts",
@@ -16163,8 +16163,8 @@
       "path": "frontend/services/__tests__/notification.service.contract.test.ts",
       "type": "file",
       "mode": "0644",
-      "size": 1020,
-      "sha256": "fa007d431c553200401b4d4cf5a9844c9d75edf58db9ac17d7b091ccd1d2f2b3"
+      "size": 1012,
+      "sha256": "c37c58d8fb0131d01f3547a3456c4578a302905912da4ca5792e2cf5a115e440"
     },
     {
       "path": "frontend/services/__tests__/nuclei-poc.service.test.ts",
@@ -16408,8 +16408,8 @@
       "path": "frontend/services/notification.service.ts",
       "type": "file",
       "mode": "0644",
-      "size": 2649,
-      "sha256": "d135ce8577bfed58bfed9860f29b8f01ea4a355b9aa52f13bc40666eae35f946"
+      "size": 3166,
+      "sha256": "c6f76b58f107fcb5fc284b131ea291a21be0cb894da11fe34b1d36dc126af8bd"
     },
     {
       "path": "frontend/services/nuclei-poc.service.ts",
@@ -17658,6 +17658,13 @@
       "sha256": "99dc31a6e8957973710779e8bb883299c893f0d899ee3a512924f97dfea6d06d"
     },
     {
+      "path": "release-notes/v0.0.1-alpha.217.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 946,
+      "sha256": "bb69ed3c8560fce956e7d0a011dcf96211c042e782ab88a205a760d476d98924"
+    },
+    {
       "path": "resources/alloy/config.alloy",
       "type": "file",
       "mode": "0644",
@@ -18298,8 +18305,8 @@
       "path": "server/cmd/server/global_asset_search_scale_postgres_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 42317,
-      "sha256": "2ed1393c63c4157c0b85fffee776cedccdd1c4898cbe7a173c6d7445df3f6418"
+      "size": 43312,
+      "sha256": "b28b55f6a9450c0dc65c99887a64ce519c0b04059600b41fe21547552d05aac8"
     },
     {
       "path": "server/cmd/server/main.go",
@@ -18421,18 +18428,32 @@
       "sha256": "ebd5de1d7a8160b5156de6fba1aeef10c292d9855bb829b12867147e2ba91734"
     },
     {
+      "path": "server/cmd/server/migrations/000007_response_headers_trgm.down.sql",
+      "type": "file",
+      "mode": "0644",
+      "size": 220,
+      "sha256": "4180c3d41454ffdf9babd866038453df5cd71b9d865eb878bcab318729294bc9"
+    },
+    {
+      "path": "server/cmd/server/migrations/000007_response_headers_trgm.up.sql",
+      "type": "file",
+      "mode": "0644",
+      "size": 482,
+      "sha256": "fe116ed841d7a8fdadb8fa3d5ace2d786103ba3fd4e7381b228fb500c932ce78"
+    },
+    {
       "path": "server/cmd/server/migrations/README.md",
       "type": "file",
       "mode": "0644",
-      "size": 18094,
-      "sha256": "f5a05cf3a931f15c23cb0bbc59974ae1879d07441c86b6ee11707f11d54c73e6"
+      "size": 18428,
+      "sha256": "f34b4666a344b54d0c9ad61e32bc928419f56b76efb0f5dcc284f96dea43b742"
     },
     {
       "path": "server/cmd/server/migrations/manifest.json",
       "type": "file",
       "mode": "0644",
-      "size": 1850,
-      "sha256": "3fe649d6845c4dbe84be4b95175b641244cddf9ab5e6b97b04c6cc00a2ac5465"
+      "size": 2122,
+      "sha256": "40c6f433b8f31b4f8903765687cd8f22b9bce6042e8b6f31e7bc3e8038ad306f"
     },
     {
       "path": "server/cmd/server/migrations/policy.json",
@@ -22183,22 +22204,22 @@
       "path": "server/internal/modules/asset/application/global_asset_search.go",
       "type": "file",
       "mode": "0644",
-      "size": 14056,
-      "sha256": "d274e6668a59cb12f969a7cbe58130784b584fbafb4e944e000a083d2ac808a7"
+      "size": 14150,
+      "sha256": "08058e04bba5dea4a32e6cbb8db78a60babb2d34141fdd828fb2a81a4f608e1f"
     },
     {
       "path": "server/internal/modules/asset/application/global_asset_search_parser.go",
       "type": "file",
       "mode": "0644",
-      "size": 11004,
-      "sha256": "85f423b5cb9a242d317d8d6bccf960933f3748fb34033eddf2a904f70fdf0a66"
+      "size": 11844,
+      "sha256": "31791ed6e5d4390e41835cc5bfa57299aefd0e07e034086f6029fd88bbe57d8b"
     },
     {
       "path": "server/internal/modules/asset/application/global_asset_search_parser_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 10633,
-      "sha256": "f2a94511c6408250bbac18818482d2fc2f23c0f50111dd99ea0900e1cf8b6bf7"
+      "size": 11261,
+      "sha256": "4831a9dfa9a4c108f612d64267678d188d8d000765a70e922611a6886e81e6e8"
     },
     {
       "path": "server/internal/modules/asset/application/global_asset_search_test.go",
@@ -23023,15 +23044,15 @@
       "path": "server/internal/modules/asset/repository/global_asset_search_query.go",
       "type": "file",
       "mode": "0644",
-      "size": 9236,
-      "sha256": "4c0a75fd09f4f9e4e0ac601efbd36f5fb8af2f31287d498f17a406b46697d479"
+      "size": 9478,
+      "sha256": "9fe75c3bc2c9cc592efe5936ca7d11d61a18733a7f7db4adc84f51318889e0b1"
     },
     {
       "path": "server/internal/modules/asset/repository/global_asset_search_query_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 23200,
-      "sha256": "28daaa47179afabd33e608e16b4e3f26b2b23b484efffbd442c6616101dd76fd"
+      "size": 27434,
+      "sha256": "f5694c4b749310f640f903d49194f332814e82fb94ceadbbe5c8ce76920567f6"
     },
     {
       "path": "server/internal/modules/asset/repository/host_port.go",
@@ -23072,8 +23093,8 @@
       "path": "server/internal/modules/asset/repository/persistence/global_asset_search_indexes_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 1406,
-      "sha256": "33e20396459659fc179c515c744c953f5d3539ed8488084288c0db6d28db04f0"
+      "size": 1506,
+      "sha256": "9b414d672fce02b5c9c77d6140634e86d6fb64b4ad5b99d993a6ecd132d79c39"
     },
     {
       "path": "server/internal/modules/asset/repository/persistence/models_test.go",
@@ -23100,8 +23121,8 @@
       "path": "server/internal/modules/asset/repository/persistence/web_assets.go",
       "type": "file",
       "mode": "0644",
-      "size": 9189,
-      "sha256": "a17b94898f5d8d7252b3e848da15b8b6e16abb10a31335640f141eba13e12a57"
+      "size": 9370,
+      "sha256": "b2ebcc76f8502b9121cee345ed5be427a180b4706641994b845ff4dbcd104160"
     },
     {
       "path": "server/internal/modules/asset/repository/query_additional_test.go",
