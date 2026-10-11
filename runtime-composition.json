@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "kind": "lunafox.runtime-composition",
-  "releaseTag": "v0.0.1-alpha.216",
-  "sourceRevisionDigest": "sha256:a52648658a1e0d32eb728b3acedcc2bd860926f5a1fd6c1c22eb33c06ddb083b",
-  "publicMergeCommit": "9bfce4a7dd3362563739df00e76f7a426067f751",
+  "releaseTag": "v0.0.1-alpha.217",
+  "sourceRevisionDigest": "sha256:4dba89373e13c1e6755e2ce20d7daafea5aa2fd1e35edd76f0404839c410dfac",
+  "publicMergeCommit": "a354f59fcedc1860805663e67cb29762100f2060",
   "components": [
     {
       "id": "engine.lunafox.directory_scan.package",
@@ -1211,7 +1211,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-directory_scan.json",
@@ -2429,7 +2429,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-directory_scan.json",
@@ -3566,7 +3566,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-fingerprint_detection.json",
@@ -4706,7 +4706,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-fingerprint_detection.json",
@@ -5885,7 +5885,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-nuclei_vulnerability.json",
@@ -7067,7 +7067,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-nuclei_vulnerability.json",
@@ -8276,7 +8276,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-port_scan.json",
@@ -9488,7 +9488,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-port_scan.json",
@@ -10655,7 +10655,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-screenshot.json",
@@ -11825,7 +11825,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-screenshot.json",
@@ -13082,7 +13082,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-subdomain_discovery.json",
@@ -14342,7 +14342,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-subdomain_discovery.json",
@@ -15546,7 +15546,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-url_collection.json",
@@ -16753,7 +16753,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-url_collection.json",
@@ -17944,7 +17944,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-website_discovery.json",
@@ -19138,7 +19138,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-website_discovery.json",
@@ -19249,7 +19249,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.213",
         "publicMergeCommit": "46ae497f60d92c72c045a0bbc063566a995f8965",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "runtime-evidence/agent.json",
@@ -19265,7 +19265,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:f710b41469cef74fccf558babc119d7414998ee12cc7c0e97d9e67b24bad16b2",
+        "digest": "sha256:3a1e17438e4d8af11c095e52371be39017d97de59e530268763c8c6f126d0eb7",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -20271,10 +20271,10 @@
               "size": 13640
             },
             {
-              "digest": "sha256:2ed1393c63c4157c0b85fffee776cedccdd1c4898cbe7a173c6d7445df3f6418",
+              "digest": "sha256:b28b55f6a9450c0dc65c99887a64ce519c0b04059600b41fe21547552d05aac8",
               "mode": 420,
               "path": "server/cmd/server/global_asset_search_scale_postgres_test.go",
-              "size": 42317
+              "size": 43312
             },
             {
               "digest": "sha256:ab797b5c19755fdd2fb3fbd6d2c2b71c284c07fbde4cd8ffc016de53274cd9c5",
@@ -20379,10 +20379,22 @@
               "size": 621
             },
             {
-              "digest": "sha256:3fe649d6845c4dbe84be4b95175b641244cddf9ab5e6b97b04c6cc00a2ac5465",
+              "digest": "sha256:4180c3d41454ffdf9babd866038453df5cd71b9d865eb878bcab318729294bc9",
+              "mode": 420,
+              "path": "server/cmd/server/migrations/000007_response_headers_trgm.down.sql",
+              "size": 220
+            },
+            {
+              "digest": "sha256:fe116ed841d7a8fdadb8fa3d5ace2d786103ba3fd4e7381b228fb500c932ce78",
+              "mode": 420,
+              "path": "server/cmd/server/migrations/000007_response_headers_trgm.up.sql",
+              "size": 482
+            },
+            {
+              "digest": "sha256:40c6f433b8f31b4f8903765687cd8f22b9bce6042e8b6f31e7bc3e8038ad306f",
               "mode": 420,
               "path": "server/cmd/server/migrations/manifest.json",
-              "size": 1850
+              "size": 2122
             },
             {
               "digest": "sha256:53331d701d9b7cbac5f6eab5cd02d7b6859b0e3959cee4c1cb1dad636567aefc",
@@ -20391,10 +20403,10 @@
               "size": 582
             },
             {
-              "digest": "sha256:f5a05cf3a931f15c23cb0bbc59974ae1879d07441c86b6ee11707f11d54c73e6",
+              "digest": "sha256:f34b4666a344b54d0c9ad61e32bc928419f56b76efb0f5dcc284f96dea43b742",
               "mode": 420,
               "path": "server/cmd/server/migrations/README.md",
-              "size": 18094
+              "size": 18428
             },
             {
               "digest": "sha256:218273055d7a2044efd593000f2daaa6abfe9d36fb651b49c6ff7e87a775c3b0",
@@ -23595,16 +23607,16 @@
               "size": 2423
             },
             {
-              "digest": "sha256:f2a94511c6408250bbac18818482d2fc2f23c0f50111dd99ea0900e1cf8b6bf7",
+              "digest": "sha256:4831a9dfa9a4c108f612d64267678d188d8d000765a70e922611a6886e81e6e8",
               "mode": 420,
               "path": "server/internal/modules/asset/application/global_asset_search_parser_test.go",
-              "size": 10633
+              "size": 11261
             },
             {
-              "digest": "sha256:85f423b5cb9a242d317d8d6bccf960933f3748fb34033eddf2a904f70fdf0a66",
+              "digest": "sha256:31791ed6e5d4390e41835cc5bfa57299aefd0e07e034086f6029fd88bbe57d8b",
               "mode": 420,
               "path": "server/internal/modules/asset/application/global_asset_search_parser.go",
-              "size": 11004
+              "size": 11844
             },
             {
               "digest": "sha256:efd957bf368156e9ed730376c1ddb743e54e696da16134b00418c3b765132d1b",
@@ -23613,10 +23625,10 @@
               "size": 9467
             },
             {
-              "digest": "sha256:d274e6668a59cb12f969a7cbe58130784b584fbafb4e944e000a083d2ac808a7",
+              "digest": "sha256:08058e04bba5dea4a32e6cbb8db78a60babb2d34141fdd828fb2a81a4f608e1f",
               "mode": 420,
               "path": "server/internal/modules/asset/application/global_asset_search.go",
-              "size": 14056
+              "size": 14150
             },
             {
               "digest": "sha256:4954af1396cc6338e6a495727ae4a5ac4f153b416b5a7c1807c2eed00c6950a5",
@@ -24315,16 +24327,16 @@
               "size": 869
             },
             {
-              "digest": "sha256:28daaa47179afabd33e608e16b4e3f26b2b23b484efffbd442c6616101dd76fd",
+              "digest": "sha256:f5694c4b749310f640f903d49194f332814e82fb94ceadbbe5c8ce76920567f6",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/global_asset_search_query_test.go",
-              "size": 23200
+              "size": 27434
             },
             {
-              "digest": "sha256:4c0a75fd09f4f9e4e0ac601efbd36f5fb8af2f31287d498f17a406b46697d479",
+              "digest": "sha256:9fe75c3bc2c9cc592efe5936ca7d11d61a18733a7f7db4adc84f51318889e0b1",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/global_asset_search_query.go",
-              "size": 9236
+              "size": 9478
             },
             {
               "digest": "sha256:13b75725cc65be60f92396d8b850bbd97c60e2b2cb611d8c3a057428bbd5ff20",
@@ -24357,10 +24369,10 @@
               "size": 340
             },
             {
-              "digest": "sha256:33e20396459659fc179c515c744c953f5d3539ed8488084288c0db6d28db04f0",
+              "digest": "sha256:9b414d672fce02b5c9c77d6140634e86d6fb64b4ad5b99d993a6ecd132d79c39",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/persistence/global_asset_search_indexes_test.go",
-              "size": 1406
+              "size": 1506
             },
             {
               "digest": "sha256:9f0a5f3516d9f696c03f9f1c1e62dd2b43c99c3556ef5947a0d2ea7899986467",
@@ -24381,10 +24393,10 @@
               "size": 728
             },
             {
-              "digest": "sha256:a17b94898f5d8d7252b3e848da15b8b6e16abb10a31335640f141eba13e12a57",
+              "digest": "sha256:b2ebcc76f8502b9121cee345ed5be427a180b4706641994b845ff4dbcd104160",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/persistence/web_assets.go",
-              "size": 9189
+              "size": 9370
             },
             {
               "digest": "sha256:bf3e7f7175aa0328999b2db45e7af77d97e27e58c5c3b8bc5e2e5e525ef48f79",
@@ -30578,8 +30590,8 @@
         }
       },
       "artifact": {
-        "ref": "ghcr.io/yyhuni/lunafox-bootstrap@sha256:7889c7a019a685bd8e1fcaa5f77532501efa764eabdecee67c79292ee6a6d3a3",
-        "digest": "sha256:7889c7a019a685bd8e1fcaa5f77532501efa764eabdecee67c79292ee6a6d3a3",
+        "ref": "ghcr.io/yyhuni/lunafox-bootstrap@sha256:232a72ce9f43ebafeb803b19eabbad20fabd075d67b8081561b6f120b5564247",
+        "digest": "sha256:232a72ce9f43ebafeb803b19eabbad20fabd075d67b8081561b6f120b5564247",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
@@ -30587,8 +30599,8 @@
       },
       "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.216",
-        "publicMergeCommit": "9bfce4a7dd3362563739df00e76f7a426067f751"
+        "tag": "v0.0.1-alpha.217",
+        "publicMergeCommit": "a354f59fcedc1860805663e67cb29762100f2060"
       },
       "evidence": {
         "image": "runtime-evidence/bootstrap.json",
@@ -30604,7 +30616,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:ec88a0b67d94b86ccdf9bfd257aca170328692a8e6ee4f44f38e65b6113f4c89",
+        "digest": "sha256:76e87d43e77f76a9b5529e300f692d577c5793cd8f190cda0e129728aebb246a",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -32691,16 +32703,16 @@
               "size": 371
             },
             {
-              "digest": "sha256:1e9e36d3f2afd73f738d00fbeba2a9eac2eafb11fc91ac44899b1b8fc8f84574",
+              "digest": "sha256:13d6a3c7fbc6a11c532aa4bb4b4ccb561f6c6a58097e7a59adc9a252c0dd6f63",
               "mode": 420,
               "path": "frontend/components/notifications/__tests__/notification-drawer-sections.contract.test.ts",
-              "size": 5675
+              "size": 5656
             },
             {
-              "digest": "sha256:7e7327b7c186807a6d7cdcfc19d8171f38183d7b209c7f2f3670f053421108ed",
+              "digest": "sha256:599f49ee8f261aa35fe878065f4591841c3f43a918fd7df2f3ecbaf21d228bad",
               "mode": 420,
               "path": "frontend/components/notifications/__tests__/notification-drawer-state.contract.test.ts",
-              "size": 935
+              "size": 927
             },
             {
               "digest": "sha256:f59f29c867ae555ef420d31b484594f82ffc17ece55651aebed86b0d4a63a3d5",
@@ -32715,16 +32727,16 @@
               "size": 106
             },
             {
-              "digest": "sha256:21934b4a916c683dc4ad9e339cae4e6e5c9c1754fb0f31cf22e9c8da3c81f0b9",
+              "digest": "sha256:9a5fb4ac259f024c6e8a556af9c858809b38a6fdbf22e711f14c48ce09deca5f",
               "mode": 420,
               "path": "frontend/components/notifications/notification-drawer-sections.tsx",
-              "size": 10111
+              "size": 12400
             },
             {
-              "digest": "sha256:6e468995f8d4b175f1d3c45d51e0a573412e08c6ac67110b9e9b8975a9685c66",
+              "digest": "sha256:886b31450058ed34ca164cc824e135cc4a913521aba396cd3268a6b33e903146",
               "mode": 420,
               "path": "frontend/components/notifications/notification-drawer-state.ts",
-              "size": 4279
+              "size": 4615
             },
             {
               "digest": "sha256:503e844f1d13f52cea68a8b2b69aae1fe3a9ae4299fde9bf58635bc5fdcf50cb",
@@ -34851,10 +34863,10 @@
               "size": 2572
             },
             {
-              "digest": "sha256:7c227f05bc6fce06224f3681c10f7f84f35b87af923e38ea0870014a5a61344a",
+              "digest": "sha256:e9e76812150a456a6b8a79e952cf8e8c3c25f2adc40350ae2ee5328f8f78ce7a",
               "mode": 420,
               "path": "frontend/components/search/__tests__/search-syntax-guidance.test.tsx",
-              "size": 3325
+              "size": 3576
             },
             {
               "digest": "sha256:d355575b390fd7961b4cf857e4f813e91bf568d53592ee4457c5a288372a8457",
@@ -34917,10 +34929,10 @@
               "size": 12496
             },
             {
-              "digest": "sha256:66b4dde1b2ef04bdd88f6f71bb0edbde27d8a882113f806a1e64c9f8f94c3b6e",
+              "digest": "sha256:ec5491e66653134bae20a981c247961fe9e2a1fdacbd7b6162ae5bdac38711ad",
               "mode": 420,
               "path": "frontend/components/search/search-syntax-guidance.tsx",
-              "size": 9618
+              "size": 9673
             },
             {
               "digest": "sha256:926be41031df82e7bbd22e9833caf238a88a7cbe946d773ed98856c8252fa707",
@@ -38589,16 +38601,16 @@
               "size": 14271
             },
             {
-              "digest": "sha256:ae9a7f31d0b62d16a73353452cebf0744f9693cdb05ca77973a380e9aacd0e7e",
+              "digest": "sha256:3a0537ae252a8514aba2a3c928319eeb3293d3625c5c5dd417d646a2f2fdd634",
               "mode": 420,
               "path": "frontend/hooks/__tests__/use-notifications.contract.test.ts",
-              "size": 864
+              "size": 856
             },
             {
-              "digest": "sha256:d6f3309c281ba9b44f27c88ab9e3a9840cbcbf3e51c4cc27cd1ea29bb1846342",
+              "digest": "sha256:5fa8d42bc4acb6059161c8ff95cdf48ae8c3ac4463e4e9cff596b5b5f1fb1cda",
               "mode": 420,
               "path": "frontend/hooks/__tests__/use-notifications.mutation.test.ts",
-              "size": 2174
+              "size": 3191
             },
             {
               "digest": "sha256:365ee24cd22641c22914027061d136872720bc5916fa60d8f94ff40dec19c2cf",
@@ -39285,10 +39297,10 @@
               "size": 11225
             },
             {
-              "digest": "sha256:86da20113d3c6e5d7e143d417a71f34bc74a0030316a734b16fafb53232a97f3",
+              "digest": "sha256:51c4769eca0b18b7ade3aaea89891a8c78acac40ceb5c58d58ac2a5e67430b03",
               "mode": 420,
               "path": "frontend/hooks/use-notifications.ts",
-              "size": 2341
+              "size": 2902
             },
             {
               "digest": "sha256:6e07bc28c67a5e2e4d344287512cc013952173cfe7fdf29a9564208a2e049045",
@@ -39807,10 +39819,10 @@
               "size": 3457
             },
             {
-              "digest": "sha256:75bb9c4c273e7b95b1c51624cca912d7299ee592b5782be551d563885df14258",
+              "digest": "sha256:68bab8118089f7b2b92561ca816874da4d2b34ab217a1fc6e6e4486aaef8540f",
               "mode": 420,
               "path": "frontend/lib/__tests__/global-asset-search-query.test.ts",
-              "size": 9361
+              "size": 10072
             },
             {
               "digest": "sha256:8c69fc3f31f518a156564587acd8a4941cc392c095e36c69d76a4267e7a8f30c",
@@ -40203,10 +40215,10 @@
               "size": 3007
             },
             {
-              "digest": "sha256:5b06f44e4ca4527446da0426e50e055b59dd420a724553fe534e05f8ed12cd0f",
+              "digest": "sha256:6421895eb345a0f91bc13e13680c33422f502735bfb194774dda03047d400354",
               "mode": 420,
               "path": "frontend/lib/global-asset-search-query.ts",
-              "size": 15767
+              "size": 16400
             },
             {
               "digest": "sha256:4fb10d41f9856a3963fd1c56b4844f2ea1e88b89af55ce6dd761fe6b4d59a570",
@@ -40437,16 +40449,16 @@
               "size": 19894
             },
             {
-              "digest": "sha256:0ebc25f20a6096f8a9b7b051f82f6ec2690b969cbfbdf90e93cfe06d35dc9cd0",
+              "digest": "sha256:5669b23416bd1c4bac25d21086da3f29e6f35d2a9dc73ab9a81e95268817521a",
               "mode": 420,
               "path": "frontend/messages/en.json",
-              "size": 209001
+              "size": 209627
             },
             {
-              "digest": "sha256:d2a26bd91bcc3d5ee4b21d72c783b7b101ee102f3f8b1b84b14dec744984fdf7",
+              "digest": "sha256:9d0dac220bbb7d692744f890041e4275eb86bcf84f9e6f9675708299e43f1de0",
               "mode": 420,
               "path": "frontend/messages/zh.json",
-              "size": 201471
+              "size": 202060
             },
             {
               "digest": "sha256:aef14a62c45a01622d477d5435aa582a7a038ad622a4a7671ecaf24e9ff551e3",
@@ -41553,10 +41565,10 @@
               "size": 2897
             },
             {
-              "digest": "sha256:fa007d431c553200401b4d4cf5a9844c9d75edf58db9ac17d7b091ccd1d2f2b3",
+              "digest": "sha256:c37c58d8fb0131d01f3547a3456c4578a302905912da4ca5792e2cf5a115e440",
               "mode": 420,
               "path": "frontend/services/__tests__/notification.service.contract.test.ts",
-              "size": 1020
+              "size": 1012
             },
             {
               "digest": "sha256:dd143f907c93a0f952ff83877979a26e5414d104f632e717e36730aed5fee8ae",
@@ -41763,10 +41775,10 @@
               "size": 3086
             },
             {
-              "digest": "sha256:d135ce8577bfed58bfed9860f29b8f01ea4a355b9aa52f13bc40666eae35f946",
+              "digest": "sha256:c6f76b58f107fcb5fc284b131ea291a21be0cb894da11fe34b1d36dc126af8bd",
               "mode": 420,
               "path": "frontend/services/notification.service.ts",
-              "size": 2649
+              "size": 3166
             },
             {
               "digest": "sha256:2a1610fd8181c0fe585bdfbce4bb3b06ced44d6b90a6af40daefbeb942ef6fa0",
@@ -42380,18 +42392,17 @@
         }
       },
       "artifact": {
-        "ref": "ghcr.io/yyhuni/lunafox-frontend@sha256:1d3d7b189303165a8350c886f29cfe46e17ad8f854b561255834ae463c3d29d9",
-        "digest": "sha256:1d3d7b189303165a8350c886f29cfe46e17ad8f854b561255834ae463c3d29d9",
+        "ref": "ghcr.io/yyhuni/lunafox-frontend@sha256:39be085de4dbcc6cdb2c755d63e9a9f214e5f3cb6c99e08397d2949f992ef387",
+        "digest": "sha256:39be085de4dbcc6cdb2c755d63e9a9f214e5f3cb6c99e08397d2949f992ef387",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
         ]
       },
-      "disposition": "reused",
+      "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.215",
-        "publicMergeCommit": "8452145bfbb18e4c4d3d53ea470238f6c57c5143",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "tag": "v0.0.1-alpha.217",
+        "publicMergeCommit": "a354f59fcedc1860805663e67cb29762100f2060"
       },
       "evidence": {
         "image": "runtime-evidence/frontend.json",
@@ -42464,7 +42475,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.176",
         "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:f429e6657b98c9814287a2580806f87bcc76ba1ec53dd3b9b35a155b29335b49"
+        "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
       },
       "evidence": {
         "image": "runtime-evidence/nginx.json",
@@ -42480,7 +42491,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:d6776fccddab75181a1e03d6fd77aa3f18fe0506efa7e2b7db0e1e224139ab7d",
+        "digest": "sha256:e8d2744fe3f21e7b46d8b6bb82d791e3b838f2c653d969644c973793fee93029",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -43462,10 +43473,10 @@
               "size": 13640
             },
             {
-              "digest": "sha256:2ed1393c63c4157c0b85fffee776cedccdd1c4898cbe7a173c6d7445df3f6418",
+              "digest": "sha256:b28b55f6a9450c0dc65c99887a64ce519c0b04059600b41fe21547552d05aac8",
               "mode": 420,
               "path": "server/cmd/server/global_asset_search_scale_postgres_test.go",
-              "size": 42317
+              "size": 43312
             },
             {
               "digest": "sha256:ab797b5c19755fdd2fb3fbd6d2c2b71c284c07fbde4cd8ffc016de53274cd9c5",
@@ -43570,10 +43581,22 @@
               "size": 621
             },
             {
-              "digest": "sha256:3fe649d6845c4dbe84be4b95175b641244cddf9ab5e6b97b04c6cc00a2ac5465",
+              "digest": "sha256:4180c3d41454ffdf9babd866038453df5cd71b9d865eb878bcab318729294bc9",
+              "mode": 420,
+              "path": "server/cmd/server/migrations/000007_response_headers_trgm.down.sql",
+              "size": 220
+            },
+            {
+              "digest": "sha256:fe116ed841d7a8fdadb8fa3d5ace2d786103ba3fd4e7381b228fb500c932ce78",
+              "mode": 420,
+              "path": "server/cmd/server/migrations/000007_response_headers_trgm.up.sql",
+              "size": 482
+            },
+            {
+              "digest": "sha256:40c6f433b8f31b4f8903765687cd8f22b9bce6042e8b6f31e7bc3e8038ad306f",
               "mode": 420,
               "path": "server/cmd/server/migrations/manifest.json",
-              "size": 1850
+              "size": 2122
             },
             {
               "digest": "sha256:53331d701d9b7cbac5f6eab5cd02d7b6859b0e3959cee4c1cb1dad636567aefc",
@@ -43582,10 +43605,10 @@
               "size": 582
             },
             {
-              "digest": "sha256:f5a05cf3a931f15c23cb0bbc59974ae1879d07441c86b6ee11707f11d54c73e6",
+              "digest": "sha256:f34b4666a344b54d0c9ad61e32bc928419f56b76efb0f5dcc284f96dea43b742",
               "mode": 420,
               "path": "server/cmd/server/migrations/README.md",
-              "size": 18094
+              "size": 18428
             },
             {
               "digest": "sha256:218273055d7a2044efd593000f2daaa6abfe9d36fb651b49c6ff7e87a775c3b0",
@@ -46786,16 +46809,16 @@
               "size": 2423
             },
             {
-              "digest": "sha256:f2a94511c6408250bbac18818482d2fc2f23c0f50111dd99ea0900e1cf8b6bf7",
+              "digest": "sha256:4831a9dfa9a4c108f612d64267678d188d8d000765a70e922611a6886e81e6e8",
               "mode": 420,
               "path": "server/internal/modules/asset/application/global_asset_search_parser_test.go",
-              "size": 10633
+              "size": 11261
             },
             {
-              "digest": "sha256:85f423b5cb9a242d317d8d6bccf960933f3748fb34033eddf2a904f70fdf0a66",
+              "digest": "sha256:31791ed6e5d4390e41835cc5bfa57299aefd0e07e034086f6029fd88bbe57d8b",
               "mode": 420,
               "path": "server/internal/modules/asset/application/global_asset_search_parser.go",
-              "size": 11004
+              "size": 11844
             },
             {
               "digest": "sha256:efd957bf368156e9ed730376c1ddb743e54e696da16134b00418c3b765132d1b",
@@ -46804,10 +46827,10 @@
               "size": 9467
             },
             {
-              "digest": "sha256:d274e6668a59cb12f969a7cbe58130784b584fbafb4e944e000a083d2ac808a7",
+              "digest": "sha256:08058e04bba5dea4a32e6cbb8db78a60babb2d34141fdd828fb2a81a4f608e1f",
               "mode": 420,
               "path": "server/internal/modules/asset/application/global_asset_search.go",
-              "size": 14056
+              "size": 14150
             },
             {
               "digest": "sha256:4954af1396cc6338e6a495727ae4a5ac4f153b416b5a7c1807c2eed00c6950a5",
@@ -47506,16 +47529,16 @@
               "size": 869
             },
             {
-              "digest": "sha256:28daaa47179afabd33e608e16b4e3f26b2b23b484efffbd442c6616101dd76fd",
+              "digest": "sha256:f5694c4b749310f640f903d49194f332814e82fb94ceadbbe5c8ce76920567f6",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/global_asset_search_query_test.go",
-              "size": 23200
+              "size": 27434
             },
             {
-              "digest": "sha256:4c0a75fd09f4f9e4e0ac601efbd36f5fb8af2f31287d498f17a406b46697d479",
+              "digest": "sha256:9fe75c3bc2c9cc592efe5936ca7d11d61a18733a7f7db4adc84f51318889e0b1",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/global_asset_search_query.go",
-              "size": 9236
+              "size": 9478
             },
             {
               "digest": "sha256:13b75725cc65be60f92396d8b850bbd97c60e2b2cb611d8c3a057428bbd5ff20",
@@ -47548,10 +47571,10 @@
               "size": 340
             },
             {
-              "digest": "sha256:33e20396459659fc179c515c744c953f5d3539ed8488084288c0db6d28db04f0",
+              "digest": "sha256:9b414d672fce02b5c9c77d6140634e86d6fb64b4ad5b99d993a6ecd132d79c39",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/persistence/global_asset_search_indexes_test.go",
-              "size": 1406
+              "size": 1506
             },
             {
               "digest": "sha256:9f0a5f3516d9f696c03f9f1c1e62dd2b43c99c3556ef5947a0d2ea7899986467",
@@ -47572,10 +47595,10 @@
               "size": 728
             },
             {
-              "digest": "sha256:a17b94898f5d8d7252b3e848da15b8b6e16abb10a31335640f141eba13e12a57",
+              "digest": "sha256:b2ebcc76f8502b9121cee345ed5be427a180b4706641994b845ff4dbcd104160",
               "mode": 420,
               "path": "server/internal/modules/asset/repository/persistence/web_assets.go",
-              "size": 9189
+              "size": 9370
             },
             {
               "digest": "sha256:bf3e7f7175aa0328999b2db45e7af77d97e27e58c5c3b8bc5e2e5e525ef48f79",
@@ -53769,8 +53792,8 @@
         }
       },
       "artifact": {
-        "ref": "ghcr.io/yyhuni/lunafox-server@sha256:8ce2cb7e340fac324bd9e16caf5877afde0b9c6408f2f54f97e33d9f5e574845",
-        "digest": "sha256:8ce2cb7e340fac324bd9e16caf5877afde0b9c6408f2f54f97e33d9f5e574845",
+        "ref": "ghcr.io/yyhuni/lunafox-server@sha256:5f5bdddf6efca1356e8fc233bf7c0305b12930293a58354b6d744bcd6a746daa",
+        "digest": "sha256:5f5bdddf6efca1356e8fc233bf7c0305b12930293a58354b6d744bcd6a746daa",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
@@ -53778,8 +53801,8 @@
       },
       "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.216",
-        "publicMergeCommit": "9bfce4a7dd3362563739df00e76f7a426067f751"
+        "tag": "v0.0.1-alpha.217",
+        "publicMergeCommit": "a354f59fcedc1860805663e67cb29762100f2060"
       },
       "evidence": {
         "image": "runtime-evidence/server.json",
@@ -53794,7 +53817,7 @@
     "runtimeCompositionSchemaVersion": 1
   },
   "manifestBinding": {
-    "manifestDigest": "sha256:397d3cffd26a3aa39df2752dbece4331ef460be3e5ff58b2a3222da19d13e42b"
+    "manifestDigest": "sha256:15120620e69c385740308bd301cfffa6e83f808fea3bd6668b75bce41d06bec2"
   },
-  "compositionDigest": "sha256:8c0d215b53c5c409151070130a6f1c1f5014667b6a832a08dd5584c407444da9"
+  "compositionDigest": "sha256:fb48b2aa9c1edf48e0c13f6a0ac8e40f558cd8c0ce1304a7f140555da8739cc0"
 }
