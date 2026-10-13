@@ -9,8 +9,8 @@ enginePackages:
       - "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:0cdf7747d3a190fc27e9cf28c167d1680f2c9e3d59483ad1a5f428ca5b54b878"
       - "ghcr.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:0cdf7747d3a190fc27e9cf28c167d1680f2c9e3d59483ad1a5f428ca5b54b878"
   - refs:
-      - "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:1fd57cbd09217310f83b09a2622bb1ff3022f736985c927b3c3bd57744d7d5c1"
-      - "ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:1fd57cbd09217310f83b09a2622bb1ff3022f736985c927b3c3bd57744d7d5c1"
+      - "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:a0a71c5bfe80abff864f72d5dcb18aa411a8cd8d5a0520669ce27838af2b1b53"
+      - "ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:a0a71c5bfe80abff864f72d5dcb18aa411a8cd8d5a0520669ce27838af2b1b53"
   - refs:
       - "docker.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:9de77be41a48fdcb9569770994ee0b1310d5380354b64bc19c0f2bb7adbb2ca1"
       - "ghcr.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:9de77be41a48fdcb9569770994ee0b1310d5380354b64bc19c0f2bb7adbb2ca1"
