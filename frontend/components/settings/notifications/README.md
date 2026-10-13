@@ -38,10 +38,13 @@ field, and footer action geometry lives in `notification-settings-layout.ts`.
   then uses one shared save action to PATCH only dirty providers. A partial
   success advances only the successful baseline; failed drafts stay editable
   with provider-local feedback.
-- Channel card headers use the shared compact spacing rhythm. Their enablement
-  switches keep the title, saved status, and switch visible, while collapsing
-  credential, subscription, test, remediation, and error details for disabled
-  drafts. Re-enabling restores those details without discarding the draft.
+- Credential fields pair `Input size="sm"` with the in-card test action `Button size="sm"` on one row via `NOTIFICATION_CREDENTIAL_ROW_CLASS`, keeping test execution adjacent to the Webhook URL instead of below subscriptions. The reveal control is `Button size="icon-sm"`. The shared save action stays the default 36px page submit.
+- Channel card headers use the shared compact spacing rhythm. Provider marks are
+  brand-colored `size-4` glyphs with no tinted chip, so the title and status
+  badge stay the visual focus. Enablement switches keep the title, saved status,
+  and switch visible, while collapsing credential, subscription, test,
+  remediation, and error details for disabled drafts. Re-enabling restores those
+  details without discarding the draft.
 - The page content shell is the only vertical scroll owner. Channel cards and
   the shared save action keep their natural height in one document-flow stack;
   the save action scrolls after the final card and must never shrink editors or

@@ -101,7 +101,7 @@
 - Website results use `SearchWebsitesDataTable`, a read-only adapter over the
   canonical target website evidence-list table surface. It reuses the
   `RelationEvidenceListFrame`, three-column header, website identity, HTTP
-  response, screenshot empty state, checkbox selection, and CSV export
+  response, screenshot preview or unavailable-summary empty state, checkbox selection, and CSV export
   behavior while preserving the Search shell and Search-owned cursor
   pagination. The global result toolbar owns the only search field and the
   website export trigger; the evidence list must not render a duplicate local
@@ -116,6 +116,14 @@
   so clicking an endpoint row displays full HTTP metadata and response bodies.
   Loading state uses `SearchResultsTableLoadingState`,
   preserving exact table header and column widths through `UnifiedDataTable`.
+
+- Website and Endpoint “导出所有” use `SearchExportService` with the submitted
+  query and asset type. The service exchanges the authenticated session JWT for
+  a short-lived, one-use download URL, then starts a native browser download.
+  It must not serialize the current page, walk search pagination, or aggregate a
+  full-export Blob. Website “导出选中” remains a local CSV of the selected
+  rows on the current page. The page only reports that the download was started;
+  the browser owns final transfer status and any interrupted partial file.
 # Search Components
 
 ## Result Table

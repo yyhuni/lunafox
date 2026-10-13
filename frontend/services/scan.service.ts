@@ -1,4 +1,8 @@
 import { api } from '@/lib/api-client'
+import {
+	BatchStopPartialCompletionError,
+	batchStopRequestLimit,
+} from '@/lib/batch-stop-partial-error'
 import { agentName, organizationName, parseAgentName, parseScanWorkflowName, scanName, scanWorkflowName, targetName } from '@/lib/resource-name'
 import { parseWorkflowConfigurationStrict } from '@/lib/workflow-config'
 import { isScanInputSource } from '@/types/scan.types'
@@ -481,8 +485,8 @@ export async function bulkDeleteScans(ids: number[]): Promise<{ message: string;
 }
 
 function validateBatchStopScanIds(ids: number[]) {
-	if (!Array.isArray(ids) || ids.length < 1 || ids.length > 100) {
-		throw new Error('batchStop requires between 1 and 100 scan IDs')
+	if (!Array.isArray(ids) || ids.length < 1) {
+		throw new Error('batchStop requires at least 1 scan ID')
 	}
 
 	const seen = new Set<number>()
@@ -497,6 +501,14 @@ function validateBatchStopScanIds(ids: number[]) {
 	}
 }
 
+function chunkBatchStopScanIds(ids: number[]) {
+	const chunks: number[][] = []
+	for (let offset = 0; offset < ids.length; offset += batchStopRequestLimit) {
+		chunks.push(ids.slice(offset, offset + batchStopRequestLimit))
+	}
+	return chunks
+}
+
 function parseBatchStopScansResponse(value: unknown): BatchStopScansResponse {
 	const payload = asRecord(value, 'Batch stop response')
 	assertOnlyFields(payload, ['stoppedCount', 'skippedCount', 'revokedTaskCount'], 'Batch stop response')
@@ -509,10 +521,40 @@ function parseBatchStopScansResponse(value: unknown): BatchStopScansResponse {
 
 export async function batchStopScans(ids: number[]): Promise<BatchStopScansResponse> {
 	validateBatchStopScanIds(ids)
-	const res = await api.post<unknown>('/scans:batchStop', {
-		names: ids.map(scanName),
-	})
-	return parseBatchStopScansResponse(res.data)
+	const totals = {
+		stoppedCount: 0,
+		skippedCount: 0,
+		revokedTaskCount: 0,
+	}
+	const completedIds: number[] = []
+
+	// Each request stays inside the server's 1-100 lock transaction. Earlier
+	// requests are already committed when a later one fails, so the loop stops
+	// instead of pretending the whole selection rolled back.
+	for (const chunk of chunkBatchStopScanIds(ids)) {
+		try {
+			const res = await api.post<unknown>('/scans:batchStop', {
+				names: chunk.map(scanName),
+			})
+			const parsed = parseBatchStopScansResponse(res.data)
+			totals.stoppedCount += parsed.stoppedCount
+			totals.skippedCount += parsed.skippedCount
+			totals.revokedTaskCount += parsed.revokedTaskCount
+			completedIds.push(...chunk)
+		} catch (error) {
+			if (completedIds.length === 0) {
+				throw error
+			}
+			throw new BatchStopPartialCompletionError({
+				...totals,
+				remainingCount: ids.length - completedIds.length,
+				completedIds,
+				cause: error,
+			})
+		}
+	}
+
+	return totals
 }
 
 export async function stopScan(id: number): Promise<{ message: string; revokedTaskCount: number }> {

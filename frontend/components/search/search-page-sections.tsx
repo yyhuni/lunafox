@@ -50,6 +50,7 @@ import {
 } from "./search-websites-data-table"
 import {
   SearchEndpointColumnVisibilityMenu,
+  SearchEndpointExportMenu,
   SearchResultsTable,
   SearchResultsTableLoadingState,
   useSearchEndpointsResultModel,
@@ -61,6 +62,7 @@ import {
   SearchQuickTags,
 } from "./search-initial-page-shell"
 import type { SearchPageState } from "./search-page-state"
+import { useGlobalAssetSearchExport } from "@/hooks/use-global-asset-search-export"
 
 const EMPTY_WEBSITE_RESULTS: WebsiteSearchResult[] = []
 
@@ -350,10 +352,12 @@ function SearchResultsPaginationRegion({ children }: { children: React.ReactNode
 function SearchResultsLoadingState({
   showWebsiteExport,
   showEndpointColumns = false,
+  showEndpointExport = false,
   websiteLoadingRowCount,
 }: {
   showWebsiteExport: boolean
   showEndpointColumns?: boolean
+  showEndpointExport?: boolean
   websiteLoadingRowCount: number
 }) {
   const pagination = (
@@ -382,6 +386,7 @@ function SearchResultsLoadingState({
           <ActionSkeleton size="default" widthClassName="w-10 sm:w-20" className="radius-none border-y-0 border-r-0" />
         </SearchAssetBarShell>
         {showWebsiteExport ? <ActionSkeleton size="default" widthClassName="w-20" className="shrink-0" /> : null}
+        {showEndpointExport ? <ActionSkeleton size="default" widthClassName="w-20" className="shrink-0" /> : null}
         {showEndpointColumns ? <ActionSkeleton size="default" widthClassName="w-28" className="shrink-0" /> : null}
       </SearchResultsToolbarRegion>
 
@@ -402,7 +407,10 @@ function SearchResultsLoadingState({
 
 export function SearchPageContent({ state }: { state: SearchPageState }) {
   const websiteResults = state.assetType === "website" && state.data ? state.data.results : EMPTY_WEBSITE_RESULTS
-  const websiteResultModel = useSearchWebsitesResultModel(websiteResults)
+  const { exportAll } = useGlobalAssetSearchExport(state.submittedQuery)
+  const websiteResultModel = useSearchWebsitesResultModel(websiteResults, {
+    onExportAll: () => exportAll("website"),
+  })
   const endpointResultModel = useSearchEndpointsResultModel()
   const showWebsiteExport = !state.error && state.assetType === "website" && Boolean(state.data?.results.length)
   const showEndpointColumns = !state.error && state.assetType === "endpoint" && Boolean(state.data?.results.length)
@@ -446,6 +454,7 @@ export function SearchPageContent({ state }: { state: SearchPageState }) {
             <SearchResultsLoadingState
               showWebsiteExport={state.assetType === "website"}
               showEndpointColumns={state.assetType === "endpoint"}
+              showEndpointExport={state.assetType === "endpoint"}
               websiteLoadingRowCount={state.pageSize}
             />
           )}
@@ -456,7 +465,12 @@ export function SearchPageContent({ state }: { state: SearchPageState }) {
           <SearchResultsToolbarRegion>
             <SearchAssetBar state={state} className="w-full md:flex-1" />
             {showWebsiteExport ? <SearchWebsiteExportMenu model={websiteResultModel} /> : null}
-            {showEndpointColumns ? <SearchEndpointColumnVisibilityMenu model={endpointResultModel} /> : null}
+            {showEndpointColumns ? (
+              <>
+                <SearchEndpointExportMenu onExportAll={() => exportAll("endpoint")} />
+                <SearchEndpointColumnVisibilityMenu model={endpointResultModel} />
+              </>
+            ) : null}
             {state.isFetching ? <span className={cn("whitespace-nowrap", textRole.bodySubtle)}>{state.t("loading")}</span> : null}
           </SearchResultsToolbarRegion>
 

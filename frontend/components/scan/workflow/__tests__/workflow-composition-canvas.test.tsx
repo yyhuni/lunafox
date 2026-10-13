@@ -238,13 +238,11 @@ describe("WorkflowCompositionCanvas", () => {
     expect(screen.getByRole("button", { name: "management.save" })).toBeEnabled()
   }, 15_000)
 
-  it("renders an interactive canvas overview in the lower-left corner", () => {
+  it("does not render a redundant canvas navigation minimap", () => {
     renderWithProviders(<WorkflowCompositionCanvas {...canvasCatalogProps} />)
 
-    const miniMap = screen.getByRole("img", { name: "canvas.miniMap" })
-    expect(miniMap).toHaveAttribute("data-minimap-position", "bottom-left")
-    expect(miniMap).toHaveAttribute("data-minimap-pannable", "true")
-    expect(miniMap).toHaveAttribute("data-minimap-zoomable", "true")
+    expect(screen.queryByRole("img", { name: "canvas.miniMap" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "canvas.expandMiniMap" })).not.toBeInTheDocument()
   })
 
   it("serializes the editable draft as pure orchestration when saved", () => {

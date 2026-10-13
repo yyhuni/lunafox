@@ -61,7 +61,7 @@ function UnifiedHeaderInteractive() {
     };
     return (<header data-slot="unified-header" className="bg-card border-b border-border flex h-(--header-height) items-center shrink-0">
       <div className="flex flex-1 gap-0.5 items-center md:gap-1 md:px-3 min-w-0 px-2">
-        <SidebarTrigger className="size-8"/>
+        <SidebarTrigger layout="compactAction"/>
 
         {/* Right button area */}
         <div className="flex gap-0.5 items-center md:gap-1 ml-auto shrink-0">

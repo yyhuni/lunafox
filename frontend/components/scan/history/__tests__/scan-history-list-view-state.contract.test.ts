@@ -20,6 +20,7 @@ describe("scan-history-list-view-state contract", () => {
     expect(source).toContain("const [rowSelection, setRowSelection] = React.useState<Record<string, boolean>>({})")
     expect(source).toContain("selectedScans = React.useMemo")
     expect(source).toContain("onSelectionClear")
+    expect(source).toContain("onBatchStopCommitted")
     expect(source).not.toContain("setSelectedScans")
   })
 

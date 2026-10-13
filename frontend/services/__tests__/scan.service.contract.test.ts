@@ -11,6 +11,7 @@ vi.mock("@/lib/api-client", () => ({
 }))
 
 import { api } from "@/lib/api-client"
+import { BatchStopPartialCompletionError } from "@/lib/batch-stop-partial-error"
 import {
   batchStopScans,
   bulkInitiateScan,
@@ -360,10 +361,71 @@ describe("scan.service contract", () => {
     ["empty", []],
     ["duplicate", [7, 7]],
     ["zero", [0]],
-    ["over limit", Array.from({ length: 101 }, (_, index) => index + 1)],
   ])("rejects a %s batch stop before the network", async (_label, ids) => {
     await expect(batchStopScans(ids)).rejects.toThrow(/batchStop/)
     expect(api.post).not.toHaveBeenCalled()
+  })
+
+  it("splits a selection above one request into sequential batches of 100", async () => {
+    const ids = Array.from({ length: 250 }, (_, index) => index + 1)
+    vi.mocked(api.post).mockImplementation(async (_url, body) => {
+      const names = (body as { names: string[] }).names
+      return {
+        data: {
+          stoppedCount: names.length,
+          skippedCount: 0,
+          revokedTaskCount: names.length,
+        },
+      } as never
+    })
+
+    await expect(batchStopScans(ids)).resolves.toEqual({
+      stoppedCount: 250,
+      skippedCount: 0,
+      revokedTaskCount: 250,
+    })
+
+    const calls = vi.mocked(api.post).mock.calls
+    expect(calls).toHaveLength(3)
+    expect(calls.map((call) => (call[1] as { names: string[] }).names.length)).toEqual([100, 100, 50])
+    expect(calls[0]?.[1]).toEqual({
+      names: ids.slice(0, 100).map((id) => `scans/${id}`),
+    })
+    expect(calls[2]?.[1]).toEqual({
+      names: ids.slice(200).map((id) => `scans/${id}`),
+    })
+    expect(calls.every((call) => call[0] === "/scans:batchStop")).toBe(true)
+  })
+
+  it("leaves a first-request failure unwrapped", async () => {
+    vi.mocked(api.post).mockRejectedValue(new Error("network"))
+
+    const error = await batchStopScans([7, 8]).catch((caught: unknown) => caught)
+
+    expect(error).toEqual(new Error("network"))
+    expect(error).not.toBeInstanceOf(BatchStopPartialCompletionError)
+    expect(api.post).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps committed counts when a later batch stop request fails", async () => {
+    const ids = Array.from({ length: 250 }, (_, index) => index + 1)
+    vi.mocked(api.post)
+      .mockResolvedValueOnce({
+        data: { stoppedCount: 80, skippedCount: 20, revokedTaskCount: 80 },
+      } as never)
+      .mockRejectedValueOnce(new Error("network"))
+
+    const error = await batchStopScans(ids).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(BatchStopPartialCompletionError)
+    expect(error).toMatchObject({
+      stoppedCount: 80,
+      skippedCount: 20,
+      revokedTaskCount: 80,
+      remainingCount: 150,
+      completedIds: ids.slice(0, 100),
+    })
+    expect(api.post).toHaveBeenCalledTimes(2)
   })
 
   it("rejects a batch-stop response with a missing or invalid count", async () => {

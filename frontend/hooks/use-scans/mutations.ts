@@ -5,6 +5,7 @@ import {
   getBulkDeleteSuccessCount,
   getQuickScanSuccessCount,
   getStopScanSuccessCount,
+  invalidateScanQueries,
   type BatchStopScansResponse,
   type BulkDeleteScansResponse,
   type BulkInitiateScanResponse,
@@ -13,7 +14,8 @@ import {
   type ScanMutationInvalidationKeys,
   type StopScanResponse,
 } from "@/hooks/_shared/scan-mutation-helpers"
-import { parseResponse } from "@/lib/response-parser"
+import { getErrorCode, getErrorResponseData, parseResponse } from "@/lib/response-parser"
+import { isBatchStopPartialCompletionError } from "@/lib/batch-stop-partial-error"
 import {
   quickScan,
   initiateScan,
@@ -199,7 +201,8 @@ export function useStopScan() {
 }
 
 /**
- * Stop all selected active scans in one request-bound transaction.
+ * Stop the selected scans. Selections above the server transaction bound are
+ * sent as sequential requests, still under one confirmation and one summary.
  */
 export function useBatchStopScans() {
   return useResourceMutation({
@@ -221,6 +224,22 @@ export function useBatchStopScans() {
         },
         queryClient,
         invalidateKeys: scanInvalidationKeys,
+      })
+    },
+    onError: async ({ error, queryClient, toast }) => {
+      if (!isBatchStopPartialCompletionError(error)) {
+        toast.errorFromCode(
+          getErrorCode(getErrorResponseData(error)),
+          "toast.scan.stop.batchError",
+        )
+        return
+      }
+
+      await invalidateScanQueries(queryClient, scanInvalidationKeys)
+      toast.error("toast.scan.stop.batchPartial", {
+        stoppedCount: error.stoppedCount,
+        skippedCount: error.skippedCount,
+        remainingCount: error.remainingCount,
       })
     },
     errorFallbackKey: "toast.scan.stop.batchError",

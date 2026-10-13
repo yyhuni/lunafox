@@ -284,24 +284,37 @@
     background: transparent;
   }
 
+  ::-webkit-scrollbar-track:hover {
+    background: var(--scrollbar-track);
+  }
+
   ::-webkit-scrollbar-thumb {
     background: var(--scrollbar-thumb);
     border-radius: 5px;
-    border: 2px solid transparent;
+    border: 1px solid transparent;
     background-clip: padding-box;
   }
 
   ::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover);
     border-radius: 5px;
-    border: 2px solid transparent;
+    border: 1px solid transparent;
     background-clip: padding-box;
   }
 
-  /* Firefox scroll bar styles */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
+  ::-webkit-scrollbar-thumb:active {
+    background: var(--scrollbar-thumb-active);
+    border-radius: 5px;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+  }
+
+  /* Standard colors override WebKit pseudo-elements; keep this fallback separate. */
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb) transparent;
+    }
   }
 
   /* Hide scrollbars but keep them scrollable */

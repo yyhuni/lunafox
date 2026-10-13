@@ -77,14 +77,14 @@ const ScrollBar = React.forwardRef<
         "data-[has-overflow-y]:opacity-100 data-[has-overflow-x]:opacity-100",
       scrollAreaType === "hover" && "data-[hovering]:opacity-100",
       orientation === "vertical" &&
-        "h-full w-2 border-l border-l-transparent p-px",
+        "h-full w-2 bg-transparent hover:bg-(--scrollbar-track) active:bg-(--scrollbar-track) data-[scrolling]:bg-(--scrollbar-track) border-l border-l-transparent p-px",
       orientation === "horizontal" &&
-        "h-2 flex-col border-t border-t-transparent p-px",
+        "h-2 flex-col bg-transparent hover:bg-(--scrollbar-track) active:bg-(--scrollbar-track) data-[scrolling]:bg-(--scrollbar-track) border-t border-t-transparent p-px",
       className
     )}
     {...props}
   >
-    <ScrollAreaPrimitive.Thumb className="relative flex-1 rounded-full bg-border/70 transition-colors duration-200 group-hover/scrollbar:bg-border active:bg-foreground/30" />
+    <ScrollAreaPrimitive.Thumb className="relative flex-1 rounded-full bg-(--scrollbar-thumb) transition-colors duration-200 group-hover/scrollbar:bg-(--scrollbar-thumb-hover) active:bg-(--scrollbar-thumb-active)" />
   </ScrollAreaPrimitive.Scrollbar>
 ))
 ScrollBar.displayName = "ScrollBar"

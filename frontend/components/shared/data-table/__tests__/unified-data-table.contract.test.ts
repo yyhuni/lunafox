@@ -121,9 +121,12 @@ describe("unified-data-table contract", () => {
 
   it("keeps virtual rows in table flow and measures wrapped content", () => {
     expect(source).toContain("scrollMargin: enableVirtualScrolling ? virtualScrollMargin : 0")
-    expect(source).toContain("const translateY = virtualRow.start - virtualScrollMargin - renderedOffset")
+    expect(source).toContain("virtualTableScrollPadding(virtualRows, totalSize, virtualScrollMargin)")
+    expect(source).toContain('data-virtual-scroll-pad="start"')
+    expect(source).toContain('data-virtual-scroll-pad="end"')
     expect(source).toContain("minHeight: rowRhythm.rhythmHeight")
     expect(source).toContain("ref={rowVirtualizer.measureElement}")
+    expect(source).not.toContain("translateY")
     expect(source).not.toContain("position: 'absolute'")
     expect(source).not.toContain('position: "absolute"')
   })

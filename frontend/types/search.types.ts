@@ -1,3 +1,5 @@
+import type { WebsiteScreenshotSummary } from "@/types/website.types"
+
 // Asset type
 export type AssetType = "website" | "endpoint"
 
@@ -20,6 +22,7 @@ export interface SearchResult {
   targetId?: number
   responseBodyTruncated?: boolean
   responseHeadersTruncated?: boolean
+  screenshot?: WebsiteScreenshotSummary
 }
 
 export type WebsiteSearchResult = SearchResult

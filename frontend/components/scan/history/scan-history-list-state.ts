@@ -6,6 +6,7 @@ import {
   useLoadScanDetail,
   useStopScan,
 } from "@/hooks/use-scans"
+import { isBatchStopPartialCompletionError } from "@/lib/batch-stop-partial-error"
 import { buildScanProgressData, type ScanProgressData } from "@/components/scan/scan-progress-dialog"
 import type { ScanRecord } from "@/types/scan.types"
 
@@ -13,12 +14,14 @@ type UseScanHistoryActionsProps = {
   tToast?: (key: string, params?: Record<string, string | number | Date>) => string
   selectedScans: ScanRecord[]
   onSelectionClear: () => void
+  onBatchStopCommitted: (completedIds: readonly number[]) => void
 }
 
 export function useScanHistoryActions({
   tToast,
   selectedScans,
   onSelectionClear,
+  onBatchStopCommitted,
 }: UseScanHistoryActionsProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
   const [scanToDelete, setScanToDelete] = React.useState<ScanRecord | null>(null)
@@ -101,10 +104,15 @@ export function useScanHistoryActions({
       // the authoritative skipped count when a status races this confirmation.
       await batchStopMutation.mutateAsync(scanIds)
       onSelectionClear()
-    } catch {
-      // Keep the selection so an operator can inspect or retry the failed batch.
+    } catch (error) {
+      if (isBatchStopPartialCompletionError(error)) {
+        // Earlier requests already committed, including terminal rows they skipped.
+        onBatchStopCommitted(error.completedIds)
+        return
+      }
+      // Nothing committed. Keep the selection so the operator can retry.
     }
-  }, [batchStopMutation, canBatchStop, onSelectionClear, selectedScans])
+  }, [batchStopMutation, canBatchStop, onBatchStopCommitted, onSelectionClear, selectedScans])
 
   const confirmStop = React.useCallback(async () => {
     if (!scanToStop) return

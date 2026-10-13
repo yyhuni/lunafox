@@ -5,7 +5,7 @@ import type { EngineConfigSectionManifestDefinition, EngineParamManifestDefiniti
 const engines: EngineCatalogDetail[] = [
   createSubdomainDiscoveryEngine(),
   createEngine("port_scan", {
-    displayName: "Port Scan", description: "Scan Target baselines plus finalized subdomain facts for open network ports and report host-port findings.", sectionName: "Naabu Active", sectionDescription: "Actively probe target-scoped hosts for open TCP ports using naabu.", timeoutDescription: "Runtime timeout in seconds for the active naabu process.",
+    displayName: "Port Scan", description: "Scan Target baselines plus finalized subdomain facts for open network ports and report host-port findings.", sectionName: "Naabu Active", sectionDescription: "Actively probe target-scoped hosts for open TCP ports using naabu.", timeoutDescription: "Per-candidate runtime budget in seconds for the active naabu process. The process deadline is this value multiplied by the candidate address count.",
   }, "naabu_active"),
   createEngine("web_crawling", {
     displayName: "Web Crawling", description: "Crawl websites to discover URLs, forms, and content for downstream scanning.", sectionName: "Crawler", sectionDescription: "Configure website crawling.", timeoutDescription: "Scan timeout in seconds",

@@ -27,8 +27,12 @@ describe("notification-settings-page-content contract", () => {
   it("uses shared provider icon owners", () => {
     expect(source).toContain('from "@/components/icons"')
     expect(source).toContain('from "@/lib/notification-provider-config"')
-    expect(source).toContain("getNotificationProviderIconSurfaceClass")
+    expect(source).not.toContain("getNotificationProviderIconSurfaceClass")
+    expect(loadingSource).not.toContain("getNotificationProviderIconSurfaceClass")
     expect(source).toContain("getNotificationProviderIconClass")
+    expect(loadingSource).toContain("getNotificationProviderIconClass")
+    expect(layoutSource).toContain('NOTIFICATION_CHANNEL_ICON_CLASS = "size-4 shrink-0"')
+    expect(layoutSource).not.toContain("size-10")
     expect(source).not.toContain("#5865F2")
     expect(source).not.toContain("#07C160")
   })
@@ -47,6 +51,7 @@ describe("notification-settings-page-content contract", () => {
       "NOTIFICATION_CHANNEL_DETAIL_CONTENT_CLASS",
       "NOTIFICATION_CHANNEL_ICON_CLASS",
       "NOTIFICATION_CREDENTIAL_FIELD_CLASS",
+      "NOTIFICATION_CREDENTIAL_ROW_CLASS",
       "NOTIFICATION_SUBSCRIPTIONS_SECTION_CLASS",
       "NOTIFICATION_SUBSCRIPTIONS_LIST_CLASS",
       "NOTIFICATION_SUBSCRIPTION_ITEM_CLASS",
@@ -67,6 +72,7 @@ describe("notification-settings-page-content contract", () => {
       "NOTIFICATION_CHANNEL_DETAIL_TITLE_ROW_CLASS",
       "NOTIFICATION_CHANNEL_DETAIL_TITLE_CLASS",
       "NOTIFICATION_CHANNEL_ICON_CLASS",
+      "NOTIFICATION_CREDENTIAL_ROW_CLASS",
     ]) {
       expect(loadingSource).toContain(constant)
     }
@@ -84,6 +90,13 @@ describe("notification-settings-page-content contract", () => {
     expect(layoutSource).toContain('NOTIFICATION_CHANNELS_STACK_CLASS = "flex w-full min-w-0 flex-col gap-3"')
     expect(layoutSource).toContain('NOTIFICATION_CHANNEL_EDITOR_CARD_CLASS =\n  "flex min-w-0 shrink-0 flex-col gap-0 overflow-hidden py-0"')
     expect(layoutSource).toContain('NOTIFICATION_CHANNEL_DETAIL_CONTENT_CLASS = "space-y-3 px-4 py-3"')
+    expect(layoutSource).toContain('NOTIFICATION_CREDENTIAL_INPUT_CLASS = "pr-10"')
+    expect(source).toContain('size="icon-sm"')
+    expect(loadingSource).toContain('size="icon-sm"')
+    expect(source).toContain('variant="outline" size="sm"')
+    expect(loadingSource).toContain('variant="outline" size="sm"')
+    expect(source).not.toMatch(/size="icon"(?!-sm)/)
+    expect(loadingSource).not.toMatch(/size="icon"(?!-sm)/)
     expect(layoutSource).toContain('NOTIFICATION_SETTINGS_ACTION_BAR_CLASS = "flex shrink-0 items-center justify-end gap-3"')
   })
 

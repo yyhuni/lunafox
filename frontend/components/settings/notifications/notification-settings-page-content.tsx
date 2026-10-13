@@ -35,10 +35,7 @@ import {
   notificationSettingsKeys,
 } from "@/hooks/use-notification-settings"
 import { normalizeError } from "@/lib/errors/normalize-error"
-import {
-  getNotificationProviderIconClass,
-  getNotificationProviderIconSurfaceClass,
-} from "@/lib/notification-provider-config"
+import { getNotificationProviderIconClass } from "@/lib/notification-provider-config"
 import { useToastMessages } from "@/lib/toast-helpers"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
@@ -58,6 +55,7 @@ import {
   NOTIFICATION_CREDENTIAL_INPUT_CLASS,
   NOTIFICATION_CREDENTIAL_INPUT_SHELL_CLASS,
   NOTIFICATION_CREDENTIAL_REVEAL_ACTION_CLASS,
+  NOTIFICATION_CREDENTIAL_ROW_CLASS,
   NOTIFICATION_CHANNEL_EDITOR_CARD_CLASS,
   NOTIFICATION_CHANNEL_DETAIL_CONTENT_CLASS,
   NOTIFICATION_CHANNEL_DETAIL_HEADER_CLASS,
@@ -121,9 +119,10 @@ function NotificationProviderIcon({ provider }: { provider: NotificationDestinat
       : semanticIcons.concept.notification
 
   return (
-    <span className={cn(NOTIFICATION_CHANNEL_ICON_CLASS, getNotificationProviderIconSurfaceClass(provider))}>
-      <Icon aria-hidden="true" className={cn("size-5", getNotificationProviderIconClass(provider))} />
-    </span>
+    <Icon
+      aria-hidden="true"
+      className={cn(NOTIFICATION_CHANNEL_ICON_CLASS, getNotificationProviderIconClass(provider))}
+    />
   )
 }
 
@@ -197,32 +196,49 @@ function NotificationDestinationEditor({
 
           <div className={NOTIFICATION_CREDENTIAL_FIELD_CLASS}>
             <Label htmlFor={credentialId}>{t("destination.credentialLabel")}</Label>
-            <div className={NOTIFICATION_CREDENTIAL_INPUT_SHELL_CLASS}>
-              <Input
-                id={credentialId}
-                size="sm"
-                className={NOTIFICATION_CREDENTIAL_INPUT_CLASS}
-                type={showCredential ? "text" : "password"}
-                autoComplete="off"
-                inputMode="url"
-                placeholder={t(`${provider}.credentialPlaceholder`)}
-                value={draft.credential}
-                disabled={isLocked}
-                onChange={(event) => onDraftChange({ credential: event.target.value })}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className={NOTIFICATION_CREDENTIAL_REVEAL_ACTION_CLASS}
-                aria-label={showCredential ? t("destination.hideCredential") : t("destination.showCredential")}
-                disabled={isLocked}
-                onClick={() => setShowCredential((current) => !current)}
-              >
-                {showCredential ? <IconEyeOff className="size-4" /> : <IconEye className="size-4" />}
+            <div className={NOTIFICATION_CREDENTIAL_ROW_CLASS}>
+              <div className={NOTIFICATION_CREDENTIAL_INPUT_SHELL_CLASS}>
+                <Input
+                  id={credentialId}
+                  size="sm"
+                  className={NOTIFICATION_CREDENTIAL_INPUT_CLASS}
+                  type={showCredential ? "text" : "password"}
+                  autoComplete="off"
+                  inputMode="url"
+                  placeholder={t(`${provider}.credentialPlaceholder`)}
+                  value={draft.credential}
+                  disabled={isLocked}
+                  onChange={(event) => onDraftChange({ credential: event.target.value })}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className={NOTIFICATION_CREDENTIAL_REVEAL_ACTION_CLASS}
+                  aria-label={showCredential ? t("destination.hideCredential") : t("destination.showCredential")}
+                  disabled={isLocked}
+                  onClick={() => setShowCredential((current) => !current)}
+                >
+                  {showCredential ? <IconEyeOff className="size-4" /> : <IconEye className="size-4" />}
+                </Button>
+              </div>
+              <Button type="button" variant="outline" size="sm" disabled={isLocked} onClick={onTest}>
+                {isTestPending ? <Spinner className="size-4" /> : <IconPlayerPlay className="size-4" />}
+                {t("test.action")}
               </Button>
             </div>
             <p className={textRole.helperText}>{t("destination.credentialHelp")}</p>
+            {testResult ? (
+              <p
+                role={testResult === "delivered" ? "status" : "alert"}
+                className={cn(
+                  textRole.helperText,
+                  testResult === "delivered" ? "text-success font-medium" : "text-destructive font-medium"
+                )}
+              >
+                {t(`test.result.${testResult}`)}
+              </p>
+            ) : null}
           </div>
 
           <div className={NOTIFICATION_SUBSCRIPTIONS_SECTION_CLASS}>
@@ -248,13 +264,6 @@ function NotificationDestinationEditor({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Button type="button" variant="outline" disabled={isLocked} onClick={onTest}>
-              {isTestPending ? <Spinner className="size-4" /> : <IconPlayerPlay className="size-4" />}
-              {t("test.action")}
-            </Button>
-            {testResult ? <p role={testResult === "delivered" ? "status" : "alert"} className={textRole.helperText}>{t(`test.result.${testResult}`)}</p> : null}
-          </div>
           {errorMessage ? <p role="alert" className={cn("text-destructive", textRole.helperText)}>{errorMessage}</p> : null}
         </CardContent>
       </CollapsibleContent>

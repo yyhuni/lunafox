@@ -21,14 +21,17 @@ describe("search websites table contract", () => {
 
   it("keeps global search read-only while retaining export, selection, and the empty screenshot state", () => {
     expect(source).toContain("buildExportOptions")
-    expect(source).toContain("exportItems(websites, \"all\")")
     expect(source).toContain("exportItems(selectedRows, \"selected\")")
+    expect(source).toContain("onExportAll")
+    expect(source).toContain("void onExportAll()")
     expect(source).toContain("model.exportOptions")
     expect(source).toContain("<Checkbox")
     expect(source).toContain("toWebsiteEvidence")
+    expect(source).toContain("screenshot: result.screenshot")
     expect(source).toContain('tDataTable("noResults")')
     expect(source).not.toContain("onBulkAdd")
     expect(source).not.toContain("onBulkDelete")
+    expect(source).not.toContain("exportItems(websites, \"all\")")
   })
 
   it("removes the duplicate result search while keeping export in the page toolbar", () => {

@@ -113,10 +113,15 @@ When the history table is not embedded with `hideToolbar`, a non-empty
 selection renders Delete and Stop through the shared `SelectedRowActionBar`.
 Stop remains visible for terminal-only selections but is disabled with localized
 feedback; it is enabled when at least one selected Scan is `pending` or
-`running`. The page opens the count-aware confirmation dialog from
-`useScanHistoryActions`, sends all selected IDs to `useBatchStopScans`, and
-clears selection only after the mutation has completed list/statistics
-invalidation. A rejected mutation leaves the current selection intact.
+`running`. The page opens one count-aware confirmation dialog from
+`useScanHistoryActions` and sends every selected ID to `useBatchStopScans`.
+Each `scans:batchStop` request stays at or below 100 IDs. A larger selection
+is sent as sequential requests under that same confirmation. The page clears
+the selection only after the whole action succeeds and list/statistics
+invalidation finishes. If the first request fails, the selection stays intact.
+If a later request fails, earlier requests stay committed: the summary reports
+those stopped and skipped counts plus how many selected scans were not
+attempted, the list refreshes, and only the uncommitted IDs remain selected.
 
 ## Page Refresh Contract
 

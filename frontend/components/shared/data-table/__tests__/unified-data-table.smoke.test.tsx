@@ -386,18 +386,80 @@ describe("UnifiedDataTable", () => {
       )
 
       const tableSurface = container.querySelector<HTMLDivElement>('[data-slot="data-table"]')
-      const virtualRow = container.querySelector<HTMLTableRowElement>("tbody tr")
+      const virtualRow = container.querySelector<HTMLTableRowElement>("tbody tr[data-index]")
       const virtualScrollSurface = tableSurface?.querySelector<HTMLDivElement>(":scope > div")
 
       expect(tableSurface).toHaveClass("max-h-150", "overflow-y-auto")
-      expect(virtualScrollSurface?.style.position).toBe("relative")
+      expect(virtualScrollSurface?.style.height).not.toBe("")
       expect(virtualRow).not.toBeNull()
       expect(virtualRow?.style.position).not.toBe("absolute")
       expect(virtualRow?.style.minHeight).toBe("40px")
-      expect(virtualRow?.style.transform).toContain("translateY")
+      expect(virtualRow?.style.transform).toBe("")
+      expect(container.querySelector('[data-virtual-scroll-pad="end"]')).not.toBeNull()
     } finally {
       offsetHeight.mockRestore()
       offsetWidth.mockRestore()
+    }
+  })
+
+  it("滚动后渲染窗口后部的行，而不是停在表头附近", () => {
+    let scrollTop = 0
+    const offsetHeight = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (this: HTMLElement) {
+      if (this.getAttribute("data-slot") === "data-table") return 400
+      if (this.getAttribute("data-slot") === "table-header") return 40
+      if (this.tagName === "TR") return 40
+      return 0
+    })
+    const offsetWidth = vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(960)
+    const scrollTopGetter = vi.spyOn(HTMLElement.prototype, "scrollTop", "get").mockImplementation(() => scrollTop)
+    const columns: ColumnDef<Row>[] = [
+      {
+        accessorKey: "name",
+        header: "Name",
+        meta: { title: "Name" },
+      },
+    ]
+    const data = Array.from({ length: 1000 }, (_, index) => ({
+      id: index + 1,
+      name: `row-${index + 1}`,
+    }))
+
+    try {
+      const { container } = renderWithProviders(
+        <UnifiedDataTable<Row>
+          data={data}
+          columns={columns}
+          getRowId={(row) => String(row.id)}
+          state={{
+            pagination: { pageIndex: 0, pageSize: 1000 },
+            paginationInfo: { total: 1000, totalPages: 1, page: 1, pageSize: 1000 },
+          }}
+          ui={{ hideToolbar: true }}
+          behavior={{ enableRowSelection: false }}
+        />
+      )
+
+      const renderedIndexes = () => Array.from(container.querySelectorAll<HTMLTableRowElement>("tbody tr[data-index]"))
+        .map((row) => Number(row.dataset.index))
+
+      expect(renderedIndexes().length).toBeGreaterThan(0)
+      expect(renderedIndexes().length).toBeLessThan(1000)
+      expect(renderedIndexes()).toContain(0)
+      expect(screen.queryByText("row-1000")).not.toBeInTheDocument()
+
+      scrollTop = 20_000
+      fireEvent.scroll(container.querySelector('[data-slot="data-table"]')!)
+
+      const scrolledIndexes = renderedIndexes()
+      expect(scrolledIndexes.length).toBeGreaterThan(0)
+      expect(scrolledIndexes.length).toBeLessThan(1000)
+      expect(scrolledIndexes).not.toContain(0)
+      expect(Math.max(...scrolledIndexes)).toBeGreaterThan(400)
+      expect(container.querySelector('[data-virtual-scroll-pad="start"]')).not.toBeNull()
+    } finally {
+      offsetHeight.mockRestore()
+      offsetWidth.mockRestore()
+      scrollTopGetter.mockRestore()
     }
   })
 

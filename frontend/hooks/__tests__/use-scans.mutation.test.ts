@@ -9,6 +9,7 @@ import {
   useQuickScan,
   useStopScan,
 } from "@/hooks/use-scans"
+import { BatchStopPartialCompletionError } from "@/lib/batch-stop-partial-error"
 import { renderHookWithProviders } from "@/test/utils/render-with-providers"
 import { createTestQueryClient } from "@/test/utils/test-query-client"
 
@@ -403,5 +404,35 @@ describe("use-scans mutation", () => {
       "toast.scan.stop.batchError",
       "batch-stop-scans"
     )
+  })
+
+  it("批量停止后续批次失败时汇总已提交数量并刷新历史", async () => {
+    scanServiceMocks.batchStopScans.mockRejectedValue(new BatchStopPartialCompletionError({
+      stoppedCount: 100,
+      skippedCount: 0,
+      revokedTaskCount: 90,
+      remainingCount: 50,
+      completedIds: [1],
+      cause: new Error("network"),
+    }))
+
+    const queryClient = createTestQueryClient()
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries")
+    const { result } = renderHookWithProviders(() => useBatchStopScans(), {
+      queryClient,
+    })
+
+    await act(async () => {
+      await expect(result.current.mutateAsync([1, 2])).rejects.toBeInstanceOf(BatchStopPartialCompletionError)
+    })
+
+    expect(toastMocks.error).toHaveBeenCalledWith(
+      "toast.scan.stop.batchPartial",
+      { stoppedCount: 100, skippedCount: 0, remainingCount: 50 },
+      "batch-stop-scans"
+    )
+    expect(toastMocks.errorFromCode).not.toHaveBeenCalled()
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: scanKeys.all })
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: scanKeys.statistics() })
   })
 })

@@ -28,6 +28,7 @@ import {
 import { cn } from "@/lib/utils"
 
 import { DataTablePagination } from "./pagination"
+import { virtualTableScrollPadding } from "./virtual-table-padding"
 import { allocateSemanticColumnWidths } from "./semantic-column-widths"
 import { getDataTableStickyColumnShellClassName } from "./sticky-column-shell"
 import { useTableState } from "./use-table-state"
@@ -357,13 +358,8 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
   const virtualRows = enableVirtualScrolling ? rowVirtualizer.getVirtualItems() : []
   const totalSize = enableVirtualScrolling ? rowVirtualizer.getTotalSize() : 0
   // Recompute every render. Scrolling changes the visible window without
-  // changing totalSize, so this offset cannot be cached on totalSize alone.
-  let renderedOffset = 0
-  const virtualRowTranslateY = virtualRows.map((virtualRow) => {
-    const translateY = virtualRow.start - virtualScrollMargin - renderedOffset
-    renderedOffset += virtualRow.size
-    return translateY
-  })
+  // changing totalSize, so these pads cannot be cached on totalSize alone.
+  const virtualScrollPadding = virtualTableScrollPadding(virtualRows, totalSize, virtualScrollMargin)
 
   const measureTableContainerWidth = React.useCallback(() => {
     const tableContainer = tableContainerRef.current
@@ -662,7 +658,6 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
         <div
           style={enableVirtualScrolling ? {
             height: `${totalSize + virtualScrollMargin}px`,
-            position: "relative",
           } : undefined}
         >
         <table
@@ -711,11 +706,20 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
               ) : rows.length ? (
                 enableVirtualScrolling ? (
                   // Rows stay in table flow so columns keep the colgroup axis.
-                  // translateY is relative to that static position: subtract the
-                  // header scroll margin and the sizes of virtual rows already
-                  // rendered above this one. minHeight lets wrapped cells grow;
-                  // a fixed height would measure as one line and overlap the next row.
-                  virtualRows.map((virtualRow, index) => {
+                  // A transformed tr does not reserve layout height, so scrolling
+                  // would move into empty space. The pads are that missing
+                  // prefix and suffix. minHeight lets wrapped cells grow; a
+                  // fixed height would measure as one line and overlap the next row.
+                  <>
+                  {virtualScrollPadding.paddingTop > 0 ? (
+                    <tr aria-hidden="true" data-virtual-scroll-pad="start">
+                      <td
+                        colSpan={visibleLeafColumns.length}
+                        style={{ height: virtualScrollPadding.paddingTop, padding: 0, border: 0 }}
+                      />
+                    </tr>
+                  ) : null}
+                  {virtualRows.map((virtualRow) => {
                     const row = rows[virtualRow.index]
                     return (
                       <TableRow
@@ -735,7 +739,6 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
                         onKeyDown={(event) => handleRowKeyDown(event, row)}
                         style={{
                           minHeight: rowRhythm.rhythmHeight,
-                          transform: `translateY(${virtualRowTranslateY[index]}px)`,
                         }}
                       >
                         {row.getVisibleCells().map((cell) => (
@@ -752,7 +755,16 @@ export function UnifiedDataTable<TData>(props: UnifiedDataTableProps<TData>) {
                         ))}
                       </TableRow>
                     )
-                  })
+                  })}
+                  {virtualScrollPadding.paddingBottom > 0 ? (
+                    <tr aria-hidden="true" data-virtual-scroll-pad="end">
+                      <td
+                        colSpan={visibleLeafColumns.length}
+                        style={{ height: virtualScrollPadding.paddingBottom, padding: 0, border: 0 }}
+                      />
+                    </tr>
+                  ) : null}
+                  </>
                 ) : (
                   // Standard rendering for small datasets
                   rows.map((row) => (

@@ -40,6 +40,7 @@ describe("search-page-state contract", () => {
     expect(source).toContain('React.useState<AssetType>("website")')
     expect(source).toContain("pageTokens")
     expect(source).toContain("nextPageToken")
+    expect(source).toContain("submittedQuery,")
     expect(source).not.toContain("asset_type")
     expect(source).not.toContain("totalPages")
     expect(source).not.toContain("useExportAssetSearch")

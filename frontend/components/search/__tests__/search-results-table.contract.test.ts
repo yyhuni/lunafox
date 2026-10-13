@@ -9,6 +9,8 @@ describe("search-results-table contract", () => {
     expect(source).toContain("EndpointSearchResult")
     expect(source).toContain("export function useSearchEndpointsResultModel")
     expect(source).toContain("export function SearchEndpointColumnVisibilityMenu")
+    expect(source).toContain("export function SearchEndpointExportMenu")
+    expect(source).toContain("ToolbarActionMenu")
     expect(source).toContain("export function SearchResultsTableLoadingState")
     expect(source).toContain("EndpointDetailDrawer")
   })

@@ -18,6 +18,9 @@ identity, metadata, screenshots, and navigation.
   existing vertical response fields and copy behavior.
 - Long values stay inside the panel's bounded `ScrollArea` and use the shared
   `textRole.code` typography with wrapping for long lines.
+  Apply the height cap to the actual viewport as well as the root: capping only
+  the root can clip an intrinsically tall viewport that has no scroll range,
+  leaving wheel scrolling and thumb dragging ineffective.
 - `ResponseEvidencePanelLoadingState` reuses the same panel frame, tab rhythm,
   bounded body region, and optional metadata footer without exposing response
   data. Consumers with a paired loading handoff should use it instead of
@@ -25,3 +28,11 @@ identity, metadata, screenshots, and navigation.
 
 Consumers must import the shared panel through `@/components/shared/response-evidence`
 and must not pass website/search domain objects or translation hooks into it.
+
+## Browser Regression
+
+Run `pnpm run storybook` and open **Shared / Response Evidence Panel / Long Responses**.
+Its play function checks that all three tabs have a bounded viewport with a real
+scroll range and can reach their final lines. **Short Response** covers content
+that fits without scrolling. Thumb dragging should also be checked with a real
+pointer; DOM-only tests do not exercise browser layout or pointer capture.

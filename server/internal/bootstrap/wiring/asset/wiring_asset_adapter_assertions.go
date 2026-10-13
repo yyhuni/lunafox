@@ -14,6 +14,8 @@ var _ assetapp.GlobalWebsiteSearchStore = (*assetWebsiteStoreAdapter)(nil)
 var _ assetdomain.EndpointQueryStore = (*assetEndpointStoreAdapter)(nil)
 var _ assetdomain.EndpointCommandStore = (*assetEndpointStoreAdapter)(nil)
 var _ assetapp.GlobalEndpointSearchStore = (*assetEndpointStoreAdapter)(nil)
+var _ assetapp.GlobalAssetExportGrantStore = (*assetGlobalExportGrantStoreAdapter)(nil)
+var _ assetapp.GlobalAssetExportSnapshotStore = (*assetGlobalExportSnapshotStoreAdapter)(nil)
 
 var _ assetdomain.DirectoryQueryStore = (*assetDirectoryStoreAdapter)(nil)
 var _ assetdomain.DirectoryCommandStore = (*assetDirectoryStoreAdapter)(nil)

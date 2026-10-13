@@ -13,7 +13,7 @@ import (
 func TestExecutionTimeoutDefaultsAndExplicitOverrides(t *testing.T) {
 	cases := map[string]map[string]int{
 		"subdomain_discovery":   {"recon": 7200, "bruteforce": 28800, "resolve": 14400},
-		"port_scan":             {"naabu_active": 14400, "naabu_passive": 3600},
+		"port_scan":             {"naabu_active": 3600, "naabu_passive": 3600},
 		"website_discovery":     {"httpx": 14400},
 		"url_collection":        {"waymore": 28800, "katana": 28800, "uro": 3600, "httpx": 14400},
 		"fingerprint_detection": {"observer_ward": 14400},

@@ -35,5 +35,7 @@ describe("scan-history-list-state contract", () => {
     expect(mutationSource).toContain('errorFallbackKey: "toast.bulkDeleteFailed"')
     expect(mutationSource).toContain('id: "batch-stop-scans"')
     expect(mutationSource).toContain('toast.scan.stop.batchSuccess')
+    expect(mutationSource).toContain('toast.scan.stop.batchPartial')
+    expect(source).toContain("onBatchStopCommitted")
   })
 })

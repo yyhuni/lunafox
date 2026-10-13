@@ -26,6 +26,7 @@ func RegisterAssetRoutes(
 	directoryHandler *directoryhandler.DirectoryHandler,
 	hostPortHandler *hostporthandler.HostPortHandler,
 	globalAssetSearchHandler *searchhandler.GlobalAssetSearchHandler,
+	globalAssetExportHandler *searchhandler.GlobalAssetExportHandler,
 	assetStatisticsHandler *assethandler.AssetStatisticsHandler,
 	endpointSnapshotHandler *snapshothandler.EndpointSnapshotHandler,
 	hostPortSnapshotHandler *snapshothandler.HostPortSnapshotHandler,
@@ -41,6 +42,8 @@ func RegisterAssetRoutes(
 	registerDirectoryRoutes(protected, directoryHandler, directorySnapshotHandler)
 	registerHostPortRoutes(protected, hostPortHandler, hostPortSnapshotHandler)
 	registerGlobalAssetSearchRoutes(protected, globalAssetSearchHandler)
+	protected.POST("/assets:export", globalAssetExportHandler.Issue)
+	api.GET("/assets/exportFiles/current", globalAssetExportHandler.Download)
 	registerAssetStatisticsRoutes(protected, assetStatisticsHandler)
 	registerScreenshotRoutes(protected, screenshotHandler, screenshotSnapshotHandler)
 	snapshotrouter.RegisterScanSnapshotRoutes(

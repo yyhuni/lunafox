@@ -168,7 +168,7 @@ func TestGlobalAssetSearchScalePostgres(t *testing.T) {
 	assertGlobalAssetSearchScaleIndexInventory(t, ctx, sqlDB)
 
 	gin.SetMode(gin.TestMode)
-	service := assetapp.NewGlobalAssetSearchService(assetrepo.NewWebsiteRepository(db), assetrepo.NewEndpointRepository(db))
+	service := assetapp.NewGlobalAssetSearchService(assetrepo.NewWebsiteRepository(db), assetrepo.NewEndpointRepository(db), assetrepo.NewScreenshotRepository(db))
 	handler := searchhandler.NewGlobalAssetSearchHandler(service)
 	router := gin.New()
 	router.GET("/v1/assets:search", handler.Search)

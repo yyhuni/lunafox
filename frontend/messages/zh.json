@@ -485,6 +485,10 @@
     "error": "搜索失败，请稍后重试",
     "noResults": "未找到匹配的资产",
     "noResultsHint": "请尝试调整搜索条件",
+    "export": {
+      "initiated": "已发起下载，请在浏览器下载管理器中查看进度。",
+      "failed": "导出下载发起失败，请重试。"
+    },
     "recentSearches": "最近搜索",
     "removeRecentSearch": "移除最近搜索",
     "assetTypes": {
@@ -2148,10 +2152,26 @@
         "saveMetadataTitle": "保存工作流",
         "saveMetadataDescription": "填写工作流名称和描述后保存当前编排。",
         "confirmSaveMetadata": "保存工作流",
+        "editWorkflowMetadata": "编辑工作流信息",
+        "discardDraftTitle": "放弃未保存的更改？",
+        "discardDraftDescription": "工作流编排草稿尚未保存，离开后修改将丢失。",
+        "cancelDiscard": "继续编辑",
+        "confirmDiscard": "放弃更改并离开",
+        "addStageAfter": "在此阶段后追加新阶段",
         "unsavedChanges": "未保存的更改",
         "mockBadge": "未保存",
         "engineLibrary": "引擎库",
         "engineLibraryHint": "拖拽引擎到画布中开始编排",
+        "collapseEngineLibrary": "收起引擎库",
+        "expandEngineLibrary": "展开引擎库",
+        "closeStageInspector": "关闭属性面板",
+        "expandStageInspector": "展开属性面板",
+        "stageInspectorTitle": "阶段属性",
+        "executionStrategy": "执行策略",
+        "executionModeSerialDesc": "该阶段将按序串行执行 1 个引擎。",
+        "executionModeParallelDesc": "该阶段将并发同时执行多个引擎，所有引擎完成后流转到下一阶段。",
+        "emptyStageHelp": "从左侧引擎库拖拽或点击引擎，将其绑定到当前阶段。",
+        "deleteStageDisabledTip": "工作流必须至少保留一个阶段。",
         "engineLibraryLoading": "正在加载引擎库...",
         "engineLibraryError": "引擎库加载失败",
         "engineLibraryEmpty": "暂无可用引擎",
@@ -2161,7 +2181,6 @@
         "addParallelStep": "追加并行步骤",
         "zoomIn": "放大画布",
         "zoomOut": "缩小画布",
-        "miniMap": "画布导航图",
         "autoLayout": "自动排版并居中",
         "reset": "重置编排草稿",
         "stageDisplayName": "阶段名称",
@@ -3192,6 +3211,7 @@
       "stop": {
         "success": "停止成功",
         "batchSuccess": "已停止 {stoppedCount} 个扫描，跳过 {skippedCount} 个终态扫描",
+        "batchPartial": "已停止 {stoppedCount} 个扫描，跳过 {skippedCount} 个终态扫描，还有 {remainingCount} 个未能停止",
         "batchError": "批量停止失败"
       },
       "delete": {

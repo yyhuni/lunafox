@@ -30,7 +30,7 @@ repository 或通过 `UNION` 合并两张资产表。默认 Website 由前端提
 不对缺失的 `assetType` 做静默降级。
 
 查询先由专用 parser 完整消费，再构造 typed AST：普通文本是 URL 的不区分大小写包含
-查询；结构化查询只允许 `url`、`host`、`title`、`statusCode`、`tech`，以及同一种扁平连接符。
+查询；结构化查询只允许 `url`、`host`、`title`、`statusCode`、`tech`、`hasScreenshot`，以及同一种扁平连接符。
 大小写不敏感的独立单词 `and` 与 `&&` 是同一个合取连接符；`or` 与 `||` 是同一个析取连接符。
 同一条查询不能混用这两套连接符，也不能用括号分组。
 文本字段的 `=` 是包含匹配，`==` 是原始字符串精确匹配；URL、host/title contains 值均至少 2 个
@@ -40,4 +40,23 @@ Unicode 字符。`statusCode` 与 `tech` 两种运算符
 
 结果使用绑定查询形态的 URL-safe keyset token，排序为 `createdAt DESC, id DESC`，
 不计算 total。repository 的超时错误映射为 `ErrGlobalAssetSearchTimeout`，不把
-PostgreSQL 驱动错误或部分结果暴露给 handler。
+PostgreSQL 驱动错误或部分结果暴露给 handler。Website 搜索结果会按当前页 Website 的
+`target_id + url` 批量补充可选 Screenshot 元数据；该投影只包含编号、URL、状态码和时间字段，
+不读取 `image`，图片仍通过专用 blob endpoint 按编号获取。
+
+### 全局搜索全量导出
+
+全量导出是独立于分页搜索的同步用例。application 先校验已提交的 `q` 与 `assetType`，
+解析并规范化 typed AST，再签发绑定用户、会话版本、资产类型和搜索条件的一次性 grant；
+分页大小、page token 和页面草稿 query 不得进入导出语义。grant 兑换后由同一只读快照提供
+完整匹配集，空结果仍返回只有 BOM 和 header 的合法 CSV。
+
+Website 与 Endpoint 使用统一的后端列顺序：
+`id,target_id,url,host,location,title,status_code,content_length,content_type,webserver,tech,response_body,response_headers,vhost,created_at`。
+导出允许恰好 100000 行或 256 MiB，超过任一上限必须在响应提交前拒绝；全请求共享 120 秒
+deadline 并尊重客户端取消。预检通过后的读取、编码、提交或网络失败会使本次传输失败，重试
+必须重新签发 grant 和建立快照。
+
+导出不设置 application 层专用并发信号量；长快照直接占用当前 Server 的数据库连接池，
+高并发时普通请求可能按现有连接池行为排队。该风险由运行指标和部署容量管理，不得通过
+客户端分页聚合或异步 job 绕过本用例契约。

@@ -28,6 +28,9 @@ type Website struct {
 	ContentLength   *int
 	Vhost           *bool
 	ResponseHeaders string
+	// Screenshot is an optional metadata projection used by enriched Website reads.
+	// Image bytes remain owned by the dedicated screenshot blob endpoint.
+	Screenshot *Screenshot
 }
 
 type Endpoint struct {

@@ -1,6 +1,7 @@
 package portscanruntime
 
 import (
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -10,7 +11,7 @@ import (
 )
 
 func TestBuildNaabuActiveCommandUsesTopPortMode(t *testing.T) {
-	cmd, err := buildNaabuActiveCommand("/tmp/subdomains.txt", "/tmp/active.jsonl", portscancontract.NaabuActiveConfig{
+	cmd, err := buildNaabuActiveCommand("/tmp/subdomains.txt", "/tmp/active.jsonl", 1, portscancontract.NaabuActiveConfig{
 		Enabled:  true,
 		Timeout:  120,
 		Threads:  50,
@@ -30,7 +31,7 @@ func TestBuildNaabuActiveCommandUsesTopPortMode(t *testing.T) {
 }
 
 func TestBuildNaabuActiveCommandUsesCustomPortMode(t *testing.T) {
-	cmd, err := buildNaabuActiveCommand("/tmp/subdomains.txt", "/tmp/active.jsonl", portscancontract.NaabuActiveConfig{
+	cmd, err := buildNaabuActiveCommand("/tmp/subdomains.txt", "/tmp/active.jsonl", 1, portscancontract.NaabuActiveConfig{
 		Enabled:  true,
 		Timeout:  120,
 		Threads:  50,
@@ -50,7 +51,7 @@ func TestBuildNaabuActiveCommandUsesCustomPortMode(t *testing.T) {
 }
 
 func TestBuildNaabuActiveCommandUsesTopAndCustomPortMode(t *testing.T) {
-	cmd, err := buildNaabuActiveCommand("/tmp/subdomains.txt", "/tmp/active.jsonl", portscancontract.NaabuActiveConfig{
+	cmd, err := buildNaabuActiveCommand("/tmp/subdomains.txt", "/tmp/active.jsonl", 1, portscancontract.NaabuActiveConfig{
 		Enabled:  true,
 		Timeout:  120,
 		Threads:  50,
@@ -70,7 +71,7 @@ func TestBuildNaabuActiveCommandUsesTopAndCustomPortMode(t *testing.T) {
 }
 
 func TestBuildNaabuActiveCommandUsesTopAndCustomWithoutCustomPorts(t *testing.T) {
-	cmd, err := buildNaabuActiveCommand("/tmp/subdomains.txt", "/tmp/active.jsonl", portscancontract.NaabuActiveConfig{
+	cmd, err := buildNaabuActiveCommand("/tmp/subdomains.txt", "/tmp/active.jsonl", 1, portscancontract.NaabuActiveConfig{
 		Enabled:  true,
 		Timeout:  120,
 		Threads:  50,
@@ -90,7 +91,7 @@ func TestBuildNaabuActiveCommandUsesTopAndCustomWithoutCustomPorts(t *testing.T)
 }
 
 func TestBuildNaabuActiveCommandRejectsOldTopPlusCustomMode(t *testing.T) {
-	_, err := buildNaabuActiveCommand("/tmp/subdomains.txt", "/tmp/active.jsonl", portscancontract.NaabuActiveConfig{
+	_, err := buildNaabuActiveCommand("/tmp/subdomains.txt", "/tmp/active.jsonl", 1, portscancontract.NaabuActiveConfig{
 		Enabled:  true,
 		Timeout:  120,
 		Ports:    "80,443",
@@ -103,7 +104,7 @@ func TestBuildNaabuActiveCommandRejectsOldTopPlusCustomMode(t *testing.T) {
 }
 
 func TestBuildNaabuActiveCommandRejectsCustomModeWithoutPorts(t *testing.T) {
-	_, err := buildNaabuActiveCommand("/tmp/subdomains.txt", "/tmp/active.jsonl", portscancontract.NaabuActiveConfig{
+	_, err := buildNaabuActiveCommand("/tmp/subdomains.txt", "/tmp/active.jsonl", 1, portscancontract.NaabuActiveConfig{
 		Enabled:  true,
 		Timeout:  120,
 		PortMode: "custom",
@@ -116,7 +117,7 @@ func TestBuildNaabuActiveCommandRejectsCustomModeWithoutPorts(t *testing.T) {
 }
 
 func TestBuildNaabuPassiveCommandOmitsActiveOnlyArgs(t *testing.T) {
-	cmd, err := buildNaabuPassiveCommand("/tmp/subdomains.txt", "/tmp/passive.jsonl", portscancontract.NaabuPassiveConfig{Enabled: true, Timeout: 60})
+	cmd, err := buildNaabuPassiveCommand("/tmp/subdomains.txt", "/tmp/passive.jsonl", 1, portscancontract.NaabuPassiveConfig{Enabled: true, Timeout: 60})
 	if err != nil {
 		t.Fatalf("buildNaabuPassiveCommand failed: %v", err)
 	}
@@ -124,5 +125,46 @@ func TestBuildNaabuPassiveCommandOmitsActiveOnlyArgs(t *testing.T) {
 	want := []string{"-list", "/tmp/subdomains.txt", "-passive", "-json", "-silent", "-o", "/tmp/passive.jsonl"}
 	if !reflect.DeepEqual(cmd.args, want) || cmd.timeout != 60*time.Second {
 		t.Fatalf("unexpected passive command: %+v", cmd)
+	}
+}
+
+func TestBuildNaabuCommandScalesTimeoutByCandidateCount(t *testing.T) {
+	active, err := buildNaabuActiveCommand("/tmp/subdomains.txt", "/tmp/active.jsonl", 4, portscancontract.NaabuActiveConfig{
+		Enabled:  true,
+		Timeout:  120,
+		PortMode: "top",
+		TopPorts: "100",
+	})
+	if err != nil {
+		t.Fatalf("buildNaabuActiveCommand failed: %v", err)
+	}
+	if active.timeout != 480*time.Second {
+		t.Fatalf("active deadline = %s, want 480s", active.timeout)
+	}
+
+	passive, err := buildNaabuPassiveCommand("/tmp/subdomains.txt", "/tmp/passive.jsonl", 4, portscancontract.NaabuPassiveConfig{Enabled: true, Timeout: 60})
+	if err != nil {
+		t.Fatalf("buildNaabuPassiveCommand failed: %v", err)
+	}
+	if passive.timeout != 240*time.Second {
+		t.Fatalf("passive deadline = %s, want 240s", passive.timeout)
+	}
+}
+
+func TestBuildNaabuCommandRejectsUnrepresentableTimeoutBudget(t *testing.T) {
+	_, err := buildNaabuActiveCommand("/tmp/subdomains.txt", "/tmp/active.jsonl", 0, portscancontract.NaabuActiveConfig{
+		Enabled:  true,
+		Timeout:  120,
+		PortMode: "top",
+		TopPorts: "100",
+	})
+	if err == nil || !strings.Contains(err.Error(), "candidate host count must be positive") {
+		t.Fatalf("expected empty candidate count to fail, got %v", err)
+	}
+
+	maxSeconds := int64(math.MaxInt64 / int64(time.Second))
+	_, err = buildNaabuPassiveCommand("/tmp/subdomains.txt", "/tmp/passive.jsonl", 2, portscancontract.NaabuPassiveConfig{Enabled: true, Timeout: maxSeconds})
+	if err == nil || !strings.Contains(err.Error(), "exceeds process deadline range") {
+		t.Fatalf("expected overflow to fail before naabu starts, got %v", err)
 	}
 }

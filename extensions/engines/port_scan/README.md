@@ -90,7 +90,7 @@ The engine uses the standard LunaFox section-level config shape:
 - `naabu_active`: `enabled`, `timeout`, `threads`, `port-mode`, `ports`, `top-ports`, `rate`
 - `naabu_passive`: `enabled`, `timeout`
 
-Both tools default to enabled. `timeout` is an integer process timeout in seconds; active defaults to 14400 seconds and passive defaults to 3600 seconds. Defaults come from `engine.json` and generated config artifacts, not from a second hand-maintained runtime default table.
+Both tools default to enabled. `timeout` is the per-candidate budget in integer seconds. The naabu process deadline is that value multiplied by the candidate address count. Both sections default to 3600 seconds. Defaults come from `engine.json` and generated config artifacts, not from a second hand-maintained runtime default table.
 
 Active port selection is controlled by `port-mode`: `top` emits only `-top-ports`, `custom` emits only `-p`, and `top-and-custom` emits `-top-ports` plus `-p` when `ports` is non-empty. `top-and-custom` is the default because it preserves naabu's additive behavior; only `custom` requires non-empty `ports`. `top-ports` is a string enum matching naabu's accepted presets: `100`, `1000`, and `full`. The previous `top-plus-custom` value is no longer accepted.
 
@@ -141,4 +141,4 @@ publishes and executes this immutable image directly.
 
 ## Execution Timeout Defaults
 
-Tool/stage defaults in seconds: `naabu_active.timeout=14400`, `naabu_passive.timeout=3600`. These finite budgets allow larger batches to finish under existing rate limits; they are project choices, not measured completion guarantees. `engine.json` is authoritative. Request timeouts and cancellation behavior are unchanged. Existing explicit configuration and saved plans retain their values; new defaults require an updated installed Engine package and newly materialized configuration.
+Tool/stage defaults in seconds: `naabu_active.timeout=3600`, `naabu_passive.timeout=3600`. Each value is a per-candidate budget; the process deadline is the candidate count times that value. These finite budgets are project choices, not measured completion guarantees. `engine.json` is authoritative. Request timeouts and cancellation behavior are unchanged. Existing explicit configuration and saved plans retain their numeric values and use the per-candidate meaning; new defaults require an updated installed Engine package and newly materialized configuration.

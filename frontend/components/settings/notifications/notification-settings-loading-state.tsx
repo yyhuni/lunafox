@@ -27,10 +27,7 @@ import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
-import {
-  getNotificationProviderIconClass,
-  getNotificationProviderIconSurfaceClass,
-} from "@/lib/notification-provider-config"
+import { getNotificationProviderIconClass } from "@/lib/notification-provider-config"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 import { EXTERNALLY_DELIVERABLE_NOTIFICATION_KINDS } from "@/types/notification.types"
@@ -51,6 +48,7 @@ import {
   NOTIFICATION_CREDENTIAL_INPUT_CLASS,
   NOTIFICATION_CREDENTIAL_INPUT_SHELL_CLASS,
   NOTIFICATION_CREDENTIAL_REVEAL_ACTION_CLASS,
+  NOTIFICATION_CREDENTIAL_ROW_CLASS,
   NOTIFICATION_CHANNEL_ICON_CLASS,
   NOTIFICATION_CHANNELS_STACK_CLASS,
   NOTIFICATION_SETTINGS_CHANNEL_WORKBENCH_CLASS,
@@ -108,9 +106,10 @@ function NotificationDestinationEditorLoadingState({
           <div className={NOTIFICATION_CHANNEL_DETAIL_HEADER_LAYOUT_CLASS}>
             <div className="min-w-0">
               <div className={NOTIFICATION_CHANNEL_DETAIL_TITLE_ROW_CLASS}>
-                <span className={cn(NOTIFICATION_CHANNEL_ICON_CLASS, getNotificationProviderIconSurfaceClass(provider))}>
-                  <Icon aria-hidden="true" className={cn("size-5", getNotificationProviderIconClass(provider))} />
-                </span>
+                <Icon
+                  aria-hidden="true"
+                  className={cn(NOTIFICATION_CHANNEL_ICON_CLASS, getNotificationProviderIconClass(provider))}
+                />
                 <CardTitle className={NOTIFICATION_CHANNEL_DETAIL_TITLE_CLASS}>{providerTitle}</CardTitle>
                 <Badge size="compact" variant={isExpanded ? "success" : "outline"}>
                   {isExpanded ? t("status.enabled") : t("status.disabled")}
@@ -131,23 +130,29 @@ function NotificationDestinationEditorLoadingState({
             ) : null}
             <div className={NOTIFICATION_CREDENTIAL_FIELD_CLASS}>
               <Label>{t("destination.credentialLabel")}</Label>
-              <div className={NOTIFICATION_CREDENTIAL_INPUT_SHELL_CLASS}>
-                <Input
-                  size="sm"
-                  className={NOTIFICATION_CREDENTIAL_INPUT_CLASS}
-                  disabled
-                  placeholder={t(`${provider}.credentialPlaceholder`)}
-                  aria-label={t("destination.credentialLabel")}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className={NOTIFICATION_CREDENTIAL_REVEAL_ACTION_CLASS}
-                  aria-label={t("destination.showCredential")}
-                  disabled
-                >
-                  <IconEye className="size-4" />
+              <div className={NOTIFICATION_CREDENTIAL_ROW_CLASS}>
+                <div className={NOTIFICATION_CREDENTIAL_INPUT_SHELL_CLASS}>
+                  <Input
+                    size="sm"
+                    className={NOTIFICATION_CREDENTIAL_INPUT_CLASS}
+                    disabled
+                    placeholder={t(`${provider}.credentialPlaceholder`)}
+                    aria-label={t("destination.credentialLabel")}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className={NOTIFICATION_CREDENTIAL_REVEAL_ACTION_CLASS}
+                    aria-label={t("destination.showCredential")}
+                    disabled
+                  >
+                    <IconEye className="size-4" />
+                  </Button>
+                </div>
+                <Button type="button" variant="outline" size="sm" disabled>
+                  <IconPlayerPlay className="size-4" />
+                  {t("test.action")}
                 </Button>
               </div>
               <p className={textRole.helperText}>{t("destination.credentialHelp")}</p>
@@ -165,12 +170,6 @@ function NotificationDestinationEditorLoadingState({
                   </div>
                 ))}
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button type="button" variant="outline" disabled>
-                <IconPlayerPlay className="size-4" />
-                {t("test.action")}
-              </Button>
             </div>
           </CardContent>
         </CollapsibleContent>

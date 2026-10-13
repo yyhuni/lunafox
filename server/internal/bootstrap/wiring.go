@@ -116,6 +116,7 @@ type deps struct {
 	hostPortHandler                *hostporthandler.HostPortHandler
 	screenshotHandler              *screenshothandler.ScreenshotHandler
 	globalAssetSearchHandler       *searchhandler.GlobalAssetSearchHandler
+	globalAssetExportHandler       *searchhandler.GlobalAssetExportHandler
 	assetStatisticsHandler         *assethandler.AssetStatisticsHandler
 	vulnerabilityHandler           *securityhandler.VulnerabilityHandler
 	scanHandler                    *scanhandler.ScanHandler
@@ -267,6 +268,7 @@ type assetModuleWiring struct {
 	hostPortHandler          *hostporthandler.HostPortHandler
 	screenshotHandler        *screenshothandler.ScreenshotHandler
 	globalAssetSearchHandler *searchhandler.GlobalAssetSearchHandler
+	globalAssetExportHandler *searchhandler.GlobalAssetExportHandler
 	assetStatisticsHandler   *assethandler.AssetStatisticsHandler
 
 	websiteSvc    *assetservice.WebsiteFacade
@@ -371,7 +373,7 @@ func buildDependencies(infra *infra, cfg *config.Config) (*deps, error) {
 	if err != nil {
 		return nil, fmt.Errorf("wire blacklist module: %w", err)
 	}
-	asset := wireAssetModule(repos)
+	asset := wireAssetModule(repos, infra, identity.tokenVersionReader)
 	fingerprint, err := wireFingerprintModule(repos, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("wire fingerprint module: %w", err)
@@ -547,6 +549,7 @@ func buildDependencies(infra *infra, cfg *config.Config) (*deps, error) {
 		hostPortHandler:                asset.hostPortHandler,
 		screenshotHandler:              asset.screenshotHandler,
 		globalAssetSearchHandler:       asset.globalAssetSearchHandler,
+		globalAssetExportHandler:       asset.globalAssetExportHandler,
 		assetStatisticsHandler:         asset.assetStatisticsHandler,
 		vulnerabilityHandler:           security.vulnerabilityHandler,
 		scanHandler:                    scan.scanHandler,
@@ -755,7 +758,7 @@ func wireBlacklistModule(repos *repositoryBundle) (blacklistModuleHandlers, erro
 	return blacklistModuleHandlers{blacklistPolicyHandler: policyHandler, blacklistPolicyService: policyService}, nil
 }
 
-func wireAssetModule(repos *repositoryBundle) assetModuleWiring {
+func wireAssetModule(repos *repositoryBundle, infra *infra, tokenVersions auth.TokenVersionReader) assetModuleWiring {
 	assetTargetLookup := assetwiring.NewAssetTargetLookupAdapter(repos.targetRepo)
 	assetWebsiteStore := assetwiring.NewAssetWebsiteStoreAdapter(repos.websiteRepo)
 	assetSubdomainStore := assetwiring.NewAssetSubdomainStoreAdapter(repos.subdomainRepo)
@@ -766,7 +769,11 @@ func wireAssetModule(repos *repositoryBundle) assetModuleWiring {
 	assetGlobalWebsiteSearchStore := assetwiring.NewAssetGlobalWebsiteSearchStoreAdapter(repos.websiteRepo)
 	assetGlobalEndpointSearchStore := assetwiring.NewAssetGlobalEndpointSearchStoreAdapter(repos.endpointRepo)
 	assetStatisticsStore := assetwiring.NewAssetStatisticsStoreAdapter(repos.assetStatisticsRepo)
-	globalAssetSearchSvc := assetservice.NewGlobalAssetSearchService(assetGlobalWebsiteSearchStore, assetGlobalEndpointSearchStore)
+	globalAssetSearchSvc := assetservice.NewGlobalAssetSearchService(assetGlobalWebsiteSearchStore, assetGlobalEndpointSearchStore, assetScreenshotStore)
+	grantStore := assetwiring.NewAssetGlobalExportGrantStoreAdapter(assetrepo.NewGlobalAssetExportGrantStore(infra.redisClient))
+	grantService := assetservice.NewGlobalAssetExportService(grantStore)
+	exportSnapshotStore := assetwiring.NewAssetGlobalExportSnapshotStoreAdapter(assetrepo.NewGlobalAssetExportSnapshotStore(infra.db))
+	exportRunner := assetservice.NewGlobalAssetExportServiceRunner(exportSnapshotStore)
 	assetStatisticsSvc := assetservice.NewAssetStatisticsQueryService(assetStatisticsStore, time.Now)
 
 	websiteSvc := assetservice.NewWebsiteFacade(
@@ -802,6 +809,7 @@ func wireAssetModule(repos *repositoryBundle) assetModuleWiring {
 		hostPortHandler:          hostporthandler.NewHostPortHandler(hostPortSvc),
 		screenshotHandler:        screenshothandler.NewScreenshotHandler(screenshotSvc),
 		globalAssetSearchHandler: searchhandler.NewGlobalAssetSearchHandler(globalAssetSearchSvc),
+		globalAssetExportHandler: searchhandler.NewGlobalAssetExportHandler(grantService, exportRunner, tokenVersions),
 		assetStatisticsHandler:   assethandler.NewAssetStatisticsHandler(assetStatisticsSvc),
 		websiteSvc:               websiteSvc,
 		subdomainSvc:             subdomainSvc,

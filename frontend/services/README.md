@@ -12,6 +12,8 @@ For overall placement rules, read `frontend/README.md` first. This file defines 
 - backend route and payload ownership
 - blob export requests
 - backend-owned download URL builders
+- global asset full-export grant issuance through `POST /assets:export`; the
+  returned one-use URL is handed to the browser for native streaming download
 - response shaping that is still transport-adjacent
 - strict parsing of submitted Workflow configuration objects; malformed or
   non-object configuration must fail instead of being replaced with `{}`.

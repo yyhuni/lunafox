@@ -73,7 +73,7 @@ func globalSearchWebsiteResponse(website assetdomain.Website) dto.WebsiteRespons
 	if tech == nil {
 		tech = []string{}
 	}
-	return dto.WebsiteResponse{
+	output := dto.WebsiteResponse{
 		ID:              website.ID,
 		Name:            httpdto.WebsiteName(website.TargetID, website.ID),
 		URL:             website.URL,
@@ -90,6 +90,17 @@ func globalSearchWebsiteResponse(website assetdomain.Website) dto.WebsiteRespons
 		ResponseHeaders: website.ResponseHeaders,
 		CreatedAt:       timeutil.ToUTC(website.CreatedAt),
 	}
+	if website.Screenshot != nil {
+		output.Screenshot = &dto.WebsiteScreenshotSummary{
+			ID:         website.Screenshot.ID,
+			Name:       httpdto.ScreenshotName(website.TargetID, website.Screenshot.ID),
+			URL:        website.Screenshot.URL,
+			StatusCode: website.Screenshot.StatusCode,
+			CreatedAt:  timeutil.ToUTC(website.Screenshot.CreatedAt),
+			UpdatedAt:  timeutil.ToUTC(website.Screenshot.UpdatedAt),
+		}
+	}
+	return output
 }
 
 func globalSearchEndpointResponse(endpoint assetdomain.Endpoint) dto.EndpointResponse {

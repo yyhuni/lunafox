@@ -38,6 +38,24 @@ type globalAssetSearchEndpointStoreStub struct {
 	totalSizeCapped bool
 }
 
+type globalAssetSearchScreenshotStoreStub struct {
+	items     []assetdomain.Screenshot
+	err       error
+	calls     int
+	targetIDs []int
+	urlGroups [][]string
+}
+
+func (stub *globalAssetSearchScreenshotStoreStub) ListSummariesByTargetAndURLs(targetID int, urls []string) ([]assetdomain.Screenshot, error) {
+	stub.calls++
+	stub.targetIDs = append(stub.targetIDs, targetID)
+	stub.urlGroups = append(stub.urlGroups, append([]string(nil), urls...))
+	if stub.err != nil {
+		return nil, stub.err
+	}
+	return append([]assetdomain.Screenshot(nil), stub.items...), nil
+}
+
 func (stub *globalAssetSearchEndpointStoreStub) SearchGlobalEndpoints(_ context.Context, query GlobalAssetSearchStoreQuery) ([]assetdomain.Endpoint, int64, bool, error) {
 	stub.calls++
 	stub.query = query
@@ -51,7 +69,7 @@ func TestGlobalAssetSearchServiceDefaultsAndSingleTableDispatch(t *testing.T) {
 	now := time.Date(2026, 8, 7, 8, 0, 0, 0, time.UTC)
 	websiteStore := &globalAssetSearchWebsiteStoreStub{items: []assetdomain.Website{{ID: 3, CreatedAt: now}, {ID: 2, CreatedAt: now}, {ID: 1, CreatedAt: now}}}
 	endpointStore := &globalAssetSearchEndpointStoreStub{}
-	service := NewGlobalAssetSearchService(websiteStore, endpointStore)
+	service := NewGlobalAssetSearchService(websiteStore, endpointStore, &globalAssetSearchScreenshotStoreStub{})
 
 	pageSize := 2
 	result, err := service.Search(context.Background(), GlobalAssetSearchInput{Query: "example", AssetType: GlobalAssetSearchAssetTypeWebsite, PageSize: &pageSize})
@@ -69,10 +87,49 @@ func TestGlobalAssetSearchServiceDefaultsAndSingleTableDispatch(t *testing.T) {
 	}
 }
 
+func TestGlobalAssetSearchServiceEnrichesWebsiteScreenshotsByTargetAndURL(t *testing.T) {
+	now := time.Date(2026, 8, 7, 8, 0, 0, 0, time.UTC)
+	status := int16(200)
+	websiteStore := &globalAssetSearchWebsiteStoreStub{items: []assetdomain.Website{
+		{ID: 1, TargetID: 7, URL: "https://one.example.test"},
+		{ID: 2, TargetID: 7, URL: "https://two.example.test"},
+		{ID: 3, TargetID: 8, URL: "https://one.example.test"},
+	}}
+	screenshotStore := &globalAssetSearchScreenshotStoreStub{items: []assetdomain.Screenshot{
+		{ID: 41, TargetID: 7, URL: "https://one.example.test", StatusCode: &status, CreatedAt: now, UpdatedAt: now},
+	}}
+	service := NewGlobalAssetSearchService(websiteStore, &globalAssetSearchEndpointStoreStub{}, screenshotStore)
+
+	result, err := service.Search(context.Background(), GlobalAssetSearchInput{Query: "example", AssetType: GlobalAssetSearchAssetTypeWebsite})
+	if err != nil {
+		t.Fatalf("search: %v", err)
+	}
+	if screenshotStore.calls != 2 {
+		t.Fatalf("expected one screenshot summary query per target, got %d", screenshotStore.calls)
+	}
+	if result.Websites[0].Screenshot == nil || result.Websites[0].Screenshot.ID != 41 {
+		t.Fatalf("expected matching screenshot summary on first website, got %+v", result.Websites[0].Screenshot)
+	}
+	if result.Websites[1].Screenshot != nil || result.Websites[2].Screenshot != nil {
+		t.Fatalf("screenshot summaries must remain scoped to target and URL: %+v", result.Websites)
+	}
+}
+
+func TestGlobalAssetSearchServicePropagatesScreenshotSummaryErrors(t *testing.T) {
+	service := NewGlobalAssetSearchService(
+		&globalAssetSearchWebsiteStoreStub{items: []assetdomain.Website{{ID: 1, TargetID: 7, URL: "https://example.test"}}},
+		&globalAssetSearchEndpointStoreStub{},
+		&globalAssetSearchScreenshotStoreStub{err: errors.New("screenshot lookup failed")},
+	)
+	if _, err := service.Search(context.Background(), GlobalAssetSearchInput{Query: "example", AssetType: GlobalAssetSearchAssetTypeWebsite}); err == nil || err.Error() != "screenshot lookup failed" {
+		t.Fatalf("screenshot lookup errors must not become an empty screenshot state, got %v", err)
+	}
+}
+
 func TestGlobalAssetSearchServiceBindsPageTokenToShapeAndCursor(t *testing.T) {
 	now := time.Date(2026, 8, 7, 8, 0, 0, 0, time.UTC)
 	websiteStore := &globalAssetSearchWebsiteStoreStub{items: []assetdomain.Website{{ID: 3, CreatedAt: now}, {ID: 2, CreatedAt: now}}}
-	service := NewGlobalAssetSearchService(websiteStore, &globalAssetSearchEndpointStoreStub{})
+	service := NewGlobalAssetSearchService(websiteStore, &globalAssetSearchEndpointStoreStub{}, &globalAssetSearchScreenshotStoreStub{})
 
 	pageSize := 1
 	first, err := service.Search(context.Background(), GlobalAssetSearchInput{Query: `host="api"`, AssetType: GlobalAssetSearchAssetTypeWebsite, PageSize: &pageSize})
@@ -106,7 +163,7 @@ func TestGlobalAssetSearchServiceBindsPageTokenToShapeAndCursor(t *testing.T) {
 func TestGlobalAssetSearchPageTokenBindsHasScreenshotPolarity(t *testing.T) {
 	now := time.Date(2026, 8, 7, 8, 0, 0, 0, time.UTC)
 	websiteStore := &globalAssetSearchWebsiteStoreStub{items: []assetdomain.Website{{ID: 3, CreatedAt: now}, {ID: 2, CreatedAt: now}}}
-	service := NewGlobalAssetSearchService(websiteStore, &globalAssetSearchEndpointStoreStub{})
+	service := NewGlobalAssetSearchService(websiteStore, &globalAssetSearchEndpointStoreStub{}, &globalAssetSearchScreenshotStoreStub{})
 
 	pageSize := 1
 	first, err := service.Search(context.Background(), GlobalAssetSearchInput{Query: `hasScreenshot=="true"`, AssetType: GlobalAssetSearchAssetTypeWebsite, PageSize: &pageSize})
@@ -156,7 +213,7 @@ func TestGlobalAssetSearchPageTokenRejectsPreContainsVersion(t *testing.T) {
 func TestGlobalAssetSearchServiceFastFailsBeforeRepository(t *testing.T) {
 	websiteStore := &globalAssetSearchWebsiteStoreStub{}
 	endpointStore := &globalAssetSearchEndpointStoreStub{}
-	service := NewGlobalAssetSearchService(websiteStore, endpointStore)
+	service := NewGlobalAssetSearchService(websiteStore, endpointStore, &globalAssetSearchScreenshotStoreStub{})
 	zero := 0
 	overLimit := 101
 	for _, input := range []GlobalAssetSearchInput{
@@ -176,7 +233,7 @@ func TestGlobalAssetSearchServiceFastFailsBeforeRepository(t *testing.T) {
 }
 
 func TestGlobalAssetSearchServiceMapsRepositoryTimeout(t *testing.T) {
-	service := NewGlobalAssetSearchService(&globalAssetSearchWebsiteStoreStub{err: ErrGlobalAssetSearchTimeout}, &globalAssetSearchEndpointStoreStub{})
+	service := NewGlobalAssetSearchService(&globalAssetSearchWebsiteStoreStub{err: ErrGlobalAssetSearchTimeout}, &globalAssetSearchEndpointStoreStub{}, &globalAssetSearchScreenshotStoreStub{})
 	if _, err := service.Search(context.Background(), GlobalAssetSearchInput{Query: "example", AssetType: GlobalAssetSearchAssetTypeWebsite}); !errors.Is(err, ErrGlobalAssetSearchTimeout) {
 		t.Fatalf("expected timeout sentinel, got %v", err)
 	}
@@ -185,7 +242,7 @@ func TestGlobalAssetSearchServiceMapsRepositoryTimeout(t *testing.T) {
 func TestGlobalAssetSearchServicePassesThroughCappedTotal(t *testing.T) {
 	websiteStore := &globalAssetSearchWebsiteStoreStub{totalSize: GlobalAssetSearchTotalSizeCap, totalSizeCapped: true}
 	endpointStore := &globalAssetSearchEndpointStoreStub{totalSize: 7}
-	service := NewGlobalAssetSearchService(websiteStore, endpointStore)
+	service := NewGlobalAssetSearchService(websiteStore, endpointStore, &globalAssetSearchScreenshotStoreStub{})
 
 	capped, err := service.Search(context.Background(), GlobalAssetSearchInput{Query: "example", AssetType: GlobalAssetSearchAssetTypeWebsite})
 	if err != nil {

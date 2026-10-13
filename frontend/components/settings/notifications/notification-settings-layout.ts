@@ -40,15 +40,17 @@ export const NOTIFICATION_CHANNEL_DETAIL_CONTENT_CLASS = "space-y-3 px-4 py-3"
 
 export const NOTIFICATION_SETTINGS_ACTION_BAR_CLASS = "flex shrink-0 items-center justify-end gap-3"
 
-export const NOTIFICATION_CHANNEL_ICON_CLASS = "radius-control flex size-10 shrink-0 items-center justify-center"
+export const NOTIFICATION_CHANNEL_ICON_CLASS = "size-4 shrink-0"
 
 export const NOTIFICATION_CHANNEL_TITLE_CLASS = textRole.sectionTitle
 
 export const NOTIFICATION_CREDENTIAL_FIELD_CLASS = "grid gap-2"
 
-export const NOTIFICATION_CREDENTIAL_INPUT_SHELL_CLASS = "relative"
+export const NOTIFICATION_CREDENTIAL_ROW_CLASS = "flex items-center gap-2"
 
-export const NOTIFICATION_CREDENTIAL_INPUT_CLASS = "pr-12"
+export const NOTIFICATION_CREDENTIAL_INPUT_SHELL_CLASS = "relative flex-1"
+
+export const NOTIFICATION_CREDENTIAL_INPUT_CLASS = "pr-10"
 
 export const NOTIFICATION_CREDENTIAL_REVEAL_ACTION_CLASS = "absolute right-1 top-1/2 -translate-y-1/2"
 

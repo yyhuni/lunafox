@@ -37,9 +37,14 @@ describe("scroll-area contract", () => {
     expect(source).toContain("data-[has-overflow-x]:")
     expect(source).toContain("data-[has-overflow-y]:opacity-100")
     expect(source).toContain("data-[has-overflow-x]:opacity-100")
-    expect(source).toContain("h-full w-2 border-l border-l-transparent p-px")
-    expect(source).toContain("h-2 flex-col border-t border-t-transparent p-px")
-    expect(source).toContain("bg-border/70")
-    expect(source).toContain("group-hover/scrollbar:bg-border")
+    expect(source).toContain(
+      "h-full w-2 bg-transparent hover:bg-(--scrollbar-track) active:bg-(--scrollbar-track) data-[scrolling]:bg-(--scrollbar-track) border-l border-l-transparent p-px"
+    )
+    expect(source).toContain(
+      "h-2 flex-col bg-transparent hover:bg-(--scrollbar-track) active:bg-(--scrollbar-track) data-[scrolling]:bg-(--scrollbar-track) border-t border-t-transparent p-px"
+    )
+    expect(source).toContain("bg-(--scrollbar-thumb)")
+    expect(source).toContain("group-hover/scrollbar:bg-(--scrollbar-thumb-hover)")
+    expect(source).toContain("active:bg-(--scrollbar-thumb-active)")
   })
 })

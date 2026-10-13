@@ -485,6 +485,10 @@
     "error": "Search failed, please try again later",
     "noResults": "No matching assets found",
     "noResultsHint": "Try adjusting your search criteria",
+    "export": {
+      "initiated": "Download started. Check your browser's download manager for progress.",
+      "failed": "The export download could not be started. Try again."
+    },
     "recentSearches": "Recent Searches",
     "removeRecentSearch": "Remove recent search",
     "assetTypes": {
@@ -2148,10 +2152,26 @@
         "saveMetadataTitle": "Save workflow",
         "saveMetadataDescription": "Provide a workflow name and description before saving this composition.",
         "confirmSaveMetadata": "Save workflow",
+        "editWorkflowMetadata": "Edit workflow info",
+        "discardDraftTitle": "Discard unsaved changes?",
+        "discardDraftDescription": "Workflow draft changes are unsaved and will be lost if you leave.",
+        "cancelDiscard": "Continue editing",
+        "confirmDiscard": "Discard changes and leave",
+        "addStageAfter": "Add stage after this stage",
         "unsavedChanges": "Unsaved changes",
         "mockBadge": "Unsaved",
         "engineLibrary": "Engine Library",
         "engineLibraryHint": "Drag engines onto the canvas to start composing",
+        "collapseEngineLibrary": "Collapse engine library",
+        "expandEngineLibrary": "Expand engine library",
+        "closeStageInspector": "Close properties panel",
+        "expandStageInspector": "Open properties panel",
+        "stageInspectorTitle": "Stage Properties",
+        "executionStrategy": "Execution Strategy",
+        "executionModeSerialDesc": "This stage runs 1 engine sequentially.",
+        "executionModeParallelDesc": "This stage runs multiple engines concurrently. Once complete, it advances to the next stage.",
+        "emptyStageHelp": "Drag or click engines from the library to bind them to this stage.",
+        "deleteStageDisabledTip": "A workflow must keep at least one stage.",
         "engineLibraryLoading": "Loading engine library...",
         "engineLibraryError": "Engine library failed to load",
         "engineLibraryEmpty": "No engines available",
@@ -2161,7 +2181,6 @@
         "addParallelStep": "Add parallel step",
         "zoomIn": "Zoom in",
         "zoomOut": "Zoom out",
-        "miniMap": "Canvas overview",
         "autoLayout": "Auto-layout and center",
         "reset": "Reset composition draft",
         "stageDisplayName": "Stage name",
@@ -3192,6 +3211,7 @@
       "stop": {
         "success": "Stop successful",
         "batchSuccess": "Stopped {stoppedCount} scans; skipped {skippedCount} terminal scans",
+        "batchPartial": "Stopped {stoppedCount} scans; skipped {skippedCount} terminal scans; {remainingCount} were not stopped",
         "batchError": "Batch stop failed"
       },
       "delete": {

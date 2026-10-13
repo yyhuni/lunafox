@@ -41,6 +41,7 @@ function toWebSite(result: WebsiteSearchResult): WebSite {
     vhost: result.vhost,
     subdomain: "",
     createdAt: result.createdAt,
+    screenshot: result.screenshot,
   }
 }
 
@@ -88,9 +89,17 @@ export interface SearchWebsitesResultModel {
   onCurrentPageSelectionChange: (checked: boolean) => void
 }
 
+export interface SearchWebsitesResultModelOptions {
+  onExportAll: () => void | Promise<void>
+}
+
 // The page-level export menu and row checkboxes share this state so global search stays the only query control.
-export function useSearchWebsitesResultModel(results: WebsiteSearchResult[]): SearchWebsitesResultModel {
+export function useSearchWebsitesResultModel(
+  results: WebsiteSearchResult[],
+  options: SearchWebsitesResultModelOptions,
+): SearchWebsitesResultModel {
   const tExport = useTranslations("common.export")
+  const { onExportAll } = options
   const [selectedRows, setSelectedRows] = React.useState<WebSite[]>([])
 
   const websites = React.useMemo(() => results.map(toWebSite), [results])
@@ -109,10 +118,10 @@ export function useSearchWebsitesResultModel(results: WebsiteSearchResult[]): Se
 
   const exportOptions = React.useMemo(
     () => buildExportOptions(tExport, {
-      onExportAll: () => exportItems(websites, "all"),
+      onExportAll: () => { void onExportAll() },
       onExportSelected: () => exportItems(selectedRows, "selected"),
     }),
-    [exportItems, selectedRows, tExport, websites]
+    [exportItems, onExportAll, selectedRows, tExport]
   )
 
   const onRowSelectionChange = React.useCallback((website: WebSite, checked: boolean) => {

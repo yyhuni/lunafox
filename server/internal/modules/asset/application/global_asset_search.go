@@ -161,13 +161,14 @@ type GlobalAssetSearchResult struct {
 // GlobalAssetSearchService validates and dispatches current-state search
 // requests without widening existing Target-scoped list services.
 type GlobalAssetSearchService struct {
-	websiteStore  GlobalWebsiteSearchStore
-	endpointStore GlobalEndpointSearchStore
+	websiteStore    GlobalWebsiteSearchStore
+	endpointStore   GlobalEndpointSearchStore
+	screenshotStore WebsiteScreenshotQueryStore
 }
 
 // NewGlobalAssetSearchService creates the single-type global search service.
-func NewGlobalAssetSearchService(websiteStore GlobalWebsiteSearchStore, endpointStore GlobalEndpointSearchStore) *GlobalAssetSearchService {
-	return &GlobalAssetSearchService{websiteStore: websiteStore, endpointStore: endpointStore}
+func NewGlobalAssetSearchService(websiteStore GlobalWebsiteSearchStore, endpointStore GlobalEndpointSearchStore, screenshotStore WebsiteScreenshotQueryStore) *GlobalAssetSearchService {
+	return &GlobalAssetSearchService{websiteStore: websiteStore, endpointStore: endpointStore, screenshotStore: screenshotStore}
 }
 
 // Search validates the request before selecting exactly one backing table.
@@ -207,6 +208,9 @@ func (service *GlobalAssetSearchService) Search(ctx context.Context, input Globa
 		if err != nil {
 			return nil, mapGlobalAssetSearchStoreError(err)
 		}
+		if err := service.enrichGlobalWebsiteScreenshots(ctx, items); err != nil {
+			return nil, err
+		}
 		result.Websites, result.NextPageToken, err = finalizeGlobalWebsiteSearchPage(items, input.AssetType, ast, pageSize)
 		if err != nil {
 			return nil, err
@@ -227,6 +231,45 @@ func (service *GlobalAssetSearchService) Search(ctx context.Context, input Globa
 		result.TotalSize, result.TotalSizeCapped = totalSize, totalSizeCapped
 	}
 	return result, nil
+}
+
+func (service *GlobalAssetSearchService) enrichGlobalWebsiteScreenshots(ctx context.Context, websites []assetdomain.Website) error {
+	if len(websites) == 0 {
+		return nil
+	}
+	if service.screenshotStore == nil {
+		return errors.New("global Website screenshot store unavailable")
+	}
+
+	urlsByTarget := make(map[int][]string)
+	for _, website := range websites {
+		urlsByTarget[website.TargetID] = append(urlsByTarget[website.TargetID], website.URL)
+	}
+
+	screenshotsByTargetURL := make(map[int]map[string]assetdomain.Screenshot, len(urlsByTarget))
+	for targetID, urls := range urlsByTarget {
+		screenshots, err := listWebsiteScreenshotSummaries(ctx, service.screenshotStore, targetID, urls)
+		if err != nil {
+			return err
+		}
+		byURL := make(map[string]assetdomain.Screenshot, len(screenshots))
+		for _, screenshot := range screenshots {
+			if screenshot.TargetID != targetID {
+				continue
+			}
+			byURL[screenshot.URL] = screenshot
+		}
+		screenshotsByTargetURL[targetID] = byURL
+	}
+
+	for index := range websites {
+		screenshot, ok := screenshotsByTargetURL[websites[index].TargetID][websites[index].URL]
+		if !ok {
+			continue
+		}
+		websites[index].Screenshot = &screenshot
+	}
+	return nil
 }
 
 func isGlobalAssetSearchAssetType(assetType GlobalAssetSearchAssetType) bool {

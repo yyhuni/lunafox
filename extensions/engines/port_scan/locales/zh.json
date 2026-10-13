@@ -21,7 +21,7 @@
           "description": "映射到 -c 的 naabu 并发 worker 数。"
         },
         "timeout": {
-          "description": "主动 naabu 进程的运行超时时间，单位为秒。"
+          "description": "每个候选地址的主动扫描运行预算，单位为秒。整次主动 naabu 的截止时间是候选地址数乘以该值。"
         },
         "top-ports": {
           "description": "top 或 top-and-custom 模式下映射到 -top-ports 的 naabu 热门端口预设；允许值为 100、1000 和 full。"
@@ -33,7 +33,7 @@
       "name": "Naabu 被动收集",
       "params": {
         "timeout": {
-          "description": "被动 naabu 进程的运行超时时间，单位为秒。"
+          "description": "每个候选地址的被动收集运行预算，单位为秒。整次被动 naabu 的截止时间是候选地址数乘以该值。"
         }
       }
     }

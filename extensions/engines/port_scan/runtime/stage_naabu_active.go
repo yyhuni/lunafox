@@ -15,7 +15,7 @@ func (r *Runtime) runNaabuActiveStage(ctx context.Context, run *portScanRun) (st
 
 	activeConfig := run.config.NaabuActive
 	outputPath := filepath.Join(run.workDir, "naabu_active.jsonl")
-	command, err := buildNaabuActiveCommand(run.candidatePath, outputPath, activeConfig)
+	command, err := buildNaabuActiveCommand(run.candidatePath, outputPath, run.hostCount, activeConfig)
 	if err != nil {
 		return "", err
 	}

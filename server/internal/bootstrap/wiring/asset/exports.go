@@ -49,3 +49,15 @@ func NewAssetScreenshotStoreAdapter(repo *assetrepo.ScreenshotRepository) asseta
 func NewAssetStatisticsStoreAdapter(repo *assetrepo.AssetStatisticsRepository) assetapp.AssetStatisticsStore {
 	return newAssetStatisticsStoreAdapter(repo)
 }
+
+// NewAssetGlobalExportGrantStoreAdapter exposes the one-time grant port to the
+// asset application service without coupling bootstrap callers to storage.
+func NewAssetGlobalExportGrantStoreAdapter(store *assetrepo.GlobalAssetExportGrantStore) assetapp.GlobalAssetExportGrantStore {
+	return newAssetGlobalExportGrantStoreAdapter(store)
+}
+
+// NewAssetGlobalExportSnapshotStoreAdapter exposes the bounded snapshot port to
+// the asset application runner without widening the repository surface.
+func NewAssetGlobalExportSnapshotStoreAdapter(store *assetrepo.GlobalAssetExportSnapshotStore) assetapp.GlobalAssetExportSnapshotStore {
+	return newAssetGlobalExportSnapshotStoreAdapter(store)
+}

@@ -240,6 +240,16 @@ export function useScanHistoryListViewState({
     setRowSelection({})
   }, [])
 
+  const handleBatchStopCommitted = React.useCallback((completedIds: readonly number[]) => {
+    const completed = new Set(completedIds.map((id) => String(id)))
+    setRowSelection((current) => {
+      const next = Object.fromEntries(
+        Object.entries(current).filter(([id]) => !completed.has(id)),
+      )
+      return Object.keys(next).length === Object.keys(current).length ? current : next
+    })
+  }, [])
+
   const {
     selectedScans: actionSelectedScans,
     deleteDialogOpen,
@@ -275,6 +285,7 @@ export function useScanHistoryListViewState({
   } = useScanHistoryActions({
     selectedScans,
     onSelectionClear: handleSelectionClear,
+    onBatchStopCommitted: handleBatchStopCommitted,
   })
 
   const formatDate = React.useCallback(

@@ -101,7 +101,7 @@ export function ResponseEvidencePanelLoadingState({
         </div>
 
         <TabsContent value="body" className="min-h-0 flex-1">
-          <ScrollArea className="min-h-0 max-h-52 flex-1 bg-muted/30" type="always" contentClassName="min-w-0">
+          <ScrollArea className="min-h-0 max-h-52 flex-1 bg-muted/30" viewportClassName="max-h-52" type="always" contentClassName="min-w-0">
             <div className="p-3"><Skeleton className="h-4 w-full" /></div>
           </ScrollArea>
         </TabsContent>
@@ -143,19 +143,20 @@ export function ResponseEvidencePanel({
           </TabsList>
         </div>
 
+        {/* Bound the viewport too: a max-height on Root alone clips content without creating a scroll range. */}
         <TabsContent value="body" className="min-h-0 flex-1">
-          <ScrollArea className="min-h-0 max-h-52 flex-1 bg-muted/30" type="always" contentClassName="min-w-0">
+          <ScrollArea className="min-h-0 max-h-52 flex-1 bg-muted/30" viewportClassName="max-h-52" type="always" contentClassName="min-w-0">
             <ResponseValue value={responseBody} emptyLabel={labels.emptyLabel} />
           </ScrollArea>
         </TabsContent>
         <TabsContent value="headers" className="min-h-0 flex-1">
-          <ScrollArea className="min-h-0 max-h-52 flex-1 bg-muted/30" type="always" contentClassName="min-w-0">
+          <ScrollArea className="min-h-0 max-h-52 flex-1 bg-muted/30" viewportClassName="max-h-52" type="always" contentClassName="min-w-0">
             <ResponseValue value={responseHeaders} emptyLabel={labels.emptyLabel} />
           </ScrollArea>
         </TabsContent>
         {hasLocation ? (
           <TabsContent value="location" className="min-h-0 flex-1">
-            <ScrollArea className="min-h-0 max-h-52 flex-1 bg-muted/30" type="always" contentClassName="min-w-0">
+            <ScrollArea className="min-h-0 max-h-52 flex-1 bg-muted/30" viewportClassName="max-h-52" type="always" contentClassName="min-w-0">
               <ResponseValue value={location} emptyLabel={labels.emptyLabel} />
             </ScrollArea>
           </TabsContent>

@@ -85,8 +85,10 @@
   --severity-info-background: oklch(from var(--severity-info) l c h / 10%);
   --severity-info-border: oklch(from var(--severity-info) l c h / 22%);
   --severity-info-hover: oklch(from var(--severity-info) l c h / 14%);
-  --scrollbar-thumb: oklch(0.708 0 0 / 30%);
-  --scrollbar-thumb-hover: oklch(0.708 0 0 / 50%);
+  --scrollbar-track: oklch(0.55 0 0 / 7%);
+  --scrollbar-thumb: oklch(0.45 0 0 / 46%);
+  --scrollbar-thumb-hover: oklch(0.38 0 0 / 58%);
+  --scrollbar-thumb-active: oklch(0.3 0 0 / 70%);
   --quick-scan-flash-dim: oklch(0.82 0.12 235 / 32%);
   --quick-scan-flash-bright: oklch(0.82 0.12 235 / 64%);
   --button-glow-strong: oklch(from var(--highlight) l c h / 44%);

@@ -237,6 +237,7 @@ export function useSearchPageState() {
     t,
     searchState,
     query,
+    submittedQuery,
     assetType,
     pageSize,
     recentSearches,

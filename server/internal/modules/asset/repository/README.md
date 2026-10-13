@@ -56,3 +56,22 @@ host/title 单等号使用带字面量转义的 PostgreSQL `ILIKE`，包含值�
 超时设置带到其他请求。URL/host/title 的包含查询依赖对应 trigram GIN，精确查询继续
 依赖原有 B-tree。若 Website detail 的虚拟 Scope 使用既有 URL trigram 缩小候选集，它
 只是内部预筛选，后续 Scope predicate 才是权威判断，不构成公开 URL contains 查询。
+
+### 全局搜索全量导出
+
+导出 repository port 必须独立于分页搜索 port，不得复用 `pageSize + 1`、capped total 或
+客户端结果数组。grant 存储只保留不可逆哈希及用户 ID、token version、assetType、规范化
+typed AST 和过期时间；消费必须原子地保证一次性使用。导出查询在一个
+`REPEATABLE READ READ ONLY` 快照内复用全局搜索谓词和 active Target join，按
+`created_at DESC, id DESC` 顺序通过 domain callback 逐行读取，不向 handler 暴露 `sql.Rows`。
+
+CSV writer 的数据映射必须保持以下固定后端字段契约：
+`id,target_id,url,host,location,title,status_code,content_length,content_type,webserver,tech,response_body,response_headers,vhost,created_at`。
+编码由最终 CSV 字节流决定，包含 BOM、header、转义和换行；同一快照需要先精确预检行数与
+字节数，再执行流写，允许恰好 100000 行/256 MiB，超过则不提交响应。读取或提交失败时
+必须释放 rows、事务和连接，并将结构化失败交给上层中断传输。
+
+每个导出会在整个请求期间占用一个数据库连接，预算为 120 秒并支持 context cancellation。
+当前实现不增加导出专用并发信号量或排队器；多个导出直接竞争现有连接池，连接池耗尽时
+普通请求按既有池行为等待。该连接池竞争风险必须在运行监控和容量评估中保留，不能通过
+静默截断结果来规避。

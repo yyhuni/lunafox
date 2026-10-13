@@ -34,6 +34,7 @@ func TestGlobalAssetSearchHandlerUsesCanonicalQueryAndReturnsCompleteAssetPayloa
 	gin.SetMode(gin.TestMode)
 	now := time.Date(2026, 8, 7, 9, 0, 0, 0, time.UTC)
 	status := 200
+	screenshotStatus := int16(200)
 	stub := &globalAssetSearchHandlerServiceStub{result: &service.GlobalAssetSearchResult{
 		AssetType: service.GlobalAssetSearchAssetTypeWebsite,
 		Websites: []assetdomain.Website{{
@@ -47,6 +48,14 @@ func TestGlobalAssetSearchHandlerUsesCanonicalQueryAndReturnsCompleteAssetPayloa
 			ResponseHeaders: "server: nginx",
 			ResponseBody:    "<html>admin</html>",
 			CreatedAt:       now,
+			Screenshot: &assetdomain.Screenshot{
+				ID:         11,
+				TargetID:   3,
+				URL:        "https://api.example.test/admin",
+				StatusCode: &screenshotStatus,
+				CreatedAt:  now,
+				UpdatedAt:  now,
+			},
 		}},
 		NextPageToken: "next-token",
 		TotalSize:     123,
@@ -61,7 +70,7 @@ func TestGlobalAssetSearchHandlerUsesCanonicalQueryAndReturnsCompleteAssetPayloa
 	}
 	body := recorder.Body.String()
 	for _, expected := range []string{
-		`"results"`, `"nextPageToken":"next-token"`, `"name":"targets/3/websites/7"`, `"tech":["nginx"]`, `"responseHeaders":"server: nginx"`, `"responseBody"`, "admin",
+		`"results"`, `"nextPageToken":"next-token"`, `"name":"targets/3/websites/7"`, `"tech":["nginx"]`, `"responseHeaders":"server: nginx"`, `"responseBody"`, "admin", `"screenshot"`, `"targets/3/screenshots/11"`,
 		`"totalSize":123`, `"totalSizeCapped":false`,
 	} {
 		if !strings.Contains(body, expected) {

@@ -21,7 +21,7 @@
           "description": "Number of concurrent naabu workers mapped to -c."
         },
         "timeout": {
-          "description": "Runtime timeout in seconds for the active naabu process."
+          "description": "Per-candidate runtime budget in seconds for the active naabu process. The process deadline is this value multiplied by the candidate address count."
         },
         "top-ports": {
           "description": "Naabu top ports preset mapped to -top-ports when port-mode is top or top-and-custom; allowed values are 100, 1000, and full."
@@ -33,7 +33,7 @@
       "name": "Naabu Passive",
       "params": {
         "timeout": {
-          "description": "Runtime timeout in seconds for the passive naabu process."
+          "description": "Per-candidate runtime budget in seconds for the passive naabu process. The process deadline is this value multiplied by the candidate address count."
         }
       }
     }

@@ -111,7 +111,7 @@ describe("unified-header contract", () => {
 
     expect(triggerIndex).toBeGreaterThan(-1)
     expect(triggerIndex).toBeLessThan(quickScanIndex)
-    expect(source).toContain('className="size-8"')
+    expect(source).toContain('layout="compactAction"')
     expect(source).not.toContain('className="md:hidden"')
   })
 

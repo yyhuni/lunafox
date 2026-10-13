@@ -3,12 +3,13 @@
 import { useMemo, useCallback, useState } from "react"
 import { useFormatter, useTranslations } from "next-intl"
 import type { ColumnDef, VisibilityState } from "@tanstack/react-table"
-import { IconChevronDown, IconLayoutColumns } from "@/components/icons"
+import { IconChevronDown, IconFileExport, IconLayoutColumns } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { DataTableColumnHeader } from "@/components/shared/data-table/column-header"
@@ -19,6 +20,7 @@ import { EndpointDetailDrawer } from "@/components/endpoints/endpoint-detail-dra
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 import type { EndpointSearchResult } from "@/types/search.types"
+import { ToolbarActionMenu } from "@/components/shared/data-table/menu-owners"
 
 export const DEFAULT_SEARCH_COLUMN_VISIBILITY: VisibilityState = {
   host: false,
@@ -96,6 +98,23 @@ export function SearchEndpointColumnVisibilityMenu({
         })}
       </DropdownMenuContent>
     </DropdownMenu>
+  )
+}
+
+export function SearchEndpointExportMenu({ onExportAll }: { onExportAll: () => void | Promise<void> }) {
+  const tActions = useTranslations("common.actions")
+  const tExport = useTranslations("common.export")
+
+  return (
+    <ToolbarActionMenu
+      label={tActions("export")}
+      icon={<IconFileExport aria-hidden="true" className="size-4" />}
+      buttonSize="default"
+    >
+      <DropdownMenuItem onClick={() => { void onExportAll() }}>
+        {tExport("all")}
+      </DropdownMenuItem>
+    </ToolbarActionMenu>
   )
 }
 

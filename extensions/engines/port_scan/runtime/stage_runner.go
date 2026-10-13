@@ -3,13 +3,15 @@ package portscanruntime
 import (
 	"context"
 	"fmt"
+	"math"
+	"time"
 )
 
 func executeNaabuStage(ctx context.Context, run *portScanRun, stageLabel, stageName, description string, command naabuCommand) error {
 	if run == nil || run.progress == nil || run.executor == nil {
 		return fmt.Errorf("port scan runtime dependencies are required")
 	}
-	if err := run.progress.Report(ctx, fmt.Sprintf("start stage %s %s: %s hosts=%d", stageLabel, stageName, description, run.hostCount)); err != nil {
+	if err := run.progress.Report(ctx, fmt.Sprintf("start stage %s %s: %s hosts=%d perHostTimeout=%ds deadline=%ds", stageLabel, stageName, description, run.hostCount, perHostTimeoutSeconds(command, run.hostCount), int64(command.timeout/time.Second))); err != nil {
 		return err
 	}
 	if err := run.progress.Report(ctx, fmt.Sprintf(
@@ -28,4 +30,11 @@ func executeNaabuStage(ctx context.Context, run *portScanRun, stageLabel, stageN
 		return err
 	}
 	return nil
+}
+
+func perHostTimeoutSeconds(command naabuCommand, hostCount uint64) int64 {
+	if hostCount == 0 || hostCount > uint64(math.MaxInt64) {
+		return 0
+	}
+	return int64(command.timeout/time.Second) / int64(hostCount)
 }

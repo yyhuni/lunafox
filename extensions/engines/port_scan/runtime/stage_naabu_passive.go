@@ -15,7 +15,7 @@ func (r *Runtime) runNaabuPassiveStage(ctx context.Context, run *portScanRun) (s
 
 	passiveConfig := run.config.NaabuPassive
 	outputPath := filepath.Join(run.workDir, "naabu_passive.jsonl")
-	command, err := buildNaabuPassiveCommand(run.candidatePath, outputPath, passiveConfig)
+	command, err := buildNaabuPassiveCommand(run.candidatePath, outputPath, run.hostCount, passiveConfig)
 	if err != nil {
 		return "", err
 	}

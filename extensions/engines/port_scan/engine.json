@@ -17,7 +17,7 @@
           {
             "key": "timeout",
             "type": "integer",
-            "default": 14400,
+            "default": 3600,
             "unit": "seconds",
             "minimum": 60
           },

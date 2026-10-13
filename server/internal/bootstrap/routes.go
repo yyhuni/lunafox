@@ -50,6 +50,7 @@ func registerRoutes(engine *gin.Engine, d *deps, jwtMiddleware gin.HandlerFunc) 
 		d.directoryHandler,
 		d.hostPortHandler,
 		d.globalAssetSearchHandler,
+		d.globalAssetExportHandler,
 		d.assetStatisticsHandler,
 		d.endpointSnapshotHandler,
 		d.hostPortSnapshotHandler,

@@ -87,6 +87,8 @@ describe("workflow-composition-canvas contract", () => {
     expect(source).toContain("aria-label={saveLabel}")
     expect(styles).toContain("right: 12rem;")
     expect(styles).toContain("right: 7rem;")
+    expect(styles).toContain(".canvasHeader[data-inspector-open=\"true\"]")
+    expect(styles).toContain("pointer-events: none;")
     expect(styles).toContain("text-overflow: ellipsis;")
     expect(styles).toContain("white-space: nowrap;")
     expect(styles).toContain(".canvasActionLabel")
@@ -208,10 +210,12 @@ describe("workflow-composition-canvas contract", () => {
     expect(source).toContain("<WorkflowDeleteStageDialog")
     expect(source).toContain('t("canvas.deleteStage")')
     expect(source).toContain('variant="destructive"')
-    expect(source).toContain('variant="surface" layout="fullWidth"')
-    expect(source).toContain('variant="destructive" layout="fullWidth"')
+    expect(source).toContain('variant="surface" size="sm" layout="fullWidth"')
+    expect(source).toContain('variant="outline"')
+    expect(source).toContain('text-destructive')
     expect(source).not.toContain('variant="surface" className="w-full"')
     expect(source).not.toContain('variant="destructive" className="w-full"')
+    expect(source).not.toContain('variant="outline" className="w-full"')
     expect(source).toContain("canDeleteStage={draftStages.length > 1}")
     expect(source).toContain("const deleteStage")
     expect(source).toContain("const [stageInspectorOpen, setStageInspectorOpen]")
@@ -223,7 +227,7 @@ describe("workflow-composition-canvas contract", () => {
     expect(source).toContain('data-empty-stage-placeholder')
     expect(source).toContain('t("canvas.emptyStageDropHint")')
     expect(source).toContain("data.stage.steps.length === 0")
-    expect(source).toContain("flex h-12 items-center justify-center gap-2 border border-dashed px-3 py-2")
+    expect(source).toContain("flex h-9 items-center justify-center gap-1.5 border border-dashed px-2.5 py-1.5")
     expect(source).toContain('lines.push("    steps: []")')
   })
 
@@ -263,13 +267,16 @@ describe("workflow-composition-canvas contract", () => {
     expect(libraryBlock).not.toContain("estimateKey")
   })
 
-  it("keeps the engine library free of category filter tags", () => {
+  it("keeps the engine library free of category filter tags and artificial classification headers", () => {
     const libraryStart = source.indexOf("function EngineLibraryPanel")
     const libraryEnd = source.indexOf("function WorkflowYamlDialog")
     const libraryBlock = source.slice(libraryStart, libraryEnd)
 
     expect(source).not.toContain("CATEGORY_FILTERS")
     expect(source).not.toContain("setCategory")
+    expect(source).not.toContain("getEngineCategory")
+    expect(source).not.toContain("groupedCategories")
+    expect(source).not.toContain("CATEGORY_ORDER")
     expect(libraryBlock).not.toContain("onCategoryChange")
     expect(libraryBlock).not.toContain("matchesCategory")
     expect(libraryBlock).not.toContain('variant={category === item ? "default" : "surface"}')
@@ -288,31 +295,28 @@ describe("workflow-composition-canvas contract", () => {
     expect(source).toContain("engines={engines}")
   })
 
-  it("keeps the engine library as a floating tool panel with internal scrolling", () => {
+  it("keeps the engine library as a docked sidebar panel with internal scrolling", () => {
     const libraryStart = source.indexOf("function EngineLibraryPanel")
     const libraryEnd = source.indexOf("function WorkflowYamlDialog")
     const libraryBlock = source.slice(libraryStart, libraryEnd)
 
     expect(libraryBlock).toContain("flex min-h-0 flex-col overflow-hidden")
-    expect(libraryBlock).toContain("styles.floatingEnginePanel")
-    expect(libraryBlock).toContain("min-h-0 flex-1 space-y-2 overflow-y-auto")
-    expect(styles).toContain(".floatingEnginePanel")
-    expect(styles).toContain("position: absolute;")
-    expect(styles).toContain("height: min(50rem, calc(100dvh - 6.5rem));")
-    expect(styles).toContain("top: 50%;")
-    expect(styles).toContain("transform: translateY(-50%);")
+    expect(libraryBlock).toContain("styles.dockedEnginePanel")
+    expect(libraryBlock).toContain("min-h-0 flex-1")
+    expect(libraryBlock).toContain("overflow-y-auto")
+    expect(styles).toContain(".dockedEnginePanel")
+    expect(styles).toContain("border-right: 1px solid var(--workflow-canvas-panel-border);")
   })
 
-  it("keeps the engine library permanently visible", () => {
+  it("allows the engine library to be collapsed or expanded", () => {
     const libraryStart = source.indexOf("function EngineLibraryPanel")
     const libraryEnd = source.indexOf("function WorkflowYamlDialog")
     const libraryBlock = source.slice(libraryStart, libraryEnd)
 
     expect(libraryBlock).toContain('data-engine-library="workflow-builder"')
-    expect(source).not.toContain("engineLibraryCollapsed")
-    expect(source).not.toContain("collapseEngineLibrary")
-    expect(source).not.toContain("expandEngineLibrary")
-    expect(styles).not.toContain(".engineLibraryToggle")
+    expect(source).toContain("isLibraryCollapsed")
+    expect(source).toContain("onCollapse")
+    expect(source).toContain("onExpandLibrary")
   })
 
   it("keeps the whole builder as a full-height floating canvas", () => {
@@ -324,9 +328,9 @@ describe("workflow-composition-canvas contract", () => {
     expect(source).not.toContain("styles.canvasPanel")
   })
 
-  it("keeps the canvas navigation map compact", () => {
-    expect(source).toContain("<MiniMap")
-    expect(source).toContain("style={{ height: 120 }}")
+  it("does not render a redundant canvas navigation minimap", () => {
+    expect(source).not.toContain("<MiniMap")
+    expect(styles).not.toContain(".canvasMiniMap")
   })
 
   it("allows panning the React Flow canvas", () => {
@@ -369,26 +373,23 @@ describe("workflow-composition-canvas contract", () => {
     expect(styles).not.toContain("transform: translateX(-50%);")
   })
 
-  it("centers automatic layouts in the desktop canvas area not obscured by the engine library", () => {
+  it("centers automatic layouts in the dedicated canvas area", () => {
     const actionsStart = source.indexOf("function WorkflowCanvasActions")
     const actionsEnd = source.indexOf("function EngineLibraryPanel")
     const actionsBlock = source.slice(actionsStart, actionsEnd)
 
-    expect(source).toContain("WORKFLOW_ENGINE_LIBRARY_OCCLUSION_PX = 304")
     expect(actionsBlock).toContain("getNodes")
     expect(actionsBlock).toContain("getNodesBounds")
     expect(actionsBlock).toContain("setViewport")
-    expect(actionsBlock).toContain('window.matchMedia("(min-width: 768px)").matches')
-    expect(actionsBlock).toContain("canvasWidth - libraryOcclusion")
-    expect(actionsBlock).toContain("viewport.x += libraryOcclusion")
+    expect(actionsBlock).toContain("getViewportForBounds")
     expect(actionsBlock).toContain("setViewport(viewport, { duration: 200 })")
     expect(actionsBlock).not.toContain("fitView(")
   })
 
   it("keeps React Flow background dots visible in dark themes", () => {
-    expect(source).toContain("<Background gap={24} size={1.5} />")
-    expect(styles).toContain("--xy-background-pattern-color: color-mix(in oklab, var(--muted-foreground) 58%, transparent);")
-    expect(styles).toContain("--xy-background-pattern-color: color-mix(in oklab, white 48%, transparent);")
+    expect(source).toContain("<Background gap={24} size={1} />")
+    expect(styles).toContain("--xy-background-pattern-color: color-mix(in oklab, var(--muted-foreground) 24%, transparent);")
+    expect(styles).toContain("--xy-background-pattern-color: color-mix(in oklab, white 24%, transparent);")
     expect(styles).toContain(".canvasShell :global(.react-flow__background-pattern.dots)")
     expect(styles).toContain("fill: var(--xy-background-pattern-color);")
     expect(styles).not.toContain("--xy-background-pattern-color: var(--border);")
@@ -398,15 +399,14 @@ describe("workflow-composition-canvas contract", () => {
     expect(source).toContain("styles.stageNode")
     expect(source).toContain("styles.stepRow")
     expect(source).toContain("styles.engineButton")
-    expect(source).toContain("styles.floatingEnginePanel")
+    expect(source).toContain("styles.dockedEnginePanel")
     expect(styles).toContain("--workflow-canvas-background")
     expect(styles).toContain(".workbench")
     expect(styles).toContain("--workflow-stage-background")
     expect(styles).toContain("--workflow-step-background")
     expect(styles).toContain("--workflow-engine-background")
     expect(styles).toContain("--workflow-stage-selected-border")
-    expect(styles).toContain(".floatingEnginePanel")
-    expect(styles).toContain("border-radius: var(--radius-overlay);")
+    expect(styles).toContain(".dockedEnginePanel")
     expect(styles).not.toContain("bg-primary/5")
   })
 
