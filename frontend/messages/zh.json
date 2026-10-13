@@ -1277,6 +1277,11 @@
       "ip": "IP",
       "cidr": "CIDR"
     },
+    "scannedFilter": {
+      "title": "是否已扫描",
+      "scanned": "已扫描",
+      "notScanned": "未扫描"
+    },
     "dialog": {
       "addTitle": "添加目标",
       "addDesc": "输入目标，可选关联一个或多个组织。未选择组织时将保存为未关联目标。",

@@ -1277,6 +1277,11 @@
       "ip": "IP",
       "cidr": "CIDR"
     },
+    "scannedFilter": {
+      "title": "Scanned",
+      "scanned": "Scanned",
+      "notScanned": "Not scanned"
+    },
     "dialog": {
       "addTitle": "Add Target",
       "addDesc": "Enter targets and optionally link one or more organizations. Targets stay unlinked when no organization is selected.",

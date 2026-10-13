@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { getDataTableSkeletonRowCount } from "@/components/shared/loading/data-table-skeleton"
 import { getLoadingOwnerAttributes } from "@/components/shared/loading/loading-owner"
-import { InteractionLoadingDialog } from "@/components/shared/loading/interaction-loading-dialog"
 import { ScheduledScanDataTable } from "@/components/scan/scheduled/scheduled-scan-data-table"
 import {
   createScheduledScanColumns,
@@ -252,17 +251,6 @@ export function TargetSettingsDialogs({
 
   return (
     <>
-      <InteractionLoadingDialog
-        open={state.pendingInteraction === "edit-dialog"}
-        onOpenChange={(open) => {
-          if (!open) {
-            state.cancelPendingInteraction("edit-dialog")
-          }
-        }}
-        owner="target-settings-edit-dialog-loading"
-        title={state.tScan("editTask")}
-      />
-
       {shouldMountCreateDialog ? (
         <CreateScheduledScanDialog
           open={state.createDialogOpen}
@@ -278,6 +266,7 @@ export function TargetSettingsDialogs({
           open={state.editDialogOpen}
           onOpenChange={state.setEditDialogOpen}
           scheduledScan={state.editingScheduledScan}
+          initialTab={state.editDialogInitialTab}
           onSuccess={() => state.refetch()}
         />
       ) : null}

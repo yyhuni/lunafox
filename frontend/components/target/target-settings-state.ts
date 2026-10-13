@@ -10,6 +10,7 @@ import {
 import { useSearchState } from "@/hooks/_shared/use-search-state"
 import { buildPaginationInfo } from "@/hooks/_shared/pagination"
 import { createScheduledScanColumns } from "@/components/scan/scheduled/scheduled-scan-columns"
+import type { ScheduledScanEditTab } from "@/components/scan/scheduled/edit-scheduled-scan-dialog"
 import { useInteractionOpenLoader } from "@/components/shared/loading/use-interaction-open-loader"
 
 import type { ScheduledScan } from "@/types/scheduled-scan.types"
@@ -23,17 +24,8 @@ const loadCreateScheduledScanDialog = () =>
     (mod) => mod.CreateScheduledScanDialog
   )
 
-const loadEditScheduledScanDialog = () =>
-  import("@/components/scan/scheduled/edit-scheduled-scan-dialog").then(
-    (mod) => mod.EditScheduledScanDialog
-  )
-
 export function useTargetSettingsState({ targetId }: TargetSettingsStateOptions) {
-  const {
-    pendingInteraction,
-    cancelPending,
-    openAfterLoad,
-  } = useInteractionOpenLoader<"create-dialog" | "edit-dialog">()
+  const { openAfterLoad } = useInteractionOpenLoader<"create-dialog">()
   const t = useTranslations("pages.targetDetail.settings")
   const tColumns = useTranslations("columns")
   const tCommon = useTranslations("common")
@@ -43,6 +35,7 @@ export function useTargetSettingsState({ targetId }: TargetSettingsStateOptions)
 
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false)
   const [editDialogOpen, setEditDialogOpen] = React.useState(false)
+  const [editDialogInitialTab, setEditDialogInitialTab] = React.useState<ScheduledScanEditTab>("basic")
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
   const [editingScheduledScan, setEditingScheduledScan] = React.useState<ScheduledScan | null>(null)
   const [deletingScheduledScan, setDeletingScheduledScan] = React.useState<ScheduledScan | null>(null)
@@ -150,12 +143,11 @@ export function useTargetSettingsState({ targetId }: TargetSettingsStateOptions)
     [locale]
   )
 
-  const handleEdit = React.useCallback((scan: ScheduledScan) => {
+  const handleEdit = React.useCallback((scan: ScheduledScan, tab: ScheduledScanEditTab = "basic") => {
     setEditingScheduledScan(scan)
-    void openAfterLoad("edit-dialog", loadEditScheduledScanDialog, () => {
-      setEditDialogOpen(true)
-    })
-  }, [openAfterLoad])
+    setEditDialogInitialTab(tab)
+    setEditDialogOpen(true)
+  }, [])
 
   const handleDelete = React.useCallback((scan: ScheduledScan) => {
     setDeletingScheduledScan(scan)
@@ -228,8 +220,7 @@ export function useTargetSettingsState({ targetId }: TargetSettingsStateOptions)
     setCreateDialogOpen,
     editDialogOpen,
     setEditDialogOpen,
-    pendingInteraction,
-    cancelPendingInteraction: cancelPending,
+    editDialogInitialTab,
     deleteDialogOpen,
     setDeleteDialogOpen,
     editingScheduledScan,

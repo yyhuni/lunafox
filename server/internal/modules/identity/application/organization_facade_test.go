@@ -478,6 +478,15 @@ func TestOrganizationFacade(t *testing.T) {
 			t.Fatalf("expected ErrOrganizationNotFound, got %v", err)
 		}
 
+		store.lastTargetFilter = ""
+		_, _, err = facade.ListOrganizationTargets(5, &dto.TargetListQuery{Filter: `scanned="true"`})
+		if !errors.Is(err, ErrUnsupportedOrganizationFilter) {
+			t.Fatalf("expected unsupported scanned filter, got %v", err)
+		}
+		if store.lastTargetFilter != "" {
+			t.Fatalf("invalid scanned filter must fail before target listing, got filter %q", store.lastTargetFilter)
+		}
+
 		err = facade.LinkOrganizationTargets(5, []int{11, 12})
 		if err != nil {
 			t.Fatalf("link organization targets failed: %v", err)

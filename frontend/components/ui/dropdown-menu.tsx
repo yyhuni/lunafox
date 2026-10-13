@@ -18,9 +18,9 @@ type MenuPositionProps = Pick<
 type DropdownMenuContentProps = React.ComponentProps<typeof DropdownMenuPrimitive.Popup> & MenuPositionProps & {
   width?: "default" | "content-fit" | "compact"
   /**
-   * Compact density matches the 12px inline trigger tier (table headers,
-   * chip-like controls) so the opened menu does not visually jump a size
-   * above the element that opened it.
+   * Compact density keeps the shared menu-row height and drops only the label
+   * to the 12px inline trigger tier (table headers) so the opened menu does
+   * not jump a text size above the element that opened it.
    */
   density?: "default" | "compact"
   container?: React.ComponentProps<typeof DropdownMenuPrimitive.Portal>["container"]

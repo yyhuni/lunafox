@@ -17,6 +17,8 @@ describe("all-targets-detail-view-sections contract", () => {
   it("routes initial target loading through the real targets table owner", () => {
     expect(source).toContain("state: AllTargetsDetailViewState")
     expect(source).toContain("<TargetsDataTable")
+    expect(source.match(/scannedFilter=\{state\.scannedFilter\}/g)).toHaveLength(2)
+    expect(source.match(/onScannedFilterChange=\{state\.handleScannedFilterChange\}/g)).toHaveLength(2)
     expect(source).toContain("loading")
     expect(source).toContain("loadingRowCount={rowCount}")
     expect(source.match(/stableSurfaceRowCount={rowCount}/g)).toHaveLength(1)

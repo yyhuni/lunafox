@@ -90,9 +90,13 @@ describe("organization-detail-view-sections contract", () => {
     expect(source).toContain("state.organizationSummary.scheduledTotal")
   })
 
-  it("does not show a dialog-shaped loading state before opening the create scheduled scan sheet", () => {
+  it("opens scheduled scan sidebars directly without a dialog-shaped loading shell", () => {
+    expect(source).not.toContain("InteractionLoadingDialog")
     expect(source).not.toContain('owner="organization-detail-create-dialog-loading"')
-    expect(source).toContain('owner="organization-detail-edit-dialog-loading"')
+    expect(source).not.toContain('owner="organization-detail-edit-dialog-loading"')
+    expect(source).toContain("shouldMountCreateScheduledScanDialog")
+    expect(source).toContain("shouldMountEditScheduledScanDialog")
+    expect(source).toContain("initialTab={state.scheduledScanEditInitialTab}")
   })
 
   it("uses shared structural action placeholders for non-table loading actions", () => {
@@ -118,6 +122,8 @@ describe("organization-detail-view-sections contract", () => {
     expect(source).toContain("<TargetsDataTable")
     expect(source).toContain("columns={state.targetColumns}")
     expect(source).toContain("typeFilter={state.typeFilter}")
+    expect(source.match(/scannedFilter=\{state\.scannedFilter\}/g)).toHaveLength(2)
+    expect(source.match(/onScannedFilterChange=\{state\.handleScannedFilterChange\}/g)).toHaveLength(2)
     expect(source).toContain("const targetStableSurfaceRowCount = getDataTableSkeletonRowCount(state.pagination.pageSize)")
     expect(source).toContain("loadingRowCount={targetStableSurfaceRowCount}")
     expect(source.match(/stableSurfaceRowCount=\{targetStableSurfaceRowCount\}/g)).toHaveLength(2)

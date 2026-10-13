@@ -21,6 +21,7 @@ import {
 } from "@/components/shared/data-table/business-list-query"
 import { getDateLocale } from "@/lib/date-utils"
 import { createScheduledScanColumns } from "@/components/scan/scheduled/scheduled-scan-columns"
+import type { ScheduledScanEditTab } from "@/components/scan/scheduled/edit-scheduled-scan-dialog"
 import { useInteractionOpenLoader } from "@/components/shared/loading/use-interaction-open-loader"
 import { createTargetColumns } from "./targets/targets-columns"
 
@@ -40,6 +41,7 @@ export type OrganizationDetailTab = "targets" | "scheduled"
 export type OrganizationScheduledStatusFilter = Array<"enabled" | "paused">
 export type OrganizationScheduledWorkflowFilter = string[]
 export type OrganizationTargetTypeFilter = TargetType[]
+export type OrganizationTargetScannedFilter = Array<"true" | "false">
 
 function buildTargetTypeFilterQuery(typeFilter: OrganizationTargetTypeFilter): string | undefined {
   if (typeFilter.length <= 1) return undefined
@@ -49,14 +51,42 @@ function buildTargetTypeFilterQuery(typeFilter: OrganizationTargetTypeFilter): s
     .join(" || ")
 }
 
-function combineTargetFilterQuery(searchQuery: string, typeFilter: OrganizationTargetTypeFilter): string | undefined {
+function quoteOrganizationTargetFilterValue(value: string) {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"")
+}
+
+function buildScannedFilterQuery(scannedFilter: OrganizationTargetScannedFilter): string | undefined {
+  const values = Array.from(new Set(scannedFilter))
+  if (values.length === 0) return undefined
+  const predicates = values.map((value) => `scanned=="${value}"`)
+  if (predicates.length === 1) return predicates[0]
+  return `(${predicates.join(" || ")})`
+}
+
+function combineTargetFilterQuery(
+  searchQuery: string,
+  typeFilter: OrganizationTargetTypeFilter,
+  scannedFilter: OrganizationTargetScannedFilter,
+): string | undefined {
   const trimmedSearchQuery = searchQuery.trim()
   const typeFilterQuery = buildTargetTypeFilterQuery(typeFilter)
+  const scannedFilterQuery = buildScannedFilterQuery(scannedFilter)
 
-  if (!typeFilterQuery) return trimmedSearchQuery || undefined
-  if (!trimmedSearchQuery) return typeFilterQuery
+  if (!scannedFilterQuery) {
+    if (!typeFilterQuery) return trimmedSearchQuery || undefined
+    if (!trimmedSearchQuery) return typeFilterQuery
+    return `(${trimmedSearchQuery}) && (${typeFilterQuery})`
+  }
 
-  return `(${trimmedSearchQuery}) && (${typeFilterQuery})`
+  const clauses: string[] = []
+  if (trimmedSearchQuery) {
+    clauses.push(typeFilterQuery
+      ? `(${trimmedSearchQuery})`
+      : `name="${quoteOrganizationTargetFilterValue(trimmedSearchQuery)}"`)
+  }
+  if (typeFilterQuery) clauses.push(`(${typeFilterQuery})`)
+  clauses.push(scannedFilterQuery)
+  return clauses.join(" && ")
 }
 
 const loadCreateScheduledScanDialog = () =>
@@ -64,19 +94,10 @@ const loadCreateScheduledScanDialog = () =>
     (mod) => mod.CreateScheduledScanDialog
   )
 
-const loadEditScheduledScanDialog = () =>
-  import("@/components/scan/scheduled/edit-scheduled-scan-dialog").then(
-    (mod) => mod.EditScheduledScanDialog
-  )
-
 const EMPTY_SCHEDULED_SCANS: ScheduledScan[] = []
 
 export function useOrganizationDetailViewState({ organizationId }: OrganizationDetailViewStateOptions) {
-  const {
-    pendingInteraction,
-    cancelPending,
-    openAfterLoad,
-  } = useInteractionOpenLoader<"create-dialog" | "edit-dialog">()
+  const { openAfterLoad } = useInteractionOpenLoader<"create-dialog">()
   const organizationNumericId = Number.parseInt(organizationId, 10)
   const [activeTab, setActiveTab] = React.useState<OrganizationDetailTab>("targets")
   const [selectedTargets, setSelectedTargets] = React.useState<Target[]>([])
@@ -96,6 +117,8 @@ export function useOrganizationDetailViewState({ organizationId }: OrganizationD
     React.useState<OrganizationScheduledWorkflowFilter>([])
   const [isCreateScheduledScanDialogOpen, setIsCreateScheduledScanDialogOpen] = React.useState(false)
   const [isEditScheduledScanDialogOpen, setIsEditScheduledScanDialogOpen] = React.useState(false)
+  const [scheduledScanEditInitialTab, setScheduledScanEditInitialTab] =
+    React.useState<ScheduledScanEditTab>("basic")
   const [scheduledScanToEdit, setScheduledScanToEdit] = React.useState<ScheduledScan | null>(null)
   const [scheduledScanToDelete, setScheduledScanToDelete] = React.useState<ScheduledScan | null>(null)
   const [scheduledScanDeleteDialogOpen, setScheduledScanDeleteDialogOpen] = React.useState(false)
@@ -198,6 +221,7 @@ export function useOrganizationDetailViewState({ organizationId }: OrganizationD
   const targetPageSize = targetQuery.pageSize
   const searchQuery = targetQuery.search ?? ""
   const typeFilter = (targetQuery.filters.type ?? []) as OrganizationTargetTypeFilter
+  const scannedFilter = (targetQuery.filters.scanned ?? []) as OrganizationTargetScannedFilter
   const pagination = React.useMemo(
     () => ({ pageIndex: targetPage - 1, pageSize: targetPageSize }),
     [targetPage, targetPageSize]
@@ -214,8 +238,15 @@ export function useOrganizationDetailViewState({ organizationId }: OrganizationD
     }))
   }, [resetTargetPaging])
 
+  const handleScannedFilterChange = React.useCallback((value: OrganizationTargetScannedFilter) => {
+    resetTargetPaging()
+    setTargetQuery((current) => applyBusinessListControlChange(current, {
+      filters: { ...current.filters, scanned: value },
+    }))
+  }, [resetTargetPaging])
+
   const typeParam = typeFilter.length === 1 ? typeFilter[0] : undefined
-  const targetFilterParam = combineTargetFilterQuery(searchQuery, typeFilter)
+  const targetFilterParam = combineTargetFilterQuery(searchQuery, typeFilter, scannedFilter)
 
   const unlinkTargets = useUnlinkTargetsFromOrganization()
   const { mutate: toggleScheduledScan } = useToggleScheduledScan()
@@ -238,7 +269,7 @@ export function useOrganizationDetailViewState({ organizationId }: OrganizationD
   } = useOrganizationTargets(organizationNumericId, {
     pageToken: targetQuery.pageToken,
     pageSize: targetPageSize,
-    search: typeFilter.length <= 1 ? searchQuery || undefined : undefined,
+    search: typeFilter.length <= 1 && scannedFilter.length === 0 ? searchQuery || undefined : undefined,
     filter: targetFilterParam,
     type: typeParam,
   })
@@ -541,12 +572,11 @@ export function useOrganizationDetailViewState({ organizationId }: OrganizationD
     })
   }, [openAfterLoad])
 
-  const handleEditScheduledScan = React.useCallback((scan: ScheduledScan) => {
+  const handleEditScheduledScan = React.useCallback((scan: ScheduledScan, tab: ScheduledScanEditTab = "basic") => {
     setScheduledScanToEdit(scan)
-    void openAfterLoad("edit-dialog", loadEditScheduledScanDialog, () => {
-      setIsEditScheduledScanDialogOpen(true)
-    })
-  }, [openAfterLoad])
+    setScheduledScanEditInitialTab(tab)
+    setIsEditScheduledScanDialogOpen(true)
+  }, [])
 
   const handleDeleteScheduledScan = React.useCallback((scan: ScheduledScan) => {
     setScheduledScanToDelete(scan)
@@ -639,6 +669,8 @@ export function useOrganizationDetailViewState({ organizationId }: OrganizationD
     searchQuery,
     typeFilter,
     handleTypeFilterChange,
+    scannedFilter,
+    handleScannedFilterChange,
     selectedTargets,
     setSelectedTargets,
     isAddDialogOpen,
@@ -673,12 +705,11 @@ export function useOrganizationDetailViewState({ organizationId }: OrganizationD
     scheduledWorkflowFilter,
     handleScheduledWorkflowFilterChange,
     scheduledWorkflowOptions,
-    pendingInteraction,
-    cancelPendingInteraction: cancelPending,
     isCreateScheduledScanDialogOpen,
     setIsCreateScheduledScanDialogOpen,
     isEditScheduledScanDialogOpen,
     setIsEditScheduledScanDialogOpen,
+    scheduledScanEditInitialTab,
     scheduledScanToEdit,
     scheduledScanDeleteDialogOpen,
     setScheduledScanDeleteDialogOpen,

@@ -227,11 +227,16 @@ Use these defaults:
   If the dynamic surface or action-local data would otherwise create a visible
   empty beat, the trigger must either:
   - enter a real pending state itself, or
-  - hand off immediately to a local loading owner such as
-    `InteractionLoadingDialog` / `InteractionLoadingDrawer`
+  - hand off immediately to a local loading owner whose shape matches the
+    destination: `InteractionLoadingDialog` only for a real dialog, and
+    `InteractionLoadingDrawer` only for a real detail drawer
+- Do not put `InteractionLoadingDialog` in front of a sheet, `FormDrawer`, or
+  other sidebar, and do not call `openAfterLoad("edit-dialog")` to preload one.
+  A centered dialog skeleton followed by the real sidebar is a double open.
+  Scheduled scan create and edit in `scan/scheduled`, `target/settings`, and
+  `organization/detail` are sidebars: open the real sidebar directly, and keep
+  the column's initial tab (`basic` or `occurrences`).
 - Current audited examples:
-  - scheduled scan create/edit dialogs in `scan/scheduled`,
-    `target/settings`, and `organization/detail`
   - fingerprint add/import dialogs in `tools/fingerprints/*`
   - vulnerability detail dialogs in target/scan detail child routes
   - search vulnerability detail dialog after result-row interaction

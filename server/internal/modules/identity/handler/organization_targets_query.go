@@ -30,6 +30,10 @@ func (h *OrganizationHandler) ListOrganizationTargets(c *gin.Context) {
 			httpdto.NotFound(c, "Organization not found")
 			return
 		}
+		if errors.Is(err, service.ErrUnsupportedOrganizationFilter) {
+			httpdto.BadRequest(c, err.Error())
+			return
+		}
 		httpdto.InternalError(c, "Failed to list targets")
 		return
 	}

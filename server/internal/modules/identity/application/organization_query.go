@@ -216,6 +216,9 @@ func (service *OrganizationQueryService) ListOrganizationTargets(
 	if err != nil {
 		return nil, 0, err
 	}
+	if !scope.ScannedPresenceAllowed(scope.ParseFilter(filter)) {
+		return nil, 0, fmt.Errorf("%w: scanned", ErrUnsupportedOrganizationFilter)
+	}
 	if store, ok := service.store.(OrganizationQueryStoreContext); ok {
 		return store.ListTargetsByOrganizationIDContext(ctx, organizationID, page, pageSize, targetType, filter)
 	}

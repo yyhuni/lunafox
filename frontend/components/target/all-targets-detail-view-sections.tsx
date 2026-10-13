@@ -88,6 +88,8 @@ export function AllTargetsDetailViewLoadingState({
       onSortingChange={state.handleSortingChange}
       typeFilter={state.typeFilter}
       onTypeFilterChange={state.handleTypeFilterChange}
+      scannedFilter={state.scannedFilter}
+      onScannedFilterChange={state.handleScannedFilterChange}
       className={state.className}
       tableClassName={state.tableClassName}
       hideToolbar={state.hideToolbar}
@@ -131,6 +133,8 @@ export function AllTargetsDetailViewTable({
       onSortingChange={state.handleSortingChange}
       typeFilter={state.typeFilter}
       onTypeFilterChange={state.handleTypeFilterChange}
+      scannedFilter={state.scannedFilter}
+      onScannedFilterChange={state.handleScannedFilterChange}
       className={state.className}
       tableClassName={state.tableClassName}
       hideToolbar={state.hideToolbar}

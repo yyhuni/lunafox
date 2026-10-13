@@ -124,8 +124,11 @@ Required rules:
 - The current audited organization surfaces are:
   - list-page detail drawer: reviewed in browser; the real sheet opens
     immediately and does not need an extra loading shell
-  - detail-page scheduled scan create/edit dialogs: use shared
-    `InteractionLoadingDialog`
+  - detail-page scheduled scan create/edit: these are sidebars. Open the real
+    sidebar directly, and pass the column tab so the handoff column opens the
+    occurrences tab. Do not insert `InteractionLoadingDialog` or
+    `openAfterLoad("edit-dialog")` in front of them. A centered dialog skeleton
+    followed by the sidebar is a double open.
 
 ## Organization List Identity
 

@@ -95,6 +95,18 @@ func TestTargetQueryServiceListTargets(t *testing.T) {
 	if store.listPage != 1 || store.listPageSize != 20 || store.listFilter != `type=="domain"` || store.listOrderBy != "createdAt desc" {
 		t.Fatalf("unexpected list args: page=%d size=%d filter=%q orderBy=%q", store.listPage, store.listPageSize, store.listFilter, store.listOrderBy)
 	}
+
+	scanned, err := service.ListTargets(context.Background(), TargetListQueryInput{
+		PageSize: 20,
+		Filter:   `scanned=="true" && type=="ip"`,
+		OrderBy:  "lastScannedAt desc",
+	})
+	if err != nil {
+		t.Fatalf("list scanned targets failed: %v", err)
+	}
+	if scanned.TotalSize != 1 || store.listFilter != `scanned=="true" && type=="ip"` || store.listOrderBy != "lastScannedAt desc" {
+		t.Fatalf("unexpected scanned list args: total=%d filter=%q orderBy=%q", scanned.TotalSize, store.listFilter, store.listOrderBy)
+	}
 }
 
 func TestTargetQueryServiceRejectsUnsupportedListQueryBeforeStore(t *testing.T) {
@@ -107,6 +119,10 @@ func TestTargetQueryServiceRejectsUnsupportedListQueryBeforeStore(t *testing.T) 
 		{PageSize: 20, Filter: `owner=="acme"`},
 		{PageSize: 20, Filter: `type=="hostname"`},
 		{PageSize: 20, Filter: `Type=="hostname"`},
+		{PageSize: 20, Filter: `scanned="true"`},
+		{PageSize: 20, Filter: `scanned!="false"`},
+		{PageSize: 20, Filter: `scanned=="yes"`},
+		{PageSize: 20, Filter: `displayName="example" || scanned=="true"`},
 		{PageSize: 20, OrderBy: "organization asc"},
 		{PageSize: 20, OrderBy: "createdAt sideways"},
 	} {

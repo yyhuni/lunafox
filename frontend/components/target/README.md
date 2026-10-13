@@ -134,6 +134,10 @@
   content and edits only the Target-local `patterns`/`etag`; it must never mutate
   the global policy. The base settings URL is the blacklist workspace; the
   scheduled scan workspace is `/targets/[id]/settings/scheduled-scans/`.
+- Target settings scheduled-scan create and edit are sidebars. Open the real
+  sidebar directly and pass the column's initial tab. Do not insert
+  `InteractionLoadingDialog` or `openAfterLoad("edit-dialog")` before the edit
+  sidebar.
 - `TargetSettingsLoadingState` receives `TargetSettingsState` and renders only
   the border-owned scheduled-scan table through `ScheduledScanDataTable` in
   loading mode. Target settings must not wrap it in a redundant card or repeat

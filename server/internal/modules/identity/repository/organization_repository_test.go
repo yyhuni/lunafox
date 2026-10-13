@@ -523,6 +523,55 @@ func TestOrganizationRepositoryActiveTargetListIsNotCappedByDefaultPageSize(t *t
 	}
 }
 
+func TestOrganizationRepositoryListTargetsByOrganizationIDFiltersScannedPresence(t *testing.T) {
+	db := newOrganizationRepositoryTestDB(t)
+	repo := NewOrganizationRepository(db)
+
+	org := &model.Organization{Name: "Acme", Description: "core team"}
+	mustCreateOrganization(t, db, org)
+
+	scannedAt := time.Date(2026, 4, 2, 8, 0, 0, 0, time.UTC)
+	scanned := &model.OrganizationTargetRef{
+		Name:          "scanned.example.com",
+		Type:          "domain",
+		CreatedAt:     time.Date(2026, 4, 1, 8, 0, 0, 0, time.UTC),
+		LastScannedAt: &scannedAt,
+	}
+	unscanned := &model.OrganizationTargetRef{
+		Name:      "new.example.com",
+		Type:      "domain",
+		CreatedAt: time.Date(2026, 4, 3, 8, 0, 0, 0, time.UTC),
+	}
+	mustCreateTarget(t, db, scanned)
+	mustCreateTarget(t, db, unscanned)
+	mustLinkOrganizationTarget(t, db, org.ID, scanned.ID)
+	mustLinkOrganizationTarget(t, db, org.ID, unscanned.ID)
+
+	scannedTargets, total, err := repo.ListTargetsByOrganizationID(org.ID, 1, 20, "", `scanned=="true"`)
+	if err != nil {
+		t.Fatalf("list scanned targets failed: %v", err)
+	}
+	if total != 1 || len(scannedTargets) != 1 || scannedTargets[0].ID != scanned.ID {
+		t.Fatalf("expected the successfully scanned target, total=%d targets=%+v", total, scannedTargets)
+	}
+
+	unscannedTargets, total, err := repo.ListTargetsByOrganizationID(org.ID, 1, 20, "domain", `scanned=="false"`)
+	if err != nil {
+		t.Fatalf("list unscanned targets failed: %v", err)
+	}
+	if total != 1 || len(unscannedTargets) != 1 || unscannedTargets[0].ID != unscanned.ID {
+		t.Fatalf("expected the target without a successful scan, total=%d targets=%+v", total, unscannedTargets)
+	}
+
+	both, total, err := repo.ListTargetsByOrganizationID(org.ID, 1, 20, "", `(scanned=="true" || scanned=="false")`)
+	if err != nil {
+		t.Fatalf("list both scanned states failed: %v", err)
+	}
+	if total != 2 || len(both) != 2 {
+		t.Fatalf("selecting both scanned states must not restrict targets, total=%d len=%d", total, len(both))
+	}
+}
+
 func TestOrganizationRepositoryListTargetsByOrganizationIDReturnsDBError(t *testing.T) {
 	db := newOrganizationRepositoryTestDB(t)
 	closeOrganizationRepositorySQLDB(t, db)

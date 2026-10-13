@@ -1,8 +1,9 @@
 "use client"
 
 import { BusinessListDataTable } from "@/components/shared/data-table"
+import { DataTableFacetPanel, type DataTableFacetPanelFacet } from "@/components/shared/data-table/faceted-filter"
 import { SimpleSearchToolbar } from "@/components/shared/data-table/simple-search-toolbar"
-import { TargetTypeFacetedFilter } from "@/components/shared/data-table/target-type-filter-select"
+import type { OrganizationTargetScannedFilter } from "@/components/organization/organization-detail-view-state"
 import type { ColumnDef } from "@tanstack/react-table"
 import type { Target } from "@/types/target.types"
 import type { TargetType } from "@/types/target.types"
@@ -31,6 +32,8 @@ interface TargetsDataTableProps {
   onPaginationChange?: (pagination: { pageIndex: number; pageSize: number }) => void
   typeFilter?: TargetType[]
   onTypeFilterChange?: (value: TargetType[]) => void
+  scannedFilter?: OrganizationTargetScannedFilter
+  onScannedFilterChange?: (value: OrganizationTargetScannedFilter) => void
   loading?: boolean
   loadingRowCount?: number
   stableSurfaceRowCount?: number
@@ -58,12 +61,48 @@ export function TargetsDataTable({
   onPaginationChange,
   typeFilter,
   onTypeFilterChange,
+  scannedFilter,
+  onScannedFilterChange,
   loading = false,
   loadingRowCount,
   stableSurfaceRowCount,
 }: TargetsDataTableProps) {
   const state = useOrganizationTargetsDataTableState({ searchValue, onSearch })
-  const hasQueryControls = Boolean(onSearch || onTypeFilterChange)
+  const hasQueryControls = Boolean(onSearch || onTypeFilterChange || onScannedFilterChange)
+  const targetFilterFacets: DataTableFacetPanelFacet[] = []
+  if (onTypeFilterChange) {
+    targetFilterFacets.push({
+      id: "type",
+      label: state.tColumns("common.type"),
+      values: typeFilter ?? [],
+      onValuesChange: (values) => onTypeFilterChange(values.filter((value): value is TargetType => (
+        value === "domain" || value === "ip" || value === "cidr"
+      ))),
+      options: [
+        { value: "domain", label: state.tTarget("types.domain") },
+        { value: "ip", label: state.tTarget("types.ip") },
+        { value: "cidr", label: state.tTarget("types.cidr") },
+      ],
+      emptyLabel: state.tCommon("actions.all"),
+      clearLabel: state.tDataTable("clearFilter"),
+    })
+  }
+  if (onScannedFilterChange) {
+    targetFilterFacets.push({
+      id: "scanned",
+      label: state.tTarget("scannedFilter.title"),
+      values: scannedFilter ?? [],
+      onValuesChange: (values) => onScannedFilterChange(values.filter((value): value is OrganizationTargetScannedFilter[number] => (
+        value === "true" || value === "false"
+      ))),
+      options: [
+        { value: "true", label: state.tTarget("scannedFilter.scanned") },
+        { value: "false", label: state.tTarget("scannedFilter.notScanned") },
+      ],
+      emptyLabel: state.tCommon("actions.all"),
+      clearLabel: state.tDataTable("clearFilter"),
+    })
+  }
 
   return (
     <BusinessListDataTable
@@ -103,18 +142,11 @@ export function TargetsDataTable({
             onSubmit={state.commitSearch}
             loading={isSearching}
             placeholder={searchPlaceholder || state.tTarget("title")}
-            after={onTypeFilterChange ? (
-              <TargetTypeFacetedFilter
-                title={state.tColumns("common.type")}
-                values={typeFilter ?? []}
-                onValuesChange={onTypeFilterChange}
-                labels={{
-                  all: state.tCommon("actions.all"),
-                  domain: state.tTarget("types.domain"),
-                  ip: state.tTarget("types.ip"),
-                  cidr: state.tTarget("types.cidr"),
-                }}
-                clearLabel={state.tDataTable("clearFilter")}
+            after={targetFilterFacets.length > 0 ? (
+              <DataTableFacetPanel
+                title={state.tDataTable("filter")}
+                activeCount={(typeFilter?.length ?? 0) + (scannedFilter?.length ?? 0)}
+                facets={targetFilterFacets}
               />
             ) : null}
           />

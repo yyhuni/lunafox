@@ -22,7 +22,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ActionSkeleton } from "@/components/shared/loading/action-skeleton"
-import { InteractionLoadingDialog } from "@/components/shared/loading/interaction-loading-dialog"
 import {
   AlertDialog,
   AlertDialogClose, AlertDialogContent,
@@ -137,6 +136,8 @@ function OrganizationDetailTargetsTableLoadingState({
         onPaginationChange={state.handlePaginationChange}
         typeFilter={state.typeFilter}
         onTypeFilterChange={state.handleTypeFilterChange}
+        scannedFilter={state.scannedFilter}
+        onScannedFilterChange={state.handleScannedFilterChange}
         loading
         loadingRowCount={targetStableSurfaceRowCount}
         stableSurfaceRowCount={targetStableSurfaceRowCount}
@@ -643,6 +644,8 @@ export function OrganizationDetailViewTable({
               onPaginationChange={state.handlePaginationChange}
               typeFilter={state.typeFilter}
               onTypeFilterChange={state.handleTypeFilterChange}
+              scannedFilter={state.scannedFilter}
+              onScannedFilterChange={state.handleScannedFilterChange}
               stableSurfaceRowCount={targetStableSurfaceRowCount}
             />
           </TabsContent>
@@ -755,20 +758,19 @@ export function OrganizationDetailViewDialogs({
 }: {
   state: OrganizationDetailViewState
 }) {
+  const sidebarMountOptions = { unmountDelayMs: deferredInteractionUnmountDelayMs }
+  const shouldMountCreateScheduledScanDialog = useDeferredInteractionMount(
+    state.isCreateScheduledScanDialogOpen,
+    sidebarMountOptions,
+  )
+  const shouldMountEditScheduledScanDialog = useDeferredInteractionMount(
+    state.isEditScheduledScanDialogOpen,
+    sidebarMountOptions,
+  )
+
   return (
     <>
-      <InteractionLoadingDialog
-        open={state.pendingInteraction === "edit-dialog"}
-        onOpenChange={(open) => {
-          if (!open) {
-            state.cancelPendingInteraction("edit-dialog")
-          }
-        }}
-        owner="organization-detail-edit-dialog-loading"
-        title={state.tScan("editTask")}
-      />
-
-      {state.isCreateScheduledScanDialogOpen ? (
+      {shouldMountCreateScheduledScanDialog ? (
         <CreateScheduledScanDialog
           open={state.isCreateScheduledScanDialogOpen}
           onOpenChange={state.setIsCreateScheduledScanDialogOpen}
@@ -778,11 +780,12 @@ export function OrganizationDetailViewDialogs({
         />
       ) : null}
 
-      {state.isEditScheduledScanDialogOpen ? (
+      {shouldMountEditScheduledScanDialog ? (
         <EditScheduledScanDialog
           open={state.isEditScheduledScanDialogOpen}
           onOpenChange={state.setIsEditScheduledScanDialogOpen}
           scheduledScan={state.scheduledScanToEdit}
+          initialTab={state.scheduledScanEditInitialTab}
           onSuccess={state.handleScheduledScanMutationSuccess}
         />
       ) : null}

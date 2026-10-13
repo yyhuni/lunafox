@@ -110,6 +110,7 @@ describe("data-table faceted filter contract", () => {
     expect(source).toContain('"ml-auto shrink-0 tabular-nums text-muted-foreground"')
     expect(source).toContain("option.count.toLocaleString()")
     expect(source).toContain('import { textRole } from "@/lib/typography"')
+    expect(source).toContain('className="h-8 gap-2 py-0 text-[13px] leading-[18px]"')
   })
 
   it("uses the shared interaction accent for selected option markers", () => {

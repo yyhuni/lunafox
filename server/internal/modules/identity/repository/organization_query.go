@@ -151,7 +151,8 @@ func (r *OrganizationRepository) ListTargetsByOrganizationIDContext(ctx context.
 		query = query.Where("target.type = ?", targetType)
 	}
 
-	query = query.Scopes(scope.WithFilterDefault(filter, targetFilterMapping, "name"))
+	remainingFilter, scannedQuery := applyOrganizationTargetScannedFilter(query, filter)
+	query = scannedQuery.Scopes(scope.WithFilterDefault(remainingFilter, targetFilterMapping, "name"))
 
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -163,6 +164,36 @@ func (r *OrganizationRepository) ListTargetsByOrganizationIDContext(ctx context.
 	).Find(&targets).Error
 
 	return targets, total, err
+}
+
+// last_scanned_at is the target's latest successful scan. Organization target
+// lists reuse that presence check instead of storing a scan time on the organization.
+func applyOrganizationTargetScannedFilter(db *gorm.DB, filter string) (string, *gorm.DB) {
+	groups := scope.ParseFilter(filter)
+	sql, ok := scope.ScannedPresenceSQL(groups, "target.last_scanned_at")
+	if !ok {
+		return "", db.Where("1 = 0")
+	}
+	if sql != "" {
+		db = db.Where(sql)
+	}
+	if !filterHasOrganizationTargetScannedField(groups) {
+		return filter, db
+	}
+	remaining, _, err := scope.ExtractField(filter, "scanned")
+	if err != nil {
+		return "", db.Where("1 = 0")
+	}
+	return remaining, db
+}
+
+func filterHasOrganizationTargetScannedField(groups []scope.FilterGroup) bool {
+	for _, group := range groups {
+		if strings.EqualFold(group.Filter.Field, "scanned") {
+			return true
+		}
+	}
+	return false
 }
 
 // ListActiveTargetsByOrganizationIDContext returns every non-deleted target in the organization.

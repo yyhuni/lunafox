@@ -19,6 +19,7 @@ describe("all-targets-detail-view-state contract", () => {
     expect(source).toContain("toggleBusinessListSorting")
     expect(source).toContain('search: { field: "displayName", operator: "=" }')
     expect(source).toContain('type: { field: "type", operator: "==" }')
+    expect(source).toContain('scanned: { field: "scanned", operator: "==" }')
     expect(source).toContain('displayName: { orderBy: "displayName", firstDirection: "asc" }')
     expect(source).toContain('createdAt: { orderBy: "createdAt", firstDirection: "desc" }')
     expect(source).toContain('lastScannedAt: { orderBy: "lastScannedAt", firstDirection: "desc" }')
@@ -31,6 +32,8 @@ describe("all-targets-detail-view-state contract", () => {
   it("hard-cuts current-page target type filtering from production state", () => {
     expect(source).toContain("typeFilter")
     expect(source).toContain("handleTypeFilterChange")
+    expect(source).toContain("scannedFilter")
+    expect(source).toContain("handleScannedFilterChange")
     expect(source).not.toContain("const filteredTargets = React.useMemo")
     expect(source).not.toContain("typeFilter.includes(target.type)")
     expect(source).not.toContain("filteredTotalCount")

@@ -61,12 +61,30 @@ func applyTargetFilter(db *gorm.DB, filter string) *gorm.DB {
 	if trimmed == "" {
 		return db
 	}
-	for _, group := range scope.ParseFilter(trimmed) {
+	groups := scope.ParseFilter(trimmed)
+	for _, group := range groups {
 		if strings.EqualFold(group.Filter.Field, "type") && group.Filter.Operator != "==" {
 			return db.Where("1 = 0")
 		}
 	}
-	return db.Scopes(scope.WithFilterDefault(trimmed, targetFilterMappingNormalized, "displayName"))
+	if !targetScannedGroupsAllowed(groups) {
+		return db.Where("1 = 0")
+	}
+	remaining := trimmed
+	var scanned []scope.FilterGroup
+	if filterHasScannedField(groups) {
+		next, matched, err := scope.ExtractField(trimmed, "scanned")
+		if err != nil {
+			return db.Where("1 = 0")
+		}
+		remaining = next
+		scanned = matched
+	}
+	db = applyScannedMatch(db, scanned)
+	if strings.TrimSpace(remaining) == "" {
+		return db
+	}
+	return db.Scopes(scope.WithFilterDefault(remaining, targetFilterMappingNormalized, "displayName"))
 }
 
 func applyTargetOrder(db *gorm.DB, orderBy string) *gorm.DB {

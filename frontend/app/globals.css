@@ -1213,27 +1213,17 @@ button.compact-action-control[data-size="icon-lg"] {
 }
 
 /*
- * Compact-density menus open from 12px inline trigger controls (table column
- * headers, chip-like toggles). Their rows drop to the same text tier as the
- * trigger so the opened menu does not visually jump a size class above the
- * element that opened it. Icon and row heights shrink one step with the text;
- * the group label keeps its muted caption treatment and is differentiated by
- * color and weight rather than size.
+ * Compact-density menus open from 12px inline triggers such as table column
+ * headers. The label stays on that text tier so the opened menu does not jump
+ * a size above the trigger. Row height stays on the shared menu-item tier,
+ * the same 28px fine-pointer / 32px coarse-pointer height as the trigger, so
+ * the row does not shrink below the control that opened it. The group label
+ * keeps its muted caption treatment and is differentiated by color and weight.
  */
 [data-slot="dropdown-menu-content"][data-density="compact"] [data-slot="dropdown-menu-item"],
 [data-slot="dropdown-menu-content"][data-density="compact"] [data-slot="dropdown-menu-label"] {
   font-size: 0.75rem;
   line-height: 1rem;
-}
-
-[data-slot="dropdown-menu-content"][data-density="compact"] .compact-menu-item {
-  min-height: 1.5rem;
-  padding-block: 0.125rem;
-}
-
-[data-slot="dropdown-menu-content"][data-density="compact"] [data-slot="dropdown-menu-item"] svg:not([class*="size-"]) {
-  width: 0.875rem;
-  height: 0.875rem;
 }
 
 .compact-action-placeholder {

@@ -41,6 +41,16 @@ describe("dropdown-menu contract", () => {
     expect(source).toContain('density = "default"')
     expect(source).toContain('density?: "default" | "compact"')
     expect(source).toContain('data-density={density}')
+
+    const css = readFileSync(path.resolve(process.cwd(), "app/globals.css"), "utf8")
+    const compactDensity = css.slice(
+      css.indexOf("Compact-density menus open from 12px inline triggers"),
+      css.indexOf(".compact-action-placeholder")
+    )
+    expect(compactDensity).toContain("font-size: 0.75rem;")
+    expect(compactDensity).toContain("line-height: 1rem;")
+    expect(compactDensity).not.toContain("min-height:")
+    expect(compactDensity).not.toContain("padding-block:")
   })
 
   it("uses Base UI as the dropdown menu primitive backend", () => {

@@ -163,10 +163,18 @@ func normalizeTargetListPageSize(pageSize int) int {
 }
 
 func validateTargetListFilter(filter string) error {
-	if err := scope.ValidateFilterDefault(filter, targetQueryFilterMapping, "displayName"); err != nil {
+	groups := scope.ParseFilter(filter)
+	if err := validateTargetScannedGroups(groups); err != nil {
+		return err
+	}
+	remaining, _, err := scope.ExtractField(filter, "scanned")
+	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUnsupportedTargetFilter, err)
 	}
-	for _, group := range scope.ParseFilter(filter) {
+	if err := scope.ValidateFilterDefault(remaining, targetQueryFilterMapping, "displayName"); err != nil {
+		return fmt.Errorf("%w: %v", ErrUnsupportedTargetFilter, err)
+	}
+	for _, group := range scope.ParseFilter(remaining) {
 		if strings.ToLower(group.Filter.Field) != "type" {
 			continue
 		}
@@ -175,6 +183,27 @@ func validateTargetListFilter(filter string) error {
 		}
 		if _, ok := targetFilterTypes[group.Filter.Value]; !ok {
 			return fmt.Errorf("%w: unsupported type", ErrUnsupportedTargetFilter)
+		}
+	}
+	return nil
+}
+
+func validateTargetScannedGroups(groups []scope.FilterGroup) error {
+	for index, group := range groups {
+		if !strings.EqualFold(group.Filter.Field, "scanned") {
+			continue
+		}
+		if group.Filter.Operator != "==" {
+			return fmt.Errorf("%w: scanned requires ==", ErrUnsupportedTargetFilter)
+		}
+		if group.Filter.Value != "true" && group.Filter.Value != "false" {
+			return fmt.Errorf("%w: unsupported scanned value", ErrUnsupportedTargetFilter)
+		}
+		if index > 0 && group.LogicalOp == scope.LogicalOr && !strings.EqualFold(groups[index-1].Filter.Field, "scanned") {
+			return fmt.Errorf("%w: scanned cannot combine with OR", ErrUnsupportedTargetFilter)
+		}
+		if index+1 < len(groups) && groups[index+1].LogicalOp == scope.LogicalOr && !strings.EqualFold(groups[index+1].Filter.Field, "scanned") {
+			return fmt.Errorf("%w: scanned cannot combine with OR", ErrUnsupportedTargetFilter)
 		}
 	}
 	return nil

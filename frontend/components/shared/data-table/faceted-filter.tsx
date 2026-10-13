@@ -84,7 +84,7 @@ function DataTableFacetedFilterOptions<TValue extends string>({
         <CommandGroup>
           {options.map((option) => {
         const isSelected = selectedValues.has(option.value);
-        return (<CommandItem key={option.value} value={option.value} keywords={[option.label]} onSelect={() => onValuesChange(toggleFacetedFilterValue(values, option.value))} className="gap-2">
+        return (<CommandItem key={option.value} value={option.value} keywords={[option.label]} onSelect={() => onValuesChange(toggleFacetedFilterValue(values, option.value))} className="h-8 gap-2 py-0 text-[13px] leading-[18px]">
                 <div className={cn("radius-control-subtle flex size-4 items-center justify-center border", isSelected
                 ? "border-interaction-accent bg-interaction-accent text-interaction-accent-foreground"
                 : "border-input [&_svg]:invisible")}>

@@ -6,8 +6,9 @@ import {
   type SelectedRowActionBarAction,
 } from "@/components/shared/data-table"
 import { UnifiedDataTable } from "@/components/shared/data-table/unified-data-table"
+import { DataTableFacetPanel, type DataTableFacetPanelFacet } from "@/components/shared/data-table/faceted-filter"
 import { SimpleSearchToolbar } from "@/components/shared/data-table/simple-search-toolbar"
-import { TargetTypeFacetedFilter } from "@/components/shared/data-table/target-type-filter-select"
+import type { TargetScannedFilter } from "@/components/target/all-targets-detail-view-state"
 import type { ColumnDef, SortingState } from "@tanstack/react-table"
 import type { Target } from "@/types/target.types"
 import type { TargetType } from "@/types/target.types"
@@ -45,6 +46,8 @@ interface TargetsDataTableProps {
   // Type filter
   typeFilter?: TargetType[]
   onTypeFilterChange?: (value: TargetType[]) => void
+  scannedFilter?: TargetScannedFilter[]
+  onScannedFilterChange?: (value: TargetScannedFilter[]) => void
   // Styling
   className?: string
   tableClassName?: string
@@ -83,6 +86,8 @@ export function TargetsDataTable({
   onSortingChange,
   typeFilter,
   onTypeFilterChange,
+  scannedFilter,
+  onScannedFilterChange,
   className,
   tableClassName,
   hideToolbar = false,
@@ -102,6 +107,40 @@ export function TargetsDataTable({
     sorting,
     onSortingChange,
   })
+  const targetFilterFacets: DataTableFacetPanelFacet[] = []
+  if (onTypeFilterChange) {
+    targetFilterFacets.push({
+      id: "type",
+      label: state.tColumns("common.type"),
+      values: typeFilter ?? [],
+      onValuesChange: (values) => onTypeFilterChange(values.filter((value): value is TargetType => (
+        value === "domain" || value === "ip" || value === "cidr"
+      ))),
+      options: [
+        { value: "domain", label: state.tTarget("types.domain") },
+        { value: "ip", label: state.tTarget("types.ip") },
+        { value: "cidr", label: state.tTarget("types.cidr") },
+      ],
+      emptyLabel: state.tActions("all"),
+      clearLabel: state.tDataTable("clearFilter"),
+    })
+  }
+  if (onScannedFilterChange) {
+    targetFilterFacets.push({
+      id: "scanned",
+      label: state.tTarget("scannedFilter.title"),
+      values: scannedFilter ?? [],
+      onValuesChange: (values) => onScannedFilterChange(values.filter((value): value is TargetScannedFilter => (
+        value === "true" || value === "false"
+      ))),
+      options: [
+        { value: "true", label: state.tTarget("scannedFilter.scanned") },
+        { value: "false", label: state.tTarget("scannedFilter.notScanned") },
+      ],
+      emptyLabel: state.tActions("all"),
+      clearLabel: state.tDataTable("clearFilter"),
+    })
+  }
   const selectedRowActions: SelectedRowActionBarAction[] = [
     ...(onBulkInitiateScan
       ? [{
@@ -165,18 +204,11 @@ export function TargetsDataTable({
               loading={isSearching}
               placeholder={searchPlaceholder || state.tTarget("title")}
               toolbarDensity="compact"
-              after={onTypeFilterChange ? (
-                <TargetTypeFacetedFilter
-                  title={state.tColumns("common.type")}
-                  values={typeFilter ?? []}
-                  onValuesChange={onTypeFilterChange}
-                  labels={{
-                    all: state.tActions("all"),
-                    domain: state.tTarget("types.domain"),
-                    ip: state.tTarget("types.ip"),
-                    cidr: state.tTarget("types.cidr"),
-                  }}
-                  clearLabel={state.tDataTable("clearFilter")}
+              after={targetFilterFacets.length > 0 ? (
+                <DataTableFacetPanel
+                  title={state.tDataTable("filter")}
+                  activeCount={(typeFilter?.length ?? 0) + (scannedFilter?.length ?? 0)}
+                  facets={targetFilterFacets}
                 />
               ) : null}
             />
@@ -184,6 +216,7 @@ export function TargetsDataTable({
           className,
           tableClassName,
           toolbarDensity: "compact",
+          initialLoadingToolbarFilterCount: targetFilterFacets.length > 0 ? 1 : 0,
           hideToolbar,
           hidePagination,
           loading,

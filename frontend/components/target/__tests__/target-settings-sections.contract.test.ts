@@ -107,9 +107,11 @@ describe("target-settings-sections contract", () => {
     expect(routeFallbackSource).not.toContain("onPageSizeChange={() => {}}")
   })
 
-  it("does not show a dialog-shaped loading state before opening the create scheduled scan sheet", () => {
+  it("opens scheduled scan sidebars directly without a dialog-shaped loading shell", () => {
+    expect(source).not.toContain("InteractionLoadingDialog")
     expect(source).not.toContain('owner="target-settings-create-dialog-loading"')
-    expect(source).toContain('owner="target-settings-edit-dialog-loading"')
+    expect(source).not.toContain('owner="target-settings-edit-dialog-loading"')
+    expect(source).toContain("initialTab={state.editDialogInitialTab}")
   })
 
   it("releases scheduled scan create and edit sidebars after close", () => {

@@ -31,8 +31,11 @@ const TARGET_FILTER_FIELDS: BusinessListFilterCompilerConfig = {
   search: { field: "displayName", operator: "=" },
   facets: {
     type: { field: "type", operator: "==" },
+    scanned: { field: "scanned", operator: "==" },
   },
 }
+
+export type TargetScannedFilter = "true" | "false"
 
 const TARGET_SORTABLE_FIELDS: Record<string, BusinessListSortableFieldConfig> = {
   displayName: { orderBy: "displayName", firstDirection: "asc" },
@@ -124,6 +127,7 @@ export function useAllTargetsDetailViewState({
   const pageSize = query.pageSize
   const searchQuery = query.search ?? ""
   const typeFilter = (query.filters.type ?? []) as TargetType[]
+  const scannedFilter = (query.filters.scanned ?? []) as TargetScannedFilter[]
   const pagination = React.useMemo(
     () => ({ pageIndex: page - 1, pageSize }),
     [page, pageSize]
@@ -205,6 +209,13 @@ export function useAllTargetsDetailViewState({
     resetPaging()
     setQuery((current) => applyBusinessListControlChange(current, {
       filters: { ...current.filters, type: value },
+    }))
+  }
+
+  const handleScannedFilterChange = (value: TargetScannedFilter[]) => {
+    resetPaging()
+    setQuery((current) => applyBusinessListControlChange(current, {
+      filters: { ...current.filters, scanned: value },
     }))
   }
 
@@ -342,6 +353,8 @@ export function useAllTargetsDetailViewState({
     commitSearch,
     typeFilter,
     handleTypeFilterChange,
+    scannedFilter,
+    handleScannedFilterChange,
     className,
     tableClassName,
     hideToolbar,
