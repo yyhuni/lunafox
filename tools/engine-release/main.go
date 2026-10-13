@@ -15,7 +15,7 @@ func main() {
 	command := flag.String("command", "", "discover, validate-build-results, build-packages, validate-package-build-results, or validate-package-artifacts")
 	engineRoot := flag.String("engine-root", "./extensions/engines", "builtin engine source root")
 	engineID := flag.String("engine-id", "", "optional canonical Engine selection for discover and validate-build-results")
-	engineIDs := flag.String("engine-ids", "", "optional comma-separated canonical Engine selection for build-packages and validate-package-artifacts")
+	engineIDs := flag.String("engine-ids", "", "optional comma-separated canonical Engine selection for validate-build-results, build-packages, and validate-package-artifacts")
 	resultsPath := flag.String("build-results", "", "verified runtime image build results JSON")
 	packageResultsPath := flag.String("package-build-results", "", "Engine Package build results JSON")
 	previousPackageResultsPath := flag.String("previous-package-build-results", "", "optional previous Engine Package build results JSON")
@@ -70,7 +70,7 @@ func runCommandWithEngineIDsAndVersionMap(command, engineRoot, selectedEngineID,
 	switch command {
 	case "discover":
 		if selectedEngineIDs != "" {
-			return fmt.Errorf("-engine-ids is only supported by build-packages and validate-package-artifacts")
+			return fmt.Errorf("-engine-ids is only supported by validate-build-results, build-packages, and validate-package-artifacts")
 		}
 		discovery, err := discoverEngineSources(engineRoot)
 		if err != nil {
@@ -90,7 +90,7 @@ func runCommandWithEngineIDsAndVersionMap(command, engineRoot, selectedEngineID,
 			return err
 		}
 		if selectedEngineIDs != "" {
-			return fmt.Errorf("-engine-ids is only supported by build-packages and validate-package-artifacts")
+			return fmt.Errorf("-engine-ids is only supported by validate-build-results, build-packages, and validate-package-artifacts")
 		}
 		packageResults, err := readPackageBuildResults(packageResultsPath)
 		if err != nil {
@@ -118,15 +118,17 @@ func runCommandWithEngineIDsAndVersionMap(command, engineRoot, selectedEngineID,
 			if err := rejectSelectedEngineForPackageCommand(command, selectedEngineID); err != nil {
 				return err
 			}
-		} else if selectedEngineIDs != "" {
-			return fmt.Errorf("-engine-ids is only supported by build-packages and validate-package-artifacts")
 		}
 		discovery, err := discoverEngineSources(engineRoot)
 		if err != nil {
 			return err
 		}
 		if command == "validate-build-results" {
-			discovery, err = selectEngineDiscovery(discovery, selectedEngineID)
+			if selectedEngineIDs != "" {
+				discovery, err = selectEngineDiscoverySet(discovery, selectedEngineIDs)
+			} else {
+				discovery, err = selectEngineDiscovery(discovery, selectedEngineID)
+			}
 			if err != nil {
 				return err
 			}

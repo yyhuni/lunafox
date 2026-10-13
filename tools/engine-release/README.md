@@ -45,9 +45,12 @@ make engine-release-discover
 ```
 
 `-engine-id` is an optional, exact canonical selection only for `discover` and
-`validate-build-results`. It is checked against the complete current discovery
-before output is written. Package build and package validation commands reject
-it, so a one-Engine receipt cannot become a partial Package release.
+single-Engine `validate-build-results`. `-engine-ids` is an optional, strictly
+sorted canonical set for `validate-build-results`, `build-packages`, and
+`validate-package-artifacts`; each ID is checked against the complete current
+discovery before output is written. Package build and package validation still
+reject `-engine-id`, so a one-Engine receipt cannot become a partial Package
+release.
 
 ## Image receipt flow
 
@@ -90,7 +93,9 @@ remains enabled; the publisher does not set `GOSUMDB=off`. The official-source
 is non-normative rationale for these controls.
 
 `validate-build-results` re-discovers the source set and rejects missing,
-extra, reordered, or mismatched records. Package generation can consume only a
+extra, reordered, or mismatched records. When `-engine-ids` is supplied, the
+same checks apply to that exact canonical subset; the selection itself must be
+bounded by the complete discovery. Package generation can consume only a
 receipt that matches the current validated Dockerfile/build-context/repository
 inputs. It never invents a fallback ref.
 
@@ -98,9 +103,11 @@ The protected public workflow dynamically discovers matrix membership, bounds
 native platform publication to sixteen fail-fast children, and runs
 `scripts/ci/aggregate-engine-runtime-image-shards.sh` before signing. The
 aggregate compares its discovery artifact to the checked-out source, requires
-one valid receipt and matching Registry evidence shard for every discovered
-Engine, and restores the existing complete receipt artifact. Signing and all
-Package stages consume only that restored complete receipt.
+one valid receipt and matching Registry evidence shard for every selected
+`builtEngineId` (or every discovered Engine when no selection is supplied), and
+restores the complete receipt for that selected build set. Reused Engines stay
+bound by the immutable composition plan; signing and Package stages consume
+only that restored receipt.
 
 ## Package artifact receipt
 

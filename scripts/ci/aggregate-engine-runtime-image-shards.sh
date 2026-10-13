@@ -247,8 +247,15 @@ done <"$expected_ids_file"
 jq -s --arg schema "lunafox.engine-runtime-image-build-results.v1" --arg mode "$MODE" \
 	'{schemaVersion:$schema,mode:$mode,engines:(sort_by(.engineId))}' \
 	"$records_dir"/*.json >"$aggregate_root/build-results.json"
-"$tool" -command validate-build-results -engine-root "$ENGINE_ROOT" -build-results "$aggregate_root/build-results.json" -mode "$MODE" >/dev/null ||
-	fail "combined Runtime Image receipt does not match complete source discovery"
+validation_args=(-command validate-build-results -engine-root "$ENGINE_ROOT" -build-results "$aggregate_root/build-results.json" -mode "$MODE")
+validation_scope="complete"
+if [ -n "$SELECTION_INPUT" ]; then
+	selected_engine_ids="$(paste -sd, "$expected_ids_file")"
+	validation_args+=(-engine-ids "$selected_engine_ids")
+	validation_scope="selected"
+fi
+"$tool" "${validation_args[@]}" >/dev/null ||
+	fail "combined Runtime Image receipt does not match the $validation_scope Engine discovery"
 cp "$RELEASE_CONTEXT_INPUT" "$aggregate_root/release-context.json"
 
 mkdir -p "$(dirname "$OUTPUT_ROOT")"

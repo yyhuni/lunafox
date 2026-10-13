@@ -109,6 +109,28 @@ func TestRunCommandValidatesSelectedEngineReceipt(t *testing.T) {
 	}
 }
 
+func TestRunCommandValidatesSelectedEngineSetReceipt(t *testing.T) {
+	root := t.TempDir()
+	writeEngineSource(t, root, "port_scan", "engine.lunafox.port_scan", true)
+	writeEngineSource(t, root, "website_discovery", "engine.lunafox.website_discovery", true)
+	discovery, err := discoverEngineSources(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload, err := json.Marshal(validDevelopmentResultsForDiscovery(discovery))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resultsPath := filepath.Join(t.TempDir(), "build-results.json")
+	if err := os.WriteFile(resultsPath, payload, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := runCommandWithEngineIDs("validate-build-results", root, "", "engine.lunafox.port_scan,engine.lunafox.website_discovery", resultsPath, "", "", "", "", "", "", &strings.Builder{}); err != nil {
+		t.Fatalf("runCommand(validate selected Engine set) error = %v", err)
+	}
+}
+
 func TestRunCommandRejectsSelectedEngineForPackageCommands(t *testing.T) {
 	root := writeEngineSourceTree(t, true)
 	for _, command := range []string{"build-packages", "validate-package-build-results", "validate-package-artifacts"} {
@@ -154,7 +176,7 @@ func TestSelectEngineDiscoverySetRequiresCanonicalBoundedPackageSelection(t *tes
 
 func TestRunCommandUsesEngineIDsOnlyForBoundedPackageCommands(t *testing.T) {
 	root := writeEngineSourceTree(t, true)
-	for _, command := range []string{"discover", "validate-build-results", "validate-package-build-results"} {
+	for _, command := range []string{"discover", "validate-package-build-results"} {
 		t.Run(command, func(t *testing.T) {
 			err := runCommandWithEngineIDs(command, root, "", "engine.lunafox.subdomain_discovery", "", "", "", "", "", "", "", &strings.Builder{})
 			if err == nil || !strings.Contains(err.Error(), "-engine-ids") {
@@ -439,6 +461,25 @@ func validDevelopmentResults(discovery Discovery) RuntimeImageBuildResults {
 			SourceRef:      "localhost:5000/" + source.Repository + "@" + releaseTestDigestA,
 		}},
 	}
+}
+
+func validDevelopmentResultsForDiscovery(discovery Discovery) RuntimeImageBuildResults {
+	results := validDevelopmentResults(discovery)
+	for _, source := range discovery.Engines[1:] {
+		results.Engines = append(results.Engines, RuntimeImageBuildResult{
+			EngineID:       source.EngineID,
+			Dockerfile:     source.Dockerfile,
+			BuildContext:   source.BuildContext,
+			Repository:     source.Repository,
+			BuildCount:     1,
+			IndexDigest:    releaseTestDigestA,
+			IndexMediaType: ociImageIndexMediaType,
+			Platforms:      []string{"linux/amd64", "linux/arm64"},
+			Refs:           []string{"localhost:5000/" + source.Repository + "@" + releaseTestDigestA},
+			SourceRef:      "localhost:5000/" + source.Repository + "@" + releaseTestDigestA,
+		})
+	}
+	return results
 }
 
 func writeEngineSourceTree(t *testing.T, includeDockerfile bool) string {
