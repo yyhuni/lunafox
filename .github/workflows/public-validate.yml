@@ -3720,3 +3720,43 @@ jobs:
             dist/final/signatures/**
             dist/final/channel/**
           if-no-files-found: error
+
+  # The demo tracks the published release, not the private handoff. A failed
+  # demo deploy must not fail the GitHub Release that already succeeded.
+  deploy-vercel-demo:
+    name: Deploy Vercel Demo
+    needs: [publication-intent, publish-final-release]
+    if: needs.publish-final-release.result == 'success' && needs.publication-intent.outputs.publish == 'true' && needs.publication-intent.outputs.recovery != 'true'
+    continue-on-error: true
+    runs-on: ubuntu-22.04
+    environment: public-release
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.0
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+      - name: Deploy the released frontend to the Vercel demo project
+        working-directory: frontend
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_DEMO_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_DEMO_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_DEMO_TOKEN }}
+          DEMO_SITE: "true"
+          NEXT_PUBLIC_USE_MOCK: "true"
+          NEXT_PUBLIC_SKIP_AUTH: "true"
+        run: node "$GITHUB_WORKSPACE/scripts/ci/deploy-vercel-demo.mjs"
