@@ -110,18 +110,17 @@ describe("scan-runtime-detail-drawer contract", () => {
     expect(source).not.toContain("getTerminalLogLevelBadgeStyle")
     expect(source).not.toContain("formatClockTime")
     expect(source).toContain('t("runtimeDrawer.tasks.noProgress")')
-    expect(source).toContain('t("runtimeDrawer.tasks.failureTitle")')
   })
 
-  it("uses localized engine descriptions in the collapsed task summary and keeps one expanded failure explanation", () => {
+  it("uses localized engine descriptions without a separate expanded failure explanation", () => {
     expect(utilsSource).toContain("detail: localizedEngineDescriptionsByID.get(task.engineId)!")
     expect(utilsSource).toContain("failureSummary: getRuntimeTaskFailureSummary(task, scan, isCanonicalFailure)")
     expect(utilsSource).not.toContain("detail: task.error")
     expect(source).toContain("{task.detail}")
     expect(source).not.toContain('{task.detail || t("runtimeDrawer.tasks.noDetail")}')
     expect(utilsSource).toContain("failureDetail: task.failureDetail")
-    expect(source).toContain("const failureMessage = [task.failureSummary, task.failureDetail].filter(Boolean).join(\" \")")
-    expect(source).toContain("{failureMessage}")
+    expect(source).not.toContain("RuntimeTaskFailureLines")
+    expect(source).not.toContain('t("runtimeDrawer.tasks.failureTitle")')
     expect(source).not.toContain("logLines: buildRuntimeTaskFailureLines")
   })
 

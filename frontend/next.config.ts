@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 import {
   assertProductionRuntimeFlags,
+  assertVercelDemoHasNoBackend,
   getRequiredVercelBackendOrigin,
 } from "./lib/production-runtime-config";
 
@@ -9,11 +10,15 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
 // Check if running on Vercel
 const isVercel = process.env.VERCEL === '1';
+const demoSite = process.env.DEMO_SITE === 'true'
 const useMock = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
 const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true'
 
-assertProductionRuntimeFlags({ useMock, skipAuth })
-const vercelBackendOrigin = isVercel && process.env.NODE_ENV === "production"
+assertProductionRuntimeFlags({ useMock, skipAuth, demoSite, isVercel })
+if (demoSite && process.env.NODE_ENV === "production") {
+  assertVercelDemoHasNoBackend()
+}
+const vercelBackendOrigin = isVercel && process.env.NODE_ENV === "production" && !demoSite
   ? getRequiredVercelBackendOrigin()
   : null
 

@@ -25,6 +25,9 @@ func (adapter *scanStopStoreAdapter) StopActiveScan(ctx context.Context, scanID 
 		ScanID:             outcome.ScanID,
 		CancelledTaskCount: outcome.CancelledTaskCount,
 	}
+	for _, task := range outcome.CancelledTasks {
+		result.CancelledTasks = append(result.CancelledTasks, scanapp.ScanStopTask{ScanID: task.ScanID, TaskID: task.TaskID})
+	}
 	for _, candidate := range outcome.NotificationCandidates {
 		result.NotificationCandidates = append(result.NotificationCandidates, scanapp.ScanStopNotification{
 			TaskID:  candidate.TaskID,
@@ -44,6 +47,9 @@ func (adapter *scanStopStoreAdapter) BatchStopActiveScans(ctx context.Context, s
 		SkippedCount:     outcome.SkippedCount,
 		RevokedTaskCount: outcome.RevokedTaskCount,
 	}
+	for _, task := range outcome.CancelledTasks {
+		result.CancelledTasks = append(result.CancelledTasks, scanapp.ScanStopTask{ScanID: task.ScanID, TaskID: task.TaskID})
+	}
 	for _, candidate := range outcome.NotificationCandidates {
 		result.NotificationCandidates = append(result.NotificationCandidates, scanapp.BatchScanStopNotification{
 			ScanID:  candidate.ScanID,
@@ -62,6 +68,9 @@ func (adapter *scanStopStoreAdapter) StopAllActiveScansForUpgrade(ctx context.Co
 	result := &scanapp.UpgradeScanStopOutcome{
 		CancelledScanCount: outcome.CancelledScanCount,
 		CancelledTaskCount: outcome.CancelledTaskCount,
+	}
+	for _, task := range outcome.CancelledTasks {
+		result.CancelledTasks = append(result.CancelledTasks, scanapp.ScanStopTask{ScanID: task.ScanID, TaskID: task.TaskID})
 	}
 	for _, candidate := range outcome.NotificationCandidates {
 		result.NotificationCandidates = append(result.NotificationCandidates, scanapp.BatchScanStopNotification{

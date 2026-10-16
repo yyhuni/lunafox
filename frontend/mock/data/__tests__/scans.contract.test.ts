@@ -137,6 +137,28 @@ describe("scans contract", () => {
     expect(logs.results.some((log) => log.content.includes("recon is required"))).toBe(true)
   })
 
+  it("covers the full runtime troubleshooting mock on scan 9", () => {
+    const scan = getMockScanById(9)
+    const tasks = scan?.runtimeTasks ?? []
+    const logs = getMockScanLogs(9).results
+
+    expect(tasks).toHaveLength(4)
+    expect(tasks.find((task) => task.failureKind === "image_pull_failed")).toMatchObject({
+      status: "failed",
+      diagnostics: { availability: "unavailable" },
+    })
+    expect(tasks.find((task) => task.failureKind === "result_submit_failed")).toMatchObject({
+      status: "failed",
+      diagnostics: { resultState: "partial", failedStage: "result_submit" },
+    })
+    expect(tasks.find((task) => task.status === "succeeded")).toMatchObject({
+      stepId: "screenshot",
+      diagnostics: { resultState: "complete" },
+    })
+    expect(logs.some((log) => log.source === "engine_stderr" && log.taskId === 9004)).toBe(true)
+    expect(logs.some((log) => log.source === "server" && log.taskId === 9003)).toBe(true)
+  })
+
   it("supports scan history BusinessListQuery filters and createdAt ordering in mock data", () => {
     const filtered = getMockScans({
       pageSize: 10,

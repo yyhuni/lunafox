@@ -712,6 +712,7 @@ function assertPrivateWorkflow(workflow, policy, publisherSource = "", autoMerge
   const jobsStart = workflow.indexOf("\njobs:");
   const jobNames = [...(jobsStart >= 0 ? workflow.slice(jobsStart).matchAll(/^  ([A-Za-z0-9_-]+):/gm) : [])].map((match) => match[1]);
   if (jobNames.at(-1) !== "request-public-export-auto-merge") fail("request-public-export-auto-merge must be the last private release job");
+  if (workflow.includes("  deploy-vercel-demo:")) fail("private release must not deploy the Vercel demo");
   if (!autoMerge.includes("name: Request Public Export Auto-Merge (Handoff Requested)") ||
       !autoMerge.includes("### Public release handoff requested") ||
       !autoMerge.includes("public repository Actions workflow owns merge, publication, channel, and GitHub Release status")) {
@@ -932,6 +933,7 @@ function assertPublicWorkflow(workflow, policy) {
     "public-engine-package-publish",
     "public-engine-release-manifest",
     "publish-final-release",
+    "deploy-vercel-demo",
   ];
   for (const name of ordinaryReleaseJobs) {
     if (!jobBlock(workflow, name).includes("needs.publication-intent.outputs.recovery != 'true'")) {
@@ -1343,6 +1345,30 @@ function assertPublicWorkflow(workflow, policy) {
   const finalRelease = jobBlock(workflow, "publish-final-release");
   if (!finalRelease.includes("environment: public-release")) {
     fail("public final release must use the protected public-release environment");
+  }
+  const demo = jobBlock(workflow, "deploy-vercel-demo");
+  assertGitHubHostedRunner(demo, "Vercel demo deployment");
+  for (const required of [
+    "environment: public-release",
+    "continue-on-error: true",
+    "needs.publish-final-release.result == 'success'",
+    "needs.publication-intent.outputs.publish == 'true'",
+    "needs.publication-intent.outputs.recovery != 'true'",
+    "scripts/ci/deploy-vercel-demo.mjs",
+    "secrets.VERCEL_DEMO_TOKEN",
+    "secrets.VERCEL_DEMO_ORG_ID",
+    "secrets.VERCEL_DEMO_PROJECT_ID",
+    "DEMO_SITE: \"true\"",
+    "NEXT_PUBLIC_USE_MOCK: \"true\"",
+    "NEXT_PUBLIC_SKIP_AUTH: \"true\"",
+  ]) {
+    if (!demo.includes(required)) fail(`Vercel demo deployment is missing ${required}`);
+  }
+  if (!hasRequiredJobNeeds(demo, ["publish-final-release", "publication-intent"])) {
+    fail("Vercel demo deployment must wait for the final public release");
+  }
+  if (demo.includes("LUNAFOX_PUBLIC_REPO_APP") || demo.includes("create-github-app-token") || demo.includes("BACKEND_URL") || demo.includes("self-hosted")) {
+    fail("Vercel demo deployment must not use the public GitHub App credential, a private runner, or a backend");
   }
   for (const block of [validation, frontendValidation, scopeValidation, goValidation, protoValidation, contextValidation, aggregate, publicationIntent, runtimeCompositionResolver, publication, agentPublication, finalRelease]) {
     if (/CLOUDFLARE_(?:API_TOKEN|ACCOUNT_ID)|wrangler deploy|docker\.lunafox\.cc\.cd/.test(block)) {

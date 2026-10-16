@@ -23,6 +23,7 @@ const UpgradeCancellationReason = "system_upgrade_maintenance"
 type UpgradeScanStopOutcome struct {
 	CancelledScanCount     int
 	CancelledTaskCount     int
+	CancelledTasks         []ScanStopTask
 	NotificationCandidates []BatchScanStopNotificationCandidate
 }
 
@@ -82,6 +83,7 @@ func (r *ScanRepository) StopAllActiveScansForUpgrade(ctx context.Context, opera
 		outcome.CancelledScanCount = len(activeIDs)
 		outcome.CancelledTaskCount = len(tasks)
 		for _, task := range tasks {
+			outcome.CancelledTasks = append(outcome.CancelledTasks, ScanStopTask{ScanID: task.ScanID, TaskID: task.ID})
 			if task.Status == taskStatusRunning && scanStopTaskHasCompleteAssignment(task) {
 				outcome.NotificationCandidates = append(outcome.NotificationCandidates, BatchScanStopNotificationCandidate{
 					ScanID: task.ScanID, TaskID: task.ID, AgentID: *task.AssignedAgentID,

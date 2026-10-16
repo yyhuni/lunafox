@@ -4,13 +4,28 @@
 
 ## Production Boundary
 
-Production frontend builds (`NODE_ENV=production`) always use the real API and
+Production frontend builds (`NODE_ENV=production`) use the real API and
 authentication boundary. `NEXT_PUBLIC_USE_MOCK` and `NEXT_PUBLIC_SKIP_AUTH` are
-development/verification switches only; the Next.js build fails closed if either
-is enabled in production. Vercel and Docker/Compose release builds must not set
-them.
+development/verification switches. The Next.js build fails closed if either is
+enabled in production, except for one explicit Vercel demo project.
 
-A Vercel deployment also requires a project-level `BACKEND_URL` containing the
+That demo project must set all three of `DEMO_SITE=true`,
+`NEXT_PUBLIC_USE_MOCK=true`, and `NEXT_PUBLIC_SKIP_AUTH=true`. It must not set
+`BACKEND_URL` or `NEXT_PUBLIC_BACKEND_URL`, because the browser mock platform
+owns `/v1/*` and skipped authentication must not be aimed at a real API.
+`DEMO_SITE=true` outside Vercel fails the production build. Docker/Compose
+release builds must not set `DEMO_SITE` or either public flag. None of these
+values belong in `frontend/vercel.json`; the real Vercel project stays on the
+backend rewrite below.
+
+The public release workflow deploys this demo after the final GitHub Release
+succeeds, using the merged public `frontend/` tree. The Vercel project must
+keep Git auto-deploy off. The public repository `public-release` environment
+supplies `VERCEL_DEMO_TOKEN`, `VERCEL_DEMO_ORG_ID`, and
+`VERCEL_DEMO_PROJECT_ID`. A missing token or a failed demo build does not fail
+the published release.
+
+A non-demo Vercel deployment requires a project-level `BACKEND_URL` containing the
 root HTTPS origin of the real backend. Next.js rewrites same-origin `/v1/*`
 requests through that server-side value, so it must not be replaced with a
 browser-facing cross-origin API URL. Vercel must not define

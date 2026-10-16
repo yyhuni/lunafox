@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -76,6 +77,10 @@ func TestScanRepositoryBatchStopActiveScansHandlesMixedStatesAndNotifications(t 
 		t.Fatalf("unexpected notification candidates: %+v", outcome.NotificationCandidates)
 	}
 
+	if want := []ScanStopTask{{ScanID: 1, TaskID: 11}, {ScanID: 1, TaskID: 12}, {ScanID: 2, TaskID: 21}}; !reflect.DeepEqual(outcome.CancelledTasks, want) {
+		t.Fatalf("cancelled task evidence identities = %+v, want %+v", outcome.CancelledTasks, want)
+	}
+
 	var scans []struct {
 		ID        int
 		Status    string
@@ -112,7 +117,7 @@ func TestScanRepositoryBatchStopActiveScansIsIdempotentForTerminalReplay(t *test
 	if err != nil {
 		t.Fatalf("replayed BatchStopActiveScans: %v", err)
 	}
-	if replay.StoppedCount != 0 || replay.SkippedCount != 2 || replay.RevokedTaskCount != 0 {
+	if replay.StoppedCount != 0 || replay.SkippedCount != 2 || replay.RevokedTaskCount != 0 || len(replay.CancelledTasks) != 0 {
 		t.Fatalf("unexpected replay outcome: %+v", replay)
 	}
 	var scan struct {
@@ -151,5 +156,17 @@ func TestScanRepositoryBatchStopActiveScansRejectsDuplicateIDs(t *testing.T) {
 	}
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		t.Fatalf("duplicate IDs returned record-not-found: %v", err)
+	}
+}
+
+func TestScanRepositorySingleStopRetainsAllCancelledTaskIdentities(t *testing.T) {
+	repo := newBatchStopRepositoryForTest(t)
+	seedBatchStopRows(t, repo)
+	outcome, err := repo.StopActiveScan(context.Background(), 1, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []ScanStopTask{{ScanID: 1, TaskID: 11}, {ScanID: 1, TaskID: 12}}; !reflect.DeepEqual(outcome.CancelledTasks, want) {
+		t.Fatalf("single stop evidence identities = %+v, want %+v", outcome.CancelledTasks, want)
 	}
 }

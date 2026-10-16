@@ -3,12 +3,16 @@ package application
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
 	agentexecutionv1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/agent/execution/v1"
+	"github.com/yyhuni/lunafox/contracts/resourcenames"
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 	scandomain "github.com/yyhuni/lunafox/server/internal/modules/scan/domain"
+	"github.com/yyhuni/lunafox/server/internal/pkg"
+	"go.uber.org/zap"
 )
 
 var ErrEngineExecutionClaimUnavailable = errors.New("Engine execution claim store is unavailable")
@@ -45,6 +49,14 @@ func (service *ScanTaskBridgeService) ClaimNextExecutionPlan(
 	)
 	if errors.Is(err, scandomain.ErrAgentExecutionSessionFenced) {
 		return nil, ErrScanTaskNotOwned
+	}
+	if err == nil && plan != nil && service.runtimeLogs != nil {
+		scanID, taskID, parseErr := resourcenames.ParseTask(plan.GetTask())
+		if parseErr != nil {
+			pkg.Error("claimed task runtime log scope is invalid", zap.Error(parseErr))
+		} else {
+			service.appendTaskRuntimeLog(ctx, &ScanTaskRecord{ID: taskID, ScanID: scanID}, "assignment:"+requestID, "info", fmt.Sprintf("[server] task assigned to Agent %d; state=running", agentID))
+		}
 	}
 	return plan, err
 }
