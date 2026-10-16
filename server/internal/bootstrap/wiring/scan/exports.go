@@ -78,10 +78,11 @@ func NewScanApplicationService(
 	engineRegistrationRepo *catalogrepo.EngineRepository,
 	installedPackageQuery installedengines.Query,
 	configResources scanapp.ConfigResourceResolver,
+	runtimeLogs scanapp.TaskRuntimeLogAppender,
 ) (*scanapp.ScanFacade, error) {
 	commandService := scanapp.NewScanCommandService(domainRepository, nil)
 	queryService := scanapp.NewScanQueryService(queryStore)
-	lifecycleService := scanapp.NewLifecycleService(commandStore, stopStore, notifier)
+	lifecycleService := scanapp.NewLifecycleService(commandStore, stopStore, notifier).WithTaskRuntimeLogAppender(runtimeLogs)
 
 	var lookupFn scanapp.TargetLookupFunc
 	var quickTargetEnsurer scanapp.QuickTargetEnsurerFunc
@@ -147,10 +148,11 @@ func NewScanTaskApplicationService(
 	scanTaskRuntimeScanStore scanapp.ScanTaskRuntimeScanStore,
 	subdomainSnapshotRepo *snapshotrepo.SubdomainSnapshotRepository,
 	hostPortSnapshotRepo *snapshotrepo.HostPortSnapshotRepository,
+	runtimeLogs scanapp.TaskRuntimeLogAppender,
 ) *scanapp.ScanTaskFacade {
 	// The active claim path reads the saved Engine Container plan. It does not
 	// resolve runtime manifests or materialize a legacy assignment envelope.
-	taskBridgeService := scanapp.NewScanTaskBridgeService(taskStore, scanTaskRuntimeScanStore)
+	taskBridgeService := scanapp.NewScanTaskBridgeService(taskStore, scanTaskRuntimeScanStore).WithTaskRuntimeLogAppender(runtimeLogs)
 	if claimStore, ok := taskStore.(scanapp.EngineExecutionClaimStore); ok {
 		taskBridgeService.WithEngineExecutionClaimStore(claimStore)
 	}

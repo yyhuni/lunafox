@@ -38,6 +38,10 @@ func (stub *progressLogApplicationStub) BatchCreateTaskProgressLogs(_ context.Co
 	return 1, 0, nil
 }
 
+func (stub *progressLogApplicationStub) BatchCreateTaskRuntimeLogs(ctx context.Context, request *scanapp.TaskProgressLogBatchCreateRequest) (int, int, error) {
+	return stub.BatchCreateTaskProgressLogs(ctx, request)
+}
+
 func TestTaskProgressLogDataPlaneRequiresRunningCurrentLease(t *testing.T) {
 	agentID := 17
 	sessionID := "session-17"

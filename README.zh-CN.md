@@ -4,6 +4,10 @@
 
 [English](README.md)
 
+## 演示
+
+[公开演示站](https://lunafox-demo.vercel.app) 用示例数据展示 LunaFox 界面，不需要登录。每次正式发布都会更新这个站点。下面的安装是另一件事：它运行你自己的 LunaFox，使用真实接口和默认管理员账号。
+
 ## 安装
 
 请安装支持 Linux 容器的 Docker，以及 2.24.0 或更高版本的 Docker Compose。

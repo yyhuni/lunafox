@@ -22,7 +22,7 @@ scan 模块补充规则：
 - **PlanTask limits policy**：`bootstrap/wiring/scan` 必须显式注入 Server-owned `PlanTaskLimitsProvider`；生产策略为每个新编译的 executable Engine plan 固定精确 14 天（1,209,600 秒），启用 v2 planning 时 application 立即校验四项 limit 均为正值并冻结一份 service 快照，scan-create 只把该快照复制进持久化 plan。请求/task config、环境变量、Agent 和 claim/retry 均不得覆盖或在持久化后重算，既有 saved plan 保持原值；testsupport 可用 `FixedPlanTaskLimitsProvider` 注入 2-5 秒预算。
 - **Blacklist snapshot freeze**：每个 Scan 的创建事务先经 application 定义的窄 `EffectiveBlacklistPolicyResolver` 读取 global 与 Target-local Policy 的已锁定并集，并在 Scan/Task/saved-plan 提交前写入 Scan-owned `scan_blacklist_snapshot`。不得在事务外预读、在 batch 项间复用、在 Task/retry 时重读当前 Policy，或把 snapshot 暴露到 Scan/Task DTO、saved plan、Agent Context。
 - **Execution input producer**：新 Engine Container 路径的 `subdomains`、`hostPorts`、`websiteURLs` 只由 Server 从已授权 Scan 持久化的 `InputSource` 选择读取边界并流式序列化：`scanSnapshot` 读取该 Scan 已最终化的 snapshot，`targetInventory` 在每次输入请求或重试时重新读取 canonical Target 的当前资产。来源只从 Scan/lease 读取，Agent 请求不得声明或覆盖它；canonical Target 只从已校验 saved plan 解析。两条分支都在 stream header 前加载并验证该 Scan 的 blacklist snapshot，只排除 matcher 命中的事实，不注入 Target baseline、不做业务规范化、不折叠或推断记录。Workflow 独占 Task 依赖的定义和判断；producer 与 artifact resolver 只为已经被 Workflow 调度并授权的 task 生成输入，不得查询、推断或重判前序 Task/Engine 状态。零记录是合法产品，Agent 仍原子发布零字节只读文件；查询、校验、黑名单、生产、传输或完整性失败必须在 Engine 启动前 fast-fail，绝不能发布部分输入、伪装为空输入或降级到另一来源。不得借此扩展 Endpoint 等输入角色。
-- **失败分类与诊断**：`PlanTaskError.Kind` 直接使用稳定的 `server_package_load_failed` 或 `server_plan_compilation_*`；不得把 package load、plan compilation、planning-time skipped 混成同一结果。Agent terminal failure 持久化稳定 `failure.kind`、固定安全 message 和可选受控 `displayMessage`；后者必须是 Agent 的固定类别建议，Server 对其长度、空白、UTF-8 和控制字符 fast-fail 校验，并将其纳入终态重放一致性比较。scheduler rejection 可以把原始 error 返回当前调用栈，但不得把其文本写入 task/scan failure 或结构化日志。scan canonical failure 选择只认识 Engine Container taxonomy，不保留 `worker_start_failed`、`container_exit_failed` 或 Agent package resolve 别名。
+- **失败分类与诊断**：`PlanTaskError.Kind` 直接使用稳定的 `server_package_load_failed` 或 `server_plan_compilation_*`；不得把 package load、plan compilation、planning-time skipped 混成同一结果。Agent terminal failure 持久化稳定 `failure.kind`、固定安全 message 和可选受控 `displayMessage`；后者必须是 Agent 的固定类别建议，Server 对其长度、空白、UTF-8 和控制字符 fast-fail 校验，并将其纳入终态重放一致性比较。scheduler rejection 保留原始 error 给当前调用栈，并写入任务运行日志；task/scan failure 仍使用固定控制面 message。scan canonical failure 选择只认识 Engine Container taxonomy，不保留 `worker_start_failed`、`container_exit_failed` 或 Agent package resolve 别名。
 - **状态命名**：状态更新方法必须带资源目标；更新 scan 用 `UpdateScanStatus`，更新可执行 scan task 用 `UpdateScanTaskStatus`（外部 task_id 传输名暂不扩散重命名，但语义指向 `scan_task.id`），避免在 task execution 编排中使用泛名 `UpdateStatus`。
 - **模型命名**：输入输出模型按职责拆分（`scan_*_inputs.go`、`scan_query_outputs.go`、`scan_task_outputs.go`、`task_progress_log_inputs.go`）；domain alias 统一使用资源化 `*_aliases.go`（当前包括 `scan_create_aliases.go`、`scan_query_aliases.go`、`scan_task_aliases.go`、`task_progress_log_aliases.go`）；sentinel errors 按资源或用例放入 `scan_errors.go`、`scan_create_errors.go`、`scan_task_errors.go`，不新增泛名 `errors.go`。
 - **对外边界**：scan task execution 能力继续通过 `ScanTaskFacade` 或 facade-backed boundary 对外收口，不直接暴露 `ScanTaskBridgeService`。
@@ -32,6 +32,33 @@ scan 模块补充规则：
 - **执行输入来源**：每个公共或内部 Scan create 输入还必须显式携带闭合 `InputSource`：`scanSnapshot` 或 `targetInventory`。该值独立于 `scanWorkflow`、Agent assignment、`triggerType` 与 Scheduled Scan `scanMode`，必须随 Scan 持久化；缺失、空值或未知值在边界 fast-fail，application 不得补默认。Quick create 传播其选择，Batch create 在请求级传播一个选择且不得把字段放入各 item，Scheduled Scan handoff 复制当时持久化的 Schedule 值。`targetInventory` 不是创建期快照，也不新增 Agent/Engine/protobuf 契约。
 - **Scan detail Agent 投影**：详情直接返回 canonical Agent reference、`assignmentMode`、显式删除态，以及 Agent 存在时读时解析的当前名称、transport status 和可选 health state。不得保存分配时名称快照，也不得通过 Agent collection 补全或把页外资源判为删除。
 - **严格领取与删除**：pinned Scan 的所有 executable task 只能由选定 Agent 领取；其他 Agent、离线或不兼容情况都必须保留 pending/blocked，不得回退或迁移。Agent 删除由 Scan-facing lifecycle port 与 claim 共用 Agent 行锁：未开始的 pinned task 以稳定 `agent_deleted` 失败并收敛 Scan；已运行 task 仍走既有 `agent_disconnected` session-fence 语义。
+
+## Task Runtime Logs
+
+`TaskRuntimeLogAppender` is a narrow Server-internal evidence boundary backed
+by the existing `TaskProgressLogApplicationService`. Callers establish task
+ownership before appending assignment, terminal state, result-ingest, stop,
+session-fence and associated error events. Stop outcomes retain every cancelled
+task identity, including unassigned tasks. Session fencing reads committed failed
+tasks and only appends evidence for the affected Agent and lower-epoch leases.
+Raw error text is preserved with a textual `[server]` prefix; terminal failure fields retain their existing control-plane contract.
+There is no source enum or whole-process log forwarding.
+
+Each event uses a deterministic request identity and increasing chunk sequence;
+UTF-8 chunks preserve whitespace and remain within 16 KiB.
+Invalid UTF-8 or NUL-containing content uses an explicit `[binary/base64]`
+standard-base64 representation so the original bytes remain recoverable.
+Writes use a separate two-second budget outside business transactions. Bulk
+stop sends cancellation notifications first and shares one total evidence
+budget across all tasks. Session-fence lookups and writes also share one budget.
+The trusted runtime-write path skips the legacy context-free Scan lookup and
+keeps the database composite owner FK as its final persistence guard.
+Persistence failures emit an Error system log and cannot change terminal results, result acknowledgement,
+committed cancellation, or session-fence recovery. A failed post-fence task
+lookup is also an Error system log and does not fail session recovery.
+Progress uploads already are runtime evidence, so a successful upload does not
+produce a second Server reception row for every Engine output line. Log reads
+remain ordered by persisted ID and retain the existing scan-history lifecycle.
 
 ## Batch Stop Lifecycle
 

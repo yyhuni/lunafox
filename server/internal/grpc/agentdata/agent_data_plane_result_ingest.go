@@ -2,7 +2,12 @@ package agentdata
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
 	"errors"
+	"fmt"
+	"io"
 
 	agentdatav1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/agent/data/v1"
 	"github.com/yyhuni/lunafox/contracts/resourcenames"
@@ -96,8 +101,10 @@ func (s *DataPlaneService) BatchIngestTaskResults(ctx context.Context, req *agen
 		Items:        items,
 	})
 	if err != nil {
+		s.appendResultRuntimeLog(ctx, scope, lease.SessionEpoch, req, "error", fmt.Sprintf("[server] result batch failed: type=%s: %v", req.ResultType, err))
 		return nil, mapResultIngestError(err)
 	}
+	s.appendResultRuntimeLog(ctx, scope, lease.SessionEpoch, req, "info", fmt.Sprintf("[server] result batch committed: type=%s items=%d", req.ResultType, len(req.ItemsJson)))
 	pkg.Info("result ingest materialized",
 		zap.Int("task.id", taskID),
 		zap.Int("scan.id", scope.ScanID),
@@ -112,6 +119,23 @@ func (s *DataPlaneService) BatchIngestTaskResults(ctx context.Context, req *agen
 	)
 
 	return &agentdatav1.BatchIngestTaskResultsResponse{}, nil
+}
+
+func (s *DataPlaneService) appendResultRuntimeLog(ctx context.Context, scope *ResultTaskScope, epoch int64, request *agentdatav1.BatchIngestTaskResultsRequest, level, content string) {
+	if s.runtimeLogs == nil {
+		return
+	}
+	// Result RPCs have no request ID. A length-framed hash of the exact batch
+	// preserves log replay identity without storing the result payload twice.
+	hash := sha256.New()
+	_ = binary.Write(hash, binary.BigEndian, epoch)
+	for _, value := range append([]string{request.ResultType}, request.ItemsJson...) {
+		_ = binary.Write(hash, binary.BigEndian, uint64(len(value)))
+		_, _ = io.WriteString(hash, value)
+	}
+	s.runtimeLogs.AppendTaskRuntimeLog(ctx, scanapp.TaskRuntimeLogEvent{
+		ScanID: scope.ScanID, TaskID: scope.TaskID, EventID: "result:" + hex.EncodeToString(hash.Sum(nil)), Level: level, Content: content,
+	})
 }
 
 func (s *DataPlaneService) getResultTaskScope(ctx context.Context, request ResultTaskScopeRequest, scanID, targetID int) (*ResultTaskScope, error) {

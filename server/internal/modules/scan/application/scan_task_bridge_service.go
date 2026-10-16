@@ -4,6 +4,16 @@ type ScanTaskBridgeService struct {
 	taskStore                ScanTaskStore
 	scanTaskRuntimeScanStore ScanTaskRuntimeScanStore
 	engineExecutionClaims    EngineExecutionClaimStore
+	runtimeLogs              TaskRuntimeLogAppender
+}
+
+// WithTaskRuntimeLogAppender adds Server task evidence outside state commits.
+func (service *ScanTaskBridgeService) WithTaskRuntimeLogAppender(appender TaskRuntimeLogAppender) *ScanTaskBridgeService {
+	if appender == nil {
+		panic("task runtime log appender is required")
+	}
+	service.runtimeLogs = appender
+	return service
 }
 
 func NewScanTaskBridgeService(

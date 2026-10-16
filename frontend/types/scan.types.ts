@@ -137,6 +137,15 @@ export interface BatchStopScansResponse {
   skippedCount: number
   revokedTaskCount: number
 }
-export interface ScanLog { id: number; taskId: number; level: "info" | "warning" | "error"; content: string; createdAt: string }
+export type ScanLogSource = "progress" | "engine_stdout" | "engine_stderr" | "agent" | "server"
+export interface ScanLog {
+  id: number
+  taskId: number
+  level: "info" | "warning" | "error"
+  content: string
+  createdAt: string
+  source?: ScanLogSource
+  truncated?: boolean
+}
 export interface GetScanLogsResponse { results: ScanLog[]; nextPageToken?: string }
 export interface GetScanLogsParams { pageSize?: number; pageToken?: string }

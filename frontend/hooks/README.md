@@ -99,3 +99,15 @@ the source query and reports the server's `affectedCount` (including a zero
 count no-op). Definitive API failures preserve the current catalog cache;
 transport-uncertain failures refresh list/detail projections once so the UI can
 observe the eventual server state, without automatic retry.
+
+## Task Runtime Log Polling
+
+`use-task-progress-logs.ts` drains all currently available opaque cursor pages
+on initial load and every polling tick, including for terminal scans that will
+not poll again. At the current append-only tail it retains the last requested
+page token and deduplicates IDs on the next poll. It never synthesizes a token
+or interprets `emittedAt` as cursor order. One fetch chain runs at a time; scan
+changes and manual reload invalidate older responses. The existing client
+cache remains bounded to the most recent 5000 entries by default. When an active
+scan stops polling, one final incremental refresh also runs after any older
+in-flight fetch, so the committed terminal logs can appear without reopening.

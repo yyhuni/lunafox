@@ -1,6 +1,9 @@
 package agentdata
 
-import agentdatav1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/agent/data/v1"
+import (
+	agentdatav1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/agent/data/v1"
+	scanapp "github.com/yyhuni/lunafox/server/internal/modules/scan/application"
+)
 
 type DataPlaneService struct {
 	agentdatav1.UnimplementedDataPlaneServiceServer
@@ -9,6 +12,16 @@ type DataPlaneService struct {
 	taskProgressLogs TaskProgressLogDataPlane
 	agentFinder      AgentFinder
 	sessions         ExecutionArtifactSessionReader
+	runtimeLogs      scanapp.TaskRuntimeLogAppender
+}
+
+// WithTaskRuntimeLogAppender installs the Server-owned task event boundary.
+func (s *DataPlaneService) WithTaskRuntimeLogAppender(appender scanapp.TaskRuntimeLogAppender) *DataPlaneService {
+	if appender == nil {
+		panic("task runtime log appender is required")
+	}
+	s.runtimeLogs = appender
+	return s
 }
 
 const (

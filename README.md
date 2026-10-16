@@ -4,6 +4,10 @@
 
 [简体中文](README.zh-CN.md)
 
+## Demo
+
+The [public demo](https://lunafox-demo.vercel.app) shows the LunaFox interface with sample data and does not require a login. Each published release updates that site. An installation below is separate: it runs your own LunaFox with the real API and the default administrator account.
+
 ## Install
 
 Install Docker with Linux container support and Docker Compose 2.24.0 or newer.

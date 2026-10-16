@@ -3,12 +3,15 @@ package agentdata
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	scanapp "github.com/yyhuni/lunafox/server/internal/modules/scan/application"
 	scandomain "github.com/yyhuni/lunafox/server/internal/modules/scan/domain"
 	scanrepo "github.com/yyhuni/lunafox/server/internal/modules/scan/repository"
+	"github.com/yyhuni/lunafox/server/internal/pkg"
 	"github.com/yyhuni/lunafox/server/internal/pkg/dberrors"
+	"go.uber.org/zap"
 )
 
 var (
@@ -18,12 +21,13 @@ var (
 )
 
 type taskProgressLogApplicationDataPlane struct {
-	logs  scanapp.TaskProgressLogApplicationService
-	tasks scanrepo.ScanTaskRepository
+	logs        scanapp.TaskProgressLogApplicationService
+	tasks       scanrepo.ScanTaskRepository
+	runtimeLogs scanapp.TaskRuntimeLogAppender
 }
 
 func NewTaskProgressLogDataPlane(logs scanapp.TaskProgressLogApplicationService, tasks scanrepo.ScanTaskRepository) TaskProgressLogDataPlane {
-	return &taskProgressLogApplicationDataPlane{logs: logs, tasks: tasks}
+	return &taskProgressLogApplicationDataPlane{logs: logs, tasks: tasks, runtimeLogs: scanapp.NewTaskRuntimeLogAppender(logs)}
 }
 
 func (plane *taskProgressLogApplicationDataPlane) WriteTaskProgressLogs(ctx context.Context, batch TaskProgressLogBatch) (int, int, error) {
@@ -65,12 +69,22 @@ func (plane *taskProgressLogApplicationDataPlane) WriteTaskProgressLogs(ctx cont
 			EmittedAt: item.EmittedAt,
 		})
 	}
-	return plane.logs.BatchCreateTaskProgressLogs(ctx, &scanapp.TaskProgressLogBatchCreateRequest{
+	accepted, duplicates, err := plane.logs.BatchCreateTaskProgressLogs(ctx, &scanapp.TaskProgressLogBatchCreateRequest{
 		ScanID:    batch.ScanID,
 		TaskID:    batch.TaskID,
 		RequestID: batch.RequestID,
 		Items:     entries,
 	})
+	if err != nil {
+		pkg.Error("task progress log persistence failed", zap.Int("scan.id", task.ScanID), zap.Int("task.id", task.ID), zap.Error(err))
+		// The uploaded entries already represent progress reception. Adding a
+		// successful Server acknowledgement would double every container line.
+		plane.runtimeLogs.AppendTaskRuntimeLog(ctx, scanapp.TaskRuntimeLogEvent{
+			ScanID: task.ScanID, TaskID: task.ID, EventID: "progress:" + batch.RequestID,
+			Level: "error", Content: fmt.Sprintf("[server] progress log persistence failed: %v", err),
+		})
+	}
+	return accepted, duplicates, err
 }
 
 func errDataPlaneDependencyMissing() error {

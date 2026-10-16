@@ -16,6 +16,7 @@ import (
 	agentserver "github.com/yyhuni/lunafox/server/internal/grpc/agentserver"
 	"github.com/yyhuni/lunafox/server/internal/job"
 	"github.com/yyhuni/lunafox/server/internal/middleware"
+	scanapp "github.com/yyhuni/lunafox/server/internal/modules/scan/application"
 	"github.com/yyhuni/lunafox/server/internal/pkg"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -212,7 +213,8 @@ func newAgentPlaneServer(cfg *config.Config, d *deps) (*agentserver.Server, erro
 				TaskScopes: agentdata.NewResultTaskScopeDataPlane(d.scanTaskRepo, d.scanRepo),
 				Ingest:     d.resultIngestService,
 			}).
-			WithTaskProgressLogDataPlane(agentdata.NewTaskProgressLogDataPlane(d.taskProgressLogService, d.scanTaskRepo)).WithAgentSessionReader(sessions),
+			WithTaskProgressLogDataPlane(agentdata.NewTaskProgressLogDataPlane(d.taskProgressLogService, d.scanTaskRepo)).
+			WithTaskRuntimeLogAppender(scanapp.NewTaskRuntimeLogAppender(d.taskProgressLogService)).WithAgentSessionReader(sessions),
 		agentdata.NewExecutionArtifactService(d.agentRepo, artifactResolver),
 		grpc.MaxRecvMsgSize(agentdata.MaxDataPlaneRecvMessageBytes),
 		// gRPC keepalive: send HTTP/2 PINGs to keep long-lived agent streams

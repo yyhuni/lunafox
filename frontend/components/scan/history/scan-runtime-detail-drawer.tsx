@@ -560,23 +560,6 @@ export function RuntimeTaskProgressLines({
   )
 }
 
-function RuntimeTaskFailureLines({ task, t }: { task: RuntimeTaskItem; t: TFn }) {
-  const failureMessage = [task.failureSummary, task.failureDetail].filter(Boolean).join(" ")
-
-  if (!failureMessage) {
-    return null
-  }
-
-  return (
-    <div className="space-y-2">
-      <span className={cn(textRole.helperText, "tracking-normal")}>
-        {t("runtimeDrawer.tasks.failureTitle")}
-      </span>
-      <p className={cn(textRole.bodySubtle, "break-words")}>{failureMessage}</p>
-    </div>
-  )
-}
-
 const diagnosticWatermarkFields: ReadonlyArray<{
   key: Exclude<keyof ResultTypeWatermark, "resultType">
   labelKey: string
@@ -749,15 +732,6 @@ export function RuntimeTaskList({
                         {getRuntimeTaskSkipReasonLabel(task, t) ? (
                           <span className={textRole.helperText}>{getRuntimeTaskSkipReasonLabel(task, t)}</span>
                         ) : null}
-                        {task.failureKind ? (
-                          <Badge
-                            size="compact"
-                            variant={getScanStatusBadgeVariant("failed")}
-                            className={cn("text-xs", getScanStatusClasses("failed"))}
-                          >
-                            {task.failureKind}
-                          </Badge>
-                        ) : null}
                       </div>
                       <p className={cn("max-w-2xl break-words", textRole.bodySubtle)}>
                         {task.detail}
@@ -791,7 +765,6 @@ export function RuntimeTaskList({
                   <div className="space-y-3">
                     <RuntimeTaskDiagnostics diagnostics={task.diagnostics} t={t} />
                     <RuntimeTaskProgressLines progressLogs={progressLogs} t={t} />
-                    <RuntimeTaskFailureLines task={task} t={t} />
                   </div>
                 </CollapsibleContent>
               </div>
@@ -824,6 +797,7 @@ export function RuntimeLogsPanel({
         : t("runtimeDrawer.details.noRuntimeLogsPlanning")
     return <RuntimePanelFallback>{reason}</RuntimePanelFallback>
   }
+
   return (
     <div className={cn(RUNTIME_DETAIL_PANEL_CLASS, "bg-card")}>
       <ScanLogList logs={logs} loading={logsLoading} />

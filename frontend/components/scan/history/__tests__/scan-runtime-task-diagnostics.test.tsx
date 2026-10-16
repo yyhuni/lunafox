@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 
 import { RuntimeTaskList } from "@/components/scan/history/scan-runtime-detail-drawer"
 import type { RuntimeTaskItem } from "@/components/scan/history/scan-runtime-detail-utils"
+import type { ScanLog } from "@/types/scan.types"
 
 const labels: Record<string, string> = {
   "runtimeDrawer.tasks.title": "Runtime tasks",
@@ -11,7 +12,6 @@ const labels: Record<string, string> = {
   "runtimeDrawer.tasks.duration": "Duration",
   "runtimeDrawer.tasks.startedAt": "Started",
   "runtimeDrawer.tasks.noProgress": "No task progress",
-  "runtimeDrawer.tasks.failureTitle": "Failure",
   "runtimeDrawer.tasks.diagnostics.title": "Result Delivery Diagnostics",
   "runtimeDrawer.tasks.diagnostics.availability": "Diagnostic availability",
   "runtimeDrawer.tasks.diagnostics.available": "Available",
@@ -49,11 +49,11 @@ function taskFixture(overrides: Partial<RuntimeTaskItem> = {}): RuntimeTaskItem 
   }
 }
 
-function renderTasks(tasks: RuntimeTaskItem[]) {
+function renderTasks(tasks: RuntimeTaskItem[], taskProgressLogsByTaskId = new Map<number, ScanLog[]>()) {
   return render(
     <RuntimeTaskList
       tasks={tasks}
-      taskProgressLogsByTaskId={new Map()}
+      taskProgressLogsByTaskId={taskProgressLogsByTaskId}
       now={new Date("2026-08-17T00:00:00Z")}
       t={translate as React.ComponentProps<typeof RuntimeTaskList>["t"]}
       statusLabel={(status) => status}
@@ -136,12 +136,37 @@ describe("RuntimeTaskList terminal diagnostics", () => {
       taskFixture({ id: 1, title: "Pending task", status: "pending" }),
       taskFixture({ id: 2, title: "First failure", status: "failed", failureSummary: "First failure summary" }),
       taskFixture({ id: 3, title: "Second failure", status: "failed", failureSummary: "Second failure summary" }),
-    ])
+    ], new Map([
+      [2, [{ id: 1, taskId: 2, level: "error", content: "First task error output", createdAt: "2026-08-17T00:00:00Z" }]],
+      [3, [{ id: 2, taskId: 3, level: "error", content: "Second task error output", createdAt: "2026-08-17T00:00:00Z" }]],
+    ]))
 
-    expect(screen.getByText("First failure summary")).toBeInTheDocument()
-    expect(screen.queryByText("Second failure summary")).not.toBeInTheDocument()
+    expect(screen.getByText(/First task error output/)).toBeInTheDocument()
+    expect(screen.queryByText(/Second task error output/)).not.toBeInTheDocument()
 
     fireEvent.click(screen.getAllByLabelText("Expand task details")[1]!)
-    expect(screen.queryByText("First failure summary")).not.toBeInTheDocument()
+    expect(screen.queryByText(/First task error output/)).not.toBeInTheDocument()
+  })
+
+  it.each([true, false])("omits separate failure explanations when task logs exist: %s", (hasLogs) => {
+    const logs: ScanLog[] = hasLogs
+      ? [{ id: 1, taskId: 1, level: "error", content: "[container/stderr] required targets file missing", createdAt: "2026-08-17T00:00:00Z" }]
+      : []
+    renderTasks([taskFixture({
+      status: "failed",
+      failureKind: "container_exit_failed",
+      failureSummary: "Generic container failure summary",
+      failureDetail: "Generic failure guidance",
+    })], new Map([[1, logs]]))
+
+    expect(screen.getByText("failed")).toBeInTheDocument()
+    expect(screen.queryByText("container_exit_failed")).not.toBeInTheDocument()
+    expect(screen.queryByText(/Generic container failure summary/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Generic failure guidance/)).not.toBeInTheDocument()
+    if (hasLogs) {
+      expect(screen.getByText(/required targets file missing/)).toBeInTheDocument()
+    } else {
+      expect(screen.getByText("No task progress")).toBeInTheDocument()
+    }
   })
 })

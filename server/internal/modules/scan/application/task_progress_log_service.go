@@ -47,7 +47,7 @@ func (service *TaskProgressLogService) BatchCreateTaskProgressLogs(ctx context.C
 	if err := ctx.Err(); err != nil {
 		return 0, 0, err
 	}
-	scanID, taskID, requestID, items := request.normalize()
+	scanID, _, _, _ := request.normalize()
 	// ScanID is persisted with every event so PostgreSQL can route and later
 	// reclaim whole scan ranges without deriving scope through scan_task.
 	_, err := service.scanLookup.GetTaskProgressLogRefByID(scanID)
@@ -57,6 +57,17 @@ func (service *TaskProgressLogService) BatchCreateTaskProgressLogs(ctx context.C
 		}
 		return 0, 0, err
 	}
+	return service.BatchCreateTaskRuntimeLogs(ctx, request)
+}
+
+// BatchCreateTaskRuntimeLogs is the trusted internal write path after task
+// ownership was established. It avoids the legacy context-free Scan lookup;
+// the database composite FK still requires the exact existing Scan/Task owner.
+func (service *TaskProgressLogService) BatchCreateTaskRuntimeLogs(ctx context.Context, request *TaskProgressLogBatchCreateRequest) (int, int, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, 0, err
+	}
+	scanID, taskID, requestID, items := request.normalize()
 	if len(items) == 0 {
 		return 0, 0, nil
 	}

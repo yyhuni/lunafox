@@ -862,6 +862,8 @@ func wireScanModule(repos *repositoryBundle, infra *infra, cfg *config.Config, n
 		repos.orgRepo,
 	)
 	taskProgressLogLookup := taskprogresslogwiring.NewTaskProgressLogScanLookupAdapter(repos.scanRepo)
+	taskProgressLogSvc := taskprogresslogwiring.NewTaskProgressLogApplicationService(taskProgressLogQueryStore, taskProgressLogCommandStore, taskProgressLogLookup)
+	runtimeLogs := scanapp.NewTaskRuntimeLogAppender(taskProgressLogSvc)
 	configResourceResolver, configResourceValidator, err := scanwiring.NewConfigResourceValidationComponents(infra.installedEngineQuery, wordlistCatalog)
 	if err != nil {
 		return scanModuleWiring{}, err
@@ -878,6 +880,7 @@ func wireScanModule(repos *repositoryBundle, infra *infra, cfg *config.Config, n
 		repos.engineRepo,
 		infra.installedEngineQuery,
 		configResourceResolver,
+		runtimeLogs,
 	)
 	if err != nil {
 		return scanModuleWiring{}, err
@@ -891,8 +894,7 @@ func wireScanModule(repos *repositoryBundle, infra *infra, cfg *config.Config, n
 		scheduledscanapp.NewOccurrenceDispatcher(scanSvc),
 	)
 	occurrenceRetentionJob := scheduledscanapp.NewOccurrenceRetentionJob(repos.scheduledScanRepo)
-	scanTaskSvc := scanwiring.NewScanTaskApplicationService(scanTaskStore, scanTaskRuntimeScanStore, repos.subdomainSnapshotRepo, repos.hostPortSnapshotRepo)
-	taskProgressLogSvc := taskprogresslogwiring.NewTaskProgressLogApplicationService(taskProgressLogQueryStore, taskProgressLogCommandStore, taskProgressLogLookup)
+	scanTaskSvc := scanwiring.NewScanTaskApplicationService(scanTaskStore, scanTaskRuntimeScanStore, repos.subdomainSnapshotRepo, repos.hostPortSnapshotRepo, runtimeLogs)
 
 	return scanModuleWiring{
 		scanHandler: scanhandler.NewScanHandler(scanSvc, scanhandler.ScanHistoryRetentionPolicy{

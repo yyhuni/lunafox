@@ -21,10 +21,18 @@ type ScanStopNotificationCandidate struct {
 	AgentID int
 }
 
+// ScanStopTask identifies a task cancelled by the committed stop transaction.
+// It includes unassigned tasks because they cannot produce Agent-side evidence.
+type ScanStopTask struct {
+	ScanID int
+	TaskID int
+}
+
 // ScanStopOutcome contains only state committed by StopActiveScan.
 type ScanStopOutcome struct {
 	ScanID                 int
 	CancelledTaskCount     int
+	CancelledTasks         []ScanStopTask
 	NotificationCandidates []ScanStopNotificationCandidate
 }
 
@@ -41,6 +49,7 @@ type BatchScanStopOutcome struct {
 	StoppedCount           int
 	SkippedCount           int
 	RevokedTaskCount       int
+	CancelledTasks         []ScanStopTask
 	NotificationCandidates []BatchScanStopNotificationCandidate
 }
 
@@ -124,6 +133,7 @@ func (r *ScanRepository) BatchStopActiveScans(ctx context.Context, scanIDs []int
 
 		outcome.RevokedTaskCount = len(tasks)
 		for _, task := range tasks {
+			outcome.CancelledTasks = append(outcome.CancelledTasks, ScanStopTask{ScanID: task.ScanID, TaskID: task.ID})
 			if task.Status == taskStatusRunning && scanStopTaskHasCompleteAssignment(task) {
 				outcome.NotificationCandidates = append(outcome.NotificationCandidates, BatchScanStopNotificationCandidate{
 					ScanID:  task.ScanID,
@@ -222,6 +232,7 @@ func (r *ScanRepository) StopActiveScan(ctx context.Context, scanID int, stopped
 
 		outcome = &ScanStopOutcome{ScanID: scan.ID, CancelledTaskCount: len(tasks)}
 		for _, task := range tasks {
+			outcome.CancelledTasks = append(outcome.CancelledTasks, ScanStopTask{ScanID: scan.ID, TaskID: task.ID})
 			if task.Status == taskStatusRunning && scanStopTaskHasCompleteAssignment(task) {
 				outcome.NotificationCandidates = append(outcome.NotificationCandidates, ScanStopNotificationCandidate{
 					TaskID:  task.ID,
