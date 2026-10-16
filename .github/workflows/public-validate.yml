@@ -3723,10 +3723,13 @@ jobs:
 
   # The demo tracks the published release, not the private handoff. A failed
   # demo deploy must not fail the GitHub Release that already succeeded.
+  # always() && !cancelled() overrides GitHub's implied success(). Without it,
+  # an intentionally skipped upstream Engine build suppresses this job after
+  # the release has already succeeded.
   deploy-vercel-demo:
     name: Deploy Vercel Demo
     needs: [publication-intent, publish-final-release]
-    if: needs.publish-final-release.result == 'success' && needs.publication-intent.outputs.publish == 'true' && needs.publication-intent.outputs.recovery != 'true'
+    if: always() && !cancelled() && needs.publish-final-release.result == 'success' && needs.publication-intent.outputs.publish == 'true' && needs.publication-intent.outputs.recovery != 'true'
     continue-on-error: true
     runs-on: ubuntu-22.04
     environment: public-release
