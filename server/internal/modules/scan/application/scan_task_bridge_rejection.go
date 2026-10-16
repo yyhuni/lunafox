@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/yyhuni/lunafox/server/internal/pkg"
@@ -21,6 +22,7 @@ func (service *ScanTaskBridgeService) failClaimedTask(
 
 	failure := failureFromReason(rejectReason)
 	if err := service.taskStore.FailClaimedTask(ctx, task.ID, failure); err != nil {
+		service.appendTaskRuntimeLog(ctx, task, "assignment-rejection-write", "error", fmt.Sprintf("[server] rejected task state commit failed: %v", err))
 		pkg.Error(
 			"Fail claimed task after scheduler rejection failed",
 			zap.Int("task.id", task.ID),
@@ -30,6 +32,7 @@ func (service *ScanTaskBridgeService) failClaimedTask(
 		)
 		return err
 	}
+	service.appendTaskRuntimeLog(ctx, task, "assignment-rejected", "error", fmt.Sprintf("[server] task assignment rejected: %v", originalErr))
 	if scan != nil {
 		if recalcErr := service.recalculateScanStatus(ctx, scan.ID); recalcErr != nil {
 			pkg.Error(

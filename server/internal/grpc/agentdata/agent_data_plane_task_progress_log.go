@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	agentdatav1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/agent/data/v1"
 	taskprogressv1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/taskprogress/v1"
@@ -118,7 +119,7 @@ func taskProgressLogEntryFromProto(index int, entry *taskprogressv1.TaskProgress
 	if err != nil {
 		return TaskProgressLogEntry{}, status.Errorf(codes.InvalidArgument, "entries[%d].level is invalid", index)
 	}
-	if strings.TrimSpace(entry.Content) == "" {
+	if entry.Content == "" || !utf8.ValidString(entry.Content) {
 		return TaskProgressLogEntry{}, status.Errorf(codes.InvalidArgument, "entries[%d].content is required", index)
 	}
 	if len([]byte(entry.Content)) > maxTaskProgressLogContentBytes {

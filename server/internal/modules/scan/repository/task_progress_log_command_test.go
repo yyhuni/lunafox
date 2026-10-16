@@ -113,14 +113,15 @@ func TestTaskProgressLogRepositoryPersistsAndListsEngineProgressLogsByScanCursor
 	}
 	repo := NewTaskProgressLogRepository(db)
 	accepted, duplicates, err := repo.BatchCreateTaskProgressLogs(context.Background(), []TaskProgressLogRecord{
-		{ID: 1, ScanID: 7, TaskID: taskID, RequestID: "request-1", Sequence: 1, Level: "info", Content: "runtime: start", EmittedAt: &emittedAt},
-		{ID: 2, ScanID: 7, TaskID: taskID, RequestID: "request-1", Sequence: 2, Level: "warning", Content: "runtime: retry", EmittedAt: ptrTime(emittedAt.Add(time.Second))},
+		{ID: 1, ScanID: 7, TaskID: taskID, RequestID: "request-1", Sequence: 1, Level: "info", Content: "[agent] runtime: start token=raw-canary", EmittedAt: ptrTime(emittedAt.Add(2 * time.Second))},
+		{ID: 2, ScanID: 7, TaskID: taskID, RequestID: "request-1", Sequence: 2, Level: "warning", Content: "[engine/stderr] runtime: retry /workspace/input", EmittedAt: ptrTime(emittedAt.Add(time.Second))},
+		{ID: 3, ScanID: 7, TaskID: taskID, RequestID: "request-1", Sequence: 3, Level: "info", Content: "[server] result batch committed", EmittedAt: &emittedAt},
 		{ID: 1, ScanID: 8, TaskID: otherTaskID, RequestID: "request-2", Sequence: 1, Level: "info", Content: "other scan", EmittedAt: ptrTime(emittedAt.Add(2 * time.Second))},
 	})
 	if err != nil {
 		t.Fatalf("batch create task progress logs failed: %v", err)
 	}
-	if accepted != 3 || duplicates != 0 {
+	if accepted != 4 || duplicates != 0 {
 		t.Fatalf("unexpected write counts accepted=%d duplicates=%d", accepted, duplicates)
 	}
 
@@ -128,7 +129,7 @@ func TestTaskProgressLogRepositoryPersistsAndListsEngineProgressLogsByScanCursor
 	if err != nil {
 		t.Fatalf("list first page failed: %v", err)
 	}
-	if len(firstPage) != 1 || firstPage[0].Content != "runtime: start" {
+	if len(firstPage) != 1 || firstPage[0].Content != "[agent] runtime: start token=raw-canary" {
 		t.Fatalf("unexpected first page: %+v", firstPage)
 	}
 	if firstPage[0].TaskID != taskID || firstPage[0].RequestID != "request-1" || firstPage[0].Sequence != 1 {
@@ -139,7 +140,7 @@ func TestTaskProgressLogRepositoryPersistsAndListsEngineProgressLogsByScanCursor
 	if err != nil {
 		t.Fatalf("list next page failed: %v", err)
 	}
-	if len(nextPage) != 1 || nextPage[0].Content != "runtime: retry" || nextPage[0].Level != "warning" {
+	if len(nextPage) != 2 || nextPage[0].ID != 2 || nextPage[0].Content != "[engine/stderr] runtime: retry /workspace/input" || nextPage[0].Level != "warning" || nextPage[1].ID != 3 || nextPage[1].Content != "[server] result batch committed" {
 		t.Fatalf("unexpected next page: %+v", nextPage)
 	}
 }

@@ -155,3 +155,18 @@ func TestTaskProgressLogServiceBatchCreatePreservesCancellation(t *testing.T) {
 		t.Fatalf("cancelled request reached command store %d times", commandStore.batchCalls)
 	}
 }
+
+func TestTaskProgressLogRuntimeWriteSkipsContextFreeLookupAndHonorsCancellation(t *testing.T) {
+	store := &taskProgressLogQueryCommandStoreStub{accepted: 1}
+	service := NewTaskProgressLogService(store, store, nil)
+	request := &TaskProgressLogBatchCreateRequest{ScanID: 7, TaskID: 101, RequestID: "runtime", Items: []TaskProgressLogCreateItem{{Sequence: 1, Level: "info", Content: "raw output", EmittedAt: time.Now().UTC()}}}
+	ctx, cancel := context.WithCancel(context.Background())
+	accepted, _, err := service.BatchCreateTaskRuntimeLogs(ctx, request)
+	if err != nil || accepted != 1 || store.batchCreateCtx != ctx {
+		t.Fatalf("trusted context-bound write = %d %v", accepted, err)
+	}
+	cancel()
+	if _, _, err := service.BatchCreateTaskRuntimeLogs(ctx, request); !errors.Is(err, context.Canceled) || store.batchCalls != 1 {
+		t.Fatalf("cancelled runtime write reached storage: calls=%d err=%v", store.batchCalls, err)
+	}
+}

@@ -19,4 +19,5 @@ type TaskProgressLogScanLookup interface {
 type TaskProgressLogApplicationService interface {
 	ListByScanID(ctx context.Context, scanID int, query *TaskProgressLogListQuery) ([]TaskProgressLogEntry, bool, error)
 	BatchCreateTaskProgressLogs(ctx context.Context, request *TaskProgressLogBatchCreateRequest) (accepted int, duplicates int, err error)
+	BatchCreateTaskRuntimeLogs(ctx context.Context, request *TaskProgressLogBatchCreateRequest) (accepted int, duplicates int, err error)
 }

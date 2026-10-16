@@ -16,10 +16,11 @@ var scanDeleteStopIgnoredTotal = expvar.NewInt("scan_delete_stop_ignored_total")
 var scanStopCancelDeliveryFailedTotal = expvar.NewInt("scan_stop_cancel_delivery_failed_total")
 
 type LifecycleService struct {
-	scanStore ScanCommandStore
-	stopStore ScanStopStore
-	notifier  TaskCancelNotifier
-	clock     Clock
+	scanStore   ScanCommandStore
+	stopStore   ScanStopStore
+	runtimeLogs TaskRuntimeLogAppender
+	notifier    TaskCancelNotifier
+	clock       Clock
 }
 
 func NewLifecycleService(scanStore ScanCommandStore, stopStore ScanStopStore, notifier TaskCancelNotifier, clocks ...Clock) *LifecycleService {
@@ -28,6 +29,12 @@ func NewLifecycleService(scanStore ScanCommandStore, stopStore ScanStopStore, no
 		clock = clocks[0]
 	}
 	return &LifecycleService{scanStore: scanStore, stopStore: stopStore, notifier: notifier, clock: clock}
+}
+
+// WithTaskRuntimeLogAppender adds task evidence after the stop transaction commits.
+func (service *LifecycleService) WithTaskRuntimeLogAppender(appender TaskRuntimeLogAppender) *LifecycleService {
+	service.runtimeLogs = appender
+	return service
 }
 
 func (service *LifecycleService) DeleteScan(ctx context.Context, id int) (int64, []string, error) {
@@ -110,6 +117,7 @@ func (service *LifecycleService) BatchStopScans(ctx context.Context, scanIDs []i
 			zap.Int("task.id", candidate.TaskID),
 		)
 	}
+	service.appendCancelledTaskRuntimeLogs(outcome.CancelledTasks, "scan-stop", "[server] task state committed: cancelled; scan was stopped by request")
 	return outcome, nil
 }
 
@@ -157,6 +165,7 @@ func (service *LifecycleService) StopAllActiveForUpgrade(ctx context.Context, op
 			zap.Int("task.id", candidate.TaskID),
 		)
 	}
+	service.appendCancelledTaskRuntimeLogs(outcome.CancelledTasks, "upgrade-stop:"+strings.TrimSpace(operationID), "[server] task state committed: cancelled; system upgrade maintenance operation="+strings.TrimSpace(operationID))
 	return outcome, nil
 }
 
@@ -193,6 +202,7 @@ func (service *LifecycleService) stopScan(ctx context.Context, scanID int) (int,
 			zap.Int("task.id", candidate.TaskID),
 		)
 	}
+	service.appendCancelledTaskRuntimeLogs(outcome.CancelledTasks, "scan-stop", "[server] task state committed: cancelled; scan was stopped by request")
 	return outcome.CancelledTaskCount, nil
 }
 
@@ -216,4 +226,21 @@ func (service *LifecycleService) stopActiveForDelete(ctx context.Context, scan *
 func isScanActive(status string) bool {
 	parsed, ok := scandomain.ParseScanStatus(status)
 	return ok && scandomain.IsActiveScanStatus(parsed)
+}
+
+func (service *LifecycleService) appendCancelledTaskRuntimeLogs(tasks []ScanStopTask, eventID, content string) {
+	if service.runtimeLogs == nil {
+		return
+	}
+	// Cancellation delivery precedes evidence. One detached budget covers all
+	// affected tasks, so logging cannot multiply the stop latency per task.
+	writeCtx, cancel := context.WithTimeout(context.Background(), taskRuntimeLogWriteTimeout)
+	defer cancel()
+	events := make([]TaskRuntimeLogEvent, 0, len(tasks))
+	for _, task := range tasks {
+		events = append(events, TaskRuntimeLogEvent{
+			ScanID: task.ScanID, TaskID: task.TaskID, EventID: eventID, Level: "info", Content: content,
+		})
+	}
+	service.runtimeLogs.AppendTaskRuntimeLogs(writeCtx, events)
 }

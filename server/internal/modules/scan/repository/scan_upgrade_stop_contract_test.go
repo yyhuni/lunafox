@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -77,6 +78,10 @@ func TestStopAllActiveScansForUpgradeCancelsActiveRowsWithAuditFence(t *testing.
 		t.Fatalf("notification candidates = %+v", outcome.NotificationCandidates)
 	}
 
+	if want := []ScanStopTask{{ScanID: 1, TaskID: 11}, {ScanID: 1, TaskID: 12}, {ScanID: 2, TaskID: 21}, {ScanID: 2, TaskID: 22}}; !reflect.DeepEqual(outcome.CancelledTasks, want) {
+		t.Fatalf("upgrade evidence identities = %+v, want %+v", outcome.CancelledTasks, want)
+	}
+
 	var scans []struct {
 		ID          int
 		Status      string
@@ -129,7 +134,7 @@ func TestStopAllActiveScansForUpgradeCancelsActiveRowsWithAuditFence(t *testing.
 	if err != nil {
 		t.Fatalf("replay error = %v", err)
 	}
-	if replay.CancelledScanCount != 0 || replay.CancelledTaskCount != 0 || len(replay.NotificationCandidates) != 0 {
+	if replay.CancelledScanCount != 0 || replay.CancelledTaskCount != 0 || len(replay.NotificationCandidates) != 0 || len(replay.CancelledTasks) != 0 {
 		t.Fatalf("replay outcome = %+v, want empty", replay)
 	}
 }

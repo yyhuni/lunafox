@@ -18,6 +18,19 @@ Repository conventions for the scan module:
 - `scan_domain_repository_adapter.go`: domain port adapter (`domain <-> repository`).
 - `task_progress_log.go` + `task_progress_log_query.go` + `task_progress_log_command.go`: three-way split for task progress log repository operations. Every persisted progress event stores its required `scan_id` with its `scan_task` owner; `(scan_id, task_id)` is the database reference and `(scan_id, task_id, request_id, sequence)` is the replay key. This is required for aligned history partition routing and retention; scan-scoped reads use the persisted `scan_id` directly.
 
+Task progress logs also carry raw task-associated Agent, Engine and Server
+runtime output. Content is preserved without redaction or source classification.
+Reads use `id ASC` regardless of textual prefix or `emitted_at`; the existing
+request/sequence key still deduplicates retries. No separate runtime-log table,
+partition, migration or retention lifecycle is introduced. PostgreSQL writers
+acquire transaction-scoped advisory locks in a dedicated namespace, sorted by
+Scan ID, before allocating row IDs. Same-Scan inserts therefore commit in cursor
+order without sharing lifecycle row locks; other Scans remain writable. SQLite
+retains its single-writer transaction behavior. Opt-in real PostgreSQL coverage
+uses `LUNAFOX_POSTGRES_RUNTIME_LOG_DSN` pinned to
+`search_path=task_runtime_log_concurrency`; it checks commit visibility, cursor
+continuation, replay deduplication and context cancellation while waiting.
+
 Constraints:
 
 - Do not use `*_mutation.go` naming.
@@ -30,3 +43,8 @@ Constraints:
 - Scan result-summary cache refreshes belong in `scan_command.go` because they update the scan read model; result ingest may call them through a dedicated application port, not by making frontend/history callers recalculate counts.
 - Fresh-install schema permits the temporary exact legacy claim shape (session epoch only), while any v2 claim marker requires the complete Agent/session/epoch/request tuple; a running task with saved plan bytes must carry that complete tuple.
 - `scan_task` remains an unpartitioned execution table with single-column `id` primary key. Its extra `UNIQUE (scan_id, id)` exists only as the task-progress-log composite foreign-key target; history retention deletes it in bounded batches only after all aligned historical partitions are gone.
+
+Stop transactions return the identities of all cancelled tasks in their existing
+outcome, independently of the complete running assignments eligible for Agent
+notification. Server runtime evidence is appended after commit; no runtime-log
+write joins the state transition transaction.

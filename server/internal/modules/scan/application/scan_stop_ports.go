@@ -20,12 +20,20 @@ type BatchScanStopNotification struct {
 	AgentID int
 }
 
+// ScanStopTask identifies a task cancelled by the committed stop transaction.
+// It includes unassigned tasks because they cannot produce Agent-side evidence.
+type ScanStopTask struct {
+	ScanID int
+	TaskID int
+}
+
 // ScanStopOutcome is the complete committed result of a normal synchronous
 // Scan Stop request. It intentionally contains no delivery state because Agent
 // delivery is process-local and happens only after this outcome is durable.
 type ScanStopOutcome struct {
 	ScanID                 int
 	CancelledTaskCount     int
+	CancelledTasks         []ScanStopTask
 	NotificationCandidates []ScanStopNotification
 }
 
@@ -34,6 +42,7 @@ type BatchScanStopOutcome struct {
 	StoppedCount           int
 	SkippedCount           int
 	RevokedTaskCount       int
+	CancelledTasks         []ScanStopTask
 	NotificationCandidates []BatchScanStopNotification
 }
 
@@ -43,6 +52,7 @@ type BatchScanStopOutcome struct {
 type UpgradeScanStopOutcome struct {
 	CancelledScanCount     int
 	CancelledTaskCount     int
+	CancelledTasks         []ScanStopTask
 	NotificationCandidates []BatchScanStopNotification
 }
 

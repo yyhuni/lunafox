@@ -30,8 +30,12 @@ describe("next.config contract", () => {
   it("keeps production Vercel builds on the real API and auth boundary", () => {
     expect(vercelConfig.env?.NEXT_PUBLIC_USE_MOCK).toBeUndefined()
     expect(vercelConfig.env?.NEXT_PUBLIC_SKIP_AUTH).toBeUndefined()
+    expect(vercelConfig.env?.DEMO_SITE).toBeUndefined()
     expect(source).toContain("assertProductionRuntimeFlags")
     expect(source).toContain("const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === 'true'")
+    expect(source).toContain("const demoSite = process.env.DEMO_SITE === 'true'")
+    expect(source).toContain("assertVercelDemoHasNoBackend")
+    expect(source).toContain("&& !demoSite")
     expect(source).not.toContain("NEXT_PUBLIC_BACKEND_URL")
   })
 

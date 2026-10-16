@@ -1,19 +1,19 @@
 {
   "schemaVersion": "lunafox.agent-bundle.v3",
-  "artifactId": "sha256-8b9983c2f060cd7a98329a55aeffe58e6e9fb7e1af0d1bda7813bf6ea14520ca",
+  "artifactId": "sha256-c7a70dbb87d08ceda6be2a7e30c676639615fddeb210a4119f80fe17f72041e4",
   "inputFingerprint": {
     "version": 1,
     "algorithm": "sha256-canonical-json-v1",
-    "value": "sha256:8b9983c2f060cd7a98329a55aeffe58e6e9fb7e1af0d1bda7813bf6ea14520ca"
+    "value": "sha256:c7a70dbb87d08ceda6be2a7e30c676639615fddeb210a4119f80fe17f72041e4"
   },
   "sourceRelease": {
-    "tag": "v0.0.1-alpha.220"
+    "tag": "v0.0.1-alpha.222"
   },
   "sourceRepository": "yyhuni/lunafox-private",
   "destinationRepository": "yyhuni/lunafox",
-  "sourceRevision": "30bf3f7d94b40e16988ca013ae6d146d01b12686",
-  "sourceRevisionDigest": "sha256:7bba6fcfc30f16a1235728c4b62787b44fe2a7e6ee425035b6fb9a06f59519e8",
-  "publicTreePath": "agent/bin/sha256-8b9983c2f060cd7a98329a55aeffe58e6e9fb7e1af0d1bda7813bf6ea14520ca",
+  "sourceRevision": "ecd58486783ee61da560701be7bcc353882de682",
+  "sourceRevisionDigest": "sha256:64fad25a4a1be48c608b1cac034a3c0e3a1b24a935beaf0719bfe210e3bc6e67",
+  "publicTreePath": "agent/bin/sha256-c7a70dbb87d08ceda6be2a7e30c676639615fddeb210a4119f80fe17f72041e4",
   "platforms": [
     "linux/amd64",
     "linux/arm64"
@@ -26,8 +26,8 @@
       "kind": "agent",
       "platform": "linux/amd64",
       "path": "lunafox-agent-linux-amd64",
-      "sha256": "sha256:d7b7a6ac6589a80cb1e47459ee41453c9e8a19c7fbd63b188bc19195e9b0847b",
-      "size": 23916369,
+      "sha256": "sha256:7bf6a8d294d8f3f103e34b59927b5743ac2a019739a0b1dfcbde6fdfd3d13da2",
+      "size": 23990092,
       "executable": true,
       "elf": true
     },
@@ -36,8 +36,8 @@
       "kind": "agent",
       "platform": "linux/arm64",
       "path": "lunafox-agent-linux-arm64",
-      "sha256": "sha256:89dcab81138af70b7bbd7c224240a01b2c8852d59a8a22869edc4a621ab22228",
-      "size": 22507410,
+      "sha256": "sha256:5cc9081a91ac09e13eef860ad10ef0b31b3d864827749d2e4684b6d3759efdd7",
+      "size": 22523933,
       "executable": true,
       "elf": true
     },
@@ -66,8 +66,8 @@
       "kind": "preheater",
       "platform": "linux/amd64",
       "path": "lunafox-engine-preheater-linux-amd64",
-      "sha256": "sha256:7472520b90e0179fa40105059f0538191480206ea9b6eeb458bad0742e1da120",
-      "size": 21327198,
+      "sha256": "sha256:1d3fdc845b8be5c78930edbe03f80be3525f401a1831d922195767d99539428a",
+      "size": 21327558,
       "executable": true,
       "elf": true
     },
@@ -76,8 +76,8 @@
       "kind": "preheater",
       "platform": "linux/arm64",
       "path": "lunafox-engine-preheater-linux-arm64",
-      "sha256": "sha256:154520efb152c9d4d15506ff80d58865cb75f55d9e2d4708ce224b7a4e522490",
-      "size": 20105831,
+      "sha256": "sha256:284827de47983d12a269dc4dc05f6e4f2c665abe60804a79f3d34cf7d7032688",
+      "size": 20105575,
       "executable": true,
       "elf": true
     }

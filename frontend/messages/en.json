@@ -1680,7 +1680,6 @@
             "noDetail": "No additional runtime detail.",
             "logTitle": "Task Log",
             "progressTitle": "Task Progress",
-            "failureTitle": "Failure Details",
             "noProgress": "No task progress yet.",
             "startedAt": "Started",
             "duration": "Duration",
@@ -1775,7 +1774,7 @@
           "details": {
             "title": "Detail Information",
             "logs": "Scan Logs",
-            "allProgress": "All Progress",
+            "allProgress": "Runtime Logs",
             "config": "Scan Config",
             "copyConfig": "Copy scan configuration",
             "noRuntimeLogsPlanning": "Execution was skipped during planning; no runtime logs were created",

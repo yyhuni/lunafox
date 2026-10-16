@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 	"unicode"
@@ -107,6 +108,7 @@ func (service *ScanTaskBridgeService) updateScanTaskStatus(
 		if !terminalTaskResultMatches(task, nextStatus, normalizedFailure, normalizedDiagnostics) {
 			return ErrScanTaskInvalidTransition
 		}
+		service.appendTerminalRuntimeLog(ctx, task, nextStatus, normalizedFailure)
 		return service.reconcileAndClearTerminalTaskResult(ctx, task, nextStatus)
 	}
 
@@ -130,6 +132,7 @@ func (service *ScanTaskBridgeService) updateScanTaskStatus(
 		return ErrScanTaskInvalidUpdate
 	}
 	if err != nil {
+		service.appendTaskRuntimeLog(ctx, task, fmt.Sprintf("terminal-write:%d:%s", sessionEpoch, nextStatus), "error", fmt.Sprintf("[server] task state commit failed: %s: %v", nextStatus, err))
 		return err
 	}
 	if !committed {
@@ -151,6 +154,7 @@ func (service *ScanTaskBridgeService) updateScanTaskStatus(
 			return ErrScanTaskInvalidTransition
 		}
 	}
+	service.appendTerminalRuntimeLog(ctx, task, nextStatus, normalizedFailure)
 	return service.reconcileAndClearTerminalTaskResult(ctx, task, nextStatus)
 }
 
@@ -194,9 +198,14 @@ func (service *ScanTaskBridgeService) reconcileTerminalTaskResult(ctx context.Co
 
 func (service *ScanTaskBridgeService) reconcileAndClearTerminalTaskResult(ctx context.Context, task *ScanTaskRecord, status scandomain.TaskStatus) error {
 	if err := service.reconcileTerminalTaskResult(ctx, task, status); err != nil {
+		service.appendTaskRuntimeLog(ctx, task, "terminal-reconcile:"+string(status), "error", fmt.Sprintf("[server] task state reconciliation failed: %v", err))
 		return err
 	}
-	return service.taskStore.ClearTerminalTaskReconciliationPending(ctx, task.ID)
+	err := service.taskStore.ClearTerminalTaskReconciliationPending(ctx, task.ID)
+	if err != nil {
+		service.appendTaskRuntimeLog(ctx, task, "terminal-clear:"+string(status), "error", fmt.Sprintf("[server] task reconciliation completion failed: %v", err))
+	}
+	return err
 }
 
 func normalizeTaskFailure(status scandomain.TaskStatus, failure *FailureDetail) (*FailureDetail, error) {

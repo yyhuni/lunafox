@@ -16,14 +16,14 @@ describe("buildTaskProgressLogsByTaskId", () => {
     expect(getRuntimeTaskPresentationStatus({ status: "pending" })).toBe("pending")
   })
 
-  it("groups explicit progress entries by task identity and sorts each task timeline", () => {
+  it("groups task logs by identity and preserves database ID order across clock differences", () => {
     const logs: ScanLog[] = [
       {
         id: 3,
         taskId: 7001,
         level: "info",
         content: "third event",
-        createdAt: "2026-06-19T01:02:05Z",
+        createdAt: "2026-06-19T01:02:01Z",
       },
       {
         id: 1,

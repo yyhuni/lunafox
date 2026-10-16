@@ -66,7 +66,7 @@ export function buildTaskProgressLogsByTaskId(logs: ScanLog[]) {
   for (const [taskId, progressLogs] of taskProgressLogsByTaskId.entries()) {
     taskProgressLogsByTaskId.set(
       taskId,
-      [...progressLogs].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() || a.id - b.id)
+      [...progressLogs].sort((a, b) => a.id - b.id)
     )
   }
 

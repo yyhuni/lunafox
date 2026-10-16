@@ -282,14 +282,13 @@ four-tab guesses.
 
 ## Runtime Failure Diagnostics
 
-Failed runtime tasks keep the stable failure kind beside the task status. The
-expanded failure area renders one customer-facing explanation: a single fixed
-failure summary (prefer the task summary and otherwise use the canonical
-scan-level summary) followed by a non-empty `failureDetail` as controlled
-customer guidance. Do not render task and scan summaries separately, and do
-not derive guidance from task logs, raw errors, or the scan-level failure
-object; legacy tasks without this optional field must not render an empty
-diagnostic region.
+Failed runtime tasks show only the localized task status in the task header.
+Expanded tasks show the original failure output through the shared task log
+viewer, without a separate failure-summary or `failureDetail` region. Missing
+logs must not trigger a generic failure explanation as a substitute; the log
+area retains its explicit empty state so missing evidence remains visible.
+Do not parse task logs to reconstruct a root cause or inject summary fields
+as synthetic log entries.
 
 ## Terminal Delivery Diagnostics
 
@@ -299,7 +298,7 @@ availability, delivery state, closed failure classifications, and bounded
 per-result-type watermarks. `complete` and `none` describe typed-result
 delivery only; neither claims that an Engine found or did not find assets.
 When failed tasks are present, the first failed task opens by default so its
-controlled failure summary, diagnostics, and progress logs are immediately
+diagnostics and progress logs are immediately
 visible. The existing Collapsible trigger remains the sole owner of subsequent
 open/closed interaction.
 
@@ -318,7 +317,7 @@ workspace or 72-hour local-log retention view.
 
 ## Runtime Progress Logs
 
-扫描运行详情中的“全部进度”、单任务展开进度和独立任务进度日志都是 operator-facing 的原始输出，不是 Agent/Server 的结构化诊断日志。三个入口都使用 shared visualization 的 `RawLogViewer` 和共享 scan-log formatter，以保留 ANSI、连续的 `[YYYY-MM-DD HH:mm:ss] [LEVEL] message` 文本顺序、时间戳/级别着色、自然换行、内容转义和靠近底部时的自动跟随。扫描进度统一使用本地秒精度，不显示毫秒；`RawLogViewer` 仍兼容旧毫秒输入。单任务展开区域可以保留自己的高度上限，但不得重新拆成时间列、级别 Badge 和消息列。
+扫描运行详情中的“运行日志”、单任务展开进度和独立任务进度日志都是 operator-facing 的原始输出，不依赖客户端解析错误文本。三个入口都使用 shared visualization 的 `RawLogViewer` 和共享 scan-log formatter，以保留 ANSI、连续的 `[YYYY-MM-DD HH:mm:ss] [LEVEL] message` 文本顺序、时间戳/级别着色、自然换行、内容转义和靠近底部时的自动跟随。运行日志直接按数据库写入顺序（`id ASC`）展示所有可用输出，保留原始发出时间仅供诊断，不按 Agent、Engine 或 Server 来源拆分或统计。扫描进度统一使用本地秒精度，不显示毫秒；`RawLogViewer` 仍兼容旧毫秒输入。单任务展开区域可以保留自己的高度上限，但不得重新拆成时间列、级别 Badge 和消息列。
 
 扫描模块不得从 `settings/system-logs` 反向导入 renderer，也不要因为共享终端视觉而给原始进度日志增加结构化日志专用的搜索/级别工具栏、连接状态或 footer。
 

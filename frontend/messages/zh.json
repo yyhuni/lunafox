@@ -1680,7 +1680,6 @@
             "noDetail": "暂无更多运行说明。",
             "logTitle": "任务日志",
             "progressTitle": "任务进度",
-            "failureTitle": "失败说明",
             "noProgress": "暂无任务进度。",
             "startedAt": "开始时间",
             "duration": "耗时",
@@ -1775,7 +1774,7 @@
           "details": {
             "title": "详情信息",
             "logs": "扫描日志",
-            "allProgress": "全部进度",
+            "allProgress": "运行日志",
             "config": "扫描配置",
             "copyConfig": "复制扫描配置",
             "noRuntimeLogsPlanning": "规划阶段已跳过执行，未产生运行日志",
