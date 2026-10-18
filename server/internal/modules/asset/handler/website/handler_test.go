@@ -172,9 +172,9 @@ func TestWebsiteHandlerNewListExportAndWrites(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	now := time.Date(2026, 3, 18, 12, 0, 0, 0, time.UTC)
-	status := 200
+	status := int64(200)
 	screenshotStatus := int16(200)
-	contentLength := 512
+	contentLength := int64(512)
 	vhost := true
 	store := &websiteStoreStub{
 		items: []assetdomain.Website{{

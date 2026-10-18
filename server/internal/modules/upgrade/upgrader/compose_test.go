@@ -174,8 +174,8 @@ func TestPublicComposeExecutorUsesFixedLayoutAndPersistsTarget(t *testing.T) {
 		t.Fatalf("persisted Server release version = %q, want %q", override.Services["server"].Environment["RELEASE_VERSION"], manifest.ReleaseVersion)
 	}
 	for _, service := range []string{"server", "bootstrap"} {
-		if override.Services[service].Environment["ENGINE_INSTALL_REGISTRY"] != "ghcr.io" {
-			t.Fatalf("persisted %s Engine registry = %q, want ghcr.io", service, override.Services[service].Environment["ENGINE_INSTALL_REGISTRY"])
+		if override.Services[service].Environment["ENGINE_INSTALL_REGISTRY"] != "${ENGINE_INSTALL_REGISTRY:-${RELEASE_REGISTRY:-docker.io}}" {
+			t.Fatalf("persisted %s Engine registry = %q, want independent Engine source expression", service, override.Services[service].Environment["ENGINE_INSTALL_REGISTRY"])
 		}
 	}
 	if override.Services["server"].Environment["RELEASE_REGISTRY"] != "ghcr.io" {
@@ -195,8 +195,8 @@ func TestPublicComposeExecutorUsesFixedLayoutAndPersistsTarget(t *testing.T) {
 	}
 }
 
-func TestNewPublicComposeExecutorRejectsUnknownRegistry(t *testing.T) {
-	if _, err := NewPublicComposeExecutor(&recordingRunner{}, "example.invalid"); err == nil {
+func TestNewPublicComposeExecutorRejectsMalformedRegistry(t *testing.T) {
+	if _, err := NewPublicComposeExecutor(&recordingRunner{}, "https://example.invalid"); err == nil {
 		t.Fatal("unknown registry was accepted")
 	}
 }
@@ -1484,4 +1484,23 @@ func newShortRoot(t *testing.T) string {
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(root) })
 	return root
+}
+
+func TestPublicComposeUsesCustomProductRegistry(t *testing.T) {
+	executor, err := NewPublicComposeExecutor(&recordingRunner{}, "product.company.cn:5443")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Reuse the release fixture so projection is tested against a validated manifest.
+	manifest, err := releasemanifest.Parse(releaseManifestFixtureBytes(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ref, err := executor.selectedImageRef(manifest, "agent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(ref, "product.company.cn:5443/yyhuni/lunafox-agent@sha256:") {
+		t.Fatal(ref)
+	}
 }

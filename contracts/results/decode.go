@@ -36,14 +36,14 @@ func DecodeHostPortItems(itemsJSON []string) ([]HostPort, error) {
 	return items, nil
 }
 
-func DecodeWebsiteItems(itemsJSON []string) ([]Website, error) {
-	items := make([]Website, 0, len(itemsJSON))
+func DecodeWebsiteV2Items(itemsJSON []string) ([]WebsiteV2, error) {
+	items := make([]WebsiteV2, 0, len(itemsJSON))
 	for index := range itemsJSON {
-		var item Website
-		if err := decodeCanonicalResultObject(itemsJSON[index], websiteResultFields, &item); err != nil {
+		var item WebsiteV2
+		if err := decodeCanonicalResultObject(itemsJSON[index], websiteV2ResultFields, &item); err != nil {
 			return nil, fmt.Errorf("itemsJson[%d] is invalid JSON: %w", index, err)
 		}
-		if err := Validate(ResultKindAssetWebsite, item); err != nil {
+		if err := Validate(ResultKindAssetWebsiteV2, item); err != nil {
 			return nil, fmt.Errorf("itemsJson[%d]: %w", index, err)
 		}
 		items = append(items, item)
@@ -51,14 +51,14 @@ func DecodeWebsiteItems(itemsJSON []string) ([]Website, error) {
 	return items, nil
 }
 
-func DecodeEndpointItems(itemsJSON []string) ([]Endpoint, error) {
-	items := make([]Endpoint, 0, len(itemsJSON))
+func DecodeEndpointV2Items(itemsJSON []string) ([]EndpointV2, error) {
+	items := make([]EndpointV2, 0, len(itemsJSON))
 	for index := range itemsJSON {
-		var item Endpoint
-		if err := decodeCanonicalResultObject(itemsJSON[index], endpointResultFields, &item); err != nil {
+		var item EndpointV2
+		if err := decodeCanonicalResultObject(itemsJSON[index], endpointV2ResultFields, &item); err != nil {
 			return nil, fmt.Errorf("itemsJson[%d] is invalid JSON: %w", index, err)
 		}
-		if err := Validate(ResultKindAssetEndpoint, item); err != nil {
+		if err := Validate(ResultKindAssetEndpointV2, item); err != nil {
 			return nil, fmt.Errorf("itemsJson[%d]: %w", index, err)
 		}
 		items = append(items, item)

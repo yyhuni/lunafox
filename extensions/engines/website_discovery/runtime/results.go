@@ -11,7 +11,7 @@ import (
 	resultparser "github.com/yyhuni/lunafox/engines/website_discovery/internal/results"
 )
 
-func (r *Runtime) ReportResults(ctx context.Context, progress ProgressReporter, websiteResults websitediscoverycontract.WebsiteSubmitter, artifacts *resultArtifacts) error {
+func (r *Runtime) ReportResults(ctx context.Context, progress ProgressReporter, websiteResults websitediscoverycontract.WebsiteV2Submitter, artifacts *resultArtifacts) error {
 	if artifacts == nil || artifacts.resultArtifactPath == "" {
 		return nil
 	}
@@ -30,7 +30,7 @@ func (r *Runtime) ReportResults(ctx context.Context, progress ProgressReporter, 
 		return fmt.Errorf("create website result deduplication staging: %w", err)
 	}
 
-	summary, err := resultparser.StreamHTTPXWebsitesWithSummary(ctx, artifacts.resultArtifactPath, func(item websitediscoverycontract.Website) error {
+	summary, err := resultparser.StreamHTTPXWebsitesWithSummary(ctx, artifacts.resultArtifactPath, func(item websitediscoverycontract.WebsiteV2) error {
 		payload, err := json.Marshal(item)
 		if err != nil {
 			return fmt.Errorf("encode observed website result: %w", err)
@@ -59,7 +59,7 @@ func (r *Runtime) ReportResults(ctx context.Context, progress ProgressReporter, 
 
 	streamContext, cancel := context.WithCancel(ctx)
 	defer cancel()
-	items := make(chan websitediscoverycontract.Website)
+	items := make(chan websitediscoverycontract.WebsiteV2)
 	type deduplicationResult struct {
 		stats resultDedupStats
 		err   error
@@ -68,7 +68,7 @@ func (r *Runtime) ReportResults(ctx context.Context, progress ProgressReporter, 
 	go func() {
 		defer close(items)
 		stats, err := stager.Stream(streamContext, func(record resultDedupRecord) error {
-			var item websitediscoverycontract.Website
+			var item websitediscoverycontract.WebsiteV2
 			if err := json.Unmarshal(record.payload, &item); err != nil {
 				return fmt.Errorf("decode staged website result: %w", err)
 			}

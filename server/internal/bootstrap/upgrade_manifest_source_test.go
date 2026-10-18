@@ -44,7 +44,7 @@ func TestNewUpgradeManifestSourceRejectsPartialOrUnknownPublicConfiguration(t *t
 		"unknown registry": {
 			DeploymentRoot: t.TempDir(), ReleaseChannel: "canary",
 			MetadataBaseURL: "https://raw.githubusercontent.com/yyhuni/lunafox/release-channel",
-			Registry:        "example.invalid",
+			Registry:        "https://example.invalid",
 		},
 	}
 	for name, cfg := range tests {

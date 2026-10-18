@@ -888,7 +888,7 @@ func TestReportingServerHoldsEmptyTypedResultAcknowledgementUntilExplicitRelease
 	resultChannel := make(chan result, 1)
 	go func() {
 		response, callErr := client.SubmitResultBatch(authorized, &engineexecutionpb.SubmitResultBatchRequest{
-			ResultType: "asset.website.v1",
+			ResultType: "asset.website.v2",
 			Items:      [][]byte{[]byte(`{"url":"https://example.com"}`)},
 		})
 		resultChannel <- result{response: response, err: callErr}
@@ -913,7 +913,7 @@ func TestReportingServerHoldsEmptyTypedResultAcknowledgementUntilExplicitRelease
 	case <-ctx.Done():
 		t.Fatal(ctx.Err())
 	}
-	if err := server.requireResultItems("asset.website.v1", 1); err != nil {
+	if err := server.requireResultItems("asset.website.v2", 1); err != nil {
 		t.Fatal(err)
 	}
 }

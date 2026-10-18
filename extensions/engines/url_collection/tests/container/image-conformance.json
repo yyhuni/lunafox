@@ -6,7 +6,7 @@
   "gateDefaultProgressAck": false,
   "defaultEntrypointExitCode": 1,
   "toolInputs": [{"kind": "websiteURLs", "content": "https://example.com\n"}],
-  "resultType": "asset.endpoint.v1",
+  "resultType": "asset.endpoint.v2",
   "toolStubs": [
     {"tool": "waymore", "source": "tool-stubs/waymore.sh"},
     {"tool": "katana", "source": "tool-stubs/katana.sh"},

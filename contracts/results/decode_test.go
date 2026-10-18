@@ -23,8 +23,8 @@ func TestDecodeSubdomainItemsRejectsInvalidJSON(t *testing.T) {
 	}
 }
 
-func TestDecodeWebsiteItemsRejectsUnpairedSurrogateBeforeJSONDecode(t *testing.T) {
-	_, err := DecodeWebsiteItems([]string{`{"url":"https://example.com/\uD800","host":"example.com"}`})
+func TestDecodeWebsiteV2ItemsRejectsUnpairedSurrogateBeforeJSONDecode(t *testing.T) {
+	_, err := DecodeWebsiteV2Items([]string{`{"url":"https://example.com/\uD800","host":"example.com"}`})
 	if err == nil || !strings.Contains(err.Error(), "unpaired Unicode surrogate") {
 		t.Fatalf("expected unpaired-surrogate rejection, got %v", err)
 	}
@@ -114,20 +114,17 @@ func TestDecodeHostPortItemsRejectsUnknownDuplicateAndIPv6Fields(t *testing.T) {
 	}
 }
 
-func TestDecodeWebsiteItemsPreservesURLAndRejectsHostRepair(t *testing.T) {
-	if _, err := DecodeWebsiteItems([]string{`{"url":"HTTPS://Api.Example.COM:443/login?b=2&a=1#fragment","host":" Api.Example.COM. "}`}); err == nil {
-		t.Fatal("DecodeWebsiteItems silently repaired a Host assertion")
-	}
-	items, err := DecodeWebsiteItems([]string{`{"url":"HTTPS://Api.Example.COM:443/login?b=2&a=1#fragment","host":"api.example.com","title":"API","statusCode":200,"contentLength":42,"location":"https://api.example.com/home","webserver":"nginx","contentType":"text/html","tech":["nginx","go"],"responseBody":"ok","vhost":false,"responseHeaders":"HTTP/1.1 200 OK"}`})
+func TestDecodeWebsiteV2ItemsPreservesURLAndObservedHost(t *testing.T) {
+	items, err := DecodeWebsiteV2Items([]string{`{"url":"HTTPS://Api.Example.COM:443/login?b=2&a=1#fragment","host":"injected.example.com","title":"API","statusCode":200,"contentLength":42,"location":"https://api.example.com/home","webserver":"nginx","contentType":"text/html","tech":["nginx","go"],"responseBody":"ok","vhost":false,"responseHeaders":"HTTP/1.1 200 OK"}`})
 
 	if err != nil {
-		t.Fatalf("DecodeWebsiteItems failed: %v", err)
+		t.Fatalf("DecodeWebsiteV2Items failed: %v", err)
 	}
 	if len(items) != 1 {
 		t.Fatalf("expected 1 website item, got %d", len(items))
 	}
 	item := items[0]
-	if item.URL != "HTTPS://Api.Example.COM:443/login?b=2&a=1#fragment" || item.Host != "api.example.com" || item.Title != "API" {
+	if item.URL != "HTTPS://Api.Example.COM:443/login?b=2&a=1#fragment" || item.Host != "injected.example.com" || item.Title != "API" {
 		t.Fatalf("unexpected website item: %#v", item)
 	}
 	if item.StatusCode == nil || *item.StatusCode != 200 || item.ContentLength == nil || *item.ContentLength != 42 {
@@ -141,39 +138,39 @@ func TestDecodeWebsiteItemsPreservesURLAndRejectsHostRepair(t *testing.T) {
 	}
 }
 
-func TestDecodeWebsiteItemsRequiresExplicitHostAssertion(t *testing.T) {
-	if _, err := DecodeWebsiteItems([]string{`{"url":"http://www.example.com:80"}`}); err == nil {
-		t.Fatal("DecodeWebsiteItems accepted a missing host assertion")
+func TestDecodeWebsiteV2ItemsRequiresExplicitHostAssertion(t *testing.T) {
+	if _, err := DecodeWebsiteV2Items([]string{`{"url":"http://www.example.com:80"}`}); err == nil {
+		t.Fatal("DecodeWebsiteV2Items accepted a missing host assertion")
 	}
-	items, err := DecodeWebsiteItems([]string{`{"url":"http://www.example.com:80","host":"www.example.com"}`})
+	items, err := DecodeWebsiteV2Items([]string{`{"url":"http://www.example.com:80","host":"www.example.com"}`})
 	if err != nil || len(items) != 1 || items[0].URL != "http://www.example.com:80" || items[0].Host != "www.example.com" {
-		t.Fatalf("DecodeWebsiteItems raw URL = %#v, %v", items, err)
+		t.Fatalf("DecodeWebsiteV2Items raw URL = %#v, %v", items, err)
 	}
 }
 
-func TestDecodeWebsiteItemsRejectsInvalidFields(t *testing.T) {
+func TestDecodeWebsiteV2ItemsRejectsInvalidFields(t *testing.T) {
 	cases := []string{
 		`{"url":" "}`,
 		`{"url":"ftp://example.com"}`,
-		`{"url":"https://example.com","host":"bad host"}`,
+		`{"url":"https://example.com","host":"bad\u0000host"}`,
 		`{"url":"https://example.com","statusCode":"200"}`,
 		`{"url":"https://example.com","tech":["ok",42]}`,
 	}
 	for _, payload := range cases {
-		_, err := DecodeWebsiteItems([]string{payload})
+		_, err := DecodeWebsiteV2Items([]string{payload})
 		if err == nil || !strings.Contains(err.Error(), "itemsJson[0]") {
 			t.Fatalf("expected item rejection for %s, got %v", payload, err)
 		}
 	}
 }
 
-func TestDecodeWebsiteItemsRejectsUnknownDuplicateAndCaseVariantFields(t *testing.T) {
+func TestDecodeWebsiteV2ItemsRejectsUnknownDuplicateAndCaseVariantFields(t *testing.T) {
 	for _, payload := range []string{
 		`{"url":"https://example.com","extra":true}`,
 		`{"url":"https://example.com","url":"https://other.example.com"}`,
 		`{"URL":"https://example.com"}`,
 	} {
-		_, err := DecodeWebsiteItems([]string{payload})
+		_, err := DecodeWebsiteV2Items([]string{payload})
 		if err == nil || !strings.Contains(err.Error(), "itemsJson[0]") {
 			t.Fatalf("expected strict website rejection for %s, got %v", payload, err)
 		}

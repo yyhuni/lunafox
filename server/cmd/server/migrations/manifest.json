@@ -51,6 +51,13 @@
       "up": "000007_response_headers_trgm.up.sql",
       "down": "000007_response_headers_trgm.down.sql",
       "checksum": "sha256:89a8bf65f26f13cec68cff69cf6d9c0a16e508cb807a7eb7a7469263f9141ef1"
+    },
+    {
+      "id": "000008",
+      "slug": "widen_web_observation_numbers",
+      "up": "000008_widen_web_observation_numbers.up.sql",
+      "down": "000008_widen_web_observation_numbers.down.sql",
+      "checksum": "sha256:9b5cd2436646901fc4d4b222448af69667cf8cb7763f76e93084de13ea359d9f"
     }
   ]
 }

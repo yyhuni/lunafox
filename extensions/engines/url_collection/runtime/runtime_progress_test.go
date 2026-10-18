@@ -138,7 +138,7 @@ func runtimeProgressExecution(workspace, seedPath string, progress ProgressRepor
 			HTTPX:   enginecontract.HTTPXConfig{Enabled: true, Timeout: 60, Threads: 1, RateLimit: 1, RequestTimeout: 1},
 		},
 		Progress: progress,
-		Results:  enginecontract.Results{Endpoints: results},
+		Results:  enginecontract.Results{EndpointV2: results},
 	}
 }
 

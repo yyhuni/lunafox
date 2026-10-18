@@ -239,9 +239,9 @@ func closeRepositorySQLDB(t *testing.T, db *gorm.DB) {
 }
 
 func TestRepositoryCommandErrorsWithClosedSQLite(t *testing.T) {
-	status := 200
+	status := int64(200)
 	status16 := int16(204)
-	length := 128
+	length := int64(128)
 	vhost := true
 
 	t.Run("directory", func(t *testing.T) {
@@ -309,8 +309,8 @@ func TestRepositoryCommandErrorsWithClosedSQLite(t *testing.T) {
 }
 
 func TestRepositoryEndpointAndWebsiteBatchUpsertSuccessWithScriptedPostgres(t *testing.T) {
-	status := 200
-	length := 256
+	status := int64(200)
+	length := int64(256)
 	vhost := true
 
 	t.Run("website", func(t *testing.T) {

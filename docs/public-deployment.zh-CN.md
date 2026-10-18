@@ -62,7 +62,16 @@ RELEASE_REGISTRY=docker.io
 RELEASE_REGISTRY=ghcr.io
 ```
 
-只接受 `docker.io` 和 `ghcr.io`。所选值适用于完整的第一方 Runtime、Agent、Engine、bootstrap 和 upgrader 闭包。LunaFox 不会回退到另一个 Registry，也不会在一次部署中混用两个 Registry。成功完成原地升级后，持久化的 override 会绑定到原 Registry；更换 Registry 需要新部署，或需要保留应用数据和配置的明确迁移。
+也支持自定义 HTTPS OCI Registry。首次启动前，可以分别配置产品镜像源和 Engine Package / Runtime Image 源：
+
+```dotenv
+RELEASE_REGISTRY=product.company.cn
+ENGINE_INSTALL_REGISTRY=engine.company.cn:5443
+```
+
+两者无需相同；`ENGINE_INSTALL_REGISTRY` 留空或未设置时使用 `RELEASE_REGISTRY`。填写 `host[:port]`，不带协议、路径、凭证或空白。镜像服务须保留原 namespace/repository 路径和 digest；Engine 镜像同步还须包含 OCI signature referrers 和签名 bundle。签名、包结构、平台、版本及兼容性校验继续生效，拉取失败不会静默回退到官方源。预热、执行和升级使用对应配置，升级保留独立的 Engine 源；外部 Agent 也需设置 `ENGINE_INSTALL_REGISTRY`。
+
+这两个选项不改写 PostgreSQL、Redis、Loki、Alloy 的第三方镜像地址，这些镜像仍需通过宿主 Docker 配置解决访问。Registry 凭证和自签 CA 需由部署环境提供；该配置不跳过 TLS，也不替代现有 Sigstore trust-root 获取。原地升级成功后，产品镜像 override 仍绑定选定产品源；更换这一绑定需要保留应用数据与配置的明确迁移。
 
 `DATABASE_MODE=embedded` 是默认值，并启用捆绑的 PostgreSQL 服务。`DB_PORT=5432`、`DB_USER=postgres` 和 `DB_NAME=lunafox` 是可编辑的默认值。此模式下保持 `DB_HOST` 和 `DB_SSLMODE` 为空。`DB_PASSWORD` 为空时，会在首次初始化时生成随机值。
 

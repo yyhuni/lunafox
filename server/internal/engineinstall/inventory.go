@@ -11,17 +11,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// InventoryMode fixes the candidate cardinality for an Engine Package v2
-// bootstrap inventory.
+// InventoryMode selects the bootstrap inventory transport policy.
 type InventoryMode string
 
 const (
 	// InventoryModeDevelopment accepts one local Registry location per package.
 	InventoryModeDevelopment InventoryMode = "development"
-	// InventoryModeProduction requires the two release Registry locations.
+	// InventoryModeProduction accepts one or more immutable artifact locations.
 	InventoryModeProduction InventoryMode = "production"
-	// InventoryModeSelectedRegistry validates both canonical public locations,
-	// then exposes only the explicitly selected Registry to the installer.
+	// InventoryModeSelectedRegistry exposes one canonical identity to the installer;
+	// the configured transport Registry is applied by the puller.
 	InventoryModeSelectedRegistry InventoryMode = "selected-registry"
 )
 
@@ -67,8 +66,8 @@ func LoadInventory(filePath string, mode InventoryMode) (*Inventory, error) {
 	return validateInventoryDocument(document, mode)
 }
 
-// LoadSelectedRegistryInventory loads a public deployment inventory that has
-// already selected Docker Hub or GHCR for the complete release closure.
+// LoadSelectedRegistryInventory loads canonical release identities and selects
+// one for the independently configured transport Registry.
 func LoadSelectedRegistryInventory(filePath, registry string) (*Inventory, error) {
 	registry, err := normalizeSelectedRegistry(registry)
 	if err != nil {
@@ -94,9 +93,9 @@ func (mode InventoryMode) requiredCandidateCount() (int, error) {
 	case InventoryModeDevelopment:
 		return 1, nil
 	case InventoryModeProduction:
-		return 2, nil
+		return 0, nil
 	case InventoryModeSelectedRegistry:
-		return 2, nil
+		return 0, nil
 	default:
 		return 0, fmt.Errorf("unsupported Engine Package v2 inventory mode %q", mode)
 	}
@@ -139,7 +138,7 @@ func validateInventoryDocumentForRegistry(document inventoryDocument, mode Inven
 		if err != nil {
 			return nil, fmt.Errorf("enginePackages[%d].refs: %w", index, err)
 		}
-		if len(candidates.References) != requiredCandidates {
+		if requiredCandidates > 0 && len(candidates.References) != requiredCandidates {
 			candidateLabel := "candidates"
 			if requiredCandidates == 1 {
 				candidateLabel = "candidate"
@@ -155,18 +154,16 @@ func validateInventoryDocumentForRegistry(document inventoryDocument, mode Inven
 			if selectedRegistry == "" {
 				return nil, fmt.Errorf("selected Engine Package Registry is required")
 			}
-			dockerReference := candidates.References[0]
-			ghcrReference := candidates.References[1]
-			if dockerReference.Registry != "docker.io" || ghcrReference.Registry != "ghcr.io" {
-				return nil, fmt.Errorf("enginePackages[%d].refs must order docker.io then ghcr.io", index)
+			// Preserve the signed identity. The configured Registry only controls
+			// transport, including when no canonical ref names that Registry.
+			selectedReference := candidates.References[0]
+			for _, reference := range candidates.References {
+				if reference.Registry == selectedRegistry {
+					selectedReference = reference
+					break
+				}
 			}
-			if dockerReference.Repository != ghcrReference.Repository {
-				return nil, fmt.Errorf("enginePackages[%d].refs must preserve repository identity", index)
-			}
-			selectedReference := dockerReference
-			if selectedRegistry == "ghcr.io" {
-				selectedReference = ghcrReference
-			}
+
 			candidates = ociartifact.ArtifactCandidates{
 				References:             []ociartifact.EnginePackageArtifactReference{selectedReference},
 				ArtifactManifestDigest: selectedReference.ArtifactManifestDigest,
@@ -188,10 +185,8 @@ func normalizeSelectedRegistry(value string) (string, error) {
 	if registry != value {
 		return "", fmt.Errorf("selected Engine Package Registry must not contain surrounding whitespace")
 	}
-	switch registry {
-	case "docker.io", "ghcr.io":
-		return registry, nil
-	default:
-		return "", fmt.Errorf("selected Engine Package Registry must be docker.io or ghcr.io")
+	if err := ociartifact.ValidateRegistryAuthority(registry); err != nil {
+		return "", fmt.Errorf("selected Engine Package Registry: %w", err)
 	}
+	return registry, nil
 }

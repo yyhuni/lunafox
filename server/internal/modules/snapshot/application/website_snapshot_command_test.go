@@ -63,6 +63,32 @@ func TestWebsiteSnapshotCommandServiceSaveAndSync(t *testing.T) {
 	}
 }
 
+func TestWebsiteSnapshotCommandServicePreservesObservedHTTPXMetadata(t *testing.T) {
+	store := &websiteSnapshotCommandStoreStub{}
+	assets := &websiteAssetSyncStub{}
+	service := NewWebsiteSnapshotCommandService(store, &snapshotScanLookupStub{
+		scan: &snapshotdomain.ScanRef{ID: 11, TargetID: 7}, target: &snapshotdomain.ScanTargetRef{ID: 7, Name: "example.com", Type: "domain"},
+	}, assets)
+	status, length := int64(0), int64(9223372036854775807)
+	summary, err := service.SaveAndSync(context.Background(), 11, 7, []WebsiteSnapshotItem{
+		{URL: "https://example.com/probe", Host: "injected.example", StatusCode: &status, ContentLength: &length, ResponseBody: "body", ResponseBodyTruncated: true, ResponseHeaders: "headers", ResponseHeadersTruncated: true},
+		{URL: "https://outside.test/probe", Host: "example.com"},
+	})
+	if err != nil || summary.InvalidItems != 0 || summary.ScopeFilteredItems != 1 || summary.SnapshotCount != 1 || summary.AssetCount != 1 {
+		t.Fatalf("observed metadata admission failed: summary=%+v err=%v", summary, err)
+	}
+	if len(store.snapshots) != 1 || len(assets.items) != 1 {
+		t.Fatalf("unexpected writes: snapshots=%+v assets=%+v", store.snapshots, assets.items)
+	}
+	snapshot, asset := store.snapshots[0], assets.items[0]
+	if snapshot.Host != "injected.example" || snapshot.StatusCode == nil || *snapshot.StatusCode != status || snapshot.ContentLength == nil || *snapshot.ContentLength != length || !snapshot.ResponseBodyTruncated || !snapshot.ResponseHeadersTruncated {
+		t.Fatalf("snapshot changed observed metadata: %+v", snapshot)
+	}
+	if asset.Host != snapshot.Host || asset.StatusCode == nil || *asset.StatusCode != status || asset.ContentLength == nil || *asset.ContentLength != length || !asset.ResponseBodyTruncated || !asset.ResponseHeadersTruncated {
+		t.Fatalf("asset changed observed metadata: %+v", asset)
+	}
+}
+
 func TestWebsiteSnapshotCommandServiceKeepsConfirmedTargetBaselineURLs(t *testing.T) {
 	store := &websiteSnapshotCommandStoreStub{}
 	assetSync := &websiteAssetSyncStub{}
@@ -119,7 +145,7 @@ func TestWebsiteSnapshotCommandServiceKeepsExactRawURLIdentities(t *testing.T) {
 	summary, err := service.SaveAndSync(context.Background(), 11, 7, []WebsiteSnapshotItem{
 		{URL: "https://example.com:443/app", Host: "example.com", Title: "earlier", Tech: []string{"old"}},
 		{URL: "https://example.com/app", Host: "example.com", Title: "later"},
-		{URL: "https://example.com/app", Host: "wrong.example.com", Title: "invalid"},
+		{URL: "https://example.com/app", Host: "wrong.example.com", Title: "invalid", ResponseHeaders: "contains\x00nul"},
 	})
 	if err != nil {
 		t.Fatalf("save and sync failed: %v", err)

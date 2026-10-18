@@ -113,7 +113,7 @@ func completeURLCollectionExecution(workspace, seedPath string, results *capture
 			HTTPX:   enginecontract.HTTPXConfig{Enabled: true, Timeout: 60, Threads: 25, RateLimit: 150, RequestTimeout: 10, Retries: 1},
 		},
 		Progress: captureURLCollectionProgress{},
-		Results:  enginecontract.Results{Endpoints: results},
+		Results:  enginecontract.Results{EndpointV2: results},
 	}
 }
 
@@ -123,11 +123,11 @@ func (captureURLCollectionProgress) Report(context.Context, string) error { retu
 
 type captureEndpoints struct {
 	calls int
-	items []enginecontract.Endpoint
+	items []enginecontract.EndpointV2
 	err   error
 }
 
-func (capture *captureEndpoints) Submit(_ context.Context, items <-chan enginecontract.Endpoint) error {
+func (capture *captureEndpoints) Submit(_ context.Context, items <-chan enginecontract.EndpointV2) error {
 	capture.calls++
 	for item := range items {
 		capture.items = append(capture.items, item)

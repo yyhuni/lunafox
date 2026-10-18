@@ -43,22 +43,24 @@ func (Subdomain) TableName() string {
 
 // Website represents a website asset.
 type Website struct {
-	ID              int             `gorm:"primaryKey;autoIncrement" json:"id"`
-	TargetID        int             `gorm:"column:target_id;not null;index:idx_website_target;index:idx_website_target_created_at_id,priority:1;index:idx_website_target_status_code_id,priority:1;index:idx_website_target_content_length_id,priority:1;index:idx_website_target_webserver_id,priority:1;index:idx_website_target_content_type_id,priority:1;index:idx_website_target_vhost_id,priority:1;uniqueIndex:unique_website_url_target,priority:2" json:"targetId"`
-	URL             string          `gorm:"column:url;size:2000;index:idx_website_url;uniqueIndex:unique_website_url_target,priority:1" json:"url"`
-	Host            string          `gorm:"column:host;size:253;index:idx_website_host;index:idx_website_host_trgm,type:gin,expression:host gin_trgm_ops" json:"host"`
-	Location        string          `gorm:"column:location;type:text" json:"location"`
-	CreatedAt       time.Time       `gorm:"column:created_at;autoCreateTime;index:idx_website_created_at;index:idx_website_target_created_at_id,priority:2" json:"createdAt"`
-	Title           string          `gorm:"column:title;type:text;index:idx_website_title;index:idx_website_title_trgm,type:gin,expression:title gin_trgm_ops" json:"title"`
-	Webserver       string          `gorm:"column:webserver;type:text;index:idx_website_target_webserver_id,priority:2" json:"webserver"`
-	ResponseBody    string          `gorm:"column:response_body;type:text" json:"responseBody"`
-	ContentType     string          `gorm:"column:content_type;type:text;index:idx_website_target_content_type_id,priority:2" json:"contentType"`
-	Tech            pq.StringArray  `gorm:"column:tech;type:varchar(100)[]" json:"tech"`
-	StatusCode      *int            `gorm:"column:status_code;index:idx_website_status_code;index:idx_website_target_status_code_id,priority:2" json:"statusCode"`
-	ContentLength   *int            `gorm:"column:content_length;index:idx_website_target_content_length_id,priority:2" json:"contentLength"`
-	Vhost           *bool           `gorm:"column:vhost;index:idx_website_target_vhost_id,priority:2" json:"vhost"`
-	ResponseHeaders string          `gorm:"column:response_headers;type:text;index:idx_website_response_headers_trgm,type:gin,expression:response_headers gin_trgm_ops" json:"responseHeaders"`
-	Target          *AssetTargetRef `gorm:"foreignKey:TargetID" json:"target,omitempty"`
+	ID                       int             `gorm:"primaryKey;autoIncrement" json:"id"`
+	TargetID                 int             `gorm:"column:target_id;not null;index:idx_website_target;index:idx_website_target_created_at_id,priority:1;index:idx_website_target_status_code_id,priority:1;index:idx_website_target_content_length_id,priority:1;index:idx_website_target_webserver_id,priority:1;index:idx_website_target_content_type_id,priority:1;index:idx_website_target_vhost_id,priority:1;uniqueIndex:unique_website_url_target,priority:2" json:"targetId"`
+	URL                      string          `gorm:"column:url;size:2000;index:idx_website_url;uniqueIndex:unique_website_url_target,priority:1" json:"url"`
+	Host                     string          `gorm:"column:host;size:253;index:idx_website_host;index:idx_website_host_trgm,type:gin,expression:host gin_trgm_ops" json:"host"`
+	Location                 string          `gorm:"column:location;type:text" json:"location"`
+	CreatedAt                time.Time       `gorm:"column:created_at;autoCreateTime;index:idx_website_created_at;index:idx_website_target_created_at_id,priority:2" json:"createdAt"`
+	Title                    string          `gorm:"column:title;type:text;index:idx_website_title;index:idx_website_title_trgm,type:gin,expression:title gin_trgm_ops" json:"title"`
+	Webserver                string          `gorm:"column:webserver;type:text;index:idx_website_target_webserver_id,priority:2" json:"webserver"`
+	ResponseBody             string          `gorm:"column:response_body;type:text" json:"responseBody"`
+	ResponseBodyTruncated    bool            `gorm:"column:response_body_truncated;not null;default:false" json:"responseBodyTruncated"`
+	ContentType              string          `gorm:"column:content_type;type:text;index:idx_website_target_content_type_id,priority:2" json:"contentType"`
+	Tech                     pq.StringArray  `gorm:"column:tech;type:varchar(100)[]" json:"tech"`
+	StatusCode               *int64          `gorm:"column:status_code;index:idx_website_status_code;index:idx_website_target_status_code_id,priority:2" json:"statusCode"`
+	ContentLength            *int64          `gorm:"column:content_length;index:idx_website_target_content_length_id,priority:2" json:"contentLength"`
+	Vhost                    *bool           `gorm:"column:vhost;index:idx_website_target_vhost_id,priority:2" json:"vhost"`
+	ResponseHeaders          string          `gorm:"column:response_headers;type:text;index:idx_website_response_headers_trgm,type:gin,expression:response_headers gin_trgm_ops" json:"responseHeaders"`
+	ResponseHeadersTruncated bool            `gorm:"column:response_headers_truncated;not null;default:false" json:"responseHeadersTruncated"`
+	Target                   *AssetTargetRef `gorm:"foreignKey:TargetID" json:"target,omitempty"`
 }
 
 func (Website) TableName() string {
@@ -86,8 +88,8 @@ type Endpoint struct {
 	ResponseBodyTruncated    bool            `gorm:"column:response_body_truncated;not null;default:false" json:"responseBodyTruncated"`
 	ContentType              string          `gorm:"column:content_type;type:text;index:idx_endpoint_target_content_type_id,priority:2" json:"contentType"`
 	Tech                     pq.StringArray  `gorm:"column:tech;type:varchar(100)[]" json:"tech"`
-	StatusCode               *int            `gorm:"column:status_code;index:idx_endpoint_status_code;index:idx_endpoint_target_status_code_id,priority:2" json:"statusCode"`
-	ContentLength            *int            `gorm:"column:content_length;index:idx_endpoint_target_content_length_id,priority:2" json:"contentLength"`
+	StatusCode               *int64          `gorm:"column:status_code;index:idx_endpoint_status_code;index:idx_endpoint_target_status_code_id,priority:2" json:"statusCode"`
+	ContentLength            *int64          `gorm:"column:content_length;index:idx_endpoint_target_content_length_id,priority:2" json:"contentLength"`
 	Vhost                    *bool           `gorm:"column:vhost;index:idx_endpoint_target_vhost_id,priority:2" json:"vhost"`
 	ResponseHeaders          string          `gorm:"column:response_headers;type:text;index:idx_endpoint_response_headers_trgm,type:gin,expression:response_headers gin_trgm_ops" json:"responseHeaders"`
 	ResponseHeadersTruncated bool            `gorm:"column:response_headers_truncated;not null;default:false" json:"responseHeadersTruncated"`

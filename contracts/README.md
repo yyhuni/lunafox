@@ -52,7 +52,8 @@ packages.
 	and materializes its role; config and platform resources keep their eager,
 	plan-bound contracts.
 - `contracts/ociartifact` owns only OCI transport identity and descriptor
-  validation. OCI manifest digests and package-layer digests are distinct;
+  validation, including canonical Registry authority checks and transport mapping
+  that preserves repository/digest identity. OCI manifest digests and package-layer digests are distinct;
   `contracts/enginemanifest` remains the sole owner of package-content,
   platform, and engine-version validation, including strict rejection of
   legacy payload/runtime-bundle fields and layouts.
@@ -104,8 +105,17 @@ packages.
   registry and the Server-side closed decode/admission boundary. Website,
   Endpoint, Directory, Screenshot, WebsiteTechnology, and Vulnerability URL
   values use the shared non-mutating observed-URL rule: accepted bytes are
-  neither trimmed, parsed/rebuilt, nor percent-decoded. Website and Endpoint
-  `host` values are separate assertions checked against a derived URL authority.
+  neither trimmed, parsed/rebuilt, nor percent-decoded.
+  `asset.website.v2` and `asset.endpoint.v2` are the only supported complete
+  HTTPX observation contracts. Their `host` values preserve the observed host
+  even when it differs from the URL authority, while URL remains the identity
+  and Target-scope input. The retired `asset.website.v1` and `asset.endpoint.v1`
+  types are unsupported; they have no decoder, generated port, or alias to v2.
+  The v2 optional `statusCode` and `contentLength` values are signed 64-bit
+  observations with no HTTP-range or non-negative restriction. Response body
+  and header evidence is finalized by generated adapters (NUL removal and
+  valid-UTF-8 truncation to 2,000 and 65,536 bytes) and carries paired
+  truncation flags; Server still validates those storage limits and flags.
   The descriptor list is the single generation input for each Engine-local
   generated contract; each generated port fixes its wire type, local Go item
   type, and Schema-basics encoder before calling the `engine-go/sdk` ResultSink.
@@ -117,7 +127,7 @@ packages.
   `{url,tech}` items: its URL preserves accepted observed bytes, `tech` is an
   explicit array that may be empty, and values are preserved without trim or
   replacement after strict nonblank, NUL, UTF-8, and 100-Unicode-code-point
-  validation. It does not route through `asset.website.v1` transformation.
+  validation. It does not route through complete Website observation materialization.
   Descriptors and generated typed Results do not authorize an Engine or
   package; every wire request must still carry the explicit canonical
   `result_type` and pass Server scope/schema validation. No manifest result

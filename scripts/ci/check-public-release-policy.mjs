@@ -1351,6 +1351,7 @@ function assertPublicWorkflow(workflow, policy) {
   for (const required of [
     "environment: public-release",
     "continue-on-error: true",
+    "always() && !cancelled()",
     "needs.publish-final-release.result == 'success'",
     "needs.publication-intent.outputs.publish == 'true'",
     "needs.publication-intent.outputs.recovery != 'true'",

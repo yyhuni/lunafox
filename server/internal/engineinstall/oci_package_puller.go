@@ -31,6 +31,9 @@ type ORASPackagePullerOptions struct {
 	MaxPackageLayerBytes int64
 	PerCandidateTimeout  time.Duration
 	AllowPlainHTTP       bool
+	// TransportRegistry changes only the remote authority. Artifact identity
+	// and digest validation continue to use the package-declared reference.
+	TransportRegistry string
 }
 
 // PulledPackageLayer is the ephemeral signed package archive stream supplied
@@ -83,6 +86,11 @@ func NewORASPackagePuller(options ORASPackagePullerOptions) (*ORASPackagePuller,
 	}
 	if options.PerCandidateTimeout <= 0 {
 		return nil, fmt.Errorf("Engine Package v2 per-candidate timeout is required")
+	}
+	if options.TransportRegistry != "" {
+		if err := ociartifact.ValidateRegistryAuthority(options.TransportRegistry); err != nil {
+			return nil, fmt.Errorf("engine package transport Registry: %w", err)
+		}
 	}
 
 	return &ORASPackagePuller{
@@ -164,7 +172,18 @@ func (puller *ORASPackagePuller) pullCandidate(
 	parentCtx context.Context,
 	reference ociartifact.EnginePackageArtifactReference,
 ) (PulledPackageLayer, *verifiedPackageLayerReader, error) {
-	repository, err := puller.newRepository(reference, puller.options.AllowPlainHTTP)
+	repositoryReference := reference
+	if puller.options.TransportRegistry != "" {
+		transportRef, transportErr := ociartifact.ReplaceRegistry(reference.String(), puller.options.TransportRegistry)
+		if transportErr != nil {
+			return PulledPackageLayer{}, nil, fmt.Errorf("resolve Engine Package transport reference: %w", transportErr)
+		}
+		repositoryReference, transportErr = ociartifact.ParseEnginePackageArtifactReference(transportRef)
+		if transportErr != nil {
+			return PulledPackageLayer{}, nil, fmt.Errorf("parse Engine Package transport reference: %w", transportErr)
+		}
+	}
+	repository, err := puller.newRepository(repositoryReference, puller.options.AllowPlainHTTP)
 	if err != nil {
 		return PulledPackageLayer{}, nil, fmt.Errorf("create Engine Package v2 OCI repository client: %w", err)
 	}

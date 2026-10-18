@@ -106,45 +106,11 @@ type Subdomain struct {
 	DNSName string `json:"dnsName"`
 }
 
-// Endpoint is the Engine-local typed item for canonical result_type "asset.endpoint.v1".
-type Endpoint struct {
-	URL                      string   `json:"url"`
-	Host                     string   `json:"host"`
-	Title                    string   `json:"title,omitempty"`
-	StatusCode               *int     `json:"statusCode,omitempty"`
-	ContentLength            *int     `json:"contentLength,omitempty"`
-	Location                 string   `json:"location,omitempty"`
-	Webserver                string   `json:"webserver,omitempty"`
-	ContentType              string   `json:"contentType,omitempty"`
-	Tech                     []string `json:"tech,omitempty"`
-	ResponseBody             string   `json:"responseBody,omitempty"`
-	ResponseBodyTruncated    bool     `json:"responseBodyTruncated,omitempty"`
-	Vhost                    *bool    `json:"vhost,omitempty"`
-	ResponseHeaders          string   `json:"responseHeaders,omitempty"`
-	ResponseHeadersTruncated bool     `json:"responseHeadersTruncated,omitempty"`
-}
-
 // HostPort is the Engine-local typed item for canonical result_type "asset.host_port.v1".
 type HostPort struct {
 	Host string `json:"host"`
 	IP   string `json:"ip"`
 	Port int    `json:"port"`
-}
-
-// Website is the Engine-local typed item for canonical result_type "asset.website.v1".
-type Website struct {
-	URL             string   `json:"url"`
-	Host            string   `json:"host"`
-	Title           string   `json:"title,omitempty"`
-	StatusCode      *int     `json:"statusCode,omitempty"`
-	ContentLength   *int     `json:"contentLength,omitempty"`
-	Location        string   `json:"location,omitempty"`
-	Webserver       string   `json:"webserver,omitempty"`
-	ContentType     string   `json:"contentType,omitempty"`
-	Tech            []string `json:"tech,omitempty"`
-	ResponseBody    string   `json:"responseBody,omitempty"`
-	Vhost           *bool    `json:"vhost,omitempty"`
-	ResponseHeaders string   `json:"responseHeaders,omitempty"`
 }
 
 // WebsiteTechnology is the Engine-local typed item for canonical result_type "asset.website_technology.v1".
@@ -180,6 +146,42 @@ type Vulnerability struct {
 	RawOutput   map[string]any `json:"rawOutput"`
 }
 
+// EndpointV2 is the Engine-local typed item for canonical result_type "asset.endpoint.v2".
+type EndpointV2 struct {
+	URL                      string   `json:"url"`
+	Host                     string   `json:"host"`
+	Title                    string   `json:"title,omitempty"`
+	StatusCode               *int64   `json:"statusCode,omitempty"`
+	ContentLength            *int64   `json:"contentLength,omitempty"`
+	Location                 string   `json:"location,omitempty"`
+	Webserver                string   `json:"webserver,omitempty"`
+	ContentType              string   `json:"contentType,omitempty"`
+	Tech                     []string `json:"tech,omitempty"`
+	ResponseBody             string   `json:"responseBody,omitempty"`
+	ResponseBodyTruncated    bool     `json:"responseBodyTruncated,omitempty"`
+	Vhost                    *bool    `json:"vhost,omitempty"`
+	ResponseHeaders          string   `json:"responseHeaders,omitempty"`
+	ResponseHeadersTruncated bool     `json:"responseHeadersTruncated,omitempty"`
+}
+
+// WebsiteV2 is the Engine-local typed item for canonical result_type "asset.website.v2".
+type WebsiteV2 struct {
+	URL                      string   `json:"url"`
+	Host                     string   `json:"host"`
+	Title                    string   `json:"title,omitempty"`
+	StatusCode               *int64   `json:"statusCode,omitempty"`
+	ContentLength            *int64   `json:"contentLength,omitempty"`
+	Location                 string   `json:"location,omitempty"`
+	Webserver                string   `json:"webserver,omitempty"`
+	ContentType              string   `json:"contentType,omitempty"`
+	Tech                     []string `json:"tech,omitempty"`
+	ResponseBody             string   `json:"responseBody,omitempty"`
+	ResponseBodyTruncated    bool     `json:"responseBodyTruncated,omitempty"`
+	Vhost                    *bool    `json:"vhost,omitempty"`
+	ResponseHeaders          string   `json:"responseHeaders,omitempty"`
+	ResponseHeadersTruncated bool     `json:"responseHeadersTruncated,omitempty"`
+}
+
 func lunafoxValidateResultString(name, value string, nonEmpty, trimmed bool) error {
 	if nonEmpty && value == "" {
 		return fmt.Errorf("%s is required", name)
@@ -191,6 +193,21 @@ func lunafoxValidateResultString(name, value string, nonEmpty, trimmed bool) err
 		return fmt.Errorf("%s must be valid UTF-8", name)
 	}
 	return nil
+}
+
+func lunafoxFinalizeResultEvidence(value string, limit int) (string, bool) {
+	if !utf8.ValidString(value) {
+		return value, false
+	}
+	cleaned := strings.ReplaceAll(value, "\x00", "")
+	if len([]byte(cleaned)) <= limit {
+		return cleaned, false
+	}
+	cut := []byte(cleaned)[:limit]
+	for len(cut) > 0 && !utf8.Valid(cut) {
+		cut = cut[:len(cut)-1]
+	}
+	return string(cut), true
 }
 
 func lunafoxValidateResultHTTPURL(name, value string, forbidUserInfo bool) error {
@@ -251,52 +268,6 @@ func EncodeSubdomain(item Subdomain) (string, error) {
 	return string(payload), nil
 }
 
-// EncodeEndpoint validates Schema-basics and encodes one Endpoint observation.
-func EncodeEndpoint(item Endpoint) (string, error) {
-	if err := lunafoxValidateResultString("endpoint url", item.URL, true, false); err != nil {
-		return "", err
-	}
-	if err := lunafoxValidateResultString("endpoint host", item.Host, true, false); err != nil {
-		return "", err
-	}
-	if err := lunafoxValidateResultString("endpoint title", item.Title, false, false); err != nil {
-		return "", err
-	}
-	if item.StatusCode != nil {
-		if err := lunafoxValidateResultInt("endpoint statuscode", int64(*item.StatusCode), lunafoxInt64Ptr(100), lunafoxInt64Ptr(599)); err != nil {
-			return "", err
-		}
-	}
-	if item.ContentLength != nil {
-		if err := lunafoxValidateResultInt("endpoint contentlength", int64(*item.ContentLength), lunafoxInt64Ptr(0), lunafoxInt64Ptr(2147483647)); err != nil {
-			return "", err
-		}
-	}
-	if err := lunafoxValidateResultString("endpoint location", item.Location, false, false); err != nil {
-		return "", err
-	}
-	if err := lunafoxValidateResultString("endpoint webserver", item.Webserver, false, false); err != nil {
-		return "", err
-	}
-	if err := lunafoxValidateResultString("endpoint contenttype", item.ContentType, false, false); err != nil {
-		return "", err
-	}
-	if err := lunafoxValidateResultStrings("endpoint tech", item.Tech, false); err != nil {
-		return "", err
-	}
-	if err := lunafoxValidateResultString("endpoint responsebody", item.ResponseBody, false, false); err != nil {
-		return "", err
-	}
-	if err := lunafoxValidateResultString("endpoint responseheaders", item.ResponseHeaders, false, false); err != nil {
-		return "", err
-	}
-	payload, err := json.Marshal(item)
-	if err != nil {
-		return "", fmt.Errorf("marshal result: %w", err)
-	}
-	return string(payload), nil
-}
-
 // EncodeHostPort validates Schema-basics and encodes one HostPort observation.
 func EncodeHostPort(item HostPort) (string, error) {
 	if err := lunafoxValidateResultString("hostport host", item.Host, true, false); err != nil {
@@ -306,52 +277,6 @@ func EncodeHostPort(item HostPort) (string, error) {
 		return "", err
 	}
 	if err := lunafoxValidateResultInt("hostport port", int64(item.Port), lunafoxInt64Ptr(1), lunafoxInt64Ptr(65535)); err != nil {
-		return "", err
-	}
-	payload, err := json.Marshal(item)
-	if err != nil {
-		return "", fmt.Errorf("marshal result: %w", err)
-	}
-	return string(payload), nil
-}
-
-// EncodeWebsite validates Schema-basics and encodes one Website observation.
-func EncodeWebsite(item Website) (string, error) {
-	if err := lunafoxValidateResultString("website url", item.URL, true, false); err != nil {
-		return "", err
-	}
-	if err := lunafoxValidateResultString("website host", item.Host, true, false); err != nil {
-		return "", err
-	}
-	if err := lunafoxValidateResultString("website title", item.Title, false, false); err != nil {
-		return "", err
-	}
-	if item.StatusCode != nil {
-		if err := lunafoxValidateResultInt("website statuscode", int64(*item.StatusCode), lunafoxInt64Ptr(100), lunafoxInt64Ptr(599)); err != nil {
-			return "", err
-		}
-	}
-	if item.ContentLength != nil {
-		if err := lunafoxValidateResultInt("website contentlength", int64(*item.ContentLength), lunafoxInt64Ptr(0), nil); err != nil {
-			return "", err
-		}
-	}
-	if err := lunafoxValidateResultString("website location", item.Location, false, false); err != nil {
-		return "", err
-	}
-	if err := lunafoxValidateResultString("website webserver", item.Webserver, false, false); err != nil {
-		return "", err
-	}
-	if err := lunafoxValidateResultString("website contenttype", item.ContentType, false, false); err != nil {
-		return "", err
-	}
-	if err := lunafoxValidateResultStrings("website tech", item.Tech, false); err != nil {
-		return "", err
-	}
-	if err := lunafoxValidateResultString("website responsebody", item.ResponseBody, false, false); err != nil {
-		return "", err
-	}
-	if err := lunafoxValidateResultString("website responseheaders", item.ResponseHeaders, false, false); err != nil {
 		return "", err
 	}
 	payload, err := json.Marshal(item)
@@ -455,6 +380,110 @@ func EncodeVulnerability(item Vulnerability) (string, error) {
 	return string(payload), nil
 }
 
+// EncodeEndpointV2 validates Schema-basics and encodes one EndpointV2 observation.
+func EncodeEndpointV2(item EndpointV2) (string, error) {
+	var lunafoxResponseBodyTruncated bool
+	item.ResponseBody, lunafoxResponseBodyTruncated = lunafoxFinalizeResultEvidence(item.ResponseBody, 2000)
+	item.ResponseBodyTruncated = item.ResponseBodyTruncated || lunafoxResponseBodyTruncated
+	var lunafoxResponseHeadersTruncated bool
+	item.ResponseHeaders, lunafoxResponseHeadersTruncated = lunafoxFinalizeResultEvidence(item.ResponseHeaders, 65536)
+	item.ResponseHeadersTruncated = item.ResponseHeadersTruncated || lunafoxResponseHeadersTruncated
+	if err := lunafoxValidateResultString("endpointv2 url", item.URL, true, false); err != nil {
+		return "", err
+	}
+	if err := lunafoxValidateResultString("endpointv2 host", item.Host, true, false); err != nil {
+		return "", err
+	}
+	if err := lunafoxValidateResultString("endpointv2 title", item.Title, false, false); err != nil {
+		return "", err
+	}
+	if item.StatusCode != nil {
+		if err := lunafoxValidateResultInt("endpointv2 statuscode", int64(*item.StatusCode), nil, nil); err != nil {
+			return "", err
+		}
+	}
+	if item.ContentLength != nil {
+		if err := lunafoxValidateResultInt("endpointv2 contentlength", int64(*item.ContentLength), nil, nil); err != nil {
+			return "", err
+		}
+	}
+	if err := lunafoxValidateResultString("endpointv2 location", item.Location, false, false); err != nil {
+		return "", err
+	}
+	if err := lunafoxValidateResultString("endpointv2 webserver", item.Webserver, false, false); err != nil {
+		return "", err
+	}
+	if err := lunafoxValidateResultString("endpointv2 contenttype", item.ContentType, false, false); err != nil {
+		return "", err
+	}
+	if err := lunafoxValidateResultStrings("endpointv2 tech", item.Tech, false); err != nil {
+		return "", err
+	}
+	if err := lunafoxValidateResultString("endpointv2 responsebody", item.ResponseBody, false, false); err != nil {
+		return "", err
+	}
+	if err := lunafoxValidateResultString("endpointv2 responseheaders", item.ResponseHeaders, false, false); err != nil {
+		return "", err
+	}
+	payload, err := json.Marshal(item)
+	if err != nil {
+		return "", fmt.Errorf("marshal result: %w", err)
+	}
+	return string(payload), nil
+}
+
+// EncodeWebsiteV2 validates Schema-basics and encodes one WebsiteV2 observation.
+func EncodeWebsiteV2(item WebsiteV2) (string, error) {
+	var lunafoxResponseBodyTruncated bool
+	item.ResponseBody, lunafoxResponseBodyTruncated = lunafoxFinalizeResultEvidence(item.ResponseBody, 2000)
+	item.ResponseBodyTruncated = item.ResponseBodyTruncated || lunafoxResponseBodyTruncated
+	var lunafoxResponseHeadersTruncated bool
+	item.ResponseHeaders, lunafoxResponseHeadersTruncated = lunafoxFinalizeResultEvidence(item.ResponseHeaders, 65536)
+	item.ResponseHeadersTruncated = item.ResponseHeadersTruncated || lunafoxResponseHeadersTruncated
+	if err := lunafoxValidateResultString("websitev2 url", item.URL, true, false); err != nil {
+		return "", err
+	}
+	if err := lunafoxValidateResultString("websitev2 host", item.Host, true, false); err != nil {
+		return "", err
+	}
+	if err := lunafoxValidateResultString("websitev2 title", item.Title, false, false); err != nil {
+		return "", err
+	}
+	if item.StatusCode != nil {
+		if err := lunafoxValidateResultInt("websitev2 statuscode", int64(*item.StatusCode), nil, nil); err != nil {
+			return "", err
+		}
+	}
+	if item.ContentLength != nil {
+		if err := lunafoxValidateResultInt("websitev2 contentlength", int64(*item.ContentLength), nil, nil); err != nil {
+			return "", err
+		}
+	}
+	if err := lunafoxValidateResultString("websitev2 location", item.Location, false, false); err != nil {
+		return "", err
+	}
+	if err := lunafoxValidateResultString("websitev2 webserver", item.Webserver, false, false); err != nil {
+		return "", err
+	}
+	if err := lunafoxValidateResultString("websitev2 contenttype", item.ContentType, false, false); err != nil {
+		return "", err
+	}
+	if err := lunafoxValidateResultStrings("websitev2 tech", item.Tech, false); err != nil {
+		return "", err
+	}
+	if err := lunafoxValidateResultString("websitev2 responsebody", item.ResponseBody, false, false); err != nil {
+		return "", err
+	}
+	if err := lunafoxValidateResultString("websitev2 responseheaders", item.ResponseHeaders, false, false); err != nil {
+		return "", err
+	}
+	payload, err := json.Marshal(item)
+	if err != nil {
+		return "", fmt.Errorf("marshal result: %w", err)
+	}
+	return string(payload), nil
+}
+
 func lunafoxResultEnumAllowed(value string, allowed []string) bool {
 	for _, candidate := range allowed {
 		if value == candidate {
@@ -473,13 +502,13 @@ type Progress interface {
 // authorization policy or an output membership declaration.
 type Results struct {
 	Subdomains          SubdomainSubmitter
-	Endpoints           EndpointSubmitter
 	HostPorts           HostPortSubmitter
-	Websites            WebsiteSubmitter
 	WebsiteTechnologies WebsiteTechnologySubmitter
 	Screenshots         ScreenshotSubmitter
 	Directories         DirectorySubmitter
 	Vulnerabilities     VulnerabilitySubmitter
+	EndpointV2          EndpointV2Submitter
+	WebsiteV2           WebsiteV2Submitter
 }
 
 // Source: canonical result descriptor "asset.subdomain.v1".
@@ -487,19 +516,9 @@ type SubdomainSubmitter interface {
 	Submit(context.Context, <-chan Subdomain) error
 }
 
-// Source: canonical result descriptor "asset.endpoint.v1".
-type EndpointSubmitter interface {
-	Submit(context.Context, <-chan Endpoint) error
-}
-
 // Source: canonical result descriptor "asset.host_port.v1".
 type HostPortSubmitter interface {
 	Submit(context.Context, <-chan HostPort) error
-}
-
-// Source: canonical result descriptor "asset.website.v1".
-type WebsiteSubmitter interface {
-	Submit(context.Context, <-chan Website) error
 }
 
 // Source: canonical result descriptor "asset.website_technology.v1".
@@ -520,6 +539,16 @@ type DirectorySubmitter interface {
 // Source: canonical result descriptor "asset.vulnerability.v1".
 type VulnerabilitySubmitter interface {
 	Submit(context.Context, <-chan Vulnerability) error
+}
+
+// Source: canonical result descriptor "asset.endpoint.v2".
+type EndpointV2Submitter interface {
+	Submit(context.Context, <-chan EndpointV2) error
+}
+
+// Source: canonical result descriptor "asset.website.v2".
+type WebsiteV2Submitter interface {
+	Submit(context.Context, <-chan WebsiteV2) error
 }
 
 type Execution struct {

@@ -32,9 +32,16 @@ minimal unverified Endpoint.
 
 Collected URLs are admitted without URL rewriting, scope-filtered against the
 input Target, and staged on task-local disk. After every enabled tool succeeds,
-raw `asset.endpoint.v1` records are submitted through
-`Execution.Results.Endpoints`. Endpoint identity is the Collector/HTTPX input
-URL, not a redirect target. URL Collection adds no retry, resume, checkpoint,
+HTTPX observations are submitted as `asset.endpoint.v2` through
+`Execution.Results.EndpointV2`. Endpoint identity and Target scope use the
+Collector/HTTPX input URL, not a redirect target. The submitted `host` remains
+the observed HTTPX value, including a custom request Host that differs from the
+URL authority. The generated v2 adapter removes NUL bytes and applies the
+response body/header UTF-8 byte limits (2,000/65,536 bytes) before
+submission; parser code does not duplicate that cleanup. Optional
+`statusCode` and `contentLength` values are preserved as signed 64-bit
+observations, including non-standard HTTP values. URL Collection adds no
+retry, resume, checkpoint,
 intermediate-file reuse, historical Website fallback, directory scanning, or
 frontend surface.
 

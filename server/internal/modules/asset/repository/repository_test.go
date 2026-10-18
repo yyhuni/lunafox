@@ -59,8 +59,9 @@ func TestSubdomainFilterMappingUsesDNSNameBoundaryField(t *testing.T) {
 
 func TestRepositoryMappers(t *testing.T) {
 	now := time.Date(2026, 3, 18, 12, 0, 0, 0, time.UTC)
-	status := 200
-	contentLength := 512
+	status := int64(200)
+	directoryStatus := 200
+	contentLength := int64(512)
 	directoryContentLength := int64(512)
 	directoryDuration := int64(42)
 	vhost := true
@@ -69,7 +70,7 @@ func TestRepositoryMappers(t *testing.T) {
 	if directoryModelToDomain(nil) != nil || directoryDomainToModel(nil) != nil {
 		t.Fatal("expected nil directory mapper inputs to return nil")
 	}
-	directory := &assetdomain.Directory{ID: 1, TargetID: 2, URL: "https://example.com/dir", Status: &status, ContentLength: &directoryContentLength, ContentType: "text/html", Duration: &directoryDuration, CreatedAt: now}
+	directory := &assetdomain.Directory{ID: 1, TargetID: 2, URL: "https://example.com/dir", Status: &directoryStatus, ContentLength: &directoryContentLength, ContentType: "text/html", Duration: &directoryDuration, CreatedAt: now}
 	directoryModel := directoryDomainToModel(directory)
 	if directoryModel.URL != directory.URL {
 		t.Fatalf("unexpected directory model: %+v", directoryModel)
@@ -156,9 +157,9 @@ func TestRepositoryMappers(t *testing.T) {
 func TestRepositoryQueriesWithSQLite(t *testing.T) {
 	db := newAssetRepositoryDB(t)
 	now := time.Date(2026, 3, 18, 12, 0, 0, 0, time.UTC)
-	status := 200
+	status := int64(200)
 	status16 := int16(201)
-	length := 256
+	length := int64(256)
 	vhost := true
 
 	mustCreateAssetFixtures(t, db, now, status, status16, length, vhost)
@@ -299,9 +300,9 @@ func TestRepositoryQueriesWithSQLite(t *testing.T) {
 func TestSubdomainRepositoryListByTargetUsesStableServerOrder(t *testing.T) {
 	db := newAssetRepositoryDB(t)
 	now := time.Date(2026, 3, 18, 12, 0, 0, 0, time.UTC)
-	status := 200
+	status := int64(200)
 	status16 := int16(201)
-	length := 256
+	length := int64(256)
 	vhost := true
 	mustCreateAssetFixtures(t, db, now, status, status16, length, vhost)
 
@@ -326,8 +327,9 @@ func TestSubdomainRepositoryListByTargetUsesStableServerOrder(t *testing.T) {
 }
 
 func TestRepositoryCommandsWithSQLite(t *testing.T) {
-	status := 200
-	length := 128
+	status := int64(200)
+	directoryStatus := 200
+	length := int64(128)
 	directoryLength := int64(128)
 	directoryDuration := int64(60)
 	status16 := int16(204)
@@ -370,7 +372,7 @@ func TestRepositoryCommandsWithSQLite(t *testing.T) {
 		affected, err := repo.BatchUpsert([]assetdomain.Directory{{
 			TargetID:      1,
 			URL:           "https://example.com/dir-upsert",
-			Status:        &status,
+			Status:        &directoryStatus,
 			ContentLength: &directoryLength,
 			ContentType:   "text/html",
 			Duration:      &directoryDuration,
@@ -612,12 +614,14 @@ func newAssetRepositoryDB(t *testing.T) *gorm.DB {
 			title TEXT,
 			webserver TEXT,
 			response_body TEXT,
+			response_body_truncated NUMERIC NOT NULL DEFAULT 0,
 			content_type TEXT,
 			tech TEXT,
 			status_code INTEGER,
 			content_length INTEGER,
 			vhost NUMERIC,
 			response_headers TEXT,
+			response_headers_truncated NUMERIC NOT NULL DEFAULT 0,
 			UNIQUE(target_id, url)
 		)`,
 		`CREATE TABLE endpoint (
@@ -671,7 +675,7 @@ func newAssetRepositoryDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func mustCreateAssetFixtures(t *testing.T, db *gorm.DB, now time.Time, status int, status16 int16, length int, vhost bool) {
+func mustCreateAssetFixtures(t *testing.T, db *gorm.DB, now time.Time, status int64, status16 int16, length int64, vhost bool) {
 	t.Helper()
 
 	if err := db.Create([]model.Directory{

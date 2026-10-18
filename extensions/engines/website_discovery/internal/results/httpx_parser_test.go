@@ -23,8 +23,8 @@ func TestStreamHTTPXWebsitesPreservesParseableRawObservations(t *testing.T) {
 		t.Fatalf("write parser fixture: %v", err)
 	}
 
-	var items []contractresults.Website
-	count, err := StreamHTTPXWebsites(context.Background(), path, func(item contractresults.Website) error {
+	var items []contractresults.WebsiteV2
+	count, err := StreamHTTPXWebsites(context.Background(), path, func(item contractresults.WebsiteV2) error {
 		items = append(items, item)
 		return nil
 	})
@@ -62,8 +62,8 @@ func TestStreamHTTPXWebsitesWithSummaryCountsMalformedInvalidAndFailedRecords(t 
 		t.Fatalf("write parser fixture: %v", err)
 	}
 
-	var items []contractresults.Website
-	summary, err := StreamHTTPXWebsitesWithSummary(context.Background(), path, func(item contractresults.Website) error {
+	var items []contractresults.WebsiteV2
+	summary, err := StreamHTTPXWebsitesWithSummary(context.Background(), path, func(item contractresults.WebsiteV2) error {
 		items = append(items, item)
 		return nil
 	})
@@ -85,8 +85,8 @@ func TestStreamHTTPXWebsitesUsesInputURLBeforeRedirectURL(t *testing.T) {
 		t.Fatalf("write parser fixture: %v", err)
 	}
 
-	var items []contractresults.Website
-	count, err := StreamHTTPXWebsites(context.Background(), path, func(item contractresults.Website) error {
+	var items []contractresults.WebsiteV2
+	count, err := StreamHTTPXWebsites(context.Background(), path, func(item contractresults.WebsiteV2) error {
 		items = append(items, item)
 		return nil
 	})
@@ -108,8 +108,8 @@ func TestStreamHTTPXWebsitesRejectsUnassociatedFinalURL(t *testing.T) {
 		t.Fatalf("write parser fixture: %v", err)
 	}
 
-	var items []contractresults.Website
-	summary, err := StreamHTTPXWebsitesWithSummary(context.Background(), path, func(item contractresults.Website) error {
+	var items []contractresults.WebsiteV2
+	summary, err := StreamHTTPXWebsitesWithSummary(context.Background(), path, func(item contractresults.WebsiteV2) error {
 		items = append(items, item)
 		return nil
 	})
@@ -127,7 +127,7 @@ func TestStreamHTTPXWebsitesFailsMissingInputEvenWhenOtherRowsAreMalformed(t *te
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatalf("write parser fixture: %v", err)
 	}
-	_, err := StreamHTTPXWebsitesWithSummary(context.Background(), path, func(contractresults.Website) error { return nil })
+	_, err := StreamHTTPXWebsitesWithSummary(context.Background(), path, func(contractresults.WebsiteV2) error { return nil })
 	if err == nil || !strings.Contains(err.Error(), "candidate input identity") {
 		t.Fatalf("expected unassociated identity failure, got %v", err)
 	}
@@ -140,8 +140,8 @@ func TestStreamHTTPXWebsitesPreservesResponseEvidenceWithLineBreaks(t *testing.T
 		t.Fatalf("write parser fixture: %v", err)
 	}
 
-	var items []contractresults.Website
-	count, err := StreamHTTPXWebsites(context.Background(), path, func(item contractresults.Website) error {
+	var items []contractresults.WebsiteV2
+	count, err := StreamHTTPXWebsites(context.Background(), path, func(item contractresults.WebsiteV2) error {
 		items = append(items, item)
 		return nil
 	})
@@ -166,8 +166,8 @@ func TestStreamHTTPXWebsitesLeavesHostAndNumericValidationToServer(t *testing.T)
 		t.Fatalf("write parser fixture: %v", err)
 	}
 
-	var items []contractresults.Website
-	summary, err := StreamHTTPXWebsitesWithSummary(context.Background(), path, func(item contractresults.Website) error {
+	var items []contractresults.WebsiteV2
+	summary, err := StreamHTTPXWebsitesWithSummary(context.Background(), path, func(item contractresults.WebsiteV2) error {
 		items = append(items, item)
 		return nil
 	})
@@ -191,8 +191,8 @@ func TestStreamHTTPXWebsitesRejectsInvalidUTF8BeforeJSONDecode(t *testing.T) {
 		t.Fatalf("write parser fixture: %v", err)
 	}
 
-	var items []contractresults.Website
-	summary, err := StreamHTTPXWebsitesWithSummary(context.Background(), path, func(item contractresults.Website) error {
+	var items []contractresults.WebsiteV2
+	summary, err := StreamHTTPXWebsitesWithSummary(context.Background(), path, func(item contractresults.WebsiteV2) error {
 		items = append(items, item)
 		return nil
 	})
@@ -210,7 +210,7 @@ func TestStreamHTTPXWebsitesRejectsUnpairedSurrogateBeforeJSONDecode(t *testing.
 		t.Fatalf("write parser fixture: %v", err)
 	}
 
-	summary, err := StreamHTTPXWebsitesWithSummary(context.Background(), path, func(contractresults.Website) error {
+	summary, err := StreamHTTPXWebsitesWithSummary(context.Background(), path, func(contractresults.WebsiteV2) error {
 		t.Fatal("unpaired-surrogate record must not be submitted")
 		return nil
 	})
@@ -230,8 +230,8 @@ func TestStreamHTTPXWebsitesSkipsOversizedRecordAndContinues(t *testing.T) {
 		t.Fatalf("write parser fixture: %v", err)
 	}
 
-	var items []contractresults.Website
-	summary, err := StreamHTTPXWebsitesWithSummary(context.Background(), path, func(item contractresults.Website) error {
+	var items []contractresults.WebsiteV2
+	summary, err := StreamHTTPXWebsitesWithSummary(context.Background(), path, func(item contractresults.WebsiteV2) error {
 		items = append(items, item)
 		return nil
 	})
@@ -248,7 +248,7 @@ func TestStreamHTTPXWebsitesSkipsOversizedRecordAndContinues(t *testing.T) {
 
 func TestStreamHTTPXWebsitesRejectsMissingFinalArtifact(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "missing.jsonl")
-	_, err := StreamHTTPXWebsites(context.Background(), path, func(contractresults.Website) error { return nil })
+	_, err := StreamHTTPXWebsites(context.Background(), path, func(contractresults.WebsiteV2) error { return nil })
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected missing artifact error, got %v", err)
 	}

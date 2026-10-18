@@ -111,11 +111,10 @@ func NewComposeExecutor(runner CommandRunner) *ComposeExecutor {
 
 // NewPublicComposeExecutor creates the fixed executor used by the released
 // Compose package. Registry is deployment-owned and never comes from a browser
-// request, so a manifest cannot silently mix Docker Hub and GHCR references.
+// request. Only the authority changes; release repository and digest stay bound.
 func NewPublicComposeExecutor(runner CommandRunner, registry string) (*ComposeExecutor, error) {
-	registry = strings.TrimSpace(registry)
-	if registry != "docker.io" && registry != "ghcr.io" {
-		return nil, fmt.Errorf("unsupported upgrade registry %q", registry)
+	if err := ociartifact.ValidateRegistryAuthority(registry); err != nil {
+		return nil, fmt.Errorf("upgrade registry: %w", err)
 	}
 	executor := &ComposeExecutor{
 		Runner:                    runner,
@@ -990,7 +989,7 @@ func (executor *ComposeExecutor) writeComposeOverrideWithMode(path string, manif
 			"AGENT_VERSION":           manifest.ReleaseVersion,
 			"AGENT_IMAGE_REF":         agent,
 			"RELEASE_REGISTRY":        executor.Registry,
-			"ENGINE_INSTALL_REGISTRY": executor.Registry,
+			"ENGINE_INSTALL_REGISTRY": "${ENGINE_INSTALL_REGISTRY:-${RELEASE_REGISTRY:-docker.io}}",
 		}}
 		services["agent"] = composeOverrideService{Image: agent, Environment: map[string]string{"AGENT_VERSION": manifest.ReleaseVersion}}
 		services["agent-preflight"] = composeOverrideService{Image: agent, Environment: map[string]string{"AGENT_IMAGE_REF": agent}}
@@ -1004,7 +1003,7 @@ func (executor *ComposeExecutor) writeComposeOverrideWithMode(path string, manif
 		services["bootstrap"] = composeOverrideService{Image: bootstrap, Environment: map[string]string{
 			"RELEASE_VERSION":         manifest.ReleaseVersion,
 			"AGENT_VERSION":           manifest.ReleaseVersion,
-			"ENGINE_INSTALL_REGISTRY": executor.Registry,
+			"ENGINE_INSTALL_REGISTRY": "${ENGINE_INSTALL_REGISTRY:-${RELEASE_REGISTRY:-docker.io}}",
 		}}
 		services["upgrader"] = composeOverrideService{
 			Image: bootstrap,
@@ -1200,13 +1199,7 @@ func (executor *ComposeExecutor) selectedImageRef(manifest *releasemanifest.Mani
 	if executor == nil || !executor.PublicLayout {
 		return refs[0], nil
 	}
-	prefix := executor.Registry + "/"
-	for _, ref := range refs {
-		if strings.HasPrefix(ref, prefix) {
-			return ref, nil
-		}
-	}
-	return "", fmt.Errorf("manifest has no %s image for registry %s", service, executor.Registry)
+	return ociartifact.ReplaceRegistry(refs[0], executor.Registry)
 }
 
 func observedDigest(output string) string {

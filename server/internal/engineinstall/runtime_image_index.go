@@ -13,7 +13,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strings"
 	"syscall"
 	"time"
 
@@ -37,6 +36,9 @@ type RuntimeImageIndexVerifierOptions struct {
 	AllowDevelopmentSinglePlatform bool
 	CloudflareAcceleration         bool
 	SignatureVerifier              DigestReferenceSignatureVerifier
+	// TransportRegistry changes only the remote authority. The package-declared
+	// reference remains the canonical identity used for signatures and storage.
+	TransportRegistry string
 }
 
 // RuntimeImageRegistryTransport maps one package-declared Registry identity to
@@ -72,10 +74,10 @@ type runtimeImageOCIRepositoryFactory func(ociartifact.DigestReference, string, 
 // NewDevelopmentRuntimeImageRegistryTransport validates one exact bootstrap-only
 // Runtime Image Registry identity-to-transport mapping.
 func NewDevelopmentRuntimeImageRegistryTransport(identityRegistry, transportRegistry string) (*RuntimeImageRegistryTransport, error) {
-	if err := validateRuntimeImageRegistryAuthority(identityRegistry); err != nil {
+	if err := ociartifact.ValidateRegistryAuthority(identityRegistry); err != nil {
 		return nil, fmt.Errorf("development Runtime Image identity Registry: %w", err)
 	}
-	if err := validateRuntimeImageRegistryAuthority(transportRegistry); err != nil {
+	if err := ociartifact.ValidateRegistryAuthority(transportRegistry); err != nil {
 		return nil, fmt.Errorf("development Runtime Image transport Registry: %w", err)
 	}
 	return &RuntimeImageRegistryTransport{
@@ -98,6 +100,14 @@ func NewRuntimeImageIndexVerifier(options RuntimeImageIndexVerifierOptions) (*Ru
 		options.DevelopmentRegistryTransport == nil ||
 		!options.AllowDevelopmentSinglePlatform) {
 		return nil, fmt.Errorf("Runtime Image development transport requires plain HTTP, an identity-to-transport Registry mapping, and single-platform policy")
+	}
+	if options.TransportRegistry != "" {
+		if usesDevelopmentTransport {
+			return nil, fmt.Errorf("production registry transport cannot be combined with development transport")
+		}
+		if err := ociartifact.ValidateRegistryAuthority(options.TransportRegistry); err != nil {
+			return nil, fmt.Errorf("runtime image transport Registry: %w", err)
+		}
 	}
 	return &RuntimeImageIndexVerifier{options: options, newRepository: newRuntimeImageRepository}, nil
 }
@@ -235,6 +245,9 @@ func (verifier *RuntimeImageIndexVerifier) verifyCandidate(
 }
 
 func (verifier *RuntimeImageIndexVerifier) transportRegistry(reference ociartifact.DigestReference) (string, error) {
+	if verifier.options.TransportRegistry != "" {
+		return verifier.options.TransportRegistry, nil
+	}
 	transport := verifier.options.DevelopmentRegistryTransport
 	if transport == nil {
 		return reference.Registry, nil
@@ -257,21 +270,6 @@ func newRuntimeImageRepository(reference ociartifact.DigestReference, transportR
 	repository.PlainHTTP = plainHTTP
 	repository.ManifestMediaTypes = []string{ocispec.MediaTypeImageIndex}
 	return repository, nil
-}
-
-func validateRuntimeImageRegistryAuthority(value string) error {
-	if value == "" || value != strings.TrimSpace(value) {
-		return fmt.Errorf("Registry authority must be a non-empty canonical value")
-	}
-	const validationSuffix = "/lunafox/runtime-image-transport@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-	reference, err := ociartifact.ParseDigestReference(value + validationSuffix)
-	if err != nil || reference.Registry != value {
-		if err == nil {
-			err = fmt.Errorf("parsed Registry %q does not match", reference.Registry)
-		}
-		return fmt.Errorf("invalid Registry authority %q: %w", value, err)
-	}
-	return nil
 }
 
 func runtimeImageAttemptContextError(parentCtx, attemptCtx context.Context) error {

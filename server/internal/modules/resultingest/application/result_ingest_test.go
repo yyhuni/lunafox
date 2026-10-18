@@ -319,7 +319,7 @@ func TestResultIngestFacadeBatchIngestTaskResultsMaterializesWebsites(t *testing
 	output, err := ingestResultStrings(context.Background(), facade, testResultIngestInput{
 		ScanID:     12,
 		TargetID:   34,
-		ResultType: results.ResultKindAssetWebsite,
+		ResultType: results.ResultKindAssetWebsiteV2,
 		ItemsJSON:  []string{`{"url":"HTTPS://Api.Example.COM:443/login?b=2&a=1#fragment","host":"api.example.com","title":"API","statusCode":200,"contentLength":42,"tech":["nginx"],"vhost":false}`},
 	})
 	if err != nil {
@@ -336,6 +336,64 @@ func TestResultIngestFacadeBatchIngestTaskResultsMaterializesWebsites(t *testing
 	}
 	if websites.items[0].StatusCode == nil || *websites.items[0].StatusCode != 200 || websites.items[0].ContentLength == nil || *websites.items[0].ContentLength != 42 {
 		t.Fatalf("unexpected materialized numeric fields: %+v", websites.items[0])
+	}
+}
+
+func TestResultIngestFacadeV2PreservesObservedHostSignedNumbersAndFlags(t *testing.T) {
+	t.Run("website", func(t *testing.T) {
+		websites := &websiteMaterializerStub{snapshotCount: 1, assetCount: 1}
+		facade := newTestResultIngestFacade(ResultIngestFacadeDependencies{Websites: websites})
+		_, err := ingestResultStrings(context.Background(), facade, testResultIngestInput{
+			ScanID: 12, TargetID: 34, ResultType: results.ResultKindAssetWebsiteV2,
+			ItemsJSON: []string{`{"url":"https://example.com/probe","host":"injected.example","statusCode":0,"contentLength":-9223372036854775808,"responseBody":"body","responseBodyTruncated":true,"responseHeaders":"headers","responseHeadersTruncated":true}`},
+		})
+		if err != nil {
+			t.Fatalf("v2 website ingest failed: %v", err)
+		}
+		if len(websites.items) != 1 {
+			t.Fatalf("materialized Website items = %#v", websites.items)
+		}
+		item := websites.items[0]
+		if item.Host != "injected.example" || item.StatusCode == nil || *item.StatusCode != 0 || item.ContentLength == nil || *item.ContentLength != -9223372036854775808 || !item.ResponseBodyTruncated || !item.ResponseHeadersTruncated {
+			t.Fatalf("v2 website metadata was not preserved: %#v", item)
+		}
+	})
+
+	t.Run("endpoint", func(t *testing.T) {
+		endpoints := &endpointMaterializerStub{snapshotCount: 1, assetCount: 1}
+		facade := newTestResultIngestFacade(ResultIngestFacadeDependencies{Endpoints: endpoints})
+		_, err := ingestResultStrings(context.Background(), facade, testResultIngestInput{
+			ScanID: 12, TargetID: 34, ResultType: results.ResultKindAssetEndpointV2,
+			ItemsJSON: []string{`{"url":"https://example.com/probe","host":"vhost.example","statusCode":999,"contentLength":2147483648}`},
+		})
+		if err != nil {
+			t.Fatalf("v2 endpoint ingest failed: %v", err)
+		}
+		if len(endpoints.items) != 1 {
+			t.Fatalf("materialized Endpoint items = %#v", endpoints.items)
+		}
+		item := endpoints.items[0]
+		if item.Host != "vhost.example" || item.StatusCode == nil || *item.StatusCode != 999 || item.ContentLength == nil || *item.ContentLength != 2147483648 {
+			t.Fatalf("v2 endpoint metadata was not preserved: %#v", item)
+		}
+	})
+}
+
+func TestResultIngestFacadeV2RejectsMalformedBatchBeforeMaterialization(t *testing.T) {
+	endpoints := &endpointMaterializerStub{snapshotCount: 1, assetCount: 1}
+	facade := newTestResultIngestFacade(ResultIngestFacadeDependencies{Endpoints: endpoints})
+	_, err := ingestResultStrings(context.Background(), facade, testResultIngestInput{
+		ScanID: 12, TargetID: 34, ResultType: results.ResultKindAssetEndpointV2,
+		ItemsJSON: []string{
+			`{"url":"https://example.com/valid","host":"vhost.example"}`,
+			`{"url":"https://example.com/invalid","host":"vhost.example","unknown":true}`,
+		},
+	})
+	if !errors.Is(err, ErrInvalidResultItems) {
+		t.Fatalf("malformed v2 batch error = %v, want ErrInvalidResultItems", err)
+	}
+	if len(endpoints.items) != 0 {
+		t.Fatalf("malformed v2 batch reached materialization: %#v", endpoints.items)
 	}
 }
 
@@ -397,7 +455,7 @@ func TestResultIngestFacadeBatchIngestTaskResultsRefreshesScanSummaryForWebsites
 	_, err := ingestResultStrings(context.Background(), facade, testResultIngestInput{
 		ScanID:     12,
 		TargetID:   34,
-		ResultType: results.ResultKindAssetWebsite,
+		ResultType: results.ResultKindAssetWebsiteV2,
 		ItemsJSON: []string{
 			`{"url":"https://api.example.com","host":"api.example.com"}`,
 			`{"url":"https://admin.example.com","host":"admin.example.com"}`,
@@ -465,7 +523,7 @@ func TestResultIngestFacadeEndpointUsesFinalTransactionCoordinator(t *testing.T)
 	})
 
 	output, err := ingestResultStrings(context.Background(), facade, testResultIngestInput{
-		ScanID: 12, TargetID: 34, ResultType: results.ResultKindAssetEndpoint,
+		ScanID: 12, TargetID: 34, ResultType: results.ResultKindAssetEndpointV2,
 		ItemsJSON: []string{`{"url":"https://api.example.com","host":"api.example.com"}`},
 	})
 	if err != nil {
@@ -493,7 +551,7 @@ func TestResultIngestFacadeEndpointSummaryFailureReturnsNoCommittedOutcome(t *te
 	})
 
 	output, err := ingestResultStrings(context.Background(), facade, testResultIngestInput{
-		ScanID: 12, TargetID: 34, ResultType: results.ResultKindAssetEndpoint,
+		ScanID: 12, TargetID: 34, ResultType: results.ResultKindAssetEndpointV2,
 		ItemsJSON: []string{`{"url":"https://api.example.com","host":"api.example.com"}`},
 	})
 	if !errors.Is(err, summaryErr) {
@@ -511,10 +569,10 @@ func TestResultIngestFacadeRejectsInvalidEndpointBatchWithoutMaterialization(t *
 	endpoints := &endpointMaterializerStub{snapshotCount: 1, assetCount: 1}
 	facade := newTestResultIngestFacade(ResultIngestFacadeDependencies{Endpoints: endpoints})
 	outcome, err := ingestResultStrings(context.Background(), facade, testResultIngestInput{
-		ScanID: 12, TargetID: 34, ResultType: results.ResultKindAssetEndpoint,
+		ScanID: 12, TargetID: 34, ResultType: results.ResultKindAssetEndpointV2,
 		ItemsJSON: []string{
 			`{"url":"https://api.example.com","host":"api.example.com"}`,
-			`{"url":"https://api.example.com","host":"other.example.com"}`,
+			`{"url":"https://api.example.com","host":"other.example.com","unknown":true}`,
 		},
 	})
 	if !errors.Is(err, ErrInvalidResultItems) {
@@ -534,7 +592,7 @@ func TestResultIngestFacadeEndpointPreservesCallerContext(t *testing.T) {
 	facade := newTestResultIngestFacade(ResultIngestFacadeDependencies{Endpoints: endpoints})
 	ctx := context.WithValue(context.Background(), contextKey{}, "request-boundary")
 	_, err := ingestResultStrings(ctx, facade, testResultIngestInput{
-		ScanID: 12, TargetID: 34, ResultType: results.ResultKindAssetEndpoint,
+		ScanID: 12, TargetID: 34, ResultType: results.ResultKindAssetEndpointV2,
 		ItemsJSON: []string{`{"url":"https://api.example.com","host":"api.example.com"}`},
 	})
 	if err != nil {
@@ -583,6 +641,29 @@ func TestResultIngestFacadeBatchIngestTaskResultsRejectsUnsupportedResultType(t 
 	}
 }
 
+func TestResultIngestFacadeRejectsRetiredHTTPXV1BeforeMaterialization(t *testing.T) {
+	for _, resultType := range []string{"asset.endpoint.v1", "asset.website.v1"} {
+		t.Run(resultType, func(t *testing.T) {
+			endpoints := &endpointMaterializerStub{}
+			websites := &websiteMaterializerStub{}
+			coordinator := &resultMaterializationCoordinatorStub{}
+			facade := newTestResultIngestFacade(ResultIngestFacadeDependencies{
+				Endpoints: endpoints, Websites: websites, Materialization: coordinator,
+			})
+			outcome, err := ingestResultStrings(context.Background(), facade, testResultIngestInput{
+				ScanID: 12, TargetID: 34, ResultType: resultType,
+				ItemsJSON: []string{`{"url":"https://example.com","host":"example.com"}`},
+			})
+			if !errors.Is(err, ErrUnsupportedResultType) {
+				t.Fatalf("retired result type error = %v, want ErrUnsupportedResultType", err)
+			}
+			if outcome != (ResultIngestOutcome{}) || coordinator.calls != 0 || len(endpoints.items) != 0 || len(websites.items) != 0 {
+				t.Fatalf("retired result type reached materialization: outcome=%+v calls=%d endpoint=%+v website=%+v", outcome, coordinator.calls, endpoints.items, websites.items)
+			}
+		})
+	}
+}
+
 func TestResultIngestFacadeAcceptsEveryCanonicalDescriptorWithoutEngineMembership(t *testing.T) {
 	for _, descriptor := range results.Descriptors() {
 		descriptor := descriptor
@@ -606,22 +687,22 @@ func TestResultIngestFacadeAcceptsEveryCanonicalDescriptorWithoutEngineMembershi
 				facade = newTestResultIngestFacade(ResultIngestFacadeDependencies{HostPorts: materializer, ScanSummary: summary, Materialization: coordinator})
 				observedContext = func() context.Context { return materializer.ctx }
 				item = `{"host":"api.example.com","ip":"192.0.2.10","port":443}`
-			case results.ResultKindAssetWebsite:
+			case results.ResultKindAssetWebsiteV2:
 				materializer := &websiteMaterializerStub{snapshotCount: 1, assetCount: 1}
 				facade = newTestResultIngestFacade(ResultIngestFacadeDependencies{Websites: materializer, ScanSummary: summary, Materialization: coordinator})
 				observedContext = func() context.Context { return materializer.ctx }
-				item = `{"url":"https://api.example.com","host":"api.example.com"}`
+				item = `{"url":"https://api.example.com","host":"custom-vhost.example","statusCode":999,"contentLength":-1}`
 			case results.ResultKindAssetWebsiteTechnology:
 				materializer := &websiteTechnologyMaterializerStub{}
 				facade = newTestResultIngestFacade(ResultIngestFacadeDependencies{WebsiteTechnologies: materializer, ScanSummary: summary, Materialization: coordinator})
 				observedContext = func() context.Context { return materializer.ctx }
 				currentOnly = true
 				item = `{"url":"https://api.example.com","tech":["nginx"]}`
-			case results.ResultKindAssetEndpoint:
+			case results.ResultKindAssetEndpointV2:
 				materializer := &endpointMaterializerStub{snapshotCount: 1, assetCount: 1}
 				facade = newTestResultIngestFacade(ResultIngestFacadeDependencies{Endpoints: materializer, ScanSummary: summary, Materialization: coordinator})
 				observedContext = func() context.Context { return materializer.ctx }
-				item = `{"url":"https://api.example.com","host":"api.example.com"}`
+				item = `{"url":"https://api.example.com","host":"custom-vhost.example","statusCode":0,"contentLength":-1}`
 			case results.ResultKindAssetScreenshot:
 				materializer := &screenshotMaterializerStub{}
 				facade = newTestResultIngestFacade(ResultIngestFacadeDependencies{Screenshots: materializer, ScanSummary: summary, Materialization: coordinator})
@@ -756,7 +837,7 @@ func TestResultIngestFacadeBatchIngestTaskResultsReportsInvalidWebsiteItems(t *t
 	outcome, err := ingestResultStrings(context.Background(), facade, testResultIngestInput{
 		ScanID:     12,
 		TargetID:   34,
-		ResultType: results.ResultKindAssetWebsite,
+		ResultType: results.ResultKindAssetWebsiteV2,
 		ItemsJSON:  []string{`{"url":"ftp://example.com"}`},
 	})
 	if !errors.Is(err, ErrInvalidResultItems) {
@@ -906,7 +987,7 @@ func TestResultIngestFacadeBatchIngestTaskResultsReturnsWebsiteMaterializationEr
 	output, err := ingestResultStrings(context.Background(), facade, testResultIngestInput{
 		ScanID:     12,
 		TargetID:   34,
-		ResultType: results.ResultKindAssetWebsite,
+		ResultType: results.ResultKindAssetWebsiteV2,
 		ItemsJSON:  []string{`{"url":"https://api.example.com","host":"api.example.com"}`},
 	})
 	if !errors.Is(err, materializeErr) {
@@ -1178,7 +1259,7 @@ func TestResultIngestFacadeWebsiteScopeFilteringUsesSnapshotBoundary(t *testing.
 			output, err := ingestResultStrings(context.Background(), facade, testResultIngestInput{
 				ScanID:     12,
 				TargetID:   34,
-				ResultType: results.ResultKindAssetWebsite,
+				ResultType: results.ResultKindAssetWebsiteV2,
 				ItemsJSON:  tt.itemsJSON,
 			})
 			if !errors.Is(err, ErrResultNotAuthorized) {
@@ -1203,7 +1284,7 @@ func TestResultIngestFacadeWebsiteRetryIsIdempotentThroughSnapshotBoundary(t *te
 	input := testResultIngestInput{
 		ScanID:     12,
 		TargetID:   34,
-		ResultType: results.ResultKindAssetWebsite,
+		ResultType: results.ResultKindAssetWebsiteV2,
 		ItemsJSON:  []string{`{"url":"https://api.example.com","host":"api.example.com"}`},
 	}
 

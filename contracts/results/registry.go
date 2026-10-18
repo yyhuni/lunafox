@@ -11,21 +11,21 @@ import (
 const (
 	ResultKindAssetSubdomain         = "asset.subdomain.v1"
 	ResultKindAssetHostPort          = "asset.host_port.v1"
-	ResultKindAssetWebsite           = "asset.website.v1"
 	ResultKindAssetWebsiteTechnology = "asset.website_technology.v1"
-	ResultKindAssetEndpoint          = "asset.endpoint.v1"
+	ResultKindAssetEndpointV2        = "asset.endpoint.v2"
 	ResultKindAssetScreenshot        = "asset.screenshot.v1"
 	ResultKindAssetDirectory         = "asset.directory.v1"
 	ResultKindAssetVulnerability     = "asset.vulnerability.v1"
 
 	ResultEncoderAssetSubdomain         = "asset.subdomain.v1.canonical-json"
 	ResultEncoderAssetHostPort          = "asset.host_port.v1.canonical-json"
-	ResultEncoderAssetWebsite           = "asset.website.v1.canonical-json"
 	ResultEncoderAssetWebsiteTechnology = "asset.website_technology.v1.canonical-json"
-	ResultEncoderAssetEndpoint          = "asset.endpoint.v1.canonical-json"
+	ResultEncoderAssetEndpointV2        = "asset.endpoint.v2.canonical-json"
 	ResultEncoderAssetScreenshot        = "asset.screenshot.v1.canonical-json"
 	ResultEncoderAssetDirectory         = "asset.directory.v1.canonical-json"
 	ResultEncoderAssetVulnerability     = "asset.vulnerability.v1.canonical-json"
+	ResultKindAssetWebsiteV2            = "asset.website.v2"
+	ResultEncoderAssetWebsiteV2         = "asset.website.v2.canonical-json"
 )
 
 type Descriptor struct {
@@ -62,21 +62,22 @@ const (
 // Engine-local generated encoder may perform. Cross-field, target-scoped and
 // persistence rules remain owned by the Server result validator.
 type FieldSchemaBasics struct {
-	ValidUTF8      bool
-	NonEmpty       bool
-	ExplicitArray  bool
-	ExplicitObject bool
-	HTTPURL        bool
-	NoURLUserInfo  bool
-	NonNegative    bool
-	Trimmed        bool
-	MinInt         *int64
-	MaxInt         *int64
-	MinNumber      *float64
-	MaxNumber      *float64
-	MaxBytes       int
-	MaxRunes       int
-	EnumValues     []string
+	ValidUTF8                bool
+	NonEmpty                 bool
+	ExplicitArray            bool
+	ExplicitObject           bool
+	HTTPURL                  bool
+	NoURLUserInfo            bool
+	NonNegative              bool
+	Trimmed                  bool
+	MinInt                   *int64
+	MaxInt                   *int64
+	MinNumber                *float64
+	MaxNumber                *float64
+	MaxBytes                 int
+	MaxRunes                 int
+	FinalizeResponseEvidence bool
+	EnumValues               []string
 }
 
 // FieldDescriptor is the source metadata for one generated local item field.
@@ -108,19 +109,24 @@ type HostPort struct {
 	Port int    `json:"port"`
 }
 
-type Website struct {
-	URL             string   `json:"url"`
-	Host            string   `json:"host,omitempty"`
-	Title           string   `json:"title,omitempty"`
-	StatusCode      *int     `json:"statusCode,omitempty"`
-	ContentLength   *int     `json:"contentLength,omitempty"`
-	Location        string   `json:"location,omitempty"`
-	Webserver       string   `json:"webserver,omitempty"`
-	ContentType     string   `json:"contentType,omitempty"`
-	Tech            []string `json:"tech,omitempty"`
-	ResponseBody    string   `json:"responseBody,omitempty"`
-	Vhost           *bool    `json:"vhost,omitempty"`
-	ResponseHeaders string   `json:"responseHeaders,omitempty"`
+// WebsiteV2 preserves the observed HTTPX host and numeric response metadata.
+// URL remains the identity and Target-scope source; generated adapters
+// finalize response evidence before submission.
+type WebsiteV2 struct {
+	URL                      string   `json:"url"`
+	Host                     string   `json:"host"`
+	Title                    string   `json:"title,omitempty"`
+	StatusCode               *int64   `json:"statusCode,omitempty"`
+	ContentLength            *int64   `json:"contentLength,omitempty"`
+	Location                 string   `json:"location,omitempty"`
+	Webserver                string   `json:"webserver,omitempty"`
+	ContentType              string   `json:"contentType,omitempty"`
+	Tech                     []string `json:"tech,omitempty"`
+	ResponseBody             string   `json:"responseBody,omitempty"`
+	ResponseBodyTruncated    bool     `json:"responseBodyTruncated,omitempty"`
+	Vhost                    *bool    `json:"vhost,omitempty"`
+	ResponseHeaders          string   `json:"responseHeaders,omitempty"`
+	ResponseHeadersTruncated bool     `json:"responseHeadersTruncated,omitempty"`
 }
 
 // WebsiteTechnology is a complete, current-only technology observation. It
@@ -131,14 +137,15 @@ type WebsiteTechnology struct {
 	Tech []string `json:"tech"`
 }
 
-// Endpoint is URL Collection evidence. URL stays exactly as observed; Host is
-// a separate required assertion validated against the raw URL authority.
-type Endpoint struct {
+// EndpointV2 is the versioned HTTPX observation contract used by URL
+// Collection. It accepts signed-64-bit numeric observations and preserves a
+// tool-observed host even when it differs from URL authority.
+type EndpointV2 struct {
 	URL                      string   `json:"url"`
 	Host                     string   `json:"host"`
 	Title                    string   `json:"title,omitempty"`
-	StatusCode               *int     `json:"statusCode,omitempty"`
-	ContentLength            *int     `json:"contentLength,omitempty"`
+	StatusCode               *int64   `json:"statusCode,omitempty"`
+	ContentLength            *int64   `json:"contentLength,omitempty"`
 	Location                 string   `json:"location,omitempty"`
 	Webserver                string   `json:"webserver,omitempty"`
 	ContentType              string   `json:"contentType,omitempty"`
@@ -171,28 +178,12 @@ var canonicalDescriptors = [...]Descriptor{
 		GoEncoderName:          "EncodeSubdomain",
 	},
 	{
-		ResultType:             ResultKindAssetEndpoint,
-		SchemaRef:              "schema.result.asset.endpoint.v1",
-		AuthorResultsFieldName: "Endpoints",
-		ItemTypeName:           "Endpoint",
-		EncoderID:              ResultEncoderAssetEndpoint,
-		GoEncoderName:          "EncodeEndpoint",
-	},
-	{
 		ResultType:             ResultKindAssetHostPort,
 		SchemaRef:              "schema.result.asset.host_port.v1",
 		AuthorResultsFieldName: "HostPorts",
 		ItemTypeName:           "HostPort",
 		EncoderID:              ResultEncoderAssetHostPort,
 		GoEncoderName:          "EncodeHostPort",
-	},
-	{
-		ResultType:             ResultKindAssetWebsite,
-		SchemaRef:              "schema.result.asset.website.v1",
-		AuthorResultsFieldName: "Websites",
-		ItemTypeName:           "Website",
-		EncoderID:              ResultEncoderAssetWebsite,
-		GoEncoderName:          "EncodeWebsite",
 	},
 	{
 		ResultType:             ResultKindAssetWebsiteTechnology,
@@ -226,6 +217,22 @@ var canonicalDescriptors = [...]Descriptor{
 		EncoderID:              ResultEncoderAssetVulnerability,
 		GoEncoderName:          "EncodeVulnerability",
 	},
+	{
+		ResultType:             ResultKindAssetEndpointV2,
+		SchemaRef:              "schema.result.asset.endpoint.v2",
+		AuthorResultsFieldName: "EndpointV2",
+		ItemTypeName:           "EndpointV2",
+		EncoderID:              ResultEncoderAssetEndpointV2,
+		GoEncoderName:          "EncodeEndpointV2",
+	},
+	{
+		ResultType:             ResultKindAssetWebsiteV2,
+		SchemaRef:              "schema.result.asset.website.v2",
+		AuthorResultsFieldName: "WebsiteV2",
+		ItemTypeName:           "WebsiteV2",
+		EncoderID:              ResultEncoderAssetWebsiteV2,
+		GoEncoderName:          "EncodeWebsiteV2",
+	},
 }
 
 func int64Pointer(value int64) *int64      { return &value }
@@ -246,51 +253,13 @@ var canonicalCodegenDescriptors = [...]CodegenDescriptor{
 		Descriptor:   canonicalDescriptors[1],
 		ClosedObject: true,
 		Fields: []FieldDescriptor{
-			{GoName: "URL", JSONName: "url", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true}},
-			{GoName: "Host", JSONName: "host", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true}},
-			{GoName: "Title", JSONName: "title", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
-			{GoName: "StatusCode", JSONName: "statusCode", GoType: "*int", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{MinInt: int64Pointer(100), MaxInt: int64Pointer(599)}},
-			{GoName: "ContentLength", JSONName: "contentLength", GoType: "*int", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{NonNegative: true, MaxInt: int64Pointer(2147483647)}},
-			{GoName: "Location", JSONName: "location", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
-			{GoName: "Webserver", JSONName: "webserver", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
-			{GoName: "ContentType", JSONName: "contentType", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
-			{GoName: "Tech", JSONName: "tech", GoType: "[]string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
-			{GoName: "ResponseBody", JSONName: "responseBody", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
-			{GoName: "ResponseBodyTruncated", JSONName: "responseBodyTruncated", GoType: "bool", Presence: FieldPresenceOptional},
-			{GoName: "Vhost", JSONName: "vhost", GoType: "*bool", Presence: FieldPresenceOptional},
-			{GoName: "ResponseHeaders", JSONName: "responseHeaders", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
-			{GoName: "ResponseHeadersTruncated", JSONName: "responseHeadersTruncated", GoType: "bool", Presence: FieldPresenceOptional},
-		},
-	},
-	{
-		Descriptor:   canonicalDescriptors[2],
-		ClosedObject: true,
-		Fields: []FieldDescriptor{
 			{GoName: "Host", JSONName: "host", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true}},
 			{GoName: "IP", JSONName: "ip", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true}},
 			{GoName: "Port", JSONName: "port", GoType: "int", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{MinInt: int64Pointer(1), MaxInt: int64Pointer(65535)}},
 		},
 	},
 	{
-		Descriptor:   canonicalDescriptors[3],
-		ClosedObject: true,
-		Fields: []FieldDescriptor{
-			{GoName: "URL", JSONName: "url", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true}},
-			{GoName: "Host", JSONName: "host", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true}},
-			{GoName: "Title", JSONName: "title", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
-			{GoName: "StatusCode", JSONName: "statusCode", GoType: "*int", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{MinInt: int64Pointer(100), MaxInt: int64Pointer(599)}},
-			{GoName: "ContentLength", JSONName: "contentLength", GoType: "*int", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{NonNegative: true}},
-			{GoName: "Location", JSONName: "location", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
-			{GoName: "Webserver", JSONName: "webserver", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
-			{GoName: "ContentType", JSONName: "contentType", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
-			{GoName: "Tech", JSONName: "tech", GoType: "[]string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
-			{GoName: "ResponseBody", JSONName: "responseBody", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
-			{GoName: "Vhost", JSONName: "vhost", GoType: "*bool", Presence: FieldPresenceOptional},
-			{GoName: "ResponseHeaders", JSONName: "responseHeaders", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
-		},
-	},
-	{
-		Descriptor:   canonicalDescriptors[4],
+		Descriptor:   canonicalDescriptors[2],
 		ClosedObject: true,
 		Fields: []FieldDescriptor{
 			{GoName: "URL", JSONName: "url", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true}},
@@ -298,7 +267,7 @@ var canonicalCodegenDescriptors = [...]CodegenDescriptor{
 		},
 	},
 	{
-		Descriptor:   canonicalDescriptors[5],
+		Descriptor:   canonicalDescriptors[3],
 		ClosedObject: true,
 		Fields: []FieldDescriptor{
 			{GoName: "URL", JSONName: "url", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true}},
@@ -307,7 +276,7 @@ var canonicalCodegenDescriptors = [...]CodegenDescriptor{
 		},
 	},
 	{
-		Descriptor:   canonicalDescriptors[6],
+		Descriptor:   canonicalDescriptors[4],
 		ClosedObject: true,
 		Fields: []FieldDescriptor{
 			{GoName: "URL", JSONName: "url", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true}},
@@ -318,7 +287,7 @@ var canonicalCodegenDescriptors = [...]CodegenDescriptor{
 		},
 	},
 	{
-		Descriptor:   canonicalDescriptors[7],
+		Descriptor:   canonicalDescriptors[5],
 		ClosedObject: true,
 		Fields: []FieldDescriptor{
 			{GoName: "URL", JSONName: "url", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true, HTTPURL: true, NoURLUserInfo: true}},
@@ -328,6 +297,46 @@ var canonicalCodegenDescriptors = [...]CodegenDescriptor{
 			{GoName: "CVSSScore", JSONName: "cvssScore", GoType: "*float64", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{MinNumber: numberPointer(0), MaxNumber: numberPointer(10)}},
 			{GoName: "Description", JSONName: "description", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
 			{GoName: "RawOutput", JSONName: "rawOutput", GoType: "map[string]any", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ExplicitObject: true}},
+		},
+	},
+	{
+		Descriptor:   canonicalDescriptors[6],
+		ClosedObject: true,
+		Fields: []FieldDescriptor{
+			{GoName: "URL", JSONName: "url", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true}},
+			{GoName: "Host", JSONName: "host", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true}},
+			{GoName: "Title", JSONName: "title", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
+			{GoName: "StatusCode", JSONName: "statusCode", GoType: "*int64", Presence: FieldPresenceOptional},
+			{GoName: "ContentLength", JSONName: "contentLength", GoType: "*int64", Presence: FieldPresenceOptional},
+			{GoName: "Location", JSONName: "location", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
+			{GoName: "Webserver", JSONName: "webserver", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
+			{GoName: "ContentType", JSONName: "contentType", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
+			{GoName: "Tech", JSONName: "tech", GoType: "[]string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
+			{GoName: "ResponseBody", JSONName: "responseBody", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, MaxBytes: 2000, FinalizeResponseEvidence: true}},
+			{GoName: "ResponseBodyTruncated", JSONName: "responseBodyTruncated", GoType: "bool", Presence: FieldPresenceOptional},
+			{GoName: "Vhost", JSONName: "vhost", GoType: "*bool", Presence: FieldPresenceOptional},
+			{GoName: "ResponseHeaders", JSONName: "responseHeaders", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, MaxBytes: 64 * 1024, FinalizeResponseEvidence: true}},
+			{GoName: "ResponseHeadersTruncated", JSONName: "responseHeadersTruncated", GoType: "bool", Presence: FieldPresenceOptional},
+		},
+	},
+	{
+		Descriptor:   canonicalDescriptors[7],
+		ClosedObject: true,
+		Fields: []FieldDescriptor{
+			{GoName: "URL", JSONName: "url", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true}},
+			{GoName: "Host", JSONName: "host", GoType: "string", Presence: FieldPresenceRequired, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, NonEmpty: true}},
+			{GoName: "Title", JSONName: "title", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
+			{GoName: "StatusCode", JSONName: "statusCode", GoType: "*int64", Presence: FieldPresenceOptional},
+			{GoName: "ContentLength", JSONName: "contentLength", GoType: "*int64", Presence: FieldPresenceOptional},
+			{GoName: "Location", JSONName: "location", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
+			{GoName: "Webserver", JSONName: "webserver", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
+			{GoName: "ContentType", JSONName: "contentType", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
+			{GoName: "Tech", JSONName: "tech", GoType: "[]string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true}},
+			{GoName: "ResponseBody", JSONName: "responseBody", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, MaxBytes: 2000, FinalizeResponseEvidence: true}},
+			{GoName: "ResponseBodyTruncated", JSONName: "responseBodyTruncated", GoType: "bool", Presence: FieldPresenceOptional},
+			{GoName: "Vhost", JSONName: "vhost", GoType: "*bool", Presence: FieldPresenceOptional},
+			{GoName: "ResponseHeaders", JSONName: "responseHeaders", GoType: "string", Presence: FieldPresenceOptional, SchemaBasics: FieldSchemaBasics{ValidUTF8: true, MaxBytes: 64 * 1024, FinalizeResponseEvidence: true}},
+			{GoName: "ResponseHeadersTruncated", JSONName: "responseHeadersTruncated", GoType: "bool", Presence: FieldPresenceOptional},
 		},
 	},
 }
@@ -501,7 +510,7 @@ func validateCodegenDescriptors(descriptors []CodegenDescriptor) error {
 
 func supportedCodegenGoType(value string) bool {
 	switch value {
-	case "string", "int", "int64", "bool", "[]string", "[]byte", "*int", "*bool", "*float64", "map[string]any":
+	case "string", "int", "int64", "bool", "[]string", "[]byte", "*int", "*int64", "*bool", "*float64", "map[string]any":
 		return true
 	default:
 		return false
@@ -600,36 +609,22 @@ func Validate(kind string, item any) error {
 			return fmt.Errorf("host-port port must be between 1 and 65535")
 		}
 		return nil
-	case ResultKindAssetWebsite:
-		website, ok := item.(Website)
+	case ResultKindAssetWebsiteV2:
+		website, ok := item.(WebsiteV2)
 		if !ok {
-			return fmt.Errorf("result kind %s requires results.Website item", kind)
+			return fmt.Errorf("result kind %s requires results.WebsiteV2 item", kind)
 		}
-		_, err := ValidateObservedAssetURL(website.URL)
-		if err != nil {
-			return err
-		}
-		urlHost, err := DeriveObservedAssetURLHost(website.URL)
-		if err != nil {
-			return err
-		}
-		if website.Host != urlHost {
-			return fmt.Errorf("website host conflicts with url authority")
-		}
-		if err := validateWebsiteOptionalFields(website); err != nil {
-			return err
-		}
-		return nil
+		return validateWebsite(website)
 	case ResultKindAssetWebsiteTechnology:
 		technology, ok := item.(WebsiteTechnology)
 		if !ok {
 			return fmt.Errorf("result kind %s requires results.WebsiteTechnology item", kind)
 		}
 		return validateWebsiteTechnology(technology)
-	case ResultKindAssetEndpoint:
-		endpoint, ok := item.(Endpoint)
+	case ResultKindAssetEndpointV2:
+		endpoint, ok := item.(EndpointV2)
 		if !ok {
-			return fmt.Errorf("result kind %s requires results.Endpoint item", kind)
+			return fmt.Errorf("result kind %s requires results.EndpointV2 item", kind)
 		}
 		return validateEndpoint(endpoint)
 	case ResultKindAssetScreenshot:
@@ -655,89 +650,57 @@ func Validate(kind string, item any) error {
 	}
 }
 
-func validateEndpoint(endpoint Endpoint) error {
+func validateWebsite(website WebsiteV2) error {
+	if _, err := ValidateObservedAssetURL(website.URL); err != nil {
+		return fmt.Errorf("website url is invalid")
+	}
+	if website.Host == "" || !utf8.ValidString(website.Host) || strings.Contains(website.Host, "\x00") || len([]byte(website.Host)) > 253 {
+		return fmt.Errorf("website host must be non-empty valid UTF-8")
+	}
+	return validateHTTPXObservedFields(website.Title, website.Location, website.Webserver, website.ContentType, website.Tech, website.ResponseBody, website.ResponseHeaders, website.ResponseBodyTruncated, website.ResponseHeadersTruncated, "website")
+}
+
+func validateEndpoint(endpoint EndpointV2) error {
 	if _, err := ValidateObservedAssetURL(endpoint.URL); err != nil {
 		return fmt.Errorf("endpoint url is invalid")
 	}
-	host, err := DeriveObservedAssetURLHost(endpoint.URL)
-	if err != nil {
-		return fmt.Errorf("endpoint url authority is invalid")
+	if endpoint.Host == "" || !utf8.ValidString(endpoint.Host) || strings.Contains(endpoint.Host, "\x00") || len([]byte(endpoint.Host)) > 253 {
+		return fmt.Errorf("endpoint host must be non-empty valid UTF-8")
 	}
-	if endpoint.Host != host {
-		return fmt.Errorf("endpoint host conflicts with url authority")
-	}
-	if endpoint.StatusCode != nil && (*endpoint.StatusCode < 100 || *endpoint.StatusCode > 599) {
-		return fmt.Errorf("endpoint statusCode must be between 100 and 599")
-	}
-	if endpoint.ContentLength != nil && (*endpoint.ContentLength < 0 || *endpoint.ContentLength > 2147483647) {
-		return fmt.Errorf("endpoint contentLength is out of range")
-	}
-	for _, field := range []struct {
-		name, value string
-		limit       int
-	}{
-		{"title", endpoint.Title, 2000}, {"location", endpoint.Location, 2000},
-		{"webserver", endpoint.Webserver, 1024}, {"contentType", endpoint.ContentType, 1024},
-	} {
-		if strings.Contains(field.value, "\x00") || len([]byte(field.value)) > field.limit {
-			return fmt.Errorf("endpoint %s is invalid", field.name)
-		}
-	}
-	for _, field := range []struct {
-		name, value string
-		limit       int
-	}{
-		{"responseBody", endpoint.ResponseBody, 2000}, {"responseHeaders", endpoint.ResponseHeaders, 64 * 1024},
-	} {
-		if strings.Contains(field.value, "\x00") || len([]byte(field.value)) > field.limit {
-			return fmt.Errorf("endpoint %s is invalid", field.name)
-		}
-	}
-	for _, tech := range endpoint.Tech {
-		if strings.TrimSpace(tech) == "" || strings.Contains(tech, "\x00") || utf8.RuneCountInString(tech) > 100 {
-			return fmt.Errorf("endpoint tech is invalid")
-		}
-	}
-	return nil
+	return validateHTTPXObservedFields(endpoint.Title, endpoint.Location, endpoint.Webserver, endpoint.ContentType, endpoint.Tech, endpoint.ResponseBody, endpoint.ResponseHeaders, endpoint.ResponseBodyTruncated, endpoint.ResponseHeadersTruncated, "endpoint")
 }
 
-func validateWebsiteOptionalFields(website Website) error {
-	if website.StatusCode != nil && (*website.StatusCode < 100 || *website.StatusCode > 599) {
-		return fmt.Errorf("website statusCode must be between 100 and 599")
-	}
-	if website.ContentLength != nil && *website.ContentLength < 0 {
-		return fmt.Errorf("website contentLength must be non-negative")
-	}
-	for _, value := range []struct {
+func validateHTTPXObservedFields(title, location, webserver, contentType string, tech []string, responseBody, responseHeaders string, responseBodyTruncated, responseHeadersTruncated bool, kind string) error {
+	for _, field := range []struct {
 		name  string
 		value string
+		limit int
 	}{
-		{name: "title", value: website.Title},
-		{name: "location", value: website.Location},
-		{name: "webserver", value: website.Webserver},
-		{name: "contentType", value: website.ContentType},
+		{"title", title, 2000}, {"location", location, 2000},
+		{"webserver", webserver, 1024}, {"contentType", contentType, 1024},
 	} {
-		if strings.Contains(value.value, "\x00") {
-			return fmt.Errorf("website %s must be NUL-safe", value.name)
+		if !utf8.ValidString(field.value) || strings.Contains(field.value, "\x00") || len([]byte(field.value)) > field.limit {
+			return fmt.Errorf("%s %s is invalid", kind, field.name)
 		}
 	}
-	// HTTP response evidence is intentionally multiline but cannot contain NUL.
-	for _, value := range []struct {
+	for _, tech := range tech {
+		if !utf8.ValidString(tech) || strings.TrimSpace(tech) == "" || strings.Contains(tech, "\x00") || utf8.RuneCountInString(tech) > 100 {
+			return fmt.Errorf("%s tech is invalid", kind)
+		}
+	}
+	for _, field := range []struct {
 		name  string
 		value string
+		limit int
 	}{
-		{name: "responseBody", value: website.ResponseBody},
-		{name: "responseHeaders", value: website.ResponseHeaders},
+		{"responseBody", responseBody, 2000}, {"responseHeaders", responseHeaders, 64 * 1024},
 	} {
-		if strings.Contains(value.value, "\x00") {
-			return fmt.Errorf("website %s must be NUL-safe", value.name)
+		if !utf8.ValidString(field.value) || strings.Contains(field.value, "\x00") || len([]byte(field.value)) > field.limit {
+			return fmt.Errorf("%s %s is invalid", kind, field.name)
 		}
 	}
-	for _, tech := range website.Tech {
-		if strings.TrimSpace(tech) == "" || strings.Contains(tech, "\x00") {
-			return fmt.Errorf("website tech values must be non-empty and NUL-safe")
-		}
-	}
+	_ = responseBodyTruncated
+	_ = responseHeadersTruncated
 	return nil
 }
 

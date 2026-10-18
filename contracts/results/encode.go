@@ -31,15 +31,15 @@ func EncodeHostPort(item HostPort) (string, error) {
 	return string(payload), nil
 }
 
-// EncodeWebsite validates and serializes one website item. It preserves the
-// accepted URL bytes while preparing only non-URL evidence and Host assertion.
-func EncodeWebsite(item Website) (string, error) {
-	if err := Validate(ResultKindAssetWebsite, item); err != nil {
+// EncodeWebsiteV2 validates and serializes the versioned observed Website
+// contract. Response evidence finalization is owned by generated Engine code.
+func EncodeWebsiteV2(item WebsiteV2) (string, error) {
+	if err := Validate(ResultKindAssetWebsiteV2, item); err != nil {
 		return "", err
 	}
 	payload, err := json.Marshal(item)
 	if err != nil {
-		return "", fmt.Errorf("marshal website result: %w", err)
+		return "", fmt.Errorf("marshal website v2 result: %w", err)
 	}
 	return string(payload), nil
 }
@@ -57,13 +57,15 @@ func EncodeWebsiteTechnology(item WebsiteTechnology) (string, error) {
 	return string(payload), nil
 }
 
-func EncodeEndpoint(item Endpoint) (string, error) {
-	if err := Validate(ResultKindAssetEndpoint, item); err != nil {
+// EncodeEndpointV2 validates and serializes the versioned observed Endpoint
+// contract. Response evidence finalization is owned by generated Engine code.
+func EncodeEndpointV2(item EndpointV2) (string, error) {
+	if err := Validate(ResultKindAssetEndpointV2, item); err != nil {
 		return "", err
 	}
 	payload, err := json.Marshal(item)
 	if err != nil {
-		return "", fmt.Errorf("marshal endpoint result: %w", err)
+		return "", fmt.Errorf("marshal endpoint v2 result: %w", err)
 	}
 	return string(payload), nil
 }

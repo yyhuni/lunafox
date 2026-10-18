@@ -14,13 +14,12 @@ fi
 : "${WORDLISTS_SOURCE_PATH:?WORDLISTS_SOURCE_PATH is required}"
 : "${AGENT_VERSION:?AGENT_VERSION is required}"
 
-case "${ENGINE_INSTALL_REGISTRY:-}" in
-docker.io | ghcr.io) ;;
-*)
-	echo 'ENGINE_INSTALL_REGISTRY must be docker.io or ghcr.io' >&2
+# Registry selection controls transport only. Engine bootstrap still validates
+# signatures, immutable digests, package compatibility and platform bindings.
+if [[ ! "${ENGINE_INSTALL_REGISTRY:-}" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:[0-9]+)?$ ]]; then
+	echo 'ENGINE_INSTALL_REGISTRY must be a Registry authority (host[:port], without scheme or path)' >&2
 	exit 1
-	;;
-esac
+fi
 
 server engine-bootstrap
 server fingerprint-bootstrap "$FINGERPRINT_BOOTSTRAP_PATH"

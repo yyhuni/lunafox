@@ -7,18 +7,20 @@ import (
 )
 
 type EndpointSnapshotItem struct {
-	URL             string   `json:"url" binding:"required"`
-	Host            string   `json:"host"`
-	Title           string   `json:"title"`
-	StatusCode      *int     `json:"statusCode"`
-	ContentLength   *int     `json:"contentLength"`
-	Location        string   `json:"location"`
-	Webserver       string   `json:"webserver"`
-	ContentType     string   `json:"contentType"`
-	Tech            []string `json:"tech"`
-	ResponseBody    string   `json:"responseBody"`
-	Vhost           *bool    `json:"vhost"`
-	ResponseHeaders string   `json:"responseHeaders"`
+	URL                      string   `json:"url" binding:"required"`
+	Host                     string   `json:"host"`
+	Title                    string   `json:"title"`
+	StatusCode               *int64   `json:"statusCode"`
+	ContentLength            *int64   `json:"contentLength"`
+	Location                 string   `json:"location"`
+	Webserver                string   `json:"webserver"`
+	ContentType              string   `json:"contentType"`
+	Tech                     []string `json:"tech"`
+	ResponseBody             string   `json:"responseBody"`
+	ResponseBodyTruncated    bool     `json:"responseBodyTruncated"`
+	Vhost                    *bool    `json:"vhost"`
+	ResponseHeaders          string   `json:"responseHeaders"`
+	ResponseHeadersTruncated bool     `json:"responseHeadersTruncated"`
 }
 
 type BatchUpsertEndpointSnapshotsRequest struct {
@@ -42,20 +44,22 @@ func (q *EndpointSnapshotListQuery) ValidatePageToken() error {
 }
 
 type EndpointSnapshotResponse struct {
-	ID              int       `json:"id"`
-	ScanID          int       `json:"scanId"`
-	Name            string    `json:"name"`
-	URL             string    `json:"url"`
-	Host            string    `json:"host"`
-	Title           string    `json:"title"`
-	StatusCode      *int      `json:"statusCode"`
-	ContentLength   *int      `json:"contentLength"`
-	Location        string    `json:"location"`
-	Webserver       string    `json:"webserver"`
-	ContentType     string    `json:"contentType"`
-	Tech            []string  `json:"tech"`
-	ResponseBody    string    `json:"responseBody"`
-	Vhost           *bool     `json:"vhost"`
-	ResponseHeaders string    `json:"responseHeaders"`
-	CreatedAt       time.Time `json:"createdAt"`
+	ID                       int       `json:"id"`
+	ScanID                   int       `json:"scanId"`
+	Name                     string    `json:"name"`
+	URL                      string    `json:"url"`
+	Host                     string    `json:"host"`
+	Title                    string    `json:"title"`
+	StatusCode               *int64    `json:"statusCode"`
+	ContentLength            *int64    `json:"contentLength"`
+	Location                 string    `json:"location"`
+	Webserver                string    `json:"webserver"`
+	ContentType              string    `json:"contentType"`
+	Tech                     []string  `json:"tech"`
+	ResponseBody             string    `json:"responseBody"`
+	ResponseBodyTruncated    bool      `json:"responseBodyTruncated"`
+	Vhost                    *bool     `json:"vhost"`
+	ResponseHeaders          string    `json:"responseHeaders"`
+	ResponseHeadersTruncated bool      `json:"responseHeadersTruncated"`
+	CreatedAt                time.Time `json:"createdAt"`
 }

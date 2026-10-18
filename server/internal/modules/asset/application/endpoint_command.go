@@ -19,14 +19,17 @@ type EndpointUpsertItem struct {
 	Title                    string
 	Webserver                string
 	ContentType              string
-	StatusCode               *int
-	ContentLength            *int
+	StatusCode               *int64
+	ContentLength            *int64
 	ResponseBody             string
 	ResponseBodyTruncated    bool
 	Tech                     []string
 	Vhost                    *bool
 	ResponseHeaders          string
 	ResponseHeadersTruncated bool
+	// AllowHostMismatch is set only by the versioned HTTPX result materializer;
+	// ordinary API/v1 callers retain the historical URL-authority assertion.
+	AllowHostMismatch bool
 }
 
 type EndpointCommandService struct {
@@ -110,12 +113,14 @@ func (service *EndpointCommandService) BatchUpsert(ctx context.Context, targetID
 		if _, err := contractresults.ValidateObservedAssetURL(item.URL); err != nil {
 			return 0, fmt.Errorf("items[%d]: %w", index, err)
 		}
-		urlHost, err := contractresults.DeriveObservedAssetURLHost(item.URL)
-		if err != nil {
-			return 0, fmt.Errorf("items[%d]: %w", index, err)
-		}
-		if item.Host != urlHost {
-			return 0, fmt.Errorf("items[%d]: endpoint host conflicts with url authority", index)
+		if !item.AllowHostMismatch {
+			urlHost, err := contractresults.DeriveObservedAssetURLHost(item.URL)
+			if err != nil {
+				return 0, fmt.Errorf("items[%d]: %w", index, err)
+			}
+			if item.Host != urlHost {
+				return 0, fmt.Errorf("items[%d]: endpoint host conflicts with url authority", index)
+			}
 		}
 		if !assetdomain.IsURLMatchTarget(item.URL, *target) {
 			continue

@@ -9,18 +9,13 @@
 - OCI client: `oras.land/oras-go/v2`。生产代码不得调用 `oras` CLI。
 - 发布者签名可作为第一方发行流水线的证据保留，但通用安装器不解释它，也不以它、
   GitHub OIDC、Registry allowlist、Engine namespace 或 repository 命名决定准入。
-- 普通 Server 的运维安装与 production bootstrap 必须保持匿名 HTTPS；它们不接受
-  plain HTTP、任意 Registry transport 重写或单平台 Runtime Image。唯一例外是显式
-  `ENGINE_INSTALL_CF_ACCELERATION=true`：它只能将已通过 GHCR Cosign 验签的第一方
-  `yyhuni/lunafox-*` 同一 digest 下载依次指向 CF、Docker Hub、GHCR，不能作为新的
-  发布身份或通用 Registry 重写。CF 的 DNS/TCP/TLS/超时/429/5xx 故障可继续尝试后续
-  候选；CF 401/403/404、OCI 完整性、协议错误和 GHCR 验签失败必须终止。仅显式
-  `ENGINE_INSTALL_DEVELOPMENT_MODE=true` 的 disposable local Compose bootstrap 可以同时
-  开启 plain HTTP、单 candidate inventory、当前宿主单平台 index，以及一组精确的 Runtime
-  Image identity-to-transport Registry authority。四项开发配置必须完整，否则在 inventory
-  安装前 fast-fail。该明确的开发 bootstrap 也是其已验证 inventory 的替换调用方，因此重复
-  本地发布可将同一 Engine ID 的 current package 更新为新 digest；production bootstrap 和
-  interactive 安装仍必须遵守显式 replacement 规则。
+- 普通 Server 运维安装与 production bootstrap 保持匿名 HTTPS。配置
+  `ENGINE_INSTALL_REGISTRY=host[:port]` 时，Package、Runtime Image 和签名材料从该源读取，
+  保留原 repository/digest 与发布身份；不回退到未配置的官方源。镜像源须同步 OCI referrers
+  与签名 bundle。该配置不改变签名策略，也不跳过平台、包结构和兼容性检查。
+  仅显式 `ENGINE_INSTALL_DEVELOPMENT_MODE=true` 的 disposable local bootstrap 可开启
+  plain HTTP、单平台 index 和精确 development identity-to-transport 映射。开发配置必须完整，
+  否则 fast-fail；production 与 interactive 安装仍遵守显式 replacement 规则。
 - development Registry 映射只改变 `RuntimeImageIndexVerifier` 的远端连接 authority；package
   中的 canonical Runtime Image ref、digest、verified identity 和持久化 registration facts
   必须保持原值。映射不匹配时不得回退到原 Registry 或从 ref 推断 transport。
@@ -31,10 +26,9 @@
 
 该实现是 Server-only 的唯一 Engine Package 安装 lane：
 
-- `LoadInventory` 只读取 bootstrap 所需的有序 immutable artifact refs。默认 production
-  每个条目恰好两个同 digest 候选；启用 CF 加速的 production 条目必须恰好为 CF、Docker
-  Hub、GHCR 三个同 repository/digest 候选；显式 local development 每个条目恰好一个候选。
-  顺序只表示传输 fallback，Engine identity 必须从已验证的 package 内发现。
+- `LoadInventory` 读取一个或多个有序、同 digest 的 immutable artifact refs；production
+  不再要求恰好两个官方候选，development 仍要求单候选。选定部署源时保留一个 canonical
+  identity ref，由 transport 层改写连接 authority；持久化身份与 release manifest 不变。
 - `ORASPackagePuller` 从 canonical `artifactRef` 校验 OCI manifest descriptor、完整
   manifest bytes、显式 OCI image-manifest root media type、精确 OCI empty config
   descriptor、v2 artifact/layer media type 和唯一 package layer descriptor，并在
@@ -47,7 +41,7 @@
   bytes 的 `packageDigest`，安全解包并在 package 内 identity 与 package-bound Runtime
   Image 验证成功后，才原子提升 archive 和只读 expanded derivative。
 - `RuntimeImageIndexVerifier` 按 package 声明顺序验证真实 digest-qualified OCI image
-  index；CF 加速模式先验签原始 GHCR digest，再从 CF 开始传输候选；production 每个候选必须
+  index；配置镜像源时从该源获取签名与 index，核验原始身份；production 每个候选必须
   包含唯一 `linux/amd64`、`linux/arm64` platform
   descriptors，显式 local development 必须只包含当前受支持宿主平台中的一个。两种模式
   都不得把所选 ref 或 `runtimeImageDigest` 建成独立持久身份。

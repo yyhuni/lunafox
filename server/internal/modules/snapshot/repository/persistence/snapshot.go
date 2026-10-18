@@ -46,8 +46,8 @@ type EndpointSnapshot struct {
 	URL                      string           `gorm:"column:url;size:2000;index:idx_endpoint_snap_url;uniqueIndex:unique_endpoint_per_scan_snapshot,priority:2" json:"url"`
 	Host                     string           `gorm:"column:host;size:253;index:idx_endpoint_snap_host" json:"host"`
 	Title                    string           `gorm:"column:title;type:text;index:idx_endpoint_snap_title" json:"title"`
-	StatusCode               *int             `gorm:"column:status_code;index:idx_endpoint_snap_status_code;index:idx_endpoint_snap_scan_status_code_id,priority:2" json:"statusCode"`
-	ContentLength            *int             `gorm:"column:content_length;index:idx_endpoint_snap_scan_content_length_id,priority:2" json:"contentLength"`
+	StatusCode               *int64           `gorm:"column:status_code;index:idx_endpoint_snap_status_code;index:idx_endpoint_snap_scan_status_code_id,priority:2" json:"statusCode"`
+	ContentLength            *int64           `gorm:"column:content_length;index:idx_endpoint_snap_scan_content_length_id,priority:2" json:"contentLength"`
 	Location                 string           `gorm:"column:location;type:text" json:"location"`
 	Webserver                string           `gorm:"column:webserver;type:text;index:idx_endpoint_snap_webserver;index:idx_endpoint_snap_scan_webserver_id,priority:2" json:"webserver"`
 	ContentType              string           `gorm:"column:content_type;type:text;index:idx_endpoint_snap_scan_content_type_id,priority:2" json:"contentType"`
@@ -117,22 +117,24 @@ func (SubdomainSnapshot) TableName() string {
 
 // WebsiteSnapshot represents a website snapshot.
 type WebsiteSnapshot struct {
-	ID              int              `gorm:"primaryKey;autoIncrement" json:"id"`
-	ScanID          int              `gorm:"column:scan_id;primaryKey;not null;index:idx_website_snap_scan;index:idx_website_snap_scan_created_at_id,priority:1;index:idx_website_snap_scan_status_code_id,priority:1;index:idx_website_snap_scan_content_length_id,priority:1;index:idx_website_snap_scan_webserver_id,priority:1;index:idx_website_snap_scan_content_type_id,priority:1;index:idx_website_snap_scan_vhost_id,priority:1;uniqueIndex:unique_website_per_scan_snapshot,priority:1" json:"scanId"`
-	URL             string           `gorm:"column:url;size:2000;index:idx_website_snap_url;uniqueIndex:unique_website_per_scan_snapshot,priority:2" json:"url"`
-	Host            string           `gorm:"column:host;size:253;index:idx_website_snap_host" json:"host"`
-	Title           string           `gorm:"column:title;type:text;index:idx_website_snap_title" json:"title"`
-	StatusCode      *int             `gorm:"column:status_code;index:idx_website_snap_scan_status_code_id,priority:2" json:"statusCode"`
-	ContentLength   *int             `gorm:"column:content_length;index:idx_website_snap_scan_content_length_id,priority:2" json:"contentLength"`
-	Location        string           `gorm:"column:location;type:text" json:"location"`
-	Webserver       string           `gorm:"column:webserver;type:text;index:idx_website_snap_scan_webserver_id,priority:2" json:"webserver"`
-	ContentType     string           `gorm:"column:content_type;type:text;index:idx_website_snap_scan_content_type_id,priority:2" json:"contentType"`
-	Tech            pq.StringArray   `gorm:"column:tech;type:varchar(100)[]" json:"tech"`
-	ResponseBody    string           `gorm:"column:response_body;type:text" json:"responseBody"`
-	Vhost           *bool            `gorm:"column:vhost;index:idx_website_snap_scan_vhost_id,priority:2" json:"vhost"`
-	ResponseHeaders string           `gorm:"column:response_headers;type:text" json:"responseHeaders"`
-	CreatedAt       time.Time        `gorm:"column:created_at;autoCreateTime;index:idx_website_snap_created_at;index:idx_website_snap_scan_created_at_id,priority:2" json:"createdAt"`
-	Scan            *SnapshotScanRef `gorm:"foreignKey:ScanID" json:"scan,omitempty"`
+	ID                       int              `gorm:"primaryKey;autoIncrement" json:"id"`
+	ScanID                   int              `gorm:"column:scan_id;primaryKey;not null;index:idx_website_snap_scan;index:idx_website_snap_scan_created_at_id,priority:1;index:idx_website_snap_scan_status_code_id,priority:1;index:idx_website_snap_scan_content_length_id,priority:1;index:idx_website_snap_scan_webserver_id,priority:1;index:idx_website_snap_scan_content_type_id,priority:1;index:idx_website_snap_scan_vhost_id,priority:1;uniqueIndex:unique_website_per_scan_snapshot,priority:1" json:"scanId"`
+	URL                      string           `gorm:"column:url;size:2000;index:idx_website_snap_url;uniqueIndex:unique_website_per_scan_snapshot,priority:2" json:"url"`
+	Host                     string           `gorm:"column:host;size:253;index:idx_website_snap_host" json:"host"`
+	Title                    string           `gorm:"column:title;type:text;index:idx_website_snap_title" json:"title"`
+	StatusCode               *int64           `gorm:"column:status_code;index:idx_website_snap_scan_status_code_id,priority:2" json:"statusCode"`
+	ContentLength            *int64           `gorm:"column:content_length;index:idx_website_snap_scan_content_length_id,priority:2" json:"contentLength"`
+	Location                 string           `gorm:"column:location;type:text" json:"location"`
+	Webserver                string           `gorm:"column:webserver;type:text;index:idx_website_snap_scan_webserver_id,priority:2" json:"webserver"`
+	ContentType              string           `gorm:"column:content_type;type:text;index:idx_website_snap_scan_content_type_id,priority:2" json:"contentType"`
+	Tech                     pq.StringArray   `gorm:"column:tech;type:varchar(100)[]" json:"tech"`
+	ResponseBody             string           `gorm:"column:response_body;type:text" json:"responseBody"`
+	ResponseBodyTruncated    bool             `gorm:"column:response_body_truncated;not null;default:false" json:"responseBodyTruncated"`
+	Vhost                    *bool            `gorm:"column:vhost;index:idx_website_snap_scan_vhost_id,priority:2" json:"vhost"`
+	ResponseHeaders          string           `gorm:"column:response_headers;type:text" json:"responseHeaders"`
+	ResponseHeadersTruncated bool             `gorm:"column:response_headers_truncated;not null;default:false" json:"responseHeadersTruncated"`
+	CreatedAt                time.Time        `gorm:"column:created_at;autoCreateTime;index:idx_website_snap_created_at;index:idx_website_snap_scan_created_at_id,priority:2" json:"createdAt"`
+	Scan                     *SnapshotScanRef `gorm:"foreignKey:ScanID" json:"scan,omitempty"`
 }
 
 func (WebsiteSnapshot) TableName() string {

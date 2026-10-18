@@ -44,11 +44,11 @@ func (h *EndpointHandler) Export(c *gin.Context) {
 		return h.svc.ForEachByTarget(targetID, func(endpoint service.Endpoint) error {
 			statusCode := ""
 			if endpoint.StatusCode != nil {
-				statusCode = strconv.Itoa(*endpoint.StatusCode)
+				statusCode = strconv.FormatInt(*endpoint.StatusCode, 10)
 			}
 			contentLength := ""
 			if endpoint.ContentLength != nil {
-				contentLength = strconv.Itoa(*endpoint.ContentLength)
+				contentLength = strconv.FormatInt(*endpoint.ContentLength, 10)
 			}
 			vhost := ""
 			if endpoint.Vhost != nil {

@@ -243,3 +243,13 @@ so the host journal remains the durable handoff source. Event append and
 delivery are best effort and must never block Compose execution or change the
 upgrade terminal result. Host command output remains available through the
 operator's host-side `logs.sh` workflow when deeper diagnosis is required.
+
+## Registry transport
+
+Public product Registries accept a canonical `host[:port]` authority, including
+custom HTTPS OCI mirrors. Product and remote-Agent upgrade refs retain the
+release repository and digest with only the authority replaced. Persistent
+Compose overrides keep `ENGINE_INSTALL_REGISTRY` as an independent environment
+expression (empty defaults to `RELEASE_REGISTRY`), so upgrading cannot rebind an
+Engine mirror to the product Registry. Candidate deployment evidence and signed
+manifests are never rewritten to describe transport selection.

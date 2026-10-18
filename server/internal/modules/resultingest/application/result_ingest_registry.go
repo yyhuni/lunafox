@@ -69,14 +69,16 @@ func newResultIngestRegistry(deps ResultIngestFacadeDependencies) resultIngestRe
 				return deps.HostPorts.SaveAndSyncContext(ctx, scope.scanID, scope.targetID, items)
 			},
 		),
-		contractresults.ResultKindAssetWebsite: newTypedResultIngestHandler(
-			contractresults.DecodeWebsiteItems,
-			func(item contractresults.Website) snapshotapp.WebsiteSnapshotItem {
+		contractresults.ResultKindAssetWebsiteTechnology: newWebsiteTechnologyResultIngestHandler(deps.WebsiteTechnologies),
+		contractresults.ResultKindAssetWebsiteV2: newTypedResultIngestHandler(
+			contractresults.DecodeWebsiteV2Items,
+			func(item contractresults.WebsiteV2) snapshotapp.WebsiteSnapshotItem {
 				return snapshotapp.WebsiteSnapshotItem{
 					URL: item.URL, Host: item.Host, Title: item.Title, StatusCode: item.StatusCode,
 					ContentLength: item.ContentLength, Location: item.Location, Webserver: item.Webserver,
 					ContentType: item.ContentType, Tech: item.Tech, ResponseBody: item.ResponseBody,
-					Vhost: item.Vhost, ResponseHeaders: item.ResponseHeaders,
+					ResponseBodyTruncated: item.ResponseBodyTruncated, Vhost: item.Vhost,
+					ResponseHeaders: item.ResponseHeaders, ResponseHeadersTruncated: item.ResponseHeadersTruncated,
 				}
 			},
 			func(ctx context.Context, scope resultIngestScope, items []snapshotapp.WebsiteSnapshotItem) (snapshotapp.MaterializationSummary, error) {
@@ -86,11 +88,16 @@ func newResultIngestRegistry(deps ResultIngestFacadeDependencies) resultIngestRe
 				return deps.Websites.SaveAndSyncContext(ctx, scope.scanID, scope.targetID, items)
 			},
 		),
-		contractresults.ResultKindAssetWebsiteTechnology: newWebsiteTechnologyResultIngestHandler(deps.WebsiteTechnologies),
-		contractresults.ResultKindAssetEndpoint: newTypedResultIngestHandler(
-			contractresults.DecodeEndpointItems,
-			func(item contractresults.Endpoint) snapshotapp.EndpointSnapshotItem {
-				return snapshotapp.EndpointSnapshotItem{URL: item.URL, Host: item.Host, Title: item.Title, StatusCode: item.StatusCode, ContentLength: item.ContentLength, Location: item.Location, Webserver: item.Webserver, ContentType: item.ContentType, Tech: item.Tech, ResponseBody: item.ResponseBody, ResponseBodyTruncated: item.ResponseBodyTruncated, Vhost: item.Vhost, ResponseHeaders: item.ResponseHeaders, ResponseHeadersTruncated: item.ResponseHeadersTruncated}
+		contractresults.ResultKindAssetEndpointV2: newTypedResultIngestHandler(
+			contractresults.DecodeEndpointV2Items,
+			func(item contractresults.EndpointV2) snapshotapp.EndpointSnapshotItem {
+				return snapshotapp.EndpointSnapshotItem{
+					URL: item.URL, Host: item.Host, Title: item.Title, StatusCode: item.StatusCode,
+					ContentLength: item.ContentLength, Location: item.Location, Webserver: item.Webserver,
+					ContentType: item.ContentType, Tech: item.Tech, ResponseBody: item.ResponseBody,
+					ResponseBodyTruncated: item.ResponseBodyTruncated, Vhost: item.Vhost,
+					ResponseHeaders: item.ResponseHeaders, ResponseHeadersTruncated: item.ResponseHeadersTruncated,
+				}
 			},
 			func(ctx context.Context, scope resultIngestScope, items []snapshotapp.EndpointSnapshotItem) (snapshotapp.MaterializationSummary, error) {
 				if isNilResultDependency(deps.Endpoints) {

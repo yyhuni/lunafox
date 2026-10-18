@@ -10,18 +10,20 @@ func toWebsiteSnapshotItemsInput(items []dto.WebsiteSnapshotItem) []service.Webs
 	for index := range items {
 		item := items[index]
 		results = append(results, service.WebsiteSnapshotItem{
-			URL:             item.URL,
-			Host:            item.Host,
-			Location:        item.Location,
-			Title:           item.Title,
-			Webserver:       item.Webserver,
-			ContentType:     item.ContentType,
-			StatusCode:      item.StatusCode,
-			ContentLength:   item.ContentLength,
-			ResponseBody:    item.ResponseBody,
-			Tech:            item.Tech,
-			Vhost:           item.Vhost,
-			ResponseHeaders: item.ResponseHeaders,
+			URL:                      item.URL,
+			Host:                     item.Host,
+			Location:                 item.Location,
+			Title:                    item.Title,
+			Webserver:                item.Webserver,
+			ContentType:              item.ContentType,
+			StatusCode:               item.StatusCode,
+			ContentLength:            item.ContentLength,
+			ResponseBody:             item.ResponseBody,
+			ResponseBodyTruncated:    item.ResponseBodyTruncated,
+			Tech:                     item.Tech,
+			Vhost:                    item.Vhost,
+			ResponseHeaders:          item.ResponseHeaders,
+			ResponseHeadersTruncated: item.ResponseHeadersTruncated,
 		})
 	}
 	return results
@@ -32,18 +34,20 @@ func toEndpointSnapshotItemsInput(items []dto.EndpointSnapshotItem) []service.En
 	for index := range items {
 		item := items[index]
 		results = append(results, service.EndpointSnapshotItem{
-			URL:             item.URL,
-			Host:            item.Host,
-			Title:           item.Title,
-			StatusCode:      item.StatusCode,
-			ContentLength:   item.ContentLength,
-			Location:        item.Location,
-			Webserver:       item.Webserver,
-			ContentType:     item.ContentType,
-			Tech:            item.Tech,
-			ResponseBody:    item.ResponseBody,
-			Vhost:           item.Vhost,
-			ResponseHeaders: item.ResponseHeaders,
+			URL:                      item.URL,
+			Host:                     item.Host,
+			Title:                    item.Title,
+			StatusCode:               item.StatusCode,
+			ContentLength:            item.ContentLength,
+			Location:                 item.Location,
+			Webserver:                item.Webserver,
+			ContentType:              item.ContentType,
+			Tech:                     item.Tech,
+			ResponseBody:             item.ResponseBody,
+			ResponseBodyTruncated:    item.ResponseBodyTruncated,
+			Vhost:                    item.Vhost,
+			ResponseHeaders:          item.ResponseHeaders,
+			ResponseHeadersTruncated: item.ResponseHeadersTruncated,
 		})
 	}
 	return results

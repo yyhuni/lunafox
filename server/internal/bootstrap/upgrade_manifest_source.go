@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/yyhuni/lunafox/contracts/ociartifact"
 	"github.com/yyhuni/lunafox/server/internal/config"
 	upgradeapp "github.com/yyhuni/lunafox/server/internal/modules/upgrade/application"
 	upgradeinfra "github.com/yyhuni/lunafox/server/internal/modules/upgrade/infrastructure"
@@ -22,8 +23,8 @@ func newUpgradeManifestSource(cfg config.UpgradeConfig) (upgradeapp.ManifestSour
 	if channel == "" || metadataBaseURL == "" || registry == "" {
 		return nil, fmt.Errorf("release channel, metadata base URL, and registry must be configured together")
 	}
-	if registry != "docker.io" && registry != "ghcr.io" {
-		return nil, fmt.Errorf("release registry must be docker.io or ghcr.io")
+	if err := ociartifact.ValidateRegistryAuthority(cfg.Registry); err != nil {
+		return nil, fmt.Errorf("release registry: %w", err)
 	}
 	return upgradeinfra.NewChannelManifestSource(upgradeinfra.ChannelManifestSourceConfig{
 		MetadataBaseURL: metadataBaseURL,

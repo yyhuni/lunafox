@@ -128,8 +128,8 @@ func (r *WebsiteRepository) upsertBatchContext(ctx context.Context, websites []m
 	result := dbtx.Resolve(ctx, r.db).WithContext(ctx).Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "url"}, {Name: "target_id"}},
 		DoUpdates: clause.AssignmentColumns([]string{
-			"host", "location", "title", "webserver", "response_body", "content_type",
-			"status_code", "content_length", "vhost", "response_headers", "tech",
+			"host", "location", "title", "webserver", "response_body", "response_body_truncated", "content_type",
+			"status_code", "content_length", "vhost", "response_headers", "response_headers_truncated", "tech",
 		}),
 	}).Create(&websites)
 

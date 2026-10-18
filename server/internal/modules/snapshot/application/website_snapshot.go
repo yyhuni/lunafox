@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	contractresults "github.com/yyhuni/lunafox/contracts/results"
 	"github.com/yyhuni/lunafox/server/internal/pkg/dberrors"
 	"github.com/yyhuni/lunafox/server/internal/pkg/scope"
 
@@ -263,12 +262,7 @@ func (service *WebsiteSnapshotCommandService) SaveAndSync(ctx context.Context, s
 
 	accepted := make([]WebsiteSnapshotItem, 0, len(items))
 	for _, item := range items {
-		if err := contractresults.Validate(contractresults.ResultKindAssetWebsite, contractresults.Website{
-			URL: item.URL, Host: item.Host, Title: item.Title, StatusCode: item.StatusCode,
-			ContentLength: item.ContentLength, Location: item.Location, Webserver: item.Webserver,
-			ContentType: item.ContentType, Tech: item.Tech, ResponseBody: item.ResponseBody,
-			Vhost: item.Vhost, ResponseHeaders: item.ResponseHeaders,
-		}); err != nil {
+		if err := validateWebsiteSnapshotItem(item); err != nil {
 			summary.InvalidItems++
 			continue
 		}
@@ -285,8 +279,8 @@ func (service *WebsiteSnapshotCommandService) SaveAndSync(ctx context.Context, s
 	validItems := make([]WebsiteAssetUpsertItem, 0, len(accepted))
 	for _, item := range accepted {
 		host := item.Host
-		snapshots = append(snapshots, snapshotdomain.WebsiteSnapshot{ScanID: scanID, URL: item.URL, Host: host, Title: item.Title, StatusCode: item.StatusCode, ContentLength: item.ContentLength, Location: item.Location, Webserver: item.Webserver, ContentType: item.ContentType, Tech: item.Tech, ResponseBody: item.ResponseBody, Vhost: item.Vhost, ResponseHeaders: item.ResponseHeaders})
-		validItems = append(validItems, WebsiteAssetUpsertItem{URL: item.URL, Host: host, Title: item.Title, StatusCode: item.StatusCode, ContentLength: item.ContentLength, Location: item.Location, Webserver: item.Webserver, ContentType: item.ContentType, Tech: item.Tech, ResponseBody: item.ResponseBody, Vhost: item.Vhost, ResponseHeaders: item.ResponseHeaders})
+		snapshots = append(snapshots, snapshotdomain.WebsiteSnapshot{ScanID: scanID, URL: item.URL, Host: host, Title: item.Title, StatusCode: item.StatusCode, ContentLength: item.ContentLength, Location: item.Location, Webserver: item.Webserver, ContentType: item.ContentType, Tech: item.Tech, ResponseBody: item.ResponseBody, ResponseBodyTruncated: item.ResponseBodyTruncated, Vhost: item.Vhost, ResponseHeaders: item.ResponseHeaders, ResponseHeadersTruncated: item.ResponseHeadersTruncated})
+		validItems = append(validItems, WebsiteAssetUpsertItem{URL: item.URL, Host: host, Title: item.Title, StatusCode: item.StatusCode, ContentLength: item.ContentLength, Location: item.Location, Webserver: item.Webserver, ContentType: item.ContentType, Tech: item.Tech, ResponseBody: item.ResponseBody, ResponseBodyTruncated: item.ResponseBodyTruncated, Vhost: item.Vhost, ResponseHeaders: item.ResponseHeaders, ResponseHeadersTruncated: item.ResponseHeadersTruncated})
 	}
 
 	if len(snapshots) == 0 {

@@ -867,10 +867,31 @@ compose_environment_value() {
 	printf '%s' "${line#*=}"
 }
 
+validate_registry_authority() {
+	local key="$1" value="$2" port
+	[[ "$value" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:[0-9]+)?$ ]] ||
+		fail "$key must be a Registry authority (host[:port], without scheme or path)"
+	case "$value" in
+	*:*)
+		port="${value##*:}"
+		if [ "${#port}" -gt 5 ] || [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+			fail "$key Registry port must be within 1-65535"
+		fi
+		;;
+	esac
+}
+
 require_renderable_configuration() {
 	if ! lf_compose config --quiet 2>&1 | sed 's/^/LunaFox:   /' >&2; then
 		fail "the Compose configuration is not valid; fix $LUNAFOX_ENV_FILE before retrying"
 	fi
+	local product_registry engine_registry
+	product_registry="$(compose_environment_value RELEASE_REGISTRY || true)"
+	product_registry="${product_registry:-docker.io}"
+	engine_registry="$(compose_environment_value ENGINE_INSTALL_REGISTRY || true)"
+	engine_registry="${engine_registry:-$product_registry}"
+	validate_registry_authority RELEASE_REGISTRY "$product_registry"
+	validate_registry_authority ENGINE_INSTALL_REGISTRY "$engine_registry"
 }
 
 # ------------------------------------------------------------ env mode ------

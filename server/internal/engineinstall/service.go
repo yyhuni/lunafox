@@ -121,7 +121,7 @@ func (installer *EnginePackageInstaller) Install(
 	if err != nil {
 		return VerifiedEngineInstallation{}, err
 	}
-	if installer.signatureVerifier != nil && len(validatedCandidates.References) != 3 {
+	if installer.signatureVerifier != nil {
 		verified := make([]ociartifact.EnginePackageArtifactReference, 0, len(validatedCandidates.References))
 		var lastTransport error
 		for _, reference := range validatedCandidates.References {

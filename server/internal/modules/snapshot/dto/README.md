@@ -11,3 +11,6 @@ snapshot 模块 DTO 规范：
 - 不允许通过类型别名复用 asset/security DTO。
 - 与资产/漏洞的字段映射必须在 `snapshot/service` 的转换层完成。
 - Scan Directory read DTO 的 `contentLength` 与纳秒 `duration` 只能输出精确十进制 `string` 或历史未知值 `null`；零值必须是 `"0"`，不得输出 JSON number 或混合 wire type。
+- Website/Endpoint snapshot DTO 原样暴露 HTTPX v2 的观测字段：`host` 可与 URL
+  authority 不一致，`statusCode`/`contentLength` 保持 signed int64，响应体/响应头及
+  paired truncation flags 与 Snapshot 一起返回；URL 仍是身份和 Target-scope 来源。

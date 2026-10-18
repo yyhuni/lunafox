@@ -360,7 +360,7 @@ func (ingest *smokeResultIngest) Ingest(ctx context.Context, command resultinges
 	record := ingest.bridge.byTaskID[command.TaskID]
 	validScope := record != nil && record.scanID == command.ScanID && record.targetID == command.TargetID && record.assignmentDelivered && !record.terminalAcked
 	validResult := record != nil && ((record.scenario == smokeScenarioPortSuccess && record.engineID == enginePortID && command.ResultType == results.ResultKindAssetHostPort) ||
-		(record.scenario == smokeScenarioWebsiteSuccess && record.engineID == engineWebsiteID && command.ResultType == results.ResultKindAssetWebsite) ||
+		(record.scenario == smokeScenarioWebsiteSuccess && record.engineID == engineWebsiteID && command.ResultType == results.ResultKindAssetWebsiteV2) ||
 		((record.scenario == smokeScenarioNucleiHit || record.scenario == smokeScenarioNucleiAckFailure || record.scenario == smokeScenarioNucleiMixed) && record.engineID == engineNucleiID && command.ResultType == results.ResultKindAssetVulnerability))
 	ingest.bridge.mu.Unlock()
 	if !validScope || !validResult || len(command.Items) == 0 {

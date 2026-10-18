@@ -23,6 +23,8 @@ services:
     - --profile
     - ${DATABASE_MODE:-embedded}
     environment:
+      RELEASE_REGISTRY: ${RELEASE_REGISTRY:?RELEASE_REGISTRY is required}
+      ENGINE_INSTALL_REGISTRY: ${ENGINE_INSTALL_REGISTRY:-}
       LUNAFOX_PREHEAT_TIMEOUT_SECONDS: ${LUNAFOX_PREHEAT_TIMEOUT_SECONDS:-900}
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -426,6 +428,7 @@ services:
       server:
         condition: service_healthy
     environment:
+      ENGINE_INSTALL_REGISTRY: ${ENGINE_INSTALL_REGISTRY:-}
       AGENT_CONTROL_URL: http://server:9090
       AGENT_BOOTSTRAP_CREDENTIALS_PATH: /var/lib/lunafox-agent/bootstrap.json
       AGENT_VERSION: ${AGENT_VERSION:?AGENT_VERSION is required}

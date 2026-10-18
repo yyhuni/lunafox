@@ -45,7 +45,7 @@ func TestDirectoryResultTypeRejectsAliasesCaseVariantsAndShapeInference(t *testi
 	if err := Validate(ResultKindAssetDirectory, Screenshot{}); err == nil {
 		t.Fatal("Directory result type was inferred from a non-Directory Go item")
 	}
-	if err := Validate(ResultKindAssetWebsite, item); err == nil {
+	if err := Validate(ResultKindAssetWebsiteV2, item); err == nil {
 		t.Fatal("Directory Go item shape was inferred as another result type")
 	}
 	payload := []byte(`{"url":"https://example.com/admin","status":200,"contentLength":0,"contentType":"text/html","duration":0}`)

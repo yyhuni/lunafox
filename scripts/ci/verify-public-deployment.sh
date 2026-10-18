@@ -363,7 +363,7 @@ NODE
 		  (.services["engine-preheater"].restart == "no") and
 		  (.services["engine-preheater"].network_mode == "none") and
 		  (.services["engine-preheater"].secrets == null) and
-		  (.services["engine-preheater"].environment == {"LUNAFOX_PREHEAT_TIMEOUT_SECONDS":"900"}) and
+		  (.services["engine-preheater"].environment == {"LUNAFOX_PREHEAT_TIMEOUT_SECONDS":"900","RELEASE_REGISTRY":"docker.io","ENGINE_INSTALL_REGISTRY":"docker.io"}) and
 		  (.services["engine-preheater"].entrypoint == ["/usr/local/bin/lunafox-engine-preheater"]) and
 		  (.services["engine-preheater"].command == ["--manifest","/deployment/preheat-manifest.json","--release-manifest","/deployment/release.manifest.yaml","--runtime-composition","/deployment/runtime-composition.json","--compose","/deployment/compose.yaml","--third-party-policy","/deployment/third-party-image-policy.json","--manifest-digest",$manifest_digest,"--profile","embedded"]) and
 		  (.services["engine-preheater"].labels["lunafox.preheat.manifest-digest"] == $manifest_digest) and
@@ -559,7 +559,7 @@ grep -Eiq 'commit local secret' "$shipped_env" || fail ".env.example must warn a
 
 source_env="$ROOT_DIR/deploy/.env.example"
 active_keys="$(rg -o '^[A-Za-z_][A-Za-z0-9_]*=' "$source_env" | tr -d '=' | sort -u | tr '\n' ' ')"
-[ "$active_keys" = "COMPOSE_PROFILES DATABASE_MODE DB_PASSWORD JWT_SECRET PUBLIC_HOST PUBLIC_PORT RELEASE_REGISTRY " ] ||
+[ "$active_keys" = "COMPOSE_PROFILES DATABASE_MODE DB_PASSWORD ENGINE_INSTALL_REGISTRY JWT_SECRET PUBLIC_HOST PUBLIC_PORT RELEASE_REGISTRY " ] ||
 	fail "deploy/.env.example must only assign the reviewed settings and the two empty secret inputs: $active_keys"
 for key in DB_HOST DB_PORT DB_USER DB_NAME DB_SSLMODE; do
 	grep -Eq "^#${key}=" "$source_env" || fail "deploy/.env.example must keep ${key} in the commented external database example"

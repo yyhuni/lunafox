@@ -96,13 +96,13 @@ func assertTypedAuthorPorts(t *testing.T) {
 		item  reflect.Type
 	}{
 		{field: "Subdomains", item: reflect.TypeOf(Subdomain{})},
-		{field: "Endpoints", item: reflect.TypeOf(Endpoint{})},
 		{field: "HostPorts", item: reflect.TypeOf(HostPort{})},
-		{field: "Websites", item: reflect.TypeOf(Website{})},
 		{field: "WebsiteTechnologies", item: reflect.TypeOf(WebsiteTechnology{})},
 		{field: "Screenshots", item: reflect.TypeOf(Screenshot{})},
 		{field: "Directories", item: reflect.TypeOf(Directory{})},
 		{field: "Vulnerabilities", item: reflect.TypeOf(Vulnerability{})},
+		{field: "EndpointV2", item: reflect.TypeOf(EndpointV2{})},
+		{field: "WebsiteV2", item: reflect.TypeOf(WebsiteV2{})},
 	}
 	if resultsType.NumField() != len(wantResults) || resultsType.NumMethod() != 0 {
 		t.Fatalf("Results surface = %d fields/%d methods, want %d typed fields/no generic methods", resultsType.NumField(), resultsType.NumMethod(), len(wantResults))

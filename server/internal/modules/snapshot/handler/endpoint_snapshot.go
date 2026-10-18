@@ -192,12 +192,12 @@ func (h *EndpointSnapshotHandler) Export(c *gin.Context) {
 		return h.svc.ForEachByScan(scanID, func(snapshot service.EndpointSnapshot) error {
 			statusCode := ""
 			if snapshot.StatusCode != nil {
-				statusCode = strconv.Itoa(*snapshot.StatusCode)
+				statusCode = strconv.FormatInt(*snapshot.StatusCode, 10)
 			}
 
 			contentLength := ""
 			if snapshot.ContentLength != nil {
-				contentLength = strconv.Itoa(*snapshot.ContentLength)
+				contentLength = strconv.FormatInt(*snapshot.ContentLength, 10)
 			}
 
 			tech := ""

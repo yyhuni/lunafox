@@ -75,8 +75,10 @@ func NewService(config ServiceConfig) (*Service, error) {
 		return nil, fmt.Errorf("current release version is invalid: %w", err)
 	}
 	registry := strings.TrimSpace(config.Registry)
-	if registry != "" && registry != "docker.io" && registry != "ghcr.io" {
-		return nil, fmt.Errorf("upgrade registry must be docker.io or ghcr.io")
+	if config.Registry != "" {
+		if err := ociartifact.ValidateRegistryAuthority(config.Registry); err != nil {
+			return nil, fmt.Errorf("upgrade registry: %w", err)
+		}
 	}
 	now := config.Now
 	if now == nil {
@@ -1006,16 +1008,9 @@ func (service *Service) agentTarget(manifest *releasemanifest.Manifest) (AgentUp
 	}
 	imageRef := refs[0]
 	if service.registry != "" {
-		imageRef = ""
-		for _, candidate := range refs {
-			parsed, parseErr := ociartifact.ParseDigestReference(candidate)
-			if parseErr == nil && parsed.Registry == service.registry {
-				imageRef = candidate
-				break
-			}
-		}
-		if imageRef == "" {
-			return AgentUpgradeTarget{}, domain.WrapManifestInvalid(fmt.Errorf("agent runtime image has no candidate for registry %s", service.registry))
+		imageRef, err = ociartifact.ReplaceRegistry(refs[0], service.registry)
+		if err != nil {
+			return AgentUpgradeTarget{}, domain.WrapManifestInvalid(err)
 		}
 	}
 	return AgentUpgradeTarget{Version: manifest.ReleaseVersion, Digest: digest, ImageRef: imageRef}, nil
