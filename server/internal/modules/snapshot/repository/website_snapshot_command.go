@@ -34,7 +34,7 @@ func (r *WebsiteSnapshotRepository) BatchCreateContext(ctx context.Context, snap
 			Columns: []clause.Column{{Name: "scan_id"}, {Name: "url"}},
 			DoUpdates: clause.AssignmentColumns([]string{
 				"host", "title", "status_code", "content_length", "location", "webserver",
-				"content_type", "tech", "response_body", "vhost", "response_headers",
+				"content_type", "tech", "response_body", "response_body_truncated", "vhost", "response_headers", "response_headers_truncated",
 			}),
 		}).Create(&batch)
 		if result.Error != nil {

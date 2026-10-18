@@ -358,12 +358,16 @@ NODE
 		published_legacy_compose=1
 	fi
 	if [ "$published_legacy_compose" -eq 0 ]; then
+		# Export PRs retain the preceding deployment snapshot, whose preheater
+		# can predate registry propagation. Only these two complete environment
+		# shapes are valid; current-template inputs are checked separately below.
 		jq -e --arg manifest_digest "$preheat_manifest_digest" '
 		  (.services["engine-preheater"].image == .services.agent.image) and
 		  (.services["engine-preheater"].restart == "no") and
 		  (.services["engine-preheater"].network_mode == "none") and
 		  (.services["engine-preheater"].secrets == null) and
-		  (.services["engine-preheater"].environment == {"LUNAFOX_PREHEAT_TIMEOUT_SECONDS":"900"}) and
+		  ((.services["engine-preheater"].environment == {"LUNAFOX_PREHEAT_TIMEOUT_SECONDS":"900"}) or
+		   (.services["engine-preheater"].environment == {"LUNAFOX_PREHEAT_TIMEOUT_SECONDS":"900","RELEASE_REGISTRY":"docker.io","ENGINE_INSTALL_REGISTRY":"docker.io"})) and
 		  (.services["engine-preheater"].entrypoint == ["/usr/local/bin/lunafox-engine-preheater"]) and
 		  (.services["engine-preheater"].command == ["--manifest","/deployment/preheat-manifest.json","--release-manifest","/deployment/release.manifest.yaml","--runtime-composition","/deployment/runtime-composition.json","--compose","/deployment/compose.yaml","--third-party-policy","/deployment/third-party-image-policy.json","--manifest-digest",$manifest_digest,"--profile","embedded"]) and
 		  (.services["engine-preheater"].labels["lunafox.preheat.manifest-digest"] == $manifest_digest) and
@@ -388,6 +392,19 @@ fi
 # An export PR still carries the previous release's rendered compose snapshot, so
 # facts introduced by the current template are asserted on the template itself
 # and on the freshly generated package contract, never on a lagging snapshot.
+template_preheater_environment="$(awk '
+  /^  engine-preheater:$/ {inside=1; next}
+  inside && /^  [a-z]/ {exit}
+  inside && /^    environment:$/ {environment=1; next}
+  environment && /^    [a-z]/ {exit}
+  environment {print}
+' "$ROOT_DIR/deploy/compose.template.yaml")"
+# shellcheck disable=SC2016
+expected_preheater_environment='      RELEASE_REGISTRY: ${RELEASE_REGISTRY:?RELEASE_REGISTRY is required}
+      ENGINE_INSTALL_REGISTRY: ${ENGINE_INSTALL_REGISTRY:-}
+      LUNAFOX_PREHEAT_TIMEOUT_SECONDS: ${LUNAFOX_PREHEAT_TIMEOUT_SECONDS:-900}'
+[ "$template_preheater_environment" = "$expected_preheater_environment" ] ||
+	fail "the deployment template must pass exactly the reviewed preheater registry and timeout inputs"
 template_config_init="$(awk '/^  config-init:$/ {inside=1; next} inside && /^  [a-z]/ {inside=0} inside {print}' "$ROOT_DIR/deploy/compose.template.yaml")"
 # The single-quoted pattern is the literal template text, not a shell expansion.
 # shellcheck disable=SC2016
@@ -559,7 +576,7 @@ grep -Eiq 'commit local secret' "$shipped_env" || fail ".env.example must warn a
 
 source_env="$ROOT_DIR/deploy/.env.example"
 active_keys="$(rg -o '^[A-Za-z_][A-Za-z0-9_]*=' "$source_env" | tr -d '=' | sort -u | tr '\n' ' ')"
-[ "$active_keys" = "COMPOSE_PROFILES DATABASE_MODE DB_PASSWORD JWT_SECRET PUBLIC_HOST PUBLIC_PORT RELEASE_REGISTRY " ] ||
+[ "$active_keys" = "COMPOSE_PROFILES DATABASE_MODE DB_PASSWORD ENGINE_INSTALL_REGISTRY JWT_SECRET PUBLIC_HOST PUBLIC_PORT RELEASE_REGISTRY " ] ||
 	fail "deploy/.env.example must only assign the reviewed settings and the two empty secret inputs: $active_keys"
 for key in DB_HOST DB_PORT DB_USER DB_NAME DB_SSLMODE; do
 	grep -Eq "^#${key}=" "$source_env" || fail "deploy/.env.example must keep ${key} in the commented external database example"

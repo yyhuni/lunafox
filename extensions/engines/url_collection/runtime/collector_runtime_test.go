@@ -98,7 +98,7 @@ func TestExecuteFailsWhenRequiredProgressAcknowledgementFailsBeforeTools(t *test
 		Config: enginecontract.Config{Waymore: enginecontract.WaymoreConfig{Enabled: true, Timeout: 60},
 			Katana: enginecontract.KatanaConfig{Enabled: true, Timeout: 60, Depth: 1, Concurrency: 1, RateLimit: 1, RequestTimeout: 1}},
 		Progress: failingProgress{err: expected},
-		Results:  enginecontract.Results{Endpoints: &captureEndpointSubmitter{}},
+		Results:  enginecontract.Results{EndpointV2: &captureEndpointSubmitter{}},
 	}
 	err := (&Runtime{executor: executor}).Execute(context.Background(), execution)
 	if !errors.Is(err, expected) || executor.calls != 0 {

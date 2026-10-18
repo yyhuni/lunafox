@@ -13,21 +13,23 @@ type TargetRef struct {
 }
 
 type Website struct {
-	ID              int
-	TargetID        int
-	URL             string
-	Host            string
-	Location        string
-	CreatedAt       time.Time
-	Title           string
-	Webserver       string
-	ResponseBody    string
-	ContentType     string
-	Tech            []string
-	StatusCode      *int
-	ContentLength   *int
-	Vhost           *bool
-	ResponseHeaders string
+	ID                       int
+	TargetID                 int
+	URL                      string
+	Host                     string
+	Location                 string
+	CreatedAt                time.Time
+	Title                    string
+	Webserver                string
+	ResponseBody             string
+	ResponseBodyTruncated    bool
+	ContentType              string
+	Tech                     []string
+	StatusCode               *int64
+	ContentLength            *int64
+	Vhost                    *bool
+	ResponseHeaders          string
+	ResponseHeadersTruncated bool
 	// Screenshot is an optional metadata projection used by enriched Website reads.
 	// Image bytes remain owned by the dedicated screenshot blob endpoint.
 	Screenshot *Screenshot
@@ -46,8 +48,8 @@ type Endpoint struct {
 	ResponseBodyTruncated    bool
 	ContentType              string
 	Tech                     []string
-	StatusCode               *int
-	ContentLength            *int
+	StatusCode               *int64
+	ContentLength            *int64
 	Vhost                    *bool
 	ResponseHeaders          string
 	ResponseHeadersTruncated bool

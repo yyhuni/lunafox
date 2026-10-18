@@ -141,12 +141,12 @@ func ValidateCanonicalBatch(resultType string, items [][]byte, limits BatchLimit
 		_, err = DecodeSubdomainItems(itemsJSON)
 	case ResultKindAssetHostPort:
 		_, err = DecodeHostPortItems(itemsJSON)
-	case ResultKindAssetWebsite:
-		_, err = DecodeWebsiteItems(itemsJSON)
+	case ResultKindAssetWebsiteV2:
+		_, err = DecodeWebsiteV2Items(itemsJSON)
 	case ResultKindAssetWebsiteTechnology:
 		_, err = DecodeWebsiteTechnologyItems(itemsJSON)
-	case ResultKindAssetEndpoint:
-		_, err = DecodeEndpointItems(itemsJSON)
+	case ResultKindAssetEndpointV2:
+		_, err = DecodeEndpointV2Items(itemsJSON)
 	case ResultKindAssetScreenshot:
 		_, err = DecodeScreenshotItems(itemsJSON)
 	case ResultKindAssetDirectory:

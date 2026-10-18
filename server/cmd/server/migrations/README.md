@@ -185,6 +185,16 @@ stored raw `response_headers` text. It does not index `response_body` and does
 not change the frozen `000001` baseline. Its down file only drops those
 indexes for isolated test teardown.
 
+Forward migration `000008` widens `status_code` and `content_length` to
+PostgreSQL `BIGINT` on the current and snapshot Website/Endpoint tables so
+HTTPX v2 signed-int64 observations are retained exactly. The initial schema
+already contains both truncation flags on Endpoint current/snapshot and the
+body flag on Website current; `000008` adds the two missing Website snapshot
+flags plus current Website `response_headers_truncated`, all with a `FALSE`
+default. It does not rewrite existing observations. The paired down migration
+is destructive test teardown only and may fail when widened values cannot fit
+back into `INTEGER`.
+
 ## Scan Execution Input Source Hard Cut
 
 The frozen `000001` baseline requires `scan.input_source` and

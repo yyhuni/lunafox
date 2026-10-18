@@ -33,7 +33,7 @@ func (stub *globalAssetSearchHandlerServiceStub) Search(_ context.Context, input
 func TestGlobalAssetSearchHandlerUsesCanonicalQueryAndReturnsCompleteAssetPayload(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	now := time.Date(2026, 8, 7, 9, 0, 0, 0, time.UTC)
-	status := 200
+	status := int64(200)
 	screenshotStatus := int16(200)
 	stub := &globalAssetSearchHandlerServiceStub{result: &service.GlobalAssetSearchResult{
 		AssetType: service.GlobalAssetSearchAssetTypeWebsite,

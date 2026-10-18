@@ -71,7 +71,7 @@ func TestComposeBootstrapDoesNotCreateResidentContainers(t *testing.T) {
 	}
 }
 
-func TestComposeBootstrapRequiresKnownRegistryAndIgnoresLegacyAccelerationKey(t *testing.T) {
+func TestComposeBootstrapAcceptsCustomRegistryAndIgnoresLegacyAccelerationKey(t *testing.T) {
 	root := filepath.Clean(filepath.Join("..", "..", ".."))
 	script, err := filepath.Abs(filepath.Join(root, "docker", "bootstrap", "bootstrap.sh"))
 	if err != nil {
@@ -88,8 +88,8 @@ func TestComposeBootstrapRequiresKnownRegistryAndIgnoresLegacyAccelerationKey(t 
 		{name: "GHCR without the legacy key", registry: "ghcr.io", wantSuccess: true},
 		{name: "legacy enabled key is ignored", registry: "ghcr.io", acceleration: stringPointer("true"), wantSuccess: true, wantWarning: true},
 		{name: "legacy malformed key is ignored", registry: "docker.io", acceleration: stringPointer("sometimes"), wantSuccess: true, wantWarning: true},
-		{name: "unknown registry fails", registry: "registry.example"},
-		{name: "unknown registry fails with the legacy key", registry: "registry.example", acceleration: stringPointer("false")},
+		{name: "custom registry", registry: "registry.example", wantSuccess: true},
+		{name: "scheme rejected", registry: "https://registry.example", acceleration: stringPointer("false")},
 	}
 
 	for _, test := range tests {

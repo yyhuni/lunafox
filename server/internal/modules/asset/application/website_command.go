@@ -13,18 +13,23 @@ import (
 var ErrWebsiteNotFound = errors.New("website not found")
 
 type WebsiteUpsertItem struct {
-	URL             string
-	Host            string
-	Location        string
-	Title           string
-	Webserver       string
-	ContentType     string
-	StatusCode      *int
-	ContentLength   *int
-	ResponseBody    string
-	Tech            []string
-	Vhost           *bool
-	ResponseHeaders string
+	URL                      string
+	Host                     string
+	Location                 string
+	Title                    string
+	Webserver                string
+	ContentType              string
+	StatusCode               *int64
+	ContentLength            *int64
+	ResponseBody             string
+	ResponseBodyTruncated    bool
+	Tech                     []string
+	Vhost                    *bool
+	ResponseHeaders          string
+	ResponseHeadersTruncated bool
+	// AllowHostMismatch is set only by the versioned HTTPX result materializer;
+	// ordinary API/v1 callers retain the historical URL-authority assertion.
+	AllowHostMismatch bool
 }
 
 // WebsiteTechnologyMaterializationSummary describes the current-only
@@ -130,31 +135,35 @@ func (service *WebsiteCommandService) BatchUpsert(ctx context.Context, targetID 
 		if _, err := contractresults.ValidateObservedAssetURL(item.URL); err != nil {
 			return 0, fmt.Errorf("items[%d]: %w", index, err)
 		}
-		urlHost, err := contractresults.DeriveObservedAssetURLHost(item.URL)
-		if err != nil {
-			return 0, fmt.Errorf("items[%d]: %w", index, err)
-		}
-		if item.Host != urlHost {
-			return 0, fmt.Errorf("items[%d]: website host conflicts with url authority", index)
+		if !item.AllowHostMismatch {
+			urlHost, err := contractresults.DeriveObservedAssetURLHost(item.URL)
+			if err != nil {
+				return 0, fmt.Errorf("items[%d]: %w", index, err)
+			}
+			if item.Host != urlHost {
+				return 0, fmt.Errorf("items[%d]: website host conflicts with url authority", index)
+			}
 		}
 		if !assetdomain.IsURLMatchTarget(item.URL, *target) {
 			continue
 		}
 
 		websites = append(websites, assetdomain.Website{
-			TargetID:        targetID,
-			URL:             item.URL,
-			Host:            item.Host,
-			Location:        item.Location,
-			Title:           item.Title,
-			Webserver:       item.Webserver,
-			ResponseBody:    item.ResponseBody,
-			ContentType:     item.ContentType,
-			Tech:            item.Tech,
-			StatusCode:      item.StatusCode,
-			ContentLength:   item.ContentLength,
-			Vhost:           item.Vhost,
-			ResponseHeaders: item.ResponseHeaders,
+			TargetID:                 targetID,
+			URL:                      item.URL,
+			Host:                     item.Host,
+			Location:                 item.Location,
+			Title:                    item.Title,
+			Webserver:                item.Webserver,
+			ResponseBody:             item.ResponseBody,
+			ResponseBodyTruncated:    item.ResponseBodyTruncated,
+			ContentType:              item.ContentType,
+			Tech:                     item.Tech,
+			StatusCode:               item.StatusCode,
+			ContentLength:            item.ContentLength,
+			Vhost:                    item.Vhost,
+			ResponseHeaders:          item.ResponseHeaders,
+			ResponseHeadersTruncated: item.ResponseHeadersTruncated,
 		})
 	}
 

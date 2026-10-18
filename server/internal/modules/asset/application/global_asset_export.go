@@ -312,7 +312,7 @@ var csvUTF8BOM = []byte{0xEF, 0xBB, 0xBF}
 func globalWebsiteExportRow(item assetdomain.Website) []string {
 	return []string{
 		strconv.Itoa(item.ID), strconv.Itoa(item.TargetID), item.URL, item.Host, item.Location,
-		item.Title, optionalInt(item.StatusCode), optionalInt(item.ContentLength), item.ContentType,
+		item.Title, optionalInt64(item.StatusCode), optionalInt64(item.ContentLength), item.ContentType,
 		item.Webserver, strings.Join(item.Tech, "|"), item.ResponseBody, item.ResponseHeaders,
 		optionalBool(item.Vhost), timeutil.FormatRFC3339NanoUTC(item.CreatedAt),
 	}
@@ -321,17 +321,17 @@ func globalWebsiteExportRow(item assetdomain.Website) []string {
 func globalEndpointExportRow(item assetdomain.Endpoint) []string {
 	return []string{
 		strconv.Itoa(item.ID), strconv.Itoa(item.TargetID), item.URL, item.Host, item.Location,
-		item.Title, optionalInt(item.StatusCode), optionalInt(item.ContentLength), item.ContentType,
+		item.Title, optionalInt64(item.StatusCode), optionalInt64(item.ContentLength), item.ContentType,
 		item.Webserver, strings.Join(item.Tech, "|"), item.ResponseBody, item.ResponseHeaders,
 		optionalBool(item.Vhost), timeutil.FormatRFC3339NanoUTC(item.CreatedAt),
 	}
 }
 
-func optionalInt(value *int) string {
+func optionalInt64(value *int64) string {
 	if value == nil {
 		return ""
 	}
-	return strconv.Itoa(*value)
+	return strconv.FormatInt(*value, 10)
 }
 
 func optionalBool(value *bool) string {

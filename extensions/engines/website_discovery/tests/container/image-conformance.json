@@ -17,7 +17,7 @@
       "content": "{\"host\":\"example.com\",\"ip\":\"192.0.2.10\",\"port\":443}\n"
     }
   ],
-  "resultType": "asset.website.v1",
+  "resultType": "asset.website.v2",
   "toolStubs": [
     {
       "tool": "httpx",

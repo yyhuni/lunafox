@@ -237,7 +237,7 @@ func websiteExecution(workspace, urls string, results *captureWebsites) *enginec
 			Enabled: true, Timeout: 60, Threads: 1, RateLimit: 1, RequestTimeout: 1, Retries: 0,
 		}},
 		Progress: captureProgress{},
-		Results:  enginecontract.Results{Websites: results},
+		Results:  enginecontract.Results{WebsiteV2: results},
 	}
 }
 
@@ -247,11 +247,11 @@ func (captureProgress) Report(context.Context, string) error { return nil }
 
 type captureWebsites struct {
 	calls int
-	items []enginecontract.Website
+	items []enginecontract.WebsiteV2
 	err   error
 }
 
-func (capture *captureWebsites) Submit(_ context.Context, items <-chan enginecontract.Website) error {
+func (capture *captureWebsites) Submit(_ context.Context, items <-chan enginecontract.WebsiteV2) error {
 	capture.calls++
 	for item := range items {
 		capture.items = append(capture.items, item)

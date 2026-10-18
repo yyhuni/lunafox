@@ -74,7 +74,7 @@ func TestGlobalAssetSearchRepositoriesOnlyReadSelectedCurrentTableForActiveTarge
 func TestGlobalAssetSearchRepositoryUsesStableKeysetAndFieldSemantics(t *testing.T) {
 	db := newAssetRepositoryDB(t)
 	now := time.Date(2026, 8, 7, 9, 0, 0, 0, time.UTC)
-	status := 200
+	status := int64(200)
 	if err := db.Create([]model.Website{
 		{ID: 3, TargetID: 1, URL: "https://Example.test/Admin", Host: "API.Example.test", Title: "Admin", StatusCode: &status, CreatedAt: now, Tech: pq.StringArray{}},
 		{ID: 2, TargetID: 1, URL: "https://example.test/admin", Host: "api.example.test", Title: "admin", StatusCode: &status, CreatedAt: now, Tech: pq.StringArray{}},

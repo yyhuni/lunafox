@@ -138,8 +138,8 @@ func TestEndpointHandlerCoverage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	now := time.Date(2026, 3, 18, 12, 0, 0, 0, time.UTC)
-	status := 200
-	contentLength := 512
+	status := int64(200)
+	contentLength := int64(512)
 	vhost := true
 	store := &endpointStoreStub{
 		items: []assetdomain.Endpoint{{

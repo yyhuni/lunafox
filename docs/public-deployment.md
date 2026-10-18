@@ -82,12 +82,31 @@ To use GHCR, change the value before first startup:
 RELEASE_REGISTRY=ghcr.io
 ```
 
-Only `docker.io` and `ghcr.io` are accepted. The selected value applies to the
-entire first-party Runtime, Agent, Engine, bootstrap, and upgrader closure.
-LunaFox never falls back to the other Registry and never mixes the two within
-one deployment. After a successful in-place upgrade, the persisted override is
-bound to its original Registry; changing Registry requires a fresh deployment
-or an explicit migration that preserves application data and configuration.
+Custom HTTPS OCI Registries are also supported. Configure product images and
+Engine Packages/Runtime Images independently before first startup:
+
+```dotenv
+RELEASE_REGISTRY=product.company.cn
+ENGINE_INSTALL_REGISTRY=engine.company.cn:5443
+```
+
+`ENGINE_INSTALL_REGISTRY` defaults to `RELEASE_REGISTRY` when empty or absent.
+Use `host[:port]` without a scheme, path, credentials, or whitespace. Mirrors
+must preserve the original namespace/repository paths and immutable digests;
+Engine mirrors must also copy OCI signature referrers and bundles. Existing
+signature, package, platform, version, and compatibility checks still apply.
+Only the configured sources are contacted for first-party content; there is no
+implicit fallback to the official Registries. Preheat, execution and upgrades
+use the same source settings, and upgrades preserve the independent Engine
+setting. Configure external Agents with `ENGINE_INSTALL_REGISTRY` as well.
+
+This setting does not redirect PostgreSQL, Redis, Loki or Alloy; their pinned
+third-party images still require access through the host Docker configuration.
+Registry credentials and custom CA provisioning are environment prerequisites;
+this option does not disable TLS or existing Sigstore trust-root retrieval.
+After a successful in-place upgrade, product image overrides remain bound to
+the selected product Registry; changing that binding requires an explicit
+migration that preserves application data and configuration.
 
 `DATABASE_MODE=embedded` is the default and enables the bundled PostgreSQL
 service. `DB_PORT=5432`, `DB_USER=postgres`, and `DB_NAME=lunafox` are editable

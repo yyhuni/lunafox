@@ -38,5 +38,5 @@ func runWebsiteDiscovery(ctx context.Context, execution *enginecontract.Executio
 	if err != nil {
 		return err
 	}
-	return runtimeInstance.ReportResults(ctx, execution.Progress, execution.Results.Websites, artifacts)
+	return runtimeInstance.ReportResults(ctx, execution.Progress, execution.Results.WebsiteV2, artifacts)
 }

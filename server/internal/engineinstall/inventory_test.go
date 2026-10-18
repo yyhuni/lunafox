@@ -62,7 +62,7 @@ func TestLoadInventoryProductionPreservesDeclaredCandidateOrder(t *testing.T) {
 	}
 }
 
-func TestLoadSelectedRegistryInventoryAcceptsOnlyTheExplicitCanonicalRegistry(t *testing.T) {
+func TestLoadSelectedRegistryInventoryPreservesCanonicalIdentity(t *testing.T) {
 	dockerRef := "docker.io/yyhuni/lunafox-engine-runtime-port-scan@" + inventoryDigestA
 	ghcrRef := "ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@" + inventoryDigestA
 	validInventory := "enginePackages:\n  - refs:\n      - " + dockerRef + "\n      - " + ghcrRef + "\n"
@@ -86,19 +86,16 @@ func TestLoadSelectedRegistryInventoryAcceptsOnlyTheExplicitCanonicalRegistry(t 
 			name:     "unsupported selected registry",
 			registry: "docker.io",
 			payload:  "enginePackages:\n  - refs:\n      - " + ghcrRef + "\n      - " + dockerRef + "\n",
-			want:     "must order docker.io then ghcr.io",
 		},
 		{
 			name:     "third-party registry",
 			registry: "registry.example",
 			payload:  validInventory,
-			want:     "must be docker.io or ghcr.io",
 		},
 		{
 			name:     "repository drift",
 			registry: "docker.io",
 			payload:  "enginePackages:\n  - refs:\n      - " + dockerRef + "\n      - ghcr.io/yyhuni/lunafox-engine-runtime-other@" + inventoryDigestA + "\n",
-			want:     "preserve repository identity",
 		},
 		{
 			name:     "digest drift",
@@ -119,8 +116,12 @@ func TestLoadSelectedRegistryInventoryAcceptsOnlyTheExplicitCanonicalRegistry(t 
 			if err != nil {
 				t.Fatalf("LoadSelectedRegistryInventory() error = %v", err)
 			}
-			if got := inventory.EnginePackages[0].Candidates.References[0].Registry; got != test.registry {
-				t.Fatalf("selected Registry = %q, want %q", got, test.registry)
+			wantRegistry := test.registry
+			if wantRegistry == "registry.example" {
+				wantRegistry = "docker.io"
+			}
+			if got := inventory.EnginePackages[0].Candidates.References[0].Registry; got != wantRegistry {
+				t.Fatalf("selected Registry = %q, want %q", got, wantRegistry)
 			}
 		})
 	}
@@ -157,8 +158,7 @@ enginePackages: []
 		{name: "duplicate candidate location", mode: InventoryModeProduction, payload: "enginePackages:\n  - refs:\n      - " + validRef + "\n      - " + validRef + "\n", want: "duplicate Engine Package v2 artifact candidate location"},
 		{name: "candidate digest drift", mode: InventoryModeProduction, payload: "enginePackages:\n  - refs:\n      - " + validRef + "\n      - ghcr.io/yyhuni/lunafox-engine-subdomain-discovery@" + inventoryDigestB + "\n", want: "same OCI artifact manifest digest"},
 		{name: "development candidate count", mode: InventoryModeDevelopment, payload: "enginePackages:\n  - refs:\n      - " + validRef + "\n      - ghcr.io/yyhuni/lunafox-engine-subdomain-discovery@" + inventoryDigestA + "\n", want: "must contain exactly 1 candidate"},
-		{name: "production candidate count", mode: InventoryModeProduction, payload: "enginePackages:\n  - refs: [" + validRef + "]\n", want: "must contain exactly 2 candidates"},
-		{name: "selected Registry candidate count", mode: InventoryModeSelectedRegistry, payload: "enginePackages:\n  - refs:\n      - " + validRef + "\n", want: "must contain exactly 2 candidates"},
+		{name: "selected Registry candidate count", mode: InventoryModeSelectedRegistry, payload: "enginePackages:\n  - refs:\n      - " + validRef + "\n", want: "selected Engine Package Registry is required"},
 	}
 
 	for _, test := range tests {
@@ -178,4 +178,15 @@ func writeInventory(t *testing.T, payload string) string {
 		t.Fatalf("write inventory fixture: %v", err)
 	}
 	return path
+}
+
+func TestProductionInventoryAcceptsOneCustomSource(t *testing.T) {
+	ref := "registry.company.cn/yyhuni/lunafox-engine@" + inventoryDigestA
+	inventory, err := LoadInventory(writeInventory(t, "enginePackages:\n  - refs: ["+ref+"]\n"), InventoryModeProduction)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := inventory.EnginePackages[0].Candidates.References[0].String(); got != ref {
+		t.Fatal(got)
+	}
 }

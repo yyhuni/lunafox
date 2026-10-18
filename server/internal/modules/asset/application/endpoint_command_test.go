@@ -148,8 +148,8 @@ func TestEndpointCommandServiceDeleteAndErrors(t *testing.T) {
 }
 
 func TestEndpointCommandServiceBatchUpsertMapsHostsAndFields(t *testing.T) {
-	statusCode := 200
-	contentLength := 1024
+	statusCode := int64(200)
+	contentLength := int64(1024)
 	vhost := true
 
 	store := &endpointCommandStoreStub{}

@@ -17,22 +17,24 @@ func (q *WebsiteListQuery) ValidatePageToken() error {
 }
 
 type WebsiteResponse struct {
-	ID              int                       `json:"id"`
-	Name            string                    `json:"name"`
-	URL             string                    `json:"url"`
-	Host            string                    `json:"host"`
-	Location        string                    `json:"location"`
-	Title           string                    `json:"title"`
-	Webserver       string                    `json:"webserver"`
-	ContentType     string                    `json:"contentType"`
-	StatusCode      *int                      `json:"statusCode"`
-	ContentLength   *int                      `json:"contentLength"`
-	ResponseBody    string                    `json:"responseBody"`
-	Tech            []string                  `json:"tech"`
-	Vhost           *bool                     `json:"vhost"`
-	ResponseHeaders string                    `json:"responseHeaders"`
-	CreatedAt       time.Time                 `json:"createdAt"`
-	Screenshot      *WebsiteScreenshotSummary `json:"screenshot,omitempty"`
+	ID                       int                       `json:"id"`
+	Name                     string                    `json:"name"`
+	URL                      string                    `json:"url"`
+	Host                     string                    `json:"host"`
+	Location                 string                    `json:"location"`
+	Title                    string                    `json:"title"`
+	Webserver                string                    `json:"webserver"`
+	ContentType              string                    `json:"contentType"`
+	StatusCode               *int64                    `json:"statusCode"`
+	ContentLength            *int64                    `json:"contentLength"`
+	ResponseBody             string                    `json:"responseBody"`
+	ResponseBodyTruncated    bool                      `json:"responseBodyTruncated"`
+	Tech                     []string                  `json:"tech"`
+	Vhost                    *bool                     `json:"vhost"`
+	ResponseHeaders          string                    `json:"responseHeaders"`
+	ResponseHeadersTruncated bool                      `json:"responseHeadersTruncated"`
+	CreatedAt                time.Time                 `json:"createdAt"`
+	Screenshot               *WebsiteScreenshotSummary `json:"screenshot,omitempty"`
 }
 
 type WebsiteScreenshotSummary struct {
@@ -53,18 +55,20 @@ type BatchCreateWebsitesResponse struct {
 }
 
 type WebsiteUpsertItem struct {
-	URL             string   `json:"url" binding:"required"`
-	Host            string   `json:"host"`
-	Location        string   `json:"location"`
-	Title           string   `json:"title"`
-	Webserver       string   `json:"webserver"`
-	ContentType     string   `json:"contentType"`
-	StatusCode      *int     `json:"statusCode"`
-	ContentLength   *int     `json:"contentLength"`
-	ResponseBody    string   `json:"responseBody"`
-	Tech            []string `json:"tech"`
-	Vhost           *bool    `json:"vhost"`
-	ResponseHeaders string   `json:"responseHeaders"`
+	URL                      string   `json:"url" binding:"required"`
+	Host                     string   `json:"host"`
+	Location                 string   `json:"location"`
+	Title                    string   `json:"title"`
+	Webserver                string   `json:"webserver"`
+	ContentType              string   `json:"contentType"`
+	StatusCode               *int64   `json:"statusCode"`
+	ContentLength            *int64   `json:"contentLength"`
+	ResponseBody             string   `json:"responseBody"`
+	ResponseBodyTruncated    bool     `json:"responseBodyTruncated"`
+	Tech                     []string `json:"tech"`
+	Vhost                    *bool    `json:"vhost"`
+	ResponseHeaders          string   `json:"responseHeaders"`
+	ResponseHeadersTruncated bool     `json:"responseHeadersTruncated"`
 }
 
 type BatchUpsertWebsitesRequest struct {

@@ -16,21 +16,13 @@ var (
 		"ip":   {},
 		"port": {},
 	}
-	websiteResultFields = map[string]struct{}{
-		"url":             {},
-		"host":            {},
-		"title":           {},
-		"statusCode":      {},
-		"contentLength":   {},
-		"location":        {},
-		"webserver":       {},
-		"contentType":     {},
-		"tech":            {},
-		"responseBody":    {},
-		"vhost":           {},
-		"responseHeaders": {},
+	websiteV2ResultFields = map[string]struct{}{
+		"url": {}, "host": {}, "title": {}, "statusCode": {}, "contentLength": {},
+		"location": {}, "webserver": {}, "contentType": {}, "tech": {},
+		"responseBody": {}, "responseBodyTruncated": {}, "vhost": {},
+		"responseHeaders": {}, "responseHeadersTruncated": {},
 	}
-	endpointResultFields = map[string]struct{}{
+	endpointV2ResultFields = map[string]struct{}{
 		"url": {}, "host": {}, "title": {}, "statusCode": {}, "contentLength": {},
 		"location": {}, "webserver": {}, "contentType": {}, "tech": {},
 		"responseBody": {}, "responseBodyTruncated": {}, "vhost": {},

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	contractresults "github.com/yyhuni/lunafox/contracts/results"
 	"github.com/yyhuni/lunafox/server/internal/pkg/dberrors"
 	"github.com/yyhuni/lunafox/server/internal/pkg/scope"
 
@@ -284,13 +283,7 @@ func (service *EndpointSnapshotCommandService) saveAndSync(ctx context.Context, 
 
 	accepted := make([]EndpointSnapshotItem, 0, len(items))
 	for _, item := range items {
-		if err := contractresults.Validate(contractresults.ResultKindAssetEndpoint, contractresults.Endpoint{
-			URL: item.URL, Host: item.Host, Title: item.Title, StatusCode: item.StatusCode,
-			ContentLength: item.ContentLength, Location: item.Location, Webserver: item.Webserver,
-			ContentType: item.ContentType, Tech: item.Tech, ResponseBody: item.ResponseBody,
-			ResponseBodyTruncated: item.ResponseBodyTruncated, Vhost: item.Vhost,
-			ResponseHeaders: item.ResponseHeaders, ResponseHeadersTruncated: item.ResponseHeadersTruncated,
-		}); err != nil {
+		if err := validateEndpointSnapshotItem(item); err != nil {
 			summary.InvalidItems++
 			continue
 		}

@@ -88,7 +88,7 @@ func TestValidateCanonicalBatchRejectsUnknownAndIPv6BeforeWrites(t *testing.T) {
 	} {
 		kind := ResultKindAssetHostPort
 		if strings.Contains(item, `"url"`) {
-			kind = ResultKindAssetWebsite
+			kind = ResultKindAssetWebsiteV2
 		}
 		if _, err := ValidateCanonicalBatch(kind, [][]byte{[]byte(item)}, DefaultBatchLimits()); err == nil {
 			t.Fatalf("IPv6 item %s must be hard-invalid", item)
@@ -99,8 +99,40 @@ func TestValidateCanonicalBatchRejectsUnknownAndIPv6BeforeWrites(t *testing.T) {
 func TestValidateCanonicalBatchDoesNotRejectParserHostileWebsitePortText(t *testing.T) {
 	for _, port := range []string{"0", "65536", "http"} {
 		item := []byte(`{"url":"https://example.com:` + port + `","host":"example.com"}`)
-		if _, err := ValidateCanonicalBatch(ResultKindAssetWebsite, [][]byte{item}, DefaultBatchLimits()); err != nil {
+		if _, err := ValidateCanonicalBatch(ResultKindAssetWebsiteV2, [][]byte{item}, DefaultBatchLimits()); err != nil {
 			t.Fatalf("website port text %q must remain an accepted raw URL: %v", port, err)
 		}
+	}
+}
+
+func TestValidateCanonicalBatchAcceptsCurrentHTTPXContracts(t *testing.T) {
+	item := []byte(`{"url":"HTTPS://Example.COM:443/path#fragment","host":"injected.example","statusCode":-9223372036854775808,"contentLength":9223372036854775807,"responseBody":"body","responseBodyTruncated":true}`)
+	for _, resultType := range []string{ResultKindAssetEndpointV2, ResultKindAssetWebsiteV2} {
+		t.Run(resultType, func(t *testing.T) {
+			batch, err := ValidateCanonicalBatch(resultType, [][]byte{item}, DefaultBatchLimits())
+			if err != nil {
+				t.Fatalf("valid observed HTTPX batch rejected: %v", err)
+			}
+			if !bytes.Equal(batch.Items[0], item) {
+				t.Fatalf("accepted HTTPX observation was changed: %s", batch.Items[0])
+			}
+		})
+	}
+}
+
+func TestRetiredHTTPXContractsAreUnsupported(t *testing.T) {
+	for _, resultType := range []string{"asset.endpoint.v1", "asset.website.v1"} {
+		t.Run(resultType, func(t *testing.T) {
+			if _, ok := Lookup(resultType); ok {
+				t.Fatal("retired HTTPX result type is still registered")
+			}
+			if err := Validate(resultType, EndpointV2{URL: "https://example.com", Host: "example.com"}); err == nil {
+				t.Fatal("retired HTTPX result type accepted a v2 item")
+			}
+			_, err := ValidateCanonicalBatch(resultType, [][]byte{[]byte(`{"url":"https://example.com","host":"example.com"}`)}, DefaultBatchLimits())
+			if err == nil || !strings.Contains(err.Error(), "unknown result type") {
+				t.Fatalf("retired HTTPX result must fail as unsupported without v2 fallback: %v", err)
+			}
+		})
 	}
 }

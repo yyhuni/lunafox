@@ -2,7 +2,7 @@
 
 This Engine probes a workspace candidate file built from Target baselines and
 finalized HostPort facts with `httpx` and reports
-validated `asset.website.v1` results through its generated Engine API v2 Facade.
+validated `asset.website.v2` results through its generated Engine API v2 Facade.
 
 ## Engine Runtime Image
 
@@ -123,18 +123,23 @@ workspace output artifact; there is no platform process capability.
 Result reporting parses those JSON lines, skips malformed or invalid rows,
 validates Website URLs without changing their bytes, and globally deduplicates
 them through a workspace-local, byte-bounded external merge before streaming
-findings through `Execution.Results.Websites`. Only exactly equal accepted URL
+findings through `Execution.Results.WebsiteV2`. Only exactly equal accepted URL
 strings collide, and the last valid scanner observation in deterministic parser
-order is retained. Agent projects the typed batches
-to Server resultingest, which owns snapshot persistence, target-scope filtering,
+order is retained. The observed HTTPX `host` is evidence and may differ from
+the URL authority; URL remains the only identity and Target-scope input. The
+generated v2 adapter removes NUL bytes, truncates response evidence at valid
+UTF-8 boundaries at 2,000 bytes for bodies and 65,536 bytes for headers, and
+carries the paired truncation flags. Agent projects the typed batches to
+Server resultingest, which owns snapshot persistence, target-scope filtering,
 retry idempotency, and current asset projection.
 
 Final-artifact parsing bounds each physical scanner record at 4 MiB. An
 oversized record is counted and skipped so later records can still be reported.
 The raw input URL remains the only Website identity source: invalid URL
-identity is skipped; an invalid explicit host, status code, content length, or
-optional value rejects the complete record. Accepted v1 records are complete
-observations, so omitted optional evidence is submitted as its zero value.
+identity is skipped; malformed structural fields remain skippable, while a
+valid observed host mismatch and signed-64-bit status/content-length value are
+preserved. Accepted v2 records are complete observations, so omitted optional
+evidence is submitted as its zero value.
 
 The result-reporting merge implementation is owned by this Engine and does not
 depend on a cross-Engine deduplication helper.

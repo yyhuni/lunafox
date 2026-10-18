@@ -119,7 +119,7 @@ const script=`import zipfile,sys,json\nwith zipfile.ZipFile(sys.argv[1]) as z:\n
   }
   assert.deepEqual(
    content['.env'].split('\n').filter(line => /^[A-Za-z_][A-Za-z0-9_]*=/.test(line)).map(line => line.split('=')[0]).sort(),
-   ['COMPOSE_PROFILES','DATABASE_MODE','DB_PASSWORD','JWT_SECRET','LUNAFOX_PREHEAT_MANIFEST_DIGEST','PUBLIC_HOST','PUBLIC_PORT','RELEASE_REGISTRY'],
+   ['COMPOSE_PROFILES','DATABASE_MODE','DB_PASSWORD','ENGINE_INSTALL_REGISTRY','JWT_SECRET','LUNAFOX_PREHEAT_MANIFEST_DIGEST','PUBLIC_HOST','PUBLIC_PORT','RELEASE_REGISTRY'],
   );
   const preheatManifest = validatePreheatManifest(JSON.parse(content['preheat-manifest.json']));
   assert.equal(content['.env'].match(/^LUNAFOX_PREHEAT_MANIFEST_DIGEST=(sha256:[a-f0-9]{64})$/m)?.[1], preheatManifest.manifestDigest);
@@ -139,7 +139,7 @@ const script=`import zipfile,sys,json\nwith zipfile.ZipFile(sys.argv[1]) as z:\n
   assert.match(content['compose.yaml'],/environment: JWT_SECRET/);
   assert.doesNotMatch(content['compose.yaml'],/PUBLIC_URL:/);
   assert.doesNotMatch(content['compose.yaml'],/POSTGRES_PASSWORD:|\n      DB_PASSWORD:|\n      JWT_SECRET:/);
-  assert.doesNotMatch(content['compose.yaml'],/\$\{(?:SERVER_IMAGE_REF|AGENT_IMAGE_REF|ENGINE_INSTALL_REGISTRY)/);
+  assert.doesNotMatch(content['compose.yaml'],/\$\{(?:SERVER_IMAGE_REF|AGENT_IMAGE_REF)/);
   assert.match(content['compose.yaml'],/--image-ref "\$\$AGENT_IMAGE_REF"/);
   assert.doesNotMatch(content['compose.yaml'],/--image-ref "\$(?:docker\.io|ghcr\.io)\//);
   assert.match(content['compose.yaml'],/\$\{RELEASE_REGISTRY:-docker\.io\}\/yyhuni\/lunafox-agent@sha256:/);
@@ -166,7 +166,18 @@ const script=`import zipfile,sys,json\nwith zipfile.ZipFile(sys.argv[1]) as z:\n
   assert.equal(entryModes['runtime-composition.json'], 0o644);
   assert.equal(entryModes['preheat-manifest.json'], 0o644);
 
-  for(const registry of ['docker.io','ghcr.io']){
+  const customDir = path.join(options.dir, 'independent-registries');
+  fs.mkdirSync(customDir, { recursive: true });
+  const custom = renderCompose(customDir, content['compose.yaml'], content['.env'], 'embedded', {
+   RELEASE_REGISTRY:'product.company.cn', ENGINE_INSTALL_REGISTRY:'engine.company.cn:5443',
+  });
+  assert.match(custom.services.server.image, /^product\.company\.cn\//);
+  for (const service of ['server','bootstrap','agent','engine-preheater']) {
+   assert.equal(custom.services[service].environment.ENGINE_INSTALL_REGISTRY, 'engine.company.cn:5443');
+  }
+  assert.equal(custom.services['engine-preheater'].environment.RELEASE_REGISTRY, 'product.company.cn');
+
+  for(const registry of ['docker.io','ghcr.io','product.company.cn']){
    const renderDir = path.join(options.dir, registry);
    fs.mkdirSync(renderDir, { recursive: true });
    const embedded = renderCompose(renderDir, content['compose.yaml'], content['.env'], 'embedded', {RELEASE_REGISTRY:registry});

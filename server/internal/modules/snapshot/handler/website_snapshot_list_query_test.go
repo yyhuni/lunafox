@@ -65,8 +65,8 @@ func (stub *websiteSnapshotHandlerLookupStub) GetTargetRefByScanID(scanID int) (
 func TestWebsiteSnapshotHandlerListUsesCanonicalQueryParameters(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	now := time.Date(2026, 7, 7, 10, 0, 0, 0, time.UTC)
-	status := 200
-	contentLength := 1024
+	status := int64(200)
+	contentLength := int64(1024)
 	store := &websiteSnapshotHandlerStoreStub{
 		items: []snapshotdomain.WebsiteSnapshot{{
 			ID:            518,

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yyhuni/lunafox/contracts/ociartifact"
 	"github.com/yyhuni/lunafox/server/internal/config"
 	"github.com/yyhuni/lunafox/server/internal/database"
 	"github.com/yyhuni/lunafox/server/internal/engineinstall"
@@ -26,6 +27,7 @@ type engineBootstrapInstallPolicy struct {
 	runtimeImageRegistryTransport  *engineinstall.RuntimeImageRegistryTransport
 	allowDevelopmentSinglePlatform bool
 	selectedRegistry               string
+	transportRegistry              string
 }
 
 // RunEngineBootstrap is the installation-only entry point used before the
@@ -76,11 +78,19 @@ func RunEngineBootstrap(ctx context.Context, cfg *config.Config, migrationsFS em
 			return fmt.Errorf("initialize public Engine signature verifier: %w", err)
 		}
 	}
+	if signatureVerifier != nil {
+		signatureVerifier, err = engineinstall.WithSignatureRegistry(signatureVerifier, policy.transportRegistry)
+		if err != nil {
+			return err
+		}
+	}
+
 	puller, err := engineinstall.NewORASPackagePuller(engineinstall.ORASPackagePullerOptions{
 		MaxManifestBytes:     engineInstallMaxManifestBytes,
 		MaxPackageLayerBytes: installConfig.MaxPackageBytes,
 		PerCandidateTimeout:  engineInstallCandidateTimeout,
 		AllowPlainHTTP:       policy.allowPlainHTTP,
+		TransportRegistry:    policy.transportRegistry,
 	})
 	if err != nil {
 		return err
@@ -92,6 +102,7 @@ func RunEngineBootstrap(ctx context.Context, cfg *config.Config, migrationsFS em
 		DevelopmentRegistryTransport:   policy.runtimeImageRegistryTransport,
 		AllowDevelopmentSinglePlatform: policy.allowDevelopmentSinglePlatform,
 		SignatureVerifier:              signatureVerifier,
+		TransportRegistry:              policy.transportRegistry,
 	})
 	if err != nil {
 		return err
@@ -130,10 +141,14 @@ func resolveEngineBootstrapInstallPolicy(installConfig config.EngineInstallConfi
 		case selectedRegistry != installConfig.Registry:
 			return engineBootstrapInstallPolicy{}, fmt.Errorf("ENGINE_INSTALL_REGISTRY must not contain surrounding whitespace")
 		case selectedRegistry != "":
-			if selectedRegistry != "docker.io" && selectedRegistry != "ghcr.io" {
-				return engineBootstrapInstallPolicy{}, fmt.Errorf("ENGINE_INSTALL_REGISTRY must be docker.io or ghcr.io")
+			if err := ociartifact.ValidateRegistryAuthority(selectedRegistry); err != nil {
+				return engineBootstrapInstallPolicy{}, fmt.Errorf("ENGINE_INSTALL_REGISTRY: %w", err)
 			}
-			return engineBootstrapInstallPolicy{inventoryMode: engineinstall.InventoryModeSelectedRegistry, selectedRegistry: selectedRegistry}, nil
+			return engineBootstrapInstallPolicy{
+				inventoryMode:     engineinstall.InventoryModeSelectedRegistry,
+				selectedRegistry:  selectedRegistry,
+				transportRegistry: selectedRegistry,
+			}, nil
 		default:
 			return engineBootstrapInstallPolicy{inventoryMode: engineinstall.InventoryModeProduction}, nil
 		}

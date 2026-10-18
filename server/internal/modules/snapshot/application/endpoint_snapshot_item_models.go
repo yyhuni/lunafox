@@ -4,8 +4,8 @@ type EndpointSnapshotItem struct {
 	URL                      string
 	Host                     string
 	Title                    string
-	StatusCode               *int
-	ContentLength            *int
+	StatusCode               *int64
+	ContentLength            *int64
 	Location                 string
 	Webserver                string
 	ContentType              string
@@ -24,8 +24,8 @@ type EndpointAssetUpsertItem struct {
 	Title                    string
 	Webserver                string
 	ContentType              string
-	StatusCode               *int
-	ContentLength            *int
+	StatusCode               *int64
+	ContentLength            *int64
 	ResponseBody             string
 	ResponseBodyTruncated    bool
 	Tech                     []string

@@ -10,18 +10,23 @@ func snapshotWebsiteAssetUpsertItemsToApplication(items []snapshotapp.WebsiteAss
 	for index := range items {
 		item := items[index]
 		results = append(results, assetapp.WebsiteUpsertItem{
-			URL:             item.URL,
-			Host:            item.Host,
-			Location:        item.Location,
-			Title:           item.Title,
-			Webserver:       item.Webserver,
-			ContentType:     item.ContentType,
-			StatusCode:      item.StatusCode,
-			ContentLength:   item.ContentLength,
-			ResponseBody:    item.ResponseBody,
-			Tech:            item.Tech,
-			Vhost:           item.Vhost,
-			ResponseHeaders: item.ResponseHeaders,
+			URL:                      item.URL,
+			Host:                     item.Host,
+			Location:                 item.Location,
+			Title:                    item.Title,
+			Webserver:                item.Webserver,
+			ContentType:              item.ContentType,
+			StatusCode:               item.StatusCode,
+			ContentLength:            item.ContentLength,
+			ResponseBody:             item.ResponseBody,
+			Tech:                     item.Tech,
+			Vhost:                    item.Vhost,
+			ResponseHeaders:          item.ResponseHeaders,
+			ResponseHeadersTruncated: item.ResponseHeadersTruncated,
+			ResponseBodyTruncated:    item.ResponseBodyTruncated,
+			// Snapshots are validated HTTPX observations; their host is evidence,
+			// while manual Asset writes retain authority matching by default.
+			AllowHostMismatch: true,
 		})
 	}
 	return results
@@ -46,6 +51,9 @@ func snapshotEndpointAssetUpsertItemsToApplication(items []snapshotapp.EndpointA
 			Vhost:                    item.Vhost,
 			ResponseHeaders:          item.ResponseHeaders,
 			ResponseHeadersTruncated: item.ResponseHeadersTruncated,
+			// Snapshots are validated HTTPX observations; their host is evidence,
+			// while manual Asset writes retain authority matching by default.
+			AllowHostMismatch: true,
 		})
 	}
 	return results

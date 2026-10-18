@@ -83,7 +83,7 @@ func TestResolveEngineBootstrapInstallPolicyRejectsDevelopmentSettingsInProducti
 		{name: "plain HTTP", mutate: func(cfg *config.EngineInstallConfig) { cfg.AllowPlainHTTP = true }, want: "ENGINE_INSTALL_ALLOW_PLAIN_HTTP"},
 		{name: "identity Registry", mutate: func(cfg *config.EngineInstallConfig) { cfg.DevelopmentRuntimeImageIdentityRegistry = "localhost:5000" }, want: "ENGINE_INSTALL_DEVELOPMENT_RUNTIME_IMAGE_IDENTITY_REGISTRY"},
 		{name: "transport Registry", mutate: func(cfg *config.EngineInstallConfig) { cfg.DevelopmentRuntimeImageTransportRegistry = "registry:5000" }, want: "ENGINE_INSTALL_DEVELOPMENT_RUNTIME_IMAGE_TRANSPORT_REGISTRY"},
-		{name: "invalid selected Registry", mutate: func(cfg *config.EngineInstallConfig) { cfg.Registry = "registry.example" }, want: "ENGINE_INSTALL_REGISTRY must be docker.io or ghcr.io"},
+		{name: "invalid selected Registry", mutate: func(cfg *config.EngineInstallConfig) { cfg.Registry = "https://registry.example" }, want: "ENGINE_INSTALL_REGISTRY"},
 	}
 
 	for _, test := range tests {
@@ -104,5 +104,15 @@ func validDevelopmentEngineInstallConfig() config.EngineInstallConfig {
 		AllowPlainHTTP:                           true,
 		DevelopmentRuntimeImageIdentityRegistry:  "localhost:5000",
 		DevelopmentRuntimeImageTransportRegistry: "registry:5000",
+	}
+}
+
+func TestEngineBootstrapUsesIndependentCustomTransport(t *testing.T) {
+	policy, err := resolveEngineBootstrapInstallPolicy(config.EngineInstallConfig{Registry: "engine.company.cn:5443"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy.selectedRegistry != "engine.company.cn:5443" || policy.transportRegistry != policy.selectedRegistry || policy.allowPlainHTTP {
+		t.Fatalf("%+v", policy)
 	}
 }

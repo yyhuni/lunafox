@@ -22,21 +22,23 @@ type ScanTargetRef struct {
 }
 
 type WebsiteSnapshot struct {
-	ID              int
-	ScanID          int
-	URL             string
-	Host            string
-	Title           string
-	StatusCode      *int
-	ContentLength   *int
-	Location        string
-	Webserver       string
-	ContentType     string
-	Tech            []string
-	ResponseBody    string
-	Vhost           *bool
-	ResponseHeaders string
-	CreatedAt       time.Time
+	ID                       int
+	ScanID                   int
+	URL                      string
+	Host                     string
+	Title                    string
+	StatusCode               *int64
+	ContentLength            *int64
+	Location                 string
+	Webserver                string
+	ContentType              string
+	Tech                     []string
+	ResponseBody             string
+	ResponseBodyTruncated    bool
+	Vhost                    *bool
+	ResponseHeaders          string
+	ResponseHeadersTruncated bool
+	CreatedAt                time.Time
 }
 
 type EndpointSnapshot struct {
@@ -45,8 +47,8 @@ type EndpointSnapshot struct {
 	URL                      string
 	Host                     string
 	Title                    string
-	StatusCode               *int
-	ContentLength            *int
+	StatusCode               *int64
+	ContentLength            *int64
 	Location                 string
 	Webserver                string
 	ContentType              string

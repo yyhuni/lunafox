@@ -17,7 +17,7 @@ func TestSubmitStagedEndpointsUsesDiskBackedLastRecordWins(t *testing.T) {
 		t.Fatal(err)
 	}
 	count := 0
-	for _, endpoint := range []contractresults.Endpoint{
+	for _, endpoint := range []contractresults.EndpointV2{
 		{URL: "https://example.com/a", Host: "example.com", Title: "first"},
 		{URL: "https://example.com/b", Host: "example.com", Title: "other"},
 		{URL: "https://example.com/a", Host: "example.com", Title: "last"},
@@ -62,7 +62,7 @@ func TestSubmitStagedEndpointsPreservesPartialAcknowledgementOnFailure(t *testin
 		t.Fatal(err)
 	}
 	count := 0
-	for _, endpoint := range []contractresults.Endpoint{
+	for _, endpoint := range []contractresults.EndpointV2{
 		{URL: "https://example.com/a", Host: "example.com"},
 		{URL: "https://example.com/b", Host: "example.com"},
 	} {
@@ -83,18 +83,18 @@ func TestSubmitStagedEndpointsPreservesPartialAcknowledgementOnFailure(t *testin
 
 type captureEndpointSubmitter struct {
 	calls int
-	items []contractresults.Endpoint
+	items []contractresults.EndpointV2
 }
 
 type partialEndpointSubmitter struct {
 	err error
 }
 
-func (submitter *partialEndpointSubmitter) Submit(context.Context, <-chan contractresults.Endpoint) error {
+func (submitter *partialEndpointSubmitter) Submit(context.Context, <-chan contractresults.EndpointV2) error {
 	return submitter.err
 }
 
-func (submitter *captureEndpointSubmitter) Submit(_ context.Context, items <-chan contractresults.Endpoint) error {
+func (submitter *captureEndpointSubmitter) Submit(_ context.Context, items <-chan contractresults.EndpointV2) error {
 	submitter.calls++
 	for item := range items {
 		submitter.items = append(submitter.items, item)

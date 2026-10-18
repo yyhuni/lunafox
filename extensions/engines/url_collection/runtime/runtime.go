@@ -42,7 +42,7 @@ func (r *Runtime) Execute(ctx context.Context, execution *enginecontract.Executi
 	if execution.Progress == nil {
 		return errors.New("engine progress port is required")
 	}
-	if execution.Results.Endpoints == nil {
+	if execution.Results.EndpointV2 == nil {
 		return errors.New("typed Endpoint result submitter is required")
 	}
 	if execution.Workspace == "" {
@@ -129,7 +129,7 @@ func (r *Runtime) Execute(ctx context.Context, execution *enginecontract.Executi
 	if err := execution.Progress.Report(ctx, "result_submission started"); err != nil {
 		return fmt.Errorf("report result submission start: %w", err)
 	}
-	if err := submitStagedEndpoints(ctx, execution.Results.Endpoints, staged); err != nil {
+	if err := submitStagedEndpoints(ctx, execution.Results.EndpointV2, staged); err != nil {
 		return err
 	}
 	if err := execution.Progress.Report(ctx, "result_submission completed"); err != nil {
@@ -291,7 +291,7 @@ func requireRegularOutput(path string) error {
 	return nil
 }
 
-func submitStagedEndpoints(ctx context.Context, submitter enginecontract.EndpointSubmitter, stagePath string) error {
+func submitStagedEndpoints(ctx context.Context, submitter enginecontract.EndpointV2Submitter, stagePath string) error {
 	if stagePath == "" {
 		return nil
 	}
@@ -304,7 +304,7 @@ func submitStagedEndpoints(ctx context.Context, submitter enginecontract.Endpoin
 	}
 	submitContext, cancel := context.WithCancel(ctx)
 	defer cancel()
-	channel := make(chan enginecontract.Endpoint)
+	channel := make(chan enginecontract.EndpointV2)
 	type outcome struct {
 		items int
 		err   error
@@ -334,9 +334,9 @@ func submitStagedEndpoints(ctx context.Context, submitter enginecontract.Endpoin
 	return nil
 }
 
-func streamLastStagedEndpoints(ctx context.Context, stagePath string, output chan<- enginecontract.Endpoint) (int, error) {
+func streamLastStagedEndpoints(ctx context.Context, stagePath string, output chan<- enginecontract.EndpointV2) (int, error) {
 	var lastKey string
-	var lastItem enginecontract.Endpoint
+	var lastItem enginecontract.EndpointV2
 	hasLast := false
 	count := 0
 	emit := func() error {
@@ -379,13 +379,13 @@ func streamLastStagedEndpoints(ctx context.Context, stagePath string, output cha
 	return count, nil
 }
 
-func decodeStagedEndpoint(line string) (string, enginecontract.Endpoint, error) {
+func decodeStagedEndpoint(line string) (string, enginecontract.EndpointV2, error) {
 	var staged stagedEndpoint
 	if err := json.Unmarshal([]byte(line), &staged); err != nil {
-		return "", enginecontract.Endpoint{}, fmt.Errorf("decode endpoint staging payload: %w", err)
+		return "", enginecontract.EndpointV2{}, fmt.Errorf("decode endpoint staging payload: %w", err)
 	}
 	if len(staged.Ordinal) != 20 || staged.URL != staged.Endpoint.URL {
-		return "", enginecontract.Endpoint{}, errors.New("endpoint staging item is invalid")
+		return "", enginecontract.EndpointV2{}, errors.New("endpoint staging item is invalid")
 	}
 	return staged.URL, staged.Endpoint, nil
 }

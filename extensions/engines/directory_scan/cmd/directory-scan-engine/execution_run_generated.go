@@ -153,94 +153,6 @@ func (port *engineSubdomainResultPort) Submit(ctx context.Context, items <-chan 
 	return <-encodeErr
 }
 
-type engineEndpointResultPort struct {
-	reporter    sdk.Reporter
-	diagnostics sdk.GeneratedDiagnostics
-	once        sync.Once
-	sink        sdk.ResultSink
-	sinkErr     error
-}
-
-func (port *engineEndpointResultPort) ensureSink() error {
-	if port == nil {
-		return errors.New("engine result port is required")
-	}
-	port.once.Do(func() {
-		if port.reporter == nil || port.diagnostics == nil {
-			port.sinkErr = errors.New("engine result dependencies are required")
-			return
-		}
-		if err := port.diagnostics.RegisterResultType("asset.endpoint.v1"); err != nil {
-			port.sinkErr = port.diagnostics.WrapFailure(sdk.GeneratedFailureResultSubmit, err)
-			return
-		}
-		port.sink, port.sinkErr = port.reporter.ResultSink("asset.endpoint.v1")
-		if port.sinkErr != nil {
-			port.sinkErr = port.diagnostics.WrapFailure(sdk.GeneratedFailureResultSubmit, port.sinkErr)
-		}
-	})
-	return port.sinkErr
-}
-
-func (port *engineEndpointResultPort) Submit(ctx context.Context, items <-chan enginecontract.Endpoint) error {
-	if ctx == nil {
-		return errors.New("engine result context is required")
-	}
-	if items == nil {
-		return errors.New("engine result items channel is required")
-	}
-	if err := port.ensureSink(); err != nil {
-		return err
-	}
-	encodeContext, cancelEncode := context.WithCancel(ctx)
-	defer cancelEncode()
-	encoded := make(chan []byte)
-	encodeErr := make(chan error, 1)
-	go func() {
-		defer close(encoded)
-		for {
-			var item enginecontract.Endpoint
-			var open bool
-			select {
-			case <-encodeContext.Done():
-				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, encodeContext.Err())
-				return
-			case item, open = <-items:
-			}
-			if !open {
-				encodeErr <- nil
-				return
-			}
-			if err := port.diagnostics.ObserveResultReceived("asset.endpoint.v1"); err != nil {
-				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, err)
-				return
-			}
-			payload, err := enginecontract.EncodeEndpoint(item)
-			if err != nil {
-				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, err)
-				return
-			}
-			if err := port.diagnostics.ObserveResultEncoded("asset.endpoint.v1"); err != nil {
-				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, err)
-				return
-			}
-			select {
-			case encoded <- []byte(payload):
-			case <-encodeContext.Done():
-				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, encodeContext.Err())
-				return
-			}
-		}
-	}()
-	submitErr := port.sink.Submit(encodeContext, encoded)
-	if submitErr != nil {
-		cancelEncode()
-		<-encodeErr
-		return port.diagnostics.WrapFailure(sdk.GeneratedFailureResultSubmit, submitErr)
-	}
-	return <-encodeErr
-}
-
 type engineHostPortResultPort struct {
 	reporter    sdk.Reporter
 	diagnostics sdk.GeneratedDiagnostics
@@ -309,94 +221,6 @@ func (port *engineHostPortResultPort) Submit(ctx context.Context, items <-chan e
 				return
 			}
 			if err := port.diagnostics.ObserveResultEncoded("asset.host_port.v1"); err != nil {
-				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, err)
-				return
-			}
-			select {
-			case encoded <- []byte(payload):
-			case <-encodeContext.Done():
-				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, encodeContext.Err())
-				return
-			}
-		}
-	}()
-	submitErr := port.sink.Submit(encodeContext, encoded)
-	if submitErr != nil {
-		cancelEncode()
-		<-encodeErr
-		return port.diagnostics.WrapFailure(sdk.GeneratedFailureResultSubmit, submitErr)
-	}
-	return <-encodeErr
-}
-
-type engineWebsiteResultPort struct {
-	reporter    sdk.Reporter
-	diagnostics sdk.GeneratedDiagnostics
-	once        sync.Once
-	sink        sdk.ResultSink
-	sinkErr     error
-}
-
-func (port *engineWebsiteResultPort) ensureSink() error {
-	if port == nil {
-		return errors.New("engine result port is required")
-	}
-	port.once.Do(func() {
-		if port.reporter == nil || port.diagnostics == nil {
-			port.sinkErr = errors.New("engine result dependencies are required")
-			return
-		}
-		if err := port.diagnostics.RegisterResultType("asset.website.v1"); err != nil {
-			port.sinkErr = port.diagnostics.WrapFailure(sdk.GeneratedFailureResultSubmit, err)
-			return
-		}
-		port.sink, port.sinkErr = port.reporter.ResultSink("asset.website.v1")
-		if port.sinkErr != nil {
-			port.sinkErr = port.diagnostics.WrapFailure(sdk.GeneratedFailureResultSubmit, port.sinkErr)
-		}
-	})
-	return port.sinkErr
-}
-
-func (port *engineWebsiteResultPort) Submit(ctx context.Context, items <-chan enginecontract.Website) error {
-	if ctx == nil {
-		return errors.New("engine result context is required")
-	}
-	if items == nil {
-		return errors.New("engine result items channel is required")
-	}
-	if err := port.ensureSink(); err != nil {
-		return err
-	}
-	encodeContext, cancelEncode := context.WithCancel(ctx)
-	defer cancelEncode()
-	encoded := make(chan []byte)
-	encodeErr := make(chan error, 1)
-	go func() {
-		defer close(encoded)
-		for {
-			var item enginecontract.Website
-			var open bool
-			select {
-			case <-encodeContext.Done():
-				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, encodeContext.Err())
-				return
-			case item, open = <-items:
-			}
-			if !open {
-				encodeErr <- nil
-				return
-			}
-			if err := port.diagnostics.ObserveResultReceived("asset.website.v1"); err != nil {
-				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, err)
-				return
-			}
-			payload, err := enginecontract.EncodeWebsite(item)
-			if err != nil {
-				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, err)
-				return
-			}
-			if err := port.diagnostics.ObserveResultEncoded("asset.website.v1"); err != nil {
 				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, err)
 				return
 			}
@@ -769,19 +593,195 @@ func (port *engineVulnerabilityResultPort) Submit(ctx context.Context, items <-c
 	return <-encodeErr
 }
 
+type engineEndpointV2ResultPort struct {
+	reporter    sdk.Reporter
+	diagnostics sdk.GeneratedDiagnostics
+	once        sync.Once
+	sink        sdk.ResultSink
+	sinkErr     error
+}
+
+func (port *engineEndpointV2ResultPort) ensureSink() error {
+	if port == nil {
+		return errors.New("engine result port is required")
+	}
+	port.once.Do(func() {
+		if port.reporter == nil || port.diagnostics == nil {
+			port.sinkErr = errors.New("engine result dependencies are required")
+			return
+		}
+		if err := port.diagnostics.RegisterResultType("asset.endpoint.v2"); err != nil {
+			port.sinkErr = port.diagnostics.WrapFailure(sdk.GeneratedFailureResultSubmit, err)
+			return
+		}
+		port.sink, port.sinkErr = port.reporter.ResultSink("asset.endpoint.v2")
+		if port.sinkErr != nil {
+			port.sinkErr = port.diagnostics.WrapFailure(sdk.GeneratedFailureResultSubmit, port.sinkErr)
+		}
+	})
+	return port.sinkErr
+}
+
+func (port *engineEndpointV2ResultPort) Submit(ctx context.Context, items <-chan enginecontract.EndpointV2) error {
+	if ctx == nil {
+		return errors.New("engine result context is required")
+	}
+	if items == nil {
+		return errors.New("engine result items channel is required")
+	}
+	if err := port.ensureSink(); err != nil {
+		return err
+	}
+	encodeContext, cancelEncode := context.WithCancel(ctx)
+	defer cancelEncode()
+	encoded := make(chan []byte)
+	encodeErr := make(chan error, 1)
+	go func() {
+		defer close(encoded)
+		for {
+			var item enginecontract.EndpointV2
+			var open bool
+			select {
+			case <-encodeContext.Done():
+				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, encodeContext.Err())
+				return
+			case item, open = <-items:
+			}
+			if !open {
+				encodeErr <- nil
+				return
+			}
+			if err := port.diagnostics.ObserveResultReceived("asset.endpoint.v2"); err != nil {
+				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, err)
+				return
+			}
+			payload, err := enginecontract.EncodeEndpointV2(item)
+			if err != nil {
+				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, err)
+				return
+			}
+			if err := port.diagnostics.ObserveResultEncoded("asset.endpoint.v2"); err != nil {
+				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, err)
+				return
+			}
+			select {
+			case encoded <- []byte(payload):
+			case <-encodeContext.Done():
+				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, encodeContext.Err())
+				return
+			}
+		}
+	}()
+	submitErr := port.sink.Submit(encodeContext, encoded)
+	if submitErr != nil {
+		cancelEncode()
+		<-encodeErr
+		return port.diagnostics.WrapFailure(sdk.GeneratedFailureResultSubmit, submitErr)
+	}
+	return <-encodeErr
+}
+
+type engineWebsiteV2ResultPort struct {
+	reporter    sdk.Reporter
+	diagnostics sdk.GeneratedDiagnostics
+	once        sync.Once
+	sink        sdk.ResultSink
+	sinkErr     error
+}
+
+func (port *engineWebsiteV2ResultPort) ensureSink() error {
+	if port == nil {
+		return errors.New("engine result port is required")
+	}
+	port.once.Do(func() {
+		if port.reporter == nil || port.diagnostics == nil {
+			port.sinkErr = errors.New("engine result dependencies are required")
+			return
+		}
+		if err := port.diagnostics.RegisterResultType("asset.website.v2"); err != nil {
+			port.sinkErr = port.diagnostics.WrapFailure(sdk.GeneratedFailureResultSubmit, err)
+			return
+		}
+		port.sink, port.sinkErr = port.reporter.ResultSink("asset.website.v2")
+		if port.sinkErr != nil {
+			port.sinkErr = port.diagnostics.WrapFailure(sdk.GeneratedFailureResultSubmit, port.sinkErr)
+		}
+	})
+	return port.sinkErr
+}
+
+func (port *engineWebsiteV2ResultPort) Submit(ctx context.Context, items <-chan enginecontract.WebsiteV2) error {
+	if ctx == nil {
+		return errors.New("engine result context is required")
+	}
+	if items == nil {
+		return errors.New("engine result items channel is required")
+	}
+	if err := port.ensureSink(); err != nil {
+		return err
+	}
+	encodeContext, cancelEncode := context.WithCancel(ctx)
+	defer cancelEncode()
+	encoded := make(chan []byte)
+	encodeErr := make(chan error, 1)
+	go func() {
+		defer close(encoded)
+		for {
+			var item enginecontract.WebsiteV2
+			var open bool
+			select {
+			case <-encodeContext.Done():
+				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, encodeContext.Err())
+				return
+			case item, open = <-items:
+			}
+			if !open {
+				encodeErr <- nil
+				return
+			}
+			if err := port.diagnostics.ObserveResultReceived("asset.website.v2"); err != nil {
+				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, err)
+				return
+			}
+			payload, err := enginecontract.EncodeWebsiteV2(item)
+			if err != nil {
+				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, err)
+				return
+			}
+			if err := port.diagnostics.ObserveResultEncoded("asset.website.v2"); err != nil {
+				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, err)
+				return
+			}
+			select {
+			case encoded <- []byte(payload):
+			case <-encodeContext.Done():
+				encodeErr <- port.diagnostics.WrapFailure(sdk.GeneratedFailureResultEncode, encodeContext.Err())
+				return
+			}
+		}
+	}()
+	submitErr := port.sink.Submit(encodeContext, encoded)
+	if submitErr != nil {
+		cancelEncode()
+		<-encodeErr
+		return port.diagnostics.WrapFailure(sdk.GeneratedFailureResultSubmit, submitErr)
+	}
+	return <-encodeErr
+}
+
 func newEngineResults(reporter sdk.Reporter, diagnostics sdk.GeneratedDiagnostics) (enginecontract.Results, error) {
 	if reporter == nil || diagnostics == nil {
 		return enginecontract.Results{}, errors.New("engine result dependencies are required")
 	}
 	var results enginecontract.Results
 	results.Subdomains = &engineSubdomainResultPort{reporter: reporter, diagnostics: diagnostics}
-	results.Endpoints = &engineEndpointResultPort{reporter: reporter, diagnostics: diagnostics}
 	results.HostPorts = &engineHostPortResultPort{reporter: reporter, diagnostics: diagnostics}
-	results.Websites = &engineWebsiteResultPort{reporter: reporter, diagnostics: diagnostics}
 	results.WebsiteTechnologies = &engineWebsiteTechnologyResultPort{reporter: reporter, diagnostics: diagnostics}
 	results.Screenshots = &engineScreenshotResultPort{reporter: reporter, diagnostics: diagnostics}
 	results.Directories = &engineDirectoryResultPort{reporter: reporter, diagnostics: diagnostics}
 	results.Vulnerabilities = &engineVulnerabilityResultPort{reporter: reporter, diagnostics: diagnostics}
+	results.EndpointV2 = &engineEndpointV2ResultPort{reporter: reporter, diagnostics: diagnostics}
+	results.WebsiteV2 = &engineWebsiteV2ResultPort{reporter: reporter, diagnostics: diagnostics}
 	return results, nil
 }
 

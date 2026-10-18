@@ -21,3 +21,8 @@ asset 模块 DTO 规范：
 全局搜索的 query DTO 使用 `q`、`assetType`、`pageSize`、`pageToken` camelCase 字段，
 响应只包含 `results` 和可选 `nextPageToken`。搜索结果直接复用 Website/Endpoint
 read DTO，不在 DTO 层拼接技术栈、转换响应头或推断漏洞归属。
+
+Website/Endpoint read DTO 原样暴露 HTTPX v2 的观测字段：`host` 可与 URL authority
+不一致，`statusCode`/`contentLength` 保持 signed int64，`responseBody`/
+`responseHeaders` 与 paired truncation flags 一起返回。URL 仍是资源身份和 Target
+scope；DTO 层不得据此改写 URL、host 或数值。

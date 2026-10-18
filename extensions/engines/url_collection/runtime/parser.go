@@ -24,13 +24,12 @@ const (
 	SkipHTTPXFailed          SkipReason = "skippedHTTPXFailed"
 	SkipInvalidURL           SkipReason = "skippedInvalidURL"
 	SkipUnassociatedIdentity SkipReason = "unassociatedCandidateIdentity"
-	SkipHostInconsistent     SkipReason = "skippedHostInconsistent"
 	SkipOversizedRecord      SkipReason = "skippedOversizedRecord"
 	SkipOversizedURL         SkipReason = "skippedOversized"
 )
 
 type HTTPXOutcome struct {
-	Endpoint enginecontract.Endpoint
+	Endpoint enginecontract.EndpointV2
 	Skip     SkipReason
 	// Structural is true after JSON syntax and field types have been accepted.
 	// Rows rejected later still prove that the tool emitted a parseable record;
@@ -44,8 +43,8 @@ type httpxRecord struct {
 	Host          string   `json:"host"`
 	Failed        bool     `json:"failed"`
 	Title         string   `json:"title"`
-	StatusCode    *int     `json:"status_code"`
-	ContentLength *int     `json:"content_length"`
+	StatusCode    *int64   `json:"status_code"`
+	ContentLength *int64   `json:"content_length"`
 	Location      string   `json:"location"`
 	Webserver     string   `json:"webserver"`
 	ContentType   string   `json:"content_type"`
@@ -147,7 +146,7 @@ func ParseHTTPXRecord(line string) HTTPXOutcome {
 		return HTTPXOutcome{Skip: SkipHTTPXFailed, Structural: true}
 	}
 	raw.Input = input
-	item := enginecontract.Endpoint{
+	item := enginecontract.EndpointV2{
 		URL: raw.Input, Host: raw.Host, Title: raw.Title, StatusCode: raw.StatusCode, ContentLength: raw.ContentLength,
 		Location: raw.Location, Webserver: raw.Webserver, ContentType: raw.ContentType, Tech: raw.Tech,
 		ResponseBody: raw.Body, ResponseHeaders: raw.RawHeader, Vhost: raw.Vhost,
@@ -191,7 +190,7 @@ func validateHTTPXFieldTypes(payload []byte) error {
 		}
 	}
 	for _, name := range []string{"status_code", "content_length"} {
-		if value, exists := fields[name]; exists && !validJSONType[int](value) {
+		if value, exists := fields[name]; exists && !validJSONType[int64](value) {
 			return fmt.Errorf("httpx %s must be integer", name)
 		}
 	}
@@ -231,12 +230,12 @@ func InTargetScope(target enginecontract.Target, rawURL string) bool {
 	}
 }
 
-func observedEndpointFromURL(raw string) (enginecontract.Endpoint, error) {
+func observedEndpointFromURL(raw string) (enginecontract.EndpointV2, error) {
 	host, err := deriveCandidateURLHost(raw)
 	if err != nil {
-		return enginecontract.Endpoint{}, err
+		return enginecontract.EndpointV2{}, err
 	}
-	return enginecontract.Endpoint{URL: raw, Host: host}, nil
+	return enginecontract.EndpointV2{URL: raw, Host: host}, nil
 }
 
 // deriveCandidateURLHost extracts only the authority used to route a raw URL

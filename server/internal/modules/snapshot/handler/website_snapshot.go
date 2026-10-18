@@ -199,12 +199,12 @@ func (h *WebsiteSnapshotHandler) Export(c *gin.Context) {
 		return h.svc.ForEachByScan(scanID, func(snapshot service.WebsiteSnapshot) error {
 			statusCode := ""
 			if snapshot.StatusCode != nil {
-				statusCode = strconv.Itoa(*snapshot.StatusCode)
+				statusCode = strconv.FormatInt(*snapshot.StatusCode, 10)
 			}
 
 			contentLength := ""
 			if snapshot.ContentLength != nil {
-				contentLength = strconv.Itoa(*snapshot.ContentLength)
+				contentLength = strconv.FormatInt(*snapshot.ContentLength, 10)
 			}
 
 			vhost := ""
@@ -247,21 +247,23 @@ func toWebsiteSnapshotOutput(s *service.WebsiteSnapshot) dto.WebsiteSnapshotResp
 		tech = []string{}
 	}
 	return dto.WebsiteSnapshotResponse{
-		ID:              s.ID,
-		ScanID:          s.ScanID,
-		Name:            httpdto.WebsiteSnapshotName(s.ScanID, s.ID),
-		URL:             s.URL,
-		Host:            s.Host,
-		Title:           s.Title,
-		StatusCode:      s.StatusCode,
-		ContentLength:   s.ContentLength,
-		Location:        s.Location,
-		Webserver:       s.Webserver,
-		ContentType:     s.ContentType,
-		Tech:            tech,
-		ResponseBody:    s.ResponseBody,
-		Vhost:           s.Vhost,
-		ResponseHeaders: s.ResponseHeaders,
-		CreatedAt:       timeutil.ToUTC(s.CreatedAt),
+		ID:                       s.ID,
+		ScanID:                   s.ScanID,
+		Name:                     httpdto.WebsiteSnapshotName(s.ScanID, s.ID),
+		URL:                      s.URL,
+		Host:                     s.Host,
+		Title:                    s.Title,
+		StatusCode:               s.StatusCode,
+		ContentLength:            s.ContentLength,
+		Location:                 s.Location,
+		Webserver:                s.Webserver,
+		ContentType:              s.ContentType,
+		Tech:                     tech,
+		ResponseBody:             s.ResponseBody,
+		ResponseBodyTruncated:    s.ResponseBodyTruncated,
+		Vhost:                    s.Vhost,
+		ResponseHeaders:          s.ResponseHeaders,
+		ResponseHeadersTruncated: s.ResponseHeadersTruncated,
+		CreatedAt:                timeutil.ToUTC(s.CreatedAt),
 	}
 }

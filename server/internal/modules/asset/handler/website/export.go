@@ -44,11 +44,11 @@ func (h *WebsiteHandler) Export(c *gin.Context) {
 		return h.svc.ForEachByTarget(targetID, func(website service.Website) error {
 			statusCode := ""
 			if website.StatusCode != nil {
-				statusCode = strconv.Itoa(*website.StatusCode)
+				statusCode = strconv.FormatInt(*website.StatusCode, 10)
 			}
 			contentLength := ""
 			if website.ContentLength != nil {
-				contentLength = strconv.Itoa(*website.ContentLength)
+				contentLength = strconv.FormatInt(*website.ContentLength, 10)
 			}
 			vhost := ""
 			if website.Vhost != nil {

@@ -179,12 +179,11 @@ type httpxSummary struct {
 	skippedHTTPXFailed      int
 	skippedInvalidURL       int
 	skippedOversized        int
-	skippedHostInconsistent int
 	recoveredMetadata       int
 }
 
 func (summary httpxSummary) progressMessage() string {
-	return fmt.Sprintf("httpx completed httpxRecords=%d stagedEndpoints=%d skippedOversizedRecord=%d skippedMalformedJSON=%d skippedInvalidFieldType=%d skippedHTTPXFailed=%d skippedInvalidURL=%d skippedOversized=%d skippedHostInconsistent=%d recoveredMetadata=%d", summary.httpxRecords, summary.stagedEndpoints, summary.skippedOversizedRecord, summary.skippedMalformedJSON, summary.skippedInvalidFieldType, summary.skippedHTTPXFailed, summary.skippedInvalidURL, summary.skippedOversized, summary.skippedHostInconsistent, summary.recoveredMetadata)
+	return fmt.Sprintf("httpx completed httpxRecords=%d stagedEndpoints=%d skippedOversizedRecord=%d skippedMalformedJSON=%d skippedInvalidFieldType=%d skippedHTTPXFailed=%d skippedInvalidURL=%d skippedOversized=%d recoveredMetadata=%d", summary.httpxRecords, summary.stagedEndpoints, summary.skippedOversizedRecord, summary.skippedMalformedJSON, summary.skippedInvalidFieldType, summary.skippedHTTPXFailed, summary.skippedInvalidURL, summary.skippedOversized, summary.recoveredMetadata)
 }
 
 func (r *Runtime) runHTTPXOrStageMinimal(ctx context.Context, execution *enginecontract.Execution, paths pipelinePaths, probeInput string) (string, httpxSummary, error) {
@@ -263,8 +262,6 @@ func (r *Runtime) runHTTPXOrStageMinimal(ctx context.Context, execution *enginec
 				return errors.New("httpx output row has no candidate input identity")
 			case SkipOversizedURL:
 				summary.skippedOversized++
-			case SkipHostInconsistent:
-				summary.skippedHostInconsistent++
 			}
 			return nil
 		}
@@ -286,19 +283,19 @@ func (r *Runtime) runHTTPXOrStageMinimal(ctx context.Context, execution *enginec
 	if summary.httpxRecords > 0 && summary.stagedEndpoints == 0 && summary.skippedHTTPXFailed == 0 &&
 		(summary.skippedOversizedRecord > 0 || summary.skippedMalformedJSON > 0 ||
 			summary.skippedInvalidFieldType > 0 || summary.skippedInvalidURL > 0 ||
-			summary.skippedOversized > 0 || summary.skippedHostInconsistent > 0) {
+			summary.skippedOversized > 0) {
 		return "", summary, errors.New("httpx output contains no valid observable record")
 	}
 	return paths.endpointStage, summary, nil
 }
 
 type stagedEndpoint struct {
-	URL      string                  `json:"url"`
-	Ordinal  string                  `json:"ordinal"`
-	Endpoint enginecontract.Endpoint `json:"endpoint"`
+	URL      string                    `json:"url"`
+	Ordinal  string                    `json:"ordinal"`
+	Endpoint enginecontract.EndpointV2 `json:"endpoint"`
 }
 
-func appendStagedEndpoint(writer *os.File, endpoint enginecontract.Endpoint, count *int) error {
+func appendStagedEndpoint(writer *os.File, endpoint enginecontract.EndpointV2, count *int) error {
 	payload, err := json.Marshal(stagedEndpoint{
 		URL:      endpoint.URL,
 		Ordinal:  fmt.Sprintf("%020d", *count),

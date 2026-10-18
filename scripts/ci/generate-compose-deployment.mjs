@@ -243,13 +243,13 @@ export function generate({ root = defaultRoot, manifest, tag, output, snapshot =
    selected.set('RELEASE_CHANNEL', tag.includes('-') ? 'canary' : 'stable');
    selected.set('RELEASE_METADATA_BASE_URL', releaseMetadataBaseURL);
    selected.set('RELEASE_REGISTRY', registryExpression);
-   selected.set('ENGINE_INSTALL_REGISTRY', registryExpression);
+   selected.set('ENGINE_INSTALL_REGISTRY', '${ENGINE_INSTALL_REGISTRY:-${RELEASE_REGISTRY:-docker.io}}');
    selected.set('ENGINE_INVENTORY_HOST_PATH', './engine-inventory.yaml');
    selected.set('LUNAFOX_SHARED_DATA_VOLUME_BIND', 'lunafox_data:/opt/lunafox:rw');
    const compose = template.replace(/\$\{([A-Z_]+)(?::[^}]*)?\}/g, (expression, key) => selected.get(key) ?? expression);
    for (const profile of ['embedded', 'external']) policyForProfile(thirdPartyPolicy, profile);
    for (const key of selected.keys()) {
-    if (key !== 'RELEASE_REGISTRY' && compose.includes('${' + key)) throw Error(`unresolved release input: ${key}`);
+    if (!['RELEASE_REGISTRY', 'ENGINE_INSTALL_REGISTRY'].includes(key) && compose.includes('${' + key)) throw Error(`unresolved release input: ${key}`);
    }
    const files = new Map(common);
    if (!historicalCompose) {

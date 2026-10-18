@@ -26,8 +26,8 @@ type EndpointResponse struct {
 	Title                    string    `json:"title"`
 	Webserver                string    `json:"webserver"`
 	ContentType              string    `json:"contentType"`
-	StatusCode               *int      `json:"statusCode"`
-	ContentLength            *int      `json:"contentLength"`
+	StatusCode               *int64    `json:"statusCode"`
+	ContentLength            *int64    `json:"contentLength"`
 	ResponseBody             string    `json:"responseBody"`
 	ResponseBodyTruncated    bool      `json:"responseBodyTruncated"`
 	Tech                     []string  `json:"tech"`
@@ -52,8 +52,8 @@ type EndpointUpsertItem struct {
 	Title           string   `json:"title"`
 	Webserver       string   `json:"webserver"`
 	ContentType     string   `json:"contentType"`
-	StatusCode      *int     `json:"statusCode"`
-	ContentLength   *int     `json:"contentLength"`
+	StatusCode      *int64   `json:"statusCode"`
+	ContentLength   *int64   `json:"contentLength"`
 	ResponseBody    string   `json:"responseBody"`
 	Tech            []string `json:"tech"`
 	Vhost           *bool    `json:"vhost"`

@@ -535,8 +535,8 @@ func TestSmokeResultEvidenceRequiresRealHostPortMaterialization(t *testing.T) {
 func TestSmokeWebsiteMaterializerRequiresExactFixtureResponse(t *testing.T) {
 	cfg := smokeConfig{fixtureIP: "192.0.2.10", fixturePort: 8080}
 	expectedURL := "http://192.0.2.10:8080"
-	okStatus := 200
-	wrongStatus := 201
+	okStatus := int64(200)
+	wrongStatus := int64(201)
 	tests := []struct {
 		name string
 		item snapshotapp.WebsiteSnapshotItem
@@ -558,14 +558,14 @@ func TestSmokeWebsiteMaterializerRequiresExactFixtureResponse(t *testing.T) {
 	bridge, record := newSmokeBridgeForTest(t, smokeScenarioWebsiteSuccess)
 	record.engineID = engineWebsiteID
 	claimSmokePlanAfterInjectedFailure(t, bridge, uuid.NewString())
-	resultJSON, err := results.EncodeWebsite(results.Website{
+	resultJSON, err := results.EncodeWebsiteV2(results.WebsiteV2{
 		URL: expectedURL, Host: cfg.fixtureIP, StatusCode: &okStatus,
 	})
 	if err != nil {
 		t.Fatalf("encode Website result: %v", err)
 	}
 	command := resultingestCommandForSmokeTest(resultJSON)
-	command.ResultType = results.ResultKindAssetWebsite
+	command.ResultType = results.ResultKindAssetWebsiteV2
 	store := newSmokeResultEvidenceStore(cfg)
 	ingest := &smokeResultIngest{bridge: bridge, inner: newSmokeResultFacade(store)}
 	outcome, err := ingest.Ingest(context.Background(), command)

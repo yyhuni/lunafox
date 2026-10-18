@@ -15,7 +15,7 @@ var _ func(
 	*Runtime,
 	context.Context,
 	ProgressReporter,
-	websitediscoverycontract.WebsiteSubmitter,
+	websitediscoverycontract.WebsiteV2Submitter,
 	*resultArtifacts,
 ) error = (*Runtime).ReportResults
 
@@ -106,10 +106,10 @@ func TestReportResultsSkipsWhenNoFinalArtifactExists(t *testing.T) {
 }
 
 type captureWebsiteResults struct {
-	items []websitediscoverycontract.Website
+	items []websitediscoverycontract.WebsiteV2
 }
 
-func (capture *captureWebsiteResults) Submit(_ context.Context, items <-chan websitediscoverycontract.Website) error {
+func (capture *captureWebsiteResults) Submit(_ context.Context, items <-chan websitediscoverycontract.WebsiteV2) error {
 	for item := range items {
 		capture.items = append(capture.items, item)
 	}
@@ -120,7 +120,7 @@ type rejectingWebsiteResults struct {
 	err error
 }
 
-func (rejecting rejectingWebsiteResults) Submit(context.Context, <-chan websitediscoverycontract.Website) error {
+func (rejecting rejectingWebsiteResults) Submit(context.Context, <-chan websitediscoverycontract.WebsiteV2) error {
 	return rejecting.err
 }
 
@@ -133,7 +133,7 @@ func (capture *captureResultProgress) Report(_ context.Context, message string) 
 	return nil
 }
 
-func findWebsite(items []websitediscoverycontract.Website, url string) *websitediscoverycontract.Website {
+func findWebsite(items []websitediscoverycontract.WebsiteV2, url string) *websitediscoverycontract.WebsiteV2 {
 	for index := range items {
 		if items[index].URL == url {
 			return &items[index]

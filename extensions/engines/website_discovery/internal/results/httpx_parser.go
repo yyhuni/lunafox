@@ -18,8 +18,8 @@ type httpxLine struct {
 	Input           string   `json:"input"`
 	Host            string   `json:"host"`
 	Title           string   `json:"title"`
-	StatusCode      *int     `json:"status_code"`
-	ContentLength   *int     `json:"content_length"`
+	StatusCode      *int64   `json:"status_code"`
+	ContentLength   *int64   `json:"content_length"`
 	Location        string   `json:"location"`
 	Webserver       string   `json:"webserver"`
 	ContentType     string   `json:"content_type"`
@@ -44,14 +44,14 @@ type ParseSummary struct {
 // StreamHTTPXWebsites reads the final HTTPX artifact incrementally and emits
 // raw observed website candidates. Result reporting owns global exact-URL
 // deduplication.
-func StreamHTTPXWebsites(ctx context.Context, filePath string, submit func(websitediscoverycontract.Website) error) (int, error) {
+func StreamHTTPXWebsites(ctx context.Context, filePath string, submit func(websitediscoverycontract.WebsiteV2) error) (int, error) {
 	summary, err := StreamHTTPXWebsitesWithSummary(ctx, filePath, submit)
 	return summary.ParsedItems, err
 }
 
 // StreamHTTPXWebsitesWithSummary reads the final HTTPX artifact and returns
 // parse accounting alongside admitted raw Website candidates.
-func StreamHTTPXWebsitesWithSummary(ctx context.Context, filePath string, submit func(websitediscoverycontract.Website) error) (ParseSummary, error) {
+func StreamHTTPXWebsitesWithSummary(ctx context.Context, filePath string, submit func(websitediscoverycontract.WebsiteV2) error) (ParseSummary, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -68,7 +68,7 @@ func StreamHTTPXWebsitesWithSummary(ctx context.Context, filePath string, submit
 	return summary, nil
 }
 
-func streamHTTPXFile(ctx context.Context, path string, submit func(websitediscoverycontract.Website) error, summary *ParseSummary) error {
+func streamHTTPXFile(ctx context.Context, path string, submit func(websitediscoverycontract.WebsiteV2) error, summary *ParseSummary) error {
 	file, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("open httpx output %s: %w", path, err)
@@ -146,7 +146,7 @@ func readResultArtifactLine(reader *bufio.Reader) (string, bool, error) {
 	}
 }
 
-func parseHTTPXLine(line string) (websitediscoverycontract.Website, bool) {
+func parseHTTPXLine(line string) (websitediscoverycontract.WebsiteV2, bool) {
 	item, _, ok := parseHTTPXLineWithOutcome(line)
 	return item, ok
 }
@@ -160,16 +160,16 @@ const (
 	httpxSkipUnassociatedIdentity
 )
 
-func parseHTTPXLineWithOutcome(line string) (websitediscoverycontract.Website, httpxSkipReason, bool) {
+func parseHTTPXLineWithOutcome(line string) (websitediscoverycontract.WebsiteV2, httpxSkipReason, bool) {
 	// encoding/json accepts invalid UTF-8 and replaces it with U+FFFD. Reject
 	// the raw record first so an observed URL can never be admitted after that
 	// lossy conversion.
 	if err := validateJSONText([]byte(line)); err != nil {
-		return websitediscoverycontract.Website{}, httpxSkipMalformed, false
+		return websitediscoverycontract.WebsiteV2{}, httpxSkipMalformed, false
 	}
 	line = strings.TrimSpace(line)
 	if line == "" {
-		return websitediscoverycontract.Website{}, httpxSkipInvalid, false
+		return websitediscoverycontract.WebsiteV2{}, httpxSkipInvalid, false
 	}
 	// HTTPX's `url` is a redirect/final observation. Only `input` can bind a
 	// row to the candidate that the Engine was authorized to execute. A missing,
@@ -177,25 +177,25 @@ func parseHTTPXLineWithOutcome(line string) (websitediscoverycontract.Website, h
 	// even when the row otherwise looks like a valid no-finding record.
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(line), &fields); err != nil {
-		return websitediscoverycontract.Website{}, httpxSkipMalformed, false
+		return websitediscoverycontract.WebsiteV2{}, httpxSkipMalformed, false
 	}
 	rawInput, exists := fields["input"]
 	if !exists || strings.TrimSpace(string(rawInput)) == "null" {
-		return websitediscoverycontract.Website{}, httpxSkipUnassociatedIdentity, false
+		return websitediscoverycontract.WebsiteV2{}, httpxSkipUnassociatedIdentity, false
 	}
 	var input string
 	if err := json.Unmarshal(rawInput, &input); err != nil || input == "" {
-		return websitediscoverycontract.Website{}, httpxSkipUnassociatedIdentity, false
+		return websitediscoverycontract.WebsiteV2{}, httpxSkipUnassociatedIdentity, false
 	}
 	var raw httpxLine
 	if err := json.Unmarshal([]byte(line), &raw); err != nil {
-		return websitediscoverycontract.Website{}, httpxSkipMalformed, false
+		return websitediscoverycontract.WebsiteV2{}, httpxSkipMalformed, false
 	}
 	raw.Input = input
 	if raw.Failed {
-		return websitediscoverycontract.Website{}, httpxSkipFailed, false
+		return websitediscoverycontract.WebsiteV2{}, httpxSkipFailed, false
 	}
-	item := websitediscoverycontract.Website{
+	item := websitediscoverycontract.WebsiteV2{
 		URL:             preferredHTTPXURL(raw),
 		Host:            raw.Host,
 		Title:           raw.Title,

@@ -7,18 +7,18 @@ func TestCodegenDescriptorsExposeCanonicalOrderAndFieldMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CodegenDescriptors() error = %v", err)
 	}
-	if len(descriptors) != 8 {
-		t.Fatalf("CodegenDescriptors() returned %d descriptors, want 8", len(descriptors))
+	if len(descriptors) != len(Descriptors()) {
+		t.Fatalf("CodegenDescriptors() returned %d descriptors, want %d", len(descriptors), len(Descriptors()))
 	}
 	wantTypes := []string{
 		ResultKindAssetSubdomain,
-		ResultKindAssetEndpoint,
 		ResultKindAssetHostPort,
-		ResultKindAssetWebsite,
 		ResultKindAssetWebsiteTechnology,
 		ResultKindAssetScreenshot,
 		ResultKindAssetDirectory,
 		ResultKindAssetVulnerability,
+		ResultKindAssetEndpointV2,
+		ResultKindAssetWebsiteV2,
 	}
 	for index, want := range wantTypes {
 		if descriptors[index].ResultType != want {
@@ -32,18 +32,18 @@ func TestCodegenDescriptorsExposeCanonicalOrderAndFieldMetadata(t *testing.T) {
 		}
 	}
 
-	website := descriptors[3]
+	website := descriptors[7]
 	if website.Fields[0].GoName != "URL" || website.Fields[0].JSONName != "url" || website.Fields[0].GoType != "string" || website.Fields[0].Presence != FieldPresenceRequired {
 		t.Fatalf("website URL metadata = %#v", website.Fields[0])
 	}
-	if website.Fields[3].GoName != "StatusCode" || website.Fields[3].GoType != "*int" || website.Fields[3].Presence != FieldPresenceOptional || website.Fields[3].SchemaBasics.MinInt == nil || *website.Fields[3].SchemaBasics.MinInt != 100 {
+	if website.Fields[3].GoName != "StatusCode" || website.Fields[3].GoType != "*int64" || website.Fields[3].Presence != FieldPresenceOptional || website.Fields[3].SchemaBasics.MinInt != nil || website.Fields[3].SchemaBasics.MaxInt != nil {
 		t.Fatalf("website statusCode metadata = %#v", website.Fields[3])
 	}
-	vulnerability := descriptors[7]
+	vulnerability := descriptors[5]
 	if vulnerability.Fields[len(vulnerability.Fields)-1].GoType != "map[string]any" || !vulnerability.Fields[len(vulnerability.Fields)-1].SchemaBasics.ExplicitObject {
 		t.Fatalf("vulnerability rawOutput metadata = %#v", vulnerability.Fields[len(vulnerability.Fields)-1])
 	}
-	directory := descriptors[6]
+	directory := descriptors[4]
 	contentType := directory.Fields[3]
 	if contentType.GoName != "ContentType" || contentType.JSONName != "contentType" || contentType.Presence != FieldPresenceRequired || !contentType.SchemaBasics.ValidUTF8 || contentType.SchemaBasics.NonEmpty {
 		t.Fatalf("directory contentType metadata = %#v", contentType)

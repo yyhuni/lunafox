@@ -141,21 +141,23 @@ func toWebsiteOutput(readModel *service.WebsiteReadModel) dto.WebsiteResponse {
 		tech = []string{}
 	}
 	output := dto.WebsiteResponse{
-		ID:              website.ID,
-		Name:            httpdto.WebsiteName(website.TargetID, website.ID),
-		URL:             website.URL,
-		Host:            website.Host,
-		Location:        website.Location,
-		Title:           website.Title,
-		Webserver:       website.Webserver,
-		ContentType:     website.ContentType,
-		StatusCode:      website.StatusCode,
-		ContentLength:   website.ContentLength,
-		ResponseBody:    website.ResponseBody,
-		Tech:            tech,
-		Vhost:           website.Vhost,
-		ResponseHeaders: website.ResponseHeaders,
-		CreatedAt:       timeutil.ToUTC(website.CreatedAt),
+		ID:                       website.ID,
+		Name:                     httpdto.WebsiteName(website.TargetID, website.ID),
+		URL:                      website.URL,
+		Host:                     website.Host,
+		Location:                 website.Location,
+		Title:                    website.Title,
+		Webserver:                website.Webserver,
+		ContentType:              website.ContentType,
+		StatusCode:               website.StatusCode,
+		ContentLength:            website.ContentLength,
+		ResponseBody:             website.ResponseBody,
+		ResponseBodyTruncated:    website.ResponseBodyTruncated,
+		Tech:                     tech,
+		Vhost:                    website.Vhost,
+		ResponseHeaders:          website.ResponseHeaders,
+		ResponseHeadersTruncated: website.ResponseHeadersTruncated,
+		CreatedAt:                timeutil.ToUTC(website.CreatedAt),
 	}
 	if readModel.Screenshot != nil {
 		output.Screenshot = &dto.WebsiteScreenshotSummary{

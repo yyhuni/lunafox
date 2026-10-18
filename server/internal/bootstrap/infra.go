@@ -124,6 +124,7 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 	operatorPuller, err := engineinstall.NewORASPackagePuller(engineinstall.ORASPackagePullerOptions{
 		MaxManifestBytes: engineInstallMaxManifestBytes, MaxPackageLayerBytes: cfg.EngineInstall.MaxPackageBytes,
 		PerCandidateTimeout: engineInstallCandidateTimeout,
+		TransportRegistry:   cfg.EngineInstall.Registry,
 	})
 	if err != nil {
 		pkg.Fatal("Operator Engine Package installer configuration is invalid", zap.Error(err))
@@ -139,10 +140,17 @@ func initInfra(cfg *config.Config, migrationsFS embed.FS) *infra {
 			pkg.Fatal("Public Engine signature verifier configuration is invalid", zap.Error(err))
 		}
 	}
+	if operatorSignatureVerifier != nil {
+		operatorSignatureVerifier, err = engineinstall.WithSignatureRegistry(operatorSignatureVerifier, cfg.EngineInstall.Registry)
+		if err != nil {
+			pkg.Fatal("Engine signature transport configuration is invalid", zap.Error(err))
+		}
+	}
 	operatorRuntimeVerifier, err := engineinstall.NewRuntimeImageIndexVerifier(engineinstall.RuntimeImageIndexVerifierOptions{
 		MaxIndexBytes:       engineInstallMaxIndexBytes,
 		PerCandidateTimeout: engineInstallCandidateTimeout,
 		SignatureVerifier:   operatorSignatureVerifier,
+		TransportRegistry:   cfg.EngineInstall.Registry,
 	})
 	if err != nil {
 		pkg.Fatal("Operator Runtime Image verifier configuration is invalid", zap.Error(err))

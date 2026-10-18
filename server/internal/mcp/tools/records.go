@@ -101,8 +101,8 @@ type WebsiteRecord struct {
 	Webserver     string    `json:"webserver,omitempty"`
 	ContentType   string    `json:"contentType,omitempty"`
 	Tech          []string  `json:"tech,omitempty"`
-	StatusCode    *int      `json:"statusCode,omitempty"`
-	ContentLength *int      `json:"contentLength,omitempty"`
+	StatusCode    *int64    `json:"statusCode,omitempty"`
+	ContentLength *int64    `json:"contentLength,omitempty"`
 	Vhost         *bool     `json:"vhost,omitempty"`
 }
 
@@ -124,8 +124,8 @@ type EndpointRecord struct {
 	Webserver     string    `json:"webserver,omitempty"`
 	ContentType   string    `json:"contentType,omitempty"`
 	Tech          []string  `json:"tech,omitempty"`
-	StatusCode    *int      `json:"statusCode,omitempty"`
-	ContentLength *int      `json:"contentLength,omitempty"`
+	StatusCode    *int64    `json:"statusCode,omitempty"`
+	ContentLength *int64    `json:"contentLength,omitempty"`
 	Vhost         *bool     `json:"vhost,omitempty"`
 }
 
