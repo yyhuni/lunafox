@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -437,4 +438,167 @@ func (progress *recordingDirectoryProgress) Messages() []string {
 	progress.mu.Lock()
 	defer progress.mu.Unlock()
 	return append([]string(nil), progress.messages...)
+}
+
+func TestRuntimeExecuteTargetVariantsUsePerCandidateWordlist(t *testing.T) {
+	workspace := t.TempDir()
+	source := filepath.Join(t.TempDir(), "wordlist.txt")
+	if err := os.WriteFile(source, []byte("admin\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var captured [][]byte
+	runner := ffufRunnerFunc(func(_ context.Context, invocation ffufInvocation) error {
+		payload, err := os.ReadFile(invocation.Config.Wordlist)
+		if err != nil {
+			return err
+		}
+		captured = append(captured, payload)
+		artifactPath, err := rawFFUFArtifactPath(invocation.Workspace, invocation.Candidate.Ordinal)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(artifactPath, nil, 0o600)
+	})
+	runtime := &Runtime{aggregation: directoryAggregationOptions{scheduler: websiteSchedulerOptions{
+		runner: runner, websiteTimeout: time.Second,
+	}}}
+	execution := directoryExecutionFixture(t, workspace, &recordingDirectoryProgress{}, &captureDirectorySubmitter{})
+	execution.Config.Ffuf.TargetVariants = true
+	execution.Config.Ffuf.Wordlist = source
+	execution.Config.Ffuf.Concurrency = 1
+	if err := runtime.Execute(context.Background(), execution); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if len(captured) != 2 {
+		t.Fatalf("captured %d candidate wordlists, want 2", len(captured))
+	}
+	for _, payload := range captured {
+		for _, want := range []string{"admin\n", "example.com.zip\n", "example.zip\n"} {
+			if !bytes.Contains(payload, []byte(want)) {
+				t.Fatalf("candidate wordlist missing %q: %q", want, payload)
+			}
+		}
+	}
+	sourceAfter, err := os.ReadFile(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(sourceAfter, []byte("admin\n")) {
+		t.Fatalf("source wordlist changed: %q", sourceAfter)
+	}
+	if _, err := os.Stat(filepath.Join(workspace, directoryWordlistSubdir)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("candidate wordlist directory was not cleaned up: %v", err)
+	}
+}
+
+func TestRuntimeExecuteTargetVariantsCleansUpOnFailure(t *testing.T) {
+	workspace := t.TempDir()
+	source := filepath.Join(t.TempDir(), "wordlist.txt")
+	if err := os.WriteFile(source, []byte("admin\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	runner := ffufRunnerFunc(func(context.Context, ffufInvocation) error {
+		return errors.New("ffuf failed")
+	})
+	runtime := &Runtime{aggregation: directoryAggregationOptions{scheduler: websiteSchedulerOptions{
+		runner: runner, websiteTimeout: time.Second,
+	}}}
+	execution := directoryExecutionFixture(t, workspace, &recordingDirectoryProgress{}, &captureDirectorySubmitter{})
+	execution.Config.Ffuf.TargetVariants = true
+	execution.Config.Ffuf.Wordlist = source
+	execution.Config.Ffuf.Concurrency = 1
+	if err := runtime.Execute(context.Background(), execution); err == nil {
+		t.Fatal("Execute() succeeded despite runner failure")
+	}
+	if _, err := os.Stat(filepath.Join(workspace, directoryWordlistSubdir)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("candidate wordlist directory was not cleaned up after failure: %v", err)
+	}
+}
+
+type staticWAFPrescanner struct {
+	blocked bool
+}
+
+func (prescanner staticWAFPrescanner) Blocked(context.Context, string) (bool, string, error) {
+	return prescanner.blocked, "fake_waf", nil
+}
+
+func TestRuntimeExecuteWAFPrescanBehavior(t *testing.T) {
+	tests := []struct {
+		name            string
+		enabled         bool
+		blocked         bool
+		wantInvocations int32
+	}{
+		{name: "disabled", enabled: false, blocked: true, wantInvocations: 2},
+		{name: "enabled healthy", enabled: true, blocked: false, wantInvocations: 2},
+		{name: "enabled blocked", enabled: true, blocked: true, wantInvocations: 0},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			workspace := t.TempDir()
+			var invocations atomic.Int32
+			runner := ffufRunnerFunc(func(_ context.Context, invocation ffufInvocation) error {
+				invocations.Add(1)
+				path, err := rawFFUFArtifactPath(invocation.Workspace, invocation.Candidate.Ordinal)
+				if err != nil {
+					return err
+				}
+				return os.WriteFile(path, nil, 0o600)
+			})
+			var factoryCalled atomic.Bool
+			runtime := &Runtime{
+				aggregation: directoryAggregationOptions{scheduler: websiteSchedulerOptions{
+					runner: runner, websiteTimeout: time.Second,
+				}},
+				wafPrescanFactory: func(enginecontract.FfufConfig) (wafPrescanner, error) {
+					factoryCalled.Store(true)
+					return staticWAFPrescanner{blocked: test.blocked}, nil
+				},
+			}
+			execution := directoryExecutionFixture(t, workspace, &recordingDirectoryProgress{}, &captureDirectorySubmitter{})
+			execution.Config.Ffuf.WafSmartSkip = test.enabled
+			if err := runtime.Execute(context.Background(), execution); err != nil {
+				t.Fatalf("Execute() error = %v", err)
+			}
+			if invocations.Load() != test.wantInvocations {
+				t.Fatalf("FFUF invocations = %d, want %d", invocations.Load(), test.wantInvocations)
+			}
+			if factoryCalled.Load() != test.enabled {
+				t.Fatalf("prescan factory called = %t, want %t", factoryCalled.Load(), test.enabled)
+			}
+		})
+	}
+}
+
+func TestRuntimeExecuteAppliesResultDenoiseSwitches(t *testing.T) {
+	workspace := t.TempDir()
+	payload := joinFFUFRecords([][]byte{
+		marshalFFUFRecord(t, ffufRecordFixture{URL: "https://example.com/admin", Status: 302, ContentLength: 0, ContentType: "text/html", Duration: 1, RedirectLocation: "/login"}),
+		marshalFFUFRecord(t, ffufRecordFixture{URL: "https://example.com/backup.zip", Status: 200, ContentLength: 10, ContentType: "text/html", Duration: 1}),
+		marshalFFUFRecord(t, ffufRecordFixture{URL: "https://example.com/real", Status: 200, ContentLength: 10, ContentType: "text/html", Duration: 1}),
+	})
+	progress := &recordingDirectoryProgress{}
+	submitter := &captureDirectorySubmitter{}
+	runtime := &Runtime{aggregation: directoryAggregationOptions{scheduler: websiteSchedulerOptions{
+		runner:         artifactWritingRunner(t, map[uint64][]byte{0: payload, 1: nil}, nil),
+		websiteTimeout: time.Second,
+	}}}
+	execution := directoryExecutionFixture(t, workspace, progress, submitter)
+	execution.Config.Ffuf.DenoiseAuthRedirect = true
+	execution.Config.Ffuf.DenoiseBackupHtml = true
+	if err := runtime.Execute(context.Background(), execution); err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if len(submitter.items) != 1 || submitter.items[0].URL != "https://example.com/real" {
+		t.Fatalf("submitted items = %#v", submitter.items)
+	}
+	wantMessages := []string{
+		"input_ready websiteCandidates=2",
+		"scan_started websiteCandidates=2",
+		"aggregation-completed websiteCandidates=2 normalCompletedWebsites=2 timedOutWebsites=0 skippedDuplicate=0 malformedRecords=0 invalidRecords=0 oversizedRecords=0",
+	}
+	if got := progress.Messages(); !reflect.DeepEqual(got, wantMessages) {
+		t.Fatalf("progress messages = %#v, want %#v", got, wantMessages)
+	}
 }

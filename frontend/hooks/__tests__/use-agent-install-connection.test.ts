@@ -31,6 +31,7 @@ function createAgent(id: number, status: "online" | "offline"): Agent {
     displayName: `agent-${id}`,
     resourceName: `agents/${id}`,
     status,
+    executionEligibility: "eligible",
     maxTasks: 3,
     cpuThreshold: 80,
     memThreshold: 80,

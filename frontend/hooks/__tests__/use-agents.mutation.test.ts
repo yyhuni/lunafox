@@ -177,7 +177,7 @@ describe("use-agents mutation", () => {
       "delete-agent-node-9"
     )
     expect(invalidateSpy).toHaveBeenCalledWith({
-      queryKey: agentKeys.lists(),
+      queryKey: agentKeys.all,
       refetchType: "active",
     })
   })

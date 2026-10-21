@@ -90,18 +90,20 @@ let mockResetFns: {
   resetMockMcpKey: () => unknown
   resetMockLoginVisualDiscoverability: () => unknown
   resetMockUpgradeOperation: () => unknown
+  resetMockAgentLicense: () => unknown
 } | null = null
 
 async function getMockPlatform() {
   if (!mockServerInstance) {
     const serverMod = await import("./mock/server")
     mockServerInstance = serverMod.mockServer
-    const [scenariosMod, scheduledScansMod, mcpKeyMod, loginVisualMod, versionMod] = await Promise.all([
+    const [scenariosMod, scheduledScansMod, mcpKeyMod, loginVisualMod, versionMod, agentLicenseMod] = await Promise.all([
       import("./mock/scenarios"),
       import("./mock/data/scheduled-scans"),
       import("./mock/data/mcp-key"),
       import("./mock/data/login-visual"),
       import("./mock/data/version"),
+      import("./mock/data/agent-license"),
     ])
     mockResetFns = {
       resetMockScenario: scenariosMod.resetMockScenario,
@@ -109,6 +111,7 @@ async function getMockPlatform() {
       resetMockMcpKey: mcpKeyMod.resetMockMcpKey,
       resetMockLoginVisualDiscoverability: loginVisualMod.resetMockLoginVisualDiscoverability,
       resetMockUpgradeOperation: versionMod.resetMockUpgradeOperation,
+      resetMockAgentLicense: agentLicenseMod.resetMockAgentLicense,
     }
   }
   return { mockServer: mockServerInstance, resetFns: mockResetFns }
@@ -130,6 +133,7 @@ afterEach(async () => {
     resetFns?.resetMockMcpKey()
     resetFns?.resetMockLoginVisualDiscoverability()
     resetFns?.resetMockUpgradeOperation()
+    resetFns?.resetMockAgentLicense()
   }
 })
 

@@ -4,6 +4,7 @@
 
 import type { AxiosError } from 'axios'
 import { api } from '@/lib/api-client'
+import { parseAgentLicense } from '@/services/agent-license.service'
 import { parseAgentName, parseAgentRegistrationTokenName } from '@/lib/resource-name'
 import type {
   Agent,
@@ -190,6 +191,7 @@ function normalizeAgent(value: unknown, path = 'agent'): Agent {
     displayName,
     resourceName: canonical.resourceName,
     status: requireString(record.status, `${path}.status`),
+    executionEligibility: requireEnum(record.executionEligibility, new Set(['eligible', 'license_restricted']), `${path}.executionEligibility`),
     maxTasks: requireInteger(record.maxTasks, `${path}.maxTasks`, 1),
     cpuThreshold: requireInteger(record.cpuThreshold, `${path}.cpuThreshold`, 1),
     memThreshold: requireInteger(record.memThreshold, `${path}.memThreshold`, 1),
@@ -304,8 +306,12 @@ function parseAgentClusterSummary(value: unknown): AgentClusterSummary {
     return invalidAgentResponse('agentClusterSummary.executionFreshnessSeconds')
   }
 
+  const license = record.license === undefined ? undefined : parseAgentLicense(record.license)
+  if (license && license.agentLimit !== record.agentLimit) return invalidAgentResponse('agentClusterSummary.license.agentLimit')
+
   return {
     resourceName: CLUSTER_SUMMARY_NAME,
+    ...(license ? { license } : {}),
     generatedAt: requireTimestamp(record.generatedAt, 'agentClusterSummary.generatedAt'),
     executionFreshnessSeconds: 15,
     agentLimit: requireInteger(record.agentLimit, 'agentClusterSummary.agentLimit', 1),

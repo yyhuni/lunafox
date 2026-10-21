@@ -1,7 +1,6 @@
 package directoryscanruntime
 
 import (
-	"errors"
 	"strconv"
 
 	enginecontract "github.com/yyhuni/lunafox/engines/directory_scan/contract"
@@ -16,11 +15,12 @@ func BuildFFUFArgs(candidate string, config enginecontract.FfufConfig) ([]string
 	if err := ValidateConfig(config); err != nil {
 		return nil, err
 	}
-	if candidate == "" {
-		return nil, errors.New("FFUF candidate is required")
+	target, err := normalizeDirectoryTarget(candidate)
+	if err != nil {
+		return nil, err
 	}
 	args := []string{
-		"-u", candidate + "FUZZ",
+		"-u", target + "FUZZ",
 		"-w", config.Wordlist,
 		"-json",
 		"-s",
@@ -40,6 +40,10 @@ func BuildFFUFArgs(candidate string, config enginecontract.FfufConfig) ([]string
 		} else {
 			args = append(args, "-ac")
 		}
+		// Built-in FFUF calibration strategies are used on purpose: they are
+		// randomized per invocation and split across independent strategy
+		// groups, so a target-specific WAF rule cannot disable every group like
+		// it could for one fixed Engine-wide calibration path.
 	}
 	args = append(args,
 		"-mc", config.MatchCodes,

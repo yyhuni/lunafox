@@ -210,20 +210,21 @@ func scanTaskRuntimeRowsToRuntimeTaskRecord(items []scanTaskRuntimeRow) ([]Runti
 			return nil, fmt.Errorf("terminal scan task Engine diagnostics are required")
 		}
 		results = append(results, RuntimeTaskRecord{
-			ID:            item.ID,
-			StepID:        item.ScanWorkflowStepID,
-			StageID:       item.ScanWorkflowStageID,
-			EngineID:      item.EngineID,
-			Status:        item.Status,
-			SkipReason:    strings.TrimSpace(item.SkipReason),
-			Order:         item.ScanWorkflowStageOrder,
-			StartedAt:     timeutil.ToUTCPtr(item.StartedAt),
-			CompletedAt:   timeutil.ToUTCPtr(item.CompletedAt),
-			Duration:      runtimeTaskDurationSeconds(item.StartedAt, item.CompletedAt),
-			Error:         item.ErrorMessage,
-			FailureKind:   item.FailureKind,
-			FailureDetail: item.FailureDetail,
-			Diagnostics:   diagnostics,
+			ID:                       item.ID,
+			StepID:                   item.ScanWorkflowStepID,
+			StageID:                  item.ScanWorkflowStageID,
+			EngineID:                 item.EngineID,
+			Status:                   item.Status,
+			HasResolvedExecutionPlan: item.HasResolvedExecutionPlan,
+			SkipReason:               strings.TrimSpace(item.SkipReason),
+			Order:                    item.ScanWorkflowStageOrder,
+			StartedAt:                timeutil.ToUTCPtr(item.StartedAt),
+			CompletedAt:              timeutil.ToUTCPtr(item.CompletedAt),
+			Duration:                 runtimeTaskDurationSeconds(item.StartedAt, item.CompletedAt),
+			Error:                    item.ErrorMessage,
+			FailureKind:              item.FailureKind,
+			FailureDetail:            item.FailureDetail,
+			Diagnostics:              diagnostics,
 		})
 	}
 	return results, nil

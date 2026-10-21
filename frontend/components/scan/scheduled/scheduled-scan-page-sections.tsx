@@ -441,6 +441,7 @@ export function ScheduledScanDataTableLoadingState({
       hasFailureIndicator: tColumns("scheduledScan.hasFailureIndicator"),
       failureCauses: {
         WORKFLOW_UNAVAILABLE: tColumns("scheduledScan.failureCauses.WORKFLOW_UNAVAILABLE"),
+        AGENT_LICENSE_RESTRICTED: tColumns("scheduledScan.failureCauses.AGENT_LICENSE_RESTRICTED"),
         AGENT_NOT_FOUND: tColumns("scheduledScan.failureCauses.AGENT_NOT_FOUND"),
         CONFIG_RESOURCE_UNAVAILABLE: tColumns("scheduledScan.failureCauses.CONFIG_RESOURCE_UNAVAILABLE"),
         ENGINE_UNAVAILABLE: tColumns("scheduledScan.failureCauses.ENGINE_UNAVAILABLE"),

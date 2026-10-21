@@ -305,7 +305,7 @@ func TestScanHandlerGetByIDSerializesCurrentAgentProjection(t *testing.T) {
 		AssignmentMode:   "pinned",
 		CreatedAt:        time.Date(2026, 8, 4, 0, 0, 0, 0, time.UTC),
 	}}
-	queryService := scanapp.NewScanQueryService(store)
+	queryService := scanapp.NewScanQueryService(store, nil)
 	facade := scanapp.NewScanFacade(store, nil, nil, queryService, nil, nil)
 	handler := NewScanHandler(facade, ScanHistoryRetentionPolicy{})
 	router := gin.New()
@@ -437,6 +437,25 @@ func TestToScanDetailOutputOmitsAgentProjectionWhenUnassigned(t *testing.T) {
 	for _, field := range []string{"agent", "agentId", "agentName", "agentStatus", "agentHealthState", "agentDeleted"} {
 		if _, exists := decoded[field]; exists {
 			t.Fatalf("unassigned Agent field %q must be omitted: %+v", field, decoded)
+		}
+	}
+}
+
+func TestScanDetailSerializesLicenseBlockAsNullableReadProjection(t *testing.T) {
+	reason := scanapp.ExecutionBlockedReasonAgentLicenseRestricted
+	for _, blocked := range []*string{&reason, nil} {
+		out := toScanDetailOutput(&scanapp.QueryScan{ID: 7, ExecutionBlockedReason: blocked})
+		encoded, err := json.Marshal(out)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var detail map[string]any
+		if err := json.Unmarshal(encoded, &detail); err != nil {
+			t.Fatal(err)
+		}
+		value, present := detail["executionBlockedReason"]
+		if !present || (blocked == nil && value != nil) || (blocked != nil && value != reason) {
+			t.Fatalf("detail omitted or altered current license block: %s", encoded)
 		}
 	}
 }

@@ -180,3 +180,11 @@ explicit boolean field, `enabled`. The service rejects extra request fields and
 strictly validates the response target and non-negative safe-integer
 `affectedCount`; pagination, filters, and source metadata are not part of this
 transport contract.
+
+## Agent license execution projection
+
+Every full Agent resource requires `executionEligibility` equal to `eligible`
+or `license_restricted`; missing or unknown values fail at the adapter boundary.
+Scan detail requires `executionBlockedReason` equal to `null` or
+`agent_license_restricted`; collection and creation projections may omit it.
+Connection/health state remains independent of execution eligibility.

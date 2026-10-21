@@ -1,10 +1,13 @@
 "use client"
 
+import Link from "next/link"
+
 import { RunningStatusIcon } from "@/components/scan/scan-status-badge"
 
 import type { ScanProgressData, StageDetail } from "@/components/scan/scan-progress-dialog-types"
 import type { StageStatus } from "@/types/scan.types"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   IconClock,
@@ -180,12 +183,44 @@ export function ScanProgressSummary({ data, engineNames, locale, t }: ScanProgre
         <span className="text-muted-foreground">{t("status")}</span>
         <ScanStatusBadge status={data.status} t={t} />
       </div>
-      {data.errorMessage && (
+      {data.failureGuidance ? (
+        <div
+          role="alert"
+          className={cn(compactSurfaceClassNames.info, "mt-2 bg-destructive/10 border-destructive/20")}
+        >
+          <p className={cn(textRole.bodyStrong, "text-destructive")}>{t("failureGuidance.pocTitle")}</p>
+          <p className={cn("mt-1 break-words", textRole.helperText, "text-destructive/80")}>
+            {t("failureGuidance.pocDescription")}
+          </p>
+          <p className={cn("mt-1 break-words", textRole.helperText, "text-destructive/80")}>
+            {t("failureGuidance.relaunchHint")}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="mt-2"
+            render={<Link href={data.failureGuidance.targetHref} />}
+          >
+            {t("failureGuidance.openPocCatalog")}
+          </Button>
+          {data.errorMessage && (
+            <details className="mt-2">
+              <summary className={cn("cursor-pointer", textRole.caption, "text-destructive/70")}>
+                {t("failureGuidance.rawDetail")}
+              </summary>
+              <p className={cn("mt-1 break-all font-mono", textRole.caption, "text-destructive/70")}>
+                {data.errorMessage}
+              </p>
+            </details>
+          )}
+        </div>
+      ) : data.errorMessage ? (
         <div className={cn(compactSurfaceClassNames.info, "mt-2 bg-destructive/10 border-destructive/20")}>
           <p className={cn(textRole.bodyStrong, "text-destructive")}>{t("errorReason")}</p>
           <p className={cn("mt-1 break-words", textRole.helperText, "text-destructive/80")}>{data.errorMessage}</p>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

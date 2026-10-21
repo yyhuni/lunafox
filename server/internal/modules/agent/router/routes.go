@@ -13,6 +13,7 @@ func RegisterAgentRoutes(
 	agentLogHandler *agenthandler.AgentLogHandler,
 	agentClusterSummaryHandler *agenthandler.AgentClusterSummaryHandler,
 	agentLocationMapHandler *agenthandler.AgentLocationMapHandler,
+	agentLicenseHandler *agenthandler.AgentLicenseHandler,
 ) {
 	api.POST("/agents:register", agentHandler.Register)
 	api.GET("/agents:downloadInstallScript", agentHandler.DownloadInstallScript)
@@ -30,4 +31,6 @@ func RegisterAgentRoutes(
 	}
 	protected.GET("/admin/agentClusterSummaries/current", agentClusterSummaryHandler.Current)
 	protected.GET("/admin/agentLocationMaps/current", agentLocationMapHandler.Current)
+	// Gin treats colon suffixes as wildcards; the handler accepts only current:activate.
+	protected.POST("/admin/agentLicenses/:licenseAction", agentLicenseHandler.Activate)
 }

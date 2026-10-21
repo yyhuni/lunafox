@@ -20,7 +20,7 @@ const savedPlanLeaseConcurrencySchema = "scan_lease_concurrency"
 
 func TestSavedPlanLeaseConcurrencyPostgres(t *testing.T) {
 	db := openSavedPlanLeaseConcurrencyPostgres(t)
-	repo := NewScanTaskRepository(db)
+	repo := NewScanTaskRepository(db, savedPlanTestExecutionGuard(t, db))
 
 	t.Run("same request concurrent claim replays one plan", func(t *testing.T) {
 		resetSavedPlanLeaseConcurrencyFixture(t, db)
@@ -92,6 +92,22 @@ func TestSavedPlanLeaseConcurrencyPostgres(t *testing.T) {
 		}
 		if status != taskStatusPending {
 			t.Fatalf("fenced claim changed task status to %q", status)
+		}
+	})
+
+	t.Run("takeover fences an old session assignment replay", func(t *testing.T) {
+		resetSavedPlanLeaseConcurrencyFixture(t, db)
+		const requestID = "550e8400-e29b-41d4-a716-446655440004"
+		if plan, err := repo.ClaimNextCompatibleSavedExecutionPlan(context.Background(), 42, "session-a", 9, requestID, []uint32{2}); err != nil || plan == nil {
+			t.Fatalf("initial session claim=%v err=%v", plan, err)
+		}
+		takeover := beginPersistedSessionTakeover(t, db, "session-b", 10)
+		if err := takeover.Commit().Error; err != nil {
+			t.Fatal(err)
+		}
+		plan, err := repo.ClaimNextCompatibleSavedExecutionPlan(context.Background(), 42, "session-a", 9, requestID, []uint32{2})
+		if plan != nil || !errors.Is(err, scandomain.ErrAgentExecutionSessionFenced) {
+			t.Fatalf("old session replay bypassed fence: plan=%v err=%v", plan, err)
 		}
 	})
 
@@ -182,8 +198,11 @@ func openSavedPlanLeaseConcurrencyPostgres(t *testing.T) *gorm.DB {
 
 func resetSavedPlanLeaseConcurrencyFixture(t *testing.T, db *gorm.DB) {
 	t.Helper()
-	if err := db.Exec("TRUNCATE scan_task, scan, agent_runtime_status").Error; err != nil {
+	if err := db.Exec("TRUNCATE scan_task, scan, agent_runtime_status, agent, agent_license").Error; err != nil {
 		t.Fatalf("reset lease concurrency fixture: %v", err)
+	}
+	if err := db.Exec("INSERT INTO agent (id, created_at) VALUES (42, CURRENT_TIMESTAMP)").Error; err != nil {
+		t.Fatal(err)
 	}
 	if err := db.Exec("INSERT INTO agent_runtime_status (agent_id, session_id, session_epoch) VALUES (42, 'session-a', 9)").Error; err != nil {
 		t.Fatalf("insert persisted session: %v", err)

@@ -42,7 +42,7 @@ func TestSavedPlanClaimSkipsIncompatibleCandidateAndReplaysExactPlan(t *testing.
 	if err := db.Exec(`CREATE TABLE agent_runtime_status (agent_id INTEGER PRIMARY KEY, session_id TEXT NOT NULL, session_epoch INTEGER NOT NULL)`).Error; err != nil {
 		t.Fatalf("create agent_runtime_status: %v", err)
 	}
-	if err := db.Exec(`CREATE TABLE agent (id INTEGER PRIMARY KEY)`).Error; err != nil {
+	if err := db.Exec(`CREATE TABLE agent (id INTEGER PRIMARY KEY, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)`).Error; err != nil {
 		t.Fatalf("create agent: %v", err)
 	}
 	if err := db.Exec(`INSERT INTO agent (id) VALUES (42)`).Error; err != nil {
@@ -81,7 +81,7 @@ func TestSavedPlanClaimSkipsIncompatibleCandidateAndReplaysExactPlan(t *testing.
 		t.Fatalf("insert tasks: %v", err)
 	}
 
-	repository := &scanTaskRepository{db: db}
+	repository := &scanTaskRepository{db: db, agentExecutionGuard: savedPlanTestExecutionGuard(t, db)}
 	requestID := "018f6f22-0d23-7b4a-a508-8f4c8abf16d1"
 	claimed, err := repository.ClaimNextCompatibleSavedExecutionPlan(context.Background(), 42, "session-a", 9, requestID, []uint32{2})
 	if err != nil {
@@ -159,7 +159,7 @@ func TestSavedPlanClaimRejectsPersistedSessionTakeoverBeforeCAS(t *testing.T) {
 	if err := db.Exec(`INSERT INTO scan_task (id, scan_id, stage_order, created_at, status, resolved_execution_plan) VALUES (1, 7, 1, CURRENT_TIMESTAMP, 'pending', ?)`, plan).Error; err != nil {
 		t.Fatalf("insert pending plan: %v", err)
 	}
-	repository := &scanTaskRepository{db: db}
+	repository := &scanTaskRepository{db: db, agentExecutionGuard: savedPlanTestExecutionGuard(t, db)}
 
 	claimed, err := repository.ClaimNextCompatibleSavedExecutionPlan(context.Background(), 42, "session-old", 9, "018f6f22-0d23-7b4a-a508-8f4c8abf16d3", []uint32{2})
 	if !errors.Is(err, scandomain.ErrAgentExecutionSessionFenced) || claimed != nil {

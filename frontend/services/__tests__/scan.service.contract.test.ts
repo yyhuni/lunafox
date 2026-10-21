@@ -580,6 +580,7 @@ describe("scan.service contract", () => {
         agentStatus: "online",
         agentHealthState: "paused",
         agentDeleted: false,
+        executionBlockedReason: null,
         assignmentMode: "pinned",
       },
     } as never)
@@ -616,6 +617,7 @@ describe("scan.service contract", () => {
         agent: "agents/1001",
         agentName: "agent",
         agentDeleted: false,
+        executionBlockedReason: null,
         assignmentMode: "automatic",
       },
     } as never)
@@ -638,6 +640,7 @@ describe("scan.service contract", () => {
         status: "failed",
         progress: 100,
         createdAt: "2026-08-04T00:00:00Z",
+        executionBlockedReason: null,
         assignmentMode: "automatic",
         runtimeTasks: [
           {
@@ -706,6 +709,7 @@ describe("scan.service contract", () => {
         status: "failed",
         progress: 100,
         createdAt: "2026-08-04T00:00:00Z",
+        executionBlockedReason: null,
         assignmentMode: "automatic",
         runtimeTasks: [
           {
@@ -728,4 +732,13 @@ describe("scan.service contract", () => {
 
     await expect(getScan(91)).rejects.toThrow("Scan detail response diagnostics has an unsupported field: rawError")
   })
+  it.each([undefined, "unknown", false])("rejects missing or invalid detail executionBlockedReason %s", async (executionBlockedReason) => {
+    vi.mocked(api.get).mockResolvedValue({ data: { id: 91, targetId: 7, plannedEngineIds: [], triggerType: "manual", inputSource: "scanSnapshot", assignmentMode: "automatic", executionBlockedReason } } as never)
+    await expect(getScan(91)).rejects.toThrow("executionBlockedReason")
+  })
+  it("preserves a pinned scan's explicit license block without changing its assignment", async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { id: 91, targetId: 7, plannedEngineIds: [], triggerType: "manual", inputSource: "scanSnapshot", assignmentMode: "pinned", agent: "agents/6", agentId: 6, agentName: "worker-06", agentDeleted: false, executionBlockedReason: "agent_license_restricted" } } as never)
+    expect(await getScan(91)).toMatchObject({ assignmentMode: "pinned", agent: "agents/6", executionBlockedReason: "agent_license_restricted" })
+  })
+
 })

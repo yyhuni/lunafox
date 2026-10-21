@@ -19,6 +19,7 @@ import {
 } from "@/lib/status-config"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { AgentLicensePanel } from "./agent-license-panel"
 import { COMPACT_SECTION_STACK_CLASS } from "@/components/shared/layout/page-shell-density"
 import type {
   AgentClusterExecutionCapacity,
@@ -39,9 +40,13 @@ import {
 type AgentOverviewSectionProps =
   | {
       loading: true
+      showLicenseBanner?: boolean
+      summary?: AgentClusterSummary
+      activationPreview?: boolean
     }
   | {
       loading?: false
+      showLicenseBanner?: boolean
       summary: AgentClusterSummary | undefined
       error: unknown
       isInitialError: boolean
@@ -374,11 +379,13 @@ function AgentOverviewLayout({
   summary,
   refreshControl,
   staleNotice,
+  showLicenseBanner = true,
 }: {
   loading: boolean
   summary: AgentClusterSummary
   refreshControl: ReactNode
   staleNotice?: ReactNode
+  showLicenseBanner?: boolean
 }) {
   return (
     <div
@@ -394,6 +401,7 @@ function AgentOverviewLayout({
         <HealthyNodeSummary summary={summary} loading={loading} />
         <CompactCapacitySummary capacity={summary.executionCapacity} loading={loading} />
       </div>
+      {summary.license && <AgentLicensePanel license={summary.license} nodeCount={summary.totalNodes} loading={loading} visible={showLicenseBanner} />}
     </div>
   )
 }
@@ -405,7 +413,11 @@ export function AgentOverviewSection(props: AgentOverviewSectionProps) {
     return (
       <AgentOverviewLayout
         loading
-        summary={LOADING_SUMMARY}
+        showLicenseBanner={props.showLicenseBanner}
+        summary={props.summary ?? (props.activationPreview ? {
+          ...LOADING_SUMMARY,
+          license: { resourceName: "agentLicenses/current", state: "inactive", agentLimit: 3, months: null, expiresAt: null, licenseId: null },
+        } : LOADING_SUMMARY)}
         refreshControl={<ActionSkeleton size="sm" widthClassName="w-40" />}
       />
     )
@@ -444,6 +456,7 @@ export function AgentOverviewSection(props: AgentOverviewSectionProps) {
   return (
     <AgentOverviewLayout
       loading={false}
+      showLicenseBanner={props.showLicenseBanner}
       summary={props.summary}
       refreshControl={refreshControl}
       staleNotice={props.isRefetchStale ? (

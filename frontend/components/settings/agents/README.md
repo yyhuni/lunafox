@@ -1,5 +1,9 @@
 # Agent UI Rules
 
+离线扩容授权已接入正式 Agent 页面。开发 mock、独立原型入口、示例 Key 与运行方式见 [ACTIVATION-PREVIEW.md](./ACTIVATION-PREVIEW.md)。默认及到期额度为 3，有效签名 Key 的额度由 Server 决定。
+
+授权横幅和激活成功弹窗的“有效期至”使用浏览器本地时区，显示到分钟并附 UTC 偏移（如 GMT+08:00）；不能截取 ISO 日期而隐藏具体失效时刻。Server 仍按 Key 中的秒级固定时间校验。
+
 `frontend/components/settings/agents/` 负责 `/settings/agents` 页面及其局部交互。这里的页面运行在带固定侧栏的主壳层里，所以响应式判断应优先基于主内容容器，而不是整个视口。
 
 ## Product Terminology
@@ -106,6 +110,10 @@
 
 ## Deployment quota
 
-- Agent 用量由集群摘要的 `totalNodes/agentLimit` 表达，含默认及离线节点，存量超额也如实显示。服务端固定3，前端不得自造默认上限或从筛选列表计数。
-- 已知达到或超过上限时，工具栏的添加操作行下方持续显示 `totalNodes/agentLimit` 和删除恢复指引；主操作、空态和扩容入口都关联同一条可访问状态。不要用 tooltip、错误弹窗或令牌生成流程替代该说明。
-- 达到上限时工具栏、空态、扩容入口均禁用；摘要未知时不启用添加，也不伪造满额用量。令牌不保留配额，已知满额不能打开安装流程；删除成功依赖既有摘要失效刷新恢复入口，服务端注册拒绝继续是最终保护。
+- 正式 `/settings/agents/` 与独立工作台 `/prototypes/agent-activation/workspace/` 使用同一条 `components → hooks → services → api-client` 链路。summary 的 `license` 投影是授权能力入口：旧 Server 未携带时不显示入口、不请求授权端点；存在时其 `agentLimit` 必须与 summary 一致。组件不能自行改额度、验签或识别示例 Key。
+- 激活调用受认证保护的 `POST /v1/admin/agentLicenses/current:activate`，仅提交原始 `key`；服务返回 `agentLicenses/current` 的 `inactive / active / expired` 投影。Key 不绑定机器，包含固定额度和到期时间，换机或重新部署后可重新输入原 Key，重复导入不重新计时。获取说明统一为“联系作者获取 Key”。
+- 授权条归属既有 overview owner，不新增加载阶段。初始 loading 与真实态都由同一 summary 驱动；原有三个同步 section owner、slot 和双帧 ready gate 继续适用。
+- Agent 用量来自全局摘要的 `totalNodes/agentLimit`，含默认、离线和存量超额节点；未激活或到期的有效额度为 3。前端不得自造默认上限或从筛选列表计数。
+- 已满额（含超额）或授权到期时自动显示紧凑横幅；有剩余额度且未到期时隐藏。授权操作只保留横幅内的“激活扩容 / 管理授权 / 更新授权”。工具栏额度/查看授权按钮及其骨架占位已彻底删除；旧 `/prototypes/agent-activation/toolbar/` 地址仅重定向至工作台。
+- 激活提交中禁止重复提交和关闭；缺失、无效、过期或尚未生效的 Key 均保留输入和已有授权。成功后 hook 等待所有 Agent 查询失效与活跃查询刷新，所有新增入口继续服从摘要配额；刷新失败继续显示旧快照和 stale 反馈。横幅隐藏时成功弹窗必须保持挂载，避免用户看不到成功结果。
+- 已知达到或超过额度时，安装器入口、空状态入口与末尾扩展槽同时禁用，提示仍走既有 quota glyph 与 accessible description。授权到期不删除或断开已有节点。列表、详情及安装令牌内 Agent 的必填 `executionEligibility` 由 Server 按完整身份集合的 `createdAt ASC, id ASC` 派生；离线也占名额，卡片在连接状态之外单独展示“授权受限”，不得按当前页排序推导。受限节点完成已领取任务，但不领取新任务。激活和删除失效全部 Agent 查询（含 picker、详情及令牌投影）；打开的详情每 15 秒刷新以反映自然到期与删除补位。

@@ -383,3 +383,68 @@ func updateMaximum(maximum *atomic.Int32, value int32) {
 		}
 	}
 }
+
+func TestWebsiteSchedulerSkipsWAFBlockedCandidates(t *testing.T) {
+	plan, _ := schedulerCandidatePlan(t, 0)
+	workspace := t.TempDir()
+	var invocations atomic.Int32
+	runner := ffufRunnerFunc(func(_ context.Context, invocation ffufInvocation) error {
+		invocations.Add(1)
+		path, err := rawFFUFArtifactPath(workspace, invocation.Candidate.Ordinal)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(path, nil, 0o600)
+	})
+	summary, err := runWebsiteScans(context.Background(), plan, defaultFFUFConfig(), workspace, websiteSchedulerOptions{
+		runner:         runner,
+		websiteTimeout: time.Second,
+		skipCandidate: func(_ context.Context, candidate WebsiteCandidate) (bool, string, error) {
+			return candidate.Ordinal == 0, "waf_blocked", nil
+		},
+	})
+	if err != nil {
+		t.Fatalf("runWebsiteScans() error = %v", err)
+	}
+	if invocations.Load() != 1 {
+		t.Fatalf("FFUF invocations = %d, want 1", invocations.Load())
+	}
+	if summary.WAFSkippedWebsites != 1 || summary.NormalCompletedWebsites != 2 || summary.TimedOutWebsites != 0 {
+		t.Fatalf("summary = %#v", summary)
+	}
+	path, err := rawFFUFArtifactPath(workspace, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil || info.Size() != 0 {
+		t.Fatalf("skipped artifact = %#v, %v", info, err)
+	}
+}
+
+func TestWebsiteSchedulerWAFSkipErrorStillRunsCandidate(t *testing.T) {
+	plan, _ := schedulerCandidatePlan(t, 0)
+	workspace := t.TempDir()
+	var invocations atomic.Int32
+	runner := ffufRunnerFunc(func(_ context.Context, invocation ffufInvocation) error {
+		invocations.Add(1)
+		path, err := rawFFUFArtifactPath(workspace, invocation.Candidate.Ordinal)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(path, nil, 0o600)
+	})
+	summary, err := runWebsiteScans(context.Background(), plan, defaultFFUFConfig(), workspace, websiteSchedulerOptions{
+		runner:         runner,
+		websiteTimeout: time.Second,
+		skipCandidate: func(_ context.Context, _ WebsiteCandidate) (bool, string, error) {
+			return false, "", errors.New("probe failed")
+		},
+	})
+	if err != nil {
+		t.Fatalf("runWebsiteScans() error = %v", err)
+	}
+	if invocations.Load() != 2 || summary.WAFSkippedWebsites != 0 {
+		t.Fatalf("invocations = %d summary = %#v", invocations.Load(), summary)
+	}
+}

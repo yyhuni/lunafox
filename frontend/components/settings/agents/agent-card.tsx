@@ -98,6 +98,7 @@ export function AgentCard({ agentNode, onConfig, onDelete, }: AgentCardProps) {
               <Badge variant={getAgentHealthBadgeVariant(healthState)} className={getAgentHealthClassName(healthState)}>
                 {healthLabel}
               </Badge>
+              {agentNode.executionEligibility === "license_restricted" && <Badge size="compact" variant="warning" title={t("executionEligibility.restrictedHint")}>{t("executionEligibility.restricted")}</Badge>}
               {hasWarnings && (<Badge variant="warning">
                   <IconAlertTriangle className="h-3 mr-1 w-3"/>
                   {t("card.warning")}

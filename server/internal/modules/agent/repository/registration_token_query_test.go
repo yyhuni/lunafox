@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 	model "github.com/yyhuni/lunafox/server/internal/modules/agent/repository/persistence"
 )
 
@@ -18,6 +19,7 @@ func TestRegistrationTokenResourceReturnsCompleteScopedProjectionAfterExpiry(t *
 		{ID: 12, InstanceID: "token-1-second", DisplayName: "second", AuthenticationToken: "00000012", Status: "online", RegistrationTokenID: 1, CreatedAt: createdAt.Add(time.Minute)},
 		{ID: 11, InstanceID: "token-1-first", DisplayName: "first", AuthenticationToken: "00000011", Status: "offline", RegistrationTokenID: 1, CreatedAt: createdAt},
 		{ID: 21, InstanceID: "token-2", DisplayName: "other", AuthenticationToken: "00000021", Status: "online", RegistrationTokenID: 2, CreatedAt: createdAt},
+		{ID: 22, InstanceID: "token-2-older", DisplayName: "older offline", AuthenticationToken: "00000022", Status: "offline", RegistrationTokenID: 2, CreatedAt: createdAt.Add(-time.Hour)},
 	}
 	for index := range agents {
 		if err := db.Create(&agents[index]).Error; err != nil {
@@ -29,7 +31,7 @@ func TestRegistrationTokenResourceReturnsCompleteScopedProjectionAfterExpiry(t *
 		t.Fatalf("insert runtime status: %v", err)
 	}
 
-	repository := &registrationTokenRepository{db: db}
+	repository := NewRegistrationTokenRepository(db)
 	resource, err := repository.GetResourceByID(context.Background(), 1)
 	if err != nil {
 		t.Fatalf("GetResourceByID error: %v", err)
@@ -39,6 +41,9 @@ func TestRegistrationTokenResourceReturnsCompleteScopedProjectionAfterExpiry(t *
 	}
 	if resource.Agents[0].ID != 11 || resource.Agents[1].ID != 12 {
 		t.Fatalf("token-scoped Agent order/identity = %#v", resource.Agents)
+	}
+	if resource.Agents[0].ExecutionEligibility != agentdomain.AgentExecutionEligible || resource.Agents[1].ExecutionEligibility != agentdomain.AgentExecutionLicenseRestricted {
+		t.Fatalf("token scope must retain complete-fleet entitlement ranking: %#v", resource.Agents)
 	}
 	if resource.Agents[1].ObservedSourceIP != "8.8.8.8" || resource.Agents[1].LastHeartbeat == nil || !resource.Agents[1].LastHeartbeat.Equal(heartbeatAt) {
 		t.Fatalf("current Agent projection = %#v", resource.Agents[1])

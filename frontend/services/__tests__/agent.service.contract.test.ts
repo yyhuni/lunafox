@@ -18,6 +18,7 @@ function makeAgentDto(id = 1) {
     name: `agents/${id}`,
     displayName: `edge-${id}`,
     status: "online",
+    executionEligibility: "eligible",
     connectionIp: "172.20.0.5",
     maxTasks: 3,
     cpuThreshold: 80,
@@ -42,6 +43,7 @@ describe("agent.service contract", () => {
             name: "agents/1",
             displayName: "edge-01",
             status: "online",
+            executionEligibility: "eligible",
             connectionIp: "172.20.0.5",
             maxTasks: 3,
             cpuThreshold: 80,
@@ -207,6 +209,7 @@ describe("agent.service contract", () => {
     expect(api.get).toHaveBeenCalledWith("/admin/agentClusterSummaries/current", undefined)
     expect(result.resourceName).toBe("agentClusterSummaries/current")
     expect(result.agentLimit).toBe(3)
+    expect(result).not.toHaveProperty("license")
     expect(result.executionCapacity).toEqual({
       configuredSlots: 70,
       occupiedSlots: 21,
@@ -226,6 +229,18 @@ describe("agent.service contract", () => {
       locationCoverage: { positionedCount: 0, unpositionedCount: 0 },
     } } as never)
     await expect(agentService.getAgentClusterSummary()).rejects.toThrow()
+  })
+
+  it("fails closed when optional license and summary quota disagree", async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: {
+      name: "agentClusterSummaries/current", generatedAt: "2026-08-04T00:00:00Z",
+      executionFreshnessSeconds: 15, agentLimit: 3, totalNodes: 0,
+      healthyCount: 0, warningCount: 0, offlineCount: 0, unknownCount: 0, staleAgentCount: 0,
+      executionCapacity: { configuredSlots: 0, occupiedSlots: 0, availableSlots: 0, unavailableSlots: 0, overcommittedSlots: 0 },
+      clusterState: "empty", reasonCodes: ["no_agents"], locationCoverage: { positionedCount: 0, unpositionedCount: 0 },
+      license: { name: "agentLicenses/current", state: "inactive", agentLimit: 10, months: null, expiresAt: null, licenseId: null },
+    } } as never)
+    await expect(agentService.getAgentClusterSummary()).rejects.toThrow("license.agentLimit")
   })
 
   it("adapts a complete location map and preserves nullable radius", async () => {
@@ -331,6 +346,7 @@ describe("agent.service contract", () => {
           name: "agents/1",
           displayName: "edge-1",
           status: "online",
+          executionEligibility: "eligible",
           healthState: "healthy",
           taskSlotsUsed: 0,
           location: {
@@ -362,4 +378,13 @@ describe("agent.service contract", () => {
       "Agent API response is invalid at registrationToken.token",
     )
   })
+  it.each([undefined, null, "unknown", "online"])("rejects missing or unsupported execution eligibility %s", async (executionEligibility) => {
+    vi.mocked(api.get).mockResolvedValue({ data: { results: [{ ...makeAgentDto(), executionEligibility }], totalSize: 1 } } as never)
+    await expect(agentService.getAgents()).rejects.toThrow("executionEligibility")
+  })
+  it("preserves restricted eligibility independently of online state", async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { results: [{ ...makeAgentDto(), executionEligibility: "license_restricted" }], totalSize: 1 } } as never)
+    expect((await agentService.getAgents()).results[0]).toMatchObject({ status: "online", executionEligibility: "license_restricted" })
+  })
+
 })

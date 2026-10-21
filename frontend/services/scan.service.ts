@@ -339,6 +339,10 @@ function toScanRecord(dto: ScanAipDto, requireDetail = false): ScanRecord {
     throw new Error("Scan response is missing plannedEngineIds")
   }
   validateScanAgentProjection(dto, requireDetail)
+  if ((requireDetail || dto.executionBlockedReason !== undefined) &&
+      dto.executionBlockedReason !== null && dto.executionBlockedReason !== 'agent_license_restricted') {
+    throw new Error('Scan detail response has an invalid executionBlockedReason')
+  }
 
   return {
     id: dto.id,
@@ -366,6 +370,7 @@ function toScanRecord(dto: ScanAipDto, requireDetail = false): ScanRecord {
     agentHealthState: dto.agentHealthState,
     assignmentMode: dto.assignmentMode,
     agentDeleted: dto.agentDeleted,
+    executionBlockedReason: dto.executionBlockedReason,
 		runtimeTasks: parseRuntimeTasks(dto.runtimeTasks),
   }
 }

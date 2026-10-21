@@ -8,6 +8,7 @@ import (
 	"github.com/yyhuni/lunafox/contracts/agentexecution"
 	"github.com/yyhuni/lunafox/contracts/enginecontract/engineexecution"
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
+	agentrepo "github.com/yyhuni/lunafox/server/internal/modules/agent/repository"
 	"github.com/yyhuni/lunafox/server/internal/modules/scan/repository"
 	"google.golang.org/protobuf/proto"
 	"gorm.io/driver/sqlite"
@@ -29,6 +30,8 @@ CREATE TABLE IF NOT EXISTS target (
 );`
 
 const integrationScanDDL = `
+CREATE TABLE IF NOT EXISTS agent (id INTEGER PRIMARY KEY, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS agent_license (singleton BOOLEAN PRIMARY KEY, signed_key TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS scan (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	target_id INTEGER NOT NULL,
@@ -257,7 +260,7 @@ func TestIntegrationSavedPlanClaimAndTerminalResultUseCurrentAgentSession(t *tes
 	ctx := context.Background()
 	db := setupIntegrationDB(t)
 	scanRepo := repository.NewScanRepository(db)
-	taskRepo := repository.NewScanTaskRepository(db)
+	taskRepo := repository.NewScanTaskRepository(db, agentrepo.NewAgentLicenseRepository(db))
 	exact := planTaskExactPackage(testPlanTaskDefinition(nil, nil, false))
 	packages := &planTaskPackageReaderStub{packageValue: exact}
 	compiler, err := NewPlanTaskCompiler(packages, nil)
@@ -312,6 +315,9 @@ func TestIntegrationSavedPlanClaimAndTerminalResultUseCurrentAgentSession(t *tes
 		sessionEpoch = int64(9)
 		requestID    = "018f6f22-0d23-7b4a-a508-8f4c8abf16d1"
 	)
+	if err := db.Exec("INSERT INTO agent (id) VALUES (?)", agentID).Error; err != nil {
+		t.Fatal(err)
+	}
 	if err := db.Exec(
 		`INSERT INTO agent_runtime_status (agent_id, session_id, session_epoch) VALUES (?, ?, ?)`,
 		agentID, sessionID, sessionEpoch,

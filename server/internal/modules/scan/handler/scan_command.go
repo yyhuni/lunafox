@@ -221,6 +221,10 @@ func (h *ScanHandler) CreateQuick(c *gin.Context) {
 			httpdto.NotFound(c, "Selected Agent not found")
 			return
 		}
+		if errors.Is(err, service.ErrScanAgentLicenseRestricted) {
+			writeAgentLicenseRestricted(c)
+			return
+		}
 		if errors.Is(err, service.ErrScanEngineConfigInvalid) {
 			httpdto.Error(c, http.StatusBadRequest, "ENGINE_CONFIG_INVALID", "complete Engine configuration is invalid; reload the workflow Profile and review the configuration")
 			return
@@ -278,6 +282,10 @@ func (h *ScanHandler) BatchCreate(c *gin.Context) {
 		}
 		if errors.Is(err, service.ErrScanAgentNotFound) {
 			httpdto.NotFound(c, "Selected Agent not found")
+			return
+		}
+		if errors.Is(err, service.ErrScanAgentLicenseRestricted) {
+			writeAgentLicenseRestricted(c)
 			return
 		}
 		if errors.Is(err, service.ErrScanEngineConfigInvalid) {

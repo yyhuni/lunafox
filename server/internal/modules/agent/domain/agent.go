@@ -12,6 +12,7 @@ type Agent struct {
 	DisplayName              string
 	AuthenticationToken      string
 	Status                   string
+	ExecutionEligibility     string
 	ObservedHostname         string
 	ConnectionIP             string
 	ObservedSourceIP         string

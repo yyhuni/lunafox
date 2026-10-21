@@ -7,6 +7,7 @@ import (
 
 	"github.com/yyhuni/lunafox/server/internal/installedengines"
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
+	agentrepo "github.com/yyhuni/lunafox/server/internal/modules/agent/repository"
 	catalogapp "github.com/yyhuni/lunafox/server/internal/modules/catalog/application"
 	catalogrepo "github.com/yyhuni/lunafox/server/internal/modules/catalog/repository"
 	identityrepo "github.com/yyhuni/lunafox/server/internal/modules/identity/repository"
@@ -51,6 +52,14 @@ func NewScanTaskRuntimeScanStoreAdapter(repo *scanrepo.ScanRepository) scanapp.S
 
 type scanCreateAgentLookupAdapter struct{ repo agentdomain.AgentRepository }
 
+// NewScanAgentExecutionReaderAdapter projects Agent entitlement into Scan use-cases.
+func NewScanAgentExecutionReaderAdapter(licenses *agentrepo.AgentLicenseRepository) scanapp.ScanAgentExecutionReader {
+	if licenses == nil {
+		return nil
+	}
+	return newScanAgentExecutionReaderAdapter(licenses)
+}
+
 func NewScanCreateAgentLookupAdapter(repo agentdomain.AgentRepository) scanapp.ScanCreateAgentLookup {
 	return scanCreateAgentLookupAdapter{repo: repo}
 }
@@ -74,14 +83,18 @@ func NewScanApplicationService(
 	notifier scanapp.TaskCancelNotifier,
 	targetLookup scanapp.ScanCreateTargetLookup,
 	agentLookup scanapp.ScanCreateAgentLookup,
+	agentExecutionReader scanapp.ScanAgentExecutionReader,
 	workflowRepo *catalogrepo.ScanWorkflowRepository,
 	engineRegistrationRepo *catalogrepo.EngineRepository,
 	installedPackageQuery installedengines.Query,
 	configResources scanapp.ConfigResourceResolver,
 	runtimeLogs scanapp.TaskRuntimeLogAppender,
 ) (*scanapp.ScanFacade, error) {
+	if agentExecutionReader == nil {
+		return nil, fmt.Errorf("scan Agent execution reader is required")
+	}
 	commandService := scanapp.NewScanCommandService(domainRepository, nil)
-	queryService := scanapp.NewScanQueryService(queryStore)
+	queryService := scanapp.NewScanQueryService(queryStore, agentExecutionReader)
 	lifecycleService := scanapp.NewLifecycleService(commandStore, stopStore, notifier).WithTaskRuntimeLogAppender(runtimeLogs)
 
 	var lookupFn scanapp.TargetLookupFunc
@@ -94,7 +107,8 @@ func NewScanApplicationService(
 	}
 	createService := scanapp.NewScanCreateService(commandStore, lookupFn, quickTargetEnsurer, newScanCreateWorkflowReader(workflowRepo), newScanCreateEnginePackageReader(installedPackageQuery), organizationTargets).
 		WithEngineRegistrationReader(newScanCreateEngineRegistrationReader(engineRegistrationRepo)).
-		WithAgentLookup(agentLookup)
+		WithAgentLookup(agentLookup).
+		WithAgentExecutionReader(agentExecutionReader)
 	compiler, err := newPlanTaskCompiler(installedPackageQuery, configResources)
 	if err != nil {
 		return nil, err

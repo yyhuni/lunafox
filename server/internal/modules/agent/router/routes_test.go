@@ -2,8 +2,10 @@ package router
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -42,6 +44,7 @@ func TestAgentFixedViewRoutesAreExactAndProtected(t *testing.T) {
 		&agenthandler.AgentLogHandler{},
 		agenthandler.NewAgentClusterSummaryHandler(agentClusterSummaryRouteServiceStub{}),
 		agenthandler.NewAgentLocationMapHandler(agentLocationMapRouteServiceStub{}),
+		agenthandler.NewAgentLicenseHandler(&agentLicenseRouteServiceStub{}),
 	)
 
 	for _, path := range []string{
@@ -87,6 +90,7 @@ func TestRegistrationTokenRoutesUseCanonicalResourceAndHardCutNestedCreation(t *
 		&agenthandler.AgentLogHandler{},
 		agenthandler.NewAgentClusterSummaryHandler(agentClusterSummaryRouteServiceStub{}),
 		agenthandler.NewAgentLocationMapHandler(agentLocationMapRouteServiceStub{}),
+		agenthandler.NewAgentLicenseHandler(&agentLicenseRouteServiceStub{}),
 	)
 
 	routes := make(map[string]bool)
@@ -127,4 +131,70 @@ type agentLocationMapRouteServiceStub struct{}
 
 func (agentLocationMapRouteServiceStub) Current(context.Context) (agentapp.AgentLocationMap, error) {
 	return agentapp.AgentLocationMap{GeneratedAt: time.Now().UTC(), Agents: []agentapp.AgentLocationMapAgent{}}, nil
+}
+
+type agentLicenseRouteServiceStub struct{ calls int }
+
+func (service *agentLicenseRouteServiceStub) Activate(context.Context, string) (agentapp.AgentLicense, error) {
+	service.calls++
+	months, expiresAt, licenseID := 1, time.Now().UTC().AddDate(0, 1, 0), "route-license"
+	return agentapp.AgentLicense{State: "active", AgentLimit: 10, Months: &months, ExpiresAt: &expiresAt, LicenseID: &licenseID}, nil
+}
+
+func TestAgentLicenseActivationOnlyAcceptsAuthenticatedFixedAliasAction(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	api := router.Group("/v1")
+	protected := api.Group("")
+	protected.Use(func(c *gin.Context) {
+		if c.GetHeader("Authorization") != "Bearer test" {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		c.Next()
+	})
+	service := &agentLicenseRouteServiceStub{}
+	RegisterAgentRoutes(api, protected, &agenthandler.AgentHandler{}, &agenthandler.AgentLogHandler{},
+		agenthandler.NewAgentClusterSummaryHandler(agentClusterSummaryRouteServiceStub{}),
+		agenthandler.NewAgentLocationMapHandler(agentLocationMapRouteServiceStub{}),
+		agenthandler.NewAgentLicenseHandler(service))
+
+	for _, test := range []struct {
+		path       string
+		authorized bool
+		status     int
+	}{
+		{"/v1/admin/agentLicenses/current:activate", false, http.StatusUnauthorized},
+		{"/v1/admin/agentLicenses/current:activate", true, http.StatusOK},
+		{"/v1/admin/agentLicenses/current", true, http.StatusNotFound},
+		{"/v1/admin/agentLicenses/current:revoke", true, http.StatusNotFound},
+		{"/v1/admin/agentLicenses/other:activate", true, http.StatusNotFound},
+	} {
+		request := httptest.NewRequest(http.MethodPost, test.path, strings.NewReader(`{"key":"test"}`))
+		request.Header.Set("Content-Type", "application/json")
+		if test.authorized {
+			request.Header.Set("Authorization", "Bearer test")
+		}
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, request)
+		if recorder.Code != test.status {
+			t.Fatalf("%s authorized=%v status=%d body=%s", test.path, test.authorized, recorder.Code, recorder.Body.String())
+		}
+		if test.status == http.StatusOK {
+			var resource struct {
+				Name       string `json:"name"`
+				State      string `json:"state"`
+				AgentLimit int    `json:"agentLimit"`
+			}
+			if err := json.Unmarshal(recorder.Body.Bytes(), &resource); err != nil {
+				t.Fatal(err)
+			}
+			if resource.Name != "agentLicenses/current" || resource.State != "active" || resource.AgentLimit != 10 {
+				t.Fatalf("unexpected resource %#v", resource)
+			}
+		}
+	}
+	if service.calls != 1 {
+		t.Fatalf("activation service called %d times, want 1", service.calls)
+	}
 }

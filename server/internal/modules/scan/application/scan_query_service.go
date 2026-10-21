@@ -4,10 +4,13 @@ import (
 	"context"
 )
 
-type ScanQueryService struct{ store ScanQueryStore }
+type ScanQueryService struct {
+	store                ScanQueryStore
+	agentExecutionReader ScanAgentExecutionReader
+}
 
-func NewScanQueryService(store ScanQueryStore) *ScanQueryService {
-	return &ScanQueryService{store: store}
+func NewScanQueryService(store ScanQueryStore, agentExecutionReader ScanAgentExecutionReader) *ScanQueryService {
+	return &ScanQueryService{store: store, agentExecutionReader: agentExecutionReader}
 }
 
 func (service *ScanQueryService) ListScans(ctx context.Context, filter ScanListFilter) ([]QueryScan, int64, error) {
@@ -32,13 +35,46 @@ func (service *ScanQueryService) ListScans(ctx context.Context, filter ScanListF
 }
 
 func (service *ScanQueryService) GetScanByID(ctx context.Context, id int) (*QueryScan, error) {
+	var scan *QueryScan
+	var err error
 	if store, ok := service.store.(ScanQueryStoreContext); ok {
-		return store.GetDetailByIDContext(ctx, id)
+		scan, err = store.GetDetailByIDContext(ctx, id)
+	} else {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		scan, err = service.store.GetDetailByID(id)
 	}
-	if err := ctx.Err(); err != nil {
+	if err != nil || scan == nil {
+		return scan, err
+	}
+	// This is a current read projection, never a persisted failure or a rebind.
+	// Running work remains valid; only unclaimed executable work is waiting.
+	scan.ExecutionBlockedReason = nil
+	if scan.AgentID == nil || scan.AgentDeleted || !hasUnclaimedExecutableTask(scan) {
+		return scan, nil
+	}
+	eligibility, err := readAgentExecutionEligibility(ctx, service.agentExecutionReader, *scan.AgentID)
+	if err != nil {
 		return nil, err
 	}
-	return service.store.GetDetailByID(id)
+	if eligibility == agentExecutionLicenseRestricted {
+		reason := ExecutionBlockedReasonAgentLicenseRestricted
+		scan.ExecutionBlockedReason = &reason
+	}
+	return scan, nil
+}
+
+func hasUnclaimedExecutableTask(scan *QueryScan) bool {
+	if scan.Status != "pending" && scan.Status != "running" {
+		return false
+	}
+	for _, task := range scan.RuntimeTasks {
+		if task.HasResolvedExecutionPlan && (task.Status == "pending" || task.Status == "blocked") {
+			return true
+		}
+	}
+	return false
 }
 
 func (service *ScanQueryService) GetGlobalStatsSummary(ctx context.Context) (*QueryStatistics, error) {

@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
 
 	enginecontract "github.com/yyhuni/lunafox/engines/directory_scan/contract"
 )
@@ -12,13 +15,15 @@ import (
 // ports. Agent terminal reporting remains the sole owner of Task state.
 type Runtime struct {
 	aggregation directoryAggregationOptions
+	// wafPrescanFactory is injectable for tests; nil uses the real HTTP probe.
+	wafPrescanFactory func(enginecontract.FfufConfig) (wafPrescanner, error)
 }
 
 func New() *Runtime {
 	return &Runtime{}
 }
 
-func (runtime *Runtime) Execute(ctx context.Context, execution *enginecontract.Execution) error {
+func (runtime *Runtime) Execute(ctx context.Context, execution *enginecontract.Execution) (err error) {
 	if runtime == nil {
 		return errors.New("Directory runtime is required")
 	}
@@ -43,6 +48,60 @@ func (runtime *Runtime) Execute(ctx context.Context, execution *enginecontract.E
 	if _, err := requireDirectoryWorkspace(execution.Workspace); err != nil {
 		return err
 	}
+	ffufConfig := execution.Config.Ffuf
+	options := runtime.aggregation
+	if ffufConfig.TargetVariants {
+		wordlistDir := filepath.Join(execution.Workspace, directoryWordlistSubdir)
+		if err := os.RemoveAll(wordlistDir); err != nil {
+			return fmt.Errorf("reset candidate wordlist directory: %w", err)
+		}
+		if err := os.MkdirAll(wordlistDir, 0o700); err != nil {
+			return fmt.Errorf("create candidate wordlist directory: %w", err)
+		}
+		defer func() {
+			if cleanupErr := os.RemoveAll(wordlistDir); cleanupErr != nil {
+				cleanupErr = fmt.Errorf("remove candidate wordlist directory: %w", cleanupErr)
+				if err == nil {
+					err = cleanupErr
+				} else {
+					err = errors.Join(err, cleanupErr)
+				}
+			}
+		}()
+		sourceWordlist := ffufConfig.Wordlist
+		options.scheduler.prepareWordlist = func(
+			prepareCtx context.Context,
+			candidate WebsiteCandidate,
+		) (string, func() error, error) {
+			path, prepareErr := prepareCandidateWordlist(
+				prepareCtx,
+				sourceWordlist,
+				candidate.Website,
+				execution.Workspace,
+				candidate.Ordinal,
+			)
+			if prepareErr != nil {
+				return "", nil, prepareErr
+			}
+			return path, func() error { return os.Remove(path) }, nil
+		}
+	} else {
+		normalizedWordlist, err := prepareNormalizedWordlist(ctx, execution.Config.Ffuf.Wordlist, execution.Workspace)
+		if err != nil {
+			return fmt.Errorf("prepare normalized Directory wordlist: %w", err)
+		}
+		defer func() {
+			if cleanupErr := normalizedWordlist.Cleanup(); cleanupErr != nil {
+				cleanupErr = fmt.Errorf("remove normalized Directory wordlist: %w", cleanupErr)
+				if err == nil {
+					err = cleanupErr
+				} else {
+					err = errors.Join(err, cleanupErr)
+				}
+			}
+		}()
+		ffufConfig.Wordlist = normalizedWordlist.path
+	}
 	if execution.Input.WebsiteURLs == nil {
 		return errors.New("typed WebsiteURLs input handle is required")
 	}
@@ -60,7 +119,21 @@ func (runtime *Runtime) Execute(ctx context.Context, execution *enginecontract.E
 		return directoryProgressError(ctx, "input_ready", err)
 	}
 
-	options := runtime.aggregation
+	if ffufConfig.WafSmartSkip {
+		factory := runtime.wafPrescanFactory
+		if factory == nil {
+			factory = func(config enginecontract.FfufConfig) (wafPrescanner, error) {
+				return newWAFPrescan(config)
+			}
+		}
+		prescan, prescanErr := factory(ffufConfig)
+		if prescanErr != nil {
+			return fmt.Errorf("prepare Directory WAF pre-scan: %w", prescanErr)
+		}
+		options.scheduler.skipCandidate = func(prescanCtx context.Context, candidate WebsiteCandidate) (bool, string, error) {
+			return prescan.Blocked(prescanCtx, candidate.Website)
+		}
+	}
 	options.beforeScheduling = func(reportCtx context.Context) error {
 		if err := execution.Progress.Report(reportCtx, fmt.Sprintf("scan_started websiteCandidates=%d", websiteCandidates)); err != nil {
 			return directoryProgressError(reportCtx, "scan_started", err)
@@ -70,7 +143,7 @@ func (runtime *Runtime) Execute(ctx context.Context, execution *enginecontract.E
 	summary, aggregationErr := scanDeduplicateAndSubmitDirectories(
 		ctx,
 		plan,
-		execution.Config.Ffuf,
+		ffufConfig,
 		execution.Workspace,
 		execution.Results.Directories,
 		options,
@@ -94,6 +167,16 @@ func (runtime *Runtime) Execute(ctx context.Context, execution *enginecontract.E
 	}
 	if err := validateDirectoryCompletionSummary(websiteCandidates, summary); err != nil {
 		return err
+	}
+	if summary.Websites.WAFSkippedWebsites > 0 {
+		log.Printf("directory waf pre-scan skipped websites=%d", summary.Websites.WAFSkippedWebsites)
+	}
+	if summary.Records.FilteredItems() > 0 {
+		log.Printf(
+			"directory result denoise filtered auth_redirect=%d backup_html=%d",
+			summary.Records.FilteredAuthRedirect,
+			summary.Records.FilteredBackupHTML,
+		)
 	}
 
 	message := fmt.Sprintf(

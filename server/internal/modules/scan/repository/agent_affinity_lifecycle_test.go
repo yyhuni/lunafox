@@ -20,7 +20,7 @@ func TestDeleteAgentTerminalizesNotStartedPinnedTasks(t *testing.T) {
 		}
 	}
 
-	if err := (&ScanRepository{db: db}).DeleteAgent(context.Background(), 42); err != nil {
+	if err := NewScanRepository(db).WithAgentExecutionGuard(savedPlanTestExecutionGuard(t, db)).DeleteAgent(context.Background(), 42); err != nil {
 		t.Fatalf("DeleteAgent returned error: %v", err)
 	}
 	assertPersistedUnavailableEngineDiagnostics(t, db, 1)

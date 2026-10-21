@@ -91,6 +91,16 @@ export function AboutDialogVersionInfo({
   const releaseTag = candidate && (candidate.releaseVersion.startsWith("v") ? candidate.releaseVersion : `v${candidate.releaseVersion}`)
   const releaseHref = candidate && `${githubRepo.replace(/\/+$/, "")}/releases/tag/${encodeURIComponent(releaseTag ?? "")}`
   const frontendOnly = isFrontendOnlyUpgrade(operation.data)
+  // canStartUpgrade mirrors the Server's eligibility verdict. A candidate the
+  // Server refuses must not be described with the normal confirmation copy:
+  // releases declaring a database migration stay ineligible until the migration
+  // policy opens data-retaining upgrades.
+  const upgradeBlocked = Boolean(candidate && hasUpdate && !canStartUpgrade)
+  const upgradeHint = !candidate
+    ? null
+    : candidate.databaseMigration.hasDatabaseMigration
+      ? (upgradeBlocked ? t("migrationManualUpgradeHint") : t("migrationRiskHint"))
+      : (upgradeBlocked ? t("upgradeUnavailableHint") : t("upgradeRiskHint"))
   return (
     <div className="space-y-3 rounded-lg border px-4 py-3">
       <div className="flex items-center justify-between gap-4">
@@ -158,7 +168,7 @@ export function AboutDialogVersionInfo({
       {candidate && hasUpdate && !operation.isActive && (
         <Alert>
           <semanticIcons.status.warning className="h-4 w-4" />
-          <AlertDescription>{candidate.databaseMigration.hasDatabaseMigration ? t("migrationRiskHint") : t("upgradeRiskHint")}</AlertDescription>
+          <AlertDescription>{upgradeHint}</AlertDescription>
         </Alert>
       )}
 

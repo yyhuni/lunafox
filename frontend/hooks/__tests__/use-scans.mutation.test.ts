@@ -435,4 +435,16 @@ describe("use-scans mutation", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: scanKeys.all })
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: scanKeys.statistics() })
   })
+  it("explains a pinned Agent license failure using the same pending toast identity", async () => {
+    scanServiceMocks.initiateScan.mockRejectedValue({ response: { data: { error: {
+      code: 400, status: "FAILED_PRECONDITION", details: [{ "@type": "type.googleapis.com/google.rpc.ErrorInfo", domain: "lunafox", reason: "AGENT_LICENSE_RESTRICTED" }],
+    } } } })
+    const { result } = renderHookWithProviders(() => useInitiateScan())
+    await act(async () => {
+      await expect(result.current.mutateAsync({ targetId: 1, agentId: 4, configuration: "name: default", scanWorkflow: "default", inputSource: "scanSnapshot" })).rejects.toBeDefined()
+    })
+    expect(toastMocks.errorFromCode).toHaveBeenCalledWith("AGENT_LICENSE_RESTRICTED", "toast.scan.initiate.error", "initiate-scan-1")
+    expect(toastMocks.success).not.toHaveBeenCalled()
+  })
+
 })

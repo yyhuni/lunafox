@@ -257,6 +257,7 @@ export function RuntimeHeader({
 
   return (
     <section className="rounded-lg border border-border/60 bg-card px-4 py-4">
+      {scan.executionBlockedReason === "agent_license_restricted" && <p role="status" className={cn("mb-3 text-warning", textRole.bodySubtle)}>{t("runtimeDrawer.licenseRestricted")}</p>}
       <div className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className={cn("break-all", textRole.panelTitle)}>

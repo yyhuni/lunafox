@@ -30,11 +30,11 @@ func (service *ScanCreateService) CreateQuick(ctx context.Context, input *Create
 	if len(input.Targets) == 0 {
 		return nil, ErrNoTargetsForScan
 	}
-	plan, err := service.prepareScanCreatePlan(ctx, input.ScanWorkflow, input.Configuration)
-	if err != nil {
+	if err := service.validateSelectedAgent(ctx, input.AgentID); err != nil {
 		return nil, err
 	}
-	if err := service.validateSelectedAgent(ctx, input.AgentID); err != nil {
+	plan, err := service.prepareScanCreatePlan(ctx, input.ScanWorkflow, input.Configuration)
+	if err != nil {
 		return nil, err
 	}
 
@@ -78,11 +78,11 @@ func (service *ScanCreateService) CreateBatch(ctx context.Context, input *Create
 	if len(input.Requests) == 0 {
 		return nil, ErrNoTargetsForScan
 	}
-	plan, err := service.prepareScanCreatePlan(ctx, input.ScanWorkflow, input.Configuration)
-	if err != nil {
+	if err := service.validateSelectedAgent(ctx, input.AgentID); err != nil {
 		return nil, err
 	}
-	if err := service.validateSelectedAgent(ctx, input.AgentID); err != nil {
+	plan, err := service.prepareScanCreatePlan(ctx, input.ScanWorkflow, input.Configuration)
+	if err != nil {
 		return nil, err
 	}
 	if service.targetLookup == nil {

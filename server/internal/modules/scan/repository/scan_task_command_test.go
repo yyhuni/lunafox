@@ -98,7 +98,7 @@ func TestScanTaskRepositoryRuntimeProjectionExposesSavedPlanPresence(t *testing.
 		t.Fatalf("insert runtime projection fixtures failed: %v", err)
 	}
 
-	repo := NewScanTaskRepository(db)
+	repo := NewScanTaskRepository(db, nil)
 	planned, err := repo.GetByID(context.Background(), 10000)
 	if err != nil {
 		t.Fatalf("GetByID planned task failed: %v", err)
@@ -128,7 +128,7 @@ func TestScanTaskRepositoryCountsSkippedTasksSeparately(t *testing.T) {
 	`).Error; err != nil {
 		t.Fatalf("insert scan task count fixture failed: %v", err)
 	}
-	repo := NewScanTaskRepository(db)
+	repo := NewScanTaskRepository(db, nil)
 
 	pending, running, completed, failed, cancelled, skipped, err := repo.CountByStatusForScanID(context.Background(), 10)
 	if err != nil {
@@ -153,7 +153,7 @@ func TestScanTaskRepositorySkipUnstartedTasksByScanIDSkipsOnlyPendingAndBlocked(
 	`).Error; err != nil {
 		t.Fatalf("insert skip unstarted fixture failed: %v", err)
 	}
-	repo := NewScanTaskRepository(db)
+	repo := NewScanTaskRepository(db, nil)
 
 	affected, err := repo.SkipUnstartedTasksByScanID(context.Background(), 10, "upstream task failed")
 	if err != nil {
@@ -211,7 +211,7 @@ func TestScanTaskRepositoryCancelUnstartedTasksByScanIDCancelsOnlyPendingAndBloc
 	`).Error; err != nil {
 		t.Fatalf("insert cancel unstarted fixture failed: %v", err)
 	}
-	repo := NewScanTaskRepository(db)
+	repo := NewScanTaskRepository(db, nil)
 
 	affected, err := repo.CancelUnstartedTasksByScanID(context.Background(), 10)
 	if err != nil {
@@ -264,7 +264,7 @@ func TestScanTaskRepositoryUnlockNextStageOrderSkipsTerminalOnlyStages(t *testin
 	`).Error; err != nil {
 		t.Fatalf("insert staged unlock fixture failed: %v", err)
 	}
-	repo := NewScanTaskRepository(db)
+	repo := NewScanTaskRepository(db, nil)
 
 	affected, err := repo.UnlockNextStageOrder(context.Background(), 10, 1)
 	if err != nil {
@@ -303,7 +303,7 @@ func TestScanTaskRepositoryUnlockNextStageOrderDoesNotSkipFailedStages(t *testin
 	`).Error; err != nil {
 		t.Fatalf("insert failed-stage unlock fixture failed: %v", err)
 	}
-	repo := NewScanTaskRepository(db)
+	repo := NewScanTaskRepository(db, nil)
 
 	affected, err := repo.UnlockNextStageOrder(context.Background(), 10, 1)
 	if err != nil {
@@ -335,7 +335,7 @@ func TestScanTaskRepositoryUnlockNextStageOrderIsIdempotent(t *testing.T) {
 	`).Error; err != nil {
 		t.Fatalf("insert staged unlock fixture failed: %v", err)
 	}
-	repo := NewScanTaskRepository(db)
+	repo := NewScanTaskRepository(db, nil)
 
 	affected, err := repo.UnlockNextStageOrder(context.Background(), 10, 1)
 	if err != nil {
@@ -392,7 +392,7 @@ func TestScanTaskRepositoryListsAndClearsPendingTerminalReconciliation(t *testin
 	`).Error; err != nil {
 		t.Fatalf("insert pending reconciliation tasks: %v", err)
 	}
-	repo := NewScanTaskRepository(db)
+	repo := NewScanTaskRepository(db, nil)
 	tasks, err := repo.ListTerminalTasksPendingReconciliation(context.Background(), 0, 1)
 	if err != nil || len(tasks) != 1 || tasks[0].ID != 10000 {
 		t.Fatalf("first reconciliation batch = %#v, %v", tasks, err)
@@ -441,7 +441,7 @@ func TestScanTaskRepositorySupersededSessionReconciliationScopePrecedesBatchLimi
 		t.Fatalf("insert scoped marker: %v", err)
 	}
 
-	repo := NewScanTaskRepository(db)
+	repo := NewScanTaskRepository(db, nil)
 	tasks, err := repo.ListSupersededSessionTerminalTasksPendingReconciliation(context.Background(), 77, 2, batchSize)
 	if err != nil || len(tasks) != 1 || tasks[0].ID != scopedTaskID {
 		t.Fatalf("scoped reconciliation batch = %#v, %v", tasks, err)
@@ -463,7 +463,7 @@ func TestScanTaskRepositoryTerminalSessionCASChecksCurrentAndAssignedFullTuple(t
 	if err := db.Exec(`UPDATE scan_task SET status = ?, assigned_agent_id = 77, assigned_session_id = 'session-a', assigned_session_epoch = 9 WHERE id = 10000`, taskStatusRunning).Error; err != nil {
 		t.Fatalf("assign task lease: %v", err)
 	}
-	repo := NewScanTaskRepository(db)
+	repo := NewScanTaskRepository(db, nil)
 
 	committed, err := repo.CommitScanTaskTerminalStatusForSession(context.Background(), 10000, 77, "session-other", 9, taskStatusSucceeded, nil)
 	if err != nil || committed {
@@ -499,7 +499,7 @@ func TestScanTaskRepositorySupersededSessionFenceReplaysUnreconciledScan(t *test
 	`, taskStatusRunning).Error; err != nil {
 		t.Fatalf("assign task lease: %v", err)
 	}
-	repo := NewScanTaskRepository(db)
+	repo := NewScanTaskRepository(db, nil)
 
 	first, err := repo.FailTasksForSupersededAgentSession(context.Background(), 77, 10)
 	if err != nil || len(first) != 1 || first[0] != 10 {

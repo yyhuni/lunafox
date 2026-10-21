@@ -11,6 +11,7 @@ function makeAgent(overrides: Partial<Agent>): Agent {
     id: 1,
     name: "agent-01",
     status: "online",
+    executionEligibility: "eligible",
     maxTasks: 4,
     cpuThreshold: 80,
     memThreshold: 80,

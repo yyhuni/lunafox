@@ -7,6 +7,7 @@ function makeAgent(overrides: Partial<Agent> = {}): Agent {
     id: 1,
     name: "agent-01",
     status: "online",
+    executionEligibility: "eligible",
     maxTasks: 4,
     cpuThreshold: 80,
     memThreshold: 80,
@@ -51,4 +52,10 @@ describe("agent execution capacity", () => {
       unavailableSlots: 7,
     })
   })
+  it("moves only restricted idle slots to unavailable while claimed work remains occupied", () => {
+    expect(buildAgentExecutionCapacity([makeAgent({ executionEligibility: "license_restricted" })])).toEqual({
+      totalSlots: 4, occupiedSlots: 2, availableSlots: 0, unavailableSlots: 2,
+    })
+  })
+
 })

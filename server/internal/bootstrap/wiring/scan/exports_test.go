@@ -46,7 +46,7 @@ func TestNewPlanTaskCompilerFailsFastWhenProductionDependencyIsMissing(t *testin
 }
 
 func TestNewScanTaskStoreAdapterRetainsDiagnosticTerminalCapability(t *testing.T) {
-	store := NewScanTaskStoreAdapter(scanrepo.NewScanTaskRepository(nil))
+	store := NewScanTaskStoreAdapter(scanrepo.NewScanTaskRepository(nil, nil))
 	if _, ok := store.(scanapp.EngineDiagnosticTerminalTaskStore); !ok {
 		t.Fatal("scan task store adapter dropped the required diagnostic terminal capability")
 	}
@@ -58,5 +58,14 @@ func TestNewConfigResourceValidationComponentsRejectsIncompleteAssembly(t *testi
 	}
 	if _, _, err := NewConfigResourceValidationComponents(&installedPackageQueryStub{}, nil); err == nil || !strings.Contains(err.Error(), "wordlist catalog") {
 		t.Fatalf("missing wordlist Catalog error = %v", err)
+	}
+}
+
+func TestNewScanApplicationServiceRequiresAgentExecutionReader(t *testing.T) {
+	if _, err := NewScanApplicationService(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil); err == nil || !strings.Contains(err.Error(), "Agent execution reader") {
+		t.Fatalf("missing entitlement dependency = %v", err)
+	}
+	if NewScanAgentExecutionReaderAdapter(nil) != nil {
+		t.Fatal("missing license repository produced an apparently usable adapter")
 	}
 }

@@ -1,3 +1,4 @@
+import { getMockAgentLicense } from '@/mock/data/agent-license'
 import type {
   Agent,
   AgentFilterOptionField,
@@ -15,6 +16,7 @@ export const mockAgents: Agent[] = [
     displayName: 'edge-01',
     observedHostname: 'edge-01',
     status: 'online',
+    executionEligibility: 'eligible',
     connectionIp: '172.20.0.5',
     agentVersion: '0.8.2',
     maxTasks: 5,
@@ -43,6 +45,7 @@ export const mockAgents: Agent[] = [
     displayName: 'lab-02',
     observedHostname: 'lab-02',
     status: 'online',
+    executionEligibility: 'eligible',
     connectionIp: '8.8.8.8',
     agentVersion: '0.8.1',
     maxTasks: 8,
@@ -71,6 +74,7 @@ export const mockAgents: Agent[] = [
     displayName: 'remote-03',
     observedHostname: 'remote-03',
     status: 'offline',
+    executionEligibility: 'eligible',
     agentVersion: '0.8.0',
     maxTasks: 4,
     cpuThreshold: 90,
@@ -98,6 +102,7 @@ export const mockAgents: Agent[] = [
     displayName: 'prod-04',
     observedHostname: 'prod-04',
     status: 'online',
+    executionEligibility: 'eligible',
     connectionIp: '208.67.222.222',
     agentVersion: '0.8.2',
     maxTasks: 10,
@@ -126,6 +131,7 @@ export const mockAgents: Agent[] = [
     displayName: 'dev-05',
     observedHostname: 'dev-05',
     status: 'online',
+    executionEligibility: 'eligible',
     connectionIp: '1.0.0.1',
     agentVersion: '0.8.2',
     maxTasks: 6,
@@ -154,6 +160,7 @@ export const mockAgents: Agent[] = [
     displayName: 'test-06',
     observedHostname: 'test-06',
     status: 'online',
+    executionEligibility: 'eligible',
     connectionIp: '8.8.4.4',
     agentVersion: '0.8.1',
     maxTasks: 5,
@@ -182,6 +189,7 @@ export const mockAgents: Agent[] = [
     displayName: 'backup-07',
     observedHostname: 'backup-07',
     status: 'online',
+    executionEligibility: 'eligible',
     connectionIp: '149.112.112.112',
     agentVersion: '0.8.2',
     maxTasks: 8,
@@ -210,6 +218,7 @@ export const mockAgents: Agent[] = [
     displayName: 'cloud-08',
     observedHostname: 'cloud-08',
     status: 'online',
+    executionEligibility: 'eligible',
     connectionIp: '208.67.220.220',
     agentVersion: '0.8.2',
     maxTasks: 12,
@@ -238,6 +247,7 @@ export const mockAgents: Agent[] = [
     displayName: 'staging-09',
     observedHostname: 'staging-09',
     status: 'offline',
+    executionEligibility: 'eligible',
     agentVersion: '0.8.0',
     maxTasks: 5,
     cpuThreshold: 90,
@@ -265,6 +275,7 @@ export const mockAgents: Agent[] = [
     displayName: 'monitor-10',
     observedHostname: 'monitor-10',
     status: 'online',
+    executionEligibility: 'eligible',
     agentVersion: '0.8.2',
     maxTasks: 7,
     cpuThreshold: 85,
@@ -365,30 +376,65 @@ const mockAgentLocationsById: Partial<Record<number, AgentLocationMapLocation>> 
   },
 }
 
+// Rank the complete registry before filtering or paging; offline identities retain their place.
+function projectedMockAgents(): Agent[] {
+  const limit = getMockAgentLicense().agentLimit
+  const eligible = new Set(sortMockAgents(mockAgents, "createdAt asc").slice(0, limit).map((agent) => agent.id))
+  return mockAgents.map((agent) => ({
+    ...agent,
+    executionEligibility: eligible.has(agent.id) ? 'eligible' : 'license_restricted',
+  }))
+}
+
 export function getMockAgentClusterSummary() {
+  const license = getMockAgentLicense()
+  const agents = projectedMockAgents()
+  let configuredSlots = 0
+  let occupiedSlots = 0
+  let availableSlots = 0
+  let unavailableSlots = 0
+  let overcommittedSlots = 0
+  let healthyCount = 0
+  let warningCount = 0
+  let offlineCount = 0
+  let unknownCount = 0
+  for (const agent of agents) {
+    configuredSlots += agent.maxTasks
+    const used = agent.status === 'online' ? agent.heartbeat?.taskSlotsUsed ?? 0 : 0
+    occupiedSlots += Math.min(used, agent.maxTasks)
+    overcommittedSlots += Math.max(used - agent.maxTasks, 0)
+    const idle = Math.max(agent.maxTasks - used, 0)
+    const healthy = agent.status === 'online' && agent.health.state === 'healthy'
+    if (healthy) healthyCount++
+    else if (agent.status === 'online') warningCount++
+    else if (agent.status === 'offline') offlineCount++
+    else unknownCount++
+    if (healthy && agent.executionEligibility === 'eligible') availableSlots += idle
+    else unavailableSlots += idle
+  }
+  const reasonCodes = [
+    ...(!agents.length ? ['no_agents'] : []),
+    ...(agents.length && !availableSlots ? ['no_available_slots'] : []),
+    ...(offlineCount ? ['offline_agents'] : []),
+    ...(warningCount ? ['warning_agents'] : []),
+    ...(unknownCount ? ['unknown_agents'] : []),
+    ...(overcommittedSlots ? ['overcommitted_slots'] : []),
+  ]
   return {
     name: 'agentClusterSummaries/current',
-    generatedAt: MOCK_AGENT_OPERATIONAL_GENERATED_AT,
+    generatedAt: new Date().toISOString(),
     executionFreshnessSeconds: 15,
-    agentLimit: 3,
-    totalNodes: 10,
-    healthyCount: 6,
-    warningCount: 2,
-    offlineCount: 2,
-    unknownCount: 0,
+    agentLimit: license.agentLimit,
+    license,
+    totalNodes: agents.length,
+    healthyCount, warningCount, offlineCount, unknownCount,
     staleAgentCount: 0,
-    executionCapacity: {
-      configuredSlots: 70,
-      occupiedSlots: 21,
-      availableSlots: 27,
-      unavailableSlots: 22,
-      overcommittedSlots: 0,
-    },
-    clusterState: 'needsAttention',
-    reasonCodes: ['offline_agents', 'warning_agents'],
+    executionCapacity: { configuredSlots, occupiedSlots, availableSlots, unavailableSlots, overcommittedSlots },
+    clusterState: !agents.length ? 'empty' : !availableSlots ? 'critical' : reasonCodes.length ? 'needsAttention' : 'healthy',
+    reasonCodes,
     locationCoverage: {
-      positionedCount: 8,
-      unpositionedCount: 2,
+      positionedCount: agents.filter((agent) => mockAgentLocationsById[agent.id]).length,
+      unpositionedCount: agents.filter((agent) => !mockAgentLocationsById[agent.id]).length,
     },
   }
 }
@@ -475,7 +521,7 @@ function sortMockAgents(agents: Agent[], orderBy: string | undefined) {
 export function getMockAgents(params: AgentListQueryParams = {}): AgentsResponse {
   const pageSize = params.pageSize ?? 10
   const page = parseMockAgentPageToken(params.pageToken)
-  const filtered = sortMockAgents(mockAgents.filter((agent) => matchesAgentFilter(agent, params.filter)), params.orderBy)
+  const filtered = sortMockAgents(projectedMockAgents().filter((agent) => matchesAgentFilter(agent, params.filter)), params.orderBy)
   const total = filtered.length
   const totalPages = Math.ceil(total / pageSize) || 1
   const start = (page - 1) * pageSize
@@ -510,7 +556,7 @@ export function getMockAgentFilterOptions(field: AgentFilterOptionField): AgentF
 }
 
 export function getMockAgentById(id: number) {
-  const agent = mockAgents.find((candidate) => candidate.id === id)
+  const agent = projectedMockAgents().find((candidate) => candidate.id === id)
   if (!agent) {
     return undefined
   }
@@ -559,6 +605,6 @@ export function getMockRegistrationTokenById(id: number) {
     name: MOCK_REGISTRATION_TOKEN_NAME,
     expiresAt: '2099-08-04T08:00:00Z',
     state: 'active',
-    agents: mockAgents.slice(0, 2),
+    agents: projectedMockAgents().slice(0, 2),
   }
 }

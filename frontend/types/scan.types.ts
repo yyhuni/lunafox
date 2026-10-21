@@ -117,6 +117,7 @@ export interface ScanRecord {
   agentStatus?: string
   agentHealthState?: string
   assignmentMode?: "automatic" | "pinned"
+  executionBlockedReason?: null | "agent_license_restricted"
   agentDeleted?: boolean
   runtimeTasks?: RuntimeTask[]
 }

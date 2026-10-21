@@ -1,5 +1,23 @@
 import type { ScanRecord, StageStatus } from "@/types/scan.types"
-import type { ScanProgressData, StageDetail } from "@/components/scan/scan-progress-dialog-types"
+import type { ScanProgressData, ScanProgressFailureGuidance, StageDetail } from "@/components/scan/scan-progress-dialog-types"
+
+/**
+ * Stable failure kind emitted when the Nuclei template artifact cannot be
+ * prepared because the enabled POC catalog is empty. The Agent also reuses this
+ * kind for transport-level template-exchange failures, so guidance keyed on it
+ * must describe the common POC cause without asserting it as certain.
+ */
+export const NUCLEI_POC_FAILURE_KIND = "no_enabled_templates"
+
+/** Canonical operator entry point for syncing and enabling Nuclei POCs. */
+export const NUCLEI_POC_MANAGEMENT_HREF = "/tools/nuclei/"
+
+export function buildNucleiPocFailureGuidance(
+  failureKind?: string | null
+): ScanProgressFailureGuidance | null {
+  if (failureKind !== NUCLEI_POC_FAILURE_KIND) return null
+  return { kind: NUCLEI_POC_FAILURE_KIND, targetHref: NUCLEI_POC_MANAGEMENT_HREF }
+}
 
 export function formatDuration(seconds?: number): string | undefined {
   if (seconds === undefined || seconds === null) return undefined
@@ -102,6 +120,8 @@ export function buildScanProgressData(scan: ScanRecord): ScanProgressData {
     currentStage: scan.currentStage,
     startedAt: scan.createdAt,
     errorMessage: scan.failure?.message || scan.errorMessage,
+    failureKind: scan.failure?.kind,
+    failureGuidance: buildNucleiPocFailureGuidance(scan.failure?.kind),
     stages,
   }
 }

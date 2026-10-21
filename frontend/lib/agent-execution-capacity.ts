@@ -28,7 +28,9 @@ export function buildAgentExecutionCapacity(agents: Agent[]): AgentExecutionCapa
 
     const occupiedSlots = nonNegativeInteger(agent.heartbeat.taskSlotsUsed)
     capacity.occupiedSlots += occupiedSlots
-    capacity.availableSlots += Math.max(maxTasks - occupiedSlots, 0)
+    const idleSlots = Math.max(maxTasks - occupiedSlots, 0)
+    if (agent.executionEligibility === "license_restricted") capacity.unavailableSlots += idleSlots
+    else capacity.availableSlots += idleSlots
     return capacity
   }, {
     totalSlots: 0,

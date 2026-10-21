@@ -26,10 +26,18 @@ type FFUFParseSummary struct {
 	MalformedRecords uint64
 	InvalidRecords   uint64
 	OversizedRecords uint64
+	// FilteredAuthRedirect and FilteredBackupHTML count valid records removed by
+	// the opt-in result denoise rules. They are not rejections.
+	FilteredAuthRedirect uint64
+	FilteredBackupHTML   uint64
+}
+
+func (summary FFUFParseSummary) FilteredItems() uint64 {
+	return summary.FilteredAuthRedirect + summary.FilteredBackupHTML
 }
 
 func (summary FFUFParseSummary) AllRecordsRejected() bool {
-	return summary.SourceRecords > 0 && summary.ParsedItems == 0
+	return summary.SourceRecords > 0 && summary.ParsedItems == 0 && summary.FilteredItems() == 0
 }
 
 func (summary *FFUFParseSummary) add(other FFUFParseSummary) {
@@ -38,12 +46,27 @@ func (summary *FFUFParseSummary) add(other FFUFParseSummary) {
 	summary.MalformedRecords += other.MalformedRecords
 	summary.InvalidRecords += other.InvalidRecords
 	summary.OversizedRecords += other.OversizedRecords
+	summary.FilteredAuthRedirect += other.FilteredAuthRedirect
+	summary.FilteredBackupHTML += other.FilteredBackupHTML
 }
 
+// ParseFFUFArtifact parses one raw artifact with result denoising disabled.
 func ParseFFUFArtifact(
 	ctx context.Context,
 	path string,
 	candidateOrdinal uint64,
+	visit func(DirectoryObservation) error,
+) (FFUFParseSummary, error) {
+	return ParseFFUFArtifactWithOptions(ctx, path, candidateOrdinal, directoryDenoiseOptions{}, visit)
+}
+
+// ParseFFUFArtifactWithOptions parses one raw artifact and applies the enabled
+// opt-in result filters before visiting observations.
+func ParseFFUFArtifactWithOptions(
+	ctx context.Context,
+	path string,
+	candidateOrdinal uint64,
+	options directoryDenoiseOptions,
 	visit func(DirectoryObservation) error,
 ) (summary FFUFParseSummary, err error) {
 	if ctx == nil {
@@ -71,13 +94,23 @@ func ParseFFUFArtifact(
 	if !info.Mode().IsRegular() {
 		return summary, errors.New("FFUF raw artifact must be a regular file")
 	}
-	return parseFFUFStream(ctx, file, candidateOrdinal, visit)
+	return parseFFUFStreamWithOptions(ctx, file, candidateOrdinal, options, visit)
 }
 
 func parseFFUFStream(
 	ctx context.Context,
 	stream io.Reader,
 	candidateOrdinal uint64,
+	visit func(DirectoryObservation) error,
+) (FFUFParseSummary, error) {
+	return parseFFUFStreamWithOptions(ctx, stream, candidateOrdinal, directoryDenoiseOptions{}, visit)
+}
+
+func parseFFUFStreamWithOptions(
+	ctx context.Context,
+	stream io.Reader,
+	candidateOrdinal uint64,
+	options directoryDenoiseOptions,
 	visit func(DirectoryObservation) error,
 ) (FFUFParseSummary, error) {
 	if stream == nil {
@@ -110,6 +143,21 @@ func parseFFUFStream(
 		case ffufRecordValid:
 		default:
 			return summary, errors.New("unknown FFUF record outcome")
+		}
+		if options.authRedirect && isRedirectStatus(item.Status) {
+			location, valid := decodeOptionalRedirectLocation(record)
+			if !valid {
+				summary.InvalidRecords++
+				continue
+			}
+			if options.filteredByAuthRedirect(item, location) {
+				summary.FilteredAuthRedirect++
+				continue
+			}
+		}
+		if options.filteredByBackupHTML(item) {
+			summary.FilteredBackupHTML++
+			continue
 		}
 		if err := visit(DirectoryObservation{
 			Item:                  item,
@@ -244,6 +292,22 @@ func decodeRequiredString(fields map[string]json.RawMessage, field string) (stri
 	raw, ok := fields[field]
 	if !ok || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
 		return "", false
+	}
+	var value string
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return "", false
+	}
+	return value, true
+}
+
+func decodeOptionalRedirectLocation(record []byte) (string, bool) {
+	fields, ok := decodeFFUFObjectFields(record)
+	if !ok {
+		return "", false
+	}
+	raw, present := fields["redirectlocation"]
+	if !present || bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		return "", true
 	}
 	var value string
 	if err := json.Unmarshal(raw, &value); err != nil {

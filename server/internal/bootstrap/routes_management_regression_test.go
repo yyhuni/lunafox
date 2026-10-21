@@ -60,6 +60,7 @@ func TestRegisterRoutesKeepsManagementHTTPAPIs(t *testing.T) {
 		"GET /v1/admin/agentRegistrationTokens/:registrationToken",
 		"GET /v1/admin/agentClusterSummaries/current",
 		"GET /v1/admin/agentLocationMaps/current",
+		"POST /v1/admin/agentLicenses/:licenseAction",
 		"POST /v1/agents:register",
 		"GET /v1/screenshots/:screenshot/blob",
 	}

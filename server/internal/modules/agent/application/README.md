@@ -19,4 +19,5 @@ agent 模块补充规则：
 - **历史迁移**：无历史聚合文件。
 - **删除与 pinned Scan**：`AgentCommandService` 通过窄 `AgentDeletionLifecycle` 端口把删除交给 Scan repository 的同一数据库事务。删除前必须终止该 Agent 尚未开始的 pinned Scan task（`failure_kind=agent_deleted`）并收敛 Scan；不得清空 `scan.agent_id`、把任务重新入队或把 pinned Scan 降级为自动分配。运行中的任务仍由 session disconnect/fence 路径产生 `agent_disconnected`。
 
-- **部署配额**：Server 统一固定最多3个已注册 Agent，默认 bootstrap 与离线节点均计入。只有创建新身份检查配额，超额存量的重连和运行不受限制；删除事务提交后释放名额。令牌生成不预留名额。
+- **部署配额**：无有效离线授权时默认最多 3 个已注册 Agent；当前有效签名 Key 的 `agentLimit` 替换该额度，默认 bootstrap 与离线节点均计入。新任务仅允许全部身份按 `created_at ASC, id ASC` 的前 N 个领取；到期不删除或断开超额存量，已领取任务、日志和结果可继续完成。相同 session/request ID 的领取重放保持原任务；新请求在持有授权共享锁的领取事务中重检资格。删除提交后后续身份顺位补位，续期自动恢复资格。令牌生成不预留名额。
+- **授权投影**：管理列表、详情及注册令牌关联 Agent 返回 `executionEligibility=eligible|license_restricted`，不改变连接或健康状态。集群容量聚合以摘要同一时刻的有效 `agentLimit` 为输入：受限节点的新鲜已占用槽位仍计 occupied，空闲槽位计 unavailable；全集排名先于筛选和分页。

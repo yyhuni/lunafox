@@ -35,7 +35,7 @@ func TestContainerFFUFProcessRunnerWritesOrdinalArtifactWithExactArgv(t *testing
 	if err := runner.Run(context.Background(), ffufInvocation{Candidate: candidate, Config: config, Workspace: workspace}); err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if gotBinary != FFUFBinary || valueAfter(gotArgs, "-u") != candidate.Website+"FUZZ" {
+	if gotBinary != FFUFBinary || valueAfter(gotArgs, "-u") != "https://example.com/root;literal/FUZZ" {
 		t.Fatalf("process binary=%q args=%#v", gotBinary, gotArgs)
 	}
 	path, err := rawFFUFArtifactPath(workspace, candidate.Ordinal)

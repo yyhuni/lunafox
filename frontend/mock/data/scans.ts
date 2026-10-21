@@ -1,3 +1,4 @@
+import { getMockAgentById } from '@/mock/data/agents'
 import type { ScanRecord, GetScansResponse, ScanListRecord, ScanLog, ScanStatus } from '@/types/scan.types'
 import type { ScanStatistics } from '@/services/scan.service'
 import { getMockCanonicalWorkflowConfiguration } from '@/mock/data/scan-workflows'
@@ -545,8 +546,8 @@ const mockScanRuntimeDetailsById: Record<
     ],
   },
   6: {
-    agentId: 106,
-    agentName: 'local',
+    agentId: 6,
+    agentName: 'test-06',
   },
   7: {
     agentId: 107,
@@ -1159,6 +1160,7 @@ export function getMockScanById(id: number): ScanRecord | undefined {
       ...(runtime?.configuration ? { configuration: runtime.configuration } : {}),
       ...(runtime?.runtimeTasks ? { runtimeTasks: runtime.runtimeTasks } : {}),
       assignmentMode: 'automatic',
+      executionBlockedReason: null,
     }
   }
   return {
@@ -1168,6 +1170,7 @@ export function getMockScanById(id: number): ScanRecord | undefined {
     agentStatus: id === 4 ? 'offline' : 'online',
     agentHealthState: id === 2 ? 'paused' : 'healthy',
     agentDeleted: false,
+    executionBlockedReason: id % 2 === 0 && (scan.status === 'pending' || scan.status === 'running') && getMockAgentById(runtime.agentId)?.executionEligibility === 'license_restricted' ? 'agent_license_restricted' : null,
     assignmentMode: id % 2 === 0 ? 'pinned' : 'automatic',
   }
 }

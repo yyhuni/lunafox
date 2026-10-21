@@ -14,6 +14,7 @@ var (
 	ErrCreateNoScanWorkflows               = errors.New("no scan workflows enabled for scan")
 	ErrCreateTargetLookupNotReady          = errors.New("target lookup is not configured")
 	ErrCreateAgentNotFound                 = errors.New("selected agent not found")
+	ErrCreateAgentLicenseRestricted        = errors.New("selected agent is license restricted")
 	ErrCreateInvalidTriggerType            = errors.New("scan trigger type is required and must be manual, scheduled, or ai")
 	ErrCreateInvalidInputSource            = scandomain.ErrInvalidInputSource
 )

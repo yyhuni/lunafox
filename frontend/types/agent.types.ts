@@ -5,6 +5,7 @@
  */
 
 export type AgentStatus = 'online' | 'offline' | string
+export type AgentExecutionEligibility = 'eligible' | 'license_restricted'
 export type AgentLocationState = 'current' | 'expired' | 'unknown'
 export type AgentClusterState = 'empty' | 'critical' | 'needsAttention' | 'healthy'
 export type AgentClusterReasonCode =
@@ -43,6 +44,7 @@ export interface Agent {
   instanceId?: string
   displayName?: string
   status: AgentStatus
+  executionEligibility: AgentExecutionEligibility
   observedHostname?: string
   connectionIp?: string
   agentVersion?: string
@@ -87,6 +89,7 @@ export interface AgentClusterLocationCoverage {
 }
 
 export interface AgentClusterSummary {
+  license?: import("@/types/agent-license.types").AgentLicense
   resourceName: 'agentClusterSummaries/current'
   generatedAt: string
   executionFreshnessSeconds: 15

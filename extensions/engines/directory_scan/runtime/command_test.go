@@ -15,7 +15,7 @@ func TestBuildFFUFArgsMatchesCanonicalDefaultCommand(t *testing.T) {
 		t.Fatalf("BuildFFUFArgs() error = %v", err)
 	}
 	want := []string{
-		"-u", "http://example.comFUZZ",
+		"-u", "http://example.com/FUZZ",
 		"-w", "/run/lunafox/resources/config/ffuf/wordlist/dir_default.txt",
 		"-json", "-s", "-X", "GET", "-raw", "-ac",
 		"-mc", "200-299,301,302,307,401,403,405,500",
@@ -59,7 +59,7 @@ func TestBuildFFUFArgsMapsOnlyEnabledConditionalControls(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildFFUFArgs(disabled modes) error = %v", err)
 	}
-	for _, omitted := range []string{"-recursion", "-recursion-depth", "-recursion-strategy", "-ac", "-ach", "-r", "-http2"} {
+	for _, omitted := range []string{"-recursion", "-recursion-depth", "-recursion-strategy", "-ac", "-ach", "-acc", "-r", "-http2"} {
 		if slices.Contains(args, omitted) {
 			t.Fatalf("disabled mode emitted %q in %#v", omitted, args)
 		}
@@ -81,8 +81,8 @@ func TestBuildFFUFArgsPreservesRawCandidateWordlistAndPayloadFile(t *testing.T) 
 	if err != nil {
 		t.Fatalf("BuildFFUFArgs() error = %v", err)
 	}
-	if args[1] != candidate+"FUZZ" || args[3] != wordlist {
-		t.Fatalf("raw candidate/wordlist changed in %#v", args)
+	if args[1] != "https://EXAMPLE.com/root/?next=/admin#fragmentFUZZ" || args[3] != wordlist {
+		t.Fatalf("normalized target/wordlist changed in %#v", args)
 	}
 	if valueAfter(args, "-mc") != config.MatchCodes || valueAfter(args, "-p") != config.Delay {
 		t.Fatalf("opaque matcher/delay changed in %#v", args)
@@ -117,8 +117,8 @@ func TestBuildFFUFArgsAcceptsVerifiedZeroByteWordlistPath(t *testing.T) {
 }
 
 func TestBuildFFUFArgsRejectsPreflightAndConfigViolations(t *testing.T) {
-	if args, err := BuildFFUFArgs("https://example.com/FUZZ", defaultFFUFConfig()); err != nil || valueAfter(args, "-u") != "https://example.com/FUZZFUZZ" {
-		t.Fatalf("BuildFFUFArgs() = %#v, %v; literal candidate bytes must be preserved", args, err)
+	if args, err := BuildFFUFArgs("https://example.com/FUZZ", defaultFFUFConfig()); err != nil || valueAfter(args, "-u") != "https://example.com/FUZZ/FUZZ" {
+		t.Fatalf("BuildFFUFArgs() = %#v, %v; literal candidate text must be preserved and normalized once", args, err)
 	}
 	config := defaultFFUFConfig()
 	config.MatchCodes = "200, 201"
@@ -162,20 +162,27 @@ func TestBuildFFUFArgsHasClosedNegativeFlagSurface(t *testing.T) {
 	}
 }
 
-func TestBuildFFUFArgsAppendsFUZZAfterExactQueryAndFragmentPrefixes(t *testing.T) {
-	for _, candidate := range []string{
-		"http://example.com?path=/admin",
-		"http://example.com#fragment",
-		"http://example.com?path=/admin#fragment",
-		"http://example.com//",
-	} {
-		t.Run(strings.ReplaceAll(candidate, "/", "_"), func(t *testing.T) {
-			args, err := BuildFFUFArgs(candidate, defaultFFUFConfig())
+func TestBuildFFUFArgsNormalizesTheSeparatorBeforeFUZZ(t *testing.T) {
+	tests := []struct {
+		candidate  string
+		wantTarget string
+	}{
+		{"http://example.com?path=/admin", "http://example.com/?path=/adminFUZZ"},
+		{"http://example.com#fragment", "http://example.com/#fragmentFUZZ"},
+		{"http://example.com?path=/admin#fragment", "http://example.com/?path=/admin#fragmentFUZZ"},
+		{"http://example.com//", "http://example.com//FUZZ"},
+		{"https://example.com/root/", "https://example.com/root/FUZZ"},
+		{"https://example.com/root", "https://example.com/root/FUZZ"},
+		{"http://127.0.0.1:8080", "http://127.0.0.1:8080/FUZZ"},
+	}
+	for _, test := range tests {
+		t.Run(strings.ReplaceAll(test.candidate, "/", "_"), func(t *testing.T) {
+			args, err := BuildFFUFArgs(test.candidate, defaultFFUFConfig())
 			if err != nil {
 				t.Fatalf("BuildFFUFArgs() error = %v", err)
 			}
-			if args[1] != candidate+"FUZZ" {
-				t.Fatalf("FFUF target = %q, want %q", args[1], candidate+"FUZZ")
+			if args[1] != test.wantTarget {
+				t.Fatalf("FFUF target = %q, want %q", args[1], test.wantTarget)
 			}
 		})
 	}

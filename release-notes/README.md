@@ -143,3 +143,14 @@ Full Changelog: https://github.com/yyhuni/lunafox/compare/v1.2.2...v1.2.3
 
 双语要求只适用于生效后的新 Tag。历史 Release 不会被自动回填或改写；如需补录，必须作为
 单独的人工审核操作执行。
+
+## 升级说明要求
+
+正文面向最终用户，除变更内容外还必须说明如何获得该版本：
+
+- 若该 Release 的 manifest 声明 `databaseMigration.hasDatabaseMigration: true`，应用内更新
+  不会给出可执行的 Upgrade Operation。英文和简体中文两节都必须明确说明该版本需要按公共
+  部署指南手动升级，并建议先完成备份、再由 AI 助手按文档执行并核对每一步。
+- 其他 Release 也应指向公共部署指南与 Release 页面，不要假设用户能在浏览器里完成全部升级。
+- 不要把“自动更新”写成对含迁移版本也成立的承诺；当前迁移策略仍处于 release-candidate 阶段，
+  保留数据升级尚未开放。

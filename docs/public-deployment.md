@@ -1,34 +1,44 @@
 # Public Docker Compose deployment
 
-> **GENERATED / READ-ONLY** - edit the private source and regenerate this
-> projection through the protected release workflow.
+> **GENERATED / READ-ONLY** - edit the private source and regenerate this projection through the protected release workflow.
 
 [简体中文](public-deployment.zh-CN.md)
 
-## Installation sources
+This is the operator manual for a single-node, self-hosted LunaFox deployment. One Docker Compose stack runs the control plane, the frontend, PostgreSQL or an external database, Loki and Alloy logging, and a resident Agent that starts Engine containers.
 
-The public `main` branch and each release's single `lunafox-<version>.zip`
-contain equivalent deployment snapshots. Each snapshot includes `compose.yaml`,
-`.env`, `.env.example`, the verified final release manifest, a dual-registry
-Engine inventory, the Loki and Alloy configuration, the default fingerprint
-corpus, required wordlists, and the Bash lifecycle scripts with their shared
-helper. Product and Engine images are digest-qualified; PostgreSQL, Redis, Loki,
-and Alloy are pinned by multi-platform manifest digest.
+## Deployment model
 
-Keep the extracted directory: `.env` is the installation's host-owned
-configuration and relative resource paths resolve from this directory. Set
-`PUBLIC_HOST` and `PUBLIC_PORT` with `--public-host <host>` and
-`--public-port <port>` during installation, or keep their existing `.env`
-values; the shipped defaults are `localhost` and `443`. The internal HTTPS
-`PUBLIC_URL` is derived from them. Once you write `DB_PASSWORD` or `JWT_SECRET`,
-restrict the file with `chmod 600 .env`; the lifecycle scripts enforce the same
-mode before they change anything.
+LunaFox separates decisions from execution:
 
-### Install from the public repository
+- The Server plans every task, freezes it into an immutable execution plan, and streams inputs on demand.
+- An Agent on each worker host claims compatible plans, materializes the inputs as read-only files, and starts one Engine container per task.
+- Engine containers run image-local tooling and report typed results; they never query the database.
+- The resident Server has no Docker control path. Docker socket access is limited to the restricted upgrader, the Compose Agent and its capability preflight, and the log collector.
 
-In a Bash environment, set the public address on the lifecycle command. It
-starts the deployment with one `docker compose up -d` and waits until the
-deployment is fully ready:
+Product and Engine images are digest-qualified. PostgreSQL, Redis, Loki, and Alloy are pinned by multi-platform manifest digest. The deployment directory is the unit of ownership: `.env` belongs to the host, relative resource paths resolve from it, and a `compose.override.yaml` written by a completed upgrade must stay with it.
+
+## Requirements
+
+- Docker Engine with Linux container support.
+- Docker Compose 2.24.0 or newer.
+- Bash 3.2 or newer for the lifecycle scripts. On Windows, run Compose directly in PowerShell.
+- A free host port for `PUBLIC_PORT`; the default is 443.
+- Outbound access to Docker Hub, GHCR, or the custom registries configured in `.env`.
+- Disk space for images, database data, scan results, and retained logs.
+
+## What the package contains
+
+The public `main` branch and each release's `lunafox-<version>.zip` contain equivalent deployment snapshots:
+
+- `compose.yaml`, `.env`, and `.env.example`
+- the verified final release manifest and a dual-registry Engine inventory
+- Loki and Alloy configuration
+- the default fingerprint corpus and required wordlists
+- seven Bash lifecycle entry points plus the shared `lunafox-lifecycle.sh` helper
+
+## Install
+
+### From the public repository
 
 ```console
 git clone https://github.com/yyhuni/lunafox.git
@@ -36,8 +46,7 @@ cd lunafox
 ./install.sh --public-host luna.example.com
 ```
 
-`docker compose up -d` is equally supported and is the native Windows
-PowerShell entry point:
+`install.sh` runs `docker compose up -d` exactly once and waits until the deployment is fully ready. Direct Compose is equally supported and is the native Windows PowerShell path:
 
 ```console
 git clone https://github.com/yyhuni/lunafox.git
@@ -45,11 +54,9 @@ cd lunafox
 docker compose up -d
 ```
 
-### Install from a release
+### From a release archive
 
-Download `lunafox-<version>.zip` and its SHA-256 metadata from the matching
-GitHub Release, verify it when required by local policy, and extract it into a
-permanent directory:
+Download `lunafox-<version>.zip` and its SHA-256 metadata from the matching GitHub Release, verify it when local policy requires it, and extract it into a permanent directory:
 
 ```console
 unzip lunafox-<version>.zip -d lunafox-<version>
@@ -57,7 +64,7 @@ cd lunafox-<version>
 ./install.sh --public-host luna.example.com
 ```
 
-The extracted ZIP also supports the direct Compose path:
+The extracted ZIP also supports direct Compose:
 
 ```console
 unzip lunafox-<version>.zip -d lunafox-<version>
@@ -65,12 +72,15 @@ cd lunafox-<version>
 docker compose up -d
 ```
 
-Windows operators extract the same ZIP and run the Compose command in native
-PowerShell.
+### Set the public address
 
-### Select a Registry
+Set `PUBLIC_HOST` and `PUBLIC_PORT` with `--public-host <host>` and `--public-port <port>` during installation, or keep the existing `.env` values. The shipped defaults are `localhost` and `443`; the internal HTTPS `PUBLIC_URL` is derived from them.
 
-Both installation sources default to Docker Hub in `.env`:
+Address options are install-only: a host must be a hostname or IP address, and a port must be decimal 1 through 65535. An omitted value keeps `.env` or the shipped default, and an explicit option atomically updates only its matching `.env` key. Options are validated before any Docker access.
+
+### Choose the image registry
+
+Both installation sources default to Docker Hub:
 
 ```dotenv
 RELEASE_REGISTRY=docker.io
@@ -82,39 +92,77 @@ To use GHCR, change the value before first startup:
 RELEASE_REGISTRY=ghcr.io
 ```
 
-Custom HTTPS OCI Registries are also supported. Configure product images and
-Engine Packages/Runtime Images independently before first startup:
+Custom HTTPS OCI registries are supported. Product images and Engine Packages/Runtime Images can use different sources:
 
 ```dotenv
 RELEASE_REGISTRY=product.company.cn
 ENGINE_INSTALL_REGISTRY=engine.company.cn:5443
 ```
 
-`ENGINE_INSTALL_REGISTRY` defaults to `RELEASE_REGISTRY` when empty or absent.
-Use `host[:port]` without a scheme, path, credentials, or whitespace. Mirrors
-must preserve the original namespace/repository paths and immutable digests;
-Engine mirrors must also copy OCI signature referrers and bundles. Existing
-signature, package, platform, version, and compatibility checks still apply.
-Only the configured sources are contacted for first-party content; there is no
-implicit fallback to the official Registries. Preheat, execution and upgrades
-use the same source settings, and upgrades preserve the independent Engine
-setting. Configure external Agents with `ENGINE_INSTALL_REGISTRY` as well.
+`ENGINE_INSTALL_REGISTRY` defaults to `RELEASE_REGISTRY` when empty or absent. Use `host[:port]` without a scheme, path, credentials, or whitespace. Mirrors must preserve the original namespace and repository paths plus immutable digests; Engine mirrors must also copy OCI signature referrers and bundles. Signature, package, platform, version, and compatibility checks still apply. Only the configured sources are contacted for first-party content; there is no implicit fallback to the official registries. Preheat, execution, and upgrades use the same settings, and upgrades preserve the independent Engine setting. External Agents must also be configured with `ENGINE_INSTALL_REGISTRY`.
 
-This setting does not redirect PostgreSQL, Redis, Loki or Alloy; their pinned
-third-party images still require access through the host Docker configuration.
-Registry credentials and custom CA provisioning are environment prerequisites;
-this option does not disable TLS or existing Sigstore trust-root retrieval.
-After a successful in-place upgrade, product image overrides remain bound to
-the selected product Registry; changing that binding requires an explicit
-migration that preserves application data and configuration.
+This setting does not redirect PostgreSQL, Redis, Loki, or Alloy; their pinned third-party images still use the host Docker configuration. Registry credentials and custom CA provisioning are environment prerequisites; the setting does not disable TLS or replace Sigstore trust-root retrieval. After a successful in-place upgrade, product image overrides remain bound to the selected product registry; changing that binding requires an explicit migration that preserves application data and configuration.
 
-`DATABASE_MODE=embedded` is the default and enables the bundled PostgreSQL
-service. `DB_PORT=5432`, `DB_USER=postgres`, and `DB_NAME=lunafox` are editable
-defaults. Leave `DB_HOST` and `DB_SSLMODE` empty in this mode. An empty
-`DB_PASSWORD` generates a random value on first initialization.
+### Protect the .env file
 
-To use a database that already exists outside this Compose project, set all of
-the following before the first start:
+Once you write `DB_PASSWORD` or `JWT_SECRET`, restrict the file with `chmod 600 .env`. The lifecycle scripts enforce the same mode before they change anything. Configuration inputs reach only the initializer as Compose secret files and must not be committed or printed in support logs.
+
+## First start and initialization
+
+`docker compose up -d` starts one-shot services in this order:
+
+1. `config-init` validates `DATABASE_MODE`, the derived `COMPOSE_PROFILES` value, and the connection inputs, generates or adopts the permitted secrets, and persists the database mode, database password, and JWT secret as mode-0600 files in `lunafox_config`.
+2. `agent-preflight` uses the released Agent image to verify the Docker API, exact named-volume identities, volume-subpath isolation, and read-only execution mounts through a real sibling-container round trip.
+3. `cert-init` creates or validates the certificate and private key in `lunafox_ssl`.
+4. In embedded mode, PostgreSQL starts after configuration initialization and `migrate` waits for its health. In external mode, the bundled PostgreSQL service is absent and `migrate` connects directly to the configured host.
+5. `bootstrap` waits for preflight and migration, installs the verified Engine inventory and default resources, then creates or validates the internal Agent credential.
+6. Server starts only after bootstrap succeeds. Agent starts after both bootstrap and Server health succeed; Nginx starts after certificate, Server, and Frontend readiness.
+
+A startup that reports ready is complete. To inspect progress, use `docker compose ps`. `docker compose config --quiet` is an optional configuration diagnostic; `docker compose pull` is an optional prefetch step.
+
+If initialization fails, inspect the one-shot and Agent logs:
+
+```console
+docker compose logs config-init agent-preflight migrate bootstrap cert-init agent upgrader
+```
+
+Correct the configuration or explicitly repair the named-volume state, then repeat `docker compose up -d`.
+
+Repeated startup reuses the files in `lunafox_config`. After a successful first initialization, changing `DATABASE_MODE` fails before any database consumer starts. A later non-empty `DB_PASSWORD` or `JWT_SECRET` that differs from the persisted value also fails; Compose does not rotate live credentials. An older configuration volume without a mode record adopts embedded mode by default; adopting external mode from such a volume requires an explicit `DB_PASSWORD` that matches the persisted value.
+
+Default resources are fail-closed. A fresh state imports the packaged fingerprint corpus and wordlists once. Later bootstrap runs leave initialized wordlist rows and their persisted content untouched, including user edits, and validate only the catalog identity and the physical regular-file boundary. Missing or partially deleted default wordlists fail with an explicit repair error; bootstrap never fills in or overwrites that state. An initialized fingerprint corpus that was fully cleared is not silently reseeded.
+
+The internal Agent credential is a mode-0600 regular JSON file in `lunafox_agent_state`; it is never passed through the host environment or Docker container metadata. Registration, database binding, and credential publication are serialized. Repeated successful `docker compose up -d` reuses the same registered Agent. Missing, malformed, permissive, partially published, deleted, or database-inconsistent identity state fails with an explicit repair error and never silently registers another Agent.
+
+The preflight checks the actual Docker socket, the Linux execution node, named-volume subpaths, and read-only execution mounts before business bootstrap. The resident Agent checks the socket, platform, API version, and exact volume identities again when it starts. Unsupported capability fails explicitly; there is no weaker whole-volume fallback. Server never receives the Docker socket.
+
+The Compose-managed Agent has in-container self-update disabled. The restricted upgrader updates its fixed `agent` service from the release Manifest. Existing remote Agent installation and `update_required` self-update behavior are unchanged.
+
+## Sign in and recover the administrator password
+
+After a fresh deployment reports ready, open `PUBLIC_URL` and sign in with the default administrator account:
+
+| Username | Password |
+| --- | --- |
+| `admin` | `admin` |
+
+Change the password from account settings after the first login.
+
+If the administrator password is forgotten, run this command from the deployment directory:
+
+```console
+docker compose exec server resetadmin
+```
+
+The command resets only the existing `admin` account, prints a new password once, and invalidates the administrator's existing sessions. It does not create the account when it is missing.
+
+## Configuration
+
+### Database modes
+
+`DATABASE_MODE=embedded` is the default and enables the bundled PostgreSQL service. `DB_PORT=5432`, `DB_USER=postgres`, and `DB_NAME=lunafox` are editable defaults. Keep `DB_HOST` and `DB_SSLMODE` empty in this mode. An empty `DB_PASSWORD` is generated on first initialization.
+
+To use a database that already exists outside this Compose project, set all of the following before the first start:
 
 ```dotenv
 DATABASE_MODE=external
@@ -126,17 +174,9 @@ DB_SSLMODE=require
 DB_PASSWORD='the existing remote database password'
 ```
 
-Keep `COMPOSE_PROFILES=${DATABASE_MODE:-embedded}` unchanged so the selected
-mode controls the service graph. External mode requires a reachable PostgreSQL
-server, an existing account and database, and permission to apply LunaFox schema
-migrations. LunaFox does not create those resources or copy data from the
-bundled database. `DB_SSLMODE` accepts `disable`, `allow`, `prefer`, `require`,
-`verify-ca`, or `verify-full`; `verify-ca` and `verify-full` use the container's
-system trust roots. Custom CA file mounting is not supported by this release.
+Keep `COMPOSE_PROFILES=${DATABASE_MODE:-embedded}` unchanged so the selected mode controls the service graph. External mode requires a reachable PostgreSQL server, an existing account and database, and permission to apply LunaFox schema migrations. LunaFox does not create those resources or copy data from the bundled database. `DB_SSLMODE` accepts `disable`, `allow`, `prefer`, `require`, `verify-ca`, or `verify-full`; `verify-ca` and `verify-full` use the container's system trust roots. Custom CA file mounting is not supported by this release.
 
-`JWT_SECRET` remains optional and is generated when empty. Configuration inputs
-reach only the initializer as Compose secret files and must not be committed or
-printed in support logs.
+`JWT_SECRET` is optional and generated when empty.
 
 <a id="database-environment-variables"></a>
 
@@ -157,66 +197,42 @@ Commented lines in `.env.example` are optional overrides. Uncomment a line only 
 | `DB_MAX_IDLE_CONNS` | `5` | Changeable on a later start. Maximum idle connections in the application pool. |
 | `DB_CONN_MAX_LIFETIME` | `300` | Changeable on a later start. Maximum lifetime of one pooled connection, in seconds. |
 
-`DATABASE_MODE` is fixed after the first successful start, and `COMPOSE_PROFILES` must remain `${DATABASE_MODE:-embedded}`. `JWT_SECRET` follows the same non-empty conflict rule as `DB_PASSWORD`. See [Configuration changes after first start](#configuration-changes-after-first-start).
+`DATABASE_MODE` is fixed after the first successful start, and `COMPOSE_PROFILES` must remain `${DATABASE_MODE:-embedded}`. `JWT_SECRET` follows the same non-empty conflict rule as `DB_PASSWORD`. See Configuration changes after first start below.
 
-## Start and lifecycle
+## Configuration changes after first start
 
-Docker with Linux container support and Docker Compose 2.24.0 or newer are the
-host prerequisites. From the extracted directory run:
+The first successful `config-init` run establishes the configuration boundary. It persists `DATABASE_MODE`, `DB_PASSWORD`, and `JWT_SECRET` in `lunafox_config`; `COMPOSE_PROFILES` must continue to derive from `DATABASE_MODE`. Later non-empty inputs are checked against that persisted state.
 
-```console
-docker compose up -d
-docker compose ps
-```
+This release does not support any of the following as an in-place operation:
 
-Compose validates the configuration and pulls missing images during
-`docker compose up -d`. `docker compose config --quiet` is an optional
-configuration diagnostic, and `docker compose pull` is an optional prefetch
-step; neither is required for installation.
+- Online database-mode migration between `embedded` and `external`.
+- Online credential rotation for the live database password or `JWT_SECRET`.
+- Automatic data copying between `lunafox_postgres` and an external PostgreSQL server.
+- Deleting or replacing `lunafox_config` to force a new selection.
 
-On Windows, run these commands directly in PowerShell. On macOS, Linux, Docker
-Desktop, or OrbStack, use the Docker endpoint already selected by the Docker
-CLI. LunaFox does not inspect or allowlist the host OS, distribution, Docker
-brand, or context name. Docker reports connection, platform, bind path, and
-published-port errors itself.
+In short, online database-mode migration is unsupported, and online credential rotation is unsupported in this release.
 
-The ordinary lifecycle is:
+If an existing deployment is blocked after an accidental edit:
 
-```console
-docker compose stop
-docker compose start
-docker compose restart
-docker compose down
-```
+1. Restore the original `DATABASE_MODE` and `COMPOSE_PROFILES` in `.env`.
+2. Restore the original non-empty `DB_PASSWORD` and `JWT_SECRET`, or remove the new values so empty inputs reuse the persisted files.
+3. Keep `lunafox_config` and, in embedded mode, `lunafox_postgres`. In external mode, keep the external database and its operator-managed backup. Do not run `docker compose down --volumes`.
+4. Run `docker compose up -d`; if initialization still fails, inspect `docker compose logs config-init` before changing any persisted state.
 
-## Administrator login and password recovery
+To adopt a different mode or different credentials, use a separate deployment:
 
-After a fresh `docker compose up -d` deployment reports ready, open `PUBLIC_URL`
-and sign in with the default administrator account:
+1. Keep the old deployment available and take verified backups of `lunafox_config` plus `lunafox_postgres` for embedded mode, or the external database for external mode.
+2. Create a new deployment directory and set the final `.env`, `DATABASE_MODE`, `COMPOSE_PROFILES`, connection values, and secrets before its first `docker compose up -d`.
+3. If data must be retained, use the operator's tested PostgreSQL backup/restore or export/import procedure. Verify schema, application data, connection access, and health before switching traffic. LunaFox does not copy data, change remote roles, or provide an automatic rollback.
+4. Keep the old deployment as the rollback target until the new deployment has been accepted.
 
-| Username | Password |
-| --- | --- |
-| `admin` | `admin` |
+Credential rotation still requires coordination outside this Compose workflow. A PostgreSQL password change must be synchronized with the database role and the new deployment's `DB_PASSWORD`; changing `JWT_SECRET` can invalidate existing sessions. Do not edit files inside `lunafox_config` directly.
 
-Change the password from the account settings after the first login.
-
-If the administrator password is forgotten, run this command from the deployment
-directory:
-
-```console
-docker compose exec server resetadmin
-```
-
-The command resets only the existing `admin` account, prints a new password once,
-and invalidates the administrator's existing sessions. It does not create the
-account when it is missing.
+## Day-2 operations
 
 ### Lifecycle scripts
 
-Every snapshot also ships seven small Bash entry points at the deployment root
-plus the shared helper `lunafox-lifecycle.sh`. They wrap the same Compose
-commands, add the checks Docker cannot express, and never keep a second
-deployment state:
+Every snapshot ships seven Bash entry points at the deployment root plus the shared `lunafox-lifecycle.sh` helper. They wrap Compose, add the checks Docker cannot express, and never keep a second deployment state:
 
 | Script | Equivalent Compose command | Behaviour |
 | --- | --- | --- |
@@ -228,88 +244,39 @@ deployment state:
 | `./logs.sh` | `docker compose logs --tail 200 --follow` | Read-only log access that forwards service names and Compose options. |
 | `./uninstall.sh` | `docker compose down --remove-orphans` | Removes containers and the project network; by default keeps volumes, `.env`, and `compose.override.yaml`. |
 
-`install.sh`, `start.sh`, and `restart.sh` report success only after the one-shot
-tasks, core service health, auxiliary service stability, the resident Agent's
-claim-ready state, and the public HTTPS endpoint all pass. `install.sh` allows
-fifteen minutes and the other two allow five; `LUNAFOX_READY_TIMEOUT_SECONDS`
-overrides the window for one invocation.
+`install.sh`, `start.sh`, and `restart.sh` report success only after the one-shot tasks, core service health, auxiliary service stability, the resident Agent's claim-ready state, and the public HTTPS endpoint all pass. `install.sh` allows fifteen minutes and the other two allow five; `LUNAFOX_READY_TIMEOUT_SECONDS` overrides the window for one invocation.
 
-A failure prints `FAILED`, names the failing service or check, and leaves the
-deployment in place: containers, volumes, and configuration stay as compose up
-created them, and nothing is rolled back. The printed diagnostics keep that
-order — conclusion, stage, preserved scene, next commands — and point at
-`./logs.sh <service>` when a service was identified and `./logs.sh` otherwise.
+A failure prints `FAILED`, names the failing service or check, and leaves the deployment in place: containers, volumes, and configuration stay as Compose created them, and nothing is rolled back. The printed diagnostics keep that order - conclusion, stage, preserved scene, next commands - and point at `./logs.sh <service>` when a service was identified and `./logs.sh` otherwise.
 
-`install.sh` describes the run it classified instead of always narrating a first
-start: a directory without any LunaFox data is a first start; a directory whose
-volumes exist without containers recreates the containers while keeping its
-named volumes and installed engines, and is not an upgrade; a running
-deployment is started with its configuration and volumes preserved. When such a
-recreated deployment fails a first-start task such as `bootstrap`, the footer
-adds one optional last line after the `logs.sh` and `status.sh` hints: if the
-preserved data can be discarded, `./uninstall.sh --purge --confirm` is the only
-way to delete the named volumes and start over.
+`install.sh` describes the run it classified instead of always narrating a first start: a directory without any LunaFox data is a first start; a directory whose volumes exist without containers recreates the containers while keeping its named volumes and installed engines, and is not an upgrade; a running deployment is started with its configuration and volumes preserved. When such a recreated deployment fails a first-start task such as `bootstrap`, the footer adds one optional last line after the `logs.sh` and `status.sh` hints: if the preserved data can be discarded, `./uninstall.sh --purge --confirm` is the only way to delete the named volumes and start over.
 
-`install.sh` accepts `--public-host <host>`, `--public-port <port>`,
-and `--help`. Address options are install-only: a host must
-be a hostname or IP address, and a port must be decimal 1 through 65535. An
-omitted address value keeps `.env` or the shipped `localhost` / `443` default;
-an explicit option atomically updates only its matching `.env` key. The command
-validates options before Docker access and runs `docker compose up -d` exactly
-once. Default `uninstall.sh` is reversible: it keeps named volumes, `.env`, the
-release directory, and the regular `compose.override.yaml` written by a
-completed Upgrade Operation. `./uninstall.sh --purge --confirm` permanently
-deletes existing volumes at the exact names declared by the current Compose
-file stack (`compose.yaml` and any regular `compose.override.yaml`), regardless
-of missing or different ownership labels. This includes unlabelled residual
-volumes left by an interrupted installation. It then removes that version
-override for a clean reinstall from the same directory. Undeclared volumes,
-`.env`, and the release directory are preserved.
+`install.sh` accepts `--public-host <host>`, `--public-port <port>`, and `--help`. Address options are install-only: a host must be a hostname or IP address, and a port must be decimal 1 through 65535. An omitted address value keeps `.env` or the shipped `localhost` and `443` default; an explicit option atomically updates only its matching `.env` key. The command validates options before Docker access and runs `docker compose up -d` exactly once.
 
-Confirmed purge skips installation ownership and database-mode classification.
-If `.env` is missing, it reads `.env.example` only to render Compose; it never
-creates `.env`. Invalid Compose inputs still prevent cleanup. After project
-containers are removed, any remaining container reference to a selected volume
-prevents all volume deletions. Docker query or deletion failures return an
-error and retain the version override; a removal failure can leave an earlier
-volume already deleted. Retrying an already empty purge is allowed. Confirming
-purge authorizes deletion by exact declared name even when the volume belongs
-to another project, so its data cannot be recovered through this command.
+Default `uninstall.sh` is reversible: it keeps named volumes, `.env`, the release directory, and the regular `compose.override.yaml` written by a completed upgrade. `./uninstall.sh --purge --confirm` permanently deletes existing volumes at the exact names declared by the current Compose file stack (`compose.yaml` and any regular `compose.override.yaml`), regardless of missing or different ownership labels. This includes unlabelled residual volumes left by an interrupted installation. It then removes that version override for a clean reinstall from the same directory. Undeclared volumes, `.env`, and the release directory are preserved.
+
+Confirmed purge skips installation ownership and database-mode classification. If `.env` is missing, it reads `.env.example` only to render Compose; it never creates `.env`. Invalid Compose inputs still prevent cleanup. After project containers are removed, any remaining container reference to a selected volume prevents all volume deletions. Docker query or deletion failures return an error and retain the version override; a removal failure can leave an earlier volume already deleted. Retrying an already empty purge is allowed. Confirming purge authorizes deletion by exact declared name even when the volume belongs to another project, so its data cannot be recovered through this command.
+
+### Logs
+
+All resident services use Docker's `json-file` driver with `max-size=10m` and `max-file=3`. `./logs.sh` follows every service with the same bounded output; pass a service name or a Compose logs option to narrow it, for example `./logs.sh server`. The ordinary Alloy container reads only labelled LunaFox Server and internal Agent output through the Docker socket and sends it to the local Loki service. Alloy stores read positions in `lunafox_alloy`, so collector restart does not replay the entire retained log set.
+
+The collector preserves the existing selectors `{component="server",container_name="lunafox-server"}` and `{agent_id="<id>",container_name="lunafox-agent"}`. It does not collect its own output. No Loki Docker plugin is installed or required.
 
 ### Image preheat and recovery
 
-Every modern installation entry uses the same Compose-managed
-`engine-preheater` one-shot gate: the public repository, Release ZIP, direct
-Compose, and supported development/private
-entry points all consume one release-bound `preheat-manifest.json`. Before the
-application services start, it preheats every Engine Runtime published for the
-host platform and the complete image closure for the selected Compose profile.
-That includes all published Engine Runtimes even when a Workflow is disabled;
-`embedded` includes `postgres`, while `external` excludes it.
+Every modern installation entry uses the same Compose-managed `engine-preheater` one-shot gate: the public repository, Release ZIP, direct Compose, and supported development and private entry points all consume one release-bound `preheat-manifest.json`. Before the application services start, it preheats every Engine Runtime published for the host platform and the complete image closure for the selected Compose profile. That includes all published Engine Runtimes even when a Workflow is disabled; `embedded` includes `postgres`, while `external` excludes it.
 
-The preheat deadline is independent from readiness. The default
-`LUNAFOX_PREHEAT_TIMEOUT_SECONDS` is `900` seconds and accepts `300` through
-`3600`; `LUNAFOX_READY_TIMEOUT_SECONDS` only controls the outer readiness wait.
-If readiness expires first, the preheater is left running. A preheat failure
-keeps the containers, logs, verified Docker cache, named volumes, database, and
-application data in place. Inspect the read-only status and service log, then
-rerun only the gate after fixing transport or configuration:
+The preheat deadline is independent from readiness. The default `LUNAFOX_PREHEAT_TIMEOUT_SECONDS` is `900` seconds and accepts `300` through `3600`; `LUNAFOX_READY_TIMEOUT_SECONDS` only controls the outer readiness wait. If readiness expires first, the preheater is left running. A preheat failure keeps the containers, logs, verified Docker cache, named volumes, database, and application data in place. Inspect the read-only status and service log, then rerun only the gate after fixing transport or configuration:
 
 ```console
 docker compose up -d --force-recreate engine-preheater
 ```
 
-During an Upgrade Operation, the target Compose and
-`third-party-image-policy.json` are fetched from the immutable
-`manifests/<release-tag>/` channel directory and are validated against that
-release's preheat manifest before the private candidate snapshot is preheated;
-the active deployment is promoted only after the gate succeeds.
+During an upgrade, the target Compose and `third-party-image-policy.json` are fetched from the immutable `manifests/<release-tag>/` channel directory and validated against that release's preheat manifest before the private candidate snapshot is preheated; the active deployment is promoted only after the gate succeeds.
 
 ### Deployment lock and recovery
 
-A lifecycle mutation and an Upgrade Operation never overlap. Both take a
-deployment-level lock in `.lunafox-lifecycle.lock`, and `./status.sh` reports it
-without waiting:
+A lifecycle mutation and an upgrade never overlap. Both take a deployment-level lock in `.lunafox-lifecycle.lock`, and `./status.sh` reports it without waiting:
 
 ```console
 ./status.sh
@@ -319,293 +286,69 @@ LunaFox:   lock: upgrade recovery fence (operation <id>)
 LunaFox deployment status: starting
 ```
 
-The lock is never reclaimed automatically, because a slow operation must not
-look like a dead one. Confirm that no lifecycle command and no upgrade is
-running, then remove the directory by hand:
+The lock is never reclaimed automatically, because a slow operation must not look like a dead one. Confirm that no lifecycle command and no upgrade is running, then remove the directory by hand:
 
 ```console
 cat .lunafox-lifecycle.lock/owner
 rm -rf .lunafox-lifecycle.lock
 ```
 
-Direct `docker compose` commands cannot take this lock, so they are outside the
-mutual exclusion. The upgrade journal in `lunafox_upgrade_state` remains the
-source of truth for an interrupted upgrade.
+Direct `docker compose` commands cannot take this lock, so they are outside the mutual exclusion. The upgrade journal in `lunafox_upgrade_state` remains the source of truth for an interrupted upgrade.
 
-The internal Agent and restricted upgrader are Compose services, so all four
-commands include them.
-`down` removes containers and the project network while retaining named
-volumes, including `lunafox_upgrade_state`. Do not add `--volumes` unless
-permanent state deletion is intended and
-has been backed up. No command in this deployment automatically migrates,
-resets, or deletes an older deployment.
-
-## Initialization
-
-Compose expresses initialization through one-shot services:
-
-1. `config-init` validates the database mode, the derived `COMPOSE_PROFILES`
-   value, and the connection inputs, generates or adopts the permitted secrets,
-   and persists the database mode, database password, and JWT secret as
-   mode-0600 files in `lunafox_config`.
-2. `agent-preflight` uses the released Agent image to verify Docker API,
-   exact named-volume identities, volume-subpath isolation, and read-only
-   execution mounts through a real sibling container round trip.
-3. `cert-init` creates or validates the certificate and private key in
-   `lunafox_ssl`.
-4. In embedded mode, PostgreSQL starts after configuration initialization and
-   `migrate` waits for its health. In external mode, the bundled PostgreSQL
-   service is absent and `migrate` connects directly to the configured host.
-5. `bootstrap` waits for both preflight and migration, installs the verified
-   Engine inventory and default resources, then creates or validates the
-   internal Agent credential.
-6. Server starts only after bootstrap succeeds. Agent starts after both
-   bootstrap and Server health succeed; Nginx starts after certificate, Server,
-   and Frontend readiness.
-
-Repeated startup reuses the files in `lunafox_config`. After a successful first
-initialization, changing `DATABASE_MODE` fails before any database consumer
-starts. A later non-empty `DB_PASSWORD` or `JWT_SECRET` that differs from the
-persisted value also fails; Compose does not rotate live credentials. An older
-configuration volume without a mode record adopts embedded mode by default.
-Adopting external mode from such a volume requires an explicit `DB_PASSWORD`
-that matches the persisted value.
-
-See [Configuration changes after first start](#configuration-changes-after-first-start)
-for the recovery path and the supported way to adopt a different deployment
-configuration.
-
-For embedded mode, back up `lunafox_config` with `lunafox_postgres`. For external
-mode, back up `lunafox_config` together with the external database using its
-operator-approved procedure. Deleting only the configuration volume loses the
-password needed to connect to the selected database.
-
-The credential is a mode-0600 regular JSON file in `lunafox_agent_state` and is
-never passed through the host environment or Docker container metadata.
-Registration, database binding, and credential publication are serialized.
-Repeated successful `docker compose up -d` reuses the same registered Agent.
-Missing, malformed, permissive, partially published, deleted, or database-
-inconsistent identity state fails with an explicit repair error and never
-silently registers another Agent.
-
-Default resources follow the same fail-closed rule. A fresh state imports the
-packaged fingerprint corpus and wordlists once. Later bootstrap runs leave
-initialized wordlist rows and their persisted content untouched, including
-user edits, and only validate the catalog identity plus the physical regular
-file boundary. Missing or partially deleted default wordlists still fail with
-an explicit repair error; bootstrap never fills in or overwrites that state.
-The fingerprint corpus retains its separate record and content integrity
-checks. An initialized corpus that was fully cleared is not silently reseeded.
-
-The preflight checks the actual Docker socket, Linux execution node,
-named-volume subpaths, and read-only execution mounts before business bootstrap.
-The resident Agent checks the socket, platform, API version, and exact volume
-identities again when it starts. Unsupported capability fails explicitly; there
-is no weaker whole-volume fallback. Server never receives the Docker socket.
-
-The Compose-managed Agent has in-container self-update disabled. The restricted
-upgrader updates its fixed `agent` service from the release Manifest. Existing
-remote Agent installation and `update_required` self-update behavior are
-unchanged.
-
-## Configuration changes after first start
-
-The first successful `config-init` run establishes the configuration boundary.
-It persists `DATABASE_MODE`, `DB_PASSWORD`, and `JWT_SECRET` in
-`lunafox_config`; `COMPOSE_PROFILES` must continue to derive from
-`DATABASE_MODE`. Later non-empty inputs are checked against that persisted
-state.
-
-This release does not support any of the following as an in-place operation:
-
-- Online database-mode migration is unsupported: changing `DATABASE_MODE`
-  between `embedded` and `external` by editing `.env` is not an in-place
-  operation.
-- Online credential rotation is unsupported: rotating the live database
-  password or `JWT_SECRET` by editing `.env` is not an in-place operation.
-- Automatically copying data between `lunafox_postgres` and an external
-  PostgreSQL server.
-- Deleting or replacing `lunafox_config` to force a new selection.
-
-In short, online database-mode migration is unsupported and online credential
-rotation is unsupported in this release.
-
-If an existing deployment is blocked after an accidental edit:
-
-1. Restore the original `DATABASE_MODE` and `COMPOSE_PROFILES` in `.env`.
-2. Restore the original non-empty `DB_PASSWORD` and `JWT_SECRET`, or remove
-   those new values so empty inputs reuse the persisted files.
-3. Keep `lunafox_config` and, for embedded mode, `lunafox_postgres`. For
-   external mode, keep the external database and its operator-managed backup.
-   Do not run `docker compose down --volumes`.
-4. Run `docker compose up -d`; if initialization still fails, inspect
-   `docker compose logs config-init` before changing any persisted state.
-
-To adopt a different mode or credentials, use a separate deployment:
-
-1. Keep the old deployment available and take verified backups of
-   `lunafox_config` plus `lunafox_postgres` for embedded mode, or the external
-   database for external mode.
-2. Create a new deployment directory and set the final `.env`,
-   `DATABASE_MODE`, `COMPOSE_PROFILES`, connection values, and secrets before
-   its first `docker compose up -d`.
-3. If data must be retained, use the operator's tested PostgreSQL
-   backup/restore or export/import procedure. Verify schema, application data,
-   connection access, and health before switching traffic. LunaFox does not
-   copy data, change remote roles, or provide an automatic rollback.
-4. Keep the old deployment as the rollback target until the new deployment
-   has been accepted.
-
-Credential rotation still requires coordination outside this Compose workflow.
-A PostgreSQL password change must be synchronized with the database role and
-the new deployment's `DB_PASSWORD`; changing `JWT_SECRET` can invalidate
-existing sessions. Do not edit files inside `lunafox_config` directly.
+`down` removes containers and the project network while retaining named volumes, including `lunafox_upgrade_state`. Do not add `--volumes` unless permanent state deletion is intended and has been backed up. No command in this deployment automatically migrates, resets, or deletes an older deployment.
 
 ## System updates
 
-The release package fixes its `stable` or `canary` channel and public metadata
-source inside `compose.yaml`. There is no host update script: version changes go
-through the Upgrade Operation and the restricted Compose upgrader, and the
-lifecycle scripts neither copy nor bypass that state machine. The selected Registry comes from `.env` before
-first startup and is then preserved by upgrades. The Server fetches
-the current schema-v3 channel record over HTTPS, validates its bounded Manifest
-path and raw SHA-256, then caches the immutable Manifest by digest in
-`lunafox_upgrade_state`. It also downloads the manifest-bound composition from
-the version-isolated `manifests/<release-tag>/runtime-composition.json` path and
-stores the validated bytes under
-`.lunafox/upgrade/compositions/<composition-core-digest>.json`. The running
-Server binary remains the input to `upgrade.compatibilityRange`; the host's
-confirmed deployment inventory is the baseline for candidate availability and
-component comparison, so a confirmed frontend-only release is not offered
-again.
+The release package fixes its `stable` or `canary` channel and public metadata source inside `compose.yaml`. There is no host update script: version changes go through the Upgrade Operation and the restricted Compose upgrader, and the lifecycle scripts neither copy nor bypass that state machine. The selected Registry comes from `.env` before first startup and is then preserved by upgrades.
 
-One explicitly registered compatibility bridge may omit the two modern
-Manifest metadata blocks so an older strict client can read the target. That
-exception is version-scoped, keeps the same immutable image and upgrade
-inventory, and always takes the full Compose update path; it never enables a
-`frontend_only` plan. Its release still carries independent notes and composition
-evidence assets, but an older host does not fetch an unbound composition during
-the update. This is a direct update to the current release, not a required
-two-step installation.
+The Server fetches the current schema-v3 channel record over HTTPS, validates its bounded Manifest path and raw SHA-256, then caches the immutable Manifest by digest in `lunafox_upgrade_state`. It also downloads the manifest-bound composition from the version-isolated `manifests/<release-tag>/runtime-composition.json` path and stores the validated bytes under `.lunafox/upgrade/compositions/<composition-core-digest>.json`. The running Server binary remains the input to `upgrade.compatibilityRange`; the host's confirmed deployment inventory is the baseline for candidate availability and component comparison, so a confirmed frontend-only release is not offered again.
 
-An administrator can check, confirm, and start an eligible update through the
-existing frontend update control. Before Server pauses scheduling or cancels
-work, a v2-capable host returns a read-only scope plan bound to the candidate
-manifest, composition, confirmed baseline, and live container digests. Only an
-exact `{frontend}` difference with confirmed dynamic frontend upstream
-capability yields `frontend_only`; it pulls and recreates `frontend` with no
-dependencies or build. The plan is revalidated after the deployment lock; a
-stale plan fails before side effects and never widens itself to `full`. Server
-sends only the Operation ID, fixed action, and Manifest digest through the shared
-Unix Socket. The Compose-managed upgrader continues if the browser closes or
-Server is recreated. It has no network port and uses a fixed project, file set,
-command argv, service allowlist, and `--no-deps` recreation. Server never
-receives the Docker Socket.
+An administrator can check, confirm, and start an eligible update through the existing frontend update control. Before Server pauses scheduling or cancels work, a v2-capable host returns a read-only scope plan bound to the candidate manifest, composition, confirmed baseline, and live container digests. Only an exact `{frontend}` difference with confirmed dynamic frontend upstream capability yields `frontend_only`; it pulls and recreates `frontend` with no dependencies or build. The plan is revalidated after the deployment lock; a stale plan fails before side effects and never widens itself to `full`. Server sends only the Operation ID, fixed action, and Manifest digest through the shared Unix Socket. The Compose-managed upgrader continues if the browser closes or Server is recreated. It has no network port and uses a fixed project, file set, command argv, service allowlist, and `--no-deps` recreation. Server never receives the Docker Socket.
 
-The upgrader's read-write Docker Socket grants control of the local Docker
-daemon. The service also mounts the extracted package directory so it can read
-`compose.yaml` and `.env`. A full operation atomically installs
-`compose.override.yaml` after service, migration, Agent, health, and digest
-verification. A `frontend_only` operation stages a patch that changes only the
-frontend image; the persistent override is promoted only after the Server sends
-`confirm`. Keep that override with the extracted directory: ordinary
-`docker compose up -d`, `start`, and `restart` automatically retain the
-confirmed image and version target without rewriting database, public address,
-or secret settings.
+The upgrader's read-write Docker Socket grants control of the local Docker daemon. The service also mounts the extracted package directory so it can read `compose.yaml` and `.env`. A full operation atomically installs `compose.override.yaml` after service, migration, Agent, health, and digest verification. A `frontend_only` operation stages a patch that changes only the frontend image; the persistent override is promoted only after the Server sends `confirm`. Keep that override with the extracted directory: ordinary `docker compose up -d`, `start`, and `restart` automatically retain the confirmed image and version target without rewriting database, public address, or secret settings.
 
-The host replaces its confirmed deployment state only after complete
-verification. For `frontend_only`, it records the new component inventory only
-after the frontend digest, health, and public Nginx response converge; a failed
-or partial run never becomes a guessed baseline.
+The host replaces its confirmed deployment state only after complete verification. For `frontend_only`, it records the new component inventory only after the frontend digest, health, and public Nginx response converge; a failed or partial run never becomes a guessed baseline.
 
-The completion receipt proves only that the bounded Compose deployment work
-finished. Server reconciles it with the database Operation, journal, migration,
-service, API, and Agent evidence before reporting success. A migration failure
-or uncertain outcome requires recovery; an Agent timeout requires attention.
-The current `release-candidate` policy uses a frozen `000001` migration
-baseline and still provides no preserve-data rollback or automatic backup.
-Production recovery is limited to a verified backup restore or an approved
-forward fix; migration `down` files are test teardown only.
+The completion receipt proves only that the bounded Compose deployment work finished. Server reconciles it with the database Operation, journal, migration, service, API, and Agent evidence before reporting success. A migration failure or uncertain outcome requires recovery; an Agent timeout requires attention. The current upgrade policy uses a frozen `000001` migration baseline and still provides no preserve-data rollback or automatic backup. Production recovery is limited to a verified backup restore or an approved forward fix; migration `down` files are test teardown only.
 
-A host that explicitly supports only `schema-v1` follows the established `full`
-path. A missing composition cache also permits only `full` planning; malformed
-or tampered composition, invalid v2 capability or plan data, and stale scoped
-plans fail closed before scheduler, cancellation, or Compose side effects. A
-candidate that declares a migration or changes any non-frontend component stays
-on the `full` path.
+A host that explicitly supports only `schema-v1` follows the established `full` path. A missing composition cache also permits only `full` planning; malformed or tampered composition, invalid v2 capability or plan data, and stale scoped plans fail closed before scheduler, cancellation, or Compose side effects. A candidate that declares a migration or changes any non-frontend component stays on the `full` path.
 
-Automatic update supports compatible image-only releases. A release that
-changes the Compose structure, named volumes, initialization resources, or the
-upgrader protocol must declare itself incompatible; download its new deployment
-ZIP, preserve the documented state, review its README, and run Compose from the
-new extracted directory. The running release must satisfy the Manifest's
-`upgrade.compatibilityRange`; otherwise the update remains visible but cannot
-create an automatic Upgrade Operation. This is also the manual fallback if the
-host cannot expose its local Docker Socket to the upgrader container.
+Automatic update supports compatible image-only releases. A release that changes the Compose structure, named volumes, initialization resources, or the upgrader protocol must declare itself incompatible; download its new deployment ZIP, preserve the documented state, review its README, and run Compose from the new extracted directory. The running release must satisfy the Manifest's `upgrade.compatibilityRange`; otherwise the update remains visible but cannot create an automatic Upgrade Operation. This is also the manual fallback if the host cannot expose its local Docker Socket to the upgrader container.
 
-## Logs
+Under the current migration policy the deployment still runs in the `release-candidate` phase: the `000001` baseline is frozen and data-retaining upgrades are not enabled yet. A candidate that declares `hasDatabaseMigration: true` therefore still appears in update checks, but `eligible` is false, the web UI cannot create an Upgrade Operation, and the dialog tells the operator to upgrade from the deployment guide. Use the manual path instead: back up `lunafox_config` and `lunafox_postgres` as described in Backup and recovery (external mode uses its approved process), keep the non-empty credentials in `.env` and the named volumes, download the target deployment ZIP, read its README, and run `./install.sh` or `docker compose up -d` from the new extracted directory. The new Server applies the numbered forward migrations when it starts; afterwards use `./status.sh` to confirm readiness and check that sign-in and data still work. We recommend handing this deployment guide to an AI assistant such as Codex to run and verify each step; do not skip the backup and do not hand-edit the schema or migration tables.
 
-All resident services use Docker's `json-file` driver with `max-size=10m` and
-`max-file=3`. `./logs.sh` follows every service with the same bounded output;
-pass a service name or a Compose logs option to narrow it, for example
-`./logs.sh server`. The ordinary Alloy container reads only labelled LunaFox Server
-and internal Agent output through the Docker socket and sends it to the local
-Loki service. Alloy stores read positions in `lunafox_alloy`, so collector
-restart does not replay the entire retained log set.
+One explicitly registered compatibility bridge may omit the two modern Manifest metadata blocks so an older strict client can read the target. That exception is version-scoped, keeps the same immutable image and upgrade inventory, and always takes the full Compose update path; it never enables a `frontend_only` plan. Its release still carries independent notes and composition evidence assets, but an older host does not fetch an unbound composition during the update. This is a direct update to the current release, not a required two-step installation.
 
-The collector preserves the existing selectors
-`{component="server",container_name="lunafox-server"}` and
-`{agent_id="<id>",container_name="lunafox-agent"}`. It does not collect its own
-output. No Loki Docker plugin is installed or required. Docker socket access is
-limited to the restricted upgrader, Compose Agent, its one-shot capability
-preflight, and the collector plus development-only tooling; the resident Server
-has no Docker control path.
+## Certificates
 
-## Certificates and recovery
+`cert-init` creates a self-signed RSA certificate with a DNS or IP SAN for `PUBLIC_HOST`. Existing certificate files must be restricted regular files, unexpired, match the configured host, and share the private key. Partial or invalid state fails rather than being overwritten. This release does not add ACME, user certificate import, or automatic renewal.
 
-`cert-init` creates a self-signed RSA certificate with a DNS or IP SAN for
-`PUBLIC_HOST`. Existing certificate files must be restricted regular files,
-unexpired, match the configured host, and share the private key. Partial or
-invalid state fails rather than being overwritten. This release does not add
-ACME, user certificate import, or automatic renewal.
+Nginx readiness probes use `127.0.0.1` to match its IPv4 listener even on hosts where `localhost` resolves to IPv6 first. Upgrade journal and completion receipt files live only in `lunafox_upgrade_state` and are reconciled by the Upgrade Operation API.
 
-Use `docker compose logs config-init agent-preflight migrate bootstrap cert-init agent upgrader` to
-diagnose a failed one-shot or Agent startup. Correct configuration or explicitly
-repair the named volume state, then repeat `docker compose up -d`. Nginx readiness probes use `127.0.0.1` to match its IPv4 listener even on
-hosts where `localhost` resolves to IPv6 first. For ordinary
-initialization, Compose exit status, dependency conditions, container state,
-and service health are the deployment status. Upgrade journal and completion
-receipt files live only in `lunafox_upgrade_state` and are reconciled by the
-Upgrade Operation API.
+## Backup and recovery
 
-When upgrading from a package that stored credentials only in `.env`, keep the
-existing non-empty `DB_PASSWORD` and `JWT_SECRET` for the first start of the new
-package. `config-init` copies them into `lunafox_config`. After that migration,
-empty inputs reuse the persisted files. A conflicting value fails explicitly;
-online credential rotation is unsupported in this release. Moving an existing
-installation between embedded and external PostgreSQL is not an in-place
-operation; see [Configuration changes after first start](#configuration-changes-after-first-start)
-for the separate deployment and operator-managed data migration path.
+For embedded mode, back up `lunafox_config` with `lunafox_postgres`. For external mode, back up `lunafox_config` together with the external database using its operator-approved procedure. Deleting only the configuration volume loses the password needed to connect to the selected database.
+
+When upgrading from a package that stored credentials only in `.env`, keep the existing non-empty `DB_PASSWORD` and `JWT_SECRET` for the first start of the new package. `config-init` copies them into `lunafox_config`. After that migration, empty inputs reuse the persisted files. A conflicting value fails explicitly; online credential rotation is unsupported in this release.
+
+Moving an existing installation between embedded and external PostgreSQL is not an in-place operation. See Configuration changes after first start for the separate deployment and operator-managed data migration path.
+
+## Troubleshooting
+
+- Readiness times out: run `./status.sh` and `./logs.sh <service>`; the failure footer names the failing stage, and nothing is rolled back. Fix the cause and repeat the same command.
+- Preheat fails: inspect the `engine-preheater` status and log, fix transport or configuration, then rerun only the gate with `docker compose up -d --force-recreate engine-preheater`.
+- The browser warns about the certificate: the first start uses a self-signed certificate for `PUBLIC_HOST`; this release does not manage certificates automatically.
+- The host port is busy: set a different `PUBLIC_PORT` before the first start, or free the port.
+- Database credentials conflict after an edit: restore the original non-empty `DB_PASSWORD` and `JWT_SECRET`, or clear them so empty inputs reuse the persisted files.
+- The deployment lock is present: confirm no lifecycle command or upgrade is running, then remove `.lunafox-lifecycle.lock` manually.
+- An upgrade ends in recovery or attention: treat the upgrade journal in `lunafox_upgrade_state` as the source of truth and follow the recovery path; there is no automatic rollback.
 
 ## Release and security boundary
 
-This is a single-node Compose release-candidate deployment. It does not
-provide rolling upgrade, automatic backup, preserve-data rollback, or
-cross-node recovery. The published `000001` migration baseline is immutable
-and does not promise compatibility with existing persisted deployments. Release
-generation and contract checks use isolated fixtures; they do not touch
-operator volumes.
+This is a single-node Compose deployment. It does not provide rolling upgrade, automatic backup, preserve-data rollback, or cross-node recovery. The published `000001` migration baseline is immutable and does not promise compatibility with existing persisted deployments. Release generation and contract checks use isolated fixtures; they do not touch operator volumes.
 
-The current Agent authentication credential remains a long-lived
-eight-character hexadecimal bearer. Agent TLS certificate-chain identity,
-replay protection, rotation, and revocation are deferred. TLS and credential
-hardening require a separate security change. The package is for self-hosted
-use on infrastructure the operator owns or controls; the closed Agent artifact
-remains subject to `NOTICE-CLOSED-ARTIFACTS.md`.
+The current Agent authentication credential is a long-lived eight-character hexadecimal bearer. This release does not provide Agent TLS certificate-chain identity, replay protection, rotation, or revocation. TLS and credential hardening require a separate security change. The package is for self-hosted use on infrastructure the operator owns or controls; the closed Agent artifact remains subject to `NOTICE-CLOSED-ARTIFACTS.md`. Redistribution or commercial use of the closed Agent artifact requires prior written authorization or a commercial agreement.
 
-Exported first-party Runtime source and deployment files are SPDX
-`GPL-3.0-only`.
+Exported first-party Runtime source and deployment files are SPDX `GPL-3.0-only`.
 
-Engine Runtime Images and Engine Packages are public artifacts. First-party
-Engine source is GPL-3.0-only. Included third-party components remain governed
-by their applicable licenses and attribution terms.
+Engine Runtime Images and Engine Packages are public artifacts. First-party Engine source is GPL-3.0-only. Included third-party components remain governed by their applicable licenses and attribution terms.

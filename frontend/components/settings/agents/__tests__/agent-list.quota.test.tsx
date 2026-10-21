@@ -73,7 +73,7 @@ vi.mock("@/components/settings/agents/agent-list-loading-state", () => ({
 }))
 
 vi.mock("@/components/settings/agents/agent-overview-section", () => ({
-  AgentOverviewSection: () => null,
+  AgentOverviewSection: ({ summary, showLicenseBanner = true }: { summary?: AgentClusterSummary; showLicenseBanner?: boolean }) => summary?.license && showLicenseBanner ? <span>license-capability</span> : null,
 }))
 
 vi.mock("@/components/settings/agents/agent-overview-loading-state", () => ({
@@ -156,6 +156,49 @@ function quotaMessage(used: number) {
 }
 
 describe("AgentList quota feedback", () => {
+  it("exposes the Server license capability on the production page while preserving old Server compatibility", () => {
+    hookMocks.summary.mockReturnValue(summaryState({ ...makeSummary(3), license: {
+      resourceName: "agentLicenses/current", state: "inactive", agentLimit: 3, months: null, expiresAt: null, licenseId: null,
+    } }))
+    const view = render(<AgentList />)
+    expect(screen.getByText("license-capability")).toBeInTheDocument()
+    hookMocks.summary.mockReturnValue(summaryState(makeSummary(3)))
+    view.rerender(<AgentList />)
+    expect(screen.queryByText("license-capability")).not.toBeInTheDocument()
+  })
+
+  it.each([
+    { count: 2, state: "inactive", visible: false },
+    { count: 3, state: "inactive", visible: true },
+    { count: 5, state: "inactive", visible: true },
+    { count: 2, state: "active", visible: false },
+    { count: 3, state: "active", visible: true },
+    { count: 2, state: "expired", visible: true },
+  ] as const)("shows the on-demand banner for count=$count state=$state: $visible", ({ count, state, visible }) => {
+    hookMocks.summary.mockReturnValue(summaryState({ ...makeSummary(count), license: {
+      resourceName: "agentLicenses/current", state, agentLimit: 3, months: null, expiresAt: null, licenseId: null,
+    } }))
+    render(<AgentList />)
+    expect(Boolean(screen.queryByText("license-capability"))).toBe(visible)
+    expect(screen.queryByRole("button", { name: /toolbarQuota|reveal|查看授权|额度/ })).not.toBeInTheDocument()
+  })
+
+  it("updates automatic banner visibility from the authoritative summary", () => {
+    hookMocks.summary.mockReturnValue(summaryState({ ...makeSummary(3), license: {
+      resourceName: "agentLicenses/current", state: "inactive", agentLimit: 3, months: null, expiresAt: null, licenseId: null,
+    } }))
+    const view = render(<AgentList />)
+    expect(screen.getByText("license-capability")).toBeInTheDocument()
+    hookMocks.summary.mockReturnValue(summaryState({ ...makeSummary(3), agentLimit: 10, license: {
+      resourceName: "agentLicenses/current", state: "active", agentLimit: 10, months: 1, expiresAt: "2026-11-19T00:00:00Z", licenseId: "demo",
+    } }))
+    view.rerender(<AgentList />)
+    expect(screen.queryByText("license-capability")).not.toBeInTheDocument()
+    expect(getAddButtons().primary).toBeEnabled()
+    hookMocks.summary.mockReturnValue(summaryState(makeSummary(3)))
+    view.rerender(<AgentList />)
+    expect(screen.queryByText("license-capability")).not.toBeInTheDocument()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     hookMocks.filterOptions.mockReturnValue({ data: { results: [] }, refetch: vi.fn() })

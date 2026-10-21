@@ -47,6 +47,7 @@ func toAgentClusterSummaryOutput(summary agentapp.AgentClusterSummary) dto.Agent
 		ExecutionFreshnessSeconds: summary.ExecutionFreshnessSeconds,
 		TotalNodes:                summary.Nodes.Total,
 		AgentLimit:                summary.AgentLimit,
+		License:                   toAgentLicenseOutput(summary.License),
 		HealthyCount:              summary.Nodes.Healthy,
 		WarningCount:              summary.Nodes.Warning,
 		OfflineCount:              summary.Nodes.Offline,

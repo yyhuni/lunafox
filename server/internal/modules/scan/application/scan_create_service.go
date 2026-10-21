@@ -13,6 +13,7 @@ type ScanCreateService struct {
 	planTaskCompiler         *PlanTaskCompiler
 	planTaskLimits           PlanTaskLimits
 	agentLookup              ScanCreateAgentLookup
+	agentExecutionReader     ScanAgentExecutionReader
 }
 
 // ConfigurePlanTask installs the scan-create compiler with one immutable

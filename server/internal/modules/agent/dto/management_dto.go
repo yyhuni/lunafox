@@ -25,23 +25,24 @@ type AgentHeartbeatResponse struct {
 }
 
 type AgentResponse struct {
-	ID               int                     `json:"id"`
-	Name             string                  `json:"name"`
-	InstanceID       string                  `json:"instanceId"`
-	DisplayName      string                  `json:"displayName"`
-	Status           string                  `json:"status"`
-	ObservedHostname string                  `json:"observedHostname,omitempty"`
-	ConnectionIP     string                  `json:"connectionIp,omitempty"`
-	AgentVersion     string                  `json:"agentVersion,omitempty"`
-	MaxTasks         int                     `json:"maxTasks"`
-	CPUThreshold     int                     `json:"cpuThreshold"`
-	MemThreshold     int                     `json:"memThreshold"`
-	DiskThreshold    int                     `json:"diskThreshold"`
-	ConnectedAt      *time.Time              `json:"connectedAt,omitempty"`
-	LastHeartbeat    *time.Time              `json:"lastHeartbeat,omitempty"`
-	Health           HealthStatus            `json:"health"`
-	Heartbeat        *AgentHeartbeatResponse `json:"heartbeat,omitempty"`
-	CreatedAt        time.Time               `json:"createdAt"`
+	ID                   int                     `json:"id"`
+	Name                 string                  `json:"name"`
+	InstanceID           string                  `json:"instanceId"`
+	DisplayName          string                  `json:"displayName"`
+	Status               string                  `json:"status"`
+	ExecutionEligibility string                  `json:"executionEligibility"`
+	ObservedHostname     string                  `json:"observedHostname,omitempty"`
+	ConnectionIP         string                  `json:"connectionIp,omitempty"`
+	AgentVersion         string                  `json:"agentVersion,omitempty"`
+	MaxTasks             int                     `json:"maxTasks"`
+	CPUThreshold         int                     `json:"cpuThreshold"`
+	MemThreshold         int                     `json:"memThreshold"`
+	DiskThreshold        int                     `json:"diskThreshold"`
+	ConnectedAt          *time.Time              `json:"connectedAt,omitempty"`
+	LastHeartbeat        *time.Time              `json:"lastHeartbeat,omitempty"`
+	Health               HealthStatus            `json:"health"`
+	Heartbeat            *AgentHeartbeatResponse `json:"heartbeat,omitempty"`
+	CreatedAt            time.Time               `json:"createdAt"`
 }
 
 type AgentLocationResponse struct {

@@ -40,6 +40,26 @@ client waits for that cleanup before sending the first real request.
 
 ## Ownership
 
+Agent activation mock uses the optional `license` projection in the existing
+cluster summary and the same `POST /admin/agentLicenses/current:activate`
+custom method as the Server. `mock/data/agent-license.ts` owns demonstration Keys,
+fixed issued expiry dates and quota. The current fixture issuance date is
+2026-10-19 UTC, with 1/2/3-month Keys expiring on 2026-11-19, 2026-12-19 and
+2027-01-19. Its in-memory activation state survives navigation and resets on a
+full reload; a reset never changes a Key’s expiry. Expired and not-yet-valid
+demonstration Keys preserve the previous license, matching the live contract.
+`happy`/`empty` are inactive, `stress` is active, `edge` is expired, and `error`
+fails activation. The summary and activation response share the same quota.
+The existing ten-node fixture stays intact, including full/over-limit states.
+Agent eligibility is projected from the complete registry ordered by
+`createdAt ASC, id ASC`, before filtering/paging. The initial eligible IDs are
+3, 9 and 1; offline ID 3 retains its place. Activation, natural expiry and
+deletion recompute eligibility. Restricted idle capacity moves to unavailable,
+while occupied slots remain unchanged. Pending pinned Scan 6 uses registered
+Agent 6 and exposes `agent_license_restricted` until an expanded Key is active.
+All Scan creation variants reject a restricted pinned Agent with
+`FAILED_PRECONDITION` / `AGENT_LICENSE_RESTRICTED` ErrorInfo.
+
 - Mock ownership now lives in the network-layer platform.
 - The runtime platform owns `USE_MOCK`, `MSW`, scenario selection, and request interception.
 - Mock bootstrap must not change the server-rendered or first-client-rendered React tree. UI providers may start the browser worker eagerly, but client request dispatch must wait in `lib/api-client` for the shared MSW startup promise before supported `/v1/*` calls leave the browser.

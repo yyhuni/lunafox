@@ -123,8 +123,9 @@ function AgentCardCompactResolved({
             <StatusLabel>{statusLabel}</StatusLabel>
           </Status>
           <div className="min-w-0">
-            <div className={AGENT_CARD_TITLE_CLASS} title={agentNode.displayName}>
-              {agentNode.displayName}
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <div className={AGENT_CARD_TITLE_CLASS} title={agentNode.displayName}>{agentNode.displayName}</div>
+              {agentNode.executionEligibility === "license_restricted" && <Badge size="compact" variant="warning" title={t("executionEligibility.restrictedHint")}>{t("executionEligibility.restricted")}</Badge>}
             </div>
             <div className={AGENT_CARD_IP_CLASS} title={connectionIpDisplay}>
               {connectionIpDisplay}

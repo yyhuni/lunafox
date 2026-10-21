@@ -20,7 +20,7 @@ func TestAgentRegistrationTransactionSupportsConcurrentInterleavedTokens(t *test
 	insertRegistrationToken(t, db, 1, "aaaaaaaa", time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC))
 	insertRegistrationToken(t, db, 2, "bbbbbbbb", time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC))
 
-	repository := &agentRepository{db: db}
+	repository := NewAgentRepository(db)
 	start := make(chan struct{})
 	errorsByAgent := make(chan error, 3)
 	var group sync.WaitGroup
@@ -87,7 +87,7 @@ func TestAgentRegistrationTransactionRollsBackMarkerAndRejectsExactExpiry(t *tes
 		t.Fatalf("insert existing Agent: %v", err)
 	}
 
-	repository := &agentRepository{db: db}
+	repository := NewAgentRepository(db)
 	conflict := agentdomain.NewRegisteredAgent(2, "conflict", "conflict", "1.0.0", "deadbeef", agentdomain.AgentRegistrationOptions{})
 	if err := repository.Create(context.Background(), conflict); err == nil {
 		t.Fatal("expected Agent insert conflict")
@@ -125,7 +125,7 @@ func TestRegistrationTokenCleanupRechecksAttributionAndRetainsMarkerAfterAgentDe
 	insertRegistrationToken(t, db, 4, "dddddddd", expiredAt)
 	insertRegistrationToken(t, db, 5, "eeeeeeee", expiredAt.Add(time.Minute))
 
-	agentRepository := &agentRepository{db: db}
+	agentRepository := NewAgentRepository(db)
 	agent := agentdomain.NewRegisteredAgent(2, "attributed", "attributed", "1.0.0", "deadbeef", agentdomain.AgentRegistrationOptions{})
 	// Registration uses a future expiry first; the cleanup scenario then ages it.
 	if err := db.Model(&model.RegistrationToken{}).Where("id = 2").Update("expires_at", time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)).Error; err != nil {
@@ -191,6 +191,7 @@ func openRegistrationTokenTestDB(t *testing.T) *gorm.DB {
 	// serializes the write transactions deterministically for this contract test.
 	sqlDB.SetMaxOpenConns(1)
 	if err := db.Exec(`
+		CREATE TABLE agent_license (singleton BOOLEAN PRIMARY KEY CHECK(singleton = TRUE), signed_key TEXT NOT NULL);
 		CREATE TABLE registration_token (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			token TEXT NOT NULL UNIQUE,

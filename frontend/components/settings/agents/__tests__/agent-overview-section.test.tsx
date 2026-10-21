@@ -49,6 +49,14 @@ const baseProps = {
 }
 
 describe("AgentOverviewSection", () => {
+  it("only exposes activation when the summary advertises license capability", () => {
+    const view = render(<AgentOverviewSection {...baseProps} summary={makeSummary()} />)
+    expect(screen.queryByRole("button", { name: "open" })).not.toBeInTheDocument()
+    view.rerender(<AgentOverviewSection {...baseProps} summary={makeSummary({ license: {
+      resourceName: "agentLicenses/current", state: "inactive", agentLimit: 3, months: null, expiresAt: null, licenseId: null,
+    } })} />)
+    expect(screen.getByRole("button", { name: "open" })).toBeInTheDocument()
+  })
   it("renders the authoritative full-cluster counts and Server-owned conclusion", () => {
     render(<AgentOverviewSection {...baseProps} summary={makeSummary()} />)
 

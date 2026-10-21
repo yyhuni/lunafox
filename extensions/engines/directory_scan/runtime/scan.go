@@ -52,6 +52,10 @@ func scanAndParseDirectories(
 	}
 	websiteSummary, err := runWebsiteScans(ctx, plan, config, workspace, options)
 	summary := DirectoryScanSummary{Websites: websiteSummary}
+	denoise := directoryDenoiseOptions{
+		authRedirect: config.DenoiseAuthRedirect,
+		backupHTML:   config.DenoiseBackupHtml,
+	}
 	if err != nil {
 		return summary, err
 	}
@@ -63,7 +67,7 @@ func scanAndParseDirectories(
 		if err != nil {
 			return summary, err
 		}
-		parsed, err := ParseFFUFArtifact(ctx, path, ordinal, visit)
+		parsed, err := ParseFFUFArtifactWithOptions(ctx, path, ordinal, denoise, visit)
 		summary.Records.add(parsed)
 		if err != nil {
 			return summary, fmt.Errorf("parse FFUF artifact %d: %w", ordinal, err)

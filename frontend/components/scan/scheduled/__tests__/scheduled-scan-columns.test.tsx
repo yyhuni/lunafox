@@ -26,6 +26,7 @@ const translations: ScheduledScanTranslations = {
     hasFailureIndicator: "Has failed runs",
     failureCauses: {
       WORKFLOW_UNAVAILABLE: "referenced scan workflow is unavailable",
+      AGENT_LICENSE_RESTRICTED: "bound agent is license restricted",
       AGENT_NOT_FOUND: "bound agent has been deleted",
       CONFIG_RESOURCE_UNAVAILABLE: "configuration resource is unavailable",
       ENGINE_UNAVAILABLE: "referenced engine is unavailable",

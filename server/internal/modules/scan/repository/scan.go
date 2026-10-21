@@ -9,6 +9,7 @@ import (
 // ScanRepository handles scan database operations.
 type ScanRepository struct {
 	db                       *gorm.DB
+	agentExecutionGuard      AgentExecutionGuard
 	terminalNotificationSink ScanTerminalNotificationSink
 }
 
@@ -34,3 +35,9 @@ var ScanFilterMapping = scope.FilterMapping{
 
 // ScanStatistics holds scan statistics.
 type ScanStatistics = scandomain.QueryStatistics
+
+// WithAgentExecutionGuard supplies the shared identity and task entitlement boundary.
+func (r *ScanRepository) WithAgentExecutionGuard(guard AgentExecutionGuard) *ScanRepository {
+	r.agentExecutionGuard = guard
+	return r
+}

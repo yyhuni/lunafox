@@ -17,7 +17,7 @@ const MAX_DOCUMENT_BYTES = 512 * 1024;
 const GENERATED_MARKER = /GENERATED/i;
 const READ_ONLY_MARKER = /READ[- ]ONLY/i;
 const DOCUMENT_PAIRS = Object.freeze([
-  { english: "README.md", chinese: "README.zh-CN.md" },
+  { english: "README.en.md", chinese: "README.md" },
   { english: "docs/public-deployment.md", chinese: "docs/public-deployment.zh-CN.md" },
 ]);
 

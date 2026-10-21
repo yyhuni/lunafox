@@ -7,6 +7,7 @@ agent 模块 handler 规范：
 - `GET /v1/admin/agents` 是已迁移 canonical collection list：只接受 `pageSize`、`pageToken`、`filter`、`orderBy`，并 hard cut 拒绝 `page`、独立 `status`、`include`、`sort`、`sortBy`、`sortOrder`、`keyword`。列表响应默认包含页面卡片所需 heartbeat projection；不要恢复 `include=heartbeat` 列表开关。
 - `GET /v1/admin/agents/filterOptions?field=status|healthState` 返回后端聚合筛选项；路由必须注册在 `/:agent` 前面。
 - `GET /v1/admin/agentClusterSummaries/current` 返回覆盖完整 Agent identity 集合的 fixed read-only summary；Overview 与 Agent 管理页不得从分页 collection 重建全局总数、容量或集群结论。
+- 受认证保护的 `POST /v1/admin/agentLicenses/current:activate` 只接受 `{key}` 并返回 `agentLicenses/current` 的已验签投影；Gin 路由使用 `:licenseAction` 通配段，handler 必须拒绝除 `current:activate` 外的动作。Key 缺失、签名无效、已过期或尚未生效分别映射为 `lunafox.agentLicense` 域的标准 `ErrorInfo`，不得回显原始 Key。
 - `GET /v1/admin/agentLocationMaps/current` 返回完整、非分页的 current/expired Agent 位置投影和 nullable Server 最后成功快照；地图不得遍历 Agent collection、采样 marker 或补默认坐标。
 - `GET /v1/admin/agents/:agent` 直接返回观测来源 generation 与最后成功位置状态；详情不得暴露 GeoIP attempt/failure 诊断，也不得把旧位置 provenance 改写为当前观测 IP。
 - Agent 注册令牌管理使用 `POST /v1/admin/agentRegistrationTokens` 与 `GET /v1/admin/agentRegistrationTokens/:registrationToken`；旧 `/v1/admin/agents/registrationTokens` 创建路径已 hard cut。路径参数是非密钥数字资源 ID，不能使用 bearer secret。

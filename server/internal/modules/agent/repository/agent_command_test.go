@@ -163,6 +163,7 @@ func TestAgentRepositoryCreateBackfillsID(t *testing.T) {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.Exec(`
+		CREATE TABLE agent_license (singleton BOOLEAN PRIMARY KEY CHECK(singleton = TRUE), signed_key TEXT NOT NULL);
 		CREATE TABLE registration_token (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			token TEXT NOT NULL UNIQUE,
@@ -190,7 +191,7 @@ func TestAgentRepositoryCreateBackfillsID(t *testing.T) {
 		t.Fatalf("create agent table failed: %v", err)
 	}
 
-	repo := &agentRepository{db: db}
+	repo := NewAgentRepository(db)
 	agent := agentdomain.NewRegisteredAgent(
 		1,
 		"agt_123456",

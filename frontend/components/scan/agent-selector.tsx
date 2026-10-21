@@ -172,7 +172,9 @@ export function ScanAgentSelector({ value, onChange, disabled = false }: ScanAge
                   ? t("automaticHint")
                   : selectedAgentUnavailable
                     ? t("unavailableHint")
-                    : t("selectedHint")}
+                    : selectedAgent?.executionEligibility === "license_restricted"
+                      ? t("licenseRestrictedHint")
+                      : t("selectedHint")}
               </span>
             </span>
           </span>
@@ -203,6 +205,7 @@ export function ScanAgentSelector({ value, onChange, disabled = false }: ScanAge
           {agents.map((agent) => {
             const heartbeat = agent.status === "online" ? agent.heartbeat : undefined
             const healthy = isHealthy(agent.health?.state)
+            const licenseRestricted = agent.executionEligibility === "license_restricted"
             const healthLabel = agent.status !== "online"
               ? t("offline")
               : healthy
@@ -213,15 +216,16 @@ export function ScanAgentSelector({ value, onChange, disabled = false }: ScanAge
                 key={agent.id}
                 value={String(agent.id)}
                 keywords={[agent.displayName || agent.name, agent.name, agent.observedHostname ?? "", agent.connectionIp ?? ""]}
-                onSelect={() => onChange(agent.id)}
+                disabled={licenseRestricted}
+                onSelect={() => { if (!licenseRestricted) onChange(agent.id) }}
                 className="min-h-24 gap-3 px-3 py-3"
               >
                 <Circle className={cn("size-2 shrink-0", getAgentStatusDotClass(agent.status, agent.health?.state))} />
                 <span className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-4">
                   <span className="flex min-w-0 items-center justify-between gap-2 sm:w-36 sm:shrink-0">
                     <span className={cn("min-w-0 flex-1 truncate", textRole.navLabel)} title={agent.displayName || agent.name}>{agent.displayName || agent.name}</span>
-                    <Badge size="compact" variant={agent.status !== "online" ? "secondary" : healthy ? "success" : "warning"} className="shrink-0">
-                      {healthLabel}
+                    <Badge size="compact" variant={licenseRestricted ? "warning" : agent.status !== "online" ? "secondary" : healthy ? "success" : "warning"} className="shrink-0">
+                      {licenseRestricted ? t("licenseRestricted") : healthLabel}
                     </Badge>
                   </span>
                   {heartbeat ? (
@@ -308,6 +312,7 @@ export function ScanAgentSelector({ value, onChange, disabled = false }: ScanAge
           {picker.hasNextPage ? <div ref={loadMoreRef} className="h-px" aria-hidden="true" /> : null}
         </CommandGroup>
       </ScanSearchablePicker>
+      {selectedAgent?.executionEligibility === "license_restricted" && <p role="alert" className={cn(textRole.helperText, "text-warning")}>{t("licenseRestrictedHint")}</p>}
       <p className="text-xs text-muted-foreground">{t("hint")}</p>
     </div>
   )

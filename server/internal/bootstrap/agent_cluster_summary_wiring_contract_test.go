@@ -18,8 +18,8 @@ func TestAgentClusterSummaryWiringIsReadOnlyAndClaimIsolated(t *testing.T) {
 		t.Fatal("wireAgentModule block not found")
 	}
 	block := wiring[start:end]
-	if strings.Count(block, "NewAgentClusterSummaryService(repos.agentRepo, agentClock)") != 1 {
-		t.Fatal("Agent cluster summary must be constructed once from its read store and application clock")
+	if strings.Count(block, "NewAgentClusterSummaryService(repos.agentRepo, agentClock, repos.agentLicenseRepo)") != 1 {
+		t.Fatal("Agent cluster summary must share its clock and persisted authorization reader")
 	}
 	if strings.Count(block, "clusterSummaryService") != 2 {
 		t.Fatal("Agent cluster summary service must only be constructed and passed to its HTTP handler")

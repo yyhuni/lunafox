@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -391,4 +392,69 @@ func withoutEnvironment(environment []string, key string) []string {
 		}
 	}
 	return filtered
+}
+
+func TestPinnedFFUFCalibrationSuppressesCatchAllRedirect(t *testing.T) {
+	binary := requirePinnedFFUFBinary(t)
+	body := []byte("<html>\r\n<head><title>301 Moved Permanently</title></head>\r\n" +
+		"<body>\r\n<center><h1>301 Moved Permanently</h1></center>\r\n" +
+		"<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n")
+	payloadPaths := map[string]struct{}{
+		"/wwwroot.zip": {},
+		"/wwwroot.sql": {},
+		"/wwwlog":      {},
+	}
+	var calibrationRequests atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		if _, isPayload := payloadPaths[request.URL.Path]; !isPayload {
+			calibrationRequests.Add(1)
+		}
+		response.Header().Set("Content-Type", "text/html")
+		response.WriteHeader(http.StatusMovedPermanently)
+		_, _ = response.Write(body)
+	}))
+	defer server.Close()
+
+	wordlist := writeFFUFWordlist(t, "wwwroot.zip", "wwwroot.sql", "wwwlog")
+	config := ffufIntegrationConfig(wordlist)
+	config.AutoCalibration = true
+	config.AutoCalibrationMode = "ac"
+	config.MatchCodes = "200-299,301,302,307,401,403,405,500"
+	records, _ := runPinnedFFUF(t, binary, server.URL+"/", config)
+	if calibrationRequests.Load() == 0 {
+		t.Fatal("FFUF did not issue any built-in calibration request")
+	}
+	if len(records) != 0 {
+		t.Fatalf("catch-all redirect was not filtered: %#v", records)
+	}
+}
+
+func TestPinnedFFUFTargetVariantsFindBackupName(t *testing.T) {
+	binary := requirePinnedFFUFBinary(t)
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		if request.URL.Path == "/localhost.zip" {
+			response.WriteHeader(http.StatusOK)
+			return
+		}
+		response.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	parsed, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	candidate := "http://localhost:" + parsed.Port()
+	source := writeFFUFWordlist(t, "admin")
+	workspace := t.TempDir()
+	wordlist, err := prepareCandidateWordlist(context.Background(), source, candidate, workspace, 0)
+	if err != nil {
+		t.Fatalf("prepareCandidateWordlist() error = %v", err)
+	}
+	config := ffufIntegrationConfig(wordlist)
+	config.MatchCodes = "200"
+	records, _ := runPinnedFFUF(t, binary, candidate, config)
+	if len(records) != 1 || !strings.HasSuffix(records[0].URL, "/localhost.zip") {
+		t.Fatalf("variant records = %#v, want one /localhost.zip", records)
+	}
 }

@@ -118,6 +118,7 @@
       "hasFailureIndicator": "Has failed runs",
       "failureCauses": {
         "WORKFLOW_UNAVAILABLE": "referenced scan workflow is unavailable",
+        "AGENT_LICENSE_RESTRICTED": "bound agent is license restricted and cannot claim new work",
         "AGENT_NOT_FOUND": "bound agent has been deleted",
         "CONFIG_RESOURCE_UNAVAILABLE": "configuration resource is unavailable",
         "ENGINE_UNAVAILABLE": "referenced engine is unavailable",
@@ -1314,6 +1315,8 @@
     "stopScan": "Stop Scan",
     "stopScanPending": "Stopping...",
     "agentSelector": {
+      "licenseRestricted": "License restricted",
+      "licenseRestrictedHint": "This Agent cannot claim new work under the current license. Claimed work can finish. Update the license or choose another Agent.",
       "label": "Execution node",
       "loading": "Loading execution nodes...",
       "automatic": "Automatic assignment",
@@ -1569,6 +1572,7 @@
         "inProgress": "Stopping selected scans..."
       },
       "runtimeDrawer": {
+        "licenseRestricted": "The pinned Agent is license restricted. This scan is waiting until the license permits new claims. Already claimed work can finish.",
         "open": "Runtime Details"
       },
       "taskId": "Scan Task ID: {id}",
@@ -1851,6 +1855,13 @@
       "startTime": "Start Time",
       "status": "Status",
       "errorReason": "Error Reason",
+      "failureGuidance": {
+        "pocTitle": "Vulnerability scan POC templates are not ready",
+        "pocDescription": "The vulnerability scan task failed while preparing Nuclei POC templates. The common cause is that POCs were not synced or not enabled.",
+        "relaunchHint": "If POCs are already enabled, check the resource and retry. After preparing POCs, re-launch the scan.",
+        "openPocCatalog": "Open Nuclei POC",
+        "rawDetail": "Original error detail"
+      },
       "engineCatalogLoading": "Loading executed engine information",
       "engineCatalogUnavailable": "Failed to load executed engine information",
       "totalProgress": "Total Progress",
@@ -2906,6 +2917,53 @@
       }
     },
     "agents": {
+      "executionEligibility": {
+        "restricted": "License restricted",
+        "restrictedHint": "Claimed work can finish; new work is paused. Eligibility resumes within the updated license quota."
+      },
+      "activation": {
+        "sectionLabel": "Agent capacity license",
+        "basicHeading": "Need more scanning nodes?",
+        "activeHeading": "Capacity license is active",
+        "expiredHeading": "Capacity license has expired",
+        "basicBadge": "Basic",
+        "activeBadge": "Expanded",
+        "expiredBadge": "Expired",
+        "basicDescription": "Your base quota is {limit} Agents. Contact the author for a Key to activate more nodes.",
+        "activeDescription": "Up to {limit} Agents · Valid until {date} · {months}-month license",
+        "expiredDescription": "Your {count} nodes are retained. The earliest {limit} registered nodes can claim new work. Other nodes can finish claimed work and resume new claims within a renewed quota.",
+        "open": "Activate capacity",
+        "manage": "Manage license",
+        "renew": "Update license",
+        "title": "Unlock more Agents",
+        "renewTitle": "Update capacity license",
+        "description": "Paste your license Key to increase the node quota.",
+        "successTitle": "Capacity activated",
+        "successDescription": "Your license is updated. Add Agents within the current quota; restricted nodes automatically resume new claims within that quota.",
+        "successLimit": "Unlocked a quota of {limit} Agents",
+        "validity": "{months}-month license · Valid until {date}",
+        "quotaLabel": "Agent node quota",
+        "licenseIdLabel": "License ID",
+        "taskConfigLabel": "Per-node task settings",
+        "taskConfigUnchanged": "Unchanged",
+        "return": "Return to Agents",
+        "keyLabel": "License Key",
+        "placeholder": "Paste the complete license Key",
+        "help": "Reuse the same Key after moving or redeploying. You do not need to activate each Agent separately.",
+        "currentQuota": "Current quota: {limit} Agents",
+        "keyDeterminesQuota": "The Key fixes the node quota and expiry. Activating it again does not extend its validity.",
+        "getKey": "How do I get a Key?",
+        "followTitle": "Contact the author for a Key",
+        "followDescription": "Copy the complete Key, then return here to activate it.",
+        "pending": "Verifying the license and refreshing the quota…",
+        "activating": "Activating",
+        "cancel": "Cancel",
+        "activate": "Activate capacity",
+        "expiredError": "This Key has expired. Contact the author for a new Key and try again. Your current license is unchanged.",
+        "notYetValidError": "This Key is not valid yet. Try again after it becomes valid, or contact the author. Your current license is unchanged.",
+        "invalidError": "This Key was not recognized. Check that you copied it completely, or contact the author for a new Key. Your current license is unchanged.",
+        "requestError": "Activation could not be completed. Try again later. The cluster summary remains the source of the displayed quota."
+      },
       "quota": {
         "reached": "Quota is full ({used}/{limit}). Delete an Agent to continue."
       },
@@ -4728,6 +4786,7 @@
     "toSearch": "to search"
   },
   "errors": {
+    "agentLicenseRestricted": "The selected Agent is license restricted. Update the license or choose another Agent.",
     "unknown": "Operation failed, please try again later",
     "validation": "Invalid input data",
     "notFound": "Resource not found",
@@ -4754,6 +4813,8 @@
     "maintenanceWindow": "Expected maintenance window: {minutes} minutes",
     "migrationSummary": "Database migration: {type}",
     "migrationRiskHint": "This release includes a database migration and requires administrator confirmation.",
+    "migrationManualUpgradeHint": "This release includes a database migration, and the current migration policy does not allow the in-app upgrader to apply it. Back up the database and configuration first, then upgrade manually from the new release package as described in the deployment guide. We recommend handing the guide to an AI assistant such as Codex and verifying each step.",
+    "upgradeUnavailableHint": "This version cannot use the in-app upgrader. Update manually as described in the deployment guide; we recommend handing the guide to an AI assistant such as Codex and verifying each step.",
     "upgradeRiskHint": "The Server will confirm the required upgrade scope before execution.",
     "noMigration": "No database migration",
     "startUpgrade": "Start Upgrade",

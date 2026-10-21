@@ -7,6 +7,7 @@ function makeNode(overrides: Partial<Agent>): Agent {
     id: 1,
     name: "agent-edge-01",
     status: "online",
+    executionEligibility: "eligible",
     maxTasks: 5,
     cpuThreshold: 85,
     memThreshold: 85,

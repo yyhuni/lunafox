@@ -25,7 +25,7 @@ type AgentRepository interface {
 
 // AgentClusterSummaryRepository produces complete-fleet aggregate facts without collection traversal.
 type AgentClusterSummaryRepository interface {
-	GetClusterAggregate(ctx context.Context, generatedAt time.Time) (AgentClusterAggregate, error)
+	GetClusterAggregate(ctx context.Context, generatedAt time.Time, agentLimit int) (AgentClusterAggregate, error)
 }
 
 type AgentLocationMapRepository interface {

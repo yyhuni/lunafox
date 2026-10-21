@@ -7,6 +7,7 @@ import (
 
 type agentRepository struct {
 	db                      *gorm.DB
+	licenses                *AgentLicenseRepository
 	offlineNotificationSink AgentOfflineNotificationSink
 }
 
@@ -15,9 +16,20 @@ func NewAgentRepository(db *gorm.DB, notificationSinks ...AgentOfflineNotificati
 	if len(notificationSinks) > 1 {
 		panic("only one agent offline notification sink is supported")
 	}
-	repository := &agentRepository{db: db}
+	repository := &agentRepository{db: db, licenses: NewAgentLicenseRepository(db)}
 	if len(notificationSinks) == 1 {
 		repository.offlineNotificationSink = notificationSinks[0]
 	}
 	return repository
+}
+
+// NewAgentRepositoryWithLicenseVerifier injects an explicit trust root for isolated tests.
+func NewAgentRepositoryWithLicenseVerifier(db *gorm.DB, verifier AgentLicenseVerifier, notificationSinks ...AgentOfflineNotificationSink) (agentdomain.AgentOperationalRepository, error) {
+	licenses, err := NewAgentLicenseRepositoryWithVerifier(db, verifier)
+	if err != nil {
+		return nil, err
+	}
+	repository := NewAgentRepository(db, notificationSinks...).(*agentRepository)
+	repository.licenses = licenses
+	return repository, nil
 }

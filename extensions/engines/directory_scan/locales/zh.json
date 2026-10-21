@@ -20,6 +20,12 @@
         "delay": {
           "description": "原样传给 FFUF 的固定或区间请求延迟，单位为秒。"
         },
+        "denoise-auth-redirect": {
+          "description": "当重定向 Location 命中已知登录/SSO 路径时丢弃该结果（默认关闭）。"
+        },
+        "denoise-backup-html": {
+          "description": "当备份后缀结果实际是 text/html 页面时丢弃该结果（默认关闭）。"
+        },
         "follow-redirects": {
           "description": "扫描期间跟随 HTTP 重定向。"
         },
@@ -47,11 +53,17 @@
         "request-timeout": {
           "description": "单次请求超时时间，单位为秒。"
         },
+        "target-variants": {
+          "description": "按目标域名生成备份文件名变体，并追加到每个站点的词表。"
+        },
         "threads": {
           "description": "每个 Website FFUF 进程使用的工作线程数。"
         },
         "timeout": {
           "description": "每个 Website FFUF 进程的截止时间，单位为秒。"
+        },
+        "waf-smart-skip": {
+          "description": "当两次预检判定站点明显被 WAF 拦截时，跳过该站点的 FFUF 扫描（默认关闭）。"
         },
         "wordlist": {
           "description": "用于目录发现的服务端管理字典。"

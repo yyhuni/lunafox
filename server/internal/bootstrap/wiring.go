@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/yyhuni/lunafox/contracts/sharedstorage"
+	"github.com/yyhuni/lunafox/server/internal/agentlicense"
 	"github.com/yyhuni/lunafox/server/internal/auth"
 	agentwiring "github.com/yyhuni/lunafox/server/internal/bootstrap/wiring/agent"
 	assetwiring "github.com/yyhuni/lunafox/server/internal/bootstrap/wiring/asset"
@@ -129,6 +130,7 @@ type deps struct {
 	agentHandler                   *agenthandler.AgentHandler
 	agentLogHandler                *agenthandler.AgentLogHandler
 	agentClusterSummaryHandler     *agenthandler.AgentClusterSummaryHandler
+	agentLicenseHandler            *agenthandler.AgentLicenseHandler
 	agentLocationMapHandler        *agenthandler.AgentLocationMapHandler
 	serverLogHandler               *systemhandler.ServerLogHandler
 	runtimeMetricsHandler          *systemhandler.RuntimeMetricsHandler
@@ -221,6 +223,7 @@ type repositoryBundle struct {
 	screenshotSnapshotRepo        *snapshotrepo.ScreenshotSnapshotRepository
 	vulnerabilitySnapshotRepo     *snapshotrepo.VulnerabilitySnapshotRepository
 	agentRepo                     agentdomain.AgentOperationalRepository
+	agentLicenseRepo              *agentrepo.AgentLicenseRepository
 	agentLocationRepo             agentdomain.AgentLocationRepository
 	registrationTokenRepo         agentdomain.RegistrationTokenRepository
 	serverLocationRepo            systemdomain.ServerLocationRepository
@@ -305,6 +308,7 @@ type agentModuleHandlers struct {
 	agentHandler               *agenthandler.AgentHandler
 	agentLogHandler            *agenthandler.AgentLogHandler
 	agentClusterSummaryHandler *agenthandler.AgentClusterSummaryHandler
+	agentLicenseHandler        *agenthandler.AgentLicenseHandler
 	agentLocationMapHandler    *agenthandler.AgentLocationMapHandler
 
 	agentControlService         *agentservice.AgentControlLifecycleService
@@ -351,6 +355,10 @@ type snapshotModuleHandlers struct {
 }
 
 func buildDependencies(infra *infra, cfg *config.Config) (*deps, error) {
+	// Fail before assembling services if the shipped author trust root is invalid.
+	if _, err := agentlicense.NewDefaultVerifier(); err != nil {
+		return nil, fmt.Errorf("configure Agent license verifier: %w", err)
+	}
 	repos := newRepositoryBundle(infra, cfg)
 	notificationWorkerOwner, err := notificationwiring.NewNotificationWorkerOwner()
 	if err != nil {
@@ -562,6 +570,7 @@ func buildDependencies(infra *infra, cfg *config.Config) (*deps, error) {
 		agentHandler:                   agent.agentHandler,
 		agentLogHandler:                agent.agentLogHandler,
 		agentClusterSummaryHandler:     agent.agentClusterSummaryHandler,
+		agentLicenseHandler:            agent.agentLicenseHandler,
 		agentLocationMapHandler:        agent.agentLocationMapHandler,
 		serverLogHandler:               system.serverLogHandler,
 		runtimeMetricsHandler:          system.runtimeMetricsHandler,
@@ -628,6 +637,7 @@ func newRepositoryBundle(infra *infra, cfg *config.Config) *repositoryBundle {
 	db := infra.db
 	notificationOutbox := notificationrepo.NewOutboxRepository(db)
 	notificationProducer := notificationrepo.NewProducerWriter(notificationOutbox, notificationdomain.VulnerabilitySeverity(cfg.Notification.VulnerabilityThreshold))
+	licenses := agentrepo.NewAgentLicenseRepository(db)
 	return &repositoryBundle{
 		userRepo:                      identityrepo.NewUserRepository(db),
 		mcpKeyRepo:                    identityrepo.NewMCPKeyRepository(db),
@@ -645,7 +655,7 @@ func newRepositoryBundle(infra *infra, cfg *config.Config) *repositoryBundle {
 		assetStatisticsRepo:           assetrepo.NewAssetStatisticsRepository(db),
 		screenshotRepo:                assetrepo.NewScreenshotRepository(db),
 		vulnerabilityRepo:             securityrepo.NewVulnerabilityRepository(db),
-		scanRepo:                      scanrepo.NewScanRepository(db, notificationProducer),
+		scanRepo:                      scanrepo.NewScanRepository(db, notificationProducer).WithAgentExecutionGuard(licenses),
 		scheduledScanRepo:             scheduledscanrepo.NewScheduledScanRepository(db),
 		targetCleanupRepo:             targetcleanuprepo.NewTargetCleanupRepository(db),
 		taskProgressLogRepo:           scanrepo.NewTaskProgressLogRepository(db),
@@ -658,10 +668,11 @@ func newRepositoryBundle(infra *infra, cfg *config.Config) *repositoryBundle {
 		screenshotSnapshotRepo:        snapshotrepo.NewScreenshotSnapshotRepository(db),
 		vulnerabilitySnapshotRepo:     snapshotrepo.NewVulnerabilitySnapshotRepository(db),
 		agentRepo:                     agentrepo.NewAgentRepository(db, notificationProducer),
+		agentLicenseRepo:              licenses,
 		agentLocationRepo:             agentrepo.NewAgentLocationRepository(db),
 		registrationTokenRepo:         agentrepo.NewRegistrationTokenRepository(db),
 		serverLocationRepo:            systemrepo.NewServerLocationRepository(db),
-		scanTaskRepo:                  scanrepo.NewScanTaskRepository(db),
+		scanTaskRepo:                  scanrepo.NewScanTaskRepository(db, licenses),
 		fingerprintRepo:               fingerprintrepo.NewFingerprintRepository(db),
 		notificationProducer:          notificationProducer,
 		nucleiPocRepo:                 nucleipocwiring.NewNucleiPOCRepository(db, notificationProducer),
@@ -876,6 +887,7 @@ func wireScanModule(repos *repositoryBundle, infra *infra, cfg *config.Config, n
 		notifier,
 		scanTargetLookup,
 		scanwiring.NewScanCreateAgentLookupAdapter(repos.agentRepo),
+		scanwiring.NewScanAgentExecutionReaderAdapter(repos.agentLicenseRepo),
 		repos.scanWorkflowRepo,
 		repos.engineRepo,
 		infra.installedEngineQuery,
@@ -945,7 +957,11 @@ func wireAgentModule(
 	if err != nil {
 		return agentModuleHandlers{}, err
 	}
-	clusterSummaryService, err := agentservice.NewAgentClusterSummaryService(repos.agentRepo, agentClock)
+	agentLicenseService, err := agentservice.NewAgentLicenseService(repos.agentLicenseRepo, agentClock)
+	if err != nil {
+		return agentModuleHandlers{}, err
+	}
+	clusterSummaryService, err := agentservice.NewAgentClusterSummaryService(repos.agentRepo, agentClock, repos.agentLicenseRepo)
 	if err != nil {
 		return agentModuleHandlers{}, err
 	}
@@ -968,6 +984,7 @@ func wireAgentModule(
 		),
 		agentLogHandler:            agenthandler.NewAgentLogHandler(agentSvc, lokiLogQuerySvc),
 		agentClusterSummaryHandler: agenthandler.NewAgentClusterSummaryHandler(clusterSummaryService),
+		agentLicenseHandler:        agenthandler.NewAgentLicenseHandler(agentLicenseService),
 		agentLocationMapHandler:    agenthandler.NewAgentLocationMapHandler(locationMapService),
 
 		agentControlService:         agentControlSvc,
