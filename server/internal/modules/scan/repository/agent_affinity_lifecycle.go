@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/yyhuni/lunafox/server/internal/pkg/dbtx"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -13,17 +14,18 @@ import (
 const agentDeletedFailureMessage = "Selected Agent was deleted before task execution"
 
 // DeleteAgent serializes physical Agent removal with pinned-task claiming.
-// The Agent row lock is also acquired by a pinned claim before it transitions
-// a task to running, so no deleted Agent can win a pending-task claim.
+// The exclusive entitlement boundary precedes the Agent row lock; claims
+// hold its shared counterpart, so deletion cannot change an in-flight rank.
 func (r *ScanRepository) DeleteAgent(ctx context.Context, agentID int) error {
-	if r == nil || r.db == nil || ctx == nil || agentID <= 0 {
+	if r == nil || r.db == nil || r.agentExecutionGuard == nil || ctx == nil || agentID <= 0 {
 		return fmt.Errorf("agent deletion scope is invalid")
 	}
 	diagnosticsUpdate, err := unavailableEngineExecutionDiagnosticsForSavedPlan(r.db.Dialector.Name())
 	if err != nil {
 		return err
 	}
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	return r.agentExecutionGuard.WithinIdentityChange(ctx, func(txContext context.Context) error {
+		tx := dbtx.Resolve(txContext, r.db).WithContext(txContext)
 		query := tx.Table("agent").Select("id").Where("id = ?", agentID)
 		if tx.Dialector.Name() == "postgres" {
 			query = query.Clauses(clause.Locking{Strength: "UPDATE"})
@@ -84,7 +86,7 @@ func requireClaimingAgentExists(tx *gorm.DB, agentID int) error {
 	}
 	query := tx.Table("agent").Select("id").Where("id = ?", agentID)
 	if tx.Dialector.Name() == "postgres" {
-		query = query.Clauses(clause.Locking{Strength: "UPDATE"})
+		query = query.Clauses(clause.Locking{Strength: "KEY SHARE"})
 	}
 	var row struct{ ID int }
 	return query.Take(&row).Error

@@ -76,6 +76,14 @@ type FfufConfig struct {
 	AutoCalibration bool
 	// Source: engine.json.execution.configSections["ffuf"].params["auto-calibration-mode"].
 	AutoCalibrationMode string
+	// Source: engine.json.execution.configSections["ffuf"].params["target-variants"].
+	TargetVariants bool
+	// Source: engine.json.execution.configSections["ffuf"].params["waf-smart-skip"].
+	WafSmartSkip bool
+	// Source: engine.json.execution.configSections["ffuf"].params["denoise-auth-redirect"].
+	DenoiseAuthRedirect bool
+	// Source: engine.json.execution.configSections["ffuf"].params["denoise-backup-html"].
+	DenoiseBackupHtml bool
 	// Source: engine.json.execution.configSections["ffuf"].params["match-codes"].
 	MatchCodes string
 	// Source: engine.json.execution.configSections["ffuf"].params["concurrency"].

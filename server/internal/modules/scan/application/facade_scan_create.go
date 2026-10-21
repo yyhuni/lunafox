@@ -56,6 +56,9 @@ func (service *ScanFacade) CreateQuick(ctx context.Context, req *CreateQuickRequ
 		if errors.Is(err, ErrCreateAgentNotFound) {
 			return nil, ErrScanAgentNotFound
 		}
+		if errors.Is(err, ErrCreateAgentLicenseRestricted) {
+			return nil, ErrScanAgentLicenseRestricted
+		}
 		if errors.Is(err, ErrCreateScanWorkflowEngineUnavailable) {
 			return nil, ErrScanWorkflowEngineUnavailable
 		}
@@ -123,6 +126,9 @@ func (service *ScanFacade) CreateBatch(ctx context.Context, req *CreateBatchRequ
 		}
 		if errors.Is(err, ErrCreateAgentNotFound) {
 			return out, ErrScanAgentNotFound
+		}
+		if errors.Is(err, ErrCreateAgentLicenseRestricted) {
+			return out, ErrScanAgentLicenseRestricted
 		}
 		if errors.Is(err, ErrCreateScanWorkflowEngineUnavailable) {
 			return out, ErrScanWorkflowEngineUnavailable

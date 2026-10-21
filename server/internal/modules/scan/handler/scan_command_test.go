@@ -757,3 +757,51 @@ func TestBatchCreateHandlerMissingConfigurationUsesWorkflowDiagnostic(t *testing
 		t.Fatalf("missing configuration reached persistence: %#v", store.scan)
 	}
 }
+
+type handlerRestrictedAgentReader struct{}
+
+func (handlerRestrictedAgentReader) AgentExists(context.Context, int) (bool, error) {
+	return true, nil
+}
+
+func (handlerRestrictedAgentReader) AgentExecutionEligibility(context.Context, int) (string, error) {
+	return "license_restricted", nil
+}
+
+func TestPinnedScanCreateReturnsExplicitLicensePrecondition(t *testing.T) {
+	create := service.NewScanCreateService(nil, nil, nil, nil, nil).
+		WithAgentLookup(handlerRestrictedAgentReader{}).
+		WithAgentExecutionReader(handlerRestrictedAgentReader{})
+	facade := newTestScanFacade(create)
+	gin.SetMode(gin.TestMode)
+	handler := NewScanHandler(facade, ScanHistoryRetentionPolicy{})
+	for _, test := range []struct{ path, body string }{
+		{path: "/v1/scans:quickCreate", body: `{"targets":["example.com"],"scanWorkflow":"scanWorkflows/default","inputSource":"scanSnapshot","configuration":{},"agent":"agents/42"}`},
+		{path: "/v1/scans:batchCreate", body: `{"requests":[{"target":"targets/7"}],"scanWorkflow":"scanWorkflows/default","inputSource":"scanSnapshot","configuration":{},"agent":"agents/42"}`},
+	} {
+		t.Run(test.path, func(t *testing.T) {
+			router := gin.New()
+			if test.path == "/v1/scans:quickCreate" {
+				router.POST(test.path, handler.CreateQuick)
+			} else {
+				router.POST(test.path, handler.BatchCreate)
+			}
+			recorder := doJSONRequest(router, http.MethodPost, test.path, test.body, "application/json")
+			var response struct {
+				Error struct {
+					Status  string `json:"status"`
+					Details []struct {
+						Type   string `json:"@type"`
+						Reason string `json:"reason"`
+					} `json:"details"`
+				} `json:"error"`
+			}
+			if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+				t.Fatalf("decode precondition: %v", err)
+			}
+			if recorder.Code != http.StatusBadRequest || response.Error.Status != "FAILED_PRECONDITION" || len(response.Error.Details) != 1 || response.Error.Details[0].Reason != "AGENT_LICENSE_RESTRICTED" || response.Error.Details[0].Type != "type.googleapis.com/google.rpc.ErrorInfo" {
+				t.Fatalf("restricted create response = %d %s", recorder.Code, recorder.Body.String())
+			}
+		})
+	}
+}

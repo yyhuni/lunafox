@@ -26,6 +26,7 @@ type AgentClusterLocationCoverage struct {
 
 type AgentClusterSummary struct {
 	AgentLimit                int
+	License                   AgentLicense
 	GeneratedAt               time.Time
 	ExecutionFreshnessSeconds int
 	Nodes                     AgentClusterNodeCounts

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -17,6 +18,10 @@ type WebsiteScanSummary struct {
 	WebsiteCandidates       uint64
 	NormalCompletedWebsites uint64
 	TimedOutWebsites        uint64
+	// WAFSkippedWebsites counts candidates skipped by the optional WAF pre-scan.
+	// They are also counted in NormalCompletedWebsites so the existing completion
+	// contract stays unchanged.
+	WAFSkippedWebsites uint64
 }
 
 func (summary WebsiteScanSummary) AllWebsitesTimedOut() bool {
@@ -28,6 +33,14 @@ func (summary WebsiteScanSummary) AllWebsitesTimedOut() bool {
 type websiteSchedulerOptions struct {
 	runner         ffufProcessRunner
 	websiteTimeout time.Duration
+	// prepareWordlist optionally stages a candidate-specific wordlist. When set,
+	// the returned cleanup runs after that candidate's invocation and the path is
+	// passed to FFUF as -w instead of the shared config wordlist.
+	prepareWordlist func(context.Context, WebsiteCandidate) (string, func() error, error)
+	// skipCandidate lets the caller skip an invocation (for example when a WAF
+	// pre-scan already proved the origin is blocked). Skipped candidates count
+	// as normally completed.
+	skipCandidate func(context.Context, WebsiteCandidate) (bool, string, error)
 }
 
 type websiteSchedulerState struct {
@@ -36,6 +49,7 @@ type websiteSchedulerState struct {
 	primaryErr      error
 	normalCompleted uint64
 	timedOut        uint64
+	wafSkipped      uint64
 }
 
 func RunWebsiteScans(
@@ -111,14 +125,61 @@ func runWebsiteScans(
 					if !state.beginInvocation() {
 						return
 					}
+					if options.skipCandidate != nil {
+						blocked, _, skipErr := options.skipCandidate(schedulerContext, candidate)
+						if skipErr == nil && blocked {
+							artifactPath, artifactErr := rawFFUFArtifactPath(workspace, candidate.Ordinal)
+							if artifactErr != nil {
+								if state.stop(fmt.Errorf("prepare skipped artifact %d: %w", candidate.Ordinal, artifactErr)) {
+									replay.Stop()
+									cancelScheduler()
+								}
+								return
+							}
+							if artifactErr := os.WriteFile(artifactPath, nil, 0o600); artifactErr != nil {
+								if state.stop(fmt.Errorf("write skipped artifact %d: %w", candidate.Ordinal, artifactErr)) {
+									replay.Stop()
+									cancelScheduler()
+								}
+								return
+							}
+							if !state.recordWAFSkip() {
+								return
+							}
+							continue
+						}
+					}
+					candidateConfig := config
+					cleanupWordlist := func() error { return nil }
+					if options.prepareWordlist != nil {
+						path, cleanup, prepareErr := options.prepareWordlist(schedulerContext, candidate)
+						if prepareErr != nil {
+							if schedulerContext.Err() == nil && state.stop(fmt.Errorf("prepare candidate wordlist %d: %w", candidate.Ordinal, prepareErr)) {
+								replay.Stop()
+								cancelScheduler()
+							}
+							return
+						}
+						candidateConfig.Wordlist = path
+						if cleanup != nil {
+							cleanupWordlist = cleanup
+						}
+					}
 					childContext, cancelChild := context.WithTimeout(schedulerContext, options.websiteTimeout)
 					runErr := options.runner.Run(childContext, ffufInvocation{
 						Candidate: candidate,
-						Config:    config,
+						Config:    candidateConfig,
 						Workspace: workspace,
 					})
 					childContextErr := childContext.Err()
 					cancelChild()
+					if cleanupErr := cleanupWordlist(); cleanupErr != nil {
+						if state.stop(fmt.Errorf("cleanup candidate wordlist %d: %w", candidate.Ordinal, cleanupErr)) {
+							replay.Stop()
+							cancelScheduler()
+						}
+						return
+					}
 
 					if ctx.Err() != nil || state.isStopped() {
 						return
@@ -150,7 +211,7 @@ func runWebsiteScans(
 	workers.Wait()
 	replayErr := <-replayDone
 
-	summary.NormalCompletedWebsites, summary.TimedOutWebsites, err = state.snapshot()
+	summary.NormalCompletedWebsites, summary.TimedOutWebsites, summary.WAFSkippedWebsites, err = state.snapshot()
 	if contextErr := ctx.Err(); contextErr != nil {
 		return summary, contextErr
 	}
@@ -188,6 +249,17 @@ func (state *websiteSchedulerState) recordNormalCompletion() bool {
 	return true
 }
 
+func (state *websiteSchedulerState) recordWAFSkip() bool {
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if state.stopped {
+		return false
+	}
+	state.normalCompleted++
+	state.wafSkipped++
+	return true
+}
+
 func (state *websiteSchedulerState) recordTimeout() bool {
 	state.mu.Lock()
 	defer state.mu.Unlock()
@@ -209,8 +281,8 @@ func (state *websiteSchedulerState) stop(err error) bool {
 	return true
 }
 
-func (state *websiteSchedulerState) snapshot() (uint64, uint64, error) {
+func (state *websiteSchedulerState) snapshot() (uint64, uint64, uint64, error) {
 	state.mu.Lock()
 	defer state.mu.Unlock()
-	return state.normalCompleted, state.timedOut, state.primaryErr
+	return state.normalCompleted, state.timedOut, state.wafSkipped, state.primaryErr
 }

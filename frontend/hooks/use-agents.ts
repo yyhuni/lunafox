@@ -77,6 +77,7 @@ export function useAgent(id: number) {
     queryKey: agentKeys.detail(resourceName),
     queryFn: ({ signal }) => agentService.getAgent(resourceName, signal),
     enabled: id > 0,
+    refetchInterval: id > 0 ? 15000 : false,
   })
 }
 
@@ -86,6 +87,7 @@ export function useSelectedAgentDetail(resourceName: string | null | undefined, 
     queryKey: agentKeys.detail(selectedResourceName),
     queryFn: ({ signal }) => agentService.getAgent(selectedResourceName, signal),
     enabled: Boolean(selectedResourceName) && (options?.enabled ?? true),
+    refetchInterval: selectedResourceName && (options?.enabled ?? true) ? 15000 : false,
   })
   return withRetainedQueryState(query)
 }
@@ -177,9 +179,7 @@ export function useDeleteAgent() {
       id: (id) => `delete-agent-node-${id}`,
     },
     invalidate: [
-      { queryKey: agentKeys.lists(), refetchType: 'active' },
-      { queryKey: agentKeys.clusterSummary(), refetchType: 'active' },
-      { queryKey: agentKeys.locationMap(), refetchType: 'active' },
+      { queryKey: agentKeys.all, refetchType: 'active' },
     ],
     onSuccess: ({ toast }) => {
       toast.success('toast.agent.delete.success')

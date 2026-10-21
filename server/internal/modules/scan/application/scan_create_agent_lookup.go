@@ -18,6 +18,15 @@ func (service *ScanCreateService) WithAgentLookup(lookup ScanCreateAgentLookup) 
 	return service
 }
 
+// WithAgentExecutionReader installs the current authorization preflight for
+// explicitly pinned Scans. The claim transaction remains the enforcement gate.
+func (service *ScanCreateService) WithAgentExecutionReader(reader ScanAgentExecutionReader) *ScanCreateService {
+	if service != nil {
+		service.agentExecutionReader = reader
+	}
+	return service
+}
+
 func (service *ScanCreateService) validateSelectedAgent(ctx context.Context, agentID *int) error {
 	if agentID == nil {
 		return nil
@@ -31,6 +40,13 @@ func (service *ScanCreateService) validateSelectedAgent(ctx context.Context, age
 	}
 	if !exists {
 		return ErrCreateAgentNotFound
+	}
+	eligibility, err := readAgentExecutionEligibility(ctx, service.agentExecutionReader, *agentID)
+	if err != nil {
+		return err
+	}
+	if eligibility == agentExecutionLicenseRestricted {
+		return ErrCreateAgentLicenseRestricted
 	}
 	return nil
 }

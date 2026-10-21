@@ -290,6 +290,8 @@ func TestClassifyHandoffAttachesPublicCauseForZeroCreatedFailures(t *testing.T) 
 		{name: "workflow unavailable", err: fmt.Errorf("wrap: %w", scanapp.ErrCreateInvalidScanWorkflow), want: HandoffCauseWorkflowUnavailable},
 		{name: "no workflows", err: scanapp.ErrCreateNoScanWorkflows, want: HandoffCauseWorkflowUnavailable},
 		{name: "agent not found", err: scanapp.ErrCreateAgentNotFound, want: HandoffCauseAgentNotFound},
+		{name: "agent license restricted", err: fmt.Errorf("pinned: %w", scanapp.ErrCreateAgentLicenseRestricted), want: HandoffCauseAgentLicenseRestricted},
+		{name: "facade agent license restricted", err: scanapp.ErrScanAgentLicenseRestricted, want: HandoffCauseAgentLicenseRestricted},
 		{name: "engine unavailable", err: fmt.Errorf("step: %w", scanapp.ErrCreateScanWorkflowEngineUnavailable), want: HandoffCauseEngineUnavailable},
 		{name: "target not found", err: scanapp.ErrCreateTargetNotFound, want: HandoffCauseTargetUnavailable},
 		{name: "no targets", err: scanapp.ErrNoTargetsForScan, want: HandoffCauseTargetUnavailable},
@@ -344,7 +346,7 @@ func TestHandoffRetryPolicyBounds(t *testing.T) {
 		t.Fatal("ParseHandoffFailureCause accepted an unknown value")
 	}
 	for _, cause := range []string{
-		"WORKFLOW_UNAVAILABLE", "AGENT_NOT_FOUND", "CONFIG_RESOURCE_UNAVAILABLE",
+		"WORKFLOW_UNAVAILABLE", "AGENT_NOT_FOUND", "AGENT_LICENSE_RESTRICTED", "CONFIG_RESOURCE_UNAVAILABLE",
 		"ENGINE_UNAVAILABLE", "TARGET_UNAVAILABLE", "INTERNAL_UNAVAILABLE",
 	} {
 		if _, ok := ParseHandoffFailureCause(cause); !ok {

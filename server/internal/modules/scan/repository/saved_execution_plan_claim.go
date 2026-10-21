@@ -11,12 +11,15 @@ import (
 	"github.com/yyhuni/lunafox/contracts/agentexecution"
 	agentexecutionv1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/agent/execution/v1"
 	model "github.com/yyhuni/lunafox/server/internal/modules/scan/repository/persistence"
+	"github.com/yyhuni/lunafox/server/internal/pkg/dbtx"
 	"google.golang.org/protobuf/proto"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 var errSavedPlanClaimRace = errors.New("saved execution plan claim lost compare-and-swap")
+
+var errAgentExecutionRestricted = errors.New("agent execution is license restricted")
 
 type savedPlanClaimCandidate struct {
 	ID                    int
@@ -37,7 +40,7 @@ func (r *scanTaskRepository) ClaimNextCompatibleSavedExecutionPlan(
 	requestID string,
 	supportedEngineAPIMajors []uint32,
 ) (*agentexecutionv1.ResolvedEngineExecutionPlan, error) {
-	if r == nil || r.db == nil {
+	if r == nil || r.db == nil || r.agentExecutionGuard == nil {
 		return nil, fmt.Errorf("scan task repository is not initialized")
 	}
 	if ctx == nil || agentID <= 0 || sessionEpoch <= 0 {
@@ -54,7 +57,13 @@ func (r *scanTaskRepository) ClaimNextCompatibleSavedExecutionPlan(
 	}
 
 	var claimed *agentexecutionv1.ResolvedEngineExecutionPlan
-	err = r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err = r.agentExecutionGuard.WithinClaim(ctx, func(txContext context.Context) error {
+		tx := dbtx.Resolve(txContext, r.db).WithContext(txContext)
+		// Lock order is quota, identity, persisted session, then Scan/Task. A
+		// KEY SHARE identity lock avoids deadlocking session takeover updates.
+		if err := requireClaimingAgentExists(tx, agentID); err != nil {
+			return err
+		}
 		if err := requirePersistedAgentExecutionSession(tx, agentID, sessionID, sessionEpoch); err != nil {
 			return err
 		}
@@ -67,19 +76,39 @@ func (r *scanTaskRepository) ClaimNextCompatibleSavedExecutionPlan(
 			return nil
 		}
 
+		// An existing correlated assignment remains replayable after expiry;
+		// only a new assignment consumes the current execution entitlement.
+		eligibility, err := r.agentExecutionGuard.ExecutionEligibilityAt(txContext, agentID, time.Now().UTC())
+		if err != nil {
+			return err
+		}
+		if eligibility == "license_restricted" {
+			return nil
+		}
+		if eligibility != "eligible" {
+			return fmt.Errorf("unknown Agent execution eligibility %q", eligibility)
+		}
+
 		candidate, plan, err := selectCompatibleSavedPlanCandidate(tx, agentID, supportedEngineAPIMajors)
 		if err != nil || candidate == nil {
 			return err
-		}
-		if candidate.ScanAgentID != nil {
-			if err := requireClaimingAgentExists(tx, agentID); err != nil {
-				return err
-			}
 		}
 		if err := bindScanToClaimingAgent(tx, candidate.ScanID, agentID); err != nil {
 			return err
 		}
 		now := time.Now().UTC()
+		// Row-lock waits may cross the signed expiry even while the shared
+		// entitlement lock prevents replacement. Recheck immediately before CAS.
+		eligibility, err = r.agentExecutionGuard.ExecutionEligibilityAt(txContext, agentID, now)
+		if err != nil {
+			return err
+		}
+		if eligibility == "license_restricted" {
+			return errAgentExecutionRestricted
+		}
+		if eligibility != "eligible" {
+			return fmt.Errorf("unknown Agent execution eligibility %q", eligibility)
+		}
 		result := tx.Model(&model.ScanTask{}).
 			Where("id = ? AND status = ?", candidate.ID, taskStatusPending).
 			Updates(map[string]interface{}{
@@ -104,6 +133,9 @@ func (r *scanTaskRepository) ClaimNextCompatibleSavedExecutionPlan(
 		claimed = proto.Clone(plan).(*agentexecutionv1.ResolvedEngineExecutionPlan)
 		return nil
 	})
+	if errors.Is(err, errAgentExecutionRestricted) {
+		return nil, nil
+	}
 	if errors.Is(err, errSavedPlanClaimRace) {
 		replayed, replayErr := findSavedPlanClaimReplay(r.db.WithContext(ctx), agentID, sessionID, sessionEpoch, requestID)
 		if replayErr != nil {
@@ -112,12 +144,9 @@ func (r *scanTaskRepository) ClaimNextCompatibleSavedExecutionPlan(
 		return replayed, nil
 	}
 	if err != nil {
-		// A concurrent replay may win the unique request correlation between our
-		// initial lookup and CAS. Return only that exact committed claim.
-		replayed, replayErr := findSavedPlanClaimReplay(r.db.WithContext(ctx), agentID, sessionID, sessionEpoch, requestID)
-		if replayErr == nil && replayed != nil {
-			return replayed, nil
-		}
+		// A replay must never convert a session fence or entitlement/storage
+		// failure into a successful response. The runtime row lock already
+		// serializes concurrent requests from this Agent before replay lookup.
 		return nil, err
 	}
 	return claimed, nil

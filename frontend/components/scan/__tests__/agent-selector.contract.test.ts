@@ -47,8 +47,9 @@ describe("scan agent selector contract", () => {
     expect(source).not.toContain("mayWait")
   })
 
-  it("keeps unhealthy and offline Agents selectable", () => {
-    expect(source).toContain("onSelect={() => onChange(agent.id)}")
+  it("keeps unhealthy and offline eligible Agents selectable", () => {
+    expect(source).toContain("disabled={licenseRestricted}")
+    expect(source).toContain("if (!licenseRestricted) onChange(agent.id)")
     expect(source).not.toContain("disabled={warning}")
   })
 

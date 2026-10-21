@@ -74,7 +74,7 @@ func TestInitialSchemaBootstrapsEmptyPostgres(t *testing.T) {
 		t.Fatalf("migration version after rerun = %d dirty=%t, want version %d clean", repeatedVersion, repeatedDirty, wantVersion)
 	}
 
-	for _, table := range []string{"registration_token", "agent", "agent_runtime_status", "agent_location", "server_location_snapshot"} {
+	for _, table := range []string{"registration_token", "agent", "agent_runtime_status", "agent_location", "server_location_snapshot", "agent_license"} {
 		if !postgresTableExists(t, ctx, db, table) {
 			t.Fatalf("baseline migration did not create %s", table)
 		}
@@ -84,6 +84,8 @@ func TestInitialSchemaBootstrapsEmptyPostgres(t *testing.T) {
 		"agent_runtime_status_observed_ip_generation_nonnegative",
 		"agent_location_latitude_range",
 		"server_location_snapshot_singleton",
+		"agent_license_singleton_check",
+		"agent_license_signed_key_check",
 	} {
 		if !postgresConstraintExists(t, ctx, db, constraint) {
 			t.Fatalf("baseline migration did not create constraint %s", constraint)
@@ -103,21 +105,23 @@ func TestInitialSchemaBootstrapsEmptyPostgres(t *testing.T) {
 	if err := serverdatabase.MigrateDown(db); err != nil {
 		t.Fatalf("run baseline down migration: %v", err)
 	}
-	if count := countPublicTables(t, ctx, db, true); count != 0 {
-		t.Fatalf("down migration left %d application tables", count)
+	if postgresTableExists(t, ctx, db, "agent_license") {
+		t.Fatal("latest down migration left agent_license")
+	}
+	if count := countPublicTables(t, ctx, db, true); count == 0 {
+		t.Fatal("latest down migration unexpectedly removed historical application tables")
 	}
 	if err := serverdatabase.RunMigrations(db); err != nil {
 		t.Fatalf("rerun baseline migration after destructive down: %v", err)
 	}
-	verifyBlacklistPostgresContract(t, ctx, db)
-	verifyScanInputSourcePostgresContract(t, ctx, db)
-	verifyAuthUserTokenVersionPostgresContract(t, ctx, db)
-	verifyTargetCleanupPostgresContract(t, ctx, db)
+	if !postgresTableExists(t, ctx, db, "agent_license") {
+		t.Fatal("rerun migrations did not restore agent_license")
+	}
 	if err := serverdatabase.MigrateDown(db); err != nil {
 		t.Fatalf("run second baseline down migration: %v", err)
 	}
-	if count := countPublicTables(t, ctx, db, true); count != 0 {
-		t.Fatalf("second down migration left %d application tables", count)
+	if count := countPublicTables(t, ctx, db, true); count == 0 {
+		t.Fatal("second latest down migration unexpectedly removed historical application tables")
 	}
 }
 

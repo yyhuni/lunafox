@@ -11,6 +11,7 @@ function makeAgent(id: number, status = "online", healthState = "healthy"): Agen
     id,
     name: `agent-${id}`,
     status,
+    executionEligibility: "eligible",
     maxTasks: 4,
     cpuThreshold: 80,
     memThreshold: 80,

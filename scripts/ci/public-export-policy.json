@@ -147,7 +147,7 @@
       "LICENSE",
       "NOTICE-CLOSED-ARTIFACTS.md",
       "README.md",
-      "README.zh-CN.md",
+      "README.en.md",
       "release-notes/README.md",
       ".gitignore",
       ".dockerignore",
@@ -392,7 +392,7 @@
   ],
   "requiredPaths": [
     "README.md",
-    "README.zh-CN.md",
+    "README.en.md",
     ".gitignore",
     ".dockerignore",
     "CONTRIBUTING.md",
@@ -648,7 +648,7 @@
   },
   "generatedMarkers": [
     "README.md",
-    "README.zh-CN.md",
+    "README.en.md",
     "CONTRIBUTING.md",
     "docs/public-deployment.md",
     "docs/public-deployment.zh-CN.md",

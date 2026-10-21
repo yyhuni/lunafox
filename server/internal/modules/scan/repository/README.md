@@ -48,3 +48,26 @@ Stop transactions return the identities of all cancelled tasks in their existing
 outcome, independently of the complete running assignments eligible for Agent
 notification. Server runtime evidence is appended after commit; no runtime-log
 write joins the state transition transaction.
+
+Execution entitlement is checked at the saved-plan claim transaction, including
+work queued before expiry. `NewScanTaskRepository` receives an explicit
+`AgentExecutionGuard`; a missing guard fails at the claim boundary. Claims hold
+the shared quota advisory lock, then the Agent identity `KEY SHARE` lock, then the
+persisted session lock, before Scan/Task locks. Registration, activation and both
+identity-deletion paths hold the exclusive quota lock, so identities cannot
+change rank during a claim. Eligibility uses all identities in
+`created_at ASC, id ASC` order; offline identities retain their place. A correlated
+assignment replay precedes the eligibility check, and terminal writes do not
+require current entitlement, allowing already claimed work to finish. Replay
+still requires the current persisted session: transaction errors must never fall
+back to an old assignment and bypass a takeover fence. New claims
+recheck the signed entitlement immediately before CAS because row-lock waits may
+cross its expiry. A rejected post-lock claim rolls back any tentative Scan binding.
+
+`ScanRepository.WithAgentExecutionGuard` is required before `DeleteAgent`;
+physical deletion participates in the same entitlement transaction.
+Real PostgreSQL regression uses `LUNAFOX_POSTGRES_LEASE_DSN` with
+`search_path=scan_lease_concurrency` and
+`go test ./internal/modules/scan/repository -run 'TestSavedPlan(LicenseClaimPostgres|LeaseConcurrencyPostgres)' -count=1`.
+It exercises running completion and request replay after expiry, new-claim
+rejection, renewal, corrupt-Key failure, and expiry during a blocked Scan bind.

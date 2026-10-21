@@ -11,6 +11,8 @@ scan 模块 DTO 规范：
 - 仅保留对共享 HTTP DTO 的依赖。
 - 已分配 Scan 的 detail 必须显式序列化 `agentDeleted`；Agent 存在时返回 `agentName`、`agentStatus`，有 runtime row 时再返回 `agentHealthState`。未分配 Scan 省略整组 Agent 字段，已删除 Agent 只保留 canonical `agent`、`assignmentMode` 与 `agentDeleted=true`。
 
+- `ScanDetailResponse.executionBlockedReason` 总是输出 nullable 字段；`agent_license_restricted` 只表示绑定节点当前无法领取排队的 executable Task，不代表离线或 Scan/Task 已失败。授权恢复后读时清除；运行中 Task 可完成。
+
 ## Workflow Configuration
 
 `configuration` remains a raw object at the transport boundary because Step IDs

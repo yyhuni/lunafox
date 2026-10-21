@@ -6,10 +6,11 @@ import (
 )
 
 type registrationTokenRepository struct {
-	db *gorm.DB
+	db       *gorm.DB
+	licenses *AgentLicenseRepository
 }
 
 // NewRegistrationTokenRepository creates a new registration token repository.
 func NewRegistrationTokenRepository(db *gorm.DB) agentdomain.RegistrationTokenRepository {
-	return &registrationTokenRepository{db: db}
+	return &registrationTokenRepository{db: db, licenses: NewAgentLicenseRepository(db)}
 }

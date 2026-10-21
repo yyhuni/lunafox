@@ -54,7 +54,7 @@ require_regular_file() {
 	fi
 }
 
-for file in README.md README.zh-CN.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTIFACTS.md \
+for file in README.md README.en.md CONTRIBUTING.md LICENSE NOTICE-CLOSED-ARTIFACTS.md \
 	.gitignore docs/public-deployment.md docs/public-deployment.zh-CN.md .env .env.example compose.yaml engine-inventory.yaml release.manifest.yaml \
 	deploy/compose.template.yaml deploy/.env.example \
 	resources/loki/loki-config.yaml resources/alloy/config.alloy \
@@ -617,8 +617,8 @@ grep -Fq 'lunafox_postgres' "$ROOT_DIR/docs/public-deployment.md" || fail "deplo
 grep -Fq '## 首次启动后的配置变更' "$ROOT_DIR/docs/public-deployment.zh-CN.md" || fail "Chinese deployment docs must document post-start configuration changes"
 grep -Fq '不支持在线数据库模式迁移' "$ROOT_DIR/docs/public-deployment.zh-CN.md" || fail "Chinese deployment docs must state that online database-mode migration is unsupported"
 grep -Fq '不支持在线凭据轮换' "$ROOT_DIR/docs/public-deployment.zh-CN.md" || fail "Chinese deployment docs must state that online credential rotation is unsupported"
-grep -Fq 'docs/public-deployment.md#configuration-changes-after-first-start' "$ROOT_DIR/README.md" "$ROOT_DIR/README.zh-CN.md" || fail "README files must link to post-start configuration guidance"
-grep -Fq '#database-environment-variables' "$ROOT_DIR/README.md" "$ROOT_DIR/README.zh-CN.md" || fail "README files must link to the database environment variable list"
+grep -Fq 'docs/public-deployment.md#configuration-changes-after-first-start' "$ROOT_DIR/README.md" "$ROOT_DIR/README.en.md" || fail "README files must link to post-start configuration guidance"
+grep -Fq '#database-environment-variables' "$ROOT_DIR/README.md" "$ROOT_DIR/README.en.md" || fail "README files must link to the database environment variable list"
 grep -Fq 'id="database-environment-variables"' "$ROOT_DIR/docs/public-deployment.md" "$ROOT_DIR/docs/public-deployment.zh-CN.md" || fail "deployment docs must anchor the database environment variable list"
 grep -Fq '## Database environment variables' "$ROOT_DIR/docs/public-deployment.md" || fail "deployment docs must list database environment variables"
 grep -Fq '## 数据库环境变量' "$ROOT_DIR/docs/public-deployment.zh-CN.md" || fail "Chinese deployment docs must list database environment variables"

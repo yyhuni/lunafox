@@ -17,6 +17,7 @@
  */
 export const ERROR_CODE_MAP: Record<string, string> = {
   // Common error codes (8, consistent with the backend ErrorCodes class)
+  AGENT_LICENSE_RESTRICTED: 'errors.agentLicenseRestricted',
   VALIDATION_ERROR: 'errors.validation',
   NOT_FOUND: 'errors.notFound',
   PERMISSION_DENIED: 'errors.permissionDenied',

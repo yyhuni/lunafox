@@ -48,7 +48,7 @@ func TestSavedPlanClaimNeverClaimsUserDisabledOrPlanningSkippedTask(t *testing.T
 		t.Fatalf("insert applicable saved plan: %v", err)
 	}
 
-	repository := &scanTaskRepository{db: db}
+	repository := &scanTaskRepository{db: db, agentExecutionGuard: savedPlanTestExecutionGuard(t, db)}
 	requestID := "018f6f22-0d23-7b4a-a508-8f4c8abf16d1"
 	claimed, err := repository.ClaimNextCompatibleSavedExecutionPlan(context.Background(), 42, "session-a", 9, requestID, []uint32{2})
 	if err != nil {

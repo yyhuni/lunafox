@@ -30,7 +30,7 @@ func TestScanTaskRepositoryBulkLifecycleDiagnosticsPostgres(t *testing.T) {
 		}
 	}
 
-	affected, err := NewScanTaskRepository(db).CancelUnstartedTasksByScanID(context.Background(), 7)
+	affected, err := NewScanTaskRepository(db, nil).CancelUnstartedTasksByScanID(context.Background(), 7)
 	if err != nil {
 		t.Fatalf("CancelUnstartedTasksByScanID returned error: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestDeleteAgentLifecycleDiagnosticsPostgres(t *testing.T) {
 		}
 	}
 
-	if err := (&ScanRepository{db: db}).DeleteAgent(context.Background(), 42); err != nil {
+	if err := NewScanRepository(db).WithAgentExecutionGuard(savedPlanTestExecutionGuard(t, db)).DeleteAgent(context.Background(), 42); err != nil {
 		t.Fatalf("DeleteAgent returned error: %v", err)
 	}
 	assertPersistedUnavailableEngineDiagnostics(t, db, 1)

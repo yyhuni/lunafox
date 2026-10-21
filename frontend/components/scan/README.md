@@ -63,6 +63,10 @@ the shared `Button` appearance.
 
 Scan log surfaces reuse `RawLogViewer` with `TerminalLogCopyAllButton` in its `topRightAction`; copy the complete currently loaded scan log text, not only a filtered or visible fragment.
 
+## Scan Progress Failure Guidance
+
+`ScanProgressSummary` derives its actionable failure block from the persisted Scan failure kind. When the kind is `no_enabled_templates` (Nuclei POC template preparation failed), it renders localized guidance, a link to `/tools/nuclei/`, and a re-launch hint; the raw Agent message is kept as secondary `<details>` content and must not replace the guidance. The copy is intentionally hedged because the Agent reuses this kind for transport-level template-exchange failures, so it must not assert POC enablement as the certain cause. Any other failure kind keeps the plain `errorReason` rendering. This surface must not offer retry, automatic POC sync or enablement, or launch-time gating.
+
 ## Agent Assignment
 
 Normal, bulk, and quick Scan launch reuse `ScanAgentSelector`. It always shows
@@ -72,7 +76,15 @@ a health badge and renders the four resource metrics as icon/label, value, and
 meter tiers; task slots are displayed as a `used/total` count without a meter. The selector
 uses the same threshold tones as the shared metric bars; offline or
 heartbeat-less Agents do not display stale resource values.
-Offline or unhealthy Agents remain selectable: selecting one
+License-restricted Agents are disabled in the shared selector. The required
+`executionEligibility` comes from the Server; never derive it from loaded pages.
+An already selected restricted Agent remains selected with an explicit warning,
+and submission failures with `AGENT_LICENSE_RESTRICTED` use localized feedback.
+Scan detail requires `executionBlockedReason` (`null` or
+`agent_license_restricted`); the runtime header explains a pinned scan waiting
+for license renewal. Scheduled handoff history preserves the corresponding
+`AGENT_LICENSE_RESTRICTED` cause.
+Offline or unhealthy eligible Agents remain selectable: selecting one
 pins the new Scan and it may remain pending until that exact Agent can claim it.
 The omitted option is automatic assignment. Do not let UI callers construct
 `agents/{id}` directly; service adapters own the canonical request reference.

@@ -28,6 +28,7 @@ type agentClusterAggregateRow struct {
 const agentClusterAggregateQuery = `
 WITH agent_facts AS (
     SELECT
+        ROW_NUMBER() OVER (ORDER BY agent.created_at ASC, agent.id ASC) AS entitlement_rank,
         CASE
             WHEN agent.status = 'offline' THEN 'offline'
             WHEN agent.status = 'online' AND agent_runtime_status.health_state = 'healthy' THEN 'healthy'
@@ -72,7 +73,7 @@ SELECT
         ELSE 0
     END), 0) AS occupied_slots,
     COALESCE(SUM(CASE
-        WHEN node_bucket = 'healthy' AND execution_fresh = 1 THEN
+        WHEN node_bucket = 'healthy' AND execution_fresh = 1 AND entitlement_rank <= @agent_limit THEN
             CASE
                 WHEN task_slots_used <= 0 THEN configured_slots
                 WHEN task_slots_used >= configured_slots THEN 0
@@ -83,6 +84,14 @@ SELECT
     COALESCE(SUM(CASE
         WHEN node_bucket = 'healthy' AND execution_fresh = 1 THEN 0
         ELSE configured_slots
+    END + CASE
+        WHEN node_bucket = 'healthy' AND execution_fresh = 1 AND entitlement_rank > @agent_limit THEN
+            CASE
+                WHEN task_slots_used <= 0 THEN configured_slots
+                WHEN task_slots_used >= configured_slots THEN 0
+                ELSE configured_slots - task_slots_used
+            END
+        ELSE 0
     END), 0) AS unavailable_slots,
     COALESCE(SUM(CASE
         WHEN node_bucket = 'healthy' AND execution_fresh = 1 AND task_slots_used > configured_slots
@@ -94,12 +103,15 @@ SELECT
 FROM agent_facts`
 
 // GetClusterAggregate keeps fleet completeness and every freshness predicate inside one database query.
-func (repository *agentRepository) GetClusterAggregate(ctx context.Context, generatedAt time.Time) (agentdomain.AgentClusterAggregate, error) {
+func (repository *agentRepository) GetClusterAggregate(ctx context.Context, generatedAt time.Time, agentLimit int) (agentdomain.AgentClusterAggregate, error) {
 	if repository == nil || repository.db == nil {
 		return agentdomain.AgentClusterAggregate{}, errors.New("Agent cluster summary repository is required")
 	}
 	if generatedAt.IsZero() {
 		return agentdomain.AgentClusterAggregate{}, errors.New("Agent cluster summary generation time is required")
+	}
+	if agentLimit < agentdomain.DeploymentAgentLimit {
+		return agentdomain.AgentClusterAggregate{}, errors.New("agent cluster summary entitlement is invalid")
 	}
 	generatedAt = generatedAt.UTC()
 	var row agentClusterAggregateRow
@@ -107,6 +119,7 @@ func (repository *agentRepository) GetClusterAggregate(ctx context.Context, gene
 		agentClusterAggregateQuery,
 		sql.Named("fresh_after", generatedAt.Add(-agentdomain.AgentExecutionFreshness)),
 		sql.Named("generated_at", generatedAt),
+		sql.Named("agent_limit", agentLimit),
 	).Scan(&row).Error; err != nil {
 		return agentdomain.AgentClusterAggregate{}, err
 	}

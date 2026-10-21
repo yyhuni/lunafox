@@ -130,6 +130,7 @@ const agentA: Agent = {
   id: 1,
   name: "Agent A",
   status: "online",
+  executionEligibility: "eligible",
   connectionIp: "10.0.0.1",
   maxTasks: 2,
   cpuThreshold: 90,

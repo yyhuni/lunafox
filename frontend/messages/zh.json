@@ -118,6 +118,7 @@
       "hasFailureIndicator": "存在失败记录",
       "failureCauses": {
         "WORKFLOW_UNAVAILABLE": "引用的扫描流程不可用",
+        "AGENT_LICENSE_RESTRICTED": "绑定的节点授权受限，无法领取新任务",
         "AGENT_NOT_FOUND": "绑定的节点已被删除",
         "CONFIG_RESOURCE_UNAVAILABLE": "配置资源不可用",
         "ENGINE_UNAVAILABLE": "引用的引擎不可用",
@@ -1314,6 +1315,8 @@
     "stopScan": "停止扫描",
     "stopScanPending": "停止中...",
     "agentSelector": {
+      "licenseRestricted": "授权受限",
+      "licenseRestrictedHint": "此节点授权受限，不能领取新任务。已领取任务可完成；请更新授权或改选其他节点。",
       "label": "指定执行节点",
       "loading": "正在加载执行节点...",
       "automatic": "自动分配",
@@ -1556,6 +1559,7 @@
         "inProgress": "正在停止选中的扫描..."
       },
       "runtimeDrawer": {
+        "licenseRestricted": "指定节点授权受限，扫描正在等待。更新授权后可继续领取；已领取任务可以完成。",
         "open": "运行详情"
       },
       "taskId": "扫描任务 ID：{id}",
@@ -1851,6 +1855,13 @@
       "startTime": "开始时间",
       "status": "状态",
       "errorReason": "错误原因",
+      "failureGuidance": {
+        "pocTitle": "漏洞扫描 POC 模板尚未就绪",
+        "pocDescription": "漏洞扫描任务在准备 Nuclei POC 模板时失败，常见原因是 POC 尚未同步或尚未启用。",
+        "relaunchHint": "如果已启用 POC，请检查资源后重试；准备好 POC 后，请重新发起扫描。",
+        "openPocCatalog": "前往 Nuclei POC",
+        "rawDetail": "原始错误详情"
+      },
       "engineCatalogLoading": "正在加载执行引擎信息",
       "engineCatalogUnavailable": "加载执行引擎信息失败",
       "totalProgress": "总进度",
@@ -2906,6 +2917,53 @@
       }
     },
     "agents": {
+      "executionEligibility": {
+        "restricted": "授权受限",
+        "restrictedHint": "已领取任务可完成，暂不领取新任务。更新授权后按额度恢复。"
+      },
+      "activation": {
+        "sectionLabel": "Agent 扩容授权",
+        "basicHeading": "需要更多扫描节点？",
+        "activeHeading": "扩容授权已生效",
+        "expiredHeading": "扩容授权已到期",
+        "basicBadge": "基础版",
+        "activeBadge": "扩容版",
+        "expiredBadge": "已到期",
+        "basicDescription": "基础额度为 {limit} 个 Agent。联系作者获取 Key，即可激活更多节点额度。",
+        "activeDescription": "最多可添加 {limit} 个 Agent · 有效期至 {date} · {months} 个月授权",
+        "expiredDescription": "已保留 {count} 个节点，最早注册的 {limit} 个可领取新任务。其余节点完成已领取任务后暂停领取，更新授权后按额度恢复。",
+        "open": "激活扩容",
+        "manage": "管理授权",
+        "renew": "更新授权",
+        "title": "解锁更多 Agent",
+        "renewTitle": "更新扩容授权",
+        "description": "粘贴你的授权 Key，激活后即可增加节点额度。",
+        "successTitle": "扩容已激活",
+        "successDescription": "授权已更新，可在当前节点额度内继续添加 Agent，受限节点会按额度自动恢复任务领取。",
+        "successLimit": "已解锁 {limit} 个 Agent 额度",
+        "validity": "{months} 个月授权 · 有效期至 {date}",
+        "quotaLabel": "Agent 节点额度",
+        "licenseIdLabel": "授权编号",
+        "taskConfigLabel": "单节点任务配置",
+        "taskConfigUnchanged": "保持原配置",
+        "return": "返回 Agent 列表",
+        "keyLabel": "授权 Key",
+        "placeholder": "粘贴完整的授权 Key",
+        "help": "换机或重新部署后可继续使用原 Key，无需为每个 Agent 单独激活。",
+        "currentQuota": "当前额度：{limit} 个 Agent",
+        "keyDeterminesQuota": "节点额度与到期时间由 Key 确定，重复激活不会延长有效期。",
+        "getKey": "如何获取 Key？",
+        "followTitle": "联系作者获取 Key",
+        "followDescription": "获取后复制完整 Key，回到这里粘贴激活。",
+        "pending": "正在验证授权并刷新额度，请稍候…",
+        "activating": "正在激活",
+        "cancel": "取消",
+        "activate": "激活扩容",
+        "expiredError": "这个 Key 已过期，请联系作者获取新的 Key 后重试。当前授权未改变。",
+        "notYetValidError": "这个 Key 尚未生效，请在生效后重试，或联系作者确认。当前授权未改变。",
+        "invalidError": "未能识别这个 Key，请检查是否完整复制，或联系作者获取新的 Key。当前授权未改变。",
+        "requestError": "暂时无法完成激活，请稍后重试。当前显示的额度以集群摘要为准。"
+      },
       "quota": {
         "reached": "配额已用完（{used}/{limit}），删除一个 Agent 后可继续添加。"
       },
@@ -4728,6 +4786,7 @@
     "toSearch": "搜索"
   },
   "errors": {
+    "agentLicenseRestricted": "指定节点授权受限，无法领取新任务。请更新授权或选择其他节点。",
     "unknown": "操作失败，请稍后重试",
     "validation": "输入数据无效",
     "notFound": "资源未找到",
@@ -4754,6 +4813,8 @@
     "maintenanceWindow": "预计维护窗口：{minutes} 分钟",
     "migrationSummary": "数据库迁移：{type}",
     "migrationRiskHint": "此版本包含数据库迁移，需要管理员确认后才能执行。",
+    "migrationManualUpgradeHint": "此版本包含数据库迁移，当前迁移策略暂不支持在应用内自动升级。请先备份数据库与配置，再按部署指南从新的发布包手动升级；建议交由 AI 助手（如 Codex）按文档执行并核对每一步结果。",
+    "upgradeUnavailableHint": "当前版本无法在应用内自动升级。请按部署指南手动更新；建议交由 AI 助手（如 Codex）按文档执行并核对每一步结果。",
     "upgradeRiskHint": "Server 会在执行前确认本次升级所需的范围。",
     "noMigration": "无数据库迁移",
     "startUpgrade": "开始升级",

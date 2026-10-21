@@ -59,6 +59,23 @@ make test
 make build
 ```
 
+## Agent 离线扩容授权
+
+基础额度为3个已注册节点（含离线和默认节点）。管理员在满额或到期横幅输入作者提供的
+Key，通过 `POST /v1/admin/agentLicenses/current:activate` 激活；集群摘要返回当前授权
+投影及有效 `agentLimit`。额度校验与注册保留在同一数据库事务锁中，到期不删除或断开
+存量节点，并将新任务领取资格恢复为全部节点按 `created_at ASC, id ASC` 排序的最早3个。
+离线节点也占名额；超额节点显示授权受限，保持连接并完成已领取任务，尚未领取的排队任务等待续期。
+续期或删除早期节点后资格自动恢复。指定受限节点的新扫描明确拒绝，已有绑定扫描的详情显示可恢复的等待原因。
+
+Key 不绑定机器，生效和到期时间在签发时固定，换VPS、重部署或重复导入原Key都不续期。
+产品内置作者公钥，无须客户配置签发密钥。持久化表由 forward migration `000009`
+创建，按现有迁移规则先升级匹配Server再部署Frontend。
+
+作者签发入口、私钥备份和构建说明见
+[`tools/license-issuer/README.md`](../tools/license-issuer/README.md)；格式及信任边界见
+[`internal/agentlicense/README.md`](internal/agentlicense/README.md)。
+
 ## 旧锁恢复
 
 仅当已确认旧版结果入库锁链影响活动 Scan 时，遵循

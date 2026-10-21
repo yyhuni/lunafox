@@ -74,7 +74,7 @@ describe("agent-list contract", () => {
     expect(overviewSource).not.toContain("OverviewStatCard")
     expect(overviewSource).not.toContain("ExecutionCapacityCard")
     expect(overviewSource).not.toContain("ShortcutCard")
-    expect(overviewLoadingSource).toContain("<AgentOverviewSection loading />")
+    expect(overviewLoadingSource).toContain("<AgentOverviewSection loading summary={summary} activationPreview={activationPreview} showLicenseBanner={showLicenseBanner} />")
     expect(overviewSource).toContain('data-testid={loading ? "agent-overview-loading-state" : "agent-overview-section"}')
   })
 
@@ -88,7 +88,7 @@ describe("agent-list contract", () => {
     expect(overviewSource).toContain("capacity.configuredSlots")
     expect(overviewSource).toContain("capacity.overcommittedSlots")
     expect(overviewSource).not.toContain('t("overview.runningTasks")')
-    expect(source).toContain("summary={clusterSummary.data}")
+    expect(source).toContain("summary={overviewSummary}")
   })
 
   it("keeps the title and refresh control in the overview header", () => {
@@ -192,9 +192,9 @@ describe("agent-list contract", () => {
   it("keeps overview and toolbar loading geometry with the resolved owners", () => {
     expect(source).toContain("AgentOverviewSection")
     expect(source).toContain('from "./agent-overview-loading-state"')
-    expect(source).toContain("skeleton={<AgentOverviewLoadingState />}")
+    expect(source).toContain("skeleton={<AgentOverviewLoadingState summary={overviewSummary} activationPreview={showActivationBanner} showLicenseBanner={showActivationBanner} />}")
     expect(overviewSource).toContain('getLoadingStructureSlotAttributes(AGENT_LIST_OVERVIEW_REGION_SLOT)')
-    expect(overviewLoadingSource).toContain("return <AgentOverviewSection loading />")
+    expect(overviewLoadingSource).toContain("return <AgentOverviewSection loading summary={summary} activationPreview={activationPreview} showLicenseBanner={showLicenseBanner} />")
     expect(listLoadingSource).toContain("AGENT_TOOLBAR_ACTIONS_CLASS")
     expect(listLoadingSource).toContain("AGENT_TOOLBAR_ACTION_ROW_CLASS")
     expect(listLoadingSource).toContain("showQuotaHint")

@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/yyhuni/lunafox/contracts/versioning"
+	"github.com/yyhuni/lunafox/server/internal/agentlicense"
 	"github.com/yyhuni/lunafox/server/internal/config"
 	"github.com/yyhuni/lunafox/server/internal/database"
 	agentapp "github.com/yyhuni/lunafox/server/internal/modules/agent/application"
@@ -51,6 +52,9 @@ func RunAgentBootstrap(ctx context.Context, databaseConfig *config.DatabaseConfi
 	}
 	if !versioning.IsValidSemVer(agentVersion) {
 		return errors.New(versioning.SemVerFieldMessage("agent bootstrap version"))
+	}
+	if _, err := agentlicense.NewDefaultVerifier(); err != nil {
+		return fmt.Errorf("configure Agent license verifier: %w", err)
 	}
 
 	db, err := database.NewDatabase(databaseConfig)

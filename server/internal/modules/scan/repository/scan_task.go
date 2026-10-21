@@ -37,7 +37,10 @@ type ScanTaskRepository interface {
 	FailTasksForSupersededAgentSession(ctx context.Context, agentID int, currentSessionEpoch int64) ([]int, error)
 }
 
-type scanTaskRepository struct{ db *gorm.DB }
+type scanTaskRepository struct {
+	db                  *gorm.DB
+	agentExecutionGuard AgentExecutionGuard
+}
 
 type CancelledTaskInfo struct {
 	TaskID  int  `gorm:"column:id"`
@@ -62,8 +65,9 @@ const (
 	scanStatusCancelled = string(scandomain.ScanStatusCancelled)
 )
 
-func NewScanTaskRepository(db *gorm.DB) ScanTaskRepository {
-	return &scanTaskRepository{db: db}
+// NewScanTaskRepository constructs task storage with an explicit execution entitlement boundary.
+func NewScanTaskRepository(db *gorm.DB, guard AgentExecutionGuard) ScanTaskRepository {
+	return &scanTaskRepository{db: db, agentExecutionGuard: guard}
 }
 
 func (r *scanTaskRepository) GetByID(ctx context.Context, id int) (*ScanTaskRecord, error) {

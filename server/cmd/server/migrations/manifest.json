@@ -58,6 +58,13 @@
       "up": "000008_widen_web_observation_numbers.up.sql",
       "down": "000008_widen_web_observation_numbers.down.sql",
       "checksum": "sha256:9b5cd2436646901fc4d4b222448af69667cf8cb7763f76e93084de13ea359d9f"
+    },
+    {
+      "id": "000009",
+      "slug": "agent_license",
+      "up": "000009_agent_license.up.sql",
+      "down": "000009_agent_license.down.sql",
+      "checksum": "sha256:c92e7fdc8f7351c3cf554a7b9efd18a39bb57046d24c1d3e563e5c841cc268fc"
     }
   ]
 }

@@ -77,5 +77,5 @@ func registerRoutes(engine *gin.Engine, d *deps, jwtMiddleware gin.HandlerFunc) 
 	if d.upgradeHandler != nil {
 		upgraderouter.RegisterUpgradeRoutes(protected, d.upgradeHandler)
 	}
-	agentrouter.RegisterAgentRoutes(api, protected, d.agentHandler, d.agentLogHandler, d.agentClusterSummaryHandler, d.agentLocationMapHandler)
+	agentrouter.RegisterAgentRoutes(api, protected, d.agentHandler, d.agentLogHandler, d.agentClusterSummaryHandler, d.agentLocationMapHandler, d.agentLicenseHandler)
 }

@@ -63,7 +63,7 @@ func TestFleetCutoverOldAgentCannotClaimPackagePlan(t *testing.T) {
 		t.Fatalf("insert package v2/API v2 saved plan: %v", err)
 	}
 
-	repository := &scanTaskRepository{db: db}
+	repository := &scanTaskRepository{db: db, agentExecutionGuard: savedPlanTestExecutionGuard(t, db)}
 	legacyClaim, err := repository.ClaimNextCompatibleSavedExecutionPlan(
 		context.Background(),
 		41,

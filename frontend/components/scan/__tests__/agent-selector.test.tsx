@@ -56,6 +56,7 @@ function detail(id: number, displayName = `selected-${id}`): AgentDetail {
     resourceName: `agents/${id}`,
     displayName,
     status: "online",
+    executionEligibility: "eligible",
     maxTasks: 4,
     cpuThreshold: 80,
     memThreshold: 80,
@@ -164,4 +165,18 @@ describe("ScanAgentSelector", () => {
     expect(hookMocks.retryCurrentGeneration).toHaveBeenCalledTimes(1)
     expect(screen.getByText("renamed-selected-agent")).toBeInTheDocument()
   })
+  it("keeps a restricted selection visible and prevents choosing restricted candidates", () => {
+    const onChange = vi.fn()
+    const restricted = { ...detail(1001, "restricted-agent"), executionEligibility: "license_restricted" as const }
+    hookMocks.useSelectedAgentDetail.mockReturnValue({ data: restricted, isInitialError: false })
+    hookMocks.useScanAgentPicker.mockImplementation(({ open }: { open: boolean }) => ({ ...pickerState(open), agents: [restricted], hasNextPage: false }))
+    renderWithProviders(<ScanAgentSelector value={1001} onChange={onChange} />)
+    expect(screen.getByRole("alert")).toHaveTextContent("licenseRestrictedHint")
+    const candidate = screen.getByRole("option", { name: /restricted-agent/ })
+    expect(candidate).toHaveAttribute("aria-disabled", "true")
+    fireEvent.click(candidate)
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getByRole("button", { name: "picker-trigger" })).toHaveTextContent("restricted-agent")
+  })
+
 })

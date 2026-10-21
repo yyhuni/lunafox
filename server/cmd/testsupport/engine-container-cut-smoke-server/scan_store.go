@@ -15,6 +15,7 @@ import (
 	"github.com/yyhuni/lunafox/contracts/enginecontract/engineexecution"
 	agentexecutionv1 "github.com/yyhuni/lunafox/contracts/gen/lunafox/agent/execution/v1"
 	"github.com/yyhuni/lunafox/contracts/resourcenames"
+	agentrepo "github.com/yyhuni/lunafox/server/internal/modules/agent/repository"
 	scanapp "github.com/yyhuni/lunafox/server/internal/modules/scan/application"
 	scanrepo "github.com/yyhuni/lunafox/server/internal/modules/scan/repository"
 	"gorm.io/driver/sqlite"
@@ -49,8 +50,10 @@ CREATE TABLE target (
 	deleted_at DATETIME
 );
 CREATE TABLE agent (
-	id INTEGER PRIMARY KEY
+	id INTEGER PRIMARY KEY,
+	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE agent_license (singleton BOOLEAN PRIMARY KEY, signed_key TEXT NOT NULL);
 CREATE TABLE scan (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	target_id INTEGER NOT NULL,
@@ -230,7 +233,7 @@ func newSmokeScanStore() (*smokeScanStore, error) {
 		_ = os.RemoveAll(root)
 		return nil, fmt.Errorf("initialize smoke Agent session: %w", err)
 	}
-	tasks := scanrepo.NewScanTaskRepository(db)
+	tasks := scanrepo.NewScanTaskRepository(db, agentrepo.NewAgentLicenseRepository(db))
 	savedPlans, ok := tasks.(scanrepo.SavedExecutionPlanReader)
 	if !ok {
 		closeGormDB(db)

@@ -17,6 +17,7 @@ type AgentClusterLocationCoverageResponse struct {
 
 type AgentClusterSummaryResponse struct {
 	AgentLimit                int                                   `json:"agentLimit"`
+	License                   AgentLicenseResponse                  `json:"license"`
 	Name                      string                                `json:"name"`
 	GeneratedAt               time.Time                             `json:"generatedAt"`
 	ExecutionFreshnessSeconds int                                   `json:"executionFreshnessSeconds"`

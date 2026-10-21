@@ -9,6 +9,7 @@ function createAgent(overrides: Partial<Agent> & Pick<Agent, "id">): Agent {
     name: `agents/${overrides.id}`,
     displayName: `agent-${overrides.id}`,
     status: "offline",
+    executionEligibility: "eligible",
     maxTasks: 3,
     cpuThreshold: 80,
     memThreshold: 80,

@@ -29,3 +29,6 @@ agent 模块 repository 规范：
 - `/settings/agents/` 公开 contains 搜索依赖 PostgreSQL `pg_trgm`：`agent.display_name`、`agent_runtime_status.observed_hostname`、`agent_runtime_status.connection_ip` 必须在 baseline migration 中有 trigram 索引；`agent(created_at, id)`、`agent.status`、`agent_runtime_status(health_state, agent_id)` 是排序/筛选的审计依据。
 
 - Agent Create 使用事务级 advisory lock `agentQuotaAdvisoryLock` 串行化 PostgreSQL 注册，在 READ COMMITTED 下拿锁后独立查询全部身份数量再写入；不同令牌和进程共用此边界。不要改成进程锁或事务外 count。SQLite 仅用于单连接契约测试，生产并发保证由 PostgreSQL 验证。真实数据库测试：`LUNAFOX_AGENT_QUOTA_POSTGRES_DSN="... search_path=agent_quota_contract" go test ./internal/modules/agent/repository -run TestAgentQuotaPostgres -count=1`；测试会创建并删除该专用 schema，不得指向生产数据。
+- 注册事务拿到同一把锁后读取当前 `agent_license` 单例并验证其原始签名 Key；数据库无授权时使用 3，过期授权也只允许 3 个新身份。激活写入与注册共用此锁，必须在锁内重新判断固定 `issuedAt`/`expiresAt`，不能把锁等待期间已经过期的 Key 当作有效。读取、验签或数据库失败必须返回错误，不得静默降级为 3。
+- 执行资格由当前签名额度和全体身份 `created_at ASC, id ASC` 的前 N 个实时派生，不持久化受限标记，不按在线状态轮换。离线身份继续占位，显式删除后后续身份顺位补位，续期自动恢复新额度内资格。
+- `AgentLicenseRepository.WithinClaim` 用共享 quota advisory lock 承载同库领取事务；`WithinIdentityChange` 用独占锁承载身份变更。资格与 `CurrentAt` 必须使用 `dbtx.Resolve` 参与调用方事务，不能在领取事务外预检后直接执行。所有删除路径必须先拿独占 quota 锁，再拿 Agent/Scan/Task 行锁；不要反转这层锁顺序。

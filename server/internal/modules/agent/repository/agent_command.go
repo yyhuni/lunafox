@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/netip"
@@ -12,11 +11,12 @@ import (
 	"github.com/yyhuni/lunafox/server/internal/geolocation"
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 	model "github.com/yyhuni/lunafox/server/internal/modules/agent/repository/persistence"
+	"github.com/yyhuni/lunafox/server/internal/pkg/dbtx"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-// agentQuotaAdvisoryLock serializes registrations across Server and bootstrap processes.
+// agentQuotaAdvisoryLock coordinates identity/Key writers and task-claim readers across processes.
 const agentQuotaAdvisoryLock int64 = 0x4c46414751554f54
 
 // Create creates a new agent.
@@ -27,24 +27,25 @@ func (r *agentRepository) Create(ctx context.Context, agent *agentdomain.Agent) 
 	if agent.RegistrationTokenID <= 0 {
 		return fmt.Errorf("agent registration token identity is required")
 	}
-	record := domainAgentToModel(agent)
-	var options *sql.TxOptions
-	if r.db.Name() == "postgres" {
-		options = &sql.TxOptions{Isolation: sql.LevelReadCommitted}
+	if err := r.licenses.validate(); err != nil {
+		return err
 	}
+	record := domainAgentToModel(agent)
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if tx.Name() == "postgres" {
-			// Count in a separate READ COMMITTED statement after the lock: a waiter
-			// must see the previous registration's commit, even with another token.
-			if err := tx.Exec("SELECT pg_advisory_xact_lock(?)", agentQuotaAdvisoryLock).Error; err != nil {
-				return err
-			}
+		if err := lockAgentQuota(tx); err != nil {
+			return err
+		}
+		// Read and verify after the cross-process lock, including the current time:
+		// a waiting registration cannot reuse a replaced or newly expired quota.
+		license, err := currentAgentLicenseAt(tx, r.licenses.verifier, time.Now().UTC())
+		if err != nil {
+			return err
 		}
 		var count int64
 		if err := tx.Model(&model.Agent{}).Count(&count).Error; err != nil {
 			return err
 		}
-		if count >= agentdomain.DeploymentAgentLimit {
+		if count >= int64(license.AgentLimit) {
 			return agentdomain.ErrAgentQuotaExceeded
 		}
 		attribution := tx.Model(&model.RegistrationToken{}).
@@ -57,7 +58,7 @@ func (r *agentRepository) Create(ctx context.Context, agent *agentdomain.Agent) 
 			return agentdomain.ErrRegistrationTokenInvalid
 		}
 		return tx.Create(record).Error
-	}, options)
+	}, agentQuotaTransactionOptions(r.db))
 	if err != nil {
 		return err
 	}
@@ -273,7 +274,9 @@ func (r *agentRepository) MarkOfflineFromOnline(ctx context.Context, id int) (bo
 
 // Delete deletes an agent.
 func (r *agentRepository) Delete(ctx context.Context, id int) error {
-	return r.db.WithContext(ctx).Delete(&model.Agent{}, id).Error
+	return r.licenses.WithinIdentityChange(ctx, func(txContext context.Context) error {
+		return dbtx.Resolve(txContext, r.db).Delete(&model.Agent{}, id).Error
+	})
 }
 
 // UpdateHeartbeat updates agent last heartbeat time and runtime fields.

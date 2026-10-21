@@ -63,16 +63,17 @@ type ScanCachedStats struct {
 
 type ScanDetailResponse struct {
 	ScanResponse
-	AgentID          *int                  `json:"agentId,omitempty"`
-	Agent            string                `json:"agent,omitempty"`
-	AgentName        string                `json:"agentName,omitempty"`
-	AgentStatus      string                `json:"agentStatus,omitempty"`
-	AgentHealthState string                `json:"agentHealthState,omitempty"`
-	AgentDeleted     *bool                 `json:"agentDeleted,omitempty"`
-	AssignmentMode   string                `json:"assignmentMode"`
-	Configuration    map[string]any        `json:"configuration,omitempty"`
-	ResultsDir       string                `json:"resultsDir,omitempty"`
-	RuntimeTasks     []RuntimeTaskResponse `json:"runtimeTasks,omitempty"`
+	ExecutionBlockedReason *string               `json:"executionBlockedReason"`
+	AgentID                *int                  `json:"agentId,omitempty"`
+	Agent                  string                `json:"agent,omitempty"`
+	AgentName              string                `json:"agentName,omitempty"`
+	AgentStatus            string                `json:"agentStatus,omitempty"`
+	AgentHealthState       string                `json:"agentHealthState,omitempty"`
+	AgentDeleted           *bool                 `json:"agentDeleted,omitempty"`
+	AssignmentMode         string                `json:"assignmentMode"`
+	Configuration          map[string]any        `json:"configuration,omitempty"`
+	ResultsDir             string                `json:"resultsDir,omitempty"`
+	RuntimeTasks           []RuntimeTaskResponse `json:"runtimeTasks,omitempty"`
 }
 
 type RuntimeTaskResponse struct {

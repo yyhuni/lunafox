@@ -930,7 +930,7 @@ func TestCreateBatchReevaluatesTriggerTimeDependenciesOnEveryAttempt(t *testing.
 					}
 					return []TargetRef{{ID: 18, Name: "organization.example.com", Type: "domain", CreatedAt: time.Now().UTC()}}, nil
 				},
-			).WithAgentLookup(triggerTimeAgentLookup{state: state})
+			).WithAgentLookup(triggerTimeAgentLookup{state: state}).WithAgentExecutionReader(&scanAgentExecutionReaderStub{eligibility: agentExecutionEligible})
 			compiler, err := NewPlanTaskCompiler(
 				&planTaskPackageReaderStub{packageValue: exactPackage},
 				triggerTimeResourceResolver{state: state},

@@ -25,6 +25,7 @@ function agent(id: number, displayName = `agent-${id}`): Agent {
     resourceName: `agents/${id}`,
     displayName,
     status: "online",
+    executionEligibility: "eligible",
     maxTasks: 4,
     cpuThreshold: 80,
     memThreshold: 80,

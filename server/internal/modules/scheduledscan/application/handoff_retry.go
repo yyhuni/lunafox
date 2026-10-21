@@ -15,6 +15,7 @@ type HandoffFailureCause string
 const (
 	HandoffCauseWorkflowUnavailable       HandoffFailureCause = "WORKFLOW_UNAVAILABLE"
 	HandoffCauseAgentNotFound             HandoffFailureCause = "AGENT_NOT_FOUND"
+	HandoffCauseAgentLicenseRestricted    HandoffFailureCause = "AGENT_LICENSE_RESTRICTED"
 	HandoffCauseConfigResourceUnavailable HandoffFailureCause = "CONFIG_RESOURCE_UNAVAILABLE"
 	HandoffCauseEngineUnavailable         HandoffFailureCause = "ENGINE_UNAVAILABLE"
 	HandoffCauseTargetUnavailable         HandoffFailureCause = "TARGET_UNAVAILABLE"
@@ -25,6 +26,7 @@ func ParseHandoffFailureCause(value string) (HandoffFailureCause, bool) {
 	switch cause := HandoffFailureCause(value); cause {
 	case HandoffCauseWorkflowUnavailable,
 		HandoffCauseAgentNotFound,
+		HandoffCauseAgentLicenseRestricted,
 		HandoffCauseConfigResourceUnavailable,
 		HandoffCauseEngineUnavailable,
 		HandoffCauseTargetUnavailable,
@@ -74,6 +76,8 @@ func ClassifyHandoffFailureCause(err error) HandoffFailureCause {
 	case errors.Is(err, scanapp.ErrCreateInvalidScanWorkflow),
 		errors.Is(err, scanapp.ErrCreateNoScanWorkflows):
 		return HandoffCauseWorkflowUnavailable
+	case errors.Is(err, scanapp.ErrCreateAgentLicenseRestricted), errors.Is(err, scanapp.ErrScanAgentLicenseRestricted):
+		return HandoffCauseAgentLicenseRestricted
 	case errors.Is(err, scanapp.ErrCreateAgentNotFound):
 		return HandoffCauseAgentNotFound
 	case errors.Is(err, scanapp.ErrCreateScanWorkflowEngineUnavailable):

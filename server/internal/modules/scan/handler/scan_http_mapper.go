@@ -237,15 +237,16 @@ func toScanDetailOutput(scan *scanapp.QueryScan) dto.ScanDetailResponse {
 	}
 
 	response := dto.ScanDetailResponse{
-		ScanResponse:     toScanOutput(scan),
-		AgentID:          scan.AgentID,
-		AgentName:        scan.AgentName,
-		AgentStatus:      scan.AgentStatus,
-		AgentHealthState: scan.AgentHealthState,
-		AssignmentMode:   scan.AssignmentMode,
-		Configuration:    scan.Configuration,
-		ResultsDir:       scan.ResultsDir,
-		RuntimeTasks:     toRuntimeTaskOutputs(scan.ID, scan.RuntimeTasks),
+		ScanResponse:           toScanOutput(scan),
+		ExecutionBlockedReason: scan.ExecutionBlockedReason,
+		AgentID:                scan.AgentID,
+		AgentName:              scan.AgentName,
+		AgentStatus:            scan.AgentStatus,
+		AgentHealthState:       scan.AgentHealthState,
+		AssignmentMode:         scan.AssignmentMode,
+		Configuration:          scan.Configuration,
+		ResultsDir:             scan.ResultsDir,
+		RuntimeTasks:           toRuntimeTaskOutputs(scan.ID, scan.RuntimeTasks),
 	}
 	if scan.AgentID != nil {
 		response.Agent = httpdto.AgentName(*scan.AgentID)

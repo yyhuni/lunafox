@@ -235,7 +235,7 @@ one closed `failureKind` and a bounded safe UTF-8 `failureMessage`; raw errors,
 configuration, paths, secrets, stacks, and complete batch payloads are never
 persisted. A zero-created creation failure additionally carries one bounded
 public `failureCause` from the closed enum `WORKFLOW_UNAVAILABLE`,
-`AGENT_NOT_FOUND`, `CONFIG_RESOURCE_UNAVAILABLE`, `ENGINE_UNAVAILABLE`,
+`AGENT_NOT_FOUND`, `AGENT_LICENSE_RESTRICTED`, `CONFIG_RESOURCE_UNAVAILABLE`, `ENGINE_UNAVAILABLE`,
 `TARGET_UNAVAILABLE`, or `INTERNAL_UNAVAILABLE`, mapped only from typed Scan
 Create errors; the enum is an API contract that only grows. Outcome settlement
 and the exactly-one successful or failed Schedule aggregate increment commit in
@@ -268,3 +268,5 @@ handoff aggregates. No occurrence write surface, Scan provenance, scheduler
 setting, runtime tuning, metric, built-in alert, dashboard, health-probe
 dependency, Undelete, Scan lifecycle tracking, or Run Now entry point may be
 added.
+
+Scheduled Scan 保存期只校验指定 Agent 存在性；每次触发交接均复用普通 Scan Create 的当前授权资格检查。绑定节点受限时不创建 Scan/Task，按 `AGENT_LICENSE_RESTRICTED` 记录可识别的 handoff cause，并保留既有有界重试策略；不得偷偷改用其他节点。

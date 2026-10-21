@@ -14,6 +14,16 @@ export interface StageDetail {
 }
 
 /**
+ * Actionable guidance for a known execution failure. The guidance replaces the
+ * raw failure message as the primary explanation while the raw message stays
+ * available as secondary detail.
+ */
+export interface ScanProgressFailureGuidance {
+  kind: "no_enabled_templates"
+  targetHref: "/tools/nuclei/"
+}
+
+/**
  * Scan progress data
  */
 export interface ScanProgressData {
@@ -30,5 +40,7 @@ export interface ScanProgressData {
   currentStage?: ScanStage
   startedAt?: string
   errorMessage?: string
+  failureKind?: string
+  failureGuidance?: ScanProgressFailureGuidance | null
   stages: StageDetail[]
 }

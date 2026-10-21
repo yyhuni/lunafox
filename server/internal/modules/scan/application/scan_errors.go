@@ -13,6 +13,7 @@ var (
 	ErrScanInvalidScanWorkflow       = errors.New("invalid scan workflow")
 	ErrScanNoScanWorkflows           = errors.New("no scan workflows enabled for scan")
 	ErrScanAgentNotFound             = errors.New("selected agent not found")
+	ErrScanAgentLicenseRestricted    = errors.New("selected agent is license restricted")
 	ErrTargetNotFound                = errors.New("target not found")
 	ErrUnsupportedScanFilter         = errors.New("unsupported scan filter")
 	ErrUnsupportedScanOrderBy        = errors.New("unsupported scan orderBy")

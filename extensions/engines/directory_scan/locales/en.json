@@ -20,6 +20,12 @@
         "delay": {
           "description": "Fixed or ranged request delay in seconds passed unchanged to FFUF."
         },
+        "denoise-auth-redirect": {
+          "description": "Drop redirect results whose resolved Location points at a known login/SSO path (default false)."
+        },
+        "denoise-backup-html": {
+          "description": "Drop backup-suffixed results served as text/html (default false)."
+        },
         "follow-redirects": {
           "description": "Follow HTTP redirects during scanning."
         },
@@ -47,11 +53,17 @@
         "request-timeout": {
           "description": "Per-request timeout in seconds."
         },
+        "target-variants": {
+          "description": "Append target-derived backup filename variants to each Website wordlist."
+        },
         "threads": {
           "description": "FFUF worker threads for each Website process."
         },
         "timeout": {
           "description": "Deadline in seconds for each Website FFUF process."
+        },
+        "waf-smart-skip": {
+          "description": "Skip a Website's FFUF scan when a two-request pre-scan detects an obvious WAF block (default false)."
         },
         "wordlist": {
           "description": "Server-managed wordlist selected for directory discovery."

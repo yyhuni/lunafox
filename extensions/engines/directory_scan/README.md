@@ -30,6 +30,13 @@ it. Its resource-backed `wordlist` parameter defaults to the preferred Catalog
 name `dir_default.txt`; unavailability fails through the shared resource
 lifecycle rather than selecting another wordlist.
 
+Wordlist entries are relative paths in the same convention as SecLists and
+other directory-bruteforce scanners: the Engine stages an Engine-private
+normalized copy, removes at most one leading `/` from each entry, and passes the
+copy as `-w`. A `//admin` entry keeps its second slash, a lone `/` stays `/`,
+and empty lines, `CRLF`, a final line without a newline, and zero-byte inputs
+remain legal. The selected source file is never rewritten.
+
 `match-codes` and `delay` remain opaque strings through Frontend, Server,
 Workflow persistence, and saved plans. Directory validates their FFUF-specific
 syntax before reading candidates or launching a process and passes accepted
@@ -42,8 +49,53 @@ HTTP/2 are the complete configurable command surface.
 Directory emits generated Target baselines first, then appends raw `websiteURLs`
 in producer order while suppressing only exact baseline overlaps. A valid
 zero-record Website input and a verified zero-byte wordlist remain legal. Each
-FFUF target is the exact Website candidate followed immediately by `FUZZ`; the
-Engine does not insert separators or normalize Website and wordlist payloads.
+FFUF target is `normalized(candidate) + "FUZZ"`: when the candidate path is
+empty or does not end with `/`, exactly one separator is inserted before the
+query, the fragment, or the end of the string. Scheme, authority, query, and
+fragment bytes otherwise stay untouched; a candidate whose path already ends
+with `/` is passed through byte-for-byte.
+
+When automatic calibration is enabled the Engine adds only `-ac` or `-ach` and
+uses the pinned FFUF built-in calibration strategies. It does not append
+`-acc`, `-acs`, or `-ack`: a product-wide fixed calibration path would be a
+single point of failure that a target-specific WAF rule can neutralize, while
+the built-in strategy groups are randomized per invocation and are calibrated
+independently. The trade-off is up to six calibration requests per Website
+instead of one; the normalized target keeps every calibration path on the
+target host.
+
+The optional `ffuf.target-variants` switch (default `false`) appends
+target-derived backup filename variants to each Website candidate's wordlist.
+Names are the complete host, the eTLD+1, the `www.`-stripped host, and the first
+two labels; suffixes are `.zip`, `.tar.gz`, `.tar`, `.rar`, `.7z`, `.sql`,
+`.bak`, and `_bak.zip`. The fixed rule set bounds the count without an
+artificial limit. Variants are deduplicated against the normalized source
+wordlist, appended in deterministic order, and written only to a per-candidate
+workspace file (`directory-wordlist/<ordinal>.txt`) that is removed after the
+invocation. IP and CIDR candidates are skipped; host parsing failures are
+best-effort. The selected source wordlist and typed results stay unchanged.
+
+The optional `ffuf.waf-smart-skip` switch (default `false`) runs a two-request
+pre-scan per Website origin before FFUF: one random nonexistent path and one
+control path `/`. An origin is treated as WAF-blocked only when the random path
+returns 403/429 or a strong challenge signature and the control path is healthy;
+such a Website is skipped, counted as normally completed, and reported through
+the Engine log and the run summary's WAF-skipped count. Probe failures and
+ambiguous responses continue the normal scan. This is a pre-scan only: it does
+not identify WAF vendors, adapt during a running scan, retry, or fabricate
+results.
+
+Two default-off result denoise switches suppress stable false positives before
+submission: `denoise-auth-redirect` drops 301/302/303/307 records whose
+`redirectlocation`, resolved against the record URL, points exactly at or below
+a fixed login/SSO path (`/login`, `/signin`, `/auth/login`, `/sso`,
+`/cas/login`, `/oauth2/authorize`, `/oauth/authorize`, `/user/login`,
+`/admin/login`, `/wp-login.php`); `denoise-backup-html` drops URLs ending in a
+fixed backup suffix (`.zip`, `.tar.gz`, `.tar`, `.rar`, `.7z`, `.sql`, `.bak`,
+`_bak.zip`) whose content type is `text/html`. Records with 401/403,
+`text/plain`, `application/*`, empty content type, or missing
+`redirectlocation` are kept. Filtered counts are logged; raw FFUF JSONL
+artifacts remain in the workspace and typed results are unchanged.
 
 Accepted results contain exactly URL, status, content length, content type, and
 nanosecond duration. Directory submits globally immutable, exact-URL winners

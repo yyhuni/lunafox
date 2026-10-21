@@ -195,6 +195,14 @@ default. It does not rewrite existing observations. The paired down migration
 is destructive test teardown only and may fail when widened values cannot fit
 back into `INTEGER`.
 
+Forward migration `000009` adds the deployment-wide `agent_license` singleton.
+It stores only the original signed offline Key; signed claims remain the
+authority for the Agent limit and fixed dates. A missing row is the default
+three-Agent entitlement. The Server validates the Key before activation and
+reads it under the same PostgreSQL advisory lock used by Agent registration.
+The down migration is destructive test teardown only and must not be used to
+silently discard a deployed entitlement.
+
 ## Scan Execution Input Source Hard Cut
 
 The frozen `000001` baseline requires `scan.input_source` and

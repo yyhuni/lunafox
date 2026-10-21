@@ -38,10 +38,10 @@ func openAgentQuotaPostgresDB(t *testing.T) *gorm.DB {
 	if err := db.Exec("CREATE SCHEMA IF NOT EXISTS agent_quota_contract").Error; err != nil {
 		t.Fatal(err)
 	}
-	if err := db.AutoMigrate(&model.RegistrationToken{}, &model.Agent{}); err != nil {
+	if err := db.AutoMigrate(&model.RegistrationToken{}, &model.Agent{}, &model.AgentLicense{}); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Exec("TRUNCATE agent, registration_token RESTART IDENTITY CASCADE").Error; err != nil {
+	if err := db.Exec("TRUNCATE agent, registration_token, agent_license RESTART IDENTITY CASCADE").Error; err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Exec("DROP SCHEMA agent_quota_contract CASCADE").Error })

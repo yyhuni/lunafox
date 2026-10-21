@@ -29,9 +29,9 @@
       "file": "ffuf.argv",
       "args": [
         "-u",
-        "http://example.comFUZZ",
+        "http://example.com/FUZZ",
         "-w",
-        "/run/lunafox/resources/config/ffuf/wordlist/dir_default.txt",
+        "/workspace/directory-wordlist.txt",
         "-json",
         "-s",
         "-X",
@@ -56,7 +56,9 @@
   "imageLocalProbes": [
     {
       "tool": "ffuf",
-      "args": ["-V"],
+      "args": [
+        "-V"
+      ],
       "outputContains": "ffuf version: 2.2.1"
     }
   ]

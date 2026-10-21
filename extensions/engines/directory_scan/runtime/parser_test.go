@@ -15,12 +15,13 @@ import (
 )
 
 type ffufRecordFixture struct {
-	URL           string `json:"url"`
-	Status        int64  `json:"status"`
-	ContentLength int64  `json:"length"`
-	ContentType   string `json:"content-type"`
-	Duration      int64  `json:"duration"`
-	Position      int64  `json:"position"`
+	URL              string `json:"url"`
+	Status           int64  `json:"status"`
+	ContentLength    int64  `json:"length"`
+	ContentType      string `json:"content-type"`
+	Duration         int64  `json:"duration"`
+	Position         int64  `json:"position"`
+	RedirectLocation string `json:"redirectlocation,omitempty"`
 }
 
 func TestParseFFUFArtifactSupportsLFCRLFAndIncompleteFinalRecord(t *testing.T) {

@@ -32,6 +32,16 @@ import type {
 } from "@/types/scan.types"
 import { scanKeys } from "./keys"
 
+function scanSubmissionErrorCode(error: unknown) {
+  const body = getErrorResponseData(error) as { error?: { status?: string; details?: unknown[] } } | undefined
+  if (body?.error?.status === "FAILED_PRECONDITION" && Array.isArray(body.error.details) && body.error.details.some((value) => {
+    if (!value || typeof value !== "object") return false
+    const detail = value as Record<string, unknown>
+    return detail["@type"] === "type.googleapis.com/google.rpc.ErrorInfo" && detail.domain === "lunafox" && detail.reason === "AGENT_LICENSE_RESTRICTED"
+  })) return "AGENT_LICENSE_RESTRICTED"
+  return getErrorCode(body)
+}
+
 const scanInvalidationKeys: ScanMutationInvalidationKeys = {
   all: scanKeys.all,
   statistics: scanKeys.statistics(),
@@ -60,7 +70,9 @@ export function useQuickScan() {
         invalidateKeys: scanInvalidationKeys,
       })
     },
-    errorFallbackKey: "toast.scan.quick.error",
+    onError: ({ error, toast }) => {
+      toast.errorFromCode(scanSubmissionErrorCode(error), "toast.scan.quick.error")
+    },
   })
 }
 
@@ -86,7 +98,9 @@ export function useInitiateScan() {
         invalidateKeys: scanInvalidationKeys,
       })
     },
-    errorFallbackKey: "toast.scan.initiate.error",
+    onError: ({ error, toast }) => {
+      toast.errorFromCode(scanSubmissionErrorCode(error), "toast.scan.initiate.error")
+    },
   })
 }
 
@@ -114,7 +128,9 @@ export function useBulkInitiateScan() {
         invalidateKeys: scanInvalidationKeys,
       })
     },
-    errorFallbackKey: "toast.scan.bulkInitiate.error",
+    onError: ({ error, toast }) => {
+      toast.errorFromCode(scanSubmissionErrorCode(error), "toast.scan.bulkInitiate.error")
+    },
   })
 }
 

@@ -9,29 +9,38 @@ import (
 
 // AgentClusterSummaryService is the read-only complete-fleet summary boundary.
 type AgentClusterSummaryService struct {
-	store AgentClusterSummaryStore
-	clock Clock
+	store    AgentClusterSummaryStore
+	clock    Clock
+	licenses AgentLicenseReader
 }
 
-func NewAgentClusterSummaryService(store AgentClusterSummaryStore, clock Clock) (*AgentClusterSummaryService, error) {
+func NewAgentClusterSummaryService(store AgentClusterSummaryStore, clock Clock, licenses AgentLicenseReader) (*AgentClusterSummaryService, error) {
 	if store == nil {
 		return nil, errors.New("Agent cluster summary store is required")
 	}
 	if clock == nil {
 		return nil, errors.New("Agent cluster summary clock is required")
 	}
-	return &AgentClusterSummaryService{store: store, clock: clock}, nil
+	if licenses == nil {
+		return nil, errors.New("agent license reader is required")
+	}
+	return &AgentClusterSummaryService{store: store, clock: clock, licenses: licenses}, nil
 }
 
 func (service *AgentClusterSummaryService) Current(ctx context.Context) (AgentClusterSummary, error) {
 	generatedAt := service.clock.NowUTC().UTC()
-	aggregate, err := service.store.GetClusterAggregate(ctx, generatedAt)
+	license, err := service.licenses.CurrentAt(ctx, generatedAt)
+	if err != nil {
+		return AgentClusterSummary{}, err
+	}
+	aggregate, err := service.store.GetClusterAggregate(ctx, generatedAt, license.AgentLimit)
 	if err != nil {
 		return AgentClusterSummary{}, err
 	}
 	conclusion := mapAgentClusterConclusion(aggregate)
 	return AgentClusterSummary{
-		AgentLimit:                agentdomain.DeploymentAgentLimit,
+		AgentLimit:                license.AgentLimit,
+		License:                   license,
 		GeneratedAt:               generatedAt,
 		ExecutionFreshnessSeconds: int(agentdomain.AgentExecutionFreshness.Seconds()),
 		Nodes: AgentClusterNodeCounts{

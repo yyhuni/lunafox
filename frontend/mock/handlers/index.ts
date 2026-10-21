@@ -1,4 +1,5 @@
 import { delay, http, HttpResponse } from "msw"
+import { activateMockAgentLicense } from "@/mock/data/agent-license"
 import type { GetIPAddressesParams } from "@/types/ip-address.types"
 import type { DirectoryFilterOptionField } from "@/types/directory.types"
 import type { EndpointFilterOptionField } from "@/types/endpoint.types"
@@ -466,6 +467,7 @@ function shouldError(path: string) {
     path.startsWith("/targets") ||
     path.startsWith("/scans") ||
     path.startsWith("/vulnerabilities") ||
+    path === "/admin/agentLicenses/current:activate" ||
     path === "/system:checkForUpdates" ||
     path === "/upgradeOperations:active" ||
     path.startsWith("/upgradeOperations/")
@@ -1359,9 +1361,16 @@ async function resolveMockApi(request: Request) {
   if (method === "POST" && path === "/scans") {
     const body = (await request.json()) as {
       target?: string
+      agent?: string
       scanWorkflow?: string
       configuration?: unknown
       inputSource?: unknown
+    }
+    const agentId = parseIdFromResourceName(body.agent, "agents")
+    if (agentId && getMockAgentById(agentId)?.executionEligibility === "license_restricted") {
+      return json({ error: { code: 400, status: "FAILED_PRECONDITION", message: "The selected Agent is license restricted.", details: [{
+        "@type": "type.googleapis.com/google.rpc.ErrorInfo", reason: "AGENT_LICENSE_RESTRICTED", domain: "lunafox",
+      }] } }, { status: 400 })
     }
     const workflow = body.scanWorkflow ? getMockScanWorkflowByName(body.scanWorkflow) : undefined
     if (!workflow || body.configuration === undefined || !isScanInputSource(body.inputSource)) {
@@ -1393,9 +1402,16 @@ async function resolveMockApi(request: Request) {
   if (method === "POST" && path === "/scans:batchCreate") {
     const body = (await request.json()) as {
       requests?: Array<{ target?: string; organization?: string }>
+      agent?: string
       scanWorkflow?: string
       configuration?: unknown
       inputSource?: unknown
+    }
+    const agentId = parseIdFromResourceName(body.agent, "agents")
+    if (agentId && getMockAgentById(agentId)?.executionEligibility === "license_restricted") {
+      return json({ error: { code: 400, status: "FAILED_PRECONDITION", message: "The selected Agent is license restricted.", details: [{
+        "@type": "type.googleapis.com/google.rpc.ErrorInfo", reason: "AGENT_LICENSE_RESTRICTED", domain: "lunafox",
+      }] } }, { status: 400 })
     }
     const workflow = body.scanWorkflow ? getMockScanWorkflowByName(body.scanWorkflow) : undefined
     if (!workflow || body.configuration === undefined || !isScanInputSource(body.inputSource)) {
@@ -1436,9 +1452,16 @@ async function resolveMockApi(request: Request) {
   }
   if (method === "POST" && path === "/scans:quickCreate") {
     const body = (await request.json()) as {
+      agent?: string
       scanWorkflow?: string
       configuration?: unknown
       inputSource?: unknown
+    }
+    const agentId = parseIdFromResourceName(body.agent, "agents")
+    if (agentId && getMockAgentById(agentId)?.executionEligibility === "license_restricted") {
+      return json({ error: { code: 400, status: "FAILED_PRECONDITION", message: "The selected Agent is license restricted.", details: [{
+        "@type": "type.googleapis.com/google.rpc.ErrorInfo", reason: "AGENT_LICENSE_RESTRICTED", domain: "lunafox",
+      }] } }, { status: 400 })
     }
     const workflow = body.scanWorkflow ? getMockScanWorkflowByName(body.scanWorkflow) : undefined
     if (!workflow || body.configuration === undefined || !isScanInputSource(body.inputSource)) {
@@ -2101,6 +2124,16 @@ createdAt: now,
   }
   if (method === "GET" && path === "/admin/agentClusterSummaries/current") {
     return json(getMockAgentClusterSummary())
+  }
+  if (method === "POST" && path === "/admin/agentLicenses/current:activate") {
+    let body: unknown
+    try { body = await request.json() } catch { body = null }
+    const result = activateMockAgentLicense(body)
+    if ("license" in result) return json(result.license)
+    return json({ error: { code: 400, status: "INVALID_ARGUMENT", message: "Agent license Key rejected.", details: [{
+      "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+      reason: result.reason, domain: "lunafox.agentLicense",
+    }] } }, { status: 400 })
   }
   if (method === "GET" && path === "/admin/agentLocationMaps/current") {
     return json(getMockAgentLocationMap())

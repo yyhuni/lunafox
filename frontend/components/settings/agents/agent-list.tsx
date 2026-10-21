@@ -138,7 +138,7 @@ function EmptyState({ onOpenInstall, disabled, ariaDescribedBy }: {
       <Button disabled={disabled} onClick={onOpenInstall} aria-describedby={ariaDescribedBy}>{t("empty.cta")}</Button>
     </div>);
 }
-export function AgentList() {
+export function AgentList({ activationPreview = false, activationPlacement = "on-demand" }: { activationPreview?: boolean; activationPlacement?: "banner" | "on-demand" } = {}) {
     const t = useTranslations("settings.agents");
     const tDataTable = useTranslations("dataTable");
     const tPagination = useTranslations("common.pagination");
@@ -170,6 +170,8 @@ export function AgentList() {
     const quotaStatus = clusterSummary.data !== undefined && clusterSummary.data.totalNodes >= clusterSummary.data.agentLimit
         ? { used: clusterSummary.data.totalNodes, limit: clusterSummary.data.agentLimit }
         : null;
+    const showActivationBanner = (activationPreview && activationPlacement === "banner") || quotaStatus !== null || clusterSummary.data?.license?.state === "expired";
+    const overviewSummary = clusterSummary.data;
     const quotaStatusMessage = quotaStatus ? t("quota.reached", quotaStatus) : undefined;
     const addDisabled = !clusterSummary.data || quotaStatus !== null;
     const quotaStatusDescriptionId = quotaStatus ? AGENT_QUOTA_STATUS_ID : undefined;
@@ -314,9 +316,10 @@ export function AgentList() {
     };
     return (<div className={cn("min-w-0", COMPACT_SECTION_STACK_CLASS)}>
       <div className={cn("mb-3", COMPACT_SECTION_STACK_CLASS)}>
-        <ContentHandoff owner="agent-list-overview" layer="section" isLoading={isInitialSectionLoading} skeleton={<AgentOverviewLoadingState />} mountContentWhileLoading>
+        <ContentHandoff owner="agent-list-overview" layer="section" isLoading={isInitialSectionLoading} skeleton={<AgentOverviewLoadingState summary={overviewSummary} activationPreview={showActivationBanner} showLicenseBanner={showActivationBanner} />} mountContentWhileLoading>
           <AgentOverviewSection
-            summary={clusterSummary.data}
+            summary={overviewSummary}
+            showLicenseBanner={showActivationBanner}
             error={clusterSummary.error}
             isInitialError={clusterSummary.isInitialError}
             isRefetchStale={clusterSummary.isRefetchStale}

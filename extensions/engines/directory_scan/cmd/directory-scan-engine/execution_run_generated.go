@@ -946,6 +946,10 @@ func lunafoxProjectFfufConfig(section *engineexecutionpb.ConfigSection) (enginec
 	var seenRecursionStrategy bool
 	var seenAutoCalibration bool
 	var seenAutoCalibrationMode bool
+	var seenTargetVariants bool
+	var seenWafSmartSkip bool
+	var seenDenoiseAuthRedirect bool
+	var seenDenoiseBackupHtml bool
 	var seenMatchCodes bool
 	var seenConcurrency bool
 	var seenThreads bool
@@ -1011,6 +1015,46 @@ func lunafoxProjectFfufConfig(section *engineexecutionpb.ConfigSection) (enginec
 				return enginecontract.FfufConfig{}, errors.New("Engine config scalar type does not match the Engine Definition")
 			}
 			projected.AutoCalibrationMode = typed.StringValue
+		case "target-variants":
+			if seenTargetVariants {
+				return enginecontract.FfufConfig{}, errors.New("duplicate Engine config scalar parameter")
+			}
+			seenTargetVariants = true
+			typed, ok := param.GetValue().(*engineexecutionpb.ConfigValue_BooleanValue)
+			if !ok {
+				return enginecontract.FfufConfig{}, errors.New("Engine config scalar type does not match the Engine Definition")
+			}
+			projected.TargetVariants = typed.BooleanValue
+		case "waf-smart-skip":
+			if seenWafSmartSkip {
+				return enginecontract.FfufConfig{}, errors.New("duplicate Engine config scalar parameter")
+			}
+			seenWafSmartSkip = true
+			typed, ok := param.GetValue().(*engineexecutionpb.ConfigValue_BooleanValue)
+			if !ok {
+				return enginecontract.FfufConfig{}, errors.New("Engine config scalar type does not match the Engine Definition")
+			}
+			projected.WafSmartSkip = typed.BooleanValue
+		case "denoise-auth-redirect":
+			if seenDenoiseAuthRedirect {
+				return enginecontract.FfufConfig{}, errors.New("duplicate Engine config scalar parameter")
+			}
+			seenDenoiseAuthRedirect = true
+			typed, ok := param.GetValue().(*engineexecutionpb.ConfigValue_BooleanValue)
+			if !ok {
+				return enginecontract.FfufConfig{}, errors.New("Engine config scalar type does not match the Engine Definition")
+			}
+			projected.DenoiseAuthRedirect = typed.BooleanValue
+		case "denoise-backup-html":
+			if seenDenoiseBackupHtml {
+				return enginecontract.FfufConfig{}, errors.New("duplicate Engine config scalar parameter")
+			}
+			seenDenoiseBackupHtml = true
+			typed, ok := param.GetValue().(*engineexecutionpb.ConfigValue_BooleanValue)
+			if !ok {
+				return enginecontract.FfufConfig{}, errors.New("Engine config scalar type does not match the Engine Definition")
+			}
+			projected.DenoiseBackupHtml = typed.BooleanValue
 		case "match-codes":
 			if seenMatchCodes {
 				return enginecontract.FfufConfig{}, errors.New("duplicate Engine config scalar parameter")
@@ -1128,6 +1172,18 @@ func lunafoxProjectFfufConfig(section *engineexecutionpb.ConfigSection) (enginec
 		return enginecontract.FfufConfig{}, errors.New("Engine config is missing a required scalar parameter")
 	}
 	if !seenAutoCalibrationMode {
+		return enginecontract.FfufConfig{}, errors.New("Engine config is missing a required scalar parameter")
+	}
+	if !seenTargetVariants {
+		return enginecontract.FfufConfig{}, errors.New("Engine config is missing a required scalar parameter")
+	}
+	if !seenWafSmartSkip {
+		return enginecontract.FfufConfig{}, errors.New("Engine config is missing a required scalar parameter")
+	}
+	if !seenDenoiseAuthRedirect {
+		return enginecontract.FfufConfig{}, errors.New("Engine config is missing a required scalar parameter")
+	}
+	if !seenDenoiseBackupHtml {
 		return enginecontract.FfufConfig{}, errors.New("Engine config is missing a required scalar parameter")
 	}
 	if !seenMatchCodes {

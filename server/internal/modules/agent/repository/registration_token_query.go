@@ -38,6 +38,9 @@ func (r *registrationTokenRepository) GetResourceByID(ctx context.Context, id in
 	for index := range item.Agents {
 		agents = append(agents, modelAgentToDomain(&item.Agents[index]))
 	}
+	if err := projectAgentExecutionEligibility(ctx, r.licenses, agents, time.Now().UTC()); err != nil {
+		return nil, err
+	}
 	return &agentdomain.RegistrationTokenResource{
 		ID:        item.ID,
 		ExpiresAt: item.ExpiresAt.UTC(),

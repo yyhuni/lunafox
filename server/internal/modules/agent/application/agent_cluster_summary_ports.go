@@ -8,5 +8,5 @@ import (
 )
 
 type AgentClusterSummaryStore interface {
-	GetClusterAggregate(ctx context.Context, generatedAt time.Time) (agentdomain.AgentClusterAggregate, error)
+	GetClusterAggregate(ctx context.Context, generatedAt time.Time, agentLimit int) (agentdomain.AgentClusterAggregate, error)
 }

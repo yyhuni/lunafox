@@ -48,6 +48,7 @@ const baseAgent: Agent = {
   name: "agents/7",
   displayName: "edge-7",
   status: "online",
+  executionEligibility: "eligible",
   observedHostname: "edge-7",
   connectionIp: "192.0.2.7",
   agentVersion: "1.0.0",
@@ -108,4 +109,10 @@ describe("AgentCardCompact heartbeat projection", () => {
     expect(screen.getByText("card.uptime")).toBeInTheDocument()
     expect(screen.getByText("metrics.lastHeartbeat")).toBeInTheDocument()
   })
+  it("shows license restriction independently of the online transport state", () => {
+    render(<AgentCardCompact agentNode={{ ...baseAgent, executionEligibility: "license_restricted" }} {...actions} />)
+    expect(screen.getByText("status.online")).toBeInTheDocument()
+    expect(screen.getByText("executionEligibility.restricted")).toBeInTheDocument()
+  })
+
 })

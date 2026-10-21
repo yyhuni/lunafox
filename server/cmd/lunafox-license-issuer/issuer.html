@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LunaFox · 授权签发</title>
+<style>
+  :root{color-scheme:light dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#202524;background:#f5f6f4;font-synthesis:none}
+  *{box-sizing:border-box}body{margin:0;padding:44px 20px}main{max-width:680px;margin:auto}header{margin-bottom:28px}.brand{font-size:12px;letter-spacing:.12em;color:#63776d}h1{font-size:28px;letter-spacing:-.04em;margin:10px 0}p{line-height:1.65;color:#63716b;font-size:14px}section{padding:26px;background:#fff;border:1px solid #dce3dd;border-radius:14px;margin-top:18px}label{display:block;font-size:14px;font-weight:600;margin-bottom:9px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:20px}input,textarea{font:inherit;width:100%;padding:12px;border:1px solid #ccd5ce;border-radius:7px;color:inherit;background:transparent}input:focus,textarea:focus{outline:2px solid #357153;outline-offset:2px}textarea{resize:vertical;font-size:12px;line-height:1.6}button{font:inherit;font-size:14px;font-weight:600;padding:12px 20px;border-radius:7px;border:1px solid #245d42;background:#245d42;color:white;cursor:pointer}button:disabled{opacity:.6;cursor:wait}button.secondary{background:transparent;color:#245d42;border-color:#cbd9d0}button:focus-visible,summary:focus-visible{outline:2px solid #357153;outline-offset:3px}.submit{margin-top:24px;width:100%}.hint{font-size:12px;margin:10px 0 0}.result-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}h2{font-size:17px;margin:0}.status{font-size:12px;color:#245d42}.metadata{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0 0}dt{font-size:12px;color:#63716b}dd{font-size:14px;margin:4px 0 0;overflow-wrap:anywhere}.error{color:#ae3229}.error:empty{display:none}details{margin-top:24px;color:#63716b;font-size:12px}summary{cursor:pointer}code{font-family:ui-monospace,monospace;overflow-wrap:anywhere}#copy-status{min-height:20px;font-size:12px;color:#245d42;margin-top:8px}[hidden]{display:none!important}
+  @media(max-width:520px){body{padding:24px 16px}section{padding:20px}.fields{grid-template-columns:1fr}h1{font-size:25px}.metadata{grid-template-columns:1fr}.result-head{align-items:flex-start}}
+  @media(prefers-color-scheme:dark){:root{color:#e4eae5;background:#121713}section{background:#1c231e;border-color:#39473d}p,dt,details{color:#a6b5a9}input,textarea{border-color:#56645a}.brand{color:#9fb8a6}.status,#copy-status{color:#94ceaa}button.secondary{color:#a2d8b6;border-color:#56645a}.error{color:#ffaaa1}}
+</style>
+<main>
+  <header><div class="brand">LUNAFOX / AUTHOR TOOLS</div><h1>生成 Agent 扩容 Key</h1><p>选择节点额度和授权期限，生成后直接发给用户。用户粘贴 Key 即可激活，换机后也可继续使用。</p></header>
+  <section aria-label="签发设置"><form id="issue-form"><div class="fields"><div><label for="limit">节点额度</label><input id="limit" name="agentLimit" type="number" min="4" step="1" value="10" required><p class="hint">授权期间可注册的 Agent 总数</p></div><div><label for="months">授权期限（月）</label><input id="months" name="months" type="number" min="1" max="120" step="1" value="1" required><p class="hint">支持 1、2、3 等月数</p></div></div><button type="submit" class="submit" id="generate">生成 Key</button><p class="hint">从签发时开始计时，到期日固定。重新导入不会续期。</p><p role="alert" id="error" class="error"></p></form></section>
+  <section id="result" aria-label="签发结果" hidden><div class="result-head"><h2>Key 已生成</h2><span class="status">可离线激活 · 不绑定机器</span></div><label for="key">授权 Key</label><textarea id="key" rows="6" readonly spellcheck="false"></textarea><div style="margin-top:14px"><button type="button" id="copy" class="secondary">复制 Key</button></div><div role="status" id="copy-status"></div><dl class="metadata"><div><dt>节点额度 / 期限</dt><dd id="entitlement"></dd></div><div><dt>固定到期时间</dt><dd id="expiry"></dd></div><div><dt>授权编号</dt><dd id="license-id"></dd></div><div><dt>签发时间</dt><dd id="issued"></dd></div></dl></section>
+  <details><summary>作者密钥与备份</summary><p>工具会复用同一个作者私钥。请备份下面的文件，换作者电脑时恢复它；请勿发给用户或放入代码仓库。</p><code id="key-path"></code><p>当前签发公钥（产品仅包含公钥）：</p><code id="public-key"></code><p>此界面只在本机运行。关闭工具后，本地地址失效。</p></details>
+</main>
+<script>
+  const session = location.hash.slice(1);
+  const byId = id => document.getElementById(id);
+  const headers = {"Authorization":"Bearer " + session,"Content-Type":"application/json"};
+  async function request(path, body) {
+    const response = await fetch(path,{method:"POST",headers,body:JSON.stringify(body)});
+    if (!response.ok) throw new Error(await response.text());
+    return response.json();
+  }
+  const date = value => new Date(value).toLocaleString("zh-CN",{hour12:false}) + "（本地时间）";
+  request("/api/info",{}).then(info => {byId("key-path").textContent=info.keyPath;byId("public-key").textContent=info.publicKey;}).catch(error => {byId("error").textContent=error.message;byId("generate").disabled=true;});
+  byId("issue-form").addEventListener("submit",async event => {
+    event.preventDefault();byId("generate").disabled=true;byId("error").textContent="";
+    try {
+      const result=await request("/api/issue",{agentLimit:Number(byId("limit").value),months:Number(byId("months").value)});
+      byId("key").value=result.key;byId("entitlement").textContent=result.agentLimit+" 个 Agent / "+result.months+" 个月";byId("expiry").textContent=date(result.expiresAt);byId("issued").textContent=date(result.issuedAt);byId("license-id").textContent=result.licenseId;byId("copy-status").textContent="";byId("result").hidden=false;
+    } catch(error) {byId("error").textContent=error.message;}
+    finally {byId("generate").disabled=false;}
+  });
+  byId("copy").addEventListener("click",async () => {
+    try {await navigator.clipboard.writeText(byId("key").value);byId("copy-status").textContent="已复制，可以发给用户了。";}
+    catch {byId("key").focus();byId("key").select();byId("copy-status").textContent="请按 Ctrl+C（Mac 为 ⌘C）复制选中的 Key。";}
+  });
+</script>
+</html>

@@ -15,11 +15,13 @@ type agentClusterSummaryStoreStub struct {
 	err         error
 	generatedAt time.Time
 	calls       int
+	agentLimit  int
 }
 
-func (stub *agentClusterSummaryStoreStub) GetClusterAggregate(_ context.Context, generatedAt time.Time) (agentdomain.AgentClusterAggregate, error) {
+func (stub *agentClusterSummaryStoreStub) GetClusterAggregate(_ context.Context, generatedAt time.Time, agentLimit int) (agentdomain.AgentClusterAggregate, error) {
 	stub.calls++
 	stub.generatedAt = generatedAt
+	stub.agentLimit = agentLimit
 	return stub.aggregate, stub.err
 }
 
@@ -38,7 +40,7 @@ func TestAgentClusterSummaryServiceUsesOneClockInstantAndMapsProjection(t *testi
 		PositionedCount:    2,
 		UnpositionedCount:  1,
 	}}
-	service, err := NewAgentClusterSummaryService(store, fixedClock{now: now})
+	service, err := NewAgentClusterSummaryService(store, fixedClock{now: now}, &agentLicenseStoreStub{license: AgentLicense{State: "inactive", AgentLimit: 3}})
 	if err != nil {
 		t.Fatalf("NewAgentClusterSummaryService: %v", err)
 	}
@@ -70,7 +72,7 @@ func TestAgentClusterSummaryServiceUsesOneClockInstantAndMapsProjection(t *testi
 
 func TestAgentClusterSummaryServiceReturnsStoreFailure(t *testing.T) {
 	wantErr := errors.New("aggregate unavailable")
-	service, err := NewAgentClusterSummaryService(&agentClusterSummaryStoreStub{err: wantErr}, fixedClock{now: time.Now().UTC()})
+	service, err := NewAgentClusterSummaryService(&agentClusterSummaryStoreStub{err: wantErr}, fixedClock{now: time.Now().UTC()}, &agentLicenseStoreStub{license: AgentLicense{State: "inactive", AgentLimit: 3}})
 	if err != nil {
 		t.Fatalf("NewAgentClusterSummaryService: %v", err)
 	}
@@ -80,10 +82,34 @@ func TestAgentClusterSummaryServiceReturnsStoreFailure(t *testing.T) {
 }
 
 func TestNewAgentClusterSummaryServiceRequiresReadOnlyDependencies(t *testing.T) {
-	if _, err := NewAgentClusterSummaryService(nil, fixedClock{now: time.Now().UTC()}); err == nil {
+	if _, err := NewAgentClusterSummaryService(nil, fixedClock{now: time.Now().UTC()}, &agentLicenseStoreStub{}); err == nil {
 		t.Fatal("nil summary store did not fast-fail")
 	}
-	if _, err := NewAgentClusterSummaryService(&agentClusterSummaryStoreStub{}, nil); err == nil {
+	if _, err := NewAgentClusterSummaryService(&agentClusterSummaryStoreStub{}, nil, &agentLicenseStoreStub{}); err == nil {
 		t.Fatal("nil summary clock did not fast-fail")
+	}
+}
+
+func TestAgentClusterSummaryServiceUsesLicenseAtGeneratedInstant(t *testing.T) {
+	now := time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)
+	store := &agentClusterSummaryStoreStub{}
+	licenses := &agentLicenseStoreStub{license: AgentLicense{State: "active", AgentLimit: 10}}
+	service, err := NewAgentClusterSummaryService(store, fixedClock{now: now}, licenses)
+	if err != nil {
+		t.Fatal(err)
+	}
+	summary, err := service.Current(context.Background())
+	if err != nil || summary.AgentLimit != 10 || store.agentLimit != 10 || summary.License.State != "active" || !licenses.at.Equal(store.generatedAt) || licenses.calls != 1 {
+		t.Fatalf("summary=%#v licenses=%#v err=%v", summary, licenses, err)
+	}
+	licenses.err = errors.New("license storage unavailable")
+	if _, err := service.Current(context.Background()); !errors.Is(err, licenses.err) {
+		t.Fatal(err)
+	}
+	if store.calls != 1 {
+		t.Fatal("aggregate queried after license failure")
+	}
+	if _, err := NewAgentClusterSummaryService(store, fixedClock{now: now}, nil); err == nil {
+		t.Fatal("nil license reader accepted")
 	}
 }

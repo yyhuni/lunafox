@@ -9,8 +9,8 @@ import test from "node:test";
 import { validatePublicDocumentation } from "./validate-public-documentation.mjs";
 
 const GENERATED_MARKER = "> **GENERATED / READ-ONLY**\n\n";
-const ENGLISH = `# Public\n\n${GENERATED_MARKER}[Chinese](README.zh-CN.md)\n\n## Install\n\n\`\`\`console\ngit clone https://github.com/yyhuni/lunafox.git\n\`\`\`\n\nUse \`PUBLIC_HOST\`.\n`;
-const CHINESE = `# 公开部署\n\n${GENERATED_MARKER}[English](README.md)\n\n## 安装\n\n\`\`\`console\ngit clone https://github.com/yyhuni/lunafox.git\n\`\`\`\n\n使用 \`PUBLIC_HOST\`。\n`;
+const ENGLISH = `# Public\n\n${GENERATED_MARKER}[Chinese](README.md)\n\n## Install\n\n\`\`\`console\ngit clone https://github.com/yyhuni/lunafox.git\n\`\`\`\n\nUse \`PUBLIC_HOST\`.\n`;
+const CHINESE = `# 公开部署\n\n${GENERATED_MARKER}[English](README.en.md)\n\n## 安装\n\n\`\`\`console\ngit clone https://github.com/yyhuni/lunafox.git\n\`\`\`\n\n使用 \`PUBLIC_HOST\`。\n`;
 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "lunafox-public-docs-"));
@@ -19,10 +19,10 @@ function fixture() {
 }
 
 function writePair(root, english = ENGLISH, chinese = CHINESE) {
-  fs.writeFileSync(path.join(root, "README.md"), english);
-  fs.writeFileSync(path.join(root, "README.zh-CN.md"), chinese);
-  fs.writeFileSync(path.join(root, "docs/public-deployment.md"), english.replaceAll("README.zh-CN.md", "public-deployment.zh-CN.md").replaceAll("README.md", "public-deployment.md"));
-  fs.writeFileSync(path.join(root, "docs/public-deployment.zh-CN.md"), chinese.replaceAll("README.md", "public-deployment.md").replaceAll("README.zh-CN.md", "public-deployment.zh-CN.md"));
+  fs.writeFileSync(path.join(root, "README.en.md"), english);
+  fs.writeFileSync(path.join(root, "README.md"), chinese);
+  fs.writeFileSync(path.join(root, "docs/public-deployment.md"), english.replaceAll("README.md", "public-deployment.zh-CN.md"));
+  fs.writeFileSync(path.join(root, "docs/public-deployment.zh-CN.md"), chinese.replaceAll("README.en.md", "public-deployment.md"));
 }
 
 test("accepts paired documents and returns structural evidence", () => {
@@ -42,8 +42,8 @@ test("rejects missing and empty paired documents", () => {
   const missingRoot = fixture();
   try {
     writePair(missingRoot);
-    fs.rmSync(path.join(missingRoot, "README.zh-CN.md"));
-    assert.throws(() => validatePublicDocumentation({ rootDir: missingRoot }), /missing required document: README\.zh-CN\.md/);
+    fs.rmSync(path.join(missingRoot, "README.en.md"));
+    assert.throws(() => validatePublicDocumentation({ rootDir: missingRoot }), /missing required document: README\.en\.md/);
   } finally {
     fs.rmSync(missingRoot, { recursive: true, force: true });
   }
@@ -60,10 +60,10 @@ test("rejects missing and empty paired documents", () => {
 
 test("rejects a missing generated/read-only projection marker", () => {
   const cases = [
-    ["README.md", ENGLISH.replace(GENERATED_MARKER, "")],
-    ["README.zh-CN.md", CHINESE.replace(GENERATED_MARKER, "")],
-    ["docs/public-deployment.md", ENGLISH.replace(GENERATED_MARKER, "").replaceAll("README.zh-CN.md", "public-deployment.zh-CN.md").replaceAll("README.md", "public-deployment.md")],
-    ["docs/public-deployment.zh-CN.md", CHINESE.replace(GENERATED_MARKER, "").replaceAll("README.md", "public-deployment.md").replaceAll("README.zh-CN.md", "public-deployment.zh-CN.md")],
+    ["README.en.md", ENGLISH.replace(GENERATED_MARKER, "")],
+    ["README.md", CHINESE.replace(GENERATED_MARKER, "")],
+    ["docs/public-deployment.md", ENGLISH.replace(GENERATED_MARKER, "").replaceAll("README.md", "public-deployment.zh-CN.md")],
+    ["docs/public-deployment.zh-CN.md", CHINESE.replace(GENERATED_MARKER, "").replaceAll("README.en.md", "public-deployment.md")],
   ];
   for (const [relativePath, content] of cases) {
     const root = fixture();

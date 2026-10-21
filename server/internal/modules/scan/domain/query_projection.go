@@ -27,6 +27,7 @@ type QueryScan struct {
 	AgentHealthState       string
 	AgentDeleted           bool
 	AssignmentMode         string
+	ExecutionBlockedReason *string
 	ErrorMessage           string
 	Failure                *FailureDetail
 	Progress               int
@@ -50,20 +51,22 @@ type QueryScan struct {
 
 // QueryRuntimeTask is the scan detail projection for persisted scan task rows.
 type QueryRuntimeTask struct {
-	ID            int
-	StepID        string
-	StageID       string
-	EngineID      string
-	Status        string
-	SkipReason    string
-	Order         int
-	StartedAt     *time.Time
-	CompletedAt   *time.Time
-	Duration      *float64
-	Error         string
-	FailureKind   string
-	FailureDetail string
-	Diagnostics   *EngineExecutionDiagnostics
+	// HasResolvedExecutionPlan distinguishes queued executable work from plan-free skips.
+	HasResolvedExecutionPlan bool
+	ID                       int
+	StepID                   string
+	StageID                  string
+	EngineID                 string
+	Status                   string
+	SkipReason               string
+	Order                    int
+	StartedAt                *time.Time
+	CompletedAt              *time.Time
+	Duration                 *float64
+	Error                    string
+	FailureKind              string
+	FailureDetail            string
+	Diagnostics              *EngineExecutionDiagnostics
 }
 
 // QueryStatistics is the aggregate projection used by scan statistics endpoints.

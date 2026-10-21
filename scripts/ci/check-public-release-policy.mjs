@@ -184,7 +184,7 @@ const REQUIRED_PUBLIC_CHECKOUT_DEPLOYMENT_PATHS = [
 ];
 const REQUIRED_PUBLIC_DOCUMENTATION_PATHS = [
   "README.md",
-  "README.zh-CN.md",
+  "README.en.md",
   "docs/public-deployment.md",
   "docs/public-deployment.zh-CN.md",
   "scripts/ci/validate-public-documentation.mjs",

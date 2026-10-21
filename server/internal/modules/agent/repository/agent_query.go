@@ -28,7 +28,11 @@ func (r *agentRepository) GetByID(ctx context.Context, id int) (*agentdomain.Age
 	if err != nil {
 		return nil, err
 	}
-	return modelAgentToDomain(&agent), nil
+	projection := modelAgentToDomain(&agent)
+	if err := projectAgentExecutionEligibility(ctx, r.licenses, []*agentdomain.Agent{projection}, time.Now().UTC()); err != nil {
+		return nil, err
+	}
+	return projection, nil
 }
 
 // GetByInstanceID resolves the stable installation identity that the Compose
@@ -87,6 +91,9 @@ func (r *agentRepository) List(ctx context.Context, page, pageSize int, filter, 
 	agents := make([]*agentdomain.Agent, 0, len(items))
 	for index := range items {
 		agents = append(agents, modelAgentToDomain(&items[index]))
+	}
+	if err := projectAgentExecutionEligibility(ctx, r.licenses, agents, time.Now().UTC()); err != nil {
+		return nil, 0, err
 	}
 	return agents, total, nil
 }

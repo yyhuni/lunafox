@@ -10,3 +10,5 @@ var _ scanapp.ScanStopStore = (*scanStopStoreAdapter)(nil)
 var _ scanapp.ScanTaskStore = (*scanTaskStoreAdapter)(nil)
 var _ scanapp.EngineDiagnosticTerminalTaskStore = (*scanTaskStoreAdapter)(nil)
 var _ scanapp.ScanTaskRuntimeScanStore = (*scanTaskRuntimeScanStoreAdapter)(nil)
+
+var _ scanapp.ScanAgentExecutionReader = (*scanAgentExecutionReaderAdapter)(nil)

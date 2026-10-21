@@ -82,7 +82,7 @@ func TestAgentRepositoryClusterAggregateUsesCompleteFleetAndStrictFreshness(t *t
 		t.Fatalf("insert invalid-radius location: %v", err)
 	}
 
-	aggregate, err := (&agentRepository{db: db}).GetClusterAggregate(context.Background(), generatedAt)
+	aggregate, err := (&agentRepository{db: db}).GetClusterAggregate(context.Background(), generatedAt, 8)
 	if err != nil {
 		t.Fatalf("GetClusterAggregate: %v", err)
 	}
@@ -101,11 +101,22 @@ func TestAgentRepositoryClusterAggregateUsesCompleteFleetAndStrictFreshness(t *t
 	if aggregate.PositionedCount != 2 || aggregate.UnpositionedCount != 6 {
 		t.Fatalf("location coverage = %#v", aggregate)
 	}
+
+	restricted, err := (&agentRepository{db: db}).GetClusterAggregate(context.Background(), generatedAt, 3)
+	if err != nil {
+		t.Fatalf("restricted GetClusterAggregate: %v", err)
+	}
+	if restricted.OccupiedSlots != 4 || restricted.AvailableSlots != 0 || restricted.UnavailableSlots != 15 || restricted.OvercommittedSlots != 4 {
+		t.Fatalf("restricted capacity must retain running slots and withhold free slots: %#v", restricted)
+	}
+	if restricted.ConfiguredSlots != restricted.OccupiedSlots+restricted.AvailableSlots+restricted.UnavailableSlots {
+		t.Fatalf("restricted configured capacity is not conserved: %#v", restricted)
+	}
 }
 
 func TestAgentRepositoryClusterAggregateReturnsSuccessfulEmptyFleet(t *testing.T) {
 	repository := &agentRepository{db: openAgentClusterSummaryTestDatabase(t)}
-	aggregate, err := repository.GetClusterAggregate(context.Background(), time.Now().UTC())
+	aggregate, err := repository.GetClusterAggregate(context.Background(), time.Now().UTC(), 3)
 	if err != nil {
 		t.Fatalf("GetClusterAggregate: %v", err)
 	}
@@ -127,7 +138,7 @@ SELECT id, 'offline', 2 FROM sequence`).Error; err != nil {
 		t.Fatalf("insert complete fleet: %v", err)
 	}
 
-	aggregate, err := (&agentRepository{db: db}).GetClusterAggregate(context.Background(), time.Now().UTC())
+	aggregate, err := (&agentRepository{db: db}).GetClusterAggregate(context.Background(), time.Now().UTC(), 3)
 	if err != nil {
 		t.Fatalf("GetClusterAggregate: %v", err)
 	}
@@ -149,7 +160,7 @@ func openAgentClusterSummaryTestDatabase(t *testing.T) *gorm.DB {
 		t.Fatalf("open SQLite: %v", err)
 	}
 	for _, schema := range []string{
-		"CREATE TABLE agent (id INTEGER PRIMARY KEY, status TEXT, max_tasks INTEGER)",
+		"CREATE TABLE agent (id INTEGER PRIMARY KEY, status TEXT, max_tasks INTEGER, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)",
 		"CREATE TABLE agent_runtime_status (agent_id INTEGER PRIMARY KEY, health_state TEXT, last_heartbeat DATETIME, task_slots_used INTEGER)",
 		"CREATE TABLE agent_location (agent_id INTEGER PRIMARY KEY, latitude REAL, longitude REAL, accuracy_radius_km REAL, source_observed_ip TEXT, provider_key TEXT, resolved_at DATETIME)",
 	} {

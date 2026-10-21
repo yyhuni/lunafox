@@ -3,8 +3,10 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	agentdomain "github.com/yyhuni/lunafox/server/internal/modules/agent/domain"
 	model "github.com/yyhuni/lunafox/server/internal/modules/agent/repository/persistence"
@@ -40,6 +42,50 @@ func TestAgentRepositoryListQueryUsesRuntimeJoinFilterAndCreatedAtTieBreaker(t *
 		if !strings.Contains(sql, required) {
 			t.Fatalf("agent list SQL must contain %q, got %s", required, sql)
 		}
+	}
+}
+
+func TestAgentManagementReadsProjectGlobalEligibilityBeforeFilteringAndPagination(t *testing.T) {
+	db := openRegistrationTokenTestDB(t)
+	if err := db.Exec("CREATE TABLE agent_location (agent_id INTEGER PRIMARY KEY)").Error; err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	insertRegistrationToken(t, db, 1, "aaaaaaaa", now.Add(time.Hour))
+	for id := 1; id <= 4; id++ {
+		status := "offline"
+		if id >= 3 {
+			status = "online"
+		}
+		if err := db.Create(&model.Agent{
+			ID: id, InstanceID: fmt.Sprintf("eligibility-%d", id), DisplayName: fmt.Sprintf("Agent %d", id),
+			AuthenticationToken: fmt.Sprintf("token-%d", id), Status: status, RegistrationTokenID: 1, CreatedAt: now,
+		}).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	repository := NewAgentRepository(db)
+	agents, total, err := repository.List(context.Background(), 1, 1, `status=="online"`, "createdAt desc")
+	if err != nil || total != 2 || len(agents) != 1 {
+		t.Fatalf("list=%#v total=%d err=%v", agents, total, err)
+	}
+	if agents[0].ID != 4 || agents[0].ExecutionEligibility != agentdomain.AgentExecutionLicenseRestricted || agents[0].Status != "online" {
+		t.Fatalf("newest online Agent must retain connection and global entitlement: %#v", agents[0])
+	}
+	earlier, err := repository.GetByID(context.Background(), 3)
+	if err != nil || earlier.ExecutionEligibility != agentdomain.AgentExecutionEligible {
+		t.Fatalf("third identity detail=%#v err=%v", earlier, err)
+	}
+	if err := db.Exec("INSERT INTO agent_license (singleton, signed_key) VALUES (TRUE, 'corrupt')").Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := repository.List(context.Background(), 1, 1, "", "createdAt desc"); err == nil {
+		t.Fatal("management projection hid corrupt entitlement")
+	}
+	// Authentication remains independent of the management entitlement projection:
+	// withholding new work must not reject an existing control connection.
+	if agent, err := repository.FindByAuthenticationToken(context.Background(), "token-4"); err != nil || agent.ID != 4 {
+		t.Fatalf("authentication was coupled to entitlement: agent=%#v err=%v", agent, err)
 	}
 }
 

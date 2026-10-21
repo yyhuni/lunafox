@@ -25,6 +25,11 @@ func AgentLocationMapName() string {
 	return "agentLocationMaps/current"
 }
 
+// AgentLicenseName identifies the deployment's current authorization resource.
+func AgentLicenseName() string {
+	return "agentLicenses/current"
+}
+
 func ParseResourceIDSegment(value string) (int, error) {
 	id, err := strconv.Atoi(strings.TrimSpace(value))
 	if err != nil || id <= 0 {

@@ -69,7 +69,7 @@ func (r *ScanRepository) GetDetailByIDContext(ctx context.Context, id int) (*Sca
 
 func (r *ScanRepository) loadRuntimeTasks(ctx context.Context, scanID int) ([]scanTaskRuntimeRow, error) {
 	var tasks []scanTaskRuntimeRow
-	err := NewScanTaskRepository(dbtx.Resolve(ctx, r.db)).(*scanTaskRepository).
+	err := NewScanTaskRepository(dbtx.Resolve(ctx, r.db), r.agentExecutionGuard).(*scanTaskRepository).
 		scanTaskRuntimeQuery(ctx).
 		Where("st.scan_id = ?", scanID).
 		Order("st.stage_order ASC, st.id ASC").
