@@ -1,5 +1,5 @@
 import * as React from "react"
-import { act, render } from "@testing-library/react"
+import { act, render, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ScanWorkflowPage from "@/components/scan/workflow/scan-workflow-page"
@@ -28,6 +28,34 @@ const tableMocks = vi.hoisted(() => ({
   },
 }))
 
+const columnMocks = vi.hoisted(() => ({
+  latestOptions: undefined as undefined | {
+    onEdit?: (row: Record<string, unknown>) => void
+  },
+}))
+
+const canvasMocks = vi.hoisted(() => ({
+  latestProps: undefined as undefined | {
+    onSave?: (stages: Array<{ stageId: string; steps: Array<{ stageId: string; stepId: string; engineId: string; profileDefaultEnabled: boolean }> }>) => Promise<void> | void
+  },
+}))
+
+const sonnerMocks = vi.hoisted(() => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    loading: vi.fn(),
+    dismiss: vi.fn(),
+    custom: vi.fn(),
+  },
+}))
+
+vi.mock("sonner", () => ({
+  toast: sonnerMocks.toast,
+  Toaster: () => null,
+}))
+
 vi.mock("next-intl", () => ({
   useLocale: () => "zh",
   useTranslations: () => (key: string) => key,
@@ -52,12 +80,21 @@ vi.mock("@/components/shared/loading/content-handoff", () => ({
 }))
 
 vi.mock("@/components/scan/workflow/scan-workflow-management-columns", () => ({
-  createWorkflowManagementColumns: vi.fn(() => []),
+  createWorkflowManagementColumns: (options: { onEdit?: (row: Record<string, unknown>) => void }) => {
+    columnMocks.latestOptions = options
+    return []
+  },
 }))
 
-vi.mock("@/components/scan/workflow/workflow-composition-canvas", () => ({
-  WorkflowCompositionCanvas: () => null,
-}))
+vi.mock("@/components/scan/workflow/workflow-composition-canvas", async () => {
+  const React = await import("react")
+  return {
+    WorkflowCompositionCanvas: (props: typeof canvasMocks.latestProps) => {
+      canvasMocks.latestProps = props
+      return React.createElement("div", { "data-testid": "workflow-builder" })
+    },
+  }
+})
 
 function getPaginationState() {
   const state = tableMocks.latestProps?.state
@@ -71,6 +108,8 @@ describe("ScanWorkflowPage cursor pagination", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     tableMocks.latestProps = undefined
+    columnMocks.latestOptions = undefined
+    canvasMocks.latestProps = undefined
     workflowHooks.useCreateScanWorkflow.mockReturnValue({ mutateAsync: vi.fn(), isPending: false })
     workflowHooks.useUpdateScanWorkflow.mockReturnValue({ mutateAsync: vi.fn(), isPending: false })
     engineCatalogHooks.useEngineCatalog.mockReturnValue({ data: [], isError: false })
@@ -175,5 +214,80 @@ describe("ScanWorkflowPage cursor pagination", () => {
       filter: undefined,
     })
     expect(getPaginationState().pagination).toEqual({ pageIndex: 0, pageSize: 50 })
+  })
+
+  const workflowName = "scanWorkflows/wf-11111111-1111-4111-8111-111111111111"
+  const workflowRow = {
+    key: workflowName,
+    name: workflowName,
+    title: "Discovery",
+    description: "",
+    engineCount: 1,
+    isBuiltin: false,
+    isExecutable: true,
+    item: {
+      name: workflowName,
+      displayName: "Discovery",
+      description: "",
+      stages: [{
+        stageId: "stage-1",
+        steps: [{ stageId: "stage-1", stepId: "step-local-100", engineId: "engine.example.custom", profileDefaultEnabled: true }],
+      }],
+      steps: [],
+      isBuiltin: false,
+      isExecutable: true,
+      etag: "v1.etag",
+      createTime: "",
+      updateTime: "",
+    },
+  }
+  const submittedStages = [{
+    stageId: "stage-1",
+    steps: [{ stageId: "stage-1", stepId: "step-local-100", engineId: "engine.example.custom", profileDefaultEnabled: true }],
+  }]
+
+  it("keeps the builder and its unsaved draft mounted when a save is rejected", async () => {
+    const mutateAsync = vi.fn().mockRejectedValue(new Error("Invalid request body"))
+    workflowHooks.useUpdateScanWorkflow.mockReturnValue({ mutateAsync, isPending: false })
+    workflowHooks.useScanWorkflowList.mockReturnValue({
+      data: { scanWorkflows: [], totalSize: 0 },
+      isLoading: false,
+      isPlaceholderData: false,
+    })
+
+    render(<ScanWorkflowPage />)
+    act(() => columnMocks.latestOptions?.onEdit?.(workflowRow))
+    expect(screen.getByTestId("workflow-builder")).toBeInTheDocument()
+
+    await act(async () => {
+      await canvasMocks.latestProps?.onSave?.(submittedStages)
+    })
+
+    expect(mutateAsync).toHaveBeenCalledTimes(1)
+    expect(sonnerMocks.toast.success).not.toHaveBeenCalled()
+    expect(sonnerMocks.toast.error).toHaveBeenCalledWith("workflow.update.error")
+    expect(screen.getByTestId("workflow-builder")).toBeInTheDocument()
+  })
+
+  it("returns to management and reports success after a saved update", async () => {
+    const mutateAsync = vi.fn().mockResolvedValue(undefined)
+    workflowHooks.useUpdateScanWorkflow.mockReturnValue({ mutateAsync, isPending: false })
+    workflowHooks.useScanWorkflowList.mockReturnValue({
+      data: { scanWorkflows: [], totalSize: 0 },
+      isLoading: false,
+      isPlaceholderData: false,
+    })
+
+    render(<ScanWorkflowPage />)
+    act(() => columnMocks.latestOptions?.onEdit?.(workflowRow))
+
+    await act(async () => {
+      await canvasMocks.latestProps?.onSave?.(submittedStages)
+    })
+
+    expect(mutateAsync).toHaveBeenCalledTimes(1)
+    expect(sonnerMocks.toast.success).toHaveBeenCalledWith("workflow.update.success")
+    expect(sonnerMocks.toast.error).not.toHaveBeenCalled()
+    expect(screen.queryByTestId("workflow-builder")).not.toBeInTheDocument()
   })
 })

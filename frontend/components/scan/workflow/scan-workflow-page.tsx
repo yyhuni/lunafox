@@ -24,6 +24,7 @@ import { useCreateScanWorkflow, useScanWorkflowList, useUpdateScanWorkflow } fro
 import { useEngineCatalog } from "@/hooks/use-engine-catalog"
 import { Button } from "@/components/ui/button"
 import { buildWorkflowEngineLibrary } from "@/lib/engine-catalog"
+import { toastFeedback } from "@/lib/toast-helpers"
 import { COMPACT_CONTENT_GUTTER_CLASS } from "@/components/shared/layout/page-shell-density"
 import type { Locale } from "@/i18n/config"
 import type { ScanWorkflow, ScanWorkflowStageView } from "@/types/scan-workflow.types"
@@ -170,6 +171,7 @@ function buildCatalogItems(workflows: ScanWorkflow[]): WorkflowCatalogItem[] {
 export default function ScanWorkflowPage() {
   const tWorkflow = useTranslations("scan.workflow")
   const tActions = useTranslations("common.actions")
+  const tToast = useTranslations("toast")
   const locale = useLocale() as Locale
   const [searchQuery, setSearchQuery] = React.useState("")
   const deferredSearchQuery = React.useDeferredValue(searchQuery)
@@ -276,28 +278,36 @@ export default function ScanWorkflowPage() {
   }, [])
 
   const saveWorkflow = React.useCallback(async (stages: ScanWorkflowStageView[]) => {
-    if (editingWorkflow?.item) {
-      await updateWorkflow.mutateAsync({
-        id: editingWorkflow.item.name,
-        input: {
-          scanWorkflow: {
-            name: editingWorkflow.item.name,
-            displayName: draftDisplayName,
-            description: draftDescription,
-            stages,
-            etag: editingWorkflow.item.etag,
+    const isUpdate = Boolean(editingWorkflow?.item)
+    try {
+      if (editingWorkflow?.item) {
+        await updateWorkflow.mutateAsync({
+          id: editingWorkflow.item.name,
+          input: {
+            scanWorkflow: {
+              name: editingWorkflow.item.name,
+              displayName: draftDisplayName,
+              description: draftDescription,
+              stages,
+              etag: editingWorkflow.item.etag,
+            },
+            updateMask: ["displayName", "description", "stages"],
           },
-          updateMask: ["displayName", "description", "stages"],
-        },
-      })
-    } else {
-      await createWorkflow.mutateAsync({
-        scanWorkflow: { displayName: draftDisplayName, description: draftDescription, stages },
-        requestId: crypto.randomUUID(),
-      })
+        })
+      } else {
+        await createWorkflow.mutateAsync({
+          scanWorkflow: { displayName: draftDisplayName, description: draftDescription, stages },
+          requestId: crypto.randomUUID(),
+        })
+      }
+      toastFeedback.success(tToast(isUpdate ? "workflow.update.success" : "workflow.create.success"))
+      setView("management")
+    } catch {
+      // Keep the builder mounted so a rejected save preserves the unsaved draft,
+      // including ETag conflicts that the user must resolve by reloading.
+      toastFeedback.error(tToast(isUpdate ? "workflow.update.error" : "workflow.create.error"))
     }
-    setView("management")
-  }, [createWorkflow, draftDescription, draftDisplayName, editingWorkflow, updateWorkflow])
+  }, [createWorkflow, draftDescription, draftDisplayName, editingWorkflow, tToast, updateWorkflow])
 
   const columns = React.useMemo(
     () => createWorkflowManagementColumns<WorkflowCatalogItem>({

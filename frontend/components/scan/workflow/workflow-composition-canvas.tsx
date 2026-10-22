@@ -62,6 +62,7 @@ import {
   semanticIcons,
 } from "@/components/icons"
 import type { WorkflowEngineLibraryItem } from "@/lib/engine-catalog"
+import { toastFeedback } from "@/lib/toast-helpers"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 import { narrowFormDialogContentClassName } from "@/lib/ui/overlay-styles"
@@ -398,7 +399,10 @@ function buildGraph({
 }
 
 function toScanWorkflowStages(stages: DraftStage[]): ScanWorkflowStageView[] {
-  return stages.map((stage) => ({
+  // Empty stages are draft-only placeholders (the editor opens with two of
+  // them). The management API requires every persisted Stage to contain at
+  // least one Step, so only populated stages form the submitted topology.
+  return stages.filter((stage) => stage.steps.length > 0).map((stage) => ({
     stageId: stage.id,
     steps: stage.steps.map((step) => ({
       stageId: stage.id,
@@ -468,6 +472,7 @@ export function WorkflowCompositionCanvas({
   isSaving = false,
 }: WorkflowCompositionCanvasProps) {
   const t = useTranslations("scan.workflow")
+  const tToast = useTranslations("toast")
   const [draftStages, setDraftStages] = React.useState<DraftStage[]>(() => createInitialDraft(t, stages))
   const [selectedStageId, setSelectedStageId] = React.useState("stage-1")
   const [selectedStepId, setSelectedStepId] = React.useState<string | null>(null)
@@ -677,13 +682,18 @@ export function WorkflowCompositionCanvas({
 
   const handleSave = React.useCallback(() => {
     if (readOnly || !onSave || !canSave) return
+    const stagesToSave = toScanWorkflowStages(draftStages)
+    if (stagesToSave.length === 0) {
+      toastFeedback.error(tToast("workflow.emptyTopology"))
+      return
+    }
     if (!displayName.trim()) {
       setSaveMetadataDialogOpen(true)
       return
     }
 
-    onSave(toScanWorkflowStages(draftStages))
-  }, [canSave, displayName, draftStages, onSave, readOnly])
+    onSave(stagesToSave)
+  }, [canSave, displayName, draftStages, onSave, readOnly, tToast])
 
   return (
     <section

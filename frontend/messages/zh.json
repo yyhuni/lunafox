@@ -3528,7 +3528,8 @@
       "delete": {
         "success": "已删除工作流",
         "error": "删除失败"
-      }
+      },
+      "emptyTopology": "请先为至少一个阶段添加引擎，再保存工作流"
     },
     "command": {
       "create": {

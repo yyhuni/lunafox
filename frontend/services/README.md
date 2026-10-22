@@ -138,6 +138,11 @@ When a service API name changes, migrate callers and tests in the same change an
 `GET /scanWorkflows/{scanWorkflow}/profile`. Workflow List/Get are pure
 orchestration resources; no service may restore a `scanWorkflowProfiles`
 collection, workflow `configuration`, or a compatibility alias for either.
+Create/Update serialize the canonical topology wire shape: each Stage carries
+`stageId` and `steps`, and each Step carries only `stepId`, `engineId`, and
+`profileDefaultEnabled`. The UI-facing `stageId` on a Step is a grouping
+projection and must be stripped before transport; the Server's strict Step
+decoder rejects unknown fields with `400 BAD_REQUEST`.
 
 ## Suggested Verification
 

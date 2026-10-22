@@ -46,13 +46,56 @@ export async function getScanWorkflowProfile(id: string): Promise<ScanWorkflowPr
   }
 }
 
+type ScanWorkflowStepPayload = {
+  stepId: string
+  engineId: string
+  profileDefaultEnabled: boolean
+}
+
+type ScanWorkflowStagePayload = {
+  stageId: string
+  steps: ScanWorkflowStepPayload[]
+}
+
+// The management API's canonical Step shape carries only stepId, engineId, and
+// profileDefaultEnabled. `stageId` is a UI projection that normalizeWorkflow adds
+// for stage grouping; the Server's strict Step decoder rejects it as an unknown
+// field, so it must not cross the transport boundary.
+function toScanWorkflowStagePayload(stages: ScanWorkflowStageView[]): ScanWorkflowStagePayload[] {
+  return stages.map((stage) => ({
+    stageId: stage.stageId,
+    steps: stage.steps.map((step) => ({
+      stepId: step.stepId,
+      engineId: step.engineId,
+      profileDefaultEnabled: step.profileDefaultEnabled,
+    })),
+  }))
+}
+
 export async function createScanWorkflow(input: CreateScanWorkflowInput): Promise<ScanWorkflow> {
-  const response = await apiClient.post("/scanWorkflows", input)
+  const response = await apiClient.post("/scanWorkflows", {
+    requestId: input.requestId,
+    ...(input.scanWorkflowId ? { scanWorkflowId: input.scanWorkflowId } : {}),
+    scanWorkflow: {
+      displayName: input.scanWorkflow.displayName,
+      description: input.scanWorkflow.description,
+      stages: toScanWorkflowStagePayload(input.scanWorkflow.stages),
+    },
+  })
   return requireWorkflow(response.data)
 }
 
 export async function updateScanWorkflow(id: string, input: UpdateScanWorkflowInput): Promise<ScanWorkflow> {
-  const response = await apiClient.patch(`/${scanWorkflowName(id)}`, input)
+  const response = await apiClient.patch(`/${scanWorkflowName(id)}`, {
+    scanWorkflow: {
+      name: input.scanWorkflow.name,
+      displayName: input.scanWorkflow.displayName,
+      description: input.scanWorkflow.description,
+      stages: toScanWorkflowStagePayload(input.scanWorkflow.stages),
+      etag: input.scanWorkflow.etag,
+    },
+    updateMask: input.updateMask,
+  })
   return requireWorkflow(response.data)
 }
 

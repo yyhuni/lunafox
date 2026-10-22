@@ -147,6 +147,13 @@ and open the same canvas in read-only mode, without save, delete, or topology
 controls. A workflow with unavailable Engines remains visible and repairable in
 management but is disabled in scan selection.
 
+The composition builder opens with empty Stage placeholders. Because the
+management API requires every persisted Stage to contain at least one Step,
+saving submits only populated stages; a draft with no Engine at all is rejected
+locally with a toast instead of a request. Save success switches back to
+management, while a rejected save keeps the focused builder and its unsaved
+draft mounted and reports the failure through the shared toast surface.
+
 The desktop workflow canvas vertically centers the floating Engine library at
 its bounded available height so the internal list can show more Engines before
 scrolling; the narrow-layout override remains deliberately shorter and

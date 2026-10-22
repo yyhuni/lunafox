@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const apiClientMocks = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn() }))
 vi.mock("@/lib/api-client", () => ({ default: apiClientMocks }))
 
-import { getScanWorkflow, getScanWorkflowProfile, listScanWorkflows } from "@/services/scan-workflow.service"
+import { createScanWorkflow, getScanWorkflow, getScanWorkflowProfile, listScanWorkflows, updateScanWorkflow } from "@/services/scan-workflow.service"
 
 const workflow = {
   name: "scanWorkflows/default",
@@ -52,5 +52,85 @@ describe("scan-workflow.service catalog contract", () => {
       },
     })
     await expect(getScanWorkflow("default")).rejects.toThrow(/pure orchestration topology/)
+  })
+
+  it("创建时只提交规范 Stage/Step 结构并剥离 UI 专有的 step.stageId", async () => {
+    apiClientMocks.post.mockResolvedValue({ data: workflow })
+
+    await createScanWorkflow({
+      requestId: "00000000-0000-4000-8000-000000000001",
+      scanWorkflow: {
+        displayName: "Discovery",
+        description: "Discover assets",
+        stages: [{
+          stageId: "stage-1",
+          steps: [{
+            stageId: "stage-1",
+            stepId: "step-local-100",
+            engineId: "engine.lunafox.discovery",
+            profileDefaultEnabled: true,
+          }],
+        }],
+      },
+    })
+
+    expect(apiClientMocks.post).toHaveBeenCalledWith("/scanWorkflows", {
+      requestId: "00000000-0000-4000-8000-000000000001",
+      scanWorkflow: {
+        displayName: "Discovery",
+        description: "Discover assets",
+        stages: [{
+          stageId: "stage-1",
+          steps: [{
+            stepId: "step-local-100",
+            engineId: "engine.lunafox.discovery",
+            profileDefaultEnabled: true,
+          }],
+        }],
+      },
+    })
+    expect(apiClientMocks.post.mock.calls[0][1].scanWorkflow.stages[0].steps[0]).not.toHaveProperty("stageId")
+  })
+
+  it("更新时同样只提交规范 Stage/Step 结构", async () => {
+    const name = "scanWorkflows/wf-11111111-1111-4111-8111-111111111111"
+    apiClientMocks.patch.mockResolvedValue({ data: { ...workflow, name } })
+
+    await updateScanWorkflow(name, {
+      scanWorkflow: {
+        name,
+        displayName: "Discovery",
+        description: "",
+        etag: "v1.etag",
+        stages: [{
+          stageId: "stage-1",
+          steps: [{
+            stageId: "stage-1",
+            stepId: "step-local-100",
+            engineId: "engine.lunafox.discovery",
+            profileDefaultEnabled: false,
+          }],
+        }],
+      },
+      updateMask: ["displayName", "description", "stages"],
+    })
+
+    expect(apiClientMocks.patch).toHaveBeenCalledWith("/scanWorkflows/wf-11111111-1111-4111-8111-111111111111", {
+      scanWorkflow: {
+        name,
+        displayName: "Discovery",
+        description: "",
+        etag: "v1.etag",
+        stages: [{
+          stageId: "stage-1",
+          steps: [{
+            stepId: "step-local-100",
+            engineId: "engine.lunafox.discovery",
+            profileDefaultEnabled: false,
+          }],
+        }],
+      },
+      updateMask: ["displayName", "description", "stages"],
+    })
   })
 })

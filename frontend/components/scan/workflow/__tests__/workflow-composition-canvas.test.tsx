@@ -10,6 +10,22 @@ const { getViewportForBoundsMock, setViewportMock } = vi.hoisted(() => ({
   setViewportMock: vi.fn().mockResolvedValue(true),
 }))
 
+const sonnerMocks = vi.hoisted(() => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    loading: vi.fn(),
+    dismiss: vi.fn(),
+    custom: vi.fn(),
+  },
+}))
+
+vi.mock("sonner", () => ({
+  toast: sonnerMocks.toast,
+  Toaster: () => null,
+}))
+
 vi.mock("@xyflow/react", () => ({
   Background: () => null,
   getViewportForBounds: getViewportForBoundsMock,
@@ -266,6 +282,35 @@ describe("WorkflowCompositionCanvas", () => {
     ]))
   })
 
+  it("submits only populated stages so empty draft placeholders do not fail the save", () => {
+    const onSave = vi.fn()
+    renderWithProviders(<WorkflowCompositionCanvas {...canvasCatalogProps} displayName="Discovery" onSave={onSave} />)
+
+    fireEvent.click(screen.getByRole("button", {
+      name: "Custom EngineCustom engine description",
+    }))
+    fireEvent.click(screen.getByRole("button", { name: "management.save" }))
+
+    expect(onSave).toHaveBeenCalledTimes(1)
+    const submittedStages = onSave.mock.calls[0][0] as Array<{ stageId: string; steps: Array<{ stepId: string }> }>
+    // The editor opens with two empty stages; the persisted topology must contain
+    // only stages that actually carry a Step.
+    expect(submittedStages).toHaveLength(1)
+    expect(submittedStages[0]).toMatchObject({ stageId: "stage-1" })
+    expect(submittedStages[0].steps).toHaveLength(1)
+  })
+
+  it("reports an empty topology instead of submitting a workflow without engines", () => {
+    sonnerMocks.toast.error.mockClear()
+    const onSave = vi.fn()
+    renderWithProviders(<WorkflowCompositionCanvas {...canvasCatalogProps} displayName="Discovery" onSave={onSave} />)
+
+    fireEvent.click(screen.getByRole("button", { name: "management.save" }))
+
+    expect(onSave).not.toHaveBeenCalled()
+    expect(sonnerMocks.toast.error).toHaveBeenCalledWith("workflow.emptyTopology")
+  })
+
   it("collects metadata in a dialog before the first save", () => {
     const onSave = vi.fn()
 
@@ -286,6 +331,9 @@ describe("WorkflowCompositionCanvas", () => {
 
     renderWithProviders(<WorkflowCanvasWithMetadata />)
 
+    fireEvent.click(screen.getByRole("button", {
+      name: "Custom EngineCustom engine description",
+    }))
     expect(screen.queryByRole("textbox", { name: "canvas.workflowName" })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole("button", { name: "management.save" }))
 

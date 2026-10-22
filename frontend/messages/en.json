@@ -3528,7 +3528,8 @@
       "delete": {
         "success": "Workflow deleted",
         "error": "Delete failed"
-      }
+      },
+      "emptyTopology": "Add an engine to at least one stage before saving the workflow"
     },
     "command": {
       "create": {

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:f4eb8ff022455ae379a5ef6acde65963727dfe52c51f7dfc7976c4fad5b2b974",
-  "releaseTag": "v0.0.1-alpha.227",
+  "sourceRevisionDigest": "sha256:5320e3b832ef7415799ecbc0233487446fe341ba20d51c2d08670de3cab78808",
+  "releaseTag": "v0.0.1-alpha.228",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "0b912abc1c97e2b7e7d2b1ff65c73a2ea6833ac35cce1590cbfd0e4186867c37"
+      "sha256": "7e4d474b44fe6122c9800ad1e507b44024b24e2065d06eea79766465d7325160"
     },
     {
       "path": "README.en.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "da25022cfc813e628892d915099a8a05094197e06e512d4a2b288100cd1894b7"
+      "sha256": "681c38940ba0285f241810a04553b84b518459ccf04cb6e09d6ae07316208586"
     },
     {
       "path": "agent/bin/sha256-e3d7dcbc55bf8652650a1543d1bfb9262fddf369d3fb4e544e9988896f96e96e/agent-bundle.sha256",
@@ -92,7 +92,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9181,
-      "sha256": "6a5183b5d2218de72dfd71679de1948a9df702351efa8fa21e4903eb40ab1f25"
+      "sha256": "0746e0eaa1038196b8eee93dbf5e953010a3aca29d997830a8d4c057897ecc63"
     },
     {
       "path": "agent/bin/sha256-e3d7dcbc55bf8652650a1543d1bfb9262fddf369d3fb4e544e9988896f96e96e/lunafox-agent-linux-amd64",
@@ -7042,8 +7042,8 @@
       "path": "frontend/components/scan/README.md",
       "type": "file",
       "mode": "0644",
-      "size": 21604,
-      "sha256": "ea2390b6c82458cb57303ff3c3d1e5eada4a25191bf76e6ef1169085a22b48a8"
+      "size": 22055,
+      "sha256": "37b3883a44b3a61a71e8f354594f6a93c17dde6cd2f83a5d6b70960008a392b7"
     },
     {
       "path": "frontend/components/scan/__tests__/agent-selector.contract.test.ts",
@@ -8225,8 +8225,8 @@
       "path": "frontend/components/scan/workflow/__tests__/scan-workflow-page.cursor-pagination.test.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 5898,
-      "sha256": "c02874f6a71fe828bc1c94eafdbfecb5734951ae99e961e16c553d564ee0eed9"
+      "size": 9727,
+      "sha256": "c9fcc17fc959a0810ee24b86e53b6e5ee272711a0ada54f5f1ac9fcd7b9cc87e"
     },
     {
       "path": "frontend/components/scan/workflow/__tests__/workflow-columns.contract.test.ts",
@@ -8246,8 +8246,8 @@
       "path": "frontend/components/scan/workflow/__tests__/workflow-composition-canvas.test.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 18413,
-      "sha256": "9d12aa3104166f8d8356605b59d8bc5e3b1b93bfe2d076c0d3511ea95421b283"
+      "size": 20177,
+      "sha256": "663a09fb1cb57b4d30b1ea89fd90f14126e02c3713163d9a775f5938e051f7a9"
     },
     {
       "path": "frontend/components/scan/workflow/__tests__/workflow-data-table-state.contract.test.ts",
@@ -8309,8 +8309,8 @@
       "path": "frontend/components/scan/workflow/scan-workflow-page.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 14300,
-      "sha256": "ff9089a6dc4d8572dc7f8e855d6be4f6937064d950ae74af539e39dfe164f7c5"
+      "size": 14881,
+      "sha256": "be88b634f2daf7bfb968f353002b765d18ec0e07b43f95e9090a7b261f923835"
     },
     {
       "path": "frontend/components/scan/workflow/workflow-columns.tsx",
@@ -8330,8 +8330,8 @@
       "path": "frontend/components/scan/workflow/workflow-composition-canvas.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 50974,
-      "sha256": "52f3c64532550236f72be2a94f5385034f2ede9e1587786038052e01a433fc9d"
+      "size": 51499,
+      "sha256": "6ff3948052a43efa07328c2f5fa8cb38957936b3646931ffbdf3e947859d62ad"
     },
     {
       "path": "frontend/components/scan/workflow/workflow-data-table-state.ts",
@@ -15141,15 +15141,15 @@
       "path": "frontend/messages/en.json",
       "type": "file",
       "mode": "0644",
-      "size": 216168,
-      "sha256": "022bccb415da4dde27e26678eb76238a4117ec89a31a04105cdb030470f6c47b"
+      "size": 216257,
+      "sha256": "ebb757248476a559a81eebc523d2765fe6495daa0e1b710f41b12064f9fe87a0"
     },
     {
       "path": "frontend/messages/zh.json",
       "type": "file",
       "mode": "0644",
-      "size": 208245,
-      "sha256": "6a27aa5380db90a9c37633a4d5488cfd2758e31df6a89fcc65b498479ea42288"
+      "size": 208332,
+      "sha256": "4a7ae12ebdd8f87bb5811e1d9342717c04d228ae5f9240970fe65207354f8b09"
     },
     {
       "path": "frontend/middleware.ts",
@@ -16359,8 +16359,8 @@
       "path": "frontend/services/README.md",
       "type": "file",
       "mode": "0644",
-      "size": 11526,
-      "sha256": "a4b26a437e376bfc993e907b3cd979d101b75bed460f05e12d510c4014a36834"
+      "size": 11883,
+      "sha256": "b4d5a51c347850e10dc4360051e44a80152e5d46c009c2ccbca729311db3dccb"
     },
     {
       "path": "frontend/services/__tests__/agent-license.service.contract.test.ts",
@@ -16506,8 +16506,8 @@
       "path": "frontend/services/__tests__/scan-workflow.service.catalog-contract.test.ts",
       "type": "file",
       "mode": "0644",
-      "size": 2806,
-      "sha256": "a379178dcffde54b2f8c7442642b3ae15d4ba41a827ef9a410a03103c6c91090"
+      "size": 5302,
+      "sha256": "e4d0bd1f6150a4895e23f4acb9b8d9c9a724250e0740a52395ff3e5b6c36749a"
     },
     {
       "path": "frontend/services/__tests__/scan.service.contract.test.ts",
@@ -16765,8 +16765,8 @@
       "path": "frontend/services/scan-workflow.service.ts",
       "type": "file",
       "mode": "0644",
-      "size": 4352,
-      "sha256": "17415451404a8716a57314d0b9a4fc29bbeb4d610332ddd364f4e3b41675c9e1"
+      "size": 5795,
+      "sha256": "e60c1120b52aa13c8ba4af05c6b2e182b7a9914639f4fbba7e7a41c9cf1d95cf"
     },
     {
       "path": "frontend/services/scan.service.ts",
@@ -18076,6 +18076,13 @@
       "mode": "0644",
       "size": 1880,
       "sha256": "512c0e1c3c1f8a82b41464d8b3accc1336540c78a280a143f64ee768b6c65055"
+    },
+    {
+      "path": "release-notes/v0.0.1-alpha.228.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 766,
+      "sha256": "ca3f06f14ecda454d3d714d82a447c69fd0558eac257362eb3bf5acfaede24e5"
     },
     {
       "path": "resources/alloy/config.alloy",
