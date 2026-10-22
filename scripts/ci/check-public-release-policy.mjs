@@ -2132,6 +2132,40 @@ function assertPublicTree(root) {
   }
 }
 
+// README screenshots are part of the public documentation contract. A local
+// image reference that is missing from the export allowlist silently produces a
+// broken image on the public landing page, so fail the policy check instead.
+const LOCAL_IMAGE_REFERENCE = /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']|!\[[^\]]*\]\(([^)\s]+)\)/giu;
+
+function readmeLocalImageReferences(root, relativePath) {
+  const text = readText(path.join(root, relativePath), "README");
+  const references = [];
+  for (const match of text.matchAll(LOCAL_IMAGE_REFERENCE)) {
+    const raw = (match[1] ?? match[2] ?? "").trim();
+    if (!raw || /^[a-z][a-z0-9+.-]*:/i.test(raw) || raw.startsWith("//") || raw.startsWith("#")) continue;
+    const withoutSuffix = raw.split("#")[0].split("?")[0];
+    if (!withoutSuffix) continue;
+    references.push(path.posix.normalize(path.posix.join(path.posix.dirname(relativePath), withoutSuffix)));
+  }
+  return references;
+}
+
+function assertReadmeAssetsExported(root, exportPolicy) {
+  const exact = new Set([...(exportPolicy.allowlist?.exact ?? []), ...(exportPolicy.allowlist?.generatedExact ?? [])]);
+  const prefixes = [...(exportPolicy.allowlist?.prefixes ?? []), ...(exportPolicy.allowlist?.generatedPrefixes ?? [])];
+  const requiredPaths = new Set(exportPolicy.requiredPaths ?? []);
+  for (const readme of ["README.md", "README.en.md"]) {
+    if (!fs.existsSync(path.join(root, readme))) continue;
+    for (const reference of readmeLocalImageReferences(root, readme)) {
+      if (!fs.existsSync(path.join(root, reference))) fail(`${readme} references a missing local image: ${reference}`);
+      if (!exact.has(reference) && !prefixes.some((prefix) => reference.startsWith(prefix))) {
+        fail(`${readme} image asset is not allowlisted for the public projection: ${reference}`);
+      }
+      if (!requiredPaths.has(reference)) fail(`export policy must require README image asset: ${reference}`);
+    }
+  }
+}
+
 function check(options) {
   const policyPath = options.policy || path.join(options.root, "scripts/ci/public-release-policy.json");
   const exportPolicyPath = options.exportPolicy || path.join(options.root, "scripts/ci/public-export-policy.json");
@@ -2141,6 +2175,7 @@ function check(options) {
   assertLegacyDeploymentBootstrapPolicy(policy);
   assertFirstPublicReleaseIdentity(policy, exportPolicy);
   assertExportPolicy(exportPolicy);
+  assertReadmeAssetsExported(options.root, exportPolicy);
   if (options.publicOnly) {
     const workflowPath = options.publicWorkflow || path.join(options.root, ".github/workflows/public-validate.yml");
     assertPublicWorkflow(readText(workflowPath, "public validation workflow"), policy);

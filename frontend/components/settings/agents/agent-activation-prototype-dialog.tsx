@@ -145,8 +145,8 @@ export function AgentActivationPrototypeDialog({ open, onOpenChange, currentLimi
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className={cn("space-y-2 pb-1 pt-2", textRole.bodySubtle)}>
-                  <p className={textRole.bodyStrong}>联系作者获取 Key</p>
-                  <p>获取后复制完整 Key，回到这里粘贴激活。</p>
+                  <p className={textRole.bodyStrong}>多种贡献方式均可获取 Key</p>
+                  <p>赞助、提交 Bug、参与引擎优化等贡献，都可以联系作者获取 Key。获取后复制完整 Key，回到这里粘贴激活。</p>
                 </div>
               </CollapsibleContent>
             </Collapsible>

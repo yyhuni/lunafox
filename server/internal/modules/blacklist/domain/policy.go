@@ -186,6 +186,13 @@ func CanonicalPatternsJSON(patterns []string) ([]byte, error) {
 	if err := ValidateCanonicalEffectivePatterns(patterns); err != nil {
 		return nil, err
 	}
+	// A nil slice and an empty slice encode the same canonical rule set. They
+	// must therefore share one JSON representation, otherwise GET (which
+	// projects the persisted empty array) and the locked replace path (which
+	// reads a nil projection) derive different etags for an empty policy.
+	if patterns == nil {
+		patterns = []string{}
+	}
 	return json.Marshal(patterns)
 }
 

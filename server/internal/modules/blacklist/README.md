@@ -8,7 +8,9 @@ global/Target-local singleton 的应用语义、持久化和 HTTP 映射。规�
 ## 资源与持久化
 
 - `blacklist_policy` 只有 `id`、`scope`、`target_id`、`patterns`、`updated_at`
-  五列。etag 由规范化 `patterns` 的紧凑 JSON SHA-256 派生，不落库。
+  五列。etag 由规范化 `patterns` 的紧凑 JSON SHA-256 派生，不落库。空规则集必须
+  编码为 `[]`：nil 与空切片必须得到同一个 etag，否则空策略的首次 PATCH 会因
+  etag 永不相等而永久 409。
 - 全局资源仅为 `blacklistPolicy`；Target-local 资源仅为
   `targets/{target}/blacklistPolicy`。两者只提供受保护的 GET/PATCH，PATCH 必须
   使用 `updateMask=patterns`、路径匹配的 `name`、非空 etag 与完整 local

@@ -101,3 +101,26 @@ func TestPolicyLimitsAndCanonicalETag(t *testing.T) {
 		t.Fatalf("stored noncanonical patterns error = %v, want ErrNonCanonicalPatterns", err)
 	}
 }
+
+func TestCanonicalPatternsJSONEncodesNilAsEmptyArray(t *testing.T) {
+	for name, patterns := range map[string][]string{"nil": nil, "empty": {}} {
+		payload, err := CanonicalPatternsJSON(patterns)
+		if err != nil {
+			t.Fatalf("%s payload error = %v", name, err)
+		}
+		if string(payload) != "[]" {
+			t.Fatalf("%s payload = %s, want []", name, payload)
+		}
+	}
+	nilETag, err := ETag(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	emptyETag, err := ETag([]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if nilETag != emptyETag {
+		t.Fatalf("nil etag %q != empty etag %q", nilETag, emptyETag)
+	}
+}

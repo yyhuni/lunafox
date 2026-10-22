@@ -109,7 +109,7 @@ export function AgentActivationPrototype() {
                   ? `当前恢复为 3 个节点额度，已添加的 ${nodes.length} 个节点予以保留。更新授权后可继续扩容。`
                   : license
                     ? `最多可添加 10 个 Agent · 有效期至 ${license.expiresAt} · ${license.months} 个月授权`
-                    : "基础额度为 3 个 Agent。联系作者获取 Key，即可激活更多节点额度。"}
+                    : "基础额度为 3 个 Agent。赞助、提交 Bug、参与引擎优化等贡献，均可联系作者获取 Key，激活更多节点额度。"}
               </p>
             </div>
           </div>

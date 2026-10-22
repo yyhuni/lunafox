@@ -1,39 +1,122 @@
-# LunaFox
+<h1 align="center">LunaFox</h1>
+
+<p align="center">
+  <b>Self-hosted Attack Surface Management (ASM) | Asset discovery and security automation for authorized testing and defensive research</b>
+</p>
+
+<p align="center">
+  <a href="https://github.com/yyhuni/lunafox/stargazers"><img src="https://img.shields.io/github/stars/yyhuni/lunafox?style=flat-square&logo=github" alt="GitHub stars"></a>
+  <a href="https://github.com/yyhuni/lunafox/network/members"><img src="https://img.shields.io/github/forks/yyhuni/lunafox?style=flat-square&logo=github" alt="GitHub forks"></a>
+  <a href="https://github.com/yyhuni/lunafox/issues"><img src="https://img.shields.io/github/issues/yyhuni/lunafox?style=flat-square&logo=github" alt="GitHub issues"></a>
+  <a href="https://github.com/yyhuni/lunafox/blob/main/LICENSE"><img src="https://img.shields.io/github/license/yyhuni/lunafox?style=flat-square" alt="License"></a>
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#quick-start">Quick start</a> •
+  <a href="#documentation">Documentation</a> •
+  <a href="#feedback-and-contributing">Feedback</a>
+</p>
+
+<p align="center">
+  <sub>Keywords: ASM | attack surface management | asset discovery | authorized security testing | distributed scanning | global search | vulnerability management</sub>
+</p>
 
 **English** | [简体中文](README.md)
 
-LunaFox is an attack surface management platform that runs asset discovery and vulnerability scans through distributed Agents (resident execution components on scan nodes) and keeps the resulting assets and findings in one web UI. The [public demo](https://lunafox-demo.vercel.app) shows the interface with sample data and requires no login.
+---
+## Live demo
 
-<img src="docs/images/en/overview.png" alt="LunaFox overview" width="100%">
+The [public demo](https://lunafox-demo.vercel.app/) shows the interface with mock data, requires no login, and is not connected to a real backend.
 
-## Capabilities
+<p align="center">
+  <img src="docs/images/en/overview.png" alt="Overview" width="24%">
+  <img src="docs/images/en/workflows.png" alt="Scan workflows" width="24%">
+  <img src="docs/images/en/scan-history.png" alt="Scan history" width="24%">
+  <img src="docs/images/en/nodes.png" alt="Agent nodes" width="24%">
+</p>
 
-- **Attack surface inventory:** targets, subdomains, websites, endpoints, directories, and the assets discovered from them.
-- **Scan orchestration:** Workflow Profiles compose ordered steps; each Scan freezes its workflow, configuration, Engine Packages, and execution plan.
-- **Distributed execution:** an Agent claims an immutable plan, materializes inputs, and runs each step in an Engine container.
-- **Vulnerability management:** scan results, vulnerabilities, and asset context in one place.
-- **Unified UI:** overview, global asset search, wordlists and fingerprints, the Nuclei POC catalog, notifications, and in-app system upgrades.
-- **MCP integration:** connect AI clients through the Model Context Protocol to deployment-wide investigation queries plus constrained target and scan actions, using a static MCP key.
-- **Self-hosted control:** the control plane, PostgreSQL, Redis, UI, and a resident Agent run from one Compose stack; more Agents can join the same Server.
+---
+## Documentation
 
-| Scan workflows | Scan history |
-| --- | --- |
-| <img src="docs/images/en/workflows.png" alt="Scan workflows" width="100%"> | <img src="docs/images/en/scan-history.png" alt="Scan history" width="100%"> |
+- [Public deployment guide](docs/public-deployment.md) - installation, day-2 operations, database, upgrades, and recovery
+- [Release notes](release-notes/README.md) - changes in each release
+- [Contributing](CONTRIBUTING.md) - issues, pull requests, and contribution conventions
 
-<img src="docs/images/en/nodes.png" alt="Agent nodes" width="100%">
+---
+## Features
 
+### Built-in engines
+
+The following are the default built-in engines; engines are distributed as Engine Packages and can be extended.
+
+| Engine | Tools | Description |
+|------|------|------|
+| Subdomain discovery | Subfinder, PureDNS, MassDNS | Passive collection plus active enumeration |
+| Port scan | Naabu | Custom port ranges |
+| Website discovery | HTTPX | Status code, title, and technology detection |
+| Fingerprinting | Finger | Multi-source fingerprint library |
+| URL collection | Katana, Waymore, HTTPX | Historical data plus active crawling |
+| Directory scan | FFUF | Calibration, recursion, and concurrency control |
+| Vulnerability scan | Nuclei | Template-based vulnerability detection |
+| Screenshots | Chromium, HTTPX | Screenshot and page metadata capture |
+
+### Platform capabilities
+
+| Capability | Description |
+|------|------|
+| Target management | Domain / IP / CIDR targets |
+| Organizations | Multiple organizations and asset ownership |
+| Global search | Expression syntax with multi-field queries |
+| Vulnerability management | Review, retest, and asset context |
+| Scheduled scans | Cron-based recurring tasks |
+| Scan orchestration | Workflow composition, freezing, and history |
+| Distributed execution | Multiple Agents with load-aware scheduling |
+| Wordlists and fingerprints | Wordlists, fingerprint library, and Nuclei POC catalog |
+| Notifications | Discord and Webhook |
+| MCP integration | AI clients for investigation and constrained actions |
+| System upgrade | In-app upgrade, progress, and recovery |
+
+### Global asset search
+
+- Multiple asset types: Website and Endpoint
+- Expression syntax: `=` contains, `==` exact, `!=` not equal
+- Logical composition: `&&` (AND) and `||` (OR)
+- Fields: url, host, title, statusCode, tech, responseHeaders, hasScreenshot
+- CSV export: stream the full result set
+
+```bash
+# basic search
+host="api"
+statusCode==200
+tech="nginx"
+
+# combinations
+host="api" && statusCode==200
+tech="vue" || tech="react"
+```
+
+### Visual interface
+
+- Statistics: assets, scans, vulnerabilities, and Agent fleet status
+- Live progress: scan progress, Engine execution state, and history
+- Notifications: Discord and Webhook
+- UI languages: Simplified Chinese and English
+
+---
 ## Quick start
 
 ### Requirements
 
-- Docker Engine with Linux container support and Docker Compose 2.24.0 or newer.
-- A free host port for `PUBLIC_PORT`; the default is 443.
-- Outbound access to Docker Hub, GHCR, or the configured registries.
-- Disk space for images, database data, scan results, and retained logs.
+- Docker Engine with Linux container support and Docker Compose 2.24.0 or newer
+- Bash 3.2 or newer for lifecycle scripts; on Windows, run Compose directly in PowerShell
+- A free port for `PUBLIC_PORT`; the default is 443
+- Outbound access to Docker Hub, GHCR, or the configured registry
+- Disk space for images, database data, scan results, and logs
 
 ### Install
 
-The public repository and every `lunafox-<version>.zip` release contain equivalent deployment snapshots. Keep the deployment directory: `.env` belongs to the installation, and relative resource paths resolve from it.
+The public repository and every `lunafox-<version>.zip` release contain equivalent deployment snapshots.
 
 **Option 1 - from the public repository**
 
@@ -57,7 +140,7 @@ cd lunafox-<version>
 docker compose up -d
 ```
 
-The repository and archive options both run the installer, which validates its arguments, starts the stack, and reports success only after initialization tasks, core service health, the Agent, and the public HTTPS endpoint are ready. Direct Compose skips the installer's image preheat and readiness checks; use it only when you manage those steps yourself.
+Options 1 and 2 run the installer, which validates arguments, preheats images, and waits for readiness. Option 3 skips those checks and is only recommended when you handle them yourself.
 
 For a deployment reachable from other machines, set the public address and port:
 
@@ -65,79 +148,34 @@ For a deployment reachable from other machines, set the public address and port:
 ./install.sh --public-host luna.example.com --public-port 8443
 ```
 
-The first start creates a self-signed certificate for `PUBLIC_HOST`; this release does not manage certificates automatically.
+The first start creates a self-signed certificate for `PUBLIC_HOST`; this release does not manage certificates. See [database environment variables](docs/public-deployment.md#database-environment-variables) and [configuration changes after the first start](docs/public-deployment.md#configuration-changes-after-first-start).
 
-### Sign in
+---
+## Feedback and contributing
 
-Open the URL derived from `PUBLIC_HOST` and `PUBLIC_PORT` (default: the local HTTPS entrypoint) with the default administrator account:
+- Bugs or suggestions: open an [Issue](https://github.com/yyhuni/lunafox/issues)
+- Want to contribute: read the [Contributing guide](CONTRIBUTING.md) first
+- Security: do not publicly disclose unfixed vulnerabilities; contact the maintainers privately as described in the guide
 
-| Username | Password |
-| --- | --- |
-| `admin` | `admin` |
+---
+## Security and compliance
 
-Change the password in account settings after the first sign-in. If the administrator password is lost, run this command from the deployment directory:
+1. LunaFox targets authorized security testing, defensive research, and management of infrastructure you own
+2. You must have explicit authorization for the target systems, data, and environments
+3. The default TLS certificate is self-signed; this release does not manage certificates
+4. Agents use a long-lived bearer token; TLS identity, replay protection, rotation, and revocation are not implemented yet
+5. This single-node deployment does not provide automatic backup, preserve-data rollback, or cross-node recovery
 
-```console
-docker compose exec server resetadmin
-```
+Do not use this project for unauthorized scanning, intrusion, or disruption.
 
-### Run your first scan
+---
+## Star History
 
-1. Add a target or import subdomains, websites, endpoints, and directories on the Targets page.
-2. Start a Quick Scan, or run a Workflow-driven Scan that composes ordered steps.
-3. Watch progress and typed results arrive from the Agent and each Engine container.
+[![Star History Chart](https://star-history.dera.page/svg?repos=yyhuni/lunafox&type=Date)](https://star-history.dera.page/#yyhuni/lunafox&Date)
 
-## Operating the stack
+---
+## License
 
-Four lifecycle scripts cover the common cases; restart, logs, uninstall, and their recovery behavior are documented in the deployment guide.
-
-| Script | Underlying command | What the wrapper adds |
-| --- | --- | --- |
-| `./install.sh` | `docker compose up -d` | Validates public host and port, pulls and preheats images, waits for readiness. |
-| `./start.sh` | `docker compose up -d` | Starts an existing deployment and waits for readiness. |
-| `./stop.sh` | `docker compose stop` | Stops resident services and keeps all data. |
-| `./status.sh` | `docker compose ps` | Prints a readiness summary; exits 0 only when the deployment is fully ready. |
-
-### Configure
-
-Review `.env` before the first start. First-party images default to Docker Hub; select GHCR explicitly when needed:
-
-```dotenv
-RELEASE_REGISTRY=docker.io
-# RELEASE_REGISTRY=ghcr.io
-```
-
-The [database environment variables](docs/public-deployment.md#database-environment-variables) section lists every database setting and its default. After the first successful start, `DATABASE_MODE`, `DB_PASSWORD`, and `JWT_SECRET` are persisted in `lunafox_config`; changing them to a different non-empty value fails fast, while empty inputs reuse the persisted values. See [configuration changes after the first start](docs/public-deployment.md#configuration-changes-after-first-start).
-
-### Upgrade and recovery
-
-An administrator checks, confirms, and starts eligible updates from the web UI. There is no host update script, and lifecycle scripts do not bypass the upgrade state machine. A release that declares a database migration is not eligible for the in-app upgrader yet: replace the package through the manual fallback in the deployment guide and complete the migration there. This single-node release does not provide automatic backup, preserve-data rollback, or cross-node recovery; recovery requires a verified backup restore or an approved forward fix. See [system updates](docs/public-deployment.md).
-
-## Troubleshooting
-
-- Readiness times out: run `./status.sh` and `./logs.sh <service>`; nothing is rolled back, so fix the cause and repeat the same command.
-- Image pull or preheat fails: check outbound access to the selected registry and the engine-preheater log, then retry.
-- The browser warns about the certificate: the first start uses a self-signed certificate; this release does not manage certificates automatically.
-- The host port is busy: set a different `PUBLIC_PORT` before the first start, or free the port.
-- Database credentials conflict after an edit: restore the original `DB_PASSWORD` and `JWT_SECRET`, or clear them so empty inputs reuse the persisted values.
-- An upgrade ends in recovery or attention: follow the upgrade journal in `lunafox_upgrade_state`; there is no automatic rollback.
-
-More recovery paths are in the [deployment guide](docs/public-deployment.md).
-
-## Security and boundaries
-
-- The default TLS certificate is self-signed; this release does not manage certificates automatically.
-- This single-node deployment does not provide rolling upgrade, automatic backup, preserve-data rollback, or cross-node recovery.
-- Agent authentication uses a long-lived bearer credential. Agent TLS identity, replay protection, rotation, and revocation are deferred and require a separate security change.
-- Run LunaFox only on infrastructure you own or control.
-
-## Documentation
-
-- [Public deployment guide](docs/public-deployment.md): installation, lifecycle, database settings, upgrades, logs, certificates, and recovery.
-- [Release notes](release-notes/README.md): changes in each release.
-
-## License and contributing
-
-Deployment files and first-party public Runtime and Engine source are `GPL-3.0-only`; Engine Runtime Images and Engine Packages are public artifacts. Third-party components keep their own licenses and attribution terms. The full text is in [LICENSE](LICENSE).
+Deployment files and first-party public Runtime/Engine source are [GPL-3.0-only](LICENSE); Engine Runtime Images and Engine Packages are public artifacts; third-party components keep their own licenses and attribution terms.
 
 > **GENERATED / READ-ONLY PROJECTION.** Generated from the private LunaFox source; report defects against the matching release tag via [CONTRIBUTING.md](CONTRIBUTING.md).

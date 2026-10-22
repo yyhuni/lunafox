@@ -240,6 +240,15 @@ fi
 if [ "$release_version" != "0.0.0-dev" ] && [ "$(basename "$RELEASE_NOTES_FILE")" != "v${release_version}.md" ]; then
 	fail "Release Notes 文件名必须匹配 releaseVersion: v${release_version}.md"
 fi
+# A migration-bearing release is ineligible for the in-app upgrade path, so its
+# notes must carry the manual-upgrade, backup, and deployment-guide guidance in
+# both languages. Fail the manifest instead of publishing misleading notes.
+if [ "$release_version" != "0.0.0-dev" ] && [ "$detected_has_migration" = true ]; then
+	node "$ROOT_DIR/scripts/ci/validate-public-release-notes.mjs" \
+		--root-dir "$ROOT_DIR" --tag "v${release_version}" \
+		--expected-has-database-migration true >/dev/null ||
+		fail "带数据库迁移的 Release Notes 必须在两种语言中说明手动升级、备份与公共部署指南"
+fi
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 tmp_file="$(mktemp "$(dirname "$OUTPUT_FILE")/.release.manifest.XXXXXX.tmp")"
 

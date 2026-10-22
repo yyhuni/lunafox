@@ -111,7 +111,7 @@
 ## Deployment quota
 
 - 正式 `/settings/agents/` 与独立工作台 `/prototypes/agent-activation/workspace/` 使用同一条 `components → hooks → services → api-client` 链路。summary 的 `license` 投影是授权能力入口：旧 Server 未携带时不显示入口、不请求授权端点；存在时其 `agentLimit` 必须与 summary 一致。组件不能自行改额度、验签或识别示例 Key。
-- 激活调用受认证保护的 `POST /v1/admin/agentLicenses/current:activate`，仅提交原始 `key`；服务返回 `agentLicenses/current` 的 `inactive / active / expired` 投影。Key 不绑定机器，包含固定额度和到期时间，换机或重新部署后可重新输入原 Key，重复导入不重新计时。获取说明统一为“联系作者获取 Key”。
+- 激活调用受认证保护的 `POST /v1/admin/agentLicenses/current:activate`，仅提交原始 `key`；服务返回 `agentLicenses/current` 的 `inactive / active / expired` 投影。Key 不绑定机器，包含固定额度和到期时间，换机或重新部署后可重新输入原 Key，重复导入不重新计时。获取说明统一列出赞助、提交 Bug、参与引擎优化等贡献途径，并说明均需联系作者获取 Key。
 - 授权条归属既有 overview owner，不新增加载阶段。初始 loading 与真实态都由同一 summary 驱动；原有三个同步 section owner、slot 和双帧 ready gate 继续适用。
 - Agent 用量来自全局摘要的 `totalNodes/agentLimit`，含默认、离线和存量超额节点；未激活或到期的有效额度为 3。前端不得自造默认上限或从筛选列表计数。
 - 已满额（含超额）或授权到期时自动显示紧凑横幅；有剩余额度且未到期时隐藏。授权操作只保留横幅内的“激活扩容 / 管理授权 / 更新授权”。工具栏额度/查看授权按钮及其骨架占位已彻底删除；旧 `/prototypes/agent-activation/toolbar/` 地址仅重定向至工作台。

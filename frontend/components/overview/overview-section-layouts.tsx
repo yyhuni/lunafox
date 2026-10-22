@@ -18,8 +18,14 @@ export const OVERVIEW_CURRENT_TASKS_TABLE_CLASS = "min-w-[620px]"
 export const OVERVIEW_ASSET_TOP_METRICS_CLASS = "grid grid-cols-1 gap-3 border-b pb-3 sm:grid-cols-2"
 export const OVERVIEW_ASSET_TOP_METRIC_ITEM_CLASS = "border-b pb-3 last:border-b-0 last:pb-0 sm:border-b-0 sm:border-r sm:pb-0 sm:pr-4 sm:last:border-r-0"
 export const OVERVIEW_ASSET_METRIC_LABEL_ROW_CLASS = "flex items-center gap-3"
-export const OVERVIEW_ASSET_DISTRIBUTION_HEADER_GRID_CLASS = "grid grid-cols-[minmax(0,1fr)_96px_96px] gap-3 border-b px-3 py-2"
-export const OVERVIEW_ASSET_DISTRIBUTION_ROW_CLASS = "grid grid-cols-[minmax(0,1fr)_96px_96px] items-center gap-3 px-3 py-3"
+// Asset type counts are heavy-tailed (URLs are page-level, sites are
+// domain-level), so the distribution never encodes magnitude as bar length.
+// Rows compare types by numbers instead; the shared column template keeps the
+// header and every row aligned while the label column absorbs the extra width.
+export const OVERVIEW_ASSET_DISTRIBUTION_COLUMNS_CLASS = "grid min-w-0 grid-cols-[minmax(0,1fr)_72px_36px_80px] items-baseline gap-x-3"
+export const OVERVIEW_ASSET_DISTRIBUTION_HEADER_GRID_CLASS = `${OVERVIEW_ASSET_DISTRIBUTION_COLUMNS_CLASS} border-b border-border pb-1.5`
+export const OVERVIEW_ASSET_DISTRIBUTION_LIST_CLASS = "min-w-0 divide-y divide-border"
+export const OVERVIEW_ASSET_DISTRIBUTION_ROW_CLASS = "grid min-w-0 gap-1 py-2"
 export const OVERVIEW_TREND_HEADER_CLASS = "flex flex-wrap items-start justify-between gap-3"
 export const OVERVIEW_RISK_RING_LEGEND_CLASS = "flex min-w-0 flex-col items-center gap-4 sm:flex-row"
 export const OVERVIEW_RISK_RING_CLASS = "relative size-44 shrink-0"
@@ -51,8 +57,9 @@ export const OVERVIEW_ASSET_METRICS_GRID_CLASS = "grid grid-cols-2 divide-x bord
 export const OVERVIEW_ASSET_METRIC_CLASS = "flex min-w-0 flex-col gap-2 px-4 py-3 first:pl-0 last:pr-0"
 export const OVERVIEW_ASSET_TREND_PANEL_CLASS = "flex min-w-0 flex-col border-t pt-4 xl:border-l xl:border-t-0 xl:pl-4 xl:pt-0"
 export const OVERVIEW_ASSET_TREND_CHART_CLASS = "mt-4"
-// Keep the four distribution rows spread through the left column's remaining visualization slot.
-export const OVERVIEW_ASSET_DISTRIBUTION_CHART_CLASS = "aspect-auto h-56 min-h-0 w-full"
+// The sparkline is a fixed-viewBox, fluid-width line: it carries only the
+// type's own seven-day shape, never a cross-type magnitude comparison.
+export const OVERVIEW_ASSET_SPARKLINE_CLASS = "h-6 w-full min-w-0 text-foreground/50"
 // In the two-column row the left metrics/distribution determine height; the
 // chart fills the remainder below its title without stretching the whole page.
 export const OVERVIEW_ASSET_CHART_SHELL_CLASS = "h-56 min-w-0 xl:min-h-56 xl:flex-1"

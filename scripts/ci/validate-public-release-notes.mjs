@@ -22,6 +22,23 @@ const SHA_PATTERN = /^[0-9a-f]{40}$/i;
 const DIGEST_PATTERN = /^[0-9a-f]{64}$/i;
 const BILINGUAL_SECTION_NAMES = Object.freeze(["English", "简体中文"]);
 const CATEGORIES = new Set(["Added", "Improved", "Fixed", "Security", "Documentation"]);
+// Migration-bearing releases are not eligible for the in-app upgrade path, so
+// their Release Notes MUST tell the reader to follow the public deployment
+// guide's manual upgrade procedure. Keep this check mechanical: both language
+// sections must name the manual upgrade, a backup step, and the deployment
+// guide, instead of relying on the release executor's memory.
+const MIGRATION_GUIDANCE_RULES = Object.freeze({
+  English: Object.freeze([
+    { code: "manual-upgrade", pattern: /\bmanual(?:ly)? upgrade/i },
+    { code: "backup", pattern: /\bback(?:ed)?[ -]?up\b/i },
+    { code: "deployment-guide", pattern: /public-deployment/i },
+  ]),
+  "简体中文": Object.freeze([
+    { code: "manual-upgrade", pattern: /手动升级/ },
+    { code: "backup", pattern: /备份/ },
+    { code: "deployment-guide", pattern: /public-deployment/i },
+  ]),
+});
 const FORBIDDEN_EVIDENCE_FIELDS = Object.freeze([
   "provider",
   "providerInput",
@@ -67,6 +84,7 @@ function parseArgs(argv) {
     expectedBaselineCommit: "",
     expectedCandidateCommit: "",
     expectedTagCommit: "",
+    expectedHasDatabaseMigration: false,
     json: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -79,7 +97,7 @@ function parseArgs(argv) {
       process.stdout.write(usage());
       process.exit(0);
     }
-    if (!["--root-dir", "--tag", "--notes-file", "--evidence-file", "--expected-target-revision", "--expected-baseline-commit", "--expected-candidate-commit", "--expected-tag-commit"].includes(arg)) fail("invalid-argument", `unknown argument: ${arg}`);
+    if (!["--root-dir", "--tag", "--notes-file", "--evidence-file", "--expected-target-revision", "--expected-baseline-commit", "--expected-candidate-commit", "--expected-tag-commit", "--expected-has-database-migration"].includes(arg)) fail("invalid-argument", `unknown argument: ${arg}`);
     const value = argv[index + 1];
     if (!value || value.startsWith("--")) fail("invalid-argument", `${arg} requires a value`);
     if (arg === "--root-dir") options.rootDir = path.resolve(value);
@@ -90,6 +108,10 @@ function parseArgs(argv) {
     else if (arg === "--expected-baseline-commit") options.expectedBaselineCommit = value;
     else if (arg === "--expected-candidate-commit") options.expectedCandidateCommit = value;
     else if (arg === "--expected-tag-commit") options.expectedTagCommit = value;
+    else if (arg === "--expected-has-database-migration") {
+      if (value !== "true" && value !== "false") fail("invalid-argument", "--expected-has-database-migration must be true or false");
+      options.expectedHasDatabaseMigration = value === "true";
+    }
     index += 1;
   }
   if (!options.tag) fail("missing-tag", "--tag is required");
@@ -97,7 +119,7 @@ function parseArgs(argv) {
 }
 
 function usage() {
-  return "Usage: node scripts/ci/validate-public-release-notes.mjs --tag <tag> [--root-dir <dir>] [--notes-file <path>] [--evidence-file <path>] [--expected-target-revision <sha>] [--expected-baseline-commit <sha>] [--expected-candidate-commit <sha>] [--expected-tag-commit <sha>] [--json]\n";
+  return "Usage: node scripts/ci/validate-public-release-notes.mjs --tag <tag> [--root-dir <dir>] [--notes-file <path>] [--evidence-file <path>] [--expected-target-revision <sha>] [--expected-baseline-commit <sha>] [--expected-candidate-commit <sha>] [--expected-tag-commit <sha>] [--expected-has-database-migration <true|false>] [--json]\n";
 }
 
 function expectedNotesPath(tag) {
@@ -124,26 +146,47 @@ function decodeUtf8(bytes, relativePath) {
   }
 }
 
-function extractBilingualSections(text, relativePath = "release notes") {
+function parseBilingualSections(text, relativePath = "release notes") {
   const headings = [...text.matchAll(/^##[ \t]+(English|简体中文)[ \t]*$/gmu)];
   const sections = {};
   for (const heading of headings) {
     const name = heading[1];
-    if (sections[name]) fail("duplicate-language-section", `${relativePath} contains duplicate ## ${name} sections`);
+    if (sections[name] !== undefined) fail("duplicate-language-section", `${relativePath} contains duplicate ## ${name} sections`);
     const nextHeading = /^##[ \t]+[^\n]+$/gmu;
     nextHeading.lastIndex = heading.index + heading[0].length;
     const next = nextHeading.exec(text);
     const body = text.slice(heading.index + heading[0].length, next?.index ?? text.length).trim();
-    sections[name] = { present: true, nonEmpty: Boolean(body) };
+    sections[name] = body;
     if (!body) fail("empty-language-section", `${relativePath} has an empty ## ${name} section`);
   }
   for (const name of BILINGUAL_SECTION_NAMES) {
-    if (!sections[name]) fail("missing-language-section", `${relativePath} is missing required ## ${name} section`);
+    if (sections[name] === undefined) fail("missing-language-section", `${relativePath} is missing required ## ${name} section`);
   }
   return sections;
 }
 
-function validateReleaseNotes({ rootDir = DEFAULT_ROOT_DIR, tag, notesFile = "" } = {}) {
+function assertMigrationUpgradeGuidance(sections, relativePath = "release notes") {
+  const missing = [];
+  for (const name of BILINGUAL_SECTION_NAMES) {
+    const body = sections[name] ?? "";
+    for (const rule of MIGRATION_GUIDANCE_RULES[name]) {
+      if (!rule.pattern.test(body)) missing.push(`${name}:${rule.code}`);
+    }
+  }
+  if (missing.length > 0) {
+    fail(
+      "missing-migration-upgrade-guidance",
+      `${relativePath} must document the manual upgrade path in both languages when the release contains a database migration (missing: ${missing.join(", ")})`,
+    );
+  }
+}
+
+function extractBilingualSections(text, relativePath = "release notes") {
+  const bodies = parseBilingualSections(text, relativePath);
+  return Object.fromEntries(BILINGUAL_SECTION_NAMES.map((name) => [name, { present: true, nonEmpty: Boolean(bodies[name]) }]));
+}
+
+function validateReleaseNotes({ rootDir = DEFAULT_ROOT_DIR, tag, notesFile = "", expectedHasDatabaseMigration = false } = {}) {
   const relativePath = expectedNotesPath(tag);
   if (notesFile && normalizeNotesPath(notesFile) !== relativePath) {
     fail("tag-path-mismatch", `release notes path must be ${relativePath}, got ${notesFile}`);
@@ -167,7 +210,9 @@ function validateReleaseNotes({ rootDir = DEFAULT_ROOT_DIR, tag, notesFile = "" 
   for (const { code, pattern } of INTERNAL_PATTERNS) {
     if (pattern.test(text)) fail(code, `${relativePath} contains a blocked internal marker (${code})`);
   }
+  const sectionBodies = parseBilingualSections(text, relativePath);
   const bilingualSections = extractBilingualSections(text, relativePath);
+  if (expectedHasDatabaseMigration) assertMigrationUpgradeGuidance(sectionBodies, relativePath);
   return {
     schemaVersion: 1,
     passed: true,
@@ -176,6 +221,7 @@ function validateReleaseNotes({ rootDir = DEFAULT_ROOT_DIR, tag, notesFile = "" 
     bytes: bytes.length,
     sha256: crypto.createHash("sha256").update(bytes).digest("hex"),
     bilingualSections,
+    ...(expectedHasDatabaseMigration ? { migrationGuidance: { required: true, checked: BILINGUAL_SECTION_NAMES } } : {}),
   };
 }
 
@@ -249,6 +295,7 @@ function validateCandidateEvidence({
   expectedCandidateCommit = "",
   expectedTagCommit = "",
   notesFile = "",
+  expectedHasDatabaseMigration = false,
 } = {}) {
   const relativeEvidencePath = normalizeEvidencePath(evidenceFile || `${RELEASE_NOTE_EVIDENCE_PREFIX}/${tag}.json`, tag);
   const root = fs.realpathSync(rootDir);
@@ -396,13 +443,14 @@ function validateCandidateEvidence({
       fail("invalid-evidence-entries", "candidate evidence entries must only cover included sources");
     }
   }
-  const notes = validateReleaseNotes({ rootDir, tag, notesFile });
+  const notes = validateReleaseNotes({ rootDir, tag, notesFile, expectedHasDatabaseMigration });
   if (notes.sha256 !== notesDigest) fail("notes-evidence-mismatch", "candidate evidence notesDigest does not match the notes file");
   return {
     schemaVersion: 1,
     passed: true,
     evidencePath: relativeEvidencePath,
     identity,
+    baselineRelease: evidence.baselineRelease,
     factsDigest,
     auditDigest,
     notesDigest,

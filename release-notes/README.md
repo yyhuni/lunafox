@@ -151,6 +151,12 @@ Full Changelog: https://github.com/yyhuni/lunafox/compare/v1.2.2...v1.2.3
 - 若该 Release 的 manifest 声明 `databaseMigration.hasDatabaseMigration: true`，应用内更新
   不会给出可执行的 Upgrade Operation。英文和简体中文两节都必须明确说明该版本需要按公共
   部署指南手动升级，并建议先完成备份、再由 AI 助手按文档执行并核对每一步。
+- 上述迁移说明由脚本强制校验，不依赖发布执行者记忆：Release Notes 候选 PR 会根据 evidence
+  中的 `baselineRelease` 与 `targetRevision` 自动解析迁移边界并提前拦截；Tag 触发时
+  `validate-public-release-notes.mjs --expected-has-database-migration true` 在导出前再次检查；
+  manifest 生成阶段还会做最后一道校验。英文节必须出现 `manual upgrade`、备份语义
+  （`backup` / `back up`）和 `public-deployment` 指南引用；简体中文节必须出现“手动升级”“备份”
+  和 `public-deployment` 指南引用。
 - 其他 Release 也应指向公共部署指南与 Release 页面，不要假设用户能在浏览器里完成全部升级。
 - 不要把“自动更新”写成对含迁移版本也成立的承诺；当前迁移策略仍处于 release-candidate 阶段，
   保留数据升级尚未开放。

@@ -96,7 +96,7 @@ func (repository *PolicyRepository) ReadEffectivePatternsForScan(ctx context.Con
 	if err != nil {
 		return nil, err
 	}
-	return append([]string(nil), patterns...), nil
+	return append([]string{}, patterns...), nil
 }
 
 // ReplacePatterns locks one singleton row, gives stale etag precedence over
@@ -250,11 +250,14 @@ func policyModelToDomain(persisted *model.Policy) (*blacklistdomain.Policy, erro
 	if err := blacklistdomain.ValidateCanonicalPolicyPatterns(patterns); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrPolicyDataIntegrity, err)
 	}
+	// An empty persisted array must project as a non-nil empty slice: callers
+	// derive the policy etag from these patterns, and a nil slice would encode
+	// as JSON null and disagree with the etag returned by GET.
 	return &blacklistdomain.Policy{
 		ID:        persisted.ID,
 		Scope:     scope,
 		TargetID:  cloneTargetID(persisted.TargetID),
-		Patterns:  append([]string(nil), patterns...),
+		Patterns:  append([]string{}, patterns...),
 		UpdatedAt: persisted.UpdatedAt.UTC(),
 	}, nil
 }

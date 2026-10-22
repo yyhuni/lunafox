@@ -8,10 +8,14 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   OVERVIEW_ASSET_REGION_LOADING_SLOT,
   OVERVIEW_ASSET_CHART_SHELL_CLASS,
-  OVERVIEW_ASSET_DISTRIBUTION_CHART_CLASS,
+  OVERVIEW_ASSET_DISTRIBUTION_COLUMNS_CLASS,
+  OVERVIEW_ASSET_DISTRIBUTION_HEADER_GRID_CLASS,
+  OVERVIEW_ASSET_DISTRIBUTION_LIST_CLASS,
+  OVERVIEW_ASSET_DISTRIBUTION_ROW_CLASS,
   OVERVIEW_ASSET_METRIC_CLASS,
   OVERVIEW_ASSET_METRICS_GRID_CLASS,
   OVERVIEW_ASSET_OVERVIEW_GRID_CLASS,
+  OVERVIEW_ASSET_SPARKLINE_CLASS,
   OVERVIEW_ASSET_TREND_CHART_CLASS,
   OVERVIEW_ASSET_TREND_PANEL_CLASS,
   OVERVIEW_AGENT_LOCATION_MAP_BODY_CLASS,
@@ -226,16 +230,24 @@ function OverviewAssetOverviewSkeleton() {
               </div>
             ))}
           </div>
-          <div className={OVERVIEW_ASSET_DISTRIBUTION_CHART_CLASS}>
-            <div className="grid h-full min-w-0 content-center gap-3 pl-4">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="grid min-w-0 grid-cols-[48px_minmax(0,1fr)_84px] items-center gap-2">
-                  <OverviewTextSkeleton roleClassName={textRole.caption} className="w-10" />
-                  <Skeleton className="h-5 w-full rounded-sm" />
-                  <OverviewTextSkeleton roleClassName={textRole.metadataValue} className="w-20" />
+          <div className={OVERVIEW_ASSET_DISTRIBUTION_HEADER_GRID_CLASS}>
+            <OverviewTextSkeleton roleClassName={textRole.tableHeader} className="w-10" />
+            <OverviewTextSkeleton roleClassName={textRole.tableHeader} className="w-8 justify-self-end" />
+            <OverviewTextSkeleton roleClassName={textRole.tableHeader} className="w-7 justify-self-end" />
+            <OverviewTextSkeleton roleClassName={textRole.tableHeader} className="w-14 justify-self-end" />
+          </div>
+          <div className={OVERVIEW_ASSET_DISTRIBUTION_LIST_CLASS}>
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className={OVERVIEW_ASSET_DISTRIBUTION_ROW_CLASS}>
+                <div className={OVERVIEW_ASSET_DISTRIBUTION_COLUMNS_CLASS}>
+                  <OverviewTextSkeleton roleClassName={textRole.metadataLabel} className="w-12" />
+                  <OverviewTextSkeleton roleClassName={textRole.metadataValueStrong} className="w-12 justify-self-end" />
+                  <OverviewTextSkeleton roleClassName={textRole.metadataLabel} className="w-8 justify-self-end" />
+                  <OverviewTextSkeleton roleClassName={textRole.metadataValueStrong} className="w-12 justify-self-end" />
                 </div>
-              ))}
-            </div>
+                <Skeleton className={cn(OVERVIEW_ASSET_SPARKLINE_CLASS, "rounded-sm")} />
+              </div>
+            ))}
           </div>
         </div>
         <div className={OVERVIEW_ASSET_TREND_PANEL_CLASS}>

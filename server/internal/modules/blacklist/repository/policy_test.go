@@ -20,15 +20,15 @@ func TestPolicyRepositoryReadsEmptySingletonPolicies(t *testing.T) {
 	repository := NewPolicyRepository(db)
 
 	global, err := repository.GetGlobal(context.Background())
-	if err != nil || global == nil || len(global.Patterns) != 0 {
+	if err != nil || global == nil || global.Patterns == nil || len(global.Patterns) != 0 {
 		t.Fatalf("GetGlobal() = %#v, %v", global, err)
 	}
 	local, err := repository.GetTarget(context.Background(), targetID)
-	if err != nil || local == nil || local.TargetID == nil || *local.TargetID != targetID || len(local.Patterns) != 0 {
+	if err != nil || local == nil || local.TargetID == nil || *local.TargetID != targetID || local.Patterns == nil || len(local.Patterns) != 0 {
 		t.Fatalf("GetTarget() = %#v, %v", local, err)
 	}
 	patterns, err := repository.ReadEffectivePatternsForScan(context.Background(), targetID)
-	if err != nil || len(patterns) != 0 {
+	if err != nil || patterns == nil || len(patterns) != 0 {
 		t.Fatalf("ReadEffectivePatternsForScan() = %v, %v", patterns, err)
 	}
 }
@@ -73,6 +73,41 @@ func TestPolicyRepositoryReplaceUsesCurrentETagAndSkipsCanonicalNoop(t *testing.
 	}
 	if _, _, err := repository.ReplacePatterns(context.Background(), blacklistdomain.ScopeGlobal, nil, etag, []string{"not a hostname"}); !errors.Is(err, blacklistdomain.ErrInvalidPattern) {
 		t.Fatalf("invalid replace error = %v", err)
+	}
+}
+
+// Regression for the empty-policy save deadlock: a policy with no rules must
+// accept the etag its own GET returns, otherwise the first PATCH always fails
+// with ABORTED/409 and no rule can ever be stored.
+func TestPolicyRepositoryReplacesEmptyPolicyUnderReturnedETag(t *testing.T) {
+	db := openPolicyRepositoryTestDB(t)
+	seedPolicy(t, db, blacklistdomain.ScopeGlobal, nil, []string{})
+	repository := NewPolicyRepository(db)
+	ctx := context.Background()
+	current, err := repository.GetGlobal(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// GET projects the persisted empty array as a non-nil slice and derives
+	// sha256("[]"), so that is the etag the client sends back.
+	getETag, err := blacklistdomain.ETag([]string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	unchanged, changed, err := repository.ReplacePatterns(ctx, blacklistdomain.ScopeGlobal, nil, getETag, []string{})
+	if err != nil || changed || unchanged == nil || unchanged.Patterns == nil || len(unchanged.Patterns) != 0 {
+		t.Fatalf("empty no-op = %#v changed=%t err=%v", unchanged, changed, err)
+	}
+	updated, changed, err := repository.ReplacePatterns(ctx, blacklistdomain.ScopeGlobal, nil, getETag, []string{"example.com"})
+	if err != nil || !changed || len(updated.Patterns) != 1 || updated.Patterns[0] != "example.com" {
+		t.Fatalf("first empty-policy replace = %#v changed=%t err=%v", updated, changed, err)
+	}
+	projectedETag, err := blacklistdomain.ETag(current.Patterns)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if projectedETag != getETag {
+		t.Fatalf("repository etag %q != GET etag %q", projectedETag, getETag)
 	}
 }
 

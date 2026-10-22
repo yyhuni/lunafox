@@ -7,12 +7,12 @@
     "value": "sha256:e3d7dcbc55bf8652650a1543d1bfb9262fddf369d3fb4e544e9988896f96e96e"
   },
   "sourceRelease": {
-    "tag": "v0.0.1-alpha.225"
+    "tag": "v0.0.1-alpha.227"
   },
   "sourceRepository": "yyhuni/lunafox-private",
   "destinationRepository": "yyhuni/lunafox",
-  "sourceRevision": "797b926fa11983dce4439bca793267df61cb8b5c",
-  "sourceRevisionDigest": "sha256:e998d4da0c989e2acc6132a31aec82d5b1867b380d4f2091601c3c68e4c4bf6b",
+  "sourceRevision": "50400e85a328c854dd72c7c97ecb38d6be8ee649",
+  "sourceRevisionDigest": "sha256:f4eb8ff022455ae379a5ef6acde65963727dfe52c51f7dfc7976c4fad5b2b974",
   "publicTreePath": "agent/bin/sha256-e3d7dcbc55bf8652650a1543d1bfb9262fddf369d3fb4e544e9988896f96e96e",
   "platforms": [
     "linux/amd64",

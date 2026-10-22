@@ -255,3 +255,92 @@ test("requires target ancestry for both candidate PR heads and Tag trees", () =>
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("requires bilingual manual-upgrade guidance for migration-bearing releases", () => {
+  const { root, notesDir } = fixture();
+  try {
+    const tag = "v1.2.5";
+    const body = [
+      `# ${tag}`,
+      "",
+      "## English",
+      "",
+      "This release includes a database migration. Follow the manual upgrade procedure in docs/public-deployment.md after taking a backup.",
+      "",
+      "## 简体中文",
+      "",
+      "本版本包含数据库迁移。请先备份，然后按 docs/public-deployment.md 中的手动升级步骤操作。",
+      "",
+    ].join("\n");
+    fs.writeFileSync(path.join(notesDir, `${tag}.md`), body);
+    const result = validateReleaseNotes({ rootDir: root, tag, expectedHasDatabaseMigration: true });
+    assert.equal(result.migrationGuidance.required, true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rejects migration-bearing notes without the English manual-upgrade phrase", () => {
+  const { root, notesDir } = fixture();
+  try {
+    const tag = "v1.2.6";
+    const body = [
+      `# ${tag}`,
+      "",
+      "## English",
+      "",
+      "This release includes a database migration. Read docs/public-deployment.md and take a backup.",
+      "",
+      "## 简体中文",
+      "",
+      "本版本包含数据库迁移。请先备份，然后按 docs/public-deployment.md 中的手动升级步骤操作。",
+      "",
+    ].join("\n");
+    fs.writeFileSync(path.join(notesDir, `${tag}.md`), body);
+    assert.throws(
+      () => validateReleaseNotes({ rootDir: root, tag, expectedHasDatabaseMigration: true }),
+      /must document the manual upgrade path.*English:manual-upgrade/,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rejects migration-bearing notes without the Chinese backup phrase", () => {
+  const { root, notesDir } = fixture();
+  try {
+    const tag = "v1.2.7";
+    const body = [
+      `# ${tag}`,
+      "",
+      "## English",
+      "",
+      "This release includes a database migration. Follow the manual upgrade procedure in docs/public-deployment.md after taking a backup.",
+      "",
+      "## 简体中文",
+      "",
+      "本版本包含数据库迁移。请按 docs/public-deployment.md 中的手动升级步骤操作。",
+      "",
+    ].join("\n");
+    fs.writeFileSync(path.join(notesDir, `${tag}.md`), body);
+    assert.throws(
+      () => validateReleaseNotes({ rootDir: root, tag, expectedHasDatabaseMigration: true }),
+      /must document the manual upgrade path.*简体中文:backup/,
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("does not require upgrade guidance for non-migration releases", () => {
+  const { root, notesDir } = fixture();
+  try {
+    const tag = "v1.2.8";
+    const body = `# ${tag}\n\n## English\n\n- Faster scans.\n\n## 简体中文\n\n- 扫描速度更快。\n`;
+    fs.writeFileSync(path.join(notesDir, `${tag}.md`), body);
+    const result = validateReleaseNotes({ rootDir: root, tag, expectedHasDatabaseMigration: false });
+    assert.equal(result.migrationGuidance, undefined);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

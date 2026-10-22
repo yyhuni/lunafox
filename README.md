@@ -1,39 +1,122 @@
-# LunaFox
+<h1 align="center">LunaFox · 月狐</h1>
+
+<p align="center">
+  <b>自托管攻击面管理平台（ASM）| 面向授权安全测试与防御研究的资产发现与安全自动化系统</b>
+</p>
+
+<p align="center">
+  <a href="https://github.com/yyhuni/lunafox/stargazers"><img src="https://img.shields.io/github/stars/yyhuni/lunafox?style=flat-square&logo=github" alt="GitHub stars"></a>
+  <a href="https://github.com/yyhuni/lunafox/network/members"><img src="https://img.shields.io/github/forks/yyhuni/lunafox?style=flat-square&logo=github" alt="GitHub forks"></a>
+  <a href="https://github.com/yyhuni/lunafox/issues"><img src="https://img.shields.io/github/issues/yyhuni/lunafox?style=flat-square&logo=github" alt="GitHub issues"></a>
+  <a href="https://github.com/yyhuni/lunafox/blob/main/LICENSE"><img src="https://img.shields.io/github/license/yyhuni/lunafox?style=flat-square" alt="License"></a>
+</p>
+
+<p align="center">
+  <a href="#功能特性">功能特性</a> •
+  <a href="#快速开始">快速开始</a> •
+  <a href="#文档">文档</a> •
+  <a href="#反馈与贡献">反馈与贡献</a>
+</p>
+
+<p align="center">
+  <sub>关键词：ASM | 攻击面管理 | 资产发现 | 授权安全测试 | 分布式扫描 | 全局搜索 | 漏洞管理</sub>
+</p>
 
 **简体中文** | [English](README.en.md)
 
-LunaFox 攻击面管理平台，通过分布式 Agent（部署在扫描节点上的常驻执行组件）执行资产发现与漏洞扫描，并把资产和漏洞结果集中在一个 Web 界面里。[公开演示站](https://lunafox-demo.vercel.app) 用示例数据展示界面，无需登录。
+---
+## 在线 Demo
 
-<img src="docs/images/zh/overview.png" alt="LunaFox 总览" width="100%">
+[公开演示站](https://lunafox-demo.vercel.app/) 使用 mock 数据展示界面，无需登录，也未接入真实后端。
 
-## 核心能力
+<p align="center">
+  <img src="docs/images/zh/overview.png" alt="总览" width="24%">
+  <img src="docs/images/zh/workflows.png" alt="扫描工作流" width="24%">
+  <img src="docs/images/zh/scan-history.png" alt="扫描历史" width="24%">
+  <img src="docs/images/zh/nodes.png" alt="Agent 节点" width="24%">
+</p>
 
-- **资产盘点：** 目标、子域名、网站、端点、目录，以及由它们发现的资产。
-- **扫描编排：** 工作流把扫描步骤按顺序组合；每次扫描都会固定当时的工作流、配置、引擎包和执行计划。
-- **分布式执行：** Agent 领取不可变的执行计划，准备好输入文件，再在引擎容器里逐步执行。
-- **漏洞管理：** 扫描结果、漏洞和资产信息集中在一处。
-- **统一界面：** 总览、全局资产搜索、字典与指纹、Nuclei POC、通知，以及应用内系统升级。
-- **MCP 集成：** 通过 Model Context Protocol 把 AI 客户端接入部署范围的调查查询，以及受控的目标与扫描操作，使用静态 MCP 密钥。
-- **自托管：** 控制面、PostgreSQL、Redis、界面和常驻 Agent 都跑在同一套 Compose 里，之后还可以接入更多 Agent 节点。
+---
+## 文档
 
-| 扫描工作流 | 扫描历史 |
-| --- | --- |
-| <img src="docs/images/zh/workflows.png" alt="扫描工作流" width="100%"> | <img src="docs/images/zh/scan-history.png" alt="扫描历史" width="100%"> |
+- [公共部署指南](docs/public-deployment.md) - 安装、日常运维、数据库、升级与恢复
+- [Release Notes](release-notes/README.md) - 每个版本的变更记录
+- [贡献指南](CONTRIBUTING.md) - Issue、Pull Request 与贡献约定
 
-<img src="docs/images/zh/nodes.png" alt="Agent 节点" width="100%">
+---
+## 功能特性
 
+### 内置引擎
+
+以下为默认内置引擎；引擎以 Engine Package 形式分发，可按需扩展。
+
+| 引擎 | 工具 | 说明 |
+|------|------|------|
+| 子域名扫描 | Subfinder, PureDNS, MassDNS | 被动收集 + 主动枚举 |
+| 端口扫描 | Naabu | 自定义端口范围 |
+| 站点发现 | HTTPX | 探测状态码、标题、技术栈 |
+| 指纹识别 | Finger | 多源指纹库 |
+| URL 收集 | Katana, Waymore, HTTPX | 历史数据 + 主动爬取 |
+| 目录扫描 | FFUF | 智能校准、递归与并发控制 |
+| 安全检测 | Nuclei | 模板化漏洞检测 |
+| 站点截图 | Chromium, HTTPX | 截图与页面信息采集 |
+
+### 平台能力
+
+| 功能 | 说明 |
+|------|------|
+| 目标管理 | 域名 / IP / CIDR 目标 |
+| 组织管理 | 多组织与资产归属 |
+| 全局搜索 | 表达式语法，多字段组合查询 |
+| 漏洞管理 | 审核、复测与资产关联 |
+| 定时扫描 | Cron 周期任务 |
+| 扫描编排 | 工作流组合、冻结与历史 |
+| 分布式执行 | 多 Agent 节点与负载调度 |
+| 字典与指纹 | 词表、指纹库与 Nuclei POC 管理 |
+| 通知推送 | Discord 与 Webhook |
+| MCP 集成 | AI 客户端接入调查与受控操作 |
+| 系统升级 | 应用内升级、进度与恢复 |
+
+### 全局资产搜索
+
+- 多类型搜索：Website 与 Endpoint 资产
+- 表达式语法：`=` 包含、`==` 精确、`!=` 不等于
+- 逻辑组合：`&&`（AND）与 `||`（OR）
+- 多字段查询：url、host、title、statusCode、tech、responseHeaders、hasScreenshot
+- CSV 导出：流式导出全部搜索结果
+
+```bash
+# basic search
+host="api"
+statusCode==200
+tech="nginx"
+
+# combinations
+host="api" && statusCode==200
+tech="vue" || tech="react"
+```
+
+### 可视化界面
+
+- 数据统计：资产、扫描、漏洞和 Agent 集群状态
+- 实时进度：扫描进度、Engine 执行状态和历史记录
+- 通知推送：Discord 与 Webhook
+- 界面语言：简体中文与 English 可切换
+
+---
 ## 快速开始
 
 ### 环境要求
 
-- 支持 Linux 容器的 Docker Engine，以及 Docker Compose 2.24.0 或更高版本。
-- 为 `PUBLIC_PORT` 准备一个可用端口；默认是 443。
-- 能访问 Docker Hub、GHCR 或已配置的镜像仓库。
-- 为镜像、数据库数据、扫描结果和保留的日志预留磁盘空间。
+- 支持 Linux 容器的 Docker Engine，以及 Docker Compose 2.24.0 或更高版本
+- 生命周期脚本需要 Bash 3.2 或更高版本；Windows 请直接在 PowerShell 运行 Compose
+- 为 `PUBLIC_PORT` 准备可用端口；默认 443
+- 能访问 Docker Hub、GHCR 或已配置的镜像仓库
+- 为镜像、数据库数据、扫描结果和日志预留磁盘空间
 
 ### 安装
 
-公共仓库和每个 `lunafox-<version>.zip` Release 都包含等价的部署快照。请保留部署目录：`.env` 归安装实例所有，相对资源路径也从这个目录解析。
+公共仓库和每个 `lunafox-<version>.zip` Release 都包含等价的部署快照。
 
 **方式 1：从公共仓库安装**
 
@@ -57,87 +140,42 @@ cd lunafox-<version>
 docker compose up -d
 ```
 
-仓库和压缩包两种方式都会运行安装脚本，它会校验参数、启动整套服务，只有初始化任务、核心服务、Agent 和公共 HTTPS 入口全部就绪后才报告成功。直接使用 Compose 会跳过安装脚本的镜像预热和就绪检查，只建议在自行处理这些步骤时使用。
+方式 1、2 会运行安装脚本，完成参数校验、镜像预热和就绪检查；方式 3 会跳过这些步骤，仅建议在自行处理时使用。
 
-如果部署要从其他机器访问，请设置公网地址和端口：
+从其他机器访问时，设置公网地址和端口：
 
 ```console
 ./install.sh --public-host luna.example.com --public-port 8443
 ```
 
-首次启动会为 `PUBLIC_HOST` 生成自签名证书；本版本不提供自动证书管理。
+首次启动会为 `PUBLIC_HOST` 生成自签名证书；本版本不自动管理证书。数据库设置见[数据库环境变量](docs/public-deployment.zh-CN.md#数据库环境变量)，首次启动后的配置变更见[配置变更](docs/public-deployment.zh-CN.md#首次启动后的配置变更)。
 
-### 登录
+---
+## 反馈与贡献
 
-打开由 `PUBLIC_HOST` 和 `PUBLIC_PORT` 得到的地址（默认：本机 HTTPS 入口），用默认管理员账号登录：
+- 发现 Bug 或改进建议：提交 [Issue](https://github.com/yyhuni/lunafox/issues)
+- 想参与开发：请先阅读 [贡献指南](CONTRIBUTING.md)
+- 安全问题：请勿公开披露未修复漏洞，按贡献指南私下联系维护者
 
-| 用户名 | 密码 |
-| --- | --- |
-| `admin` | `admin` |
+---
+## 安全与合规说明
 
-首次登录后请在账号设置里修改密码。如果忘记管理员密码，在部署目录中运行：
+1. 本项目面向授权安全测试、防御研究与自有资产攻击面管理
+2. 使用者必须确保已获得目标系统、数据和环境的明确合法授权
+3. 默认 TLS 证书为自签名；本版本不自动管理证书
+4. Agent 使用长期有效的 bearer 令牌；TLS 身份、重放保护、轮换与吊销尚未实现
+5. 单机部署不提供自动备份、保留数据的回滚或跨节点恢复
 
-```console
-docker compose exec server resetadmin
-```
+请勿将本项目用于任何未经授权的扫描、入侵或破坏行为。
 
-### 发起第一次扫描
+---
+## Star History
 
-1. 在“目标”页面添加目标，或导入子域名、网站、端点和目录。
-2. 发起快速扫描，或运行由有序步骤组成的工作流扫描。
-3. 查看 Agent 和每个引擎容器回传的进度和结构化结果。
+[![Star History Chart](https://star-history.dera.page/svg?repos=yyhuni/lunafox&type=Date)](https://star-history.dera.page/#yyhuni/lunafox&Date)
 
-## 日常运维
+---
+## 许可证
 
-四个生命周期脚本覆盖常用操作；restart、logs、uninstall 以及各自的恢复行为请见部署指南。
-
-| 脚本 | 底层命令 | 封装脚本额外完成的工作 |
-| --- | --- | --- |
-| `./install.sh` | `docker compose up -d` | 校验公网地址和端口，拉取并预热镜像，等待就绪。 |
-| `./start.sh` | `docker compose up -d` | 启动已有部署，等待就绪。 |
-| `./stop.sh` | `docker compose stop` | 停止常驻服务，保留全部数据。 |
-| `./status.sh` | `docker compose ps` | 输出就绪摘要；完全就绪时才返回 0。 |
-
-### 配置
-
-首次启动前检查 `.env`。第一方镜像默认从 Docker Hub 拉取；需要时显式改用 GHCR：
-
-```dotenv
-RELEASE_REGISTRY=docker.io
-# RELEASE_REGISTRY=ghcr.io
-```
-
-[数据库环境变量](docs/public-deployment.zh-CN.md#数据库环境变量)一节列出所有数据库设置和默认值。首次成功启动后，`DATABASE_MODE`、`DB_PASSWORD` 和 `JWT_SECRET` 会记到 `lunafox_config`；再改成不同的非空值会直接失败，留空则复用已保存的值。恢复步骤见[首次启动后的配置变更](docs/public-deployment.zh-CN.md#首次启动后的配置变更)。
-
-### 升级与恢复
-
-升级是产品自带的功能：管理员在 Web 界面里检查、确认并启动符合条件的更新。没有宿主机升级脚本，生命周期脚本也不会绕过升级流程。含数据库迁移的 release 目前无法在应用内自动升级：更新仍会显示，但需要按部署指南的手动 fallback 替换发布包并完成迁移。这个单机版本不提供自动备份、保留数据的回滚或跨节点恢复；出问题只能靠已验证的备份恢复，或走批准过的前向修复。详见[系统更新](docs/public-deployment.zh-CN.md)。
-
-## 故障排查
-
-- 就绪超时：运行 `./status.sh` 和 `./logs.sh <service>`；不会自动回滚，请先修复再重复同一条命令。
-- 镜像拉取或预热失败：检查到所选仓库的出站网络，以及 engine-preheater 的日志，然后重试。
-- 浏览器提示证书问题：首次启动使用自签名证书；本版本不提供自动证书管理。
-- 宿主机端口被占用：首次启动前改一个不同的 `PUBLIC_PORT`，或释放该端口。
-- 修改后数据库凭据冲突：恢复原来的 `DB_PASSWORD` 和 `JWT_SECRET`，或清空它们让空输入复用已保存的值。
-- 升级进入恢复或需要关注的状态：以 `lunafox_upgrade_state` 里的升级日志为准；没有自动回滚。
-
-更多恢复路径见[部署指南](docs/public-deployment.zh-CN.md)。
-
-## 安全边界
-
-- 默认 TLS 证书是自签名的；本版本不提供自动证书管理。
-- 这个单机部署不提供滚动升级、自动备份、保留数据的回滚或跨节点恢复。
-- Agent 目前通过长期有效的 bearer 令牌认证。Agent 侧的 TLS 证书身份校验、重放保护、令牌轮换和吊销尚未实现，这些需要另行做安全加固。
-- 请在自有或受控的基础设施上运行 LunaFox。
-
-## 文档
-
-- [公共部署指南](docs/public-deployment.zh-CN.md)：安装、日常运维、数据库设置、升级、日志、证书与恢复的完整说明。
-- [Release Notes](release-notes/README.md)：每个版本的变更记录。
-
-## 许可与贡献
-
-部署文件和第一方公开的 Runtime 与 Engine 源码使用 `GPL-3.0-only` 许可；Engine Runtime Images 和 Engine Packages 是公开产物。第三方组件继续遵循各自的许可证和署名条款。完整许可文本见 [LICENSE](LICENSE)。
+部署文件与第一方公开的 Runtime/Engine 源码采用 [GPL-3.0-only](LICENSE)；Engine Runtime Images 与 Engine Packages 是公开产物；第三方组件遵循各自的许可证与署名条款。
 
 > **GENERATED / READ-ONLY PROJECTION（生成投影，只读）。** 由 LunaFox 私有源码生成；发现问题请带上对应 release tag 按 [CONTRIBUTING.md](CONTRIBUTING.md) 反馈。

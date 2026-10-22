@@ -3,43 +3,45 @@
 import { useEffect, useState } from "react"
 import { useReducedMotion } from "framer-motion"
 import { useLocale, useTranslations } from "next-intl"
-import { Bar, BarChart, Cell, LabelList, XAxis, YAxis, type LabelProps } from "recharts"
 import { useAssetStatistics, useStatisticsHistory } from "@/hooks/use-overview"
 import { semanticIcons } from "@/components/icons"
 import { OverviewAreaChart } from "@/components/overview/overview-area-chart"
+import {
+  ASSET_SPARKLINE_VIEW_HEIGHT,
+  ASSET_SPARKLINE_VIEW_WIDTH,
+  buildAssetSparklineAreaPoints,
+  buildAssetSparklinePoints,
+} from "@/components/overview/overview-asset-sparkline"
 import { OverviewNumberTicker } from "@/components/overview/overview-number-ticker"
 import { AppErrorState } from "@/components/shared/feedback/app-error-state"
 import {
   OVERVIEW_ASSET_CHART_SHELL_CLASS,
-  OVERVIEW_ASSET_DISTRIBUTION_CHART_CLASS,
+  OVERVIEW_ASSET_DISTRIBUTION_COLUMNS_CLASS,
+  OVERVIEW_ASSET_DISTRIBUTION_HEADER_GRID_CLASS,
+  OVERVIEW_ASSET_DISTRIBUTION_LIST_CLASS,
+  OVERVIEW_ASSET_DISTRIBUTION_ROW_CLASS,
   OVERVIEW_ASSET_METRIC_CLASS,
   OVERVIEW_ASSET_METRICS_GRID_CLASS,
   OVERVIEW_ASSET_OVERVIEW_GRID_CLASS,
+  OVERVIEW_ASSET_SPARKLINE_CLASS,
   OVERVIEW_ASSET_TREND_CHART_CLASS,
   OVERVIEW_ASSET_TREND_PANEL_CLASS,
   OverviewSectionPanel,
 } from "@/components/overview/overview-section-layouts"
 import { formatAssetTrendAxisTick, formatOverviewDateTick, formatOverviewSignedChange } from "@/components/overview/overview-axis-format"
-import {
-  ASSET_DISTRIBUTION_AXIS_TICK_MARGIN,
-  resolveAssetDistributionAxisWidth,
-} from "@/components/overview/overview-distribution-axis"
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 import type { AssetDistributionChartSeries } from "@/lib/chart-config"
-import { getTrendToneTextClass } from "@/lib/status-config"
+import { getTrendToneTextClass, type TrendTone } from "@/lib/status-config"
 import { normalizeError } from "@/lib/errors/normalize-error"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
 import { COMPACT_SECTION_STACK_CLASS } from "@/components/shared/layout/page-shell-density"
+import type { StatisticsHistoryItem } from "@/types/overview.types"
 
 const AssetIcon = semanticIcons.concept.asset
 const TargetIcon = semanticIcons.concept.target
 
 const ASSET_CHART_MARGIN = { top: 12, right: 0, left: 0, bottom: 0 }
 const ASSET_CHART_X_AXIS_PADDING = { left: 0, right: 16 }
-const ASSET_DISTRIBUTION_BASE_COLOR = "var(--foreground)"
-const ASSET_DISTRIBUTION_MIN_OPACITY = 0.32
-const ASSET_DISTRIBUTION_MAX_OPACITY = 0.68
 const ASSET_CHART_DOT = {
   fill: "var(--card)",
   r: 3,
@@ -52,30 +54,38 @@ const ASSET_CHART_TOOLTIP_STYLE = {
   borderRadius: 8,
   boxShadow: "none",
 }
+// The row trend, the seven-day delta, and the headline count all describe the
+// same asset type, so they must read from the matching statistics field.
+const ASSET_TYPE_HISTORY_KEYS = {
+  subdomain: "totalSubdomains",
+  ip: "totalIps",
+  endpoint: "totalEndpoints",
+  website: "totalWebsites",
+} as const satisfies Record<AssetDistributionChartSeries, keyof StatisticsHistoryItem>
 
-function AssetDistributionValueLabel({ value, viewBox }: LabelProps) {
-  if (
-    value === undefined ||
-    !viewBox ||
-    !("x" in viewBox) ||
-    viewBox.x === undefined ||
-    viewBox.y === undefined ||
-    viewBox.width === undefined ||
-    viewBox.height === undefined
-  ) {
-    return null
-  }
-
+function AssetSparkline({ points }: { points: string }) {
   return (
-    <text
-      className="fill-foreground"
-      dominantBaseline="middle"
-      fontSize={11}
-      x={viewBox.x + viewBox.width + 8}
-      y={viewBox.y + viewBox.height / 2}
+    <svg
+      aria-hidden="true"
+      className={OVERVIEW_ASSET_SPARKLINE_CLASS}
+      preserveAspectRatio="none"
+      viewBox={`0 0 ${ASSET_SPARKLINE_VIEW_WIDTH} ${ASSET_SPARKLINE_VIEW_HEIGHT}`}
     >
-      {String(value)}
-    </text>
+      {points ? (
+        <>
+          <polygon fill="currentColor" fillOpacity={0.18} points={buildAssetSparklineAreaPoints(points)} />
+          <polyline
+            fill="none"
+            points={points}
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            vectorEffect="non-scaling-stroke"
+          />
+        </>
+      ) : null}
+    </svg>
   )
 }
 
@@ -99,48 +109,38 @@ export function OverviewAssetOverview() {
     { key: "websites", series: "website", label: tAsset("tabs.websites"), value: assets.data?.totalWebsites ?? 0 },
   ]
   const distributionTotal = assetTypes.reduce((sum, item) => sum + item.value, 0)
-  const assetDistributionConfig = {
-    value: {
-      label: t("assets"),
-    },
-    subdomain: {
-      label: tAsset("tabs.subdomains"),
-      color: ASSET_DISTRIBUTION_BASE_COLOR,
-    },
-    ip: {
-      label: tAsset("tabs.ips"),
-      color: ASSET_DISTRIBUTION_BASE_COLOR,
-    },
-    endpoint: {
-      label: tAsset("tabs.endpoints"),
-      color: ASSET_DISTRIBUTION_BASE_COLOR,
-    },
-    website: {
-      label: tAsset("tabs.websites"),
-      color: ASSET_DISTRIBUTION_BASE_COLOR,
-    },
-  } satisfies ChartConfig
-  const maxDistributionValue = Math.max(...assetTypes.map((item) => item.value), 1)
-  const assetDistributionData = assetTypes.map((item) => {
+  const historyItems = history.data ?? []
+  const assetDistributionRows = assetTypes.map((item) => {
+    const seriesValues = historyItems.map((entry) => Number(entry[ASSET_TYPE_HISTORY_KEYS[item.series]] ?? 0))
+    const hasHistory = seriesValues.length >= 2
+    const sevenDayChange = hasHistory
+      ? (seriesValues.at(-1) ?? 0) - (seriesValues.at(0) ?? 0)
+      : 0
     const percent = distributionTotal > 0 ? Math.round((item.value / distributionTotal) * 100) : 0
+    const changeTone: TrendTone = sevenDayChange > 0 ? "positive" : sevenDayChange < 0 ? "negative" : "neutral"
 
     return {
       ...item,
-      displayValue: `${item.value.toLocaleString(locale)} (${percent}%)`,
-      fill: ASSET_DISTRIBUTION_BASE_COLOR,
-      fillOpacity:
-        ASSET_DISTRIBUTION_MIN_OPACITY +
-        (item.value / maxDistributionValue) *
-          (ASSET_DISTRIBUTION_MAX_OPACITY - ASSET_DISTRIBUTION_MIN_OPACITY),
+      percent,
+      hasHistory,
+      sevenDayChange,
+      changeTone,
+      sparklinePoints: buildAssetSparklinePoints(seriesValues),
     }
   })
-  const historyData = (history.data ?? []).map((item) => ({
+  const distributionLabel = assetDistributionRows
+    .map((row) => {
+      const valueLabel = `${row.label} ${row.value.toLocaleString(locale)} (${row.percent}%)`
+
+      return row.hasHistory
+        ? `${valueLabel}, ${t("newIn7d")} ${formatOverviewSignedChange(row.sevenDayChange, locale)}`
+        : valueLabel
+    })
+    .join("; ")
+  const historyData = historyItems.map((item) => ({
     date: item.date,
     totalAssets: item.totalAssets,
   }))
-  const assetDistributionAxisWidth = resolveAssetDistributionAxisWidth(
-    assetDistributionData.map((item) => item.label),
-  )
   useEffect(() => {
     if (!historyData.length || prefersReducedMotion !== false) {
       setIsTrendAnimationActive(false)
@@ -191,50 +191,41 @@ export function OverviewAssetOverview() {
             </div>
 
             <div
-              aria-label={assetDistributionData.map((item) => `${item.label} ${item.displayValue}`).join(", ")}
+              aria-label={distributionLabel}
               className="min-w-0"
               role="img"
             >
-              <ChartContainer
-                config={assetDistributionConfig}
-                className={OVERVIEW_ASSET_DISTRIBUTION_CHART_CLASS}
-              >
-                <BarChart
-                  accessibilityLayer
-                  data={assetDistributionData}
-                  layout="vertical"
-                  margin={{ top: 2, right: 92, left: 0, bottom: 2 }}
-                >
-                  <XAxis dataKey="value" type="number" hide />
-                  <YAxis
-                    axisLine={false}
-                    dataKey="label"
-                    tick={{ textAnchor: "end" }}
-                    tickLine={false}
-                    tickMargin={ASSET_DISTRIBUTION_AXIS_TICK_MARGIN}
-                    type="category"
-                    width={assetDistributionAxisWidth}
-                  />
-                  <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent hideLabel nameKey="series" />}
-                  />
-                  <Bar
-                    barSize={20}
-                    dataKey="value"
-                    radius={2}
-                  >
-                    {assetDistributionData.map((item) => (
-                      <Cell key={item.key} fill={item.fill} fillOpacity={item.fillOpacity} />
-                    ))}
-                    <LabelList
-                      content={AssetDistributionValueLabel}
-                      dataKey="displayValue"
-                      position="right"
-                    />
-                  </Bar>
-                </BarChart>
-              </ChartContainer>
+              <div className={OVERVIEW_ASSET_DISTRIBUTION_HEADER_GRID_CLASS}>
+                <span className={textRole.tableHeader}>{t("type")}</span>
+                <span className={cn(textRole.tableHeader, "text-right")}>{t("count")}</span>
+                <span className={cn(textRole.tableHeader, "text-right")}>{t("share")}</span>
+                <span className={cn(textRole.tableHeader, "text-right")}>{t("newIn7d")}</span>
+              </div>
+              <div className={OVERVIEW_ASSET_DISTRIBUTION_LIST_CLASS}>
+                {assetDistributionRows.map((row) => (
+                  <div key={row.key} className={OVERVIEW_ASSET_DISTRIBUTION_ROW_CLASS}>
+                    <div className={OVERVIEW_ASSET_DISTRIBUTION_COLUMNS_CLASS}>
+                      <span className={cn("truncate", textRole.metadataLabel)}>{row.label}</span>
+                      <span className={cn(textRole.metadataValueStrong, "text-right tabular-nums")}>
+                        {row.value.toLocaleString(locale)}
+                      </span>
+                      <span className={cn(textRole.metadataLabel, "text-right tabular-nums")}>{row.percent}%</span>
+                      <span
+                        className={cn(
+                          textRole.metadataValueStrong,
+                          "text-right tabular-nums",
+                          row.hasHistory ? getTrendToneTextClass(row.changeTone) : "text-muted-foreground",
+                        )}
+                      >
+                        {row.hasHistory
+                          ? row.sevenDayChange === 0 ? "0" : formatOverviewSignedChange(row.sevenDayChange, locale)
+                          : "—"}
+                      </span>
+                    </div>
+                    <AssetSparkline points={row.sparklinePoints} />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
