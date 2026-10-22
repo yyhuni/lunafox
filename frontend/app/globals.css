@@ -923,6 +923,14 @@ html[data-theme-sync] *::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /*
+   * The universal motion reset must not touch overlay positioners. Base UI writes
+   * each popup's anchor offset into an inline transform, so `transform: none
+   * !important` below would strand every menu/popover/tooltip/select at the
+   * viewport origin, still visible because the shared enter animation owns
+   * opacity. `:where()` keeps this entry's specificity unchanged so the
+   * tabs-active-indicator override further down still wins.
+   */
   html[data-theme] body,
   html[data-theme] header,
   html[data-theme] main,
@@ -930,7 +938,7 @@ html[data-theme-sync] *::after {
   html[data-theme] section,
   html[data-theme] article,
   html[data-theme] button,
-  html[data-theme] [data-slot],
+  html[data-theme] [data-slot]:where(:not([data-slot$="-positioner"])),
   html[data-theme] [data-slot="spinner"],
   html[data-theme] [data-slot="button-loading-indicator"],
   html[data-theme] [data-slot="toast-loading-icon"],

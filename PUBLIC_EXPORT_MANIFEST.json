@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:5320e3b832ef7415799ecbc0233487446fe341ba20d51c2d08670de3cab78808",
-  "releaseTag": "v0.0.1-alpha.228",
+  "sourceRevisionDigest": "sha256:d88836d76cf786447038382c37638f63699467efe052f83d010a3444d8c635ec",
+  "releaseTag": "v0.0.1-alpha.229",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "7e4d474b44fe6122c9800ad1e507b44024b24e2065d06eea79766465d7325160"
+      "sha256": "3ab8ab19c371ba62da3eaf6ba57db9a2d4656a441ad5167d0bd3ce08e54f0167"
     },
     {
       "path": "README.en.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "681c38940ba0285f241810a04553b84b518459ccf04cb6e09d6ae07316208586"
+      "sha256": "fa32625dfd4b1224f0bffbe91e7a3d9e58a8c786bf9815d7a16894506d3c58e1"
     },
     {
       "path": "agent/bin/sha256-e3d7dcbc55bf8652650a1543d1bfb9262fddf369d3fb4e544e9988896f96e96e/agent-bundle.sha256",
@@ -92,7 +92,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9181,
-      "sha256": "0746e0eaa1038196b8eee93dbf5e953010a3aca29d997830a8d4c057897ecc63"
+      "sha256": "8347caf2ed2e4a491687a12c2b09e747d4e3338b0b0e30e31581938aff2737da"
     },
     {
       "path": "agent/bin/sha256-e3d7dcbc55bf8652650a1543d1bfb9262fddf369d3fb4e544e9988896f96e96e/lunafox-agent-linux-amd64",
@@ -3609,6 +3609,13 @@
       "sha256": "061cdf6ce368b752692f92a48cc9c19364f61fcaab05378e594a703c1251bf96"
     },
     {
+      "path": "frontend/__tests__/reduced-motion-overlay-positioning.contract.test.ts",
+      "type": "file",
+      "mode": "0644",
+      "size": 2150,
+      "sha256": "1daca79bcfd022ff0844196da704f14d7f055226d5c1f1026d010c5f9b860fb5"
+    },
+    {
       "path": "frontend/__tests__/service-boundary.contract.test.ts",
       "type": "file",
       "mode": "0644",
@@ -3731,8 +3738,8 @@
       "path": "frontend/app/globals.css",
       "type": "file",
       "mode": "0644",
-      "size": 32208,
-      "sha256": "16088d6e9f66aac6404c9f988cd4e1e2a1c1a4d48e1a7ba66bdee23791367e89"
+      "size": 32707,
+      "sha256": "fc2a90894318a6f32c8c1e4c8a10ea114c5fade723d3dce7927babe8e86b94a3"
     },
     {
       "path": "frontend/app/icon.png",
@@ -11676,8 +11683,8 @@
       "path": "frontend/components/ui/README.md",
       "type": "file",
       "mode": "0644",
-      "size": 118446,
-      "sha256": "ee6eeda4b75cd72a37a537f9398789bf8c26ae05c5c0155c9d4dbd6129ca672b"
+      "size": 118941,
+      "sha256": "81054db371a134beb3be85f2543c82e603c7eb53525c363bdb5f161c82ca3c44"
     },
     {
       "path": "frontend/components/ui/__tests__/alert-dialog.contract.test.ts",
@@ -18083,6 +18090,13 @@
       "mode": "0644",
       "size": 766,
       "sha256": "ca3f06f14ecda454d3d714d82a447c69fd0558eac257362eb3bf5acfaede24e5"
+    },
+    {
+      "path": "release-notes/v0.0.1-alpha.229.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 611,
+      "sha256": "b8f45e545aa6baa7c400f165a64ae29d31f12fe7a98ffa36f5e9be98ebfb72f2"
     },
     {
       "path": "resources/alloy/config.alloy",

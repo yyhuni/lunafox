@@ -387,6 +387,8 @@ When a content-tab rail needs different density or underline behavior, extend `T
 
 Layering must use shared overlay helpers or primitives. Do not add page-local z-index ladders. New overlay width tier or z-index ownership requires a contract test and README update.
 
+Overlay position MUST stay owned by the primitive positioner: Base UI writes each popup's anchor offset into an inline `transform` on `[data-slot$="-positioner"]` nodes. Any global motion or reduced-motion reset that forces `transform: none` onto `[data-slot]` MUST exclude `-positioner` slots, otherwise every menu, popover, tooltip, and select opens at the viewport origin instead of its trigger. `frontend/__tests__/reduced-motion-overlay-positioning.contract.test.ts` guards this boundary.
+
 Shared overlay owners live under `frontend/components/shared`. Route code SHOULD use the shared owner before raw primitives:
 
 - Use `FormDrawer` from `frontend/components/shared/form-drawer` for create/edit/link/configuration drawers with a fixed footer.
