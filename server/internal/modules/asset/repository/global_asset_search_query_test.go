@@ -71,6 +71,47 @@ func TestGlobalAssetSearchRepositoriesOnlyReadSelectedCurrentTableForActiveTarge
 	}
 }
 
+func TestGlobalAssetSearchRepositoryFiltersByCurrentOrganizationsWithoutDuplicates(t *testing.T) {
+	db := newAssetRepositoryDB(t)
+	now := time.Date(2026, 8, 7, 9, 0, 0, 0, time.UTC)
+	if err := db.Create(&model.AssetTargetRef{ID: 2, Name: "second.example", Type: assetdomain.TargetTypeDomain}).Error; err != nil {
+		t.Fatalf("seed second target: %v", err)
+	}
+	if err := db.Exec(`INSERT INTO organization (id, name) VALUES (1, 'Tencent'), (2, '腾讯云')`).Error; err != nil {
+		t.Fatalf("seed organizations: %v", err)
+	}
+	if err := db.Exec(`INSERT INTO organization_target (organization_id, target_id) VALUES (1, 1), (2, 1), (1, 2)`).Error; err != nil {
+		t.Fatalf("seed organization targets: %v", err)
+	}
+	if err := db.Create([]model.Website{
+		{ID: 1, TargetID: 1, URL: "https://first.example.test", Host: "first.example.test", CreatedAt: now, Tech: pq.StringArray{}},
+		{ID: 2, TargetID: 2, URL: "https://second.example.test", Host: "second.example.test", CreatedAt: now.Add(-time.Second), Tech: pq.StringArray{}},
+	}).Error; err != nil {
+		t.Fatalf("seed websites: %v", err)
+	}
+	if err := db.Create(&model.Endpoint{ID: 3, TargetID: 1, URL: "https://first.example.test/api", Host: "first.example.test", CreatedAt: now, Tech: pq.StringArray{}}).Error; err != nil {
+		t.Fatalf("seed endpoint: %v", err)
+	}
+
+	andAST, err := assetapp.ParseGlobalAssetSearchQuery(`organization=="Tencent" && organization=="腾讯云"`)
+	if err != nil {
+		t.Fatalf("parse organization AND: %v", err)
+	}
+	websites, total, capped, err := NewWebsiteRepository(db).SearchGlobalWebsites(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: andAST, PageSize: 10})
+	if err != nil || len(websites) != 1 || websites[0].ID != 1 || total != 1 || capped {
+		t.Fatalf("organization AND must require both current relationships without duplicate rows: items=%+v total=%d capped=%v err=%v", websites, total, capped, err)
+	}
+
+	containsAST, err := assetapp.ParseGlobalAssetSearchQuery(`organization="腾讯"`)
+	if err != nil {
+		t.Fatalf("parse organization contains: %v", err)
+	}
+	endpoints, total, capped, err := NewEndpointRepository(db).SearchGlobalEndpoints(context.Background(), assetapp.GlobalAssetSearchStoreQuery{AST: containsAST, PageSize: 10})
+	if err != nil || len(endpoints) != 1 || endpoints[0].ID != 3 || total != 1 || capped {
+		t.Fatalf("organization contains must apply to Endpoint current relationships: items=%+v total=%d capped=%v err=%v", endpoints, total, capped, err)
+	}
+}
+
 func TestGlobalAssetSearchRepositoryUsesStableKeysetAndFieldSemantics(t *testing.T) {
 	db := newAssetRepositoryDB(t)
 	now := time.Date(2026, 8, 7, 9, 0, 0, 0, time.UTC)

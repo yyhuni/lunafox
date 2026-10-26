@@ -74,6 +74,7 @@ export function useSearchPageState() {
   const [pageSize, setPageSize] = React.useState(GLOBAL_ASSET_SEARCH_DEFAULT_PAGE_SIZE)
   const [pageTokens, setPageTokens] = React.useState<Array<string | undefined>>([undefined])
   const [pageIndex, setPageIndex] = React.useState(0)
+  const [organizationSearchRevision, setOrganizationSearchRevision] = React.useState(0)
   const [recentSearches, setRecentSearches] = React.useState<string[]>([])
   const [queryDiagnosticCode, setQueryDiagnosticCode] = React.useState<GlobalAssetSearchDiagnosticCode | null>(initialQueryDiagnosticCode)
   const lastUrlQueryRef = React.useRef(initialQuery)
@@ -90,7 +91,10 @@ export function useSearchPageState() {
 
   const beginSearch = React.useCallback((nextQuery: string, nextAssetType: AssetType, nextPageSize = pageSize) => {
     try {
-      parseGlobalAssetSearchQuery(nextQuery)
+      const parsed = parseGlobalAssetSearchQuery(nextQuery)
+      if (parsed.mode === "structured" && parsed.conditions.some((condition) => condition.field === "organization")) {
+        setOrganizationSearchRevision((current) => current + 1)
+      }
     } catch (error) {
       setQueryDiagnosticCode(getGlobalAssetSearchDiagnosticCode(error))
       return false
@@ -152,9 +156,20 @@ export function useSearchPageState() {
     }
   }, [assetType, pageIndex, pageSize, pageTokens, submittedQuery])
 
-  const { data, isLoading, error, isFetching, refetch } = useAssetSearch(activeSearchParams, {
-    enabled: searchState === "searching" || searchState === "results",
-  })
+  const searchEnabled = searchState === "searching" || searchState === "results"
+  const submittedQueryHasOrganization = React.useMemo(() => {
+    if (!submittedQuery) return false
+    try {
+      const parsed = parseGlobalAssetSearchQuery(submittedQuery)
+      return parsed.mode === "structured" && parsed.conditions.some((condition) => condition.field === "organization")
+    } catch {
+      return false
+    }
+  }, [submittedQuery])
+  const searchOptions = submittedQueryHasOrganization && organizationSearchRevision > 0
+    ? { enabled: searchEnabled, requestNonce: organizationSearchRevision }
+    : { enabled: searchEnabled }
+  const { data, isLoading, error, isFetching, refetch } = useAssetSearch(activeSearchParams, searchOptions)
 
   const tPagination = useTranslations("common.pagination")
   // The capped summary is display-only: navigation stays token-driven, so the

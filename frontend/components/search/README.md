@@ -75,13 +75,16 @@
 - `GET /v1/assets:search` accepts `q`, `assetType`, optional `pageSize`, and
   optional `pageToken`; the page defaults to Website and 10 rows.
 - Plain text searches URL only. Structured input allows `url`, `host`, `title`,
-  `statusCode`, and `tech` with one flat connector: `&&` or the word `and` when
-  every condition must match, or `||` or the word `or` when any condition may
-  match. The shared frontend parser rejects mixed connectors and other
-  unsupported syntax before fetching.
-- `=` contains values for URL, host, and title require at least two Unicode
-  characters. `==` exact values are not subject to this minimum; status codes
-  remain integers and technology values remain exact elements.
+  `statusCode`, `tech`, `hasScreenshot`, `responseHeaders`, and `organization`
+  with one flat connector: `&&` or the word `and` when every condition must
+  match, or `||` or the word `or` when any condition may match. The shared
+  frontend parser rejects mixed connectors and other unsupported syntax before
+  fetching.
+- `=` contains values for URL, host, title, and organization require at least
+  two Unicode characters; response headers keep their three-character minimum.
+  `==` exact values are not subject to these minimums; status codes remain
+  integers, technology values remain exact elements, and organization matches
+  the current display name.
 - Focusing or clicking the resolved search input opens `SearchSyntaxGuidance`.
   It derives its fields from `GLOBAL_ASSET_SEARCH_FIELDS`, shows `=`, `==`,
   `&&`, and `||`, and offers draft-only field/example shortcuts. Its popover aligns

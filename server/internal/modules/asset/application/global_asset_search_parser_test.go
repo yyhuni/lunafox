@@ -228,6 +228,28 @@ func TestParseGlobalAssetSearchQueryUsesFieldSpecificTypedSemantics(t *testing.T
 	}
 }
 
+func TestParseGlobalAssetSearchQuerySupportsOrganizationNameSemantics(t *testing.T) {
+	contains, err := ParseGlobalAssetSearchQuery(`organization="腾讯" && host="api"`)
+	if err != nil {
+		t.Fatalf("organization contains query should be accepted: %v", err)
+	}
+	if len(contains.Conditions) != 2 || contains.Conditions[0].Field != GlobalAssetSearchFieldOrganization || contains.Conditions[0].Operator != GlobalAssetSearchOperatorContains || contains.Conditions[0].Text != "腾讯" {
+		t.Fatalf("unexpected organization contains AST: %+v", contains)
+	}
+	exact, err := ParseGlobalAssetSearchQuery(`organization=="A"`)
+	if err != nil {
+		t.Fatalf("single-character organization exact query should be accepted: %v", err)
+	}
+	if condition := exact.Conditions[0]; condition.Field != GlobalAssetSearchFieldOrganization || condition.Operator != GlobalAssetSearchOperatorExact || condition.Text != "A" {
+		t.Fatalf("unexpected organization exact condition: %+v", condition)
+	}
+	for _, raw := range []string{`organization="A"`, `organization="  A "`} {
+		if _, err := ParseGlobalAssetSearchQuery(raw); !errors.Is(err, ErrInvalidGlobalAssetSearchQuery) {
+			t.Fatalf("organization contains query %q should be rejected: %v", raw, err)
+		}
+	}
+}
+
 func TestParseGlobalAssetSearchQuerySupportsHasScreenshotBoolean(t *testing.T) {
 	for _, raw := range []string{`hasScreenshot="true"`, `hasScreenshot=="true"`} {
 		ast, err := ParseGlobalAssetSearchQuery(raw)

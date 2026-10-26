@@ -166,7 +166,7 @@ function CollapsedSidebarSubmenu({ current, isClosing, menu, normalize, onClose,
     return (<div className="fixed z-50 w-max min-w-40 max-w-56" data-sidebar-collapsed-submenu="true" onMouseEnter={onKeepOpen} onMouseLeave={onClose} onFocus={onKeepOpen} onBlur={onClose} style={{ transform: `translate3d(${menu.left}px, ${menu.top}px, 0)` }}>
       <div data-sidebar-collapsed-submenu-panel="true" className={cn("radius-overlay border border-border bg-popover p-1 text-popover-foreground shadow-md motion-reduce:animate-none", isClosing ? "animate-out fade-out-0 slide-out-to-left-1 duration-[var(--motion-duration-reveal)]" : "animate-in fade-in-0 slide-in-from-left-1 duration-[var(--motion-duration-enter)]")}>
         <div className={cn("flex max-w-full items-center gap-2 truncate px-2 py-1 text-sidebar-foreground/70", textRole.helperText)}>
-          <MenuIcon className="size-4 shrink-0"/>
+          <MenuIcon className="size-3.5 shrink-0"/>
           <span className="truncate">{menu.title}</span>
         </div>
         <div className="flex min-w-0 flex-col gap-1">

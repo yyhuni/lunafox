@@ -191,7 +191,7 @@ describe("app-sidebar contract", () => {
     expect(source).not.toContain("outline-none transition-colors hover:bg-sidebar-accent")
     expect(source).toContain("translate3d(${menu.left}px, ${menu.top}px, 0)")
     expect(source).toContain("const MenuIcon = menu.icon")
-    expect(source).toContain('<MenuIcon className="size-4 shrink-0"')
+    expect(source).toContain('<MenuIcon className="size-3.5 shrink-0"')
     expect(source).toContain("const collapsedSubmenuUnmountDelayMs = 180")
     expect(source).toContain("}, collapsedSubmenuUnmountDelayMs)")
     expect(source).toContain("onCollapsedMenuOpen({")

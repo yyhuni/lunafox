@@ -156,6 +156,15 @@ func globalAssetSearchConditionPredicate(condition assetapp.GlobalAssetSearchCon
 	case assetapp.GlobalAssetSearchFieldResponseHeaders:
 		// Match the stored header blob only. Truncation stays a result flag.
 		return globalAssetSearchTextPredicate("asset.response_headers", condition.Operator, condition.Text, dialect), nil
+	case assetapp.GlobalAssetSearchFieldOrganization:
+		// Keep each organization condition as an independent existence probe.
+		// A direct many-to-many join would duplicate asset rows and would make
+		// organization==A && organization==B impossible to express correctly.
+		namePredicate := globalAssetSearchTextPredicate("org.name", condition.Operator, condition.Text, dialect)
+		return globalAssetSearchPredicate{
+			clause: "EXISTS (SELECT 1 FROM organization_target AS org_target JOIN organization AS org ON org.id = org_target.organization_id AND org.deleted_at IS NULL WHERE org_target.target_id = asset.target_id AND " + namePredicate.clause + ")",
+			args:   namePredicate.args,
+		}, nil
 	case assetapp.GlobalAssetSearchFieldStatusCode:
 		if condition.StatusCode == nil {
 			return globalAssetSearchPredicate{}, fmt.Errorf("statusCode condition has no integer value")

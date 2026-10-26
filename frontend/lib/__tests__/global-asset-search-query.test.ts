@@ -97,7 +97,7 @@ describe("global asset search query", () => {
   })
 
   it("parses the approved fields with their typed values", () => {
-    const query = parseGlobalAssetSearchQuery('host="api" && title=="Admin" && statusCode="200" && tech="nginx"')
+    const query = parseGlobalAssetSearchQuery('host="api" && title=="Admin" && statusCode="200" && tech="nginx" && organization="腾讯"')
     expect(query).toEqual({
       mode: "structured",
       combinator: "and",
@@ -106,8 +106,24 @@ describe("global asset search query", () => {
         { field: "title", operator: "==", value: "Admin" },
         { field: "statusCode", operator: "=", value: 200 },
         { field: "tech", operator: "=", value: "nginx" },
+        { field: "organization", operator: "=", value: "腾讯" },
       ],
     })
+  })
+
+  it("matches organization display names with text semantics", () => {
+    expect(parseGlobalAssetSearchQuery('organization="腾讯"')).toEqual({
+      mode: "structured",
+      combinator: "and",
+      conditions: [{ field: "organization", operator: "=", value: "腾讯" }],
+    })
+    expect(parseGlobalAssetSearchQuery('organization=="A"')).toEqual({
+      mode: "structured",
+      combinator: "and",
+      conditions: [{ field: "organization", operator: "==", value: "A" }],
+    })
+    expect(() => parseGlobalAssetSearchQuery('organization="A"')).toThrow(GlobalAssetSearchQueryError)
+    expect(() => parseGlobalAssetSearchQuery('organization="  A "')).toThrow(GlobalAssetSearchQueryError)
   })
 
   it("parses hasScreenshot as an exact boolean with both operators", () => {
@@ -197,6 +213,7 @@ describe("global asset search query", () => {
       'title="Login"',
       'statusCode=="200"',
       'tech="nginx"',
+      'organization="腾讯"',
       'host="api" && statusCode=="200"',
     ])
   })

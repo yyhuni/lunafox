@@ -13,6 +13,7 @@ import type {
   WebsiteSearchResult,
 } from "@/types/search.types"
 import { mockEndpoints } from "./endpoints"
+import { mockTargets } from "./targets"
 import { mockWebsites } from "./websites"
 
 interface MockSearchPageToken {
@@ -27,6 +28,7 @@ function websiteToSearchResult(website: typeof mockWebsites[number]): WebsiteSea
   return {
     id: website.id,
     name: `targets/${website.target}/websites/${website.id}`,
+    targetId: website.target,
     url: website.url,
     host: website.host,
     title: website.title,
@@ -83,6 +85,16 @@ function matchesCondition(record: SearchResult, condition: GlobalAssetSearchCond
     // Mock datasets carry no screenshots, mirroring a screenshot-less
     // database: only the "false" polarity can match.
     return condition.value === "false"
+  }
+  if (condition.field === "organization") {
+    const organizationNames = mockTargets
+      .find((target) => target.id === record.targetId)
+      ?.organizations
+      ?.map((organization) => organization.name) ?? []
+    const expected = String(condition.value)
+    return organizationNames.some((organizationName) => condition.operator === "=="
+      ? organizationName === expected
+      : organizationName.toLocaleLowerCase().includes(expected.toLocaleLowerCase()))
   }
 
   const fieldValue = record[condition.field]

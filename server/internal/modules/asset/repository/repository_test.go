@@ -586,6 +586,16 @@ func newAssetRepositoryDB(t *testing.T) *gorm.DB {
 			last_scanned_at DATETIME,
 			deleted_at DATETIME
 		)`,
+		`CREATE TABLE organization (
+			id INTEGER PRIMARY KEY,
+			name TEXT NOT NULL,
+			deleted_at DATETIME
+		)`,
+		`CREATE TABLE organization_target (
+			organization_id INTEGER NOT NULL,
+			target_id INTEGER NOT NULL,
+			PRIMARY KEY (organization_id, target_id)
+		)`,
 		`CREATE TABLE directory (
 			id INTEGER PRIMARY KEY,
 			target_id INTEGER NOT NULL,

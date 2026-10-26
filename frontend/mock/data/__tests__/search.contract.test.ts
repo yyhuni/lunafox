@@ -30,6 +30,12 @@ describe("search contract", () => {
     expect(exactURL.results).toHaveLength(1)
     expect(exactURL.results[0]?.url).toBe("https://acme.com")
 
+    const organizationContains = getMockSearchResults({ q: 'organization="Acme"', assetType: "website" })
+    expect(organizationContains.results.length).toBeGreaterThan(1)
+    const organizationExact = getMockSearchResults({ q: 'organization=="Acme Corporation"', assetType: "website" })
+    expect(organizationExact.results.length).toBeGreaterThan(1)
+    expect(organizationExact.results.every((result) => [1, 2].includes(result.targetId ?? 0))).toBe(true)
+
     expect(getMockSearchResults({ q: "jd", assetType: "website" }).results).toHaveLength(0)
     expect(() => getMockSearchResults({ q: 'host="a"', assetType: "website" })).toThrow(GlobalAssetSearchQueryError)
   })

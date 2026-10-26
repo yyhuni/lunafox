@@ -17,17 +17,18 @@ import {
 
 describe("SearchSyntaxGuidance", () => {
   it("uses the parser whitelist and keeps every suggested example valid", () => {
-    expect(GLOBAL_ASSET_SEARCH_FIELDS).toEqual(["url", "host", "title", "statusCode", "tech", "hasScreenshot", "responseHeaders"])
+    expect(GLOBAL_ASSET_SEARCH_FIELDS).toEqual(["url", "host", "title", "statusCode", "tech", "hasScreenshot", "responseHeaders", "organization"])
     expect(GLOBAL_ASSET_SEARCH_GUIDANCE.some((entry) => entry.query === 'responseHeaders="rememberMe=deleteMe"')).toBe(true)
     expect(GLOBAL_ASSET_SEARCH_GUIDANCE.some((entry) => entry.query.includes("responseBody"))).toBe(false)
     expect(GLOBAL_ASSET_SEARCH_SYNTAX_EXAMPLES).toHaveLength(GLOBAL_ASSET_SEARCH_GUIDANCE.length)
-    expect(GLOBAL_ASSET_SEARCH_FEATURED_GUIDANCE).toHaveLength(6)
+    expect(GLOBAL_ASSET_SEARCH_FEATURED_GUIDANCE).toHaveLength(7)
     expect(GLOBAL_ASSET_SEARCH_FEATURED_GUIDANCE.map((entry) => entry.query)).toEqual([
       'url="admin"',
       'host="api"',
       'title="Login"',
       'statusCode=="200"',
       'tech="nginx"',
+      'organization="腾讯"',
       'host="api" && statusCode=="200"',
     ])
     expect(() => GLOBAL_ASSET_SEARCH_SYNTAX_EXAMPLES.forEach(parseGlobalAssetSearchQuery)).not.toThrow()

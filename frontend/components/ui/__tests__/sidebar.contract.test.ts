@@ -61,7 +61,7 @@ describe("sidebar contract", () => {
     expect(source).toContain("px-2.5 py-1.5")
     expect(source).toContain("gap-2")
     expect(source).toContain("rounded-lg")
-    expect(source).toContain("[&>svg]:size-4")
+    expect(source).toContain("[&>svg]:size-3.5")
     expect(source).toContain("textRole.navLabel")
     expect(source).toContain("[&>span]:leading-[18px]")
     expect(source).toContain("hover:bg-sidebar-accent")

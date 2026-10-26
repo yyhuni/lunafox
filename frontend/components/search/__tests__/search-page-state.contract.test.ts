@@ -156,4 +156,38 @@ describe("search-page-state contract", () => {
     expect(result.current.queryDiagnosticCode).toBe("containsValueTooShort")
     expect(hookMocks.useAssetSearch).toHaveBeenLastCalledWith(undefined, { enabled: false })
   })
+
+  it("refreshes repeated organization submissions while preserving ordinary query caching", () => {
+    const { result } = renderHook(() => useSearchPageState())
+
+    act(() => {
+      result.current.setQuery('organization="Acme"')
+    })
+    act(() => {
+      result.current.handleSearch()
+    })
+    expect(hookMocks.useAssetSearch).toHaveBeenLastCalledWith(
+      { q: 'organization="Acme"', assetType: "website", pageSize: 10 },
+      { enabled: true, requestNonce: 1 },
+    )
+
+    act(() => {
+      result.current.handleSearch()
+    })
+    expect(hookMocks.useAssetSearch).toHaveBeenLastCalledWith(
+      { q: 'organization="Acme"', assetType: "website", pageSize: 10 },
+      { enabled: true, requestNonce: 2 },
+    )
+
+    act(() => {
+      result.current.setQuery('host="api"')
+    })
+    act(() => {
+      result.current.handleSearch()
+    })
+    expect(hookMocks.useAssetSearch).toHaveBeenLastCalledWith(
+      { q: 'host="api"', assetType: "website", pageSize: 10 },
+      { enabled: true },
+    )
+  })
 })

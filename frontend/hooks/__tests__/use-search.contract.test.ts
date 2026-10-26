@@ -9,7 +9,7 @@ describe("use-search contract", () => {
     expect(source).toContain("export function useAssetSearch")
     expect(source).toContain('from "@tanstack/react-query"')
     expect(source).toContain("params: SearchParams | undefined")
-    expect(source).toContain('queryKey: ["asset-search", params ?? null]')
+    expect(source).toContain('queryKey: ["asset-search", params ?? null, options?.requestNonce ?? 0]')
     expect(source).toContain("Boolean(params?.q.trim())")
     expect(source).not.toContain("asset_type")
     expect(source).not.toContain("totalPages")

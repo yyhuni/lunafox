@@ -66,7 +66,7 @@ export function getGlobalAssetSearchInlineCompletion(draft: string): string {
     return '="'
   }
 
-  if (/^(?:url|host|title|statusCode|tech)(?:==|=)$/.test(currentCondition)) {
+  if (/^(?:url|host|title|statusCode|tech|organization)(?:==|=)$/.test(currentCondition)) {
     return '"'
   }
 

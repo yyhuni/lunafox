@@ -273,6 +273,8 @@ func globalAssetSearchField(raw string) (GlobalAssetSearchField, error) {
 		return GlobalAssetSearchFieldHasScreenshot, nil
 	case string(GlobalAssetSearchFieldResponseHeaders):
 		return GlobalAssetSearchFieldResponseHeaders, nil
+	case string(GlobalAssetSearchFieldOrganization):
+		return GlobalAssetSearchFieldOrganization, nil
 	default:
 		return "", fmt.Errorf("unsupported field %q", raw)
 	}
@@ -305,7 +307,7 @@ func newGlobalAssetSearchCondition(field GlobalAssetSearchField, operator Global
 		return GlobalAssetSearchCondition{Field: field, Operator: operator, StatusCode: &value}, nil
 	}
 	if operator == GlobalAssetSearchOperatorContains {
-		if field == GlobalAssetSearchFieldURL || field == GlobalAssetSearchFieldHost || field == GlobalAssetSearchFieldTitle {
+		if field == GlobalAssetSearchFieldURL || field == GlobalAssetSearchFieldHost || field == GlobalAssetSearchFieldTitle || field == GlobalAssetSearchFieldOrganization {
 			if utf8.RuneCountInString(strings.TrimSpace(rawValue)) < globalAssetSearchMinContainsRunes {
 				return GlobalAssetSearchCondition{}, fmt.Errorf("%s contains value must contain at least %d Unicode characters", field, globalAssetSearchMinContainsRunes)
 			}

@@ -67,6 +67,7 @@ const (
 	GlobalAssetSearchFieldTech            GlobalAssetSearchField = "tech"
 	GlobalAssetSearchFieldHasScreenshot   GlobalAssetSearchField = "hasScreenshot"
 	GlobalAssetSearchFieldResponseHeaders GlobalAssetSearchField = "responseHeaders"
+	GlobalAssetSearchFieldOrganization    GlobalAssetSearchField = "organization"
 )
 
 // GlobalAssetSearchOperator controls the approved field-specific match mode.
