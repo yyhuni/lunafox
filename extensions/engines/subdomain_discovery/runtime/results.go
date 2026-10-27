@@ -58,6 +58,9 @@ func (w *Runtime) ReportResults(ctx context.Context, progress ProgressReporter, 
 	go func() {
 		defer close(items)
 		stats, err := stager.stream(streamContext, func(record resultDedupRecord) error {
+			if err := streamContext.Err(); err != nil {
+				return err
+			}
 			var item subdomaincontract.Subdomain
 			if err := json.Unmarshal(record.payload, &item); err != nil {
 				return fmt.Errorf("decode staged subdomain result: %w", err)
@@ -81,6 +84,9 @@ func (w *Runtime) ReportResults(ctx context.Context, progress ProgressReporter, 
 	streamed := <-streamedResults
 	if streamed.err != nil {
 		return fmt.Errorf("deduplicate subdomain results: %w", streamed.err)
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	summary.SkippedDuplicate += streamed.stats.duplicateCount
 	log.Printf("results reported subdomains=%d", streamed.stats.uniqueCount)

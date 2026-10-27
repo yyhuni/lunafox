@@ -85,6 +85,10 @@ type BruteforceConfig struct {
 	Threads int64
 	// Source: engine.json.execution.configSections["bruteforce"].params["rate-limit"].
 	RateLimit int64
+	// Source: engine.json.execution.configSections["bruteforce"].params["recursive"].
+	Recursive bool
+	// Source: engine.json.execution.configSections["bruteforce"].params["recursive-depth"].
+	RecursiveDepth int64
 	// Source: engine.json.execution.configSections["bruteforce"].params["wildcard-filter"].
 	WildcardFilter bool
 	// Source: engine.json.execution.configSections["bruteforce"].params["wildcard-probe-count"].

@@ -82,6 +82,10 @@ All Scan creation variants reject a restricted pinned Agent with
   including the real `httpx.headers` format, defaults, and bounds. Its locale
   metadata matches the packaged English resource in every mock locale branch;
   no frontend-only `sensitive` marker is added to any Engine header parameter.
+- Subdomain Discovery Catalog detail mirrors `bruteforce.recursive=false` and
+  `bruteforce.recursive-depth=1` with inclusive bounds 1 through 5. Workflow
+  Profiles use those same Catalog parameters; depth counts additional layers
+  after the root-domain Bruteforce pass.
 - Website Mock List/Get mirrors the real `GET /v1/targets/{target}/websites` and `GET /v1/websites/{website}` contracts, including canonical `name` and optional Screenshot summaries without image bytes. The old `websiteRelations` pseudo resource is intentionally absent.
 - Website detail asset requests use the same mandatory leading scope filter as real mode: `host==` is an exact normalized observed-host filter, while `websiteUrl==` is a structured HTTP(S) origin and path-boundary filter. Mock handlers reject an `OR` or non-leading scope clause rather than widening to Target-wide data.
 - Nuclei POC collection activation is intercepted at the network layer with

@@ -11,6 +11,12 @@
         "rate-limit": {
           "description": "Rate limit per second"
         },
+        "recursive": {
+          "description": "Enable recursive bruteforce below newly discovered subdomains"
+        },
+        "recursive-depth": {
+          "description": "Additional recursive layers after the root-domain pass (1-5)"
+        },
         "resolvers": {
           "description": "Resolver list name for PureDNS bruteforce (stored on server)"
         },

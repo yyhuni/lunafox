@@ -151,6 +151,8 @@ func commandResultFromExecution(stageName string, command toolInvocation, output
 	}
 	if executionResult.Error != nil {
 		result.Error = executionResult.Error
+	} else if executionResult.ExitCode != 0 {
+		result.Error = fmt.Errorf("%s exited with code %d", commandLabelForProgress(command), executionResult.ExitCode)
 	}
 	return result
 }

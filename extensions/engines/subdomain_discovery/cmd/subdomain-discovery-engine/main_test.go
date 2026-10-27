@@ -334,7 +334,7 @@ func subdomainExecution(workspace, wordlist, resolvers, provider string, results
 		Config: enginecontract.Config{
 			Recon: enginecontract.ReconConfig{Enabled: true, Timeout: 60, Threads: 1},
 			Bruteforce: enginecontract.BruteforceConfig{
-				Enabled: false, Timeout: 60, Wordlist: wordlist, Resolvers: resolvers, Threads: 1, RateLimit: 1, WildcardProbeCount: 1, WildcardBatch: 1,
+				Enabled: false, Timeout: 60, Wordlist: wordlist, Resolvers: resolvers, Threads: 1, RateLimit: 1, RecursiveDepth: 1, WildcardProbeCount: 1, WildcardBatch: 1,
 			},
 			Resolve: enginecontract.ResolveConfig{Enabled: true, Timeout: 60, Threads: 1, RateLimit: 1, Resolvers: resolvers},
 		},

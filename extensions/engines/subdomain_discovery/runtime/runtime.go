@@ -93,6 +93,11 @@ func initializeDiscoveryRun(
 	if executor == nil {
 		return nil, fmt.Errorf("tool executor is required")
 	}
+	if engineConfig.Bruteforce.Enabled {
+		if err := validateBruteforceConfig(engineConfig.Bruteforce); err != nil {
+			return nil, fmt.Errorf("invalid bruteforce config: %w", err)
+		}
+	}
 	log.Printf("discovery run prepared target.name=%s target.type=%s", target.Value, target.Type)
 	return &discoveryRun{
 		domain:                  target.Value,

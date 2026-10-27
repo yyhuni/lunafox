@@ -126,7 +126,7 @@ func TestRunAllStagesSkipsResolveWhenUpstreamArtifactsContainNoCandidates(t *tes
 	require.Contains(t, progress.messages, "skip stage 3/3 resolve reason=no previous outputs")
 }
 
-func newStageTestRun(t *testing.T, bruteforceEnabled bool, progress *recordingStageProgress, executor *recordingStageExecutor) *discoveryRun {
+func newStageTestRun(t *testing.T, bruteforceEnabled bool, progress *recordingStageProgress, executor toolExecutor) *discoveryRun {
 	t.Helper()
 	return &discoveryRun{
 		domain: "example.com",
@@ -142,6 +142,7 @@ func newStageTestRun(t *testing.T, bruteforceEnabled bool, progress *recordingSt
 				Resolvers:          "/bruteforce-resolvers.txt",
 				Threads:            1,
 				RateLimit:          1,
+				RecursiveDepth:     1,
 				WildcardFilter:     false,
 				WildcardProbeCount: 3,
 				WildcardBatch:      100,

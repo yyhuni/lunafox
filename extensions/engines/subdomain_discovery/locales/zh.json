@@ -11,6 +11,12 @@
         "rate-limit": {
           "description": "每秒请求速率限制"
         },
+        "recursive": {
+          "description": "启用从已发现子域名继续向下的递归爆破"
+        },
+        "recursive-depth": {
+          "description": "在根域名一层爆破之后追加的递归层数（1-5）"
+        },
         "resolvers": {
           "description": "PureDNS 爆破使用的解析器列表名称，文件存储在服务端"
         },

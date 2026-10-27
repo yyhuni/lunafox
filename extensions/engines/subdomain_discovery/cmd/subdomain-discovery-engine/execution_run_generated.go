@@ -1021,6 +1021,8 @@ func lunafoxProjectBruteforceConfig(section *engineexecutionpb.ConfigSection) (e
 	var seenTimeout bool
 	var seenThreads bool
 	var seenRateLimit bool
+	var seenRecursive bool
+	var seenRecursiveDepth bool
 	var seenWildcardFilter bool
 	var seenWildcardProbeCount bool
 	var seenWildcardBatch bool
@@ -1059,6 +1061,26 @@ func lunafoxProjectBruteforceConfig(section *engineexecutionpb.ConfigSection) (e
 				return enginecontract.BruteforceConfig{}, errors.New("Engine config scalar type does not match the Engine Definition")
 			}
 			projected.RateLimit = typed.IntegerValue
+		case "recursive":
+			if seenRecursive {
+				return enginecontract.BruteforceConfig{}, errors.New("duplicate Engine config scalar parameter")
+			}
+			seenRecursive = true
+			typed, ok := param.GetValue().(*engineexecutionpb.ConfigValue_BooleanValue)
+			if !ok {
+				return enginecontract.BruteforceConfig{}, errors.New("Engine config scalar type does not match the Engine Definition")
+			}
+			projected.Recursive = typed.BooleanValue
+		case "recursive-depth":
+			if seenRecursiveDepth {
+				return enginecontract.BruteforceConfig{}, errors.New("duplicate Engine config scalar parameter")
+			}
+			seenRecursiveDepth = true
+			typed, ok := param.GetValue().(*engineexecutionpb.ConfigValue_IntegerValue)
+			if !ok {
+				return enginecontract.BruteforceConfig{}, errors.New("Engine config scalar type does not match the Engine Definition")
+			}
+			projected.RecursiveDepth = typed.IntegerValue
 		case "wildcard-filter":
 			if seenWildcardFilter {
 				return enginecontract.BruteforceConfig{}, errors.New("duplicate Engine config scalar parameter")
@@ -1100,6 +1122,12 @@ func lunafoxProjectBruteforceConfig(section *engineexecutionpb.ConfigSection) (e
 		return enginecontract.BruteforceConfig{}, errors.New("Engine config is missing a required scalar parameter")
 	}
 	if !seenRateLimit {
+		return enginecontract.BruteforceConfig{}, errors.New("Engine config is missing a required scalar parameter")
+	}
+	if !seenRecursive {
+		return enginecontract.BruteforceConfig{}, errors.New("Engine config is missing a required scalar parameter")
+	}
+	if !seenRecursiveDepth {
 		return enginecontract.BruteforceConfig{}, errors.New("Engine config is missing a required scalar parameter")
 	}
 	if !seenWildcardFilter {

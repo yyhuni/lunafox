@@ -43,6 +43,16 @@ describe("engine catalog projection", () => {
     })
   })
 
+  it("exposes bounded recursive bruteforce controls", () => {
+    const detail = getMockEngineCatalogDetail("engine.lunafox.subdomain_discovery")!
+    const bruteforce = detail.execution.configSections.find((section) => section.id === "bruteforce")!
+
+    expect(bruteforce.params).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: "recursive", type: "boolean", default: false }),
+      expect.objectContaining({ key: "recursive-depth", type: "integer", default: 1, minimum: 1, maximum: 5 }),
+    ]))
+  })
+
   it("keeps built-in Engine mock names and descriptions English across locales", () => {
     const expected = {
       "subdomain_discovery": { displayName: "Subdomain Discovery", description: "Discover target-domain subdomains through reconnaissance, optional dictionary bruteforce, and DNS resolution" },

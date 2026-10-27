@@ -87,6 +87,35 @@ even when wildcard filtering is disabled. The pinned PureDNS label-boundary
 fix remains in effect, while shared-IP/CDN ambiguity remains a known limitation
 of the classifier.
 
+## Recursive Bruteforce
+
+Bruteforce recursion is configured in the existing `bruteforce` section with
+`recursive` and `recursive-depth`. Recursion is disabled by default. When it is
+enabled, `recursive-depth` must be between 1 and 5 and describes the number of
+additional layers after the baseline command against the target domain. For
+example, with `recursive-depth=2`, the Engine first runs
+`puredns bruteforce <wordlist> example.com`, then runs one command for each
+normalized subdomain returned by that command, and finally runs one command for
+each normalized subdomain returned by that second layer.
+
+The root-domain command always runs when Bruteforce is enabled. Each recursive
+layer reads only the immediately preceding layer's workspace artifacts. Lines
+are normalized and deduplicated before parent commands are scheduled, so a
+parent is processed once in deterministic order. Passive Subfinder results
+remain inputs to final Resolve and do not become recursive parents.
+
+Parent commands and layers run serially. Every invocation reuses the configured
+Bruteforce wordlist, resolver file, threads, rate limit, wildcard settings, and
+timeout. If one parent command fails, or the execution is cancelled or times
+out, the Engine stops launching later parents and layers and keeps the existing
+failed-stage execution state. A layer with no valid normalized candidates ends
+recursion successfully.
+
+All intermediate PureDNS outputs remain Engine-owned workspace artifacts. The
+existing Resolve stage still consumes the deduplicated union of Recon and every
+completed Bruteforce artifact, and only its final DNS-verified output is
+submitted as subdomain results.
+
 The generated Facade and its runtimekit adapter own common runtime mechanics:
 
 - Context/credential/UDS bootstrap and signal-derived cancellation
