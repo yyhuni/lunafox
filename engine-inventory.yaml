@@ -15,8 +15,8 @@ enginePackages:
       - "docker.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:f727b412e00e39ca58eeb0f655e70b662b31bd24fef17b3da4285541f76604d2"
       - "ghcr.io/yyhuni/lunafox-engine-runtime-screenshot@sha256:f727b412e00e39ca58eeb0f655e70b662b31bd24fef17b3da4285541f76604d2"
   - refs:
-      - "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:f76b7fc52b297362e38e89fa00d30d3989bd0222b578e35b1c6bb3d4a5acb0f4"
-      - "ghcr.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:f76b7fc52b297362e38e89fa00d30d3989bd0222b578e35b1c6bb3d4a5acb0f4"
+      - "docker.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:3ddb1425671f5c2bdcf30dc094d9099007e5212bde36882d9ba5822e55b3f1ab"
+      - "ghcr.io/yyhuni/lunafox-engine-runtime-subdomain-discovery@sha256:3ddb1425671f5c2bdcf30dc094d9099007e5212bde36882d9ba5822e55b3f1ab"
   - refs:
       - "docker.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:04c7d84cdc6696eb900bb9bf9d680d45765425dba764ee1edf41b2a5140a8b3c"
       - "ghcr.io/yyhuni/lunafox-engine-runtime-url-collection@sha256:04c7d84cdc6696eb900bb9bf9d680d45765425dba764ee1edf41b2a5140a8b3c"
