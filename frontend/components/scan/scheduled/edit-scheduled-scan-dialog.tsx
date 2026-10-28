@@ -53,6 +53,10 @@ export function EditScheduledScanDialog({
     displayName,
     setDisplayName,
     scanWorkflow,
+    selectionMode,
+    setSelectionMode,
+    selectedOrgId,
+    setSelectedTargetId,
     selectedTargetId,
     selectedAgentID,
     inputSource,
@@ -68,6 +72,27 @@ export function EditScheduledScanDialog({
     isEngineCatalogError,
     configValidationRef,
     targets,
+    organizations,
+    orgSearchInput,
+    setOrgSearchInput,
+    orgPageSize,
+    setOrgPageSize,
+    organizationTotalCount,
+    organizationPaginationNavigation,
+    onFirstOrgPage,
+    onPreviousOrgPage,
+    onNextOrgPage,
+    targetSearchInput,
+    setTargetSearchInput,
+    targetPageSize,
+    setTargetPageSize,
+    targetTotalCount,
+    targetPaginationNavigation,
+    onFirstTargetPage,
+    onPreviousTargetPage,
+    onNextTargetPage,
+    isOrgFetching,
+    isTargetFetching,
     workflows,
     isPending,
     isLoadingWorkflows,
@@ -82,6 +107,8 @@ export function EditScheduledScanDialog({
     handleResetWorkflowConfig,
     handleYamlValidationChange,
     handleTargetSelect,
+    handleOrgSelect,
+    setSelectedOrgId,
     setSelectedAgentID,
     setInputSource,
     setTimeZone,
@@ -182,10 +209,36 @@ export function EditScheduledScanDialog({
 
             <EditScheduledScanTargetSection
               t={t}
-              scheduledScan={scheduledScan}
+              selectionMode={selectionMode}
+              onSelectionModeChange={setSelectionMode}
+              organizations={organizations}
               targets={targets}
+              selectedOrgId={selectedOrgId}
               selectedTargetId={selectedTargetId}
+              orgSearchInput={orgSearchInput}
+              onOrgSearchChange={setOrgSearchInput}
+              orgPageSize={orgPageSize}
+              onOrgPageSizeChange={setOrgPageSize}
+              organizationTotalCount={organizationTotalCount}
+              organizationPaginationNavigation={organizationPaginationNavigation}
+              onFirstOrgPage={onFirstOrgPage}
+              onPreviousOrgPage={onPreviousOrgPage}
+              onNextOrgPage={onNextOrgPage}
+              targetSearchInput={targetSearchInput}
+              onTargetSearchChange={setTargetSearchInput}
+              targetPageSize={targetPageSize}
+              onTargetPageSizeChange={setTargetPageSize}
+              targetTotalCount={targetTotalCount}
+              targetPaginationNavigation={targetPaginationNavigation}
+              onFirstTargetPage={onFirstTargetPage}
+              onPreviousTargetPage={onPreviousTargetPage}
+              onNextTargetPage={onNextTargetPage}
+              isOrgFetching={isOrgFetching}
+              isTargetFetching={isTargetFetching}
+              onSelectOrganization={handleOrgSelect}
               onSelectTarget={handleTargetSelect}
+              onClearOrganization={() => setSelectedOrgId(null)}
+              onClearTarget={() => setSelectedTargetId(null)}
             />
 
             <EditScheduledScanCronSection

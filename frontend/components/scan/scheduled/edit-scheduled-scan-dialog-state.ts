@@ -8,7 +8,6 @@ import {
   isIanaTimeZoneValid,
 } from "@/lib/scheduled-scan-helpers"
 import { useUpdateScheduledScan } from "@/hooks/use-scheduled-scans"
-import { useTargets } from "@/hooks/use-targets"
 import { useLoadScanWorkflowProfile, useScanWorkflows } from "@/hooks/use-scan-workflows"
 import { useEngineCatalogDetails } from "@/hooks/use-engine-catalog"
 import { scanWorkflowName } from "@/lib/resource-name"
@@ -24,8 +23,11 @@ import type { ScanConfigValidationHandle } from "@/components/scan/scan-config-v
 import type { EngineConfigFormValues } from "@/types/engine-config.types"
 import type { ScheduledScan, UpdateScheduledScanRequest } from "@/types/scheduled-scan.types"
 import type { ScanWorkflow } from "@/types/scan-workflow.types"
-import type { Target } from "@/types/target.types"
 import type { ScanInputSource } from "@/types/scan.types"
+import {
+  useScheduledScanSearch,
+} from "@/components/scan/scheduled/scheduled-scan-dialog-state-hooks"
+import type { ScheduledScanSelectionMode } from "@/lib/scheduled-scan-helpers"
 
 interface UseEditScheduledScanDialogStateProps {
   open: boolean
@@ -45,18 +47,42 @@ export function useEditScheduledScanDialogState({
   t,
 }: UseEditScheduledScanDialogStateProps) {
   const { mutate: updateScheduledScan, isPending } = useUpdateScheduledScan()
-  const { data: targetsData } = useTargets()
+  const {
+    orgSearchInput,
+    setOrgSearchInput,
+    orgPageSize,
+    setOrgPageSize,
+    organizationTotalCount,
+    organizationPaginationNavigation,
+    onFirstOrgPage,
+    onPreviousOrgPage,
+    onNextOrgPage,
+    targetSearchInput,
+    setTargetSearchInput,
+    targetPageSize,
+    setTargetPageSize,
+    targetTotalCount,
+    targetPaginationNavigation,
+    onFirstTargetPage,
+    onPreviousTargetPage,
+    onNextTargetPage,
+    isOrgFetching,
+    isTargetFetching,
+    organizations,
+    targets,
+  } = useScheduledScanSearch({ open })
   const loadScanWorkflowProfile = useLoadScanWorkflowProfile()
   const {
     data: workflowsData,
     isLoading: isLoadingWorkflows,
     isError: isWorkflowsError,
   } = useScanWorkflows()
-  const targets: Target[] = targetsData?.targets || []
   const workflows = React.useMemo<ScanWorkflow[]>(() => workflowsData || [], [workflowsData])
 
   const [displayName, setDisplayName] = React.useState("")
   const [scanWorkflow, setScanWorkflow] = React.useState("")
+  const [selectionMode, setSelectionMode] = React.useState<ScheduledScanSelectionMode>("organization")
+  const [selectedOrgId, setSelectedOrgId] = React.useState<number | null>(null)
   const [selectedTargetId, setSelectedTargetId] = React.useState<number | null>(null)
   const [selectedAgentID, setSelectedAgentID] = React.useState<number | null>(null)
   const [inputSource, setInputSource] = React.useState<ScanInputSource>("scanSnapshot")
@@ -110,6 +136,8 @@ export function useEditScheduledScanDialogState({
       const persistedWorkflowName = scanWorkflowName(scheduledScan.scanWorkflow)
       setDisplayName(scheduledScan.displayName)
       setScanWorkflow(persistedWorkflowName)
+      setSelectionMode(scheduledScan.scanMode)
+      setSelectedOrgId(scheduledScan.organizationId)
       setSelectedTargetId(scheduledScan.targetId)
       setSelectedAgentID(scheduledScan.agentId ?? null)
       setInputSource(scheduledScan.inputSource)
@@ -242,6 +270,19 @@ export function useEditScheduledScanDialogState({
     setSelectedTargetId((prev) => (prev === targetId ? null : targetId))
   }, [])
 
+  const handleOrgSelect = React.useCallback((orgId: number) => {
+    setSelectedOrgId((prev) => (prev === orgId ? null : orgId))
+  }, [])
+
+  const handleSelectionModeChange = React.useCallback((mode: ScheduledScanSelectionMode) => {
+    setSelectionMode(mode)
+    if (mode === "organization") {
+      setSelectedTargetId(null)
+    } else {
+      setSelectedOrgId(null)
+    }
+  }, [])
+
   const isConfigurationChanged = replacementConfiguration !== null || isConfigEdited
   const isConfigurationSaveBlocked = isConfigurationChanged && (
     engineCatalog.isLoading
@@ -274,7 +315,11 @@ export function useEditScheduledScanDialogState({
       toastFeedback.error(t("form.scanWorkflowRequired"))
       return
     }
-    if (scheduledScan.scanMode === "target" && !selectedTargetId) {
+    if (selectionMode === "organization" && !selectedOrgId) {
+      toastFeedback.error(t("toast.selectOrganization"))
+      return
+    }
+    if (selectionMode === "target" && !selectedTargetId) {
       toastFeedback.error(t("toast.selectTarget"))
       return
     }
@@ -309,7 +354,11 @@ export function useEditScheduledScanDialogState({
       request.inputSource = inputSource
     }
 
-    if (scheduledScan.scanMode === "target" && selectedTargetId) {
+    if (selectionMode === "organization" && selectedOrgId) {
+      request.organizationId = selectedOrgId
+    }
+
+    if (selectionMode === "target" && selectedTargetId) {
       request.targetId = selectedTargetId
     }
 
@@ -330,7 +379,7 @@ export function useEditScheduledScanDialogState({
         },
       }
     )
-  }, [configuration, cronExpression, displayName, inputSource, isConfigurationChanged, isConfigurationSaveBlocked, isWorkflowConfigLoading, onOpenChange, onSuccess, scanWorkflow, scheduledScan, selectedAgentID, selectedTargetId, t, timeZone, updateScheduledScan])
+  }, [configuration, cronExpression, displayName, inputSource, isConfigurationChanged, isConfigurationSaveBlocked, isWorkflowConfigLoading, onOpenChange, onSuccess, scanWorkflow, scheduledScan, selectedAgentID, selectedOrgId, selectedTargetId, selectionMode, t, timeZone, updateScheduledScan])
 
   const getCronDescription = React.useCallback((cron: string): string => {
     try {
@@ -352,7 +401,12 @@ export function useEditScheduledScanDialogState({
     displayName,
     setDisplayName,
     scanWorkflow,
+    selectionMode,
+    setSelectionMode: handleSelectionModeChange,
+    selectedOrgId,
+    setSelectedOrgId,
     selectedTargetId,
+    setSelectedTargetId,
     selectedAgentID,
     inputSource,
     timeZone,
@@ -371,6 +425,27 @@ export function useEditScheduledScanDialogState({
     workflowProfileDraft,
     isWorkflowProfileLoading,
     targets,
+    organizations,
+    orgSearchInput,
+    setOrgSearchInput,
+    orgPageSize,
+    setOrgPageSize,
+    organizationTotalCount,
+    organizationPaginationNavigation,
+    onFirstOrgPage,
+    onPreviousOrgPage,
+    onNextOrgPage,
+    targetSearchInput,
+    setTargetSearchInput,
+    targetPageSize,
+    setTargetPageSize,
+    targetTotalCount,
+    targetPaginationNavigation,
+    onFirstTargetPage,
+    onPreviousTargetPage,
+    onNextTargetPage,
+    isOrgFetching,
+    isTargetFetching,
     workflows,
     isPending,
     isLoadingWorkflows,
@@ -382,6 +457,7 @@ export function useEditScheduledScanDialogState({
     handleResetWorkflowConfig,
     handleYamlValidationChange,
     handleTargetSelect,
+    handleOrgSelect,
     setSelectedAgentID,
     setInputSource,
     setTimeZone,

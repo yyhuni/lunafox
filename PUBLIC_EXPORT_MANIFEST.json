@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:611572353eb95d54a9e585ab2981b7765797e9df8b5d0b23168e5c6cb24717ed",
-  "releaseTag": "v0.0.1-alpha.231",
+  "sourceRevisionDigest": "sha256:34d29129e49347a3d95fbea0669f808fc4a07014621a587cd7f5f85734b60eaf",
+  "releaseTag": "v0.0.1-alpha.232",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "a7238cb92a467419b1ff0cf1a9da0f211b8b91956ce98aa03d3bb80036b003d7"
+      "sha256": "60806d4da38054df3ba6fbdf6df7d1dc836449a140ce59aabc3f522bda7a8ebe"
     },
     {
       "path": "README.en.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "502657c3880f74d622ebe944af23a15e90383071cb9600cc78715768f4e37714"
+      "sha256": "c16bf83a5558f1c771663fbd949c38e9cc0387115b73a3ac20a2d1c1445a642d"
     },
     {
       "path": "agent/bin/sha256-e3d7dcbc55bf8652650a1543d1bfb9262fddf369d3fb4e544e9988896f96e96e/agent-bundle.sha256",
@@ -92,7 +92,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9181,
-      "sha256": "90de34b91a8716d16a9b45b16f6d833120e985beb5c79fb9ce3dd2bdd2ffff95"
+      "sha256": "602797c1ba5afd2979602200cec760ab3b50e6b72639ab2fa5609a3e823a1dff"
     },
     {
       "path": "agent/bin/sha256-e3d7dcbc55bf8652650a1543d1bfb9262fddf369d3fb4e544e9988896f96e96e/lunafox-agent-linux-amd64",
@@ -7973,8 +7973,8 @@
       "path": "frontend/components/scan/scheduled/__tests__/edit-scheduled-scan-dialog-state.test.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 11461,
-      "sha256": "9b7e1edd7efe8c5cc4ca4b5798d1fb5efd80b58402f7f31e64f316826d8ea3cf"
+      "size": 12438,
+      "sha256": "2838235e912978bf9aea63abb2e97e74145fd033133577be41098b7bcc9ecb17"
     },
     {
       "path": "frontend/components/scan/scheduled/__tests__/edit-scheduled-scan-dialog.contract.test.ts",
@@ -8099,22 +8099,22 @@
       "path": "frontend/components/scan/scheduled/edit-scheduled-scan-dialog-sections.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 7340,
-      "sha256": "261a48926a8f37168f5b9a8a76f5071e28d0fae3a4e1426e2e457d9e5a83d9e0"
+      "size": 11715,
+      "sha256": "4f4c73bc77801b8ca7f5cdfd40191731a9703eed9bfc205c80e6c65789bab485"
     },
     {
       "path": "frontend/components/scan/scheduled/edit-scheduled-scan-dialog-state.ts",
       "type": "file",
       "mode": "0644",
-      "size": 14774,
-      "sha256": "04871d35601b9e4b9938a8cd5f48db6f14ff4a0cea4b6509434ffaf02d243308"
+      "size": 16877,
+      "sha256": "3a7abe243d622015872f1b63d63f51d7752a00c1b2e0d438f6f6ba33f00f58b7"
     },
     {
       "path": "frontend/components/scan/scheduled/edit-scheduled-scan-dialog.tsx",
       "type": "file",
       "mode": "0644",
-      "size": 8249,
-      "sha256": "d1fb60b5bcb4a3d4d1564fa43a7962c0a70602af6a0a7a5a1a4b314e8ed0a8ba"
+      "size": 10247,
+      "sha256": "0e05d42cc9144803634d96c281bf71738c09f1f906e4180f26a158ca680e02bb"
     },
     {
       "path": "frontend/components/scan/scheduled/index.ts",
@@ -18132,6 +18132,13 @@
       "mode": "0644",
       "size": 687,
       "sha256": "8349f94edc60f63f5f78a319e6ff26bb0f48ab3cca4181eb2717039003f0ab4f"
+    },
+    {
+      "path": "release-notes/v0.0.1-alpha.232.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 553,
+      "sha256": "93dbe4737a67c63d84492a5b1b728ab217a8e03d0e58828c4edaea7ba9aa16cc"
     },
     {
       "path": "resources/alloy/config.alloy",

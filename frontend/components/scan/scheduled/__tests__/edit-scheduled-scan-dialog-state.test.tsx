@@ -31,7 +31,11 @@ vi.mock("@/hooks/use-scheduled-scans", () => ({
 }))
 
 vi.mock("@/hooks/use-targets", () => ({
-  useTargets: () => ({ data: { targets: [] } }),
+  useTargets: () => ({ data: { targets: [], nextPageToken: undefined, totalSize: 0 }, isFetching: false, isPlaceholderData: false }),
+}))
+
+vi.mock("@/hooks/use-organizations", () => ({
+  useOrganizations: () => ({ data: { organizations: [], nextPageToken: undefined, totalSize: 0 }, isFetching: false, isPlaceholderData: false }),
 }))
 
 vi.mock("@/hooks/use-scan-workflows", () => ({
@@ -236,6 +240,27 @@ describe("useEditScheduledScanDialogState", () => {
       },
       expect.any(Object)
     )
+  })
+
+  it("编辑时可以从组织扫描切换到新的目标扫描范围", async () => {
+    const { result } = renderState()
+
+    await waitFor(() => {
+      expect(result.current.selectionMode).toBe("organization")
+    })
+
+    act(() => result.current.setSelectionMode("target"))
+    act(() => result.current.setSelectedTargetId(7))
+    act(() => result.current.handleSubmit())
+
+    expect(stateMocks.updateScheduledScan).toHaveBeenLastCalledWith(
+      {
+        id: scheduledScan.id,
+        data: expect.objectContaining({ targetId: 7 }),
+      },
+      expect.any(Object)
+    )
+    expect(stateMocks.updateScheduledScan.mock.calls.at(-1)?.[0].data).not.toHaveProperty("organizationId")
   })
 
   it("用新工作流的 Profile 配置一并更新定时扫描", async () => {

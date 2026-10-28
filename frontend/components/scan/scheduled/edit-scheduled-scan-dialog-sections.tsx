@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { IconCheck, IconClock, IconX } from "@/components/icons";
+import { IconCheck, IconClock, semanticIcons } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,7 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ScheduledScanTimeZoneField } from "@/components/scan/scheduled/scheduled-scan-time-zone-field";
 import { isCronExpressionValid } from "@/lib/scheduled-scan-helpers";
-import type { ScheduledScan } from "@/types/scheduled-scan.types";
+import type { ScheduledScanSelectionMode } from "@/lib/scheduled-scan-helpers";
+import type { Organization } from "@/types/organization.types";
+import type { CursorPaginationNavigation } from "@/types/data-table.types";
+import { OrganizationSelectionWorkspace } from "@/components/organization/organization-selection-workspace";
+import { TargetSelectionWorkspace } from "@/components/target/target-selection-workspace";
 import type { Target } from "@/types/target.types";
 import { compactSurfaceClassNames } from "@/lib/ui/compact-surface-contract";
 import { cn } from "@/lib/utils";
@@ -42,39 +46,143 @@ export function EditScheduledScanNameField({ t, name, onNameChange, }: EditSched
 }
 interface EditScheduledScanTargetSectionProps {
     t: TranslationFn;
-    scheduledScan: ScheduledScan;
+    selectionMode: ScheduledScanSelectionMode;
+    onSelectionModeChange: (mode: ScheduledScanSelectionMode) => void;
+    organizations: Organization[];
     targets: Target[];
+    selectedOrgId: number | null;
     selectedTargetId: number | null;
+    orgSearchInput: string;
+    onOrgSearchChange: (value: string) => void;
+    orgPageSize: number;
+    onOrgPageSizeChange: React.Dispatch<React.SetStateAction<number>>;
+    organizationTotalCount: number;
+    organizationPaginationNavigation: CursorPaginationNavigation;
+    onFirstOrgPage: () => void;
+    onPreviousOrgPage: () => void;
+    onNextOrgPage: () => void;
+    targetSearchInput: string;
+    onTargetSearchChange: (value: string) => void;
+    targetPageSize: number;
+    onTargetPageSizeChange: React.Dispatch<React.SetStateAction<number>>;
+    targetTotalCount: number;
+    targetPaginationNavigation: CursorPaginationNavigation;
+    onFirstTargetPage: () => void;
+    onPreviousTargetPage: () => void;
+    onNextTargetPage: () => void;
+    isOrgFetching: boolean;
+    isTargetFetching: boolean;
+    onSelectOrganization: (organizationId: number) => void;
     onSelectTarget: (targetId: number) => void;
+    onClearOrganization: () => void;
+    onClearTarget: () => void;
 }
-export function EditScheduledScanTargetSection({ t, scheduledScan, targets, selectedTargetId, onSelectTarget, }: EditScheduledScanTargetSectionProps) {
-    if (scheduledScan.scanMode === "organization") {
-        return (<div className="gap-2 grid">
-        <Label>{t("form.scanScope")}</Label>
-        <div className={cn(compactSurfaceClassNames.mutedInfo, "space-y-2")}>
-          <div className="flex gap-2 items-center">
-            <Badge variant="secondary">{t("form.organizationMode")}</Badge>
-            <span className="font-medium">{scheduledScan.organizationName}</span>
-          </div>
-          <p className="mt-2 text-muted-foreground text-xs">
-            {t("form.organizationModeHint")}
-          </p>
-        </div>
-      </div>);
-    }
-    return (<div className="gap-2 grid">
+export function EditScheduledScanTargetSection({
+    t,
+    selectionMode,
+    onSelectionModeChange,
+    organizations,
+    targets,
+    selectedOrgId,
+    selectedTargetId,
+    orgSearchInput,
+    onOrgSearchChange,
+    orgPageSize,
+    onOrgPageSizeChange,
+    organizationTotalCount,
+    organizationPaginationNavigation,
+    onFirstOrgPage,
+    onPreviousOrgPage,
+    onNextOrgPage,
+    targetSearchInput,
+    onTargetSearchChange,
+    targetPageSize,
+    onTargetPageSizeChange,
+    targetTotalCount,
+    targetPaginationNavigation,
+    onFirstTargetPage,
+    onPreviousTargetPage,
+    onNextTargetPage,
+    isOrgFetching,
+    isTargetFetching,
+    onSelectOrganization,
+    onSelectTarget,
+    onClearOrganization,
+    onClearTarget,
+}: EditScheduledScanTargetSectionProps) {
+    const OrganizationIcon = semanticIcons.concept.organization;
+    const TargetIcon = semanticIcons.concept.target;
+
+    return (<div className="gap-3 grid">
       <Label>{t("form.scanScope")}</Label>
-      <div className="border max-h-[150px] overflow-y-auto p-3 rounded-md">
-        {targets.length === 0 ? (<p className="text-muted-foreground text-sm">{t("form.noAvailableTarget")}</p>) : (<div className="flex flex-wrap gap-2">
-            {targets.map((target) => (<Badge key={target.id} variant={selectedTargetId === target.id ? "default" : "outline"} className="cursor-pointer" render={<button type="button" onClick={() => onSelectTarget(target.id)}/>}>
-                  {target.name}
-                  {selectedTargetId === target.id && (<IconX className="h-3 ml-1 w-3"/>)}
-                </Badge>))}
-          </div>)}
+      <div className="gap-3 grid grid-cols-1 sm:grid-cols-2">
+        <Button type="button" variant="outline" size="action-card" layout="actionTile" selected={selectionMode === "organization"} onClick={() => onSelectionModeChange("organization")} aria-pressed={selectionMode === "organization"}>
+          <OrganizationIcon className="h-8 w-8 shrink-0" />
+          <div className="min-w-0 text-center">
+            <p className="font-medium truncate">{t("form.organizationScan")}</p>
+            <p className="text-muted-foreground text-xs break-words">{t("form.organizationScanDesc")}</p>
+          </div>
+        </Button>
+        <Button type="button" variant="outline" size="action-card" layout="actionTile" selected={selectionMode === "target"} onClick={() => onSelectionModeChange("target")} aria-pressed={selectionMode === "target"}>
+          <TargetIcon className="h-8 w-8 shrink-0" />
+          <div className="min-w-0 text-center">
+            <p className="font-medium truncate">{t("form.targetScan")}</p>
+            <p className="text-muted-foreground text-xs break-words">{t("form.targetScanDesc")}</p>
+          </div>
+        </Button>
       </div>
-      {selectedTargetId && (<p className="text-muted-foreground text-xs">
-          {t("form.selected")}: {targets.find((item) => item.id === selectedTargetId)?.name}
-        </p>)}
+      <p className="text-muted-foreground text-sm break-words">
+        {selectionMode === "organization" ? t("form.organizationScanHint") : t("form.targetScanHint")}
+      </p>
+      {selectionMode === "organization" ? (
+        <OrganizationSelectionWorkspace
+          id="edit-scheduled-scan-organization-workspace"
+          title={t("form.selectOrganization")}
+          hint={t("form.organizationScanHint")}
+          selectionMode="single"
+          showSelectionCount={false}
+          organizations={organizations}
+          selectedOrganizationIds={selectedOrgId === null ? [] : [String(selectedOrgId)]}
+          totalCount={organizationTotalCount}
+          canFirstPage={organizationPaginationNavigation.canFirstPage ?? false}
+          canPreviousPage={organizationPaginationNavigation.canPreviousPage}
+          canNextPage={organizationPaginationNavigation.canNextPage}
+          pageSize={orgPageSize}
+          pageSizeOptions={[8, 16, 24, 50]}
+          searchQuery={orgSearchInput}
+          isLoading={isOrgFetching}
+          onSearchQueryChange={onOrgSearchChange}
+          onFirstPage={onFirstOrgPage}
+          onPreviousPage={onPreviousOrgPage}
+          onNextPage={onNextOrgPage}
+          onPageSizeChange={onOrgPageSizeChange}
+          onToggleOrganization={(organization) => onSelectOrganization(organization.id)}
+          onClearOrganizations={onClearOrganization}
+        />
+      ) : (
+        <TargetSelectionWorkspace
+          id="edit-scheduled-scan-target-workspace"
+          title={t("form.selectTarget")}
+          hint={t("form.targetScanHint")}
+          targets={targets}
+          selectedTargetId={selectedTargetId}
+          totalCount={targetTotalCount}
+          canFirstPage={targetPaginationNavigation.canFirstPage ?? false}
+          canPreviousPage={targetPaginationNavigation.canPreviousPage}
+          canNextPage={targetPaginationNavigation.canNextPage}
+          pageSize={targetPageSize}
+          pageSizeOptions={[10, 20, 50]}
+          searchQuery={targetSearchInput}
+          isLoading={isTargetFetching}
+          onSearchQueryChange={onTargetSearchChange}
+          onFirstPage={onFirstTargetPage}
+          onPreviousPage={onPreviousTargetPage}
+          onNextPage={onNextTargetPage}
+          onPageSizeChange={onTargetPageSizeChange}
+          onToggleTarget={(target) => onSelectTarget(target.id)}
+          onClearTarget={onClearTarget}
+        />
+      )}
     </div>);
 }
 interface EditScheduledScanCronSectionProps {
