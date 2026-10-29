@@ -16,15 +16,15 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, Sid
 // Import collapsible component
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, } from "@/components/ui/collapsible";
 import { textRole } from "@/lib/typography";
-import { shellOverlaySideOffsets } from "@/lib/ui/overlay-styles";
+import { shellOverlaySideOffsets, sidebarHoverTiming } from "@/lib/ui/overlay-styles";
 import { useLoginVisualDiscoverability } from "@/hooks/use-login-visual";
 import { cn } from "@/lib/utils";
 const AboutIcon = semanticIcons.navigation.about;
 const SupportAuthorIcon = semanticIcons.navigation.support;
 // Keep the framework's automatic route prefetch policy.
 const sidebarLinkPrefetch = null;
-// Keep the hover bridge long enough to reach the flyout while matching the shared reveal tier.
-const collapsedSubmenuUnmountDelayMs = 180;
+// Preserve the panel through its exit animation after the shared pointer-leave delay.
+const collapsedSubmenuUnmountDelayMs = sidebarHoverTiming.unmountDelay;
 type AppSidebarNavItem = {
     title: string;
     icon: Icon;
@@ -79,7 +79,7 @@ function AppSidebarCollapsibleNavItem({ collapsedMenuKey, current, isCollapsedDe
             icon: item.icon,
             items: item.items!,
             top: rect.top,
-            left: rect.right + shellOverlaySideOffsets.sidebarDesktop,
+            left: rect.right + shellOverlaySideOffsets.sidebarCollapsed,
         });
     }, [item.icon, item.items, item.title, itemKey, onCollapsedMenuOpen]);
     React.useEffect(() => {
@@ -90,8 +90,8 @@ function AppSidebarCollapsibleNavItem({ collapsedMenuKey, current, isCollapsedDe
         return (<SidebarMenuItem>
         <SidebarMenuButton type="button" aria-label={item.title} aria-expanded={isCollapsedMenuOpen} onMouseEnter={openCollapsedMenu} onMouseLeave={onCollapsedMenuClose} onFocus={openCollapsedMenu} onBlur={onCollapsedMenuClose}>
           <ItemIcon />
-          <span>{item.title}</span>
-          <IconChevronRight className="ml-auto"/>
+          <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
+          <IconChevronRight className="ml-auto group-data-[collapsible=icon]:hidden"/>
         </SidebarMenuButton>
       </SidebarMenuItem>);
     }
@@ -99,8 +99,8 @@ function AppSidebarCollapsibleNavItem({ collapsedMenuKey, current, isCollapsedDe
       <SidebarMenuItem>
         <CollapsibleTrigger render={<SidebarMenuButton/>}>
             <ItemIcon />
-            <span>{item.title}</span>
-            <IconChevronRight className="ml-auto"/>
+            <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
+            <IconChevronRight className="ml-auto group-data-[collapsible=icon]:hidden"/>
           </CollapsibleTrigger>
         {shouldRenderSubItems ? (<CollapsibleContent>
             <SidebarMenuSub className="relative my-1 pl-6 before:absolute before:top-1 before:bottom-1 before:left-4 before:w-px before:rounded-full before:bg-sidebar-border/60 before:content-['']">
@@ -142,7 +142,7 @@ function AppSidebarNavigationGroup({ collapsedMenuKey, current, group, isCollaps
                   <SidebarMenuButton data-sidebar-has-badge={item.badge ? "true" : undefined} isActive={isActive} tooltip={item.title} render={<Link href={item.url} prefetch={sidebarLinkPrefetch}/>}>
                     <item.icon />
                     <SidebarNavigationPendingIndicator />
-                    <span>{item.title}</span>
+                    <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
                   </SidebarMenuButton>
                   {item.badge ? <SidebarMenuBadge className="radius-badge border border-sidebar-border bg-sidebar">{item.badge}</SidebarMenuBadge> : null}
                 </SidebarMenuItem>);
@@ -164,6 +164,8 @@ function CollapsedSidebarSubmenu({ current, isClosing, menu, normalize, onClose,
 }) {
     const MenuIcon = menu.icon;
     return (<div className="fixed z-50 w-max min-w-40 max-w-56" data-sidebar-collapsed-submenu="true" onMouseEnter={onKeepOpen} onMouseLeave={onClose} onFocus={onKeepOpen} onBlur={onClose} style={{ transform: `translate3d(${menu.left}px, ${menu.top}px, 0)` }}>
+      {/* Keep the 12px trigger gap inside the hover owner so the close timer cannot win while the pointer crosses to the panel. */}
+      <div aria-hidden="true" data-sidebar-collapsed-submenu-bridge="true" className="pointer-events-auto absolute inset-y-0 -left-3 w-3" />
       <div data-sidebar-collapsed-submenu-panel="true" className={cn("radius-overlay border border-border bg-popover p-1 text-popover-foreground shadow-md motion-reduce:animate-none", isClosing ? "animate-out fade-out-0 slide-out-to-left-1 duration-[var(--motion-duration-reveal)]" : "animate-in fade-in-0 slide-in-from-left-1 duration-[var(--motion-duration-enter)]")}>
         <div className={cn("flex max-w-full items-center gap-2 truncate px-2 py-1 text-sidebar-foreground/70", textRole.helperText)}>
           <MenuIcon className="size-3.5 shrink-0"/>
@@ -199,11 +201,16 @@ export function AppSidebar({ warmup = false, ...props }: React.ComponentProps<ty
     const [collapsedMenu, setCollapsedMenu] = React.useState<AppSidebarCollapsedMenuState | null>(null);
     const [isCollapsedMenuClosing, setIsCollapsedMenuClosing] = React.useState(false);
     const closeTimerRef = React.useRef<number | null>(null);
+    const unmountTimerRef = React.useRef<number | null>(null);
     const isCollapsedDesktop = state === "collapsed" && !isMobile;
     const clearCollapsedMenuCloseTimer = React.useCallback(() => {
-        if (closeTimerRef.current) {
+        if (closeTimerRef.current !== null) {
             window.clearTimeout(closeTimerRef.current);
             closeTimerRef.current = null;
+        }
+        if (unmountTimerRef.current !== null) {
+            window.clearTimeout(unmountTimerRef.current);
+            unmountTimerRef.current = null;
         }
     }, []);
     const openCollapsedMenu = React.useCallback((menu: AppSidebarCollapsedMenuState) => {
@@ -212,14 +219,19 @@ export function AppSidebar({ warmup = false, ...props }: React.ComponentProps<ty
         setCollapsedMenu(menu);
     }, [clearCollapsedMenuCloseTimer]);
     const closeCollapsedMenu = React.useCallback(() => {
-        clearCollapsedMenuCloseTimer();
-        setIsCollapsedMenuClosing(true);
+        // Child focus/leave events must not restart an exit already in progress.
+        if (closeTimerRef.current !== null || unmountTimerRef.current !== null)
+            return;
         closeTimerRef.current = window.setTimeout(() => {
-            setCollapsedMenu(null);
-            setIsCollapsedMenuClosing(false);
             closeTimerRef.current = null;
-        }, collapsedSubmenuUnmountDelayMs);
-    }, [clearCollapsedMenuCloseTimer]);
+            setIsCollapsedMenuClosing(true);
+            unmountTimerRef.current = window.setTimeout(() => {
+                setCollapsedMenu(null);
+                setIsCollapsedMenuClosing(false);
+                unmountTimerRef.current = null;
+            }, collapsedSubmenuUnmountDelayMs);
+        }, sidebarHoverTiming.closeDelay);
+    }, []);
     const closeCollapsedMenuImmediately = React.useCallback(() => {
         clearCollapsedMenuCloseTimer();
         setCollapsedMenu(null);
@@ -346,6 +358,11 @@ export function AppSidebar({ warmup = false, ...props }: React.ComponentProps<ty
                     icon: semanticIcons.concept.database,
                 },
                 {
+                    title: t('mcpConnection'),
+                    url: "/settings/mcp/",
+                    icon: semanticIcons.concept.mcp,
+                },
+                {
                     title: t('systemSettings'),
                     icon: semanticIcons.concept.apiKey,
                     items: [
@@ -399,14 +416,14 @@ export function AppSidebar({ warmup = false, ...props }: React.ComponentProps<ty
             >
               <SupportAuthorIcon />
               <SidebarNavigationPendingIndicator />
-              <span>{t('supportAuthor')}</span>
+              <span className="group-data-[collapsible=icon]:hidden">{t('supportAuthor')}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <AboutDialog>
               <SidebarMenuButton tooltip={t('about')}>
                 <AboutIcon />
-                <span>{t('about')}</span>
+                <span className="group-data-[collapsible=icon]:hidden">{t('about')}</span>
               </SidebarMenuButton>
             </AboutDialog>
           </SidebarMenuItem>

@@ -422,12 +422,12 @@
     "themeModeDark": "深色",
     "themeModeSystem": "跟随系统",
     "agents": "分布式",
-    "nodesManagement": "节点"
+    "nodesManagement": "节点",
+    "mcpConnection": "MCP 连接"
   },
   "mcpIntegration": {
-    "open": "连接 MCP",
     "title": "MCP 连接",
-    "description": "连接外部 AI 客户端。",
+    "description": "将 LunaFox 的安全能力连接到你熟悉的 AI 客户端。",
     "endpoint": {
       "label": "MCP 地址",
       "copy": "复制 MCP 地址",
@@ -441,8 +441,8 @@
       "revealed": "可复制",
       "emptyDescription": "生成密钥后即可连接 AI 客户端。",
       "lostDescription": "现有密钥无法再次查看；如已遗失，请重新生成。",
-      "revealedDescription": "该密钥仅显示一次，请在关闭此窗口前复制。",
-      "rotatedDescription": "旧密钥已失效，请在关闭此窗口前复制新密钥。",
+      "revealedDescription": "密钥仅显示一次，离开页面或隐藏后无法再次查看，请及时安全保存。",
+      "rotatedDescription": "旧密钥已失效，请在离开页面或隐藏前安全保存新密钥并更新客户端。",
       "statusError": "无法获取 MCP 密钥状态。",
       "generateError": "无法生成 MCP 密钥，请重试。",
       "retry": "重试",
@@ -471,6 +471,27 @@
         "cursor": "Cursor",
         "claudeCode": "Claude Code",
         "codex": "Codex"
+      }
+    },
+    "page": {
+      "setupTitle": "客户端配置",
+      "heroTitle": "将安全能力接入 AI 工作流",
+      "heroDescription": "通过 MCP，让 AI 客户端访问 LunaFox 的资产、漏洞和扫描能力。",
+      "flowDescription": "AI 客户端通过 LunaFox MCP 访问资产、漏洞和扫描能力",
+      "hideKey": "隐藏密钥",
+      "configurationEmpty": "生成 MCP 密钥后，即可查看并复制客户端配置。",
+      "instructions": {
+        "claudeCode": "将配置保存到项目的 .mcp.json，然后重启 Claude Code。",
+        "cursor": "将配置保存到项目的 .cursor/mcp.json，然后在 Cursor 中启用 LunaFox。",
+        "codex": "将配置添加到 ~/.codex/config.toml，然后重新打开 Codex。",
+        "vscode": "将配置保存到 .vscode/mcp.json，然后在 VS Code 中启动 LunaFox MCP。"
+      },
+      "setupDescription": "选择客户端，生成密钥并复制对应配置。",
+      "configurationTitle": "配置文件",
+      "capabilities": {
+        "assets": "资产上下文",
+        "risk": "漏洞与风险",
+        "scan": "扫描工作流"
       }
     }
   },

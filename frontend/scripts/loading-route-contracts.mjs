@@ -861,6 +861,15 @@ const routeLoadingContractsWithoutGeometry = [
   firstScreenRouteContract("route_scan_config_workflows"),
   firstScreenRouteContract("route_scan_config_engines"),
   {
+    id: "route_settings_mcp",
+    classification: "direct-client-route",
+    expectedFirstScreenLayer: "route",
+    allowedLayers: ["boot", "app-shell", "route", "interaction"],
+    // Configuration chrome and the connection diagram resolve immediately;
+    // the credential status waits inside its fixed input, without a page skeleton.
+    expectedOwners: [DEFAULT_PROTECTED_ROUTE_OWNER],
+  },
+  {
     id: "route_search",
     classification: "query-driven-workspace",
     expectedFirstScreenLayer: "route",

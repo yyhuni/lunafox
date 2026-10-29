@@ -39,7 +39,7 @@ export function NavSecondary({ items, ...props // Other properties passed to Sid
               {/* Navigation menu button, rendered as link using Base UI render */}
               <SidebarMenuButton render={<a href={item.url}/>}>              {/* Navigation link */}
                   <item.icon />                   {/* Navigation item icon */}
-                  <span>{item.title}</span>       {/* Navigation item title */}
+                  <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>       {/* Navigation item title */}
                 </SidebarMenuButton>
             </SidebarMenuItem>))}
         </SidebarMenu>

@@ -35,7 +35,7 @@ describe("unified-header contract", () => {
     expect(source).toContain("const HeaderActionSeparator")
     expect(source).toContain("<GithubStarButton />")
     expect(source).toContain('<Separator orientation="vertical" className="mx-2 h-4! w-px self-center bg-muted-foreground/35"')
-    expect(source).toContain("Array.from({ length: 7 })")
+    expect(source).toContain("Array.from({ length: 6 })")
 
     const githubIndex = source.indexOf("<GithubStarButton />")
 
@@ -54,17 +54,10 @@ describe("unified-header contract", () => {
     expect(resourceIndex).toBeLessThan(notificationIndex)
   })
 
-  it("exposes MCP access as a compact top-bar popover", () => {
-    expect(source).toContain('from "@/components/mcp-access-popover"')
-    expect(source).toContain("<McpAccessPopover />")
-
-    const notificationIndex = source.indexOf("<NotificationDrawer")
-    const mcpIndex = source.indexOf("<McpAccessPopover />")
-    const languageIndex = source.indexOf("<LanguageSwitcher />")
-
-    expect(mcpIndex).toBeGreaterThan(notificationIndex)
-    expect(mcpIndex).toBeLessThan(languageIndex)
-    expect(source).toContain("Array.from({ length: 7 })")
+  it("leaves MCP configuration to the sidebar page", () => {
+    expect(source).not.toContain("McpAccessPopover")
+    expect(source).not.toContain("mcp-access-popover")
+    expect(source).toContain("Array.from({ length: 6 })")
   })
 
   it("keeps GitHub as the far-right project action behind one shadcn-style separator", () => {

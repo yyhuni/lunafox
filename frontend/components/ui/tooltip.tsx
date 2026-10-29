@@ -5,6 +5,7 @@ import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip"
 
 import {
   floatingContentMotionClassName,
+  sidebarHoverTiming,
   tooltipArrowClassName,
   tooltipSurfaceClassName,
 } from "@/lib/ui/overlay-styles"
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils"
 type TooltipContentProps = React.ComponentProps<typeof TooltipPrimitive.Popup> &
   Pick<React.ComponentProps<typeof TooltipPrimitive.Positioner>, "align" | "side" | "sideOffset" | "alignOffset" | "collisionPadding" | "collisionBoundary" | "collisionAvoidance" | "sticky" | "positionMethod"> & {
     container?: React.ComponentProps<typeof TooltipPrimitive.Portal>["container"]
+    showArrow?: boolean
   }
 
 const TOOLTIP_OPEN_DELAY_MS = 400
@@ -37,6 +39,18 @@ function TooltipProvider(props: TooltipProviderProps) {
       delay={TOOLTIP_OPEN_DELAY_MS}
       closeDelay={TOOLTIP_CLOSE_DELAY_MS}
       timeout={TOOLTIP_ADJACENT_SWITCH_TIMEOUT_MS}
+    />
+  )
+}
+
+function SidebarTooltipProvider(props: TooltipProviderProps) {
+  return (
+    <TooltipPrimitive.Provider
+      {...props}
+      data-slot="sidebar-tooltip-provider"
+      delay={sidebarHoverTiming.openDelay}
+      closeDelay={sidebarHoverTiming.closeDelay}
+      timeout={sidebarHoverTiming.adjacentSwitchTimeout}
     />
   )
 }
@@ -68,6 +82,7 @@ function TooltipContent({
   sticky,
   positionMethod,
   container,
+  showArrow = true,
   children,
   ...props
 }: TooltipContentProps) {
@@ -96,11 +111,11 @@ function TooltipContent({
           {...props}
         >
           {children}
-          <TooltipPrimitive.Arrow className={tooltipArrowClassName} />
+          {showArrow ? <TooltipPrimitive.Arrow className={tooltipArrowClassName} /> : null}
         </TooltipPrimitive.Popup>
       </TooltipPrimitive.Positioner>
     </TooltipPrimitive.Portal>
   )
 }
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider, SidebarTooltipProvider }

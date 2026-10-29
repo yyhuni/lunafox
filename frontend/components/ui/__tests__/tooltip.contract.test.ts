@@ -43,6 +43,11 @@ describe("tooltip contract", () => {
     expect(overlaySource).not.toContain("radius-overlay-arrow")
   })
 
+  it("keeps the tooltip arrow optional so shell-owned callers can remove it", () => {
+    expect(source).toContain("showArrow = true")
+    expect(source).toContain("{showArrow ? <TooltipPrimitive.Arrow")
+  })
+
   it("uses Base UI as the tooltip primitive backend", () => {
     expect(source).toContain('from "@base-ui/react/tooltip"')
     expect(source).not.toContain("@radix-ui/react-tooltip")
@@ -66,6 +71,14 @@ describe("tooltip contract", () => {
     expect(source).toContain("delay={TOOLTIP_OPEN_DELAY_MS}")
     expect(source).toContain("closeDelay={TOOLTIP_CLOSE_DELAY_MS}")
     expect(source).toContain("timeout={TOOLTIP_ADJACENT_SWITCH_TIMEOUT_MS}")
+  })
+
+  it("exposes a dedicated sidebar hover timing policy", () => {
+    expect(source).toContain("function SidebarTooltipProvider")
+    expect(source).toContain('data-slot="sidebar-tooltip-provider"')
+    expect(source).toContain("delay={sidebarHoverTiming.openDelay}")
+    expect(source).toContain("closeDelay={sidebarHoverTiming.closeDelay}")
+    expect(source).toContain("timeout={sidebarHoverTiming.adjacentSwitchTimeout}")
   })
 
   it("keeps production Tooltip callers on the shared timing policy", () => {

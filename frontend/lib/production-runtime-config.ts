@@ -65,7 +65,7 @@ export function assertVercelDemoHasNoBackend(
 }
 
 /**
- * Return the external API origin used by Vercel's same-origin `/v1` rewrite.
+ * Return the backend origin used by Vercel's same-origin `/v1` and `/mcp` rewrites.
  * Keeping this server-side avoids expanding the browser's CORS/auth boundary.
  */
 export function getRequiredVercelBackendOrigin(

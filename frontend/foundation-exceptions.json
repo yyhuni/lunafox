@@ -3,6 +3,17 @@
   "description": "Unified UI foundation exception ledger. Counts represent the approved initial baseline and verify mode fails when matching findings exceed these counts.",
   "exceptions": [
     {
+      "id": "motion-mcp-connection-flow",
+      "status": "keep",
+      "scope": "components/mcp/mcp-connection-flow.tsx",
+      "pattern": "repeatCount=\"indefinite\"",
+      "class": "chart-rendering",
+      "owner": "MCP connection page",
+      "reason": "The user explicitly requested automatic continuous flow without playback controls. Three SVG packets use linear 3.6s path motion, with automatic removal for reduced motion, offscreen diagrams and hidden documents. This illustration never reads credentials or reports runtime connectivity.",
+      "reviewTrigger": "When the diagram's packet count, timing, visibility lifecycle or rendering scope changes.",
+      "recoveryPath": "Remove continuous packets or promote the renderer into a shared visualization owner if another production surface needs the same motion."
+    },
+    {
       "id": "ui-baseline-theme-token-owner",
       "status": "keep",
       "scope": "app/globals.css",

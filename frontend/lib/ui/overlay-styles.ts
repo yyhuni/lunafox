@@ -11,7 +11,18 @@ export const floatingSurfaceClassName =
 export const shellOverlaySideOffsets = {
   header: 8,
   sidebarDesktop: 16,
+  sidebarCollapsed: 12,
 } as const
+
+export const sidebarHoverTiming = {
+  openDelay: 0,
+  closeDelay: 120,
+  adjacentSwitchTimeout: 120,
+  unmountDelay: 180,
+} as const
+
+export const sidebarHoverMotionClassName =
+  "duration-[var(--motion-duration-enter)] data-[closed]:duration-[var(--motion-duration-reveal)]"
 
 const overlayBackdropBaseClassName =
   "fixed inset-0 z-50 bg-(--overlay-backdrop-background) transition-opacity duration-150 data-[open]:animate-in data-[closed]:animate-out data-[closed]:fade-out-0 data-[open]:fade-in-0 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0"

@@ -5,11 +5,13 @@ import path from "node:path"
 const source = readFileSync(path.resolve(process.cwd(), "components/ui/sidebar.tsx"), "utf8")
 
 describe("sidebar contract", () => {
-  it("inherits the shared Tooltip timing policy without a sidebar exception", () => {
-    expect(source).toContain("<TooltipProvider>")
-    expect(source).not.toContain("<TooltipProvider delay=")
-    expect(source).not.toContain("<TooltipProvider closeDelay=")
-    expect(source).not.toContain("<TooltipProvider timeout=")
+  it("uses the shared sidebar hover timing policy for navigation tooltips", () => {
+    expect(source).toContain("<SidebarTooltipProvider>")
+    expect(source).toContain('from "@/lib/ui/overlay-styles"')
+    expect(source).toContain("sidebarHoverMotionClassName")
+    expect(source).toContain("sideOffset={state === \"collapsed\" && !isMobile ? shellOverlaySideOffsets.sidebarCollapsed : undefined}")
+    expect(source).toContain("const tooltipProps: React.ComponentProps<typeof TooltipContent>")
+    expect(source).toContain("showArrow={false}")
   })
 
   it("keeps sidebar polymorphic composition project-owned instead of using Radix Slot", () => {
@@ -75,6 +77,7 @@ describe("sidebar contract", () => {
     expect(source).toContain("data-[active=true]:font-semibold")
     expect(source).toContain("data-[active=true]:after:bg-sidebar-primary")
     expect(source).toContain("group-data-[collapsible=icon]:size-8!")
+    expect(source).toContain("group-data-[collapsible=icon]:gap-0")
     expect(source).toContain("group-data-[collapsible=icon]:data-[active=true]:after:hidden")
     expect(source).not.toContain("data-[active=true]:font-bold")
     expect(source).not.toContain("data-[active=true]:after:bg-[var(--highlight)]")

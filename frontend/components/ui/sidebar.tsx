@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { textRole } from "@/lib/typography"
 import { cn } from "@/lib/utils"
+import { shellOverlaySideOffsets, sidebarHoverMotionClassName } from "@/lib/ui/overlay-styles"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PolymorphicSlot } from "@/components/ui/polymorphic"
@@ -25,7 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
+  SidebarTooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
@@ -153,7 +154,7 @@ function SidebarProvider({
 
   return (
     <SidebarContext.Provider value={contextValue}>
-      <TooltipProvider>
+      <SidebarTooltipProvider>
         <div
           data-slot="sidebar-wrapper"
           style={
@@ -173,7 +174,7 @@ function SidebarProvider({
         >
           {children}
         </div>
-      </TooltipProvider>
+      </SidebarTooltipProvider>
     </SidebarContext.Provider>
   )
 }
@@ -568,7 +569,7 @@ function SidebarNavigationPendingIndicator({
 const sidebarMenuButtonVariants = cva(
   cn(
     // Keep the active marker centered on the disclosure-chevron axis without changing layout.
-    "peer/menu-button ring-sidebar-ring relative flex h-auto min-h-8 w-full items-center gap-2 overflow-hidden rounded-lg bg-transparent px-2.5 py-1.5 text-left outline-hidden focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 [&>span]:truncate [&>span]:leading-[18px] [&>svg]:size-3.5 [&>svg]:shrink-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:[&>svg:not(.ml-auto)]:text-sidebar-accent-foreground has-data-[sidebar-navigation-pending=true]:bg-sidebar-accent/70 has-data-[sidebar-navigation-pending=true]:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-semibold data-[active=true]:after:absolute data-[active=true]:after:right-4 data-[active=true]:after:translate-x-px data-[active=true]:after:top-1/2 data-[active=true]:after:z-20 data-[active=true]:after:block data-[active=true]:after:size-1.5 data-[active=true]:after:-translate-y-1/2 data-[active=true]:after:rounded-full data-[active=true]:after:bg-sidebar-primary data-[active=true]:after:content-[''] data-[active=true]:[&>svg:not(.ml-auto)]:text-sidebar-primary has-[>svg.ml-auto]:data-[active=true]:after:hidden data-[sidebar-has-badge=true]:data-[active=true]:after:hidden data-[panel-open]:[&>svg.ml-auto]:rotate-90 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:after:hidden group-data-[collapsible=icon]:data-[active=true]:after:hidden",
+    "peer/menu-button ring-sidebar-ring relative flex h-auto min-h-8 w-full items-center gap-2 overflow-hidden rounded-lg bg-transparent px-2.5 py-1.5 text-left outline-hidden focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 group-has-data-[sidebar=menu-action]/menu-item:pr-8 [&>span]:truncate [&>span]:leading-[18px] [&>svg]:size-3.5 [&>svg]:shrink-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:[&>svg:not(.ml-auto)]:text-sidebar-accent-foreground has-data-[sidebar-navigation-pending=true]:bg-sidebar-accent/70 has-data-[sidebar-navigation-pending=true]:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-semibold data-[active=true]:after:absolute data-[active=true]:after:right-4 data-[active=true]:after:translate-x-px data-[active=true]:after:top-1/2 data-[active=true]:after:z-20 data-[active=true]:after:block data-[active=true]:after:size-1.5 data-[active=true]:after:-translate-y-1/2 data-[active=true]:after:rounded-full data-[active=true]:after:bg-sidebar-primary data-[active=true]:after:content-[''] data-[active=true]:[&>svg:not(.ml-auto)]:text-sidebar-primary has-[>svg.ml-auto]:data-[active=true]:after:hidden data-[sidebar-has-badge=true]:data-[active=true]:after:hidden data-[panel-open]:[&>svg.ml-auto]:rotate-90 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! group-data-[collapsible=icon]:gap-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:after:hidden group-data-[collapsible=icon]:data-[active=true]:after:hidden",
     sidebarNavigationCommittedActiveSuppressionClassName,
     textRole.navLabel,
     "text-sidebar-foreground/65 [&>svg:not(.ml-auto)]:text-sidebar-foreground/55"
@@ -635,11 +636,8 @@ function SidebarMenuButtonTooltip({
 }) {
   const { isMobile, state } = useSidebar()
 
-  if (typeof tooltip === "string") {
-    tooltip = {
-      children: tooltip,
-    }
-  }
+  const tooltipProps: React.ComponentProps<typeof TooltipContent> =
+    typeof tooltip === "string" ? { children: tooltip } : tooltip
 
   return (
     <Tooltip>
@@ -647,8 +645,11 @@ function SidebarMenuButtonTooltip({
       <TooltipContent
         side="right"
         align="center"
+        sideOffset={state === "collapsed" && !isMobile ? shellOverlaySideOffsets.sidebarCollapsed : undefined}
         hidden={state !== "collapsed" || isMobile}
-        {...tooltip}
+        {...tooltipProps}
+        showArrow={false}
+        className={cn(sidebarHoverMotionClassName, tooltipProps.className)}
       />
     </Tooltip>
   )

@@ -81,6 +81,10 @@ const nextConfig: NextConfig = {
           source: '/v1/:path*',
           destination: `${vercelBackendOrigin}/v1/:path*`,
         },
+        {
+          source: '/mcp',
+          destination: `${vercelBackendOrigin}/mcp`,
+        },
       ];
     }
     // Use server service name in Docker environment, localhost for local development
@@ -90,6 +94,12 @@ const nextConfig: NextConfig = {
       {
         source: '/v1/:path*',
         destination: `http://${apiHost}:8080/v1/:path*`,
+      },
+      // Client configuration uses the frontend origin; direct dev access also
+      // needs this protocol route when it does not pass through Nginx.
+      {
+        source: '/mcp',
+        destination: `http://${apiHost}:8080/mcp`,
       },
     ];
   },

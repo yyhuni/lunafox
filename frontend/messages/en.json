@@ -422,12 +422,12 @@
     "themeModeDark": "Dark",
     "themeModeSystem": "System",
     "agents": "Agents",
-    "nodesManagement": "Nodes"
+    "nodesManagement": "Nodes",
+    "mcpConnection": "MCP connection"
   },
   "mcpIntegration": {
-    "open": "Connect MCP",
     "title": "MCP Connection",
-    "description": "Connect an external AI client.",
+    "description": "Connect LunaFox security capabilities to your preferred AI client.",
     "endpoint": {
       "label": "MCP address",
       "copy": "Copy MCP address",
@@ -441,8 +441,8 @@
       "revealed": "Ready to copy",
       "emptyDescription": "Generate a key to connect an AI client.",
       "lostDescription": "The existing key cannot be shown again. Regenerate it if it was lost.",
-      "revealedDescription": "This key is shown once. Copy it before closing this popover.",
-      "rotatedDescription": "The previous key is invalid. Copy this new key before closing this popover.",
+      "revealedDescription": "This key is shown once. Save it securely before leaving this page or hiding it.",
+      "rotatedDescription": "The previous key is invalid. Save the new key and update your clients before leaving or hiding it.",
       "statusError": "Could not load the MCP key status.",
       "generateError": "Could not generate the MCP key. Try again.",
       "retry": "Retry",
@@ -471,6 +471,27 @@
         "cursor": "Cursor",
         "claudeCode": "Claude Code",
         "codex": "Codex"
+      }
+    },
+    "page": {
+      "setupTitle": "Client configuration",
+      "heroTitle": "Bring security into your AI workflow",
+      "heroDescription": "Connect your AI client to LunaFox assets, vulnerabilities and scans through MCP.",
+      "flowDescription": "AI clients access assets, vulnerabilities and scans through LunaFox MCP",
+      "hideKey": "Hide key",
+      "configurationEmpty": "Generate an MCP key to view and copy your client configuration.",
+      "instructions": {
+        "claudeCode": "Save this configuration in your project's .mcp.json, then restart Claude Code.",
+        "cursor": "Save this configuration in .cursor/mcp.json, then enable LunaFox in Cursor.",
+        "codex": "Add this configuration to ~/.codex/config.toml, then reopen Codex.",
+        "vscode": "Save this configuration in .vscode/mcp.json, then start LunaFox MCP in VS Code."
+      },
+      "setupDescription": "Choose a client, generate a key, then copy its configuration.",
+      "configurationTitle": "Configuration file",
+      "capabilities": {
+        "assets": "Asset context",
+        "risk": "Vulnerabilities",
+        "scan": "Scan workflows"
       }
     }
   },

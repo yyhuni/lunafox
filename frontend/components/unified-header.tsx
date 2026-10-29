@@ -6,7 +6,6 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { GithubStarButton } from "@/components/github-star-button";
 import { ServerResourcePopover } from "@/components/server-resource-popover";
-import { McpAccessPopover } from "@/components/mcp-access-popover";
 import { HeaderIconActionMenu } from "@/components/shared/dropdown-menu-owners";
 import { useTranslations } from "next-intl";
 import { IconCircleHalf2, IconMoon, IconSun } from "@/components/icons";
@@ -40,7 +39,7 @@ function UnifiedHeaderWarmup() {
       <div className="flex flex-1 gap-0.5 items-center md:gap-1 md:px-3 min-w-0 px-2">
         <HeaderIconPlaceholder compact={false} />
         <div className="flex gap-0.5 items-center md:gap-1 ml-auto shrink-0">
-          {Array.from({ length: 7 }).map((_, index) => (<HeaderIconPlaceholder key={index}/>))}
+          {Array.from({ length: 6 }).map((_, index) => (<HeaderIconPlaceholder key={index}/>))}
         </div>
       </div>
     </header>);
@@ -68,7 +67,6 @@ function UnifiedHeaderInteractive() {
           <QuickScanHeaderTrigger />
           <ServerResourcePopover />
           <NotificationDrawer />
-          <McpAccessPopover />
           <LanguageSwitcher />
           <HeaderIconActionMenu
             ariaLabel={themeMenuLabel}

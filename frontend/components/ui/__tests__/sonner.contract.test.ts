@@ -18,6 +18,16 @@ describe("sonner contract", () => {
     expect(source).toContain('"--border-radius": "var(--radius-overlay)"')
   })
 
+  it("keeps transient feedback on the shared compact surface tier", () => {
+    expect(source).toContain('width: "fit-content"')
+    expect(source).toContain('marginInline: "auto"')
+    expect(source).toContain('padding: "8px 12px"')
+    expect(source).toContain('gap: "8px"')
+    expect(source).toContain('borderRadius: "var(--radius-control)"')
+    expect(source).toContain('title: "!text-xs !leading-4"')
+    expect(source).toContain('description: "!text-xs !leading-4"')
+  })
+
   it("collapses stacked toasts until the user interacts with the stack", () => {
     expect(source).toContain("expand={false}")
   })
