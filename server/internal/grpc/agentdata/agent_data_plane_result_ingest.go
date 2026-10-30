@@ -101,6 +101,14 @@ func (s *DataPlaneService) BatchIngestTaskResults(ctx context.Context, req *agen
 		Items:        items,
 	})
 	if err != nil {
+		pkg.Error("agent result batch ingest failed",
+			zap.Int("scan.id", scope.ScanID),
+			zap.Int("task.id", scope.TaskID),
+			zap.Int("target.id", scope.TargetID),
+			zap.String("result.type", req.ResultType),
+			zap.Int("result.items", len(req.ItemsJson)),
+			zap.Error(err),
+		)
 		s.appendResultRuntimeLog(ctx, scope, lease.SessionEpoch, req, "error", fmt.Sprintf("[server] result batch failed: type=%s: %v", req.ResultType, err))
 		return nil, mapResultIngestError(err)
 	}

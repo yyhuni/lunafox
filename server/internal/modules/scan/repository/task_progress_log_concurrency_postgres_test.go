@@ -115,6 +115,28 @@ func TestTaskProgressLogPostgresLockWaitHonorsEvidenceDeadline(t *testing.T) {
 	}
 }
 
+func TestTaskProgressLogPostgresPersistsFailedResultAndReturnsItByScan(t *testing.T) {
+	db := openTaskProgressLogConcurrencyPostgres(t)
+	repo := NewTaskProgressLogRepository(db)
+	emittedAt := time.Now().UTC()
+	accepted, duplicates, err := repo.BatchCreateTaskProgressLogs(context.Background(), []TaskProgressLogRecord{
+		{
+			ScanID: 7, TaskID: 101, RequestID: "server-runtime-failed-result", Sequence: 1,
+			Level: "error", Content: "[server] result batch failed: type=asset.endpoint: acknowledgement timed out", EmittedAt: &emittedAt,
+		},
+	})
+	if err != nil || accepted != 1 || duplicates != 0 {
+		t.Fatalf("failed-result log write = accepted=%d duplicates=%d err=%v", accepted, duplicates, err)
+	}
+	rows, err := repo.FindByScanIDWithCursor(7, 0, 10)
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("failed-result log query = %#v err=%v", rows, err)
+	}
+	if rows[0].TaskID != 101 || rows[0].Level != "error" || !strings.Contains(rows[0].Content, "result batch failed") {
+		t.Fatalf("failed-result log projection = %#v", rows[0])
+	}
+}
+
 func runtimeLogConcurrencyRecords(scanID, taskID int, requestID, content string) []TaskProgressLogRecord {
 	emittedAt := time.Now().UTC()
 	return []TaskProgressLogRecord{{ScanID: scanID, TaskID: taskID, RequestID: requestID, Sequence: 1, Level: "info", Content: content, EmittedAt: &emittedAt}}

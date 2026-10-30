@@ -443,11 +443,11 @@ func TestSmokeProgressRequiresExactLeaseShapeAndRequestReplay(t *testing.T) {
 		}},
 		{name: "sequence", mutate: func(value *agentdata.TaskProgressLogBatch) {
 			value.RequestID = uuid.NewString()
-			value.Entries[0].Sequence = 2
+			value.Entries[0].Sequence = 0
 		}},
 		{name: "level", mutate: func(value *agentdata.TaskProgressLogBatch) {
 			value.RequestID = uuid.NewString()
-			value.Entries[0].Level = "warning"
+			value.Entries[0].Level = "debug"
 		}},
 		{name: "content", mutate: func(value *agentdata.TaskProgressLogBatch) {
 			value.RequestID = uuid.NewString()
@@ -467,6 +467,50 @@ func TestSmokeProgressRequiresExactLeaseShapeAndRequestReplay(t *testing.T) {
 				t.Fatal("invalid progress unexpectedly succeeded")
 			}
 		})
+	}
+}
+
+func TestSmokeProgressAcceptsEngineFailureLevels(t *testing.T) {
+	for _, test := range []struct {
+		level    string
+		sequence int64
+	}{
+		{level: "warning", sequence: 2},
+		{level: "error", sequence: 3},
+	} {
+		t.Run(test.level, func(t *testing.T) {
+			bridge, _ := newSmokeBridgeForTest(t, smokeScenarioPortSuccess)
+			claimSmokePlanAfterInjectedFailure(t, bridge, uuid.NewString())
+			sink := &smokeProgressSink{bridge: bridge}
+			batch := agentdata.TaskProgressLogBatch{
+				ScanID: 1, TaskID: 1, AgentID: smokeAgentID, SessionID: smokeTestSessionID, SessionEpoch: 7,
+				RequestID: uuid.NewString(),
+				Entries:   []agentdata.TaskProgressLogEntry{{Sequence: test.sequence, Level: test.level, Content: "engine execution failed", EmittedAt: time.Now().UTC()}},
+			}
+			accepted, duplicates, err := sink.WriteTaskProgressLogs(context.Background(), batch)
+			if err != nil || accepted != 1 || duplicates != 0 {
+				t.Fatalf("%s progress = %d, %d, %v", test.level, accepted, duplicates, err)
+			}
+		})
+	}
+}
+
+func TestSmokeProgressIsRetainedAfterTerminalObservation(t *testing.T) {
+	bridge, _ := newSmokeBridgeForTest(t, smokeScenarioPortSuccess)
+	claimSmokePlanAfterInjectedFailure(t, bridge, uuid.NewString())
+	if err := bridge.ReportTerminalTaskResult(context.Background(), smokeAgentID, smokeTestSessionID, 7, 1, "failed", &scanapp.FailureDetail{
+		Kind: smokeEngineExitFailureKind, Message: smokeEngineExitFailureMessage,
+	}); err != nil {
+		t.Fatalf("terminal result = %v", err)
+	}
+	sink := &smokeProgressSink{bridge: bridge}
+	accepted, duplicates, err := sink.WriteTaskProgressLogs(context.Background(), agentdata.TaskProgressLogBatch{
+		ScanID: 1, TaskID: 1, AgentID: smokeAgentID, SessionID: smokeTestSessionID, SessionEpoch: 7,
+		RequestID: uuid.NewString(),
+		Entries:   []agentdata.TaskProgressLogEntry{{Sequence: 9, Level: "error", Content: "engine execution failed", EmittedAt: time.Now().UTC()}},
+	})
+	if err != nil || accepted != 1 || duplicates != 0 {
+		t.Fatalf("late progress = %d, %d, %v", accepted, duplicates, err)
 	}
 }
 

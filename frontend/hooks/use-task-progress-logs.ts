@@ -71,6 +71,10 @@ export function useScanLogs({
           // Tail rereads can include IDs already evicted from a small cache.
           // Only append newer IDs, or those old rows would displace recent logs.
           const additions = response.results.filter(log => log.id > lastId)
+          // An unchanged polling response must not publish a new array. The
+          // runtime detail view groups and renders these logs, so preserving
+          // the reference keeps a no-op poll from invalidating that subtree.
+          if (!replacePage && additions.length === 0) return prev
           return clampLogs([...existing, ...additions])
         })
         replace = false

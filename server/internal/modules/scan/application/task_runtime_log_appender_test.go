@@ -160,6 +160,44 @@ func TestTaskTerminalLogFailureDoesNotChangeAcknowledgement(t *testing.T) {
 	}
 }
 
+func TestFailedTerminalResultPersistsFailureEvidenceInTaskProgressLog(t *testing.T) {
+	task := assignedTaskRecordForTest(ScanTaskRecord{
+		ID:     101,
+		ScanID: 7,
+		Status: "running",
+	}, 17, "session-17", 23)
+	store := &taskStoreStub{
+		getByIDFn: func(context.Context, int) (*ScanTaskRecord, error) {
+			return task, nil
+		},
+	}
+	logStore := &runtimeLogStoreStub{}
+	service := newScanTaskBridgeServiceForTest(store, &scanTaskRuntimeScanStoreStub{}).
+		WithTaskRuntimeLogAppender(NewTaskRuntimeLogAppender(logStore))
+
+	failure := &FailureDetail{
+		Kind:    "result_submit_failed",
+		Message: "result batch acknowledgement timed out",
+	}
+	if err := service.ReportTerminalTaskResult(context.Background(), 17, "session-17", 23, 101, "failed", failure); err != nil {
+		t.Fatalf("ReportTerminalTaskResult returned error: %v", err)
+	}
+
+	if store.updatedStatus != "failed" || store.updatedFailure == nil || store.updatedFailure.Kind != failure.Kind {
+		t.Fatalf("terminal failure was not persisted: status=%q failure=%+v", store.updatedStatus, store.updatedFailure)
+	}
+	if len(logStore.requests) != 1 {
+		t.Fatalf("task progress log writes = %d, want 1", len(logStore.requests))
+	}
+	request := logStore.requests[0]
+	if request.ScanID != task.ScanID || request.TaskID != task.ID || len(request.Items) != 1 {
+		t.Fatalf("task progress log scope = %#v, want scan=%d task=%d", request, task.ScanID, task.ID)
+	}
+	if request.Items[0].Level != "error" || !strings.Contains(request.Items[0].Content, failure.Message) {
+		t.Fatalf("task progress log failure evidence = %#v", request.Items[0])
+	}
+}
+
 func TestTaskTerminalLogsRejectUnownedTaskAndPreserveFailureText(t *testing.T) {
 	task := assignedTaskRecordForTest(ScanTaskRecord{ID: 101, ScanID: 7, Status: "running"}, 17, "session-17", 23)
 	store := &taskStoreStub{getByIDFn: func(context.Context, int) (*ScanTaskRecord, error) { return task, nil }}
