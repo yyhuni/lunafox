@@ -101,6 +101,29 @@ describe("useTaskProgressLogs", () => {
     unmount()
   })
 
+  it("keeps the log array reference when an incremental poll has no new rows", async () => {
+    const response = {
+      results: [{ id: 1, taskId: 7001, level: "info", content: "started", createdAt: "2026-06-18T00:00:00Z" }],
+    } satisfies GetScanLogsResponse
+    serviceMocks.getScanLogs.mockResolvedValue(response)
+
+    const { result, unmount } = renderHookWithProviders(() =>
+      useTaskProgressLogs({ scanId: 7, pollingInterval: 1000 })
+    )
+
+    await flushEffects()
+    const initialLogs = result.current.logs
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(result.current.logs).toBe(initialLogs)
+    unmount()
+  })
+
   it("loads every page for a terminal scan with polling disabled", async () => {
     serviceMocks.getScanLogs
       .mockResolvedValueOnce({

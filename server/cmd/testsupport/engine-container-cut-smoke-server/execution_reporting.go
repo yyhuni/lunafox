@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -61,7 +62,12 @@ func smokeProgressSnapshotEqual(left, right smokeProgressSnapshot) bool {
 		left.emittedAt.Equal(right.emittedAt)
 }
 
-func (sink *smokeProgressSink) WriteTaskProgressLogs(ctx context.Context, batch agentdata.TaskProgressLogBatch) (int, int, error) {
+func (sink *smokeProgressSink) WriteTaskProgressLogs(ctx context.Context, batch agentdata.TaskProgressLogBatch) (accepted, duplicates int, err error) {
+	defer func() {
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "smoke progress rejected task=%d request=%s: %v\n", batch.TaskID, batch.RequestID, err)
+		}
+	}()
 	if ctx == nil {
 		return 0, 0, errors.New("progress context is required")
 	}
@@ -76,7 +82,7 @@ func (sink *smokeProgressSink) WriteTaskProgressLogs(ctx context.Context, batch 
 		return 0, 0, errors.New("progress request ID is invalid")
 	}
 	entry := batch.Entries[0]
-	if entry.Sequence != 1 || entry.Level != "info" || strings.TrimSpace(entry.Content) == "" || entry.EmittedAt.IsZero() {
+	if entry.Sequence <= 0 || (entry.Level != "info" && entry.Level != "warning" && entry.Level != "error") || strings.TrimSpace(entry.Content) == "" || entry.EmittedAt.IsZero() {
 		return 0, 0, errors.New("progress entry is not canonical")
 	}
 	snapshot := smokeProgressSnapshot{
@@ -108,10 +114,9 @@ func (sink *smokeProgressSink) WriteTaskProgressLogs(ctx context.Context, batch 
 		sink.bridge.mu.Unlock()
 		return 0, 1, nil
 	}
-	if record.terminal != nil || record.terminalAcked {
-		sink.bridge.mu.Unlock()
-		return 0, 0, errors.New("new progress is not allowed after terminal observation")
-	}
+	// Runtime log delivery can race with the terminal acknowledgement outbox.
+	// The production repository keeps these rows idempotently after terminal
+	// state changes, so the smoke sink must preserve the same behavior.
 	shouldCancel := (record.scenario == smokeScenarioPortCancel || record.scenario == smokeScenarioNucleiCancel) && !record.cancelIssued
 	if shouldCancel && sink.bridge.cancelPublisher == nil {
 		sink.bridge.mu.Unlock()
