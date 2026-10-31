@@ -42,7 +42,7 @@ const (
 	// Keep the empty-facts chain on a target that is not answered by the
 	// transparent network used by the container smoke. The Engine still must
 	// materialize and consume its Target baseline before HTTPX starts.
-	smokeEmptyCIDR = "0.0.0.0/32"
+	smokeEmptyCIDR = "192.0.2.254/32"
 )
 
 func scenarioOrder(config ...smokeConfig) []smokeScenario {

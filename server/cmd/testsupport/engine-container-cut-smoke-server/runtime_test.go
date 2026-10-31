@@ -75,6 +75,17 @@ func TestScenarioOrderAddsOnlyFixtureNucleiCases(t *testing.T) {
 	}
 }
 
+func TestPendingTerminalScenariosReportsUnacknowledgedRecords(t *testing.T) {
+	bridge, record := newSmokeBridgeForTest(t, smokeScenarioNucleiAckFailure)
+	if got := bridge.pendingTerminalScenarios(); len(got) != 1 || got[0] != string(record.scenario) {
+		t.Fatalf("pending scenarios before acknowledgement = %#v, want [%q]", got, record.scenario)
+	}
+	record.terminalAcked = true
+	if got := bridge.pendingTerminalScenarios(); len(got) != 0 {
+		t.Fatalf("pending scenarios after acknowledgement = %#v, want empty", got)
+	}
+}
+
 func TestFixtureNucleiScenarioPlansUseWebsiteIPTarget(t *testing.T) {
 	cfg := smokeConfig{fixtureIP: "192.0.2.10", fixturePort: 18080}
 	for _, scenario := range []smokeScenario{smokeScenarioNucleiMalformed, smokeScenarioNucleiMixed, smokeScenarioNucleiNonzero} {
@@ -492,6 +503,32 @@ func TestSmokeProgressAcceptsEngineFailureLevels(t *testing.T) {
 				t.Fatalf("%s progress = %d, %d, %v", test.level, accepted, duplicates, err)
 			}
 		})
+	}
+}
+
+func TestSmokeProgressAcceptsOrderedRuntimeLogBatchesAndReplaysThemIdempotently(t *testing.T) {
+	bridge, _ := newSmokeBridgeForTest(t, smokeScenarioPortSuccess)
+	claimSmokePlanAfterInjectedFailure(t, bridge, uuid.NewString())
+	sink := &smokeProgressSink{bridge: bridge}
+	requestID := uuid.NewString()
+	batch := agentdata.TaskProgressLogBatch{
+		ScanID: 1, TaskID: 1, AgentID: smokeAgentID, SessionID: smokeTestSessionID, SessionEpoch: 7,
+		RequestID: requestID,
+		Entries: []agentdata.TaskProgressLogEntry{
+			{Sequence: 1, Level: "info", Content: "started", EmittedAt: time.Now().UTC()},
+			{Sequence: 2, Level: "error", Content: "engine failed", EmittedAt: time.Now().UTC()},
+		},
+	}
+	accepted, duplicates, err := sink.WriteTaskProgressLogs(context.Background(), batch)
+	if err != nil || accepted != 2 || duplicates != 0 {
+		t.Fatalf("batch write = %d accepted, %d duplicates, %v", accepted, duplicates, err)
+	}
+	accepted, duplicates, err = sink.WriteTaskProgressLogs(context.Background(), batch)
+	if err != nil || accepted != 0 || duplicates != 2 {
+		t.Fatalf("batch replay = %d accepted, %d duplicates, %v", accepted, duplicates, err)
+	}
+	if got := bridge.countersSnapshot().progressMessages; got != 2 {
+		t.Fatalf("progress counter = %d, want 2", got)
 	}
 }
 
@@ -934,7 +971,7 @@ func TestSmokeProductionBridgePersistsClaimReplayAndTerminalRecovery(t *testing.
 		Take(&terminal).Error; err != nil {
 		t.Fatalf("read terminal task: %v", err)
 	}
-	if terminal.TaskStatus != "succeeded" || terminal.ScanStatus != "succeeded" || terminal.TerminalReconciliationPending {
+	if terminal.TaskStatus != "succeeded" || terminal.ScanStatus != "succeeded" || !terminal.TerminalReconciliationPending {
 		t.Fatalf("production terminal state = %#v", terminal)
 	}
 	persisted, err := store.tasks.GetByID(ctx, record.taskID)
@@ -952,6 +989,9 @@ func TestSmokeProductionBridgePersistsClaimReplayAndTerminalRecovery(t *testing.
 	}
 	if err := bridge.ReportTerminalTaskResultWithDiagnostics(ctx, smokeAgentID, smokeTestSessionID, 7, record.taskID, "succeeded", nil, diagnostics); err != nil {
 		t.Fatalf("exact production terminal replay: %v", err)
+	}
+	if err := store.db.Table("scan_task").Where("id = ? AND terminal_reconciliation_pending = ?", record.taskID, true).Take(&struct{}{}).Error; err == nil {
+		t.Fatal("exact production terminal replay did not clear reconciliation marker")
 	}
 	counters := bridge.countersSnapshot()
 	if counters.planAssignments != 1 || counters.claimRecoveryFailures != 1 || counters.claimRecoveryReplays != 1 ||

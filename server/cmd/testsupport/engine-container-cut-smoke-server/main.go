@@ -735,7 +735,11 @@ func runSmoke(ctx context.Context, cfg smokeConfig) error {
 		return fmt.Errorf("publish Server readiness: %w", err)
 	}
 
-	scenarioCtx, cancelScenario := context.WithTimeout(ctx, 8*time.Minute)
+	// Production-artifact runs cold-pull every receipt-bound Runtime Image.
+	// Those pulls can consume most of the outer 15-minute smoke budget before
+	// the final acknowledgement-recovery scenario starts, so keep the server
+	// wait aligned with the script's deadline instead of failing early at 8m.
+	scenarioCtx, cancelScenario := context.WithTimeout(ctx, 14*time.Minute)
 	defer cancelScenario()
 	terminalDone := make(chan bool, 1)
 	go func() { terminalDone <- runtime.bridge.waitTerminal(scenarioCtx, len(scenarioOrder(runtime.cfg))) }()
@@ -751,7 +755,7 @@ func runSmoke(ctx context.Context, cfg smokeConfig) error {
 			return errors.New("not all smoke terminal acknowledgements arrived")
 		}
 	case <-scenarioCtx.Done():
-		return fmt.Errorf("implementation-cut smoke timed out waiting for terminal acknowledgements: %w", scenarioCtx.Err())
+		return fmt.Errorf("implementation-cut smoke timed out waiting for terminal acknowledgements: pending=%s: %w", strings.Join(runtime.bridge.pendingTerminalScenarios(), ","), scenarioCtx.Err())
 	}
 	ackDeadline := time.Now().Add(10 * time.Second)
 	for !runtime.bridge.allTerminalsAcked() && time.Now().Before(ackDeadline) {

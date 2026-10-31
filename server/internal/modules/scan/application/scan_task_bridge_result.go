@@ -51,6 +51,34 @@ func (service *ScanTaskBridgeService) ReportTerminalTaskResultWithDiagnostics(
 	return service.updateScanTaskStatus(ctx, agentID, strings.TrimSpace(sessionID), sessionEpoch, taskID, status, failure, diagnostics)
 }
 
+// MarkTerminalTaskReconciliationPending keeps a committed terminal result
+// recoverable until the control-plane acknowledgement is sent successfully.
+// The marker is deliberately separate from the terminal commit so a lost
+// acknowledgement after a successful DB write can be reconciled by the next
+// Agent session.
+func (service *ScanTaskBridgeService) MarkTerminalTaskReconciliationPending(ctx context.Context, taskID int) error {
+	if service == nil || service.taskStore == nil {
+		return ErrScanTaskInvalidUpdate
+	}
+	marker, ok := service.taskStore.(interface {
+		MarkTerminalTaskReconciliationPending(context.Context, int) error
+	})
+	if !ok {
+		// Lightweight application fakes do not model the durable marker. The
+		// production repository implements it; absent support remains compatible
+		// with the existing in-memory lifecycle tests.
+		return nil
+	}
+	return marker.MarkTerminalTaskReconciliationPending(ctx, taskID)
+}
+
+func (service *ScanTaskBridgeService) ClearTerminalTaskReconciliationPending(ctx context.Context, taskID int) error {
+	if service == nil || service.taskStore == nil {
+		return ErrScanTaskInvalidUpdate
+	}
+	return service.taskStore.ClearTerminalTaskReconciliationPending(ctx, taskID)
+}
+
 func (service *ScanTaskBridgeService) updateScanTaskStatus(
 	ctx context.Context,
 	agentID int,

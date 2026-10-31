@@ -37,6 +37,11 @@ type EngineDiagnosticScanTaskBridge interface {
 	ReportTerminalTaskResultWithDiagnostics(ctx context.Context, agentID int, sessionID string, sessionEpoch int64, taskID int, result string, failure *scanapp.FailureDetail, diagnostics *scanapp.EngineExecutionDiagnostics) error
 }
 
+type TerminalTaskReconciliationMarker interface {
+	MarkTerminalTaskReconciliationPending(ctx context.Context, taskID int) error
+	ClearTerminalTaskReconciliationPending(ctx context.Context, taskID int) error
+}
+
 type EngineExecutionClaimBridge interface {
 	ClaimNextExecutionPlan(ctx context.Context, agentID int, sessionID string, sessionEpoch int64, requestID string, snapshot agentdomain.AgentExecutionCapabilitySnapshot) (*agentexecutionv1.ResolvedEngineExecutionPlan, error)
 }

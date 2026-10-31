@@ -70,6 +70,7 @@ type smokeProgressKey struct {
 	sessionEpoch int64
 	taskID       int
 	requestID    string
+	sequence     int64
 }
 
 type smokeProgressSnapshot struct {
@@ -782,6 +783,10 @@ func (bridge *smokeTaskBridge) reportProductionTerminalTaskResult(
 		bridge.counters.recoveryReplays++
 		record.terminalAcked = true
 		bridge.counters.terminalAcks++
+		if err := production.ClearTerminalTaskReconciliationPending(ctx, received.taskID); err != nil {
+			bridge.mu.Unlock()
+			return fmt.Errorf("clear terminal acknowledgement recovery: %w", err)
+		}
 		bridge.markAllAckedLocked()
 		bridge.mu.Unlock()
 		bridge.signalTerminal()
@@ -831,6 +836,10 @@ func (bridge *smokeTaskBridge) reportProductionTerminalTaskResult(
 	if record.scenario == smokeScenarioWebsiteEmpty {
 		record.terminalRecoveryFailureInjected = true
 		bridge.counters.terminalRecoveryFails++
+		if err := production.MarkTerminalTaskReconciliationPending(ctx, received.taskID); err != nil {
+			bridge.mu.Unlock()
+			return fmt.Errorf("mark terminal acknowledgement recovery: %w", err)
+		}
 		bridge.mu.Unlock()
 		return errors.New("smoke terminal acknowledgement intentionally interrupted after production commit")
 	}
@@ -870,7 +879,25 @@ func (bridge *smokeTaskBridge) FenceSupersededAgentSession(ctx context.Context, 
 	if production == nil {
 		return nil
 	}
-	return production.FenceSupersededAgentSession(ctx, agentID, currentSessionEpoch)
+	if err := production.FenceSupersededAgentSession(ctx, agentID, currentSessionEpoch); err != nil {
+		return err
+	}
+	// Mirror durable terminal reconciliation in the harness record so the
+	// smoke waiter observes the same acknowledgement boundary after reconnect.
+	bridge.mu.Lock()
+	for _, record := range bridge.queue {
+		if record == nil || record.terminalAcked || record.terminal == nil || !record.terminalRecoveryFailureInjected || record.claimSessionEpoch >= currentSessionEpoch {
+			continue
+		}
+		record.terminalRecoverySeen = true
+		record.terminalAcked = true
+		bridge.counters.recoveryReplays++
+		bridge.counters.terminalAcks++
+	}
+	bridge.markAllAckedLocked()
+	bridge.mu.Unlock()
+	bridge.signalTerminal()
+	return nil
 }
 
 func (bridge *smokeTaskBridge) countersSnapshot() smokeCounters {
@@ -880,25 +907,39 @@ func (bridge *smokeTaskBridge) countersSnapshot() smokeCounters {
 }
 
 func (bridge *smokeTaskBridge) waitTerminal(ctx context.Context, expected int) bool {
-	if expected <= 0 {
+	if expected <= 0 || bridge.allTerminalsAcked() {
 		return true
 	}
-	seen := 0
-	for seen < expected {
+	for {
+		if bridge.allTerminalsAcked() {
+			return true
+		}
 		select {
 		case <-bridge.terminal:
-			seen++
+			// Notifications are only wake-ups. Recovery can emit more than one
+			// notification for a task, so the durable record state is authoritative.
 		case <-ctx.Done():
 			return false
 		}
 	}
-	return true
 }
 
 func (bridge *smokeTaskBridge) allTerminalsAcked() bool {
 	bridge.mu.Lock()
 	defer bridge.mu.Unlock()
 	return !bridge.allAckedAt.IsZero()
+}
+
+func (bridge *smokeTaskBridge) pendingTerminalScenarios() []string {
+	bridge.mu.Lock()
+	defer bridge.mu.Unlock()
+	pending := make([]string, 0)
+	for _, record := range bridge.queue {
+		if record != nil && !record.terminalAcked {
+			pending = append(pending, string(record.scenario))
+		}
+	}
+	return pending
 }
 
 func (bridge *smokeTaskBridge) cleanupObserved() bool {

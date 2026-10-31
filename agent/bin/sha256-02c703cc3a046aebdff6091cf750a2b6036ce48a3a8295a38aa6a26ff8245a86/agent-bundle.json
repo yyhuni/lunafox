@@ -1,19 +1,19 @@
 {
   "schemaVersion": "lunafox.agent-bundle.v3",
-  "artifactId": "sha256-2234b3a8ab338c457bed413c3a1b4ed7c4e2016ecc7d630c462fc3e7feaca3a3",
+  "artifactId": "sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86",
   "inputFingerprint": {
     "version": 1,
     "algorithm": "sha256-canonical-json-v1",
-    "value": "sha256:2234b3a8ab338c457bed413c3a1b4ed7c4e2016ecc7d630c462fc3e7feaca3a3"
+    "value": "sha256:02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86"
   },
   "sourceRelease": {
-    "tag": "v0.0.1-alpha.234"
+    "tag": "v0.0.1-alpha.236"
   },
   "sourceRepository": "yyhuni/lunafox-private",
   "destinationRepository": "yyhuni/lunafox",
-  "sourceRevision": "7f370671d7ef6580e9caf5144986225fa7568ff6",
-  "sourceRevisionDigest": "sha256:3adb17cc9d99289df2b00824a5985e89c5be4267280dac2be1b0532394acbb49",
-  "publicTreePath": "agent/bin/sha256-2234b3a8ab338c457bed413c3a1b4ed7c4e2016ecc7d630c462fc3e7feaca3a3",
+  "sourceRevision": "910bb563019098f0f15c3d4350df6989433553f1",
+  "sourceRevisionDigest": "sha256:bdff5ce021b3ceeeb784b4929c41e6178f74d67b40b49b8b78d02137e3a40f1e",
+  "publicTreePath": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86",
   "platforms": [
     "linux/amd64",
     "linux/arm64"
@@ -26,8 +26,8 @@
       "kind": "agent",
       "platform": "linux/amd64",
       "path": "lunafox-agent-linux-amd64",
-      "sha256": "sha256:7e2503385c3bd3725c459949c8ad7bd4da632305c07fd187cc40717e9d5b3f60",
-      "size": 24001096,
+      "sha256": "sha256:7bd187c73aa8e4a445df0ec3707d39ed9cf916f245ea8474ff6aabf116ae8812",
+      "size": 24001253,
       "executable": true,
       "elf": true
     },
@@ -36,8 +36,8 @@
       "kind": "agent",
       "platform": "linux/arm64",
       "path": "lunafox-agent-linux-arm64",
-      "sha256": "sha256:8bf0a8789a756b789ec92cbe4f85fd592ed8e5356aac03110c1fa785a5f56bb2",
-      "size": 22528025,
+      "sha256": "sha256:467b6a6255992e0951b2ac138f89124fcd79504a1c4d64bf2fb5842d1666dc63",
+      "size": 22528222,
       "executable": true,
       "elf": true
     },
