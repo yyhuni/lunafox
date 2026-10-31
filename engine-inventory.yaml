@@ -6,8 +6,8 @@ enginePackages:
       - "docker.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:fc2f66597e3bd60b3a77a146dd7d4d63005aa0c86739c82a29f753191144c925"
       - "ghcr.io/yyhuni/lunafox-engine-runtime-fingerprint-detection@sha256:fc2f66597e3bd60b3a77a146dd7d4d63005aa0c86739c82a29f753191144c925"
   - refs:
-      - "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:6d06b2945d1f4fcb125f2e00c9209e2f40e8c2de2b8bb6f8a79a2a27faaf8d4d"
-      - "ghcr.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:6d06b2945d1f4fcb125f2e00c9209e2f40e8c2de2b8bb6f8a79a2a27faaf8d4d"
+      - "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:db6d9f73489c734b6496ea94b9055d5a0fab6822accec09137d530afc8d6686f"
+      - "ghcr.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:db6d9f73489c734b6496ea94b9055d5a0fab6822accec09137d530afc8d6686f"
   - refs:
       - "docker.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:c5d1f0ebac5d094d6a7dfb745cb603dd66c39bbf0075eb74082062fbe7f81977"
       - "ghcr.io/yyhuni/lunafox-engine-runtime-port-scan@sha256:c5d1f0ebac5d094d6a7dfb745cb603dd66c39bbf0075eb74082062fbe7f81977"
