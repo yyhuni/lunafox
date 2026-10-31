@@ -74,24 +74,32 @@ func (sink *smokeProgressSink) WriteTaskProgressLogs(ctx context.Context, batch 
 	if err := ctx.Err(); err != nil {
 		return 0, 0, err
 	}
-	if sink == nil || sink.bridge == nil || batch.TaskID <= 0 || len(batch.Entries) != 1 || batch.AgentID != smokeAgentID || strings.TrimSpace(batch.SessionID) != batch.SessionID || batch.SessionID == "" || batch.SessionEpoch <= 0 {
+	if sink == nil || sink.bridge == nil || batch.TaskID <= 0 || len(batch.Entries) == 0 || batch.AgentID != smokeAgentID || strings.TrimSpace(batch.SessionID) != batch.SessionID || batch.SessionID == "" || batch.SessionEpoch <= 0 {
 		return 0, 0, errors.New("progress batch is invalid")
 	}
 	requestID, err := uuid.Parse(strings.TrimSpace(batch.RequestID))
 	if err != nil || requestID.String() != batch.RequestID || requestID.Version() != uuid.Version(4) {
 		return 0, 0, errors.New("progress request ID is invalid")
 	}
-	entry := batch.Entries[0]
-	if entry.Sequence <= 0 || (entry.Level != "info" && entry.Level != "warning" && entry.Level != "error") || strings.TrimSpace(entry.Content) == "" || entry.EmittedAt.IsZero() {
-		return 0, 0, errors.New("progress entry is not canonical")
-	}
-	snapshot := smokeProgressSnapshot{
-		scanID: batch.ScanID, sequence: entry.Sequence, level: entry.Level,
-		content: entry.Content, emittedAt: entry.EmittedAt,
-	}
-	key := smokeProgressKey{
-		agentID: batch.AgentID, sessionID: batch.SessionID, sessionEpoch: batch.SessionEpoch,
-		taskID: batch.TaskID, requestID: batch.RequestID,
+	snapshots := make([]smokeProgressSnapshot, len(batch.Entries))
+	keys := make([]smokeProgressKey, len(batch.Entries))
+	seenBatchKeys := make(map[smokeProgressKey]struct{}, len(batch.Entries))
+	for index, entry := range batch.Entries {
+		if entry.Sequence <= 0 || (entry.Level != "info" && entry.Level != "warning" && entry.Level != "error") || strings.TrimSpace(entry.Content) == "" || entry.EmittedAt.IsZero() {
+			return 0, 0, errors.New("progress entry is not canonical")
+		}
+		snapshots[index] = smokeProgressSnapshot{
+			scanID: batch.ScanID, sequence: entry.Sequence, level: entry.Level,
+			content: entry.Content, emittedAt: entry.EmittedAt,
+		}
+		keys[index] = smokeProgressKey{
+			agentID: batch.AgentID, sessionID: batch.SessionID, sessionEpoch: batch.SessionEpoch,
+			taskID: batch.TaskID, requestID: batch.RequestID, sequence: entry.Sequence,
+		}
+		if _, duplicate := seenBatchKeys[keys[index]]; duplicate {
+			return 0, 0, errors.New("progress batch contains duplicate sequence")
+		}
+		seenBatchKeys[keys[index]] = struct{}{}
 	}
 	sink.bridge.authority.mu.RLock()
 	currentSession := sink.bridge.authority.agent.SessionID
@@ -106,42 +114,66 @@ func (sink *smokeProgressSink) WriteTaskProgressLogs(ctx context.Context, batch 
 		sink.bridge.mu.Unlock()
 		return 0, 0, errors.New("progress batch does not match an active smoke claim")
 	}
-	if saved, ok := sink.bridge.progress[key]; ok {
-		if !smokeProgressSnapshotEqual(saved, snapshot) {
-			sink.bridge.mu.Unlock()
-			return 0, 0, errors.New("progress replay changed the immutable request")
+	newEntries := make([]int, 0, len(batch.Entries))
+	for index, key := range keys {
+		if saved, ok := sink.bridge.progress[key]; ok {
+			if !smokeProgressSnapshotEqual(saved, snapshots[index]) {
+				sink.bridge.mu.Unlock()
+				return 0, 0, errors.New("progress replay changed the immutable request")
+			}
+			duplicates++
+			continue
 		}
-		sink.bridge.mu.Unlock()
-		return 0, 1, nil
+		newEntries = append(newEntries, index)
 	}
 	// Runtime log delivery can race with the terminal acknowledgement outbox.
 	// The production repository keeps these rows idempotently after terminal
-	// state changes, so the smoke sink must preserve the same behavior.
-	shouldCancel := (record.scenario == smokeScenarioPortCancel || record.scenario == smokeScenarioNucleiCancel) && !record.cancelIssued
+	// state changes, so the smoke sink must preserve the same behavior. Wait
+	// until the Engine reports that its scan stage started: that progress is
+	// emitted after the input artifact has been materialized, which makes the
+	// cancellation scenario deterministic and leaves evidence of the revoked
+	// input stream.
+	cancelStageStarted := false
+	for _, index := range newEntries {
+		content := snapshots[index].content
+		if strings.Contains(content, "scan_started") || strings.Contains(content, "start stage") {
+			cancelStageStarted = true
+			break
+		}
+	}
+	shouldCancel := (record.scenario == smokeScenarioPortCancel || record.scenario == smokeScenarioNucleiCancel) && !record.cancelIssued && cancelStageStarted
 	if shouldCancel && sink.bridge.cancelPublisher == nil {
 		sink.bridge.mu.Unlock()
 		return 0, 0, errors.New("cancel publisher is unavailable")
 	}
-	sink.bridge.progress[key] = snapshot
-	record.progressMessages++
-	record.lastProgressSeq = entry.Sequence
+	for _, index := range newEntries {
+		sink.bridge.progress[keys[index]] = snapshots[index]
+	}
+	accepted = len(newEntries)
+	record.progressMessages += accepted
+	if len(snapshots) > 0 {
+		record.lastProgressSeq = snapshots[len(snapshots)-1].sequence
+	}
 	// The Engine emits aggregate parser counters only in its bounded completion
 	// message. Keep those counters as smoke evidence without retaining raw
 	// result lines or widening the production progress contract.
-	if strings.Contains(entry.Content, "malformedRecords=") || strings.Contains(entry.Content, "invalidRecords=") {
-		for _, field := range []struct {
-			name   string
-			target *uint64
-		}{
-			{name: "malformedRecords=", target: &record.malformedRecords},
-			{name: "invalidRecords=", target: &record.invalidRecords},
-		} {
-			if value, ok := parseSmokeProgressCounter(entry.Content, field.name); ok {
-				*field.target = value
+	for _, index := range newEntries {
+		content := snapshots[index].content
+		if strings.Contains(content, "malformedRecords=") || strings.Contains(content, "invalidRecords=") {
+			for _, field := range []struct {
+				name   string
+				target *uint64
+			}{
+				{name: "malformedRecords=", target: &record.malformedRecords},
+				{name: "invalidRecords=", target: &record.invalidRecords},
+			} {
+				if value, ok := parseSmokeProgressCounter(content, field.name); ok {
+					*field.target = value
+				}
 			}
 		}
 	}
-	sink.bridge.counters.progressMessages++
+	sink.bridge.counters.progressMessages += accepted
 	if shouldCancel {
 		record.cancelIssued = true
 	}
@@ -154,7 +186,7 @@ func (sink *smokeProgressSink) WriteTaskProgressLogs(ctx context.Context, batch 
 		// best-effort control downlink and intentionally has no success result.
 		publisher.SendTaskCancel(smokeAgentID, scanID, taskID)
 	}
-	return 1, 0, nil
+	return accepted, duplicates, nil
 }
 
 type smokeSubdomainMaterializer struct{}

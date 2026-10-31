@@ -148,10 +148,19 @@ func (s *ControlPlaneService) handleTerminalTaskResult(
 	); err != nil {
 		return mapScanTaskBridgeError(err)
 	}
+	// The terminal commit may already be durable while the acknowledgement is
+	// still in flight. Retain a recovery marker until the ack write succeeds so
+	// a disconnect after commit can be reconciled by the replacement session.
+	marker, hasMarker := s.diagnosticTaskBridge.(TerminalTaskReconciliationMarker)
+	if hasMarker {
+		if err := marker.MarkTerminalTaskReconciliationPending(ctx, taskID); err != nil {
+			return status.Error(codes.Internal, err.Error())
+		}
+	}
 	if err := s.requireCurrentSession(agent.ID, session, "terminal_task_result_ack"); err != nil {
 		return err
 	}
-	return sendControlEvent(sendMutex, stream, &agentcontrolv1.ConnectResponse{
+	if err := sendControlEvent(sendMutex, stream, &agentcontrolv1.ConnectResponse{
 		Payload: &agentcontrolv1.ConnectResponse_TerminalTaskResultAck{
 			TerminalTaskResultAck: &agentcontrolv1.TerminalTaskResultAck{
 				Task:                  payload.GetTask(),
@@ -159,7 +168,15 @@ func (s *ControlPlaneService) handleTerminalTaskResult(
 				CompatibilityRevision: engineexecutionpb.EngineExecutionDiagnosticsCompatibilityRevision,
 			},
 		},
-	})
+	}); err != nil {
+		return err
+	}
+	if hasMarker {
+		if err := marker.ClearTerminalTaskReconciliationPending(ctx, taskID); err != nil {
+			return status.Error(codes.Internal, err.Error())
+		}
+	}
+	return nil
 }
 
 func sendTaskAssign(sendMutex *sync.Mutex, stream grpc.BidiStreamingServer[agentcontrolv1.ConnectRequest, agentcontrolv1.ConnectResponse], requestID string, plan *agentexecutionv1.ResolvedEngineExecutionPlan) error {

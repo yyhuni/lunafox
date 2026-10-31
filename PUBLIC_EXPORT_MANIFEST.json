@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:3adb17cc9d99289df2b00824a5985e89c5be4267280dac2be1b0532394acbb49",
-  "releaseTag": "v0.0.1-alpha.234",
+  "sourceRevisionDigest": "sha256:bdff5ce021b3ceeeb784b4929c41e6178f74d67b40b49b8b78d02137e3a40f1e",
+  "releaseTag": "v0.0.1-alpha.236",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "ba63a288a59a39bf58d87d42263aea98ae2306c5f2bc97072ed2588e1d504bc6"
+      "sha256": "817cc75e53282200054f1ffef8463d11d1499dcd32d9066b49a0ed1336f33b6b"
     },
     {
       "path": "README.en.md",
@@ -74,63 +74,63 @@
       "sha256": "0f7abf2719fc0911e83face654b4a6fab27f8385d930be6dd67c9aa7ae804270"
     },
     {
-      "path": "agent/bin/sha256-2234b3a8ab338c457bed413c3a1b4ed7c4e2016ecc7d630c462fc3e7feaca3a3/agent-bundle.json",
+      "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/agent-bundle.json",
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "ec28f449960269b0b6d51c0a487ff15bfdb8ba3322982c6af9089f28e1f47e12"
+      "sha256": "c5657fd902f24149e71ed0165d885309ef582e3b93c54d630b6db5c5dbf26a65"
     },
     {
-      "path": "agent/bin/sha256-2234b3a8ab338c457bed413c3a1b4ed7c4e2016ecc7d630c462fc3e7feaca3a3/agent-bundle.sha256",
+      "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/agent-bundle.sha256",
       "type": "file",
       "mode": "0644",
       "size": 608,
-      "sha256": "e753be29f1a1d9fce4ac516b10584cf2d576fbb4707b5676008413c44aee371d"
+      "sha256": "f4629df5b762ab3aeece0ca9412e7b6f9ab176e0ad3dd4e0fbbda2d152c642de"
     },
     {
-      "path": "agent/bin/sha256-2234b3a8ab338c457bed413c3a1b4ed7c4e2016ecc7d630c462fc3e7feaca3a3/agent-bundle.sigstore.json",
+      "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
-      "size": 9173,
-      "sha256": "68186fa76b6fff912d2fb5bf72ce3b2872596de59cbe4a6ca3166a4216639f8a"
+      "size": 9181,
+      "sha256": "38bb881d972c56c64b5b8af14fb2bce90e066704289610bd9e121daabd02bce1"
     },
     {
-      "path": "agent/bin/sha256-2234b3a8ab338c457bed413c3a1b4ed7c4e2016ecc7d630c462fc3e7feaca3a3/lunafox-agent-linux-amd64",
+      "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/lunafox-agent-linux-amd64",
       "type": "file",
       "mode": "0755",
-      "size": 24001096,
-      "sha256": "7e2503385c3bd3725c459949c8ad7bd4da632305c07fd187cc40717e9d5b3f60"
+      "size": 24001253,
+      "sha256": "7bd187c73aa8e4a445df0ec3707d39ed9cf916f245ea8474ff6aabf116ae8812"
     },
     {
-      "path": "agent/bin/sha256-2234b3a8ab338c457bed413c3a1b4ed7c4e2016ecc7d630c462fc3e7feaca3a3/lunafox-agent-linux-arm64",
+      "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/lunafox-agent-linux-arm64",
       "type": "file",
       "mode": "0755",
-      "size": 22528025,
-      "sha256": "8bf0a8789a756b789ec92cbe4f85fd592ed8e5356aac03110c1fa785a5f56bb2"
+      "size": 22528222,
+      "sha256": "467b6a6255992e0951b2ac138f89124fcd79504a1c4d64bf2fb5842d1666dc63"
     },
     {
-      "path": "agent/bin/sha256-2234b3a8ab338c457bed413c3a1b4ed7c4e2016ecc7d630c462fc3e7feaca3a3/lunafox-engine-mount-preflight-linux-amd64",
+      "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/lunafox-engine-mount-preflight-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 20000987,
       "sha256": "2b12a49b754a09e98377c96105c2975a5b48bf6b063eae0b2062ea271e0add2a"
     },
     {
-      "path": "agent/bin/sha256-2234b3a8ab338c457bed413c3a1b4ed7c4e2016ecc7d630c462fc3e7feaca3a3/lunafox-engine-mount-preflight-linux-arm64",
+      "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/lunafox-engine-mount-preflight-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 18804436,
       "sha256": "143872aa1a600ce25451d9319a31c4971846dc306bd85e2e85721be4d2bac5a4"
     },
     {
-      "path": "agent/bin/sha256-2234b3a8ab338c457bed413c3a1b4ed7c4e2016ecc7d630c462fc3e7feaca3a3/lunafox-engine-preheater-linux-amd64",
+      "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/lunafox-engine-preheater-linux-amd64",
       "type": "file",
       "mode": "0755",
       "size": 21344459,
       "sha256": "02fdee578a4875f7732900232799ccf98e4277dfa2e98617f2b76d76d36145d8"
     },
     {
-      "path": "agent/bin/sha256-2234b3a8ab338c457bed413c3a1b4ed7c4e2016ecc7d630c462fc3e7feaca3a3/lunafox-engine-preheater-linux-arm64",
+      "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/lunafox-engine-preheater-linux-arm64",
       "type": "file",
       "mode": "0755",
       "size": 20109028,
@@ -2093,8 +2093,8 @@
       "path": "extensions/engines/nuclei_vulnerability/runtime/container_execution.go",
       "type": "file",
       "mode": "0644",
-      "size": 4410,
-      "sha256": "84be8289975b7326a8803f71ac70c8747827f1becaa6fa4a7b5512d7d37cbab9"
+      "size": 5372,
+      "sha256": "6578667f5b6daa8da218af1e5da7022f82ac1146ccdb3e5bf1a764b170e0c8f2"
     },
     {
       "path": "extensions/engines/nuclei_vulnerability/runtime/execution.go",
@@ -2149,8 +2149,8 @@
       "path": "extensions/engines/nuclei_vulnerability/runtime/process_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 3238,
-      "sha256": "224480f8fbcf7c1aa4ebb794ba0bcc8ea300f6ed93e54e37db532a48aa405d87"
+      "size": 3759,
+      "sha256": "63d987b905a424be1d469a931ece1fbd0112f9267bddff1ae614c43e142b4a8b"
     },
     {
       "path": "extensions/engines/nuclei_vulnerability/tests/container/container-conformance.sh",
@@ -18211,6 +18211,13 @@
       "sha256": "0fbfbe742845c69b7ebfd71bbeb6caf2d49b74551eb30ce994f5ba7daecc9aa7"
     },
     {
+      "path": "release-notes/v0.0.1-alpha.236.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 530,
+      "sha256": "b87400ef68c7df600cc9a082ea3f5db9b2b621cd5f7bee7ab69f92bda6529d80"
+    },
+    {
       "path": "resources/alloy/config.alloy",
       "type": "file",
       "mode": "0644",
@@ -19187,15 +19194,15 @@
       "path": "server/cmd/testsupport/engine-container-cut-smoke-server/execution_reporting.go",
       "type": "file",
       "mode": "0644",
-      "size": 17364,
-      "sha256": "f8aa7d43c2fe7c04695bb8f25329e6ee52f84d7e05af087e3c1eeb32e4a72803"
+      "size": 18684,
+      "sha256": "a1b4996d0bdb52ceda55475238ffe4751c2f05b6e88742dfb0c3e6f98570c1e9"
     },
     {
       "path": "server/cmd/testsupport/engine-container-cut-smoke-server/main.go",
       "type": "file",
       "mode": "0644",
-      "size": 44748,
-      "sha256": "e02d0f3f9d0b34a3bf67aa1ab416dcebb4f5fc304461e0a2ee1e1362b2cefc60"
+      "size": 45124,
+      "sha256": "1690595adc17ede009d4de75aff87849a97fd2f327e55bab4de2e66373168124"
     },
     {
       "path": "server/cmd/testsupport/engine-container-cut-smoke-server/package_cache.go",
@@ -19229,15 +19236,15 @@
       "path": "server/cmd/testsupport/engine-container-cut-smoke-server/runtime.go",
       "type": "file",
       "mode": "0644",
-      "size": 19561,
-      "sha256": "acdcb09c5e90572b7d610b91cc4d09f755fdba27decda7144409fb8b60870d28"
+      "size": 19565,
+      "sha256": "a69e4a03030504ed65fe99109c8f710c5ce7a047a9e282e888a8a18a95cf3838"
     },
     {
       "path": "server/cmd/testsupport/engine-container-cut-smoke-server/runtime_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 49537,
-      "sha256": "99c939556a14c0b38e5f02a65989f88622e83ac4e1a9d65db133b6be43bab4cc"
+      "size": 51563,
+      "sha256": "a55b4cceef1aaa2cafa0888b376ea751b2dbccc86902bce1b1a28c5a20d51bf5"
     },
     {
       "path": "server/cmd/testsupport/engine-container-cut-smoke-server/scan_store.go",
@@ -19264,8 +19271,8 @@
       "path": "server/cmd/testsupport/engine-container-cut-smoke-server/task_bridge.go",
       "type": "file",
       "mode": "0644",
-      "size": 32838,
-      "sha256": "5ac9253c2d48c298097fae5c1aa4b979b77405a62ff84bc2a5db95f6a1ab7ccc"
+      "size": 34384,
+      "sha256": "06cc35fabd22fd9d5bef86ae1d51b5bae91b90f237033dc4815399e91d7f97d1"
     },
     {
       "path": "server/cmd/testsupport/operator-engine-install-smoke/main.go",
@@ -20804,8 +20811,8 @@
       "path": "server/internal/grpc/agentcontrol/agent_control_connect_test.go",
       "type": "file",
       "mode": "0644",
-      "size": 48916,
-      "sha256": "499b9b835d4f1ae2cc5085e0f28f52f3ab450dc955c603583edcf1209e92e675"
+      "size": 49644,
+      "sha256": "fcffd01c8a88df8bedddb5af2a89d32f783b034befac1725a269de767ad8507e"
     },
     {
       "path": "server/internal/grpc/agentcontrol/agent_control_event_publisher.go",
@@ -20825,8 +20832,8 @@
       "path": "server/internal/grpc/agentcontrol/agent_control_plane_service.go",
       "type": "file",
       "mode": "0644",
-      "size": 9254,
-      "sha256": "583c6cfb2c4088f612457fbc230f6ec6d95400f3c5f9a622d7a43c9c35a97f07"
+      "size": 9464,
+      "sha256": "e6d5d016d261c530f15a19d8c7c19e9a1a89d870c905aa8b385f162e03842cb7"
     },
     {
       "path": "server/internal/grpc/agentcontrol/agent_control_plane_service_helpers_test.go",
@@ -20874,8 +20881,8 @@
       "path": "server/internal/grpc/agentcontrol/control_handlers.go",
       "type": "file",
       "mode": "0644",
-      "size": 7781,
-      "sha256": "f1599143c7726fe1bbf23289b1929366c91f9b48ebfdaf54e5ab300fd1faf5e7"
+      "size": 8455,
+      "sha256": "c7f1023cccad1ba0f2d68ad2e2f87eb0afadf1d0022f12e0cbda6ae4d2b6479c"
     },
     {
       "path": "server/internal/grpc/agentcontrol/control_mappers.go",
@@ -27517,8 +27524,8 @@
       "path": "server/internal/modules/scan/application/scan_task_bridge_result.go",
       "type": "file",
       "mode": "0644",
-      "size": 9104,
-      "sha256": "0473762b018b0822ede30e44f05e197d937dfc5e05d97d353750090cda972783"
+      "size": 10324,
+      "sha256": "ba9b98593440f3696a4308e2f5b4e3a00b1a81ab03824ab6fda7c9e2c16c8d7e"
     },
     {
       "path": "server/internal/modules/scan/application/scan_task_bridge_scan_status.go",
@@ -28182,8 +28189,8 @@
       "path": "server/internal/modules/scan/repository/scan_task.go",
       "type": "file",
       "mode": "0644",
-      "size": 24500,
-      "sha256": "d6ef5a18c2df8ae7507ca5c250d1585b0b4ca2505a7d89ac4b2ca96e24b10fcf"
+      "size": 24953,
+      "sha256": "0c06d2e64d212afadf1a3e16833cca1633c7651b9e0eaf36c4ec04bc068e99f5"
     },
     {
       "path": "server/internal/modules/scan/repository/scan_task_command_test.go",

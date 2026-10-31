@@ -24,6 +24,7 @@ type ScanTaskRepository interface {
 	CommitScanTaskTerminalStatusWithDiagnosticsForSession(ctx context.Context, id, agentID int, sessionID string, sessionEpoch int64, status string, failure *scandomain.FailureDetail, diagnostics *scandomain.EngineExecutionDiagnostics) (bool, error)
 	ListTerminalTasksPendingReconciliation(ctx context.Context, afterTaskID, limit int) ([]ScanTaskRecord, error)
 	ListSupersededSessionTerminalTasksPendingReconciliation(ctx context.Context, agentID int, currentSessionEpoch int64, limit int) ([]ScanTaskRecord, error)
+	MarkTerminalTaskReconciliationPending(ctx context.Context, taskID int) error
 	ClearTerminalTaskReconciliationPending(ctx context.Context, taskID int) error
 	FailClaimedTask(ctx context.Context, id int, failure *scandomain.FailureDetail) error
 	SkipUnstartedTasksByScanID(ctx context.Context, scanID int, reason string) (int64, error)
@@ -211,6 +212,15 @@ func (r *scanTaskRepository) ClearTerminalTaskReconciliationPending(ctx context.
 	return r.db.WithContext(ctx).Model(&model.ScanTask{}).
 		Where("id = ? AND terminal_reconciliation_pending = ?", taskID, true).
 		Update("terminal_reconciliation_pending", false).Error
+}
+
+func (r *scanTaskRepository) MarkTerminalTaskReconciliationPending(ctx context.Context, taskID int) error {
+	if r == nil || r.db == nil || ctx == nil || taskID <= 0 {
+		return fmt.Errorf("terminal reconciliation task is invalid")
+	}
+	return r.db.WithContext(ctx).Model(&model.ScanTask{}).
+		Where("id = ?", taskID).
+		Update("terminal_reconciliation_pending", true).Error
 }
 
 func (r *scanTaskRepository) FailClaimedTask(ctx context.Context, id int, failure *scandomain.FailureDetail) error {

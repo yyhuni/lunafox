@@ -308,6 +308,9 @@ func TestConnectReportsTerminalTaskResultThroughExplicitBridgeAction(t *testing.
 	if tasks.reportedResults[0].taskID != 109 || tasks.reportedResults[0].status != "failed" {
 		t.Fatalf("unexpected terminal task result report payload: %+v", tasks.reportedResults[0])
 	}
+	if len(tasks.markedTerminalIDs) != 1 || tasks.markedTerminalIDs[0] != 109 || len(tasks.clearedTerminalIDs) != 1 || tasks.clearedTerminalIDs[0] != 109 {
+		t.Fatalf("terminal reconciliation marker lifecycle = marked=%v cleared=%v, want [109] for both", tasks.markedTerminalIDs, tasks.clearedTerminalIDs)
+	}
 	if len(stream.sent) != 2 {
 		t.Fatalf("expected SessionReady then terminal acknowledgement, got %d events", len(stream.sent))
 	}
@@ -1278,19 +1281,21 @@ type taskUpdate struct {
 }
 
 type taskRuntimeStub struct {
-	claimPlan         *agentexecutionv1.ResolvedEngineExecutionPlan
-	claimErr          error
-	claimCalls        int
-	claimAgentID      int
-	claimSessionID    string
-	claimSessionEpoch int64
-	claimRequestID    string
-	claimSnapshot     agentdomain.AgentExecutionCapabilitySnapshot
-	updateErr         error
-	reportedResults   []taskUpdate
-	reportHook        func()
-	fenceErr          error
-	fencedEpochs      []int64
+	claimPlan          *agentexecutionv1.ResolvedEngineExecutionPlan
+	claimErr           error
+	claimCalls         int
+	claimAgentID       int
+	claimSessionID     string
+	claimSessionEpoch  int64
+	claimRequestID     string
+	claimSnapshot      agentdomain.AgentExecutionCapabilitySnapshot
+	updateErr          error
+	reportedResults    []taskUpdate
+	reportHook         func()
+	markedTerminalIDs  []int
+	clearedTerminalIDs []int
+	fenceErr           error
+	fencedEpochs       []int64
 }
 
 func (s *taskRuntimeStub) ClaimNextExecutionPlan(_ context.Context, agentID int, sessionID string, sessionEpoch int64, requestID string, snapshot agentdomain.AgentExecutionCapabilitySnapshot) (*agentexecutionv1.ResolvedEngineExecutionPlan, error) {
@@ -1317,6 +1322,16 @@ func (s *taskRuntimeStub) ReportTerminalTaskResultWithDiagnostics(_ context.Cont
 		s.reportHook()
 	}
 	return s.updateErr
+}
+
+func (s *taskRuntimeStub) MarkTerminalTaskReconciliationPending(_ context.Context, taskID int) error {
+	s.markedTerminalIDs = append(s.markedTerminalIDs, taskID)
+	return nil
+}
+
+func (s *taskRuntimeStub) ClearTerminalTaskReconciliationPending(_ context.Context, taskID int) error {
+	s.clearedTerminalIDs = append(s.clearedTerminalIDs, taskID)
+	return nil
 }
 
 func terminalDiagnosticsProtoForTest() *engineexecutionpb.EngineExecutionDiagnostics {
