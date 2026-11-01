@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:bdff5ce021b3ceeeb784b4929c41e6178f74d67b40b49b8b78d02137e3a40f1e",
-  "releaseTag": "v0.0.1-alpha.236",
+  "sourceRevisionDigest": "sha256:a20a6ddd047d9bf97f4e5754802aeeeade2594aca4a5f80dd782889126e96167",
+  "releaseTag": "v0.0.1-alpha.237",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "817cc75e53282200054f1ffef8463d11d1499dcd32d9066b49a0ed1336f33b6b"
+      "sha256": "7583a7d9bc132380fdb682585f21d3b67c2d390876551abfe571d290f6b2d11f"
     },
     {
       "path": "README.en.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "c5657fd902f24149e71ed0165d885309ef582e3b93c54d630b6db5c5dbf26a65"
+      "sha256": "8d7bb8b41c9d0727396b7a4257ffb084bfb1e967fef086ffd4123f4013769228"
     },
     {
       "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/agent-bundle.sha256",
@@ -92,7 +92,7 @@
       "type": "file",
       "mode": "0644",
       "size": 9181,
-      "sha256": "38bb881d972c56c64b5b8af14fb2bce90e066704289610bd9e121daabd02bce1"
+      "sha256": "aa9f6af539959615750b4678f328d3b29cc2eb30b2691223131a04142ccad2d2"
     },
     {
       "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/lunafox-agent-linux-amd64",
@@ -18218,6 +18218,13 @@
       "sha256": "b87400ef68c7df600cc9a082ea3f5db9b2b621cd5f7bee7ab69f92bda6529d80"
     },
     {
+      "path": "release-notes/v0.0.1-alpha.237.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 763,
+      "sha256": "05bbb2d32dd60d75631b107242ad8666c0996a4b2e76301a4c446cee9a40ec2c"
+    },
+    {
       "path": "resources/alloy/config.alloy",
       "type": "file",
       "mode": "0644",
@@ -18869,6 +18876,13 @@
       "sha256": "65759e8d93a56123ab05e5b3097c5efea3836e94de2b8970f89726f1948c1063"
     },
     {
+      "path": "server/cmd/server/blacklist_policy_migration_contract_test.go",
+      "type": "file",
+      "mode": "0644",
+      "size": 857,
+      "sha256": "2955f5bb22ca934d42dd540dbcbbfae8a7614e1adf06bd873f8949aa2dd55198"
+    },
+    {
       "path": "server/cmd/server/command.go",
       "type": "file",
       "mode": "0644",
@@ -19065,18 +19079,32 @@
       "sha256": "12581cde5e9f6b5c72a1854061ef94d223f5c0221ce6111afa5ef1fc2460d79b"
     },
     {
+      "path": "server/cmd/server/migrations/000010_backfill_target_blacklist_policy.down.sql",
+      "type": "file",
+      "mode": "0644",
+      "size": 102,
+      "sha256": "63ce1145da9f40e218b38fa2189897258e8a806ca82564e3db8c960291f23445"
+    },
+    {
+      "path": "server/cmd/server/migrations/000010_backfill_target_blacklist_policy.up.sql",
+      "type": "file",
+      "mode": "0644",
+      "size": 410,
+      "sha256": "8ff4a101d78c18f2c880f75c9d584550f2bb309855e1e6932c7bb4e6b303799b"
+    },
+    {
       "path": "server/cmd/server/migrations/README.md",
       "type": "file",
       "mode": "0644",
-      "size": 19558,
-      "sha256": "0801405514ced6b5d4fab2db63bbb990edb7acbcc1f6b790f895fffdcbc48a1e"
+      "size": 20028,
+      "sha256": "9c764bbd677d7cec3c041a2b04e35ed72b8c803dd4e23129785c7dfb3e5b054d"
     },
     {
       "path": "server/cmd/server/migrations/manifest.json",
       "type": "file",
       "mode": "0644",
-      "size": 2666,
-      "sha256": "fc5ba3dc7d9a1d3ca3fba1445fe90d42a6590ae974ee04597bc84f22852e6f5c"
+      "size": 2971,
+      "sha256": "d5f960c982eb84e600a008c7650955f7a0f0c9102584a732b8bf483191e69a33"
     },
     {
       "path": "server/cmd/server/migrations/policy.json",

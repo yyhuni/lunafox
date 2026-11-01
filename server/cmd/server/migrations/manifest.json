@@ -65,6 +65,13 @@
       "up": "000009_agent_license.up.sql",
       "down": "000009_agent_license.down.sql",
       "checksum": "sha256:c92e7fdc8f7351c3cf554a7b9efd18a39bb57046d24c1d3e563e5c841cc268fc"
+    },
+    {
+      "id": "000010",
+      "slug": "backfill_target_blacklist_policy",
+      "up": "000010_backfill_target_blacklist_policy.up.sql",
+      "down": "000010_backfill_target_blacklist_policy.down.sql",
+      "checksum": "sha256:bfe0d45a034fc6c1a835df56ab4a62db75a4978ee55a9b1361966ffcec9f659b"
     }
   ]
 }
