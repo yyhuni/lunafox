@@ -91,8 +91,8 @@
       "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
-      "size": 9181,
-      "sha256": "aa9f6af539959615750b4678f328d3b29cc2eb30b2691223131a04142ccad2d2"
+      "size": 9173,
+      "sha256": "b38ea75dc239106a543ab573348119f55cfabcf64a96906a82751cbbf9ce1ff2"
     },
     {
       "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/lunafox-agent-linux-amd64",
