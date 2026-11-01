@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:830643350a25cdae3d4c6120b87685dd7381c2acc4d18fe6c7bafb925de94820",
-  "releaseTag": "v0.0.1-alpha.239",
+  "sourceRevisionDigest": "sha256:5e378e6219bd0109d17ea8c3fab73e87c0ae2a2d5911a9db0d46fac4c4bf2216",
+  "releaseTag": "v0.0.1-alpha.240",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "e36814e2916386445462a8e46a31b059f9bfc1c4407dc093d7ed5727db413430"
+      "sha256": "a193e9a773ee2ef2c285912eeffe9431b617eb6e8359fe14b414831e6b4db9f8"
     },
     {
       "path": "README.en.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "02506f0615d36d973b5a5e865fb3434349c2a55fa1151ff7df58ccc0fb4890c0"
+      "sha256": "0ca37930adeee4aed6c6459e60f4490ebeb419078588b09b66de80fc56dfc6b2"
     },
     {
       "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/agent-bundle.sha256",
@@ -91,8 +91,8 @@
       "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
-      "size": 9181,
-      "sha256": "311ecd15d60ff5b623e909646442ac7e2f5196b008f98f172af643b2a48611e5"
+      "size": 9173,
+      "sha256": "8bb1d09ff49e87d7f14f0a928fba350c7d892fc1d688515e9b78aa71e1b3bd1b"
     },
     {
       "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/lunafox-agent-linux-amd64",
@@ -18237,6 +18237,13 @@
       "mode": "0644",
       "size": 586,
       "sha256": "a1a3a5e97af2f434e09e32472bfaaae843be01f4e9fda1037633fad1febb7d72"
+    },
+    {
+      "path": "release-notes/v0.0.1-alpha.240.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 894,
+      "sha256": "b120f00e1a3f0274ef43f26c4df0c2e96c00ed575e94018d71358f54dcf5473e"
     },
     {
       "path": "resources/alloy/config.alloy",
