@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "kind": "lunafox.runtime-composition",
-  "releaseTag": "v0.0.1-alpha.236",
-  "sourceRevisionDigest": "sha256:bdff5ce021b3ceeeb784b4929c41e6178f74d67b40b49b8b78d02137e3a40f1e",
-  "publicMergeCommit": "315b7c7fd485db091e9b4545fe309aab199e4228",
+  "releaseTag": "v0.0.1-alpha.240",
+  "sourceRevisionDigest": "sha256:5e378e6219bd0109d17ea8c3fab73e87c0ae2a2d5911a9db0d46fac4c4bf2216",
+  "publicMergeCommit": "1f2f7bf14a50da51d00134ee2cc5783aa4be1b57",
   "components": [
     {
       "id": "engine.lunafox.directory_scan.package",
@@ -1271,7 +1271,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.233",
         "publicMergeCommit": "f67d4662ae3cfb5e95dbadd3c30933190f4ad9ae",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-directory_scan.json",
@@ -2549,7 +2549,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.233",
         "publicMergeCommit": "f67d4662ae3cfb5e95dbadd3c30933190f4ad9ae",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-directory_scan.json",
@@ -3698,7 +3698,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.233",
         "publicMergeCommit": "f67d4662ae3cfb5e95dbadd3c30933190f4ad9ae",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-fingerprint_detection.json",
@@ -4850,7 +4850,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.233",
         "publicMergeCommit": "f67d4662ae3cfb5e95dbadd3c30933190f4ad9ae",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-fingerprint_detection.json",
@@ -6037,10 +6037,11 @@
         "ref": "docker.io/yyhuni/lunafox-engine-runtime-nuclei-vulnerability@sha256:db6d9f73489c734b6496ea94b9055d5a0fab6822accec09137d530afc8d6686f",
         "digest": "sha256:db6d9f73489c734b6496ea94b9055d5a0fab6822accec09137d530afc8d6686f"
       },
-      "disposition": "built",
+      "disposition": "reused",
       "sourceRelease": {
         "tag": "v0.0.1-alpha.236",
-        "publicMergeCommit": "315b7c7fd485db091e9b4545fe309aab199e4228"
+        "publicMergeCommit": "315b7c7fd485db091e9b4545fe309aab199e4228",
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-nuclei_vulnerability.json",
@@ -7230,10 +7231,11 @@
           "linux/arm64"
         ]
       },
-      "disposition": "built",
+      "disposition": "reused",
       "sourceRelease": {
         "tag": "v0.0.1-alpha.236",
-        "publicMergeCommit": "315b7c7fd485db091e9b4545fe309aab199e4228"
+        "publicMergeCommit": "315b7c7fd485db091e9b4545fe309aab199e4228",
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-nuclei_vulnerability.json",
@@ -8454,7 +8456,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.233",
         "publicMergeCommit": "f67d4662ae3cfb5e95dbadd3c30933190f4ad9ae",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-port_scan.json",
@@ -9678,7 +9680,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.233",
         "publicMergeCommit": "f67d4662ae3cfb5e95dbadd3c30933190f4ad9ae",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-port_scan.json",
@@ -10857,7 +10859,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.233",
         "publicMergeCommit": "f67d4662ae3cfb5e95dbadd3c30933190f4ad9ae",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-screenshot.json",
@@ -12039,7 +12041,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.233",
         "publicMergeCommit": "f67d4662ae3cfb5e95dbadd3c30933190f4ad9ae",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-screenshot.json",
@@ -13320,7 +13322,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.233",
         "publicMergeCommit": "f67d4662ae3cfb5e95dbadd3c30933190f4ad9ae",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-subdomain_discovery.json",
@@ -14604,7 +14606,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.233",
         "publicMergeCommit": "f67d4662ae3cfb5e95dbadd3c30933190f4ad9ae",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-subdomain_discovery.json",
@@ -15820,7 +15822,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.233",
         "publicMergeCommit": "f67d4662ae3cfb5e95dbadd3c30933190f4ad9ae",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-url_collection.json",
@@ -17039,7 +17041,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.233",
         "publicMergeCommit": "f67d4662ae3cfb5e95dbadd3c30933190f4ad9ae",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-url_collection.json",
@@ -18242,7 +18244,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.233",
         "publicMergeCommit": "f67d4662ae3cfb5e95dbadd3c30933190f4ad9ae",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-package-evidence/engine-lunafox-website_discovery.json",
@@ -19448,7 +19450,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.233",
         "publicMergeCommit": "f67d4662ae3cfb5e95dbadd3c30933190f4ad9ae",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "engine-runtime-evidence/engine-lunafox-website_discovery.json",
@@ -19555,10 +19557,11 @@
           "linux/arm64"
         ]
       },
-      "disposition": "built",
+      "disposition": "reused",
       "sourceRelease": {
         "tag": "v0.0.1-alpha.236",
-        "publicMergeCommit": "315b7c7fd485db091e9b4545fe309aab199e4228"
+        "publicMergeCommit": "315b7c7fd485db091e9b4545fe309aab199e4228",
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "runtime-evidence/agent.json",
@@ -19574,7 +19577,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:55b5e770b968c7c303c8246c66a224ce628616a864e38c22f4d8d563b76aa42d",
+        "digest": "sha256:4c8f191e1c6453fa58b87c56fb483c98f8263202204b2b5618920196f46a282c",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -20598,6 +20601,12 @@
               "size": 1803
             },
             {
+              "digest": "sha256:2955f5bb22ca934d42dd540dbcbbfae8a7614e1adf06bd873f8949aa2dd55198",
+              "mode": 420,
+              "path": "server/cmd/server/blacklist_policy_migration_contract_test.go",
+              "size": 857
+            },
+            {
               "digest": "sha256:c0a3af1cacd8d2c86a539bc4b08d11aea0e20e6aaabdbcf13c6c4ab5d0fa7982",
               "mode": 420,
               "path": "server/cmd/server/command_test.go",
@@ -20766,10 +20775,22 @@
               "size": 313
             },
             {
-              "digest": "sha256:fc5ba3dc7d9a1d3ca3fba1445fe90d42a6590ae974ee04597bc84f22852e6f5c",
+              "digest": "sha256:63ce1145da9f40e218b38fa2189897258e8a806ca82564e3db8c960291f23445",
+              "mode": 420,
+              "path": "server/cmd/server/migrations/000010_backfill_target_blacklist_policy.down.sql",
+              "size": 102
+            },
+            {
+              "digest": "sha256:8ff4a101d78c18f2c880f75c9d584550f2bb309855e1e6932c7bb4e6b303799b",
+              "mode": 420,
+              "path": "server/cmd/server/migrations/000010_backfill_target_blacklist_policy.up.sql",
+              "size": 410
+            },
+            {
+              "digest": "sha256:d5f960c982eb84e600a008c7650955f7a0f0c9102584a732b8bf483191e69a33",
               "mode": 420,
               "path": "server/cmd/server/migrations/manifest.json",
-              "size": 2666
+              "size": 2971
             },
             {
               "digest": "sha256:53331d701d9b7cbac5f6eab5cd02d7b6859b0e3959cee4c1cb1dad636567aefc",
@@ -20778,10 +20799,10 @@
               "size": 582
             },
             {
-              "digest": "sha256:0801405514ced6b5d4fab2db63bbb990edb7acbcc1f6b790f895fffdcbc48a1e",
+              "digest": "sha256:9c764bbd677d7cec3c041a2b04e35ed72b8c803dd4e23129785c7dfb3e5b054d",
               "mode": 420,
               "path": "server/cmd/server/migrations/README.md",
-              "size": 19558
+              "size": 20028
             },
             {
               "digest": "sha256:218273055d7a2044efd593000f2daaa6abfe9d36fb651b49c6ff7e87a775c3b0",
@@ -31253,8 +31274,8 @@
         }
       },
       "artifact": {
-        "ref": "ghcr.io/yyhuni/lunafox-bootstrap@sha256:c0b434a020b289777530f906188f6d877f27d3099a99152542d15cd7992e1042",
-        "digest": "sha256:c0b434a020b289777530f906188f6d877f27d3099a99152542d15cd7992e1042",
+        "ref": "ghcr.io/yyhuni/lunafox-bootstrap@sha256:eaacff28b2d269bfe59ec31b9ed56558b936c7c4547b0b61afe59da4fdfa66c1",
+        "digest": "sha256:eaacff28b2d269bfe59ec31b9ed56558b936c7c4547b0b61afe59da4fdfa66c1",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
@@ -31262,8 +31283,8 @@
       },
       "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.236",
-        "publicMergeCommit": "315b7c7fd485db091e9b4545fe309aab199e4228"
+        "tag": "v0.0.1-alpha.240",
+        "publicMergeCommit": "1f2f7bf14a50da51d00134ee2cc5783aa4be1b57"
       },
       "evidence": {
         "image": "runtime-evidence/bootstrap.json",
@@ -43306,7 +43327,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.234",
         "publicMergeCommit": "e3727ce6df506940f97c8ae31a3e4fb9c8f6ad4a",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "runtime-evidence/frontend.json",
@@ -43379,7 +43400,7 @@
       "sourceRelease": {
         "tag": "v0.0.1-alpha.176",
         "publicMergeCommit": "64294aa8c3d5d9600376f10b4d60945ab0aa5f5c",
-        "compositionDigest": "sha256:2c4d6b2ef22ff813b971d8e9becd34441ae52880358a7cdd95e5e57dc530318f"
+        "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
       },
       "evidence": {
         "image": "runtime-evidence/nginx.json",
@@ -43395,7 +43416,7 @@
       "inputFingerprint": {
         "version": 2,
         "algorithm": "sha256-canonical-json-v1",
-        "digest": "sha256:321087c9ad5bc00180f80f2f54c0f5321b7a14b9de7963a7dd478878620101c5",
+        "digest": "sha256:bcbadba02038739b538878cb8b05609cabb750360da95d63030ef6c00e097192",
         "baseImagesResolved": true,
         "inputs": {
           "baseImages": [
@@ -44395,6 +44416,12 @@
               "size": 1803
             },
             {
+              "digest": "sha256:2955f5bb22ca934d42dd540dbcbbfae8a7614e1adf06bd873f8949aa2dd55198",
+              "mode": 420,
+              "path": "server/cmd/server/blacklist_policy_migration_contract_test.go",
+              "size": 857
+            },
+            {
               "digest": "sha256:c0a3af1cacd8d2c86a539bc4b08d11aea0e20e6aaabdbcf13c6c4ab5d0fa7982",
               "mode": 420,
               "path": "server/cmd/server/command_test.go",
@@ -44563,10 +44590,22 @@
               "size": 313
             },
             {
-              "digest": "sha256:fc5ba3dc7d9a1d3ca3fba1445fe90d42a6590ae974ee04597bc84f22852e6f5c",
+              "digest": "sha256:63ce1145da9f40e218b38fa2189897258e8a806ca82564e3db8c960291f23445",
+              "mode": 420,
+              "path": "server/cmd/server/migrations/000010_backfill_target_blacklist_policy.down.sql",
+              "size": 102
+            },
+            {
+              "digest": "sha256:8ff4a101d78c18f2c880f75c9d584550f2bb309855e1e6932c7bb4e6b303799b",
+              "mode": 420,
+              "path": "server/cmd/server/migrations/000010_backfill_target_blacklist_policy.up.sql",
+              "size": 410
+            },
+            {
+              "digest": "sha256:d5f960c982eb84e600a008c7650955f7a0f0c9102584a732b8bf483191e69a33",
               "mode": 420,
               "path": "server/cmd/server/migrations/manifest.json",
-              "size": 2666
+              "size": 2971
             },
             {
               "digest": "sha256:53331d701d9b7cbac5f6eab5cd02d7b6859b0e3959cee4c1cb1dad636567aefc",
@@ -44575,10 +44614,10 @@
               "size": 582
             },
             {
-              "digest": "sha256:0801405514ced6b5d4fab2db63bbb990edb7acbcc1f6b790f895fffdcbc48a1e",
+              "digest": "sha256:9c764bbd677d7cec3c041a2b04e35ed72b8c803dd4e23129785c7dfb3e5b054d",
               "mode": 420,
               "path": "server/cmd/server/migrations/README.md",
-              "size": 19558
+              "size": 20028
             },
             {
               "digest": "sha256:218273055d7a2044efd593000f2daaa6abfe9d36fb651b49c6ff7e87a775c3b0",
@@ -55050,8 +55089,8 @@
         }
       },
       "artifact": {
-        "ref": "ghcr.io/yyhuni/lunafox-server@sha256:c0ffe90fed151ddc7ea9f82a83139b0c08d29c9039ad900d1a114d743bc00bde",
-        "digest": "sha256:c0ffe90fed151ddc7ea9f82a83139b0c08d29c9039ad900d1a114d743bc00bde",
+        "ref": "ghcr.io/yyhuni/lunafox-server@sha256:bc48b58237491783a2165f1d193df6bee9aae4e49b4682ae31a7289db589804c",
+        "digest": "sha256:bc48b58237491783a2165f1d193df6bee9aae4e49b4682ae31a7289db589804c",
         "platforms": [
           "linux/amd64",
           "linux/arm64"
@@ -55059,8 +55098,8 @@
       },
       "disposition": "built",
       "sourceRelease": {
-        "tag": "v0.0.1-alpha.236",
-        "publicMergeCommit": "315b7c7fd485db091e9b4545fe309aab199e4228"
+        "tag": "v0.0.1-alpha.240",
+        "publicMergeCommit": "1f2f7bf14a50da51d00134ee2cc5783aa4be1b57"
       },
       "evidence": {
         "image": "runtime-evidence/server.json",
@@ -55075,7 +55114,7 @@
     "runtimeCompositionSchemaVersion": 1
   },
   "manifestBinding": {
-    "manifestDigest": "sha256:32c9582c367db81dc6b5634d8725a775b32093072b1d4c2d64ce43e5fe51e6f7"
+    "manifestDigest": "sha256:412ffdfd5b9fb6f944d3724dd706bb26b1a0bde358b7daccba630d377e9e93cf"
   },
-  "compositionDigest": "sha256:6732daa770a4b971830244799c52f4549bfeb339484d060b61269724e1fa3a8e"
+  "compositionDigest": "sha256:f8b2e67d3e5ab9e3f96c3fa3dd2802b26493f9e426bc0d9c6e8dba9980271e65"
 }
