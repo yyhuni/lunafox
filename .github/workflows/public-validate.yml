@@ -17,6 +17,7 @@ on:
         required: true
         type: string
     # Keep manual recovery explicitly bound to the immutable provenance record;
+# v0.0.1-alpha.237 immutable recovery maintenance.
     # the inputs are required so an unbound dispatch cannot reach publication.
 
 # Every PR/export job is secretless and runs on GitHub-hosted infrastructure.
