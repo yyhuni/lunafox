@@ -1,0 +1,1 @@
+-- DESTRUCTIVE TEST TEARDOWN ONLY. Backfilled policy rows are not reversible without a data snapshot.

@@ -203,6 +203,14 @@ reads it under the same PostgreSQL advisory lock used by Agent registration.
 The down migration is destructive test teardown only and must not be used to
 silently discard a deployed entitlement.
 
+Forward migration `000010` backfills the empty Target-local `blacklist_policy`
+singleton for existing Targets that predate Target policy initialization. It
+only inserts rows that are missing, preserves all existing patterns, is safe to
+run repeatedly, and uses the same empty-array representation as new Target
+creation. Its down migration is a destructive test-teardown placeholder; a
+production rollback requires a verified backup restore or an approved forward
+fix.
+
 ## Scan Execution Input Source Hard Cut
 
 The frozen `000001` baseline requires `scan.input_source` and
