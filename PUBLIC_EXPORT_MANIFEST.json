@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "exporterVersion": "public-exporter/v1",
-  "sourceRevisionDigest": "sha256:a20a6ddd047d9bf97f4e5754802aeeeade2594aca4a5f80dd782889126e96167",
-  "releaseTag": "v0.0.1-alpha.237",
+  "sourceRevisionDigest": "sha256:830643350a25cdae3d4c6120b87685dd7381c2acc4d18fe6c7bafb925de94820",
+  "releaseTag": "v0.0.1-alpha.239",
   "generatedReadOnly": true,
   "excludedPaths": [
     ".env",
@@ -57,7 +57,7 @@
       "type": "file",
       "mode": "0644",
       "size": 431,
-      "sha256": "7583a7d9bc132380fdb682585f21d3b67c2d390876551abfe571d290f6b2d11f"
+      "sha256": "e36814e2916386445462a8e46a31b059f9bfc1c4407dc093d7ed5727db413430"
     },
     {
       "path": "README.en.md",
@@ -78,7 +78,7 @@
       "type": "file",
       "mode": "0644",
       "size": 3012,
-      "sha256": "8d7bb8b41c9d0727396b7a4257ffb084bfb1e967fef086ffd4123f4013769228"
+      "sha256": "02506f0615d36d973b5a5e865fb3434349c2a55fa1151ff7df58ccc0fb4890c0"
     },
     {
       "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/agent-bundle.sha256",
@@ -91,8 +91,8 @@
       "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/agent-bundle.sigstore.json",
       "type": "file",
       "mode": "0644",
-      "size": 9173,
-      "sha256": "b38ea75dc239106a543ab573348119f55cfabcf64a96906a82751cbbf9ce1ff2"
+      "size": 9181,
+      "sha256": "311ecd15d60ff5b623e909646442ac7e2f5196b008f98f172af643b2a48611e5"
     },
     {
       "path": "agent/bin/sha256-02c703cc3a046aebdff6091cf750a2b6036ce48a3a8295a38aa6a26ff8245a86/lunafox-agent-linux-amd64",
@@ -18223,6 +18223,20 @@
       "mode": "0644",
       "size": 763,
       "sha256": "05bbb2d32dd60d75631b107242ad8666c0996a4b2e76301a4c446cee9a40ec2c"
+    },
+    {
+      "path": "release-notes/v0.0.1-alpha.238.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 763,
+      "sha256": "3cf268620643823e52208f314d38ea7bb91f5b4774193e5f896ed4b1199b5e5c"
+    },
+    {
+      "path": "release-notes/v0.0.1-alpha.239.md",
+      "type": "file",
+      "mode": "0644",
+      "size": 586,
+      "sha256": "a1a3a5e97af2f434e09e32472bfaaae843be01f4e9fda1037633fad1febb7d72"
     },
     {
       "path": "resources/alloy/config.alloy",
